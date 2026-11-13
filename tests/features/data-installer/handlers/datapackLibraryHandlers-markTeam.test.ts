@@ -65,7 +65,7 @@ it.each([
 ])('refuses, asking nothing of the store, with %s', async (_label, payload) => {
     expect(await mark(createMockHandlerContext(), payload)).toEqual({
         success: false,
-        error: 'Name the datapack, and say whether it is a team datapack.',
+        error: 'Name the datapack, and say whether it is a Demo Builder datapack.',
     });
     expect(mockAccess).not.toHaveBeenCalled();
     expect(fetchMock).not.toHaveBeenCalled();

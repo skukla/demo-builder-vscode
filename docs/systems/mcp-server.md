@@ -778,8 +778,13 @@ not saved. `list_datapack_export_items` lists one kind of the project's store to
 alone and refused on a save, and the name echo applies only to a call naming a pack. The Data
 Installer service's own engine and export, and the Engine setting that chose them, were
 deleted on 2026-11-06 with the setting (DI-12): the service had ignored the Commerce credentials a
-caller sends since 2026-10-27. A pack reaches its shared catalog by `copy_library_datapack_to_installer`,
-and a pack only it holds is installed by Demo Builder.
+caller sends since 2026-10-27. Agents cannot write into the Data Installer (D7, datapack-simplification
+Phase 8): `copy_library_datapack_to_installer` was removed and `load_datapack_zip` forces `target: "library"`
+(`argDefaults`), as the screen hides both behind `INSTALLER_WRITES_SHOWN`. A pack only the Data Installer
+holds is installed by Demo Builder. `delete_library_datapack` takes `everyVersion`, as the screen's Delete
+does for a datapack of saves. The datapack tools' descriptions, narration and consent copy use the
+Datapacks screen's words (Install, Uninstall, Switch, Save As New, Add from File, Delete, "Demo Builder
+datapack"); the tool names and `mark_team_datapack`'s `team` argument stay as identifiers.
 A creation install that does not end in success, a partly installed one included, is recorded on
 the project (step-04 S7, `installFailure.ts`), and `get_datapack_import_target` answers
 `installFailed: {reason, retries}` while the project names that datapack. A later

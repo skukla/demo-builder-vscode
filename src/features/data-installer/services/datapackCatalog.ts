@@ -79,8 +79,8 @@ export function isSettingsLayer(row: Pick<DatapackSummary, 'id' | 'dataTypes'>):
 
 /**
  * The rows a catalog offers as cards: all but the settings layers whose pack is listed too, which
- * are reached from that pack's flyout (its Store Configuration row, and "Delete Store Configuration"
- * on the SC's own). A layer keeps its card when hiding it would strand it: no pack of its name is
+ * are reached from that pack's flyout (its Store Configuration row; deleting a version of the SC's own
+ * takes its layer with it). A layer keeps its card when hiding it would strand it: no pack of its name is
  * listed, so no flyout reaches it, or it was installed on its own, and a card is where a pack is
  * removed from the store.
  *

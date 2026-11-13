@@ -360,7 +360,13 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // project's removes that one first, asking about the user's changes, and no longer stops another
 // version or a team pack's in-place update as "lost track". Existing projects would keep treating
 // another version as a first install.
-export const AI_CONTEXT_VERSION = 61;
+// v62 (2026-11-13, datapack simplification Phase 8): import-datapack speaks the Datapacks screen's
+// words (Install, Uninstall, Switch, Save As New, Add from File, Delete, Demo Builder datapacks), maps
+// each screen action to its tool, gives the save question and the failed-install Retry, says Clear Demo
+// Data uninstalls the datapack first, and drops copy_library_datapack_to_installer, which agents no
+// longer have (D7). Existing projects would keep sending the agent to a tool that is gone, and to the
+// removed `unused` and Data Installer inputs.
+export const AI_CONTEXT_VERSION = 62;
 
 /**
  * Component IDs for standardized component instance access

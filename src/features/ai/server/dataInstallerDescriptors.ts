@@ -25,9 +25,11 @@
  *
  * ## Shared infrastructure, and what that changes
  *
- * The datapack catalog holds entries other teams depend on, and an EXPORT writes
- * into it. So `start_datapack_export` takes a name echo as well as a confirm,
- * the same bar `delete_github_repo` uses — the risk is not losing your own work.
+ * A save (`start_datapack_export`, `save_store_changes_to_pack`) writes a new
+ * version into the datapack library, never into the Data Installer's shared
+ * catalog (D7: agents have no Data Installer destination). When it names a
+ * datapack it takes a name echo (`confirmName`) as well as a confirm, the same
+ * bar `delete_github_repo` uses.
  *
  * @module features/ai/server/dataInstallerDescriptors
  */
@@ -338,12 +340,12 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         readOnly: false,
         description:
             'Save the store\'s copy of the datapack this project uses into the datapack library, with the categories, ' +
-            'set, attributes and quantities its products need: Save or Save As. Without saveAs (Save) it is the NEW latest save of ' +
+            'set, attributes and quantities its products need: Save or Save As New. Without saveAs (Save) it is the NEW latest save of ' +
             'the pack the project uses, only when that pack is the user\'s own (the save before it is kept for undo_last_save; ' +
-            'older saves are deleted); when it is not (a team pack such as ' +
+            'older saves are deleted); when it is not (a Demo Builder datapack such as ' +
             'Bodea, or a colleague\'s), nothing is written and the answer has data.needsName: ' +
             'ask the user for a name, then call again with saveAs.displayName (Save As), which makes a NEW pack of ' +
-            'theirs; a name the user already has for one of their datapacks is refused (ask for another). Either way the ' +
+            'theirs (the screen\'s Save As New); a name the user already has for one of their datapacks is refused (ask for another). Either way the ' +
             'project then uses the new save. Everything the demo uses goes in on its own, what was added by hand in the ' +
             'Admin included, so a save from a pack is refused with selections: send selections only for a save with no ' +
             'datapack. No pack named: the project\'s when ' +
@@ -556,7 +558,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         readOnly: false,
         description:
             "Undo the last save of the project's own datapack: Commerce goes back to the save before it. The datapack must " +
-            "be the one this project uses and one of the user's own in My Datapacks (not a team pack), with an earlier save " +
+            "be the one this project uses and one of the user's own in My Datapacks (not a Demo Builder datapack), with an earlier save " +
             'to go back to; otherwise this refuses and nothing changes. One job, as start_datapack_import over the pack in use: ' +
             'the last save is uninstalled and the one before it installed, onto the website and store view the pack is ' +
             'installed to. Changes made in the Admin since are lost, never saved. Only once the job succeeds is the last ' +
@@ -580,7 +582,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             "Restore the project's datapack: put Commerce back to the datapack as the user last saved it, losing what " +
             "was changed in the Admin since (the screen's Restore). The datapack must be the one this project uses, installed " +
             "by Demo Builder; otherwise this refuses and nothing changes. When it is one of the user's own in My Datapacks, " +
-            'it restores its newest save; otherwise (a team pack, a Data Installer pack) the version installed. It checks ' +
+            'it restores its newest save; otherwise (a Demo Builder datapack, a Data Installer pack) the version installed. It checks ' +
             'Commerce first, writing nothing: when Commerce already matches, it answers data.upToDate and starts nothing. ' +
             'Otherwise it is one job: what is installed is uninstalled by its install record and the datapack installed ' +
             'again, onto the website and store view it is installed to, even when it is the same version (unlike ' +
@@ -605,9 +607,8 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         description:
             "Capture data from this project's Commerce store into a datapack: saves what is picked in selections " +
             "into the datapack library, with the project's pack when Demo Builder installed it; the same save as " +
-            'save_store_changes_to_pack (Save, or Save As with saveAs), answering the same way. Send selections, ' +
-            "saveAs and confirm. Nothing goes into the Data Installer's shared catalog: copy_library_datapack_to_installer " +
-            'does that, afterwards. aco:true (an Adobe Commerce Optimizer pack) is refused in this release: ACO ' +
+            'save_store_changes_to_pack (Save, or Save As New with saveAs), answering the same way. Send selections, ' +
+            "saveAs and confirm. Nothing goes into the Data Installer's shared catalog. aco:true (an Adobe Commerce Optimizer pack) is refused in this release: ACO " +
             'datapacks arrive with ACO support.',
         map: importHandlers,
         type: 'start-datapack-export',
@@ -653,8 +654,8 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         // Writes a local file and nothing else: the store is only read.
         readOnly: false,
         description:
-            'Save a datapack from the Data Installer or the datapack library as a zip file in the ' +
-            'project — one file to keep, send, or load into a store later. A pack holding no store_config ' +
+            "Save a datapack from the Data Installer or the datapack library as a zip file in the project (the screen's Save as File) — " +
+            'one file to keep, send, or load into a store later. A pack holding no store_config ' +
             'carries its settings layer (the library pack named <pack>-settings) as a second section; ' +
             'settingsLayer says so, and settingsLayerNote when the library could not be asked.',
         map: importHandlers,
@@ -735,46 +736,46 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: false,
         description:
-            'Write the pack in a datapack zip file into the datapack library (default) or the Data Installer. ' +
-            'Into the Data Installer, which other teams share, it needs confirmName equal to the pack ' +
-            'name and never updates an existing pack. A settings layer in the file goes into the datapack library, ' +
-            'wherever the data goes; settingsLayer says what became of it. A file whose layer holds a path a pack may ' +
-            'not set is refused before any write. The Data Installer needs write access, which its owners grant. Into it the pack goes in its form, as ' +
-            'copy_library_datapack_to_installer sends it (changed lists each change). This does not install anything into Commerce.',
+            "Add the pack in a datapack zip file to My Datapacks, the user's own datapack library (the screen's Add from File; " +
+            "Install from File is this, then start_datapack_import). It is private to the user until shared. A settings layer " +
+            'in the file goes into My Datapacks with it; settingsLayer says what became of it. A file whose layer holds a path a ' +
+            'pack may not set is refused before any write. This does not install anything into Commerce.',
         map: importHandlers,
         type: 'load-datapack-zip',
         confirm: true,
         inputSchema: {
             path: z.string().describe('The datapack file, inside the project'),
-            target: z.enum(['installer', 'library']).optional().describe('Which store to write it into (default library)'),
             update: z
                 .boolean()
                 .optional()
-                .describe('Library only: replace the data types this file carries in a pack that already exists'),
-            confirmName: z
-                .string()
-                .optional()
-                .describe('Data Installer only: must equal the pack name (open_datapack_zip reports it)'),
+                .describe("Replace the data types this file carries in a datapack of yours that already exists (the screen's Replace Existing)"),
         },
+        // D7 (owner, 2026-11-10): agents get no Data Installer destination, which fails for our accounts;
+        // the screen hides it too (`INSTALLER_WRITES_SHOWN`). Forced, so a session holding the old schema
+        // cannot send target "installer" past it.
+        argDefaults: { target: 'library' },
     },
     {
         tool: 'delete_library_datapack',
         needsAuth: ['adobe'],
         readOnly: false,
         description:
-            'Delete one of your own packs from the datapack library — the undo of ' +
-            "load_datapack_zip. Cannot be undone. The library only lets a pack's owner delete " +
-            "it; the Data Installer's shared catalog is never touched. When you shared the pack " +
-            'in a project file, the answer carries `warning` (without confirm, `sharedInFile`): ' +
-            "anyone who has not created that project yet gets the pack it was made from instead. " +
-            'A version takes your settings layer of ' +
-            'the same version with it (`settingsLayerDeleted: true`).',
+            "Delete one of your own datapacks from My Datapacks (the screen's Delete). Cannot be undone. A datapack of saves is " +
+            'deleted whole, as the screen does: send everyVersion:true and no version. A version names one version alone. ' +
+            "A datapack a project uses is refused. Only a pack's owner can delete it; the Data Installer's shared catalog is " +
+            'never touched. When you shared the pack in a project file, the answer carries `warning` (without confirm, ' +
+            '`sharedInFile`): anyone who has not created that project yet gets the pack it was made from instead. Each version ' +
+            'takes your settings layer of the same version with it (`settingsLayerDeleted: true`).',
         map: importHandlers,
         type: 'delete-library-datapack',
         // Gated twice, as reset_datapack is: the row refuses before dispatch, and the
         // same flag satisfies the handler's own confirm check.
         confirm: true,
-        inputSchema: { ...DATAPACK_ID },
+        inputSchema: {
+            datapackName: z.string().describe('Your datapack, by its name from find_datapacks'),
+            version: z.string().optional().describe('One version to delete, e.g. main; omit with everyVersion'),
+            everyVersion: z.boolean().optional().describe('true: delete every version (every save) of the datapack, as the screen does'),
+        },
     },
     {
         tool: 'rename_datapack',
@@ -798,8 +799,8 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: false,
         description:
-            'Share one of your own datapack library packs with your team, or stop sharing it: every version. ' +
-            'Shared, everyone using Demo Builder can see and install it under Community datapacks, and a colleague can ' +
+            "Share one of your own datapacks in My Datapacks, or stop sharing it (the screen's Share and Stop Sharing): every version. " +
+            'Shared, everyone using Demo Builder can see and install it under Community Datapacks, and a colleague can ' +
             'create a project from a file that names it; stopped, only you can. Its settings layer goes with it. Answers how many versions changed. ' +
             "Ask the user first. export_project_settings's packNote says when the project's pack is private.",
         map: importHandlers,
@@ -815,40 +816,16 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: false,
         description:
-            "Mark one of your own datapacks in Demo Builder's datapack store as an official team pack, or take " +
-            'the mark off: every version. A team pack is in the default list; any other shared pack is behind ' +
-            'Include Community. It does not share the pack: share_datapack does that. The store refuses anyone ' +
-            'not on its list of team pack owners. Ask the user first.',
+            "Mark one of your own datapacks in Demo Builder's datapack store as a Demo Builder datapack, or take " +
+            'the mark off: every version. A marked datapack is listed under Demo Builder Datapacks; any other shared one under ' +
+            'Community Datapacks. It does not share the datapack: share_datapack does that. The store refuses anyone ' +
+            'not on its list of Demo Builder datapack owners. Ask the user first.',
         map: importHandlers,
         type: 'mark-team-datapack',
         confirm: true,
         inputSchema: {
             datapackName: z.string().describe('The pack name from find_datapacks (one of yours)'),
-            team: z.boolean().describe('true to mark it as a team pack, false to take the mark off'),
-        },
-    },
-    {
-        tool: 'copy_library_datapack_to_installer',
-        needsAuth: ['adobe'],
-        readOnly: false,
-        description:
-            "Copy a datapack library pack into the Data Installer's catalog, so other teams can find and install " +
-            'it. Needs write access to the Data Installer, which its owners grant and most accounts lack; without it ' +
-            'the answer says so and nothing is sent. Not needed to install it here: start_datapack_import takes source:"library". **Writes into the ' +
-            'SHARED catalog** — needs confirm:true and ' +
-            'confirmName equal to the pack name, never overwrites an existing pack, and cannot be ' +
-            'undone from the extension. The pack goes in the form the Data Installer takes, or not at all: a gift card ' +
-            'goes in the Default attribute set (changed lists each such change), and a data type it takes no data of ' +
-            '(store configuration) or one too large for it is refused before anything is sent.',
-        map: importHandlers,
-        type: 'copy-library-datapack-to-installer',
-        confirm: true,
-        inputSchema: {
-            ...DATAPACK_ID,
-            confirmName: z
-                .string()
-                .optional()
-                .describe('Must equal datapackName — guards a write to the shared catalog'),
+            team: z.boolean().describe('true to mark it as a Demo Builder datapack, false to take the mark off'),
         },
     },
 ];

@@ -326,12 +326,12 @@ judgement in this feature:
 
 - **Changing or deleting a pack.** The catalog is shared infrastructure with 23
   entries other teams depend on, `delete-datapack` cascades, there is no undo and no
-  ownership guard. One agent typo removes a colleague's demo. Creating a NEW pack is
-  offered in two ways, both of which only add: `start_datapack_export` (with the service
-  engine; with Demo Builder's it saves into the SC's datapack library instead, Save or Save As) and
-  `load_datapack_zip`. Each needs the pack's name typed back, and loading a file
-  never updates an existing pack in this catalog. The datapack library does have an
-  ownership check, so updating your own pack is offered there.
+  ownership guard. One agent typo removes a colleague's demo. Writing into it at all is not
+  offered to agents (D7, datapack-simplification Phase 8): our accounts cannot write there, and the
+  screen hides it too (`INSTALLER_WRITES_SHOWN`). `start_datapack_export` saves into the SC's own
+  datapack library (Save or Save As New), and `load_datapack_zip` writes into it alone (its `target`
+  is forced to `library`). The datapack library does have an ownership check, so updating your own
+  pack is offered there.
 - **`DELETE get-installed-datapacks`** — clears tracking without uninstalling
   anything. Its only effect is to make the tracking lie.
 - **`async-process-status`** — reports `in_progress` for jobs that finished hours
@@ -383,7 +383,8 @@ included, and opening on the version the demo uses (`DatapackCatalogGrid`):
   (`delete-library-datapack` with `everyVersion`); on a named version, that version and its layer.
   It asks "Delete My Luma?", "Permanently deletes it.", naming no version, with a red Delete. It is
   offered on the SC's own library datapack and never on a Demo Builder datapack, its owner's
-  included; agents can still delete one (`delete_library_datapack`). The storage is unchanged: each
+  included; agents can still delete one (`delete_library_datapack`, with `everyVersion` for a pack
+  of saves, as the screen does). The storage is unchanged: each
   save is still its own version, so nothing was migrated.
 - **Switch to** (J8-1, owner 2026-11-12; step-04 S5). Over a datapack the demo holds and Demo Builder
   installed, another datapack's main button reads "Switch to Bodea", exactly when the job window
@@ -584,13 +585,13 @@ so itself (`mine`), because only it knows the caller's verified email.
 A library pack's flyout offers Install, with Save as File and, when it is yours, Share or Stop
 Sharing and Delete in its More menu (`PackActions`); in the Datapack Library the bar is More alone. Demo Builder installs it straight
 from the library; agents pass `source: "library"` to `validate_datapack_import`,
-`start_datapack_import` and `reset_datapack`. While the Data Installer is on (its address set and
-`dataInstaller.enabled`, the catalog's `installerOn`), the flyout also offers Copy to the Data
-Installer beside Import (`copy-library-datapack-to-installer` / `copy_library_datapack_to_installer`):
-it puts the pack where other teams can find and install it, and is not needed to install it here
-(owner, 2026-11-06). The copy writes into the shared catalog, so it carries the load's guards —
-the pack name sent back, an existing pack never overwritten — and it cannot be undone from the
-extension.
+`start_datapack_import` and `reset_datapack`. Copy to the Data Installer
+(`copy-library-datapack-to-installer`) puts a library pack where other teams can find and install
+it. It is built, but hidden behind `INSTALLER_WRITES_SHOWN` (off, owner 2026-11-06) until our accounts
+can write there, and offered then only while the Data Installer is on (the catalog's `installerOn`).
+Agents have no copy tool at all (D7; `copy_library_datapack_to_installer` was removed in Phase 8).
+The copy carries the load's guards (the pack name sent back, an existing pack never overwritten) and
+cannot be undone from the extension.
 If the library cannot be reached, the Data Installer's packs still show, with a line
 saying why the library's are missing. Agents get the same through `find_datapacks`
 (`store`, `includeLibrary`) and `get_datapack` (`store`).
@@ -643,13 +644,13 @@ A zip whose files sit under one root folder reads the same.
 
 | | Panel | Agent tool |
 |---|---|---|
-| Save a pack from either store | "Save as file" in a pack's flyout menu, and after an export | `save_datapack_zip`; `dataTypes` saves only the types named (to leave out one the store cannot send) |
-| Remove your own library pack | "Delete" in its flyout menu (not on a Demo Builder datapack) | `delete_library_datapack` |
+| Save a pack from either store | Save as File in a pack's flyout menu, and after an export | `save_datapack_zip`; `dataTypes` saves only the types named (to leave out one the store cannot send) |
+| Remove your own library pack | "Delete" in its flyout menu (not on a Demo Builder datapack); a pack of saves goes whole | `delete_library_datapack`; `everyVersion: true` for a pack of saves |
 | Install a library pack | "Install" in its flyout | `start_datapack_import` with `source: "library"` |
-| Put a library pack in the Data Installer's catalog (needs write access, which our accounts lack today) | Not on screen until then | `copy_library_datapack_to_installer` |
-| See what a file holds, writing nothing | the first step of "Load from file" | `open_datapack_zip` |
+| Put a library pack in the Data Installer's catalog (needs write access, which our accounts lack today) | Not on screen until then (`INSTALLER_WRITES_SHOWN`) | none (D7) |
+| See what a file holds, writing nothing | the first step of Add from File (Install from File in a project) | `open_datapack_zip` |
 | Build a pack file from a Commerce product export | none (agent only) | `build_datapack_from_export` |
-| Write it into a store | "Load from file", library by default | `load_datapack_zip` |
+| Write it into My Datapacks | Add from File (Install from File in a project); the Data Installer only under `INSTALLER_WRITES_SHOWN` | `load_datapack_zip`, My Datapacks only |
 | Undo a load into the library | "Remove it from the library", in the load result | `delete_library_datapack` |
 
 Loading puts a pack in a store; installing it into Commerce is still Install. Each data

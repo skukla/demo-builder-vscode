@@ -1,6 +1,6 @@
 ---
 name: import-datapack
-description: Loads sample data (products, categories, customers, B2B companies) into a project's Commerce instance from a datapack, removes it again, or captures data back out into a pack. Use when a demo needs catalog data, when the storefront renders but has nothing in it, or when the user asks to seed, populate, install, reset or export sample data. Seven ordered calls with three traps — read this before calling any of them.
+description: Installs a datapack (products, categories, customers, B2B companies) into a project's Commerce instance, switches, restores or uninstalls it, saves Commerce back into a datapack, and clears demo data. Use when a demo needs catalog data, when the storefront renders but has nothing in it, or when the user asks to install, switch, restore, uninstall, save, undo a save or clear sample data. Seven ordered calls with three traps — read this before calling any of them.
 ---
 
 # Install a Datapack
@@ -59,7 +59,7 @@ them, and it cannot be undone.
 If the same version is installed again and its contents have not changed, the preview should
 show nothing to update, add or remove. If it shows any, stop and tell the user rather than
 installing: it means Demo Builder has lost track of what it made. That check is only for the same,
-unchanged version. A team pack updated in place since it was installed, or another version, is
+unchanged version. A Demo Builder datapack updated in place since it was installed, or another version, is
 expected to change things: show the user the preview and go on. Afterwards the note says what was
 taken out ("Took out 3 items the pack no longer has: …"), and `check.leftOut` counts products the
 check skipped because they were kept; `verify_datapack_install` checks every product.
@@ -80,15 +80,24 @@ first: its data is removed in the same job, the way `reset_datapack` removes it,
 installs. Tell the user that before you start.
 
 - Changes the user made to the old pack since it was installed are saved into their own pack first,
-  without asking. When the old pack is not theirs (a team pack, a colleague's), the call installs
+  without asking. When the old pack is not theirs (a Demo Builder datapack, a colleague's), the call installs
   nothing and answers `CHANGES_NEED_ANSWER` with the changes in a sentence. Ask the user, then call
   again with `changes: "keep"` and `saveAs` (a new pack of theirs; ask them for the name) or
   `changes: "drop"` (lost).
-- A removal that fails installs nothing: the status's `stoppedAt` is `replacing`, its `reason` says
-  why, and the project still names the old pack.
+- An uninstall that fails installs nothing: the status's `stoppedAt` is `replacing`, its `reason`
+  says why, and the project still names the old pack.
 - Once the old pack is gone the project names the new one, and `reset_datapack` removes the new one.
 
 Installing the same version again uninstalls nothing: it updates in place, as above.
+
+## A failed install, and Retry
+
+When the install of the project's datapack at creation did not succeed, `get_datapack_import_target`
+answers `installFailed` with the `reason` and how many `retries` were made. The screen shows the card
+with a red dot and offers Retry. Retry is `start_datapack_import` with the same datapack, version and
+scope; read the reason to the user first, since a cause in the pack or the instance fails again.
+After two failed retries the screen offers Fix with AI instead: find the cause before a third try.
+An install that succeeds clears the record.
 
 ## Trap 2 — never guess `commerceInstance`
 
@@ -161,7 +170,9 @@ Removal takes back everything the project's install record lists and nothing els
 `dataTypes` you send, so say that to the user rather than naming the kinds you sent. A pack
 Demo Builder never installed in this project (the Data Installer service installed it, or
 another project did) is refused and nothing is removed by name; to clear what that install
-left, use `check_demo_data` and then `clear_demo_data` (the screen's "Clear Demo Data"). To clear
+left, use `check_demo_data` and then `clear_demo_data` (the screen's "Clear Demo Data").
+`clear_demo_data` uninstalls the project's datapack first, asking the save question below, then
+clears every website the project uses; a save or uninstall that fails clears nothing. To clear
 whole websites of the instance, whoever put the data there (the screen's "Clear Commerce
 Instance"), call `check_demo_data` with `websites: []` to see the websites and the projects using
 each, then with the chosen website codes for the list, show the user that list and which projects
@@ -173,23 +184,35 @@ be undone, except the datapacks.
 Like an install it returns a handle and is polled. Demo Builder removes in the reverse of the
 install's order, so you do not have to reason about what to remove first.
 
+## The save question
+
+Uninstall, Switch, Clear Demo Data, Clear Commerce Instance, and a project's reset or delete with
+Uninstall Datapack all take the datapack out of Commerce. Changes the user made in it since it was
+installed are saved into their own datapack first, without asking. When the datapack is not theirs,
+the call changes nothing and answers `CHANGES_NEED_ANSWER` with the changes in a sentence. Ask the
+user, then call again with one of:
+
+- `changes: "keep"` and `saveAs` (a name the user gives): saved as a new datapack of theirs;
+- `changes: "drop"`: lost (in the user's own datapack too).
+
 ## Saving the store into a pack
 
-`save_store_changes_to_pack` saves the project's store into the datapack library, as Save or
-Save As: everything the demo uses, with nothing to pick. That is the pack Demo Builder installed
+`save_store_changes_to_pack` saves the project's store into My Datapacks, as Save or
+Save As New: everything the demo uses, with nothing to pick. That is the pack Demo Builder installed
 here as the store holds it now, and whatever of the demo's the pack does not hold yet (what someone
 added in the Admin), never another demo's on a shared instance.
 
 - **Save** (no `saveAs`): the NEW latest save of the pack the project uses, only when that pack is
-  the user's own. The save before it is kept, for `undo_last_save`; older saves are deleted. When it is not (a team pack such as Bodea, or a colleague's), nothing is written and
+  the user's own. Two saves are kept: the save before it stays, for `undo_last_save`; older saves are deleted. When it is not (a Demo Builder datapack such as Bodea, or a colleague's), nothing is written and
   the answer carries `data.needsName`.
-- **Save As** (`saveAs: { displayName }`): a NEW pack of the user's, under the name they give.
+- **Save As New** (`saveAs: { displayName }`): a NEW pack of the user's, under the name they give.
   Ask the user for the name; do not make one up.
 
 Either way the project then uses the new save: it installs from it and resets to it. With no
 pack named it saves only what is picked, which is how a store built by hand in the Admin becomes
-a pack (send `saveAs`). `start_datapack_export` is the same save: send `selections`, `saveAs`
-and `confirm`. A name the user already has for one of their own datapacks is refused: ask for
+a pack (send `saveAs`; the screen's Create). `start_datapack_export` is the same save: send
+`selections`, `saveAs` and `confirm`. Every save goes into My Datapacks, never into the Data
+Installer. A name the user already has for one of their own datapacks is refused: ask for
 another.
 
 - **From a pack, pick nothing**: the save takes everything the demo uses, and `selections` with
@@ -214,13 +237,26 @@ another.
 **ACO packs** (Adobe Commerce Optimizer) come with ACO support, in a later release:
 `start_datapack_export` refuses `aco: true` until then. Say so if the user asks for one.
 
-## Putting a pack in the Data Installer
+## The Datapacks screen's words, and the tool for each
 
-`copy_library_datapack_to_installer` copies one of the user's library packs into the Data
-Installer's catalog, so other teams can find and install it. It is not needed to install the
-pack here: `start_datapack_import` installs a library pack where it is. It writes to a catalog
-**other teams depend on** and cannot be undone from here, so it needs `confirm: true` and
-`confirmName` equal to the pack name. Ask the user first.
+| The screen says | The tool |
+|---|---|
+| Install, Switch to | `start_datapack_import` |
+| Uninstall | `reset_datapack` |
+| Restore | `restore_datapack` |
+| Save, Save As New, Create | `save_store_changes_to_pack` |
+| Undo Last Save | `undo_last_save` |
+| Clear Demo Data | `check_demo_data`, then `clear_demo_data` |
+| Clear Commerce Instance | `check_demo_data` with website codes, then `clear_commerce_instance` |
+| Save as File | `save_datapack_zip` |
+| Add from File (Install from File is this, then Install) | `open_datapack_zip`, then `load_datapack_zip` |
+| Share, Stop Sharing | `share_datapack` |
+| Delete | `delete_library_datapack` (a datapack of saves: `everyVersion: true`, as the screen does) |
+
+Use the screen's words with the user: Install, not import; Uninstall, not reset; Save, not export.
+Datapacks Demo Builder publishes are "Demo Builder datapacks". An agent cannot put a datapack into the
+Data Installer: `load_datapack_zip` adds a file to My Datapacks only. Every write above asks the user
+first.
 
 ## What the INSTANCE needs, which the install cannot check
 

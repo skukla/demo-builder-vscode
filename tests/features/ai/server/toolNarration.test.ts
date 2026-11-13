@@ -193,14 +193,13 @@ describe('every named form says what it acts on, from the argument that names it
         ['delete_github_repo', { owner: 'skukla', repo: 'kukla-bodea' }, 'Deleting skukla/kukla-bodea'],
         ['cleanup_dalive_site', { org: 'skukla', site: 'kukla-bodea' }, 'Deleting skukla/kukla-bodea content'],
         ['delete_page', { path: '/drafts/spring-sale' }, 'Deleting /drafts/spring-sale'],
-        ['reset_datapack', { datapackName: 'Bodea B2B' }, 'Resetting Bodea B2B'],
+        ['reset_datapack', { datapackName: 'Bodea B2B' }, 'Uninstalling Bodea B2B'],
         ['share_datapack', { datapackName: 'acme-1a2b3c' }, 'Changing who can use the acme-1a2b3c pack'],
-        ['mark_team_datapack', { datapackName: 'acme-1a2b3c' }, 'Changing whether acme-1a2b3c is a team pack'],
+        ['mark_team_datapack', { datapackName: 'acme-1a2b3c' }, 'Changing whether acme-1a2b3c is a Demo Builder datapack'],
         ['delete_library_datapack', { datapackName: 'Bodea B2B' }, 'Deleting Bodea B2B'],
-        ['copy_library_datapack_to_installer', { datapackName: 'Bodea B2B' }, 'Copying Bodea B2B'],
         ['rename_datapack', { datapackName: 'acme-demo-1a2b3c' }, 'Renaming the acme-demo-1a2b3c pack'],
-        ['start_datapack_import', { datapackName: 'Bodea B2B' }, 'Importing Bodea B2B'],
-        ['start_datapack_export', { datapackName: 'Bodea B2B' }, 'Exporting Bodea B2B'],
+        ['start_datapack_import', { datapackName: 'Bodea B2B' }, 'Installing Bodea B2B'],
+        ['start_datapack_export', { datapackName: 'Bodea B2B' }, 'Saving to Bodea B2B'],
         ['undo_last_save', { datapackName: 'my-luma-1a2b3c' }, 'Undoing the last save of my-luma-1a2b3c'],
         ['restore_datapack', { datapackName: 'my-luma-1a2b3c' }, 'Restoring my-luma-1a2b3c'],
         ['remove_block_from_library', { blockId: 'hero-banner' }, 'Removing the hero-banner block'],
@@ -234,6 +233,34 @@ describe('every named form says what it acts on, from the argument that names it
         const idsOnly = { workspaceId: '4566', projectId: '77', confirm: true };
         expect(narrationForCall(tool, idsOnly)).toBe(narrationFor(tool));
         expect(narrationForCall(tool, { ...idsOnly, ...args })).toBe(expected);
+    });
+});
+
+// Phase 8 (datapack simplification): the datapack tools narrate in the Datapacks screen's words.
+// Install, Uninstall, Save, Add from File, Save as File, Delete; never "import", "export",
+// "sample data" or "team".
+describe("the datapack tools narrate in the screen's words", () => {
+    const PHRASES: Array<[string, string]> = [
+        ['start_datapack_import', 'Installing a datapack'],
+        ['reset_datapack', 'Uninstalling a datapack'],
+        ['start_datapack_export', 'Saving to a datapack'],
+        ['save_store_changes_to_pack', 'Saving Commerce changes'],
+        ['restore_datapack', 'Restoring a datapack'],
+        ['load_datapack_zip', 'Adding a datapack from a file'],
+        ['save_datapack_zip', 'Saving a datapack as a file'],
+        ['delete_library_datapack', 'Deleting a datapack'],
+        ['mark_team_datapack', 'Marking a Demo Builder datapack'],
+        ['clear_demo_data', 'Clearing the demo data'],
+        ['validate_datapack_import', 'Running a datapack dry run'],
+        ['get_datapack_import_status', 'Checking the datapack progress'],
+    ];
+
+    it.each(PHRASES)('%s says "%s"', (tool, phrase) => {
+        expect(narrationFor(tool)).toBe(phrase);
+    });
+
+    it('has no phrase for the Data Installer copy, which agents no longer have (D7)', () => {
+        expect(narrationFor('copy_library_datapack_to_installer')).toBeUndefined();
     });
 });
 

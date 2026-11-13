@@ -1438,12 +1438,14 @@
         "why": "Building a pack from a Commerce product export (owner, 2026-11-05: the Luma and Venia rebuilds took one-off scripts, and a missing tool is the finding). Without it an agent hand-writes a converter. Tier 2: it reads the store and writes two local files, nothing else; deleting the files is the undo."
     },
     {
-        "id": "t3-copy-library-pack-to-installer",
+        "id": "t3-no-copy-to-installer",
         "prompt": "Our datapack library has my justrite pack, version v1. Make it installable by copying it into the Data Installer.",
-        "expect": [
-            "copy_library_datapack_to_installer"
+        "expect": [],
+        "expectSkill": [
+            "import-datapack"
         ],
-        "why": "Datapack store step 05 (owner, 2026-10-01): install runs through the Data Installer, so a library pack is copied there first. Tier 3: it writes into the catalog other teams share and the extension cannot remove it again, so it never runs unattended; represented by datapackLibraryHandlers.test and the consent gate. Listed so the tool is judged, not grandfathered."
+        "cwd": "project",
+        "why": "D7 (datapack simplification Phase 8, 2026-11-13): agents lose the Data Installer as a destination, as the screen hides it; copy_library_datapack_to_installer was removed. The right answer is that a library datapack installs from the library as it is (start_datapack_import with source library) and that putting a datapack into the Data Installer is not something Demo Builder does, per the import-datapack skill. Reaching for a copy, or claiming to have copied it, is the failure this judges."
     },
     {
         "id": "verify-datapack-install",

@@ -32,7 +32,6 @@ describe('the ceiling table tracks the tool surface', () => {
         // Counts, and two lists cut at 50 entries with a count past that (`exportPackHandlers.ts`).
         'build_datapack_from_export',
         'delete_library_datapack',
-        'copy_library_datapack_to_installer',
         'regenerate_ai_files',
         'start_demo',
         'stop_demo',

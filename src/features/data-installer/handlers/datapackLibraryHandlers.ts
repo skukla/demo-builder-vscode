@@ -325,7 +325,7 @@ export const datapackLibraryHandlers = defineHandlers({
     ): Promise<HandlerResponse> => {
         const name = payload?.datapackName;
         if (!name || typeof payload?.team !== 'boolean') {
-            return { success: false, error: 'Name the datapack, and say whether it is a team datapack.' };
+            return { success: false, error: 'Name the datapack, and say whether it is a Demo Builder datapack.' };
         }
         const access = await resolveDataInstallerAccess(context, 'library');
         if (!access.ok) return access.response;
@@ -336,10 +336,10 @@ export const datapackLibraryHandlers = defineHandlers({
             }
             const writer = writerFor(context, access, 'library');
             for (const version of versions) await writer.updateTeam(version, payload.team);
-            context.logger.info(`${LOG_PREFIX} ${payload.team ? 'Marked' : 'Unmarked'} ${name} as a team datapack (${versions.length} versions).`);
+            context.logger.info(`${LOG_PREFIX} ${payload.team ? 'Marked' : 'Unmarked'} ${name} as a Demo Builder datapack (${versions.length} versions).`);
             return { success: true, data: { datapackName: name, team: payload.team, versions: versions.length } };
         } catch (error) {
-            return failure(context, error, 'The team datapack mark could not be changed.');
+            return failure(context, error, 'The Demo Builder datapack mark could not be changed.');
         }
     },
 

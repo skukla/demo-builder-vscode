@@ -431,10 +431,8 @@ describe('rows with no output safety net are classified', () => {
         // `{path, bytes, dataTypes, products, giftCards, categories}` and three short lists, at most a
         // few dozen attribute codes and paths (`exportPackHandlers.ts`).
         'build_datapack_from_export',
-        // `{datapackName, version, deleted}` on success.
+        // `{datapackName, version, deleted}` on success; `{datapackName, deleted, versions}` with everyVersion.
         'delete_library_datapack',
-        // `{datapackName, version, target, pack, stored, failed}`, as load answers.
-        'copy_library_datapack_to_installer',
         // HANDLER RETURNS DATA (datapack-engine step 05, read in storeChangesHandlers.ts): the
         // preview answers `{datapackName, version, installed, kinds, kept?}`, counts and at most
         // three names per kind; the save answers `{datapackName, version, previousVersion,

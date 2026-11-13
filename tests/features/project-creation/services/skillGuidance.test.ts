@@ -96,7 +96,8 @@ describe('diagnose-demo routes the empty-product-page symptom correctly', () => 
         // the tree endpoint hides it.
         expect(c).toMatch(/categories\/list|flat search/i);
         // And the instruction that stops the wrong instinct.
-        expect(c).toMatch(/rather than re-importing/i);
+        // Phase 8: the screen's word is Install (decision D1), so the skill says reinstalling.
+        expect(c).toMatch(/rather than reinstalling/i);
     });
 
     it('can ask whether a feature is off rather than broken', () => {
@@ -151,10 +152,11 @@ describe('import-datapack teaches the traps, not just the sequence', () => {
         expect(c).toMatch(/cannot be undone/i);
     });
 
-    it('flags the shared catalog on export', () => {
+    // Phase 8 (D7): nothing an agent saves reaches the Data Installer's shared catalog.
+    it('says a save goes to My Datapacks, never the shared catalog', () => {
         const c = content();
         expect(c).toContain('start_datapack_export');
-        expect(c).toMatch(/other teams/i);
+        expect(c).toMatch(/never into the Data\s+Installer/i);
     });
 
     /**
@@ -172,13 +174,45 @@ describe('import-datapack teaches the traps, not just the sequence', () => {
         expect(c).toMatch(/instance wipe/i);
     });
 
-    // The service's own export, which the caller had to order type by type, was deleted on
-    // 2026-11-06 with its engine (DI-12). What reaches the Data Installer now is a copy.
-    it('says how a pack reaches the Data Installer, and that it is not needed to install here', () => {
+    // Phase 8 (D7, owner 2026-11-10): agents lose the Data Installer destination, which fails for
+    // our accounts; the screen hides it too. The copy tool is gone, and the skill says so.
+    it('offers no way to put a pack in the Data Installer', () => {
         const c = content();
-        expect(c).toContain('copy_library_datapack_to_installer');
-        expect(c).toMatch(/not needed to install the\s+pack here/i);
-        expect(c).toMatch(/confirmName/);
+        expect(c).not.toContain('copy_library_datapack_to_installer');
+        expect(c).toMatch(/cannot put a datapack into the\s+Data Installer/i);
+    });
+
+    // Phase 8: each screen action an SC names, with the tool that does it.
+    it("maps the Datapacks screen's words to the tools", () => {
+        const c = content();
+        for (const [word, tool] of [
+            ['Add from File', 'load_datapack_zip'],
+            ['Save as File', 'save_datapack_zip'],
+            ['Save As New', 'save_store_changes_to_pack'],
+            ['Undo Last Save', 'undo_last_save'],
+            ['Stop Sharing', 'share_datapack'],
+            ['Delete', 'delete_library_datapack'],
+            ['Clear Commerce Instance', 'clear_commerce_instance'],
+        ]) {
+            expect(c).toContain(word);
+            expect(c).toContain(tool);
+        }
+        expect(c).toContain('everyVersion');
+        expect(c).not.toMatch(/team (data)?pack/i);
+    });
+
+    // Step-04 S7/S8: a creation install that failed is recorded, and Retry installs again.
+    it('tells the agent how to read a failed install and retry it', () => {
+        const c = content();
+        expect(c).toContain('installFailed');
+        expect(c).toMatch(/Retry/);
+    });
+
+    // Step 06 C3: Clear Demo Data uninstalls the datapack first, asking the save question.
+    it('says Clear Demo Data uninstalls the datapack first and asks the save question', () => {
+        const c = content();
+        expect(c).toMatch(/clear_demo_data` uninstalls the project's datapack first/);
+        expect(c).toMatch(/CHANGES_NEED_ANSWER/);
     });
 
     /**

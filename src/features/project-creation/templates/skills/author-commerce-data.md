@@ -7,8 +7,8 @@ description: Builds a demo's catalog data in the project's Commerce store from a
 
 Two jobs look alike and are kept apart:
 
-- **Sharing finished data** with other SCs is a datapack. Use `import-datapack` (import, reset,
-  export). A datapack is versioned and removable; prefer it whenever one fits the brief.
+- **Sharing finished data** with other SCs is a datapack. Use `import-datapack` (install, uninstall,
+  save). A datapack is versioned and removable; prefer it whenever one fits the brief.
 - **This skill** is building or fixing data in THIS project's store, from a brief ("three brands,
   about forty products, contract prices for two companies") or from a spreadsheet a colleague sent.
 
