@@ -20,7 +20,7 @@ import { useDataInstallerRequest } from './useDataInstallerRequest';
 import { type SwitchedFrom, useSwitchChanges } from './useSwitchChanges';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
-import type { RestoreDatapackRequest } from '@/types/webviewRequests';
+import type { DatapackRecordsRequest, RestoreDatapackRequest } from '@/types/webviewRequests';
 
 /** What `get-datapack-import-target` says of the open project. */
 export interface JobTarget extends SwitchedFrom {
@@ -85,8 +85,9 @@ function useTableRead(args: JobReadsArgs, pack: object) {
 export function useJobReads(args: JobReadsArgs) {
     const { id, source, kind } = args;
     const target = useDataInstallerRequest<JobTarget>('get-datapack-import-target');
+    // The datapack as the reads name it (`get-datapack-records` and the preview take the same fields).
     const pack = useMemo(
-        () => ({ datapackName: id.name, version: id.version, ...libraryField(source) }),
+        (): DatapackRecordsRequest => ({ datapackName: id.name, version: id.version, ...libraryField(source) }),
         [id, source],
     );
     const loadTarget = target.load;

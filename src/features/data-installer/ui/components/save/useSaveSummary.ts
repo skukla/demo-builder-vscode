@@ -15,7 +15,7 @@ import type { TypeRow } from '../job/installRows';
 import type { PackBeingSaved } from './packBeingSaved';
 import { saveRows } from './saveRows';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import type { DatapackRecordsResult } from '@/types/webviewRequests';
+import type { DatapackRecordsRequest, DatapackRecordsResult } from '@/types/webviewRequests';
 
 const READ_CHANGES = { timeout: TIMEOUTS.DATAPACK_IMPORT_COMPARE };
 const RECORD_UNREAD = "What the datapack installed couldn't be read.";
@@ -36,7 +36,7 @@ export interface SaveSummary {
 }
 
 /** The datapack as the reads name it: its store only when it is the library. */
-function packFields(pack: PackBeingSaved) {
+function packFields(pack: PackBeingSaved): DatapackRecordsRequest {
     return {
         datapackName: pack.id.name,
         version: pack.id.version,
