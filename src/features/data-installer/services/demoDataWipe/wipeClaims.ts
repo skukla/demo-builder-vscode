@@ -1,7 +1,7 @@
 /**
  * What a wipe of some stores must respect from every project on this machine (datapack-engine
- * step 10, owner 2026-10-30). Every door into the wipe (the check, the clearing, reset's question
- * and its clearing) reads this before it plans.
+ * step 10, owner 2026-10-30). Every door into the wipe (the check and the clearing) reads this
+ * before it plans.
  *
  * - **A store another project records as its own cannot be chosen**, and the refusal names that
  *   project. scratch-1028 records JustRite's website and store view as its own, so resetting it

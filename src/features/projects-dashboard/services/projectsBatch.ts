@@ -250,9 +250,8 @@ function inParallel<T>(items: readonly T[], limit: number, laneOf: (item: T) => 
 }
 
 /**
- * A reset that removes its pack's data plans the store's clearing before it clears; two at once
- * could each plan before the other removed anything (no lock on a Commerce instance), so they take
- * turns. A batch never clears other store data, so nothing else shares this lane.
+ * A reset that removes its pack's data plans the removal before it removes; two at once could each
+ * plan before the other removed anything (no lock on a Commerce instance), so they take turns.
  */
 const REMOVES_STORE_DATA = 'removes-store-data';
 

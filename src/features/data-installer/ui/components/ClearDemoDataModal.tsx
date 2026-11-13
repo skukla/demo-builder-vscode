@@ -10,8 +10,8 @@
  * `LoadDatapackFileModal`), `LeadText` and `SectionLabel` for its text, `FactList` for the list
  * (one labelled line a kind, as the setup guide lists its facts), and the Modal's own wait while the
  * choices are read. Whatever a check could not do is a line where the list would land; if the
- * choices could not be read at all, that is the dialog's title. The VS Code reset modal (`edsResetOtherData.ts`) asks the same question for the project's
- * own store; it is a native dialog, so it has no list and no ticks.
+ * choices could not be read at all, that is the dialog's title. This is the only human door to the
+ * clearing: no reset offers it (owner, 2026-11-12).
  *
  * @module features/data-installer/ui/components/ClearDemoDataModal
  */

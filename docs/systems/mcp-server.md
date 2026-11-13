@@ -977,17 +977,16 @@ takes shared ones off the chosen websites (read whole, sent back with the other 
 deletes categories deepest first. Its `note` says what it did and exactly what Commerce refused. Orders are never
 deleted. It never touches what an install record lists (`reset_datapack` removes that),
 attributes, sets, customer groups, companies, shared catalogs, stocks and sources, websites,
-stores, store views, root categories or settings. Cannot be undone. Project reset asks the same
-question for the project's own store after the datapack one; the Data Installer's "Clear demo
-data" is the human surface with the store picker. Plan: `.rptc/plans/datapack-engine/step-10-wipe.md`.
+stores, store views, root categories or settings. Cannot be undone. The Data Installer's "Clear demo
+data" is the human surface with the store picker; no reset offers it (owner, 2026-11-12), neither the
+buttons nor `reset_project`. Plan: `.rptc/plans/datapack-engine/step-10-wipe.md`.
 
-Every door (both tools, the Data Installer and reset's question) reads every other project on this
+Every door (both tools and the Data Installer) reads every other project on this
 machine (`readWipeClaims`, over `loadOtherProjects`). A chosen store another project records as
 its own (the store its recorded store view belongs to) is refused before any product, customer or
 order is read, naming that project ("The store justrite_store (website justrite) is also
 JustRite's own store (project JustRite). Clear it from that project, if at all."):
-`check_demo_data` answers it as `data.refused`, a normal answer; `clear_demo_data` refuses; reset
-does not ask its second question and logs the sentence. What another project's install records
+`check_demo_data` answers it as `data.refused`, a normal answer; `clear_demo_data` refuses. What another project's install records
 list on the chosen websites is left, as this project's is.
 
 **One action, ERP included** (owner, 2026-10-30). Every door also finds the ERP integration

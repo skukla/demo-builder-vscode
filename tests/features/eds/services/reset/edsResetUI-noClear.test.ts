@@ -1,0 +1,246 @@
+/**
+ * No reset offers or runs Clear Demo Data (owner, 2026-11-12: "Reset no longer offers Clear; reset
+ * stays the approved batch window"). Clear Demo Data is its own command on the Datapacks screen.
+ *
+ * Driven through the public entry point for every path that reaches it: one project (a screen's
+ * Reset, with or without a datapack), a batch (`answered`) and an Edit (`withinEdit`). The wipe's
+ * own services are faked so that, were reset still to read the store for a clearing, it would find
+ * something to clear: the assertions then prove reset never planned, asked or cleared.
+ */
+
+import {
+    mockEnsureAdobeIOAuth,
+    mockEnsureDaLiveAuth,
+    mockEnsureProjectOrgContext,
+    resetEdsProjectWithUI,
+    vscode,
+    fakeGitHubAppService,
+} from './edsResetUI.testUtils';
+import type { WipePlan } from '@/features/data-installer/services/demoDataWipe/wipePlan';
+import type { Project, ProjectStatus } from '@/types/base';
+
+jest.setTimeout(5000);
+
+jest.mock('@/features/eds/services/reset/edsResetService', () => ({
+    executeEdsReset: jest.fn().mockResolvedValue({ success: true }),
+}));
+jest.mock('@/features/eds/services/reset/edsResetParams', () => ({
+    ...jest.requireActual('@/features/eds/services/reset/edsResetParams'),
+    extractResetParams: jest
+        .fn()
+        .mockReturnValue({
+            success: true,
+            params: { repoOwner: 'test-owner', repoName: 'test-repo' },
+        }),
+}));
+jest.mock('@/features/data-installer/services/sampleDataInstall', () => ({
+    ...jest.requireActual('@/features/data-installer/services/sampleDataInstall'),
+    removeSampleData: jest.fn(),
+}));
+jest.mock('@/features/data-installer/services/sampleDataInstallDeps', () => ({
+    buildSampleDataDeps: jest.fn(() => ({})),
+}));
+// The wipe's store access and reads: each answers as though the store held things to clear.
+jest.mock('@/features/data-installer/services/buildDatapackEngine', () => ({
+    ...jest.requireActual('@/features/data-installer/services/buildDatapackEngine'),
+    projectCommerce: jest.fn(() => async () => ({ get: jest.fn() })),
+}));
+jest.mock('@/core/state/otherProjects', () => ({ loadOtherProjects: jest.fn(async () => []) }));
+jest.mock('@/features/data-installer/services/demoDataWipe/wipeReads', () => ({
+    readWipeStructure: jest.fn(async () => ({})),
+}));
+jest.mock('@/features/data-installer/services/demoDataWipe/wipeScope', () => ({
+    resolveWipeScope: jest.fn(() => ({})),
+}));
+jest.mock('@/features/data-installer/services/demoDataWipe/wipeClaims', () => ({
+    projectStoreChoice: jest.fn(() => ({ websiteCode: 'base', storeCode: 'main_website_store' })),
+    readWipeClaims: jest.fn(async () => ({})),
+}));
+jest.mock('@/features/data-installer/services/demoDataWipe/wipeErpDeps', () => ({
+    findWipeErp: jest.fn(() => undefined),
+}));
+jest.mock('@/features/data-installer/services/demoDataWipe/wipePlan', () => ({
+    planWipe: jest.fn(),
+}));
+jest.mock('@/features/data-installer/services/demoDataWipe/wipeRun', () => ({
+    clearShown: jest.fn(),
+}));
+
+import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
+import { removeSampleData } from '@/features/data-installer/services/sampleDataInstall';
+import { planWipe } from '@/features/data-installer/services/demoDataWipe/wipePlan';
+import { clearShown } from '@/features/data-installer/services/demoDataWipe/wipeRun';
+import { createMeshDepsFake } from '../../../../helpers/meshDepsFake';
+import { createMockStateManager } from '../../../../helpers/stateManagerFake';
+import { createMockLogger } from '../../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
+import { createMockSecretStorage } from '../../../../helpers/secretStorageFake';
+import { createMockExtensionContext } from '../../../../helpers/extensionContextFake';
+import { createMockProject } from '../../../../helpers/projectFake';
+
+const mockedRemove = removeSampleData as jest.MockedFunction<typeof removeSampleData>;
+const mockedPlan = planWipe as jest.MockedFunction<typeof planWipe>;
+const mockedClear = clearShown as jest.MockedFunction<typeof clearShown>;
+const mockedReset = executeEdsReset as jest.MockedFunction<typeof executeEdsReset>;
+
+/** A plan that, if reset still asked, would put its question on screen. */
+const PLAN = {
+    choices: [],
+    preview: {
+        total: 3,
+        stores: [{ storeName: 'Main', storeCode: 'main_website_store', websiteCode: 'base' }],
+        remove: {
+            products: { count: 3 },
+            categories: { count: 0 },
+            customers: { count: 0 },
+            cartRules: { count: 0 },
+            companies: { count: 0 },
+            catalogs: { count: 0 },
+            customerGroups: { count: 0 },
+            attributeSets: { count: 0 },
+            attributes: { count: 0 },
+        },
+        takenOff: { count: 0 },
+        rulesTakenOff: { count: 0 },
+        settings: { count: 0 },
+        orders: {
+            cancel: { count: 0 },
+            refund: { count: 0 },
+            leftOpen: { count: 0 },
+            returns: { count: 0 },
+        },
+        left: [],
+    },
+} as unknown as WipePlan;
+
+function project(withPack: boolean): Project {
+    return createMockProject({
+        name: 'test-project',
+        path: '/test/project',
+        status: 'running' as ProjectStatus,
+        componentSelections: { backend: 'adobe-commerce-accs' },
+        componentConfigs: { 'adobe-commerce-accs': { ACCS_STORE_CODE: 'main_website_store' } },
+        componentInstances: {
+            'eds-storefront': {
+                id: 'eds-storefront',
+                name: 'EDS Storefront',
+                type: 'frontend',
+                status: 'ready',
+                metadata: { githubRepo: 'test-owner/test-repo', daLiveOrg: 'test-org' },
+            },
+        },
+        ...(withPack ? { datapack: { name: 'bodea', version: 'main' } } : {}),
+    });
+}
+
+type ResetOptions = Parameters<typeof resetEdsProjectWithUI>[0];
+
+function run(withPack: boolean, extra: Partial<ResetOptions> = {}) {
+    const context = createMockHandlerContext({
+        logger: createMockLogger(),
+        debugLogger: createMockLogger(),
+        stateManager: createMockStateManager({
+            saveProject: jest.fn(),
+            getCurrentProject: jest.fn(),
+        }),
+        sendMessage: jest.fn(),
+        context: createMockExtensionContext({ secrets: createMockSecretStorage().secrets }),
+    });
+    return resetEdsProjectWithUI({
+        githubAppService: fakeGitHubAppService,
+        meshDeps: createMeshDepsFake(),
+        project: project(withPack),
+        context,
+        ...extra,
+    });
+}
+
+/** The reset question answers with its button's text; the datapack question with a button. */
+function answer(...titles: string[]): void {
+    const ask = (vscode.window.showWarningMessage as jest.Mock).mockReset();
+    for (const title of titles)
+        ask.mockResolvedValueOnce(title === 'Reset Project' ? title : { title });
+    ask.mockResolvedValue({ title: 'Clear Demo Data Too' });
+}
+
+/** Every question the reset put on screen, by its message. */
+function questionsAsked(): string[] {
+    return (vscode.window.showWarningMessage as jest.Mock).mock.calls.map((call) =>
+        String(call[0])
+    );
+}
+
+function expectNoClear(): void {
+    expect(mockedPlan).not.toHaveBeenCalled();
+    expect(mockedClear).not.toHaveBeenCalled();
+    expect(questionsAsked().some((q) => /clear demo data/i.test(q))).toBe(false);
+}
+
+beforeEach(() => {
+    jest.clearAllMocks();
+    (vscode.window.withProgress as jest.Mock).mockImplementation(
+        async (_o: unknown, task: (p: { report: jest.Mock }) => Promise<unknown>) =>
+            task({ report: jest.fn() })
+    );
+    mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: true });
+    mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: true });
+    mockEnsureProjectOrgContext.mockResolvedValue({ reachable: true });
+    mockedRemove.mockResolvedValue({ ran: true, outcome: 'success' });
+    mockedPlan.mockResolvedValue(PLAN);
+});
+
+describe('one project, from a screen', () => {
+    it('after "Uninstall Datapack": uninstalls, resets, and never offers or runs Clear', async () => {
+        answer('Reset Project', 'Uninstall Datapack');
+
+        await run(true);
+
+        expect(questionsAsked()).toHaveLength(2);
+        expect(questionsAsked()[0]).toBe('Reset test-project?');
+        expect(mockedRemove).toHaveBeenCalledTimes(1);
+        expect(mockedReset).toHaveBeenCalledTimes(1);
+        expectNoClear();
+    });
+
+    it('for a project that names no datapack: asks only the reset, and never offers or runs Clear', async () => {
+        answer('Reset Project');
+
+        await run(false);
+
+        expect(questionsAsked()).toEqual(['Reset test-project?']);
+        expect(mockedReset).toHaveBeenCalledTimes(1);
+        expectNoClear();
+    });
+
+    it('still asks before it runs: declining the reset runs nothing', async () => {
+        answer();
+        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue(undefined);
+
+        const result = await run(true);
+
+        expect(result).toEqual({ success: false, cancelled: true });
+        expect(mockedRemove).not.toHaveBeenCalled();
+        expect(mockedReset).not.toHaveBeenCalled();
+        expectNoClear();
+    });
+});
+
+it('a batch reset (answered in the batch window) never plans or runs Clear', async () => {
+    answer();
+
+    await run(true, { withinEdit: { report: jest.fn() }, answered: { removeDatapack: true } });
+
+    expect(questionsAsked()).toStrictEqual([]);
+    expect(mockedReset).toHaveBeenCalledTimes(1);
+    expectNoClear();
+});
+
+it("an Edit's reset never plans or runs Clear", async () => {
+    answer();
+
+    await run(true, { withinEdit: { report: jest.fn() } });
+
+    expect(questionsAsked()).toStrictEqual([]);
+    expect(mockedReset).toHaveBeenCalledTimes(1);
+    expectNoClear();
+});

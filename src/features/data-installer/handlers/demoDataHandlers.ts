@@ -1,7 +1,7 @@
 /**
  * Clearing a demo's part of the store (datapack-engine step 10): two handlers, which the agent tools
- * and the Data Installer's "Clear demo data" both reach, and which project reset's question uses the
- * same services as. The unit chosen is the STORE (owner, 2026-10-30), by website and store code.
+ * and the Data Installer's "Clear demo data" both reach; no reset offers it (owner, 2026-11-12). The
+ * unit chosen is the STORE (owner, 2026-10-30), by website and store code.
  *
  * - `check-demo-data`: every website and store to choose from (`choices`), and, when stores are
  *   chosen (or the project names its own), what their install records list and what else they hold

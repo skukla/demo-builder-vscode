@@ -22,7 +22,6 @@ import type { GitHubRepoOperations } from '../github/githubRepoOperations';
 import { checkDemoSource, offerToKeepContent } from './demoSourceCheck';
 import type { MeshRedeployDeps } from './edsResetMeshHelper';
 import { showResetResultNotifications, withModalWarning } from './edsResetNotifications';
-import { beginOtherDataCheck, clearProjectOtherData, confirmClearOtherData } from './edsResetOtherData';
 import {
     extractResetParams,
     type EdsResetParams,
@@ -115,8 +114,6 @@ export interface EdsResetWithUIOptions {
      * the batch asked its questions before anything ran, so none is asked here, and it reports
      * through `withinEdit.report` into the batch's one window. `removeDatapack` is the batch's
      * Uninstall Datapack; `changes` answers a pack that is not the SC's (a name, or `drop`).
-     * Other store data is never cleared by a batch: a single reset shows what it would clear
-     * before it asks, and a batch could not.
      */
     answered?: { removeDatapack: boolean; changes?: SaveAsAnswer };
     /**
@@ -223,8 +220,6 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
     const withinEdit = options.withinEdit;
     const answered = options.answered;
     const canRemoveSampleData = withinEdit && !answered ? undefined : beginSampleDataRemovalCheck(project);
-    // What else the demo's website holds (step 10): read beside it, asked after it.
-    const otherData = withinEdit ? undefined : beginOtherDataCheck(project, context);
 
     if (!withinEdit && !(await confirmReset(vscode, getProjectDisplayName(project)))) {
         context.logger.info(`${logPrefix} resetEds: User cancelled reset`);
@@ -246,9 +241,7 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
         ? answered.removeDatapack && (await canRemoveSampleData) === true
         : !withinEdit &&
           (await confirmSampleDataRemoval(project, vscode, canRemoveSampleData, { memory }));
-    // Only after "Uninstall Datapack", or with no datapack: keeping the pack must not clear its data.
-    const otherPlan = removeData || !project.datapack ? await otherData : undefined;
-    const clearOther = otherPlan !== undefined && (await confirmClearOtherData(vscode, otherPlan));
+    // No reset offers Clear Demo Data (owner, 2026-11-12): it is its own command on the Datapacks screen.
 
     // Listed as resetting for the whole run: the projects list reads that, never
     // this in-memory status (found 2026-10-28, three resets all said "Needs reset").
@@ -354,10 +347,6 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
                     // A batch answered the changes already; asking here would stop it mid-run.
                     const askName = answered ? { given: answered.changes } : askSaveAsNameWith(vscode);
                     await removeProjectSampleData(project, context, report, askName);
-                }
-                // After the pack's removal, so what it took is gone from the list, never added to it.
-                if (clearOther && otherPlan) {
-                    await clearProjectOtherData(project, context, report, otherPlan);
                 }
 
                 // The reset's steps are a fixed list, so the count is known up
