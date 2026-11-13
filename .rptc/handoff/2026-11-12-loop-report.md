@@ -80,6 +80,13 @@ Live notes; rewritten as the final report at the loop's close.
 - Found by R1 (an old defect): the flyout was meant to wait for the project's first answer (walk
   F92) but never did, a null-versus-undefined check. Being fixed now, with the header's save button
   (S1), which is built to P4-Q4's recommendation where a datapack has no install record.
+- F92 and step-04 S1: 6a7e13d28. The flyout waits for the project's first answer in a project's
+  Datapacks (two causes fixed). The header's save button is one state that never changes its words:
+  waiting, Create, Save (Save, Save As New), Save As New, or none with no install record. Full gate
+  green (2,406 suites, 38,507 tests). Not wired: Install from File opening the install window; folded
+  into P4-Q10, since it needs the dialog's words and an undo case decided.
+- Step-04 S2 (the Save windows; Add Unused Items removed from the screen and the agent tools): with a
+  test-first builder now.
 - Phase 1b, done while waiting: ERP Downtime (863c5c2ca) and Edit Demo Package (f8ece2e6e) moved
   onto the Form layout, whose failure line is what both waited for. Same words; Cancel beside the
   commit, as every form; a read failure is a result window with Close. An unused style rule removed.
@@ -99,7 +106,8 @@ Live notes; rewritten as the final report at the loop's close.
   recommendation: Create's result title; named versions on cards; what Save Changes counts; the header
   with no install record; Fix with AI across reopenings; Delete on a named version; the file load's
   undo row; agents deleting Demo Builder datapacks; which wizard card shows the type list; Install
-  from File over an existing datapack; a partly installed creation install.
+  from File over an existing datapack (and whether Install from File opens the install window after
+  the load, with what words, and what if the load is undone first); a partly installed creation install.
 - Eight product questions from the install window's plan (step-03.md section 4), each with a
   recommendation: Q1 Save As name in a one-row save question; Q2 agents installing a subset; Q3 a
   clean install's leftover lines; Q4 how a background success ends in VS Code; Q5 failed titles for
