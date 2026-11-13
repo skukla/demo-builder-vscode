@@ -205,7 +205,12 @@ Live notes; rewritten as the final report at the loop's close.
   meant something narrower in delete_project than in the windows; both tools now match the windows'
   Without Saving. Full gate green (2,408 suites, 38,606 tests). Live agent reset owed.
 - Reset and delete (step-05) are built, except P5-Q8 (the mid-batch dialog), which is yours.
-- Clear (step-06) C1 (the category tree to shared code): with a builder.
+- Step-06 C1: fc5edf517. The indented category tree is a shared component; Create Datapack's
+  categories show as that tree, ticking unchanged. The filter now matches a category's own name (as
+  the prototype does), not its full path. Style check: nothing moved; the tree's rules measured in
+  the Datapacks screen. Full gate green (2,410 suites, 38,626 tests).
+- Step-06 C2a (Clear's engine and check: whole websites, full record lists, kinds of failed read,
+  the shared-website warning): with a builder.
 - Phase 1b, done while waiting: ERP Downtime (863c5c2ca) and Edit Demo Package (f8ece2e6e) moved
   onto the Form layout, whose failure line is what both waited for. Same words; Cancel beside the
   commit, as every form; a read failure is a result window with Close. An unused style rule removed.
@@ -303,5 +308,7 @@ Live notes; rewritten as the final report at the loop's close.
   Reset Selected also reads "Reset Kukla Luma?" ("Reset 1 Project" is gone). Recommend keeping it.
 - From S6: when only a row carries warnings the window's title stays green (the same question as Q9;
   recommend amber).
+- From C1: the category filter matches a category's own name (typing "gear" shows Gear, not every
+  row under it), as the walked prototype does; the old list matched the full path. Recommend keeping it.
 - Phase 2 live cycle on the test store (save twice, Undo Last Save, Restore, reinstall with nothing
   sent, uninstall), once Phase 2 is built.
