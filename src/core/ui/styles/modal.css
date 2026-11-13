@@ -3,9 +3,9 @@
  *
  * FEATURE-SCOPED DESPITE LIVING IN core/ui (ADR-017 §6, and §3 as amended
  * 2026-09-09: reach, not global). `Modal` is in core/ui/components/ui, but only
- * SIX entries render it — wizard, dashboard, integrations, aiOverview,
- * dataInstaller and projectsList (the Updates modal, PL-80). `configure` and
- * `sidebar` do not, and do not import this sheet.
+ * EIGHT entries import it — wizard, dashboard, configure, integrations,
+ * aiOverview, dataInstaller, siteAccess and projectsList (the Updates modal,
+ * PL-80). `sidebar` does not.
  *
  * `.modal-body:has(.manage-apis-body)` travels with this family, not with
  * `.manage-*`: its first class decides ownership, and it styles the modal body.
@@ -160,9 +160,11 @@
 }
 
 /* The title, with how things stand as an icon before it (Modal `status`). The icon sits on the
-   title's first line when a long title wraps. */
+   title's first line when a long title wraps. Top-aligned in its line, so the icon arriving as a
+   run ends does not grow the title row (it added 3px, measured; decisions Phase 1b, J1-3d). */
 .modal-title {
     display: inline-flex;
+    vertical-align: top;
     align-items: flex-start;
     gap: 10px;
     overflow-wrap: anywhere;

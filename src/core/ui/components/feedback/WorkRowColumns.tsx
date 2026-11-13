@@ -30,19 +30,8 @@ function Row({ row, dense }: { row: OperationRow; dense: boolean }): React.React
             {...(detail ? { detail } : {})}
             state={row.status === 'success' ? 'done' : row.status}
             dense={dense}
-        >
-            {row.problem ? (
-                <p
-                    className={
-                        row.problem.failed
-                            ? 'dialog-problem text-negative'
-                            : 'dialog-problem text-notice'
-                    }
-                >
-                    {row.problem.text}
-                </p>
-            ) : null}
-        </WorkRow>
+            {...(row.problem ? { problem: row.problem } : {})}
+        />
     );
 }
 

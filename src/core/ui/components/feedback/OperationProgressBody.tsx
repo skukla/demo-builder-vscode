@@ -63,7 +63,7 @@ export function OperationProgressBody({
         return prompt.title ? <LeadText>{prompt.message}</LeadText> : null;
     }
     if (failed) {
-        return <EndView message={progress?.error} rows={progress?.rows} tookMs={progress?.tookMs} />;
+        return <EndView message={progress?.error} rows={progress?.rows} tookMs={progress?.tookMs} failed />;
     }
     if (succeeded) return <SuccessEnd message={successMessage} progress={progress} />;
     // A run that sends its parts as rows shows them in place of the one spinner, the import's
@@ -132,13 +132,34 @@ function SuccessEnd({ message, progress }: { message?: string; progress?: Operat
     return <EndView message={message} outcome={progress} rows={progress?.rows} tookMs={progress?.tookMs} />;
 }
 
+/** Whether a row, or a row nested under one, says what went wrong. */
+function rowsSayAProblem(rows: readonly OperationRow[]): boolean {
+    const said = (row: OperationRow): boolean => row.problem !== undefined;
+    return rows.some((row) => said(row) || (row.types ?? []).some(said));
+}
+
+/**
+ * A failed run's rows as it ended, its reason on the row that stopped when no row says it: red, in
+ * place of that row's line, so it takes the room the line held rather than a line under the rows.
+ */
+function withReason(rows: OperationRow[], reason: string | undefined): OperationRow[] {
+    if (!reason || rowsSayAProblem(rows)) return rows;
+    const at = rows.findIndex((row) => row.status === 'error');
+    if (at < 0) return rows;
+    return rows.map((row, i) => (i === at ? { ...row, problem: { text: reason, failed: true } } : row));
+}
+
 /**
  * How a run ended, below the title that says it: the sentence, the lines it left to know, what
  * it changed as rows, and how long a long run took. Nothing at all for a plain success, whose
  * title says everything. It was a status box repeating the title over the same lines, which read
  * as machine-made (dialog design rules, owner 2026-10-31).
+ *
+ * A run that ends on its rows keeps one height from first frame to last (decisions Phase 1b, J1-3d
+ * growth, owner 2026-11-11): its problem is on its row, in the room the row's line held, and no
+ * closing sentence goes under the rows to repeat it. A sentence no row can carry still says itself.
  */
-function EndView({ message, outcome, rows, tookMs }: {
+function EndView({ message, outcome, rows, tookMs, failed = false }: {
     message?: string;
     /** The run's rows as it ended, when it sent them: above its sentence, where they were. */
     rows?: OperationRow[];
@@ -146,18 +167,22 @@ function EndView({ message, outcome, rows, tookMs }: {
     outcome?: Pick<OperationProgressPayload, 'details' | 'changes'> | null;
     /** How long the run took; `RunFoot` says it only for a long run. */
     tookMs?: number;
+    /** The run failed: `message` is its reason, which the row that stopped can carry. */
+    failed?: boolean;
 }): React.ReactElement | null {
     const { details: lines, changes } = outcome ?? {};
     const hasRows = Boolean(rows && rows.length > 0);
+    const shown = rows && failed ? withReason(rows, message) : rows;
+    const lead = shown && hasRows && rowsSayAProblem(shown) ? undefined : message;
     const foot = (
-        <RunFoot lead={message} lines={lines} tookMs={tookMs} testId={hasRows ? undefined : 'operation-end'}>
+        <RunFoot lead={lead} lines={lines} tookMs={tookMs} testId={hasRows ? undefined : 'operation-end'}>
             {changes && changes.length > 0 ? <ChangeRows changes={changes} /> : null}
         </RunFoot>
     );
-    if (!rows || !hasRows) return foot;
+    if (!shown || !hasRows) return foot;
     return (
         <div className="dialog-stack" data-testid="operation-end">
-            <RunRows rows={rows} />
+            <RunRows rows={shown} />
             {foot}
         </div>
     );

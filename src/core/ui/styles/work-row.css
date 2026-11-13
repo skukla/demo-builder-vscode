@@ -84,6 +84,16 @@
         color: var(--spectrum-global-color-gray-700);
     }
 
+    /* A run's row as it ended with a problem (`WorkRow` `problem`): in the room its progress line
+       held, and one line, so the window keeps one height from first frame to last (decisions
+       Phase 1b, J1-3d growth, owner 2026-11-11: a wrapped line grew it 19px). Cut short, its whole
+       text on hover. A dense row's problem still wraps (below, walk F135). */
+    .work-row:not(.work-row--dense) .work-row-problem {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
     /* A list of rows, without the browser's bullets and indent. */
     .work-row-list {
         list-style: none;

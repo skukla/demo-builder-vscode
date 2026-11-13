@@ -101,8 +101,9 @@ to know ("My Luma Installed", then "Your changes are saved in Version History." 
 or the title alone when nothing is. No rows, no "Took …". A run that finishes with any problem (a
 row or step with a warning or error, a stop) does not switch: the title turns to the outcome with
 its icon, the rows stay with each one's final state, and a problem sits on the row it is about,
-one short line in orange or red. What is left to say about the whole run (one sentence, then
-"Took …") goes under the list, and the size does not change. The rule was "a run ends where it
+one short line in orange or red, in the room the row's progress line held, cut to fit. No closing
+sentence goes under the list to repeat a row: only what no row can say (one sentence), then
+"Took …", so the size does not change from first frame to last (owner, 2026-11-11). The rule was "a run ends where it
 ran" for every run (owner, 2026-11-07, generalising the Updates run's rule of 2026-10-21); since
 2026-11-10 that holds only for a run with a problem, because a clean finish's rows told the SC
 nothing the title did not (owner, walk F134: "Do all three"). A save that finds nothing changed

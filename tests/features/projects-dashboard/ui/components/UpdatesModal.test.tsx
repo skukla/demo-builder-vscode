@@ -212,14 +212,17 @@ describe('UpdatesModal', () => {
         expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
     });
 
-    it("says why a row was left alone in grey, not a failure's red", () => {
+    // Decisions Phase 1b (J1-3d build item): a warning's note is orange, as the dialog rules say;
+    // it was grey.
+    it("says why a row was left alone in the warning's orange, not a failure's red", () => {
         const c = running(
             { 'blockLibrary:0': { id: 'blockLibrary:0', state: 'skipped', message: 'Not updated — your blocks were kept.' } },
             { state: 'succeeded', warning: '1 update did not apply.' },
         );
         render(<UpdatesModal controls={c} />);
 
-        expect(screen.getByText('Not updated — your blocks were kept.')).toHaveClass('work-row-note');
+        expect(screen.getByText('Not updated — your blocks were kept.')).toHaveClass('dialog-problem', 'text-notice');
+        expect(screen.getByText('Not updated — your blocks were kept.')).not.toHaveClass('work-row-why');
     });
 
     it('titles a run where everything applied "Updates Applied", a note under its row', () => {
@@ -374,7 +377,7 @@ describe('UpdatesModal', () => {
         render(<UpdatesModal controls={c} />);
 
         expect(screen.getByText('Your Local Copy')).toBeInTheDocument();
-        expect(screen.getByText('Left as it is — it has commits GitHub does not have.')).toHaveClass('work-row-note');
+        expect(screen.getByText('Left as it is — it has commits GitHub does not have.')).toHaveClass('text-notice');
     });
 
     // No sentence under the title unless a listed update reaches the live site, and the extension's

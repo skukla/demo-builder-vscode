@@ -1,7 +1,8 @@
 /**
- * A run's steps as rows: one `WorkRow` per step, its problem under it, and the rows nested under a
- * step that has them (`OperationRow.types`), small, in columns (`WorkRowColumns` dense). Moved out of
- * `ImportRunView` (step-04 R3) so a progress row can carry nested rows the same way.
+ * A run's steps as rows: one `WorkRow` per step, its problem in place of its line, and the rows
+ * nested under a step that has them (`OperationRow.types`), small, in columns (`WorkRowColumns`
+ * dense). Moved out of `ImportRunView` (step-04 R3) so a progress row can carry nested rows the same
+ * way.
  *
  * Styled by `work-row.css` (`.step-rows`: the steps' spacing, bold titles and muted lines;
  * `.step-rows-nested`: the rows under a step), which every bundle drawing the import's window or the
@@ -15,7 +16,7 @@ import { WorkRow } from '@/core/ui/components/feedback/WorkRow';
 import { WorkRowColumns } from '@/core/ui/components/feedback/WorkRowColumns';
 import type { OperationRow } from '@/types/webviewPayloads';
 
-/** One step: its row, its problem under it, and its nested rows. */
+/** One step: its row, its problem in place of its line (`WorkRow` `problem`), and its nested rows. */
 function Step({ step, columns }: { step: OperationRow; columns: 1 | 2 }): React.ReactElement {
     return (
         <WorkRow
@@ -23,18 +24,8 @@ function Step({ step, columns }: { step: OperationRow; columns: 1 | 2 }): React.
             label={step.label}
             {...(step.line ? { detail: step.line } : {})}
             state={step.status === 'success' ? 'done' : step.status}
+            {...(step.problem ? { problem: step.problem } : {})}
         >
-            {step.problem ? (
-                <p
-                    className={
-                        step.problem.failed
-                            ? 'dialog-problem text-negative'
-                            : 'dialog-problem text-notice'
-                    }
-                >
-                    {step.problem.text}
-                </p>
-            ) : null}
             {step.types && step.types.length > 0 ? (
                 <div className="step-rows-nested">
                     <WorkRowColumns rows={step.types} columns={columns} dense />

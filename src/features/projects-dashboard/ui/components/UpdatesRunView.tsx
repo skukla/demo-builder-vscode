@@ -76,8 +76,8 @@ interface StepProps {
 
 function Step({ label, detail, status, asking, onTyped }: StepProps) {
     const state = status?.state ?? 'waiting';
-    // Red only for a failure: a row left alone carries its yellow icon, and says why in
-    // the note's grey (it was red until 2026-10-21).
+    // Red only for a failure: a row left alone carries its yellow icon, and says why in the
+    // warning's orange (`WorkRow`; red until 2026-10-21, grey until decisions Phase 1b, J1-3d).
     const note = status?.message && state !== 'running' ? status.message : undefined;
     return (
         <WorkRow

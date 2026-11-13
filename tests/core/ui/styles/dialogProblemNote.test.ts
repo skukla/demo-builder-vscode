@@ -22,6 +22,12 @@ describe('dialog styles', () => {
         expect(ruleFor('.dialog-rows')).toMatch(/gap:\s*8px/);
     });
 
+    // Decisions Phase 1b (J1-3d growth): the status icon appearing at the end grew the title row
+    // 3px (measured in the prototype); top-aligned, the row keeps its height.
+    it('the title sits at the top of its line, so a status icon does not grow the title row', () => {
+        expect(ruleFor('.modal-title')).toMatch(/vertical-align:\s*top/);
+    });
+
     it('the progress window keeps equal rows above and below its spinner', () => {
         expect(ruleFor('.modal-wait-progress')).toMatch(/grid-template-rows:\s*1fr auto 1fr/);
         expect(ruleFor('.modal-wait-progress > [role="status"]')).toMatch(/grid-row:\s*2/);

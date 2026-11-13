@@ -39,6 +39,75 @@ describe('WorkRow', () => {
 
         expect(screen.getByText('The sign-in was cancelled.')).toHaveClass('work-row-why');
     });
+
+    // Decisions Phase 1b (J1-3d build item, owner 2026-11-11): a warning's note is orange, as the
+    // dialog rules say ("Orange for a warning, red for a failure"), not grey.
+    it("draws a warning row's note orange, as the house's warning line", () => {
+        render(<WorkRow status="warning" label="Website Settings" note="Left as it is." />);
+
+        const note = screen.getByText('Left as it is.');
+        expect(note).toHaveClass('dialog-problem', 'text-notice');
+        expect(note).not.toHaveClass('work-row-note');
+    });
+
+    it("CONTROL: a finished row's note stays the quiet grey one", () => {
+        render(<WorkRow status="success" label="Blocks" note="One block left out." />);
+
+        expect(screen.getByText('One block left out.')).toHaveClass('work-row-note');
+        expect(screen.getByText('One block left out.')).not.toHaveClass('text-notice');
+    });
+
+    it('CONTROL: a failed warning-iconed row still says why in red', () => {
+        render(<WorkRow status="warning" label="A" note="Refused." why />);
+
+        expect(screen.getByText('Refused.')).toHaveClass('work-row-why');
+    });
+});
+
+// Decisions Phase 1b (J1-3d growth, owner 2026-11-11): the progress window keeps one height from
+// first frame to last, so a row's problem takes the room its progress line held, never a line of
+// its own, and fits one line. jsdom has no layout: this pins the slot and the rule that clips it.
+describe("a work row's problem", () => {
+    it('takes the second line in place of the progress line, never beside it', () => {
+        const { container } = render(
+            <WorkRow status="warning" label="Website Settings" detail="Resetting 4 of 7" problem={{ text: '2 list settings need resetting.', failed: false }} />,
+        );
+
+        const text = container.querySelector('.work-row-text') as HTMLElement;
+        expect(Array.from(text.children).map((child) => child.textContent)).toEqual([
+            'Website Settings',
+            '2 list settings need resetting.',
+        ]);
+        expect(screen.queryByText('Resetting 4 of 7')).not.toBeInTheDocument();
+    });
+
+    it('is orange when it went in with a problem and red when it failed', () => {
+        render(
+            <>
+                <WorkRow status="warning" label="A" problem={{ text: 'Some skipped.', failed: false }} />
+                <WorkRow status="error" label="B" problem={{ text: 'Commerce refused.', failed: true }} />
+            </>,
+        );
+
+        expect(screen.getByText('Some skipped.')).toHaveClass('dialog-problem', 'text-notice', 'work-row-problem');
+        expect(screen.getByText('Commerce refused.')).toHaveClass('dialog-problem', 'text-negative', 'work-row-problem');
+    });
+
+    it('fits one line, cut short with its whole text on hover', () => {
+        render(<WorkRow status="warning" label="A" problem={{ text: 'A long reason.', failed: false }} />);
+
+        expect(screen.getByText('A long reason.')).toHaveAttribute('title', 'A long reason.');
+        const rule = ruleFor('.work-row:not(.work-row--dense) .work-row-problem');
+        expect(rule).toMatch(/white-space:\s*nowrap/);
+        expect(rule).toMatch(/overflow:\s*hidden/);
+        expect(rule).toMatch(/text-overflow:\s*ellipsis/);
+    });
+
+    it('CONTROL: a row without a problem keeps its progress line', () => {
+        render(<WorkRow status="checking" label="Products" detail="Removing 1,026 of 2,052" />);
+
+        expect(screen.getByText('Removing 1,026 of 2,052')).toHaveClass('work-row-detail');
+    });
 });
 
 // A hairline between rows, as the integration flyout draws its rows, and a finished row's name in
