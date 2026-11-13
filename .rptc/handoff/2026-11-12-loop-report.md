@@ -71,6 +71,9 @@ Live notes; rewritten as the final report at the loop's close.
   Compared on the wizard, dashboard and Data Installer screens at two themes and three widths: no
   element moved. Control: the new build holds the new rules and none of the removed ones. The check's
   sample screens do not open the new install window, so its own look still needs a look on screen.
+- Phases 5, 7 and 7b: the screen plan is written (step-04.md: three behaviour-preserving splits, then
+  ten slices). It found Delete Store Configuration, Add Unused Items and the flyout's Install over
+  another datapack still in the product, and a failed creation install recorded nowhere.
 - Phase 1b, done while waiting: ERP Downtime (863c5c2ca) and Edit Demo Package (f8ece2e6e) moved
   onto the Form layout, whose failure line is what both waited for. Same words; Cancel beside the
   commit, as every form; a read failure is a result window with Close. An unused style rule removed.
@@ -86,6 +89,11 @@ Live notes; rewritten as the final report at the loop's close.
   (cb22d910a).
 
 ## Walkthrough queue (for the owner)
+- Eleven more questions from the screen plan (step-04.md, P4-Q1 to P4-Q11), each with a
+  recommendation: Create's result title; named versions on cards; what Save Changes counts; the header
+  with no install record; Fix with AI across reopenings; Delete on a named version; the file load's
+  undo row; agents deleting Demo Builder datapacks; which wizard card shows the type list; Install
+  from File over an existing datapack; a partly installed creation install.
 - Eight product questions from the install window's plan (step-03.md section 4), each with a
   recommendation: Q1 Save As name in a one-row save question; Q2 agents installing a subset; Q3 a
   clean install's leftover lines; Q4 how a background success ends in VS Code; Q5 failed titles for
