@@ -47,6 +47,8 @@ import '@/core/ui/styles/menu-trigger.css';
 // to this pack" opens (datapack-engine step 05).
 import '@/core/ui/styles/checkbox-row.css';
 import '@/core/ui/styles/work-row.css';
+// .tree-list-* — Save From Store's categories, indented under their parents (`TreeList`).
+import '@/core/ui/styles/tree-list.css';
 // .fact-list and .lead-text/.section-label — "Clear demo data" lists what clearing the chosen
 // stores would do (datapack-engine step 10).
 import '@/core/ui/styles/fact-list.css';

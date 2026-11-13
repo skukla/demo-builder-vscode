@@ -36,5 +36,5 @@ export function StoreKindItems({ kind, page, failure, loading, picked, onChange 
         );
     }
     if (failure || !page) return <p className="dialog-problem text-negative">Couldn&apos;t load {many}: {failure}</p>;
-    return <StoreItemChecklist items={page.items} nouns={[one, many]} picked={picked} onChange={onChange} />;
+    return <StoreItemChecklist items={page.items} nouns={[one, many]} picked={picked} onChange={onChange} tree={kind === 'categories'} />;
 }

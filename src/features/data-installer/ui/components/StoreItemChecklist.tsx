@@ -8,6 +8,11 @@
  * alone, no grey detail under it (prototype-conventions rule 1, step-04 S3); the filter still
  * matches the detail (a SKU, an email), which the SC knows the item by.
  *
+ * Categories are a `TreeList` (decisions Phase 6, J1-3a): each under its parent by its own name,
+ * built from the path `storeItems.ts` names it by ("Gear / Bags"). A filter keeps a match's parents,
+ * muted; Select All and the count take the matches alone. A parent that is not listed (already in
+ * the pack being saved) is drawn by name with no tick.
+ *
  * @module features/data-installer/ui/components/StoreItemChecklist
  */
 
@@ -16,6 +21,10 @@ import type { StoreItem } from '../../pickableKinds';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import { CheckboxRow } from '@/core/ui/components/selection/CheckboxRow';
 import { SelectAllRow } from '@/core/ui/components/selection/SelectAllRow';
+import { TreeList, treeRows, type TreeListNode, type TreeListRow } from '@/core/ui/components/ui/TreeList';
+
+/** How `storeItems.ts` joins a category's place under the root into its name. */
+const PATH_SEPARATOR = ' / ';
 
 /** Fields a query is matched against. */
 const matches = (item: StoreItem, query: string): boolean => {
@@ -23,25 +32,59 @@ const matches = (item: StoreItem, query: string): boolean => {
     return q === '' || item.displayName.toLowerCase().includes(q) || (item.detail ?? '').toLowerCase().includes(q);
 };
 
+/** The items as a tree, by the path each is named by; a parent not listed is a node with no id. */
+function treeOf(items: readonly StoreItem[]): TreeListNode[] {
+    const roots: TreeListNode[] = [];
+    const byPath = new Map<string, TreeListNode>();
+    const nodeAt = (parts: readonly string[]): TreeListNode => {
+        const path = parts.join(PATH_SEPARATOR);
+        const found = byPath.get(path);
+        if (found) return found;
+        const node: TreeListNode = { name: parts[parts.length - 1] };
+        byPath.set(path, node);
+        if (parts.length === 1) roots.push(node);
+        else (nodeAt(parts.slice(0, -1)).children ??= []).push(node);
+        return node;
+    };
+    items.forEach((item) => {
+        nodeAt(item.displayName.split(PATH_SEPARATOR)).id = item.id;
+    });
+    return roots;
+}
+
+/** The ids the query shows, in the order drawn: a flat list's matches, or a tree's matched rows. */
+function shownIds(items: readonly StoreItem[], tree: TreeListNode[] | undefined, query: string): string[] {
+    if (!tree) return items.filter((item) => matches(item, query)).map((item) => item.id);
+    return treeRows(tree, query).flatMap((row) => (row.matched && row.id !== undefined ? [row.id] : []));
+}
+
 export interface StoreItemChecklistProps {
     items: StoreItem[];
     /** What one of them is called, and more than one, for the count: "category", "categories". */
     nouns: readonly [string, string];
     picked: readonly string[];
     onChange: (picked: string[]) => void;
+    /** Draw the items as a tree by their paths (categories). */
+    tree?: boolean;
 }
 
 /** The items, searchable, each a checkbox; Select all stays above them and ticks what the search shows. */
-export function StoreItemChecklist({ items, nouns, picked, onChange }: StoreItemChecklistProps): React.ReactElement {
+export function StoreItemChecklist({ items, nouns, picked, onChange, tree = false }: StoreItemChecklistProps): React.ReactElement {
     const [query, setQuery] = useState('');
-    const shown = useMemo(() => items.filter((item) => matches(item, query)), [items, query]);
+    const nodes = useMemo(() => (tree ? treeOf(items) : undefined), [items, tree]);
+    const shown = useMemo(() => shownIds(items, nodes, query), [items, nodes, query]);
     const ticked = new Set(picked);
-    const allShown = shown.length > 0 && shown.every((item) => ticked.has(item.id));
+    const allShown = shown.length > 0 && shown.every((id) => ticked.has(id));
     const toggle = (id: string): void => onChange(ticked.has(id) ? picked.filter((p) => p !== id) : [...picked, id]);
     const toggleShown = (): void => {
-        const ids = new Set(shown.map((item) => item.id));
+        const ids = new Set(shown);
         onChange(allShown ? picked.filter((p) => !ids.has(p)) : [...new Set([...picked, ...ids])]);
     };
+    const tickRow = (id: string, label: string): React.ReactElement => (
+        <CheckboxRow key={id} label={label} isSelected={ticked.has(id)} onChange={() => toggle(id)} />
+    );
+    const treeRow = (row: TreeListRow): React.ReactNode => (row.id === undefined ? row.name : tickRow(row.id, row.name));
+    const shownSet = new Set(shown);
     return (
         <div className="datapack-pick-list">
             <SearchHeader
@@ -55,11 +98,13 @@ export function StoreItemChecklist({ items, nouns, picked, onChange }: StoreItem
                 hasLoadedOnce
                 alwaysShowCount
             />
-            {shown.length > 0 ? <SelectAllRow all={allShown} some={shown.some((item) => ticked.has(item.id))} onToggle={toggleShown} /> : null}
+            {shown.length > 0 ? <SelectAllRow all={allShown} some={shown.some((id) => ticked.has(id))} onToggle={toggleShown} /> : null}
             <div className="datapack-pick-rows">
-                {shown.map((item) => (
-                    <CheckboxRow key={item.id} label={item.displayName} isSelected={ticked.has(item.id)} onChange={() => toggle(item.id)} />
-                ))}
+                {nodes ? (
+                    <TreeList nodes={nodes} query={query} renderRow={treeRow} />
+                ) : (
+                    items.filter((item) => shownSet.has(item.id)).map((item) => tickRow(item.id, item.displayName))
+                )}
             </div>
         </div>
     );

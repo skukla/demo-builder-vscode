@@ -1,0 +1,42 @@
+/**
+ * .tree-list-row — records indented under their parents (`ui/TreeList`): one row each, a thin rule
+ * under it, an elbow before a child, and a muted parent kept only for a match below it.
+ *
+ * REACHES ONLY THE BUNDLES THAT IMPORT IT (ADR-017 §6): `dataInstaller` (Save From Store's
+ * categories, `StoreItemChecklist`). A new host bundle imports it in its entry, or the rows render
+ * flat and unruled with no error.
+ *
+ * Moved unchanged on 2026-11-13 from the datapack-simplification prototype's sheet
+ * (`mockups/flow/proto-j1.html`); its indent, written inline there as 20px per level, is the
+ * `--tree-depth` parameter the component sets on each row.
+ */
+
+@layer theme {
+    .tree-list-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding-top: 5px;
+        padding-bottom: 5px;
+        padding-left: calc(var(--tree-depth, 0) * 20px);
+        border-bottom: 1px solid var(--vscode-panel-border);
+    }
+
+    /* A parent shown only because a match sits below it; its tick's label too, which
+       `checkbox-row.css` would otherwise draw in the primary register. */
+    .tree-list-row--context,
+    .tree-list-row--context .checkbox-row-label {
+        color: var(--vscode-descriptionForeground);
+    }
+
+    /* The corner joining a child to the parent above it. */
+    .tree-list-elbow {
+        width: 10px;
+        height: 10px;
+        margin-left: 4px;
+        border-left: 1px solid var(--vscode-descriptionForeground);
+        border-bottom: 1px solid var(--vscode-descriptionForeground);
+        transform: translateY(-4px);
+        flex: none;
+    }
+}
