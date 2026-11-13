@@ -159,3 +159,7 @@ P5-Q2: Reset here, Delete via the list (as recommended). P5-Q3: uninstall it. P5
 ## Status
 
 R1 a6df67dad, R2 208fb758a, S1 29a59686f, S2 851fa48e1, S3 c65799909; reset stops offering Clear b9c1946b2.
+
+S4 bd9a5c987, S5 3e947288b, S6 and reset warnings 919ee94b4, S7 8d038a566. Built except P5-Q8. Live
+cycles owed: batch reset (storefront and headless, with and without changes), agent reset_project with
+removeData.

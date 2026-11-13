@@ -199,7 +199,13 @@ Live notes; rewritten as the final report at the loop's close.
   should-fix (the removal ran before the rebuild check, so a reset that could not rebuild still
   emptied the store) was fixed and proven by tests that failed with the old order. Full gate green
   (2,406 suites, 38,580 tests). Live reset owed.
-- Step-05 S7 (the agent's reset_project gets the uninstall choice): with a builder.
+- Step-05 S7: 8d038a566. The agent's reset_project can uninstall the datapack with the same save
+  answers as the window (owner's P5-Q4), through the same code as the button; a datapack with
+  unsaved changes and no answer is refused and nothing is reset. Aligned on the way: changes 'drop'
+  meant something narrower in delete_project than in the windows; both tools now match the windows'
+  Without Saving. Full gate green (2,408 suites, 38,606 tests). Live agent reset owed.
+- Reset and delete (step-05) are built, except P5-Q8 (the mid-batch dialog), which is yours.
+- Clear (step-06) C1 (the category tree to shared code): with a builder.
 - Phase 1b, done while waiting: ERP Downtime (863c5c2ca) and Edit Demo Package (f8ece2e6e) moved
   onto the Form layout, whose failure line is what both waited for. Same words; Cancel beside the
   commit, as every form; a read failure is a result window with Close. An unused style rule removed.
