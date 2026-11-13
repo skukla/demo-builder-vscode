@@ -104,7 +104,14 @@ Live notes; rewritten as the final report at the loop's close.
   Style check: no element moved on any of the nine screens (the sample screens draw no run steps, so
   how the save's steps look is for the owner's screenshot pass). Full gate green (2,407 suites,
   38,548 tests). Live save owed.
-- Step-04 S5 (the flyout bar and More menu): with a builder.
+- Step-04 S5: e1ec0378a. The datapack panel: Install, "Switch to Bodea" over another installed
+  datapack, "Restore My Luma" on the installed one; no save buttons (saving is the header's); the
+  More menu in short words (Save as File, Undo Last Save, Share or Stop Sharing; then Uninstall,
+  Delete). Delete reads "Delete My Luma?" / "Permanently deletes it." and is hidden on Demo Builder
+  datapacks for everyone. The library panel's bar is the More menu alone. Delete Store Configuration
+  left the panel; the file load's row stays (P4-Q7). Only the Datapacks screen draws this panel; no
+  styles changed. Full gate green (2,408 suites, 38,556 tests).
+- Step-04 S6 (cards, tags, dates, the dot): with a builder.
 - Phase 1b, done while waiting: ERP Downtime (863c5c2ca) and Edit Demo Package (f8ece2e6e) moved
   onto the Form layout, whose failure line is what both waited for. Same words; Cancel beside the
   commit, as every form; a read failure is a result window with Close. An unused style rule removed.
@@ -150,5 +157,8 @@ Live notes; rewritten as the final report at the loop's close.
   the save row's spinning line keeps the engine's words ("Saving to My Datapacks", "Finishing the
   save"); a failure after the reads but before the write ("nothing to save", "the install would
   refuse it") lands on the save row. Recommend keeping all three.
+- From S5: P4-Q6 matters now. On a datapack with named variants (Bodea's "main"), Delete removes only
+  that variant, so "Permanently deletes it." overstates it. Recommend Delete removes the whole
+  datapack, as P4-Q6 says. Also: Share stays on the SC's own Demo Builder datapack, as before.
 - Phase 2 live cycle on the test store (save twice, Undo Last Save, Restore, reinstall with nothing
   sent, uninstall), once Phase 2 is built.
