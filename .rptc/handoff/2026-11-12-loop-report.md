@@ -111,7 +111,13 @@ Live notes; rewritten as the final report at the loop's close.
   datapacks for everyone. The library panel's bar is the More menu alone. Delete Store Configuration
   left the panel; the file load's row stays (P4-Q7). Only the Datapacks screen draws this panel; no
   styles changed. Full gate green (2,408 suites, 38,556 tests).
-- Step-04 S6 (cards, tags, dates, the dot): with a builder.
+- Step-04 S6: 899c1e35c. Cards say "Demo Builder" (and the Show choice "Demo Builder Datapacks");
+  every card and panel date uses one format ("Saved Nov 10, 9:15 AM"); the amber dot says "Newer save
+  available" exactly when Restore would install a newer save (one rule shared by Restore and the
+  card). Measured in the real stylesheet: on the narrowest card (240px) the date and a tag do not fit
+  one line; the tag now stays on the date's line and the date wraps (before, the tag dropped below);
+  at 300px all fits. Full gate green on the committed code (2,407 suites, 38,558 tests).
+- Step-04 S7 (the failed install, extension side): next.
 - Phase 1b, done while waiting: ERP Downtime (863c5c2ca) and Edit Demo Package (f8ece2e6e) moved
   onto the Form layout, whose failure line is what both waited for. Same words; Cancel beside the
   commit, as every form; a read failure is a result window with Close. An unused style rule removed.
@@ -122,6 +128,10 @@ Live notes; rewritten as the final report at the loop's close.
   ending "Last Save Undone"; the same-pack replace step still reads "Uninstall the Previous Version".
 
 ## Retracted / corrected
+- S6 was committed before its gate passed: the commit command did not depend on the gate's result,
+  and one test had failed (a token check reading git's file list still named a file the slice had
+  deleted but not yet committed). The test passed once the deletion was committed, and the full gate
+  then passed on the committed code. Nothing was pushed. Every commit since depends on the gate.
 - Before the loop I told the owner step-02.md recorded why slice 3 refuses rather than repoints. It
   did not: a hook blocked that command before it ran, and only the file was committed. Recorded now
   (cb22d910a).
@@ -160,5 +170,9 @@ Live notes; rewritten as the final report at the loop's close.
 - From S5: P4-Q6 matters now. On a datapack with named variants (Bodea's "main"), Delete removes only
   that variant, so "Permanently deletes it." overstates it. Recommend Delete removes the whole
   datapack, as P4-Q6 says. Also: Share stays on the SC's own Demo Builder datapack, as before.
+- From S6: (a) the narrow-card look above, for the screenshot pass; (b) a Demo Builder datapack's
+  "main" updated in place no longer shows a dot (the dot now means a newer save); want that signal
+  back with its own words? (c) the agent tool mark_team_datapack still says "team datapack"
+  (Phase 8 will align agent words).
 - Phase 2 live cycle on the test store (save twice, Undo Last Save, Restore, reinstall with nothing
   sent, uninstall), once Phase 2 is built.
