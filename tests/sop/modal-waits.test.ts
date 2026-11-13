@@ -20,10 +20,7 @@ import * as path from 'path';
 const SRC = path.join(__dirname, '..', '..', 'src');
 
 /** Files that render a Modal and draw a wait in its body, each with why that is right. */
-const LEDGER: Record<string, string> = {
-    'features/data-installer/ui/components/ClearDemoDataModal.tsx':
-        'A re-check after a tick shows its spinner where the answer lands (owner, 2026-10-31). The first read uses `waiting`.',
-};
+const LEDGER: Record<string, string> = {};
 
 function sources(dir: string): string[] {
     return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -42,12 +39,12 @@ const relative = (file: string) => path.relative(SRC, file).split(path.sep).join
  */
 const RENDERS_DIALOG = /<(Modal|StepsDialog|StepsWindow)\b/;
 
+/** A dialog that draws a wait of its own in its body. */
+const drawsOwnWait = (text: string): boolean => RENDERS_DIALOG.test(text) && /<(LoadingDisplay|ProgressCircle|Spinner)\b/.test(text);
+
 function offenders(): string[] {
     return sources(SRC)
-        .filter((file) => {
-            const text = fs.readFileSync(file, 'utf8');
-            return RENDERS_DIALOG.test(text) && /<(LoadingDisplay|ProgressCircle|Spinner)\b/.test(text);
-        })
+        .filter((file) => drawsOwnWait(fs.readFileSync(file, 'utf8')))
         .map(relative)
         .sort();
 }
@@ -86,8 +83,12 @@ describe('a dialog that is waiting shows nothing else', () => {
         expect(rule).toMatch(/padding-top: 8px/);
     });
 
+    // The ledger emptied on 2026-11-13 (step 06, C2a: Clear Demo Data lost its re-check spinner), so the
+    // control no longer leans on a real offender: the scan reads the tree, and the test finds the shape.
     it('CONTROL: still finds the thing it looks for, and Modal waits with the house rows', () => {
         expect(fs.readFileSync(path.join(SRC, 'core/ui/components/ui/Modal.tsx'), 'utf8')).toMatch(/<StageWait\b/);
-        expect(offenders().length).toBeGreaterThan(0);
+        expect(sources(SRC).filter((file) => RENDERS_DIALOG.test(fs.readFileSync(file, 'utf8'))).length).toBeGreaterThan(5);
+        expect(drawsOwnWait('<Modal title="x"><Spinner size="S" aria-label="Reading" /></Modal>')).toBe(true);
+        expect(drawsOwnWait('<Modal title="x" waiting="Reading" />')).toBe(false);
     });
 });

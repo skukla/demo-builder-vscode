@@ -15,12 +15,11 @@ import { RESET_RULE_CASES } from '../../../../helpers/resetRuleOrders';
 import { fakeErp } from './wipeErp.testUtils';
 import { sandbox, writesOf } from './wipe.testUtils';
 
-const TEST_STORE = [{ websiteCode: 'justrite_test_website', storeCode: 'justrite_test_store' }];
+const TEST_STORE = ['justrite_test_website'];
 const [PENDING, , , WITH_RETURN] = RESET_RULE_CASES;
 const UPDATE_FIRST =
     'it must be updated first. Open the project justrite and update erp-integration ' +
     '(Update on its card, or update_integration), then check again';
-const CATEGORY_LEFT = 'Left 1 of the categories (Safety Cans): under root category 119, which the store justrite_store (website justrite) also shows.';
 
 /** The test store holding two orders (one with a return), and nothing else. */
 const twoOrders = () => sandbox({ products: [], customers: [], orders: [PENDING.order, WITH_RETURN.order], returns: WITH_RETURN.returns });
@@ -64,21 +63,21 @@ describe('the plan, with the ERP integration serving the store', () => {
         const plan = await planWipeFor(twoOrders().get, TEST_STORE, { records: [], erp });
 
         expect(plan.orders.map((o) => o.id)).toStrictEqual(['701', '704']);
-        expect(plan.preview.orders.returns).toEqual({ count: 1, names: ['R40'] });
+        expect(plan.check.records.returns).toEqual({ removed: ['R40'], kept: [] });
         expect(plan.erp).toEqual({ route: { name: 'JustRite', websites: ['justrite_test_website'] }, stores: ['justrite_test_store'] });
-        expect(plan.preview.erp).toEqual({
+        expect(plan.check.erp).toEqual({
             integration: 'JustRite',
             websites: ['justrite_test_website'],
-            line: 'The ERP integration (JustRite) serves these stores: its ERP is brought in line with Commerce after the clearing.',
+            line: 'The ERP integration (JustRite) serves these websites: its ERP is brought in line with Commerce after the clearing.',
         });
-        expect(plan.preview.total).toBe(3);
+        expect(plan.check.total).toBe(3);
     });
 
     it('names only the routed stores for the ERP step', async () => {
         const { erp } = fakeErp();
         const store = sandbox({ products: [], customers: [], orders: [PENDING.order, BODEA_OUTLET_ORDER] });
 
-        const plan = await planWipeFor(store.get, [...TEST_STORE, { websiteCode: 'bodea' }], { records: [], erp });
+        const plan = await planWipeFor(store.get, [...TEST_STORE, 'bodea'], { records: [], erp });
 
         expect(plan.orders.map((o) => o.id).sort()).toStrictEqual(['600', '701']);
         expect(plan.erp?.stores).toStrictEqual(['justrite_test_store']);
@@ -87,12 +86,43 @@ describe('the plan, with the ERP integration serving the store', () => {
     it('still closes the orders when the integration must be updated, and says its ERP will not be brought in line', async () => {
         const { erp } = fakeErp({ status: STATUS_BEFORE });
 
-        const { preview, orders } = await planWipeFor(twoOrders().get, TEST_STORE, { records: [], erp });
+        const { check, orders } = await planWipeFor(twoOrders().get, TEST_STORE, { records: [], erp });
 
         expect(orders.map((o) => o.id)).toStrictEqual(['701', '704']);
-        expect(preview.total).toBe(3);
-        expect(preview.erp?.held).toBe(UPDATE_FIRST);
-        expect(preview.erp?.line).toBe(`The ERP integration (JustRite) serves these stores, but ${UPDATE_FIRST}. Its ERP will not be brought in line.`);
+        expect(check.total).toBe(3);
+        expect(check.erp?.held).toBe(UPDATE_FIRST);
+        expect(check.erp?.line).toBe(`The ERP integration (JustRite) serves these websites, but ${UPDATE_FIRST}. Its ERP will not be brought in line.`);
+    });
+});
+
+describe('the ERP step, when the orders could not be read', () => {
+    /** The test website's orders answer 500: whether they are closed is not known. */
+    const ordersUnread = () => {
+        const store = twoOrders();
+        const get = (path: string) => (path.startsWith('orders?') ? Promise.reject(new Error('Commerce answered 500 for orders')) : store.get(path));
+        return { ...store, get };
+    };
+
+    it("holds the ERP step in the plan and says why: its premise, every order closed, is not known", async () => {
+        const { erp } = fakeErp();
+
+        const plan = await planWipeFor(ordersUnread().get, TEST_STORE, { records: [], erp });
+
+        expect(plan.orders).toStrictEqual([]);
+        expect(plan.erp?.route.held).toBe('the orders could not be read');
+        expect(plan.check.erp?.line).toBe('The ERP integration (JustRite) serves these websites, but the orders could not be read. Its ERP will not be brought in line.');
+    });
+
+    it('never asks the integration to close orders or refill its ERPs', async () => {
+        const { erp, client, refill } = fakeErp();
+        const store = ordersUnread();
+        const shown = await planWipeFor(store.get, TEST_STORE, { records: [], erp });
+
+        const outcome = await clearShown(store, shown, { records: [], erp });
+
+        expect(client.closeOrders).not.toHaveBeenCalled();
+        expect(refill).not.toHaveBeenCalled();
+        expect(outcome.sentence).toContain("JustRite's ERP was not brought in line with Commerce: the orders could not be read.");
     });
 });
 
@@ -128,9 +158,8 @@ describe('clearing, with the ERP integration serving the store', () => {
         expect(outcome.failed).toStrictEqual([]);
         expect(outcome.erp).toEqual({ integration: 'JustRite', broughtInLine: true, removedFrom: ['Justrite ERP'], refreshed: true });
         expect(outcome.sentence).toBe(
-            'Removed nothing from the store justrite_test_store. Canceled 1 order and refunded 1 order. Closed 1 return. ' +
-                "JustRite's ERP was brought in line with Commerce. The stores' orders were removed from Justrite ERP. " +
-                CATEGORY_LEFT,
+            'Removed nothing from the website justrite_test_website. Canceled 1 order and refunded 1 order. Closed 1 return. ' +
+                "JustRite's ERP was brought in line with Commerce. These websites' orders were removed from Justrite ERP.",
         );
     });
 
@@ -143,7 +172,7 @@ describe('clearing, with the ERP integration serving the store', () => {
                 return STORE_CLOSE;
             },
         });
-        const shown = await planWipeFor(store.get, [...TEST_STORE, { websiteCode: 'bodea' }], { records: [], erp });
+        const shown = await planWipeFor(store.get, [...TEST_STORE, 'bodea'], { records: [], erp });
 
         await clearShown(store, shown, { records: [], erp });
 

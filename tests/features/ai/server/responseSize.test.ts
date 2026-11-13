@@ -448,8 +448,8 @@ describe('rows with no output safety net are classified', () => {
         // `{datapackName, displayName, versions}`, three fixed fields.
         'rename_datapack',
         // HANDLER RETURNS DATA (datapack-engine step 10, read in demoDataHandlers.ts): the check
-        // answers the preview, counts and at most three names per kind with fixed sentences; the
-        // clearing answers `{removed, failed, sentence}`, counts and one Commerce message per kind.
+        // answers a ClearCheck, a row per type and every record by name (step 06), so it grows with
+        // the store; the clearing answers `{removed, failed, sentence, leftOpen, listSettings}`.
         'check_demo_data',
         'clear_demo_data',
         // HANDLER RETURNS DATA (owner, 2026-10-30, read in datapackLibraryHandlers.ts):

@@ -1,5 +1,5 @@
 /**
- * Clearing a demo's part of the store (datapack-engine step 10): the plan shown is carried out,
+ * Clearing a demo's websites (datapack-engine step 10): the plan shown is carried out,
  * orders (each with its returns) first, then the reverse of install order; refusals are counted, and nothing is
  * written when the store would now clear something the SC was not shown.
  */
@@ -9,7 +9,7 @@ import { WipeChangedError, clearShown, runWipe } from '@/features/data-installer
 import { RESET_RULE_CASES } from '../../../../helpers/resetRuleOrders';
 import { PROJECT_RECORDS, sandbox, writesOf } from './wipe.testUtils';
 
-const TEST_STORE = [{ websiteCode: 'justrite_test_website', storeCode: 'justrite_test_store' }];
+const TEST_STORE = ['justrite_test_website'];
 
 describe('runWipe', () => {
     it('closes orders, each with its returns, deletes customers, then products, takes shared products off the website, then categories', async () => {
@@ -34,34 +34,35 @@ describe('runWipe', () => {
             { method: 'DELETE', path: 'products/ZZ-SHARED-WITH-JUSTRITE/websites/5' },
         ]);
         expect(stages).toEqual(['Closing orders', 'Deleting customers', 'Deleting products', 'Removing products from websites']);
+        // Kept records carry no reason any more (J1-3b), so the sentence no longer lists them.
         expect(outcome.sentence).toBe(
-            'Removed 3 products and 1 customer from the store justrite_test_store. Canceled 1 order and refunded 1 order. Closed 1 return. ' +
-                'Took 1 product other websites also sell off the chosen websites. ' +
-                'Left 1 of the products (ZZ-LONE-VARIANT): shown only as part of another product, which may be one another website sells. ' +
-                'Left 1 of the categories (Safety Cans): under root category 119, which the store justrite_store (website justrite) also shows. ' +
-                'Left 1 of the customers (zz.admin@example.com): they are in a company that stays. ' +
-                'Left 1 of the companies (company 28): who is in them could not be read.',
+            'Removed 3 products and 1 customer from the website justrite_test_website. Canceled 1 order and refunded 1 order. Closed 1 return. ' +
+                'Took 1 product other websites also sell off the chosen websites.',
         );
+        expect(outcome.leftOpen).toStrictEqual([]);
     });
 
     // 2026-11-06: deleting every category deepest first sent one request each.
-    it('deletes the top category, and counts the one under it, which Commerce deletes with it', async () => {
+    it('deletes the top categories, and counts the one under one, which Commerce deletes with it', async () => {
         const store = sandbox({ products: [], customers: [] });
-        const plan = await planWipeFor(store.get, [{ websiteCode: 'bodea', storeCode: 'bodea_store' }], { records: PROJECT_RECORDS });
+        const plan = await planWipeFor(store.get, ['bodea'], { records: PROJECT_RECORDS });
 
         const outcome = await runWipe(store, plan);
 
-        expect(store.sent).toEqual([{ method: 'DELETE', path: 'categories/151' }]);
-        expect(outcome.removed.categories).toBe(2);
+        expect(store.sent).toEqual([
+            { method: 'DELETE', path: 'categories/151' },
+            { method: 'DELETE', path: 'categories/161' },
+        ]);
+        expect(outcome.removed.categories).toBe(3);
     });
 
     it('holds back a category under one Commerce refused, naming both', async () => {
         const store = sandbox({ products: [], customers: [] }, (path) => path === 'categories/151');
-        const plan = await planWipeFor(store.get, [{ websiteCode: 'bodea', storeCode: 'bodea_store' }], { records: PROJECT_RECORDS });
+        const plan = await planWipeFor(store.get, ['bodea'], { records: PROJECT_RECORDS });
 
         const outcome = await runWipe(store, plan);
 
-        expect(outcome.removed.categories).toBe(0);
+        expect(outcome.removed.categories).toBe(1);
         expect(outcome.failed).toEqual([expect.objectContaining({ what: 'remove 1 of the categories', count: 2 })]);
     });
 
@@ -74,6 +75,16 @@ describe('runWipe', () => {
         expect(outcome.removed).toMatchObject({ customers: 1, products: 2, takenOff: 1, cartRules: 0, rulesTakenOff: 0, categories: 0 });
         expect(outcome.failed).toEqual([{ what: 'remove 1 of the products', count: 1, first: 'ZZ-JACKET: Commerce answered 400: The product is in use.' }]);
         expect(outcome.sentence).toContain('Could not remove 1 of the products (ZZ-JACKET: Commerce answered 400: The product is in use.).');
+    });
+
+    it('names the orders it left open with a note, for the result to point to the Admin', async () => {
+        const order = { entity_id: 802, increment_id: '000000802', state: 'payment_review', status: 'payment_review', store_id: 6, items: [{ item_id: 2, qty_ordered: 1, qty_invoiced: 1 }] };
+        const store = sandbox({ products: [], customers: [], orders: [order] });
+
+        const outcome = await runWipe(store, await planWipeFor(store.get, TEST_STORE, { records: [] }), () => undefined, '2026-11-13');
+
+        expect(outcome.leftOpen).toEqual(['000000802']);
+        expect(outcome.orders.commented).toBe(1);
     });
 });
 

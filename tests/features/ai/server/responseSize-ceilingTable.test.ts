@@ -180,8 +180,8 @@ describe('the ceiling table tracks the tool surface', () => {
             'preview_datapack_changes',
             'save_store_changes_to_pack',
             'rename_datapack',
-            // check_demo_data and clear_demo_data (datapack-engine step 10): counts and at most
-            // three names per kind; neither has run live yet.
+            // check_demo_data and clear_demo_data (datapack-engine step 10): since step 06 the check
+            // lists every record by name, so its size grows with the store; neither has run live yet.
             'check_demo_data',
             'clear_demo_data',
             // share_datapack (owner, 2026-10-30): three fixed fields; not yet run live.

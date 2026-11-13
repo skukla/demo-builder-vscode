@@ -1,6 +1,7 @@
 /**
- * Website settings a wipe puts back: on wholly chosen websites only, a value that differs from the
- * Default scope's is set to it. Commerce cannot make a value inherited again, so nothing here claims
+ * Website settings a wipe puts back: on the chosen websites only, a value that differs from the
+ * Default scope's is set to it; protected settings are not listed, and list settings are named for
+ * the clearing's result. Commerce cannot make a value inherited again, so nothing here claims
  * that. Commerce's answers are the live page's shape (`SYSTEM_CONFIG_PAGE_TEST_WEBSITE`).
  */
 
@@ -12,7 +13,7 @@ import { SYSTEM_CONFIG_PAGE_TEST_WEBSITE, settingsInstance } from '../../../../h
 import { REFUSED_SETTING, sandbox } from './wipe.testUtils';
 
 const TEST = 'justrite_test_website';
-const TEST_STORE = [{ websiteCode: TEST, storeCode: 'justrite_test_store' }];
+const TEST_STORE = [TEST];
 const NOTHING = { customers: [], products: [], orders: [] };
 
 describe('decideSettings, through the plan', () => {
@@ -25,7 +26,7 @@ describe('decideSettings, through the plan', () => {
             { websiteCode: TEST, path: 'sales/totals_sort/tax', value: '40' },
             { websiteCode: TEST, path: 'payment/companycredit/active', value: '0' },
         ]);
-        expect(plan.preview.settings).toEqual({ count: 2, names: ['sales/totals_sort/tax', 'payment/companycredit/active'] });
+        expect(plan.check.records.website_settings).toEqual({ removed: ['sales/totals_sort/tax', 'payment/companycredit/active'], kept: [] });
         expect(store.sent).toStrictEqual([]);
     });
 
@@ -41,12 +42,12 @@ describe('decideSettings, through the plan', () => {
         ]);
     });
 
-    it('never changes a base URL or a credential, says so, and never copies a masked value', async () => {
+    it('never changes a base URL or a credential, does not list it, and never copies a masked value', async () => {
         const plan = await planWipeFor(sandbox({ ...NOTHING, instance: settingsInstance() }).get, TEST_STORE, { records: [] });
 
         expect(plan.settings.map((s) => s.path)).not.toContain('web/secure/base_url');
         expect(plan.settings.map((s) => s.path)).not.toContain('carriers/ups/password');
-        expect(plan.preview.left).toContainEqual({ kind: 'settings', count: 1, names: ['web/secure/base_url'], why: 'base URLs, cookies, Admin settings and credentials are never changed' });
+        expect(plan.check.records.website_settings.kept).toStrictEqual([]);
     });
 
     it('never copies a value that reads as masked or encrypted under an ordinary path', async () => {
@@ -64,7 +65,7 @@ describe('decideSettings, through the plan', () => {
         const plan = await planWipeFor(sandbox({ ...NOTHING, instance: settingsInstance() }).get, TEST_STORE, { records: [] });
 
         expect(plan.settings.map((s) => s.path)).not.toContain('general/store_information/name');
-        expect(plan.preview.left).toContainEqual({ kind: 'settings', count: 1, names: ['general/store_information/name'], why: 'they have no default value to go back to' });
+        expect(Object.values(plan.check.records).flatMap((r) => r.kept)).not.toContain('general/store_information/name');
     });
 
     describe('a list setting, which answers as an array', () => {
@@ -75,30 +76,30 @@ describe('decideSettings, through the plan', () => {
             instance.settings?.websites[TEST].push({ path: 'sales/cancellation/reasons', value: websiteValue, scope: 'website', scope_code: TEST });
             return instance;
         };
-        const LIST_WHY = 'Commerce cannot write a list back, so set them to Use Default Value in the Admin';
 
         it('needs nothing when its contents match the default, though each read is a new array', async () => {
             const plan = await planWipeFor(sandbox({ ...NOTHING, instance: withList([...REASONS]) }).get, TEST_STORE, { records: [] });
 
             expect(plan.settings.map((s) => s.path)).not.toContain('sales/cancellation/reasons');
-            expect(plan.preview.left).not.toContainEqual(expect.objectContaining({ why: LIST_WHY }));
+            expect(plan.listSettings).toStrictEqual([]);
         });
 
         it('needs nothing when an earlier write joined it into the same text', async () => {
             const plan = await planWipeFor(sandbox({ ...NOTHING, instance: withList(REASONS.join(',')) }).get, TEST_STORE, { records: [] });
 
             expect(plan.settings.map((s) => s.path)).not.toContain('sales/cancellation/reasons');
-            expect(plan.preview.left).not.toContainEqual(expect.objectContaining({ why: LIST_WHY }));
+            expect(plan.listSettings).toStrictEqual([]);
         });
 
         it.each<[string, string | string[]]>([
             ['an array', ['Changed my mind']],
             ['a string', 'Changed my mind'],
-        ])('never writes one that differs, as %s, and says why it stays', async (_form, websiteValue) => {
+        ])("never writes one that differs, as %s, and names it for the clearing's result, not the summary", async (_form, websiteValue) => {
             const plan = await planWipeFor(sandbox({ ...NOTHING, instance: withList(websiteValue) }).get, TEST_STORE, { records: [] });
 
             expect(plan.settings.map((s) => s.path)).not.toContain('sales/cancellation/reasons');
-            expect(plan.preview.left).toContainEqual({ kind: 'settings', count: 1, names: ['sales/cancellation/reasons'], why: LIST_WHY });
+            expect(plan.listSettings).toEqual(['sales/cancellation/reasons']);
+            expect(plan.check.records.website_settings.removed).not.toContain('sales/cancellation/reasons');
         });
     });
 
@@ -108,34 +109,25 @@ describe('decideSettings, through the plan', () => {
         const plan = await planWipeFor(sandbox({ ...NOTHING, instance: settingsInstance() }).get, TEST_STORE, { records: [], settingsKept });
 
         expect(plan.settings.map((s) => s.path)).toEqual(['sales/totals_sort/tax']);
-        expect(plan.preview.left).toContainEqual(expect.objectContaining({ kind: 'settings', names: ['payment/companycredit/active'], why: 'a datapack or the setup guide set them, and its removal or undo puts them back' }));
+        expect(plan.check.records.website_settings).toEqual({ removed: ['sales/totals_sort/tax'], kept: [] });
     });
 
-    it('touches no setting of a website only partly chosen, nor reads one', async () => {
+    it("sets back a chosen website's, and never reads another website's", async () => {
         const store = sandbox({ ...NOTHING, instance: settingsInstance() });
 
-        const plan = await planWipeFor(store.get, [{ websiteCode: 'bodea', storeCode: 'bodea_store' }], { records: [] });
-
-        expect(plan.settings).toStrictEqual([]);
-        expect(store.reads.some((path) => path.startsWith('system/config'))).toBe(false);
-    });
-
-    it("sets back a wholly chosen website's, and never reads another website's", async () => {
-        const store = sandbox({ ...NOTHING, instance: settingsInstance() });
-
-        const plan = await planWipeFor(store.get, [{ websiteCode: 'bodea' }], { records: [] });
+        const plan = await planWipeFor(store.get, ['bodea'], { records: [] });
 
         expect(plan.settings).toEqual([{ websiteCode: 'bodea', path: 'sales/totals_sort/tax', value: '40' }]);
         expect(store.reads.some((path) => path.includes('scopeCode=justrite'))).toBe(false);
     });
 
-    it('says so, by website, when the settings cannot be read', async () => {
+    it('leaves every setting alone, marked not read, when a website\'s settings cannot be read', async () => {
         const store = sandbox({ ...NOTHING, instance: settingsInstance({ failing: [/scope=website/u] }) });
 
         const plan = await planWipeFor(store.get, TEST_STORE, { records: [] });
 
         expect(plan.settings).toStrictEqual([]);
-        expect(plan.preview.left).toContainEqual({ kind: 'settings', count: 1, names: [`website ${TEST}`], why: "Commerce would not list the website's settings" });
+        expect(plan.check.unread).toEqual({ website_settings: 'strange' });
     });
 
     it('wants nothing on a store without the API (404)', async () => {
@@ -156,7 +148,7 @@ describe('decideSettings, through the plan', () => {
 
         const decided = await decideSettings(store.get, resolveWipeScope(structure, TEST_STORE), new Set());
 
-        expect(decided).toEqual({ reset: [], offLimits: [], installed: [], noDefault: [], lists: [], unread: [] });
+        expect(decided).toEqual({ reset: [], lists: [] });
     });
 });
 

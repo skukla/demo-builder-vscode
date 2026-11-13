@@ -156,7 +156,7 @@ export const erpStoresAsked = (plan: WipeErpPlan | undefined): string[] => (plan
 
 /** The list's one line for the ERP part. */
 function lineOf({ route }: WipeErpPlan): string {
-    const who = `The ERP integration (${route.name}) serves these stores`;
+    const who = `The ERP integration (${route.name}) serves these websites`;
     if (route.held) return `${who}, but ${route.held}. Its ERP will not be brought in line.`;
     return `${who}: its ERP is brought in line with Commerce after the clearing.`;
 }
@@ -238,10 +238,10 @@ export function erpProblemOf(plan: WipeErpPlan, closed: ErpClosed | undefined, r
     return why.length > 0 ? andList(why) : undefined;
 }
 
-/** " The stores' orders were removed from Justrite ERP. Accuform ERP could not remove them (...).", or nothing. */
+/** " These websites' orders were removed from Justrite ERP. Accuform ERP could not remove them (...).", or nothing. */
 function removalSentence(closed: ErpClosed | undefined): string {
     if (!closed) return '';
-    const from = closed.removedFrom.length > 0 ? ` The stores' orders were removed from ${andList(closed.removedFrom)}.` : '';
+    const from = closed.removedFrom.length > 0 ? ` These websites' orders were removed from ${andList(closed.removedFrom)}.` : '';
     return `${from}${closed.notRemoved.map((line) => ` ${line.charAt(0).toUpperCase()}${line.slice(1)}.`).join('')}`;
 }
 

@@ -39,8 +39,10 @@ const LEDGER: Readonly<Record<string, Reason>> = {
  * 68 -> 66 on 2026-11-12 (step 03, S7): the old import window went, with three runtime strings in
  * its form and its removal confirm; one came in, the job window's question button, which is its
  * verb (`DatapackVerb`: Install, Uninstall or Switch).
+ * 66 -> 64 on 2026-11-13 (step 06, C2a): Clear Demo Data's store picker went (`StorePickList`), with
+ * its two runtime labels, a website's name and a store's name.
  */
-const DYNAMIC_PIN = 66;
+const DYNAMIC_PIN = 64;
 
 /**
  * The six dialog layouts (the Steps layout joined 2026-11-11) hand their caller's words on to Modal (`title={title}`). Those words are

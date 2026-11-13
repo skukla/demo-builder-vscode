@@ -44,7 +44,7 @@ export const DATAPACK_STAGES = {
     removingAttributeSets: { label: 'Deleting attribute sets', expectation: 'Usually a second each' },
     removingAttributes: { label: 'Deleting attributes', expectation: 'Usually a second each' },
     resettingSettings: { label: 'Restoring default configuration', expectation: 'Usually under a minute' },
-    // An ERP integration serves some chosen stores ("One action, ERP included"): after the clearing
+    // An ERP integration serves some chosen websites ("One action, ERP included"): after the clearing
     // closed their orders in Commerce, it brings its ERP in line (erp-order-close step 5: drops its
     // records of them and has each ERP remove its sales orders), then its ERP is filled again.
     updatingErp: { label: 'Updating the ERP', expectation: 'Usually a minute or two' },

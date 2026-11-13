@@ -956,67 +956,72 @@ root while a store shows it as its root, saying to point that store back first. 
 writes the pack's root back either way, so the saved version still installs as its own root
 elsewhere. Plan: `.rptc/plans/datapack-engine/step-12-pack-categories-on-storefront.md`.
 
-### Clearing a demo's part of the store (datapack-engine step 10, 2026-10-30)
+### Clearing a demo's websites (datapack-engine step 10, 2026-10-30; whole websites since 2026-11-13)
 
-The unit chosen is the **store** (store group), by website and store code (owner, 2026-10-30):
-`stores: [{ websiteCode, storeCode? }]`, where a website without a store means all of its stores.
-Store views are listed under their store and never chosen on their own.
+The unit is the **website**, always whole (datapack-simplification step 06): Clear Demo Data covers
+every website the project uses, its own (`resolveInstallTarget`) and each website its install records
+were installed to. Neither tool takes a website or store; Clear Commerce Instance (the websites the
+SC ticks) is step 06's C4, and the tools' inputs are redesigned in its C6.
 
-`check_demo_data` (a read) always answers `data.choices`: every website and its stores, each
-store's views, and `claimedBy` on a store another local project records as its own. With stores
-chosen (the project's own store when none is named; `stores: []` for the choices alone) it also
-answers `data.preview`: what the install records list, by kind; what clearing would delete
-(products tied to the chosen stores, categories under a root only chosen stores use, customers of
-a wholly chosen website or made in a chosen store, cart rules on wholly chosen websites only, their
-coupons with them) and take off the chosen websites (products other websites also sell, cart rules
-other websites also use); the orders it would cancel or refund and the returns it would close;
-the companies, shared catalogs (each with its customer group), customer groups, attribute sets and
-attributes only the chosen stores use (`data.preview.remove`), the website settings it would set to
-the default's value (`data.preview.settings`); what it would leave and why, in `data.preview.left`
-(a root a store not chosen shares, a product whose demo can't be told, a company with a customer
-elsewhere, a catalog, group or attribute something that stays uses, an order Commerce can neither cancel nor refund, a cart rule on a
-website a store not chosen also sells on or holding a coupon Demo Builder installed); and a `token`. What
-a chosen store owns is judged against the whole chosen set.
+`check_demo_data` (a read) answers one `ClearCheck` (`src/types/demoDataWipe.ts`): `data.websites`;
+`data.rows`, one per data type, each with its count and what happens ("12 removed", "3 closed", "2
+set back to the default value"); `data.records`, every record of each type by name, `removed` and
+`kept` (with a `tree` for categories); `data.total`; and a `token`. What any install record lists,
+this project's included, is left: `data.datapack` names the project's datapack, whose uninstall
+(`reset_datapack`) removes what it installed, until step 06's C3 runs that removal before the
+clearing. The count is what the clearing does. Each record counts under its own type (a shared catalog's customer group under
+customer groups, a company's customers under customers). Kept is what any project's install
+records list on these websites, an instance-wide thing (company, catalog, group, attribute set,
+attribute) any other project's records list, and anything a website not chosen uses; kept records
+carry no reason. Orders already Canceled or Closed, and protected settings, are not listed; orders
+Commerce can neither cancel nor refund (payment review) are named by the clearing's result
+(`data.leftOpen`), not the check. A type Commerce did not answer is in `data.unread`, by
+`classifyTransience`'s kind: `slow` (named by `data.problem`; check again, and the clearing waits),
+`refused` (a 401, 403 or 404 from Commerce included) or `strange` (left alone; the clearing runs for
+the rest). A type whose proof is unread is left too: categories when products or cart rules are,
+catalogs, groups and attributes when cart rules are. A category a cart rule that stays tests is kept. The check failing as a whole
+(signed out, offline) answers the failure codes the Datapacks failure treatment reads. The lists are
+full, so a large store answers a long check.
 
-`clear_demo_data` (confirm-gated; the consent names the stores) needs the stores named, never
-defaulted, and that token. It makes the list again and writes nothing if the store would now clear
-anything the list did not hold, answering the new list instead; otherwise it closes the returns,
-closes off the orders by the one reset rule shared with the ERP integration's reset (nothing
-invoiced or shipped: cancelled; any other: refunded with an offline credit memo; each noted), then
-deletes customers, products, takes shared products off the chosen websites, deletes cart rules and
-takes shared ones off the chosen websites (read whole, sent back with the other websites only), and
-deletes categories deepest first. Its `note` says what it did and exactly what Commerce refused. Orders are never
-deleted. It never touches what an install record lists (`reset_datapack` removes that),
-attributes, sets, customer groups, companies, shared catalogs, stocks and sources, websites,
-stores, store views, root categories or settings. Cannot be undone. The Data Installer's "Clear demo
-data" is the human surface with the store picker; no reset offers it (owner, 2026-11-12), neither the
-buttons nor `reset_project`. Plan: `.rptc/plans/datapack-engine/step-10-wipe.md`.
+`clear_demo_data` (confirm-gated) needs that token. It refuses while the list it names has a slow
+type. It makes the list again and writes nothing if the store would now clear anything the list did
+not hold, answering the new list instead; otherwise it closes off the orders by the one reset rule
+shared with the ERP integration's reset (each noted first, its open returns closed; nothing invoiced
+or shipped: cancelled; any other: invoiced in full and refunded with an offline credit memo), then
+deletes companies, customers, products (or takes shared ones off these websites), cart rules (or takes
+shared ones off), shared catalogs with their groups, customer groups, categories (the top ones, Commerce
+taking those under them), attribute sets and attributes, and sets website settings to the default's
+value. Its `note` says what it did, exactly what Commerce refused, and that the project's datapack
+was left for its uninstall. Orders are never deleted. When the orders could not be read, the ERP step
+is held and says why: the integration is asked only once every order is closed. Its consent dialog
+names the websites the token's check covered, and the shared-website warning (`shownClears.ts`).
+Cannot be undone. The Data Installer's "Clear Demo Data" is the human surface; no reset offers it
+(owner, 2026-11-12), neither the buttons nor `reset_project`. Plans:
+`.rptc/plans/datapack-engine/step-10-wipe.md`, `.rptc/plans/datapack-simplification/step-06.md`.
 
-Every door (both tools and the Data Installer) reads every other project on this
-machine (`readWipeClaims`, over `loadOtherProjects`). A chosen store another project records as
-its own (the store its recorded store view belongs to) is refused before any product, customer or
-order is read, naming that project ("The store justrite_store (website justrite) is also
-JustRite's own store (project JustRite). Clear it from that project, if at all."):
-`check_demo_data` answers it as `data.refused`, a normal answer; `clear_demo_data` refuses. What another project's install records
-list on the chosen websites is left, as this project's is.
+Every door (both tools and the Data Installer) reads every other project on this machine
+(`readWipeClaims`, over `loadOtherProjects`). Another project using one of these websites is never a
+refusal (P6-Q2, owner 2026-11-13): `data.warning` names it ("The project JustRite also uses the website
+justrite. Clearing it also removes what was added there by hand for that project."), and the SC or the
+agent's user may still clear. What another project's install records list on these websites is left.
 
 **One action, ERP included** (owner, 2026-10-30). Every door also finds the ERP integration
 serving the instance, from any local project (`findWipeErp`: the deployed ERP integration of a
 project on the same Commerce instance, as the one-per-instance add refusal matches it). Orders of
-chosen stores whose website it sends to an ERP (`GET erp/settings?websites=`, `orders_send`) are
+chosen websites it sends to an ERP (`GET erp/settings?websites=`, `orders_send`) are
 still the wipe's own: Commerce is the source system (owner, 2026-11-11), so `clear_demo_data`
-closes them by the one reset rule like any other. `data.preview.erp` carries one line ("The ERP
-integration (JustRite) serves these stores: its ERP is brought in line with Commerce after the
+closes them by the one reset rule like any other. `data.erp` carries one line ("The ERP
+integration (JustRite) serves these websites: its ERP is brought in line with Commerce after the
 clearing."). After every Commerce write, the clearing asks the integration to bring its ERP in line
 (`POST erp/close-orders` with the routed store codes, followed by its run id: with every order
 already closed it writes nothing to their state, forgets them, and each ERP that held one removes
 its sales orders for them), then fills the integration's ERPs from Commerce again (`fillEveryErp`).
 The integration's order counts are never merged into the wipe's. A deployment whose `erp/status`
-lacks `closesOrdersByStore`, or one that cannot be asked, is never called: `data.preview.erp.held`
+lacks `closesOrdersByStore`, or one that cannot be asked, is never called: `data.erp.held`
 says why (with the update to run), and the orders are closed all the same. A held, failed or
 partial ERP step is an ERP problem: the answer's `data.erp.broughtInLine` is false,
-`data.erp.problem` says why, and the note says the ERP was not brought in line. The store list
-never offers Commerce's own Admin website (`admin`, id 0).
+`data.erp.problem` says why, and the note says the ERP was not brought in line. Commerce's own
+Admin website (`admin`, id 0) is never read as one of the websites.
 
 ### Waiting on a datapack job instead of polling it (owner, 2026-11-05)
 

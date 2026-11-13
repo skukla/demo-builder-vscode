@@ -11,7 +11,7 @@ import type { CommerceCustomer } from '@/types/commerceWire';
 import { ADMIN_64, BUYER_65, CATALOG_20, COMPANY_28, GROUP_25, GROUP_30, LONE_SHOPPER, PUBLIC_CATALOG, STRANGER_IN_GROUP, b2bInstance } from '../../../../helpers/commerceWipeInstanceFixtures';
 import { sandbox } from './wipe.testUtils';
 
-const TEST_STORE = [{ websiteCode: 'justrite_test_website', storeCode: 'justrite_test_store' }];
+const TEST_STORE = ['justrite_test_website'];
 const NOTHING = { products: [], orders: [] };
 const GOING = [ADMIN_64, BUYER_65];
 
@@ -27,22 +27,19 @@ describe('decideCatalogs, through the plan', () => {
         expect(plan.groups).toEqual([
             { groupId: 25, groupName: GROUP_25.code, catalog: { id: 20, name: CATALOG_20.name }, needs: ['company:28', 'customer:64', 'customer:65'] },
         ]);
-        expect(plan.preview.remove.catalogs).toEqual({ count: 1, names: [CATALOG_20.name] });
-        expect(plan.preview.remove.customerGroups).toEqual({ count: 0, names: [] });
+        // Each under its own type: the catalog under shared catalogs, its group under customer groups (J1-5).
+        expect(plan.check.records.b2b_shared_catalogs).toEqual({ removed: [CATALOG_20.name], kept: [] });
+        expect(plan.check.records.customer_groups).toEqual({ removed: [GROUP_25.code], kept: [] });
     });
 
-    it('keeps the catalog and its group when a customer on another website is in the group, and names it', async () => {
+    it('keeps the catalog and its group when a customer on another website is in the group, and lists both', async () => {
         const store = sandbox({ ...NOTHING, customers: [...GOING, STRANGER_IN_GROUP], instance: b2bInstance() });
 
         const plan = await planWipeFor(store.get, TEST_STORE, { records: [] });
 
         expect(plan.groups).toStrictEqual([]);
-        expect(plan.preview.left).toContainEqual({
-            kind: 'shared catalogs',
-            count: 1,
-            names: [CATALOG_20.name],
-            why: 'a customer, company or cart rule that stays uses them, and removing them would move those customers to General',
-        });
+        expect(plan.check.records.b2b_shared_catalogs).toEqual({ removed: [], kept: [CATALOG_20.name] });
+        expect(plan.check.records.customer_groups).toEqual({ removed: [], kept: [GROUP_25.code] });
     });
 
     it('keeps them when a company that stays is on the group', async () => {
@@ -108,17 +105,17 @@ describe('decideCatalogs, through the plan', () => {
         const plan = await planWipeFor(store.get, TEST_STORE, { records: [] });
 
         expect(plan.groups).toEqual([{ groupId: 30, groupName: GROUP_30.code, needs: ['customer:70'] }]);
-        expect(plan.preview.remove.customerGroups).toEqual({ count: 1, names: [GROUP_30.code] });
+        expect(plan.check.records.customer_groups).toEqual({ removed: [GROUP_30.code], kept: [] });
     });
 
-    it('keeps a group a customer who stays is in, and names it as a customer group', async () => {
+    it('keeps a group a customer who stays is in, and lists it as a customer group', async () => {
         const other: CommerceCustomer = { ...STRANGER_IN_GROUP, group_id: 30 };
         const store = sandbox({ ...NOTHING, customers: [LONE_SHOPPER, other], instance: b2bInstance({ companies: [], hierarchies: {} }) });
 
         const plan = await planWipeFor(store.get, TEST_STORE, { records: [] });
 
         expect(plan.groups).toStrictEqual([]);
-        expect(plan.preview.left).toContainEqual(expect.objectContaining({ kind: 'customer groups', names: [GROUP_30.code] }));
+        expect(plan.check.records.customer_groups.kept).toEqual([GROUP_30.code]);
     });
 
     it.each([
@@ -131,25 +128,26 @@ describe('decideCatalogs, through the plan', () => {
         const plan = await planWipeFor(store.get, TEST_STORE, { records: [], everyRecord: [recordOf(kind, id)] });
 
         expect(plan.groups).toStrictEqual([]);
-        expect(plan.preview.left).toContainEqual(expect.objectContaining({ kind: 'shared catalogs', why: 'Demo Builder installed them, so removing that datapack decides' }));
+        expect(plan.check.records.b2b_shared_catalogs.kept).toEqual([CATALOG_20.name]);
     });
 
-    it('keeps them, named, when who uses the group cannot be read', async () => {
+    it('leaves them alone, marked not read, when who uses the group cannot be read', async () => {
         const store = sandbox({ ...NOTHING, customers: GOING, instance: b2bInstance({ failing: [/^company\?/u] }) });
 
         const plan = await planWipeFor(store.get, TEST_STORE, { records: [] });
 
         expect(plan.groups).toStrictEqual([]);
-        expect(plan.preview.left).toContainEqual(expect.objectContaining({ kind: 'shared catalogs', why: 'who uses them could not be read' }));
+        expect(plan.check.unread).toMatchObject({ b2b_shared_catalogs: 'strange', customer_groups: 'strange' });
     });
 
-    it('keeps a group with no catalog, named by its id, when the group itself cannot be read', async () => {
+    it('leaves a group with no catalog alone, marked not read, when the group itself cannot be read', async () => {
         const store = sandbox({ ...NOTHING, customers: [LONE_SHOPPER], instance: b2bInstance({ companies: [], hierarchies: {}, failing: [/^customerGroups\/30/u] }) });
 
         const plan = await planWipeFor(store.get, TEST_STORE, { records: [] });
 
         expect(plan.groups).toStrictEqual([]);
-        expect(plan.preview.left).toContainEqual({ kind: 'customer groups', count: 1, names: ['group 30'], why: 'who uses them could not be read' });
+        expect(plan.check.unread).toMatchObject({ customer_groups: 'strange' });
+        expect(plan.customerIds).toEqual(['70']);
     });
 
     it('looks again at a group a clearing before this could not finish, under the same rules', async () => {

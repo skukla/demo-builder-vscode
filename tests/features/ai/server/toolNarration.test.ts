@@ -194,7 +194,6 @@ describe('every named form says what it acts on, from the argument that names it
         ['cleanup_dalive_site', { org: 'skukla', site: 'kukla-bodea' }, 'Deleting skukla/kukla-bodea content'],
         ['delete_page', { path: '/drafts/spring-sale' }, 'Deleting /drafts/spring-sale'],
         ['reset_datapack', { datapackName: 'Bodea B2B' }, 'Resetting Bodea B2B'],
-        ['clear_demo_data', { stores: [{ websiteCode: 'justrite_test_website', storeCode: 'justrite_test_store' }] }, 'Clearing justrite_test_store'],
         ['share_datapack', { datapackName: 'acme-1a2b3c' }, 'Changing who can use the acme-1a2b3c pack'],
         ['mark_team_datapack', { datapackName: 'acme-1a2b3c' }, 'Changing whether acme-1a2b3c is a team pack'],
         ['delete_library_datapack', { datapackName: 'Bodea B2B' }, 'Deleting Bodea B2B'],
@@ -260,11 +259,3 @@ describe('a call that acts in the open project can name it', () => {
     });
 });
 
-describe('clear_demo_data names every store it is handed', () => {
-    it('names several stores, and a website handed alone as all its stores', () => {
-        const stores = [{ websiteCode: 'bodea', storeCode: 'bodea_store' }, { websiteCode: 'bodea', storeCode: 'bodea_outlet' }, { websiteCode: 'base' }];
-
-        expect(narrationForCall('clear_demo_data', { stores })).toBe('Clearing bodea_store, bodea_outlet and every store of base');
-        expect(narrationForCall('clear_demo_data', { stores: [] })).toBe(narrationFor('clear_demo_data'));
-    });
-});

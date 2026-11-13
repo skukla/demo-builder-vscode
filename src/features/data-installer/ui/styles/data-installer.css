@@ -475,25 +475,6 @@
 }
 }
 
-/* "Clear demo data" (ClearDemoDataModal, StorePickList): the store tree with its stores indented
-   under their website, scrolling past a dozen rows so the list of what clearing does stays in view,
-   and the spinner while a check runs. Its groups 24 apart are `.clear-demo-body`, in core's
-   modal-text.css since the save window's frame moved to core (step-05, R2). */
-@layer theme {
-.clear-demo-store-list {
-    max-height: 280px;
-    overflow-y: auto;
-}
-
-.clear-demo-stores {
-    padding-left: 24px;
-}
-
-.clear-demo-checking {
-    display: flex;
-}
-}
-
 /* The held pack's one Admin step in the flyout (PackSetupStepLine, DI-5): one quiet line, the
    text then Show step, while the step is open; nothing once it is done. No box: the step itself
    is in its dialog (PackSetupStepDialog). Only this bundle renders it. */

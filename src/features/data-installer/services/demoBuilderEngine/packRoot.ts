@@ -23,17 +23,17 @@
  * (`installCategories`). A category's key leaves that first name out (`packForm.categoryKey`), so
  * the keys, the record and a repeat install are the same either way.
  *
- * Reads the store structure the wipe reads (`readWipeStructure`, `resolveWipeScope`): the three
- * store lists, and which other stores show the same root.
+ * Reads the store structure the wipe reads (`readWipeStructure`): the three store lists, and
+ * which other stores show the same root.
  *
  * @module features/data-installer/services/demoBuilderEngine/packRoot
  */
 
 import { readWipeStructure } from '../demoDataWipe/wipeReads';
-import { resolveWipeScope, storeOfView } from '../demoDataWipe/wipeScope';
 import { CATALOG_CATEGORIES_KIND } from './b2bKeys';
 import type { CreatedObject, TargetCodes } from './installRecord';
 import { ROOT_KEY } from './packForm';
+import type { CommerceStoreGroup, CommerceStoreStructure } from '@/types/commerceStore';
 import type { CommerceGet } from '@/types/commerceWire';
 
 /** The store a pack is installed for, and the root category it shows. */
@@ -69,9 +69,22 @@ export async function readStoreRoot(get: CommerceGet, codes: TargetCodes): Promi
     const structure = await readWipeStructure(get);
     const group = storeOfView(structure, codes.websiteCode, codes.storeCode);
     if (!group) return undefined;
-    const root = String(group.root_category_id);
-    const scope = resolveWipeScope(structure, [{ websiteCode: codes.websiteCode, storeCode: group.code }]);
-    return { storeCode: group.code, storeName: group.name, rootId: Number(root), sharedWith: scope.sharedRoots.get(root) ?? [] };
+    return { storeCode: group.code, storeName: group.name, rootId: Number(group.root_category_id), sharedWith: othersShowing(structure, group) };
+}
+
+/** The store a store view belongs to, on that website: how an install target's view names its store. */
+function storeOfView(structure: CommerceStoreStructure, websiteCode: string, viewCode: string): CommerceStoreGroup | undefined {
+    const site = structure.websites.find((w) => w.code === websiteCode);
+    const view = structure.storeViews.find((v) => v.code === viewCode && String(v.website_id) === String(site?.id));
+    return view ? structure.storeGroups.find((g) => String(g.id) === String(view.store_group_id)) : undefined;
+}
+
+/** Every other store showing the store's root: "the store justrite_store (website justrite)". */
+function othersShowing(structure: CommerceStoreStructure, group: CommerceStoreGroup): string[] {
+    const codeOf = new Map(structure.websites.map((w) => [String(w.id), w.code]));
+    return structure.storeGroups
+        .filter((g) => String(g.id) !== String(group.id) && String(g.root_category_id) === String(group.root_category_id))
+        .map((g) => `the store ${g.code} (website ${codeOf.get(String(g.website_id)) ?? g.website_id})`);
 }
 
 /**

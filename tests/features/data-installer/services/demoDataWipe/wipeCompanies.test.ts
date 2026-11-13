@@ -1,17 +1,17 @@
 /**
- * Which companies a wipe removes: a company whose admin and customers are all on wholly chosen
- * websites goes, with those customers; one tied to anything else stays, is named, and keeps everyone
- * in it. The company, hierarchy and refused admin delete are the live run's (`COMPANY_28_DB08`,
+ * Which companies a wipe removes: a company whose admin and customers are all on the chosen
+ * websites goes, with those customers; one tied to anything else is kept, listed without a reason,
+ * and keeps everyone in it; a read that fails leaves every company alone. The company, hierarchy and refused admin delete are the live run's (`COMPANY_28_DB08`,
  * `HIERARCHY_28_DB08`, `DELETE_COMPANY_ADMIN_REFUSED_DB08`).
  */
 
 import { planWipeFor } from '@/features/data-installer/services/demoDataWipe/wipePlan';
 import type { InstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import type { CommerceOrder } from '@/types/commerceWire';
-import { ADMIN_64, ADMIN_ON_BODEA, BUYER_65, BUYER_ON_BODEA, BUYER_ON_JUSTRITE, COMPANY_28, b2bInstance } from '../../../../helpers/commerceWipeInstanceFixtures';
+import { ADMIN_64, BUYER_65, BUYER_ON_JUSTRITE, COMPANY_28, b2bInstance } from '../../../../helpers/commerceWipeInstanceFixtures';
 import { sandbox } from './wipe.testUtils';
 
-const TEST_STORE = [{ websiteCode: 'justrite_test_website', storeCode: 'justrite_test_store' }];
+const TEST_STORE = ['justrite_test_website'];
 const NOTHING = { products: [], orders: [] };
 const nameOfCompany = COMPANY_28.company_name;
 
@@ -35,8 +35,8 @@ describe('decideCompanies, through the plan', () => {
         expect(plan.companyIds).toEqual(['28']);
         expect(plan.customerIds.sort()).toEqual(['64', '65']);
         expect(plan.memberOf).toEqual({ 64: '28', 65: '28' });
-        expect(plan.preview.remove.companies).toEqual({ count: 1, names: [nameOfCompany] });
-        expect(plan.preview.left.filter((l) => l.kind === 'companies' || l.kind === 'customers')).toStrictEqual([]);
+        expect(plan.check.records.b2b_companies).toEqual({ removed: [nameOfCompany], kept: [] });
+        expect(plan.check.records.customers.kept).toStrictEqual([]);
         expect(store.sent).toStrictEqual([]);
     });
 
@@ -47,17 +47,8 @@ describe('decideCompanies, through the plan', () => {
 
         expect(plan.companyIds).toStrictEqual([]);
         expect(plan.customerIds).toStrictEqual([]);
-        expect(plan.preview.left).toContainEqual({ kind: 'companies', count: 1, names: [nameOfCompany], why: 'a customer in them is on a website not chosen' });
-        expect(plan.preview.left).toContainEqual({ kind: 'customers', count: 1, names: [ADMIN_64.email], why: 'they are in a company that stays' });
-    });
-
-    it('keeps a company whose customers are on a website only partly chosen', async () => {
-        const store = sandbox({ ...NOTHING, customers: [ADMIN_ON_BODEA, BUYER_ON_BODEA], instance: b2bInstance() });
-
-        const plan = await planWipeFor(store.get, [{ websiteCode: 'bodea', storeCode: 'bodea_store' }], { records: [] });
-
-        expect(plan.companyIds).toStrictEqual([]);
-        expect(plan.preview.left).toContainEqual(expect.objectContaining({ kind: 'companies', names: [nameOfCompany] }));
+        expect(plan.check.records.b2b_companies).toEqual({ removed: [], kept: [nameOfCompany] });
+        expect(plan.check.records.customers).toEqual({ removed: [], kept: [ADMIN_64.email] });
     });
 
     it('keeps a company with a customer who has an order in a store not chosen, reading where each ordered', async () => {
@@ -67,7 +58,7 @@ describe('decideCompanies, through the plan', () => {
         const plan = await planWipeFor(store.get, TEST_STORE, { records: [] });
 
         expect(plan.companyIds).toStrictEqual([]);
-        expect(plan.preview.left).toContainEqual(expect.objectContaining({ kind: 'companies', names: [nameOfCompany], why: 'a customer in them has an order in a store not chosen' }));
+        expect(plan.check.records.b2b_companies.kept).toEqual([nameOfCompany]);
         expect(store.reads.some((path) => path.startsWith('orders?') && path.includes('field]=customer_id') && decodeURIComponent(path).includes('64,65'))).toBe(true);
     });
 
@@ -86,7 +77,7 @@ describe('decideCompanies, through the plan', () => {
 
         expect(plan.companyIds).toStrictEqual([]);
         expect(plan.customerIds).toStrictEqual([]);
-        expect(plan.preview.left).toContainEqual(expect.objectContaining({ kind: 'companies', names: [nameOfCompany], why: expect.stringContaining('Demo Builder installed') }));
+        expect(plan.check.records.b2b_companies.kept).toEqual([nameOfCompany]);
     });
 
     it('keeps a company holding a customer an install record lists', async () => {
@@ -97,21 +88,33 @@ describe('decideCompanies, through the plan', () => {
         expect(plan.companyIds).toStrictEqual([]);
     });
 
-    it('keeps a company whose hierarchy cannot be read, rather than delete what might be another demo\'s', async () => {
+    it("leaves every company alone, marked not read, when a hierarchy cannot be read, rather than delete what might be another demo's", async () => {
         const store = sandbox({ ...NOTHING, customers: [ADMIN_64, BUYER_65], instance: b2bInstance({ failing: [/^hierarchy\//u] }) });
 
         const plan = await planWipeFor(store.get, TEST_STORE, { records: [] });
 
         expect(plan.companyIds).toStrictEqual([]);
-        expect(plan.preview.left).toContainEqual(expect.objectContaining({ kind: 'companies', why: 'who is in them could not be read' }));
+        expect(plan.customerIds).toStrictEqual([]);
+        expect(plan.check.unread).toMatchObject({ b2b_companies: 'strange' });
     });
 
-    it('keeps a company whose admin the read does not name', async () => {
+    it('leaves every company alone, marked not read, when the read does not name its admin', async () => {
         const instance = b2bInstance({ companies: [{ ...COMPANY_28, super_user_id: undefined }] });
         const store = sandbox({ ...NOTHING, customers: [ADMIN_64, BUYER_65], instance });
 
         const plan = await planWipeFor(store.get, TEST_STORE, { records: [] });
 
         expect(plan.companyIds).toStrictEqual([]);
+        expect(plan.check.unread).toMatchObject({ b2b_companies: 'strange' });
+    });
+
+    it('decides nothing for a company Commerce does not have, keeping the customers who name it', async () => {
+        const store = sandbox({ ...NOTHING, customers: [ADMIN_64, BUYER_65], instance: b2bInstance({ companies: [] }) });
+
+        const plan = await planWipeFor(store.get, TEST_STORE, { records: [] });
+
+        expect(plan.companyIds).toStrictEqual([]);
+        expect(plan.check.records.customers.kept.sort()).toEqual([ADMIN_64.email, BUYER_65.email].sort());
+        expect(plan.check.unread).toBeUndefined();
     });
 });

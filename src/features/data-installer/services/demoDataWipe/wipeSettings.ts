@@ -1,5 +1,5 @@
 /**
- * Website settings a wipe puts back (owner, 2026-11-02), on wholly chosen websites only: never the
+ * Website settings a wipe puts back (owner, 2026-11-02), on the chosen websites only: never the
  * Default scope, never another website's.
  *
  * **Commerce has no way to put a website's setting back to inherited.** `PUT /V1/system/config` needs a
@@ -17,11 +17,13 @@
  * | Website value, where it differs from the Default scope's | Done |
  * |---|---|
  * | any other | set to the Default scope's value |
- * | base URLs, cookies, the Admin's, a credential (`isOffLimitsSetting`, what a pack may not set), or a value masked or encrypted | stays, counted: a website needs its own, and a masked value must never be copied |
- * | written by a datapack or the setup guide, whose records say (`settingsKept`) | stays, counted: its removal or undo puts it back |
- * | no value at the Default scope | stays, counted: there is nothing to put back, and writing "" or "0" would be a guess |
- * | a list, on either side | stays, counted: a write sends text, and the read then answers one joined string, which the API cannot turn back into the list (live 2026-11-02, `sales/cancellation/reasons`). Only "Use Default Value" in the Admin restores it |
- * | a website that cannot be read | stays, counted, by website |
+ * | base URLs, cookies, the Admin's, a credential (`isOffLimitsSetting`, what a pack may not set), or a value masked or encrypted | stays, not listed (protected): a website needs its own, and a masked value must never be copied |
+ * | written by a datapack or the setup guide, whose records say (`settingsKept`) | stays, not listed (protected): its removal or undo puts it back |
+ * | no value at the Default scope | stays, not listed: there is nothing to put back, and writing "" or "0" would be a guess |
+ * | a list, on either side | stays, named in `lists` for the clearing's result: a write sends text, and the read then answers one joined string, which the API cannot turn back into the list (live 2026-11-02, `sales/cancellation/reasons`). Only "Use Default Value" in the Admin restores it |
+ *
+ * A website whose settings cannot be read leaves every setting alone (`failed`): the plan marks
+ * website settings as not read.
  *
  * | Read or write | Endpoint and field | Confirmed from a real answer? |
  * |---|---|---|
@@ -34,12 +36,10 @@
 
 import type { RemovalAccess } from '../demoBuilderEngine/removers';
 import { isOffLimitsSetting } from '../demoBuilderEngine/storeConfigKind';
-import { leftRow } from './wipeLeft';
 import type { WipeScope } from './wipeScope';
 import { absentAsEmpty, readAllPages } from '@/features/app-builder/services/erpFillReaders';
 import { configFix } from '@/features/app-builder/services/storePreparation/configFix';
 import type { CommerceGet, CommerceSystemConfigRow } from '@/types/commerceWire';
-import type { WipeLeft } from '@/types/demoDataWipe';
 
 /** A value that is not the setting's: masked, or Commerce's encrypted form. Never copied anywhere. */
 const HIDDEN_VALUE = /^(\*+|\d+:\d+:.*)$/u;
@@ -56,13 +56,10 @@ export interface WipeSetting {
 
 export interface SettingsDecision {
     reset: WipeSetting[];
-    /** Paths that stay, by why. */
-    offLimits: string[];
-    installed: string[];
-    noDefault: string[];
+    /** List settings that differ from the default: only "Use Default Value" in the Admin puts them back. */
     lists: string[];
-    /** Websites that could not be read. */
-    unread: string[];
+    /** What stopped a read: every setting is then left alone. */
+    failed?: unknown;
 }
 
 type SettingValue = CommerceSystemConfigRow['value'];
@@ -77,52 +74,30 @@ function sortRow(row: CommerceSystemConfigRow, websiteCode: string, defaults: Re
     const value = asText(row.value);
     const fallbackText = asText(fallback);
     if (value === null || value === fallbackText) return;
-    if (isOffLimitsSetting(row.path) || HIDDEN_VALUE.test(value) || (fallbackText !== null && HIDDEN_VALUE.test(fallbackText))) decided.offLimits.push(row.path);
-    else if (kept.has(`${websiteCode}/${row.path}`)) decided.installed.push(row.path);
-    else if (fallback === null) decided.noDefault.push(row.path);
-    else if (Array.isArray(fallback) || Array.isArray(row.value)) decided.lists.push(row.path);
+    const isProtected = isOffLimitsSetting(row.path) || HIDDEN_VALUE.test(value) || (fallbackText !== null && HIDDEN_VALUE.test(fallbackText));
+    if (isProtected || kept.has(`${websiteCode}/${row.path}`) || fallback === null) return;
+    if (Array.isArray(fallback) || Array.isArray(row.value)) decided.lists.push(row.path);
     else decided.reset.push({ websiteCode, path: row.path, value: fallback });
 }
 
-/** The wholly chosen websites' codes. */
-const wholeWebsiteCodes = (scope: WipeScope): string[] => [...new Set(scope.stores.filter((s) => scope.websites.whole.includes(s.website.id)).map((s) => s.website.code))];
-
 /**
- * What the wholly chosen websites hold that differs from the Default scope. Reads only.
+ * What the chosen websites hold that differs from the Default scope. Reads only; a read that fails
+ * leaves every setting alone.
  *
  * @param kept - settings a record says a datapack or the setup guide wrote, as `<website code>/<path>`
  */
 export async function decideSettings(get: CommerceGet, scope: WipeScope, kept: ReadonlySet<string>): Promise<SettingsDecision> {
-    const decided: SettingsDecision = { reset: [], offLimits: [], installed: [], noDefault: [], lists: [], unread: [] };
-    const websites = wholeWebsiteCodes(scope);
-    if (websites.length === 0) return decided;
-    let defaults: Map<string, SettingValue>;
+    const decided: SettingsDecision = { reset: [], lists: [] };
     try {
-        defaults = new Map((await readScope(get, '&scope=default')).map((row) => [row.path, row.value]));
-    } catch {
-        decided.unread.push(...websites);
-        return decided;
-    }
-    for (const websiteCode of websites) {
-        try {
-            const rows = await readScope(get, `&scope=website&scopeCode=${encodeURIComponent(websiteCode)}`);
-            for (const row of rows) sortRow(row, websiteCode, defaults, kept, decided);
-        } catch {
-            decided.unread.push(websiteCode);
+        const defaults = new Map((await readScope(get, '&scope=default')).map((row) => [row.path, row.value]));
+        for (const { code } of scope.websites) {
+            const rows = await readScope(get, `&scope=website&scopeCode=${encodeURIComponent(code)}`);
+            for (const row of rows) sortRow(row, code, defaults, kept, decided);
         }
+    } catch (error) {
+        return { reset: [], lists: [], failed: error };
     }
     return decided;
-}
-
-/** What the SC is told about the settings that stay. */
-export function settingsLeft(decided: SettingsDecision): WipeLeft[] {
-    return [
-        leftRow('settings', decided.offLimits, 'base URLs, cookies, Admin settings and credentials are never changed'),
-        leftRow('settings', decided.installed, 'a datapack or the setup guide set them, and its removal or undo puts them back'),
-        leftRow('settings', decided.noDefault, 'they have no default value to go back to'),
-        leftRow('settings', decided.lists, 'Commerce cannot write a list back, so set them to Use Default Value in the Admin'),
-        leftRow('settings', decided.unread.map((code) => `website ${code}`), "Commerce would not list the website's settings"),
-    ];
 }
 
 /** What a settings write did: how many went through, and each refused, without its values. */

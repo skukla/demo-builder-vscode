@@ -1,13 +1,12 @@
 /**
- * Which cart rules a store wipe clears (datapack-engine step 11). A cart rule is website-scoped and
- * one rule can span websites, so only what is unambiguous is done:
+ * Which cart rules a wipe clears (datapack-engine step 11; whole websites only since
+ * datapack-simplification step 06). A cart rule is website-scoped and one rule can span websites:
  *
  * | Rule | Done |
  * |---|---|
- * | on wholly chosen websites only | deleted (`DELETE salesRules/{id}`); Commerce deletes its coupons with it |
- * | on wholly chosen websites and others too | taken off the chosen ones: read whole (`GET salesRules/{id}`), sent back with only the others (`PUT salesRules/{id}`) |
- * | on a website only partly chosen | left: it applies on that website's stores not chosen too |
- * | listed by an install record, or holding a coupon one lists | left: the pack's removal takes it, by its own rules |
+ * | on chosen websites only | deleted (`DELETE salesRules/{id}`); Commerce deletes its coupons with it |
+ * | on chosen websites and others too | taken off the chosen ones: read whole (`GET salesRules/{id}`), sent back with only the others (`PUT salesRules/{id}`) |
+ * | listed by an install record, or holding a coupon one lists | kept, and listed |
  * | on no chosen website | not read about at all |
  *
  * | Read | Endpoint and field | Confirmed from a real answer? |
@@ -32,10 +31,8 @@ export interface CartRuleDecision {
     remove: CommerceSalesRule[];
     /** Each rule kept on the websites not chosen, and those websites. */
     takeOff: Array<{ rule: CommerceSalesRule; websiteIds: number[] }>;
-    /** On a website only partly chosen. */
-    partWebsite: CommerceSalesRule[];
-    /** Holding a coupon an install record lists. */
-    holding: CommerceSalesRule[];
+    /** On a chosen website, and listed by an install record or holding a coupon one lists. */
+    kept: CommerceSalesRule[];
     /** Every rule on the instance this wipe does not delete: what a customer group or an attribute must not be named by. */
     staying: CommerceSalesRule[];
 }
@@ -59,12 +56,11 @@ async function rulesHoldingRecorded(get: CommerceGet, coupons: ReadonlySet<strin
 }
 
 /** Sort one rule on a chosen website into what the wipe does with it. */
-function sortRule(rule: CommerceSalesRule, scope: WipeScope, holdingIds: ReadonlySet<string>, decided: CartRuleDecision): void {
-    const websites = (rule.website_ids ?? []).map(Number);
-    if (websites.some((id) => scope.websites.part.includes(id))) return void decided.partWebsite.push(rule);
-    const others = websites.filter((id) => !scope.websites.whole.includes(id));
+function sortRule(rule: CommerceSalesRule, scope: WipeScope, keptIds: ReadonlySet<string>, decided: CartRuleDecision): void {
+    if (keptIds.has(String(rule.rule_id))) return void decided.kept.push(rule);
+    const others = (rule.website_ids ?? []).map(Number).filter((id) => !scope.websiteIds.includes(id));
     if (others.length > 0) return void decided.takeOff.push({ rule, websiteIds: others });
-    (holdingIds.has(String(rule.rule_id)) ? decided.holding : decided.remove).push(rule);
+    decided.remove.push(rule);
 }
 
 /**
@@ -73,14 +69,30 @@ function sortRule(rule: CommerceSalesRule, scope: WipeScope, holdingIds: Readonl
  * @param recorded - the rules and coupons install records list: never touched
  */
 export async function decideCartRules(get: CommerceGet, scope: WipeScope, recorded: RecordedPromotions): Promise<CartRuleDecision> {
-    const decided: CartRuleDecision = { remove: [], takeOff: [], partWebsite: [], holding: [], staying: [] };
-    const chosen = [...scope.websites.whole, ...scope.websites.part];
+    const decided: CartRuleDecision = { remove: [], takeOff: [], kept: [], staying: [] };
     const all = await absentAsEmpty(() => readAllPages<CommerceSalesRule>(get, 'salesRules/search'));
-    const rules = all.filter((r) => r.rule_id !== undefined && !recorded.rules.has(String(r.rule_id)) && (r.website_ids ?? []).map(Number).some((id) => chosen.includes(id)));
+    const rules = all.filter((r) => r.rule_id !== undefined && (r.website_ids ?? []).map(Number).some((id) => scope.websiteIds.includes(id)));
     const holdingIds = rules.length > 0 && recorded.coupons.size > 0 ? await rulesHoldingRecorded(get, recorded.coupons) : new Set<string>();
-    for (const rule of rules) sortRule(rule, scope, holdingIds, decided);
+    for (const rule of rules) sortRule(rule, scope, new Set([...recorded.rules, ...holdingIds]), decided);
     decided.staying = all.filter((r) => !decided.remove.includes(r));
     return decided;
+}
+
+/** A condition tree's category ids (`category_ids`, this store's ids, comma-separated), anywhere in it. */
+function categoriesIn(condition: CommerceSalesRule['condition'], into: Set<string>): void {
+    if (!condition) return;
+    if (condition.attribute_name === 'category_ids') String(condition.value ?? '').split(',').map((id) => id.trim()).filter(Boolean).forEach((id) => into.add(id));
+    for (const child of condition.conditions ?? []) categoriesIn(child, into);
+}
+
+/** Every category the rules test, in their conditions or their actions: a category a rule that stays tests stays. */
+export function categoriesNamedBy(rules: readonly CommerceSalesRule[]): Set<string> {
+    const named = new Set<string>();
+    for (const rule of rules) {
+        categoriesIn(rule.condition, named);
+        categoriesIn(rule.action_condition, named);
+    }
+    return named;
 }
 
 /** Delete one rule; Commerce deletes its coupons with it. */

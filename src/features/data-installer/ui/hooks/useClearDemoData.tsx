@@ -11,11 +11,11 @@ import React, { useCallback } from 'react';
 import { OperationProgressModal } from '@/core/ui/components/feedback/OperationProgressModal';
 import { useOperationRunner } from '@/core/ui/hooks/useOperationRunner';
 import { DEMO_DATA_CLEAR_OPERATION_ID } from '@/core/utils/operationIds';
-import type { DemoDataRequest, WipeStoreChoice } from '@/types/demoDataWipe';
+import type { DemoDataRequest } from '@/types/demoDataWipe';
 
 export interface ClearDemoData {
-    /** Clear these stores as the list with this token showed them. */
-    clear: (stores: WipeStoreChoice[], token: string) => void;
+    /** Clear what the list with this token showed, on these websites (by code: the window's name). */
+    clear: (token: string, websites: string[]) => void;
     /** The progress window; mount it once. */
     progressWindow: React.JSX.Element;
 }
@@ -27,16 +27,16 @@ export function useClearDemoData(onClosed: () => void): ClearDemoData {
     const { start, open, retry, close } = useOperationRunner();
 
     const clear = useCallback(
-        (stores: WipeStoreChoice[], token: string): void => {
-            const payload: Omit<DemoDataRequest, 'progress'> = { stores, token, confirm: true };
+        (token: string, websites: string[]): void => {
+            const payload: Omit<DemoDataRequest, 'progress'> = { token, confirm: true };
             start({
                 id: DEMO_DATA_CLEAR_OPERATION_ID,
-                name: stores.map((s) => s.storeCode ?? s.websiteCode).join(', '),
+                name: websites.join(', '),
                 message: 'clear-demo-data',
                 payload: { ...payload },
                 title: 'Clearing Demo Data',
-                subject: stores.map((s) => s.storeCode ?? s.websiteCode).join(', '),
-                // Named by the button's thing, Demo Data: a list of store codes would put a comma in the title.
+                subject: websites.join(', '),
+                // Named by the button's thing, Demo Data: a list of website codes would put a comma in the title.
                 failureTitle: "Couldn't Clear Demo Data",
                 successTitle: 'Demo Data Cleared',
             });

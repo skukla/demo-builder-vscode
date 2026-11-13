@@ -33,7 +33,6 @@ import { CardActionsMenu } from '@/core/ui/components/ui/CardActionsMenu';
 import { renderMenuIcon } from '@/core/ui/components/ui/menuIcons';
 import { Spinner } from '@/core/ui/components/ui/Spinner';
 import type { DatapackId } from '@/types/datapack';
-import type { WipeStoreChoice } from '@/types/demoDataWipe';
 
 /** The save button's state, and the flow each of its choices opens. Handlers stable. */
 export interface HeaderSaveActions {
@@ -92,9 +91,9 @@ export function CatalogHeaderActions({ onCatalogChanged, save, mySaves }: Catalo
 
     const close = useCallback((): void => setOpen(null), []);
     const startClear = useCallback(
-        (stores: WipeStoreChoice[], token: string): void => {
+        (token: string, websites: string[]): void => {
             setOpen(null);
-            clear(stores, token);
+            clear(token, websites);
         },
         [clear],
     );

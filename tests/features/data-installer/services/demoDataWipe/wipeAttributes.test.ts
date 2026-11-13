@@ -10,12 +10,12 @@ import type { CommerceSalesRule } from '@/types/commerceSalesRule';
 import { DEFAULT_SET_PRODUCT, JUSTRITE_CAN, JUSTRITE_WIPER, OWNED_PRODUCT, WIPER_1, WIPER_2, attributeInstance } from '../../../../helpers/commerceWipeInstanceFixtures';
 import { sandbox } from './wipe.testUtils';
 
-const TEST_STORE = [{ websiteCode: 'justrite_test_website', storeCode: 'justrite_test_store' }];
+const TEST_STORE = ['justrite_test_website'];
 const NOTHING = { customers: [], orders: [] };
 const ALL = [WIPER_1, WIPER_2];
 
 const recordOf = (kind: string, id: string): InstallRecord => ({ format: 1, pack: { name: 'zz', version: '1' }, engine: 'demo-builder', startedAt: '2026-10-30T10:00:00.000Z', created: [{ kind, id }] });
-const whyOf = (plan: Awaited<ReturnType<typeof planWipeFor>>, kind: string) => plan.preview.left.filter((l) => l.kind === kind);
+const keptOf = (plan: Awaited<ReturnType<typeof planWipeFor>>, type: string) => plan.check.records[type]?.kept ?? [];
 
 describe('decideAttributes, through the plan', () => {
     it("removes a set only the products going use, and the user's attribute it holds, after those products", async () => {
@@ -25,58 +25,59 @@ describe('decideAttributes, through the plan', () => {
 
         expect(plan.attributeSets).toEqual([{ id: 40, name: 'Wipers', needs: ['product:ZZ-WIPER-1', 'product:ZZ-WIPER-2'] }]);
         expect(plan.attributes).toEqual([{ code: 'wiper_size', needs: ['set:40', 'product:ZZ-WIPER-1', 'product:ZZ-WIPER-2'] }]);
-        expect(plan.preview.remove.attributeSets).toEqual({ count: 1, names: ['Wipers'] });
-        expect(plan.preview.remove.attributes).toEqual({ count: 1, names: ['wiper_size'] });
+        expect(plan.check.records.attribute_sets).toEqual({ removed: ['Wipers'], kept: [] });
+        expect(plan.check.records.product_attributes).toEqual({ removed: ['wiper_size'], kept: [] });
     });
 
-    it('keeps a set a product on another website is in, and the attribute that set holds, naming both', async () => {
+    it('keeps a set a product on another website is in, and the attribute that set holds, listing both', async () => {
         const store = sandbox({ ...NOTHING, products: [...ALL, JUSTRITE_WIPER], instance: attributeInstance() });
 
         const plan = await planWipeFor(store.get, TEST_STORE, { records: [] });
 
         expect(plan.attributeSets).toStrictEqual([]);
         expect(plan.attributes).toStrictEqual([]);
-        expect(whyOf(plan, 'attribute sets')).toEqual([{ kind: 'attribute sets', count: 1, names: ['Wipers'], why: 'products that stay are in them' }]);
-        expect(whyOf(plan, 'attributes')).toEqual([{ kind: 'attributes', count: 1, names: ['wiper_size'], why: 'an attribute set that stays holds them' }]);
+        expect(keptOf(plan, 'attribute_sets')).toEqual(['Wipers']);
+        expect(keptOf(plan, 'product_attributes')).toEqual(['wiper_size']);
     });
 
-    it('never removes the Default set or a system attribute, and does not report them', async () => {
+    it('never removes the Default set or a system attribute, and does not list them', async () => {
         const store = sandbox({ ...NOTHING, products: [DEFAULT_SET_PRODUCT], instance: attributeInstance() });
 
         const plan = await planWipeFor(store.get, TEST_STORE, { records: [] });
 
         expect(plan.attributeSets).toStrictEqual([]);
-        expect(plan.preview.left.some((l) => l.names.includes('Default') || l.names.includes('description'))).toBe(false);
+        const listed = Object.values(plan.check.records).flatMap((r) => [...r.removed, ...r.kept]);
+        expect(listed.some((name) => name === 'Default' || name === 'description')).toBe(false);
     });
 
-    it('keeps an attribute the Default set holds, carried by a product going, and names it', async () => {
+    it('keeps an attribute the Default set holds, carried by a product going, and lists it', async () => {
         const store = sandbox({ ...NOTHING, products: [DEFAULT_SET_PRODUCT], instance: attributeInstance() });
 
         const plan = await planWipeFor(store.get, TEST_STORE, { records: [] });
 
         expect(plan.attributes).toStrictEqual([]);
-        expect(whyOf(plan, 'attributes')).toEqual([{ kind: 'attributes', count: 1, names: ['cs_format'], why: 'an attribute set that stays holds them' }]);
+        expect(keptOf(plan, 'product_attributes')).toEqual(['cs_format']);
     });
 
-    it('never removes an attribute an ERP integration owns, and names it', async () => {
+    it('never removes an attribute an ERP integration owns, and lists it', async () => {
         const store = sandbox({ ...NOTHING, products: [OWNED_PRODUCT], instance: attributeInstance() });
 
         const plan = await planWipeFor(store.get, TEST_STORE, { records: [] });
 
         expect(plan.attributes.map((a) => a.code)).toEqual(['wiper_size']);
-        expect(whyOf(plan, 'attributes')).toEqual([{ kind: 'attributes', count: 3, names: ['erp_owner', 'brand', 'erp_sync_note'], why: 'an ERP integration owns them' }]);
+        expect(keptOf(plan, 'product_attributes')).toEqual(['erp_owner', 'brand', 'erp_sync_note']);
     });
 
     it.each([
-        ['the set', 'attribute_sets', '40', 'attribute sets', 'Wipers'],
-        ["the attribute's place in the set", 'attribute_assign_to_set', '40/wiper_size', 'attribute sets', 'Wipers'],
-    ])('never touches a set when an install record of any website lists %s', async (_what, kind, id, leftKind, name) => {
+        ['the set', 'attribute_sets', '40'],
+        ["the attribute's place in the set", 'attribute_assign_to_set', '40/wiper_size'],
+    ])('never touches a set when an install record of any website lists %s', async (_what, kind, id) => {
         const store = sandbox({ ...NOTHING, products: ALL, instance: attributeInstance() });
 
         const plan = await planWipeFor(store.get, TEST_STORE, { records: [], everyRecord: [recordOf(kind, id)] });
 
         expect(plan.attributeSets).toStrictEqual([]);
-        expect(whyOf(plan, leftKind)).toContainEqual(expect.objectContaining({ names: [name], why: 'Demo Builder installed them, so removing that datapack decides' }));
+        expect(keptOf(plan, 'attribute_sets')).toEqual(['Wipers']);
     });
 
     it.each([
@@ -98,7 +99,7 @@ describe('decideAttributes, through the plan', () => {
         const plan = await planWipeFor(store.get, TEST_STORE, { records: [] });
 
         expect(plan.attributes).toStrictEqual([]);
-        expect(whyOf(plan, 'attributes')).toEqual([{ kind: 'attributes', count: 1, names: ['wiper_size'], why: 'a cart rule that stays tests them' }]);
+        expect(keptOf(plan, 'product_attributes')).toEqual(['wiper_size']);
     });
 
     it('keeps an attribute a product elsewhere still carries, though no set that stays holds it', async () => {
@@ -109,7 +110,7 @@ describe('decideAttributes, through the plan', () => {
 
         expect(plan.attributeSets.map((s) => s.id)).toEqual([40]);
         expect(plan.attributes).toStrictEqual([]);
-        expect(whyOf(plan, 'attributes')).toEqual([{ kind: 'attributes', count: 1, names: ['wiper_size'], why: 'products that stay carry a value for them' }]);
+        expect(keptOf(plan, 'product_attributes')).toEqual(['wiper_size']);
     });
 
     it('asks who carries it by a notnull search on its code', async () => {
@@ -123,31 +124,33 @@ describe('decideAttributes, through the plan', () => {
     it.each([
         ['who carries it', /conditionType\]=notnull/u],
         ['the attribute itself', /^products\/attributes\/wiper_size/u],
-    ])("keeps the attribute, named, when %s can't be read", async (_what, failing) => {
+    ])("leaves every attribute alone, marked not read, when %s can't be read", async (_what, failing) => {
         const store = sandbox({ ...NOTHING, products: ALL, instance: attributeInstance({ failing: [failing] }) });
 
         const plan = await planWipeFor(store.get, TEST_STORE, { records: [] });
 
         expect(plan.attributes).toStrictEqual([]);
-        expect(whyOf(plan, 'attributes')).toEqual([{ kind: 'attributes', count: 1, names: ['wiper_size'], why: "Commerce would not say what uses them, so they can't be called unused" }]);
+        expect(plan.attributeSets.map((s) => s.id)).toEqual([40]);
+        expect(plan.check.unread).toEqual({ product_attributes: 'strange' });
     });
 
-    it('keeps every attribute when the sets holding them cannot be read', async () => {
+    it('leaves every attribute alone when the sets holding them cannot be read', async () => {
         const store = sandbox({ ...NOTHING, products: ALL, instance: attributeInstance({ failing: [/^products\/attribute-sets\/4\/attributes/u] }) });
 
         const plan = await planWipeFor(store.get, TEST_STORE, { records: [] });
 
         expect(plan.attributes).toStrictEqual([]);
-        expect(whyOf(plan, 'attributes')[0]).toMatchObject({ why: "Commerce would not say what uses them, so they can't be called unused" });
+        expect(plan.check.unread).toEqual({ product_attributes: 'strange' });
     });
 
-    it('keeps the set, named, when the products in it cannot be read', async () => {
+    it('leaves every set, and so every attribute, alone when the products in a set cannot be read', async () => {
         const store = sandbox({ ...NOTHING, products: ALL, instance: attributeInstance({ failing: [/field\]=attribute_set_id/u] }) });
 
         const plan = await planWipeFor(store.get, TEST_STORE, { records: [] });
 
         expect(plan.attributeSets).toStrictEqual([]);
-        expect(whyOf(plan, 'attribute sets')).toEqual([{ kind: 'attribute sets', count: 1, names: ['Wipers'], why: "which products are in them could not be read, so they can't be called unused" }]);
+        expect(plan.attributes).toStrictEqual([]);
+        expect(plan.check.unread).toEqual({ attribute_sets: 'strange', product_attributes: 'strange' });
     });
 
     it('looks at no set when no product is going', async () => {

@@ -11,7 +11,7 @@ import { ADMIN_64, BUYER_65, CATALOG_20, COMPANY_28, LONE_SHOPPER, WIPER_1, WIPE
 import { DELETE_COMPANY_ADMIN_REFUSED_DB08 } from '../../../../helpers/commerceB2bFixtures';
 import { REFUSED_SETTING, sandbox, writesOf } from './wipe.testUtils';
 
-const TEST_STORE = [{ websiteCode: 'justrite_test_website', storeCode: 'justrite_test_store' }];
+const TEST_STORE = ['justrite_test_website'];
 const B2B = { products: [], orders: [], customers: [ADMIN_64, BUYER_65] };
 
 describe('runWipe, the B2B kinds', () => {
@@ -35,8 +35,7 @@ describe('runWipe, the B2B kinds', () => {
         expect(outcome.failed).toStrictEqual([]);
         expect(outcome.unfinished).toBeUndefined();
         expect(outcome.sentence).toBe(
-            'Removed 2 customers, 1 company and 1 shared catalog with its customer group from the store justrite_test_store. ' +
-                'Left 1 of the categories (Safety Cans): under root category 119, which the store justrite_store (website justrite) also shows.',
+            'Removed 2 customers, 1 company and 1 shared catalog with its customer group from the website justrite_test_website.',
         );
     });
 
@@ -70,7 +69,7 @@ describe('runWipe, the B2B kinds', () => {
         ]);
         expect(store.data.instance?.movedToGeneral).toStrictEqual([]);
         expect(outcome.removed).toMatchObject({ companies: 1, customers: 1, catalogs: 0 });
-        expect(outcome.unfinished).toEqual({ scopeKey: 'justrite_test_website/justrite_test_store', groups: [25], sets: [], attributes: [] });
+        expect(outcome.unfinished).toEqual({ scopeKey: 'justrite_test_website', groups: [25], sets: [], attributes: [] });
     });
 
     it('has the admin refused, as Commerce did live, only if the company were still there: the order is what avoids it', async () => {
@@ -125,7 +124,7 @@ describe('runWipe, the B2B kinds', () => {
 
         const plan = await planWipeFor(store.get, TEST_STORE, { records: [] });
 
-        expect(plan.preview.total).toBe(0);
+        expect(plan.check.total).toBe(0);
     });
 });
 
@@ -193,13 +192,25 @@ describe('runWipe, website settings', () => {
 });
 
 describe('what is said afterwards', () => {
-    it('names what stayed, kind by kind, with why', async () => {
+    it('lists what stayed in the check, not in the sentence: kept records carry no reason (J1-3b)', async () => {
         const store = sandbox({ products: [], orders: [], customers: [ADMIN_64, { ...BUYER_65, website_id: 2 }], instance: b2bInstance() });
+        const plan = await planWipeFor(store.get, TEST_STORE, { records: [] });
+
+        const outcome = await runWipe(store, plan);
+
+        expect(plan.check.records.b2b_companies.kept).toEqual([COMPANY_28.company_name]);
+        expect(outcome.sentence).not.toContain('Left ');
+    });
+
+    it("names the list settings no write can put back, for the result's Admin step", async () => {
+        const instance = settingsInstance();
+        instance.settings?.default.push({ path: 'sales/cancellation/reasons', value: ['A', 'B'], scope: 'default' });
+        instance.settings?.websites.justrite_test_website.push({ path: 'sales/cancellation/reasons', value: ['A'], scope: 'website', scope_code: 'justrite_test_website' });
+        const store = sandbox({ customers: [], orders: [], products: [], instance });
 
         const outcome = await runWipe(store, await planWipeFor(store.get, TEST_STORE, { records: [] }));
 
-        expect(outcome.left).toContainEqual(expect.objectContaining({ kind: 'companies', names: [COMPANY_28.company_name] }));
-        expect(outcome.sentence).toContain(`Left 1 of the companies (${COMPANY_28.company_name}): a customer in them is on a website not chosen.`);
+        expect(outcome.listSettings).toEqual(['sales/cancellation/reasons']);
     });
 });
 

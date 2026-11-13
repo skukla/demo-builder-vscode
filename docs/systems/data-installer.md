@@ -241,15 +241,15 @@ which lists every object the install made. It never removes by name.
   another project) is refused, and nothing is removed (owner, 2026-10-30, step 14
   item 20). The refusal points the SC at **Clear demo data** on the Data Installer
   screen (agents: `check_demo_data`, then `clear_demo_data`), which clears what Demo
-  Builder did not install from the stores the SC picks (`demoDataWipe/wipePlan.ts`):
-  products, categories, customers and cart rules; companies with their customers,
-  shared catalogs with their customer groups, customer groups, attribute sets and
-  attributes, each only when nothing else on the instance uses it; and the wholly
-  chosen websites' settings, set to the default's value (Commerce cannot make a
-  value inherited again, so "Use Default Value" in the Admin stays the one way to
-  do that). Orders are closed, never deleted. What another demo also uses stays, and
-  the dialog names it. Rules, write order and live proof:
-  `.rptc/plans/datapack-engine/step-10-wipe.md`.
+  Builder did not install from every website the project uses, whole
+  (`demoDataWipe/wipePlan.ts`; websites since datapack-simplification step 06):
+  products, categories, customers and cart rules; companies, shared catalogs,
+  customer groups, attribute sets and attributes, each only when nothing else on the
+  instance uses it; and those websites' settings, set to the default's value (Commerce
+  cannot make a value inherited again, so "Use Default Value" in the Admin stays the
+  one way to do that). Orders are closed, never deleted. What another demo also uses
+  stays, listed as kept. Rules, write order and live proof:
+  `.rptc/plans/datapack-engine/step-10-wipe.md`, `.rptc/plans/datapack-simplification/step-06.md`.
 
 When an install hits trouble (step 14 items 1 to 3):
 

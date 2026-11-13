@@ -66,7 +66,7 @@ function itemText(item: unknown): string {
 function consentValue(value: unknown): string | undefined {
     if (typeof value === 'string') return value;
     if (typeof value === 'number' || typeof value === 'boolean') return String(value);
-    // A list names WHICH things (`clear_demo_data`'s stores): leaving it out would leave the line blank.
+    // A list names WHICH things: leaving it out would leave the line blank.
     if (Array.isArray(value)) return value.map(itemText).join(', ');
     return undefined;
 }
@@ -131,8 +131,9 @@ export function buildConsentPrompt(
     const target = copy.target.length
         ? renderTargetForConsent(args, copy.target)
         : (fallbackTarget ?? '');
-    // The choices the call made, under the target (`reset_project`'s Uninstall Datapack).
-    const named = [target, renderTargetForConsent(args, copy.choices ?? [])].filter(Boolean).join('\n');
+    // What the arguments cannot name (`clear_demo_data`'s websites, from its token), then the choices
+    // the call made (`reset_project`'s Uninstall Datapack), under the target.
+    const named = [target, copy.describe?.(args) ?? '', renderTargetForConsent(args, copy.choices ?? [])].filter(Boolean).join('\n');
     return {
         title: `${agentNotice(copy.action)}?`,
         detail: [copy.consequence, named].filter(Boolean).join('\n\n'),

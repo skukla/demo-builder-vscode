@@ -1,5 +1,5 @@
 /**
- * Clearing a demo's part of the store (datapack-engine step 10): the plan the SC saw, carried out.
+ * Clearing a demo's websites (datapack-engine step 10): the plan the SC saw, carried out.
  * Cannot be undone: it removes things no install record lists and closes orders, so there is nothing
  * to put back.
  *
@@ -24,7 +24,7 @@
  * and the rest carry on, so the SC is told exactly what could not be done, and a second clearing picks
  * up what is left (`WipeOutcome.unfinished`).
  *
- * Every order of the chosen stores is the wipe's own, ERP-routed ones included (Commerce is the
+ * Every order of the chosen websites is the wipe's own, ERP-routed ones included (Commerce is the
  * source system, owner 2026-11-11, erp-order-close step 5). When an ERP integration routes some
  * chosen websites (`wipeErp.ts`), its ERP is brought in line AFTER every write above, then filled
  * again from Commerce. Its order counts are never merged: a failure there is an ERP problem.
@@ -69,12 +69,12 @@ import type { WipeUnfinished } from './wipeUnfinished';
 import { andList } from '@/core/utils/andList';
 import { DATAPACK_STAGES } from '@/core/utils/datapackStages';
 import { errorText } from '@/features/app-builder/services/storePreparation/fixContract';
-import type { WipePreview } from '@/types/demoDataWipe';
+import type { ClearCheck } from '@/types/demoDataWipe';
 
 /** The store would now clear something the SC was not shown: nothing was written. */
 export class WipeChangedError extends Error {
-    constructor(readonly preview: WipePreview) {
-        super(`Commerce changed since the list was made, so nothing was cleared. Check what would be removed again (${preview.total} things now).`);
+    constructor(readonly check: Pick<ClearCheck, 'total'>) {
+        super(`Commerce changed since the list was made, so nothing was cleared. Check what would be removed again (${check.total} things now).`);
         this.name = 'WipeChangedError';
     }
 }
@@ -135,9 +135,11 @@ export interface WipeOutcome {
     /** Each step with refusals: how many, and the first in Commerce's words. */
     failed: Array<{ what: string; count: number; first: string }>;
     sentence: string;
-    /** What the list said stays, kind by kind, with why. */
-    left: WipePreview['left'];
-    /** What no read would find again, for the next clearing of these stores to look at (`wipeUnfinished.ts`). */
+    /** Orders left open with a note, by number (payment review, or nothing to invoice or refund): for the SC to finish in the Admin. */
+    leftOpen: string[];
+    /** List settings that differ from the default, which no write can put back: "Use Default Value" in the Admin does. */
+    listSettings: string[];
+    /** What no read would find again, for the next clearing of these websites to look at (`wipeUnfinished.ts`). */
     unfinished?: WipeUnfinished;
     /** The ERP step, when an integration routed some chosen websites: never counted in `orders` or `failed`. */
     erp?: { integration: string; broughtInLine: boolean; problem?: string; removedFrom: string[]; refreshed: boolean; said?: string };
@@ -238,10 +240,10 @@ function stepsOf(commerce: RemovalAccess, plan: WipePlan, day: string, onReturnC
 
 const counted = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 
-/** "the store justrite_test_store", "the stores bodea_store and bodea_outlet". */
-export function storesInWords(preview: WipePreview): string {
-    const codes = preview.stores.map((s) => s.storeCode);
-    return `${codes.length === 1 ? 'the store' : 'the stores'} ${andList(codes)}`;
+/** "the website justrite_test_website", "the websites bodea and justrite". */
+export function websitesInWords(check: Pick<ClearCheck, 'websites'>): string {
+    const codes = check.websites.map((w) => w.code);
+    return `${codes.length === 1 ? 'the website' : 'the websites'} ${andList(codes)}`;
 }
 
 /** " Canceled 1 order, refunded 2 and left 1 open with a note. Closed 1 return.", or nothing. */
@@ -277,17 +279,8 @@ function settingsSentence(count: number): string {
     return ` Set ${counted(count, 'website setting', 'website settings')} to the default's value. Commerce can't clear a website's own value, so a later change to the default won't reach ${count === 1 ? 'it' : 'them'}.`;
 }
 
-/** " Left 1 of the companies (Acme): why.", kind by kind. */
-function leftSentence(left: WipePreview['left']): string {
-    const names = (row: WipePreview['left'][number]): string => {
-        const more = row.count - row.names.length;
-        return row.names.length > 0 ? ` (${row.names.join(', ')}${more > 0 ? ` and ${more} more` : ''})` : '';
-    };
-    return left.map((row) => ` Left ${row.count} of the ${row.kind}${names(row)}: ${row.why}.`).join('');
-}
-
-function sentenceOf(preview: WipePreview, removed: WipeCounts, orders: OrderCounts, failed: WipeOutcome['failed']): string {
-    const where = storesInWords(preview);
+function sentenceOf(check: Pick<ClearCheck, 'websites'>, removed: WipeCounts, orders: OrderCounts, failed: WipeOutcome['failed']): string {
+    const where = websitesInWords(check);
     const parts = removedParts(removed);
     const did = parts.length > 0 ? `Removed ${andList(parts)} from ${where}.` : `Removed nothing from ${where}.`;
     const off = removed.takenOff > 0 ? ` Took ${counted(removed.takenOff, 'product', 'products')} other websites also sell off the chosen websites.` : '';
@@ -328,8 +321,8 @@ export async function runWipe(commerce: RemovalAccess, plan: WipePlan, report: (
     }
     await runSettings(commerce, plan, report, removed, failed);
     const unfinished = unfinishedOf(plan, notDone);
-    const { left } = plan.preview;
-    return { removed, orders, failed, left, sentence: `${sentenceOf(plan.preview, removed, orders, failed)}${leftSentence(left)}`, ...(unfinished ? { unfinished } : {}) };
+    const leftOpen = plan.orders.filter((o) => o.action === 'note').map((o) => o.number);
+    return { removed, orders, failed, leftOpen, listSettings: plan.listSettings, sentence: sentenceOf(plan.check, removed, orders, failed), ...(unfinished ? { unfinished } : {}) };
 }
 
 /** Every write of one step, what it needs first checked; answers each it could not do, as "id: why". */
@@ -373,7 +366,7 @@ function unfinishedOf(plan: WipePlan, notDone: ReadonlySet<string>): WipeUnfinis
 /** The wipe's outcome with the ERP step added, and the sentence said again: its counts untouched. */
 function withErp(outcome: WipeOutcome, plan: WipePlan, closed: ErpClosed | undefined, refreshed: ErpRefreshed | undefined): WipeOutcome {
     if (!plan.erp) return outcome;
-    const sentence = `${sentenceOf(plan.preview, outcome.removed, outcome.orders, outcome.failed)}${erpSentence(plan.erp, closed, refreshed)}${leftSentence(outcome.left)}`;
+    const sentence = `${sentenceOf(plan.check, outcome.removed, outcome.orders, outcome.failed)}${erpSentence(plan.erp, closed, refreshed)}`;
     const problem = erpProblemOf(plan.erp, closed, refreshed);
     const said = refreshed?.said ? { said: refreshed.said } : {};
     const line = { integration: plan.erp.route.name, broughtInLine: !problem, ...(problem ? { problem } : {}) };
@@ -382,16 +375,16 @@ function withErp(outcome: WipeOutcome, plan: WipePlan, closed: ErpClosed | undef
 }
 
 /**
- * Clear the stores as shown: make the plan again, refuse when it takes anything the shown plan did
+ * Clear the websites as shown: make the plan again, refuse when it takes anything the shown plan did
  * not, then carry it out: the wipe's own writes, orders included; then, when an ERP integration
- * routes some of the stores, its ERP brought in line and filled again from Commerce.
+ * routes some of the websites, its ERP brought in line and filled again from Commerce.
  *
  * @throws WipeChangedError, writing nothing, when the store would now clear something not shown
  */
 export async function clearShown(commerce: RemovalAccess, shown: WipePlan, inputs: WipeInputs, report: (stage: string, step?: string) => void = () => undefined): Promise<WipeOutcome> {
     const { erp } = inputs;
-    const now = await planWipeFor(commerce.get, shown.choices, inputs);
-    if (!withinPlan(shown, now)) throw new WipeChangedError(now.preview);
+    const now = await planWipeFor(commerce.get, shown.websiteCodes, inputs);
+    if (!withinPlan(shown, now)) throw new WipeChangedError(now.check);
     const outcome = await runWipe(commerce, now, report);
     const closed = await closeErpOrders(erp, now.erp, report);
     return withErp(outcome, now, closed, await refreshErp(erp, now.erp, report));

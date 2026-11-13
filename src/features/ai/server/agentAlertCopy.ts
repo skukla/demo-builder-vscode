@@ -45,6 +45,8 @@
  * @module features/ai/server/agentAlertCopy
  */
 
+import { shownClearFor } from '@/features/data-installer/services/demoDataWipe/shownClears';
+
 /** Authored strings for one tool's alerts. */
 export interface AgentAlertCopy {
     /** Completes "Agent · ___?". Verb phrase, no full stop. */
@@ -77,6 +79,12 @@ export interface AgentAlertCopy {
      * would have dropped the line naming the project.
      */
     choices?: string[];
+    /**
+     * Lines naming what the call acts on that its arguments cannot: `clear_demo_data` is handed only
+     * a token, so this names the websites the token's check covered (`shownClears.ts`). Shown under
+     * the target; nothing when it answers nothing.
+     */
+    describe?: (args: unknown) => string | undefined;
     /**
      * May the user say "don't ask again this session" for this tool?
      *
@@ -111,6 +119,13 @@ export interface AgentAlertCopy {
  * interrupting, because a prompt on a cheap mutation trains people to click
  * Allow without reading, which costs more than it saves.
  */
+/** "Websites: bodea, justrite", and the shared-website warning, for the check the token names; nothing for one no check answered. */
+function clearedWebsitesLines(args: unknown): string | undefined {
+    const shown = shownClearFor((args as { token?: unknown } | null | undefined)?.token);
+    if (!shown) return undefined;
+    return [`Websites: ${shown.websites.join(', ')}`, shown.warning].filter(Boolean).join('\n');
+}
+
 export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     delete_project: {
         action: 'Delete this project',
@@ -264,10 +279,11 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         sessionGrant: false,
     },
     clear_demo_data: {
-        action: "Clear these stores' demo data",
+        action: "Clear this project's demo data",
         consequence:
-            "Deletes what only these stores use and Demo Builder did not install, as listed: products, categories, customers, cart rules, companies, shared catalogs, customer groups, attribute sets and attributes. Sets the website settings to the default's value, takes products other websites sell off them, cancels or refunds their orders and closes their returns (through the ERP integration where one serves the store, then refreshing its ERP). This can't be undone.",
-        target: ['stores'],
+            "Deletes what only this project's websites use and no datapack lists, as listed: products, categories, customers, cart rules, companies, shared catalogs, customer groups, attribute sets and attributes. Sets the website settings to the default's value, takes products other websites sell off them, cancels or refunds their orders and closes their returns (bringing in line the ERP of an ERP integration that serves these websites, from Commerce). This can't be undone.",
+        target: [],
+        describe: (args) => clearedWebsitesLines(args),
         sessionGrant: false,
     },
     reinstall_integration: {

@@ -39,14 +39,6 @@ import { importHandlers } from '@/features/data-installer/handlers/importHandler
 import { PICKABLE_KINDS, PICK_FIELDS } from '@/features/data-installer/pickableKinds';
 import type { HandlerResponse } from '@/types/handlers';
 
-/** One store a demo-data check or clearing is about (`WipeStoreChoice`): a website alone means all its stores. */
-const WIPE_STORE = z
-    .object({
-        websiteCode: z.string().describe('The website, by code'),
-        storeCode: z.string().optional().describe('The store (store group), by code. Omit for every store of the website'),
-    })
-    .strict();
-
 /**
  * The datapack an import/reset/export names.
  *
@@ -361,52 +353,51 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         },
     },
 
-    // ── clearing a demo's part of the store (datapack-engine step 10) ────────
+    // ── clearing a demo's websites (datapack-engine step 10; datapack-simplification step 06) ──
     {
         tool: 'check_demo_data',
         needsAuth: ['adobe'],
-        readOnly: true, // reads the store structure, the chosen stores' products, categories, customers, cart rules, orders and returns, the companies, catalogs, groups, attribute sets, attributes and settings they use, the records, and the ERP integration's erp/status and erp/settings (GETs)
+        readOnly: true, // reads the store structure, the project's websites' products, categories, customers, cart rules, orders and returns, the companies, catalogs, groups, attribute sets, attributes and settings they use, the records, and the ERP integration's erp/status and erp/settings (GETs)
         description:
-            "What some STORES of this project's Commerce instance hold that Demo Builder did not install, and what clearing them would do. " +
-            'Answers data.choices: every website and its stores (store views listed under each, never chosen alone; a store another ' +
-            'local project records as its own carries claimedBy and cannot be chosen). With stores chosen, also data.preview: ' +
-            'products, categories, customers, cart rules (with their coupons), companies, shared catalogs (with their customer groups), ' +
-            'customer groups, attribute sets and attributes it would remove, website settings it would set to the default value (data.preview.settings), ' +
-            'products and cart rules other websites ' +
-            "also sell or use that would only be taken off the chosen websites, orders it would cancel or refund (never delete) and returns it would close, what it would leave and why in data.preview.left " +
-            "(a root category a store not chosen shares, a product whose demo can't be told, a company with a customer elsewhere, a catalog, group or attribute something that stays uses, a cart rule on a website a " +
-            'store not chosen also sells on), and a token clear_demo_data needs. ' +
-            'When an ERP integration on this instance (in any local project) sends a chosen store\'s orders to an ERP, those orders ' +
-            'are still closed by the clearing, and data.preview.erp says its ERP is brought in line with Commerce after (its line says so); ' +
-            'when it must be updated first or cannot be asked, data.preview.erp.held says why its ERP will not be brought in line. ' +
-            "Also counts what Demo Builder installed (removed by reset_datapack, never by the clearing). Writes nothing. Defaults to the " +
-            "project's own store; stores: [] answers the choices alone. When a chosen store is another project's, answers data.refused " +
-            'instead of a preview: tell the user that sentence; it names the project to clear it from.',
+            "What clearing every website this project uses (its own and every website its datapack was installed to) would do in its Commerce instance. " +
+            "What any datapack Demo Builder installed lists is left, this project's included: data.datapack names this project's, which its uninstall " +
+            '(reset_datapack) removes. Answers data.websites; data.rows, one per data type ' +
+            '(products, categories, customers, companies, shared catalogs, cart rules, customer groups, attribute sets, attributes, website settings, ' +
+            'orders, returns), each with its count and what happens ("12 removed", "3 closed", ' +
+            '"2 set back to the default value"); data.records, every record of each type by name, removed and kept (kept: what another ' +
+            "project's datapack lists, or a website not chosen uses; no reasons); data.total; and data.token, which clear_demo_data needs. " +
+            "Each record counts under its own type: a shared catalog's customer group under customer groups, a company's customers under customers. " +
+            'Orders are closed, never deleted; orders Commerce can neither cancel nor refund and orders already closed are not listed. ' +
+            'A type Commerce did not answer is in data.unread: slow (data.problem names it; check again before clearing), refused or strange ' +
+            '(left alone; the clearing runs for the rest). When another local project uses one of these websites, data.warning names it: ' +
+            'tell the user; they may still clear. When an ERP integration (in any local project) sends these websites\' orders to an ERP, ' +
+            'data.erp says its ERP is brought in line with Commerce after the clearing; data.erp.held says why it will not be. ' +
+            'Large stores answer long lists. Writes nothing.',
         map: importHandlers,
         type: 'check-demo-data',
-        inputSchema: { stores: z.array(WIPE_STORE).optional().describe("The stores to look at, by website and store code. Omit for the project's own; [] for the choices alone") },
+        inputSchema: {},
     },
     {
         tool: 'clear_demo_data',
         needsAuth: ['adobe'],
         readOnly: false,
         description:
-            'Clear the chosen stores of everything check_demo_data listed: deletes those products, categories, customers, cart rules ' +
-            "(their coupons with them), companies, shared catalogs (their customer groups with them), customer groups, attribute sets and attributes, sets those wholly chosen websites' settings to the default value, " +
-            'takes the shared products and cart rules off the chosen websites, cancels or refunds their orders (closing them, never deleting) and closes their ' +
+            "Clear this project's websites of everything check_demo_data listed: deletes those products, categories, customers, cart rules " +
+            "(their coupons with them), companies, shared catalogs (their customer groups with them), customer groups, attribute sets and attributes, sets those websites' settings to the default value, " +
+            'takes the shared products and cart rules off these websites, cancels or refunds their orders (closing them, never deleting) and closes their ' +
             "returns, those an ERP integration sends to an ERP included; then that integration's ERP is brought in line with Commerce and " +
             "filled again, in the same call. When that step fails or is held, data.erp.broughtInLine is false and data.erp.problem says why; " +
-            "the orders stay closed. Cannot be undone. Show the user check_demo_data's list and ask first. Needs the stores named exactly as checked " +
-            'and the token from that check; if the store would now clear anything the list did not hold, nothing is written and the ' +
-            'new list comes back. Refused when another project on this machine records a chosen store as its own. ' +
-            "Never touches what any project's install records list, anything a store not chosen also uses, Commerce's own customer groups and attributes, " +
-            "the public catalog, the Default attribute set, stocks, the default settings or another website's. A partial failure says what finished; running it again picks up what is left.",
+            "the orders stay closed. Cannot be undone. Show the user check_demo_data's list and ask first. Needs the token from that check; " +
+            'refused while that check named a type Commerce was too slow to answer (check again). If the store would now clear anything the list did not hold, nothing is written and the ' +
+            "new list comes back as data. Never touches what any project's install records list, anything a website not chosen also uses, Commerce's own customer groups and attributes, " +
+            "the public catalog, the Default attribute set, stocks, the default settings or another website's, nor what this project's datapack installed " +
+            "(left for reset_datapack; the note says so). Answers data.leftOpen (orders left open " +
+            'with a note, to finish in the Commerce Admin) and data.listSettings (list settings only the Admin can set back). A partial failure says what finished; running it again picks up what is left.',
         map: importHandlers,
         type: 'clear-demo-data',
         confirm: true, // gated twice, as reset_datapack is: the row, then the handler's own check
         inputSchema: {
-            stores: z.array(WIPE_STORE).describe('The stores to clear, by website and store code, as check_demo_data was asked about them. Never defaulted'),
-            token: z.string().describe("check_demo_data's token for those stores"),
+            token: z.string().describe("check_demo_data's token"),
         },
     },
 

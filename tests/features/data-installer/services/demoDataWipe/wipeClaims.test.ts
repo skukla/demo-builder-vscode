@@ -1,15 +1,14 @@
 /**
- * What a wipe of some stores must respect from every project on this machine (datapack-engine
- * step 10, owner 2026-10-30): a store another project records as its own cannot be chosen, and the
- * refusal names that project; what any project's install records list on the chosen websites is left.
+ * What a wipe of a project's websites must respect from every project on this machine
+ * (datapack-engine step 10; datapack-simplification step 06): the websites are every one the project
+ * uses; another project using one of them is a warning naming it, never a refusal (P6-Q2); what any
+ * project's install records list on the chosen websites is left.
  */
 
 import { type InstallRecord, installRecordPath } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
-import { claimedStores, readWipeClaims } from '@/features/data-installer/services/demoDataWipe/wipeClaims';
-import { resolveWipeScope } from '@/features/data-installer/services/demoDataWipe/wipeScope';
+import { projectWebsites, readWipeClaims } from '@/features/data-installer/services/demoDataWipe/wipeClaims';
 import type { Project } from '@/types/base';
 import type { CommerceStoreStructure } from '@/types/commerceStore';
-import type { WipeStoreChoice } from '@/types/demoDataWipe';
 import type { StorePreparationRecord } from '@/types/storePreparation';
 import { SANDBOX_GROUPS, SANDBOX_VIEWS, SANDBOX_WEBSITES } from '../../../../helpers/commerceWipeFixtures';
 import { createMockProject } from '../../../../helpers/projectFake';
@@ -17,6 +16,7 @@ import { memoryFiles } from '../demoBuilderEngine/demoBuilderEngine.testUtils';
 import { PROJECT_RECORDS } from './wipe.testUtils';
 
 const STRUCTURE: CommerceStoreStructure = { websites: SANDBOX_WEBSITES, storeGroups: SANDBOX_GROUPS, storeViews: SANDBOX_VIEWS };
+const PROJECT_SCOPE = { kind: 'project' } as const;
 
 function accsProject(name: string, websiteCode: string, viewCode: string, title?: string): Project {
     return createMockProject({
@@ -43,82 +43,95 @@ function filesWith(entries: Array<[Project, InstallRecord]>) {
     return memoryFiles(Object.fromEntries(entries.map(([p, r]) => [installRecordPath(p.path, r.pack), JSON.stringify(r)])));
 }
 
-const claims = (files: ReturnType<typeof memoryFiles>, project: Project, others: Project[], choices: WipeStoreChoice[]) =>
-    readWipeClaims(files, project, others, STRUCTURE, resolveWipeScope(STRUCTURE, choices));
+const claims = (files: ReturnType<typeof memoryFiles>, project: Project, others: Project[]) => readWipeClaims(files, project, others, STRUCTURE, PROJECT_SCOPE);
 
-/** scratch-1028's shape: its own website and view are JustRite's. */
-const SCRATCH = accsProject('scratch-1028', 'justrite', 'justrite_us');
+/** A project on the test website, as PROJECT_RECORDS' target says. */
+const TESTER = accsProject('tester', 'justrite_test_website', 'justrite_test_view', 'Tester');
 const JUSTRITE = accsProject('JustRite', 'justrite', 'justrite_us');
-const OUTLET_DEMO = accsProject('outlet-demo', 'bodea', 'bodea_outlet_en', 'Outlet Demo');
-const TEST_STORE = [{ websiteCode: 'justrite_test_website', storeCode: 'justrite_test_store' }];
-const CLAIMED = "The store justrite_store (website justrite) is also JustRite's own store (project JustRite). Clear it from that project, if at all.";
 
-describe('readWipeClaims', () => {
-    it('refuses a store another project records as its own, naming it, reading no record', async () => {
-        const files = filesWith([[SCRATCH, PROJECT_RECORDS[0]]]);
+describe('projectWebsites', () => {
+    it("names the project's own website and every website its records were installed to, each once, sorted", () => {
+        const records = [record('a', 'bodea', 'A'), record('b', 'justrite_test_website', 'B'), record('c', undefined, 'C')];
+
+        expect(projectWebsites(JUSTRITE, records)).toEqual(['bodea', 'justrite', 'justrite_test_website']);
+    });
+
+    it('names none for a project with no website and no record', () => {
+        expect(projectWebsites(createMockProject({ name: 'bare', componentConfigs: {} }), [])).toStrictEqual([]);
+    });
+});
+
+describe('readWipeClaims, project scope', () => {
+    it("covers every website the project uses: its own and its records'", async () => {
+        const files = filesWith([[JUSTRITE, PROJECT_RECORDS[0]]]);
+
+        const answer = await claims(files, JUSTRITE, []);
+
+        expect(answer.scope.key).toBe('justrite,justrite_test_website');
+    });
+
+    it('warns, naming the project, when another project uses one of these websites, and still answers what to respect', async () => {
+        const files = filesWith([[TESTER, PROJECT_RECORDS[0]]]);
         const read = jest.spyOn(files, 'read');
-        const list = jest.spyOn(files, 'list');
 
-        expect(await claims(files, SCRATCH, [JUSTRITE, OUTLET_DEMO], [{ websiteCode: 'justrite' }])).toEqual({ refusal: CLAIMED });
-        expect(read).not.toHaveBeenCalled();
-        expect(list).not.toHaveBeenCalled();
+        const answer = await claims(files, TESTER, [accsProject('other', 'justrite_test_website', 'justrite_test_view', 'Other Demo'), JUSTRITE]);
+
+        expect(answer.warning).toBe('The project Other Demo also uses the website justrite_test_website. Clearing it also removes what was added there by hand for that project.');
+        expect(answer.respects.records).toEqual(PROJECT_RECORDS);
+        expect(read).toHaveBeenCalled();
     });
 
-    it("refuses a website when one of its stores is another project's, naming only that store", async () => {
-        const result = await claims(memoryFiles(), SCRATCH, [OUTLET_DEMO], [{ websiteCode: 'bodea' }]);
-
-        expect(result).toEqual({
-            refusal: "The store bodea_outlet (website bodea) is also Outlet Demo's own store (project outlet-demo). Clear it from that project, if at all.",
-        });
-    });
-
-    it("lets the other store of that website be cleared: a claim is the project's store, not its website", async () => {
-        expect(await claims(memoryFiles(), SCRATCH, [OUTLET_DEMO], [{ websiteCode: 'bodea', storeCode: 'bodea_store' }])).toMatchObject({ records: [] });
-    });
-
-    it('names every project that claims it', async () => {
-        const result = await claims(memoryFiles(), SCRATCH, [JUSTRITE, accsProject('justrite-copy', 'justrite', 'justrite_us')], [{ websiteCode: 'justrite' }]);
-
-        expect(result).toEqual({
-            refusal:
-                "The store justrite_store (website justrite) is also JustRite's and justrite-copy's own store (projects JustRite and justrite-copy). " +
-                'Clear it from one of those projects, if at all.',
-        });
-    });
-
-    it('claims every store of its website for a project whose store view the store no longer has', async () => {
-        const stale = accsProject('stale-demo', 'bodea', 'gone_view');
-
-        expect([...claimedStores(STRUCTURE, SCRATCH, [stale]).keys()]).toEqual([3, 7]);
-    });
-
-    it('does not count the project itself, if the list holds it', async () => {
-        const files = filesWith([[SCRATCH, PROJECT_RECORDS[0]]]);
-
-        expect(await claims(files, SCRATCH, [SCRATCH], [{ websiteCode: 'justrite' }])).toMatchObject({ records: PROJECT_RECORDS });
-    });
-
-    it("keeps every record of the project's own, as before, when no other project claims the stores", async () => {
-        const own = record('own-pack', 'bodea', 'OWN-ELSEWHERE');
+    it("counts another project's record on these websites as using them, and names every project", async () => {
+        const other = accsProject('bodea-demo', 'bodea', 'bodea_en', 'Bodea Demo');
         const files = filesWith([
-            [SCRATCH, PROJECT_RECORDS[0]],
-            [SCRATCH, own],
+            [TESTER, PROJECT_RECORDS[0]],
+            [other, record('theirs', 'justrite_test_website', 'THEIRS')],
         ]);
 
-        expect(await claims(files, SCRATCH, [JUSTRITE], TEST_STORE)).toMatchObject({ records: [PROJECT_RECORDS[0], own] });
+        const answer = await claims(files, TESTER, [other, accsProject('copy', 'justrite_test_website', 'justrite_test_view', 'Copy')]);
+
+        expect(answer.warning).toBe(
+            'The projects Bodea Demo and Copy also use the website justrite_test_website. Clearing it also removes what was added there by hand for those projects.',
+        );
     });
 
-    it("hands on another project's records for ANY website as the instance-wide list, without treating their products as on these stores", async () => {
+    it('warns of nothing when no other project uses these websites, and skips the project itself if listed', async () => {
+        const files = filesWith([[TESTER, PROJECT_RECORDS[0]]]);
+
+        expect((await claims(files, TESTER, [TESTER, JUSTRITE])).warning).toBeUndefined();
+    });
+
+    it("respects this project's own records and the settings they wrote, as well as every other project's", async () => {
+        const own = record('own-pack', 'justrite_test_website', 'OWN');
+        const other = accsProject('other-demo', 'bodea', 'bodea_en');
+        const theirs = record('their-pack', 'justrite_test_website', 'THEIRS-ON-TEST');
+        const files = filesWith([
+            [TESTER, own],
+            [other, theirs],
+        ]);
+
+        const answer = await claims(files, TESTER, [other]);
+
+        expect(answer.respects).toMatchObject({ records: [own, theirs], everyRecord: [own, theirs] });
+    });
+
+    it('names what is true when the project records no website at all', async () => {
+        const bare = createMockProject({ name: 'bare', path: '/nonexistent/projects/bare', componentConfigs: {} });
+
+        await expect(claims(memoryFiles(), bare, [])).rejects.toThrow('This project records no website to clear.');
+    });
+
+    it("hands on another project's records for ANY website as the instance-wide list, without treating their products as on these websites", async () => {
         const other = accsProject('other-demo', 'bodea', 'bodea_en');
         const onBodea = record('their-bodea-pack', 'bodea', 'THEIRS-ON-BODEA');
         const files = filesWith([
-            [SCRATCH, PROJECT_RECORDS[0]],
+            [TESTER, PROJECT_RECORDS[0]],
             [other, onBodea],
         ]);
 
-        const answer = await claims(files, SCRATCH, [other], TEST_STORE);
+        const answer = await claims(files, TESTER, [other]);
 
-        expect(answer).toMatchObject({ records: [PROJECT_RECORDS[0]], everyRecord: [PROJECT_RECORDS[0], onBodea] });
+        expect(answer.respects).toMatchObject({ records: [PROJECT_RECORDS[0]], everyRecord: [PROJECT_RECORDS[0], onBodea] });
     });
 
     it('says which website settings a datapack, the setup guide or set_commerce_config wrote, on any project', async () => {
@@ -134,49 +147,55 @@ describe('readWipeClaims', () => {
             appBuilderComponents: { erp: { kind: 'integration', status: 'deployed', source: { owner: 'zz', repo: 'zz' }, storePreparation } },
             commerceConfigChange: { at: '2026-10-30', previous: [{ path: 'sales/totals_sort/tax', scope: 'website', scopeCode: 'bodea', stored: null, effective: '40' }] },
         };
-        const layer: InstallRecord = { ...PROJECT_RECORDS[0], created: [{ kind: 'store_config', id: 'catalog/frontend/grid_per_page@website', key: 'catalog/frontend/grid_per_page@website' }, { kind: 'store_config', id: 'catalog/x/y@default', key: 'catalog/x/y@default' }] };
-        const files = filesWith([[SCRATCH, layer]]);
+        const layer: InstallRecord = {
+            ...PROJECT_RECORDS[0],
+            created: [
+                { kind: 'store_config', id: 'catalog/frontend/grid_per_page@website', key: 'catalog/frontend/grid_per_page@website' },
+                { kind: 'store_config', id: 'catalog/x/y@default', key: 'catalog/x/y@default' },
+            ],
+        };
+        const files = filesWith([[TESTER, layer]]);
 
-        const answer = await claims(files, SCRATCH, [other], TEST_STORE);
+        const answer = await claims(files, TESTER, [other]);
 
-        expect('settingsKept' in answer && [...answer.settingsKept].sort()).toEqual([
+        expect([...answer.respects.settingsKept].sort()).toEqual([
             'bodea/sales/totals_sort/tax',
             'justrite_test_website/catalog/frontend/grid_per_page',
             'justrite_test_website/payment/companycredit/active',
         ]);
     });
 
-    it("adds another project's records for the chosen websites, and only those", async () => {
-        const other = accsProject('other-demo', 'bodea', 'bodea_en');
-        const onTestSite = record('their-pack', 'justrite_test_website', 'THEIRS-ON-TEST');
-        const onBodea = record('their-bodea-pack', 'bodea', 'THEIRS-ON-BODEA');
-        const files = filesWith([
-            [SCRATCH, PROJECT_RECORDS[0]],
-            [other, onTestSite],
-            [other, onBodea],
-        ]);
-
-        expect(await claims(files, SCRATCH, [other], TEST_STORE)).toMatchObject({ records: [PROJECT_RECORDS[0], onTestSite] });
-    });
-
     it("reads a record with no website at its project's own website, as every record reader does", async () => {
         const other = accsProject('other-demo', 'bodea', 'bodea_en');
         const files = filesWith([[other, record('old-pack', undefined, 'OLD-ON-BODEA')]]);
 
-        expect(await claims(files, SCRATCH, [other], TEST_STORE)).toMatchObject({ records: [] });
+        expect((await claims(files, TESTER, [other])).respects.records).toStrictEqual([]);
     });
 
     it('keeps a record whose website nothing says: it may be on a chosen one', async () => {
         const nowhere = createMockProject({ name: 'no-website', path: '/nonexistent/projects/no-website', componentConfigs: {} });
         const old = record('old-pack', undefined, 'OLD-SOMEWHERE');
 
-        expect(await claims(filesWith([[nowhere, old]]), SCRATCH, [nowhere], TEST_STORE)).toMatchObject({ records: [old] });
+        expect((await claims(filesWith([[nowhere, old]]), TESTER, [nowhere])).respects.records).toEqual([old]);
     });
 
     it("refuses when another project's record cannot be read: what it lists could be taken", async () => {
         const other = accsProject('other-demo', 'bodea', 'bodea_en');
         const files = memoryFiles({ [installRecordPath(other.path, { name: 'broken', version: '1' })]: '{not json' });
 
-        await expect(claims(files, SCRATCH, [other], TEST_STORE)).rejects.toThrow('The install record for broken@1 cannot be read.');
+        await expect(claims(files, TESTER, [other])).rejects.toThrow('The install record for broken@1 cannot be read.');
+    });
+
+    it('names a website the project uses that the store no longer has', async () => {
+        await expect(claims(memoryFiles(), accsProject('gone', 'gone_website', 'gone_view'), [])).rejects.toThrow('Commerce has no website gone_website.');
+    });
+});
+
+describe('readWipeClaims, instance scope', () => {
+    it('covers the websites named, whatever the project uses, and warns of nothing', async () => {
+        const answer = await readWipeClaims(memoryFiles(), TESTER, [JUSTRITE], STRUCTURE, { kind: 'instance', websites: ['justrite', 'bodea'] });
+
+        expect(answer.scope.key).toBe('bodea,justrite');
+        expect(answer.warning).toBeUndefined();
     });
 });

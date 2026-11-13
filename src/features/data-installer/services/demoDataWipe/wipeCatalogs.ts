@@ -11,10 +11,12 @@
  * | Group, with its catalog if it has one | Done |
  * |---|---|
  * | every customer and company in it is going, and no cart rule that stays names it | removed: the catalog, then the group |
- * | Commerce's own (`NOT LOGGED IN`, `General`, `Wholesale`, `Retailer`, ids 0 to 3) or the public catalog's | never, and not reported: the list of what is never touched says it |
- * | an install record lists it | stays, named |
- * | a customer, company or cart rule that stays uses it | stays, named: deleting it would move them to General |
- * | who uses it could not be read | stays, named |
+ * | Commerce's own (`NOT LOGGED IN`, `General`, `Wholesale`, `Retailer`, ids 0 to 3) or the public catalog's | never, and not listed |
+ * | an install record lists it | kept, and listed |
+ * | a customer, company or cart rule that stays uses it | kept, and listed: deleting it would move them to General |
+ *
+ * A read that fails leaves every group alone (`failed`): the plan marks shared catalogs and customer
+ * groups as not read.
  *
  * | Read | Endpoint and field | Confirmed from a real answer? |
  * |---|---|---|
@@ -32,11 +34,9 @@ import { readOrNull, segment } from '../demoBuilderEngine/kindContext';
 import type { RemovalAccess } from '../demoBuilderEngine/removers';
 import { removeCatalog } from '../demoBuilderEngine/sharedCatalogKinds';
 import type { GoingCompany } from './wipeCompanies';
-import { leftRow } from './wipeLeft';
 import { absentAsEmpty, readAllPages } from '@/features/app-builder/services/erpFillReaders';
 import type { CommerceSalesRule } from '@/types/commerceSalesRule';
 import type { CommerceCompanyRow, CommerceCustomer, CommerceCustomerGroup, CommerceGet, CommerceSharedCatalog } from '@/types/commerceWire';
-import type { WipeLeft } from '@/types/demoDataWipe';
 
 /** Commerce's own groups: 0 `NOT LOGGED IN`, 1 `General`, 2 `Wholesale`, 3 `Retailer`. Magento's fixed ids. */
 const BUILT_IN_GROUPS: ReadonlySet<number> = new Set([0, 1, 2, 3]);
@@ -52,15 +52,15 @@ export interface GoingGroup {
 
 export interface CatalogDecision {
     remove: GoingGroup[];
-    /** What stays, by why, each as { kind, name }. */
-    installed: StayingGroup[];
-    used: StayingGroup[];
-    unread: StayingGroup[];
+    /** The groups that stay, each with its catalog's name when it has one. */
+    kept: StayingGroup[];
+    /** What stopped a read: every group is then left alone. */
+    failed?: unknown;
 }
 
-interface StayingGroup {
-    kind: 'shared catalogs' | 'customer groups';
-    name: string;
+export interface StayingGroup {
+    groupName: string;
+    catalog?: string;
 }
 
 /** What deciding the catalogs and groups is handed. */
@@ -104,30 +104,30 @@ function needsOf(groupId: number, inputs: CatalogInputs): string[] {
 
 async function judge(get: CommerceGet, groupId: number, catalog: CommerceSharedCatalog | undefined, inputs: CatalogInputs, decided: CatalogDecision): Promise<void> {
     // A catalog names itself as the store calls it; its group was renamed to match when it was made.
-    const group = await readOrNull<CommerceCustomerGroup>(get, `customerGroups/${segment(groupId)}`).catch(() => undefined);
+    const group = await readOrNull<CommerceCustomerGroup>(get, `customerGroups/${segment(groupId)}`);
     // Gone since: nothing to decide.
     if (group === null && !catalog) return;
     const groupName = group?.code ?? `group ${groupId}`;
-    const staying: StayingGroup = catalog ? { kind: 'shared catalogs', name: catalog.name } : { kind: 'customer groups', name: groupName };
-    if (group === undefined && !catalog) return void decided.unread.push(staying);
-    if (inputs.recorded.groups.has(String(groupId)) || (catalog && inputs.recorded.catalogs.has(String(catalog.id)))) return void decided.installed.push(staying);
-    try {
-        if (await usedOutside(get, groupId, inputs)) return void decided.used.push(staying);
-    } catch {
-        return void decided.unread.push(staying);
-    }
+    const staying: StayingGroup = { groupName, ...(catalog ? { catalog: catalog.name } : {}) };
+    const recorded = inputs.recorded.groups.has(String(groupId)) || (catalog !== undefined && inputs.recorded.catalogs.has(String(catalog.id)));
+    if (recorded || (await usedOutside(get, groupId, inputs))) return void decided.kept.push(staying);
     decided.remove.push({ groupId, groupName, ...(catalog ? { catalog: { id: Number(catalog.id), name: catalog.name } } : {}), needs: needsOf(groupId, inputs) });
 }
 
-/** Decide every group the customers and companies going are in. Reads only. */
+/** Decide every group the customers and companies going are in. Reads only; a read that fails leaves them all. */
 export async function decideCatalogs(get: CommerceGet, inputs: CatalogInputs): Promise<CatalogDecision> {
-    const decided: CatalogDecision = { remove: [], installed: [], used: [], unread: [] };
+    const decided: CatalogDecision = { remove: [], kept: [] };
     const groups = candidateGroups(inputs);
     if (groups.length === 0) return decided;
-    const catalogs = await readCatalogs(get);
-    for (const groupId of groups) {
-        const catalog = catalogs.find((c) => Number(c.customer_group_id) === groupId);
-        if (catalog?.type !== PUBLIC_CATALOG_TYPE) await judge(get, groupId, catalog, inputs, decided);
+    try {
+        const catalogs = await readCatalogs(get);
+        for (const groupId of groups) {
+            const catalog = catalogs.find((c) => Number(c.customer_group_id) === groupId);
+            if (catalog?.type !== PUBLIC_CATALOG_TYPE) await judge(get, groupId, catalog, inputs, decided);
+        }
+    } catch (error) {
+        const going = decided.remove.map((g) => ({ groupName: g.groupName, ...(g.catalog ? { catalog: g.catalog.name } : {}) }));
+        return { remove: [], kept: [...decided.kept, ...going], failed: error };
     }
     return decided;
 }
@@ -147,16 +147,4 @@ export async function removeEmptyGroup(commerce: RemovalAccess, group: GoingGrou
     if (inIt > 0) throw new Error(`${inIt} customers or companies are still in it, and removing it would move them to General`);
     if (group.catalog) await removeCatalog(send, String(group.catalog.id));
     await removeCustomerGroup(send, String(group.groupId));
-}
-
-const rowsOf = (staying: readonly StayingGroup[], why: string): WipeLeft[] =>
-    (['shared catalogs', 'customer groups'] as const).map((kind) => leftRow(kind, staying.filter((s) => s.kind === kind).map((s) => s.name), why));
-
-/** What the SC is told about the catalogs and groups that stay. */
-export function catalogsLeft(decided: CatalogDecision): WipeLeft[] {
-    return [
-        ...rowsOf(decided.installed, 'Demo Builder installed them, so removing that datapack decides'),
-        ...rowsOf(decided.used, 'a customer, company or cart rule that stays uses them, and removing them would move those customers to General'),
-        ...rowsOf(decided.unread, 'who uses them could not be read'),
-    ];
 }

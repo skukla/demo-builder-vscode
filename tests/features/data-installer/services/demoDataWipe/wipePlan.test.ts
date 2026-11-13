@@ -1,159 +1,242 @@
 /**
- * What clearing a demo's part of the store would remove (datapack-engine step 10): only what the
- * chosen stores own and Demo Builder did not install, judged against the whole chosen set, decided
- * from reads, writing nothing.
+ * What clearing a project's websites would remove (datapack-engine step 10; datapack-simplification
+ * step 06): only what the chosen websites own, judged against the whole chosen set, decided from
+ * reads, writing nothing; answered as one row and one full record list per data type, kept records
+ * without reasons, and a read that failed marked by its kind.
  */
 
 import { filterBy, filterIn } from '@/features/data-installer/services/demoBuilderEngine/b2bReads';
-import { NEVER_TOUCHED, planWipeFor, withinPlan } from '@/features/data-installer/services/demoDataWipe/wipePlan';
+import { planWipeFor, withinPlan } from '@/features/data-installer/services/demoDataWipe/wipePlan';
 import { WipeScopeError } from '@/features/data-installer/services/demoDataWipe/wipeReads';
-import { BODEA_CUSTOMERS, BODEA_OUTLET_ORDER, BODEA_PRODUCTS } from '../../../../helpers/commerceWipeFixtures';
-import { ADMIN_64, BUYER_65, CATALOG_20, LONE_SHOPPER, WIPER_1, attributeInstance, b2bInstance, settingsInstance } from '../../../../helpers/commerceWipeInstanceFixtures';
+import type { CommerceSalesRule } from '@/types/commerceSalesRule';
+import type { CommerceGet, CommerceOrder } from '@/types/commerceWire';
+import { ADMIN_64, BUYER_65, CATALOG_20, GROUP_30, LONE_SHOPPER, WIPER_1, attributeInstance, b2bInstance, settingsInstance } from '../../../../helpers/commerceWipeInstanceFixtures';
 import { PROJECT_RECORDS, sandbox } from './wipe.testUtils';
 
-const TEST_STORE = [{ websiteCode: 'justrite_test_website', storeCode: 'justrite_test_store' }];
-const BODEA_STORE = [{ websiteCode: 'bodea', storeCode: 'bodea_store' }];
+/** The test website: one store, `justrite_test_store`, whose root 119 JustRite's store also shows. */
+const TEST_SITE = ['justrite_test_website'];
 
-describe('planWipe on a store whose website is wholly chosen and whose root is shared (justrite_test_store)', () => {
-    it('removes products sold only there, takes shared ones off it, and leaves a lone variant', async () => {
-        const plan = await planWipeFor(sandbox().get, TEST_STORE, { records: PROJECT_RECORDS });
+describe('planWipe on a website whose root another website shares (justrite_test_website)', () => {
+    it('removes products sold only there, takes shared ones off it, and keeps a lone variant and what a record lists', async () => {
+        const plan = await planWipeFor(sandbox().get, TEST_SITE, { records: PROJECT_RECORDS });
 
         expect(plan.deleteSkus).toEqual(['ZZ-ONLY-HERE', 'ZZ-JACKET', 'ZZ-JACKET-RED']);
         expect(plan.takeOff).toEqual([{ sku: 'ZZ-SHARED-WITH-JUSTRITE', websiteId: 5 }]);
-        expect(plan.preview.left).toContainEqual(expect.objectContaining({ kind: 'products', count: 1, names: ['ZZ-LONE-VARIANT'] }));
-    });
-
-    it('leaves every category under the root a store not chosen also shows, and names that store', async () => {
-        const plan = await planWipeFor(sandbox().get, TEST_STORE, { records: PROJECT_RECORDS });
-
-        expect(plan.categoryIds).toStrictEqual([]);
-        expect(plan.preview.left).toContainEqual({
-            kind: 'categories',
-            count: 1,
-            names: ['Safety Cans'],
-            why: 'under root category 119, which the store justrite_store (website justrite) also shows',
+        expect(plan.check.records.products).toEqual({
+            removed: ['ZZ-ONLY-HERE', 'ZZ-JACKET', 'ZZ-JACKET-RED', 'ZZ-SHARED-WITH-JUSTRITE'],
+            kept: ['ZZ-LONE-VARIANT', 'ZZ-MADE-BY-DEMO-BUILDER'],
         });
     });
 
-    it("takes only the website's customers, leaving one in a B2B company and the one Demo Builder made", async () => {
-        const plan = await planWipeFor(sandbox().get, TEST_STORE, { records: PROJECT_RECORDS });
+    it('keeps every category under the root a website not chosen also shows, with no reason', async () => {
+        const plan = await planWipeFor(sandbox().get, TEST_SITE, { records: PROJECT_RECORDS });
+
+        expect(plan.categoryIds).toStrictEqual([]);
+        expect(plan.check.records.categories).toEqual({ removed: [], kept: ['Safety Cans'] });
+    });
+
+    it("takes the website's customers, keeping one in a company that stays and the one a record lists", async () => {
+        const plan = await planWipeFor(sandbox().get, TEST_SITE, { records: PROJECT_RECORDS });
 
         expect(plan.customerIds).toEqual(['70']);
-        expect(plan.preview.left).toContainEqual(expect.objectContaining({ kind: 'customers', names: ['zz.admin@example.com'] }));
+        expect(plan.check.records.customers).toEqual({ removed: ['zz.shopper@example.com'], kept: ['zz.admin@example.com', 'zz.made@example.com'] });
     });
 
-    it('never names what an install record lists, and counts those apart', async () => {
-        const plan = await planWipeFor(sandbox().get, TEST_STORE, { records: PROJECT_RECORDS });
-
-        expect(plan.deleteSkus).not.toContain('ZZ-MADE-BY-DEMO-BUILDER');
-        expect(plan.preview.installed).toEqual({ products: 1, customers: 1, categories: 1 });
-    });
-
-    it('reads by the website and the views, writes nothing, and answers counts and a few names, never rows', async () => {
+    it('reads by the website and its views, writes nothing, and answers a row per type and full lists', async () => {
         const store = sandbox();
 
-        const { preview } = await planWipeFor(store.get, TEST_STORE, { records: PROJECT_RECORDS });
+        const { check } = await planWipeFor(store.get, TEST_SITE, { records: PROJECT_RECORDS });
 
         expect(store.sent).toStrictEqual([]);
         expect(store.reads.some((p) => p.startsWith('products?') && p.includes(filterBy('website_id', 5)))).toBe(true);
         expect(store.reads.some((p) => p.startsWith('customers/search?') && p.includes(filterBy('website_id', 5)))).toBe(true);
         expect(store.reads.some((p) => p.startsWith('orders?') && p.includes(filterIn('store_id', [6])))).toBe(true);
-        expect(preview).toMatchObject({
-            stores: [{ websiteCode: 'justrite_test_website', websiteName: 'JustRite Test', storeCode: 'justrite_test_store', storeName: 'JustRite Test Store' }],
-            remove: { products: { count: 3, names: ['ZZ-ONLY-HERE', 'ZZ-JACKET', 'ZZ-JACKET-RED'] }, categories: { count: 0, names: [] }, customers: { count: 1, names: ['zz.shopper@example.com'] } },
-            takenOff: { count: 1, names: ['ZZ-SHARED-WITH-JUSTRITE'] },
-            orders: { cancel: { count: 0, names: [] }, refund: { count: 0, names: [] }, returns: { count: 0, names: [] } },
-            total: 5,
-            never: NEVER_TOUCHED,
-        });
+        expect(check.websites).toEqual([{ code: 'justrite_test_website', name: 'JustRite Test' }]);
+        expect(check.rows).toEqual([
+            { type: 'products', label: 'Products', count: 4, happens: '4 removed' },
+            { type: 'categories', label: 'Categories', count: 0, happens: '0 removed' },
+            { type: 'customers', label: 'Customers', count: 1, happens: '1 removed' },
+        ]);
+        expect(check.total).toBe(5);
+        expect(check.unread).toBeUndefined();
+        expect(check.problem).toBeUndefined();
     });
 
-    it('leaves a product whose websites or visibility Commerce did not answer', async () => {
+    it('keeps a product whose websites or visibility Commerce did not answer', async () => {
         const store = sandbox({ products: [{ id: 1, sku: 'ZZ-NO-FIELDS', extension_attributes: { website_ids: [5] } }] });
 
-        const plan = await planWipeFor(store.get, TEST_STORE, { records: [] });
+        const plan = await planWipeFor(store.get, TEST_SITE, { records: [] });
 
         expect(plan.deleteSkus).toStrictEqual([]);
-        expect(plan.preview.left.filter((l) => l.kind === 'products')).toEqual([expect.objectContaining({ names: ['ZZ-NO-FIELDS'] })]);
+        expect(plan.check.records.products).toEqual({ removed: [], kept: ['ZZ-NO-FIELDS'] });
     });
 
-    it('clears the shared root once every store using it is chosen', async () => {
-        const plan = await planWipeFor(sandbox({ products: [], customers: [] }).get, [...TEST_STORE, { websiteCode: 'justrite' }], { records: [] });
+    it('clears the shared root once every website using it is chosen', async () => {
+        const plan = await planWipeFor(sandbox({ products: [], customers: [] }).get, [...TEST_SITE, 'justrite'], { records: [] });
 
         expect(plan.categoryIds).toEqual(['120']);
     });
 });
 
-describe('planWipe on a whole website with roots of its own (bodea)', () => {
-    it("removes both stores' categories, top ones first, leaving one that holds a category Demo Builder installed", async () => {
-        const plan = await planWipeFor(sandbox({ products: [], customers: [] }).get, [{ websiteCode: 'bodea' }], { records: PROJECT_RECORDS });
+describe('planWipe on a website with roots of its own (bodea)', () => {
+    it("removes both stores' categories, top ones first, as a tree, keeping one holding a category Demo Builder installed", async () => {
+        const plan = await planWipeFor(sandbox({ products: [], customers: [] }).get, ['bodea'], { records: PROJECT_RECORDS });
 
         expect(plan.categoryIds).toEqual(['151', '161', '152']);
         // Commerce deletes 152 with 151, its parent: no request is sent for it.
         expect(plan.categoryUnder).toEqual({ 152: '151' });
-        expect(plan.preview.left).toEqual([{ kind: 'categories', count: 1, names: ['Cables'], why: 'they hold a category Demo Builder installed' }]);
+        expect(plan.check.records.categories).toEqual({
+            removed: ['Racks', 'Server Racks', 'Clearance'],
+            kept: ['Cables', 'Pack Cables'],
+            tree: [{ name: 'Racks', id: '151', children: [{ name: 'Server Racks', id: '152' }] }, { name: 'Clearance', id: '161' }],
+        });
     });
 });
 
-describe('planWipe on one store of a website with two (bodea_store)', () => {
-    const store = () => sandbox({ products: BODEA_PRODUCTS, customers: BODEA_CUSTOMERS, orders: [BODEA_OUTLET_ORDER] });
-
-    it("deletes a product only in the store's categories, with a configurable's child, and takes one sold elsewhere off", async () => {
-        const plan = await planWipeFor(store().get, BODEA_STORE, { records: [] });
-
-        expect(plan.deleteSkus).toEqual(['BD-RACK', 'BD-CHAIR', 'BD-CHAIR-RED']);
-        expect(plan.takeOff).toEqual([{ sku: 'BD-ALSO-ON-MAIN', websiteId: 3 }]);
+describe('planWipe keeps a category a cart rule that stays names (F3)', () => {
+    const naming = (value: string): CommerceSalesRule => ({
+        rule_id: 9,
+        name: 'JustRite Racks',
+        website_ids: [2],
+        condition: { condition_type: 'all', conditions: [{ condition_type: 'found', conditions: [{ condition_type: 'product', attribute_name: 'category_ids', operator: '==', value }] }] },
     });
 
-    it("leaves a product with no category as one whose demo can't be told, and one in the other store's categories", async () => {
-        const { left } = (await planWipeFor(store().get, BODEA_STORE, { records: [] })).preview;
+    it('keeps the category, and the one above it, since Commerce deletes a category with its parent', async () => {
+        const plan = await planWipeFor(sandbox({ products: [], customers: [], rules: [naming('152, 999')] }).get, ['bodea'], { records: [] });
 
-        expect(left).toContainEqual(expect.objectContaining({ kind: 'products', names: ['BD-NO-CATEGORY'], why: expect.stringMatching(/which demo they belong to can't be told/) }));
-        expect(left).toContainEqual(expect.objectContaining({ kind: 'products', names: ['BD-CLEARANCE', 'BD-BOTH-STORES'], why: 'they are in the categories of a store not chosen' }));
+        expect(plan.categoryIds).toEqual(['154', '161', '155']);
+        expect(plan.check.records.categories.kept).toEqual(['Racks', 'Server Racks']);
     });
 
-    it("clears only the chosen store's root, never the other store's", async () => {
-        const plan = await planWipeFor(store().get, BODEA_STORE, { records: [] });
+    it('deletes the categories a rule going in the same clearing names', async () => {
+        const going: CommerceSalesRule = { ...naming('152'), website_ids: [3] };
 
-        expect(plan.categoryIds).toEqual(['151', '154', '152', '155']);
-        expect(plan.categoryUnder).toEqual({ 152: '151', 155: '154' });
+        const plan = await planWipeFor(sandbox({ products: [], customers: [], rules: [going] }).get, ['bodea'], { records: [] });
+
+        expect(plan.ruleIds).toEqual(['9']);
+        expect(plan.categoryIds).toEqual(['151', '154', '161', '152', '155']);
     });
 
-    it('removes a customer made in the store, and leaves one made in the other, one who ordered there, and one made in the Admin', async () => {
-        const s = store();
+    it("leaves every category alone when the cart rules can't be read", async () => {
+        const store = sandbox({ products: [], customers: [] });
+        const get: CommerceGet = (path) => (path.startsWith('salesRules/search?') ? Promise.reject(new Error('Commerce answered 500 for salesRules')) : store.get(path));
 
-        const plan = await planWipeFor(s.get, BODEA_STORE, { records: [] });
+        const plan = await planWipeFor(get, ['bodea'], { records: [] });
 
-        expect(plan.customerIds).toEqual(['90']);
-        expect(plan.preview.left).toContainEqual(expect.objectContaining({ kind: 'customers', names: ['bd.outlet@example.com', 'bd.both@example.com'] }));
-        expect(plan.preview.left).toContainEqual(expect.objectContaining({ kind: 'customers', names: ['bd.admin@example.com'] }));
-        expect(s.reads.some((p) => p.startsWith('orders?') && p.includes(filterIn('customer_id', [90, 92])))).toBe(true);
+        expect(plan.categoryIds).toStrictEqual([]);
+        expect(plan.check.unread).toMatchObject({ cart_rules: 'strange', categories: 'strange' });
+    });
+});
+
+describe('planWipe counts', () => {
+    const order = (id: number, state: string, lines: CommerceOrder['items']): CommerceOrder => ({ entity_id: id, increment_id: `000000${id}`, state, status: state, store_id: 6, items: lines });
+
+    it('lists closed orders under orders, and leaves payment review and already-closed orders off the summary', async () => {
+        const orders = [
+            order(801, 'new', [{ item_id: 1, qty_ordered: 1 }]),
+            order(802, 'payment_review', [{ item_id: 2, qty_ordered: 1, qty_invoiced: 1 }]),
+            order(803, 'closed', [{ item_id: 3, qty_ordered: 1 }]),
+        ];
+
+        const plan = await planWipeFor(sandbox({ products: [], customers: [], orders }).get, TEST_SITE, { records: [] });
+
+        expect(plan.orders.map((o) => o.number)).toEqual(['000000801', '000000802']);
+        expect(plan.check.records.orders).toEqual({ removed: ['000000801'], kept: [] });
+        expect(plan.check.rows).toEqual([
+            { type: 'categories', label: 'Categories', count: 0, happens: '0 removed' },
+            { type: 'orders', label: 'Orders', count: 1, happens: '1 closed' },
+        ]);
+        expect(plan.check.total).toBe(1);
     });
 
-    it("never closes the other store's orders", async () => {
-        expect((await planWipeFor(store().get, BODEA_STORE, { records: [] })).orders).toStrictEqual([]);
+    it("counts a catalog's group under customer groups, and a company's members under customers", async () => {
+        const plan = await planWipeFor(sandbox({ products: [], orders: [], customers: [ADMIN_64, BUYER_65], instance: b2bInstance() }).get, TEST_SITE, { records: [] });
+
+        expect(plan.check.records.b2b_companies.removed).toHaveLength(1);
+        expect(plan.check.records.customers.removed.sort()).toEqual([ADMIN_64.email, BUYER_65.email].sort());
+        expect(plan.check.records.b2b_shared_catalogs.removed).toEqual([CATALOG_20.name]);
+        expect(plan.check.records.customer_groups.removed).toEqual(['ZZ Test Catalog']);
+    });
+});
+
+describe('planWipe, a read that fails', () => {
+    /** The sandbox, with reads matching `pattern` failing as `error`. */
+    function failing(pattern: RegExp, error: Error, state: Parameters<typeof sandbox>[0] = {}) {
+        const store = sandbox(state);
+        const get: CommerceGet = (path) => (pattern.test(path) ? Promise.reject(error) : store.get(path));
+        return { store, get };
+    }
+
+    it('marks a type Commerce answers strangely as not read, leaves it alone, and plans the rest', async () => {
+        const { get } = failing(/^products\?/u, new Error('Commerce answered 500 for products'));
+
+        const plan = await planWipeFor(get, TEST_SITE, { records: [] });
+
+        expect(plan.deleteSkus).toStrictEqual([]);
+        expect(plan.takeOff).toStrictEqual([]);
+        expect(plan.customerIds).toEqual(['70', '72']);
+        // Categories go with it (F2): which products sit in them is not known.
+        expect(plan.check.unread).toEqual({ products: 'strange', categories: 'strange' });
+        expect(plan.check.rows[0]).toEqual({ type: 'products', label: 'Products', count: 0, happens: "Couldn't be read" });
+        expect(plan.check.problem).toBeUndefined();
+    });
+
+    it("leaves the categories alone when the products can't be read: their links are not known (F2)", async () => {
+        const { get } = failing(/^products\?/u, new Error('Commerce answered 500 for products'), { customers: [] });
+
+        const plan = await planWipeFor(get, ['bodea'], { records: [] });
+
+        expect(plan.categoryIds).toStrictEqual([]);
+        expect(plan.check.unread).toEqual({ products: 'strange', categories: 'strange' });
+    });
+
+    it('marks a type Commerce turns away as refused', async () => {
+        const { get } = failing(/^customers\/search\?/u, new Error('Commerce answered 401: Unauthorized'));
+
+        const plan = await planWipeFor(get, TEST_SITE, { records: [] });
+
+        expect(plan.customerIds).toStrictEqual([]);
+        expect(plan.check.unread).toEqual({ customers: 'refused' });
+    });
+
+    it('answers a slow type as the problem to retry, naming it', async () => {
+        const { get } = failing(/^customers\/search\?/u, new Error('The request timed out'));
+
+        const plan = await planWipeFor(get, TEST_SITE, { records: [] });
+
+        expect(plan.check.unread).toEqual({ customers: 'slow' });
+        expect(plan.check.problem).toBe("Commerce didn't answer for Customers.");
+    });
+
+    it("leaves the catalogs, groups and attributes alone when the cart rules can't be read: what uses them is unknown", async () => {
+        const { get } = failing(/^salesRules\/search\?/u, new Error('Commerce answered 500 for salesRules'), { customers: [LONE_SHOPPER], products: [WIPER_1], instance: attributeInstance({ groups: [GROUP_30] }) });
+
+        const plan = await planWipeFor(get, TEST_SITE, { records: [] });
+
+        expect(plan.groups).toStrictEqual([]);
+        expect(plan.attributes).toStrictEqual([]);
+        expect(plan.check.unread).toMatchObject({ cart_rules: 'strange', b2b_shared_catalogs: 'strange', customer_groups: 'strange', product_attributes: 'strange' });
     });
 });
 
 describe('planWipe refusals', () => {
-    it('names a website or store the store does not have', async () => {
-        await expect(planWipeFor(sandbox().get, [{ websiteCode: 'nope' }], { records: [] })).rejects.toThrow(new WipeScopeError('Commerce has no website nope.'));
-        await expect(planWipeFor(sandbox().get, [{ websiteCode: 'bodea', storeCode: 'nope' }], { records: [] })).rejects.toThrow(new WipeScopeError('The website bodea has no store nope.'));
+    it('names a website the store does not have', async () => {
+        await expect(planWipeFor(sandbox().get, ['nope'], { records: [] })).rejects.toThrow(new WipeScopeError('Commerce has no website nope.'));
     });
 });
 
 describe('withinPlan', () => {
-    it('lets a plan through that takes the same or less, and stops one that takes more or other stores', async () => {
-        const shown = await planWipeFor(sandbox().get, TEST_STORE, { records: PROJECT_RECORDS });
-        const less = await planWipeFor(sandbox({ products: [] }).get, TEST_STORE, { records: PROJECT_RECORDS });
-        const more = await planWipeFor(sandbox({ customers: [{ id: 99, email: 'new@example.com', firstname: 'N', lastname: 'W', website_id: 5 }] }).get, TEST_STORE, { records: [] });
-        const other = await planWipeFor(sandbox().get, BODEA_STORE, { records: [] });
+    it('lets a plan through that takes the same or less, and stops one that takes more or other websites', async () => {
+        const shown = await planWipeFor(sandbox().get, TEST_SITE, { records: PROJECT_RECORDS });
+        const less = await planWipeFor(sandbox({ products: [] }).get, TEST_SITE, { records: PROJECT_RECORDS });
+        const more = await planWipeFor(sandbox({ customers: [{ id: 99, email: 'new@example.com', firstname: 'N', lastname: 'W', website_id: 5 }] }).get, TEST_SITE, { records: [] });
+        const other = await planWipeFor(sandbox().get, ['bodea'], { records: [] });
 
         expect(withinPlan(shown, shown)).toBe(true);
         expect(withinPlan(shown, less)).toBe(true);
         expect(withinPlan(shown, more)).toBe(false);
         expect(withinPlan(shown, other)).toBe(false);
-        expect(less.preview.token).not.toBe(shown.preview.token);
+        expect(less.check.token).not.toBe(shown.check.token);
     });
 
     it.each([
@@ -162,18 +245,18 @@ describe('withinPlan', () => {
         ['an attribute set and attribute', { products: [WIPER_1], instance: attributeInstance() }],
         ['a website setting', { instance: settingsInstance() }],
     ])('stops a plan that would now take %s the list did not hold', async (_what, state) => {
-        const shown = await planWipeFor(sandbox({ customers: [], products: [] }).get, TEST_STORE, { records: [] });
+        const shown = await planWipeFor(sandbox({ customers: [], products: [] }).get, TEST_SITE, { records: [] });
 
-        const now = await planWipeFor(sandbox({ customers: [], products: [], ...state }).get, TEST_STORE, { records: [] });
+        const now = await planWipeFor(sandbox({ customers: [], products: [], ...state }).get, TEST_SITE, { records: [] });
 
         expect(withinPlan(shown, now)).toBe(false);
-        expect(now.preview.token).not.toBe(shown.preview.token);
+        expect(now.check.token).not.toBe(shown.check.token);
     });
 
     it('stops a plan that would now close an order the list did not hold', async () => {
-        const shown = await planWipeFor(sandbox().get, TEST_STORE, { records: [] });
+        const shown = await planWipeFor(sandbox().get, TEST_SITE, { records: [] });
         const order = { entity_id: 800, increment_id: '000000800', state: 'new', store_id: 6, items: [{ item_id: 1, qty_ordered: 1 }] };
-        const now = await planWipeFor(sandbox({ orders: [order] }).get, TEST_STORE, { records: [] });
+        const now = await planWipeFor(sandbox({ orders: [order] }).get, TEST_SITE, { records: [] });
 
         expect(withinPlan(shown, now)).toBe(false);
     });

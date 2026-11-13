@@ -1,82 +1,32 @@
 /**
- * Clearing a demo's part of the store (datapack-engine step 10, owner 2026-10-30): the SC picks
- * STORES (store groups), and the wipe clears what those stores own and Demo Builder did not install,
- * closing their orders and returns. These are the shapes that cross between the extension, the
- * agent tools (`check_demo_data`, `clear_demo_data`) and the Data Installer webview.
+ * Clearing a demo's data from the store (datapack-engine step 10; datapack-simplification step 06):
+ * the SC clears WEBSITES, always whole (owner, 2026-11-11: Clear no longer picks stores). Clear Demo
+ * Data clears every website the project uses; Clear Commerce Instance (step 06, C4) the websites the
+ * SC ticks. These are the shapes that cross between the extension, the agent tools
+ * (`check_demo_data`, `clear_demo_data`) and the Data Installer webview.
  *
- * Shared between the extension and the webviews, so it imports nothing.
+ * Types only. `TypeRow` is the type table's row (`installRows.ts`) and `TreeListNode` the core
+ * tree's node (`TreeList.tsx`): both are imported as types, so nothing of either module is bundled
+ * with this one.
  *
  * @module types/demoDataWipe
  */
 
+import type { TreeListNode } from '@/core/ui/components/ui/TreeList';
+import type { TypeRow } from '@/features/data-installer/ui/components/job/installRows';
+
 /**
- * One store to clear, by code. `storeCode` is the STORE's (store group's) code; left out, every
- * store of the website is meant (ticking a website ticks all its stores). Store views are never
- * named: nothing in Commerce belongs to a view except translations and where an order was placed.
+ * Which websites a clearing covers. `project`: every website the project uses, from its install
+ * target and its install records. `instance`: the websites named (Clear Commerce Instance, C4).
  */
-export interface WipeStoreChoice {
-    websiteCode: string;
-    storeCode?: string;
-}
-
-/** One store as the picker shows it: its views underneath, and why it cannot be ticked, if so. */
-export interface WipeChoiceStore {
-    code: string;
-    name: string;
-    /** Its store views' names, shown under the store, never picked. */
-    views: string[];
-    /** Part of what was asked about. */
-    ticked: boolean;
-    /** Another local project records this store as its own: the sentence naming it. Cannot be ticked. */
-    claimedBy?: string;
-}
-
-/** One website and its stores, in the store's own order. */
-export interface WipeChoiceWebsite {
-    code: string;
-    name: string;
-    stores: WipeChoiceStore[];
-}
-
-/** Some things, counted, with at most three named. */
-export interface WipeNamed {
-    count: number;
-    names: string[];
-}
-
-export type WipeKind =
-    | 'products'
-    | 'categories'
-    | 'customers'
-    | 'orders'
-    | 'cart rules'
-    | 'companies'
-    | 'shared catalogs'
-    | 'customer groups'
-    | 'attribute sets'
-    | 'attributes'
-    | 'settings';
-
-/** Things of one kind the wipe leaves, and the one reason. */
-export interface WipeLeft extends WipeNamed {
-    kind: WipeKind;
-    why: string;
-}
-
-/** A store the plan covers, by code and name. */
-export interface WipePlanStore {
-    websiteCode: string;
-    websiteName: string;
-    storeCode: string;
-    storeName: string;
-}
+export type ClearScope = { kind: 'project' } | { kind: 'instance'; websites: string[] };
 
 /**
  * The ERP step ("One action, ERP included", owner 2026-10-30): an ERP integration serves the
- * instance (from any local project) and sends the orders of some chosen stores' websites to an ERP.
- * The wipe closes those orders itself, as any other (Commerce is the source system, owner
- * 2026-11-11); its ERP is brought in line after the clearing, then filled again from Commerce. Not
- * brought in line (`held`) when the integration must be updated first, or could not be asked.
+ * instance (from any local project) and sends the orders of some chosen websites to an ERP. The
+ * wipe closes those orders itself, as any other (Commerce is the source system, owner 2026-11-11);
+ * its ERP is brought in line after the clearing, then filled again from Commerce. Not brought in
+ * line (`held`) when the integration must be updated first, or could not be asked.
  */
 export interface WipeErpPart {
     /** The project the integration is in, as the SC knows it: "JustRite". */
@@ -89,54 +39,53 @@ export interface WipeErpPart {
     line: string;
 }
 
-/** What the SC and the agent see before anything is written. Counts and a few names, never rows. */
-export interface WipePreview {
-    stores: WipePlanStore[];
-    /**
-     * What would be deleted, by kind. A cart rule's coupons go with it (step 11). A shared catalog's
-     * customer group goes with it, as one (`catalogs`); `customerGroups` are groups no catalog uses.
-     * `customers` includes those in the `companies` going.
-     */
-    remove: Record<'products' | 'categories' | 'customers' | 'cartRules' | 'companies' | 'catalogs' | 'customerGroups' | 'attributeSets' | 'attributes', WipeNamed>;
-    /** Website settings set back to the Default scope's value, by path. */
-    settings: WipeNamed;
-    /** Products also sold on websites not chosen: taken off the chosen ones only. */
-    takenOff: WipeNamed;
-    /** Cart rules also used on websites not chosen: taken off the chosen ones only (step 11). */
-    rulesTakenOff: WipeNamed;
-    /**
-     * Orders are never deleted (Commerce cannot): canceled, refunded with a credit memo, or left open
-     * with a note when Commerce can do neither; their returns closed. Named by order number.
-     */
-    orders: { cancel: WipeNamed; refund: WipeNamed; leftOpen: WipeNamed; returns: WipeNamed };
-    /** The ERP step, when an ERP integration serves some chosen stores' websites: their orders are in `orders`. */
-    erp?: WipeErpPart;
-    left: WipeLeft[];
-    /** What the install records list (every local project's, on the chosen websites), by kind: their packs' removal takes those. */
-    installed: Record<string, number>;
-    /** How many things the wipe would change. */
-    total: number;
-    /** Names this exact plan; the clearing must be handed it back. */
-    token: string;
-    /** What is never touched, in one sentence. */
-    never: string;
+/** One data type's records, by name: what the clearing takes, and what it leaves. No reasons. */
+export interface ClearRecords {
+    removed: string[];
+    /** Another project's records on these websites, instance-wide things another project's records list, and anything a website not chosen uses. */
+    kept: string[];
+    /** The removed records as a tree, for a type that nests (categories). */
+    tree?: TreeListNode[];
 }
 
 /**
- * `check-demo-data`'s answer: every website and store to choose from, and, when stores were chosen,
- * either the list of what clearing them would do or why it may not be done from this project.
+ * Why a data type could not be read, by `classifyTransience`'s kind: `slow` (a timeout or the network:
+ * Retry, and the clearing waits), `refused` (Commerce turned the read away), `strange` (any other
+ * answer). A refused or strange type is left alone, and the clearing runs for the rest.
  */
-export interface DemoDataCheck {
-    choices: WipeChoiceWebsite[];
-    preview?: WipePreview;
-    /** A chosen store another local project records as its own: one sentence per store, naming it. */
-    refused?: string;
+export type ClearUnread = 'slow' | 'refused' | 'strange';
+
+/** The datapack the project names, which the clearing takes out first (C3). */
+export interface ClearDatapack {
+    name: string;
+    /** Whether the SC changed what it put in Commerce: not checked by the check itself. */
+    changes: 'none' | 'asks' | 'saves' | 'unchecked';
+}
+
+/** `check-demo-data`'s answer: what clearing the project's websites would do, type by type. */
+export interface ClearCheck {
+    websites: Array<{ code: string; name: string }>;
+    /** One row per data type with anything removed, kept or not read, in a fixed order. */
+    rows: TypeRow[];
+    /** Each type's records, keyed as `rows` names the type. */
+    records: Record<string, ClearRecords>;
+    /** The types that could not be read, and how. Absent when every read answered. */
+    unread?: Record<string, ClearUnread>;
+    /** How many things the clearing changes: the button's count. */
+    total: number;
+    /** Names this exact plan; the clearing must be handed it back. */
+    token: string;
+    datapack?: ClearDatapack;
+    /** One sentence naming the types Commerce was too slow to answer: Retry, and the clearing waits. */
+    problem?: string;
+    /** Another local project uses one of these websites: one sentence naming it. Informational; the SC may go on. */
+    warning?: string;
+    /** The ERP step, when an ERP integration serves some of these websites: their orders are counted under orders. */
+    erp?: WipeErpPart;
 }
 
 /** What either handler is sent. Checked in the handler: an agent sends these too. */
 export interface DemoDataRequest {
-    /** The stores to look at or clear. The check defaults to the project's own store; the clearing never does. */
-    stores?: WipeStoreChoice[];
     /** Clear only: the token of the list shown (`check-demo-data`'s answer). */
     token?: string;
     /** Clear only: must be true. */

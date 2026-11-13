@@ -53,7 +53,6 @@ jest.mock('@/features/data-installer/services/demoDataWipe/wipeScope', () => ({
     resolveWipeScope: jest.fn(() => ({})),
 }));
 jest.mock('@/features/data-installer/services/demoDataWipe/wipeClaims', () => ({
-    projectStoreChoice: jest.fn(() => ({ websiteCode: 'base', storeCode: 'main_website_store' })),
     readWipeClaims: jest.fn(async () => ({})),
 }));
 jest.mock('@/features/data-installer/services/demoDataWipe/wipeErpDeps', () => ({
@@ -83,35 +82,35 @@ const mockedPlan = planWipe as jest.MockedFunction<typeof planWipe>;
 const mockedClear = clearShown as jest.MockedFunction<typeof clearShown>;
 const mockedReset = executeEdsReset as jest.MockedFunction<typeof executeEdsReset>;
 
-/** A plan that, if reset still asked, would put its question on screen. */
-const PLAN = {
-    choices: [],
-    preview: {
+/** A plan that, if reset still asked, would put its question on screen. Typed whole, so it keeps the plan's shape. */
+const PLAN: WipePlan = {
+    websiteCodes: ['base'],
+    scopeKey: 'base',
+    check: {
+        websites: [{ code: 'base', name: 'Main Website' }],
+        rows: [{ type: 'products', label: 'Products', count: 3, happens: '3 removed' }],
+        records: { products: { removed: ['A', 'B', 'C'], kept: [] } },
         total: 3,
-        stores: [{ storeName: 'Main', storeCode: 'main_website_store', websiteCode: 'base' }],
-        remove: {
-            products: { count: 3 },
-            categories: { count: 0 },
-            customers: { count: 0 },
-            cartRules: { count: 0 },
-            companies: { count: 0 },
-            catalogs: { count: 0 },
-            customerGroups: { count: 0 },
-            attributeSets: { count: 0 },
-            attributes: { count: 0 },
-        },
-        takenOff: { count: 0 },
-        rulesTakenOff: { count: 0 },
-        settings: { count: 0 },
-        orders: {
-            cancel: { count: 0 },
-            refund: { count: 0 },
-            leftOpen: { count: 0 },
-            returns: { count: 0 },
-        },
-        left: [],
+        token: 'zz-token',
     },
-} as unknown as WipePlan;
+    deleteSkus: ['A', 'B', 'C'],
+    takeOff: [],
+    categoryIds: [],
+    categoryUnder: {},
+    customerIds: [],
+    companyIds: [],
+    memberOf: {},
+    groups: [],
+    attributeSets: [],
+    attributes: [],
+    settings: [],
+    listSettings: [],
+    ruleIds: [],
+    ruleTakeOff: [],
+    orders: [],
+    alreadyClosed: 0,
+    unreadDetails: {},
+};
 
 function project(withPack: boolean): Project {
     return createMockProject({

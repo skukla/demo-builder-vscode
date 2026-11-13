@@ -14,7 +14,7 @@ import { RESET_RULE_CASES, type ResetRuleCase } from '../../../../helpers/resetR
 import { sandbox } from './wipe.testUtils';
 
 const DAY = '2026-10-30';
-const TEST_STORE = [{ websiteCode: 'justrite_test_website', storeCode: 'justrite_test_store' }];
+const TEST_STORE = ['justrite_test_website'];
 const CANCELED = `Canceled by the demo reset on ${DAY}.`;
 const REFUNDED = `Refunded and closed by the demo reset on ${DAY}.`;
 const PARTLY = `Refunded the invoiced items by the demo reset on ${DAY}.`;
@@ -78,14 +78,15 @@ describe('the one reset rule for orders', () => {
             RESET_RULE_CASES.flatMap((c) => c.returns),
         );
 
-        const { preview } = await planWipeFor(store.get, TEST_STORE, { records: [] });
+        const { check, orders } = await planWipeFor(store.get, TEST_STORE, { records: [] });
 
-        expect(preview.orders).toEqual({
-            cancel: { count: 1, names: ['000000701'] },
-            refund: { count: 5, names: ['000000702', '000000703', '000000704'] },
-            leftOpen: { count: 0, names: [] },
-            returns: { count: 1, names: ['R40'] },
-        });
+        expect(orders.filter((o) => o.action === 'cancel').map((o) => o.number)).toEqual(['000000701']);
+        expect(orders.filter((o) => o.action === 'refund')).toHaveLength(5);
+        expect(orders.filter((o) => o.action === 'note')).toStrictEqual([]);
+        // Every closed order under orders, by number, in full (J1-3b); its return under returns.
+        expect(check.records.orders.removed).toHaveLength(6);
+        expect(check.records.orders.removed.slice(0, 4)).toEqual(['000000701', '000000702', '000000703', '000000704']);
+        expect(check.records.returns).toEqual({ removed: ['R40'], kept: [] });
         expect(store.sent).toStrictEqual([]);
     });
 
@@ -159,7 +160,7 @@ describe('the reset rule at its edges', () => {
         const again = await planWipeFor(store.get, TEST_STORE, { records: [] });
         await runWipe(store, again, undefined, DAY);
 
-        expect(again.preview.total).toBe(0);
+        expect(again.check.total).toBe(0);
         expect(again.alreadyClosed).toBe(7);
         expect(store.sent).toHaveLength(written);
         expect(store.data.orders.map((o) => o.state)).toEqual(['canceled', 'closed', 'closed', 'closed', 'closed', 'closed', 'closed']);
@@ -245,6 +246,6 @@ describe('the reset rule at its edges', () => {
         const plan = await planWipeFor(store.get, TEST_STORE, { records: [] });
 
         expect(plan.orders.map((o) => o.returns)).toStrictEqual([[]]);
-        expect(plan.preview.orders.returns).toEqual({ count: 0, names: [] });
+        expect(plan.check.records.returns).toBeUndefined();
     });
 });
