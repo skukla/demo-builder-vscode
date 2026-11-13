@@ -257,7 +257,14 @@ Live notes; rewritten as the final report at the loop's close.
   prompt was out of date (stores, "didn't install"); rewritten, and a prompt added for the new tool.
   Found: the agent-reach scan cannot see the Clear handlers (it only reads one way of registering
   them); recommended as its own fix. Full gate green (2,423 suites, 38,812 tests).
-- Step-06 C7 (the J1-3d leftovers): with a builder.
+- Step-06 C7: 4cdce1289. The shared progress window keeps one height: a row's problem takes that
+  row's second line (one line, full text on hover), and the closing sentence under the rows goes
+  when a row already says it; warning notes are orange; a status icon no longer grows a window's
+  title row. Style check: nothing moved on the nine screens; the new rules measured in the Datapacks
+  screen (orange #e87400). Full gate green (2,423 suites, 38,823 tests).
+- Clear (step-06) is built: C1-C7. No import cycles. Live cycles owed (listed per slice above).
+- The shared order-state table (owner's P6-Q1, beta.153): with a builder; the ERP integration repo's
+  half on a local branch there, unpushed until the owner's go.
 - Phase 1b, done while waiting: ERP Downtime (863c5c2ca) and Edit Demo Package (f8ece2e6e) moved
   onto the Form layout, whose failure line is what both waited for. Same words; Cancel beside the
   commit, as every form; a read failure is a result window with Close. An unused style rule removed.
@@ -368,5 +375,8 @@ Live notes; rewritten as the final report at the loop's close.
   prefix, not new), against your no-middle-dot rule; change it everywhere? Recommend "Agent:".
   (b) Fix the agent-reach scan so it sees handlers built inside a function (it will then list other
   such actions as new rows to sort)? Recommend yes, as its own change after the release work.
+- From C7: (a) the small data-type rows nested under the install and save steps keep a wrapping
+  problem line (walk F135 chose that); (b) a warning that belongs to no row still shows under the rows,
+  so that window can grow by one line in that case. Recommend keeping both.
 - Phase 2 live cycle on the test store (save twice, Undo Last Save, Restore, reinstall with nothing
   sent, uninstall), once Phase 2 is built.
