@@ -176,3 +176,7 @@ Where they differ, `decisions.md` wins. Owner, 2026-11-13: built within beta.153
   cited-identifiers, god-file ratchet (`wipePlan.ts` 368, `wipeRun.ts` 398 near the 400 cap).
 - CSS reach: `TreeList`'s stylesheet must reach the dataInstaller entry; C7's `.modal-title` touches
   all nine bundles.
+
+## Status (2026-11-13)
+
+Built: C1 fc5edf517, C2a f28dc929a, C2b 07861c7d6, C3 07950f078, C4 55b4065f5, C5 335cb189e, C6 62ef1ad06, C7 4cdce1289; the shared order-state table ac4a6923a (ERP half f64bd32 on commerce-erp-integration fix/shared-order-cases, unpushed). Owner answers P6-Q1 to Q4 recorded in decisions.md. Live cycles owed: Clear Demo Data (install, reinstall with nothing sent, Clear, a second Clear changes nothing; stores where another demo's and the SC's own product carry a pack attribute); Clear Commerce Instance (two projects on one website, a pack also on a second website, an older pack's records).

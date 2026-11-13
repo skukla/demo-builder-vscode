@@ -263,8 +263,13 @@ Live notes; rewritten as the final report at the loop's close.
   title row. Style check: nothing moved on the nine screens; the new rules measured in the Datapacks
   screen (orange #e87400). Full gate green (2,423 suites, 38,823 tests).
 - Clear (step-06) is built: C1-C7. No import cycles. Live cycles owed (listed per slice above).
-- The shared order-state table (owner's P6-Q1, beta.153): with a builder; the ERP integration repo's
-  half on a local branch there, unpushed until the owner's go.
+- The shared order-state table: ac4a6923a. The order reset rule's seven cases live in one data file
+  here; the ERP integration keeps a byte-identical copy, and both repos pin the same fingerprint, so
+  a change in one without the other fails a test. The two copies already matched (only this repo's
+  header was stale). The ERP half is committed on a local branch there (commerce-erp-integration,
+  fix/shared-order-cases, f64bd32, based on the shared main because local main was 72 commits behind),
+  NOT pushed: pushing needs the owner's go. Full gate green (2,424 suites, 38,827 tests).
+- Phase 6 (reset, delete and Clear) is built. Phase 8 (agents match the screen) next.
 - Phase 1b, done while waiting: ERP Downtime (863c5c2ca) and Edit Demo Package (f8ece2e6e) moved
   onto the Form layout, whose failure line is what both waited for. Same words; Cancel beside the
   commit, as every form; a read failure is a result window with Close. An unused style rule removed.
