@@ -277,7 +277,13 @@ Live notes; rewritten as the final report at the loop's close.
   the save question. AI_CONTEXT_VERSION 61 -> 62, so existing projects refresh their guides on the
   next start. The agent test set's copy prompt now checks the agent says it cannot. Full gate green
   (2,425 suites, 38,851 tests). All datapack phases (2 to 8) are built.
-- Phase 1b, the nine non-datapack windows onto the layouts: next.
+- Phase 1b, the last nine windows: d7f0fcd30. Three moved onto the Steps window, which opens at
+  its content's height and keeps it: Manage APIs, Assign ERP Products (its way out now reads Cancel,
+  beside Assign) and AI Capabilities (it no longer shrinks while Regenerate runs). A failed read or
+  an empty state is now a small result window. The other six stay in the layout ledger with reasons
+  rewritten to match the code; four need your decision (walkthrough queue). The Title Case check
+  now reads one more label (AI Capabilities' Close), so its allowance dropped from 66 to 65. No
+  stylesheet changed. Full gate green (2,425 suites, 38,858 tests).
 - Phase 1b, done while waiting: ERP Downtime (863c5c2ca) and Edit Demo Package (f8ece2e6e) moved
   onto the Form layout, whose failure line is what both waited for. Same words; Cancel beside the
   commit, as every form; a read failure is a result window with Close. An unused style rule removed.
@@ -395,5 +401,15 @@ Live notes; rewritten as the final report at the loop's close.
   load_datapack_zip, mark_team_datapack, the import-datapack guide) to the screen's words as their own
   change? It breaks the test set and agents' habits; recommend next release. (b) The agent-reach scan
   also files anything starting with "copy" as screen-only (a second blind spot).
+- From Phase 1b, six windows not moved, each with a recommendation: (a) Share: main buttons into
+  the footer (Copy Link, Save File), both forms drawn hidden so it opens at the taller one;
+  (b) Add a Demo and (c) Add Integration: their stages differ in height; recommend the Steps window
+  held at the first stage, taller stages scroll (your 2026-11-11 rule allows that or a new window);
+  (d) Setup Guide: give the Guide layout a two-pane option (step list left, chosen step right)
+  rather than redesign the guide; (e) Projects Batch run and (f) Updates run: neither layout fits
+  (a question under a row must hide Close, the Progress layout cannot); recommend leaving both as
+  they are for beta.153. Screenshots owed for the three that moved. Also found: the hosting check
+  does not look at windows built on the Steps window, so one with no dialog around it would pass
+  (old gap; the three moved ones are hosted correctly).
 - Phase 2 live cycle on the test store (save twice, Undo Last Save, Restore, reinstall with nothing
   sent, uninstall), once Phase 2 is built.
