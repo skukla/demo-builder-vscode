@@ -452,6 +452,9 @@ describe('rows with no output safety net are classified', () => {
         // the store; the clearing answers `{removed, failed, sentence, leftOpen, listSettings}`.
         'check_demo_data',
         'clear_demo_data',
+        // HANDLER RETURNS DATA (step 06 C6, read in demoDataInstanceClear.ts): the instance clearing
+        // answers the clearing's `{removed, failed, sentence, leftOpen, listSettings}` with its note.
+        'clear_commerce_instance',
         // HANDLER RETURNS DATA (owner, 2026-10-30, read in datapackLibraryHandlers.ts):
         // `{datapackName, shared, versions}`, three fixed fields.
         'share_datapack',

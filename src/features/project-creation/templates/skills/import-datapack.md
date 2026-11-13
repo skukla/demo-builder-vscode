@@ -161,7 +161,14 @@ Removal takes back everything the project's install record lists and nothing els
 `dataTypes` you send, so say that to the user rather than naming the kinds you sent. A pack
 Demo Builder never installed in this project (the Data Installer service installed it, or
 another project did) is refused and nothing is removed by name; to clear what that install
-left, use `check_demo_data` and then `clear_demo_data` (the screen's "Clear demo data").
+left, use `check_demo_data` and then `clear_demo_data` (the screen's "Clear Demo Data"). To clear
+whole websites of the instance, whoever put the data there (the screen's "Clear Commerce
+Instance"), call `check_demo_data` with `websites: []` to see the websites and the projects using
+each, then with the chosen website codes for the list, show the user that list and which projects
+lose their data, and call `clear_commerce_instance` with its token and `understood: true` once they
+agree. It uninstalls each listed project's datapack first: answer each project's changes by its
+path (`changes` keep with a `saveAs` name, or drop) when it answers `CHANGES_NEED_ANSWER`. It cannot
+be undone, except the datapacks.
 
 Like an install it returns a handle and is polled. Demo Builder removes in the reverse of the
 install's order, so you do not have to reason about what to remove first.

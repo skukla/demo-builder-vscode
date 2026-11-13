@@ -10,6 +10,7 @@
  * what reaches each manifest is asserted, not assumed. The engine's removal is faked per project.
  */
 
+import { instanceClearRequest } from '@/features/ai/server/datapackAnswerArgs';
 import {
     createDemoDataHandlers,
     type DemoDataDeps,
@@ -19,6 +20,7 @@ import {
     type InstallRecord,
     installRecordPath,
 } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
+import { shownClearFor } from '@/features/data-installer/services/demoDataWipe/shownClears';
 import {
     forgetRemovedPack,
     type SaveAsAnswer,
@@ -523,5 +525,61 @@ describe('clear-commerce-instance (step 06 C4)', () => {
         expect(
             (await made.handlers['clear-demo-data'](made.context, { token, confirm: true })).error
         ).toMatch(/no longer known/);
+    });
+});
+
+/**
+ * The agent's call (step 06 C6): `clear_commerce_instance` sends the answers by project path as
+ * `changes` and `saveAs`, read by `instanceClearRequest` (`datapackAnswerArgs`, as reset, delete and
+ * Clear Demo Data read theirs); its consent reads the projects the instance check noted by its token.
+ */
+describe('clear_commerce_instance reaching clear-commerce-instance (step 06 C6)', () => {
+    it("notes each project's fate by the instance check's token, for the consent", async () => {
+        const made = instanceSetUp();
+
+        const { token } = await shown(made);
+
+        expect(shownClearFor(token)).toMatchObject({
+            websites: [SITE],
+            projects: [
+                { path: OPEN.path, name: 'Zz Tester', datapack: 'zz-test' },
+                { path: NB.path, name: 'Neighbour Demo', datapack: 'nb-pack' },
+                { path: FAR.path, name: 'Far Away', kept: true },
+            ],
+        });
+    });
+
+    it('refuses keep with no name for a pack not the SC\'s, naming the project, before any removal or write', async () => {
+        const made = instanceSetUp({ changes: { [NB.path]: NB_CHANGES } });
+        const { token } = await shown(made);
+
+        const res = await made.handlers['clear-commerce-instance'](
+            made.context,
+            instanceClearRequest({ token, confirm: true, understood: true, changes: { [NB.path]: 'keep' } })
+        );
+
+        expect(res).toMatchObject({ success: false, code: ErrorCode.CHANGES_NEED_ANSWER });
+        expect(res.error).toContain('Neighbour Demo');
+        expect(made.seen.paths).toStrictEqual([]);
+        expect(made.store.sent).toStrictEqual([]);
+    });
+
+    it('hands each removal its answer: keep with a name saves under it, drop loses the changes', async () => {
+        const made = instanceSetUp({ changes: { [NB.path]: NB_CHANGES } });
+        const { token } = await shown(made);
+
+        const res = await made.handlers['clear-commerce-instance'](
+            made.context,
+            instanceClearRequest({
+                token,
+                confirm: true,
+                understood: true,
+                changes: { [OPEN.path]: 'drop', [NB.path]: 'keep' },
+                saveAs: { [NB.path]: 'My Neighbour' },
+            })
+        );
+
+        expect(res.success).toBe(true);
+        expect(made.seen.given).toEqual(['drop', { saveAs: 'My Neighbour' }]);
     });
 });

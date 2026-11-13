@@ -184,6 +184,13 @@ describe('the ceiling table tracks the tool surface', () => {
             // lists every record by name, so its size grows with the store; neither has run live yet.
             'check_demo_data',
             'clear_demo_data',
+            // clear_commerce_instance (step 06 C6): the clearing's fixed fields and its note, which names
+            // each project uninstalled first and each that kept its data. The INSTANCE CHECK it needs is
+            // check_demo_data with website codes, and it is the large one: on the C4 fixtures (3 projects,
+            // 10 records) it answered 1,204 bytes, 463 of them the projects, against 983 for the project
+            // check of the same store; it grows with every record of every chosen website. No ceiling
+            // is set for either until a live store is measured.
+            'clear_commerce_instance',
             // share_datapack (owner, 2026-10-30): three fixed fields; not yet run live.
             'share_datapack',
             // mark_team_datapack (beta.153): three fixed fields; not yet run live.

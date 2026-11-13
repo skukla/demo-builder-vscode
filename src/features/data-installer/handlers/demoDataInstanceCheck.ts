@@ -19,6 +19,7 @@
 import { changesOnRemoval } from '../services/dataInstallerConfig';
 import { type InstanceClaims, type InstanceUser, readInstanceClaims } from '../services/demoDataWipe/instanceClaims';
 import { instanceWebsites, onSameInstance } from '../services/demoDataWipe/instanceProjects';
+import { type ShownProject, noteShownProjects } from '../services/demoDataWipe/shownClears';
 import { resolveWipeScope } from '../services/demoDataWipe/wipeScope';
 import { rememberedPackName } from '../services/packNames';
 import { keptElsewhere, keptNowhere, keptOlder, keptUnmatched } from '../ui/clearDemoDataWords';
@@ -133,6 +134,13 @@ function packsOf(users: readonly InstanceUser[], projects: readonly ClearProject
     return { removals, forgets, kept: projects.flatMap((p) => [p.kept, p.note].filter((line): line is string => line !== undefined)) };
 }
 
+/** A listed project as `clear_commerce_instance`'s consent names it (`shownClears.ts`). */
+function shownProjectOf(project: ClearProject): ShownProject {
+    const base = { path: project.path, name: project.name };
+    if (project.kept) return { ...base, kept: true };
+    return project.datapack ? { ...base, datapack: project.datapack.name } : base;
+}
+
 /** What clearing these websites would do, whoever put the data there, with the projects that lose it. */
 export async function checkInstance(
     deps: DemoDataDeps,
@@ -156,7 +164,9 @@ export async function checkInstance(
             projects,
             ...(await saveNamesOf(deps, context, projects)),
         };
-        return { success: true, data: { ...answerOf(plan, claims, opened.project), instance } };
+        const answer = answerOf(plan, claims, opened.project);
+        noteShownProjects(plan.check.token, projects.map(shownProjectOf));
+        return { success: true, data: { ...answer, instance } };
     } catch (error) {
         return failure(context, error, 'What these websites hold could not be read.');
     }

@@ -45,7 +45,7 @@
  * @module features/ai/server/agentAlertCopy
  */
 
-import { shownClearFor } from '@/features/data-installer/services/demoDataWipe/shownClears';
+import { type ShownProject, shownClearFor } from '@/features/data-installer/services/demoDataWipe/shownClears';
 
 /** Authored strings for one tool's alerts. */
 export interface AgentAlertCopy {
@@ -125,6 +125,42 @@ function clearedWebsitesLines(args: unknown): string | undefined {
     if (!shown) return undefined;
     const datapack = shown.datapack ? `Uninstalls first: ${shown.datapack}` : undefined;
     return [`Websites: ${shown.websites.join(', ')}`, datapack, shown.warning].filter(Boolean).join('\n');
+}
+
+/** "Uninstalls first", "Keep their datapacks and data" and "Also lose their demo data": an instance check's projects by fate. */
+function instanceProjectLines(projects: readonly ShownProject[]): string[] {
+    const uninstalled = projects.filter((p) => p.datapack !== undefined).map((p) => `${p.datapack} (${p.name})`);
+    const kept = projects.filter((p) => p.kept).map((p) => p.name);
+    const losing = projects.filter((p) => !p.kept && p.datapack === undefined).map((p) => p.name);
+    return [
+        uninstalled.length > 0 ? `Uninstalls first: ${uninstalled.join(', ')}` : '',
+        kept.length > 0 ? `Keep their datapacks and data: ${kept.join(', ')}` : '',
+        losing.length > 0 ? `Also lose their demo data: ${losing.join(', ')}` : '',
+    ].filter(Boolean);
+}
+
+/** The call's answers about each project's changes, by project name: "Zz Tester: drop; Neighbour Demo: keep as My Neighbour". */
+function instanceAnswersLine(args: { changes?: unknown; saveAs?: unknown }, projects: readonly ShownProject[]): string | undefined {
+    const changes = args.changes && typeof args.changes === 'object' ? Object.entries(args.changes as Record<string, unknown>) : [];
+    if (changes.length === 0) return undefined;
+    const names = (args.saveAs && typeof args.saveAs === 'object' ? args.saveAs : {}) as Record<string, unknown>;
+    const said = changes.map(([path, answer]) => {
+        const project = projects.find((p) => p.path === path)?.name ?? path;
+        const name = names[path];
+        return answer === 'keep' && typeof name === 'string' ? `${project}: keep as ${name}` : `${project}: ${String(answer)}`;
+    });
+    return `Your changes: ${said.join('; ')}`;
+}
+
+/** The websites and projects the instance check the token names showed, and the call's answers; nothing for one no check answered. */
+function instanceClearLines(args: unknown): string | undefined {
+    const call = (args ?? {}) as { token?: unknown; changes?: unknown; saveAs?: unknown };
+    const shown = shownClearFor(call.token);
+    if (!shown) return undefined;
+    const projects = shown.projects ?? [];
+    return [`Websites: ${shown.websites.join(', ')}`, ...instanceProjectLines(projects), instanceAnswersLine(call, projects)]
+        .filter(Boolean)
+        .join('\n');
 }
 
 export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
@@ -287,6 +323,15 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         describe: (args) => clearedWebsitesLines(args),
         // saveAs is a name in an object, which the dialog does not draw (`consentValue`); changes is the decision.
         choices: ['changes'],
+        sessionGrant: false,
+    },
+    clear_commerce_instance: {
+        action: "Clear this Commerce instance's websites",
+        consequence:
+            "Uninstalls first the datapack of each project named below (its changes saved first unless the agent was told to drop them), then deletes everything on these websites that no kept project's datapack lists, whoever put it there: products, categories, customers, cart rules, companies, shared catalogs, customer groups, attribute sets and attributes. Sets the website settings to the default's value, cancels or refunds their orders and closes their returns. Every project on these websites loses its demo data there, except those that keep theirs. This can't be undone, except the datapacks, which can be installed again from the library.",
+        target: [],
+        // The websites, the projects by fate and the answers by project name: the arguments name only a token and paths.
+        describe: (args) => instanceClearLines(args),
         sessionGrant: false,
     },
     reinstall_integration: {

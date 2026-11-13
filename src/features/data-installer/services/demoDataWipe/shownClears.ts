@@ -7,6 +7,9 @@
  * records each answer it gives (`demoDataHandlers.ts`). Words only: the plan itself stays in the
  * handler, which holds the clearing to it.
  *
+ * An instance check (Clear Commerce Instance, C6) also notes its projects, so
+ * `clear_commerce_instance`'s consent names each project uninstalled first and each that keeps its data.
+ *
  * The newest check is also what Fix with AI on Clear Demo Data's window reads (step 06, C2b): the
  * types it could not read, with Commerce's words, so the prompt says what happened.
  *
@@ -21,6 +24,20 @@ export interface ShownUnread {
     detail: string;
 }
 
+/**
+ * A project on the websites an instance check covers (Clear Commerce Instance, step 06 C6), as the
+ * list named it: its datapack, uninstalled first, or `kept` when it keeps its datapack and its data.
+ * Neither: it loses its demo data with no datapack to uninstall.
+ */
+export interface ShownProject {
+    path: string;
+    /** As its card names it. */
+    name: string;
+    /** The datapack the clearing uninstalls first, as the SC knows it. */
+    datapack?: string;
+    kept?: true;
+}
+
 /** What one shown check covers, as the consent dialog names it. */
 export interface ShownClear {
     /** The websites, by code. */
@@ -31,6 +48,8 @@ export interface ShownClear {
     unread?: Record<string, ShownUnread>;
     /** The project's datapack, as the SC knows it, which the clearing uninstalls first (step 06, C3). */
     datapack?: string;
+    /** An instance check's projects, for `clear_commerce_instance`'s consent (step 06 C6). */
+    projects?: ShownProject[];
 }
 
 /** As many as the handler keeps plans: one is shown per question, so a few is plenty. */
@@ -53,4 +72,10 @@ export function shownClearFor(token: unknown): ShownClear | undefined {
 /** The newest check answered, when there is one. */
 export function latestShownClear(): ShownClear | undefined {
     return [...shown.values()].pop();
+}
+
+/** Add an instance check's projects to what the check with this token covers (noted by `rememberShownClear` first). */
+export function noteShownProjects(token: string, projects: ShownProject[]): void {
+    const clear = shown.get(token);
+    if (clear) shown.set(token, { ...clear, projects });
 }

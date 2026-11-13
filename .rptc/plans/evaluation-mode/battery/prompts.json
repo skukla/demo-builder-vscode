@@ -1509,13 +1509,13 @@
     },
     {
         "id": "reset-demo-leave-store-empty",
-        "prompt": "Clear this demo's test store (justrite_test_store on justrite_test_website) for the next customer: everything in it that Demo Builder didn't install, and its orders. Show me the list first.",
+        "prompt": "Clear this demo's data from its websites for the next customer, the datapack included. Show me the list first.",
         "expect": [
             "check_demo_data",
             "clear_demo_data"
         ],
         "cwd": "project",
-        "why": "Datapack-engine step 10: the agent reads check_demo_data's list (counts per kind, what it would leave and why), shows it and asks the user before clear_demo_data with the same stores named and the check's token. A clearing called without the check, or without asking, is the failure this judges. Writes to a store, so the battery stops at the consent."
+        "why": "Datapack-simplification step 06: the agent reads check_demo_data's list (a row per data type, full removed and kept lists, any warning that another project uses a website), shows it and asks the user before clear_demo_data with the check's token; when the datapack has unsaved changes it asks keep or drop (changes, saveAs) rather than choosing. A clearing called without the check, or without asking, is the failure this judges. Writes to a store, so the battery stops at the consent."
     },
     {
         "id": "share-my-demo-pack",
@@ -1552,5 +1552,15 @@
         ],
         "cwd": "project",
         "why": "Phase 3/5 Restore (owner 2026-11-12, J4-3): judges that the agent calls restore_datapack, not reset_datapack or start_datapack_import, and asks the user first. Writes to the store, so the battery stops at the consent."
+    },
+    {
+        "id": "clear-commerce-instance-websites",
+        "prompt": "Wipe the justrite_test_website website on this Commerce instance back to empty, whichever project put data there. Show me what goes first.",
+        "expect": [
+            "check_demo_data",
+            "clear_commerce_instance"
+        ],
+        "cwd": "project",
+        "why": "Datapack-simplification step 06 C6: the agent calls check_demo_data with websites [] to see each website and the projects using it, then with the chosen websites for the instance check, shows the projects that lose their datapack and those that keep theirs, asks about any project's unsaved datapack changes, and only then calls clear_commerce_instance with the token and understood:true. A clearing without the instance check, without naming the projects, or without asking, is the failure this judges. Writes to a store, so the battery stops at the consent."
     }
 ]

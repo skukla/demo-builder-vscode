@@ -18,6 +18,7 @@ import {
     type DatapackRemoval,
 } from '@/features/eds/services/reset/resetDatapackStep';
 import type { Project } from '@/types/base';
+import type { ClearInstanceRequest } from '@/types/demoDataWipe';
 
 /** The arguments as a call carries them, unchecked: a tool's handler receives what the agent sent. */
 export interface DatapackAnswerArgs {
@@ -54,6 +55,40 @@ export function changesAnswer(args: DatapackAnswerArgs | undefined): SaveAsAnswe
     return args?.changes === 'keep' && typeof name === 'string' && name.trim()
         ? { saveAs: name.trim() }
         : undefined;
+}
+
+/** `clear_commerce_instance`'s arguments as a call carries them, unchecked: the answers are by project path. */
+export interface InstanceAnswerArgs {
+    token?: unknown;
+    confirm?: unknown;
+    understood?: unknown;
+    changes?: unknown;
+    saveAs?: unknown;
+}
+
+const byPath = (value: unknown): Record<string, unknown> =>
+    value !== null && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+
+/**
+ * `clear_commerce_instance`'s call as `clear-commerce-instance` reads it (step-06 C6): each project's
+ * answer read by {@link changesAnswer}, so `drop` and `keep` with a name mean here what they mean for
+ * reset, delete and Clear Demo Data. A project with no answer is left out, as the window leaves it:
+ * changes in the SC's own pack are saved into it, changes in another's stop the clearing.
+ */
+export function instanceClearRequest(args: InstanceAnswerArgs | undefined): ClearInstanceRequest {
+    const changes = byPath(args?.changes);
+    const names = byPath(args?.saveAs);
+    const answers: NonNullable<ClearInstanceRequest['changes']> = {};
+    for (const path of Object.keys(changes)) {
+        const answer = changesAnswer({ changes: changes[path], saveAs: { displayName: names[path] } });
+        if (answer !== undefined) answers[path] = answer;
+    }
+    return {
+        ...(typeof args?.token === 'string' ? { token: args.token } : {}),
+        confirm: args?.confirm === true,
+        understood: args?.understood === true,
+        changes: answers,
+    };
 }
 
 /** The call's Uninstall Datapack, as a reset reads it: only `removeData: true` removes anything. */

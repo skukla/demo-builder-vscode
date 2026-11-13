@@ -960,8 +960,13 @@ elsewhere. Plan: `.rptc/plans/datapack-engine/step-12-pack-categories-on-storefr
 
 The unit is the **website**, always whole (datapack-simplification step 06): Clear Demo Data covers
 every website the project uses, its own (`resolveInstallTarget`) and each website its install records
-were installed to. Neither tool takes a website or store; Clear Commerce Instance (the websites the
-SC ticks) is step 06's C4, and the tools' inputs are redesigned in its C6.
+were installed to. Clear Commerce Instance clears the websites the SC ticks, whoever put the data
+there (step 06 C4); its agent surface is `check_demo_data` with `websites` and `clear_commerce_instance`
+(C6, below). `check_demo_data` takes `websites` three ways: omitted, this project's websites (Clear
+Demo Data); `[]`, the instance's websites (`InstanceChoices`: each code and name with the local
+projects on this instance using it); website codes, the instance check for those websites, its token
+starting `instance-`, with `data.instance.projects` (`ClearProject`: each project's datapack
+uninstalled first, or why it keeps its data).
 
 `check_demo_data` (a read) answers one `ClearCheck` (`src/types/demoDataWipe.ts`): `data.websites`;
 `data.rows`, one per data type, each with its count and what happens ("12 removed", "3 closed", "2
@@ -1016,6 +1021,21 @@ which installing it again puts back. From the screen it runs in one progress win
 Open Commerce Admin. The Data Installer's "Clear Demo Data" is the human surface; no reset offers it
 (owner, 2026-11-12), neither the buttons nor `reset_project`. Plans:
 `.rptc/plans/datapack-engine/step-10-wipe.md`, `.rptc/plans/datapack-simplification/step-06.md`.
+
+`clear_commerce_instance` (confirm-gated, step 06 C6) needs an instance check's token and
+`understood: true` (the window's "I understand"; the handler requires it too). It takes each
+project's answer about its changes by project path: `changes` (`keep` or `drop`) and `saveAs` (a
+name), read by `instanceClearRequest` in `datapackAnswerArgs.ts` through the same `changesAnswer`
+as reset, delete and `clear_demo_data`, so `drop` loses changes in the user's own pack too and
+`keep` without a name is no answer. A project with unanswered changes in a pack not the user's
+answers `CHANGES_NEED_ANSWER` naming it, before any removal or write. Then
+`clear-commerce-instance` (`demoDataInstanceClear.ts`) uninstalls each listed datapack in turn and
+clears, held to the list. Its consent dialog names the websites, each project whose datapack is
+uninstalled first, each that keeps its datapack and data, each that loses its demo data with no
+datapack, and the answers by project name (the instance check notes its projects by token,
+`shownClears.ts`), and says it cannot be undone, except the datapacks. An instance check can be large:
+every record of every chosen website by name (1,204 bytes on the C4 fixtures' 10 records); no
+response ceiling is set until a live store is measured.
 
 Every door (both tools and the Data Installer) reads every other project on this machine
 (`readWipeClaims`, over `loadOtherProjects`). Another project using one of these websites is never a

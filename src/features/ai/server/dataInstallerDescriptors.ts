@@ -33,12 +33,12 @@
  */
 
 import { z } from 'zod';
-import { CLEAR_CHANGES_DESCRIPTION } from './datapackAnswerArgs';
+import { CLEAR_CHANGES_DESCRIPTION, type InstanceAnswerArgs, instanceClearRequest } from './datapackAnswerArgs';
 import { AGENT_PAGE_SIZE } from './projectors';
 import type { ToolDescriptor } from './toolDescriptors';
 import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
 import { PICKABLE_KINDS, PICK_FIELDS } from '@/features/data-installer/pickableKinds';
-import type { HandlerResponse } from '@/types/handlers';
+import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
 
 /**
  * The datapack an import/reset/export names.
@@ -173,6 +173,21 @@ function pageExportItems(res: HandlerResponse, args: Record<string, unknown>): s
         ...(page?.inPackCount !== undefined ? { inPackCount: page.inPackCount } : {}),
     });
 }
+
+/**
+ * `clear_commerce_instance`'s call, handed to `clear-commerce-instance` as the handler reads it: the
+ * tool takes each project's answer as `changes` (keep or drop) and `saveAs` (a name), by project
+ * path, the words reset, delete and Clear Demo Data use; the handler takes one answer per path, as the
+ * window's batch save question gives it (`instanceClearRequest`, datapackAnswerArgs). Looked up at
+ * call time, so the handler map stays the one the window reaches.
+ */
+const INSTANCE_CLEAR_TOOL = defineHandlers({
+    'clear-commerce-instance': (context: HandlerContext, args?: InstanceAnswerArgs) =>
+        importHandlers['clear-commerce-instance'](context, instanceClearRequest(args)),
+});
+
+/** Answers by project path, as an instance check's `instance.projects` names each project. */
+const PROJECT_PATH = z.string().min(1);
 
 export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
     // ── reads ───────────────────────────────────────────────────────────────
@@ -374,10 +389,20 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             '(left alone; the clearing runs for the rest). When another local project uses one of these websites, data.warning names it: ' +
             'tell the user; they may still clear. When an ERP integration (in any local project) sends these websites\' orders to an ERP, ' +
             'data.erp says its ERP is brought in line with Commerce after the clearing; data.erp.held says why it will not be. ' +
-            'Large stores answer long lists. Writes nothing.',
+            'Large stores answer long lists. Writes nothing. ' +
+            'That is websites omitted (Clear Demo Data). Clear Commerce Instance instead clears whole websites of the instance, whoever put the data there: ' +
+            "websites [] answers data.websites, each website's code and name with the local projects using it (projects); " +
+            'website codes answer the same list for clearing those websites, its token starting instance-, with data.instance.projects: each project on them, ' +
+            'its datapack uninstalled first (datapack, with changes: asks means its changes need an answer) or why it keeps its data (kept). ' +
+            'That instance check is what clear_commerce_instance needs; an instance list can be large (every record of every chosen website).',
         map: importHandlers,
         type: 'check-demo-data',
-        inputSchema: {},
+        inputSchema: {
+            websites: z
+                .array(z.string().min(1))
+                .optional()
+                .describe("Omit for this project's websites; [] for the instance's websites with the projects using each; website codes for the instance check clear_commerce_instance needs"),
+        },
     },
     {
         tool: 'clear_demo_data',
@@ -405,6 +430,37 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             token: z.string().describe("check_demo_data's token"),
             changes: z.enum(['keep', 'drop']).optional().describe(CLEAR_CHANGES_DESCRIPTION),
             saveAs: SAVE_AS,
+        },
+    },
+    {
+        tool: 'clear_commerce_instance',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        description:
+            "Clear whole websites of this project's Commerce instance, whoever put the data there (the screen's Clear Commerce Instance): everything the instance " +
+            'check (check_demo_data with website codes) listed. Show the user that list, its projects and what each loses, and ask first; understood:true says the ' +
+            'user understood. First it uninstalls the datapack of each project the list names with one, in turn, as reset_datapack does: ' +
+            "changes in the user's own pack are saved into it; changes in a pack not theirs need an answer by project path, changes {path: \"keep\"} with " +
+            'saveAs {path: name} (a new datapack of theirs) or changes {path: "drop"} (lost; drop loses changes in the user\'s own pack too). A project with ' +
+            'unanswered changes in a pack not theirs answers code CHANGES_NEED_ANSWER naming it, and nothing is cleared. A save or uninstall that fails stops ' +
+            'there, before anything is cleared; running it again with the same token skips the packs already out. Then it clears as clear_demo_data does, ' +
+            "held to the list: what a kept project's datapack lists stays, and the projects that keep their data are named in the note. Cannot be undone, except " +
+            'the datapacks: each can be installed again from the library. Needs the token from that instance check; refused while that check named a type ' +
+            'Commerce was too slow to answer (check again).',
+        map: INSTANCE_CLEAR_TOOL,
+        type: 'clear-commerce-instance',
+        confirm: true, // gated twice: the row, then the handler's own confirm and understood
+        inputSchema: {
+            token: z.string().describe('The token of check_demo_data called with website codes'),
+            understood: z.literal(true).describe('true: the user read the list and understood it cannot be undone, except the datapacks'),
+            changes: z
+                .record(PROJECT_PATH, z.enum(['keep', 'drop']))
+                .optional()
+                .describe("By project path, for a project whose datapack is uninstalled first: keep saves the user's changes as a new datapack named by saveAs; drop loses them, in the user's own pack too. Left out, changes in the user's own pack are saved into it"),
+            saveAs: z
+                .record(PROJECT_PATH, z.string().min(1))
+                .optional()
+                .describe('By project path, with changes keep: the name the user gave the new datapack, e.g. My Bodea'),
         },
     },
 

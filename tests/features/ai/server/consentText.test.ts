@@ -77,3 +77,58 @@ describe('buildConsentPrompt for clear_demo_data', () => {
         expect(buildConsentPrompt('clear_demo_data', { token: 'never-shown', confirm: true }, OPEN)?.detail).toMatch(/\n\nProject: zz-tester$/);
     });
 });
+
+/**
+ * clear_commerce_instance is handed only a token and the answers by project path, so the dialog names
+ * what that instance check showed: the websites, each project whose datapack is uninstalled first,
+ * each project that keeps its datapack and data, and the answers by project name (step 06 C6).
+ */
+describe('buildConsentPrompt for clear_commerce_instance', () => {
+    const OPEN = 'Project: zz-tester';
+    const PROJECTS = [
+        { path: '/p/zz', name: 'Zz Tester', datapack: 'zz-test' },
+        { path: '/p/nb', name: 'Neighbour Demo', datapack: 'nb-pack' },
+        { path: '/p/far', name: 'Far Away', kept: true as const },
+        { path: '/p/plain', name: 'Plain Demo' },
+    ];
+
+    it('says it cannot be undone except the datapacks, and names the websites and every project by its fate', () => {
+        rememberShownClear('instance-consent-1', { websites: ['justrite_test_website', 'bodea'], projects: PROJECTS });
+
+        const prompt = buildConsentPrompt('clear_commerce_instance', { token: 'instance-consent-1', confirm: true, understood: true }, OPEN);
+
+        expect(prompt?.title).toContain("Clear this Commerce instance's websites");
+        expect(prompt?.detail).toContain("This can't be undone, except the datapacks");
+        expect(prompt?.detail.split('\n\n').slice(1)).toEqual([
+            [
+                OPEN,
+                'Websites: justrite_test_website, bodea',
+                'Uninstalls first: zz-test (Zz Tester), nb-pack (Neighbour Demo)',
+                'Keep their datapacks and data: Far Away',
+                'Also lose their demo data: Plain Demo',
+            ].join('\n'),
+        ]);
+    });
+
+    it("shows the call's answers about each project's changes, by project name", () => {
+        rememberShownClear('instance-consent-2', { websites: ['bodea'], projects: PROJECTS });
+
+        const prompt = buildConsentPrompt(
+            'clear_commerce_instance',
+            {
+                token: 'instance-consent-2',
+                confirm: true,
+                understood: true,
+                changes: { '/p/zz': 'drop', '/p/nb': 'keep' },
+                saveAs: { '/p/nb': 'My Neighbour' },
+            },
+            OPEN,
+        );
+
+        expect(prompt?.detail.endsWith('\nYour changes: Zz Tester: drop; Neighbour Demo: keep as My Neighbour')).toBe(true);
+    });
+
+    it('names the project alone for a token no check answered: the handler refuses that call', () => {
+        expect(buildConsentPrompt('clear_commerce_instance', { token: 'never-shown', confirm: true, understood: true }, OPEN)?.detail).toMatch(/\n\nProject: zz-tester$/);
+    });
+});

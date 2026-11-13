@@ -265,6 +265,8 @@ export const TOOL_NARRATION: Record<string, string> = {
     restore_datapack: 'Restoring the sample data',
     // "Clear this project's websites of everything check_demo_data listed".
     clear_demo_data: "Clearing the demo's store data",
+    // "Clear whole websites of this project's Commerce instance, whoever put the data there".
+    clear_commerce_instance: 'Clearing the Commerce instance',
     save_datapack_zip: 'Saving the datapack as a file',
     open_datapack_zip: 'Reading the datapack file',
     build_datapack_from_export: 'Building a datapack file',
