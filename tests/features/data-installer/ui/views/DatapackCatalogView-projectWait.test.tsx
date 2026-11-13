@@ -78,7 +78,7 @@ it("draws the header's save button waiting, with no words, until the project has
     expect(screen.getByRole('button', { name: 'Loading' })).toBeDisabled();
     expect(screen.queryByRole('button', { name: SAVE_WORDS })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Install from File' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Clear Demo Data' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Clear' })).toBeInTheDocument();
 });
 
 it('offers Add from File alone in the Datapack Library', async () => {
@@ -89,5 +89,5 @@ it('offers Add from File alone in the Datapack Library', async () => {
     expect(screen.queryByRole('button', { name: SAVE_WORDS })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Loading' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Install from File' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Clear Demo Data' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Clear' })).not.toBeInTheDocument();
 });

@@ -37,23 +37,10 @@ import { importHandlers } from '@/features/data-installer/handlers/importHandler
 import { announceDatapacksChanged } from '@/features/data-installer/services/datapackChanges';
 import type { DataInstallerInitialData } from '@/types/webviewPayloads';
 import * as vscode from 'vscode';
-import { createMockLogger } from '../../../helpers/loggerFake';
-import { createMockStateManager } from '../../../helpers/stateManagerFake';
-import type { StateManager } from '@/core/state/stateManager';
-import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { makeDataInstallerCommand } from './showDataInstaller.testUtils';
 
 jest.mock('@/core/communication/webviewCommunicationManager');
 
-/** Minimal ExtensionContext — only what BaseWebviewCommand reaches for. */
-function makeExtensionContext(): vscode.ExtensionContext {
-    return createMockExtensionContext();
-}
-
-function makeStateManager(): ReturnType<typeof createMockStateManager> {
-    return createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(null) });
-}
-
-const logger = createMockLogger();
 
 /** `activeColorTheme` is readonly on the real API, so replace the whole object. */
 function themeIs(kind: vscode.ColorThemeKind): void {
@@ -79,12 +66,7 @@ type Internals = {
 };
 
 function makeCommand(mode?: 'library' | 'project'): ShowDataInstallerCommand & Internals {
-    return new ShowDataInstallerCommand(
-        makeExtensionContext(),
-        makeStateManager() as unknown as StateManager,
-        logger,
-        mode
-    ) as ShowDataInstallerCommand & Internals;
+    return makeDataInstallerCommand(mode).command as ShowDataInstallerCommand & Internals;
 }
 
 describe('ShowDataInstallerCommand', () => {
@@ -152,7 +134,8 @@ describe('ShowDataInstallerCommand', () => {
             // map the MCP descriptors mirror. Named here rather than derived,
             // because being outside both maps is the whole point of it. The same goes
             // for the house progress window's two messages, which "Save store changes to
-            // this pack" opens (datapack-engine step 05).
+            // this pack" opens (datapack-engine step 05), and `takeClearRequest`, where the
+            // screen takes a Clear window the Command Palette held for it (step 06 C5).
             expect(registered).toEqual(
                 [
                     ...getRegisteredTypes(dataInstallerHandlers),
@@ -160,6 +143,7 @@ describe('ShowDataInstallerCommand', () => {
                     'open-data-installer-settings',
                     'getOperationProgress',
                     'openDebugLogs',
+                    'takeClearRequest',
                 ].sort()
             );
         });
@@ -345,9 +329,10 @@ describe('ShowDataInstallerCommand', () => {
         });
 
         it('says it is the library, and names no project even while one is open', async () => {
-            const stateManager = makeStateManager();
+            const built = makeDataInstallerCommand('library');
+            const { stateManager } = built;
             (stateManager.getCurrentProject as jest.Mock).mockResolvedValue({ name: 'scratch-1028', path: '/p' });
-            const library = new ShowDataInstallerCommand(makeExtensionContext(), stateManager as unknown as StateManager, logger, 'library') as ShowDataInstallerCommand & Internals;
+            const library = built.command as ShowDataInstallerCommand & Internals;
 
             const data = await library.getInitialData();
 

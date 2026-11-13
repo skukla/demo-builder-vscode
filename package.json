@@ -63,6 +63,16 @@
                 "category": "Demo Builder"
             },
             {
+                "command": "demoBuilder.clearDemoData",
+                "title": "Clear Demo Data",
+                "category": "Demo Builder"
+            },
+            {
+                "command": "demoBuilder.clearCommerceInstance",
+                "title": "Clear Commerce Instance",
+                "category": "Demo Builder"
+            },
+            {
                 "command": "demoBuilder.manageSiteAccess",
                 "title": "Manage Site Access",
                 "category": "Demo Builder"

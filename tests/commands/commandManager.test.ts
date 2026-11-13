@@ -156,7 +156,7 @@ describe('CommandManager', () => {
             );
         });
 
-        it('should register all 38 commands (resetAll only in dev mode)', () => {
+        it('should register all 40 commands (resetAll only in dev mode)', () => {
             commandManager.registerCommands();
 
             // 34 → 37: `signInAdobe` (PL-5), `signInDaLive` (EDS-9) and
@@ -173,7 +173,9 @@ describe('CommandManager', () => {
             // get_storefront_report tool carry what it said (owner, 2026-10-23).
             // 38 since demoBuilder.showDatapackLibrary: the Datapack Library, from the sidebar
             // and the palette, beside a project's Datapacks (owner, 2026-11-07).
-            expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(38);
+            // 40 since demoBuilder.clearDemoData and demoBuilder.clearCommerceInstance: the
+            // Command Palette's doors to the Datapacks header's two Clear windows (step 06 C5, P6-Q5).
+            expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(40);
 
             // Verify all commands are registered (in order of registration)
             const expectedCommands = [
@@ -186,6 +188,8 @@ describe('CommandManager', () => {
                 'demoBuilder.showIntegrations',
                 'demoBuilder.showDataInstaller',
                 'demoBuilder.showDatapackLibrary',
+                'demoBuilder.clearDemoData',
+                'demoBuilder.clearCommerceInstance',
                 'demoBuilder.loadProject',
                 'demoBuilder.startDemo',
                 'demoBuilder.stopDemo',

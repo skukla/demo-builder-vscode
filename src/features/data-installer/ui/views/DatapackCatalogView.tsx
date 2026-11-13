@@ -48,6 +48,7 @@ import { DatapackSourceNotice } from '../components/DatapackSourceNotice';
 import { renderDataInstallerFailure } from '../dataInstallerFailure';
 import { headerSave, heldInCatalogOf } from '../headerSave';
 import { useCatalogShow } from '../hooks/useCatalogShow';
+import type { ClearArrival } from '../hooks/useClearArrival';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import { useDatapackCatalog } from '../hooks/useDatapackCatalog';
 import { requestDatapackRename, useDetailFlyout } from '../hooks/useDetailFlyout';
@@ -91,9 +92,10 @@ function mySavesIn(page: CatalogPage | null): DatapackId[] {
 /**
  * @param library - the Datapack Library (owner, 2026-11-07): no project is read, no card wears the
  *   project's check, and nothing that acts on a store is offered (Import, the header's save button,
- *   Install from File, Clear Demo Data).
+ *   Install from File, the Clear menu).
+ * @param clearArrival - a Clear window the Command Palette asked for, which the header opens (P6-Q5)
  */
-export function DatapackCatalogView({ library = false }: { library?: boolean } = {}): React.JSX.Element {
+export function DatapackCatalogView({ library = false, clearArrival }: { library?: boolean; clearArrival?: ClearArrival } = {}): React.JSX.Element {
     const [query, setQuery] = useState('');
     const [versions, setVersions] = useState<Record<string, string>>({});
 
@@ -283,6 +285,8 @@ export function DatapackCatalogView({ library = false }: { library?: boolean } =
                                 save={save}
                                 mySaves={mySaves}
                                 ownNames={owned.ownNames}
+                                clearRequest={clearArrival?.request}
+                                onClearRequestTaken={clearArrival?.taken}
                             />
                         }
                     />

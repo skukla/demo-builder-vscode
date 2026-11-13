@@ -1,15 +1,15 @@
 /**
  * The Datapacks header's actions (step-04 S1; decisions Phase 7 and 7b): in a project's Datapacks
- * the save button, Install from File, then Clear Demo Data; in the Datapack Library Add from File
- * alone. The save button is one state (`headerSave`), and its words never change while it is on
+ * the save button, Install from File, then the Clear menu (Clear Demo Data, Clear Commerce Instance;
+ * step 06 C5, J1-1); in the Datapack Library Add from File alone. The save button is one state (`headerSave`), and its words never change while it is on
  * screen: until the state is known it is a disabled, waiting button with no words.
  */
 
 import '../../../../helpers/webviewClientMock';
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { press } from '../../../../helpers/reactSettle';
+import { press, settle } from '../../../../helpers/reactSettle';
 
 // Below the mock on purpose — see webview-test-authoring §3.
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
@@ -18,6 +18,7 @@ import {
     type HeaderSaveActions,
 } from '@/features/data-installer/ui/components/CatalogHeaderActions';
 import type { HeaderSave } from '@/features/data-installer/ui/headerSave';
+import type { ClearWindowKind } from '@/types/demoDataWipe';
 
 const mockRequest = webviewClient.request as jest.Mock;
 
@@ -29,6 +30,17 @@ function saveActions(state: HeaderSave): HeaderSaveActions {
 
 function renderHeader(save?: HeaderSaveActions): ReturnType<typeof render> {
     return render(<CatalogHeaderActions onCatalogChanged={jest.fn()} save={save} />);
+}
+
+/** The items of the menu a labelled trigger opens (the Spectrum mock draws every menu open). */
+function menuItemsOf(trigger: string): string[] {
+    const shell = screen.getByRole('button', { name: trigger }).closest('div') as HTMLElement;
+    return within(within(shell).getByRole('menu')).getAllByRole('menuitem').map((row) => row.textContent ?? '');
+}
+
+/** The `check-demo-data` payloads asked so far: `{}` is Clear Demo Data's, `{ websites: [] }` the instance's. */
+function checks(): unknown[] {
+    return mockRequest.mock.calls.filter((call) => call[0] === 'check-demo-data').map((call) => call[1]);
 }
 
 /** The named buttons, in the order the header draws them: every button it has, or a name is missing. */
@@ -69,10 +81,7 @@ describe("in a project's Datapacks", () => {
         renderHeader(save);
 
         expect(screen.getByRole('button', { name: 'Save' })).toHaveTextContent('Save▾');
-        expect(screen.getAllByRole('menuitem').map((row) => row.textContent)).toEqual([
-            'Save',
-            'Save As New',
-        ]);
+        expect(menuItemsOf('Save')).toEqual(['Save', 'Save As New']);
 
         await press(screen.getByRole('menuitem', { name: 'Save' }));
         expect(save.onSave).toHaveBeenCalledTimes(1);
@@ -85,7 +94,7 @@ describe("in a project's Datapacks", () => {
         const save = saveActions('save-as-new');
         renderHeader(save);
 
-        expect(screen.queryByRole('menuitem')).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
         await press(screen.getByRole('button', { name: 'Save As New' }));
 
         expect(save.onSaveAsNew).toHaveBeenCalledTimes(1);
@@ -97,13 +106,13 @@ describe("in a project's Datapacks", () => {
 
         expect(screen.queryByRole('button', { name: SAVE_WORDS })).not.toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Loading' })).not.toBeInTheDocument();
-        expect(buttonsInOrder(['Install from File', 'Clear Demo Data'])).toEqual(['Install from File', 'Clear Demo Data']);
+        expect(buttonsInOrder(['Install from File', 'Clear'])).toEqual(['Install from File', 'Clear']);
     });
 
-    it('puts the save button first, then Install from File, then Clear Demo Data', () => {
+    it('puts the save button first, then Install from File, then Clear', () => {
         renderHeader(saveActions('save-as-new'));
 
-        expect(buttonsInOrder(['Save As New', 'Install from File', 'Clear Demo Data'])).toEqual(['Save As New', 'Install from File', 'Clear Demo Data']);
+        expect(buttonsInOrder(['Save As New', 'Install from File', 'Clear'])).toEqual(['Save As New', 'Install from File', 'Clear']);
     });
 
     it("opens today's file load from Install from File", async () => {
@@ -138,6 +147,60 @@ describe("in a project's Datapacks", () => {
         record();
 
         expect(frames).toEqual([[], [], [words]]);
+    });
+});
+
+describe("the Clear menu (step 06 C5, J1-1)", () => {
+    it('is Clear ▾ with two items: Clear Demo Data, then Clear Commerce Instance', () => {
+        renderHeader(saveActions('create'));
+
+        expect(screen.getByRole('button', { name: 'Clear' })).toHaveTextContent('Clear▾');
+        expect(menuItemsOf('Clear')).toEqual(['Clear Demo Data', 'Clear Commerce Instance']);
+    });
+
+    it("opens Clear Demo Data's window from its item, and no other", async () => {
+        renderHeader(saveActions('create'));
+        expect(checks()).toStrictEqual([]);
+
+        await press(screen.getByRole('menuitem', { name: 'Clear Demo Data' }));
+        await settle();
+
+        expect(checks()).toEqual([{}]);
+        expect(screen.queryByRole('heading', { name: 'Clear Commerce Instance' })).not.toBeInTheDocument();
+    });
+
+    it("opens Clear Commerce Instance's window from its item, asking for the instance's websites", async () => {
+        renderHeader(saveActions('create'));
+
+        await press(screen.getByRole('menuitem', { name: 'Clear Commerce Instance' }));
+        await settle();
+
+        expect(checks()).toEqual([{ websites: [] }]);
+        expect(screen.getByRole('heading', { name: 'Clear Commerce Instance' })).toBeInTheDocument();
+    });
+
+    // The Command Palette's doors (P6-Q5): the screen hands the header the window it was asked for.
+    it.each<[ClearWindowKind, unknown]>([
+        ['project', {}],
+        ['instance', { websites: [] }],
+    ])('opens the %s window it is asked for on arrival, and says it took the request', async (kind, payload) => {
+        const taken = jest.fn();
+        render(
+            <CatalogHeaderActions onCatalogChanged={jest.fn()} save={saveActions('create')} clearRequest={kind} onClearRequestTaken={taken} />
+        );
+        await settle();
+
+        expect(checks()).toEqual([payload]);
+        expect(taken).toHaveBeenCalledTimes(1);
+    });
+
+    it('opens nothing on arrival in the Datapack Library, where there is no Clear', async () => {
+        const taken = jest.fn();
+        render(<CatalogHeaderActions onCatalogChanged={jest.fn()} clearRequest="instance" onClearRequestTaken={taken} />);
+        await settle();
+
+        expect(checks()).toStrictEqual([]);
+        expect(taken).not.toHaveBeenCalled();
     });
 });
 

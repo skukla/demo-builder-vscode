@@ -169,3 +169,22 @@ export interface ClearInstanceRequest {
      */
     changes?: Record<string, { saveAs: string } | 'drop'>;
 }
+
+/**
+ * Which of the header's two Clear windows to open (C5, P6-Q5): Clear Demo Data (`project`) or Clear
+ * Commerce Instance (`instance`). The Command Palette's `demoBuilder.clearDemoData` and
+ * `demoBuilder.clearCommerceInstance` open the project's Datapacks on one. A screen not open yet
+ * takes the request once mounted (`takeClearRequest`); one already open is pushed `openClearWindow`.
+ */
+export type ClearWindowKind = 'project' | 'instance';
+
+/** `openClearWindow`: open this Clear window on the Datapacks screen already open. */
+export interface OpenClearWindowPayload {
+    window: ClearWindowKind;
+}
+
+/** `takeClearRequest`: the Clear window to open now, or null; used up either way. */
+export interface TakeClearRequestResponse {
+    success: true;
+    data: { window: ClearWindowKind | null };
+}

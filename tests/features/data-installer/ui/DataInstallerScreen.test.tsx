@@ -12,9 +12,9 @@
  * written to hide itself below two.
  */
 
-import '../../../helpers/webviewClientMock';
+import { webviewClientHandlers } from '../../../helpers/webviewClientMock';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
 
 import { settle } from '../../../helpers/reactSettle';
 import '@testing-library/jest-dom';
@@ -186,7 +186,7 @@ describe('DataInstallerScreen', () => {
             expect(await screen.findByRole('button', { name: /Add from File/ })).toBeInTheDocument();
             expect(screen.queryByRole('button', { name: /^(Create|Save|Save As New|Loading)$/ })).not.toBeInTheDocument();
             expect(screen.queryByRole('button', { name: /Install from File/ })).not.toBeInTheDocument();
-            expect(screen.queryByRole('button', { name: /Clear Demo Data/ })).not.toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: 'Clear' })).not.toBeInTheDocument();
         });
 
         it('CONTROL: a project\'s Datapacks names the project and keeps the store\'s actions', async () => {
@@ -195,9 +195,59 @@ describe('DataInstallerScreen', () => {
 
             expect(screen.getByText('scratch-1028')).toBeInTheDocument();
             expect(await screen.findByRole('button', { name: /Install from File/ })).toBeInTheDocument();
-            expect(screen.getByRole('button', { name: /Clear Demo Data/ })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Clear' })).toBeInTheDocument();
             expect(screen.getByRole('button', { name: 'Activity' })).toBeInTheDocument();
             await waitFor(() => expect(requestedTypes()).toContain('get-datapack-import-target'));
+        });
+    });
+
+    // The Command Palette's Clear doors (step 06 C5, P6-Q5): the screen opens on that window.
+    describe('arriving from the Command Palette', () => {
+        /** The `check-demo-data` payloads: `{}` is Clear Demo Data's, `{ websites: [] }` the instance's. */
+        const checks = (): unknown[] =>
+            mockRequest.mock.calls.filter((call) => call[0] === 'check-demo-data').map((call) => call[1]);
+
+        function holding(window: 'project' | 'instance' | null): void {
+            mockRequest.mockImplementation(async (type: string) => {
+                if (type === 'takeClearRequest') return { success: true, data: { window } };
+                // The window stays on its read wait: its own suites cover what it draws.
+                if (type === 'check-demo-data') return new Promise(() => undefined);
+                if (type === 'get-datapack-import-target') {
+                    return { success: true, data: { instance: 'TENANT123', projectName: 'demo-1' } };
+                }
+                return { success: true, data: { items: [], count: 0, total: 0 } };
+            });
+        }
+
+        it('opens the window held for it once the header is drawn', async () => {
+            holding('instance');
+            render(<DataInstallerScreen mode="project" projectName={asDisplayName('Kukla Luma')} />);
+            await settle();
+
+            await waitFor(() => expect(checks()).toEqual([{ websites: [] }]));
+        });
+
+        it('switches to the catalog when a window is pushed while Activity is on screen', async () => {
+            holding(null);
+            render(<DataInstallerScreen mode="project" projectName={asDisplayName('Kukla Luma')} />);
+            await settle();
+            fireEvent.click(screen.getByRole('button', { name: 'Activity' }));
+            await settle();
+
+            act(() => webviewClientHandlers.get('openClearWindow')?.({ window: 'project' }));
+            await settle();
+
+            expect(screen.getByRole('button', { name: 'Catalog' })).toHaveAttribute('aria-pressed', 'true');
+            await waitFor(() => expect(checks()).toEqual([{}]));
+        });
+
+        it('does not ask for a held request as the Datapack Library', async () => {
+            holding('project');
+            render(<DataInstallerScreen mode="library" />);
+            await settle();
+
+            expect(requestedTypes()).not.toContain('takeClearRequest');
+            expect(checks()).toStrictEqual([]);
         });
     });
 });

@@ -24,11 +24,16 @@
  * header and holds the store's actions. One screen that silently acted on the project opened last
  * was the finding (F65).
  *
+ * **Arriving on a Clear window** (step 06 C5, P6-Q5): the Command Palette's Clear doors open a
+ * project's Datapacks with that window open (`useClearArrival`). The screen holds the request and
+ * shows the catalog, whose header opens the window once it is drawn.
+ *
  * @module features/data-installer/ui/DataInstallerScreen
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ViewSwitcher, type SwitchableView } from './components/ViewSwitcher';
+import { useClearArrival, type ClearArrival } from './hooks/useClearArrival';
 import { DatapackActivityView } from './views/DatapackActivityView';
 import { DatapackCatalogView } from './views/DatapackCatalogView';
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';
@@ -72,6 +77,11 @@ function subtitleOf(library: boolean, projectName: string | undefined): string {
 export function DataInstallerScreen({ mode, projectName }: DataInstallerScreenProps): React.JSX.Element {
     const [activeView, setActiveView] = useState(VIEWS[0].id);
     const library = mode === 'library';
+    const clearArrival = useClearArrival(!library);
+    // The Clear windows live in the catalog's header: an arrival shows the catalog.
+    useEffect(() => {
+        if (clearArrival.request) setActiveView(VIEWS[0].id);
+    }, [clearArrival.request]);
 
     return (
         <PageLayout
@@ -101,16 +111,16 @@ export function DataInstallerScreen({ mode, projectName }: DataInstallerScreenPr
                     so keeping the others mounted would spend round trips on screens
                     nobody is looking at. The cost is a re-fetch when you switch back,
                     which is the cheaper of the two. */}
-                {library ? <DatapackCatalogView library /> : renderView(activeView)}
+                {library ? <DatapackCatalogView library /> : renderView(activeView, clearArrival)}
             </div>
         </PageLayout>
     );
 }
 
 /** The body for the active view id. */
-function renderView(activeView: string): React.JSX.Element | null {
+function renderView(activeView: string, clearArrival: ClearArrival): React.JSX.Element | null {
     if (activeView === 'activity') {
         return <DatapackActivityView />;
     }
-    return <DatapackCatalogView />;
+    return <DatapackCatalogView clearArrival={clearArrival} />;
 }

@@ -57,6 +57,18 @@ describe('Data Installer integration points', () => {
         expect(commands.map((c) => c.command)).not.toContain(COMMAND_ID);
     });
 
+    // Step 06 C5 (P6-Q5): the header's two Clear windows, reachable from the palette.
+    it.each([
+        ['demoBuilder.clearDemoData', 'Clear Demo Data'],
+        ['demoBuilder.clearCommerceInstance', 'Clear Commerce Instance'],
+    ])('contributes %s to the palette as "%s", and registers it', (id, title) => {
+        const pkg = JSON.parse(read('package.json'));
+        const commands = pkg.contributes.commands as { command: string; title: string; category?: string }[];
+
+        expect(commands.find((c) => c.command === id)).toEqual({ command: id, title, category: 'Demo Builder' });
+        expect(read('src/commands/commandManager.ts')).toContain(`'${id}'`);
+    });
+
     it('registers that command, so the id resolves to something', () => {
         const manager = read('src/commands/commandManager.ts');
 

@@ -528,6 +528,14 @@ export class CommandManager {
         this.registerCommand('demoBuilder.showDatapackLibrary', async () => {
             await datapackLibrary.execute();
         });
+        // The Datapacks header's two Clear windows, from the palette (step 06 C5, P6-Q5): the current
+        // project's Datapacks opens with the window open, refused without a project with Commerce.
+        this.registerCommand('demoBuilder.clearDemoData', async () => {
+            await dataInstaller.openClearWindow('project');
+        });
+        this.registerCommand('demoBuilder.clearCommerceInstance', async () => {
+            await dataInstaller.openClearWindow('instance');
+        });
 
         // One-shot storefront name migration (heals pre-`164fd251` storefronts
         // without requiring a destructive reset).

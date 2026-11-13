@@ -231,9 +231,10 @@ describe('the two doors out of the catalog', () => {
 
     // 2026-10-30 (owner): one Create datapack in place of "Export from this instance" and "Save
     // from this store", quiet buttons rather than links; Clear demo data last. Step-04 S1: the
-    // button reads Create, and the file action Install from File in a project's Datapacks.
+    // button reads Create, and the file action Install from File in a project's Datapacks. Step 06
+    // C5: Clear Demo Data became the Clear menu, still last.
     it(
-        'offers Create, Install from File and, last, Clear Demo Data',
+        'offers Create, Install from File and, last, Clear',
         async () => {
             mockRequest.mockResolvedValue({
                 success: true,
@@ -243,7 +244,7 @@ describe('the two doors out of the catalog', () => {
             await settle();
             await screen.findAllByTestId('datapack-card');
 
-            const labels = ['Create', 'Install from File', 'Clear Demo Data'];
+            const labels = ['Create', 'Install from File', 'Clear'];
             const buttons = labels.map((name) => screen.getByRole('button', { name }));
             expect(buttons.every((button, i) => i === 0 || buttons[i - 1].compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
             expect(screen.queryByText('Export from this instance')).not.toBeInTheDocument();

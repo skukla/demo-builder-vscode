@@ -25,6 +25,9 @@ const LEDGER: Readonly<Record<string, Reason>> = {
     'Something went wrong': 'complete-sentence',
     'Removal stopped': 'status-note',
     'project configuration': 'inside-a-sentence',
+    // Clear Commerce Instance's confirmation box (step 06 C4, decisions J1-5): the SC states a fact
+    // in the first person before the red button turns on. Read since C5 gave the window its host.
+    'I understand every project on these websites loses its data': 'complete-sentence',
 };
 
 /**
@@ -41,8 +44,11 @@ const LEDGER: Readonly<Record<string, Reason>> = {
  * verb (`DatapackVerb`: Install, Uninstall or Switch).
  * 66 -> 64 on 2026-11-13 (step 06, C2a): Clear Demo Data's store picker went (`StorePickList`), with
  * its two runtime labels, a website's name and a store's name.
+ * 64 -> 66 on 2026-11-13 (step 06, C5): Clear Commerce Instance's window joined the bundle with the
+ * header's Clear menu, and with it the website list's two runtime labels (`CheckboxRow.label`, a
+ * website's name or, without one, its code): Commerce's own words for the SC's websites.
  */
-const DYNAMIC_PIN = 64;
+const DYNAMIC_PIN = 66;
 
 /**
  * The six dialog layouts (the Steps layout joined 2026-11-11) hand their caller's words on to Modal (`title={title}`). Those words are
@@ -129,7 +135,7 @@ describe('Title Case for what names a thing', () => {
             MINIMUM_SITES
         );
         expect(sites.map((site) => site.text)).toEqual(
-            expect.arrayContaining(['Run in Background', 'Clear Demo Data', 'Build Your Project'])
+            expect.arrayContaining(['Run in Background', 'Install from File', 'Build Your Project'])
         );
     });
 
