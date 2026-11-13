@@ -66,6 +66,11 @@ Live notes; rewritten as the final report at the loop's close.
   recommendation). Full gate green (2,400 suites, 38,454 tests).
 - **The install window's rebuild (step-03) is done except S3** (background endings), which waits on
   Q4. Owed: live cycles for install, switch and uninstall; a look on screen at every window's height.
+- Visual check, batched: today's code built with the stylesheets as they were before this run and as
+  they are now (the type table's new rules, seven removed form rules, the removed add-demo note rule).
+  Compared on the wizard, dashboard and Data Installer screens at two themes and three widths: no
+  element moved. Control: the new build holds the new rules and none of the removed ones. The check's
+  sample screens do not open the new install window, so its own look still needs a look on screen.
 - Phase 1b, done while waiting: ERP Downtime (863c5c2ca) and Edit Demo Package (f8ece2e6e) moved
   onto the Form layout, whose failure line is what both waited for. Same words; Cancel beside the
   commit, as every form; a read failure is a result window with Close. An unused style rule removed.
