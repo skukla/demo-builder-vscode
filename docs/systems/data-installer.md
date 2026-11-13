@@ -426,13 +426,19 @@ writes what was picked, from a store Demo Builder did not fill. A pick brings wh
 product its categories, set, attributes and quantities; a rule its coupons; a company its admin),
 and never joins the install record, so removing the pack leaves it.
 
-**The save's window shows the import's rows** (owner, 2026-11-09, walk F91): Preparing Save
-("Finding what this demo uses"), a row per data type the save holds, in the order capture reads them
-(`captureRows`, beside `captureLines`), and Finishing Save (the library write, then "Updating this
-demo's record"). Rows read together, products with gift cards, spin together; at the end each says
-what the version holds ("2,046 Products"). They reach the shared progress window as the message's
-`rows` (`OperationRow`), drawn by `WorkRowColumns`, the import window's own columns, and built by the
-import's row model (`runRows.ts`, `SAVE_RUN`). From a pack the website's products are read whole
+**The save's window shows two steps** (owner, 2026-11-09, walk F91; two steps since step-04 S4,
+decisions Phase 7b): "Export from Commerce", with a row per data type the save holds under it, in
+the order capture reads them, then "Save <the pack's name>" as its own row, so a failed write shows
+on its own row (`captureRows`, beside `captureLines`). The export spins with what the save does
+first ("Reading this demo's data"), then counts the data types exported ("2 of 5 data types"), the
+type being read saying "Exporting", and ends "Exported"; the save row waits, then spins with the
+library write ("Saving to My Datapacks", then "Finishing the save"). Rows read together, products
+with gift cards, spin together. A save that stops ends on the rows it stopped on (`stoppedRows`,
+from `saveInWindow`): the row that was spinning red, "Stopped", what had not started "Not run", the
+reason the sentence under them. They reach the shared progress window as the message's `rows`
+(`OperationRow`, the data types in `types`), drawn by `StepRows` as the import window draws its
+steps, and the data types are built by the import's row model (`runRows.ts`, `SAVE_RUN`). Only the
+window gets rows: an agent's save answers its sentence. From a pack the website's products are read whole
 once, both to find what the demo uses and as capture's products, and the set list once for every
 product (walk F90).
 

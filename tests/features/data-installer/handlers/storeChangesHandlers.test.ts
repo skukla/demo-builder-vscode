@@ -52,6 +52,8 @@ import { previewChanges } from '@/features/data-installer/services/demoBuilderEn
 import { verifyPackInstall } from '@/features/data-installer/services/demoBuilderEngine/verifyInstall';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
+import type { OperationProgressPayload } from '@/types/webviewPayloads';
+import { SAVE_WRITING } from '../../../helpers/operationRowFixtures';
 
 const mockedGuard = orgGuard as jest.MockedFunction<typeof orgGuard>;
 const mockedAccess = resolveDataInstallerAccess as jest.MockedFunction<typeof resolveDataInstallerAccess>;
@@ -461,6 +463,37 @@ describe('save-store-changes-to-pack', () => {
         await storeChangesHandlers['save-store-changes-to-pack'](context, { ...ID, saveAs: SAVE_AS, confirm: true, progress: 'modal' });
 
         expect(context.sendMessage).toHaveBeenCalledWith('operationProgress', expect.objectContaining({ id: 'datapack-save', state: 'running', rows: reading }));
+    });
+
+    // Phase 7b (decisions.md): the save is two steps "so a failed write shows on its own row". A save
+    // that stops ends on the rows it stopped on, the reason the sentence under them.
+    it('ends a failed write on the save row, the reason as the sentence under the rows', async () => {
+        mockedSave.mockImplementation(async (_deps, _id, _write, report) => {
+            report?.('Saving to My Datapacks', 'Categories', undefined, SAVE_WRITING);
+            throw new StoreChangesError('Some of My Luma could not be saved to My Datapacks (categories: too large).');
+        });
+        const context = harness();
+
+        await storeChangesHandlers['save-store-changes-to-pack'](context, { ...ID, saveAs: SAVE_AS, confirm: true, progress: 'modal' });
+
+        const end = jest.mocked(context.sendMessage).mock.calls.map((call) => call[1] as OperationProgressPayload).find((m) => m.state === 'failed');
+        expect(end?.error).toBe('Some of My Luma could not be saved to My Datapacks (categories: too large).');
+        expect(end?.rows?.map((row) => [row.label, row.status, row.line])).toStrictEqual([
+            ['Export from Commerce', 'success', 'Exported'],
+            ['Save My Luma', 'error', 'Stopped'],
+        ]);
+    });
+
+    it('CONTROL: an agent\'s save that stops answers no rows', async () => {
+        mockedSave.mockImplementation(async (_deps, _id, _write, report) => {
+            report?.('Saving to My Datapacks', 'Categories', undefined, SAVE_WRITING);
+            throw new StoreChangesError('Some of My Luma could not be saved.');
+        });
+
+        const result = await storeChangesHandlers['save-store-changes-to-pack'](harness(), { ...ID, saveAs: SAVE_AS, confirm: true });
+
+        expect(result).toMatchObject({ success: false, error: 'Some of My Luma could not be saved.' });
+        expect(result).not.toHaveProperty('rows');
     });
 
     it('answers what stopped it in the SC\'s words, and records nothing on the project', async () => {

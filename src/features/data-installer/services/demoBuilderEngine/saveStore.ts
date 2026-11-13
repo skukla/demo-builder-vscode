@@ -218,7 +218,7 @@ export async function saveStoreChanges(
     const seeds = [...(record?.created ?? []), ...seedsOf(picks)];
     const seeded = [...seeds.map((seed) => seed.kind), ...Object.keys(installed.rows)];
     const lineFor = captureLines(seeded);
-    const progress = captureRows(seeded);
+    const progress = captureRows(seeded, saveAs.displayName);
     const reading = (at: number): void => {
         took(`reading ${lineFor(at)}`);
         report(OPERATION_STAGES.readingStoreChanges.label, lineFor(at), undefined, progress.reading(at));
@@ -270,14 +270,14 @@ export async function saveStoreChanges(
     };
 }
 
-/** The last row's line while the save writes: the write, then the record moved onto the new version (`rebaseRecord`). */
+/** The save row's line while it writes: the write, then the record moved onto the new version (`rebaseRecord`). */
 const SAVING_STEP = 'Saving to My Datapacks';
 const RECORD_STEP = 'Finishing the save';
 
-/** The rows before what the demo uses is known: the kinds the record, the pack and the picks name. */
+/** The steps before what the demo uses is known: the kinds the record, the pack and the picks name. */
 function preparingRows(record: InstallRecord | undefined, rows: Record<string, unknown>, target: SaveTarget): OperationRow[] {
     const kinds = [...(record?.created ?? []).map((o) => o.kind), ...Object.keys(rows), ...seedsOf(target.picks ?? {}).map((o) => o.kind)];
-    return captureRows(kinds).preparing(firstStep(target) ?? 'Reading your selection');
+    return captureRows(kinds, target.saveAs.displayName).preparing(firstStep(target) ?? 'Reading your selection');
 }
 
 /**
@@ -321,7 +321,7 @@ function withPicks(demo: StorePicks, chosen: StorePicks | undefined): StorePicks
     return all;
 }
 
-/** What the window's second row says before the data types are known: from a pack, the demo's data is found first. */
+/** What the export step says before the data types are known: from a pack, the demo's data is found first. */
 function firstStep(target: SaveTarget): string | undefined {
     return target.pack ? "Reading this demo's data" : undefined;
 }

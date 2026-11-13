@@ -54,7 +54,7 @@ import type { DatapackSetupStep } from '../types';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
 import { resolveDatapackWriteAccess } from './datapackWriteGate';
 import { libraryReads } from './libraryReads';
-import { failure, saveIntoFor, saveToPack } from './packSave';
+import { failure, saveInWindow, saveIntoFor, saveToPack } from './packSave';
 import { DATAPACK_SAVE_OPERATION_ID } from '@/core/utils/operationIds';
 import { narrateOutcomeToModal } from '@/core/vscode/operationProgress';
 import { withOperationProgress } from '@/core/vscode/withOperationProgress';
@@ -345,7 +345,8 @@ export const storeChangesHandlers = defineHandlers({
             const options = { id: DATAPACK_SAVE_OPERATION_ID, title, inModal: payload.progress === 'modal' };
             // The reporter itself, so the save's rows reach its window (walk F91: a wrapper passing on
             // only the stage and step dropped them, and the window kept its one spinner).
-            return withOperationProgress(options, (report) => saveToPack(context, opened, into, report));
+            const save = options.inModal ? saveInWindow : saveToPack;
+            return withOperationProgress(options, (report) => save(context, opened, into, report));
         },
         () => DATAPACK_SAVE_OPERATION_ID,
     ),

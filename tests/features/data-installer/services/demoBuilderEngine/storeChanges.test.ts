@@ -160,21 +160,19 @@ describe('saveStoreChanges', () => {
         ]);
     });
 
-    // Walk F91: the save's window shows a row per data type; its own work goes on the row it leads to
-    // (review, 2026-11-10: no Preparing Save or Finishing Save rows).
-    it('sends the window a row per data type, the save\'s own steps on the first and last row', async () => {
+    // Walk F91, then Phase 7b (decisions.md): two steps, Export from Commerce with a row per data
+    // type under it, then the write into the pack as its own row, named for the pack it writes.
+    it('sends the window two steps: the export with its data types, then the save into the pack', async () => {
         const { d, write } = await deps();
         const sent: OperationRow[][] = [];
 
         await saveStoreChanges(d, { pack: PACK, saveAs: SAVE_AS }, write, (_stage, _step, _at, rows) => void (rows && sent.push(rows)));
 
-        const labels = (rows: OperationRow[]) => rows.map((row) => `${row.label}: ${row.status}`);
-        expect(sent[0]).toStrictEqual([
-            expect.objectContaining({ label: 'Categories', status: 'checking', line: "Reading this demo's data" }),
-        ]);
-        expect(sent.every((rows) => rows.every((row) => !/Preparing|Finishing/u.test(row.label)))).toBe(true);
-        expect(labels(sent.find((rows) => rows[0]?.status === 'checking' && !rows[0].line?.startsWith('Finding')) ?? [])).toStrictEqual(['Categories: checking']);
-        expect(sent.at(-1)?.at(-1)).toMatchObject({ label: 'Categories', status: 'checking', line: "Finishing the save" });
+        const steps = (rows: OperationRow[] | undefined) => (rows ?? []).map((row) => `${row.label}: ${row.status}: ${row.line}`);
+        expect(steps(sent[0])).toStrictEqual(["Export from Commerce: checking: Reading this demo's data", 'Save Acme Demo: pending: Waiting']);
+        expect(sent[0]?.[0]?.types?.map((t) => `${t.label}: ${t.status}`)).toStrictEqual(['Categories: pending']);
+        expect(steps(sent.find((rows) => rows[0]?.types?.[0]?.status === 'checking'))).toStrictEqual(['Export from Commerce: checking: 0 of 1 data type', 'Save Acme Demo: pending: Waiting']);
+        expect(steps(sent.at(-1))).toStrictEqual(['Export from Commerce: success: Exported', 'Save Acme Demo: checking: Finishing the save']);
     });
 
     it("names what goes in when a save is into the demo's own pack, too", async () => {

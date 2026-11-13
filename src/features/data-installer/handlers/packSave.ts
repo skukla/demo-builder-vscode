@@ -9,7 +9,8 @@
  *   library lists it as the SC's (Save), else the answer that a name is needed. A library that
  *   cannot be asked is never taken to mean the SC's: Save As is the safe answer.
  * - `saveToPack`: capture, write the new version into the library (never `update`), and record
- *   on the project that it now uses it.
+ *   on the project that it now uses it. `saveInWindow` is the same save in its progress window,
+ *   ending a save that stops on the row it stopped on.
  *
  * @module features/data-installer/handlers/packSave
  */
@@ -17,6 +18,7 @@
 import { nameProblem } from '../saveAsName';
 import { DatapackStoreWriter } from '../services/datapackStoreWriter';
 import { writePackToStore } from '../services/datapackTransfer';
+import { stoppedRows } from '../services/demoBuilderEngine/capturePhases';
 import { saveNote } from '../services/demoBuilderEngine/saveOutcome';
 import { saveStoreChanges } from '../services/demoBuilderEngine/saveStore';
 import { StoreChangesError } from '../services/demoBuilderEngine/storeAccess';
@@ -29,6 +31,7 @@ import type { OperationOutcome, ReportStage } from '@/core/vscode/withOperationP
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
+import type { OperationRow } from '@/types/webviewPayloads';
 import type { SaveStoreChangesResult } from '@/types/webviewRequests';
 
 const LOG_PREFIX = '[Data Installer]';
@@ -157,6 +160,26 @@ export async function saveToPack(
     } catch (error) {
         return failure(context, error, 'Your changes could not be saved.');
     }
+}
+
+/**
+ * The save in its progress window: the steps it last sent are kept, so a save that stops ends on
+ * the row it stopped on, a failed write on the save row (decisions.md, Phase 7b), the reason the
+ * sentence under them. Only the window gets rows: an agent's answer is the sentence.
+ */
+export async function saveInWindow(
+    context: HandlerContext,
+    opened: SaveOpened,
+    into: SaveInto,
+    report: ReportStage,
+): Promise<HandlerResponse & OperationOutcome> {
+    let last: OperationRow[] | undefined;
+    const keep: ReportStage = (stage, step, position, rows) => {
+        if (rows) last = rows;
+        report(stage, step, position, rows);
+    };
+    const result = await saveToPack(context, opened, into, keep);
+    return !result.success && last ? { ...result, rows: stoppedRows(last) } : result;
 }
 
 /**

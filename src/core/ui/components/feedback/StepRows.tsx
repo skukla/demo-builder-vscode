@@ -3,8 +3,9 @@
  * step that has them (`OperationRow.types`), small, in columns (`WorkRowColumns` dense). Moved out of
  * `ImportRunView` (step-04 R3) so a progress row can carry nested rows the same way.
  *
- * The nested rows sit in `.import-step-types`, which `data-installer.css` styles today: a bundle
- * that draws steps with nested rows outside the Datapacks screens needs that rule to reach it.
+ * Styled by `work-row.css` (`.step-rows`: the steps' spacing, bold titles and muted lines;
+ * `.step-rows-nested`: the rows under a step), which every bundle drawing the import's window or the
+ * progress modal imports (a datapack save's Export from Commerce and its data types, Phase 7b).
  *
  * @module core/ui/components/feedback/StepRows
  */
@@ -35,7 +36,7 @@ function Step({ step, columns }: { step: OperationRow; columns: 1 | 2 }): React.
                 </p>
             ) : null}
             {step.types && step.types.length > 0 ? (
-                <div className="import-step-types">
+                <div className="step-rows-nested">
                     <WorkRowColumns rows={step.types} columns={columns} dense />
                 </div>
             ) : null}
@@ -51,10 +52,10 @@ export interface StepRowsProps {
 
 export function StepRows({ steps, columns }: StepRowsProps): React.ReactElement {
     return (
-        <>
+        <div className="step-rows">
             {steps.map((step) => (
                 <Step key={step.kind} step={step} columns={columns} />
             ))}
-        </>
+        </div>
     );
 }

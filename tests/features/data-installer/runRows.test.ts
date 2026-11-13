@@ -101,20 +101,17 @@ describe('runRows', () => {
 describe('runRows for a save (SAVE_RUN)', () => {
     const save = (over: Partial<RunSource>) => runRows(source({ dataTypes: ['categories', 'products'], running: true, ...over }), SAVE_RUN);
 
-    it('puts what the save does first on the first row, before any is read', () => {
-        expect(save({ phase: 'Finding what this demo uses' }).map((r) => [r.label, r.status, r.line])).toEqual([
-            ['Categories', 'checking', 'Finding what this demo uses'],
-            ['Products', 'pending', 'Waiting'],
+    // Phase 7b (owner, 2026-11-12, J3-1): the type being read says "Exporting", Commerce's word.
+    it('says Exporting on the type being read, in the order given', () => {
+        expect(save({ dataTypes: ['products', 'categories'], perType: states({ products: 'success', categories: 'processing' }) }).map((r) => [r.label, r.status, r.line])).toEqual([
+            ['Products', 'success', 'Done'],
+            ['Categories', 'checking', 'Exporting'],
         ]);
     });
 
-    it('puts what the save writes on the last row, once every one is read', () => {
-        const rows = save({ perType: states({ categories: 'success', products: 'success' }), phase: 'Saving to your datapacks' });
-
-        expect(rows.map((r) => [r.status, r.line])).toEqual([
-            ['success', 'Done'],
-            ['checking', 'Saving to your datapacks'],
-        ]);
+    // Phase 7b: the save's own work is on its steps (`captureRows`), never on a type's row.
+    it('keeps the save\'s phase off the rows, as the import does', () => {
+        expect(save({ phase: 'Finding what this demo uses' }).every((r) => r.status === 'pending')).toBe(true);
     });
 
     it('CONTROL: an import keeps its phase off the rows: its steps say it', () => {

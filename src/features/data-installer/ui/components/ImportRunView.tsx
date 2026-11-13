@@ -43,7 +43,7 @@ export interface ImportRunViewProps {
 
 export function ImportRunView({ steps, columns, running, end }: ImportRunViewProps): React.ReactElement {
     return (
-        <div data-testid="import-run" className="import-steps">
+        <div data-testid="import-run">
             <StepRows steps={steps} columns={columns} />
             {/* The clock's line is there from the first frame (F116). */}
             {running ? <RunFoot running={running} className="import-run-foot" /> : null}

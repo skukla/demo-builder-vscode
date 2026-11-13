@@ -25,3 +25,15 @@ export const FAILED_STEP: OperationRow = {
     status: 'error',
     problem: { text: 'Commerce did not answer.', failed: true },
 };
+
+/** A save's two steps as it writes (Phase 7b): the export done, its save row spinning. */
+export const SAVE_WRITING: OperationRow[] = [
+    {
+        kind: 'export',
+        label: 'Export from Commerce',
+        status: 'success',
+        line: 'Exported',
+        types: [{ kind: 'categories', label: 'Categories', status: 'success', line: 'Done' }],
+    },
+    { kind: 'save', label: 'Save My Luma', status: 'checking', line: 'Saving to My Datapacks' },
+];

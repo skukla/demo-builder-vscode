@@ -9,8 +9,9 @@ import '@testing-library/jest-dom';
 
 import { render, screen } from '@testing-library/react';
 import React from 'react';
-import { OperationProgressBody } from '@/core/ui/components/feedback/OperationProgressBody';
+import { OperationProgressBody, keepsRows } from '@/core/ui/components/feedback/OperationProgressBody';
 import type { OperationRow } from '@/types/webviewPayloads';
+import { SAVE_WRITING } from '../../../../helpers/operationRowFixtures';
 
 const STARTED = 1_000_000;
 
@@ -108,5 +109,43 @@ describe('OperationProgressBody, a run with rows', () => {
 
         expect(screen.queryByTestId('operation-rows')).not.toBeInTheDocument();
         expect(screen.getByText('0 of 1 data type')).toBeInTheDocument();
+    });
+});
+
+// Phase 7b (decisions.md): the save is two steps, the data types nested under Export from Commerce,
+// drawn as the import's window draws its steps (`StepRows`).
+describe('OperationProgressBody, a run whose rows are steps with rows under them', () => {
+    it('draws each step with its nested rows under it while it runs', () => {
+        const { container } = renderRunning({ progress: { id: 'x', state: 'running', rows: SAVE_WRITING } });
+
+        expect(screen.getByText('Export from Commerce')).toBeInTheDocument();
+        expect(screen.getByText('Save My Luma')).toBeInTheDocument();
+        expect(screen.getByText('Saving to My Datapacks')).toBeInTheDocument();
+        expect(container.querySelector('.step-rows-nested')?.textContent).toContain('Categories');
+        expect(container.querySelector('[data-testid="operation-rows"] > .work-row-columns')).toBeNull();
+    });
+
+    it('ends a failed run on its steps, the reason under them once', () => {
+        const stopped: OperationRow[] = [SAVE_WRITING[0] as OperationRow, { kind: 'save', label: 'Save My Luma', status: 'error', line: 'Stopped' }];
+        render(<OperationProgressBody failed succeeded={false} onTyped={jest.fn()} progress={{ id: 'x', state: 'failed', error: 'My Luma could not be saved.', rows: stopped }} />);
+
+        expect(screen.getByText('Stopped')).toBeInTheDocument();
+        expect(screen.getAllByText('My Luma could not be saved.')).toHaveLength(1);
+    });
+
+    it('keeps the rows of a run that succeeded with a problem on a nested row', () => {
+        const [exported, save] = SAVE_WRITING as [OperationRow, OperationRow];
+        const ended: OperationRow[] = [
+            { ...exported, types: [{ kind: 'products', label: 'Products', status: 'warning', problem: { text: '3 products had no price', failed: false } }] },
+            { ...save, status: 'success', line: 'Saved' },
+        ];
+
+        expect(keepsRows({ id: 'x', state: 'succeeded', rows: ended })).toBe(true);
+    });
+
+    it('CONTROL: a clean run of steps still ends small', () => {
+        const [exported, save] = SAVE_WRITING as [OperationRow, OperationRow];
+
+        expect(keepsRows({ id: 'x', state: 'succeeded', rows: [exported, { ...save, status: 'success', line: 'Saved' }] })).toBe(false);
     });
 });

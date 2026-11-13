@@ -70,7 +70,7 @@ const rowOf = (shown: Shown, text: string) => shown.getByText(text).closest('.wo
 const stepNames = (shown: Shown) =>
     Array.from(
         (shown.getByTestId('import-run') as HTMLElement).querySelectorAll(
-            '.import-steps > .work-row > .work-row-text > .checkbox-row-label'
+            '.step-rows > .work-row > .work-row-text > .checkbox-row-label'
         )
     ).map((el) => el.textContent);
 
@@ -84,9 +84,10 @@ describe('an install while it runs', () => {
             'Install ZZ Test Root DB12, 1',
             'Verify Installation',
         ]);
+        // Inside the step on screen (`renderRun` returns it), never a reserved, hidden one.
         const types = Array.from(
-            document.querySelectorAll(
-                '.modal-steps > div:not(.modal-steps-ghost) .work-row--dense .checkbox-row-label'
+            (shown.getByTestId('import-run') as HTMLElement).querySelectorAll(
+                '.step-rows-nested .work-row--dense .checkbox-row-label'
             )
         ).map((el) => el.textContent);
         expect(types).toStrictEqual(['Categories', 'Products']);

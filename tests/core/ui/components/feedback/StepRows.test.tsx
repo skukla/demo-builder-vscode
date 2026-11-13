@@ -14,12 +14,16 @@ jest.mock('@/core/ui/components/feedback/StepStatusIcon', () => ({
 }));
 
 describe('StepRows', () => {
-    it('draws one row per step, in order, with its line under its name', () => {
+    // The steps sit directly in `.step-rows`, which work-row.css styles (bold titles, spacing), so
+    // every window drawing them looks the same: the import's and the progress modal's (step-04 S4).
+    it('draws one row per step, in order, directly in .step-rows, with its line under its name', () => {
         const { container } = render(
             <StepRows steps={[STEP_WITH_TYPES, FAILED_STEP]} columns={1} />
         );
 
-        const steps = Array.from(container.children).filter((el) =>
+        const wrapper = container.firstElementChild as HTMLElement;
+        expect(wrapper).toHaveClass('step-rows');
+        const steps = Array.from(wrapper.children).filter((el) =>
             el.classList.contains('work-row')
         );
         expect(steps.map((el) => el.querySelector('.checkbox-row-label')?.textContent)).toEqual([
@@ -32,7 +36,7 @@ describe('StepRows', () => {
     it("draws a step's nested rows dense, in the columns asked for", () => {
         const { container } = render(<StepRows steps={[STEP_WITH_TYPES]} columns={2} />);
 
-        const nested = container.querySelector('.import-step-types .work-row-columns');
+        const nested = container.querySelector('.step-rows-nested .work-row-columns');
         expect(nested).toHaveClass('work-row-columns--dense');
         expect(nested?.querySelectorAll('.work-row-column')).toHaveLength(2);
         expect(nested?.querySelectorAll('.work-row')).toHaveLength(3);
@@ -46,7 +50,7 @@ describe('StepRows', () => {
             <StepRows steps={[FAILED_STEP, { ...STEP_WITH_TYPES, types: [] }]} columns={1} />
         );
 
-        expect(container.querySelector('.import-step-types')).toBeNull();
+        expect(container.querySelector('.step-rows-nested')).toBeNull();
         expect(screen.getByText('Commerce did not answer.')).toHaveClass(
             'dialog-problem',
             'text-negative'

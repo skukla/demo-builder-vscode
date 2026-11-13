@@ -15,6 +15,7 @@ import React from 'react';
 import { OperationQuestion } from '@/core/ui/components/feedback/OperationQuestion';
 import { RunFoot } from '@/core/ui/components/feedback/RunFoot';
 import { StageRows } from '@/core/ui/components/feedback/StageWait';
+import { StepRows } from '@/core/ui/components/feedback/StepRows';
 import { WorkRow } from '@/core/ui/components/feedback/WorkRow';
 import { WorkRowColumns } from '@/core/ui/components/feedback/WorkRowColumns';
 import { LeadText } from '@/core/ui/components/ui/LeadText';
@@ -90,11 +91,20 @@ export function OperationProgressBody({
     );
 }
 
-/** A run's rows while it goes, two columns as the import's window draws them, the clock under them. */
+/**
+ * A run's rows: steps with rows under them as the import's window draws them (`StepRows`; a save's
+ * Export from Commerce and its data types, Phase 7b), else flat, two columns.
+ */
+function RunRows({ rows }: { rows: readonly OperationRow[] }): React.ReactElement {
+    if (rows.some((row) => row.types && row.types.length > 0)) return <StepRows steps={rows} columns={2} />;
+    return <WorkRowColumns rows={rows} columns={2} />;
+}
+
+/** A run's rows while it goes, the clock under them. */
 function RunningRows({ rows, startedAt }: { rows: OperationRow[]; startedAt?: number }): React.ReactElement {
     return (
         <div className="dialog-stack" data-testid="operation-rows">
-            <WorkRowColumns rows={rows} columns={2} />
+            <RunRows rows={rows} />
             <RunFoot running={{ startedAt }} />
         </div>
     );
@@ -102,11 +112,13 @@ function RunningRows({ rows, startedAt }: { rows: OperationRow[]; startedAt?: nu
 
 /**
  * Whether a run that succeeded keeps its rows on screen: it sent rows, and by the shared rule
- * (`endsSmall`) it does not end small, a warning or a row with a problem. A row's note reaches here
- * as a problem that did not fail (`runRows.ts`). The modal holds such an ending open to be read.
+ * (`endsSmall`) it does not end small, a warning or a row with a problem, a nested row's included.
+ * A row's note reaches here as a problem that did not fail (`runRows.ts`). The modal holds such an
+ * ending open to be read.
  */
 export function keepsRows(progress?: OperationProgressPayload | null): boolean {
-    const rows = progress?.rows ?? [];
+    // A step's nested rows count as its own: a problem on a data type under a step keeps them too.
+    const rows = (progress?.rows ?? []).flatMap((row) => [row, ...(row.types ?? [])]);
     return rows.length > 0 && !endsSmall({ succeeded: true, warning: progress?.warning, rows });
 }
 
@@ -145,7 +157,7 @@ function EndView({ message, outcome, rows, tookMs }: {
     if (!rows || !hasRows) return foot;
     return (
         <div className="dialog-stack" data-testid="operation-end">
-            <WorkRowColumns rows={rows} columns={2} />
+            <RunRows rows={rows} />
             {foot}
         </div>
     );

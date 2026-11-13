@@ -4,14 +4,15 @@
  * groups (owner, 2026-11-05). A read with nothing to do is skipped over; the reads themselves do not
  * change.
  *
- * The same reads are the save's rows (walk F91): a row per data type the save is about, in the order
- * capture reads them, between Preparing Save and Finishing Save, drawn as the import's are
- * (`runRows`, `SAVE_RUN`).
+ * The same reads are the save's rows (walk F91): two steps (decisions.md, Phase 7b), "Export from
+ * Commerce" with a row per data type the save is about under it, in the order capture reads them
+ * (`runRows`, `SAVE_RUN`), then the write into the pack as its own row, so a failed write shows on
+ * its own row. The words are the prototype's (`mockups/flow/scenarioSave.ts`, `typesRunSteps`).
  *
  * @module features/data-installer/services/demoBuilderEngine/capturePhases
  */
 
-import { type RunSource, SAVE_RUN, runRows } from '../../runRows';
+import { SAVE_RUN, runRows } from '../../runRows';
 import type { DataTypeStatus } from '../../types';
 import { phaseLine } from '../datapackTypesLine';
 import { CAPTURE_PHASES } from './capture';
@@ -59,31 +60,73 @@ function readState(read: number, at: number): DataTypeStatus {
     return read === at ? 'processing' : 'pending';
 }
 
-/** A save's rows at each point of it (walk F91). */
+/** A save's two steps at each point of it (walk F91; Phase 7b). */
 export interface CaptureRows {
-    /** Before the reads: the first row spins with what the save does first. */
+    /** Before the reads: the export spins with what the save does first. */
     preparing: (step: string) => OperationRow[];
     /** A read under way, by its place in `CAPTURE_PHASES`: the types before it done, its own spinning. */
     reading: (at: number) => OperationRow[];
-    /** After the reads: the last row spins with what the save is writing. */
+    /** After the reads: the export done, the save's row spinning with what it is writing. */
     finishing: (step: string) => OperationRow[];
 }
 
+const EXPORT = { kind: 'export', label: 'Export from Commerce' } as const;
+const WAITING = 'Waiting';
+const NOT_RUN = 'Not run';
+const STOPPED = 'Stopped';
+
+/** The export step over its types: done when every one is, else how many are, else what it does. */
+function exportStep(types: OperationRow[], line?: string): OperationRow {
+    const done = types.filter((type) => type.status === 'success').length;
+    if (line) return { ...EXPORT, status: 'checking', line, types };
+    if (types.length > 0 && done === types.length) return { ...EXPORT, status: 'success', line: 'Exported', types };
+    // The prototype's step line counts data types (`scenarioInstall.ts` `typesStep`); the type
+    // being read says "Exporting" (`SAVE_RUN`).
+    const counted = types.length > 0 ? `${done} of ${types.length} data type${types.length === 1 ? '' : 's'}` : SAVE_RUN.doing;
+    return { ...EXPORT, status: 'checking', line: counted, types };
+}
+
 /**
- * The save's rows, the import's (`runRows`) named for the save.
+ * The save's two steps: the import's rows (`runRows`) for the data types, under Export from
+ * Commerce, then the write.
  *
  * @param seeded - the kinds the save starts from, as `captureLines` takes them
+ * @param into - the name of the datapack the save writes: the demo's own, or the Save As name
  */
-export function captureRows(seeded: Iterable<string>): CaptureRows {
+export function captureRows(seeded: Iterable<string>, into: string): CaptureRows {
     const shown = shownPhases(seeded);
     const kinds = shown.flat();
-    const rows = (perType: Record<string, DataTypeStatus>, more: Partial<RunSource> = {}): OperationRow[] => runRows({ dataTypes: kinds, perType, ...more }, SAVE_RUN);
+    const save = { kind: 'save', label: `Save ${into}` };
+    const typeRows = (perType: Record<string, DataTypeStatus>): OperationRow[] => runRows({ dataTypes: kinds, perType, running: true }, SAVE_RUN);
     const statesAt = (at: number): Record<string, DataTypeStatus> =>
         Object.fromEntries(shown.flatMap((phase, i) => phase.map((kind): [string, DataTypeStatus] => [kind, readState(i, at)])));
     const allDone = (): Record<string, DataTypeStatus> => Object.fromEntries(kinds.map((kind): [string, DataTypeStatus] => [kind, 'success']));
+    const waiting: OperationRow = { ...save, status: 'pending', line: WAITING };
     return {
-        preparing: (step) => rows({}, { phase: step, running: true }),
-        reading: (at) => rows(statesAt(at), { running: true }),
-        finishing: (step) => rows(allDone(), { phase: step, running: true }),
+        preparing: (step) => [exportStep(typeRows({}), step), waiting],
+        reading: (at) => [exportStep(typeRows(statesAt(at))), waiting],
+        finishing: (step) => [exportStep(typeRows(allDone())), { ...save, status: 'checking', line: step }],
     };
+}
+
+/** A row the save stopped on: spinning becomes red, not started becomes "Not run". */
+function stoppedRow(row: OperationRow): OperationRow {
+    if (row.status === 'checking') return { ...row, status: 'error', line: STOPPED };
+    return row.status === 'pending' ? { ...row, line: NOT_RUN } : row;
+}
+
+/**
+ * The save's steps as it stopped (dialog design rules: how a run ended, on the rows it ended on):
+ * the row that was spinning red, a step red when a type under it was, and what had not started
+ * "Not run". The reason is the window's sentence under them, so it is said once.
+ *
+ * @param rows - the steps last sent while the save ran (`captureRows`)
+ */
+export function stoppedRows(rows: readonly OperationRow[]): OperationRow[] {
+    return rows.map((row) => {
+        if (!row.types) return stoppedRow(row);
+        const types = row.types.map(stoppedRow);
+        const failed = types.some((type) => type.status === 'error');
+        return failed ? { ...row, status: 'error', line: STOPPED, types } : { ...stoppedRow(row), types };
+    });
 }
