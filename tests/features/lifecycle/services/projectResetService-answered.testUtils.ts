@@ -1,14 +1,15 @@
 /**
- * The mock wall, the SUT import and the defaults the `resetProjectWithUI` suites
- * share (`-resetWithUI`, `-keptIntegrations`, `-modalProgress`).
+ * The mock wall, the SUT import and the defaults the projectResetService suites that
+ * drive the whole reset share (`-answered`, `-keptIntegrations`): the batch's door,
+ * `runProjectResetAnswered`, and the agent's, `executeProjectReset`.
  *
  * IMPORTING THIS FILE REGISTERS THE MOCKS, and this file owns the import of the
  * service under test: `jest.mock` hoists above the imports of the module it
  * appears in, not across modules, so a spec that imported the service itself
  * could bind to the real collaborators. Specs import everything from here.
  *
- * Split out of `projectResetService-resetWithUI.test.ts` on 2026-10-09 (PL-69
- * sitting 9) when that suite passed the 750-line limit. Fixtures that every
+ * Split out of the reset suite on 2026-10-09 (PL-69 sitting 9) when that suite
+ * passed the 750-line limit. Fixtures that every
  * projectResetService suite shares stay in `projectResetService.testUtils.ts`.
  */
 
@@ -80,7 +81,7 @@ jest.mock('@/core/utils/sleep', () => ({ sleep: (...a: unknown[]) => mockSleep(.
 import * as vscode from 'vscode';
 import {
     executeProjectReset,
-    resetProjectWithUI,
+    runProjectResetAnswered,
 } from '@/features/lifecycle/services/projectResetService';
 import {
     FRONTEND_DEF,
@@ -95,7 +96,7 @@ import {
     createResetProject,
 } from './projectResetService.testUtils';
 
-export { executeProjectReset, resetProjectWithUI };
+export { executeProjectReset };
 export {
     FRONTEND_DEF,
     MESH_DEF,
@@ -114,8 +115,9 @@ export const showErrorMessage = vscode.window.showErrorMessage as jest.Mock;
 export const withProgress = vscode.window.withProgress as jest.Mock;
 export const executeCommand = vscode.commands.executeCommand as jest.Mock;
 
+/** The reset as a batch row runs it, reporting into `progressReport`. */
 export function run(project = createResetProject(), context = createResetHandlerContext(), logPrefix?: string) {
-    return resetProjectWithUI({ project, context, logPrefix, commandManager, authManager });
+    return runProjectResetAnswered({ project, context, logPrefix, commandManager, authManager }, progressReport);
 }
 
 /** The definitions the orchestrator was handed, as a plain object for `toEqual`. */
@@ -126,17 +128,13 @@ export function handedDefinitions(): Record<string, unknown> {
     return Object.fromEntries(ctx.componentDefinitions);
 }
 
-/** The notification's `report`, fresh per test (a live binding: read it, never copy it). */
+/** The batch row's `report`, fresh per test (a live binding: read it, never copy it). */
 export let progressReport: jest.Mock = jest.fn();
 
 /** Every mock back to its default answer: a reset that succeeds end to end. Call it from `beforeEach`. */
 export function installResetDefaults(): void {
     jest.clearAllMocks();
     progressReport = jest.fn();
-    withProgress.mockImplementation(async (_o: unknown, task: (p: unknown) => Promise<unknown>) =>
-        task({ report: progressReport }),
-    );
-    showWarningMessage.mockResolvedValue('Reset Project');
     mockRm.mockResolvedValue(undefined);
     mockReaddir.mockResolvedValue([]);
     mockLoadRegistry.mockResolvedValue(REGISTRY);

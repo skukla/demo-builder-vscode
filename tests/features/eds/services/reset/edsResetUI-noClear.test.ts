@@ -2,8 +2,8 @@
  * No reset offers or runs Clear Demo Data (owner, 2026-11-12: "Reset no longer offers Clear; reset
  * stays the approved batch window"). Clear Demo Data is its own command on the Datapacks screen.
  *
- * Driven through the public entry point for every path that reaches it: one project (a screen's
- * Reset, with or without a datapack), a batch (`answered`) and an Edit (`withinEdit`). The wipe's
+ * Driven through the public entry point for every path that reaches it: a batch (`answered`, every
+ * screen's Reset since step-05 S4) and an Edit (`withinEdit`). The wipe's
  * own services are faked so that, were reset still to read the store for a clearing, it would find
  * something to clear: the assertions then prove reset never planned, asked or cleared.
  */
@@ -151,16 +151,14 @@ function run(withPack: boolean, extra: Partial<ResetOptions> = {}) {
         meshDeps: createMeshDepsFake(),
         project: project(withPack),
         context,
+        withinEdit: { report: jest.fn() },
         ...extra,
     });
 }
 
-/** The reset question answers with its button's text; the datapack question with a button. */
-function answer(...titles: string[]): void {
-    const ask = (vscode.window.showWarningMessage as jest.Mock).mockReset();
-    for (const title of titles)
-        ask.mockResolvedValueOnce(title === 'Reset Project' ? title : { title });
-    ask.mockResolvedValue({ title: 'Clear Demo Data Too' });
+/** Any question put on screen would be answered "Clear Demo Data Too", so asking one would show. */
+function answer(): void {
+    (vscode.window.showWarningMessage as jest.Mock).mockReset().mockResolvedValue({ title: 'Clear Demo Data Too' });
 }
 
 /** Every question the reset put on screen, by its message. */
@@ -178,10 +176,6 @@ function expectNoClear(): void {
 
 beforeEach(() => {
     jest.clearAllMocks();
-    (vscode.window.withProgress as jest.Mock).mockImplementation(
-        async (_o: unknown, task: (p: { report: jest.Mock }) => Promise<unknown>) =>
-            task({ report: jest.fn() })
-    );
     mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: true });
     mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: true });
     mockEnsureProjectOrgContext.mockResolvedValue({ reachable: true });
@@ -189,46 +183,10 @@ beforeEach(() => {
     mockedPlan.mockResolvedValue(PLAN);
 });
 
-describe('one project, from a screen', () => {
-    it('after "Uninstall Datapack": uninstalls, resets, and never offers or runs Clear', async () => {
-        answer('Reset Project', 'Uninstall Datapack');
-
-        await run(true);
-
-        expect(questionsAsked()).toHaveLength(2);
-        expect(questionsAsked()[0]).toBe('Reset test-project?');
-        expect(mockedRemove).toHaveBeenCalledTimes(1);
-        expect(mockedReset).toHaveBeenCalledTimes(1);
-        expectNoClear();
-    });
-
-    it('for a project that names no datapack: asks only the reset, and never offers or runs Clear', async () => {
-        answer('Reset Project');
-
-        await run(false);
-
-        expect(questionsAsked()).toEqual(['Reset test-project?']);
-        expect(mockedReset).toHaveBeenCalledTimes(1);
-        expectNoClear();
-    });
-
-    it('still asks before it runs: declining the reset runs nothing', async () => {
-        answer();
-        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue(undefined);
-
-        const result = await run(true);
-
-        expect(result).toEqual({ success: false, cancelled: true });
-        expect(mockedRemove).not.toHaveBeenCalled();
-        expect(mockedReset).not.toHaveBeenCalled();
-        expectNoClear();
-    });
-});
-
 it('a batch reset (answered in the batch window) never plans or runs Clear', async () => {
     answer();
 
-    await run(true, { withinEdit: { report: jest.fn() }, answered: { removeDatapack: true } });
+    await run(true, { answered: { removeDatapack: true } });
 
     expect(questionsAsked()).toStrictEqual([]);
     expect(mockedReset).toHaveBeenCalledTimes(1);
@@ -238,7 +196,7 @@ it('a batch reset (answered in the batch window) never plans or runs Clear', asy
 it("an Edit's reset never plans or runs Clear", async () => {
     answer();
 
-    await run(true, { withinEdit: { report: jest.fn() } });
+    await run(true);
 
     expect(questionsAsked()).toStrictEqual([]);
     expect(mockedReset).toHaveBeenCalledTimes(1);

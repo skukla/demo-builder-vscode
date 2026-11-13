@@ -15,33 +15,21 @@
  */
 
 import type { ReportStage } from '@/core/vscode/withOperationProgress';
-import { libraryDisplayName } from '@/features/data-installer/handlers/libraryWriter';
 import { installedByDemoBuilder } from '@/features/data-installer/services/buildDatapackEngine';
 import { commerceBackendOf } from '@/features/data-installer/services/commerceBackend';
 import { removeProjectSampleData, type SaveAsAnswering } from '@/features/eds/services/reset/edsResetSampleData';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 
-/** The datapack data a project delete may remove with it, as the SC knows the pack. */
-export interface RemovableData {
-    displayName: string;
-}
-
 /**
  * Whether a delete of this project may remove datapack data: not when the project has no datapack,
- * none Demo Builder installed, or no Commerce backend. A batch reads the rest itself.
+ * none Demo Builder installed, or no Commerce backend. The batch and the agent tool read the rest
+ * themselves.
  */
 export async function hasRemovableData(project: Project): Promise<boolean> {
     const held = project.datapack;
     if (!held || commerceBackendOf(project) === undefined) return false;
     return installedByDemoBuilder(project.path, { name: held.name, version: held.version });
-}
-
-/** The data a single delete of this project may remove, as its question names it. */
-export async function removableDataOf(context: HandlerContext, project: Project): Promise<RemovableData | undefined> {
-    const held = project.datapack;
-    if (!held || !(await hasRemovableData(project))) return undefined;
-    return { displayName: (await libraryDisplayName(context, held)) ?? held.name };
 }
 
 /**

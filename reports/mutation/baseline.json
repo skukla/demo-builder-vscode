@@ -10071,20 +10071,6 @@
             "equivalent": 0,
             "openGaps": 0
         },
-        "src/features/eds/services/reset/edsResetNotifications.ts": {
-            "score": 98.61,
-            "killed": 71,
-            "survived": 1,
-            "noCoverage": 0,
-            "timeout": 0,
-            "survivorCategories": {
-                "string": 1
-            },
-            "uncoveredCategories": {},
-            "highValueSurvivors": 0,
-            "equivalent": 0,
-            "openGaps": 0
-        },
         "src/features/eds/services/reset/edsResetPreflight.ts": {
             "score": 84.71,
             "killed": 72,
@@ -10445,23 +10431,6 @@
             "uncoveredCategories": {},
             "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 0
-        },
-        "src/features/projects-dashboard/services/deletionConfirmation.ts": {
-            "score": 77.61,
-            "killed": 100,
-            "survived": 30,
-            "noCoverage": 0,
-            "timeout": 4,
-            "survivorCategories": {
-                "string": 14,
-                "other": 2,
-                "branch": 8,
-                "optionalChain": 6
-            },
-            "uncoveredCategories": {},
-            "highValueSurvivors": 8,
-            "equivalent": 16,
             "openGaps": 0
         },
         "src/features/projects-dashboard/services/edsExternalCleanup.ts": {

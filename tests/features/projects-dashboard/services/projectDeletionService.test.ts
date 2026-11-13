@@ -1,59 +1,47 @@
 /**
- * Deleting a project — the decisions, not the dialogs.
+ * Deleting a project once the SC has answered: `runProjectDelete`, which the batch window runs
+ * a row at a time (`projectsBatch.ts`). The question itself, and its cancel, are the batch's
+ * (`ProjectsBatchModal`, `projectsBatch.test.ts`).
  *
  * DONE CRITERION for this unit, written BEFORE the work and recorded in
- * `.rptc/plans/architecture-test-convergence/overview.md`:
+ * `.rptc/plans/architecture-test-convergence/overview.md` (the cancel half went with the
+ * one-project delete question, step-05 S5):
  *
- *   1. Cancelling is proven to delete NOTHING, on both confirmation paths.
+ *   1. An UNTICKED resource is not destroyed.
  *   2. `deleteDirectoryWithRetry` retries, and gives up rather than looping.
- *   3. Every remaining uncovered line is NAMED in the commit and is a
- *      `vscode.window` call or filesystem I/O — not a decision.
  *
- * The criterion is quoted verbatim above, including where it was wrong — that
- * is the point of writing it first. Two corrections, both recorded in the plan:
- * there are THREE confirmation configurations, not two (`cleanupBehavior` is
- * ask / localOnly / deleteAll); and clause 3 FAILED on the first pass, because
- * the uncovered remainder still held the decisions about which remote resources
- * get destroyed. Those got tested rather than narrated.
- *
- * WHY 1 IS THE ONE THAT MATTERS. This is the only operation in the extension
- * that destroys a user's work irreversibly — files, the GitHub repo, DA.live
- * content, the Helix site. "Cancel" is the last thing standing between a
- * misclick and all of it, and nothing asserted that it holds. A cancel that
- * silently proceeds would look exactly like a successful delete.
+ * WHY 1 MATTERS. This is the only operation in the extension that destroys a user's work
+ * irreversibly — files, the GitHub repo, DA.live content, the Helix site. Unticking a row is
+ * how the SC keeps a resource while the project goes.
  */
 
 import {
-    deleteProject,
     deleteProjectFiles,
-    mockCreateQuickPick,
     mockDeleteDaLiveSite,
     mockDeleteRepository,
+    mockDeleteSiteConfig,
     mockEnsureDaLiveAuth,
     mockExecuteCommand,
-    mockGetConfiguration,
     mockGetToken,
-    mockProgressReport,
+    mockRemoveDataBeforeDelete,
+    mockRemoveSitePermissions,
     mockRm,
-    mockShowInformationMessage,
-    mockShowWarningMessage,
     mockSleep,
-    mockWithProgressOptions,
 } from './projectDeletionService.testUtils';
 import {
     SERVICES,
-    armQuickPick,
     context,
+    deleteAnswered,
     edsProject,
     mockDeleteAdminApiKey,
     mockInitKeyStore,
     mockListAllPages,
     mockListPublishedPaths,
+    mockStageReport,
     mockUnpublishPages,
     plainProject,
 } from './projectDeletionService.fixtures';
-import { startModalRun } from '@/core/vscode/operationProgress';
-import type { OperationProgressPayload } from '@/types/webviewPayloads';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -71,124 +59,12 @@ beforeEach(() => {
         previewFailed: 0,
     });
     mockDeleteAdminApiKey.mockResolvedValue({ success: true });
-    // 'ask' is the shipped default; 'deleteAll' asks the same question with the
-    // repository and the site ticked (owner, 2026-11-04).
-    mockGetConfiguration.mockReturnValue({ get: () => 'ask' });
+    mockRemoveDataBeforeDelete.mockResolvedValue(undefined);
 });
 
-describe('CRITERION 1 — cancelling deletes nothing', () => {
-    it('deletes nothing when the plain confirmation is dismissed', () => {
-        // `showWarningMessage` resolving undefined is what a dismissed modal
-        // looks like — the user pressed Escape rather than "Delete".
-        mockShowWarningMessage.mockResolvedValue(undefined);
-
-        return deleteProject(context(), plainProject(), SERVICES).then((result) => {
-            expect(mockRm).not.toHaveBeenCalled();
-            expect(result.data).toMatchObject({ success: false, error: 'cancelled' });
-        });
-    });
-
-    it('deletes nothing when the user answers anything other than Delete', () => {
-        mockShowWarningMessage.mockResolvedValue('Cancel');
-
-        return deleteProject(context(), plainProject(), SERVICES).then((result) => {
-            expect(mockRm).not.toHaveBeenCalled();
-            expect(result.data).toMatchObject({ success: false, error: 'cancelled' });
-        });
-    });
-
-    it('CONTROL: an EDS project really does take the OTHER confirmation path', async () => {
-        // Without this, a fixture that quietly fails `extractEdsMetadata` sends the
-        // next two tests down the plain path and they pass anyway. That is
-        // exactly what the first draft of this file did.
-        armQuickPick('escape');
-
-        await deleteProject(context(), edsProject(), SERVICES);
-
-        expect(mockCreateQuickPick).toHaveBeenCalled();
-        expect(mockShowWarningMessage).not.toHaveBeenCalled();
-    });
-
-    it('deletes nothing when the EDS dialog is dismissed with Escape', async () => {
-        // The EDS path asks a different question — which external resources to
-        // remove — and leaving it must be just as safe as dismissing the plain
-        // modal. This is the path that would also have taken the GitHub repo
-        // and the DA.live content.
-        armQuickPick('escape');
-
-        const result = await deleteProject(context(), edsProject(), SERVICES);
-
-        expect(mockRm).not.toHaveBeenCalled();
-        // Same envelope/payload split as the plain path: the call worked, the
-        // delete did not happen.
-        expect(result.success).toBe(true);
-        expect(result.data).toMatchObject({ success: false, error: 'cancelled' });
-    });
-
-    it('deletes nothing when the EDS dialog Cancel button is pressed', async () => {
-        // A SECOND cancel route through the same dialog, resolved by a
-        // different handler. Escape passing says nothing about this one.
-        armQuickPick('cancelButton');
-
-        const result = await deleteProject(context(), edsProject(), SERVICES);
-
-        expect(mockRm).not.toHaveBeenCalled();
-        expect(result.data).toMatchObject({ success: false, error: 'cancelled' });
-    });
-
-    it('deletes nothing when an EDS project set to local-only is declined', () => {
-        // The THIRD confirmation configuration. `cleanupBehavior: 'localOnly'`
-        // skips the resource dialog and shows the plain modal instead — a
-        // separate early return from either of the two above.
-        mockGetConfiguration.mockReturnValue({ get: () => 'localOnly' });
-        mockShowWarningMessage.mockResolvedValue(undefined);
-
-        return deleteProject(context(), edsProject(), SERVICES).then((result) => {
-            expect(mockRm).not.toHaveBeenCalled();
-            expect(result.data).toMatchObject({ success: false, error: 'cancelled' });
-        });
-    });
-
-    // Until 2026-11-04 delete-all was the one path with no confirmation at all: it removed the
-    // project, its repository and its DA.live site without a prompt. It now asks like 'ask', with
-    // those two ticked, so leaving the question is as safe as leaving any other.
-    it('still asks under delete-all, with the repository and the site ticked', async () => {
-        mockGetConfiguration.mockReturnValue({ get: () => 'deleteAll' });
-        const pick = armQuickPick('accept');
-
-        await deleteProject(context(), edsProject(), SERVICES);
-
-        expect(pick.selectedAtShow().map((item) => item.id)).toStrictEqual(['github', 'daLive']);
-        expect(mockRm).toHaveBeenCalled();
-    });
-
-    it('deletes nothing under delete-all when the question is left with Escape', async () => {
-        mockGetConfiguration.mockReturnValue({ get: () => 'deleteAll' });
-        armQuickPick('escape');
-
-        const result = await deleteProject(context(), edsProject(), SERVICES);
-
-        expect(mockRm).not.toHaveBeenCalled();
-        expect(result.data).toMatchObject({ success: false, error: 'cancelled' });
-    });
-
-    it('reports a cancel as a SUCCESSFUL call that did not delete', () => {
-        // The envelope says success (the handler ran fine); the payload says the
-        // delete did not happen. A caller reading only `success` must not
-        // conclude the project is gone.
-        mockShowWarningMessage.mockResolvedValue(undefined);
-
-        return deleteProject(context(), plainProject(), SERVICES).then((result) => {
-            expect(result.success).toBe(true);
-            expect(result.data).toMatchObject({ success: false });
-        });
-    });
-});
-
-describe('CRITERION 1 (cont.) — an UNTICKED resource is not destroyed', () => {
+describe('CRITERION 1 — an UNTICKED resource is not destroyed', () => {
     /**
-     * Cancelling is one way to say no. Unticking a row is the other, and it is
-     * the finer-grained one: the user WANTS the project gone but wants to keep
+     * Unticking a row is how the user says no to one resource: they WANT the project gone but wants to keep
      * the repo. Getting this backwards deletes a GitHub repository the user
      * explicitly declined to delete, which no undo reaches.
      */
@@ -200,27 +76,21 @@ describe('CRITERION 1 (cont.) — an UNTICKED resource is not destroyed', () => 
     });
 
     it('deletes both remote resources when both stay ticked', async () => {
-        armQuickPick('accept', ['github', 'daLive']);
-
-        await deleteProject(context(), edsProject(), SERVICES);
+        await deleteAnswered(context(), edsProject(), SERVICES, ['github', 'daLive']);
 
         expect(mockDeleteRepository).toHaveBeenCalledWith('skukla', 'demo-storefront');
         expect(mockDeleteDaLiveSite).toHaveBeenCalled();
     });
 
     it('spares the GitHub repo when its row is unticked', async () => {
-        armQuickPick('accept', ['daLive']);
-
-        await deleteProject(context(), edsProject(), SERVICES);
+        await deleteAnswered(context(), edsProject(), SERVICES, ['daLive']);
 
         expect(mockDeleteRepository).not.toHaveBeenCalled();
         expect(mockDeleteDaLiveSite).toHaveBeenCalled(); // the other one still runs
     });
 
     it('spares the DA.live site when its row is unticked', async () => {
-        armQuickPick('accept', ['github']);
-
-        await deleteProject(context(), edsProject(), SERVICES);
+        await deleteAnswered(context(), edsProject(), SERVICES, ['github']);
 
         expect(mockDeleteDaLiveSite).not.toHaveBeenCalled();
         expect(mockDeleteRepository).toHaveBeenCalled();
@@ -228,9 +98,7 @@ describe('CRITERION 1 (cont.) — an UNTICKED resource is not destroyed', () => 
 
     it('deletes NO remote resource when both rows are unticked', async () => {
         // Confirming with nothing ticked means "remove the local project only".
-        armQuickPick('accept', []);
-
-        await deleteProject(context(), edsProject(), SERVICES);
+        await deleteAnswered(context(), edsProject(), SERVICES, []);
 
         expect(mockDeleteRepository).not.toHaveBeenCalled();
         expect(mockDeleteDaLiveSite).not.toHaveBeenCalled();
@@ -241,9 +109,7 @@ describe('CRITERION 1 (cont.) — an UNTICKED resource is not destroyed', () => 
         // No token and no successful prompt: the safe outcome is to skip the
         // repo and report it, never to proceed against an unauthenticated API.
         mockGetToken.mockResolvedValue(undefined);
-        armQuickPick('accept', ['github']);
-
-        await deleteProject(context(), edsProject(), SERVICES);
+        await deleteAnswered(context(), edsProject(), SERVICES, ['github']);
 
         expect(mockDeleteRepository).not.toHaveBeenCalled();
     });
@@ -252,9 +118,60 @@ describe('CRITERION 1 (cont.) — an UNTICKED resource is not destroyed', () => 
         // The same rule on the other resource. An expired DA.live session must
         // skip the site, not fall through to an unauthenticated delete.
         mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: false, error: 'expired' });
-        armQuickPick('accept', ['daLive']);
+        await deleteAnswered(context(), edsProject(), SERVICES, ['daLive']);
 
-        await deleteProject(context(), edsProject(), SERVICES);
+        expect(mockDeleteDaLiveSite).not.toHaveBeenCalled();
+    });
+});
+
+/** The stored storefront names a fixture can lose, to test what is still addressable. */
+function metadataOf(project: ReturnType<typeof edsProject>): Record<string, unknown> {
+    const metadata = project.componentInstances?.['eds-storefront']?.metadata;
+    if (!metadata) throw new Error('fixture is missing its eds-storefront metadata');
+    return metadata as Record<string, unknown>;
+}
+
+describe('with both ticked, what the project can address goes', () => {
+    beforeEach(() => {
+        mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: true });
+        mockDeleteDaLiveSite.mockResolvedValue({ success: true });
+        mockGetToken.mockResolvedValue('gh-token');
+        mockDeleteRepository.mockResolvedValue(undefined);
+        mockRemoveSitePermissions.mockResolvedValue({ success: true });
+        mockDeleteSiteConfig.mockResolvedValue({ success: true });
+    });
+
+    it('takes only the DA.live site when there is no repo to take', async () => {
+        const project = edsProject();
+        delete metadataOf(project).githubRepo;
+
+        await deleteAnswered(context(), project, SERVICES);
+
+        expect(mockDeleteRepository).not.toHaveBeenCalled();
+        expect(mockDeleteDaLiveSite).toHaveBeenCalled();
+    });
+
+    // Both halves fall back to the repo, so a project that stored neither is still
+    // addressable — and must still have its site taken down. Read raw, deleting a
+    // migrated project left the storefront up (owner sweep, 2026-09-20).
+    it('still takes the DA.live site down when neither half was stored', async () => {
+        const project = edsProject();
+        delete metadataOf(project).daLiveOrg;
+        delete metadataOf(project).daLiveSite;
+
+        await deleteAnswered(context(), project, SERVICES);
+
+        expect(mockDeleteRepository).toHaveBeenCalled();
+        expect(mockDeleteDaLiveSite).toHaveBeenCalled();
+    });
+
+    it('takes only the repo when nothing names the storefront', async () => {
+        const project = edsProject();
+        delete metadataOf(project).daLiveOrg;
+        delete metadataOf(project).daLiveSite;
+        delete metadataOf(project).githubRepo;
+
+        await deleteAnswered(context(), project, SERVICES);
 
         expect(mockDeleteDaLiveSite).not.toHaveBeenCalled();
     });
@@ -377,9 +294,7 @@ describe('CDN unpublish before the site is deleted', () => {
     });
 
     it('lists the site pages and unpublishes exactly those', async () => {
-        armQuickPick('accept');
-
-        await deleteProject(context(), edsProject(), SERVICES);
+        await deleteAnswered(context(), edsProject(), SERVICES);
 
         expect(mockListAllPages).toHaveBeenCalledWith('skukla', 'demo-storefront');
         // The GitHub pair addresses the CDN, the DA pair addresses the content —
@@ -391,9 +306,7 @@ describe('CDN unpublish before the site is deleted', () => {
     });
 
     it('initialises the key store BEFORE minting or deleting a key', async () => {
-        armQuickPick('accept');
-
-        await deleteProject(context(), edsProject(), SERVICES);
+        await deleteAnswered(context(), edsProject(), SERVICES);
 
         expect(mockInitKeyStore.mock.invocationCallOrder[0]).toBeLessThan(
             mockDeleteAdminApiKey.mock.invocationCallOrder[0],
@@ -401,117 +314,42 @@ describe('CDN unpublish before the site is deleted', () => {
     });
 
     it('deletes the site Admin API key — a live credential must not outlive the site', async () => {
-        armQuickPick('accept');
-
-        await deleteProject(context(), edsProject(), SERVICES);
+        await deleteAnswered(context(), edsProject(), SERVICES);
 
         expect(mockDeleteAdminApiKey).toHaveBeenCalledWith('skukla', 'demo-storefront');
     });
 
     it('a failed unpublish never stops the deletion', async () => {
-        armQuickPick('accept');
         mockUnpublishPages.mockRejectedValue(new Error('helix 500'));
 
-        const result = await deleteProject(context(), edsProject(), SERVICES);
+        const result = await deleteAnswered(context(), edsProject(), SERVICES);
 
         // Non-fatal by design: a CDN that will not answer must not strand the user
         // with a project they cannot remove.
-        expect(result.success).toBe(true);
+        expect(result.stopped).toBeUndefined();
         expect(mockRm).toHaveBeenCalled();
     });
 });
 
 describe("a confirmed delete takes the project's secrets with it", () => {
     it("deletes the project's kept secrets from SecretStorage once the folder is gone", async () => {
-        mockShowWarningMessage.mockResolvedValue('Delete');
         const ctx = context();
         const remove = jest.fn(async () => undefined);
         Object.assign(ctx.context as object, { secrets: { delete: remove } });
-        await deleteProject(ctx, plainProject({ adobe: { workspace: 'ws-1' } }), SERVICES);
+        await deleteAnswered(ctx, plainProject({ adobe: { workspace: 'ws-1' } }), SERVICES);
         expect(mockRm).toHaveBeenCalled();
         expect(remove).toHaveBeenCalledWith('demoBuilder.commerceRest.credential.ws-1');
     });
 
     it('keeps them when the folder could not be deleted', async () => {
-        mockShowWarningMessage.mockResolvedValue('Delete');
         mockRm.mockRejectedValue(Object.assign(new Error('denied'), { code: 'EACCES' }));
         const ctx = context();
         const remove = jest.fn(async () => undefined);
         Object.assign(ctx.context as object, { secrets: { delete: remove } });
         await expect(
-            deleteProject(ctx, plainProject({ adobe: { workspace: 'ws-1' } }), SERVICES),
+            deleteAnswered(ctx, plainProject({ adobe: { workspace: 'ws-1' } }), SERVICES),
         ).rejects.toThrow('Failed to delete project: denied');
         expect(remove).not.toHaveBeenCalled();
-    });
-});
-
-describe('the one-time cleanup-settings tip', () => {
-    beforeEach(() => {
-        // showOneTimeTip chains .then on this, so it must always be a promise.
-        mockShowInformationMessage.mockResolvedValue(undefined);
-        mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: true });
-        mockDeleteDaLiveSite.mockResolvedValue({ success: true });
-        mockGetToken.mockResolvedValue('gh-token');
-        mockDeleteRepository.mockResolvedValue(undefined);
-    });
-
-    /**
-     * A context where the tip has NOT been shown before. The shared handler-context
-     * fake answers `true` to every globalState read so tips stay out of other suites'
-     * way — which here means the tip never fires and the assertions pass on nothing.
-     */
-    function freshTipContext(): ReturnType<typeof context> {
-        const ctx = context();
-        (ctx.context.globalState.get as jest.Mock).mockReturnValue(false);
-        return ctx;
-    }
-
-    it('appears after a cleanup ran, offering the settings it configures', async () => {
-        armQuickPick('accept', ['github', 'daLive']);
-        const ctx = freshTipContext();
-
-        await deleteProject(ctx, edsProject(), SERVICES);
-
-        expect(mockShowInformationMessage).toHaveBeenCalledWith(
-            expect.any(String),
-            'Open Settings',
-        );
-        expect(ctx.context.globalState.update).toHaveBeenCalledWith(
-            'edsCleanup.settingsTipShown',
-            true,
-        );
-    });
-
-    it('does not appear when nothing was cleaned up', async () => {
-        armQuickPick('accept', []);
-
-        await deleteProject(freshTipContext(), edsProject(), SERVICES);
-
-        expect(mockShowInformationMessage).not.toHaveBeenCalled();
-    });
-
-    it('does not appear a second time', async () => {
-        armQuickPick('accept', ['github', 'daLive']);
-        const ctx = context();
-        (ctx.context.globalState.get as jest.Mock).mockReturnValue(true);
-
-        await deleteProject(ctx, edsProject(), SERVICES);
-
-        expect(mockShowInformationMessage).not.toHaveBeenCalled();
-    });
-
-    it('opens the cleanupBehavior setting when its action is chosen', async () => {
-        armQuickPick('accept', ['github', 'daLive']);
-        mockShowInformationMessage.mockResolvedValue('Open Settings');
-
-        await deleteProject(freshTipContext(), edsProject(), SERVICES);
-        // The tip is fire-and-forget; let its .then run.
-        await Promise.resolve();
-
-        expect(mockExecuteCommand).toHaveBeenCalledWith(
-            'workbench.action.openSettings',
-            'demoBuilder.cleanupBehavior',
-        );
     });
 });
 
@@ -574,46 +412,97 @@ describe('removing the local footprint', () => {
     });
 });
 
-describe('where a delete narrates', () => {
-    /** The non-empty lines the progress notification was handed, in order. */
-    const notified = (): string[] =>
-        mockProgressReport.mock.calls
-            .map(([update]) => (update as { message?: string }).message ?? '')
-            .filter((message) => message !== '');
+describe('the steps it reports', () => {
+    const at = (index: number, total: number) => ({ index, total });
 
-    it('a delete started from a screen narrates in that screen\'s modal, by its id, and ends it as succeeded', async () => {
-        mockShowWarningMessage.mockResolvedValue('Delete');
-        const pushed: OperationProgressPayload[] = [];
-        startModalRun('screen-op-1', async (_type: string, payload?: unknown) => {
-            pushed.push(payload as OperationProgressPayload);
-        });
-
-        await deleteProject(context(), plainProject(), SERVICES, {
-            progress: 'modal',
-            operationId: 'screen-op-1',
-        });
-
-        // One surface per operation (PL-59 R1): no notification beside the modal.
-        expect(mockWithProgressOptions).not.toHaveBeenCalled();
-        expect(pushed.at(-1)).toStrictEqual({
-            id: 'screen-op-1',
-            state: 'succeeded',
-            startedAt: expect.any(Number),
-            tookMs: expect.any(Number),
-        });
-    });
-
-    it("the cleanup's own step reaches the notification ahead of the file removal", async () => {
-        armQuickPick('accept', ['github']);
+    beforeEach(() => {
+        mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: true });
+        mockDeleteDaLiveSite.mockResolvedValue({ success: true });
         mockGetToken.mockResolvedValue('gh-token');
         mockDeleteRepository.mockResolvedValue(undefined);
+    });
 
-        await deleteProject(context(), edsProject(), SERVICES);
+    // A stage reported with no line under it shows its stage table detail: that is the surface's
+    // job (`withOperationProgress`), so here it is undefined.
+    it('numbers every step of a full EDS delete, with the lines it adds under them', async () => {
+        await deleteAnswered(context(), edsProject(), SERVICES, ['github', 'daLive']);
 
-        // Two lines from the repository cleanup (the repository, then its code on
-        // aem.live, EDS-67), one for the files. Dropping the forwarding, or forwarding
-        // blanks, leaves the file removal alone.
-        expect(notified()).toHaveLength(3);
-        expect(mockDeleteRepository).toHaveBeenCalled();
+        expect(mockStageReport.mock.calls).toStrictEqual([
+            [OPERATION_STAGES.checkingRequirements.label, at(1, 8), 'Your DA.live sign-in'],
+            [OPERATION_STAGES.takingPagesOffSite.label, at(2, 8), undefined],
+            [OPERATION_STAGES.removingProductPages.label, at(3, 8), undefined],
+            [OPERATION_STAGES.removingProductPages.label, at(3, 8), 'The page made for each product'],
+            [OPERATION_STAGES.clearingDaLiveContent.label, at(4, 8), undefined],
+            [OPERATION_STAGES.clearingSiteSettings.label, at(5, 8), undefined],
+            [OPERATION_STAGES.deletingRepository.label, at(6, 8), undefined],
+            // EDS-67: AEM's copy of the code, once the repository is gone.
+            [OPERATION_STAGES.removingSiteCode.label, at(7, 8), undefined],
+            [OPERATION_STAGES.removingProjectFiles.label, at(8, 8), undefined],
+        ]);
+    });
+
+    it('counts only the steps the SC chose', async () => {
+        await deleteAnswered(context(), edsProject(), SERVICES, ['github']);
+
+        expect(mockStageReport.mock.calls.map(([stage, position]) => [stage, position])).toStrictEqual([
+            [OPERATION_STAGES.deletingRepository.label, at(1, 3)],
+            [OPERATION_STAGES.removingSiteCode.label, at(2, 3)],
+            [OPERATION_STAGES.removingProjectFiles.label, at(3, 3)],
+        ]);
+    });
+
+    // "1 of 1" says nothing a step alone does not.
+    it('shows a project with nothing online as one step, unnumbered', async () => {
+        await deleteAnswered(context(), plainProject(), SERVICES, []);
+
+        expect(mockStageReport.mock.calls).toStrictEqual([
+            [OPERATION_STAGES.removingProjectFiles.label, undefined, undefined],
+        ]);
+    });
+});
+
+/**
+ * Uninstall Datapack (owner, 2026-11-09, walk F96): a ticked box removes the data FIRST; a
+ * removal that does not finish stops the delete and keeps the project. The removal is mocked in
+ * the wall (`mockRemoveDataBeforeDelete`); its own suite is `datapackDataRemoval.test.ts`.
+ */
+describe("the datapack's data", () => {
+    beforeEach(() => {
+        mockGetToken.mockResolvedValue('gh-token');
+        mockDeleteRepository.mockResolvedValue(undefined);
+    });
+
+    it('leaves the data when the box is left unticked', async () => {
+        const result = await deleteAnswered(context(), plainProject(), SERVICES, []);
+
+        expect(mockRm).toHaveBeenCalled();
+        expect(mockRemoveDataBeforeDelete).not.toHaveBeenCalled();
+        expect(result).toStrictEqual({ cleanupResults: [] });
+    });
+
+    it('removes the data before the repository and the files when ticked', async () => {
+        const ctx = context();
+        const project = edsProject();
+        const order: string[] = [];
+        mockRemoveDataBeforeDelete.mockImplementation(async () => { order.push('data'); });
+        mockDeleteRepository.mockImplementation(async () => { order.push('repository'); });
+        mockRm.mockImplementation(async () => { order.push('files'); });
+
+        const result = await deleteAnswered(ctx, project, SERVICES, ['github', 'datapackData']);
+
+        expect(mockRemoveDataBeforeDelete).toHaveBeenCalledWith(ctx, project, expect.any(Function), { given: undefined });
+        expect(order).toEqual(['data', 'repository', 'files']);
+        expect(result.stopped).toBeUndefined();
+    });
+
+    it('keeps the project, and everything online, when the data does not all come out', async () => {
+        const why = "Its datapack's data was not removed, so the project was kept: Commerce refused 2 products.";
+        mockRemoveDataBeforeDelete.mockResolvedValue(why);
+
+        const result = await deleteAnswered(context(), edsProject(), SERVICES, ['github', 'datapackData']);
+
+        expect(mockDeleteRepository).not.toHaveBeenCalled();
+        expect(mockRm).not.toHaveBeenCalled();
+        expect(result.stopped).toBe(why);
     });
 });

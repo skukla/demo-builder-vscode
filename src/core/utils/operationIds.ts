@@ -13,14 +13,6 @@
  */
 
 /**
- * A reset, keyed by the project it resets — the projects list can start one for
- * any project it lists, so "the reset" alone would not say which.
- */
-export function resetOperationId(projectName: string): string {
-    return `reset:${projectName}`;
-}
-
-/**
  * The dashboard's storefront buttons. One project is open at a time there, so
  * these need no key of their own — they name the operation, not the target.
  */
@@ -66,11 +58,6 @@ export const AI_FILES_OPERATION_ID = 'ai-files';
  * in the Configure screen's progress modal while that screen is open.
  */
 export const CONFIGURE_REPUBLISH_OPERATION_ID = 'configure-republish-storefront';
-
-/** A project deletion, keyed by the project being deleted. */
-export function deleteOperationId(projectName: string): string {
-    return `delete:${projectName}`;
-}
 
 /**
  * Applying the updates the SC left ticked in the Updates modal (PL-80). One list

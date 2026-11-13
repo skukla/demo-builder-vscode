@@ -2,16 +2,16 @@
  * The main reset flow, pinned on the ARGUMENTS its collaborators receive.
  *
  * Mutation testing (PL-22, batch MUT-07) found the whole GitHub App check, the
- * confirmation prompt's shape, the progress narration and the parameter object
- * handed to `executeEdsReset` unconstrained: every collaborator is mocked, and a
+ * progress narration and the parameter object handed to `executeEdsReset`
+ * unconstrained: every collaborator is mocked, and a
  * mock answers the same whatever it is handed. These suites read what each was
  * handed instead.
  *
- * Three groups:
+ * Driven as the batch and Edit run it: reporting into the caller's window
+ * (`withinEdit`), with no question of its own. Three groups:
  *
- * 1. **Before the progress window** — parameter failure, the confirmation
- *    prompt (modal, one button), the cancel result.
- * 2. **Inside it** — the progress messages in order, the DA.live / org gate
+ * 1. **Before anything runs** — parameter failure, the DA.live guard's answer.
+ * 2. **The run** — the progress messages in order, the DA.live / org gate
  *    arguments, and the reset parameters (defaults, byom overlay, mesh
  *    auto-detect).
  * 3. **The AEM Code Sync check** — installed, undetermined (advisory, continues),
@@ -68,7 +68,6 @@ import { createMockProject } from '../../../../helpers/projectFake';
 const mockedReset = executeEdsReset as jest.MockedFunction<typeof executeEdsReset>;
 const mockedParams = extractResetParams as jest.MockedFunction<typeof extractResetParams>;
 const meshDeps = createMeshDepsFake({ authManager: mockAuthService });
-const RESET = 'Reset Project';
 
 /**
  * Handed in through the options seam. `isAppInstalled` is what the resolver
@@ -135,24 +134,21 @@ function run(project: Project, context = createContext(), extra: Record<string, 
         meshDeps,
         project,
         context,
+        withinEdit: { report },
         ...extra,
     });
 }
 
 beforeEach(() => {
     jest.clearAllMocks();
-    (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue(RESET);
-    (vscode.window.withProgress as jest.Mock).mockImplementation(
-        async (_options: unknown, task: (p: { report: jest.Mock }) => Promise<unknown>) =>
-            task({ report }),
-    );
+    (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue(undefined);
     mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: true });
     mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: true });
     mockEnsureProjectOrgContext.mockResolvedValue({ reachable: true });
     isAppInstalled.mockResolvedValue({ isInstalled: true });
 });
 
-describe('resetEdsProjectWithUI — before the progress window', () => {
+describe('resetEdsProjectWithUI — before anything runs', () => {
     it('returns the extraction error and asks nothing when the params cannot be read', async () => {
         mockedParams.mockReturnValueOnce({ success: false, error: 'no repo recorded' });
 
@@ -160,27 +156,6 @@ describe('resetEdsProjectWithUI — before the progress window', () => {
 
         expect(result).toEqual({ success: false, error: 'no repo recorded' });
         expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
-        expect(mockedReset).not.toHaveBeenCalled();
-    });
-
-    it('confirms with a MODAL naming the project and one button', async () => {
-        await run(createProject());
-
-        expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
-            'Reset test-project?',
-            { modal: true, detail: 'It returns to how it was set up. Code changes are lost.' },
-            RESET,
-        );
-    });
-
-    it('reports a cancel as cancelled, with nothing saved and nothing run', async () => {
-        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue(undefined);
-        const context = createContext();
-
-        const result = await run(createProject(), context);
-
-        expect(result).toEqual({ success: false, cancelled: true });
-        expect(context.stateManager.saveProject).not.toHaveBeenCalled();
         expect(mockedReset).not.toHaveBeenCalled();
     });
 
@@ -199,35 +174,24 @@ describe('resetEdsProjectWithUI — before the progress window', () => {
     });
 });
 
-describe('resetEdsProjectWithUI — inside the progress window', () => {
-    // Titled for the PROJECT: the same words the modal shows and the
-    // notification it hands over to, rather than the feature's name.
-    it('opens a non-cancellable notification titled for the project', async () => {
-        await run(createProject());
-
-        expect(vscode.window.withProgress).toHaveBeenCalledWith(
-            expect.objectContaining({ title: 'Resetting test-project', cancellable: false }),
-            expect.any(Function),
-        );
-    });
-
+describe('resetEdsProjectWithUI — the run', () => {
     it('narrates the four pre-flight checks in order, then each pipeline step', async () => {
         await run(createProject());
 
         // Four checks under ONE stage, each naming what it is asking about, and
         // then the pipeline's own steps with the count they know up front.
-        expect(report.mock.calls.map((c) => c[0])).toEqual([
-            { message: 'Checking requirements' },
-            { message: 'Checking requirements' },
-            { message: 'Checking requirements' },
-            { message: 'Checking requirements' },
+        expect(report.mock.calls).toEqual([
+            ['Checking requirements', 'Your DA.live sign-in'],
+            ['Checking requirements', 'Your Adobe sign-in'],
+            ['Checking requirements', 'The Adobe organization'],
+            ['Checking requirements', 'The GitHub app on your repo'],
         ]);
 
         const onProgress = mockedReset.mock.calls[0][4]!;
         onProgress({ step: RESET_STEP.publishingCodeAndSettings, totalSteps: 11, message: 'Publishing the code' });
-        // The notification's one line is the step's own name and position (since
-        // 2026-10-16); the step's passing messages are for the modal's second row.
-        expect(report).toHaveBeenLastCalledWith({ message: 'Publishing code, settings (2 of 11)' });
+        // The step's own name is the stage, with its position; its passing message is the
+        // line under it (since 2026-10-16).
+        expect(report).toHaveBeenLastCalledWith('Publishing code, settings', 'Publishing the code', { index: 2, total: 11 });
     });
 
     it('hands the org gate the auth manager, the project and the logger', async () => {
@@ -313,7 +277,7 @@ describe('resetEdsProjectWithUI — the AEM Code Sync check', () => {
         await run(createProject());
 
         expect(isAppInstalled).toHaveBeenCalledWith('test-owner', 'test-repo');
-        expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(1);
+        expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
         expect(mockedReset).toHaveBeenCalled();
     });
 
@@ -323,7 +287,7 @@ describe('resetEdsProjectWithUI — the AEM Code Sync check', () => {
 
         await run(createProject(), context);
 
-        expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(1);
+        expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
         expect(mockedReset).toHaveBeenCalled();
         expect(context.logger.warn).toHaveBeenCalledWith(
             expect.stringContaining('Could not verify AEM Code Sync on test-owner/test-repo (HTTP 503)'),
@@ -348,7 +312,7 @@ describe('resetEdsProjectWithUI — the AEM Code Sync check', () => {
 
         await run(createProject(), createContext());
 
-        expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(1);
+        expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
         expect(mockedReset).toHaveBeenCalled();
     });
 
@@ -368,11 +332,10 @@ describe('resetEdsProjectWithUI — the AEM Code Sync check', () => {
         });
 
         it('Install App opens the install URL for THIS repo, then continues on Continue', async () => {
-            // Three questions in order: the reset confirm, the App warning, and the
-            // after-install Continue — which is a question now, so it arrives on the
-            // same channel rather than as an information message.
+            // Two questions in order: the App warning, and the after-install Continue —
+            // which is a question now, so it arrives on the same channel rather than as
+            // an information message.
             (vscode.window.showWarningMessage as jest.Mock)
-                .mockResolvedValueOnce(RESET)
                 .mockResolvedValueOnce('Install App')
                 .mockResolvedValueOnce('Continue');
 
@@ -396,7 +359,6 @@ describe('resetEdsProjectWithUI — the AEM Code Sync check', () => {
 
         it('Install App then Cancel aborts, restoring the status before returning', async () => {
             (vscode.window.showWarningMessage as jest.Mock)
-                .mockResolvedValueOnce(RESET)
                 .mockResolvedValueOnce('Install App');
             (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Cancel');
             const statuses: string[] = [];
@@ -410,7 +372,6 @@ describe('resetEdsProjectWithUI — the AEM Code Sync check', () => {
 
         it('Continue Anyway runs the reset without opening anything', async () => {
             (vscode.window.showWarningMessage as jest.Mock)
-                .mockResolvedValueOnce(RESET)
                 .mockResolvedValueOnce('Continue Anyway');
 
             const result = await run(createProject());
@@ -422,7 +383,6 @@ describe('resetEdsProjectWithUI — the AEM Code Sync check', () => {
 
         it('dismissing the prompt aborts as cancelled', async () => {
             (vscode.window.showWarningMessage as jest.Mock)
-                .mockResolvedValueOnce(RESET)
                 .mockResolvedValueOnce(undefined);
             const statuses: string[] = [];
 

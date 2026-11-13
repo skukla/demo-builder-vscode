@@ -609,8 +609,8 @@ still published from before that was not republished is unpublished: `leftoverPa
 in the answer says `removed`, `some-left`, or `not-listed` when Helix could not say
 what is published, in which case old pages may still be live (EDS-33); a headless
 project goes to `executeProjectReset` (components deleted and installed again;
-integrations and configuration kept), the core
-`resetProjectWithUI` wraps. Before that date the tool was `reset_eds_project` and
+integrations and configuration kept), the same steps a batch row runs through
+`runProjectResetAnswered`. Before that date the tool was `reset_eds_project` and
 refused a headless project. The headless half refuses a running demo and names
 `stop_demo` rather than stopping it unasked, and asks for the Adobe sign-in only
 when there is a mesh to redeploy. Nothing undoes a reset — it is the return to

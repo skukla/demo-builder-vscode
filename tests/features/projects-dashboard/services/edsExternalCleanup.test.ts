@@ -3,17 +3,15 @@
  * DA.live site and its org config, and the GitHub repository, each with its own
  * sign-in check.
  *
- * Driven through `deleteProject`, because the module wall in
- * `projectDeletionService.testUtils` is the one place these collaborators are
- * faked. The confirmation that decides WHICH of these run is
- * `deletionConfirmation.test.ts`; the one-time tip after a cleanup and the local
- * removal are the orchestrator's, in `projectDeletionService.test.ts`. Same rule
- * in all of them: every assertion reads the arguments a collaborator received or
+ * Driven through the answered delete the batch runs (`deleteAnswered`, over
+ * `runProjectDelete`), because the module wall in `projectDeletionService.testUtils`
+ * is the one place these collaborators are faked. Which of these run is the SC's
+ * ticked answer; the local removal is the orchestrator's, in
+ * `projectDeletionService.test.ts`. Same rule in both: every assertion reads the arguments a collaborator received or
  * the `cleanupResults` the service reports, never a value a mock handed back.
  */
 
 import {
-    deleteProject,
     mockCheckLiveStatus,
     mockDaLiveAccessToken,
     mockDefaultDeleteAdminApiKey,
@@ -24,36 +22,34 @@ import {
     mockDeleteSiteConfig,
     mockDeleteDaLiveSite,
     mockEnsureDaLiveAuth,
-    mockGetConfiguration,
     mockGetSession,
     mockGetToken,
     mockHelixInitKeyStore,
     mockListRepoFiles,
-    mockProgressReport,
     mockRemoveSitePermissions,
     mockRm,
-    mockShowInformationMessage,
     mockShowWarningMessage,
     mockSleep,
     mockStoreToken,
 } from './projectDeletionService.testUtils';
 import {
     SERVICES,
-    armQuickPick,
     context,
+    deleteAnswered,
     edsProject,
     mockDeleteAdminApiKey,
     mockCheckDaLiveSignIn,
     mockDeleteCode,
     mockListAllPages,
     mockListPublishedPaths,
+    mockStageReport,
     mockUnpublishPages,
 } from './projectDeletionService.fixtures';
 import type { CleanupResultItem } from '@/features/eds/services/resourceCleanupHelpers';
 
-/** The cleanup ledger the service reports back on its response. */
-function resultsOf(result: { data?: unknown }): CleanupResultItem[] {
-    return (result.data as { cleanupResults?: CleanupResultItem[] }).cleanupResults ?? [];
+/** The cleanup ledger the delete reports back. */
+function resultsOf(result: { cleanupResults: CleanupResultItem[] }): CleanupResultItem[] {
+    return result.cleanupResults;
 }
 
 const of = (results: CleanupResultItem[], type: string) => results.filter((r) => r.type === type);
@@ -62,9 +58,6 @@ beforeEach(() => {
     jest.clearAllMocks();
     mockRm.mockResolvedValue(undefined);
     mockSleep.mockResolvedValue(undefined);
-    mockGetConfiguration.mockReturnValue({ get: () => 'ask' });
-    // showOneTimeTip chains .then on this, so it must always be a promise.
-    mockShowInformationMessage.mockResolvedValue(undefined);
     mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: true });
     mockDeleteDaLiveSite.mockResolvedValue({ success: true });
     mockGetToken.mockResolvedValue('gh-token');
@@ -101,11 +94,10 @@ beforeEach(() => {
 
 describe('the CDN unpublish step', () => {
     it('skips entirely when the project has no GitHub repo to address the CDN by', async () => {
-        armQuickPick('accept', ['daLive']);
         const project = edsProject();
         delete metadataOf(project).githubRepo;
 
-        await deleteProject(context(), project, SERVICES);
+        await deleteAnswered(context(), project, SERVICES, ['daLive']);
 
         // The DA.live content still goes; only the CDN step has no address.
         expect(mockListAllPages).not.toHaveBeenCalled();
@@ -113,22 +105,20 @@ describe('the CDN unpublish step', () => {
     });
 
     it('skips when the stored repo is not an owner/repo pair', async () => {
-        armQuickPick('accept', ['daLive']);
         const project = edsProject();
         metadataOf(project).githubRepo = 'no-slash-here';
 
-        await deleteProject(context(), project, SERVICES);
+        await deleteAnswered(context(), project, SERVICES, ['daLive']);
 
         expect(mockListAllPages).not.toHaveBeenCalled();
     });
 
     it('records a helix result only when pages were actually unpublished', async () => {
-        armQuickPick('accept', ['daLive']);
         mockUnpublishPages.mockResolvedValue({
             success: true, count: 0, total: 0, liveFailed: 0, previewFailed: 0,
         });
 
-        const result = await deleteProject(context(), edsProject(), SERVICES);
+        const result = await deleteAnswered(context(), edsProject(), SERVICES, ['daLive']);
 
         // Nothing was published, so there is nothing to report as cleaned up.
         expect(of(resultsOf(result), 'helix')).toStrictEqual([]);
@@ -138,12 +128,11 @@ describe('the CDN unpublish step', () => {
     // EDS-65: and the delete stops there. The repository and the project are how a
     // second try takes the pages down, so neither goes while the pages are live.
     it('records a failed helix result, with the sentence, and keeps everything else when pages are still live', async () => {
-        armQuickPick('accept', ['daLive', 'github']);
         mockUnpublishPages.mockResolvedValue({
             success: false, count: 0, total: 2, liveFailed: 2, previewFailed: 0,
         });
 
-        const result = await deleteProject(context(), edsProject(), SERVICES);
+        const result = await deleteAnswered(context(), edsProject(), SERVICES, ['daLive', 'github']);
 
         expect(of(resultsOf(result), 'helix')).toStrictEqual([
             {
@@ -156,17 +145,14 @@ describe('the CDN unpublish step', () => {
         expect(mockDeleteDaLiveSite).not.toHaveBeenCalled();
         expect(mockDeleteRepository).not.toHaveBeenCalled();
         expect(mockRm).not.toHaveBeenCalled();
-        expect(result.data).toMatchObject({
-            success: false,
-            error: 'The pages could not be taken off the live site, so nothing else was deleted. ' +
+        expect(result.stopped).toBe(
+            'The pages could not be taken off the live site, so nothing else was deleted. ' +
                 'Sign in to DA.live again, then try again.',
-        });
+        );
     });
 
     it('records the repo as cleaned when pages were unpublished', async () => {
-        armQuickPick('accept', ['daLive']);
-
-        const result = await deleteProject(context(), edsProject(), SERVICES);
+        const result = await deleteAnswered(context(), edsProject(), SERVICES, ['daLive']);
 
         expect(of(resultsOf(result), 'helix')).toEqual([
             { type: 'helix', name: 'skukla/demo-storefront', success: true },
@@ -176,13 +162,12 @@ describe('the CDN unpublish step', () => {
     // EDS-33, measured 2026-10-09: the DA.live content was already gone, so the delete
     // listed nothing to unpublish and the site's pages stayed live.
     it('unpublishes what Helix lists when DA.live lists nothing, and checks the live host', async () => {
-        armQuickPick('accept', ['daLive']);
         mockListAllPages.mockResolvedValue([]);
         mockListPublishedPaths.mockImplementation(async (_o: string, _s: string, _b: string, pattern: string) =>
             pattern === '/*' ? ['/', '/about'] : [],
         );
 
-        const result = await deleteProject(context(), edsProject(), SERVICES);
+        const result = await deleteAnswered(context(), edsProject(), SERVICES, ['daLive']);
 
         expect(mockListPublishedPaths).toHaveBeenCalledWith('skukla', 'demo-storefront', 'main', '/*');
         expect(mockUnpublishPages).toHaveBeenNthCalledWith(1, 'skukla', 'demo-storefront', 'main', ['/', '/about']);
@@ -193,12 +178,11 @@ describe('the CDN unpublish step', () => {
     });
 
     it('records a failed helix result when a page still answers after the unpublish', async () => {
-        armQuickPick('accept', ['daLive']);
         mockCheckLiveStatus.mockImplementation(async (url: string) =>
             url === 'https://main--demo-storefront--skukla.aem.live/' ? 200 : 404,
         );
 
-        const result = await deleteProject(context(), edsProject(), SERVICES);
+        const result = await deleteAnswered(context(), edsProject(), SERVICES, ['daLive']);
 
         expect(of(resultsOf(result), 'helix')).toEqual([
             expect.objectContaining({
@@ -212,10 +196,9 @@ describe('the CDN unpublish step', () => {
 
     // Product pages are published through the overlay and are in no DA.live listing (EDS-26).
     it('removes the product pages Helix lists, by owner/repo, and records them as cleaned', async () => {
-        armQuickPick('accept', ['daLive']);
         mockListPublishedPaths.mockResolvedValue(['/products/drum/dc-100', '/products/default', '/index']);
 
-        const result = await deleteProject(context(), edsProject(), SERVICES);
+        const result = await deleteAnswered(context(), edsProject(), SERVICES, ['daLive']);
 
         expect(mockListPublishedPaths).toHaveBeenCalledWith('skukla', 'demo-storefront', 'main', '/products/*');
         expect(mockUnpublishPages).toHaveBeenNthCalledWith(2, 'skukla', 'demo-storefront', 'main', [
@@ -229,12 +212,11 @@ describe('the CDN unpublish step', () => {
     });
 
     it('names both CDN results by the repository, not the DA.live site, when the two differ', async () => {
-        armQuickPick('accept', ['daLive']);
         mockListPublishedPaths.mockResolvedValue(['/products/drum/dc-100']);
         const project = edsProject();
         metadataOf(project).daLiveSite = 'demo-site';
 
-        const result = await deleteProject(context(), project, SERVICES);
+        const result = await deleteAnswered(context(), project, SERVICES, ['daLive']);
 
         // The CDN is addressed by owner/repo; the DA.live pair names the content.
         expect(of(resultsOf(result), 'helix')).toStrictEqual([
@@ -244,7 +226,6 @@ describe('the CDN unpublish step', () => {
     });
 
     it('leaves the product pages, and says why, when another project publishes to the same repository', async () => {
-        armQuickPick('accept', ['daLive']);
         mockListPublishedPaths.mockResolvedValue(['/products/drum/dc-100']);
         const ctx = context();
         // Its own DA.live site on the shared repository: that site is offered, its product pages are not.
@@ -258,7 +239,7 @@ describe('the CDN unpublish step', () => {
             path === '/projects/other' ? other : edsProject(),
         );
 
-        const result = await deleteProject(ctx, edsProject(), SERVICES);
+        const result = await deleteAnswered(ctx, edsProject(), SERVICES, ['daLive']);
 
         expect(mockListPublishedPaths).not.toHaveBeenCalledWith('skukla', 'demo-storefront', 'main', '/products/*');
         expect(mockUnpublishPages).toHaveBeenCalledTimes(1);
@@ -273,13 +254,12 @@ describe('the CDN unpublish step', () => {
     });
 
     it('never reports a clean result when Helix keeps the preview copies', async () => {
-        armQuickPick('accept', ['daLive']);
         mockListPublishedPaths.mockResolvedValue(['/products/drum/dc-100']);
         mockUnpublishPages
             .mockResolvedValueOnce({ success: true, count: 2, total: 2, liveFailed: 0, previewFailed: 0 })
             .mockResolvedValueOnce({ success: true, count: 1, total: 1, liveFailed: 0, previewFailed: 1 });
 
-        const result = await deleteProject(context(), edsProject(), SERVICES);
+        const result = await deleteAnswered(context(), edsProject(), SERVICES, ['daLive']);
 
         const row = of(resultsOf(result), 'helix').find((r) => r.name.startsWith('product pages'));
         expect(row).toMatchObject({ success: false });
@@ -289,9 +269,8 @@ describe('the CDN unpublish step', () => {
     it('falls back to the real Helix when no service seam is handed in', async () => {
         // Production passes no `services`. The default arm builds a HelixService and
         // inits its key store; nothing else in the suite exercises that branch.
-        armQuickPick('accept', ['daLive']);
 
-        await deleteProject(context(), edsProject());
+        await deleteAnswered(context(), edsProject(), undefined, ['daLive']);
 
         expect(mockHelixInitKeyStore).toHaveBeenCalled();
         expect(mockDefaultListAllPages).toHaveBeenCalledWith('skukla', 'demo-storefront');
@@ -302,25 +281,18 @@ describe('the CDN unpublish step', () => {
 
 describe('the DA.live site cleanup', () => {
     it("forwards the teardown's own steps to the progress surface", async () => {
-        armQuickPick('accept', ['daLive']);
-
-        await deleteProject(context(), edsProject(), SERVICES);
+        await deleteAnswered(context(), edsProject(), SERVICES, ['daLive']);
 
         // The site step and the file removal are two lines; anything more is the
         // shared teardown narrating its own steps (CDN, content, site settings)
         // through onStep. Without the forwarding the SC sees one frozen line for
         // the whole teardown.
-        const lines = mockProgressReport.mock.calls
-            .map(([update]) => (update as { message?: string }).message ?? '')
-            .filter((message) => message !== '');
-        expect(lines.length).toBeGreaterThan(2);
+        expect(mockStageReport.mock.calls.length).toBeGreaterThan(2);
         expect(mockDeleteDaLiveSite).toHaveBeenCalledWith('skukla', 'demo-storefront');
     });
 
     it('records the deleted site and clears its org-config rows', async () => {
-        armQuickPick('accept', ['daLive']);
-
-        const result = await deleteProject(context(), edsProject(), SERVICES);
+        const result = await deleteAnswered(context(), edsProject(), SERVICES, ['daLive']);
 
         expect(of(resultsOf(result), 'daLive')).toEqual([
             { type: 'daLive', name: 'skukla/demo-storefront', success: true, error: undefined },
@@ -331,10 +303,9 @@ describe('the DA.live site cleanup', () => {
     });
 
     it('reports the site deletion failure it was given', async () => {
-        armQuickPick('accept', ['daLive']);
         mockDeleteDaLiveSite.mockResolvedValue({ success: false, error: 'DA.live 500' });
 
-        const result = await deleteProject(context(), edsProject(), SERVICES);
+        const result = await deleteAnswered(context(), edsProject(), SERVICES, ['daLive']);
 
         expect(of(resultsOf(result), 'daLive')).toEqual([
             { type: 'daLive', name: 'skukla/demo-storefront', success: false, error: 'DA.live 500' },
@@ -342,10 +313,9 @@ describe('the DA.live site cleanup', () => {
     });
 
     it('turns a thrown cleanup into a reported failure, not a lost delete', async () => {
-        armQuickPick('accept', ['daLive']);
         mockDeleteDaLiveSite.mockRejectedValue(new Error('token expired'));
 
-        const result = await deleteProject(context(), edsProject(), SERVICES);
+        const result = await deleteAnswered(context(), edsProject(), SERVICES, ['daLive']);
 
         expect(of(resultsOf(result), 'daLive')).toEqual([
             {
@@ -359,10 +329,9 @@ describe('the DA.live site cleanup', () => {
     });
 
     it('records a SKIPPED result carrying why, when DA.live auth is unavailable', async () => {
-        armQuickPick('accept', ['daLive']);
         mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: false, error: 'sign-in declined' });
 
-        const result = await deleteProject(context(), edsProject(), SERVICES);
+        const result = await deleteAnswered(context(), edsProject(), SERVICES, ['daLive']);
 
         expect(of(resultsOf(result), 'daLive')).toEqual([
             {
@@ -377,10 +346,9 @@ describe('the DA.live site cleanup', () => {
     });
 
     it('falls back to a generic reason when the guard gave none', async () => {
-        armQuickPick('accept', ['daLive']);
         mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: false });
 
-        const result = await deleteProject(context(), edsProject(), SERVICES);
+        const result = await deleteAnswered(context(), edsProject(), SERVICES, ['daLive']);
 
         expect(of(resultsOf(result), 'daLive')[0].error).toBe('Authentication required');
     });
@@ -388,9 +356,7 @@ describe('the DA.live site cleanup', () => {
 
 describe('the GitHub repository cleanup', () => {
     it('records the repo as deleted, by owner and name', async () => {
-        armQuickPick('accept', ['github']);
-
-        const result = await deleteProject(context(), edsProject(), SERVICES);
+        const result = await deleteAnswered(context(), edsProject(), SERVICES, ['github']);
 
         expect(mockDeleteRepository).toHaveBeenCalledWith('skukla', 'demo-storefront');
         expect(of(resultsOf(result), 'github')).toEqual([
@@ -399,11 +365,10 @@ describe('the GitHub repository cleanup', () => {
     });
 
     it('refuses a repo name that is not owner/repo, and says so', async () => {
-        armQuickPick('accept', ['github']);
         const project = edsProject();
         metadataOf(project).githubRepo = 'no-slash-here';
 
-        const result = await deleteProject(context(), project, SERVICES);
+        const result = await deleteAnswered(context(), project, SERVICES, ['github']);
 
         expect(mockDeleteRepository).not.toHaveBeenCalled();
         expect(of(resultsOf(result), 'github')).toEqual([
@@ -417,10 +382,9 @@ describe('the GitHub repository cleanup', () => {
     });
 
     it('reports a thrown deletion rather than losing it', async () => {
-        armQuickPick('accept', ['github']);
         mockDeleteRepository.mockRejectedValue(new Error('403 from GitHub'));
 
-        const result = await deleteProject(context(), edsProject(), SERVICES);
+        const result = await deleteAnswered(context(), edsProject(), SERVICES, ['github']);
 
         expect(of(resultsOf(result), 'github')).toEqual([
             {
@@ -439,11 +403,10 @@ describe('the GitHub repository cleanup', () => {
         });
 
         it('stores the session token with the scopes a repo delete needs', async () => {
-            armQuickPick('accept', ['github']);
             mockShowWarningMessage.mockResolvedValue('Sign In');
             mockGetSession.mockResolvedValue({ accessToken: 'gh-session-token' });
 
-            await deleteProject(context(), edsProject(), SERVICES);
+            await deleteAnswered(context(), edsProject(), SERVICES, ['github']);
 
             expect(mockGetSession).toHaveBeenCalledWith(
                 'github',
@@ -461,21 +424,19 @@ describe('the GitHub repository cleanup', () => {
         });
 
         it('proceeds without storing anything when the session comes back empty', async () => {
-            armQuickPick('accept', ['github']);
             mockShowWarningMessage.mockResolvedValue('Sign In');
             mockGetSession.mockResolvedValue(undefined);
 
-            await deleteProject(context(), edsProject(), SERVICES);
+            await deleteAnswered(context(), edsProject(), SERVICES, ['github']);
 
             expect(mockStoreToken).not.toHaveBeenCalled();
             expect(mockDeleteRepository).toHaveBeenCalled();
         });
 
         it('skips the repo, with a reason, when the user declines to sign in', async () => {
-            armQuickPick('accept', ['github']);
             mockShowWarningMessage.mockResolvedValue(undefined);
 
-            const result = await deleteProject(context(), edsProject(), SERVICES);
+            const result = await deleteAnswered(context(), edsProject(), SERVICES, ['github']);
 
             expect(mockGetSession).not.toHaveBeenCalled();
             expect(mockDeleteRepository).not.toHaveBeenCalled();
@@ -491,11 +452,10 @@ describe('the GitHub repository cleanup', () => {
         });
 
         it('skips the repo when the sign-in itself fails', async () => {
-            armQuickPick('accept', ['github']);
             mockShowWarningMessage.mockResolvedValue('Sign In');
             mockGetSession.mockRejectedValue(new Error('user aborted'));
 
-            const result = await deleteProject(context(), edsProject(), SERVICES);
+            const result = await deleteAnswered(context(), edsProject(), SERVICES, ['github']);
 
             expect(mockDeleteRepository).not.toHaveBeenCalled();
             expect(of(resultsOf(result), 'github')).toEqual([
@@ -516,9 +476,7 @@ describe("the site's code on aem.live, after the repository", () => {
     const codeRows = (results: CleanupResultItem[]) => results.filter((r) => r.name.startsWith('site code'));
 
     it('lists the repository before deleting it, then removes each file from the same site', async () => {
-        armQuickPick('accept', ['github']);
-
-        await deleteProject(context(), edsProject(), SERVICES);
+        await deleteAnswered(context(), edsProject(), SERVICES, ['github']);
 
         expect(mockListRepoFiles).toHaveBeenCalledWith('skukla', 'demo-storefront', 'main');
         expect(mockDeleteCode.mock.calls).toEqual(
@@ -534,9 +492,7 @@ describe("the site's code on aem.live, after the repository", () => {
     });
 
     it('records the code as cleaned up when aem.live no longer serves it', async () => {
-        armQuickPick('accept', ['github']);
-
-        const result = await deleteProject(context(), edsProject(), SERVICES);
+        const result = await deleteAnswered(context(), edsProject(), SERVICES, ['github']);
 
         expect(mockCheckLiveStatus).toHaveBeenCalledWith(
             expect.stringMatching(/^https:\/\/main--demo-storefront--skukla\.aem\.live\/scripts\/aem\.js\?/),
@@ -547,10 +503,9 @@ describe("the site's code on aem.live, after the repository", () => {
     });
 
     it('never says cleaned up over code aem.live still serves', async () => {
-        armQuickPick('accept', ['github']);
         mockCheckLiveStatus.mockImplementation(async () => 200);
 
-        const result = await deleteProject(context(), edsProject(), SERVICES);
+        const result = await deleteAnswered(context(), edsProject(), SERVICES, ['github']);
 
         expect(codeRows(resultsOf(result))).toStrictEqual([
             {
@@ -568,34 +523,30 @@ describe("the site's code on aem.live, after the repository", () => {
         ['no DA.live session', () => mockDaLiveAccessToken.mockResolvedValue(null)],
         ['a DA.live sign-in IMS no longer accepts', () => mockCheckDaLiveSignIn.mockResolvedValue('refused')],
     ])('keeps the repository and the project with %s, and says why', async (_name, arrange) => {
-        armQuickPick('accept', ['github']);
         arrange();
 
-        const result = await deleteProject(context(), edsProject(), SERVICES);
+        const result = await deleteAnswered(context(), edsProject(), SERVICES, ['github']);
 
         const kept = 'The repository was kept so its site code can still be removed. Sign in to DA.live and delete again.';
         expect(mockDeleteRepository).not.toHaveBeenCalled();
         expect(mockDeleteCode).not.toHaveBeenCalled();
         expect(mockRm).not.toHaveBeenCalled();
-        expect(result.data).toMatchObject({ success: false, error: kept });
+        expect(result.stopped).toBe(kept);
         expect(of(resultsOf(result), 'github')).toStrictEqual([
             { type: 'github', name: 'skukla/demo-storefront', success: false, error: kept },
         ]);
     });
 
     it('asks IMS about the DA.live token the code would be removed with', async () => {
-        armQuickPick('accept', ['github']);
-
-        await deleteProject(context(), edsProject(), SERVICES);
+        await deleteAnswered(context(), edsProject(), SERVICES, ['github']);
 
         expect(mockCheckDaLiveSignIn).toHaveBeenCalledWith('token');
     });
 
     it('removes no code when the repository delete fails, the repository being still there', async () => {
-        armQuickPick('accept', ['github']);
         mockDeleteRepository.mockRejectedValue(new Error('403 from GitHub'));
 
-        const result = await deleteProject(context(), edsProject(), SERVICES);
+        const result = await deleteAnswered(context(), edsProject(), SERVICES, ['github']);
 
         expect(mockDeleteCode).not.toHaveBeenCalled();
         expect(codeRows(resultsOf(result))).toStrictEqual([]);

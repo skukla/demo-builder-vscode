@@ -1,6 +1,6 @@
 /**
- * The module wall, the fakes and the fixtures every project-delete suite shares:
- * projectDeletionService, deletionConfirmation(-modal) and edsExternalCleanup.
+ * The module wall and the fakes every project-delete suite shares: projectDeletionService
+ * (the answered delete the batch runs, `runProjectDelete`) and edsExternalCleanup.
  *
  * Extracted when the second suite arrived. The wall is thirty lines of jest.mock
  * covering seven modules, and the two suites need exactly the same one: the first
@@ -9,41 +9,20 @@
  * header once described — a mock supplying a method the source had stopped calling,
  * with 23 tests green over an unreachable branch.
  *
- * Suites import `deleteProject`/`deleteProjectFiles` FROM HERE. `jest.mock` hoists
+ * Suites import `runProjectDelete`/`deleteProjectFiles` FROM HERE. `jest.mock` hoists
  * above the imports of the module it appears in — this one — so a suite that imported
  * the subject itself could bind it before these mocks were registered.
  */
 
 export const mockShowWarningMessage = jest.fn();
-export const mockShowInformationMessage = jest.fn();
 export const mockExecuteCommand = jest.fn();
 export const mockRm = jest.fn();
-export const mockGetConfiguration = jest.fn();
-export const mockCreateQuickPick = jest.fn();
 export const mockGetSession = jest.fn();
-export const mockProgressReport = jest.fn();
-export const mockWithProgressOptions = jest.fn();
 
 jest.mock('vscode', () => ({
-    workspace: { getConfiguration: (...a: unknown[]) => mockGetConfiguration(...a) },
-    window: {
-        showWarningMessage: (...a: unknown[]) => mockShowWarningMessage(...a),
-        createQuickPick: () => mockCreateQuickPick(),
-        showInformationMessage: (...a: unknown[]) => mockShowInformationMessage(...a),
-        withProgress: (
-            opts: unknown,
-            task: (p: { report: (v: unknown) => void }) => Promise<unknown>,
-        ) => {
-            mockWithProgressOptions(opts);
-            return task({ report: (v: unknown) => mockProgressReport(v) });
-        },
-    },
+    window: { showWarningMessage: (...a: unknown[]) => mockShowWarningMessage(...a) },
     commands: { executeCommand: (...a: unknown[]) => mockExecuteCommand(...a) },
     authentication: { getSession: (...a: unknown[]) => mockGetSession(...a) },
-    ThemeIcon: class {
-        constructor(public readonly id: string) {}
-    },
-    ProgressLocation: { Notification: 15 },
 }));
 
 jest.mock('fs/promises', () => ({ rm: (...a: unknown[]) => mockRm(...a) }));
@@ -82,14 +61,6 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     getDaLiveAuthService: jest.fn().mockReturnValue({}),
     // The DA.live session the code removal reads without asking (EDS-67).
     tryCreateDaLiveTokenProvider: () => ({ getAccessToken: () => mockDaLiveAccessToken() }),
-}));
-
-// requireActual keeps `extractEdsMetadata` REAL — it decides
-// which confirmation path runs, and a stub of it would hide the fixture bug
-// the CONTROL test exists to catch.
-jest.mock('@/features/eds/services/resourceCleanupHelpers', () => ({
-    ...jest.requireActual('@/features/eds/services/resourceCleanupHelpers'),
-    formatCleanupResults: () => '',
 }));
 
 // The site deletion is now ONE call on the content operations, made by the
@@ -142,7 +113,7 @@ jest.mock('@/features/eds/services/daLive/daLiveConfigService', () => ({
 
 /**
  * The PRODUCTION Helix default, so a call that passes no `services` is testable.
- * Without it, `deleteProject(context, project)` would construct a real HelixService
+ * Without it, a delete handed no `services` would construct a real HelixService
  * and call its real static key-store init.
  */
 export const mockHelixInitKeyStore = jest.fn();
@@ -188,20 +159,17 @@ export const mockSleep = jest.fn().mockResolvedValue(undefined);
 jest.mock('@/core/utils/sleep', () => ({ sleep: (...a: unknown[]) => mockSleep(...a) }));
 
 /**
- * Uninstall Datapack (walk F96): whether the project has data Demo Builder installed in
- * Commerce (`removableDataOf`), and removing it (`removeDataBeforeDelete`, undefined when it all
- * came out, else why it did not). The real module reaches the store; its own suite is
- * `datapackDataRemoval.test.ts`, and every delete suite asserts only whether, and with what, they
- * are called. Offers no data unless a suite says so.
+ * Uninstall Datapack (walk F96): removing the data (`removeDataBeforeDelete`, undefined when it
+ * all came out, else why it did not). The real module reaches the store; its own suite is
+ * `datapackDataRemoval.test.ts`, and every delete suite asserts only whether, and with what, it
+ * is called.
  */
-export const mockRemovableDataOf = jest.fn().mockResolvedValue(undefined);
 export const mockRemoveDataBeforeDelete = jest.fn().mockResolvedValue(undefined);
 jest.mock('@/features/projects-dashboard/services/datapackDataRemoval', () => ({
-    removableDataOf: (...a: unknown[]) => mockRemovableDataOf(...a),
     removeDataBeforeDelete: (...a: unknown[]) => mockRemoveDataBeforeDelete(...a),
 }));
 
 // Below the mocks on purpose — see the note above about hoisting.
-export { deleteProject } from '@/features/projects-dashboard/services/projectDeletionService';
+export { runProjectDelete } from '@/features/projects-dashboard/services/projectDeletionService';
 export { deleteProjectFiles } from '@/features/projects-dashboard/services/projectFilesDeletion';
 export type { DeletionServices } from '@/features/projects-dashboard/services/edsExternalCleanup';

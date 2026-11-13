@@ -2,7 +2,8 @@
  * Project Reset Service
  *
  * Resets headless (non-EDS) projects by deleting and re-cloning components.
- * Follows the same UI pattern as edsResetService: confirmation → progress → execute → notify.
+ * Two doors, neither with a dialog: a batch's answered run (`runProjectResetAnswered`) and the
+ * `reset_project` agent tool (`executeProjectReset`).
  *
  * Reuses:
  * - cloneAllComponents / installAllComponents from componentInstallationOrchestrator
@@ -19,13 +20,8 @@ import * as path from 'path';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { whileRunning } from '@/core/state/projectWorkRunning';
 import { numberedSteps } from '@/core/utils/numberedSteps';
-import { resetOperationId } from '@/core/utils/operationIds';
 import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
-import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
-import {
-    withOperationProgress,
-    type ReportStage,
-} from '@/core/vscode/withOperationProgress';
+import type { ReportStage } from '@/core/vscode/withOperationProgress';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { getComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';
 import { getStackById } from '@/features/components/services/demoPackageLoader';
@@ -62,14 +58,6 @@ function projectResetSteps(project: Project): string[] {
         S.writingConfigFiles.label,
         ...(getMeshComponentInstance(project)?.path ? [S.checkingRequirements.label, S.redeployingMesh.label] : []),
     ];
-}
-
-/** The SC's door: the reset's own needs plus where its progress shows. */
-export interface ResetWithUIOptions extends ProjectResetDeps {
-    /** Started from a screen that hosts the progress modal (PL-59 R1). */
-    progress?: 'modal';
-    /** The id that screen named the operation by, so its modal follows this run. */
-    operationId?: string;
 }
 
 // ==========================================================
@@ -369,9 +357,9 @@ async function runResetSteps(deps: ProjectResetDeps, show: ReportStage): Promise
 }
 
 /**
- * Reset a headless project with no dialog and no notification: the core both
- * doors share. `resetProjectWithUI` wraps it for an SC; the `reset_project`
- * agent tool calls it directly, having taken consent through `confirm:true`.
+ * Reset a headless project with no dialog and no notification. The `reset_project`
+ * agent tool calls it, having taken consent through `confirm:true`; a batch runs the
+ * same steps through `runProjectResetAnswered`.
  *
  * It does not stop a running demo — the caller does, by whatever means it has.
  *
@@ -403,69 +391,4 @@ export async function runProjectResetAnswered(deps: ProjectResetDeps, report: Re
         await vscode.commands.executeCommand('demoBuilder.stopDemo');
     }
     return whileResetting(deps, async () => asHandlerResponse(await runResetSteps(deps, report)));
-}
-
-// ==========================================================
-// Full Reset with UI
-// ==========================================================
-
-/**
- * Reset a headless project with full UI flow.
- *
- * Pattern mirrors edsResetUI.resetEdsProjectWithUI:
- * 1. Confirmation dialog
- * 2. Stop demo if running
- * 3. Set status to 'resetting'
- * 4. The steps of {@link executeProjectReset}'s core, narrated to the
- *    notification or the progress modal
- * 5. Restore status, show the error notification on failure
- */
-export async function resetProjectWithUI(options: ResetWithUIOptions): Promise<HandlerResponse> {
-    const { project, context, logPrefix = '[ProjectReset]' } = options;
-
-    const vscode = await import('vscode');
-
-    // Show confirmation dialog
-    const confirmButton = 'Reset Project';
-    const confirmation = await vscode.window.showWarningMessage(
-        `Are you sure you want to reset "${project.name}"? This will delete its components and ` +
-            'install them again from scratch. Integrations are left as they are, and your ' +
-            'configuration is kept.',
-        { modal: true },
-        confirmButton,
-    );
-
-    if (confirmation !== confirmButton) {
-        context.logger.info(`${logPrefix} Reset cancelled by user`);
-        return { success: false, cancelled: true };
-    }
-
-    // Stop demo if running
-    if (project.status === 'running' || project.status === 'starting') {
-        context.logger.info(`${logPrefix} Stopping running demo before reset`);
-        await vscode.commands.executeCommand('demoBuilder.stopDemo');
-    }
-
-    return whileResetting(options, async () => {
-        try {
-            return await withOperationProgress(
-                {
-                    id: options.operationId ?? resetOperationId(project.name),
-                    title: `Resetting ${getProjectDisplayName(project)}`,
-                    inModal: options.progress === 'modal',
-                },
-                async (report) => asHandlerResponse(await runResetSteps(options, report)),
-            );
-        } catch (error) {
-            const errorMessage = (error as Error).message;
-            context.logger.error(`${logPrefix} Reset failed`, error as Error);
-
-            // A modal already shows the reason, with Debug Logs beside it.
-            if (options.progress !== 'modal') {
-                vscode.window.showErrorMessage(`Failed to reset project: ${errorMessage}`);
-            }
-
-            return { success: false, error: errorMessage };
-        }
-    });
 }

@@ -1,6 +1,6 @@
 /**
- * projectResetService — the full reset flow (`resetProjectWithUI`) and the
- * component-definition rebuild it runs first.
+ * projectResetService — the whole reset as a batch row runs it (`runProjectResetAnswered`,
+ * every screen's Reset since step-05 S4) and the component-definition rebuild it runs first.
  *
  * WRITTEN 2026-09-04 (PL-22, MUT-08). Both were untested: 174 mutants sat
  * uncovered, every one of them a decision a refactor could flip with the suite
@@ -9,8 +9,8 @@
  * is what a cast or a mock would have hidden.
  *
  * What is asserted:
- *  - the dialog's answer gates everything; a running/starting demo is stopped
- *    first; status goes 'resetting' and is restored on the error path
+ *  - a running/starting demo is stopped first; status goes 'resetting' and is
+ *    restored on the error path
  *  - the rebuilt definitions: frontend source restored from the saved instance,
  *    a dashboard-added App Builder app rebuilt from its instance, the
  *    catalogue-wide fallback, and the two skips (not found, no source)
@@ -18,6 +18,7 @@
  *    directory removed, and the final status/result
  */
 
+import { runningWork } from '@/core/state/projectWorkRunning';
 import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
 import type { Project } from '@/types/base';
 import {
@@ -51,28 +52,11 @@ import {
     showErrorMessage,
     showWarningMessage,
     withProgress,
-} from './projectResetService-resetWithUI.testUtils';
+} from './projectResetService-answered.testUtils';
 
 beforeEach(installResetDefaults);
 
-describe('resetProjectWithUI — the gate and the demo stop', () => {
-    it('asks the SC with a modal naming the project, and does nothing when they decline', async () => {
-        showWarningMessage.mockResolvedValue(undefined);
-        const project = createResetProject();
-        const context = createResetHandlerContext();
-
-        await expect(run(project, context)).resolves.toEqual({ success: false, cancelled: true });
-
-        expect(showWarningMessage).toHaveBeenCalledWith(
-            expect.stringContaining('reset "demo"'),
-            { modal: true },
-            'Reset Project',
-        );
-        expect(context.stateManager.saveProject).not.toHaveBeenCalled();
-        expect(mockCloneAllComponents).not.toHaveBeenCalled();
-        expect(project.status).toBe('ready');
-    });
-
+describe('the answered reset — the demo stop and the status', () => {
     it.each(['running', 'starting'] as const)(
         'stops a %s demo before touching the project',
         async (status) => {
@@ -97,7 +81,7 @@ describe('resetProjectWithUI — the gate and the demo stop', () => {
         },
     );
 
-    it('marks the project resetting and saves it BEFORE the progress notification opens', async () => {
+    it('marks the project resetting and saves it BEFORE the first step is reported', async () => {
         const project = createResetProject();
         const context = createResetHandlerContext();
         const seen: string[] = [];
@@ -109,18 +93,29 @@ describe('resetProjectWithUI — the gate and the demo stop', () => {
 
         expect(seen[0]).toBe('resetting');
         expect((context.stateManager.saveProject as jest.Mock).mock.invocationCallOrder[0]).toBeLessThan(
-            withProgress.mock.invocationCallOrder[0],
+            progressReport.mock.invocationCallOrder[0],
         );
-        // Titled for the project, not for the feature: the same title the modal
-        // carries and the notification it hands over to (PL-59 wording).
-        expect(withProgress).toHaveBeenCalledWith(
-            expect.objectContaining({ title: 'Resetting demo' }),
-            expect.any(Function),
-        );
+    });
+
+    // The projects list reads what is running from the registry, never this copy of
+    // the project (found 2026-10-28: three resets all still said "Needs reset").
+    it('lists the project as resetting while the reset runs, and not after', async () => {
+        const project = createResetProject();
+        const stackOf = mockGetStackById.getMockImplementation();
+        let during: string | undefined;
+        mockGetStackById.mockImplementation((...args: unknown[]) => {
+            during = runningWork(project.path);
+            return stackOf?.(...args);
+        });
+
+        await run(project);
+
+        expect(during).toBe('resetting');
+        expect(runningWork(project.path)).toBeUndefined();
     });
 });
 
-describe('resetProjectWithUI — rebuilding the component definitions', () => {
+describe('the answered reset — rebuilding the component definitions', () => {
     it('reads the registry from the extension path and resolves the saved stack', async () => {
         await run();
 
@@ -128,24 +123,22 @@ describe('resetProjectWithUI — rebuilding the component definitions', () => {
         expect(mockGetStackById).toHaveBeenCalledWith('headless-paas');
     });
 
+    // The batch row shows the reason; nothing here raises a notification beside it.
     it('fails the reset when the saved stack is unknown, restoring the status', async () => {
         mockGetStackById.mockReturnValue(undefined);
         const project = createResetProject({ selectedStack: 'gone' });
         const context = createResetHandlerContext();
 
-        await expect(run(project, context)).resolves.toEqual({
-            success: false,
-            error: 'Stack "gone" not found in stacks.json. Cannot reset.',
-        });
-        expect(showErrorMessage).toHaveBeenCalledWith(
-            'Failed to reset project: Stack "gone" not found in stacks.json. Cannot reset.',
+        await expect(run(project, context)).rejects.toThrow(
+            'Stack "gone" not found in stacks.json. Cannot reset.',
         );
+        expect(showErrorMessage).not.toHaveBeenCalled();
         expect(project.status).toBe('ready');
         expect(mockCloneAllComponents).not.toHaveBeenCalled();
     });
 
     it('never looks the stack up when the project has none', async () => {
-        await run(createResetProject({ selectedStack: undefined }));
+        await expect(run(createResetProject({ selectedStack: undefined }))).rejects.toThrow('Cannot reset.');
 
         expect(mockGetStackById).not.toHaveBeenCalled();
         expect(mockCloneAllComponents).not.toHaveBeenCalled();
@@ -363,7 +356,7 @@ describe('resetProjectWithUI — rebuilding the component definitions', () => {
     });
 });
 
-describe('resetProjectWithUI — the rebuild itself', () => {
+describe('the answered reset — the rebuild itself', () => {
     it('removes the components directory, clears the instances, then clones and installs through one context', async () => {
         const project = createResetProject({
             componentInstances: {
@@ -393,7 +386,7 @@ describe('resetProjectWithUI — the rebuild itself', () => {
         );
     });
 
-    it('the install context saves THIS project and relays progress messages to the notification', async () => {
+    it('the install context saves THIS project and relays progress messages to the row', async () => {
         const project = createResetProject();
         const context = createResetHandlerContext();
 
@@ -409,9 +402,11 @@ describe('resetProjectWithUI — the rebuild itself', () => {
 
         installContext.progressTracker('clone', 40, 'Cloning citisignal…');
         // The clone's own line rides under the step, which keeps its position.
-        expect(progressReport).toHaveBeenCalledWith({
-            message: `${S.downloadingComponents.label} (3 of 5)`,
-        });
+        expect(progressReport).toHaveBeenLastCalledWith(
+            S.downloadingComponents.label,
+            'Cloning citisignal…',
+            { index: 3, total: 5 },
+        );
     });
 
     it('a missing components directory is not an error — it is noted once, at debug', async () => {
@@ -443,15 +438,15 @@ describe('resetProjectWithUI — the rebuild itself', () => {
 
     // Steps from the stage table, named as creation names the same jobs (progress
     // vocabulary slice 6, owner 2026-10-16), numbered from a list known up front.
-    it('reports each step to the notification in order, numbered from the run it is', async () => {
+    it('reports each step to the row in order, numbered from the run it is', async () => {
         await run();
 
-        expect(progressReport.mock.calls.map((c) => c[0].message)).toEqual([
-            `${S.loadingComponents.label} (1 of 5)`,
-            `${S.removingComponents.label} (2 of 5)`,
-            `${S.downloadingComponents.label} (3 of 5)`,
-            `${S.installingComponents.label} (4 of 5)`,
-            `${S.writingConfigFiles.label} (5 of 5)`,
+        expect(progressReport.mock.calls.map((c) => [c[0], c[2]])).toEqual([
+            [S.loadingComponents.label, { index: 1, total: 5 }],
+            [S.removingComponents.label, { index: 2, total: 5 }],
+            [S.downloadingComponents.label, { index: 3, total: 5 }],
+            [S.installingComponents.label, { index: 4, total: 5 }],
+            [S.writingConfigFiles.label, { index: 5, total: 5 }],
         ]);
     });
 
@@ -462,19 +457,19 @@ describe('resetProjectWithUI — the rebuild itself', () => {
 
         await run();
 
-        expect(progressReport.mock.calls.map((c) => c[0].message)).toEqual([
-            `${S.loadingComponents.label} (1 of 7)`,
-            `${S.removingComponents.label} (2 of 7)`,
-            `${S.downloadingComponents.label} (3 of 7)`,
-            `${S.installingComponents.label} (4 of 7)`,
-            `${S.writingConfigFiles.label} (5 of 7)`,
-            `${S.checkingRequirements.label} (6 of 7)`,
-            `${S.redeployingMesh.label} (7 of 7)`,
+        expect(progressReport.mock.calls.map((c) => [c[0], c[2]?.index, c[2]?.total])).toEqual([
+            [S.loadingComponents.label, 1, 7],
+            [S.removingComponents.label, 2, 7],
+            [S.downloadingComponents.label, 3, 7],
+            [S.installingComponents.label, 4, 7],
+            [S.writingConfigFiles.label, 5, 7],
+            [S.checkingRequirements.label, 6, 7],
+            [S.redeployingMesh.label, 7, 7],
         ]);
     });
 });
 
-describe('resetProjectWithUI — the ending', () => {
+describe('the answered reset — the ending', () => {
     // R6: a success ends the progress and says "— done" where it was being
     // watched. The toast that used to sit here held the screen for its own timer
     // after the work had already finished.
@@ -486,7 +481,7 @@ describe('resetProjectWithUI — the ending', () => {
 
         expect(project.status).toBe('ready');
         expect(context.stateManager.saveProject).toHaveBeenLastCalledWith(project);
-        expect(withProgress).toHaveBeenCalledTimes(1);
+        expect(withProgress).not.toHaveBeenCalled();
         expect(mockSleep).not.toHaveBeenCalled();
     });
 
@@ -495,8 +490,8 @@ describe('resetProjectWithUI — the ending', () => {
 
         await expect(run()).resolves.toEqual({ success: true });
 
-        // One progress for the whole reset, mesh leg included.
-        expect(withProgress).toHaveBeenCalledTimes(1);
+        // The row is the whole reset's one surface, mesh leg included.
+        expect(withProgress).not.toHaveBeenCalled();
     });
 
     it('returns the mesh leg’s early result when the redeploy failed', async () => {
@@ -508,20 +503,17 @@ describe('resetProjectWithUI — the ending', () => {
             error: 'Reset completed but mesh redeployment failed: aio exploded',
         });
         // No success notice on top of the warning the mesh leg already showed.
-        expect(withProgress).toHaveBeenCalledTimes(1);
+        expect(withProgress).not.toHaveBeenCalled();
     });
 
-    it('a failure mid-rebuild reports the error, shows it, and restores the original status', async () => {
+    it('a failure mid-rebuild reaches the batch, with the original status restored', async () => {
         mockCloneAllComponents.mockRejectedValue(new Error('git clone failed'));
         const project = createResetProject({ status: 'stopped' });
         const context = createResetHandlerContext();
 
-        await expect(run(project, context)).resolves.toEqual({
-            success: false,
-            error: 'git clone failed',
-        });
+        await expect(run(project, context)).rejects.toThrow('git clone failed');
 
-        expect(showErrorMessage).toHaveBeenCalledWith('Failed to reset project: git clone failed');
+        expect(showErrorMessage).not.toHaveBeenCalled();
         expect(project.status).toBe('stopped');
         expect(context.stateManager.saveProject).toHaveBeenLastCalledWith(project);
         expect(mockInstallAllComponents).not.toHaveBeenCalled();

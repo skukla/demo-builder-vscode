@@ -1,34 +1,35 @@
 /**
  * Fixtures for the projectDeletionService suites — the projects, the handler context,
- * the CDN-unpublish service seam, and the QuickPick that performs one gesture.
+ * the CDN-unpublish service seam, and the answered delete the batch runs.
  *
  * Separate from `projectDeletionService.testUtils` because that file is the jest.mock
  * WALL and must be imported first; this one is ordinary values built on top of it.
  */
 
-import { mockCreateQuickPick } from './projectDeletionService.testUtils';
+import { runProjectDelete } from './projectDeletionService.testUtils';
 import type { DeletionServices } from './projectDeletionService.testUtils';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockProject } from '../../../helpers/projectFake';
 import type { ImsTokenVerdict } from '@/features/eds/services/daLive/daLiveSignInCheck';
+import type { CleanupResultItem } from '@/features/eds/services/resourceCleanupHelpers';
 import type { HandlerContext } from '@/types/handlers';
 import type { Project } from '@/types/base';
 
-/** A plain, non-EDS project — takes the simple warning-modal path. */
+/** A plain, non-EDS project: nothing online to remove. */
 export function plainProject(over: Partial<Project> = {}): Project {
     return createMockProject({ name: 'demo-project', path: '/projects/demo', ...over });
 }
 
 /**
- * An EDS project — takes the cleanup-options dialog path instead.
+ * An EDS project: a repository and a DA.live site online.
  *
  * `extractEdsMetadata` keys off `componentInstances`, NOT `componentSelections`
  * (resourceCleanupHelpers.ts). Getting that wrong is silent: the project
- * simply takes the plain path and every assertion still passes, which is
+ * simply has nothing online and every assertion still passes, which is
  * exactly what the first draft of this file did.
  *
  * The metadata fields are the ones `extractEdsMetadata` reads; without them
- * it returns a null-ish shape and `deleteProject` skips the EDS branch again.
+ * it returns a null-ish shape and the delete skips the EDS branch again.
  */
 export function edsProject(over: Partial<Project> = {}): Project {
     return createMockProject({
@@ -88,78 +89,38 @@ export const SERVICES: DeletionServices = {
     checkDaLiveSignIn: mockCheckDaLiveSignIn,
 };
 
-/**
- * The ways a user leaves the cleanup dialog. Two of them are cancels, and
- * `acceptThenHide` is what real VS Code does: onDidHide fires AFTER onDidAccept,
- * which the production `resolved` guard exists to absorb.
- */
-export type Gesture = 'escape' | 'cancelButton' | 'accept' | 'acceptThenHide';
+/** The resources the SC left ticked in the batch's Delete question. */
+export type Ticked = Array<'github' | 'daLive' | 'datapackData'>;
 
-/** What a test can read back off the dialog the code configured. */
-export interface ArmedQuickPick {
-    /** The rows offered, in the order they were pushed. */
-    items: () => Array<{ id: string; picked?: boolean; description?: string }>;
-    /** What was ticked at the moment `show()` was called — before the gesture. */
-    selectedAtShow: () => Array<{ id: string }>;
-    /** What the user left ticked when they pressed Enter. */
-    selected: () => unknown[];
-    buttons: () => unknown[];
-    flags: () => { canSelectMany: boolean; ignoreFocusOut: boolean };
+/** Every stage the delete reported, as `[stage, position, line under it]`. */
+export const mockStageReport = jest.fn();
+
+/** What an answered delete left: why it stopped, if it did, and what each cleanup step did. */
+export interface AnsweredDeleteRun {
+    stopped?: string;
+    cleanupResults: CleanupResultItem[];
 }
 
 /**
- * A fake `QuickPick` that performs one gesture when the code calls `show()`.
- *
- * The dialog is event-driven — `showCleanupConfirmation` returns a promise that
- * only settles inside `onDidHide` / `onDidTriggerButton` / `onDidAccept` — so a
- * stub that merely records the call would hang the test forever.
+ * Delete a project as the batch does once its question is answered (`projectsBatch.ts`): the
+ * ticked resources as the cleanup options, a given answer for the pack's changes, and a report
+ * that records each stage on `mockStageReport`.
  */
-export function armQuickPick(
-    gesture: Gesture,
-    /** Which resource rows the user leaves ticked when they press Enter. */
-    keep: Array<'github' | 'daLive' | 'datapackData'> = ['github', 'daLive']
-): ArmedQuickPick {
-    const handlers: Record<string, () => void> = {};
-    let selectedAtShow: Array<{ id: string }> = [];
-    const pick = {
-        title: '',
-        placeholder: '',
-        canSelectMany: false,
-        ignoreFocusOut: false,
-        items: [] as Array<{ id: string; picked?: boolean; description?: string }>,
-        selectedItems: [] as Array<{ id: string }>,
-        buttons: [] as unknown[],
-        onDidTriggerButton: (h: () => void) => (handlers.button = h),
-        onDidAccept: (h: () => void) => (handlers.accept = h),
-        onDidHide: (h: () => void) => (handlers.hide = h),
-        hide: () => {},
-        dispose: () => {},
-        show: () => {
-            selectedAtShow = [...pick.selectedItems];
-            if (gesture === 'escape') handlers.hide?.();
-            if (gesture === 'cancelButton') handlers.button?.();
-            if (gesture === 'accept' || gesture === 'acceptThenHide') {
-                // Untick whatever `keep` leaves out — the production code reads
-                // `selectedItems`, so this IS the user's choice.
-                pick.selectedItems = pick.items.filter((i) =>
-                    keep.includes(i.id as 'github' | 'daLive' | 'datapackData')
-                );
-                handlers.accept?.();
-                // VS Code hides the dialog after an accept. A second settle here
-                // would overwrite the answer with a cancel.
-                if (gesture === 'acceptThenHide') handlers.hide?.();
-            }
-        },
+export async function deleteAnswered(
+    ctx: HandlerContext,
+    project: Project,
+    services?: DeletionServices,
+    ticked: Ticked = ['github', 'daLive'],
+): Promise<AnsweredDeleteRun> {
+    const cleanupResults: CleanupResultItem[] = [];
+    const cleanupOptions = {
+        deleteGitHubRepo: ticked.includes('github'),
+        deleteDaLiveSite: ticked.includes('daLive'),
+        removeDatapackData: ticked.includes('datapackData'),
     };
-    mockCreateQuickPick.mockReturnValue(pick);
-    return {
-        items: () => pick.items,
-        selectedAtShow: () => selectedAtShow,
-        selected: () => pick.selectedItems,
-        buttons: () => pick.buttons,
-        flags: () => ({
-            canSelectMany: pick.canSelectMany,
-            ignoreFocusOut: pick.ignoreFocusOut,
-        }),
+    const report = (stage: string, step?: string, position?: unknown): void => {
+        mockStageReport(stage, position, step);
     };
+    const ran = await runProjectDelete(ctx, project, { cleanupOptions, askName: { given: undefined }, cleanupResults, services }, report);
+    return { ...ran, cleanupResults };
 }

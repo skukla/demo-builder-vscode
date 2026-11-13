@@ -8,8 +8,8 @@
  *  - An Edge Delivery project: `runEdsReset` (`edsResetTool.ts`) rewrites the
  *    storefront repository and its DA.live content to the template.
  *  - A headless project: `executeProjectReset` (`projectResetService.ts`) deletes
- *    the components and installs them again — the core `resetProjectWithUI`
- *    wraps, minus its dialog and notification.
+ *    the components and installs them again — the same steps a batch row runs
+ *    (`runProjectResetAnswered`), with no dialog and no notification.
  *
  * Until 2026-10-03 this was `reset_eds_project` and refused a headless project,
  * which left an agent unable to do what the button did.

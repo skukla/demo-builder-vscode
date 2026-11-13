@@ -1,7 +1,6 @@
 /**
- * The words a project delete's question shares between its two windows: the single delete's
- * (`deletionConfirmation.ts`, in the extension) and Delete Selected's (`BatchDeleteQuestions`, in
- * the projects list's webview). Pure, so both bundles can import it (walk F96).
+ * The words a project delete's question uses in the batch window's Delete (`BatchDeleteQuestions`,
+ * in the projects list's webview). Pure, so a webview bundle can import it (walk F96).
  *
  * @module features/projects-dashboard/deleteWords
  */

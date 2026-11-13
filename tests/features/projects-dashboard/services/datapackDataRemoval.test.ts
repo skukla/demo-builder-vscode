@@ -1,25 +1,21 @@
 /**
  * Uninstall Datapack on a project delete (walk F96): offered only where Demo Builder installed
- * the project's datapack in a Commerce instance, named as the library names the pack, and removed
- * through the reset's own removal, whose reason, when the data did not all come out, is what stops
+ * the project's datapack in a Commerce instance, and removed through the reset's own removal, whose reason, when the data did not all come out, is what stops
  * the delete. The store and the library are mocked; the removal's own suite is
  * `sampleDataRemovalChanges.test.ts`.
  */
 
 jest.mock('@/features/data-installer/services/buildDatapackEngine', () => ({ installedByDemoBuilder: jest.fn() }));
-jest.mock('@/features/data-installer/handlers/libraryWriter', () => ({ libraryDisplayName: jest.fn() }));
 jest.mock('@/features/eds/services/reset/edsResetSampleData', () => ({ removeProjectSampleData: jest.fn() }));
 
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockProject } from '../../../helpers/projectFake';
-import { libraryDisplayName } from '@/features/data-installer/handlers/libraryWriter';
 import { installedByDemoBuilder } from '@/features/data-installer/services/buildDatapackEngine';
 import { removeProjectSampleData } from '@/features/eds/services/reset/edsResetSampleData';
-import { hasRemovableData, removableDataOf, removeDataBeforeDelete } from '@/features/projects-dashboard/services/datapackDataRemoval';
+import { hasRemovableData, removeDataBeforeDelete } from '@/features/projects-dashboard/services/datapackDataRemoval';
 import type { Project } from '@/types/base';
 
 const mockedOurs = installedByDemoBuilder as jest.MockedFunction<typeof installedByDemoBuilder>;
-const mockedName = libraryDisplayName as jest.MockedFunction<typeof libraryDisplayName>;
 const mockedRemove = removeProjectSampleData as jest.MockedFunction<typeof removeProjectSampleData>;
 
 const PACK = { name: 'bodea', version: 'main', store: 'library' as const };
@@ -29,7 +25,6 @@ const withPack = (overrides: Partial<Project> = {}): Project =>
 beforeEach(() => {
     jest.clearAllMocks();
     mockedOurs.mockResolvedValue(true);
-    mockedName.mockResolvedValue('Bodea Demo');
 });
 
 describe('whether a delete may remove datapack data', () => {
@@ -41,14 +36,6 @@ describe('whether a delete may remove datapack data', () => {
         await expect(hasRemovableData(withPack({ componentSelections: {} }))).resolves.toBe(false);
         mockedOurs.mockResolvedValue(false);
         await expect(hasRemovableData(withPack())).resolves.toBe(false);
-    });
-
-    it("names the pack as the library does, its own name when the library has none", async () => {
-        await expect(removableDataOf(createMockHandlerContext(), withPack())).resolves.toStrictEqual({ displayName: 'Bodea Demo' });
-        mockedName.mockResolvedValue(undefined);
-        await expect(removableDataOf(createMockHandlerContext(), withPack())).resolves.toStrictEqual({ displayName: 'bodea' });
-        mockedOurs.mockResolvedValue(false);
-        await expect(removableDataOf(createMockHandlerContext(), withPack())).resolves.toBeUndefined();
     });
 });
 

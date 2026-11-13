@@ -1,12 +1,10 @@
 /**
- * Which surface a reset runs on, and which id it is followed by (PL-59 R1).
+ * A storefront reset run inside its caller's window: the batch window (every screen's Reset
+ * since step-05 S4, `answered`) and an Edit's Finish (`withinEdit` alone). It asks nothing,
+ * opens no progress of its own, and tells each step to the caller's `report`.
  *
- * Found by the first mutation run of `edsResetUI` on its own (EDS-8, 2026-10-08):
- * the `progress: 'modal'` option and the `operationId` a screen names its run by
- * were read by no test, so a reset started from a screen could have run in a
- * background notification, or under an id its modal does not follow, with every
- * suite green. The progress surface is replaced here so the options it receives
- * can be read; the surface itself is pinned in `withOperationProgress.test.ts`.
+ * What was this suite's first job, which surface a reset ran on and the id a screen's modal
+ * followed it by (PL-59 R1), went with the one-project reset's own window (step-05 S5).
  */
 
 import {
@@ -41,15 +39,8 @@ jest.mock('@/features/eds/services/reset/edsResetSampleData', () => ({
     removeProjectSampleData: jest.fn(),
 }));
 const mockReport = jest.fn();
-jest.mock('@/core/vscode/withOperationProgress', () => ({
-    withOperationProgress: jest.fn(
-        async (_options: unknown, work: (report: jest.Mock) => Promise<unknown>) => work(mockReport)
-    ),
-}));
 
 import { runningWork } from '@/core/state/projectWorkRunning';
-import { resetOperationId } from '@/core/utils/operationIds';
-import { withOperationProgress } from '@/core/vscode/withOperationProgress';
 import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
 import { removeProjectSampleData } from '@/features/eds/services/reset/edsResetSampleData';
 import { createMeshDepsFake } from '../../../../helpers/meshDepsFake';
@@ -100,83 +91,21 @@ function run(outcome: EdsResetResult, extra: Record<string, unknown> = {}) {
         meshDeps,
         project: createProject(),
         context: createContext(),
+        withinEdit: { report: mockReport },
         ...extra,
     });
 }
 
 beforeEach(() => {
     jest.clearAllMocks();
-    (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Reset Project');
+    (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue(undefined);
     (vscode.window.showErrorMessage as jest.Mock).mockResolvedValue(undefined);
     mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: true });
     mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: true });
     mockEnsureProjectOrgContext.mockResolvedValue({ reachable: true });
 });
 
-describe('resetEdsProjectWithUI — the progress surface', () => {
-    it('runs in a notification named by the reset id when no screen is hosting it', async () => {
-        await run({ success: true });
-
-        expect(withOperationProgress).toHaveBeenCalledWith(
-            {
-                id: resetOperationId('test-project'),
-                title: 'Resetting test-project',
-                inModal: false,
-            },
-            expect.any(Function)
-        );
-    });
-
-    it("runs in the screen's modal, under the id that screen named, when started from one", async () => {
-        await run({ success: true }, { progress: 'modal', operationId: 'op-7' });
-
-        expect(withOperationProgress).toHaveBeenCalledWith(
-            { id: 'op-7', title: 'Resetting test-project', inModal: true },
-            expect.any(Function)
-        );
-    });
-
-    // The card said "JustRite" and the modal said "Resetting justrite" (2026-10-23):
-    // the title is for a person, so it uses the name they gave the project.
-    it("names the project as the SC named it, and keeps the folder name in the id", async () => {
-        const project = createProject();
-        project.title = 'JustRite';
-        mockedReset.mockResolvedValue({ success: true });
-
-        await resetEdsProjectWithUI({
-            githubAppService: fakeGitHubAppService,
-            meshDeps,
-            project,
-            context: createContext(),
-        });
-
-        expect(withOperationProgress).toHaveBeenCalledWith(
-            expect.objectContaining({ id: resetOperationId('test-project'), title: 'Resetting JustRite' }),
-            expect.any(Function),
-        );
-    });
-
-    // The step under the stage is what a screen's modal shows on its second row.
-    it('names each pre-flight check as the step under one stage, in order', async () => {
-        const project = createProject();
-        project.adobe = { organization: 'org-1' };
-        mockedReset.mockResolvedValue({ success: true });
-
-        await resetEdsProjectWithUI({
-            githubAppService: fakeGitHubAppService,
-            meshDeps,
-            project,
-            context: createContext(),
-        });
-
-        expect(mockReport.mock.calls).toStrictEqual([
-            ['Checking requirements', 'Your DA.live sign-in'],
-            ['Checking requirements', 'Your Adobe sign-in'],
-            ['Checking requirements', 'The Adobe organization'],
-            ['Checking requirements', 'The GitHub app on your repo'],
-        ]);
-    });
-
+describe('resetEdsProjectWithUI — the steps it reports', () => {
     // Found on the 2026-10-16 release walk: every message from inside a step was shown
     // AS the stage, with the step's position glued on, so "Publishing block library
     // (11 of 11)" read as eleven of eleven library items. A step's stage is its own
@@ -201,7 +130,7 @@ describe('resetEdsProjectWithUI — the progress surface', () => {
             meshDeps,
             project: createProject(),
             context: createContext(),
-            progress: 'modal',
+            withinEdit: { report: mockReport },
         });
 
         expect(mockReport).toHaveBeenCalledWith(
@@ -216,66 +145,6 @@ describe('resetEdsProjectWithUI — the progress surface', () => {
             index: RESET_STEP.resettingCode,
             total: 11,
         });
-    });
-
-    it('raises no failure toast in a modal, which already shows the reason', async () => {
-        await run({ success: false, error: 'pipeline died' }, { progress: 'modal' });
-
-        expect(vscode.window.showErrorMessage).not.toHaveBeenCalled();
-    });
-
-    // Found on the 2026-10-16 release walk: a reset run from the dashboard finished
-    // in its modal with a clean success, and its warning arrived as a notification
-    // in the corner instead.
-    it("puts a success's warnings on the modal's last view, not in notifications", async () => {
-        const leftover =
-            'Pages from before the reset may still be live on h. Reset again to remove them.';
-        const missing = '3 pages the source has are missing from this storefront: /a, /b, /c';
-
-        const result = await run(
-            {
-                success: true,
-                leftoverPages: { status: 'not-listed', removed: 0, summary: leftover },
-                pipelineWarnings: [leftover, missing],
-            },
-            { progress: 'modal' }
-        );
-
-        expect(result.warning).toBe(`${leftover} ${missing}`);
-        // The confirmation is the only one.
-        expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(1);
-    });
-
-    // The page steps' sentences in the modal's last view: one that left pages undone is
-    // its warning (it reached only the Debug Logs until 2026-10-23), the rest a note.
-    it('ends the modal with a page warning, and the other page sentences as a note', async () => {
-        const undone = "13 category pages couldn't be published; republish the storefront to try again.";
-        const result = await run(
-            {
-                success: true,
-                catalogMenu: undone,
-                productPages: 'Removed 49 product pages.',
-                pageWarnings: [undone],
-            },
-            { progress: 'modal' }
-        );
-
-        expect(result).toMatchObject({ warning: undone, details: ['Removed 49 product pages.'] });
-        expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(1);
-    });
-
-    it('adds no warning to a clean success in a modal', async () => {
-        const result = await run({ success: true }, { progress: 'modal' });
-
-        expect(result).not.toHaveProperty('warning');
-    });
-
-    it('raises the failure toast when no modal is showing the reason', async () => {
-        await run({ success: false, error: 'pipeline died' });
-
-        expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
-            'Failed to reset EDS project: pipeline died'
-        );
     });
 });
 
@@ -294,6 +163,7 @@ describe('resetEdsProjectWithUI — listed as resetting', () => {
             meshDeps,
             project: createProject(),
             context: createContext(),
+            withinEdit: { report: mockReport },
         });
 
         expect(during).toBe('resetting');
@@ -309,6 +179,7 @@ describe('resetEdsProjectWithUI — listed as resetting', () => {
                 meshDeps,
                 project: createProject(),
                 context: createContext(),
+                withinEdit: { report: mockReport },
             }),
         ).rejects.toThrow('pipeline died');
 
@@ -319,14 +190,13 @@ describe('resetEdsProjectWithUI — listed as resetting', () => {
 // An Edit that changes the package resets as part of its Finish (PL-75): it asked
 // its own questions before anything ran, and shows progress on the wizard's screen.
 describe('resetEdsProjectWithUI — within an Edit', () => {
-    it("asks nothing, opens no progress of its own, and reports onto the Edit's screen", async () => {
+    it("asks nothing and reports onto the Edit's screen", async () => {
         const editReport = jest.fn();
 
         const result = await run({ success: true }, { withinEdit: { report: editReport } });
 
         expect(result.success).toBe(true);
         expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
-        expect(withOperationProgress).not.toHaveBeenCalled();
         expect(editReport).toHaveBeenCalledWith('Checking requirements', 'Your DA.live sign-in');
         expect(mockedReset).toHaveBeenCalledTimes(1);
     });
@@ -365,7 +235,6 @@ describe('resetEdsProjectWithUI — answered by a batch', () => {
 
         expect(result.success).toBe(true);
         expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
-        expect(withOperationProgress).not.toHaveBeenCalled();
         // Given, not asked: it goes with the first read, so it reaches the SC's own pack too (step-05 S1).
         expect((removeProjectSampleData as jest.Mock).mock.calls[0][3]).toStrictEqual({ given: { saveAs: 'My Bodea' } });
     });

@@ -158,11 +158,6 @@ export interface EdsResetResult extends HandlerResponse {
      * palette. Absent when it had nothing to say.
      */
     pipelineWarnings?: string[];
-    /**
-     * A success's warnings as one line, for the progress modal's last view: set only
-     * when the reset ran in a modal (`withModalWarning`).
-     */
-    warning?: string;
     /** Additional error details */
     errorDetails?: Record<string, unknown>;
 }

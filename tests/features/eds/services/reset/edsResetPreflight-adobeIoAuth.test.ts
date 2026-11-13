@@ -62,7 +62,6 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 // Imports (after mocks)
 // =============================================================================
 
-import * as vscode from 'vscode';
 import { resetEdsProjectWithUI } from '@/features/eds/services/reset/edsResetUI';
 import {
     createResetContext,
@@ -140,11 +139,6 @@ function createProjectWithMesh(adobeContext?: {
 describe('resetEdsProjectWithUI - Adobe I/O Auth', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-
-        // withProgress executes the callback immediately
-        (vscode.window.withProgress as jest.Mock).mockImplementation(async (_options, callback) => {
-            return callback({ report: jest.fn() });
-        });
     });
 
     it('should call ensureAdobeIOAuth with project adobe context when mesh project resets', async () => {
@@ -159,12 +153,8 @@ describe('resetEdsProjectWithUI - Adobe I/O Auth', () => {
         // And: ensureAdobeIOAuth returns failed (causes early return)
         mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: false });
 
-        // And: User confirms reset
-        (vscode.window.showWarningMessage as jest.Mock)
-            .mockResolvedValueOnce('Reset Project');
-
         // When
-        const result = await resetEdsProjectWithUI({ meshDeps, project, context, packages: testPackages });
+        const result = await resetEdsProjectWithUI({ meshDeps, project, context, packages: testPackages, withinEdit: { report: jest.fn() } });
 
         // Then: Should call ensureAdobeIOAuth with project context
         expect(mockEnsureAdobeIOAuth).toHaveBeenCalledWith(
@@ -191,11 +181,8 @@ describe('resetEdsProjectWithUI - Adobe I/O Auth', () => {
         // And: ensureAdobeIOAuth returns failed (early return, before any reset work)
         mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: false });
 
-        (vscode.window.showWarningMessage as jest.Mock)
-            .mockResolvedValueOnce('Reset Project');
-
         // When
-        await resetEdsProjectWithUI({ meshDeps, project, context, packages: testPackages });
+        await resetEdsProjectWithUI({ meshDeps, project, context, packages: testPackages, withinEdit: { report: jest.fn() } });
 
         // Then: ensureAdobeIOAuth is called with the org set and the ids undefined
         expect(mockEnsureAdobeIOAuth).toHaveBeenCalledWith(
@@ -219,9 +206,8 @@ describe('resetEdsProjectWithUI - Adobe I/O Auth', () => {
         });
         const context = createResetContext(project);
         mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: false });
-        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValueOnce('Reset Project');
 
-        const result = await resetEdsProjectWithUI({ meshDeps, project, context, packages: testPackages });
+        const result = await resetEdsProjectWithUI({ meshDeps, project, context, packages: testPackages, withinEdit: { report: jest.fn() } });
 
         expect(mockEnsureAdobeIOAuth).toHaveBeenCalled();
         expect(result.errorType).toBe('ADOBE_AUTH_REQUIRED');
@@ -234,11 +220,10 @@ describe('resetEdsProjectWithUI - Adobe I/O Auth', () => {
             componentSelections: { backend: 'adobe-commerce-paas' },
         });
         const context = createResetContext(project);
-        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValueOnce('Reset Project');
 
         // The run goes on past the Adobe step to the GitHub app check, which this suite does not
         // set up; it is the Adobe step that is in question, and it comes first.
-        await resetEdsProjectWithUI({ meshDeps, project, context, packages: testPackages }).catch(() => undefined);
+        await resetEdsProjectWithUI({ meshDeps, project, context, packages: testPackages, withinEdit: { report: jest.fn() } }).catch(() => undefined);
 
         expect(mockEnsureAdobeIOAuth).not.toHaveBeenCalled();
     });

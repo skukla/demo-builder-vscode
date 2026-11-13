@@ -7,7 +7,6 @@
  * Functions:
  * - extractEdsMetadata: Extract EDS metadata from project
  * - getLinkedEdsProjects: Get all projects with EDS metadata
- * - formatCleanupResults: Human-readable cleanup summary
  */
 
 import { COMPONENT_IDS } from '@/core/constants';
@@ -129,104 +128,4 @@ export async function getLinkedEdsProjects(
     }
 
     return edsProjects;
-}
-
-// ==========================================================
-// Combined Cleanup Operations
-// ==========================================================
-
-// ==========================================================
-// Results Formatting
-// ==========================================================
-
-/**
- * Format cleanup results into human-readable summary
- * @param results - Array of cleanup results
- * @returns Formatted summary string
- */
-export function formatCleanupResults(results: CleanupResultItem[]): string {
-    if (results.length === 0) {
-        return 'No cleanup operations performed.';
-    }
-
-    const succeeded = results.filter(r => r.success && !r.skipped);
-    const failed = results.filter(r => !r.success && !r.skipped);
-    const skipped = results.filter(r => r.skipped);
-
-    const lines: string[] = [];
-
-    if (succeeded.length > 0) {
-        const successItems = succeeded.map(r => formatResourceName(r.type, r.name)).join(', ');
-        lines.push(`✓ Cleaned up: ${successItems}`);
-    }
-
-    if (failed.length > 0) {
-        for (const result of failed) {
-            const name = formatResourceName(result.type, result.name);
-            lines.push(`✗ Failed: ${name}${result.error ? ` - ${result.error}` : ''}`);
-        }
-    }
-
-    if (skipped.length > 0) {
-        const skippedItems = skipped.map(r => formatResourceName(r.type, r.name)).join(', ');
-        lines.push(`○ Skipped: ${skippedItems}`);
-    }
-
-    return lines.join('\n');
-}
-
-/**
- * Format a resource type and name for display
- */
-function formatResourceName(type: CleanupResultItem['type'], name: string): string {
-    switch (type) {
-        case 'github':
-            return `GitHub repo (${name})`;
-        case 'daLive':
-            return `DA.live site (${name})`;
-        case 'helix':
-            return `Helix CDN (${name})`;
-        case 'backend':
-            return `Backend data (${name})`;
-        case 'datapack':
-            return `Datapack (${name})`;
-        default:
-            return name;
-    }
-}
-
-/**
- * Create a summary message for cleanup operations
- * @param results - Array of cleanup results
- * @returns Object with summary counts and message
- */
-export function summarizeCleanupResults(results: CleanupResultItem[]): {
-    total: number;
-    succeeded: number;
-    failed: number;
-    skipped: number;
-    message: string;
-} {
-    const succeeded = results.filter(r => r.success && !r.skipped).length;
-    const failed = results.filter(r => !r.success && !r.skipped).length;
-    const skipped = results.filter(r => r.skipped).length;
-
-    let message: string;
-    if (failed === 0 && succeeded > 0) {
-        message = `Successfully cleaned up ${succeeded} resource${succeeded !== 1 ? 's' : ''}.`;
-    } else if (failed > 0 && succeeded > 0) {
-        message = `Cleaned up ${succeeded} resource${succeeded !== 1 ? 's' : ''}, ${failed} failed.`;
-    } else if (failed > 0 && succeeded === 0) {
-        message = `Failed to clean up ${failed} resource${failed !== 1 ? 's' : ''}.`;
-    } else {
-        message = 'No resources were cleaned up.';
-    }
-
-    return {
-        total: results.length,
-        succeeded,
-        failed,
-        skipped,
-        message,
-    };
 }

@@ -15,7 +15,6 @@
  */
 
 import * as vscode from 'vscode';
-import type { CleanupOptions } from './deletionConfirmation';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { askDuringOperation } from '@/core/vscode/operationPrompt';
 import { ensureDaLiveAuth as ensureDaLiveAuthShared, getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
@@ -37,6 +36,19 @@ import {
 } from '@/features/eds/services/storefront/storefrontTeardown';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
+
+/**
+ * What the SC chose to remove beside the project's files: which online resources, and the
+ * datapack's data.
+ */
+export interface CleanupOptions {
+    deleteGitHubRepo: boolean;
+    deleteDaLiveSite: boolean;
+    /** Also remove its datapack's data from Commerce, its changes saved first. Absent means keep it. */
+    removeDatapackData?: boolean;
+    /** The project being deleted: it does not count as "another project on the repository". */
+    projectPath?: string;
+}
 
 /**
  * The Helix calls the delete makes, out of a class with dozens: four for the CDN

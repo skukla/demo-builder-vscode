@@ -12,7 +12,7 @@
  * Not in `core/`: core cannot import a feature's types, and the entry type is
  * project-creation's. Not inside `componentInstallationOrchestrator` either: the
  * suites that drive both callers replace that module with a two-function mock
- * (`projectResetService-resetWithUI.test.ts`, `executor-orchestrationSeams.test.ts`),
+ * (`projectResetService-answered.test.ts`, `executor-orchestrationSeams.test.ts`),
  * and a helper living there would be `undefined` under them.
  *
  * @module features/project-creation/services/componentDefinitionEntry

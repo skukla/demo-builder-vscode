@@ -1,11 +1,11 @@
 /**
  * The reset door for a project built on an added demo.
  *
- * Decided 2026-09-11: the source is checked BEFORE the first modal, an
- * unreachable one refuses in a sentence, a missing content site offers to
- * keep the current content, and the dry check's caveats are shown when the
- * reset finishes. Each case pins the arguments the VS Code window API and
- * the reset service receive.
+ * Decided 2026-09-11: the source is checked before anything runs, an
+ * unreachable one refuses in a sentence, and a missing content site offers to
+ * keep the current content. Each case pins the arguments the VS Code window API
+ * and the reset service receive. Driven as the batch runs it (`withinEdit`);
+ * the keep-content offer is still a VS Code dialog there (open question P5-Q8).
  */
 
 import {
@@ -39,9 +39,6 @@ jest.mock('@/features/eds/services/reset/demoSourceCheck', () => ({
     checkDemoSource: jest.fn(),
 }));
 jest.mock('@/core/utils/sleep');
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({ show: jest.fn() }),
-}));
 
 import { checkDemoSource } from '@/features/eds/services/reset/demoSourceCheck';
 import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
@@ -57,7 +54,6 @@ import { makeAddedDemo } from '../../../../helpers/demoPackageFixtures';
 const mockedReset = executeEdsReset as jest.MockedFunction<typeof executeEdsReset>;
 const mockedCheck = checkDemoSource as jest.MockedFunction<typeof checkDemoSource>;
 const meshDeps = createMeshDepsFake();
-const RESET = 'Reset Project';
 const UNREACHABLE = "The Isle5 by Jen demo's repository can't be reached. Reset and updates are unavailable until it is.";
 const REACHABLE: DemoSourceCheck = { reachable: true, checked: true, message: '', contentReachable: true };
 const CONTENT_GONE: DemoSourceCheck = {
@@ -105,12 +101,13 @@ function run(outcome: EdsResetResult = { success: true }) {
         project: createProject(),
         context: createContext(),
         repoOperations,
+        withinEdit: { report: jest.fn() },
     });
 }
 
 beforeEach(() => {
     jest.clearAllMocks();
-    (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue(RESET);
+    (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue(undefined);
     (vscode.window.showErrorMessage as jest.Mock).mockResolvedValue(undefined);
     mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: true });
     mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: true });
@@ -131,26 +128,19 @@ describe('reset of a project built on an added demo — the source check', () =>
         expect(mockedReset).toHaveBeenCalledTimes(1);
     });
 
-    it('refuses in one sentence, before the confirmation, when the source is unreachable', async () => {
+    it('refuses in one sentence when the source is unreachable', async () => {
         mockedCheck.mockResolvedValue({ reachable: false, checked: true, message: UNREACHABLE, contentReachable: false });
 
         const result = await run();
 
         expect(result).toEqual({ success: false, error: UNREACHABLE, errorType: 'DEMO_SOURCE_UNREACHABLE' });
         expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(UNREACHABLE);
-        expect(vscode.window.showWarningMessage).not.toHaveBeenCalledWith(
-            expect.stringContaining('Reset Project'),
-            expect.anything(),
-            expect.anything(),
-        );
         expect(mockedReset).not.toHaveBeenCalled();
     });
 
     it('offers to keep the current content when the content site is gone, and resets the code only', async () => {
         mockedCheck.mockResolvedValue(CONTENT_GONE);
-        (vscode.window.showWarningMessage as jest.Mock)
-            .mockResolvedValueOnce({ title: 'Keep Current Content' })
-            .mockResolvedValue(RESET);
+        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValueOnce({ title: 'Keep Current Content' });
 
         await run();
 
@@ -191,6 +181,7 @@ describe('reset of a project built on an added demo — the source check', () =>
             project,
             context: createContext(),
             repoOperations,
+            withinEdit: { report: jest.fn() },
         });
 
         expect(mockedCheck).not.toHaveBeenCalled();

@@ -6638,43 +6638,6 @@
             "source": "PL-22 MUT-02, 2026-09-05"
         },
         {
-            "module": "src/features/eds/services/resourceCleanupHelpers.ts",
-            "anchors": [
-                "if (failed.length > 0) {"
-            ],
-            "mutants": 2,
-            "category": "branch",
-            "reason": "The body of this guard is a for-of over the very array the guard tests, so entering it with an empty array does nothing at all: no line is pushed and the output is unchanged. Widening the condition to true or to '>= 0' therefore produces byte-identical text for every input. Its two neighbours are NOT equivalent and are killed \u2014 they join a list into one heading line, so an empty group there prints a bare heading, which 'leaves out the skipped heading entirely when nothing was skipped' catches.",
-            "decision": "none \u2014 the guard reads as a group with the two beside it, and the loop it wraps is genuinely a no-op when empty",
-            "recorded": "2026-09-05",
-            "source": "PL-22 MUT-02, 2026-09-05"
-        },
-        {
-            "module": "src/features/eds/services/resourceCleanupHelpers.ts",
-            "anchors": [
-                "} else if (failed > 0 && succeeded > 0) {",
-                "} else if (failed > 0 && succeeded === 0) {"
-            ],
-            "mutants": 3,
-            "category": "branch",
-            "reason": "Each of these arms restates a fact the arm above it has already excluded. Reaching the second means 'failed === 0 && succeeded > 0' was false; combined with failed > 0 that leaves succeeded > 0 implied, so widening the failed half to true or to '>= 0' selects the same arm for every input. Reaching the third means the second was also false, which with failed > 0 forces succeeded to be 0, so widening 'succeeded === 0' to true likewise changes nothing. The messages themselves ARE pinned, by the mixed-run and single-failure cases.",
-            "decision": "none \u2014 spelling out both halves of each arm is what makes the four-way split readable; the redundancy is the point",
-            "recorded": "2026-09-05",
-            "source": "PL-22 MUT-02, 2026-09-05"
-        },
-        {
-            "module": "src/features/eds/services/resourceCleanupHelpers.ts",
-            "anchors": [
-                "default:"
-            ],
-            "mutants": 1,
-            "category": "branch",
-            "reason": "formatResourceName switches on CleanupResultItem['type'], a closed union of four string literals, and the switch has a case for every one of them. The default arm is therefore unreachable for any value the compiler will let a caller pass; driving it would take a cast at the call boundary, which silences the one check that makes the union worth having. Every reachable arm is pinned by the exact-output tests in the formatCleanupResults suite.",
-            "decision": "none \u2014 the default returns the raw name, which is the right answer if the union ever gains a member before this switch does",
-            "recorded": "2026-09-05",
-            "source": "PL-22 MUT-02, 2026-09-05"
-        },
-        {
             "module": "src/features/eds/handlers/storefrontSetup/storefrontSetupPhase3.ts",
             "anchors": [
                 "} else {"
@@ -7404,68 +7367,6 @@
             "category": "optionalChain",
             "reason": "Two optional chains on one line; only the SECOND is unreachable. Dropping the '?' on payload?.newName throws only when payload is undefined, and short-circuiting means the left operand already returned in that case. No input reaches it. The first chain on the same line IS killed, by the absent-payload test.",
             "decision": "none \u2014 the mutant is equivalent: no call can distinguish it.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
-            "anchors": [
-                "if (cleanupResults.length > 0) {"
-            ],
-            "mutants": 5,
-            "category": "branch",
-            "reason": "The block is one logger.info of the formatted cleanup summary. Both outcomes return the same response and perform no further work; only the log transcript differs.",
-            "decision": "none \u2014 a test could only assert log wording, which the logger-argument rule forbids.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/projects-dashboard/services/deletionConfirmation.ts",
-            "anchors": [
-                "if (resolved) return;"
-            ],
-            "line": 247,
-            "mutants": 1,
-            "category": "branch",
-            "reason": "A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. The guard's FORCED-TRUE half IS killed (a gesture that returns early never settles, and the test hangs); the forced-false and 'resolved = false' halves leave behaviour identical because the extra resolve is discarded. Re-anchored 2026-11-10 (246 -> 247): unchanged code; the delete question's box label moved to `uninstallWords.ts`, one import line above it (review fixes).",
-            "decision": "none \u2014 equivalent. The acceptThenHide test proves the ORDER is survived; it cannot prove the flag is what survives it.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/projects-dashboard/services/deletionConfirmation.ts",
-            "anchors": [
-                "resolved = true;"
-            ],
-            "line": 248,
-            "mutants": 1,
-            "category": "branch",
-            "reason": "A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. The guard's FORCED-TRUE half IS killed (a gesture that returns early never settles, and the test hangs); the forced-false and 'resolved = false' halves leave behaviour identical because the extra resolve is discarded. Re-anchored 2026-11-10 (247 -> 248): unchanged code; the delete question's box label moved to `uninstallWords.ts`, one import line above it (review fixes).",
-            "decision": "none \u2014 equivalent.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/projects-dashboard/services/deletionConfirmation.ts",
-            "anchors": [
-                "quickPick.selectedItems = items.filter(i => i.picked);"
-            ],
-            "mutants": 1,
-            "category": "other",
-            "reason": "Replacing the predicate body with a constant yields the same empty selection, because every item is built with 'picked: false' \u2014 nothing is ever pre-ticked, which is itself the tested behaviour (a pre-ticked row would make Enter destructive). The METHOD-level mutant on the same line IS killed by that assertion; only the arrow body is unobservable.",
-            "decision": "none \u2014 equivalent.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
-            "anchors": [
-                "if (selection === 'Open Settings') {"
-            ],
-            "mutants": 1,
-            "category": "branch",
-            "reason": "Forcing this true cannot be observed because there is exactly ONE action on the tip, and showOneTimeTip already filters a dismissal ('if (selection && options.onAction)'). So the only selection that reaches this line is the one it tests for. The forced-FALSE half is killed by the test that the action opens the cleanupBehavior setting.",
-            "decision": "none \u2014 equivalent unless a second action is added, at which point this row is stale and the mutant becomes killable.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"
         },
@@ -10888,70 +10789,6 @@
             "decision": "It was previously killed by asserting that warning's wording, which tests/sop/no-logger-wording-assertions.test.ts refuses; the assertion was removed and the mutant recorded instead.",
             "recorded": "2026-09-06",
             "source": "Found 2026-09-06 when the ratchet caught the score falling after that assertion was replaced by one on the project's own state."
-        },
-        {
-            "module": "src/features/projects-dashboard/services/deletionConfirmation.ts",
-            "anchors": [
-                "return { deleteGitHubRepo: false, deleteDaLiveSite: false };"
-            ],
-            "mutants": 1,
-            "category": "other",
-            "reason": "Emptying the returned object leaves both flags undefined, which is falsy exactly where false was: performEdsCleanup skips the repo on a falsy deleteGitHubRepo and performDaLiveCleanup returns on a falsy deleteDaLiveSite. Since 2026-10-09 this one line answers both the localOnly setting and an EDS project with nothing to offer (the plain modal was pasted three times and became confirmPlainDelete); flipping either literal to true IS now killed, by the localOnly test that spares both resources.",
-            "decision": "none \u2014 equivalent; the suite asserts the calls made, which do not move.",
-            "recorded": "2026-10-09",
-            "source": "EDS-8 split of projectDeletionService"
-        },
-        {
-            "module": "src/features/projects-dashboard/services/deletionConfirmation.ts",
-            "anchors": [
-                "if (resolved) return;"
-            ],
-            "line": 230,
-            "mutants": 1,
-            "category": "branch",
-            "reason": "In the handler for the Cancel button: A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. VS Code fires onDidHide after onDidAccept and after the Cancel button's hide(), and nothing fires twice, so dropping this guard or never setting the flag only adds a discarded resolve and a second hide() of a dialog already hidden. Measured 2026-10-09 on the split file; the same reasoning as the onDidHide row. Re-anchored 2026-11-10 (229 -> 230): unchanged code; the delete question's box label moved to `uninstallWords.ts`, one import line above it (review fixes).",
-            "decision": "none \u2014 equivalent. The acceptThenHide and cancel tests prove the answer survives the extra event; they cannot prove the flag is what makes it so.",
-            "recorded": "2026-10-09",
-            "source": "EDS-8 split of projectDeletionService"
-        },
-        {
-            "module": "src/features/projects-dashboard/services/deletionConfirmation.ts",
-            "anchors": [
-                "resolved = true;"
-            ],
-            "line": 231,
-            "mutants": 1,
-            "category": "branch",
-            "reason": "In the handler for the Cancel button: A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. VS Code fires onDidHide after onDidAccept and after the Cancel button's hide(), and nothing fires twice, so dropping this guard or never setting the flag only adds a discarded resolve and a second hide() of a dialog already hidden. Measured 2026-10-09 on the split file; the same reasoning as the onDidHide row. Re-anchored 2026-11-10 (230 -> 231): unchanged code; the delete question's box label moved to `uninstallWords.ts`, one import line above it (review fixes).",
-            "decision": "none \u2014 equivalent. The acceptThenHide and cancel tests prove the answer survives the extra event; they cannot prove the flag is what makes it so.",
-            "recorded": "2026-10-09",
-            "source": "EDS-8 split of projectDeletionService"
-        },
-        {
-            "module": "src/features/projects-dashboard/services/deletionConfirmation.ts",
-            "anchors": [
-                "if (resolved) return;"
-            ],
-            "line": 238,
-            "mutants": 1,
-            "category": "branch",
-            "reason": "In the handler for Enter (accept): A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. VS Code fires onDidHide after onDidAccept and after the Cancel button's hide(), and nothing fires twice, so dropping this guard or never setting the flag only adds a discarded resolve and a second hide() of a dialog already hidden. Measured 2026-10-09 on the split file; the same reasoning as the onDidHide row. Re-anchored 2026-11-10 (237 -> 238): unchanged code; the delete question's box label moved to `uninstallWords.ts`, one import line above it (review fixes).",
-            "decision": "none \u2014 equivalent. The acceptThenHide and cancel tests prove the answer survives the extra event; they cannot prove the flag is what makes it so.",
-            "recorded": "2026-10-09",
-            "source": "EDS-8 split of projectDeletionService"
-        },
-        {
-            "module": "src/features/projects-dashboard/services/deletionConfirmation.ts",
-            "anchors": [
-                "resolved = true;"
-            ],
-            "line": 239,
-            "mutants": 1,
-            "category": "branch",
-            "reason": "In the handler for Enter (accept): A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. VS Code fires onDidHide after onDidAccept and after the Cancel button's hide(), and nothing fires twice, so dropping this guard or never setting the flag only adds a discarded resolve and a second hide() of a dialog already hidden. Measured 2026-10-09 on the split file; the same reasoning as the onDidHide row. Re-anchored 2026-11-10 (238 -> 239): unchanged code; the delete question's box label moved to `uninstallWords.ts`, one import line above it (review fixes).",
-            "decision": "none \u2014 equivalent. The acceptThenHide and cancel tests prove the answer survives the extra event; they cannot prove the flag is what makes it so.",
-            "recorded": "2026-10-09",
-            "source": "EDS-8 split of projectDeletionService"
         },
         {
             "module": "src/features/ai/server/agentOperationNotifier.ts",

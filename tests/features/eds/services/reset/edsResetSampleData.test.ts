@@ -1,17 +1,18 @@
 /**
  * RENAMED from `edsResetUI-sampleData.test.ts` on 2026-10-08 (EDS-8 split by job):
  * the sample-data step moved to `edsResetSampleData.ts`.
- * A suite is paired with the module it is named for. Still driven through the
- * public entry point; no assertion changed in the rename.
+ * A suite is paired with the module it is named for.
  *
- * Reset and the imported sample data.
+ * Reset and the imported sample data. Since step-05 S5 the question is asked before anything
+ * runs: by Edit (`executorEditApply.ts`, through `confirmSampleDataRemoval`) or by the batch
+ * window, whose answer reaches the reset as `answered.removeDatapack`.
  *
  * Reset has always meant "put the STOREFRONT back": repo to template, CDN sync,
  * DA.live content re-copied. Sample data is a different target — products,
  * categories and customers on a live Commerce instance — so folding it in
  * silently would widen what an existing button destroys.
  *
- * So it is a SECOND prompt, and these pin its three properties:
+ * So it is a SEPARATE question, and these pin its three properties:
  *
  * 1. **Only when there is something to remove.** A project that recorded no
  *    pack is never asked; an extra modal answering itself is noise.
@@ -38,6 +39,10 @@ import {
     vscode,
     fakeGitHubAppService,
 } from './edsResetUI.testUtils';
+import {
+    beginSampleDataRemovalCheck,
+    confirmSampleDataRemoval,
+} from '@/features/eds/services/reset/edsResetSampleData';
 import type { Project, ProjectStatus } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -85,7 +90,6 @@ const meshDeps = createMeshDepsFake();
 
 const mockedReset = executeEdsReset as jest.MockedFunction<typeof executeEdsReset>;
 const mockedRemove = removeSampleData as jest.MockedFunction<typeof removeSampleData>;
-const RESET = 'Reset Project';
 // The datapack prompt uses MessageItem buttons (its Keep Data button replaces
 // the modal's automatic Cancel — user-reported ambiguity, 2026-08-23), so the
 // mock resolves the shape VS Code resolves: the item, not a string.
@@ -145,7 +149,7 @@ function createContext(): HandlerContext {
     });
 }
 
-/** The confirm answers, in order: the reset, then the sample-data prompt. */
+/** The question's answers, in order. */
 function answers(...values: Array<string | { title: string } | undefined>): void {
     const mock = vscode.window.showWarningMessage as jest.Mock;
     mock.mockReset();
@@ -155,27 +159,22 @@ function answers(...values: Array<string | { title: string } | undefined>): void
     mock.mockResolvedValue(undefined);
 }
 
-/**
- * Let the SUT's dynamic imports and its detached removal check settle.
- *
- * The check is started without being awaited, so nothing the caller returns
- * guarantees it has run. A microtask tick is not enough — `await import()`
- * resolves on the macrotask queue.
- */
-async function flush(): Promise<void> {
-    for (let i = 0; i < 5; i++) {
-        await new Promise((resolve) => setImmediate(resolve));
-    }
-}
-
-function run(project: Project) {
+/** The reset as a batch runs it, with the SC's Uninstall Datapack answer. */
+function run(project: Project, removeDatapack = true) {
     return resetEdsProjectWithUI({
         githubAppService: fakeGitHubAppService,
         meshDeps,
         project,
         context: createContext(),
         packages: testPackages,
+        withinEdit: { report: jest.fn() },
+        answered: { removeDatapack },
     });
+}
+
+/** The question as Edit asks it (`executorEditApply.ts`): gated on the same check. */
+function ask(project: Project): Promise<boolean> {
+    return confirmSampleDataRemoval(project, vscode, beginSampleDataRemovalCheck(project));
 }
 
 beforeEach(() => {
@@ -186,43 +185,81 @@ beforeEach(() => {
     mockedRemove.mockResolvedValue({ ran: true, outcome: 'success' });
 });
 
-describe('resetEdsProjectWithUI — sample data', () => {
+describe('the question', () => {
     /** Rule 1. */
     it('never asks when the project recorded no pack', async () => {
-        answers(RESET);
+        await expect(ask(createProject())).resolves.toBe(false);
 
+        expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
+    });
+
+    it('asks, and names the pack, when one was recorded', async () => {
+        answers(undefined);
+
+        await ask(createProject({ name: 'bodea', version: 'main' }));
+
+        const first = (vscode.window.showWarningMessage as jest.Mock).mock.calls[0];
+        // A question, never the pack's id (review, 2026-11-10): "Uninstall My Luma Too?".
+        expect(String(first[0])).toMatch(/^Uninstall .+ Too\?$/u);
+        expect(String(first[0])).not.toMatch(/bodea@main/u);
+    });
+
+    /** Rule 2 — the important one. */
+    it('KEEPS the data when the prompt is dismissed', async () => {
+        answers(undefined);
+
+        await expect(ask(createProject({ name: 'bodea', version: 'main' }))).resolves.toBe(false);
+    });
+
+    /**
+     * Do not ask for something we cannot deliver. Measured live 2026-08-16: reset offered
+     * sample-data removal, ran the full ~3-minute storefront reset, and only THEN reported it
+     * could not remove anything. It used to be decided by resolving the project's Commerce
+     * credentials; the Data Installer service signs in with its own (DEMOSYS-1698), so what
+     * decides it now is whether the project has a Commerce backend (DI-6).
+     */
+    it('asks for an ACCS project that saved no Commerce credentials', async () => {
+        answers(REMOVE);
+
+        await expect(ask(createProject({ name: 'bodea', version: 'main' }))).resolves.toBe(true);
+    });
+
+    it('does not ask when the project has no Commerce backend', async () => {
+        const project = createProject({ name: 'bodea', version: 'main' });
+        (project as { componentSelections?: unknown }).componentSelections = undefined;
+
+        await expect(ask(project)).resolves.toBe(false);
+
+        expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
+    });
+});
+
+describe('resetEdsProjectWithUI — sample data, answered', () => {
+    it('removes nothing when the project recorded no pack', async () => {
         await run(createProject());
 
-        expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(1);
         expect(mockedRemove).not.toHaveBeenCalled();
     });
 
     it('runs the DA.live guard before the reset', async () => {
         // The guard asks IMS, so a locally-valid token IMS no longer accepts stops
         // here rather than three minutes into the pipeline (2026-08-16, 2026-10-28).
-        answers(RESET);
-
         await run(createProject());
 
         expect(mockEnsureDaLiveAuth).toHaveBeenCalledWith(expect.anything(), expect.any(String));
     });
 
-    it('asks, and names the pack, when one was recorded', async () => {
-        answers(RESET, undefined);
+    it('KEEPS the data when the SC did not tick Uninstall Datapack', async () => {
+        await run(createProject({ name: 'bodea', version: 'main' }), false);
 
-        await run(createProject({ name: 'bodea', version: 'main' }));
-
-        const second = (vscode.window.showWarningMessage as jest.Mock).mock.calls[1];
-        // A question, never the pack's id (review, 2026-11-10): "Uninstall My Luma Too?".
-        expect(String(second[0])).toMatch(/^Uninstall .+ Too\?$/u);
-        expect(String(second[0])).not.toMatch(/bodea@main/u);
+        expect(mockedRemove).not.toHaveBeenCalled();
     });
 
-    /** Rule 2 — the important one. */
-    it('KEEPS the data when the prompt is dismissed', async () => {
-        answers(RESET, undefined);
+    it('removes nothing when the project has no Commerce backend', async () => {
+        const project = createProject({ name: 'bodea', version: 'main' });
+        (project as { componentSelections?: unknown }).componentSelections = undefined;
 
-        await run(createProject({ name: 'bodea', version: 'main' }));
+        await run(project);
 
         expect(mockedRemove).not.toHaveBeenCalled();
     });
@@ -243,7 +280,6 @@ describe('resetEdsProjectWithUI — sample data', () => {
      * no assertion about outcomes would notice.
      */
     it('runs the data step BEFORE the storefront reset, so pre-warming is not wasted', async () => {
-        answers(RESET, REMOVE);
 
         await run(createProject({ name: 'bodea', version: 'main' }));
 
@@ -254,7 +290,6 @@ describe('resetEdsProjectWithUI — sample data', () => {
 
     /** Rule 3. */
     it('still reports the reset as successful when the removal fails', async () => {
-        answers(RESET, REMOVE);
         mockedRemove.mockResolvedValue({ ran: false, reason: 'the service refused' });
 
         const result = await run(createProject({ name: 'bodea', version: 'main' }));
@@ -263,54 +298,10 @@ describe('resetEdsProjectWithUI — sample data', () => {
     });
 
     it('does not throw when the removal itself blows up', async () => {
-        answers(RESET, REMOVE);
         mockedRemove.mockRejectedValue(new Error('unexpected'));
 
         await expect(run(createProject({ name: 'bodea', version: 'main' }))).resolves.toMatchObject(
             { success: true }
         );
-    });
-});
-
-/**
- * Do not ask for something we cannot deliver.
- *
- * Measured live 2026-08-16: reset offered sample-data removal, ran the full
- * ~3-minute storefront reset, and only THEN reported it could not remove anything.
- * So the question is decided before the prompt.
- *
- * It used to be decided by resolving the project's Commerce credentials. The Data
- * Installer service signs in with its own (DEMOSYS-1698), so what decides it now is
- * whether the project has a Commerce backend to remove the pack from (DI-6).
- */
-describe('resetEdsProjectWithUI — asks only when it can deliver', () => {
-    it('asks for an ACCS project that saved no Commerce credentials', async () => {
-        answers(RESET, REMOVE);
-
-        await run(createProject({ name: 'bodea', version: 'main' }));
-
-        expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(2);
-        expect(mockedRemove).toHaveBeenCalled();
-    });
-
-    it('does not ask when the project has no Commerce backend', async () => {
-        answers(RESET);
-        const project = createProject({ name: 'bodea', version: 'main' });
-        (project as { componentSelections?: unknown }).componentSelections = undefined;
-
-        await run(project);
-
-        expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(1);
-        expect(mockedRemove).not.toHaveBeenCalled();
-    });
-
-    it('asks nothing more when the reset is cancelled', async () => {
-        answers(undefined);
-
-        await run(createProject({ name: 'bodea', version: 'main' }));
-        await flush();
-
-        expect(vscode.window.showWarningMessage).toHaveBeenCalledTimes(1);
-        expect(mockedRemove).not.toHaveBeenCalled();
     });
 });

@@ -35,9 +35,9 @@ const BASE_DELAY = TIMEOUTS.FILE_DELETE_RETRY_BASE;
  *
  * Stops the demo if running, removes the project directory (with retry), drops it
  * from the recent list, and clears the current-project pointer if it matched. The
- * headless core shared by the UI `deleteProject` (which wraps it with confirmation
- * + progress + optional EDS cloud cleanup) and the MCP `delete_project` tool
- * (which gates it with confirm + a name echo). Cloud resources are handled
+ * headless core shared by the batch's answered delete (`runProjectDelete`, which runs
+ * the chosen cloud cleanup first) and the MCP `delete_project` tool (which gates it
+ * with confirm + a name echo). Cloud resources are handled
  * separately (delete_github_repo / cleanup_dalive_site).
  */
 export async function deleteProjectFiles(

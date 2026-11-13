@@ -1,74 +1,30 @@
 /**
  * ProjectDeletionService
  *
- * The delete itself: ask, then remove what the SC chose online, then the local
- * project, inside one progress surface, and report what was cleaned up.
- *
- * The question lives in `deletionConfirmation.ts`, the online removal (GitHub
- * repository, DA.live site, the CDN unpublish) in `edsExternalCleanup.ts`, and
- * the local removal with its retry in `projectFilesDeletion.ts`, and the datapack's data in
- * Commerce, when the SC ticked Uninstall Datapack, in `datapackDataRemoval.ts` (walk F96).
+ * The delete itself, once answered: the datapack's data in Commerce when the SC ticked
+ * Uninstall Datapack (`datapackDataRemoval.ts`, walk F96), then what the SC chose online
+ * (the GitHub repository, the DA.live site, the CDN unpublish, `edsExternalCleanup.ts`),
+ * then the local project with its retry (`projectFilesDeletion.ts`). The question is asked
+ * by the batch window before anything runs (`projectsBatch.ts`).
  */
 
-import * as vscode from 'vscode';
-import { type RemovableData, removableDataOf, removeDataBeforeDelete } from './datapackDataRemoval';
-import { confirmPlainDelete, showCleanupConfirmation, type CleanupOptions } from './deletionConfirmation';
-import { edsCleanupSteps, performEdsCleanup, type DeletionServices } from './edsExternalCleanup';
+import { removeDataBeforeDelete } from './datapackDataRemoval';
+import { edsCleanupSteps, performEdsCleanup, type CleanupOptions, type DeletionServices } from './edsExternalCleanup';
 import { deleteProjectFiles } from './projectFilesDeletion';
 import { numberedSteps } from '@/core/utils/numberedSteps';
-import { showOneTimeTip } from '@/core/utils/oneTimeTip';
-import { deleteOperationId } from '@/core/utils/operationIds';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
-import { type ReportStage, withOperationProgress } from '@/core/vscode/withOperationProgress';
-import { askSaveAsNameWith, type SaveAsAnswering } from '@/features/eds/services/reset/edsResetSampleData';
-import {
-    extractEdsMetadata,
-    formatCleanupResults,
-    type CleanupResultItem,
-} from '@/features/eds/services/resourceCleanupHelpers';
-import { type SharedOnline, sharedOnlineOf } from '@/features/eds/services/storefront/sharedRepoProjects';
+import type { ReportStage } from '@/core/vscode/withOperationProgress';
+import type { SaveAsAnswering } from '@/features/eds/services/reset/edsResetSampleData';
+import { extractEdsMetadata, type CleanupResultItem } from '@/features/eds/services/resourceCleanupHelpers';
 import type { Project } from '@/types/base';
-import type { HandlerContext, HandlerResponse } from '@/types/handlers';
-
-/** Where a delete reports, when a screen started it (PL-59 R1). */
-export interface DeleteProgressOptions {
-    progress?: 'modal';
-    /** The id that screen named the operation by. */
-    operationId?: string;
-}
-
-/**
- * Ask before deleting: the cleanup question when the project has something beyond its
- * files (an EDS storefront online, or its datapack's data in Commerce), else the plain modal.
- *
- * @returns what to delete beside the files, or null when the SC cancelled
- */
-async function askBeforeDelete(
-    project: Project,
-    edsMetadata: ReturnType<typeof extractEdsMetadata>,
-    options?: DeleteProgressOptions,
-    data?: RemovableData,
-    shared?: SharedOnline,
-): Promise<CleanupOptions | null> {
-    if (edsMetadata || data) {
-        // Auth is checked lazily in performEdsCleanup when user selects an option
-        return showCleanupConfirmation(
-            project,
-            edsMetadata,
-            options?.progress === 'modal' ? (options.operationId ?? deleteOperationId(project.name)) : undefined,
-            data,
-            shared,
-        );
-    }
-    return (await confirmPlainDelete(project)) ? { deleteGitHubRepo: false, deleteDaLiveSite: false } : null;
-}
+import type { HandlerContext } from '@/types/handlers';
 
 /** What a delete runs with once it has been answered. */
 export interface AnsweredDelete {
     cleanupOptions: CleanupOptions;
     /**
-     * How a pack with changes is answered when its data goes: asked when it comes up (a single
-     * delete, an agent), or given up front (a batch's save question, `GivenSaveAs`).
+     * How a pack with changes is answered when its data goes: given up front by the batch's save
+     * question (`GivenSaveAs`).
      */
     askName?: SaveAsAnswering;
     /** Where each cleanup step's result is added. */
@@ -78,8 +34,8 @@ export interface AnsweredDelete {
 
 /**
  * The delete itself, answered: the datapack's data first, when the SC ticked it, then the
- * storefront's online resources, then the files. Shared by a single delete and a batch
- * (`projectsBatch.ts`), which report into their own windows.
+ * storefront's online resources, then the files. Run by the batch (`projectsBatch.ts`), a row
+ * at a time, reporting into its window.
  *
  * @returns why it stopped, when the data was not all removed or the storefront's pages are still
  *   live, and the project was kept
@@ -123,90 +79,4 @@ export async function runProjectDelete(
     // Local deletion (stop demo, remove files, drop from recent, clear current).
     await deleteProjectFiles(context, project);
     return {};
-}
-
-/**
- * Delete a project with confirmation and cleanup
- *
- * Shows confirmation dialog, stops demo if running, deletes files,
- * and removes from recent projects.
- *
- * For EDS projects, offers optional external resource cleanup.
- */
-export async function deleteProject(
-    context: HandlerContext,
-    project: Project,
-    services?: DeletionServices,
-    options?: DeleteProgressOptions,
-): Promise<HandlerResponse> {
-    // Check if this is an EDS project with external resources
-    // Null unless the project has an Edge Delivery storefront component to clean up.
-    const edsMetadata = extractEdsMetadata(project);
-
-    // Auth is checked lazily in performEdsCleanup when user actually selects an option
-    // This avoids slow auth checks before showing the confirmation dialog
-    const data = await removableDataOf(context, project);
-    const shared = await sharedOnlineOf(context.stateManager, edsMetadata, [project.path]);
-    const cleanupOptions = await askBeforeDelete(project, edsMetadata, options, data, shared);
-    if (cleanupOptions === null) {
-        return { success: true, data: { success: false, error: 'cancelled' } };
-    }
-
-    // Collect cleanup results for EDS projects
-    const cleanupResults: CleanupResultItem[] = [];
-    let stoppedBecause: string | undefined;
-
-    // Where this narrates is the shared routing: the screen's progress modal when
-    // a kebab started it, else one notification (PL-59 R1/R2). Titled for the
-    // PROJECT — it used to say "Demo Builder", which names the extension rather
-    // than what is happening.
-    await withOperationProgress(
-        {
-            id: options?.operationId ?? deleteOperationId(project.name),
-            title: `Deleting ${project.name}`,
-            inModal: options?.progress === 'modal',
-        },
-        async (report) => {
-            const ran = await runProjectDelete(context, project, { cleanupOptions, askName: askSaveAsNameWith(vscode), cleanupResults, services }, report);
-            stoppedBecause = ran.stopped;
-            // No "deleted" line on a timer: the modal closes itself and a
-            // background run ends with "— done" (PL-59 R6).
-            return ran.stopped ? { success: false, error: ran.stopped } : { success: true };
-        },
-    );
-
-    if (stoppedBecause) {
-        return {
-            success: true,
-            data: { success: false, projectName: project.name, error: stoppedBecause, cleanupResults },
-        };
-    }
-
-    // Show cleanup summary for EDS projects
-    if (cleanupResults.length > 0) {
-        const summary = formatCleanupResults(cleanupResults);
-        context.logger.info(`[Delete Project] Cleanup summary:\n${summary}`);
-    }
-
-    // Show one-time tip about cleanup settings (only if we showed the QuickPick)
-    if (edsMetadata && cleanupResults.length > 0) {
-        showOneTimeTip(context.context.globalState, {
-            stateKey: 'edsCleanup.settingsTipShown',
-            message: 'Tip: You can customize cleanup behavior in Settings → Demo Builder',
-            actions: ['Open Settings'],
-            onAction: (selection) => {
-                if (selection === 'Open Settings') {
-                    vscode.commands.executeCommand(
-                        'workbench.action.openSettings',
-                        'demoBuilder.cleanupBehavior',
-                    );
-                }
-            },
-        });
-    }
-
-    return {
-        success: true,
-        data: { success: true, projectName: project.name, cleanupResults },
-    };
 }

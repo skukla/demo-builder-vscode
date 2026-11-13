@@ -1,8 +1,9 @@
 /**
  * RENAMED from `edsResetUI-removalReporting.test.ts` on 2026-10-08 (EDS-8 split by job):
  * the sample-data step moved to `edsResetSampleData.ts`.
- * A suite is paired with the module it is named for. Still driven through the
- * public entry point; no assertion changed in the rename.
+ * A suite is paired with the module it is named for. The removal is driven through the
+ * reset a batch runs (`answered.removeDatapack`), the question through
+ * `confirmSampleDataRemoval` as Edit asks it (step-05 S5).
  *
  * How the datapack removal is asked for, narrated and reported.
  *
@@ -11,7 +12,7 @@
  * mutation testing (PL-22, batch MUT-07) found unconstrained:
  *
  * - the prompt's two buttons, and that Keep Data is the close affordance
- * - the progress line, before and during the removal
+ * - the progress line, before and during the removal, told to the caller's report
  * - the three-level report: a clean removal says nothing, a refusal is a
  *   warning, data removed-but-broken is an ERROR
  */
@@ -24,6 +25,7 @@ import {
     vscode,
     fakeGitHubAppService,
 } from './edsResetUI.testUtils';
+import { confirmSampleDataRemoval } from '@/features/eds/services/reset/edsResetSampleData';
 import type { SampleDataProgress } from '@/features/data-installer/services/sampleDataInstallDeps';
 import type { Project, ProjectStatus } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
@@ -47,7 +49,6 @@ jest.mock('@/features/data-installer/services/sampleDataInstallDeps', () => ({
     buildSampleDataDeps: jest.fn(() => ({})),
 }));
 
-import { startModalRun } from '@/core/vscode/operationProgress';
 import { removeSampleData } from '@/features/data-installer/services/sampleDataInstall';
 import { buildSampleDataDeps } from '@/features/data-installer/services/sampleDataInstallDeps';
 import { createMeshDepsFake } from '../../../../helpers/meshDepsFake';
@@ -61,7 +62,6 @@ import { createMockProject } from '../../../../helpers/projectFake';
 const mockedRemove = removeSampleData as jest.MockedFunction<typeof removeSampleData>;
 const mockedDeps = buildSampleDataDeps as jest.MockedFunction<typeof buildSampleDataDeps>;
 const meshDeps = createMeshDepsFake();
-const RESET = 'Reset Project';
 const REMOVE = { title: 'Uninstall Datapack' };
 const KEEP = { title: 'Keep Datapack', isCloseAffordance: true };
 
@@ -97,26 +97,25 @@ function createContext(): HandlerContext {
 
 const report = jest.fn();
 
-function run(context = createContext()) {
+/** The reset as a batch runs it once the SC ticked Uninstall Datapack (or not). */
+function resetWith(project: Project, context: HandlerContext, removeDatapack = true) {
     return resetEdsProjectWithUI({
         githubAppService: fakeGitHubAppService,
         meshDeps,
-        project: createProject(),
+        project,
         context,
+        withinEdit: { report },
+        answered: { removeDatapack },
     });
+}
+
+function run(context = createContext()) {
+    return resetWith(createProject(), context);
 }
 
 beforeEach(() => {
     jest.clearAllMocks();
-    (vscode.window.showWarningMessage as jest.Mock)
-        .mockReset()
-        .mockResolvedValueOnce(RESET)
-        .mockResolvedValueOnce(REMOVE)
-        .mockResolvedValue(undefined);
-    (vscode.window.withProgress as jest.Mock).mockImplementation(
-        async (_options: unknown, task: (p: { report: jest.Mock }) => Promise<unknown>) =>
-            task({ report }),
-    );
+    (vscode.window.showWarningMessage as jest.Mock).mockReset().mockResolvedValue(REMOVE);
     mockEnsureDaLiveAuth.mockResolvedValue({ authenticated: true });
     mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: true });
     mockEnsureProjectOrgContext.mockResolvedValue({ reachable: true });
@@ -125,10 +124,9 @@ beforeEach(() => {
 
 describe('the datapack prompt', () => {
     it('is modal, names the pack, and makes Keep Data the close affordance', async () => {
-        await run();
+        await confirmSampleDataRemoval(createProject(), vscode, Promise.resolve(true));
 
-        expect(vscode.window.showWarningMessage).toHaveBeenNthCalledWith(
-            2,
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
             expect.stringMatching(/^Uninstall .+ Too\?$/u),
             { modal: true, detail: expect.stringContaining('Deletes what it installed in Commerce.') },
             REMOVE,
@@ -143,7 +141,7 @@ describe('the removal narration', () => {
 
         await run(context);
 
-        expect(report).toHaveBeenCalledWith({ message: 'Uninstalling the datapack' });
+        expect(report).toHaveBeenCalledWith('Uninstalling the datapack');
         expect(mockedDeps).toHaveBeenCalledWith(
             context,
             expect.objectContaining({ name: 'test-project' }),
@@ -151,47 +149,12 @@ describe('the removal narration', () => {
             'remove',
         );
 
-        const relay = mockedDeps.mock.calls[0][2] as (p: SampleDataProgress) => void;
-        // A notification shows the step alone: the count of types is the line under
-        // it, never the step's position (progress vocabulary slice 5, 2026-10-16).
-        relay({ done: 1, total: 3, processing: ['Products', 'Categories'] });
-        expect(report).toHaveBeenLastCalledWith({ message: 'Uninstalling the datapack' });
-
-        relay({ done: 3, total: 3, processing: [] });
-        expect(report).toHaveBeenLastCalledWith({ message: 'Uninstalling the datapack' });
-    });
-});
-
-// Found by the first mutation run of edsResetSampleData on its own (EDS-8,
-// 2026-10-08): the types being worked on are the STEP under the stage, which only
-// a screen's modal shows (a notification shows the stage line alone), so no test
-// above could see it.
-describe('the removal narration in a screen\'s modal', () => {
-    it('shows the types removed and in flight as the line under the step, never as its position', async () => {
-        const send = jest.fn().mockResolvedValue(undefined);
-        startModalRun('reset-modal', send);
-
-        await resetEdsProjectWithUI({
-            githubAppService: fakeGitHubAppService,
-            meshDeps,
-            project: createProject(),
-            context: createContext(),
-            progress: 'modal',
-            operationId: 'reset-modal',
-        });
+        // Found by the first mutation run of edsResetSampleData on its own (EDS-8,
+        // 2026-10-08): the types being worked on are the STEP under the stage, never
+        // the step's position (progress vocabulary slice 5, 2026-10-16).
         const relay = mockedDeps.mock.calls[0][2] as (p: SampleDataProgress) => void;
         relay({ done: 1, total: 3, processing: ['Products', 'Categories'] });
-
-        expect(send).toHaveBeenLastCalledWith(
-            'operationProgress',
-            expect.objectContaining({
-                id: 'reset-modal',
-                state: 'running',
-                stage: 'Uninstalling the datapack',
-                step: '1 of 3 data types: Products, Categories',
-            }),
-        );
-        expect(send.mock.calls.filter(([, payload]) => (payload as { position?: unknown })?.position)).toStrictEqual([]);
+        expect(report).toHaveBeenLastCalledWith('Uninstalling the datapack', '1 of 3 data types: Products, Categories');
     });
 });
 
@@ -260,8 +223,6 @@ describe('the removal report', () => {
 // showed it installed after the reset. The trap: the reset's `finally` saves the project object it
 // holds, so a clear on any other copy would be written back over by that last save.
 describe('the project record after the reset', () => {
-    const resetWith = async (project: Project, context: HandlerContext) =>
-        resetEdsProjectWithUI({ githubAppService: fakeGitHubAppService, meshDeps, project, context });
     const lastSaved = (context: HandlerContext): Project | undefined =>
         jest.mocked(context.stateManager.saveProject).mock.calls.at(-1)?.[0];
 
@@ -285,10 +246,9 @@ describe('the project record after the reset', () => {
     });
 
     it('CONTROL: still names the datapack when the SC kept it', async () => {
-        (vscode.window.showWarningMessage as jest.Mock).mockReset().mockResolvedValueOnce(RESET).mockResolvedValue(KEEP);
         const context = createContext();
 
-        await resetWith(createProject(), context);
+        await resetWith(createProject(), context, false);
 
         expect(mockedRemove).not.toHaveBeenCalled();
         expect(lastSaved(context)?.datapack).toStrictEqual({ name: 'bodea', version: 'main' });

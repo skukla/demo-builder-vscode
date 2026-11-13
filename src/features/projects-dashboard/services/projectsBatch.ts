@@ -16,8 +16,8 @@
  *   questions taking turns (`operationPrompt`). Each project reports into its own row, and one that
  *   fails does not stop the rest.
  *
- * The single delete and reset are reused, not copied: `runProjectDelete`, and each reset's
- * answered run, which asks nothing and reports into this window.
+ * Each delete is `runProjectDelete`, each reset that kind of project's answered run; neither asks
+ * anything, and both report into this window.
  *
  * @module features/projects-dashboard/services/projectsBatch
  */
