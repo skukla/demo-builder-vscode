@@ -256,9 +256,9 @@ Reset and delete:
   (`.rptc/backlog/2026-11-12-several-datapacks-per-project.md`). The model the owner agreed for it
   (J8-1): Switch only when a new datapack writes the same records at the same level; uninstall
   removes only what that datapack wrote; a datapack built on another needs it installed first.
-- **The order rule's live test**: shipped-not-invoiced and partly invoiced orders end Closed,
-  nothing reaches an ERP, a second Clear changes nothing. On the test store, with the owner's go
-  (J1-3b build item).
+- **The order rule's live test**: done. Passed live on 2026-11-11 on the test store
+  (`.rptc/plans/erp-order-close/overview.md`, step 6): shipped-not-invoiced and partly invoiced
+  orders end Closed, nothing reaches an ERP, a second Clear changes nothing (J1-3b build item).
 - **One-project reset and delete still use VS Code dialogs today**. Decided to become the batch
   window titled by name (J7-1); the prototype still shows the product's "Reset 1 Project?" title.
 - **The batch window grows when its questions replace the read wait.** Measured in the J7
