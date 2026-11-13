@@ -276,6 +276,91 @@ Reset and delete:
   Switch too.
 - No other walk decision is specific to the agent surface.
 
+## Owner walk of the loop's questions (2026-11-13)
+
+Every question the 2026-11-12 loop parked, answered by the owner one at a time. "New work" marks an
+answer that needs building; the rest confirm what is built.
+
+### Real data
+- A delete whose datapack removal leaves data in Commerce stops: the project stays and the window
+  says what was left (R1-a). New work.
+- An Edit whose old-datapack removal fails stops: the old datapack stays recorded (R1-b). New work.
+- A batch reset whose changes could not be read gives that project no row and leaves its datapack
+  alone; the 11-04 rule stands (P5-Q5).
+- A reset with Uninstall Datapack ticked clears the project's datapack, so the card reads not
+  installed (S7-b). New work unless Phase 6 already does it.
+- With the always-save setting on, the save question says one line: "My Luma is saved first (your
+  setting)." (S1-a). New work.
+- The one-datapack save question always has a name box, the SC's own datapack too: pre-filled with
+  its own name saves into it, a new name makes a new datapack (P5-Q7, reverses the recommendation).
+  New work, in Switch, Uninstall, Reset and Delete.
+
+### Install, restore and switch
+- A background install that succeeds shows a progress-style popup, "Bodea Installed", that closes
+  itself after a few seconds; a failure stays as a warning with Open Debug Logs (step-03 Q4).
+  Unblocks S3. New work.
+- A clean install closes itself: the search-delay line is dropped; lines saying the SC's edits were
+  kept still keep it open (Q3). New work.
+- Installing a datapack the store already matches ends at "Bodea Is Up to Date" (Q8). New work.
+- The title turns amber only when Commerce refused or failed to write something; kept edits and
+  already-there rows stay green (Q9, S6). New work.
+- Retry after a stopped switch installs the new datapack only, and says the old one is already out
+  (Q10). New work.
+- Kept as built: "Install Bodea, eds-compatible?" (Q11); "Couldn't Restore My Luma" / "Couldn't Undo Last Save" (Q5); Restore's check in a window
+  (Q6); "Uninstall My Luma?" with no store name (Q7); agents may install part of a datapack (Q2).
+- A partly installed creation install is failed, with the run's reason (P4-Q11).
+- A skipped creation install must not happen: when a datapack needs a website or store view, the
+  wizard requires the selection before Continue (S7-a, owner's reframing). New work.
+
+### The Datapacks screen
+- "My Luma Created" (P4-Q1). The version picker only with two or more versions, else "Updated Nov 6,
+  9:15 AM" (P4-Q2). The dashboard line shows a version only with two or more (S9).
+- The save count adds "N added" in beta.153: records added by hand since the install (P4-Q3). Engine
+  work, live check owed. New work.
+- No install record: no Save; Create shows with "No install record for Luma, so changes can't be
+  counted. Create a datapack to keep them, or Restore Luma to start counting." (P4-Q4). New work.
+- Fix with AI's failure count carries across reopenings (P4-Q5). Delete removes the whole datapack
+  (P4-Q6).
+- Install from File adds the file, then opens the install window (never wired until now); a file
+  whose save already exists asks Replace or Keep Both, Keep Both with a name box "My Luma Copy"; one
+  Delete in the result window undoes everything the load added, and "Delete Store Configuration" goes
+  (P4-Q7, P4-Q10). New work.
+- The amber dot also shows when the installed Demo Builder datapack was updated since, hover "Luma
+  updated Nov 12", Restore installs it (S6-b). New work.
+- A failed card hides the dot and keeps Uninstall; Fix with AI with nothing to fix says so on screen
+  (S8). New work for the line.
+- "Recommended" is dropped. The screen and the wizard step open on "My and Demo Builder Datapacks",
+  only datapacks a person chose; the service's leftovers and Community are one choice away (S10-a).
+  Found while answering: "curated" was the service's unreviewed shared flag. New work.
+- The save window: a whole-type tick skips the read, in beta.153, for the extension and agent tools
+  (S3-a, reverses the recommendation, new work); the count label matches the other screens (S3-b,
+  check them); search keeps matching SKU and email (S3-c); "Stopped" and "Not run" stay (S4).
+- Share on own datapacks only; the wizard cards stay as they are (P4-Q9).
+
+### Reset, delete and Clear
+- An added demo whose site is down: the reset carries on, keeps its content and says so on its row
+  (P5-Q8). Batch rows and one-project words kept (P5-Q1, S1-c, S2). All six Clear choices kept
+  (P6-Q5 to Q7, C1, C2b, C5).
+- Small nested type rows take one line with the full text on hover, like main rows (C7-a, reverses
+  walk F135). A run-wide warning stays under the rows (C7-b).
+
+### Agents
+- Agents cannot delete Demo Builder datapacks, as the screen (P4-Q8, reverses the recommendation).
+  New work.
+- "Agent · " becomes "Agent: " everywhere. New work.
+- The old tool names (start_datapack_import, load_datapack_zip, mark_team_datapack, the
+  import-datapack guide) are renamed to the screen's words in beta.153. New work, with the test set,
+  docs and an AI_CONTEXT_VERSION bump.
+- The agent-reach scan is fixed now: factory-built handler maps and the "copy" assumption. New work.
+
+### The six windows Phase 1b left
+- Share: main buttons in the footer, opens at the taller form. Add a Demo and Add Integration: the
+  Steps window held at the first stage, taller stages scroll, Back at the footer's left. Setup Guide:
+  a two-column option on the Guide layout. New work.
+- The projects batch run and the Updates run: extend the Progress layout now (Close hidden while a
+  row's question waits; a question under its row) and move both onto it. New work.
+- The hosting check covers windows built on the layouts. New work.
+
 ## Open
 
 - **J6-2, the failure reason in the flyout**: kept for now, provisional. Owner 2026-11-12: "We can
