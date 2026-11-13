@@ -192,8 +192,14 @@ Live notes; rewritten as the final report at the loop's close.
   not published, pages undone, mesh redeploy failed) no longer shows them; that came with S2 and S4.
   Fixing next. P5-Q8's mid-batch dialog is still reachable. Full gate green (2,405 suites, 38,551
   tests).
-- Step-05 next: batch reset warnings on their row, and S6 (a ticked Uninstall Datapack uninstalls on
-  every reset).
+- Step-05 S6 and the reset warnings: 919ee94b4. A ticked Uninstall Datapack now uninstalls on every
+  reset, not only storefronts (owner's P5-Q3), after the reset checks it can rebuild; a successful
+  reset's warnings show as orange lines on its row, from the agent tool's own summarizer; a failed
+  row still says what happened to the datapack. An independent review found nothing blocking; its
+  should-fix (the removal ran before the rebuild check, so a reset that could not rebuild still
+  emptied the store) was fixed and proven by tests that failed with the old order. Full gate green
+  (2,406 suites, 38,580 tests). Live reset owed.
+- Step-05 S7 (the agent's reset_project gets the uninstall choice): with a builder.
 - Phase 1b, done while waiting: ERP Downtime (863c5c2ca) and Edit Demo Package (f8ece2e6e) moved
   onto the Form layout, whose failure line is what both waited for. Same words; Cancel beside the
   commit, as every form; a read failure is a result window with Close. An unused style rule removed.
@@ -289,5 +295,7 @@ Live notes; rewritten as the final report at the loop's close.
   datapack's name (two projects on one datapack would otherwise read the same); not in the mockup.
 - From S2: the window's words follow the number of projects, so ticking one project and pressing
   Reset Selected also reads "Reset Kukla Luma?" ("Reset 1 Project" is gone). Recommend keeping it.
+- From S6: when only a row carries warnings the window's title stays green (the same question as Q9;
+  recommend amber).
 - Phase 2 live cycle on the test store (save twice, Undo Last Save, Restore, reinstall with nothing
   sent, uninstall), once Phase 2 is built.
