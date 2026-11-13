@@ -47,9 +47,12 @@ Live notes; rewritten as the final report at the loop's close.
 - Phase 4, S5: 09e4978eb. A Dry Run that finds a problem offers Fix with AI; the prompt is built from
   what the extension recorded about the Dry Run (fix the datapack, check again, report, never install
   without asking). Full gate green (2,405 suites, 38,663 tests).
-- Phases 3 and 5, S6 (Switch and the save question): with a test-first builder now. Built to Q1's
-  recommendation (an editable "My Bodea" name only when the datapack is not the SC's own), which
-  follows the owner's J7-2 decision; the always-save setting is kept, only the box and its writer go.
+- Phases 3 and 5, S6: a switch opens the new window: "Switch to Bodea?", then "Save Your Changes
+  First?" only with unsaved edits (counts by type, no box; Switch Without Saving, Cancel, Save and
+  Switch), an editable "My Luma" name only when the datapack is not the SC's (Q1's recommendation,
+  following J7-2), the run "Switching to Bodea", and the one-time tip after the first answer. The
+  always-save box and its writer are gone; the setting stays, with glossary words. Full gate green
+  (2,408 suites, 38,698 tests).
 - Phase 1b, done while waiting: ERP Downtime (863c5c2ca) and Edit Demo Package (f8ece2e6e) moved
   onto the Form layout, whose failure line is what both waited for. Same words; Cancel beside the
   commit, as every form; a read failure is a result window with Close. An unused style rule removed.
@@ -71,6 +74,10 @@ Live notes; rewritten as the final report at the loop's close.
   Restore and Undo (built as "Couldn't Restore My Luma" and "Couldn't Undo Last Save", the house
   "Couldn't …" rule; change if wanted); Q6 Restore's check in a window; Q7 the store name leaving the Uninstall title;
   Q8 installing a pack Commerce already matches.
+- Q10 (from S6): the prototype shows Retry after a stopped switch, but a switch that stopped after
+  the old datapack was uninstalled is not a simple repeat. Offer Retry (re-run the install of the new
+  datapack only), or Close only? Recommend Retry installing the new datapack, since the old one is
+  already out, and say so in the run's problem line.
 - Q9 (from S1): a run with a problem on one row and no overall warning now stays open, but its title
   is still green. Should a problem row alone turn the title amber? Recommend yes: the title says how
   it ended, and a problem is not a clean success.
