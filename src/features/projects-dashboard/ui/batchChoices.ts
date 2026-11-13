@@ -10,7 +10,7 @@
  * @module features/projects-dashboard/ui/batchChoices
  */
 
-import { freeName, nameProblem } from '@/features/data-installer/saveAsName';
+import { type ChangesByPath, type PackRow, type SaveNames, type SaveQuestion, nameProblems, namesOf } from '@/features/data-installer/saveAsName';
 import type {
     BatchDatapack,
     BatchDeleteAnswer,
@@ -19,9 +19,6 @@ import type {
     BatchResetRow,
     PrepareProjectsBatchResponse,
 } from '@/types/projectsBatch';
-
-/** A project of either batch, as the datapack questions read it. */
-export type PackRow = Pick<BatchResetRow, 'path' | 'name' | 'datapack'>;
 
 /** The three things a delete may take with a project, in the table's column order. */
 export type DeleteOptionKey = 'repo' | 'site' | 'datapack';
@@ -37,15 +34,6 @@ export interface ColumnState {
     all: boolean;
     some: boolean;
 }
-
-/** The save question's answer for one pack: a new datapack's name, or its changes lost. */
-export type BatchChanges = NonNullable<BatchResetAnswer['changes']>;
-
-/** The save question's answers, by project path; a pack saved into itself has none. */
-export type ChangesByPath = Readonly<Record<string, BatchChanges>>;
-
-/** The names in the save question's fields, by project path. */
-export type SaveNames = Readonly<Record<string, string>>;
 
 /** Every box where the prepare said it starts. */
 export function initialDeleteTicks(rows: readonly BatchDeleteRow[]): DeleteTicks {
@@ -127,88 +115,18 @@ export function toggleRemoveColumn(rows: readonly BatchResetRow[], ticks: Remove
     return { ...ticks, ...Object.fromEntries(rows.filter(removable).map((row) => [row.path, on])) };
 }
 
-const sameName = (a: string, b: string): boolean => a.trim().toLowerCase() === b.trim().toLowerCase();
-
-/** The SC's own pack: a save goes into it (`saves`), where someone else's makes a new one (`asks`). */
-const isOwn = (row: PackRow): boolean => row.datapack?.changes === 'saves';
-
 /**
  * The save question's rows: each pack whose data goes with changes, the SC's own included, except
  * theirs when the setting saves it without asking (P5-Q6, Switch's `mustAsk`). A pack whose changes
  * could not be read has no box, so its data stays and nothing is asked (P5-Q5 open).
  */
 export function saveRows<Row extends PackRow>(rows: readonly Row[], ticks: RemoveTicks, alwaysSave: boolean): Row[] {
-    return rows.filter((row) => removes(row, ticks) && (row.datapack?.changes === 'asks' || (isOwn(row) && !alwaysSave)));
-}
-
-/**
- * Each row's name: what was typed, else where it starts. The SC's own starts with its own name;
- * someone else's with "My <Pack>", counting on past their datapacks and the rows above.
- */
-export function namesOf(rows: readonly PackRow[], ownNames: readonly string[], typed: SaveNames): Record<string, string> {
-    const names: Record<string, string> = {};
-    for (const row of rows) {
-        const pack = row.datapack?.name ?? '';
-        names[row.path] = typed[row.path] ?? (isOwn(row) ? pack : freeName(pack, [...ownNames, ...Object.values(names)]));
-    }
-    return names;
-}
-
-/** A row saving into the SC's own pack under its own name (the run saves into it, `changesOf`). */
-function savesIntoOwn(row: PackRow, names: SaveNames): boolean {
-    return isOwn(row) && sameName(names[row.path] ?? '', row.datapack?.name ?? '');
-}
-
-/**
- * The names a row may not take: the SC's datapacks, less its own pack (it saves into it), and the
- * other rows'. Two projects saving into the same own pack under its own name do not clash: each
- * saves into it, one after the other (review of step-05 S1).
- */
-function takenFor(row: PackRow, rows: readonly PackRow[], names: SaveNames, ownNames: readonly string[]): string[] {
-    const own = isOwn(row) ? (row.datapack?.name ?? '') : undefined;
-    const sharesOwn = (other: PackRow): boolean =>
-        own !== undefined && savesIntoOwn(row, names) && savesIntoOwn(other, names) && sameName(other.datapack?.name ?? '', own);
-    return [
-        ...ownNames.filter((name) => own === undefined || !sameName(name, own)),
-        ...rows.filter((other) => other.path !== row.path && !sharesOwn(other)).map((other) => names[other.path] ?? ''),
-    ];
-}
-
-/** Why each row's name cannot be used, by project path; a row whose name can is absent. */
-export function nameProblems(rows: readonly PackRow[], names: SaveNames, ownNames: readonly string[]): Record<string, string> {
-    const problems: Record<string, string> = {};
-    for (const row of rows) {
-        const problem = nameProblem(names[row.path] ?? '', takenFor(row, rows, names, ownNames));
-        if (problem) problems[row.path] = problem;
-    }
-    return problems;
-}
-
-/**
- * The save question answered. Saved: the SC's own pack under its own name sends nothing (the run
- * saves into it), any other name a new datapack's, trimmed; never the own name as `saveAs`, which
- * the save refuses as taken. Without saving: every row's changes go.
- */
-export function changesOf(rows: readonly PackRow[], names: SaveNames, answer: 'save' | 'drop'): ChangesByPath {
-    const changes: Record<string, BatchChanges> = {};
-    for (const row of rows) {
-        const name = (names[row.path] ?? '').trim();
-        if (answer === 'drop') changes[row.path] = 'drop';
-        else if (!(isOwn(row) && sameName(name, row.datapack?.name ?? ''))) changes[row.path] = { saveAs: name };
-    }
-    return changes;
+    return rows.filter((row) => removes(row, ticks) && (row.datapack?.changes === 'asks' || (row.datapack?.changes === 'saves' && !alwaysSave)));
 }
 
 /** Whose pack's data goes, by project path: a delete's Uninstall Datapack boxes, a reset's. */
 export function removingOf(questions: PrepareProjectsBatchResponse, ticks: DeleteTicks, removeTicks: RemoveTicks): RemoveTicks {
     return questions.action === 'delete' ? dataTicks(questions.rows, ticks) : removeTicks;
-}
-
-/** The save question over the questions as answered: its rows, each row's name, and why a name is refused. */
-export interface SaveQuestion {
-    rows: PackRow[];
-    names: SaveNames;
-    problems: Readonly<Record<string, string>>;
 }
 
 /** What the SC has chosen that the save question reads. */

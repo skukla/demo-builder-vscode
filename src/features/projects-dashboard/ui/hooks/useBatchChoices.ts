@@ -17,8 +17,8 @@ import {
     type DeleteOptionKey,
     type DeleteTicks,
     type RemoveTicks,
-    type SaveNames,
 } from '../batchChoices';
+import type { SaveNames } from '@/features/data-installer/saveAsName';
 import type { BatchDeleteRow, BatchResetRow, PrepareProjectsBatchResponse } from '@/types/projectsBatch';
 
 export interface BatchChoices {

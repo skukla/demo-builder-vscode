@@ -321,13 +321,29 @@ export async function forgetRemovedPack(project: Project, context: HandlerContex
     project.datapack = undefined;
     dropStaleFailure(project);
     try {
-        await createNonSwitchingStateManager(context.stateManager).saveProject(project);
+        await createNonSwitchingStateManager(context.stateManager).saveProject(await withoutPackOnDisk(project, context));
         return true;
     } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
         context.logger.warn(`[EdsReset] The datapack was uninstalled; the project could not be saved without it: ${reason}`);
         return false;
     }
+}
+
+/**
+ * What to save once a pack is forgotten. The open project: the object handed, which its screens and
+ * a reset's `finally` hold. Any other: its manifest as it is on disk NOW, with only its pack cleared,
+ * since a copy loaded earlier (Clear Commerce Instance loads every project before its removals, step
+ * 06 C4 review) would write back whatever it held. Falls back to the object handed when it cannot be read.
+ */
+async function withoutPackOnDisk(project: Project, context: HandlerContext): Promise<Project> {
+    const current = await context.stateManager.getCurrentProject();
+    if (current?.path === project.path) return project;
+    const fresh = await context.stateManager.loadProjectFromPath(project.path, undefined, { persistAfterLoad: false });
+    if (!fresh) return project;
+    fresh.datapack = undefined;
+    dropStaleFailure(fresh);
+    return fresh;
 }
 
 /** The answers, in the Datapacks screen's save question's words (`SaveFirstWindow`). */

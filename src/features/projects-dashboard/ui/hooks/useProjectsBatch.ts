@@ -15,13 +15,14 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { changesOf, deleteAnswers, resetAnswers, saveQuestionOf } from '../batchChoices';
+import { deleteAnswers, resetAnswers, saveQuestionOf } from '../batchChoices';
 import { batchSubject, runningTitle } from '../batchWords';
 import { useBatchChoices, type BatchChoices } from './useBatchChoices';
 import { useOperationProgress } from '@/core/ui/hooks/useOperationProgress';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { PROJECTS_BATCH_OPERATION_ID } from '@/core/utils/operationIds';
 import { getProjectDisplayName, type ProjectDisplayName, type ProjectNameParts } from '@/core/utils/projectDisplayName';
+import { changesOf } from '@/features/data-installer/saveAsName';
 import type { Project } from '@/types/base';
 import type {
     PrepareProjectsBatchResponse,

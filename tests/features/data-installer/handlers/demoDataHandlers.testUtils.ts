@@ -86,6 +86,7 @@ export function setUp(overrides: Partial<DemoDataDeps> = {}, store = sandbox(), 
         openAdmin: async () => ({ outcome: 'opened' }),
         remove: packRemoval(store, files, seen),
         changes: async () => undefined,
+        ownNames: async () => [],
         ...overrides,
     };
     const handlers = createDemoDataHandlers(deps);

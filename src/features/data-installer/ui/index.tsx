@@ -55,6 +55,11 @@ import '@/core/ui/styles/fact-list.css';
 import '@/core/ui/styles/modal-text.css';
 // .choice-card* — Create datapack's screens are cards (`ChoiceCard`, owned by project-creation).
 import '@/features/project-creation/ui/styles/choice-cards.css';
+// A scrolling list's fade, and the batch save table's rows (`BatchSaveTable`, projects-batch.css):
+// Clear Commerce Instance asks the batch save question (step 06 C4). ADR-017 §6: a sheet reaches
+// only the bundles whose entry imports it.
+import '@/core/ui/styles/scroll-fade.css';
+import '@/features/projects-dashboard/ui/styles/projects-batch.css';
 // Feature-scoped: this is the ONLY entry that loads it, so its classes exist in
 // this bundle and nowhere else.
 import './styles/data-installer.css';

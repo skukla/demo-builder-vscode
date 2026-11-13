@@ -164,6 +164,33 @@ describe('a customer group the pack made', () => {
 
         expect(containersLine(kept)).toBe('Kept the customer group Platinum Buyer: it holds 1 shared catalog you added.');
     });
+
+    // C4 re-review: a cart rule applying to the group uses it too (`demoUses.ts`); deleting the group would strip it.
+    it("is kept while a cart rule the pack did not make applies to it", async () => {
+        const ctx = await fakeContext({
+            [page('customers/search', filterBy('group_id', 31))]: { items: [] },
+            [page('company', filterBy('customer_group_id', 31))]: { items: [] },
+            [CATALOGS]: { items: [] },
+            [page('salesRules/search')]: { items: [{ rule_id: 7, name: 'Their Rule', customer_group_ids: [1, 31] }, { rule_id: 8, name: 'Other', customer_group_ids: [1] }] },
+        });
+
+        const { kept } = await decideRemovals(ctx.get, [GROUP]);
+
+        expect(containersLine(kept)).toBe('Kept the customer group Platinum Buyer: it holds 1 cart rule you added.');
+    });
+
+    it('is taken out when the only cart rule applying to it goes with it', async () => {
+        const ctx = await fakeContext({
+            [page('customers/search', filterBy('group_id', 31))]: { items: [] },
+            [page('company', filterBy('customer_group_id', 31))]: { items: [] },
+            [CATALOGS]: { items: [] },
+            [page('salesRules/search')]: { items: [{ rule_id: 7, name: 'Pack Rule', customer_group_ids: [31] }] },
+        });
+
+        const { kept } = await decideRemovals(ctx.get, [obj('cart_rules', '7'), GROUP]);
+
+        expect(kept).toStrictEqual([]);
+    });
 });
 
 /**

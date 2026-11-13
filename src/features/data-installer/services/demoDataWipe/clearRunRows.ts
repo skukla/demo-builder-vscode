@@ -1,7 +1,7 @@
 /**
  * Clear Demo Data's one run window as rows (datapack-simplification step 06, C3; the walked
  * `mockups/flow/ClearRunWindow.tsx`): "Uninstall <Datapack>" first when the project's datapack goes
- * before the clearing, then one row per data type the list removes, in the order the clearing works
+ * before the clearing (one per project for Clear Commerce Instance, C4), then one row per data type the list removes, in the order the clearing works
  * through them (`wipeRun.ts`), then the ERP when one is brought in line. Every row is there from the
  * first push, so the window never grows (rule 14); the stage each report names moves the rows on.
  *
@@ -33,6 +33,10 @@ import type { OperationRow } from '@/types/webviewPayloads';
 
 /** The Uninstall row's kind; no data type is named this. */
 export const UNINSTALL_ROW = 'uninstall-datapack';
+
+/** The kind of the Uninstall row at this place: the first is `UNINSTALL_ROW`, the next "uninstall-datapack-2". */
+const uninstallKind = (at: number): string => (at === 0 ? UNINSTALL_ROW : `${UNINSTALL_ROW}-${at + 1}`);
+const isUninstall = (kind: string): boolean => kind.startsWith(UNINSTALL_ROW);
 const ERP_ROW = 'erp';
 
 /** One row: its data type, the stages that work on it, and the clearing's steps whose refusals it carries. */
@@ -111,33 +115,33 @@ const refusedLine = (failed: WipeOutcome['failed'][number]): string =>
 export interface ClearRun {
     /** Each report of the clearing, the rows moved on to its stage, passed on with them. */
     report: ReportStage;
-    /** The removal is running (`true`) or done: while it runs, what it reports goes on the Uninstall row. */
-    uninstalling: (running: boolean) => void;
+    /** The removal at this place is running (`true`) or done: while it runs, what it reports goes on its Uninstall row. */
+    uninstalling: (running: boolean, at?: number) => void;
     /** Whether a removal, or a wipe step, has begun: from then on the run has written, or may have. */
     writing: () => boolean;
-    /** The rows as a removal that did not finish left them: nothing after it ran. */
-    stopped: (reason: string) => OperationRow[];
-    /** The rows as the clearing ended. */
-    ended: (outcome: WipeOutcome, leftInStore: boolean) => OperationRow[];
+    /** The rows as the removal at this place, not finishing, left them: those before it done, nothing after it run. */
+    stopped: (reason: string, at?: number) => OperationRow[];
+    /** The rows as the clearing ended; `leftInStore` says, per removal, whether it left part in Commerce on purpose. */
+    ended: (outcome: WipeOutcome, leftInStore: readonly boolean[]) => OperationRow[];
 }
 
 /**
  * The run's rows for the list the SC saw.
  *
- * @param uninstall - the datapack the clearing uninstalls first, as the SC knows it; none when it uninstalls nothing
+ * @param uninstalls - each datapack the clearing uninstalls first, as the SC knows it, in order; none when it uninstalls nothing
  * @param report - where the rows go with each stage (the progress window's reporter)
  */
 export function clearRun(
     plan: WipePlan,
-    uninstall: string | undefined,
+    uninstalls: readonly string[],
     report: ReportStage,
 ): ClearRun {
     const specs = RUN_ORDER.filter((spec) => shows(plan, spec.kind));
     let rows: OperationRow[] = [
-        ...(uninstall ? [waiting(UNINSTALL_ROW, `Uninstall ${uninstall}`)] : []),
+        ...uninstalls.map((name, at) => waiting(uninstallKind(at), `Uninstall ${name}`)),
         ...specs.map((spec) => waiting(spec.kind, labelOf(plan, spec.kind))),
     ];
-    let removing = false;
+    let removing: number | undefined;
     let wrote = false;
     /** Every row before `kind` done, and `kind` working, its line under it. */
     const working = (kind: string, line: string | undefined): void => {
@@ -156,7 +160,7 @@ export function clearRun(
         });
     };
     const rowFor = (stage: string): string | undefined => {
-        if (removing) return UNINSTALL_ROW;
+        if (removing !== undefined) return uninstallKind(removing);
         if (stage === S.verifyingDemoData.label) return specs[0]?.kind;
         return specs.find((spec) => spec.stages.includes(stage))?.kind;
     };
@@ -165,29 +169,26 @@ export function clearRun(
         report: (stage, step, position) => {
             if (RUN_ORDER.some((spec) => spec.stages.includes(stage))) wrote = true;
             const kind = rowFor(stage);
-            if (kind) working(kind, kind === UNINSTALL_ROW ? (step ?? stage) : step);
+            if (kind) working(kind, isUninstall(kind) ? (step ?? stage) : step);
             report(stage, step, position, rows);
         },
-        uninstalling: (running) => {
-            removing = running;
+        uninstalling: (running, at = 0) => {
+            removing = running ? at : undefined;
             if (running) wrote = true;
         },
         writing: () => wrote,
-        stopped: (reason) =>
-            rows.map((row) =>
-                row.kind === UNINSTALL_ROW
-                    ? {
-                          kind: row.kind,
-                          label: row.label,
-                          status: 'error',
-                          problem: { text: reason, failed: true },
-                      }
-                    : { kind: row.kind, label: row.label, status: 'pending', line: 'Not run' },
-            ),
+        stopped: (reason, at = 0) =>
+            rows.map((row, i) => {
+                if (i < at) return done(row);
+                return i === at
+                    ? { kind: row.kind, label: row.label, status: 'error', problem: { text: reason, failed: true } }
+                    : { kind: row.kind, label: row.label, status: 'pending', line: 'Not run' };
+            }),
         ended: (outcome, leftInStore) => {
             const problems = ending(outcome);
-            if (leftInStore)
-                problems.set(UNINSTALL_ROW, 'Part of it was left in Commerce on purpose.');
+            leftInStore.forEach((left, at) => {
+                if (left) problems.set(uninstallKind(at), 'Part of it was left in Commerce on purpose.');
+            });
             return rows.map((row) => {
                 const text = problems.get(row.kind);
                 return text ? warned(row, text) : done({ ...row, problem: undefined });

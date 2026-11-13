@@ -15,12 +15,7 @@
 import type { TreeListNode } from '@/core/ui/components/ui/TreeList';
 import type { TypeRow } from '@/features/data-installer/ui/components/job/installRows';
 import type { ProjectDatapack } from '@/types/datapack';
-
-/**
- * Which websites a clearing covers. `project`: every website the project uses, from its install
- * target and its install records. `instance`: the websites named (Clear Commerce Instance, C4).
- */
-export type ClearScope = { kind: 'project' } | { kind: 'instance'; websites: string[] };
+import type { BatchDatapack, BatchSaveNames } from '@/types/projectsBatch';
 
 /**
  * The ERP step ("One action, ERP included", owner 2026-10-30): an ERP integration serves the
@@ -70,6 +65,44 @@ export interface ClearDatapack {
     pack: ProjectDatapack;
 }
 
+/** One website of the instance, with the local projects on this Commerce instance using it (C4). */
+export interface InstanceWebsite {
+    code: string;
+    name: string;
+    /** As each project's card names it; none when no local project uses it (P6-Q7). */
+    projects: string[];
+}
+
+/** `check-demo-data` with `websites: []`: the instance's websites, for Clear Commerce Instance. */
+export interface InstanceChoices {
+    websites: InstanceWebsite[];
+}
+
+/**
+ * A local project on the chosen websites (C4): it loses its demo data unless `kept` says why not.
+ * `datapack` is present when the clearing uninstalls it first: its `changes`, read as a batch reads
+ * them, decide whether the batch save question asks about it (P6-Q4).
+ */
+export interface ClearProject {
+    path: string;
+    /** As its card names it. */
+    name: string;
+    datapack?: BatchDatapack;
+    /**
+     * Why this project keeps its data on these websites, as one sentence naming it: its datapack is
+     * also installed on a website not chosen, a record of it names no website, or the project may be
+     * on another Commerce instance with a website of the same code. Absent: it loses its demo data.
+     */
+    kept?: string;
+    /** It loses its datapack's data, but keeps what an older pack's install record lists on these websites: one sentence naming them. */
+    note?: string;
+}
+
+/** What Clear Commerce Instance's check adds: the projects, and what the save question needs. */
+export interface ClearInstancePart extends BatchSaveNames {
+    projects: ClearProject[];
+}
+
 /** `check-demo-data`'s answer: what clearing the project's websites would do, type by type. */
 export interface ClearCheck {
     /** The project, as the SC knows it: the window's title names it. */
@@ -92,10 +125,18 @@ export interface ClearCheck {
     warning?: string;
     /** The ERP step, when an ERP integration serves some of these websites: their orders are counted under orders. */
     erp?: WipeErpPart;
+    /** Clear Commerce Instance's list (C4): the projects on these websites, which all lose their demo data. */
+    instance?: ClearInstancePart;
 }
 
 /** What either handler is sent. Checked in the handler: an agent sends these too. */
 export interface DemoDataRequest {
+    /**
+     * The check only: omitted, the project's own websites (Clear Demo Data); `[]`, the instance's
+     * websites with the projects using each (`InstanceChoices`); codes, the list for clearing those
+     * websites whoever put the data there (Clear Commerce Instance, C4).
+     */
+    websites?: string[];
     /** Clear only: the token of the list shown (`check-demo-data`'s answer). */
     token?: string;
     /** Clear only: must be true. */
@@ -109,4 +150,22 @@ export interface DemoDataRequest {
      */
     changes?: 'keep' | 'drop';
     saveAs?: { displayName: string };
+}
+
+/**
+ * `clear-commerce-instance` (C4): clear what the instance check with this token showed. Gated twice
+ * in the handler, as an agent sends it too: `confirm`, and `understood`, the window's "I understand"
+ * box. Each project's datapack is uninstalled first, its changes settled by its answer here.
+ */
+export interface ClearInstanceRequest {
+    token?: string;
+    confirm?: boolean;
+    understood?: boolean;
+    progress?: 'modal';
+    /**
+     * The batch save question's answers, by project path: a new datapack's name, or `drop`. Absent
+     * for a project: changes in the SC's own pack are saved into it, and changes in another's stop
+     * the clearing before anything runs.
+     */
+    changes?: Record<string, { saveAs: string } | 'drop'>;
 }

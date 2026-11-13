@@ -36,6 +36,8 @@ export interface JobSummaryWindowProps {
     waiting: ModalWait | false;
     /** Review Records; an uninstall's question has none. */
     onReview?: () => void;
+    /** Back, before Review Records: Clear Commerce Instance's summary goes back to its websites (C4). */
+    onBack?: () => void;
     /** Dry Run and Install; or the question's one action. */
     actionButtons: ActionButton[];
     onClose: () => void;
@@ -61,6 +63,7 @@ export function JobSummaryWindow({
     ready,
     waiting,
     onReview,
+    onBack,
     actionButtons,
     onClose,
     lead,
@@ -82,7 +85,10 @@ export function JobSummaryWindow({
             ready={ready}
             waiting={waiting}
             closeLabel="Cancel"
-            startButtons={onReview ? [{ label: 'Review Records', variant: 'secondary', onPress: onReview }] : []}
+            startButtons={[
+                ...(onBack ? [{ label: 'Back', variant: 'secondary' as const, onPress: onBack }] : []),
+                ...(onReview ? [{ label: 'Review Records', variant: 'secondary' as const, onPress: onReview }] : []),
+            ]}
             actionButtons={actionButtons}
             onClose={onClose}
             {...(holdProblemRoom && !problem ? { reserve: body(PROBLEM_ROOM) } : {})}

@@ -63,12 +63,34 @@ export interface DemoDataDeps {
     ) => Promise<DatapackRemoval>;
     /** What the project's datapack changed since it was installed (`readRemovalChangesOf`): asked about before a clearing with no answer. */
     changes: (context: HandlerContext, project: Project) => Promise<DatapackRemovalChanges | undefined>;
+    /** The SC's own datapacks' names (`packSave.ownNames`): a name the batch save question may not give a new one (C4). */
+    ownNames: (context: HandlerContext) => Promise<string[]>;
 }
 
 /** A plan shown, with the datapack the clearing uninstalls first and its name as the SC knows it. */
 export interface ShownPlan {
     plan: WipePlan;
     removing?: { pack: ProjectDatapack; name: string };
+    /** Clear Commerce Instance's (C4). */
+    instance?: ShownInstance;
+}
+
+/** What Clear Commerce Instance does with the projects' datapacks, as its list said. */
+export interface ShownInstance {
+    /** Each datapack it uninstalls first, in order. */
+    removals: InstanceRemoval[];
+    /** Each pack the service installed whose project stops naming it after a full clearing (`name`: the project). */
+    forgets: InstanceRemoval[];
+    /** Why each other project keeps its data, and what an uninstalled one's older packs keep: the result says so too. */
+    kept: string[];
+}
+
+/** One project's datapack Clear Commerce Instance uninstalls first: the project by path (loaded afresh to run), the pack, and the run row's name for it. */
+export interface InstanceRemoval {
+    path: string;
+    pack: ProjectDatapack;
+    /** "nb-pack (Neighbour Demo)": the pack as the SC knows it, and its project. */
+    name: string;
 }
 
 /** The plans shown, by token, newest last; a few is plenty, since one is shown per question. */
@@ -149,6 +171,5 @@ export const claimsOf = (
         opened.project,
         opened.others,
         opened.structure,
-        { kind: 'project' },
         options,
     );

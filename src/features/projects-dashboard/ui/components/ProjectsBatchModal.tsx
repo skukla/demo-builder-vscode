@@ -23,14 +23,14 @@
 
 import { DialogContainer } from '@adobe/react-spectrum';
 import React from 'react';
-import { saveQuestionOf, type SaveQuestion } from '../batchChoices';
+import { saveQuestionOf } from '../batchChoices';
 import { batchSubject, confirmTitle, endTitle, runLabel, runningTitle, type BatchSubject } from '../batchWords';
 import type { BatchView, ProjectsBatchControls } from '../hooks/useProjectsBatch';
 import { BatchDeleteQuestions } from './BatchDeleteQuestions';
 import { BatchResetQuestions } from './BatchResetQuestions';
-import { BatchSaveTable } from './BatchSaveTable';
 import { ProjectsBatchRunView } from './ProjectsBatchRunView';
 import { endingRowOf, promptButtons } from './runWindowParts';
+import { BatchSaveTable } from '@/core/ui/components/feedback/BatchSaveTable';
 import { OperationQuestion, questionTakesWindow } from '@/core/ui/components/feedback/OperationQuestion';
 import { SaveFirstWindow } from '@/core/ui/components/feedback/SaveFirstWindow';
 import type { WaitLines } from '@/core/ui/components/feedback/StageWait';
@@ -39,6 +39,7 @@ import { StepsWindow } from '@/core/ui/components/ui/StepsDialog';
 import { endsSmall } from '@/core/ui/utils/runEnding';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { WAIT_STAGES } from '@/core/utils/waitStages';
+import type { SaveQuestion } from '@/features/data-installer/saveAsName';
 import type { ProjectsBatchAction } from '@/types/projectsBatch';
 import type { OperationPrompt } from '@/types/webviewPayloads';
 

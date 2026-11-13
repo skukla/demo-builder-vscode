@@ -61,7 +61,7 @@ import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 
 /** The types the list could not read in time, by name: the clearing waits for Retry. */
-function slowTypes(shown: ShownPlan): string[] {
+export function slowTypes(shown: ShownPlan): string[] {
     return Object.entries(shown.plan.check.unread ?? {})
         .filter(([, kind]) => kind === 'slow')
         .map(([type]) => dataTypeLabel(type));
@@ -145,13 +145,13 @@ async function offerAgain(plans: ShownPlans, opened: Opened, claims: WipeClaims,
 }
 
 /** The window's line when something is left to do, else nothing: the rows say what. */
-function warningOf(outcome: WipeOutcome, rows: ReadonlyArray<{ problem?: unknown }>): string | undefined {
+export function warningOf(outcome: WipeOutcome, rows: ReadonlyArray<{ problem?: unknown }>): string | undefined {
     if (needsAdmin(outcome)) return 'Some of it needs the Commerce Admin.';
     return rows.some((row) => row.problem) ? 'Not everything was cleared.' : undefined;
 }
 
 /** Note what the wipe could not finish, for the next clearing of these websites; never fatal. */
-function noteUnfinished(deps: DemoDataDeps, context: HandlerContext, opened: Opened, unfinished: WipeUnfinished | undefined): Promise<void> {
+export function noteUnfinished(deps: DemoDataDeps, context: HandlerContext, opened: Opened, unfinished: WipeUnfinished | undefined): Promise<void> {
     return rememberWipeUnfinished(deps.files, opened.project.path, unfinished).catch((error: unknown) => context.logger.warn(`${LOG_PREFIX} What was left to do could not be noted: ${String(error)}`));
 }
 
@@ -160,7 +160,7 @@ function noteUnfinished(deps: DemoDataDeps, context: HandlerContext, opened: Ope
  * looks again at every group, set and attribute the list meant to remove, with what an earlier note
  * named. Only widens what is looked at (`wipeUnfinished.ts`).
  */
-async function noteStopped(deps: DemoDataDeps, context: HandlerContext, opened: Opened, plan: WipePlan): Promise<void> {
+export async function noteStopped(deps: DemoDataDeps, context: HandlerContext, opened: Opened, plan: WipePlan): Promise<void> {
     const before = await readWipeUnfinished(deps.files, opened.project.path).catch(() => undefined);
     const earlier = before?.scopeKey === plan.scopeKey ? before : undefined;
     const merged = (a: readonly (string | number)[], b: readonly (string | number)[] = []) => [...new Set([...a, ...b])];
@@ -178,7 +178,7 @@ async function noteStopped(deps: DemoDataDeps, context: HandlerContext, opened: 
  * `withinPlan` accepts), and nothing kept or only taken off a website. With no record, Demo Builder
  * cannot tell which kept thing is the pack's, so anything kept may be (re-review, 2026-11-13).
  */
-function tookItAll(shown: ShownPlan, ran: WipePlan, outcome: WipeOutcome): boolean {
+export function tookItAll(shown: ShownPlan, ran: WipePlan, outcome: WipeOutcome): boolean {
     const unread = (plan: WipePlan): number => Object.keys(plan.check.unread ?? {}).length;
     const kept = Object.values(ran.check.records).some((records) => records.kept.length > 0);
     const takenOff = ran.takeOff.length + ran.ruleTakeOff.length > 0;
@@ -206,9 +206,17 @@ function sentenceOf(outcome: WipeOutcome, shown: ShownPlan, uninstalled: Uninsta
     return parts.join(' ');
 }
 
-/** The wipe, re-planned with the records as they are now and held to the list shown. */
-async function wipe(deps: DemoDataDeps, context: HandlerContext, opened: Opened, claims: WipeClaims, claimed: Claimed, uninstalled?: Uninstalled): Promise<HandlerResponse> {
-    const { shown, run } = claimed;
+/** What a wipe of the shown list came to, and the plan it ran (made again at run time), when it ran. */
+export interface ShownWipe {
+    outcome: WipeOutcome;
+    ran?: WipePlan;
+}
+
+/**
+ * The wipe both Clears run: re-planned with the records as they are now, held to the list shown
+ * (`clearShown`), its progress on the run's rows, and what it could not finish noted for the next.
+ */
+export async function runShownWipe(deps: DemoDataDeps, context: HandlerContext, opened: Opened, claims: WipeClaims, shown: ShownPlan, run: ClearRun): Promise<ShownWipe> {
     const onPhase = (at: number): void => run.report(DATAPACK_STAGES.verifyingDemoData.label, phaseLine(WIPE_PHASES, at));
     onPhase(0);
     let ran: WipePlan | undefined;
@@ -217,10 +225,17 @@ async function wipe(deps: DemoDataDeps, context: HandlerContext, opened: Opened,
         return noteUnfinished(deps, context, opened, done.unfinished);
     };
     const outcome = await clearShown(opened.commerce, shown.plan, { ...claims.respects, erp: opened.erp, onPhase, onWiped }, run.report);
+    return { outcome, ...(ran ? { ran } : {}) };
+}
+
+/** The wipe, re-planned with the records as they are now and held to the list shown. */
+async function wipe(deps: DemoDataDeps, context: HandlerContext, opened: Opened, claims: WipeClaims, claimed: Claimed, uninstalled?: Uninstalled): Promise<HandlerResponse> {
+    const { shown, run } = claimed;
+    const { outcome, ran } = await runShownWipe(deps, context, opened, claims, shown, run);
     const forgotten = await forgetServicePack(context, opened, shown, { outcome, ...(ran ? { ran } : {}) });
     const sentence = sentenceOf(outcome, shown, uninstalled, forgotten);
     context.logger.info(`${LOG_PREFIX} ${sentence}`);
-    const rows = run.ended(outcome, uninstalled?.leftInStore === true);
+    const rows = run.ended(outcome, [uninstalled?.leftInStore === true]);
     const warning = warningOf(outcome, rows);
     const offer = needsAdmin(outcome) ? { offer: { action: 'open-commerce-admin' as const } } : {};
     return { success: true, note: sentence, data: { ...outcome, sentence }, rows, ...(warning ? { warning } : {}), ...offer };
@@ -274,7 +289,7 @@ export async function clearDemoData(deps: DemoDataDeps, plans: ShownPlans, conte
     if (asked) return (release(), asked);
     const options = { id: DEMO_DATA_CLEAR_OPERATION_ID, title: 'Clearing Demo Data', inModal: payload.progress === 'modal' };
     return withOperationProgress(options, async (report) => {
-        const run = clearRun(shown.plan, shown.removing?.name, report);
+        const run = clearRun(shown.plan, shown.removing ? [shown.removing.name] : [], report);
         try {
             return await clearIn(deps, plans, context, { shown, payload, run, release });
         } catch (error) {

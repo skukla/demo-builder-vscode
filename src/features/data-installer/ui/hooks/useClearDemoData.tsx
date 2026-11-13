@@ -11,12 +11,13 @@
  */
 
 import React, { useCallback } from 'react';
+import type { ChangesByPath } from '../../saveAsName';
 import type { RemovalAnswer } from './useSwitchChanges';
 import { OperationProgressModal, type ProgressModalNextStep } from '@/core/ui/components/feedback/OperationProgressModal';
 import { useOperationRunner } from '@/core/ui/hooks/useOperationRunner';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { DEMO_DATA_CLEAR_OPERATION_ID } from '@/core/utils/operationIds';
-import type { DemoDataRequest } from '@/types/demoDataWipe';
+import type { ClearInstanceRequest, DemoDataRequest } from '@/types/demoDataWipe';
 import { ErrorCode } from '@/types/errorCodes';
 import type { OperationOffer } from '@/types/webviewPayloads';
 
@@ -28,6 +29,12 @@ export interface ClearDemoData {
      * no progress window opens.
      */
     clear: (token: string, websites: string[], answer?: RemovalAnswer) => Promise<boolean>;
+    /**
+     * Clear Commerce Instance (C4): clear what the instance list with this token showed, confirmed and
+     * understood, with the batch save question's answers by project path. Resolves `true` when the host
+     * refused for an answer about a project's changes, as `clear` does.
+     */
+    clearInstance: (token: string, websites: string[], changes: ChangesByPath) => Promise<boolean>;
     /** The progress window is open: the run began (or failed before it could). */
     running: boolean;
     /** The progress window; mount it once. */
@@ -69,6 +76,23 @@ export function useClearDemoData(onClosed: () => void): ClearDemoData {
         [startWhenItBegins],
     );
 
+    const clearInstance = useCallback(
+        (token: string, websites: string[], changes: ChangesByPath): Promise<boolean> => {
+            const payload: Omit<ClearInstanceRequest, 'progress'> = { token, confirm: true, understood: true, changes: { ...changes } };
+            return new Promise((resolve) => startWhenItBegins({
+                id: DEMO_DATA_CLEAR_OPERATION_ID,
+                name: websites.join(', '),
+                message: 'clear-commerce-instance',
+                payload: { ...payload },
+                title: 'Clearing Commerce Instance',
+                subject: websites.join(', '),
+                failureTitle: "Couldn't Clear Commerce Instance",
+                successTitle: 'Commerce Instance Cleared',
+            }, (response) => resolve(needsAnswer(response))));
+        },
+        [startWhenItBegins],
+    );
+
     const closeWindow = useCallback((): void => {
         close();
         onClosed();
@@ -76,6 +100,7 @@ export function useClearDemoData(onClosed: () => void): ClearDemoData {
 
     return {
         clear,
+        clearInstance,
         running: open !== null,
         progressWindow: <OperationProgressModal operation={open} onRetry={retry} onClose={closeWindow} offerStep={clearOfferStep} />,
     };

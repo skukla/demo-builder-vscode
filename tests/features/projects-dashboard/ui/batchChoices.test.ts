@@ -5,15 +5,13 @@
  * answers sent for each project.
  */
 
+import { changesOf, nameProblems, namesOf } from '@/features/data-installer/saveAsName';
 import {
-    changesOf,
     columnState,
     dataTicks,
     deleteAnswers,
     initialDeleteTicks,
     initialRemoveTicks,
-    nameProblems,
-    namesOf,
     removeColumnState,
     resetAnswers,
     saveRows,

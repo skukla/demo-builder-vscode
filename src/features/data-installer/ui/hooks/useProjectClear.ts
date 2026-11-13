@@ -29,18 +29,11 @@ export interface ProjectClear extends DemoDataCheckState {
     openAdmin: () => void;
 }
 
-export function useProjectClear(): ProjectClear {
-    const check = useDemoDataCheck();
-    const { retry: askAgain } = check;
-    const [reviewing, setReviewing] = useState(false);
-    const [retries, setRetries] = useState(0);
+/** The ways to a type a Clear check could not read, beyond Retry: Fix with AI and Open Commerce Admin. Clear Commerce Instance's too (C4). */
+export type ClearFixes = Pick<ProjectClear, 'adminProblem' | 'fixWithAi' | 'openAdmin'>;
+
+export function useClearFixes(): ClearFixes {
     const [adminProblem, setAdminProblem] = useState<string | undefined>(undefined);
-    const retry = useCallback((): void => {
-        setRetries((n) => n + 1);
-        askAgain();
-    }, [askAgain]);
-    const review = useCallback((): void => setReviewing(true), []);
-    const back = useCallback((): void => setReviewing(false), []);
     const fixWithAi = useCallback((): void => {
         void webviewClient.request('fix-datapack-import-with-ai', FROM_CLEAR_CHECK);
     }, []);
@@ -51,15 +44,19 @@ export function useProjectClear(): ProjectClear {
             .then((res) => setAdminProblem(res?.success === false ? res.error : undefined))
             .catch(() => undefined);
     }, []);
-    return {
-        ...check,
-        retry,
-        reviewing,
-        review,
-        back,
-        retries,
-        ...(adminProblem ? { adminProblem } : {}),
-        fixWithAi,
-        openAdmin,
-    };
+    return { ...(adminProblem ? { adminProblem } : {}), fixWithAi, openAdmin };
+}
+
+export function useProjectClear(): ProjectClear {
+    const check = useDemoDataCheck();
+    const { retry: askAgain } = check;
+    const [reviewing, setReviewing] = useState(false);
+    const [retries, setRetries] = useState(0);
+    const retry = useCallback((): void => {
+        setRetries((n) => n + 1);
+        askAgain();
+    }, [askAgain]);
+    const review = useCallback((): void => setReviewing(true), []);
+    const back = useCallback((): void => setReviewing(false), []);
+    return { ...check, retry, reviewing, review, back, retries, ...useClearFixes() };
 }

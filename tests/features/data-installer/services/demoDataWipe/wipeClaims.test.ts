@@ -6,7 +6,8 @@
  */
 
 import { type InstallRecord, installRecordPath } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
-import { projectWebsites, readWipeClaims } from '@/features/data-installer/services/demoDataWipe/wipeClaims';
+import { projectWebsites } from '@/features/data-installer/services/demoDataWipe/recordWebsites';
+import { readWipeClaims } from '@/features/data-installer/services/demoDataWipe/wipeClaims';
 import type { Project } from '@/types/base';
 import type { CommerceStoreStructure } from '@/types/commerceStore';
 import type { StorePreparationRecord } from '@/types/storePreparation';
@@ -16,7 +17,6 @@ import { memoryFiles } from '../demoBuilderEngine/demoBuilderEngine.testUtils';
 import { PROJECT_RECORDS } from './wipe.testUtils';
 
 const STRUCTURE: CommerceStoreStructure = { websites: SANDBOX_WEBSITES, storeGroups: SANDBOX_GROUPS, storeViews: SANDBOX_VIEWS };
-const PROJECT_SCOPE = { kind: 'project' } as const;
 
 function accsProject(name: string, websiteCode: string, viewCode: string, title?: string): Project {
     return createMockProject({
@@ -43,7 +43,7 @@ function filesWith(entries: Array<[Project, InstallRecord]>) {
     return memoryFiles(Object.fromEntries(entries.map(([p, r]) => [installRecordPath(p.path, r.pack), JSON.stringify(r)])));
 }
 
-const claims = (files: ReturnType<typeof memoryFiles>, project: Project, others: Project[]) => readWipeClaims(files, project, others, STRUCTURE, PROJECT_SCOPE);
+const claims = (files: ReturnType<typeof memoryFiles>, project: Project, others: Project[]) => readWipeClaims(files, project, others, STRUCTURE);
 
 /** A project on the test website, as PROJECT_RECORDS' target says. */
 const TESTER = accsProject('tester', 'justrite_test_website', 'justrite_test_view', 'Tester');
@@ -132,7 +132,7 @@ describe('readWipeClaims, project scope', () => {
             [other, theirs],
         ]);
 
-        const answer = await readWipeClaims(files, TESTER, [other], STRUCTURE, PROJECT_SCOPE, { asIfRemoved: { name: 'own-pack', version: '1' } });
+        const answer = await readWipeClaims(files, TESTER, [other], STRUCTURE, { asIfRemoved: { name: 'own-pack', version: '1' } });
 
         expect(answer.respects.records).toEqual([leftover, theirs]);
         expect(answer.respects.everyRecord).toEqual([leftover, theirs]);
@@ -143,7 +143,7 @@ describe('readWipeClaims, project scope', () => {
     it('drops nothing, and names no removal, when the datapack named has no record here (a pack the service installed)', async () => {
         const files = filesWith([[TESTER, PROJECT_RECORDS[0]]]);
 
-        const answer = await readWipeClaims(files, TESTER, [], STRUCTURE, PROJECT_SCOPE, { asIfRemoved: { name: 'service-pack', version: '1' } });
+        const answer = await readWipeClaims(files, TESTER, [], STRUCTURE, { asIfRemoved: { name: 'service-pack', version: '1' } });
 
         expect(answer.respects.records).toEqual([PROJECT_RECORDS[0]]);
         expect(answer.removing).toBeUndefined();
@@ -222,14 +222,5 @@ describe('readWipeClaims, project scope', () => {
 
     it('names a website the project uses that the store no longer has', async () => {
         await expect(claims(memoryFiles(), accsProject('gone', 'gone_website', 'gone_view'), [])).rejects.toThrow('Commerce has no website gone_website.');
-    });
-});
-
-describe('readWipeClaims, instance scope', () => {
-    it('covers the websites named, whatever the project uses, and warns of nothing', async () => {
-        const answer = await readWipeClaims(memoryFiles(), TESTER, [JUSTRITE], STRUCTURE, { kind: 'instance', websites: ['justrite', 'bodea'] });
-
-        expect(answer.scope.key).toBe('bodea,justrite');
-        expect(answer.warning).toBeUndefined();
     });
 });

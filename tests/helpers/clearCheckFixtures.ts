@@ -4,7 +4,7 @@
  * these. The numbers and names are made up; the shape is `src/types/demoDataWipe.ts`'s.
  */
 
-import type { ClearCheck } from '@/types/demoDataWipe';
+import type { ClearCheck, InstanceChoices } from '@/types/demoDataWipe';
 
 /** Clearing the Bodea website: products, categories as a tree, customers with one kept, closed orders. */
 export const BODEA_CHECK: ClearCheck = {
@@ -33,4 +33,35 @@ export const EMPTY_CHECK: ClearCheck = { project: 'Bodea', websites: [{ code: 'b
 export const BODEA_PACK_CHECK: ClearCheck = {
     ...BODEA_CHECK,
     datapack: { name: 'Bodea B2B', changes: 'unchecked', pack: { name: 'bodea-b2b', version: '1', store: 'library' } },
+};
+
+/** Clear Commerce Instance's websites (C4): two used by projects, one by four, one by none. */
+export const INSTANCE_CHOICES: InstanceChoices = {
+    websites: [
+        { code: 'base', name: 'Main Website', projects: ['Kukla Luma', 'Luma Test'] },
+        { code: 'bodea', name: 'Bodea', projects: ['Bodea', 'Bodea EU', 'Bodea Test', 'Bodea Old'] },
+        { code: 'spare', name: 'Spare', projects: [] },
+    ],
+};
+
+/** Clearing Main Website: two projects lose their data, one's datapack with changes in a pack not the SC's. */
+export const INSTANCE_CHECK: ClearCheck = {
+    ...BODEA_CHECK,
+    project: 'Kukla Luma',
+    websites: [{ code: 'base', name: 'Main Website' }],
+    token: 'instance-tok-1',
+    instance: {
+        projects: [
+            { path: '/p/kukla-luma', name: 'Kukla Luma', datapack: { name: 'Luma', changes: 'asks' } },
+            { path: '/p/luma-test', name: 'Luma Test', datapack: { name: 'Luma Test Pack' } },
+        ],
+        ownNames: ['My Luma'],
+        alwaysSave: false,
+    },
+};
+
+/** The same, with nothing changed in either datapack. */
+export const INSTANCE_CHECK_NO_CHANGES: ClearCheck = {
+    ...INSTANCE_CHECK,
+    instance: { projects: [{ path: '/p/luma-test', name: 'Luma Test', datapack: { name: 'Luma Test Pack' } }], ownNames: [], alwaysSave: false },
 };

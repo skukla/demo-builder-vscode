@@ -71,8 +71,8 @@ const SAVE_QUESTION_ANSWERED = 'datapack-save-question-answered';
 
 const kindsOf = (check: ClearCheck): Set<string> => new Set(Object.values(check.unread ?? {}));
 
-/** The one fix a type not read asks for, beside Clear (rule 16): the slow kind first, since Clear waits for it. */
-function fixButton(check: ClearCheck, clear: ProjectClear): ActionButton | undefined {
+/** The one fix a type not read asks for, beside Clear (rule 16): the slow kind first, since Clear waits for it. Clear Commerce Instance's too. */
+export function fixButton(check: ClearCheck, clear: Pick<ProjectClear, 'retries' | 'retry' | 'fixWithAi' | 'openAdmin'>): ActionButton | undefined {
     const kinds = kindsOf(check);
     const fix: ActionButton = {
         label: FIX_WITH_AI,
@@ -176,10 +176,11 @@ function useClearPress(check: ClearCheck | null, ownNames: readonly string[], on
     return { asking, sending, changes, press, answer };
 }
 
-/** Review Records over the check's own lists: removed, kept, the categories' tree, the types not read. */
-function recordsWindow(
+/** Review Records over the check's own lists: removed, kept, the categories' tree, the types not read. Clear Commerce Instance's too. */
+export function recordsWindow(
     check: ClearCheck,
-    clear: ProjectClear,
+    title: string,
+    onBack: () => void,
     onClose: () => void,
 ): React.ReactElement {
     const removed: Record<string, string[]> = {};
@@ -192,14 +193,14 @@ function recordsWindow(
     }
     return (
         <RecordsWindow
-            title={clearTitle(check.project)}
+            title={title}
             rows={check.rows}
             records={removed}
             kept={kept}
             trees={trees}
             unread={new Set(Object.keys(check.unread ?? {}))}
             reading={false}
-            onBack={clear.back}
+            onBack={onBack}
             onClose={onClose}
         />
     );
@@ -219,7 +220,7 @@ function ClearSteps({ onClose, onClear, ownNames = NO_NAMES }: ProjectClearWindo
             </StepsWindow>
         );
     }
-    if (check && clear.reviewing) return recordsWindow(check, clear, onClose);
+    if (check && clear.reviewing) return recordsWindow(check, clearTitle(check.project), clear.back, onClose);
     if (pressing.asking) return saveFirstWindow(pressing.changes, pressing.answer, onClose);
     const problem = check?.problem ?? clear.adminProblem;
     return (

@@ -3,8 +3,9 @@
  * widens what the next clearing of the same websites looks at.
  */
 
-import { readWipeClaims } from '@/features/data-installer/services/demoDataWipe/wipeClaims';
+import { readInstanceClaims } from '@/features/data-installer/services/demoDataWipe/instanceClaims';
 import { readWipeStructure } from '@/features/data-installer/services/demoDataWipe/wipeReads';
+import { resolveWipeScope } from '@/features/data-installer/services/demoDataWipe/wipeScope';
 import { readWipeUnfinished, rememberWipeUnfinished } from '@/features/data-installer/services/demoDataWipe/wipeUnfinished';
 import { createMockProject } from '../../../../helpers/projectFake';
 import { memoryFiles } from '../demoBuilderEngine/demoBuilderEngine.testUtils';
@@ -44,8 +45,8 @@ describe('the unfinished note', () => {
         const structure = await readWipeStructure(sandbox().get);
         const project = createMockProject({ name: 'zz', path: PATH, componentConfigs: {} });
 
-        const same = await readWipeClaims(files, project, [], structure, { kind: 'instance', websites: ['justrite_test_website'] });
-        const other = await readWipeClaims(files, project, [], structure, { kind: 'instance', websites: ['bodea'] });
+        const same = await readInstanceClaims(files, project, [], resolveWipeScope(structure, ['justrite_test_website']), { matched: new Set([PATH]) });
+        const other = await readInstanceClaims(files, project, [], resolveWipeScope(structure, ['bodea']), { matched: new Set([PATH]) });
 
         expect(same.respects).toMatchObject({ unfinished: NOTE });
         expect('unfinished' in other.respects).toBe(false);
@@ -57,7 +58,7 @@ describe('the unfinished note', () => {
         const structure = await readWipeStructure(sandbox().get);
         const project = createMockProject({ name: 'zz', path: PATH, componentConfigs: {} });
 
-        const claims = await readWipeClaims(files, project, [], structure, { kind: 'instance', websites: ['justrite_test_website'] });
+        const claims = await readInstanceClaims(files, project, [], resolveWipeScope(structure, ['justrite_test_website']), { matched: new Set([PATH]) });
 
         expect('unfinished' in claims.respects).toBe(false);
     });

@@ -101,3 +101,30 @@ it('resolves true, opening no progress window, when the host refuses for an answ
     await expect(asked).resolves.toBe(true);
     expect(view.container.textContent).toContain('shut');
 });
+
+describe('Clear Commerce Instance (step 06 C4)', () => {
+    function StartsInstance(): React.ReactElement {
+        const { clearInstance, progressWindow } = useClearDemoData(NOTHING);
+        useEffect(() => {
+            void clearInstance('instance-tok-1', ['base', 'bodea'], { '/p/a': { saveAs: 'My A' }, '/p/b': 'drop' });
+        }, [clearInstance]);
+        return progressWindow;
+    }
+
+    it('sends the clearing confirmed and understood, each project\'s answer by path, to the progress window', async () => {
+        render(<StartsInstance />);
+        await settle();
+
+        const sentInstance = (webviewClient.request as jest.Mock).mock.calls.filter((c) => c[0] === 'clear-commerce-instance').map((c) => c[1]);
+        expect(sentInstance).toEqual([
+            {
+                id: 'demo-data-clear',
+                token: 'instance-tok-1',
+                confirm: true,
+                understood: true,
+                changes: { '/p/a': { saveAs: 'My A' }, '/p/b': 'drop' },
+                progress: 'modal',
+            },
+        ]);
+    });
+});

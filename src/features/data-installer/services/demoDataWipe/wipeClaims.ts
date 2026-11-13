@@ -3,9 +3,9 @@
  * (datapack-engine step 10; datapack-simplification step 06). Every door into the wipe (the check
  * and the clearing) reads this before it plans.
  *
- * - **The websites** (`ClearScope`): for Clear Demo Data, every website the project uses, its install
- *   target's (`resolveInstallTarget`) and each of its install records' (`target.websiteCode`), the
- *   same reading every record reader takes; for Clear Commerce Instance, the websites named.
+ * - **The websites**: for Clear Demo Data, every website the project uses, its install target's
+ *   (`resolveInstallTarget`) and each of its install records' (`target.websiteCode`), the same reading
+ *   every record reader takes. Clear Commerce Instance reads its own (`instanceClaims.ts`).
  * - **Another project using one of them is a warning, never a refusal** (P6-Q2, owner 2026-11-13: "The
  *   warning is an informational warning that should allow them to stop if they want and continue").
  *   "Uses" is read the same way as for this project: its install target's website, or a website one of
@@ -22,12 +22,15 @@
  *   (owner, 2026-11-02): a company, catalog, group, attribute set or attribute belongs to no website,
  *   so another demo's pack may have made one these websites also use (`everyRecord`). The same for a
  *   website setting a datapack or the setup guide wrote (`settingsKept`): its undo puts it back.
+ * - **Clear Commerce Instance** reads its own claims (`instanceClaims.ts`, step 06 C4): a project's
+ *   records on the chosen websites stop being respected only when its datapack is uninstalled first.
  *
  * @module features/data-installer/services/demoDataWipe/wipeClaims
  */
 
 import { type InstallRecord, type RecordFiles, readProjectRecords } from '../demoBuilderEngine/installRecord';
 import { resolveInstallTarget } from '../sampleDataInstall';
+import { isPack, projectWebsites } from './recordWebsites';
 import { WipeScopeError } from './wipeReads';
 import { recordedSettings, settingsKeptBy } from './wipeRecorded';
 import { type WipeScope, resolveWipeScope } from './wipeScope';
@@ -37,7 +40,6 @@ import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import type { Project } from '@/types/base';
 import type { CommerceStoreStructure } from '@/types/commerceStore';
 import type { DatapackId } from '@/types/datapack';
-import type { ClearScope } from '@/types/demoDataWipe';
 
 /** What a wipe must leave, from every project on this machine. */
 export interface WipeRespects {
@@ -56,7 +58,7 @@ export interface WipeClaims {
     scope: WipeScope;
     /** Everything to respect, this project's records included. */
     respects: WipeRespects;
-    /** Another local project uses one of these websites: the sentence naming it. Project scope only. */
+    /** Another local project uses one of these websites: the sentence naming it (Clear Demo Data's). */
     warning?: string;
     /**
      * The datapack record dropped for `asIfRemoved`, when the project has one: the clearing uninstalls
@@ -75,18 +77,9 @@ export interface ClaimsOptions {
     websites?: readonly string[];
 }
 
-const isPack = (record: InstallRecord, pack: DatapackId | undefined): boolean => pack !== undefined && record.pack.name === pack.name && record.pack.version === pack.version;
 
-/** Every website a project uses: its install target's, and each its install records were installed to. Sorted, each once. */
-export function projectWebsites(project: Project, records: readonly InstallRecord[]): string[] {
-    const own = resolveInstallTarget(project)?.websiteCode;
-    const codes = [own, ...records.map((r) => r.target?.websiteCode)].filter((code): code is string => code !== undefined && code !== '');
-    return [...new Set(codes)].sort();
-}
-
-/** The websites a clearing covers: every one the project uses, or those named. */
-function websitesOf(clear: ClearScope, project: Project, own: readonly InstallRecord[], shown?: readonly string[]): string[] {
-    if (clear.kind === 'instance') return clear.websites;
+/** The websites Clear Demo Data covers: those the list shown covered, else every one the project uses. */
+function websitesOf(project: Project, own: readonly InstallRecord[], shown?: readonly string[]): string[] {
     if (shown) return [...shown];
     const websites = projectWebsites(project, own);
     if (websites.length === 0) throw new WipeScopeError('This project records no website to clear.');
@@ -144,18 +137,18 @@ async function readOthers(files: RecordFiles, project: Project, others: readonly
  * @throws InstallRecordError when a record cannot be read: a wipe that ignored it could delete what it lists
  * @throws WipeScopeError when a website the project uses is no longer in the store, or it records none
  */
-export async function readWipeClaims(files: RecordFiles, project: Project, others: readonly Project[], structure: CommerceStoreStructure, clear: ClearScope, options: ClaimsOptions = {}): Promise<WipeClaims> {
+export async function readWipeClaims(files: RecordFiles, project: Project, others: readonly Project[], structure: CommerceStoreStructure, options: ClaimsOptions = {}): Promise<WipeClaims> {
     const all = await readProjectRecords(files, project.path);
     const dropped = all.filter((r) => isPack(r, options.asIfRemoved));
     const own = all.filter((r) => !isPack(r, options.asIfRemoved));
-    const scope = resolveWipeScope(structure, websitesOf(clear, project, all, options.websites));
+    const scope = resolveWipeScope(structure, websitesOf(project, all, options.websites));
     const theirs = await readOthers(files, project, others, new Set(scope.websites.map((w) => w.code)));
     const note = await readWipeUnfinished(files, project.path);
     const unfinished = note?.scopeKey === scope.key ? { unfinished: note } : {};
     const settingsKept = new Set([...settingsKeptBy(project, own), ...theirs.settingsKept]);
     const respects = { records: [...own, ...theirs.records], everyRecord: [...own, ...theirs.everyRecord], settingsKept, ...unfinished };
     const shared = [...new Set(theirs.users.flatMap((u) => u.websites))].sort();
-    const warning = clear.kind === 'project' ? warningOf(theirs.users.map((u) => u.project), shared) : undefined;
+    const warning = warningOf(theirs.users.map((u) => u.project), shared);
     const removing = dropped.length > 0 ? { removing: { setBack: recordedSettings(project, dropped) } } : {};
     return { scope, respects, ...(warning ? { warning } : {}), ...removing };
 }
