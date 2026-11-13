@@ -10,7 +10,7 @@ import { createRoot } from 'react-dom/client';
 import type { ProjectActions } from './components/ProjectActionsMenu';
 import { ProjectsBatchModal } from './components/ProjectsBatchModal';
 import { UpdatesModal } from './components/UpdatesModal';
-import { useProjectsBatch } from './hooks/useProjectsBatch';
+import { useListBatch } from './hooks/useListBatch';
 import { useUpdatesModal } from './hooks/useUpdatesModal';
 import { ProjectsDashboard } from './ProjectsDashboard';
 import { OperationProgressModal } from '@/core/ui/components/feedback/OperationProgressModal';
@@ -18,8 +18,7 @@ import { WebviewApp } from '@/core/ui/components/WebviewApp';
 import { useOperationRunner } from '@/core/ui/hooks/useOperationRunner';
 import { useViewModePreference } from '@/core/ui/hooks/useViewModePreference';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import { COPY_SETTINGS_OPERATION_ID, deleteOperationId, resetOperationId } from '@/core/utils/operationIds';
-import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
+import { COPY_SETTINGS_OPERATION_ID } from '@/core/utils/operationIds';
 import { sleep } from '@/core/utils/sleep';
 import type { Project } from '@/types/base';
 import type {
@@ -159,11 +158,6 @@ function ProjectsDashboardApp() {
             }
         });
 
-        // Subscribe to project deletion (refresh list)
-        const unsubscribeDeleted = webviewClient.onMessage('projectDeleted', () => {
-            fetchProjects(true);
-        });
-
         // Subscribe to demo state changes (start/stop)
         const unsubscribeDemoState = webviewClient.onMessage('demoStateChanged', (data) => {
             const typedData = data as DemoStateChangedPayload | undefined;
@@ -173,7 +167,6 @@ function ProjectsDashboardApp() {
         return () => {
             unsubscribeConfig();
             unsubscribeProjects();
-            unsubscribeDeleted();
             unsubscribeDemoState();
         };
     }, [fetchProjects, adoptViewMode]);
@@ -233,17 +226,15 @@ function ProjectsDashboardApp() {
         }
     }, []);
 
-    // Both kebab actions that take minutes — delete and reset — narrate into this
-    // screen's one progress modal (PL-59).
+    // Copy from a project narrates into this screen's one progress modal (PL-59).
     const operations = useOperationRunner();
     const startOperation = operations.startWhenItBegins;
     // Check for Updates (PL-80): its list, and then its run, in the Updates modal.
     const refreshList = useCallback(() => void fetchProjects(true), [fetchProjects]);
     const updates = useUpdatesModal(refreshList);
-    // Reset Selected and Delete Selected (owner, 2026-11-04): one window, run row by row.
-    const batch = useProjectsBatch(refreshList);
-    const batchOpen = batch.view.phase !== 'closed';
-    const listBatch = useMemo(() => ({ start: batch.start, isOpen: batchOpen, runs: batch.runs }), [batch.start, batchOpen, batch.runs]);
+    // Reset and Delete, one project's from its card or several selected: one window, run row by row
+    // (owner, 2026-11-04; step-05 S2).
+    const { batch, listBatch, onResetProject, onDeleteProject } = useListBatch(refreshList);
 
     // Copy from a project: the modal asks which one, then the wizard opens with
     // its settings (picker-to-modal).
@@ -257,27 +248,6 @@ function ProjectsDashboardApp() {
             successTitle: 'Settings Copied',
         });
     }, [startOperation]);
-
-    // Handle delete project — narrated in this screen's progress modal, which
-    // opens once the run reports: VS Code asks to confirm first, and for an EDS
-    // project it also asks which cloud resources to take with it (PL-59 R1).
-    const handleDeleteProject = useCallback(
-        (project: Project) => {
-            startOperation(
-                {
-                    id: deleteOperationId(project.name),
-                    name: project.name,
-                    message: 'deleteProject',
-                    title: `Deleting ${getProjectDisplayName(project)}`,
-                    failureTitle: `Couldn't Delete ${getProjectDisplayName(project)}`,
-                    successTitle: `${getProjectDisplayName(project)} Deleted`,
-                    payload: { projectPath: project.path },
-                },
-                () => fetchProjects(true),
-            );
-        },
-        [startOperation, fetchProjects],
-    );
 
     // Handle start demo
     const handleStartDemo = useCallback(
@@ -352,26 +322,6 @@ function ProjectsDashboardApp() {
             console.error('Failed to open admin panel:', error);
         }
     }, []);
-
-    // Handle reset project (all project types) — narrated in this screen's
-    // progress modal (PL-59 R1), which opens once the run starts reporting: VS
-    // Code confirms first, and may ask about sample data.
-    const handleResetProject = useCallback(
-        (project: Project) => {
-            startOperation({
-                id: resetOperationId(project.name),
-                name: project.name,
-                message: 'resetProject',
-                title: `Resetting ${getProjectDisplayName(project)}`,
-                failureTitle: `Couldn't Reset ${getProjectDisplayName(project)}`,
-                successTitle: `${getProjectDisplayName(project)} Reset`,
-                // The list must reflect what the reset changed; the modal closes
-                // on success, so the refresh rides the same moment.
-                payload: { projectPath: project.path },
-            }, () => fetchProjects(true));
-        },
-        [startOperation, fetchProjects],
-    );
 
     // Handle per-integration redeploy (one kebab item per redeployable keyed
     // integration; the id targets that integration only — ADR-011 D3 Step 04).
@@ -472,14 +422,14 @@ function ProjectsDashboardApp() {
             onOpenLiveSite: handleOpenLiveSite,
             onOpenDaLive: handleOpenDaLive,
             onOpenAdminPanel: handleOpenAdminPanel,
-            onResetProject: handleResetProject,
+            onResetProject,
             onOpenIntegrations: handleOpenIntegrations,
             onEdit: handleEditProject,
             onRenameSubmit: handleRenameSubmit,
             onExport: handleExportProject,
             onOpenAi: handleOpenAiForProject,
             onPinToggle: handlePinToggle,
-            onDelete: handleDeleteProject,
+            onDelete: onDeleteProject,
         }),
         [
             handleStartDemo,
@@ -488,14 +438,14 @@ function ProjectsDashboardApp() {
             handleOpenLiveSite,
             handleOpenDaLive,
             handleOpenAdminPanel,
-            handleResetProject,
+            onResetProject,
             handleOpenIntegrations,
             handleEditProject,
             handleRenameSubmit,
             handleExportProject,
             handleOpenAiForProject,
             handlePinToggle,
-            handleDeleteProject,
+            onDeleteProject,
         ],
     );
 

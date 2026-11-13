@@ -29,7 +29,8 @@ const nameField = (project: string) => screen.getByRole('textbox', { name: `Save
 /** Opens on these questions and presses the red button. */
 async function pressReset(prepare: PrepareEnvelope, button = 'Reset 3 Projects') {
     const opened = await openOn('reset', prepare);
-    await screen.findByRole('dialog', { name: /^Reset \d+ Projects?\?$/ });
+    // Several projects' confirm, or one project's by its name (J7-1).
+    await screen.findByRole('dialog', { name: /^Reset .+\?$/u });
     await opened.user.click(screen.getByRole('button', { name: button }));
     return opened;
 }
@@ -164,7 +165,7 @@ describe('ProjectsBatchModal: Reset Selected', () => {
     });
 
     it('runs at once when the only pack with changes is the SC\'s own and the setting saves it', async () => {
-        await pressReset(prepared([ROWS[1]], { ownNames: ['Mine'], alwaysSave: true }), 'Reset 1 Project');
+        await pressReset(prepared([ROWS[1]], { ownNames: ['Mine'], alwaysSave: true }), 'Reset');
 
         expect(screen.queryByRole('dialog', { name: 'Save Your Changes First?' })).toBeNull();
         expect(runRequest()).toMatchObject({ answers: [{ path: '/p/b', removeDatapack: true }] });
@@ -173,7 +174,7 @@ describe('ProjectsBatchModal: Reset Selected', () => {
     // Option B (owner, 2026-11-04): a pack whose changes could not be read stays, said on its row.
     it('keeps a pack whose changes could not be read: no box, and a note on its row', async () => {
         await openOn('reset', prepared([{ path: '/p/a', name: asDisplayName('A'), datapack: { name: 'Team', changes: 'unchecked' } }]));
-        await screen.findByRole('dialog', { name: /^Reset \d+ Projects?\?$/ });
+        await screen.findByRole('dialog', { name: 'Reset A?' });
 
         expect(screen.queryByRole('checkbox', { name: 'Uninstall Datapack, A' })).toBeNull();
         expect(screen.getByText("Couldn't check for changes. Datapack kept.")).toHaveClass('dialog-problem', 'text-notice');
@@ -237,7 +238,7 @@ describe('ProjectsBatchModal: Reset Selected', () => {
     // Each project as the run draws it: its name, and under it what it is (owner, 2026-11-04).
     it("draws each project's package and stack under its name", async () => {
         await openOn('reset', prepared([{ path: '/p/a', name: asDisplayName('A'), summary: 'Starter (B2B + B2C), Edge Delivery + ACCS' }]));
-        await screen.findByRole('dialog', { name: /^Reset \d+ Projects?\?$/ });
+        await screen.findByRole('dialog', { name: 'Reset A?' });
 
         expect(screen.getByText('Starter (B2B + B2C), Edge Delivery + ACCS')).toHaveClass('work-row-detail');
     });
@@ -245,7 +246,7 @@ describe('ProjectsBatchModal: Reset Selected', () => {
     // A storefront's repository names what the reset overwrites; it leads over the summary.
     it("draws a storefront's repository under its name, in place of its summary", async () => {
         await openOn('reset', prepared([{ path: '/p/a', name: asDisplayName('A'), repository: 'skukla/a', summary: 'Starter (B2B + B2C), Edge Delivery + ACCS' }]));
-        await screen.findByRole('dialog', { name: /^Reset \d+ Projects?\?$/ });
+        await screen.findByRole('dialog', { name: 'Reset A?' });
 
         expect(screen.getByText('skukla/a')).toHaveClass('work-row-detail');
         expect(screen.queryByText('Starter (B2B + B2C), Edge Delivery + ACCS')).toBeNull();

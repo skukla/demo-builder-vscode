@@ -8,6 +8,7 @@
 import { act, screen, within } from '@testing-library/react';
 import {
     mockPostMessage,
+    mockRequest,
     openOn,
     PROJECTS_BATCH_OPERATION_ID,
     push,
@@ -16,6 +17,7 @@ import {
 } from './ProjectsBatchModal.testUtils';
 import type { OperationPrompt } from '@/types/webviewPayloads';
 import { deleteQuestions, resetQuestions } from '../../../../helpers/projectsBatchFixtures';
+import { createProjectsDashboardProject } from '../../testUtils';
 import { asDisplayName } from '@/core/utils/projectDisplayName';
 
 const DELETE: PrepareEnvelope = {
@@ -341,5 +343,82 @@ describe('ProjectsBatchModal: the run', () => {
         expect(mockPostMessage).toHaveBeenCalledWith('backgroundOperation', { id: ID, title: 'Deleting Projects' });
         expect(onClosed).toHaveBeenCalledTimes(1);
         expect(screen.queryByRole('dialog')).toBeNull();
+    });
+});
+
+/**
+ * One project, from a card's Reset or Delete: the same window with one row, its words naming the
+ * project (decisions J7-1; step-05 P5-Q1's recommendation): "Reset Kukla Luma?", the button the bare
+ * verb, the run "Resetting Kukla Luma", the end "Kukla Luma Reset" (the thing first).
+ */
+describe('ProjectsBatchModal: one project, its words by name', () => {
+    // The slug differs from the title, so a window that read the slug would fail here.
+    const KUKLA = createProjectsDashboardProject({ name: 'kukla-luma', title: 'Kukla Luma', path: '/p/kukla' });
+    const ONE_ROW = { path: '/p/kukla', name: asDisplayName('Kukla Luma') };
+    const ONE: Record<'reset' | 'delete', PrepareEnvelope> = {
+        reset: { success: true, data: resetQuestions([ONE_ROW]) },
+        delete: { success: true, data: deleteQuestions([ONE_ROW]) },
+    };
+    const WORDS = {
+        reset: { verb: 'Reset', running: 'Resetting Kukla Luma', done: 'Kukla Luma Reset', failed: "Couldn't Reset Kukla Luma" },
+        delete: { verb: 'Delete', running: 'Deleting Kukla Luma', done: 'Kukla Luma Deleted', failed: "Couldn't Delete Kukla Luma" },
+    } as const;
+
+    /** The one-row window on its questions, then its red button pressed. */
+    async function runningOne(action: 'reset' | 'delete') {
+        const opened = await openOn(action, ONE[action], [KUKLA]);
+        await opened.user.click(await screen.findByRole('button', { name: WORDS[action].verb }));
+        await push('operationProgress', { id: ID, state: 'running' });
+        return opened;
+    }
+
+    describe.each(['reset', 'delete'] as const)('%s', (action) => {
+        const words = WORDS[action];
+
+        it('titles the read wait by the project\'s name', async () => {
+            await openOn(action, null, [KUKLA]);
+
+            expect(screen.getByRole('dialog', { name: `${words.verb} Kukla Luma?` })).toBeInTheDocument();
+        });
+
+        it('asks by name, the red button the bare verb, and nothing runs before it is pressed', async () => {
+            await openOn(action, ONE[action], [KUKLA]);
+
+            const dialog = await screen.findByRole('dialog', { name: `${words.verb} Kukla Luma?` });
+            expect(dialog).toHaveAttribute('data-status', 'warning');
+            expect(screen.getByRole('button', { name: words.verb })).toHaveAttribute('data-variant', 'negative');
+            expect(screen.queryByRole('button', { name: /1 Project/u })).toBeNull();
+            expect(mockRequest).not.toHaveBeenCalledWith('runProjectsBatch', expect.anything());
+        });
+
+        it('runs under the project\'s name', async () => {
+            await runningOne(action);
+
+            expect(screen.getByRole('dialog', { name: words.running })).toBeInTheDocument();
+            expect(mockRequest).toHaveBeenCalledWith('runProjectsBatch', expect.objectContaining({ action }));
+        });
+
+        it('ends with the project first, then what happened to it', async () => {
+            await runningOne(action);
+            await push('projectsBatchRow', { path: '/p/kukla', state: 'done' });
+            await push('operationProgress', { id: ID, state: 'succeeded' });
+
+            expect(screen.getByRole('dialog', { name: words.done })).toHaveAttribute('data-status', 'success');
+        });
+
+        it('a run that did not go through says which project it could not', async () => {
+            await runningOne(action);
+            await push('operationProgress', { id: ID, state: 'failed', error: 'GitHub refused.' });
+
+            expect(screen.getByRole('dialog', { name: words.failed })).toHaveAttribute('data-status', 'error');
+        });
+
+        it('closing mid-run hands it to a notification under the same name', async () => {
+            const { user } = await runningOne(action);
+
+            await user.click(screen.getByRole('button', { name: 'Run in Background' }));
+
+            expect(mockPostMessage).toHaveBeenCalledWith('backgroundOperation', { id: ID, title: words.running });
+        });
     });
 });

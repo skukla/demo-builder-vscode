@@ -1,5 +1,5 @@
 /**
- * Dashboard handlers — delete, edit, rename, open-live-site, open-DA.live, reset.
+ * Dashboard handlers — edit, rename, open-live-site, open-DA.live.
  *
  * Same rule as the sibling settingsActions suite: these handlers decide WHICH
  * collaborator runs and WITH WHAT, so the assertions read the arguments the
@@ -10,21 +10,14 @@
 import * as vscode from 'vscode';
 import type { Project } from '@/types/base';
 import {
-    handleDeleteProject,
     handleEditProject,
     handleOpenDaLive,
     handleOpenLiveSite,
     handleRenameProject,
-    handleResetProject,
-    mockDeleteProject,
     mockExtractSettingsFromProject,
-    mockGetAuthenticationService,
-    mockGetCommandExecutor,
     mockGetEwCanvasBranch,
     mockOpenPrivateBrowser,
     mockRenameProjectCore,
-    mockResetEdsProjectWithUI,
-    mockResetProjectWithUI,
     mockResolveProjectAuthoringExperience,
 } from './dashboardHandlers-actions.testUtils';
 import { createProjectsDashboardContext, createProjectsDashboardProject } from '../testUtils';
@@ -42,8 +35,6 @@ const OUTSIDE_PATH = '/tmp/not-a-demo-builder-project';
 function malformedRename(payload: object): { projectPath: string; newName: string } {
     return payload as unknown as { projectPath: string; newName: string };
 }
-const COMMAND_EXECUTOR = { execute: jest.fn() };
-const AUTH_SERVICE = { getTokenStatus: jest.fn() };
 
 /**
  * The stored EDS metadata of a fixture built by `createEdsProject`, for tests that
@@ -81,104 +72,11 @@ beforeEach(() => {
     jest.clearAllMocks();
     mockExecuteCommand.mockResolvedValue(undefined);
     mockOpenExternal.mockResolvedValue(true);
-    mockGetCommandExecutor.mockReturnValue(COMMAND_EXECUTOR);
-    mockGetAuthenticationService.mockReturnValue(AUTH_SERVICE);
     mockResolveProjectAuthoringExperience.mockReturnValue('da-live-classic');
     mockGetEwCanvasBranch.mockReturnValue('');
     mockExtractSettingsFromProject.mockReturnValue({
         selectedPackage: 'citisignal',
         selectedStack: 'eds-saas',
-    });
-});
-
-describe('handleDeleteProject', () => {
-    it('delegates to deleteProject with the loaded project and announces the deletion', async () => {
-        const project = createProjectsDashboardProject();
-        const context = createProjectsDashboardContext([project]);
-        mockDeleteProject.mockResolvedValue({ success: true, data: { success: true } });
-
-        const result = await handleDeleteProject(context, { projectPath: project.path });
-
-        // Plus where it reports and the id its modal follows (PL-59).
-        expect(mockDeleteProject).toHaveBeenCalledWith(context, project, undefined, {
-            progress: undefined,
-            operationId: expect.stringContaining('delete:'),
-        });
-        expect(context.sendMessage).toHaveBeenCalledWith('projectDeleted', {});
-        expect(result).toEqual({ success: true, data: { success: true } });
-    });
-
-    it('stays silent when the service reports the deletion did not complete', async () => {
-        const project = createProjectsDashboardProject();
-        const context = createProjectsDashboardContext([project]);
-        // Handler-level success, deletion-level failure — e.g. the retry timed out.
-        mockDeleteProject.mockResolvedValue({ success: true, data: { success: false } });
-
-        await handleDeleteProject(context, { projectPath: project.path });
-
-        expect(context.sendMessage).not.toHaveBeenCalled();
-    });
-
-    it('stays silent when the service itself failed', async () => {
-        const project = createProjectsDashboardProject();
-        const context = createProjectsDashboardContext([project]);
-        mockDeleteProject.mockResolvedValue({ success: false, error: 'cancelled' });
-
-        const result = await handleDeleteProject(context, { projectPath: project.path });
-
-        expect(context.sendMessage).not.toHaveBeenCalled();
-        expect(result).toEqual({ success: false, error: 'cancelled' });
-    });
-
-    it('stays silent when the service returns no data at all', async () => {
-        const project = createProjectsDashboardProject();
-        const context = createProjectsDashboardContext([project]);
-        mockDeleteProject.mockResolvedValue({ success: true });
-
-        const result = await handleDeleteProject(context, { projectPath: project.path });
-
-        expect(context.sendMessage).not.toHaveBeenCalled();
-        // The absent `data` must read as "did not delete", not blow up the handler.
-        expect(result).toEqual({ success: true });
-    });
-
-    it('loads without persisting the pointer, and refuses an unresolvable project', async () => {
-        const project = createProjectsDashboardProject();
-        const context = createProjectsDashboardContext([]);
-
-        const result = await handleDeleteProject(context, { projectPath: project.path });
-
-        expect(context.stateManager.loadProjectFromPath).toHaveBeenCalledWith(
-            project.path,
-            undefined,
-            { persistAfterLoad: false },
-        );
-        expect(mockDeleteProject).not.toHaveBeenCalled();
-        expect(result).toEqual({ success: false, error: 'Project not found' });
-    });
-
-    it('refuses a missing path and a path outside the projects directory', async () => {
-        const context = createProjectsDashboardContext([]);
-
-        expect(await handleDeleteProject(context)).toEqual({
-            success: false,
-            error: 'Project path is required',
-        });
-        expect(await handleDeleteProject(context, { projectPath: OUTSIDE_PATH })).toEqual({
-            success: false,
-            error: 'Invalid project path',
-        });
-        expect(context.stateManager.loadProjectFromPath).not.toHaveBeenCalled();
-    });
-
-    it('reports failure when the deletion service throws', async () => {
-        const project = createProjectsDashboardProject();
-        const context = createProjectsDashboardContext([project]);
-        mockDeleteProject.mockRejectedValue(new Error('rmdir failed'));
-
-        const result = await handleDeleteProject(context, { projectPath: project.path });
-
-        expect(result).toEqual({ success: false, error: 'Failed to delete project' });
     });
 });
 
@@ -449,56 +347,3 @@ describe('handleOpenDaLive', () => {
     });
 });
 
-describe('handleResetProject', () => {
-    it('routes a NON-EDS project to the component re-clone reset with the located services', async () => {
-        const project = createProjectsDashboardProject({ selectedStack: 'headless-saas' });
-        const context = createProjectsDashboardContext([project]);
-        mockResetProjectWithUI.mockResolvedValue({ success: true });
-
-        const result = await handleResetProject(context, { projectPath: project.path });
-
-        expect(mockResetEdsProjectWithUI).not.toHaveBeenCalled();
-        expect(mockResetProjectWithUI).toHaveBeenCalledWith({
-            commandManager: COMMAND_EXECUTOR,
-            authManager: AUTH_SERVICE,
-            project,
-            context,
-            logPrefix: '[ProjectsList]',
-            progress: undefined,
-            operationId: expect.stringContaining('reset:'),
-        });
-        expect(result).toEqual({ success: true });
-    });
-
-    it('routes an EDS project to the template reset, block library and CDN check included', async () => {
-        const project = createEdsProject();
-        const context = createProjectsDashboardContext([project]);
-        mockResetEdsProjectWithUI.mockResolvedValue({ success: true });
-
-        const result = await handleResetProject(context, { projectPath: project.path });
-
-        expect(mockResetProjectWithUI).not.toHaveBeenCalled();
-        expect(mockResetEdsProjectWithUI).toHaveBeenCalledWith({
-            meshDeps: { commandManager: COMMAND_EXECUTOR, authManager: AUTH_SERVICE },
-            project,
-            context,
-            logPrefix: '[ProjectsList]',
-            includeBlockLibrary: true,
-            verifyCdn: true,
-            showLogsOnError: true,
-            // Where it reports, and the id whose modal follows it (PL-59).
-            progress: undefined,
-            operationId: expect.stringContaining('reset:'),
-        });
-        expect(result).toEqual({ success: true });
-    });
-
-    it('refuses a path outside the projects directory before loading', async () => {
-        const context = createProjectsDashboardContext([]);
-
-        const result = await handleResetProject(context, { projectPath: OUTSIDE_PATH });
-
-        expect(context.stateManager.loadProjectFromPath).not.toHaveBeenCalled();
-        expect(result).toEqual({ success: false, error: 'Invalid project path' });
-    });
-});

@@ -7360,7 +7360,7 @@
             "anchors": [
                 "if (edsStorefront) {"
             ],
-            "line": 115,
+            "line": 52,
             "mutants": 2,
             "category": "branch",
             "reason": "The whole block is three logger.debug calls describing the EDS metadata for troubleshooting. Both branch outcomes produce the same wizard command and the same response; only the debug transcript differs.",
@@ -7373,7 +7373,7 @@
             "anchors": [
                 "if (edsStorefront.metadata) {"
             ],
-            "line": 117,
+            "line": 54,
             "mutants": 3,
             "category": "branch",
             "reason": "Nested inside the debug-only block above: its body is three more logger.debug lines. Nothing downstream reads anything it computes.",
@@ -7386,7 +7386,7 @@
             "anchors": [
                 "if (settings.edsConfig) {"
             ],
-            "line": 130,
+            "line": 67,
             "mutants": 2,
             "category": "branch",
             "reason": "Body is four logger.debug calls echoing the already-extracted edsConfig. The settings object handed to the wizard is identical either way.",
@@ -7399,7 +7399,7 @@
             "anchors": [
                 "if (!payload?.projectPath || !payload?.newName) {"
             ],
-            "line": 177,
+            "line": 114,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Two optional chains on one line; only the SECOND is unreachable. Dropping the '?' on payload?.newName throws only when payload is undefined, and short-circuiting means the left operand already returned in that case. No input reaches it. The first chain on the same line IS killed, by the absent-payload test.",

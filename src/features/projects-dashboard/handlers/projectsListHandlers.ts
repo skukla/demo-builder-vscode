@@ -14,14 +14,12 @@ import {
     handleImportFromFile,
     handleCopyFromExisting,
     handleExportProject,
-    handleDeleteProject,
     handleStartDemo,
     handleStopDemo,
     handleOpenBrowser,
     handleOpenLiveSite,
     handleOpenDaLive,
     handleOpenAdminPanel,
-    handleResetProject,
     handleEditProject,
     handleRenameProject,
     handleOpenHelp,
@@ -62,10 +60,7 @@ export const projectsListHandlers = defineHandlers({
     copyFromExisting: handleCopyFromExisting,
     exportProject: handleExportProject,
 
-    // Project deletion handler
-    deleteProject: handleDeleteProject,
-
-    // Reset Selected and Delete Selected: the questions' rows, then the run, a row per project.
+    // Reset and Delete, one project's or the selected ones': the questions' rows, then the run.
     prepareProjectsBatch: handlePrepareProjectsBatch,
     runProjectsBatch: handleRunProjectsBatch,
 
@@ -76,9 +71,6 @@ export const projectsListHandlers = defineHandlers({
     openLiveSite: handleOpenLiveSite,
     openDaLive: handleOpenDaLive,
     openAdminPanel: handleOpenAdminPanel,
-
-    // Project reset handler
-    resetProject: handleResetProject,
 
     // Project edit handler
     editProject: handleEditProject,

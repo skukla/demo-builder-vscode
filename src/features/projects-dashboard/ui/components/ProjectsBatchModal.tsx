@@ -21,7 +21,8 @@
 import { DialogContainer } from '@adobe/react-spectrum';
 import React from 'react';
 import { saveQuestionOf, type SaveQuestion } from '../batchChoices';
-import { runningTitle, type BatchView, type ProjectsBatchControls } from '../hooks/useProjectsBatch';
+import { batchSubject, confirmTitle, endTitle, runLabel, runningTitle, type BatchSubject } from '../batchWords';
+import type { BatchView, ProjectsBatchControls } from '../hooks/useProjectsBatch';
 import { BatchDeleteQuestions } from './BatchDeleteQuestions';
 import { BatchResetQuestions } from './BatchResetQuestions';
 import { BatchSaveTable } from './BatchSaveTable';
@@ -35,7 +36,7 @@ import { endsSmall } from '@/core/ui/utils/runEnding';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { WAIT_STAGES } from '@/core/utils/waitStages';
 import type { ProjectsBatchAction } from '@/types/projectsBatch';
-import type { OperationProgressPayload, OperationPrompt } from '@/types/webviewPayloads';
+import type { OperationPrompt } from '@/types/webviewPayloads';
 
 const NO_ACTIONS: ActionButton[] = [];
 
@@ -55,29 +56,12 @@ function cancels(prompt: OperationPrompt): boolean {
     return Boolean(prompt.fields?.length);
 }
 
-/** The action and how many projects it is on, whatever the phase. */
-function subjectOf(view: Exclude<BatchView, { phase: 'closed' }>): { action: ProjectsBatchAction; count: number } {
-    if (view.phase === 'reading') return { action: view.action, count: view.count };
-    if (view.phase === 'unread') return { action: view.action, count: 0 };
-    if (view.phase === 'asking') return { action: view.questions.action, count: view.questions.rows.length };
-    return { action: view.action, count: view.rows.length };
-}
-
-/** The run button's label: the action and how many it takes. */
-function runLabel(action: ProjectsBatchAction, count: number): string {
-    if (action === 'delete') return count === 1 ? 'Delete 1 Project' : `Delete ${count} Projects`;
-    return count === 1 ? 'Reset 1 Project' : `Reset ${count} Projects`;
-}
-
-/**
- * The run's header once it has ended (the window-header convention, owner 2026-11-04): what
- * happened to the projects, generically; which project, and why, is in the rows beneath. Some
- * failing is said by the amber icon, the rows by their own.
- */
-function endTitle(action: ProjectsBatchAction, progress: OperationProgressPayload): string {
-    const deleting = action === 'delete';
-    if (progress.state === 'failed' || progress.warning) return deleting ? "Couldn't Delete Projects" : "Couldn't Reset Projects";
-    return deleting ? 'Projects Deleted' : 'Projects Reset';
+/** The action, how many projects it is on and the name when one, whatever the phase. */
+function subjectOf(view: Exclude<BatchView, { phase: 'closed' }>): BatchSubject {
+    if (view.phase === 'reading') return batchSubject(view.action, view.names);
+    if (view.phase === 'unread') return batchSubject(view.action, []);
+    if (view.phase === 'asking') return batchSubject(view.questions.action, view.questions.rows.map((row) => row.name));
+    return batchSubject(view.action, view.rows.map((row) => row.name));
 }
 
 /**
@@ -98,16 +82,21 @@ function saveQuestionOfView(controls: ProjectsBatchControls): SaveQuestion | und
     return view.phase === 'asking' ? saveQuestionOf(view.questions, choices) : undefined;
 }
 
-/** The window's header in every phase: the kind of thing, never a name; a confirm adds its count. */
+/**
+ * The window's header in every phase (`batchWords`): several projects by kind, a confirm adding the
+ * button's count (owner, 2026-11-05); one project by its name (J7-1). Some failing is said by the
+ * amber icon, the rows by their own.
+ */
 function titleOf(controls: ProjectsBatchControls): string {
     const { view, progress } = controls;
     if (view.phase === 'closed') return '';
     if (view.phase === 'unread') return "Couldn't Read Projects";
-    const { action, count } = subjectOf(view);
-    // A confirm asks, its count the button's (owner, 2026-11-05).
-    if (view.phase !== 'running') return `${runLabel(action, count)}?`;
-    if (progress?.state === 'succeeded' || progress?.state === 'failed') return endTitle(action, progress);
-    return askingOf(controls)?.title ?? runningTitle(action);
+    const subject = subjectOf(view);
+    if (view.phase !== 'running') return confirmTitle(subject);
+    if (progress?.state === 'succeeded' || progress?.state === 'failed') {
+        return endTitle(subject, progress.state === 'failed' || Boolean(progress.warning));
+    }
+    return askingOf(controls)?.title ?? runningTitle(subject);
 }
 
 function statusOf(controls: ProjectsBatchControls): ModalStatus | undefined {
@@ -143,11 +132,10 @@ function actionsOf(controls: ProjectsBatchControls): ActionButton[] {
         return [{ label: 'Open Debug Logs', variant: 'secondary', onPress: () => webviewClient.postMessage('openDebugLogs', {}) }];
     }
     if (view.phase !== 'asking') return NO_ACTIONS;
-    const { questions } = view;
     // With changes to answer, the save question asks before anything runs (J7-2).
     const asks = (saveQuestionOfView(controls)?.rows.length ?? 0) > 0;
     // Red for both: a delete removes, a reset replaces each project's code (owner, 2026-11-04).
-    const label = runLabel(questions.action, questions.rows.length);
+    const label = runLabel(subjectOf(view));
     return [{ label, variant: 'negative', onPress: () => (asks ? choices.askToSave() : controls.run()) }];
 }
 

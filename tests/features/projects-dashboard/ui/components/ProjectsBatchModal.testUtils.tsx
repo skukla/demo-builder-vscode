@@ -78,11 +78,11 @@ export function answers(prepare: PrepareEnvelope | null): void {
     });
 }
 
-function Harness({ action, onClosed }: { action: ProjectsBatchAction; onClosed: () => void }) {
+function Harness({ action, projects, onClosed }: { action: ProjectsBatchAction; projects: Project[]; onClosed: () => void }) {
     const controls = useProjectsBatch(onClosed);
     return (
         <>
-            <button onClick={() => controls.start(action, PROJECTS)}>Open Window</button>
+            <button onClick={() => controls.start(action, projects)}>Open Window</button>
             <ProjectsBatchModal controls={controls} />
         </>
     );
@@ -90,12 +90,12 @@ function Harness({ action, onClosed }: { action: ProjectsBatchAction; onClosed: 
 
 export const setupUser = () => userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
 
-/** Opens the window on the three projects and lets the prepare's answer land. */
-export async function openOn(action: ProjectsBatchAction, prepare: PrepareEnvelope | null) {
+/** Opens the window on the projects given (the three by default) and lets the prepare's answer land. */
+export async function openOn(action: ProjectsBatchAction, prepare: PrepareEnvelope | null, projects: Project[] = PROJECTS) {
     answers(prepare);
     const onClosed = jest.fn();
     const user = setupUser();
-    render(<Harness action={action} onClosed={onClosed} />);
+    render(<Harness action={action} projects={projects} onClosed={onClosed} />);
     await user.click(screen.getByRole('button', { name: 'Open Window' }));
     // The window waits for the prepare's answer; let it land before the test reads the window.
     if (prepare) await waitFor(() => expect(screen.queryByText(/^Reading /)).toBeNull());

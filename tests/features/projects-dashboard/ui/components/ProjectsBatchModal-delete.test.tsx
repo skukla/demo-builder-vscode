@@ -97,11 +97,13 @@ describe('ProjectsBatchModal: Delete Selected', () => {
         expect(nameCell.closest('.batch-delete')).toHaveClass('scroll-fade');
     });
 
-    it('asks for one project, in the same words', async () => {
+    // One project is named, not counted (decisions J7-1; step-05 P5-Q1).
+    it('asks for one project by its name, the body in the same words', async () => {
         const one = prepared([{ path: '/p/a', name: asDisplayName('A'), repo: { name: 'me/a', ticked: false } }]);
         await openOn('delete', one);
 
-        expect(await screen.findByRole('dialog', { name: 'Delete 1 Project?' })).toBeInTheDocument();
+        expect(await screen.findByRole('dialog', { name: 'Delete A?' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Delete' })).toHaveAttribute('data-variant', 'negative');
         expect(screen.getByText('Project files are removed from this machine.')).toBeInTheDocument();
     });
 

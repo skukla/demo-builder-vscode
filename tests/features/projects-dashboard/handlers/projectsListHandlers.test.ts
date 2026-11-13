@@ -51,11 +51,13 @@ describe('projectsListHandlers', () => {
             expect(hasHandler(projectsListHandlers, 'exportProject')).toBe(true);
         });
 
-        it('should include project deletion handler', () => {
-            // Given: projectsListHandlers object
-            // When: Checking for deletion message types
-            // Then: Deletion handler present
-            expect(hasHandler(projectsListHandlers, 'deleteProject')).toBe(true);
+        // Reset and Delete from a card open the batch window (step-05 S2, decisions J7-1): the
+        // one-project messages and their VS Code dialogs left the list.
+        it('routes no one-project reset or delete: the batch window does both', () => {
+            expect(hasHandler(projectsListHandlers, 'deleteProject')).toBe(false);
+            expect(hasHandler(projectsListHandlers, 'resetProject')).toBe(false);
+            expect(hasHandler(projectsListHandlers, 'prepareProjectsBatch')).toBe(true);
+            expect(hasHandler(projectsListHandlers, 'runProjectsBatch')).toBe(true);
         });
 
         it('should include demo control handlers', () => {
@@ -87,10 +89,6 @@ describe('projectsListHandlers', () => {
             // When: Checking for view mode message types
             // Then: View mode handler present
             expect(hasHandler(projectsListHandlers, 'setViewModeOverride')).toBe(true);
-        });
-
-        it('should include the project reset handler', () => {
-            expect(hasHandler(projectsListHandlers, 'resetProject')).toBe(true);
         });
 
         /**
@@ -141,9 +139,10 @@ describe('projectsListHandlers', () => {
         // 2026-09-20, when a question the work is paused on moved into the modal).
         // 28 since 2026-10-22: recheckUpdates, the Updates window's "Back to updates".
         // 30 since 2026-11-04: prepareProjectsBatch and runProjectsBatch, Reset Selected and Delete Selected.
-        it('should have exactly 30 handlers', () => {
+        // 28 since step-05 S2: resetProject and deleteProject left, a card's Reset and Delete open the batch window.
+        it('should have exactly 28 handlers', () => {
             const types = getRegisteredTypes(projectsListHandlers) as Array<keyof typeof projectsListHandlers>;
-            expect(types).toHaveLength(30);
+            expect(types).toHaveLength(28);
             expect(hasHandler(projectsListHandlers, 'recheckUpdates')).toBe(true);
         });
 

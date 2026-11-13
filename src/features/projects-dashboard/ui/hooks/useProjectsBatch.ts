@@ -16,11 +16,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { changesOf, deleteAnswers, resetAnswers, saveQuestionOf } from '../batchChoices';
+import { batchSubject, runningTitle } from '../batchWords';
 import { useBatchChoices, type BatchChoices } from './useBatchChoices';
 import { useOperationProgress } from '@/core/ui/hooks/useOperationProgress';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { PROJECTS_BATCH_OPERATION_ID } from '@/core/utils/operationIds';
-import type { ProjectDisplayName } from '@/core/utils/projectDisplayName';
+import { getProjectDisplayName, type ProjectDisplayName } from '@/core/utils/projectDisplayName';
 import type { Project } from '@/types/base';
 import type {
     PrepareProjectsBatchResponse,
@@ -41,7 +42,7 @@ export interface BatchRunRow {
 /** What the window shows. */
 export type BatchView =
     | { phase: 'closed' }
-    | { phase: 'reading'; action: ProjectsBatchAction; count: number }
+    | { phase: 'reading'; action: ProjectsBatchAction; names: ProjectDisplayName[] }
     | { phase: 'unread'; action: ProjectsBatchAction; error: string }
     | { phase: 'asking'; questions: PrepareProjectsBatchResponse }
     | { phase: 'running'; action: ProjectsBatchAction; rows: BatchRunRow[] };
@@ -116,11 +117,6 @@ function requestOf(questions: PrepareProjectsBatchResponse, choices: BatchChoice
         : { action: 'reset', answers: resetAnswers(questions.rows, choices.removeTicks, changes) };
 }
 
-/** The run's header, and the notification's a run closed mid-way goes on in: the kind, never a count. */
-export function runningTitle(action: ProjectsBatchAction): string {
-    return action === 'delete' ? 'Deleting Projects' : 'Resetting Projects';
-}
-
 /** Each pushed row's status, when it started and ended, and the order they first arrived in. */
 function useRowPushes(): { order: string[]; statuses: BatchRowStatuses; timings: BatchRowTimings; clear: () => void } {
     const [order, setOrder] = useState<string[]>(NO_ORDER);
@@ -166,7 +162,7 @@ export function useProjectsBatch(onClosedAfterRun: () => void): ProjectsBatchCon
         if (projects.length === 0) return;
         const ticket = reading.current + 1;
         reading.current = ticket;
-        setView({ phase: 'reading', action, count: projects.length });
+        setView({ phase: 'reading', action, names: projects.map(getProjectDisplayName) });
         const payload = { action, projectPaths: projects.map((p) => p.path) };
         const settle = (envelope: PrepareEnvelope | undefined): void => {
             if (reading.current !== ticket) return;
@@ -211,7 +207,7 @@ export function useProjectsBatch(onClosedAfterRun: () => void): ProjectsBatchCon
             if (progress?.prompt && !hasEnded(progress)) {
                 answer(undefined);
             } else if (!hasEnded(progress)) {
-                const title = runningTitle(view.action);
+                const title = runningTitle(batchSubject(view.action, view.rows.map((row) => row.name)));
                 webviewClient.postMessage('backgroundOperation', { id: PROJECTS_BATCH_OPERATION_ID, title });
             }
             onClosedAfterRun();

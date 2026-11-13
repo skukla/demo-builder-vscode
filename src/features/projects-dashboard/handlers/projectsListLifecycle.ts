@@ -1,5 +1,6 @@
 /**
- * Projects list: what changes a project — delete, edit, rename, reset, pin.
+ * Projects list: what changes a project — edit, rename, pin. Reset and delete go through the batch
+ * window (`projectsBatchHandlers.ts`), one project or several (step-05 S2).
  * Split from `dashboardHandlers.ts` by job (EDS-8, 2026-10-05), which re-exports
  * every handler.
  *
@@ -7,75 +8,11 @@
  */
 
 import * as vscode from 'vscode';
-import { resolveProjectFromPath, withProjectFromPath } from './projectFromPath';
-import { ServiceLocator } from '@/core/di/serviceLocator';
-import { deleteOperationId, resetOperationId } from '@/core/utils/operationIds';
+import { resolveProjectFromPath } from './projectFromPath';
 import { validateProjectPath } from '@/core/validation/PathSafetyValidator';
-import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
-import { deleteProject } from '@/features/projects-dashboard/services/projectDeletionService';
 import { renameProjectCore } from '@/features/projects-dashboard/services/projectRenameService';
 import { extractSettingsFromProject } from '@/features/projects-dashboard/services/settingsSerializer';
 import type { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
-
-/** What a screen sends to delete one of the projects it lists. */
-export interface DeleteProjectPayload {
-    projectPath: string;
-    /** The id its progress modal follows (PL-59); absent from other callers. */
-    id?: string;
-    progress?: 'modal';
-}
-
-export interface ResetProjectPayload {
-    projectPath: string;
-    /** The id its progress modal follows (PL-59); absent from other callers. */
-    id?: string;
-    progress?: 'modal';
-}
-
-// ============================================================================
-// Delete Project Handler (delegated to projectDeletionService)
-// ============================================================================
-
-/**
- * Delete a project by path
- *
- * Delegates to projectDeletionService which handles confirmation, cleanup, and retry logic.
- */
-export const handleDeleteProject: MessageHandler<DeleteProjectPayload> = narrateOutcomeToModal(
-    async (context, payload): Promise<HandlerResponse> => {
-    try {
-        const resolved = await resolveProjectFromPath(context, payload);
-        if (!resolved.ok) {
-            return resolved.error;
-        }
-        const { project } = resolved;
-
-        const result = await deleteProject(context, project, undefined, {
-            progress: progressSurfaceOf(payload),
-            operationId: payload?.id ?? deleteOperationId(project.name),
-        });
-
-        // Notify UI to refresh (handles timeout scenarios)
-        // Cast data to expected shape - deleteProject returns { success: boolean }
-        const resultData = result.data as { success?: boolean } | undefined;
-        if (result.success && resultData?.success) {
-            context.sendMessage('projectDeleted', {});
-        }
-
-        return result;
-    } catch (error) {
-        context.logger.error(
-            'Failed to delete project',
-            error instanceof Error ? error : undefined,
-        );
-        return {
-            success: false,
-            error: 'Failed to delete project',
-        };
-    }
-    },
-    (payload) => payload?.id ?? '',
-);
 
 // ============================================================================
 // Edit Project Handler
@@ -205,60 +142,6 @@ export const handleRenameProject: MessageHandler<{ projectPath: string; newName:
     return renameProjectCore(context, project, payload.newName);
 };
 
-
-/**
- * Handle 'resetProject' message - Reset project to initial state
- *
- * Dispatches to the appropriate reset service based on project type:
- * - EDS projects: resetEdsProjectWithUI (template-based reset)
- * - Headless projects: resetProjectWithUI (component re-clone)
- *
- * From a screen that hosts the progress modal it narrates there (PL-59 R1),
- * which is why the whole body is wrapped: the modal has to be recorded before
- * the first confirmation dialog, not after it.
- */
-export const handleResetProject: MessageHandler<ResetProjectPayload> = narrateOutcomeToModal(
-    withProjectFromPath<ResetProjectPayload>(async (context, project, payload) => {
-        const progress = progressSurfaceOf(payload);
-        const operationId = payload?.id ?? resetOperationId(project.name);
-
-        const { isEdsProject } = await import('@/types/typeGuards');
-
-        if (isEdsProject(project)) {
-            const { resetEdsProjectWithUI } = await import(
-                '@/features/eds/services/reset/edsResetUI'
-            );
-            return resetEdsProjectWithUI({
-                meshDeps: {
-                    commandManager: ServiceLocator.getCommandExecutor(),
-                    authManager: ServiceLocator.getAuthenticationService(),
-                },
-                project,
-                context,
-                logPrefix: '[ProjectsList]',
-                includeBlockLibrary: true,
-                verifyCdn: true,
-                showLogsOnError: true,
-                progress,
-                operationId,
-            });
-        }
-
-        const { resetProjectWithUI } = await import(
-            '@/features/lifecycle/services/projectResetService'
-        );
-        return resetProjectWithUI({
-            commandManager: ServiceLocator.getCommandExecutor(),
-            authManager: ServiceLocator.getAuthenticationService(),
-            project,
-            context,
-            logPrefix: '[ProjectsList]',
-            progress,
-            operationId,
-        });
-    }),
-    (payload) => payload?.id ?? '',
-);
 
 // ============================================================================
 // Project Pinning
