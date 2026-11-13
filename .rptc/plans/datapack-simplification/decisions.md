@@ -224,6 +224,20 @@ Reset and delete:
 - Clear is planned in its own pass (step-06) and built within beta.153 (P5-Q9, owner 2026-11-13:
   "Own planning pass now").
 
+- Clear never refuses: on a website another local project uses, Clear Demo Data warns (an
+  informational line naming the project) and the SC can stop or continue (P6-Q2, owner 2026-11-13:
+  "The SE should be able to clear the entire instance, regardless of the ramifications. The warning
+  is an informational warning that should allow them to stop if they want and continue").
+- Clear Commerce Instance asks about other projects' unsaved datapack changes with the batch save
+  question (the Datapack / Save As table with editable names) (P6-Q4, owner 2026-11-13: "We have a
+  saved data pack flow already ... Why not use this?").
+- A failed read is split by kind, each kind with its own offer (P6-Q3, owner 2026-11-13: "We should
+  split by kind, but then think through what we offer the user for each kind"); the per-kind
+  proposal is with the owner.
+- The order rule gets the shared table of order states, in beta.153: one table here, tested here;
+  the ERP integration's copy checked by a fingerprint that fails its build when they differ (P6-Q1,
+  owner 2026-11-13: "We've learned that nothing will stay identical by hand."; "Yes, in beta.153").
+
 ## Phase 7: the Datapacks screen
 
 - The header: the save button (Create with no datapack), "Install from File" in a project's

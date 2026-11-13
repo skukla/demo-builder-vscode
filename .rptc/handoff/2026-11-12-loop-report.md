@@ -175,7 +175,16 @@ Live notes; rewritten as the final report at the loop's close.
   the store or asks "Clear Demo Data Too" (owner 11-12). Clear Demo Data itself is unchanged. Full
   gate green (2,411 suites, 38,687 tests).
 - Owner answered P5-Q2, Q3, Q4 and Q9 on 11-13 (all as recommended); recorded in decisions.md.
-- Step-05 S4 (the dashboard's Reset and Delete) next; the Clear planning pass (step-06) running.
+- Clear plan: 7a0dc5d3b (step-06.md). Owner answered P6-Q1 to Q4 on 11-13 (recorded in
+  decisions.md): Clear warns and never refuses; Clear Commerce Instance uses the batch save question;
+  failed reads split by kind (per-kind proposal with the owner); the shared order-state table is
+  built in beta.153.
+- Step-05 S4: bd9a5c987. The dashboard's Reset opens the one-row batch window there; its Delete
+  opens the projects list on its one-row Delete window (owner's P5-Q2). Style check: nothing moved
+  on the dashboard, projects list or integrations. Found by that check: the projects list threw on
+  every load reading an answer with no data; fixed, with the same latent read in the Updates
+  hand-off, both pinned by tests proven red first. Full gate green (2,411 suites, 38,705 tests).
+- Step-05 S5 (delete the one-project code nothing calls) next.
 - Phase 1b, done while waiting: ERP Downtime (863c5c2ca) and Edit Demo Package (f8ece2e6e) moved
   onto the Form layout, whose failure line is what both waited for. Same words; Cancel beside the
   commit, as every form; a read failure is a result window with Close. An unused style rule removed.
