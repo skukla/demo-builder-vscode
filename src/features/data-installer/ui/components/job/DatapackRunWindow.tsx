@@ -5,10 +5,15 @@
  * held at its tallest state from the first frame (`reserve`: mid-run and stopped), so it never grows
  * (rule 14). A clean end leaves for the small result instead (rule 17).
  *
+ * A switch (S6) draws its Save Your Changes and Uninstall rows before its job is recorded
+ * (`switching`), the save's stage on the first while the start waits on it (walk F129), and holds
+ * room for them in the reserve.
+ *
  * @module features/data-installer/ui/components/job/DatapackRunWindow
  */
 
 import React, { useState } from 'react';
+import type { StepSource } from '../../../importSteps';
 import type { ImportJobRecord } from '../../../types';
 import { useImportProgress } from '../../hooks/useImportProgress';
 import type { ResultContent } from '../importResult';
@@ -30,6 +35,8 @@ export interface DatapackRunWindowProps {
     columns: 1 | 2;
     /** Opened on a job already running: its clock starts when the job did, not when the window opened. */
     opensRunning: boolean;
+    /** A switch: the datapack it uninstalls, and the save's stage while the start waits on it. */
+    switching?: Pick<StepSource, 'replaces' | 'savingStage'>;
     actionButtons: ActionButton[];
     onClose: () => void;
 }
@@ -54,15 +61,24 @@ function reserveRecord(
 }
 
 /** The run's tallest states, drawn hidden so the window opens at their height: mid-run, and stopped. */
-function runReserve(types: string[], installing: Installing, columns: 1 | 2): React.ReactNode[] {
+function runReserve(
+    types: string[],
+    installing: Installing,
+    columns: 1 | 2,
+    replaces?: string,
+): React.ReactNode[] {
     const first = types[0] ?? '';
     const last = types[types.length - 1] ?? '';
+    // A switch's rows above Install: saved, and the datapack it uninstalls.
+    const switched = replaces ? { replaces, savedAs: replaces, replacing: 'success' as const } : {};
     const mid = reserveRecord(types, installing.version, {
+        ...switched,
         outcome: 'watching',
         perType: { [first]: 'processing' },
         detail: '1,000 of 1,000',
     });
     const stopped = reserveRecord(types, installing.version, {
+        ...switched,
         perType: Object.fromEntries(types.map((t) => [t, 'error' as const])),
         stoppedAt: last,
         reason: 'Stopped',
@@ -107,7 +123,7 @@ function LiveRun({
 
 /** The step the window is on: ended, running, or starting. */
 function RunBody(props: DatapackRunWindowProps & { pressedAt: number }): React.ReactElement {
-    const { ended, record, types, installing, columns, opensRunning, pressedAt } = props;
+    const { ended, record, types, installing, columns, opensRunning, pressedAt, switching } = props;
     if (ended?.run) {
         const end = {
             ...(ended.lead ? { lead: ended.lead } : {}),
@@ -135,7 +151,7 @@ function RunBody(props: DatapackRunWindowProps & { pressedAt: number }): React.R
     }
     return (
         <ImportRunView
-            steps={startingSteps(types, installing)}
+            steps={startingSteps(types, installing, switching)}
             columns={columns}
             running={{ startedAt: pressedAt }}
         />
@@ -143,14 +159,15 @@ function RunBody(props: DatapackRunWindowProps & { pressedAt: number }): React.R
 }
 
 export function DatapackRunWindow(props: DatapackRunWindowProps): React.ReactElement {
-    const { title, status, ended, types, installing, columns, actionButtons, onClose } = props;
+    const { title, status, ended, types, installing, columns, actionButtons, onClose, switching } =
+        props;
     // When Install was pressed: one clock from the press to the end.
     const [pressedAt] = useState(() => Date.now());
     return (
         <StepsWindow
             title={title}
             {...(status ? { status } : {})}
-            reserve={runReserve(types, installing, columns)}
+            reserve={runReserve(types, installing, columns, switching?.replaces)}
             // Run in Background while it runs: closing hands the job over, it stops nothing.
             closeLabel={ended ? 'Close' : 'Run in Background'}
             actionButtons={actionButtons}

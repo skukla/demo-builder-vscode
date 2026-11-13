@@ -24,7 +24,6 @@ const CHANGED: DatapackRemovalChanges = { count: 3, kinds: KINDS, sentence: SENT
 /** The demo's pack is a team pack: saving makes a new pack of the SC's, by a name they give. */
 const CHANGED_TEAM: DatapackRemovalChanges = { count: 3, kinds: KINDS, sentence: SENTENCE, alwaysSave: false };
 const NOTHING: DatapackRemovalChanges = { count: 0, kinds: [], alwaysSave: false };
-const ALWAYS_BOX = 'Always Save Without Asking';
 const CHANGES_LEAD = 'Uninstalling removes these changes.';
 const DELETES = 'Permanently deletes Bodea’s categories.';
 
@@ -188,7 +187,6 @@ describe('nothing changed', () => {
         await press(footerRemove());
 
         expect(resetCalls()[0][1]).toMatchObject({ datapackName: 'bodea', version: 'main', confirm: true, changes: 'drop' });
-        expect(resetCalls()[0][1]).not.toHaveProperty('alwaysSave');
     });
 });
 
@@ -201,13 +199,14 @@ describe('something changed, in a pack of the SC\'s', () => {
         expect(screen.getByRole('heading', { name: 'Uninstall Bodea from inst?' })).toBeInTheDocument();
         expect(screen.getByText(DELETES)).toBeInTheDocument();
         expect(screen.getByText(CHANGES_LEAD)).toBeInTheDocument();
+        // Counted by type, no names (step 03, S6; decisions J2-1); no box (J2-3).
         expect(changedRows()).toStrictEqual([
-            ['Categories', 'Critical Power'],
-            ['Products', 'A, B'],
+            ['Categories', '1'],
+            ['Products', '2'],
         ]);
         expect(screen.queryByText(SENTENCE)).not.toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Save and Uninstall' })).toBeEnabled();
-        expect(screen.getByRole('checkbox', { name: ALWAYS_BOX })).not.toBeChecked();
+        expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
     });
 
     // The button that loses the changes stands apart, at the footer's start (walk F111).
@@ -219,12 +218,12 @@ describe('something changed, in a pack of the SC\'s', () => {
         expect(screen.getByRole('button', { name: 'Cancel' }).closest('.modal-footer-start')).toBeNull();
     });
 
-    it('names three of a type\'s changes, then how many more', async () => {
+    it('counts a type\'s changes, never naming them', async () => {
         const many = [{ kind: 'products', count: 5, names: ['24-mb01', '24-mb02', '24-ug01', '24-ug02', '24-ug03'] }];
         answers({ success: true, data: { ...CHANGED, count: 5, kinds: many } });
         await openConfirm();
 
-        expect(changedRows()).toStrictEqual([['Products', '24-mb01, 24-mb02, 24-ug01 and 2 more']]);
+        expect(changedRows()).toStrictEqual([['Products', '5']]);
     });
 
     it('CONTROL: with no data types on the answer, says the sentence instead of a list', async () => {
@@ -242,7 +241,6 @@ describe('something changed, in a pack of the SC\'s', () => {
         await press(footerRemove());
 
         expect(resetCalls()[0][1]).toMatchObject({ confirm: true, changes: 'keep' });
-        expect(resetCalls()[0][1]).not.toHaveProperty('alwaysSave');
         expect(resetCalls()[0][1]).not.toHaveProperty('saveAs');
     });
 
@@ -254,19 +252,9 @@ describe('something changed, in a pack of the SC\'s', () => {
         expect(resetCalls()[0][1]).toMatchObject({ confirm: true, changes: 'drop' });
     });
 
-    it('with always ticked, Save and Uninstall also asks for the setting', async () => {
-        await openConfirm();
-
-        await press(screen.getByRole('checkbox', { name: ALWAYS_BOX }));
-        await press(footerRemove());
-
-        expect(resetCalls()[0][1]).toMatchObject({ changes: 'keep', alwaysSave: true });
-    });
-
     it('Cancel removes nothing, and closes the window', async () => {
         const onClose = jest.fn();
         await openConfirm(onClose);
-        await press(screen.getByRole('checkbox', { name: ALWAYS_BOX }));
 
         await press(screen.getByRole('button', { name: 'Cancel' }));
 
@@ -278,11 +266,11 @@ describe('something changed, in a pack of the SC\'s', () => {
 describe('something changed, in a pack that is not the SC\'s', () => {
     beforeEach(() => answers({ success: true, data: CHANGED_TEAM }));
 
-    it('asks the new pack\'s name, starting empty, with no always box, and saves only once it has one', async () => {
+    it('asks the new pack\'s name, starting empty, with no box, and saves only once it has one', async () => {
         await openConfirm();
 
         expect(screen.getByRole('textbox', { name: 'Save Changes As' })).toHaveValue('');
-        expect(screen.queryByRole('checkbox', { name: ALWAYS_BOX })).not.toBeInTheDocument();
+        expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Save As New and Uninstall' })).toHaveAttribute('aria-disabled', 'true');
     });
 
@@ -363,16 +351,14 @@ describe('a save that fails', () => {
         expect(screen.getByRole('heading').querySelector('.text-negative')).not.toBeNull();
     });
 
-    it('Back returns to the same confirm, boxes as they were, without reading again', async () => {
+    it('Back returns to the same confirm, without reading again', async () => {
         await openConfirm();
-        await press(screen.getByRole('checkbox', { name: ALWAYS_BOX }));
         await press(footerRemove());
         await settle();
 
         await press(screen.getByRole('button', { name: 'Back' }));
 
         expect(screen.getByText(CHANGES_LEAD)).toBeInTheDocument();
-        expect(screen.getByRole('checkbox', { name: ALWAYS_BOX })).toBeChecked();
         expect(readCalls()).toHaveLength(1);
     });
 

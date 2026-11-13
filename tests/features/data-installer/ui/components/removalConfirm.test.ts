@@ -12,7 +12,6 @@ import {
     removalAnswer,
     removeLabel,
     saveAsNameOf,
-    toggleAlways,
 } from '@/features/data-installer/ui/components/removalConfirm';
 import type { DataInstallerFailure } from '@/features/data-installer/ui/hooks/useDataInstallerRequest';
 
@@ -62,21 +61,16 @@ describe('confirmContent', () => {
     });
 });
 
-describe('the box and the name', () => {
-    it('start with always off and no name typed', () => {
-        expect(FRESH_CHOICE).toEqual({ always: false });
-    });
-
-    it('turns always on and off', () => {
-        expect(toggleAlways(toggleAlways(FRESH_CHOICE))).toEqual({ always: false });
-        expect(toggleAlways(FRESH_CHOICE)).toEqual({ always: true });
+describe('the name', () => {
+    it('starts with no name typed', () => {
+        expect(FRESH_CHOICE).toStrictEqual({});
     });
 
     it('takes the name typed, trimmed; it starts empty, as Create Datapack\'s does', () => {
         const team = confirmContent(CHANGED_TEAM, null);
         expect(saveAsNameOf(team, FRESH_CHOICE)).toBe('');
-        expect(saveAsNameOf(team, { always: false, saveAsName: '  My Bodea ' })).toBe('My Bodea');
-        expect(saveAsNameOf(team, { always: false, saveAsName: '' })).toBe('');
+        expect(saveAsNameOf(team, { saveAsName: '  My Bodea ' })).toBe('My Bodea');
+        expect(saveAsNameOf(team, { saveAsName: '' })).toBe('');
     });
 });
 
@@ -89,16 +83,11 @@ describe('removalAnswer', () => {
     });
 
     it('drops on Uninstall Without Saving', () => {
-        expect(removalAnswer(mine, { always: true }, false)).toEqual({ changes: 'drop' });
-    });
-
-    it("asks for the setting only when always is ticked, and only for the SC's own pack", () => {
-        expect(removalAnswer(mine, { always: true }, true)).toEqual({ changes: 'keep', alwaysSave: true });
-        expect(removalAnswer(team, { always: true }, true)).not.toHaveProperty('alwaysSave');
+        expect(removalAnswer(mine, FRESH_CHOICE, false)).toEqual({ changes: 'drop' });
     });
 
     it("keeps as a new pack by the name given when the pack is not the SC's", () => {
-        expect(removalAnswer(team, { always: false, saveAsName: 'My Bodea' }, true)).toEqual({ changes: 'keep', saveAs: { displayName: 'My Bodea' } });
+        expect(removalAnswer(team, { saveAsName: 'My Bodea' }, true)).toEqual({ changes: 'keep', saveAs: { displayName: 'My Bodea' } });
     });
 
     it('keeps when the setting already answers, whichever button', () => {

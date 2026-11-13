@@ -1,6 +1,6 @@
 /**
  * What the removal confirm shows and what its Remove sends (datapack-engine step 05), decided from
- * what the read found and the two boxes. Pure, as `importModalView` is; `useRemovalConfirm` holds
+ * what the read found and the Save As name. Pure, as `importModalView` is; `useRemovalConfirm` holds
  * the state these decide from.
  *
  * @module features/data-installer/ui/components/removalConfirm
@@ -45,21 +45,21 @@ export function recordedRemovalLines(displayName: string, recordedKinds: readonl
     return sentences.filter((line): line is string => line !== undefined);
 }
 
-/** The confirm's one box, and the name a save as a new pack goes under. */
+/**
+ * The name a save as a new pack goes under. No box: saving without asking is the setting
+ * `demoBuilder.dataInstaller.changesOnRemoval` only (step 03, S6; decisions J2-3).
+ */
 export interface RemovalChoice {
-    always: boolean;
-    /** Save As's name, when the demo's pack is not the SC's; starts as `suggestedName`. */
+    /** Save As's name, when the demo's pack is not the SC's; starts empty. */
     saveAsName?: string;
 }
 
-/** Stopping the question is a choice of its own. */
-export const FRESH_CHOICE: RemovalChoice = { always: false };
+/** Nothing typed yet. */
+export const FRESH_CHOICE: RemovalChoice = {};
 
 /** What a press of one of the confirm's buttons adds to the request. */
 export interface RemovalAnswer {
     changes: ChangesAnswer;
-    /** Turn on "always save": only ever said by this confirm's box, never by an agent. */
-    alwaysSave?: true;
     /** The name of the new datapack the changes go into, when the demo's pack is not the SC's. */
     saveAs?: { displayName: string };
 }
@@ -80,10 +80,6 @@ export function confirmContent(answer: DatapackRemovalChanges | null, failure: D
     };
 }
 
-export function toggleAlways(choice: RemovalChoice): RemovalChoice {
-    return { ...choice, always: !choice.always };
-}
-
 /** The name Save As would use: what the SC typed. It starts empty, as Create Datapack's does. */
 export function saveAsNameOf(content: ConfirmContent, choice: RemovalChoice): string {
     if (content.kind !== 'changes') return '';
@@ -97,8 +93,7 @@ export function saveAsNameOf(content: ConfirmContent, choice: RemovalChoice): st
 export function removalAnswer(content: ConfirmContent, choice: RemovalChoice, save: boolean): RemovalAnswer {
     if (content.kind === 'will-save') return { changes: 'keep' };
     if (content.kind !== 'changes' || !save) return { changes: 'drop' };
-    const always = choice.always && content.packName ? { alwaysSave: true as const } : {};
-    if (content.packName) return { changes: 'keep', ...always };
+    if (content.packName) return { changes: 'keep' };
     return { changes: 'keep', saveAs: { displayName: saveAsNameOf(content, choice) } };
 }
 

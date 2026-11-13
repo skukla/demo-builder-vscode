@@ -11,6 +11,7 @@
  * @module features/data-installer/ui/components/job/installRows
  */
 
+import type { ChangedKind } from '../../../removalChanges';
 import type { KindChanges } from '../../../services/demoBuilderEngine/storeChanges';
 import { dataTypeLabel } from '../../dataTypeLabel';
 
@@ -67,4 +68,17 @@ export function installRows(kinds: readonly KindChanges[]): TypeRow[] {
             happens: happensOf(sum),
         }))
         .filter((row) => row.count > 0);
+}
+
+/**
+ * "Save Your Changes First?"'s rows (step 03, S6): the SC's changes counted by type, the count bare,
+ * no example names (decisions Phase 3, J2-1).
+ */
+export function changedRows(kinds: readonly ChangedKind[]): TypeRow[] {
+    return kinds.map((kind) => ({
+        type: kind.kind,
+        label: dataTypeLabel(kind.kind),
+        count: kind.count,
+        happens: digits(kind.count),
+    }));
 }

@@ -204,8 +204,10 @@ which lists every object the install made. It never removes by name.
   `handlers/removalChanges.ts`). The confirm reads it (`get-datapack-removal-changes`, the
   preview's own read) and, when there is something to lose, says what and offers two buttons:
   **Save and Remove** and **Remove Without Saving**. When the demo's pack is the SC's own, saving is
-  Save, a new version of it, the previous one kept, and "Always Save Without Asking" sets
-  `demoBuilder.dataInstaller.changesOnRemoval` to `save`. When it is not (a team pack), saving is
+  Save, a new version of it, the previous one kept. There is no "Always" box (removed
+  2026-11-12, step 03 S6): with `demoBuilder.dataInstaller.changesOnRemoval` set to `save` in
+  Settings, the SC's own pack is saved without asking, and the first answered save question shows a
+  one-time tip pointing to that setting (`datapack-save-question-answered`). When it is not (a team pack), saving is
   Save As: the confirm asks the new pack's name, starting empty as Create Datapack's does (owner,
   2026-11-04: two demos of Bodea both suggested "Bodea Copy"), and the main button
   says **Save As New and Remove**. The removal is then of the saved version,

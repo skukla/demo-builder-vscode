@@ -9,8 +9,10 @@
  * - **A press that does not belong to the phase on screen moves nothing**: an answer arriving late
  *   (the check after the summary is up, a second end) is ignored rather than jumping the window.
  *
- * S4 has two kinds: an `install` of a pack the project does not hold, from its check; and `watch`,
- * a job already running when the window opened (Undo, Restore, an agent's), from its run.
+ * Three kinds: an `install` of a pack the project does not hold, from its check; a `switch` over the
+ * datapack it holds (S6), from its check, whose Switch asks "Save Your Changes First?" when the held
+ * datapack has changes; and `watch`, a job already running when the window opened (Undo, Restore,
+ * an agent's), from its run.
  *
  * @module features/data-installer/ui/components/job/datapackJob
  */
@@ -18,7 +20,7 @@
 import type { LastAction } from '../importResult';
 
 /** What the window was opened for. */
-export type JobKind = 'install' | 'watch';
+export type JobKind = 'install' | 'switch' | 'watch';
 
 /** The window on screen. */
 export type JobPhase =
@@ -27,6 +29,7 @@ export type JobPhase =
     | 'records'
     | 'dry-wait'
     | 'dry-result'
+    | 'save-first'
     | 'run'
     | 'ended'
     | 'done'
@@ -48,11 +51,13 @@ export type JobEvent =
     | { type: 'dry-run' }
     | { type: 'dry-answered' }
     | { type: 'start' }
+    /** Switch pressed with changes to lose: the save question. */
+    | { type: 'save-first' }
     | { type: 'ended'; clean: boolean };
 
-/** Where a job opens: an install on its check, a running job on its run. */
+/** Where a job opens: an install or a switch on its check, a running job on its run. */
 export function startJob(kind: JobKind): JobState {
-    return { kind, phase: kind === 'install' ? 'check' : 'run', lastAction: null };
+    return { kind, phase: kind === 'watch' ? 'run' : 'check', lastAction: null };
 }
 
 /** The phases each event may leave from. */
@@ -64,7 +69,8 @@ const FROM: Record<JobEvent['type'], readonly JobPhase[]> = {
     back: ['records', 'dry-result', 'ended'],
     'dry-run': ['summary', 'dry-result'],
     'dry-answered': ['dry-wait'],
-    start: ['summary', 'dry-result', 'ended'],
+    start: ['summary', 'dry-result', 'save-first', 'ended'],
+    'save-first': ['summary'],
     ended: ['run'],
 };
 
@@ -84,6 +90,8 @@ function next(state: JobState, event: JobEvent): JobState {
             return { ...state, phase: 'run', lastAction: 'start' };
         case 'running':
             return { ...state, phase: 'run' };
+        case 'save-first':
+            return { ...state, phase: 'save-first' };
         case 'ended':
             return { ...state, phase: event.clean ? 'done' : 'ended' };
         default:
@@ -93,10 +101,12 @@ function next(state: JobState, event: JobEvent): JobState {
 
 /**
  * The job after `event`; the same object when the event does not belong to the phase on screen.
- * A job opened running has no summary behind it, so its Back moves nothing.
+ * A job opened running has no summary behind it, so its Back moves nothing; only a switch asks
+ * the save question.
  */
 export function datapackJob(state: JobState, event: JobEvent): JobState {
     if (!FROM[event.type].includes(state.phase)) return state;
+    if (event.type === 'save-first' && state.kind !== 'switch') return state;
     if (state.kind === 'watch' && (event.type === 'back' || event.type === 'start')) return state;
     return next(state, event);
 }

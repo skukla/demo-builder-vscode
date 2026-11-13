@@ -117,7 +117,8 @@ describe('importing another version over the one the demo uses', () => {
         // A lead sentence, then a row per data type (walk F110).
         expect(screen.getByText('Installing replaces these changes.')).toBeInTheDocument();
         const rows = Array.from(document.querySelectorAll('.fact-list dt')).map((dt) => [dt.textContent, dt.nextElementSibling?.textContent]);
-        expect(rows).toStrictEqual([['Products', 'A, B']]);
+        // Counted by type, no names (step 03, S6; decisions J2-1).
+        expect(rows).toStrictEqual([['Products', '2']]);
         expect(screen.queryByText(SENTENCE)).not.toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Save As New and Install' })).toBeInTheDocument();
         expect(startCalls()).toHaveLength(0);
@@ -208,7 +209,8 @@ describe('importing another version over the one the demo uses', () => {
     });
 });
 
-// Step 03, S2: the running title says what the start is (`jobWords`), before its record answers.
+// Step 03, S2: the running title says what the start is (`jobWords`), before its record answers. A
+// switch over another datapack opens in the job window since S6 (`DatapackJobWindow-switch.test.tsx`).
 describe('the title while the install starts', () => {
     /** The start stays out, so the window holds its starting view. */
     async function startingOver(held: typeof OLD): Promise<void> {
@@ -220,13 +222,7 @@ describe('the title while the install starts', () => {
         await pressImport();
     }
 
-    it('is "Switching to" over another datapack', async () => {
-        await startingOver({ ...OLD, name: 'luma' });
-
-        expect(screen.getByRole('heading', { name: 'Switching to Bodea' })).toBeInTheDocument();
-    });
-
-    it('CONTROL: is "Installing" over another version of the same datapack', async () => {
+    it('is "Installing" over another version of the same datapack', async () => {
         await startingOver(OLD);
 
         expect(screen.getByRole('heading', { name: 'Installing Bodea' })).toBeInTheDocument();

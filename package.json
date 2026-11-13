@@ -355,11 +355,11 @@
                             "save"
                         ],
                         "enumDescriptions": [
-                            "Ask each time a removal finds changes.",
-                            "Save them to the demo's own pack first, without asking."
+                            "Ask Save Your Changes First? each time.",
+                            "Save your changes to your own datapack first, without asking."
                         ],
                         "default": "ask",
-                        "description": "What removing a datapack does with anything you changed in it since it was installed. Saving makes a new version of the demo's own pack in the datapack library, and the previous version is kept. \"Always do this, and stop asking\" on the removal's confirmation sets this to save; set it back to ask here."
+                        "description": "What happens to your changes in a datapack when you uninstall it or switch to another. Ask shows Save Your Changes First? each time. Save saves them to your own datapack first, without asking; a datapack that is not yours still asks, since a save needs a name."
                     },
                     "demoBuilder.dataInstaller.apiBaseUrl": {
                         "scope": "machine",

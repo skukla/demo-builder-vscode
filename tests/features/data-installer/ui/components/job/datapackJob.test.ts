@@ -141,3 +141,34 @@ describe('datapackJob', () => {
         expect(datapackJob(from, event)).toBe(from);
     });
 });
+
+// Step 03, S6: a switch over the datapack the project holds (decisions J2-3, J8-1).
+describe('a switch', () => {
+    const sw = (phase: JobPhase, over: Partial<JobState> = {}): JobState => at(phase, { kind: 'switch', ...over });
+
+    it('opens on its check', () => {
+        expect(startJob('switch')).toEqual({ kind: 'switch', phase: 'check', lastAction: null });
+    });
+
+    it.each<[string, JobState, JobEvent, JobState]>([
+        ['Switch with changes: the save question', sw('summary'), { type: 'save-first' }, sw('save-first')],
+        [
+            'the save question answered: the run, keyed as the last action',
+            sw('save-first'),
+            { type: 'start' },
+            sw('run', { lastAction: 'start' }),
+        ],
+        ['Switch with no changes: the run', sw('summary'), { type: 'start' }, sw('run', { lastAction: 'start' })],
+        ['Back from a refused start: the summary', sw('ended', { lastAction: 'start' }), { type: 'back' }, sw('summary', { lastAction: 'start' })],
+    ])('%s', (_name, from, event, to) => {
+        expect(datapackJob(from, event)).toEqual(to);
+    });
+
+    it.each<[string, JobState]>([
+        ['from the check', sw('check')],
+        ['from the run', sw('run', { lastAction: 'start' })],
+        ['from an install summary: an install never asks', at('summary')],
+    ])('asks nothing %s', (_name, from) => {
+        expect(datapackJob(from, { type: 'save-first' })).toBe(from);
+    });
+});

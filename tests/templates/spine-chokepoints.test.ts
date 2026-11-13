@@ -243,15 +243,14 @@ describe('spine choke-points', () => {
         // that sentence mechanical. Added 2026-10-06: the engine-choice warning's
         // "Use Copilot in VS Code" button (engineChoiceWatch) — an SC's click,
         // not a tool, clearing the one setting it warned about.
-        // "Always do this, and stop asking" on a pack's removal (dataInstallerConfig): an SC's tick,
-        // written only after the save succeeds. The reset_datapack tool has no field that reaches it.
+        // Removed 2026-11-12 (datapack step 03, S6): dataInstallerConfig, whose removal box wrote
+        // changesOnRemoval. The box is gone; the setting is changed in Settings only.
         const primitive = /\.update\(\s*['"`]|getConfiguration\([^)]*\)\.update\(/;
         const settingsContext = /getConfiguration\(/;
         const spine = [
             'commands/commandManager.ts',
             'commands/openInClaude.ts',
             'features/ai/engine/engineChoiceWatch.ts',
-            'features/data-installer/services/dataInstallerConfig.ts',
             'features/project-creation/commands/createProject.ts',
             'features/updates/commands/checkUpdates.ts',
         ];

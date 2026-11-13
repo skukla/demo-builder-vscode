@@ -16,7 +16,7 @@
  */
 
 import { type ChangesAnswer, type DatapackRemovalChanges, type DatapackRemovalScope, changesFromPreview, changesSentence } from '../removalChanges';
-import { alwaysSaveChangesOnRemoval, changesOnRemoval } from '../services/dataInstallerConfig';
+import { changesOnRemoval } from '../services/dataInstallerConfig';
 import { InstallRecordError, nodeRecordFiles, readInstallRecord } from '../services/demoBuilderEngine/installRecord';
 import { kindsOnRecord } from '../services/demoBuilderEngine/runPack';
 import { previewChanges } from '../services/demoBuilderEngine/storeChanges';
@@ -40,8 +40,6 @@ export interface RemovalChangesRequest {
     answer?: ChangesAnswer;
     /** With changes found and no answer: ask (an agent) or save (a door whose question was already asked). */
     unanswered: 'refuse' | 'keep';
-    /** Turn on "always save" once a save has worked: the confirm's box. */
-    rememberAlways?: boolean;
     /** Save As: the name for a new datapack, when the demo's pack is not the SC's. */
     saveAs?: { displayName?: unknown };
 }
@@ -127,22 +125,12 @@ async function saveFirst(context: HandlerContext, request: RemovalChangesRequest
     const result = await saveToPack(context, opened, into, report);
     if (!result.success) return { response: notSaved(result) };
     const data = result.data as SaveStoreChangesResult;
-    if (request.rememberAlways) await rememberAlways(context);
     return { saved: { id: { name: data.datapackName, version: data.version }, dataTypes: Object.keys(data.counts), note: data.message } };
 }
 
 /** A save that stopped: nothing is removed, and the confirm can say why. */
 function notSaved(response: HandlerResponse): HandlerResponse {
     return { ...response, success: false, code: ErrorCode.CHANGES_NOT_SAVED };
-}
-
-/** A setting that will not write is not worth stopping a save that worked. */
-async function rememberAlways(context: HandlerContext): Promise<void> {
-    try {
-        await alwaysSaveChangesOnRemoval();
-    } catch (error) {
-        context.logger.warn(`[Data Installer] Could not turn on saving changes before a removal: ${error instanceof Error ? error.message : String(error)}`);
-    }
 }
 
 /** No answer, and something to lose: name it, and remove nothing. */

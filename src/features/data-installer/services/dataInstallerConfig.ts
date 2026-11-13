@@ -43,12 +43,6 @@ export function changesOnRemoval(): ChangesOnRemoval {
     return raw === 'save' ? 'save' : 'ask';
 }
 
-/** "Always do this, and stop asking": for this user, everywhere. Settings turns it back off. */
-export async function alwaysSaveChangesOnRemoval(): Promise<void> {
-    const save: ChangesOnRemoval = 'save';
-    await vscode.workspace.getConfiguration(SETTINGS_SECTION).update('changesOnRemoval', save, vscode.ConfigurationTarget.Global);
-}
-
 /**
  * Whether a settings change alters the datapack list: which sources it reads, or what its cards
  * offer (whether the Data Installer is on decides Copy to the Data Installer). A screen showing the list follows these, since an SC who

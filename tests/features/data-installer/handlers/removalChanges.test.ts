@@ -225,21 +225,12 @@ describe('keep', () => {
         expect(target.saveAs.id.version).toMatch(/^\d{8}-\d{6}$/u);
     });
 
-    it('turns the setting on only when asked, and only once the save worked', async () => {
-        await reset(KEEP);
-        expect(settingUpdate).not.toHaveBeenCalled();
-
+    // Step 03, S6: the Always box is gone; the setting is the SC's to change, in Settings (J2-3).
+    it('never writes the setting, whatever the request says', async () => {
         recordsFor(BODEA);
         await reset({ ...KEEP, alwaysSave: true });
-        expect(settingUpdate).toHaveBeenCalledWith('changesOnRemoval', 'save', vscode.ConfigurationTarget.Global);
-    });
 
-    it('still removes when the setting will not write: the save it was about has worked', async () => {
-        settingUpdate.mockRejectedValue(new Error('read-only settings'));
-
-        const result = await reset({ ...KEEP, alwaysSave: true });
-
-        expect(result.success).toBe(true);
+        expect(settingUpdate).not.toHaveBeenCalled();
         expect(events).toEqual(['save', 'remove acme-1a2b3c@20261102-120000']);
     });
 
@@ -264,12 +255,6 @@ describe('a save that fails', () => {
         expect(result).toMatchObject({ success: false, code: ErrorCode.CHANGES_NOT_SAVED, error: 'The library did not take all of it. Delete that version and try again.' });
         expect(events).toStrictEqual([]);
         expect(mockedRun).not.toHaveBeenCalled();
-    });
-
-    it('leaves the setting alone', async () => {
-        await reset({ ...KEEP, alwaysSave: true });
-
-        expect(settingUpdate).not.toHaveBeenCalled();
     });
 
     it('removes nothing when the sign-in is in the wrong org either', async () => {

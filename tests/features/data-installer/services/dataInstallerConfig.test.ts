@@ -313,3 +313,24 @@ describe('the Data Installer turned off', () => {
         expect(affectsDatapackList({ affectsConfiguration: (section: string) => section === 'demoBuilder.dataInstaller.enabled' })).toBe(true);
     });
 });
+
+/**
+ * The setting that replaced the save question's "Always" box (step 03, S6; decisions J2-3): its
+ * words in the glossary's terms, and nothing about a box that no longer exists.
+ */
+describe("changesOnRemoval's description", () => {
+    const manifest = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf8'));
+    const setting = (manifest.contributes.configuration as Array<{ properties: Record<string, { description: string; enumDescriptions: string[] }> }>)
+        .map((group) => group.properties['demoBuilder.dataInstaller.changesOnRemoval'])
+        .find((found) => found !== undefined)!;
+    const words = [setting.description, ...setting.enumDescriptions].join(' ');
+
+    it('names the question it answers and says datapack', () => {
+        expect(words).toContain('Save Your Changes First?');
+        expect(words).toContain('datapack');
+    });
+
+    it('says nothing of a box, a pack or a version', () => {
+        expect(words).not.toMatch(/Always do this|stop asking|\bpack\b|\bversion\b/u);
+    });
+});

@@ -40,6 +40,7 @@ import { type StartImportPayload, afterWait, prepareImport, readInput, startData
 import { importTargetHandlers } from './importTargetHandlers';
 import { STARTING_REMOVAL_STAGE, type SavedFirst, removalChangesHandlers, removalStageReporter, settleChangesBeforeRemoval } from './removalChanges';
 import { restoreDatapackHandlers } from './restoreDatapack';
+import { saveQuestionTipHandlers } from './saveQuestionTip';
 import { storeChangesHandlers } from './storeChangesHandlers';
 import { undoLastSaveHandlers } from './undoLastSave';
 import { TransientStateManager } from '@/core/state/transientStateManager';
@@ -94,6 +95,8 @@ export const importHandlers = announcingChanges(defineHandlers({
     ...datapackRecordsHandlers,
     // What a removal would lose, for its confirm (step 05).
     ...removalChangesHandlers,
+    // The one-time tip once the save question was answered (step 03, S6); webview-only.
+    ...saveQuestionTipHandlers,
     // What a website holds that Demo Builder did not install, and clearing it (step 10).
     ...demoDataHandlers,
     // An import that ended with a problem, handed to the SC's AI (owner, 2026-11-07).
@@ -247,7 +250,6 @@ async function settleBeforeReset(
             ...(payload?.source ? { source: input.source } : {}),
             ...(answer ? { answer } : {}),
             unanswered: 'refuse',
-            ...(payload?.alwaysSave === true ? { rememberAlways: true } : {}),
             ...(payload?.saveAs ? { saveAs: payload.saveAs } : {}),
         },
         stage,

@@ -289,8 +289,20 @@ describe('what each row accepts', () => {
         expect(schema.changes.parse('drop')).toBe('drop');
         expect(schema.changes.parse(undefined)).toBeUndefined();
         expect(() => schema.changes.parse('maybe')).toThrow();
-        // The handler reads `alwaysSave` from the confirm's box. A setting is the SC's to change.
+        // Nothing reads an `alwaysSave` any more (the window's box was removed, step 03, S6): the
+        // setting is the SC's to change, in Settings.
         expect(schema).not.toHaveProperty('alwaysSave');
+    });
+
+    // Step 03, S6 (decisions J8-1, Phase 8): the screen's Replace became Switch, so the tool says it too.
+    it('calls installing another pack over the project\'s a switch, as the screen does', () => {
+        const { description } = row('start_datapack_import')!;
+        const changes = row('start_datapack_import')!.inputSchema!.changes.description;
+
+        expect(description).toContain("the screen's Switch");
+        expect(description).not.toMatch(/\breplaces it\b/u);
+        expect(changes).not.toMatch(/^Replacing/u);
+        expect(changes).toContain('switch');
     });
 
     it('lets reset_datapack omit dataTypes, since its record decides, but not an import or a dry run', () => {

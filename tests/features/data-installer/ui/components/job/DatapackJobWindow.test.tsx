@@ -387,17 +387,21 @@ it('just closes when no job is running', async () => {
 });
 
 /**
- * Which window opens (S4): the new one for a first install and for a job already running; today's
- * window for everything later slices move (a switch over a held pack, a held pack's reinstall,
- * Uninstall).
+ * Which window opens (S4, S6): the new one for a first install, a switch over another datapack and
+ * a job already running; today's window for what S7 and S8 move (another version of the held
+ * datapack, and Uninstall).
  */
 describe('windowRoute', () => {
+    const id = { name: 'bodea', version: 'main' };
+    const luma = { name: 'luma', version: 'v1', store: 'library' as const };
     it.each([
-        ['a first install, the project holding no datapack', { holdsAPack: false }, 'job'],
-        ['a run opened by Undo or Restore', { holdsAPack: true, opensOn: 'run' as const }, 'job'],
-        ['Uninstall', { holdsAPack: true, opensOn: 'remove' as const }, 'modal'],
-        ['a switch, or a reinstall, over the datapack the project holds', { holdsAPack: true }, 'modal'],
-    ])('%s: %s', (_name, opened, route) => {
+        ['a first install, the project holding no datapack', { id }, 'install'],
+        ['a run opened by Undo or Restore', { id, holding: { pack: luma, recorded: true }, opensOn: 'run' as const }, 'watch'],
+        ['Uninstall', { id, holding: { pack: luma, recorded: true }, opensOn: 'remove' as const }, 'modal'],
+        ['a switch over another datapack Demo Builder installed', { id, holding: { pack: luma, recorded: true } }, 'switch'],
+        ['another datapack with nothing to uninstall it by: an install', { id, holding: { pack: luma, recorded: false } }, 'install'],
+        ['another version of the datapack the project holds', { id, holding: { pack: { ...luma, name: 'bodea' }, recorded: true } }, 'modal'],
+    ])('%s', (_name, opened, route) => {
         expect(windowRoute(opened)).toBe(route);
     });
 });

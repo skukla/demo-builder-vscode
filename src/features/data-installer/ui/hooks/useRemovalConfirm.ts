@@ -1,6 +1,6 @@
 /**
- * The removal confirm's state (datapack-engine step 05): the read of what the SC changed, the box,
- * the Save As name, and the save's stages while the removal waits on it. Pure decisions are in
+ * The removal confirm's state (datapack-engine step 05): the read of what the SC changed, the Save
+ * As name, and the save's stages while the removal waits on it. Pure decisions are in
  * `removalConfirm.ts`; this holds what they decide from, so the import modal does not.
  *
  * @module features/data-installer/ui/hooks/useRemovalConfirm
@@ -8,7 +8,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { DatapackRemovalChanges, DatapackRemovalScope } from '../../removalChanges';
-import { type ConfirmContent, FRESH_CHOICE, type RemovalAnswer, type RemovalChoice, confirmContent, removalAnswer, saveAsNameOf, toggleAlways } from '../components/removalConfirm';
+import { type ConfirmContent, FRESH_CHOICE, type RemovalAnswer, type RemovalChoice, confirmContent, removalAnswer, saveAsNameOf } from '../components/removalConfirm';
 import { useDataInstallerRequest } from './useDataInstallerRequest';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
@@ -19,7 +19,6 @@ import type { OperationProgressPayload } from '@/types/webviewPayloads';
 export interface RemovalConfirmView {
     content: ConfirmContent;
     choice: RemovalChoice;
-    onToggleAlways: () => void;
     /** The Save As name, as typed. */
     onSaveAsName: (name: string) => void;
 }
@@ -31,7 +30,7 @@ export interface RemovalConfirm extends RemovalConfirmView {
     armed: boolean;
     /** Which stage of saving first the removal is on, once it has started saving. */
     stage: string | undefined;
-    /** The Remove press was made: read the store, then show the confirm with the boxes fresh. */
+    /** The Remove press was made: read the store, then show the confirm with nothing typed. */
     arm: (pack: unknown) => void;
     /** Cancel: back to the form. Nothing has changed. */
     disarm: () => void;
@@ -39,7 +38,7 @@ export interface RemovalConfirm extends RemovalConfirmView {
     press: (save: boolean) => RemovalAnswer;
     /** Saving first as a new pack needs a name. */
     canSave: boolean;
-    /** Back from a save that failed: the same confirm, the boxes as they were. */
+    /** Back from a save that failed: the same confirm, the name as it was. */
     reopen: () => void;
 }
 
@@ -86,7 +85,6 @@ export function useRemovalConfirm(): RemovalConfirm {
         press,
         canSave,
         reopen: useCallback(() => setOpen(true), []),
-        onToggleAlways: useCallback(() => setChoice(toggleAlways), []),
         onSaveAsName: useCallback((name: string) => setChoice((current) => ({ ...current, saveAsName: name })), []),
     };
 }

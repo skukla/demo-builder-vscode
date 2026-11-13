@@ -439,13 +439,13 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             'go in; the note names each skipped row and why, and every row that needed it. Every kind still ' +
             'reads success, so read the note. Sign-in, throttling, a Commerce error or no answer stop it; ' +
             'running it again carries on and counts anything made without an answer as the pack\'s. ' +
-            'Installing another pack or another version over the one the project uses (Demo Builder installed it) ' +
-            "replaces it: that pack is uninstalled first, in the same job, as reset_datapack uninstalls it, then this " +
-            'one installs; an uninstall that fails installs nothing (stoppedAt replacing) and the project keeps naming the ' +
-            "old pack, else it names the new one. Changes the user made since it was installed are saved into the user's " +
-            'own pack first; when the old pack is not theirs, this names the changes and installs nothing until changes ' +
-            'answers: keep saves them as a new pack named by saveAs, drop loses them. Ask the user. Installing the same ' +
-            'version again replaces nothing.',
+            "Installing another pack over the one the project uses (Demo Builder installed it) is a switch (the screen's " +
+            'Switch), and installing another version of that pack works the same way: the pack in use is uninstalled first, ' +
+            'in the same job, as reset_datapack uninstalls it, then this one installs; an uninstall that fails installs ' +
+            'nothing (stoppedAt replacing) and the project keeps naming the old pack, else it names the new one. Changes ' +
+            "the user made since it was installed are saved into the user's own pack first; when the old pack is not " +
+            'theirs, this names the changes and installs nothing until changes answers: keep saves them as a new pack ' +
+            'named by saveAs, drop loses them. Ask the user. Installing the same version again uninstalls nothing.',
         map: importHandlers,
         type: 'start-datapack-import',
         confirm: true,
@@ -456,7 +456,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             changes: z
                 .enum(['keep', 'drop'])
                 .optional()
-                .describe("Replacing the project's pack only: the user's changes to it since install, keep saves them first (into their own pack, or as saveAs), drop loses them"),
+                .describe("Only when this uninstalls the project's pack first (a switch, or another version of it): the user's changes to it since install, keep saves them first (into their own pack, or as saveAs), drop loses them"),
             saveAs: SAVE_AS,
         },
     },
@@ -503,7 +503,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         description:
             "Undo the last save of the project's own datapack: Commerce goes back to the save before it. The datapack must " +
             "be the one this project uses and one of the user's own in My Datapacks (not a team pack), with an earlier save " +
-            'to go back to; otherwise this refuses and nothing changes. One job, as start_datapack_import replacing a pack: ' +
+            'to go back to; otherwise this refuses and nothing changes. One job, as start_datapack_import over the pack in use: ' +
             'the last save is uninstalled and the one before it installed, onto the website and store view the pack is ' +
             'installed to. Changes made in the Admin since are lost, never saved. Only once the job succeeds is the last ' +
             'save deleted from My Datapacks, with its store configuration; a job that fails deletes nothing and the project ' +

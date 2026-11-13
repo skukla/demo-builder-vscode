@@ -50,7 +50,7 @@ import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import { useDatapackCatalog } from '../hooks/useDatapackCatalog';
 import { requestDatapackRename, useDetailFlyout } from '../hooks/useDetailFlyout';
 import { type HeldPackInfo, useHeldPack } from '../hooks/useHeldPack';
-import { ImportWindowModal, useImportWindow } from '../hooks/useImportWindow';
+import { ImportWindowModal, ownedOf, useImportWindow } from '../hooks/useImportWindow';
 import { FullScreenLoading } from '@/core/ui/components/feedback/FullScreenLoading';
 import { FullScreenSurface } from '@/core/ui/components/layout/FullScreenSurface';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
@@ -202,7 +202,9 @@ export function DatapackCatalogView({ library = false }: { library?: boolean } =
     // flow modal beside the list and keeps its flyout view-only, and this follows
     // that. Closing the modal therefore leaves the flyout open behind it.
     // Fixed when it opens: nothing the flyout does afterwards closes it (walk F113).
-    const importWindow = useImportWindow(detail.value, selectedStore, held !== undefined);
+    const installedAt = projectContext.value?.installedAt;
+    const owned = useMemo(() => ownedOf(value, held, installedAt), [value, held, installedAt]);
+    const importWindow = useImportWindow(detail.value, selectedStore, owned);
     /**
      * Closing the import modal RE-READS which pack this project holds.
      *
@@ -234,7 +236,6 @@ export function DatapackCatalogView({ library = false }: { library?: boolean } =
         loadProjectContext({});
         refresh();
     }, [loadProjectContext, refresh]);
-    const installedAt = projectContext.value?.installedAt;
     // The flyout waits for the project's first answer too: Save Changes hangs on it, and appeared on
     // its own a moment after the other buttons (owner, 2026-11-09, walk F92).
     const flyoutLoading = detail.loading || (projectContext.value === undefined && projectContext.failure === undefined);
@@ -362,7 +363,7 @@ export function DatapackCatalogView({ library = false }: { library?: boolean } =
                     openDetail={openDetail}
                     installedPacks={installedPacks}
                     held={held}
-                    installedAt={projectContext.value?.installedAt}
+                    installedAt={installedAt}
                 />
             </FullScreenSurface>
 

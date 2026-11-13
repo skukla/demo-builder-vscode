@@ -39,7 +39,6 @@ import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 export interface ReplaceAnswerPayload {
     changes?: string;
     saveAs?: { displayName?: unknown };
-    alwaysSave?: boolean;
 }
 
 /** The import to start, and what it replaces when it replaces anything. */
@@ -137,7 +136,6 @@ export async function settleReplacement(
             ...(answer ? { answer } : {}),
             // The SC's own pack is saved into without asking; any other is asked about (CHANGES_NEED_ANSWER).
             unanswered: 'keep',
-            ...(payload?.alwaysSave === true ? { rememberAlways: true } : {}),
             ...(payload?.saveAs ? { saveAs: payload.saveAs } : {}),
         },
         removalStageReporter(context),

@@ -49,8 +49,6 @@ export interface StartImportPayload {
     changes?: string;
     /** With `changes: "keep"`: the name of a new datapack to save them as, when the demo's pack is not the SC's. */
     saveAs?: { displayName?: unknown };
-    /** Only ever the confirm's box: turn on "always save" once a save has worked. */
-    alwaysSave?: boolean;
     /** Agent: wait up to this many seconds (at most 45) for the job to end, saying its progress (`importJobWait.ts`). */
     waitSeconds?: number;
 }

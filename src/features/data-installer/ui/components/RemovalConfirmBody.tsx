@@ -4,8 +4,8 @@
  * footer's two buttons (`buildActions`). When the demo's pack is not the SC's, saving makes a new
  * pack of theirs, named in the field here (Save As, `.rptc/plans/datapack-save-as/`).
  *
- * `CheckboxRow` is the house row the plan names. Its labels are long sentences here and it has no
- * variant for that; none is needed, since a label wraps.
+ * The changes are counted by type, no names, and there is no "Always" box: saving without asking
+ * is the setting only (step 03, S6; decisions J2-1, J2-3).
  *
  * @module features/data-installer/ui/components/RemovalConfirmBody
  */
@@ -15,7 +15,6 @@ import React from 'react';
 import type { ChangedKind } from '../../removalChanges';
 import { dataTypeLabel } from '../dataTypeLabel';
 import type { RemovalConfirmView } from '../hooks/useRemovalConfirm';
-import { CheckboxRow } from '@/core/ui/components/selection/CheckboxRow';
 import { Fact, FactList } from '@/core/ui/components/ui/FactList';
 import { LeadText } from '@/core/ui/components/ui/LeadText';
 
@@ -31,24 +30,13 @@ export const UNCHECKED_LEAD = {
     remove: 'Uninstalling removes any changes you made.',
 } as const;
 
-/** Names a data type shows in full; past that, how many more (the dialog design rules' count). */
-const NAMES_SHOWN = 3;
-
-/** One data type's changes as its line: "24-mb01, 24-mb02, 24-ug01 and 2 more", or a count alone. */
-export function changedLine(kind: ChangedKind): string {
-    const named = kind.names.slice(0, NAMES_SHOWN);
-    if (named.length === 0) return kind.count.toLocaleString('en-US');
-    const more = kind.count - named.length;
-    return more > 0 ? `${named.join(', ')} and ${more.toLocaleString('en-US')} more` : named.join(', ');
-}
-
-/** The changes, one row per data type, in the setup guide's two-column list (walk F110). */
+/** The changes, one row per data type and its count, in the setup guide's two-column list (walk F110). */
 function ChangedList({ kinds }: { kinds: readonly ChangedKind[] }): React.JSX.Element {
     return (
         <FactList>
             {kinds.map((kind) => (
                 <Fact key={kind.kind} label={dataTypeLabel(kind.kind)}>
-                    {changedLine(kind)}
+                    {kind.count.toLocaleString('en-US')}
                 </Fact>
             ))}
         </FactList>
@@ -72,9 +60,7 @@ export function RemovalConfirmBody({ deletes, view, forImport = false }: { delet
                     ) : (
                         <LeadText>{content.sentence}</LeadText>
                     )}
-                    {content.packName ? (
-                        <CheckboxRow label="Always Save Without Asking" isSelected={choice.always} onChange={view.onToggleAlways} />
-                    ) : (
+                    {content.packName ? null : (
                         // Not the SC's pack, so saving makes a new one of theirs: Save As, named here.
                         <TextField
                             label="Save Changes As"

@@ -72,6 +72,8 @@ export interface Answers {
     validate: unknown;
     start: unknown;
     records: unknown;
+    /** What the held datapack's changes read answers (a switch's check, S6). */
+    changes: unknown;
 }
 
 const DEFAULT_ANSWERS: Answers = {
@@ -88,6 +90,7 @@ const DEFAULT_ANSWERS: Answers = {
     validate: { success: true, data: { valid: true } },
     start: { success: true, data: { activationId: 'act-1' } },
     records: { success: true, data: BODEA_RECORDS },
+    changes: { success: true, data: { count: 0, kinds: [], alwaysSave: false } },
 };
 
 /** Answer every request the window sends; `never` leaves that one unanswered. */
@@ -111,6 +114,8 @@ export function answer(over: Partial<Answers> = {}, never: string[] = []): void 
                 return a.start;
             case 'get-datapack-records':
                 return a.records;
+            case 'get-datapack-removal-changes':
+                return a.changes;
             default:
                 return { success: true, data: null };
         }

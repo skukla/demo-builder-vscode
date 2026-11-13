@@ -790,10 +790,11 @@ before. Both read the store with the project's own
 credential, behind the same org guard as the import. Plan:
 `.rptc/plans/datapack-engine/step-05-capture-and-repeat-installs.md`.
 
-### Importing another pack or version over the project's (walk F97, 2026-11-09)
+### Switching to another pack, or another version (walk F97, 2026-11-09)
 
 No new tool. When the project uses a pack Demo Builder's engine installed, `start_datapack_import`
-of **another pack, or another version**, replaces it in one job: the old pack is removed first, by its
+of **another pack** (a switch, the screen's Switch since step 03 S6, 2026-11-12) **or another
+version** uninstalls it in the same job: the old pack is removed first, by its
 install record, through the same removal `reset_datapack` runs (`engineRemoval.ts`), then the new one
 installs. Before anything is removed the user's changes to the old pack are settled as
 a project reset settles them (`settleChangesBeforeRemoval`, in `importReplacement.ts`): with no
@@ -805,7 +806,7 @@ what is removed. The job record carries `replaces` (the pack replaced as the use
 were saved first, `savedAs` (where they went, "Nov 9, 1:56 PM"); a removal that fails installs
 nothing, ends with `stoppedAt: "replacing"` and its `reason`, and leaves the project naming the old
 pack. The project names the new pack once the old one is gone. Importing the same version again
-replaces nothing and updates in place, as before.
+uninstalls nothing and updates in place, as before.
 
 Every job record also carries `purpose`, what the job is for, set where it starts (datapack
 simplification step 03): `install`, `switch` (an install over another pack), `uninstall`,

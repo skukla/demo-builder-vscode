@@ -72,12 +72,12 @@ place and keeps Admin edits). It checks first: when nothing has changed it answe
 does nothing; otherwise it uninstalls the datapack and installs its latest save in one job. It asks
 the user first, since anything changed since the last save is lost.
 
-## Installing another pack or version
+## Switching to another pack, or another version
 
-When the project uses a pack Demo Builder installed and you install **another pack, or another
-version of it**, `start_datapack_import` replaces it: the old pack's data is removed first, in the
-same job, the way `reset_datapack` removes it, then the new one installs. Tell the user that before
-you start.
+When the project uses a pack Demo Builder installed and you install **another pack** (a switch, the
+screen's Switch) **or another version of it**, `start_datapack_import` uninstalls the pack in use
+first: its data is removed in the same job, the way `reset_datapack` removes it, then the new one
+installs. Tell the user that before you start.
 
 - Changes the user made to the old pack since it was installed are saved into their own pack first,
   without asking. When the old pack is not theirs (a team pack, a colleague's), the call installs
@@ -88,7 +88,7 @@ you start.
   why, and the project still names the old pack.
 - Once the old pack is gone the project names the new one, and `reset_datapack` removes the new one.
 
-Installing the same version again replaces nothing: it updates in place, as above.
+Installing the same version again uninstalls nothing: it updates in place, as above.
 
 ## Trap 2 — never guess `commerceInstance`
 

@@ -434,7 +434,7 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     start_datapack_import: {
         action: 'Install a datapack',
         consequence:
-            'Writes the chosen data types and what they need into the live Commerce instance, then the datapack\'s store configuration when all of it is chosen. Installing again updates or removes what the datapack made earlier of those types, keeping anything changed in the Admin. Installing another datapack over the one this demo uses uninstalls that one first. Takes several minutes and cannot be paused.',
+            'Writes the chosen data types and what they need into the live Commerce instance, then the datapack\'s store configuration when all of it is chosen. Installing again updates or removes what the datapack made earlier of those types, keeping anything changed in the Admin. Switching to another datapack, or another version of the one this demo uses, uninstalls that one first. Takes several minutes and cannot be paused.',
         target: ['datapackName', 'version', 'changes'],
         sessionGrant: false,
     },

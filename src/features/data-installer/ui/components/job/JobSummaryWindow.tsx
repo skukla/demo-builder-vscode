@@ -5,61 +5,59 @@
  * check has answered (`ready`), so it opens at the table's height and never grows (rules 12, 14).
  * No checkbox, no picker: the whole datapack goes to the project's own store.
  *
+ * A switch asks over the same table (S6, decisions J2-3, J8-1): "Switch to Bodea?" with the warning
+ * icon and a blue Switch, no opening line; the host hands in the frame's buttons and problem line.
+ *
  * @module features/data-installer/ui/components/job/JobSummaryWindow
  */
 
 import React from 'react';
-import { DRY_RUN, INSTALL } from '../../../datapackWords';
 import { TypeTable } from '../typeSummary/TypeTable';
 import type { TypeRow } from './installRows';
-import type { ModalWait } from '@/core/ui/components/ui/Modal';
+import type { ActionButton, ModalStatus, ModalWait } from '@/core/ui/components/ui/Modal';
 import { StepsWindow } from '@/core/ui/components/ui/StepsDialog';
 
 export interface JobSummaryWindowProps {
     title: string;
+    /** A switch's warning icon. */
+    status?: ModalStatus;
     rows: readonly TypeRow[];
-    /** What installing would change could not be read. */
-    checkFailed: boolean;
+    /** What could not be read, as the problem line under the table says it. */
+    problem?: string;
     /** The check has answered: the table is known. */
     ready: boolean;
     waiting: ModalWait | false;
     onReview: () => void;
-    onDryRun: () => void;
-    onInstall: () => void;
+    /** Dry Run and Install; or Switch. */
+    actionButtons: ActionButton[];
     onClose: () => void;
 }
 
 export function JobSummaryWindow({
     title,
+    status,
     rows,
-    checkFailed,
+    problem,
     ready,
     waiting,
     onReview,
-    onDryRun,
-    onInstall,
+    actionButtons,
     onClose,
 }: JobSummaryWindowProps): React.ReactElement {
     return (
         <StepsWindow
             title={title}
+            {...(status ? { status } : {})}
             ready={ready}
             waiting={waiting}
             closeLabel="Cancel"
             startButtons={[{ label: 'Review Records', variant: 'secondary', onPress: onReview }]}
-            actionButtons={[
-                { label: DRY_RUN, variant: 'secondary', onPress: onDryRun },
-                { label: INSTALL, variant: 'accent', onPress: onInstall },
-            ]}
+            actionButtons={actionButtons}
             onClose={onClose}
         >
             <div className="clear-demo-body">
                 <TypeTable rows={rows} />
-                {checkFailed ? (
-                    <p className="dialog-problem text-notice">
-                        {"What installing would change couldn't be read."}
-                    </p>
-                ) : null}
+                {problem ? <p className="dialog-problem text-notice">{problem}</p> : null}
             </div>
         </StepsWindow>
     );
