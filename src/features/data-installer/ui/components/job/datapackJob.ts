@@ -9,10 +9,12 @@
  * - **A press that does not belong to the phase on screen moves nothing**: an answer arriving late
  *   (the check after the summary is up, a second end) is ignored rather than jumping the window.
  *
- * Three kinds: an `install` of a pack the project does not hold, from its check; a `switch` over the
+ * Four kinds: an `install` of a pack the project does not hold, from its check; a `switch` over the
  * datapack it holds (S6), from its check, whose Switch asks "Save Your Changes First?" when the held
- * datapack has changes; and `watch`, a job already running when the window opened (Undo, Restore,
- * an agent's), from its run.
+ * datapack has changes; an `uninstall` of the datapack it holds (S7), from its check, whose question
+ * ("Uninstall My Luma?") stands where the summary does and asks the same save question, with no
+ * Review Records and no Dry Run, its run keyed on the removal (`reset`); and `watch`, a job already
+ * running when the window opened (Undo, Restore, an agent's), from its run.
  *
  * @module features/data-installer/ui/components/job/datapackJob
  */
@@ -20,7 +22,7 @@
 import type { LastAction } from '../importResult';
 
 /** What the window was opened for. */
-export type JobKind = 'install' | 'switch' | 'watch';
+export type JobKind = 'install' | 'switch' | 'uninstall' | 'watch';
 
 /** The window on screen. */
 export type JobPhase =
@@ -51,11 +53,11 @@ export type JobEvent =
     | { type: 'dry-run' }
     | { type: 'dry-answered' }
     | { type: 'start' }
-    /** Switch pressed with changes to lose: the save question. */
+    /** Switch or Uninstall pressed with changes to lose: the save question. */
     | { type: 'save-first' }
     | { type: 'ended'; clean: boolean };
 
-/** Where a job opens: an install or a switch on its check, a running job on its run. */
+/** Where a job opens: an install, a switch or an uninstall on its check, a running job on its run. */
 export function startJob(kind: JobKind): JobState {
     return { kind, phase: kind === 'watch' ? 'run' : 'check', lastAction: null };
 }
@@ -87,7 +89,7 @@ function next(state: JobState, event: JobEvent): JobState {
         case 'dry-answered':
             return { ...state, phase: 'dry-result' };
         case 'start':
-            return { ...state, phase: 'run', lastAction: 'start' };
+            return { ...state, phase: 'run', lastAction: state.kind === 'uninstall' ? 'reset' : 'start' };
         case 'running':
             return { ...state, phase: 'run' };
         case 'save-first':
@@ -99,14 +101,20 @@ function next(state: JobState, event: JobEvent): JobState {
     }
 }
 
+/** The kinds that ask "Save Your Changes First?": those that uninstall the held datapack. */
+const ASKS_SAVE: readonly JobKind[] = ['switch', 'uninstall'];
+/** What an uninstall's question does not offer. */
+const NOT_UNINSTALL: ReadonlyArray<JobEvent['type']> = ['review', 'dry-run'];
+
 /**
  * The job after `event`; the same object when the event does not belong to the phase on screen.
- * A job opened running has no summary behind it, so its Back moves nothing; only a switch asks
- * the save question.
+ * A job opened running has no summary behind it, so its Back moves nothing; only what uninstalls
+ * the held datapack asks the save question; an uninstall has no Review Records and no Dry Run.
  */
 export function datapackJob(state: JobState, event: JobEvent): JobState {
     if (!FROM[event.type].includes(state.phase)) return state;
-    if (event.type === 'save-first' && state.kind !== 'switch') return state;
+    if (event.type === 'save-first' && !ASKS_SAVE.includes(state.kind)) return state;
+    if (state.kind === 'uninstall' && NOT_UNINSTALL.includes(event.type)) return state;
     if (state.kind === 'watch' && (event.type === 'back' || event.type === 'start')) return state;
     return next(state, event);
 }

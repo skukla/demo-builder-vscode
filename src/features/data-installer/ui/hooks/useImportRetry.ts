@@ -1,12 +1,12 @@
 /**
- * The import window's three ways to run an import (owner, 2026-11-07): Import from the form, Retry
+ * The job window's three ways to run a job (owner, 2026-11-07): Install from the summary, Retry
  * on a stop a retry can get past, and Fix with AI on a problem it cannot. Retry runs the same import
  * again (what is already in sends nothing, so it carries on from where it stopped) and counts its
  * presses, so the window can offer Fix with AI once retrying has not helped (`RETRIES_BEFORE_FIX`).
  * Fix with AI asks the extension to open the SC's AI on the recorded problem (`importFixHandlers.ts`);
  * a Dry Run's asks for the recorded dry run instead (step 03, S5), sending nothing of the window.
  *
- * Split out of `ImportDatapackModal`, which keeps the state the requests share.
+ * Used by `useDatapackJob`, which keeps the state the requests share.
  *
  * @module features/data-installer/ui/hooks/useImportRetry
  */

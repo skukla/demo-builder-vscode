@@ -243,7 +243,7 @@ export async function removeProjectSampleData(
     }
 }
 
-/** The answers, in the Datapacks screen's removal words (`importModalView`). */
+/** The answers, in the Datapacks screen's save question's words (`SaveFirstWindow`). */
 const SAVE = saveFirstLabel('Uninstall', true);
 const DROP = withoutSavingLabel('Uninstall');
 const NAME_LABEL = 'Save Changes As';

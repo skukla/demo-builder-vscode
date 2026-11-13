@@ -14,7 +14,7 @@ import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { StoreItemPage } from '@/features/data-installer/pickableKinds';
 import type { PackBeingSaved } from '@/features/data-installer/ui/components/create-flow/datapackFlowStages';
 import { type CreateDatapackFlowArgs, useCreateDatapackFlow } from '@/features/data-installer/ui/components/create-flow/useCreateDatapackFlow';
-import type { TargetWebsite } from '@/features/data-installer/ui/hooks/useImportScopes';
+import type { TargetWebsite } from '@/features/data-installer/ui/hooks/useAcoExportChoice';
 
 const mockRequest = webviewClient.request as jest.Mock;
 

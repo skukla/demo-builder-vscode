@@ -32,8 +32,6 @@ const LAYOUTS = [
 
 /** Files that render `Modal` directly today, each with the change that moves it. Shrink only. */
 const LEDGER: Readonly<Record<string, string>> = {
-    'src/features/data-installer/ui/components/ImportDatapackModal.tsx':
-        'waits for a layout: rebuilt as one window per phase in the build (decisions.md, J2), not moved onto Steps',
     'src/features/data-installer/ui/components/ClearDemoDataModal.tsx':
         'waits for a layout: rebuilt to J1 (type table, Review Records, Removed and Kept tabs) in the build',
     'src/features/dashboard/ui/components/ManageApisModal.tsx':

@@ -1,10 +1,8 @@
 /**
- * What the import modal's result view shows, decided from state.
+ * What a datapack job window's result shows, decided from state.
  *
- * Pure: no React, no requests. Extracted from `ImportDatapackModal` because that
- * file was 831 lines against a 500-line cap, and because deciding "which outcome
- * does the user see" is testable without rendering a modal — which the modal's
- * own suites had to do for every branch.
+ * Pure: no React, no requests, so deciding "which outcome does the user see" is
+ * testable without rendering a window.
  *
  * The rule these encode, and the one worth not losing: **the result is keyed on
  * the LAST ACTION**, not on which request objects happen to hold values. Request
@@ -16,37 +14,14 @@
  */
 
 import { FINISHING_STOP, type ImportJobRecord, type KeptRootStep, SAVE_STOP } from '../../types';
-import { dataTypeLabel } from '../dataTypeLabel';
 import type { DataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import type { ModalStatus } from '@/core/ui/components/ui/Modal';
 import { endsSmall, type RunEnding } from '@/core/ui/utils/runEnding';
 import { jobPurpose, jobWords } from '@/features/data-installer/datapackWords';
 import { ErrorCode } from '@/types/errorCodes';
 
-/**
- * One line per data type: its human name and what the service says it did.
- *
- * Shared with the modal's in-flight `WatchProgress`, which had built this list
- * with a byte-identical expression. Two copies of one job — and the moment the
- * codes became labels, the copy that got missed would have shown the raw code
- * for the whole duration of the import and the finished name only at the end.
- */
-export function describePerType(
-    perType: ImportJobRecord['perType'],
-    options: { troubledOnly?: boolean } = {},
-): string[] {
-    return Object.entries(perType)
-        .filter(([, state]) => !options.troubledOnly || state !== 'success')
-        .map(([type, state]) => `${dataTypeLabel(type)}: ${state}`);
-}
-
 /** The operation whose outcome the result view should show. */
 export type LastAction = 'dryRun' | 'start' | 'reset';
-
-/** Whether the result on screen is a Dry Run that passed: it offers Install, not Close. */
-export function checkPassed(lastAction: LastAction | null, check: { valid: boolean } | null | undefined): boolean {
-    return lastAction === 'dryRun' && check?.valid === true;
-}
 
 /**
  * One rendered outcome, whatever produced it, in the dialog design rules' result shape
@@ -167,8 +142,10 @@ export function resolveResult(
                 record.outcome !== 'watching' &&
                 record.activationId === startedActivation
             ) {
-                if (record.operation !== 'reset' && ranOnRows(record)) return runResult(record, name, sources.retries ?? 0);
-                return withSavedNote(terminalResult(record, name), lastAction === 'reset' ? reset.value?.savedNote : undefined);
+                if (ranOnRows(record)) {
+                    return record.operation === 'reset' ? uninstallResult(record, name) : runResult(record, name, sources.retries ?? 0);
+                }
+                return terminalResult(record);
             }
             return null;
         }
@@ -261,10 +238,17 @@ function runResult(record: ImportJobRecord, name: string, retries: number): Resu
     return { variant: 'warning', title, run: record, finished: true, action: 'fix', ...lead, ...took };
 }
 
-/** Where the changes went: what a removal that saved them first has left to say, however it ended. */
-function withSavedNote(result: ResultContent, savedNote: string | undefined): ResultContent {
-    if (!savedNote) return result;
-    return { ...result, message: [result.message, savedNote].filter(Boolean).join(' ') };
+/**
+ * An uninstall's ending, on its steps like an install's (step 03, S7; decisions J5-2). A clean one
+ * is the small result, "My Luma Uninstalled", the kept root's Admin step when the store kept it; the
+ * save made first is not repeated, its own step said where (rule 3). One that stopped, or left part
+ * of the datapack behind, stays on its steps as "Couldn't Uninstall My Luma", with Retry: uninstalling
+ * again tries what is left again.
+ */
+function uninstallResult(record: ImportJobRecord, name: string): ResultContent {
+    if (record.outcome === 'success') return { ...successResult(record, name, wordsFor('reset')), finished: true };
+    const took = record.processingTimeMs !== undefined ? { tookMs: record.processingTimeMs } : {};
+    return { variant: 'error', title: jobWords('uninstall', name).failed, run: record, action: 'retry', ...took };
 }
 
 /**
@@ -279,12 +263,15 @@ function dryRunResult(dryRun: DataInstallerRequest<{ valid: boolean; reason?: st
         : { variant: 'warning', title: 'Dry Run Found a Problem', message: dryRun.value.reason, action: 'fix' };
 }
 
-/** A finished job, worded for ITS operation: a removal must not say "Installed". */
-function terminalResult(record: ImportJobRecord, name: string): ResultContent {
+/**
+ * A job with no rows to end on, worded for ITS operation (a removal must not say "Installed"): one
+ * that never started, was stopped watching, or could not be watched. A job that ran ends on its steps
+ * (`runResult`, `uninstallResult`).
+ */
+function terminalResult(record: ImportJobRecord): ResultContent {
     const words = wordsFor(record.operation === 'reset' ? 'reset' : 'start');
     const took = record.processingTimeMs !== undefined ? { tookMs: record.processingTimeMs } : {};
-    if (record.outcome === 'success') return { ...successResult(record, name, words), ...took };
-    return { ...unfinishedResult(record, name, words), ...took };
+    return { ...unfinishedResult(record, words), ...took };
 }
 
 /**
@@ -305,23 +292,10 @@ function successResult(record: ImportJobRecord, name: string, words: OperationWo
     return { variant: 'success', title: `${name} ${words.done}`, ...(record.note ? { message: record.note } : {}) };
 }
 
-/**
- * Anything short of success, narrowed to the types that need attention: on a partial run the
- * successes are the noise and the failures are the answer.
- */
-function unfinishedResult(record: ImportJobRecord, name: string, words: OperationWords): ResultContent {
-    const troubled = describePerType(record.perType, { troubledOnly: true });
-    const kept = record.note ? [record.note] : [];
+/** What is left to say of a job that has no rows to end on. */
+function unfinishedResult(record: ImportJobRecord, words: OperationWords): ResultContent {
     const later = 'Still running. The result will be on the Activity tab.';
     switch (record.outcome) {
-        case 'partial':
-            return {
-                variant: 'warning',
-                title: `Some Data Types Not ${words.done}`,
-                details: [...kept, ...troubled],
-            };
-        case 'error':
-            return { variant: 'error', title: `Couldn't ${words.verbTitle} ${name}`, message: record.reason, details: [...kept, ...troubled] };
         case 'never-registered':
             return { variant: 'error', title: `${words.nounTitle} Did Not Start`, message: record.reason };
         case 'stopped':

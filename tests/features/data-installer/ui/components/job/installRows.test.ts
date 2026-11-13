@@ -6,7 +6,8 @@
  */
 
 import type { KindChanges } from '@/features/data-installer/services/demoBuilderEngine/storeChanges';
-import { changedRows, installRows } from '@/features/data-installer/ui/components/job/installRows';
+import type { ChangedKind } from '@/features/data-installer/removalChanges';
+import { countedRows, installRows } from '@/features/data-installer/ui/components/job/installRows';
 
 const named = (count: number) => ({ count, names: [] });
 const kind = (
@@ -58,14 +59,13 @@ describe('installRows', () => {
 });
 
 // Step 03, S6: "Save Your Changes First?" counts the changes by type, no example names (J2-1).
-describe('changedRows', () => {
+describe('countedRows', () => {
     it('is one row per type, its count bare, never a name', () => {
-        expect(
-            changedRows([
-                { kind: 'products', count: 1200, names: ['24-MB01'] },
-                { kind: 'categories', count: 1, names: ['Gear'] },
-            ])
-        ).toEqual([
+        const changed: ChangedKind[] = [
+            { kind: 'products', count: 1200, names: ['24-MB01'] },
+            { kind: 'categories', count: 1, names: ['Gear'] },
+        ];
+        expect(countedRows(changed)).toEqual([
             { type: 'products', label: 'Products', count: 1200, happens: '1,200' },
             { type: 'categories', label: 'Categories', count: 1, happens: '1' },
         ]);

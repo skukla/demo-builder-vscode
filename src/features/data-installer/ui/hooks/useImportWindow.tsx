@@ -9,17 +9,15 @@
  * flyout does closes the window: the window reads its own version's data types when the flyout has
  * not (`useVersionTypes`).
  *
- * Two windows serve it while step 03 moves the paths one slice at a time (`windowRoute`): the job
- * window (`DatapackJobWindow`) for a first install (S4), a switch over another datapack (S6) and a
- * run already started (Undo, Restore), and `ImportDatapackModal` for another version of the held
- * datapack and Uninstall.
+ * One window serves every path (`DatapackJobWindow`, step 03), on the job `windowRoute` picks: a
+ * first install (S4), a switch over another datapack (S6), Uninstall and another version of the held
+ * datapack (S7), and a run already started (Undo, Restore).
  *
  * @module features/data-installer/ui/hooks/useImportWindow
  */
 
 import React, { useCallback, useState } from 'react';
 import type { DataItemInventory, DatapackDetail, DatapackSummary } from '../../types';
-import { ImportDatapackModal } from '../components/ImportDatapackModal';
 import { DatapackJobWindow } from '../components/job/DatapackJobWindow';
 import type { DatapackId, DatapackStoreName, ProjectDatapack } from '@/types/datapack';
 
@@ -37,8 +35,8 @@ export interface ImportWindow {
     /** The data types the version holds, when the flyout had read that version; else the window reads them. */
     types?: string[];
     /**
-     * Opened by Remove Data: straight to the removal's confirm, closing when it is done (F118). Opened
-     * by Undo or Restore once its job was accepted: straight to the run.
+     * Opened by Uninstall: the uninstall's check, then its question (F118, J5-1). Opened by Undo or
+     * Restore once its job was accepted: straight to the run.
      */
     opensOn?: 'remove' | 'run';
     /** The datapack the project held when the window opened: installing another is a switch. */
@@ -47,22 +45,23 @@ export interface ImportWindow {
     ownNames: string[];
 }
 
-/** The window a job opens in: the job window, by its kind, or today's window. */
-export type WindowRoute = 'install' | 'switch' | 'watch' | 'modal';
+/** The job the window opens on. */
+export type WindowRoute = 'install' | 'switch' | 'version' | 'uninstall' | 'watch';
 
 /**
- * Which window opens (step 03, S4 and S6): the job window for a first install, for a switch over
- * another datapack Demo Builder installed (with no record there is nothing to uninstall, so it is
- * an install), and for a run already started; today's window for what later slices move (another
- * version of the held datapack, Uninstall).
+ * Which job the window opens on (step 03, S4, S6, S7). With no record of the held datapack there is
+ * nothing to uninstall it by, so installing over it is an install. Another version of the held
+ * datapack is a switch in Install's words (`version`). The same version again installs in place,
+ * replacing nothing, as the handler does (`importReplacement.ts`); on screen it is reached only
+ * when there is no record, since Restore stands in Install's place otherwise (`installedPackProps`).
  */
 export function windowRoute(opened: Pick<ImportWindow, 'id' | 'opensOn' | 'holding'>): WindowRoute {
     if (opened.opensOn === 'run') return 'watch';
-    if (opened.opensOn === 'remove') return 'modal';
+    if (opened.opensOn === 'remove') return 'uninstall';
     const { holding } = opened;
-    if (!holding) return 'install';
-    if (holding.pack.name === opened.id.name) return 'modal';
-    return holding.recorded ? 'switch' : 'install';
+    if (!holding?.recorded) return 'install';
+    if (holding.pack.name !== opened.id.name) return 'switch';
+    return holding.pack.version === opened.id.version ? 'install' : 'version';
 }
 
 /** The flyout's read: the detail and what is stored, as `get-datapack-detail` answers. */
@@ -137,30 +136,25 @@ export function useImportWindow(
     return { window: opened, open, openRemoval, close };
 }
 
+/** The props each route adds to the job window. */
+function routeProps(route: WindowRoute, ownNames: string[]): Partial<React.ComponentProps<typeof DatapackJobWindow>> {
+    if (route === 'uninstall') return { uninstalling: { ownNames } };
+    if (route === 'switch') return { switching: { ownNames } };
+    if (route === 'version') return { switching: { ownNames, verb: 'Install' } };
+    return {};
+}
+
 /** The import window as it opened (`useImportWindow`): only what it was given goes in. */
 export function ImportWindowModal({ opened, onClose }: { opened: ImportWindow; onClose: () => void }): React.JSX.Element {
     const route = windowRoute(opened);
-    if (route !== 'modal') {
-        return (
-            <DatapackJobWindow
-                id={opened.id}
-                displayName={opened.displayName}
-                {...(opened.types ? { types: opened.types } : {})}
-                source={opened.store}
-                startsAt={route === 'watch' ? 'run' : 'check'}
-                {...(route === 'switch' ? { switching: { ownNames: opened.ownNames } } : {})}
-                onClose={onClose}
-            />
-        );
-    }
-    const opensOn = opened.opensOn === 'remove' ? opened.opensOn : undefined;
     return (
-        <ImportDatapackModal
+        <DatapackJobWindow
             id={opened.id}
             displayName={opened.displayName}
-            {...(opened.types ? { availableTypes: opened.types } : {})}
+            {...(opened.types ? { types: opened.types } : {})}
             source={opened.store}
-            {...(opensOn ? { opensOn } : {})}
+            startsAt={route === 'watch' ? 'run' : 'check'}
+            {...routeProps(route, opened.ownNames)}
             onClose={onClose}
         />
     );

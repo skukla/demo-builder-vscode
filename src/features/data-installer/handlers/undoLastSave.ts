@@ -10,7 +10,7 @@
  * configuration (`deleteVersionWithLayer`); a job that fails or stops deletes nothing, and the
  * project keeps naming the newest save.
  *
- * Re-imports are locked to where the pack is installed (`useLockedScope`), so the target is the
+ * Re-imports go only where the pack is installed (`engine.ts` `elsewhere`), so the target is the
  * install record's; a record written before it kept one falls back to the project's, as any import.
  *
  * @module features/data-installer/handlers/undoLastSave

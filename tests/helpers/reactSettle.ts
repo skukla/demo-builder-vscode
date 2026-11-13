@@ -18,7 +18,7 @@
  * never would.
  *
  * MEASURED, because four plausible fixes did nothing. On one suite family
- * (`ImportDatapackModal`, 165 warnings) these all left the count unchanged at
+ * (the old datapack import modal's, 165 warnings) these all left the count unchanged at
  * exactly 9 for a single isolated test:
  *
  *   - draining more microtask ticks inside one act()

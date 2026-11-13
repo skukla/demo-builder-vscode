@@ -12,7 +12,7 @@
  * hosting is invisible through a mocked child by construction, so no number of
  * green component tests can answer this question. It has to be asked of the source.
  *
- * The incident: `ImportDatapackModal` shipped with neither host and never rendered
+ * The incident: the datapack import modal shipped with neither host and never rendered
  * once, from the day it was written through five green gates and four reports of
  * "green" — found only when a human pressed the button (fixed in 88277fbd).
  *

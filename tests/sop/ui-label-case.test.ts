@@ -36,8 +36,11 @@ const LEDGER: Readonly<Record<string, Reason>> = {
  * History's radio choices are each a save's date ("Nov 9, 1:56 PM", `versionLabel`), which no
  * Title Case rule applies to (walk F99). 70 -> 68 on 2026-11-10 (Phase 1b): a layout's forwarding of
  * its caller's words is no longer counted (`forwardedByALayout`); ConfirmActionDialog's two were.
+ * 68 -> 66 on 2026-11-12 (step 03, S7): the old import window went, with three runtime strings in
+ * its form and its removal confirm; one came in, the job window's question button, which is its
+ * verb (`DatapackVerb`: Install, Uninstall or Switch).
  */
-const DYNAMIC_PIN = 68;
+const DYNAMIC_PIN = 66;
 
 /**
  * The six dialog layouts (the Steps layout joined 2026-11-11) hand their caller's words on to Modal (`title={title}`). Those words are

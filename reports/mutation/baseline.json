@@ -5251,22 +5251,6 @@
             "openGaps": 0,
             "recorded": "2026-10-10T01:29:48.516Z"
         },
-        "src/features/data-installer/ui/components/ImportDatapackModal.tsx": {
-            "score": 92.05,
-            "killed": 139,
-            "survived": 12,
-            "noCoverage": 0,
-            "timeout": 0,
-            "survivorCategories": {
-                "other": 8,
-                "branch": 3,
-                "optionalChain": 1
-            },
-            "uncoveredCategories": {},
-            "highValueSurvivors": 3,
-            "equivalent": 12,
-            "openGaps": 0
-        },
         "src/features/data-installer/ui/components/ViewSwitcher.tsx": {
             "score": 100,
             "killed": 18,
@@ -10510,18 +10494,6 @@
             "uncoveredCategories": {},
             "highValueSurvivors": 2,
             "equivalent": 5,
-            "openGaps": 0
-        },
-        "src/features/data-installer/ui/components/importModalView.ts": {
-            "score": 100,
-            "killed": 106,
-            "survived": 0,
-            "noCoverage": 0,
-            "timeout": 0,
-            "survivorCategories": {},
-            "uncoveredCategories": {},
-            "highValueSurvivors": 0,
-            "equivalent": 0,
             "openGaps": 0
         },
         "src/features/eds/services/storefront/storefrontContentRepublishService.ts": {

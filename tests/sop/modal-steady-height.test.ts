@@ -95,7 +95,7 @@ function modalsWithViews(): Modal[] {
         const near = localImports(file, source);
         const nearby = near.map((path) => withoutImports(readFileSync(join(ROOT, path), 'utf8')));
         // The view switch can live one file along too, in the modal's OWN body
-        // (`XModal.tsx` beside `XModalBody.tsx`). The import modal's does: once its
+        // (`XModal.tsx` beside `XModalBody.tsx`). The datapack import modal's did, until step 03 replaced it: once its
         // footer and view choice moved to importModalView.ts (EDS-8, 2026-10-09),
         // counting only the modal's own file dropped the very modal this rule was
         // written for out of the scan, with every check still green. Only the
@@ -123,10 +123,9 @@ describe('a modal does not change size while it works', () => {
     it('CONTROL: the scan finds the modals this extension actually shows', () => {
         expect(COMPONENTS.length).toBeGreaterThan(100);
         expect(modals.length).toBeGreaterThan(2);
-        // The one that jumped, and the one that never did.
+        // The one that never jumped.
         expect(modals.map((m) => m.file)).toEqual(
             expect.arrayContaining([
-                'src/features/data-installer/ui/components/ImportDatapackModal.tsx',
                 'src/core/ui/components/feedback/OperationProgressModal.tsx',
             ]),
         );

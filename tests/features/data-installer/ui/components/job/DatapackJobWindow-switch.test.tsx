@@ -337,3 +337,112 @@ describe("Save Your Changes First? for a datapack that is not the SC's", () => {
         expect(button('Save and Switch')).toHaveAttribute('aria-disabled', 'true');
     });
 });
+
+/**
+ * Another version of the datapack the project holds (step 03, S7): the switch's flow, check,
+ * question, save question and a run that uninstalls first, in Install's words: "Install Bodea,
+ * eds-compatible?", Install, "Installing Bodea, eds-compatible" (never walked; the plan parks it as
+ * Q11). Ported from `ImportDatapackModal-replace.test.tsx`: the old version's changes read in its
+ * store, the save answers riding on the start, the save step from the press, a save never named by
+ * its id.
+ */
+describe('another version of the held datapack', () => {
+    const BODEA_MAIN: ProjectDatapack = { name: 'bodea', version: 'main', store: 'library' };
+    const HOLDS_MAIN = {
+        success: true,
+        data: { ...TARGET.data, datapack: BODEA_MAIN, heldName: 'Bodea' },
+    };
+    const VERSIONING = record({ version: 'eds-compatible', replaces: 'Bodea, main', replacesVersion: 'main' });
+
+    function holdingMain(changes: DatapackRemovalChanges, over: Parameters<typeof answer>[0] = {}, never: string[] = []) {
+        answer({ target: HOLDS_MAIN, changes: { success: true, data: changes }, ...over }, never);
+    }
+
+    async function openVersion(version = 'eds-compatible') {
+        const view = renderWindow({
+            id: { name: 'bodea', version },
+            switching: { ownNames: [], verb: 'Install' },
+        });
+        await settle();
+        await settle();
+        await settle();
+        return view;
+    }
+
+    it("reads the held version's changes in its store, then asks in Install's words with a blue Install", async () => {
+        holdingMain(NOTHING);
+        await openVersion();
+
+        expect(await heading('Install Bodea, eds-compatible?')).toBeInTheDocument();
+        expect(sent('get-datapack-removal-changes')).toEqual({ datapackName: 'bodea', version: 'main', source: 'library' });
+        expect(button('Install')).toHaveClass('modal-button-primary');
+        expect(button('Review Records')).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Switch' })).toBeNull();
+        expect(screen.queryByRole('button', { name: 'Dry Run' })).toBeNull();
+    });
+
+    it('never names a save by its id', async () => {
+        holdingMain(NOTHING);
+        await openVersion('20261112-090000');
+
+        expect(await heading('Install Bodea?')).toBeInTheDocument();
+        expect(screen.queryByText(/20261112/u)).toBeNull();
+    });
+
+    it('with nothing changed, starts at once, titled "Installing Bodea, eds-compatible", and hands over under it', async () => {
+        holdingMain(NOTHING, { statusAfter: VERSIONING });
+        const { onClose } = await openVersion();
+        await heading('Install Bodea, eds-compatible?');
+
+        await press(button('Install'));
+
+        expect(sent('start-datapack-import')).toMatchObject({ datapackName: 'bodea', version: 'eds-compatible', changes: 'drop' });
+        expect(await heading('Installing Bodea, eds-compatible')).toBeInTheDocument();
+        await press(button('Run in Background'));
+        expect(mockPostMessage.mock.calls).toStrictEqual([
+            ['backgroundOperation', { id: DATAPACK_OPERATION_ID, title: 'Installing Bodea, eds-compatible' }],
+        ]);
+        expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('with changes asks "Save Your Changes First?" in Install\'s words, the losing choice apart at the start', async () => {
+        holdingMain(CHANGED_MINE);
+        await openVersion();
+        await heading('Install Bodea, eds-compatible?');
+
+        await press(button('Install'));
+
+        expect(await heading('Save Your Changes First?')).toBeInTheDocument();
+        expect(button('Install Without Saving').closest('.modal-footer-start')).not.toBeNull();
+        expect(button('Save and Install').closest('.modal-footer-start')).toBeNull();
+        expect(sends('start-datapack-import')).toBe(0);
+    });
+
+    it('Install Without Saving starts the install, losing them, waiting as long as a save can take', async () => {
+        holdingMain(CHANGED_MINE);
+        await openVersion();
+        await heading('Install Bodea, eds-compatible?');
+        await press(button('Install'));
+
+        await press(button('Install Without Saving'));
+
+        const call = mockRequest.mock.calls.find(([type]) => type === 'start-datapack-import');
+        expect(call?.[1]).toMatchObject({ version: 'eds-compatible', changes: 'drop' });
+        expect(call?.[2]).toBe(TIMEOUTS.DATAPACK_SAVE_THEN_WRITE);
+        expect(sends('reset-datapack')).toBe(0);
+    });
+
+    it('Save and Install draws Save Your Changes from the press', async () => {
+        holdingMain(CHANGED_MINE, {}, ['start-datapack-import']);
+        await openVersion();
+        await heading('Install Bodea, eds-compatible?');
+        await press(button('Install'));
+
+        await press(button('Save and Install'));
+
+        expect(sent('start-datapack-import')).toMatchObject({ changes: 'keep' });
+        expect(await heading('Installing Bodea, eds-compatible')).toBeInTheDocument();
+        expect(screen.getAllByText('Save Your Changes').length).toBeGreaterThan(0);
+        expect(screen.getAllByText('Starting').length).toBeGreaterThan(0);
+    });
+});

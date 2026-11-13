@@ -7,18 +7,28 @@
  *
  * A switch (S6) draws its Save Your Changes and Uninstall rows before its job is recorded
  * (`switching`), the save's stage on the first while the start waits on it (walk F129), and holds
- * room for them in the reserve.
+ * room for them in the reserve. An uninstall (S7) draws its own steps (`uninstallSteps`): Save Your
+ * Changes when it saves first, then Uninstall <name>, the row a switch uninstalls with.
  *
  * @module features/data-installer/ui/components/job/DatapackRunWindow
  */
 
 import React, { useState } from 'react';
-import type { StepSource } from '../../../importSteps';
+import { type StepSource, uninstallSteps } from '../../../importSteps';
 import type { ImportJobRecord } from '../../../types';
 import { useImportProgress } from '../../hooks/useImportProgress';
 import type { ResultContent } from '../importResult';
 import { ImportRunView } from '../ImportRunView';
-import { endedSteps, type Installing, liveSteps, startingSteps } from './runSteps';
+import {
+    endedSteps,
+    type Installing,
+    liveSteps,
+    startingSteps,
+    type Uninstalling,
+    uninstallEndedSteps,
+    uninstallLiveSteps,
+    uninstallStartingSteps,
+} from './runSteps';
 import type { ActionButton, ModalStatus } from '@/core/ui/components/ui/Modal';
 import { StepsWindow } from '@/core/ui/components/ui/StepsDialog';
 
@@ -37,6 +47,8 @@ export interface DatapackRunWindowProps {
     opensRunning: boolean;
     /** A switch: the datapack it uninstalls, and the save's stage while the start waits on it. */
     switching?: Pick<StepSource, 'replaces' | 'savingStage'>;
+    /** An uninstall: whether it saves first, the save's stage, and where it saved. */
+    uninstalling?: Uninstalling;
     actionButtons: ActionButton[];
     onClose: () => void;
 }
@@ -99,44 +111,61 @@ function runReserve(
     ];
 }
 
+/** An uninstall's tallest states: mid-way, and stopped, the save above when it saves first. */
+function uninstallReserve(name: string, uninstalling: Uninstalling, columns: 1 | 2): React.ReactNode[] {
+    const saved = uninstalling.saves ? { savedAs: name } : {};
+    return [
+        <ImportRunView
+            key="mid"
+            steps={uninstallSteps({ name, running: true, detail: '1,000 of 1,000', ...saved })}
+            columns={columns}
+            running={{ startedAt: 0 }}
+        />,
+        <ImportRunView
+            key="stopped"
+            steps={uninstallSteps({ name, running: false, ended: 'stopped', reason: 'Stopped', ...saved })}
+            columns={columns}
+            end={{ lines: [], tookMs: 0 }}
+        />,
+    ];
+}
+
 /** The steps while the job runs, from its live progress. */
 function LiveRun({
     record,
     columns,
     name,
     startedAt,
+    uninstalling,
 }: {
     record: ImportJobRecord;
     columns: 1 | 2;
     name: string;
     startedAt: number;
+    uninstalling?: Uninstalling;
 }): React.ReactElement {
     const live = useImportProgress(record.activationId);
-    return (
-        <ImportRunView
-            steps={liveSteps(record, live, name)}
-            columns={columns}
-            running={{ startedAt }}
-        />
-    );
+    const steps = uninstalling
+        ? uninstallLiveSteps(record, live, name, uninstalling)
+        : liveSteps(record, live, name);
+    return <ImportRunView steps={steps} columns={columns} running={{ startedAt }} />;
 }
 
 /** The step the window is on: ended, running, or starting. */
 function RunBody(props: DatapackRunWindowProps & { pressedAt: number }): React.ReactElement {
-    const { ended, record, types, installing, columns, opensRunning, pressedAt, switching } = props;
+    const { ended, record, types, installing, columns, opensRunning, pressedAt, switching, uninstalling } =
+        props;
     if (ended?.run) {
         const end = {
             ...(ended.lead ? { lead: ended.lead } : {}),
             lines: ended.run.scLines ?? [],
             ...(ended.tookMs === undefined ? {} : { tookMs: ended.tookMs }),
         };
-        return (
-            <ImportRunView
-                steps={endedSteps(ended.run, installing.name)}
-                columns={columns}
-                end={end}
-            />
-        );
+        const { run } = ended;
+        const steps = uninstalling
+            ? uninstallEndedSteps(run, installing.name, uninstalling)
+            : endedSteps(run, installing.name);
+        return <ImportRunView steps={steps} columns={columns} end={end} />;
     }
     if (record?.outcome === 'watching') {
         const startedAt = opensRunning ? Date.parse(record.startedAt) : pressedAt;
@@ -146,12 +175,16 @@ function RunBody(props: DatapackRunWindowProps & { pressedAt: number }): React.R
                 columns={columns}
                 name={installing.name}
                 startedAt={startedAt}
+                {...(uninstalling ? { uninstalling } : {})}
             />
         );
     }
+    const steps = uninstalling
+        ? uninstallStartingSteps(installing.name, uninstalling)
+        : startingSteps(types, installing, switching);
     return (
         <ImportRunView
-            steps={startingSteps(types, installing, switching)}
+            steps={steps}
             columns={columns}
             running={{ startedAt: pressedAt }}
         />
@@ -161,13 +194,18 @@ function RunBody(props: DatapackRunWindowProps & { pressedAt: number }): React.R
 export function DatapackRunWindow(props: DatapackRunWindowProps): React.ReactElement {
     const { title, status, ended, types, installing, columns, actionButtons, onClose, switching } =
         props;
+    const { uninstalling } = props;
     // When Install was pressed: one clock from the press to the end.
     const [pressedAt] = useState(() => Date.now());
     return (
         <StepsWindow
             title={title}
             {...(status ? { status } : {})}
-            reserve={runReserve(types, installing, columns, switching?.replaces)}
+            reserve={
+                uninstalling
+                    ? uninstallReserve(installing.name, uninstalling, columns)
+                    : runReserve(types, installing, columns, switching?.replaces)
+            }
             // Run in Background while it runs: closing hands the job over, it stops nothing.
             closeLabel={ended ? 'Close' : 'Run in Background'}
             actionButtons={actionButtons}

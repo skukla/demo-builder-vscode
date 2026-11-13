@@ -7,8 +7,7 @@
  * Ported from `ImportDatapackModal.test.tsx`, `.targeting`, `-decisions` and `.lifecycle` for the
  * path that moved here: the project's instance and scope sent verbatim, a library pack naming its
  * store, the refusal shown verbatim, the result keyed on the last action, Run in Background, and
- * no instance. What those suites pin about the form (checkboxes, pickers) stays with the old
- * window, which still serves a switch, a reinstall and Uninstall.
+ * no instance.
  */
 
 import { act, screen, within } from '@testing-library/react';
@@ -376,6 +375,51 @@ describe('a window opened on a running job', () => {
     });
 });
 
+/**
+ * The status poll moves a running job's window forward, and must stop once it ends: both directions
+ * are pinned, since a test that only proves it starts passes as well when the stop is gone. Ported
+ * from `ImportDatapackModal-decisions.test.tsx` and `.lifecycle`.
+ */
+describe('the status poll', () => {
+    const statusReads = () => sends('get-datapack-import-status');
+    const tick = (ms: number) =>
+        act(async () => {
+            jest.advanceTimersByTime(ms);
+        });
+
+    it('reads the status once on open, and polls while a job runs', async () => {
+        answer({ statusBefore: record() });
+        renderWindow({ startsAt: 'run' });
+        await settle();
+        await settle();
+
+        const before = statusReads();
+        await tick(2000);
+        await settle();
+        expect(statusReads()).toBeGreaterThan(before);
+    });
+
+    it('never polls for a job that is not running, and a fresh window greets nothing finished', async () => {
+        answer({ statusBefore: record({ outcome: 'success', perType: { categories: 'success' } }) });
+        await openOnSummary();
+
+        expect(statusReads()).toBe(1);
+        expect(await heading('Install Bodea')).toBeInTheDocument();
+        await tick(6000);
+        expect(statusReads()).toBe(1);
+    });
+
+    it('re-reads the status as soon as a start is accepted', async () => {
+        answer({ statusAfter: record() });
+        await openOnSummary();
+        const before = statusReads();
+
+        await press(button('Install'));
+
+        expect(statusReads()).toBeGreaterThan(before);
+    });
+});
+
 it('just closes when no job is running', async () => {
     const { onClose } = await openOnSummary();
 
@@ -387,20 +431,24 @@ it('just closes when no job is running', async () => {
 });
 
 /**
- * Which window opens (S4, S6): the new one for a first install, a switch over another datapack and
- * a job already running; today's window for what S7 and S8 move (another version of the held
- * datapack, and Uninstall).
+ * Which job the window opens on (S4, S6, S7): every path is the job window now. Another version of
+ * the held datapack is a switch in Install's words; the same version again, reached on screen only
+ * when Demo Builder has no record of it (Restore stands in Install's place otherwise), installs in
+ * place, as the handler does: nothing is replaced.
  */
 describe('windowRoute', () => {
     const id = { name: 'bodea', version: 'main' };
     const luma = { name: 'luma', version: 'v1', store: 'library' as const };
+    const bodea = { name: 'bodea', version: 'eds-compatible', store: 'library' as const };
     it.each([
         ['a first install, the project holding no datapack', { id }, 'install'],
         ['a run opened by Undo or Restore', { id, holding: { pack: luma, recorded: true }, opensOn: 'run' as const }, 'watch'],
-        ['Uninstall', { id, holding: { pack: luma, recorded: true }, opensOn: 'remove' as const }, 'modal'],
+        ['Uninstall', { id, holding: { pack: luma, recorded: true }, opensOn: 'remove' as const }, 'uninstall'],
         ['a switch over another datapack Demo Builder installed', { id, holding: { pack: luma, recorded: true } }, 'switch'],
         ['another datapack with nothing to uninstall it by: an install', { id, holding: { pack: luma, recorded: false } }, 'install'],
-        ['another version of the datapack the project holds', { id, holding: { pack: { ...luma, name: 'bodea' }, recorded: true } }, 'modal'],
+        ['another version of the datapack the project holds', { id, holding: { pack: bodea, recorded: true } }, 'version'],
+        ['another version with nothing to uninstall it by: an install', { id, holding: { pack: bodea, recorded: false } }, 'install'],
+        ['the same version again: an install in place', { id, holding: { pack: { ...bodea, version: 'main' }, recorded: true } }, 'install'],
     ])('%s', (_name, opened, route) => {
         expect(windowRoute(opened)).toBe(route);
     });

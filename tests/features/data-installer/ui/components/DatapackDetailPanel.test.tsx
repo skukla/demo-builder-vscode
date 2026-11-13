@@ -262,7 +262,7 @@ describe('DatapackDetailPanel', () => {
     /**
      * The panel RAISES import; it does not own the modal.
      *
-     * It used to render `ImportDatapackModal` as a child of the Drawer — a dialog
+     * It used to render the import window as a child of the Drawer — a dialog
      * nested inside a drawer, which no other surface here does. The view mounts it
      * now, the way `IntegrationsScreen` mounts its flow modal beside the list, so
      * this panel is view-only like `IntegrationDetailPanel`.

@@ -252,11 +252,19 @@ describe('an ending worded for what the job was for', () => {
     });
 });
 
+/**
+ * An uninstall, drawn as steps (step 03, S7; decisions J5-2): a clean one ends on the small result,
+ * "Luma Uninstalled", which closes itself unless something is left to read; one that stopped or
+ * left part behind stays on its steps as "Couldn't Uninstall Luma", with Retry (J5-1's picture).
+ * The kept root keeps its Admin step in the small window.
+ */
 describe('a removal', () => {
-    it('calls a reset a REMOVAL', () => {
-        expect(outcomeOf({ outcome: 'success', operation: 'reset' })?.title).toBe(
-            `${PACK_NAME} Uninstalled`
-        );
+    it('calls a reset a REMOVAL, and ends it on the small result', () => {
+        expect(outcomeOf({ outcome: 'success', operation: 'reset' })).toEqual({
+            variant: 'success',
+            title: `${PACK_NAME} Uninstalled`,
+            finished: true,
+        });
     });
 
     it('says what it left in the store as its sentence', () => {
@@ -270,6 +278,7 @@ describe('a removal', () => {
             variant: 'success',
             title: `${PACK_NAME} Uninstalled`,
             message: 'Kept the category Gear: it holds yours.',
+            finished: true,
         });
     });
 
@@ -294,34 +303,24 @@ describe('a removal', () => {
             message:
                 "Justrite Test Store still uses the datapack's root category, ZZ Root DB12, so it stayed.",
             keptRoot,
+            finished: true,
         });
     });
 
-    it('calls a partial run a WARNING, naming the types that need attention', () => {
-        const result = outcomeOf({
-            outcome: 'partial',
-            operation: 'reset',
-            perType: { categories: 'success', products: 'error' },
-        });
-
-        expect(result).toEqual({
-            variant: 'warning',
-            title: `Some Data Types Not Uninstalled`,
-            details: ['Products: error'],
-        });
-    });
-
-    it('carries the record’s reason through as the message', () => {
-        const result = outcomeOf({
-            outcome: 'error',
+    it.each(['error', 'partial'] as const)('keeps a run that ended %s on its steps, "Couldn\'t Uninstall", with Retry', (outcome) => {
+        const record = jobRecord({
+            outcome,
             operation: 'reset',
             reason: 'Commerce rejected the token',
+            processingTimeMs: 4000,
         });
 
-        expect(result).toMatchObject({
+        expect(resolveResult('reset', recordOnlySources(record))).toEqual({
             variant: 'error',
             title: `Couldn't Uninstall ${PACK_NAME}`,
-            message: 'Commerce rejected the token',
+            run: record,
+            action: 'retry',
+            tookMs: 4000,
         });
     });
 });

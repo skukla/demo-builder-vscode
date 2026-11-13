@@ -1,5 +1,6 @@
 /**
- * Live import progress — the per-type map turned into one line and a ring.
+ * Live import progress — the per-type map turned into one line, for the progress notification a
+ * running job is handed to (`importJobWatch.ts`).
  *
  * The modal showed a bare "Importing…" for the whole run, sometimes minutes,
  * and the reason was never missing data: the runner builds a partial per-type
@@ -7,8 +8,8 @@
  * must COVER the requested types before a job counts as terminal). The map
  * simply never left the extension until the job finished.
  *
- * Pure, and deliberately so — deciding what the spinner says is testable without
- * rendering a modal or running a poll.
+ * Pure, and deliberately so — deciding what the line says is testable without
+ * rendering anything or running a poll.
  *
  * @module features/data-installer/ui/importProgress
  */
@@ -102,13 +103,4 @@ export function progressLabel(progress: ImportProgress, detail?: string): string
     if (counting) return typesLine(done, total, [detail]);
     const current = processing.length > 0 ? processing : waiting.slice(0, 1);
     return typesLine(done, total, current.map(dataTypeLabel));
-}
-
-/**
- * Whether a ring can show real progress. It needs several types and at least one finished: a ring
- * pinned at 0 reads as stalled where the plain spinner reads as working, and a job of one type has
- * no fraction to show until it is over.
- */
-export function hasMeasurableProgress(progress: ImportProgress): boolean {
-    return progress.total > 1 && progress.done > 0;
 }

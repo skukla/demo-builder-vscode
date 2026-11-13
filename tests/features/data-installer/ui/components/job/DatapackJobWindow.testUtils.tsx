@@ -74,6 +74,10 @@ export interface Answers {
     records: unknown;
     /** What the held datapack's changes read answers (a switch's check, S6). */
     changes: unknown;
+    /** What an uninstall takes, from the install record (S7). */
+    scope: unknown;
+    /** An uninstall's start (S7). */
+    reset: unknown;
 }
 
 const DEFAULT_ANSWERS: Answers = {
@@ -91,6 +95,8 @@ const DEFAULT_ANSWERS: Answers = {
     start: { success: true, data: { activationId: 'act-1' } },
     records: { success: true, data: BODEA_RECORDS },
     changes: { success: true, data: { count: 0, kinds: [], alwaysSave: false } },
+    scope: { success: true, data: { kinds: null } },
+    reset: { success: true, data: { activationId: 'act-1' } },
 };
 
 /** Answer every request the window sends; `never` leaves that one unanswered. */
@@ -116,6 +122,11 @@ export function answer(over: Partial<Answers> = {}, never: string[] = []): void 
                 return a.records;
             case 'get-datapack-removal-changes':
                 return a.changes;
+            case 'get-datapack-removal-scope':
+                return a.scope;
+            case 'reset-datapack':
+                started = true;
+                return a.reset;
             default:
                 return { success: true, data: null };
         }

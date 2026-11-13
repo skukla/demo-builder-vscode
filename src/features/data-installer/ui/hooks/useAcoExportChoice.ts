@@ -13,8 +13,14 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDataInstallerRequest } from './useDataInstallerRequest';
-import type { TargetWebsite } from './useImportScopes';
 import { ACO_EXPORT_KINDS } from '@/types/acoPack';
+
+/** One website and its store views, as `list-datapack-import-scopes` answers. */
+export interface TargetWebsite {
+    code: string;
+    name: string;
+    storeViews: Array<{ code: string; name: string }>;
+}
 
 /** One store view to tick, with the website it belongs to. */
 export interface AcoStoreViewChoice {

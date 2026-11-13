@@ -1,7 +1,8 @@
 /**
- * What a switch knows about the datapack it switches from (step 03, S6; decisions J2-3, J8-1): the
- * SC's changes to it, read in the job's check (`get-datapack-removal-changes`, counts only), and
- * what Switch does with them. With nothing changed, Switch starts at once; with the setting
+ * What a switch knows about the datapack it switches from (step 03, S6; decisions J2-3, J8-1), and an
+ * uninstall about the datapack it uninstalls (S7, J5-1): the SC's changes to it, read in the job's
+ * check (`get-datapack-removal-changes`, counts only), and what Switch or Uninstall does with them.
+ * With nothing changed, it starts at once; with the setting
  * `demoBuilder.dataInstaller.changesOnRemoval` on save and the datapack the SC's own, it saves into
  * it without asking; otherwise, or when the read failed, "Save Your Changes First?" asks.
  *
@@ -12,16 +13,22 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import type { DatapackRemovalChanges } from '../../removalChanges';
-import { changedRows, type TypeRow } from '../components/job/installRows';
+import type { ChangesAnswer, DatapackRemovalChanges } from '../../removalChanges';
+import { countedRows, type TypeRow } from '../components/job/installRows';
 import { freeName, nameProblem } from '../components/job/saveAsName';
-import type { RemovalAnswer } from '../components/removalConfirm';
 import { useDataInstallerRequest } from './useDataInstallerRequest';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { ProjectDatapack } from '@/types/datapack';
 import type { OperationProgressPayload } from '@/types/webviewPayloads';
+
+/** What a start that uninstalls the held datapack adds to its request about the SC's changes. */
+export interface RemovalAnswer {
+    changes: ChangesAnswer;
+    /** The name of the new datapack the changes go into, when the held one is not the SC's. */
+    saveAs?: { displayName: string };
+}
 
 /** The held datapack, as `get-datapack-import-target` reports it. */
 export interface SwitchedFrom {
@@ -33,7 +40,7 @@ export interface SwitchedFrom {
 /** The save question's name field, when the held datapack is not the SC's. */
 export interface SaveAsField {
     name: string;
-    /** Why the name cannot be used: Save and Switch waits. */
+    /** Why the name cannot be used: the save button waits. */
     problem?: string;
     onName: (name: string) => void;
 }
@@ -46,7 +53,7 @@ export interface SwitchChanges {
     readFailed: boolean;
     /** Present when saving makes a new datapack, which needs a name. */
     saveAs?: SaveAsField;
-    /** What Switch does: ask the save question, or start with this answer. */
+    /** What Switch or Uninstall does: ask the save question, or start with this answer. */
     onSwitch: () => RemovalAnswer | 'ask';
     /** The save question answered: save first or not. */
     answer: (saves: boolean) => RemovalAnswer;
@@ -55,7 +62,7 @@ export interface SwitchChanges {
 const READ = { timeout: TIMEOUTS.DATAPACK_IMPORT_COMPARE };
 const NO_ROWS: TypeRow[] = [];
 
-/** Whether Switch must ask: changes the setting does not already save, or nothing known. */
+/** Whether Switch or Uninstall must ask: changes the setting does not already save, or nothing known. */
 function mustAsk(changes: DatapackRemovalChanges | null, readFailed: boolean): boolean {
     if (readFailed) return true;
     if (!changes || changes.count === 0) return false;
@@ -96,7 +103,7 @@ export function useSwitchChanges(
     const changes = read.value;
     const readFailed = read.failure !== null;
     const kinds = changes?.kinds;
-    const rows = useMemo(() => (kinds ? changedRows(kinds) : NO_ROWS), [kinds]);
+    const rows = useMemo(() => (kinds ? countedRows(kinds) : NO_ROWS), [kinds]);
     const own = changes?.packName !== undefined;
     const name = typed ?? freeName(from?.heldName ?? held?.name ?? '', ownNames);
     const problem = own ? undefined : nameProblem(name, ownNames);

@@ -1,10 +1,10 @@
 /**
  * What a data type needs in order to import.
  *
- * Someone importing part of a datapack picks types off a checkbox grid. Picking
- * `products` without `customer_groups` fails the whole products type, and
- * nothing in the UI said so beyond one hardcoded warning about that single pair.
- * This generalises it: pick a type, get what it needs.
+ * An install asked for part of a datapack (an agent's `dataTypes`; the screen
+ * installs the whole pack since step 03) takes what each type needs with it
+ * (`askedKinds.ts`): `products` without `customer_groups` fails the whole products
+ * type. Pick a type, get what it needs.
  *
  * ## Why this is a hand-written map when `dataTypeLabel` argues against one
  *
@@ -90,8 +90,7 @@ function dependenciesOf(
  * The selection, plus everything it needs that the pack actually has.
  *
  * Transitive, and it stops at what `available` contains: a dependency the pack
- * does not hold cannot be ticked, so it is reported by
- * {@link missingDependencies} instead of silently appearing here.
+ * does not hold is left out rather than invented.
  *
  * @param selected - the types currently ticked
  * @param available - the types this datapack contains
@@ -121,130 +120,4 @@ export function withDependencies(
     }
 
     return [...resolved];
-}
-
-/**
- * Which selected types still need `type` — empty means it can be unticked.
- *
- * Direct dependents only. A transitive one cannot be selected without its own
- * direct dependency also being selected, so the direct check already covers it.
- *
- * @param type - the type the user is trying to untick
- * @param selected - the types currently ticked
- * @param map - injectable for tests; the real map by default
- */
-export function blockedBy(
-    type: string,
-    selected: readonly string[],
-    map: Readonly<Record<string, readonly string[]>> = IMPORT_DEPENDENCIES,
-): string[] {
-    return selected.filter(
-        (candidate) => candidate !== type && dependenciesOf(candidate, map).includes(type),
-    );
-}
-
-/**
- * A selection, and which of it the SYSTEM chose.
- *
- * `auto` is the provenance record, and it exists for one question: when a type
- * is unticked, do its dependencies go with it? Without provenance that question
- * has no right answer — clearing them strands nothing but discards choices the
- * user made before the dependency was borrowed, and keeping them leaves types
- * selected that nobody picked, bound for a live Commerce instance.
- *
- * `auto` is always a subset of `selected`.
- */
-export interface TypeSelection {
-    selected: readonly string[];
-    auto: readonly string[];
-}
-
-/**
- * Tick `type`, taking its satisfiable dependencies with it.
- *
- * Anything added that the user had not already selected is recorded as `auto`.
- * A type the user had ticked themselves keeps its provenance even when a later
- * selection depends on it — that is what makes {@link deselectType} able to
- * leave it alone.
- */
-export function selectType(
-    selection: TypeSelection,
-    type: string,
-    available: readonly string[],
-    map: Readonly<Record<string, readonly string[]>> = IMPORT_DEPENDENCIES,
-): TypeSelection {
-    const before = new Set([...selection.selected, type]);
-    const after = withDependencies([...before], available, map);
-
-    return {
-        selected: after,
-        // Only what THIS click introduced joins the auto set; existing entries
-        // keep whatever provenance they already had.
-        auto: [...selection.auto, ...after.filter((t) => !before.has(t))],
-    };
-}
-
-/**
- * Untick `type`, and drop the dependencies it alone was holding.
- *
- * Refuses outright while something still selected needs `type` — the checkbox is
- * disabled in that state, and this makes it unreachable rather than merely hard
- * to reach.
- *
- * A dependency is dropped only when BOTH hold: the system added it, and nothing
- * still selected needs it. Everything else stays.
- */
-export function deselectType(
-    selection: TypeSelection,
-    type: string,
-    map: Readonly<Record<string, readonly string[]>> = IMPORT_DEPENDENCIES,
-): TypeSelection {
-    if (blockedBy(type, selection.selected, map).length > 0) {
-        return selection;
-    }
-
-    const remaining = selection.selected.filter((t) => t !== type);
-    const auto = new Set(selection.auto);
-    // Only what the departing type could have brought is a candidate; a
-    // dependency of something else was never this click's to remove.
-    const candidates = new Set(dependenciesOf(type, map));
-
-    const kept = remaining.filter(
-        (t) => !candidates.has(t) || !auto.has(t) || blockedBy(t, remaining, map).length > 0,
-    );
-
-    return {
-        selected: kept,
-        auto: [...auto].filter((t) => kept.includes(t)),
-    };
-}
-
-/**
- * Dependencies of the selected types that this datapack does NOT contain.
- *
- * The case selection cannot fix. A pack holding `products` but no `categories`
- * will fail its category lookups however the boxes are ticked, and the only
- * useful moment to say so is before the import runs.
- *
- * @param selected - the types currently ticked
- * @param available - the types this datapack contains
- * @param map - injectable for tests; the real map by default
- */
-export function missingDependencies(
-    selected: readonly string[],
-    available: readonly string[],
-    map: Readonly<Record<string, readonly string[]>> = IMPORT_DEPENDENCIES,
-): string[] {
-    const inPack = new Set(available);
-    const missing = new Set<string>();
-
-    for (const type of selected) {
-        for (const dependency of dependenciesOf(type, map)) {
-            if (!inPack.has(dependency)) {
-                missing.add(dependency);
-            }
-        }
-    }
-
-    return [...missing];
 }

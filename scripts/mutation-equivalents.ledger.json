@@ -9358,10 +9358,10 @@
             "anchors": [
                 "default:"
             ],
-            "line": 333,
+            "line": 307,
             "mutants": 1,
             "category": "branch",
-            "reason": "Unreachable through the only route into unfinishedResult. Its switch names six outcomes; the record type declares eight. The two it omits cannot arrive: terminalResult hands 'success' to successResult before this call, and resolveResult only reaches terminalResult when record.outcome !== 'watching'. So no ImportJobRecord a caller can build lands in the default arm, and no test can distinguish it from the arms above. Re-anchored 2026-10-31 (202 -> 181): describeOutcome and the per-outcome variant table became one switch, unfinishedResult, when results moved to the dialog design rules; the default arm and the argument are unchanged. Re-anchored 2026-11-09 (295 -> 307): unchanged code; the ending's sentence for a replace (walk F105) was added above it. Re-anchored 2026-11-10 (307 -> 329): unchanged code; the clean import's small result (walk F134) added `leftToKnow`, `hasProblem` and two lines above it. Re-anchored 2026-11-10 (329 -> 330): unchanged code; a run that has lines for the SC stays on its steps, one line above it. Re-anchored 2026-11-10 (330 -> 313): unchanged code; the clean import's result took the engine's lines into its body and the problem run's paragraph went (review fixes). Re-anchored 2026-11-10 (313 -> 314): unchanged code; a comment above the named failure title went in above it. Re-anchored 2026-11-11 (314 -> 322): unchanged code; the Check Passed result gained its Install action and checkPassed went in above it (Phase 1 wording). Re-anchored 2026-11-12 (322 -> 320): unchanged code; SAVED_LINE and its comment went from above it (Phase 2: the save's own result says where the changes went). Re-anchored 2026-11-12 (320 -> 329): unchanged code; the import's ending now asks the shared rule (`endsSmall`, plan step-03 S1), and `endingOf` replaced `hasProblem` above it. Re-anchored 2026-11-12 (329 -> 333): unchanged code; the import's ending now reads the job's titles (`jobWords`, step 03 S2) and its import went in above it.",
+            "reason": "Unreachable through the only route into unfinishedResult. Its switch names six outcomes; the record type declares eight. The two it omits cannot arrive: terminalResult hands 'success' to successResult before this call, and resolveResult only reaches terminalResult when record.outcome !== 'watching'. So no ImportJobRecord a caller can build lands in the default arm, and no test can distinguish it from the arms above. Re-anchored 2026-10-31 (202 -> 181): describeOutcome and the per-outcome variant table became one switch, unfinishedResult, when results moved to the dialog design rules; the default arm and the argument are unchanged. Re-anchored 2026-11-09 (295 -> 307): unchanged code; the ending's sentence for a replace (walk F105) was added above it. Re-anchored 2026-11-10 (307 -> 329): unchanged code; the clean import's small result (walk F134) added `leftToKnow`, `hasProblem` and two lines above it. Re-anchored 2026-11-10 (329 -> 330): unchanged code; a run that has lines for the SC stays on its steps, one line above it. Re-anchored 2026-11-10 (330 -> 313): unchanged code; the clean import's result took the engine's lines into its body and the problem run's paragraph went (review fixes). Re-anchored 2026-11-10 (313 -> 314): unchanged code; a comment above the named failure title went in above it. Re-anchored 2026-11-11 (314 -> 322): unchanged code; the Check Passed result gained its Install action and checkPassed went in above it (Phase 1 wording). Re-anchored 2026-11-12 (322 -> 320): unchanged code; SAVED_LINE and its comment went from above it (Phase 2: the save's own result says where the changes went). Re-anchored 2026-11-12 (320 -> 329): unchanged code; the import's ending now asks the shared rule (`endsSmall`, plan step-03 S1), and `endingOf` replaced `hasProblem` above it. Re-anchored 2026-11-12 (329 -> 333): unchanged code; the import's ending now reads the job's titles (`jobWords`, step 03 S2) and its import went in above it. Re-anchored 2026-11-12 (333 -> 307): the default arm is unchanged; the argument narrowed. An uninstall now ends on its steps (`uninstallResult`, step 03 S7) as an import does (`runResult`), so resolveResult reaches terminalResult only for an outcome other than success, partial, error or watching, and unfinishedResult names the four that remain; the eight-member union still has none for the default to take. describePerType, terminalResult's success branch, and the partial and error arms went from above it.",
             "decision": "none \u2014 the default keeps unfinishedResult total should the outcome union gain a member",
             "recorded": "2026-09-05",
             "source": "PL-22 MUT-02, 2026-09-05"
@@ -9496,58 +9496,6 @@
             "category": "branch",
             "reason": "This expression is an argument to logger.debug, not the returned verdict \u2014 the identical expression four lines below at the return statement is the one callers read, and it is killed. Changing this copy alters only the text of a debug line, so the only assertion that could see it would be on the logger's arguments, which pins wording rather than behaviour. The classifier reads the enclosing statement and cannot see that these lines sit inside a logger call.",
             "decision": "none \u2014 a debug summary that mirrors the return value; the return value itself is pinned",
-            "recorded": "2026-09-06",
-            "source": "PL-22 MUT-03, 2026-09-05"
-        },
-        {
-            "module": "src/features/data-installer/ui/components/ImportDatapackModal.tsx",
-            "anchors": [
-                "const [dismissed, setDismissed] = useState(false);"
-            ],
-            "mutants": 1,
-            "category": "branch",
-            "reason": "The initial value cannot be observed because the only thing it gates is resolveResult, which returns null for a null lastAction \u2014 its switch has an arm for each of the four actions and a default that returns null. So before any action the result is null whether dismissed is true or false, and the first action calls act(), which sets dismissed false before the result is next read. Re-anchored 2026-11-09 (101 -> 103): unchanged code; walk F105's save label was carried onto the job record above it. Re-anchored 2026-11-09 (103 -> 115): unchanged code; the import window's steps redesign (walk F107 to F118) moved lines above it. Re-anchored 2026-11-10 (115 -> 117): unchanged code; the data types' columns (walk F135, `useRunColumns`) were added above it. Re-anchored 2026-11-12 (117 -> 115): unchanged code; the status poll's interval moved to `importModalJob.ts` (`STATUS_POLL_MS`, step 03 S4), shared with the new job window, which took two lines out above it.",
-            "decision": "none \u2014 starting undismissed is what 'the user has seen nothing yet' means",
-            "recorded": "2026-09-06",
-            "source": "PL-22 MUT-03, 2026-09-05",
-            "line": 115
-        },
-        {
-            "module": "src/features/data-installer/ui/components/ImportDatapackModal.tsx",
-            "anchors": [
-                "}, [loadStatus]);"
-            ],
-            "line": 134,
-            "mutants": 1,
-            "category": "other",
-            "reason": "Emptying this dependency array changes nothing, because loadStatus is referentially stable for the life of the modal: useDataInstallerRequest returns load as a useCallback keyed on execute, and useVSCodeRequest builds execute as a useCallback keyed on the request type, which is a literal here. The effect therefore runs exactly once either way. Re-anchored 2026-11-09 (118 -> 122): unchanged code; walk F105's save label was carried onto the job record above it. Re-anchored 2026-11-09 (122 -> 134): unchanged code; the import window's steps redesign (walk F107 to F118) moved lines above it. Re-anchored 2026-11-10 (134 -> 136): unchanged code; the data types' columns (walk F135, `useRunColumns`) were added above it. Re-anchored 2026-11-12 (136 -> 134): unchanged code; the status poll's interval moved to `importModalJob.ts` (`STATUS_POLL_MS`, step 03 S4), shared with the new job window, which took two lines out above it.",
-            "decision": "none \u2014 naming the dependency is what keeps it true if load ever stops being stable",
-            "recorded": "2026-09-06",
-            "source": "PL-22 MUT-03, 2026-09-05"
-        },
-        {
-            "module": "src/features/data-installer/ui/components/ImportDatapackModal.tsx",
-            "anchors": [
-                "}, [loadTarget]);"
-            ],
-            "line": 138,
-            "mutants": 1,
-            "category": "other",
-            "reason": "Emptying this dependency array changes nothing, because loadTarget is referentially stable for the life of the modal: useDataInstallerRequest returns load as a useCallback keyed on execute, and useVSCodeRequest builds execute as a useCallback keyed on the request type, which is a literal here. The effect therefore runs exactly once either way. Re-anchored 2026-11-09 (123 -> 127): unchanged code; walk F105's save label was carried onto the job record above it. Re-anchored 2026-11-09 (127 -> 139): unchanged code; the import window's steps redesign (walk F107 to F118) moved lines above it. Re-anchored 2026-11-10 (139 -> 140): unchanged code; the data types' columns (walk F135) were added above it and a blank line removed. Re-anchored 2026-11-12 (140 -> 138): unchanged code; the status poll's interval moved to `importModalJob.ts` (`STATUS_POLL_MS`, step 03 S4), shared with the new job window, which took two lines out above it.",
-            "decision": "none \u2014 naming the dependency is what keeps it true if load ever stops being stable",
-            "recorded": "2026-09-06",
-            "source": "PL-22 MUT-03, 2026-09-05"
-        },
-        {
-            "module": "src/features/data-installer/ui/components/ImportDatapackModal.tsx",
-            "anchors": [
-                "}, []);"
-            ],
-            "line": 183,
-            "mutants": 1,
-            "category": "other",
-            "reason": "Replacing this empty dependency array with a one-element constant array keeps the callback just as stable: React compares dependency arrays element by element with Object.is, and the same string literal is produced on every render, so the comparison succeeds and useCallback returns the memoised function exactly as it does now. Nothing about act's identity or behaviour moves. Re-anchored 2026-11-09 (180 -> 184): unchanged code; walk F105's save label was carried onto the job record above it. Re-anchored 2026-11-09 (184 -> 188): unchanged code; the import window's steps redesign (walk F107 to F118) moved lines above it. Re-anchored 2026-11-10 (188 -> 186): unchanged code; a comment above it was shortened and blank lines removed to keep the file at its size limit (walk F135). Re-anchored 2026-11-12 (186 -> 185): unchanged code; a two-line comment above it became one (step 03, S2). Re-anchored 2026-11-12 (185 -> 183): unchanged code; the status poll's interval moved to `importModalJob.ts` (`STATUS_POLL_MS`, step 03 S4), shared with the new job window, which took two lines out above it.",
-            "decision": "none \u2014 act closes over nothing that can change, so its dependency list is empty",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-03, 2026-09-05"
         },

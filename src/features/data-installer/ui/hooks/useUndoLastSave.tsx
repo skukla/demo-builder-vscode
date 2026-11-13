@@ -3,7 +3,7 @@
  * (`PackActions`), so the request is sent confirmed. The `undo-last-save` handler starts one job that
  * uninstalls the newest save and installs the one before it, answering as `start-datapack-import`
  * does. Once it is accepted, the import window opens on the earlier save, where it picks the running
- * job up (`ImportDatapackModal`). It is `useLibrarySharing`'s shape, for the same flyout.
+ * job up (`DatapackJobWindow`). It is `useLibrarySharing`'s shape, for the same flyout.
  *
  * @module features/data-installer/ui/hooks/useUndoLastSave
  */

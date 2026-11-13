@@ -197,24 +197,15 @@ describe('resolveResult — a removal that was to save the changes first (step 0
         expect(result).not.toHaveProperty('backToConfirm');
     });
 
-    it('says where the changes went on a removal that finished', () => {
+    // Step 03, S7: the run's Save Your Changes step says where they went (rule 3, a fact once).
+    it('does not repeat where the changes went on a removal that finished', () => {
         const result = resolveResult('reset', sources({
             reset: succeeded({ activationId: ACTIVATION, savedNote: SAVED_NOTE }),
             record: jobRecord({ operation: 'reset', outcome: 'success', activationId: ACTIVATION }),
             startedActivation: ACTIVATION,
         }));
 
-        expect(result).toMatchObject({ variant: 'success', message: SAVED_NOTE });
-    });
-
-    it('keeps what the removal itself had to say, then adds it, on one that failed too', () => {
-        const result = resolveResult('reset', sources({
-            reset: succeeded({ activationId: ACTIVATION, savedNote: SAVED_NOTE }),
-            record: jobRecord({ operation: 'reset', outcome: 'error', reason: 'Commerce refused a product.', activationId: ACTIVATION }),
-            startedActivation: ACTIVATION,
-        }));
-
-        expect(result).toMatchObject({ variant: 'error', message: `Commerce refused a product. ${SAVED_NOTE}` });
+        expect(result).toEqual({ variant: 'success', title: `${PACK_NAME} Uninstalled`, finished: true });
     });
 
     it('CONTROL: an import says nothing of it, whatever an earlier removal left', () => {

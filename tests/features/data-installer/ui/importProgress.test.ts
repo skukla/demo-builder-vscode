@@ -21,7 +21,7 @@
  */
 
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
-import { hasMeasurableProgress, summarizeProgress, progressLabel, progressStep } from '@/features/data-installer/ui/importProgress';
+import { summarizeProgress, progressLabel, progressStep } from '@/features/data-installer/ui/importProgress';
 import type { DataTypeStatus } from '@/features/data-installer/types';
 
 const REQUESTED = ['attribute_sets', 'categories', 'products', 'customers'];
@@ -173,17 +173,6 @@ describe('progressLabel', () => {
 
     it('says nothing at all before the job reports anything', () => {
         expect(line({}, FOURTEEN)).toBeUndefined();
-    });
-});
-
-describe('hasMeasurableProgress', () => {
-    it.each([
-        ['one type, running', { categories: 'processing' as const }, ['categories'], false],
-        ['one type, finished', { categories: 'success' as const }, ['categories'], false],
-        ['several types, none finished', { a: 'processing' as const }, ['a', 'b'], false],
-        ['several types, one finished', { a: 'success' as const }, ['a', 'b'], true],
-    ])('%s', (_label, perType, requested, expected) => {
-        expect(hasMeasurableProgress(summarizeProgress(perType, requested))).toBe(expected);
     });
 });
 

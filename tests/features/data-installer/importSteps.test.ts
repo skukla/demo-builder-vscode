@@ -10,9 +10,10 @@ import {
     importSteps,
     type ImportStep,
     type StepSource,
+    uninstallSteps,
 } from '@/features/data-installer/importSteps';
 import { versionLabel } from '@/features/data-installer/packVersions';
-import { FINISHING_STOP, type InstallCheck, LINKING_OPTIONS, REPLACE_STOP } from '@/features/data-installer/types';
+import { FINISHING_STOP, type InstallCheck, LINKING_OPTIONS, REPLACE_STOP, SAVE_STOP } from '@/features/data-installer/types';
 
 const NONE_FOUND = { count: 0, examples: [] as string[] };
 
@@ -422,5 +423,58 @@ describe('a stop', () => {
         });
         expect(install(steps)).toMatchObject({ status: 'pending', line: 'Not run' });
         expect(install(steps).problem).toBeUndefined();
+    });
+});
+
+/**
+ * An uninstall drawn as steps, like Install (step 03, S7; decisions J5-2): Save Your Changes only
+ * when saving first, then "Uninstall My Luma", the row J2's switch uninstalls with, so the same job
+ * reads the same in both runs. Its line says where it stands, never the datapack again (rule 3).
+ */
+describe("an uninstall's steps", () => {
+    const LUMA = { name: 'My Luma' };
+
+    it('is one row, Uninstall My Luma, working from the first frame when nothing is saved', () => {
+        expect(uninstallSteps({ ...LUMA, running: true })).toEqual([
+            { kind: 'uninstall', label: 'Uninstall My Luma', status: 'checking', line: 'Uninstalling from Commerce' },
+        ]);
+    });
+
+    it('says the count once the engine gives one', () => {
+        const [row] = uninstallSteps({ ...LUMA, running: true, detail: '12 of 40 products' });
+        expect(row.line).toBe('Uninstalling 12 of 40');
+    });
+
+    it('saves first: Save Your Changes spinning on its stage, the uninstall waiting', () => {
+        const steps = uninstallSteps({ ...LUMA, running: true, savingStage: 'Reading Commerce' });
+
+        expect(labels(steps)).toEqual(['Save Your Changes', 'Uninstall My Luma']);
+        expect(steps[0]).toMatchObject({ status: 'checking', line: 'Reading Commerce' });
+        expect(steps[1]).toMatchObject({ status: 'pending', line: 'Waiting' });
+    });
+
+    it('once saved, says where and the uninstall works', () => {
+        const steps = uninstallSteps({ ...LUMA, running: true, savedAs: 'My Luma 2' });
+
+        expect(steps[0]).toMatchObject({ status: 'success', line: 'Saved to My Luma 2' });
+        expect(steps[1]).toMatchObject({ status: 'checking', line: 'Uninstalling from Commerce' });
+    });
+
+    it('ends Uninstalled', () => {
+        const [row] = uninstallSteps({ ...LUMA, running: false, ended: 'done' });
+        expect(row).toMatchObject({ status: 'success', line: 'Uninstalled' });
+    });
+
+    it('a stop puts the reason on the row, one line', () => {
+        const [row] = uninstallSteps({ ...LUMA, running: false, ended: 'stopped', reason: 'Commerce refused the category Gear.' });
+        expect(row).toMatchObject({ status: 'error', problem: { text: 'Commerce refused the category Gear.', failed: true } });
+        expect(row.line).toBeUndefined();
+    });
+
+    it('a save that failed is red on its own row, and the uninstall did not run', () => {
+        const steps = uninstallSteps({ ...LUMA, running: false, ended: 'stopped', stoppedAt: SAVE_STOP, reason: 'The library is read-only.' });
+
+        expect(steps[0]).toMatchObject({ status: 'error', problem: { text: 'The library is read-only.', failed: true } });
+        expect(steps[1]).toMatchObject({ status: 'pending', line: 'Not run' });
     });
 });

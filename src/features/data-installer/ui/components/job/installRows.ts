@@ -4,7 +4,7 @@
  * when every record is new; "53 added, 3 updated" only when some already exist (decisions Phase 5,
  * J2-1; rule 5, the verb only when it says something new). A type with nothing to change is not
  * listed (rule 7). A kind that installs with another (an attribute's options) counts on that type,
- * as the install asks for it (`importChangeLines.ts` folds it the same way).
+ * as the install asks for it.
  *
  * Pure: no React.
  *
@@ -71,10 +71,11 @@ export function installRows(kinds: readonly KindChanges[]): TypeRow[] {
 }
 
 /**
- * "Save Your Changes First?"'s rows (step 03, S6): the SC's changes counted by type, the count bare,
- * no example names (decisions Phase 3, J2-1).
+ * Rows of a count by type, the count bare and no example names (decisions Phase 3, J2-1): "Save Your
+ * Changes First?"'s, the SC's changes (step 03, S6); and the Uninstall question's, what the install
+ * record lists (S7).
  */
-export function changedRows(kinds: readonly ChangedKind[]): TypeRow[] {
+export function countedRows(kinds: ReadonlyArray<Pick<ChangedKind, 'kind' | 'count'>>): TypeRow[] {
     return kinds.map((kind) => ({
         type: kind.kind,
         label: dataTypeLabel(kind.kind),

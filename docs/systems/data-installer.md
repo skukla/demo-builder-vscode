@@ -107,36 +107,38 @@ Demo Builder's own engine (`services/demoBuilderEngine/`, the default) removes a
 from its install record, `<project>/.demo-builder/datapacks/<name>@<version>.json`,
 which lists every object the install made. It never removes by name.
 
-- **An import honours the ticks; a removal does not take any** (`demoBuilderEngine/askedKinds.ts`).
-  An import installs the kinds asked for and what they need (`ui/importDependencies.ts`), and nothing
-  else. A kind left out is left alone: not installed, not compared, not removed, not put back, and
-  still on the record. The dry run and `preview_datapack_changes` decide it the same way. A removal
-  takes what the record lists, whatever is ticked. **Uninstall** (named for the pair of Install, owner
-  2026-11-09, walk F120: "Remove Data" read as all data, "Remove Datapack" as deleting the pack; the
+- **An install takes the whole pack on screen; an agent may ask for less; a removal takes what the
+  record lists** (`demoBuilderEngine/askedKinds.ts`). The screen installs every data type the pack
+  holds (step 03, decisions J2-1); `start_datapack_import`'s `dataTypes` still installs the kinds asked
+  for and what they need (`ui/importDependencies.ts`), and nothing else. A kind left out is left
+  alone: not installed, not compared, not removed, not put back, and still on the record. The dry run
+  and `preview_datapack_changes` decide it the same way. A removal takes what the record lists,
+  whatever is sent. **Uninstall** (named for the pair of Install, owner 2026-11-09, walk F120; the
   same word everywhere this action appears, Project Reset's and Reset Selected's **Uninstall
-  Datapack** and Delete Project's box included) is the flyout's own action, in its
-  More menu on the version whose data Demo Builder installed in this demo's store (owner, 2026-11-09,
-  walk F118: pressing Import first to remove data was strange): it opens the import window straight
-  on the removal's confirm (`opensOn: 'remove'`, `useRemovalWindow`), with no form and no comparison
-  only an import needs, and Cancel or Back closes the window. The import form no longer has it. The
-  confirm names the kinds on the record: "Permanently deletes what Bodea installed: categories and
-  products. Puts back the store configuration it changed." A removal's check asks nothing of the pack, so a pack deleted from its store
-  can still be removed (`validateRemoval`); it refuses only a store other than the one on the record.
-  With no record the service removes the types it is sent, and the form and confirm stay as they were.
+  Datapack** and Delete Project's box included) is the flyout's own action, in its More menu on the
+  version whose data Demo Builder installed in this demo's store (walk F118). It opens the job window
+  (`DatapackJobWindow`, step 03 S7; decisions J5-1, J5-2) on its check, then asks **"Uninstall My
+  Luma?"** over what the install record lists, counted by data type (`get-datapack-removal-scope`), with
+  a red **Uninstall** and Cancel; no store in the title. With unsaved changes **"Save Your Changes
+  First?"** follows, its verb Uninstall, the same question a switch asks. The run is steps: **Save Your
+  Changes** when saving first, then **Uninstall My Luma** (`uninstallSteps`), titled "Uninstalling My
+  Luma"; a clean end is "My Luma Uninstalled", which closes itself; a stop is "Couldn't Uninstall My
+  Luma" on its steps with Retry, which takes out what the record still lists. A root a store kept
+  ends on its Admin step instead. A removal's check asks nothing of the pack, so a pack deleted from
+  its store can still be removed (`validateRemoval`); it refuses only a store other than the one on
+  the record. With no record it is refused, and Clear Demo Data clears what that install left.
 - **Installing another pack or version over the project's replaces it** (walk F97, 2026-11-09,
   `handlers/importReplacement.ts`). It used to run as a first install: products already in the store
   were left alone, the project named the new pack, and the old data had nothing pointing at it. Now,
-  when Demo Builder installed the pack the project uses, the install form says what it replaces in
-  the SC's terms (walk F101, `replaceWords.ts`): "Replaces this demo's data with another save of
-  My Luma." for another save of the same pack (no date: the SC never manages versions, Phase 2), "Replaces this demo's datapack, Luma." for
-  another pack. Every data type starts ticked (walk F103), and Install
-  first reads the SC's changes to that pack the way a removal does, under the install's own title,
-  waiting on "Checking for your changes" (walk F108, F114: the one name for that check, wherever it
-  runs). With changes the removal's confirm asks "Save Your Changes First?" at medium width (walk
-  F104, F106): "Installing replaces these changes.", then the
-  changes one row per data type ("Products: 24-mb01, 24-mb02, 24-ug01 and 2 more", walk F110), with
-  **Install Without Saving** at the footer's start and **Cancel** and **Save and Install** (or **Save
-  As New and Install**) at its end (walk F111); with none it starts at once. The start and the removal wait up to
+  when Demo Builder installed the pack the project uses, the job window's check reads what installing
+  changes and the SC's changes to the held pack together ("Checking for your changes", walk F114), then
+  asks over the type table: **"Switch to Bodea?"** with a blue Switch for another datapack (step 03
+  S6, decisions J2-3, J8-1), or **"Install Bodea, eds-compatible?"** with a blue Install for another
+  version of the same one (S7; a save's dated version is never named). With changes **"Save Your
+  Changes First?"** follows: the changes counted by type, no names, with **Switch Without Saving** (or
+  **Install Without Saving**) at the footer's start and **Cancel** and **Save and Switch** (or **Save
+  and Install**) at its end, and an editable "My Bodea" name when the held pack is not the SC's; with
+  none it starts at once. The start and the removal wait up to
   `TIMEOUTS.DATAPACK_SAVE_THEN_WRITE` (10 minutes), since a save runs before they answer: the
   webview's 30 s default gave up on a 1 min 28 s save and said it couldn't start over an
   install that then ran (walk F105). **The run is steps** (owner, 2026-11-09, `importSteps.ts`,

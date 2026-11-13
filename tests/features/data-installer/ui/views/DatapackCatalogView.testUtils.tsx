@@ -122,10 +122,9 @@ function resolveCatalogThenDetail(inventory: {
             });
         }
         // Serves two consumers that share this request: the view's own
-        // projectContext (DatapackCatalogView.tsx:102) and the import modal's
-        // target (ImportDatapackModal.tsx:149) — same shape, same request.
-        // Without an instance the modal renders "This project has no Commerce
-        // instance" rather than the type list.
+        // projectContext and the job window's target (`useJobReads`) — same
+        // shape, same request. Without an instance the window ends on "No
+        // Commerce Instance" rather than the type table.
         if (type === 'get-datapack-import-target') {
             return Promise.resolve({
                 success: true,

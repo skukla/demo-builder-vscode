@@ -34,7 +34,6 @@ export const WAIT_STAGES = {
     // on a live instance. The label says it all; "Since this demo's last save" was a fragment
     // (Phase 1, owner 2026-11-10).
     checkingForChanges: { label: 'Checking for your changes', expectation: 'Usually about a minute' },
-    readingWebsites: { label: 'Reading websites', expectation: FEW_SECONDS, detail: FROM_COMMERCE },
     // A Dry Run of an install: the request is checked and nothing is written (D6; the name Dry Run
     // is kept, owner 2026-11-10). The label alone; the result says nothing was written.
     checkingImport: { label: 'Running the dry run', expectation: FEW_SECONDS },
@@ -86,7 +85,7 @@ export const WAIT_STAGES = {
 
 /**
  * One kind's list in Create Datapack's picker ("Reading categories"), in the words of
- * `readingProducts` and `readingWebsites` (owner, 2026-11-08, F79: the pane's spinner said nothing).
+ * `readingProducts` (owner, 2026-11-08, F79: the pane's spinner said nothing).
  *
  * @param many - the kind's plural noun, as `KIND_NOUNS` gives it
  */

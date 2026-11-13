@@ -291,16 +291,8 @@
 }
 
 /* ===========================================
-   Import modal
+   The job window's run
    =========================================== */
-@layer theme {
-.datapack-import-body {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-}
-
 /* The import's run (`ImportRunView`): its steps (work-row.css), the clock or how it ended under
    them. A step's line stays on one line, so the window keeps its height (walk F116). Scoped to
    the steps themselves (`.import-steps > .work-row`), so the data types under Install and the
@@ -333,99 +325,6 @@
 /* Install's data types, under its line. */
 .import-step-types {
     margin-top: 8px;
-}
-}
-
-/* Where the pack lands. Two pickers side by side — they are one decision, and
-   stacking them reads as two unrelated fields. */
-/* Side by side: website and store view are one decision, and the hint that used
-   to sit under them (explaining a rule the picker already enforces) is gone. */
-@layer theme {
-.datapack-import-scope {
-    display: flex;
-    gap: 16px;
-}
-}
-
-@layer theme {
-.datapack-import-scope > * {
-    flex: 1 1 0;
-    min-width: 0;
-}
-}
-
-@layer theme {
-.datapack-import-scope > [data-testid='spectrum-picker-wrapper'],
-.datapack-import-scope > div {
-    min-width: 0;
-}
-}
-
-/* Label above, control below. */
-@layer theme {
-.datapack-scope-field {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-width: 0;
-}
-}
-
-/* While the stores load: one spinner in the row the pickers will fill, holding the row's
-   height (a label line, 4px, a 32px field) so the pickers replace it without a jump. */
-@layer theme {
-}
-
-@layer theme {
-.datapack-import-types {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-}
-
-/* The data-type checkbox list, shared by BOTH modals — import and export.
-
-   It was two classes. The export copy set minmax(420px, 1fr), sized back when a
-   type was a raw underscore code held on one unbroken line, and at the wide
-   modal's ~685px content box auto-fill fits floor(685/420) = 1 track: eighteen
-   exportable types in a single scrolling column. The import copy had already
-   been tuned away from that and the export one could not inherit it, because
-   nothing linked them. One class now, so they cannot drift apart again.
-
-   260px tracks give two columns at that same width, which halves the export
-   list from eighteen rows to nine — shorter, not necessarily scroll-free. Equal
-   tracks keep the rows aligned; a list read downward wants alignment more than
-   density. */
-@layer theme {
-.datapack-type-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 8px 24px;
-    /* A safety net rather than the rule it once was. Labels now carry spaces
-       ("B2B shared catalog company assignments") and break on their own, but a
-       code still reaches this grid whenever the service adds a type the label
-       derivation has not been taught. `anywhere` is the only value that breaks a
-       word with no break opportunity; `break-word` leaves it overflowing.
-       Inherited, so it reaches the Spectrum label without naming a Spectrum
-       class. */
-    overflow-wrap: anywhere;
-}
-}
-
-@layer theme {
-.datapack-type-grid > * {
-    min-width: 0;
-}
-}
-
-/* What importing again would change, under a data type's name in the Import form (owner,
-   2026-11-08): the quieter second line a checkbox row carries, as `CheckboxRow`'s detail does. */
-@layer theme {
-.datapack-type-changes {
-    display: block;
-    font-size: var(--spectrum-global-dimension-font-size-75);
-    color: var(--spectrum-global-color-gray-700);
 }
 }
 

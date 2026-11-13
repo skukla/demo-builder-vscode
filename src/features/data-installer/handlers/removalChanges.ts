@@ -1,6 +1,7 @@
 /**
  * What a removal does about the SC's changes (datapack-engine step 05). One path for every door:
- * the import window's confirm, `reset_datapack`, and a project reset or Edit that removes the pack.
+ * the job window's Uninstall and Switch, `reset_datapack`, and a project reset or Edit that removes
+ * the pack.
  *
  * It finds changes with the preview's own read (`previewChanges`) and saves them with the save
  * itself (`openSave`, `saveIntoFor`, `saveToPack`): Save, a new version of the demo's pack when it
@@ -20,6 +21,7 @@ import { changesOnRemoval } from '../services/dataInstallerConfig';
 import { InstallRecordError, nodeRecordFiles, readInstallRecord } from '../services/demoBuilderEngine/installRecord';
 import { kindsOnRecord } from '../services/demoBuilderEngine/runPack';
 import { previewChanges } from '../services/demoBuilderEngine/storeChanges';
+import { packKindOf } from '../services/demoBuilderEngine/storeCopies';
 import { failure, saveIntoFor, saveToPack } from './packSave';
 import { openProjectStore, openSave, readPayload, type StoreChangesPayload } from './storeChangesHandlers';
 import { reportPhase } from '@/core/utils/agentPhaseChannel';
@@ -219,15 +221,19 @@ export function contextForProject(context: HandlerContext, project: Project): Ha
     return { ...context, stateManager };
 }
 
-/** What a removal of this pack takes, when Demo Builder's engine installed it: read from the record alone. */
+/** What an uninstall of this pack takes, when Demo Builder's engine installed it: read from the record alone. */
 async function removalScope(project: Project | undefined, pack: DatapackId): Promise<DatapackRemovalScope> {
     const record = project ? await readInstallRecord(nodeRecordFiles, project.path, pack) : undefined;
-    if (!record) return { recordedKinds: null };
-    const at = record.target;
-    return { recordedKinds: kindsOnRecord(record), ...(at ? { installedAt: { websiteCode: at.websiteCode, storeCode: at.storeCode } } : {}) };
+    if (!record) return { kinds: null };
+    const counts = new Map<string, number>();
+    for (const object of [...record.created, ...(record.pending ?? [])]) {
+        const kind = packKindOf(object.kind);
+        counts.set(kind, (counts.get(kind) ?? 0) + 1);
+    }
+    return { kinds: kindsOnRecord(record).map((kind) => ({ kind, count: counts.get(kind) ?? 0 })) };
 }
 
-/** The form's and the confirm's reads: what a removal of this pack would take, and would lose. Write nothing. */
+/** The Uninstall question's reads: what an uninstall of this pack would take, and would lose. Write nothing. */
 export const removalChangesHandlers = defineHandlers({
     'get-datapack-removal-scope': async (context: HandlerContext, payload?: StoreChangesPayload): Promise<HandlerResponse> => {
         const input = readPayload(payload);

@@ -1,7 +1,7 @@
 /**
  * What a removal says about the changes it found (datapack-engine step 05): the SC's edits to what
- * a pack made, from the preview's own `keep`, as the one sentence the removal's confirm and
- * `reset_datapack` both read. Pure, so the webview and the extension share it.
+ * a pack made, from the preview's own `keep`: counted by type for the save question, and as the one
+ * sentence `reset_datapack` reads. Pure, so the webview and the extension share it.
  *
  * @module features/data-installer/removalChanges
  */
@@ -32,18 +32,20 @@ export interface DatapackRemovalChanges {
     alwaysSave: boolean;
 }
 
+/** One data type on an install record, and how many things of it the record lists. */
+export interface RecordedKind {
+    kind: string;
+    count: number;
+}
+
 /**
- * What a removal of a pack takes, as the import form is told it (`get-datapack-removal-scope`): the
- * kinds on its install record, in install order, whatever is ticked. Null when there is no record:
- * the Data Installer service installed it, and its removal points to Clear Demo Data.
+ * What an uninstall of a pack takes (`get-datapack-removal-scope`): what its install record lists,
+ * counted by data type in install order, whatever is sent; the Uninstall question's type table
+ * (step 03, S7). Null when there is no record: the Data Installer service installed it, and its
+ * removal points to Clear Demo Data.
  */
 export interface DatapackRemovalScope {
-    recordedKinds: string[] | null;
-    /**
-     * The website and store view the record says the pack went into, when it says: importing it
-     * again can go nowhere else (`engine.ts` `elsewhere`), so the form locks its pickers to them.
-     */
-    installedAt?: { websiteCode: string; storeCode: string };
+    kinds: RecordedKind[] | null;
 }
 
 /** The nouns for the kinds an SC cannot pick but a pack can make. */

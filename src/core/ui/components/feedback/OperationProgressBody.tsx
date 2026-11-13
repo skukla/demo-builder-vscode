@@ -69,7 +69,7 @@ export function OperationProgressBody({
     // window's rows (walk F91: a save's minutes of reading said one line).
     if (progress?.rows?.length) return <RunningRows rows={progress.rows} startedAt={progress.startedAt} />;
     // Size L, as every other progress display here: M left-aligns and shrinks
-    // the text (ImportDatapackModal).
+    // the text.
     // The room for all three lines is kept and what is there sits level in it, so the spinner does
     // not ride high over a blank line, and the box does not move when a line arrives. Row 3 only
     // when it has words: `expectationLine` answers a blank for a screen that holds the row.

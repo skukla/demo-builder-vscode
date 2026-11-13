@@ -129,19 +129,19 @@ describe('get-datapack-removal-scope', () => {
     const scope = (payload: Record<string, unknown> = { datapackName: PACK.name, version: PACK.version }) =>
         importHandlers['get-datapack-removal-scope'](makeImportHarness(projectOf()).context, payload);
 
-    /** Where the record says the pack went: the form locks its pickers to it (owner, 2026-11-08). */
-    const AT = { websiteCode: 'base', storeCode: 'default' };
-
-    it('names the kinds on the record, in install order, however little was asked for', async () => {
+    it('counts what the record lists by data type, in install order, however little was asked for', async () => {
         await h.importTypes(['categories']);
-        await expect(scope()).resolves.toEqual({ success: true, data: { recordedKinds: ['categories'], installedAt: AT } });
+        await expect(scope()).resolves.toEqual({ success: true, data: { kinds: [{ kind: 'categories', count: 2 }] } });
 
         await h.importTypes(['products']);
-        await expect(scope()).resolves.toEqual({ success: true, data: { recordedKinds: ['categories', 'products'], installedAt: AT } });
+        await expect(scope()).resolves.toEqual({
+            success: true,
+            data: { kinds: [{ kind: 'categories', count: 2 }, { kind: 'products', count: 1 }] },
+        });
     });
 
     it('is null with no record: the service would remove it', async () => {
-        await expect(scope()).resolves.toEqual({ success: true, data: { recordedKinds: null } });
+        await expect(scope()).resolves.toEqual({ success: true, data: { kinds: null } });
     });
 
     it('fails rather than guess when the record cannot be read', async () => {

@@ -68,7 +68,9 @@ const failed = (reason: string | undefined): Pick<OperationRow, 'status' | 'prob
  * failed keeps its step, red with why, and nothing after it ran (review, 2026-11-10: the step went
  * and its failure sat on Uninstall).
  */
-function saveStep(source: StepSource): ImportStep[] {
+function saveStep(
+    source: Pick<StepSource, 'stoppedAt' | 'reason' | 'savedAs' | 'savingStage' | 'replaces'>,
+): ImportStep[] {
     const row = { kind: SAVING, label: 'Save Your Changes' };
     if (source.stoppedAt === SAVE_STOP) return [{ ...row, ...failed(source.reason) }];
     if (source.savedAs) return [{ ...row, status: 'success', line: `Saved to ${source.savedAs}` }];
@@ -105,6 +107,9 @@ function removeStep(source: StepSource): ImportStep[] {
     return [{ ...row, ...waiting(source.running) }];
 }
 
+/** The count at the head of the engine's detail: "1,200 of 2,046" of "1,200 of 2,046 products". */
+const countIn = (detail: string | undefined): string | undefined => detail?.match(/^[\d,]+ of [\d,]+/u)?.[0];
+
 /**
  * The working data type's second line, the word first and then the count (owner, 2026-11-10, walk
  * F133): "Installing 1,200 of 2,046", or "Linking product options 2,044 of 2,046" while configurable
@@ -113,7 +118,7 @@ function removeStep(source: StepSource): ImportStep[] {
  */
 export function doingLine(detail: string | undefined): string {
     const word = detail?.endsWith(LINKING_OPTIONS) ? 'Linking product options' : 'Installing';
-    const count = detail?.match(/^[\d,]+ of [\d,]+/u)?.[0];
+    const count = countIn(detail);
     return count ? `${word} ${count}` : word;
 }
 
@@ -201,4 +206,33 @@ export function importSteps(source: StepSource): ImportStep[] {
     const types = typeRows(source);
     const install = installStep(source, types);
     return [...saveStep(source), ...removeStep(source), install, verifyStep(source, install)];
+}
+
+/** What an uninstall's steps are drawn from (step 03, S7). */
+export interface UninstallSource extends Pick<StepSource, 'savingStage' | 'savedAs' | 'detail' | 'stoppedAt' | 'reason'> {
+    /** The datapack uninstalled, as the SC knows it: "My Luma". */
+    name: string;
+    running: boolean;
+    /** Once it ended: done, or stopped. */
+    ended?: 'done' | 'stopped';
+}
+
+/** The Uninstall row's state: where the uninstall stands, its datapack named by the row. */
+function uninstallState(source: UninstallSource): Pick<OperationRow, 'status' | 'line' | 'problem'> {
+    if (source.stoppedAt === SAVE_STOP) return waiting(false);
+    if (source.ended === 'stopped') return failed(source.reason);
+    if (source.ended === 'done') return { status: 'success', line: 'Uninstalled' };
+    // Saving first, before the job: the uninstall waits on the save.
+    if (source.savingStage && !source.savedAs) return waiting(true);
+    const count = countIn(source.detail);
+    return { status: 'checking', line: count ? `Uninstalling ${count}` : 'Uninstalling from Commerce' };
+}
+
+/**
+ * An uninstall as steps, like Install (decisions J5-2): Save Your Changes when the SC saves first,
+ * then "Uninstall My Luma", the row a switch uninstalls with, so the same job reads the same in both.
+ */
+export function uninstallSteps(source: UninstallSource): ImportStep[] {
+    const row = { kind: 'uninstall', label: `${UNINSTALL} ${source.name}` };
+    return [...saveStep({ ...source, replaces: source.name }), { ...row, ...uninstallState(source) }];
 }

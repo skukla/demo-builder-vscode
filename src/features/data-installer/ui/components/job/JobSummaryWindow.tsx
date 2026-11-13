@@ -6,7 +6,9 @@
  * No checkbox, no picker: the whole datapack goes to the project's own store.
  *
  * A switch asks over the same table (S6, decisions J2-3, J8-1): "Switch to Bodea?" with the warning
- * icon and a blue Switch, no opening line; the host hands in the frame's buttons and problem line.
+ * icon and a blue Switch, no opening line; an uninstall asks "Uninstall My Luma?" over what its
+ * record lists, a red Uninstall and no Review Records (S7, J5-1). The host hands in the frame's
+ * buttons and problem line.
  *
  * @module features/data-installer/ui/components/job/JobSummaryWindow
  */
@@ -27,8 +29,9 @@ export interface JobSummaryWindowProps {
     /** The check has answered: the table is known. */
     ready: boolean;
     waiting: ModalWait | false;
-    onReview: () => void;
-    /** Dry Run and Install; or Switch. */
+    /** Review Records; an uninstall's question has none. */
+    onReview?: () => void;
+    /** Dry Run and Install; or the question's one action. */
     actionButtons: ActionButton[];
     onClose: () => void;
 }
@@ -51,7 +54,7 @@ export function JobSummaryWindow({
             ready={ready}
             waiting={waiting}
             closeLabel="Cancel"
-            startButtons={[{ label: 'Review Records', variant: 'secondary', onPress: onReview }]}
+            startButtons={onReview ? [{ label: 'Review Records', variant: 'secondary', onPress: onReview }] : []}
             actionButtons={actionButtons}
             onClose={onClose}
         >

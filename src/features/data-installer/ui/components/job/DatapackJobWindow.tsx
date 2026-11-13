@@ -1,5 +1,5 @@
 /**
- * A datapack job's window host (step 03, S4 and S6): ONE `DialogContainer`, and in it the one window
+ * A datapack job's window host (step 03, S4, S6 and S7): ONE `DialogContainer`, and in it the one window
  * the job's phase is on (`datapackJob.ts`), each a shared layout. It picks windows and nothing more:
  * the requests and the events they send are `useDatapackJob`'s, the bodies are each window's.
  *
@@ -8,10 +8,13 @@
  *   run, an end with a problem → `DatapackRunWindow`
  *   a clean end, a start that never ran, no instance → `JobResultWindow`
  *
- * Serves a first install of a pack the project does not hold, a switch over the datapack it holds
+ * Serves a first install of a pack the project does not hold; a switch over the datapack it holds
  * ("Switch to Bodea?", then "Save Your Changes First?" when it has changes; decisions J2-3, J8-1),
- * and a job already running when it opened (Undo, Restore, an agent's), titled by what that job is
- * for (`jobWords`). Closing a job still running hands it to a progress notification, as every
+ * which for another version of the held datapack keeps Install's words ("Install Bodea,
+ * eds-compatible?", Install, "Installing ..."; walked by nobody yet, the plan's Q11); an uninstall
+ * ("Uninstall My Luma?" over what its record lists, a red Uninstall, the same save question, and
+ * its run as steps; J5-1, J5-2); and a job already running when it opened (Undo, Restore, an
+ * agent's), titled by what that job is for (`jobWords`). Closing a job still running hands it to a progress notification, as every
  * progress window does: nothing is cancelled, since there is nothing to cancel with.
  *
  * @module features/data-installer/ui/components/job/DatapackJobWindow
@@ -20,6 +23,7 @@
 import { DialogContainer } from '@adobe/react-spectrum';
 import React from 'react';
 import {
+    type DatapackVerb,
     DRY_RUN,
     FIX_WITH_AI,
     FIX_WITH_AI_HINT,
@@ -27,11 +31,13 @@ import {
     installTitle,
     jobPurpose,
     jobWords,
+    UNINSTALL,
 } from '../../../datapackWords';
+import { packLine } from '../../../packVersions';
+import type { JobPurpose } from '../../../types';
 import { useDatapackJob, type DatapackJob } from '../../hooks/useDatapackJob';
 import { useRunColumns } from '../../hooks/useRunColumns';
 import { useVersionTypes } from '../../hooks/useVersionTypes';
-import { backgroundTitle } from '../importModalJob';
 import { type ResultContent, resultStatus } from '../importResult';
 import type { JobKind } from './datapackJob';
 import { DatapackRunWindow } from './DatapackRunWindow';
@@ -39,6 +45,7 @@ import { DryRunWindow } from './DryRunWindow';
 import { JobResultWindow } from './JobResultWindow';
 import { JobSummaryWindow } from './JobSummaryWindow';
 import { RecordsWindow } from './RecordsWindow';
+import type { Uninstalling } from './runSteps';
 import { SaveFirstWindow } from './SaveFirstWindow';
 import type { ActionButton } from '@/core/ui/components/ui/Modal';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
@@ -54,9 +61,22 @@ export interface DatapackJobWindowProps {
     source?: DatapackStoreName;
     /** An install starts at its check; a job already running at its run. */
     startsAt: 'check' | 'run';
-    /** A switch over the datapack the project holds (S6): the SC's own datapacks' names. */
-    switching?: { ownNames: string[] };
+    /**
+     * A switch over the datapack the project holds (S6): the SC's own datapacks' names; `Install`
+     * when it is another version of the same datapack, which keeps Install's words.
+     */
+    switching?: { ownNames: string[]; verb?: 'Install' };
+    /** An uninstall of the datapack the window opened on (S7): the SC's own datapacks' names. */
+    uninstalling?: { ownNames: string[] };
     onClose: () => void;
+}
+
+/** What the window was opened for, in the words it uses: its kind, verb and name. */
+interface Opened {
+    kind: JobKind;
+    verb: DatapackVerb;
+    /** The datapack as titles name it: "Bodea", or "Bodea, eds-compatible" for another version. */
+    name: string;
 }
 
 const NO_INSTANCE: ResultContent = {
@@ -68,16 +88,28 @@ const NO_RECORDS: Record<string, string[]> = {};
 const NO_NAMES: string[] = [];
 const CHANGES_UNCHECKED = "Your changes couldn't be checked.";
 const PREVIEW_UNREAD = "What installing would change couldn't be read.";
+const RECORD_UNREAD = "What the datapack installed couldn't be read.";
 
 /** What the window was opened for. */
-function kindOf(startsAt: 'check' | 'run', switching: boolean): JobKind {
-    if (startsAt === 'run') return 'watch';
-    return switching ? 'switch' : 'install';
+function openedAs(props: DatapackJobWindowProps): Opened {
+    const { startsAt, switching, uninstalling, displayName, id } = props;
+    if (startsAt === 'run') return { kind: 'watch', verb: INSTALL, name: displayName };
+    if (uninstalling) return { kind: 'uninstall', verb: UNINSTALL, name: displayName };
+    if (switching?.verb) return { kind: 'switch', verb: INSTALL, name: packLine(displayName, id.version) };
+    if (switching) return { kind: 'switch', verb: 'Switch', name: displayName };
+    return { kind: 'install', verb: INSTALL, name: displayName };
 }
 
-/** An end's one action beside Close (rule 16): Retry, or Fix with AI. Retry only on this window's own install. */
+/** What the job is for before its record says: a switch, an uninstall, else an install. */
+function purposeOf(opened: Opened): JobPurpose {
+    if (opened.kind === 'uninstall') return 'uninstall';
+    return opened.verb === 'Switch' ? 'switch' : 'install';
+}
+
+/** An end's one action beside Close (rule 16): Retry, or Fix with AI. Retry only on this window's own install or uninstall. */
 function endButtons(job: DatapackJob, result: ResultContent): ActionButton[] {
-    if (result.action === 'retry' && job.state.kind === 'install')
+    const own = job.state.kind === 'install' || job.state.kind === 'uninstall';
+    if (result.action === 'retry' && own)
         return [{ label: 'Retry', variant: 'accent', onPress: job.retry }];
     if (result.action === 'fix')
         return [
@@ -86,25 +118,28 @@ function endButtons(job: DatapackJob, result: ResultContent): ActionButton[] {
     return [];
 }
 
-/** What the run is for before its record says: a switch, else an install. */
-const startedAs = (job: DatapackJob) => (job.state.kind === 'switch' ? 'switch' : 'install');
+/** What the job running is for: its record's purpose once it is recorded, else what the window opened for. */
+function runningPurpose(job: DatapackJob, opened: Opened): JobPurpose {
+    return job.record?.outcome === 'watching' ? jobPurpose(job.record) : purposeOf(opened);
+}
 
 /** The run's title: the end's once it ended with a problem, else what the job watched is for. */
-function runTitle(job: DatapackJob, name: string): string {
+function runTitle(job: DatapackJob, opened: Opened): string {
     if (job.result?.run) return job.result.title;
-    const purpose = job.record?.outcome === 'watching' ? jobPurpose(job.record) : startedAs(job);
-    return jobWords(purpose, name).running;
+    return jobWords(runningPurpose(job, opened), opened.name).running;
 }
 
-/** A switch's problem line: the changes unchecked first, since they decide the save question. */
-function switchProblem(changesFailed: boolean, previewFailed: boolean): string | undefined {
-    if (changesFailed) return CHANGES_UNCHECKED;
-    return previewFailed ? PREVIEW_UNREAD : undefined;
-}
+/** A question's title: without its question mark while the check reads. */
+const asked = (title: string, checking: boolean): string => (checking ? title : `${title}?`);
 
-/** The summary's frame: Install's, or a switch's question (no opening line, a blue Switch). */
-function summaryFrame(job: DatapackJob, name: string, checking: boolean) {
-    if (job.state.kind !== 'switch') {
+/**
+ * The summary's frame: Install's; or a question, no opening line and the warning icon, over the same
+ * table: a switch's blue Switch, another version's blue Install, an uninstall's red Uninstall (rule
+ * 20), which has no Review Records.
+ */
+function summaryFrame(job: DatapackJob, opened: Opened, checking: boolean) {
+    const { name, verb, kind } = opened;
+    if (kind === 'install') {
         return {
             title: installTitle(name),
             actionButtons: [
@@ -112,14 +147,18 @@ function summaryFrame(job: DatapackJob, name: string, checking: boolean) {
                 { label: INSTALL, variant: 'accent' as const, onPress: job.install },
             ],
             problem: job.checkFailed ? PREVIEW_UNREAD : undefined,
+            onReview: job.review,
         };
     }
-    const { changes } = job.switching;
+    const uninstall = kind === 'uninstall';
+    const title = verb === 'Switch' ? `Switch to ${name}` : `${verb} ${name}`;
+    const unread = job.checkFailed ? (uninstall ? RECORD_UNREAD : PREVIEW_UNREAD) : undefined;
     return {
-        title: checking ? `Switch to ${name}` : `Switch to ${name}?`,
+        title: asked(title, checking),
         status: 'warning' as const,
-        actionButtons: [{ label: 'Switch', variant: 'accent' as const, onPress: job.switching.press }],
-        problem: switchProblem(changes.readFailed, job.checkFailed),
+        actionButtons: [{ label: verb, variant: uninstall ? ('negative' as const) : ('accent' as const), onPress: job.switching.press }],
+        problem: job.switching.changes.readFailed ? CHANGES_UNCHECKED : unread,
+        ...(uninstall ? {} : { onReview: job.review }),
     };
 }
 
@@ -128,13 +167,13 @@ function summaryWait(job: DatapackJob) {
     const { phase, kind } = job.state;
     if (phase === 'dry-wait') return WAIT_STAGES.checkingImport;
     if (phase !== 'check') return false;
-    return kind === 'switch' ? WAIT_STAGES.checkingForChanges : WAIT_STAGES.readingWhatToSelect;
+    return kind === 'install' ? WAIT_STAGES.readingWhatToSelect : WAIT_STAGES.checkingForChanges;
 }
 
 /** The summary window: the check's wait, the type table, a Dry Run's wait. */
-function SummaryPhase({ job, name, onClose }: { job: DatapackJob; name: string; onClose: () => void }): React.ReactElement {
+function SummaryPhase({ job, opened, onClose }: { job: DatapackJob; opened: Opened; onClose: () => void }): React.ReactElement {
     const checking = job.state.phase === 'check';
-    const { problem, ...frame } = summaryFrame(job, name, checking);
+    const { problem, ...frame } = summaryFrame(job, opened, checking);
     return (
         <JobSummaryWindow
             {...frame}
@@ -142,7 +181,6 @@ function SummaryPhase({ job, name, onClose }: { job: DatapackJob; name: string; 
             {...(problem ? { problem } : {})}
             ready={!checking}
             waiting={summaryWait(job)}
-            onReview={job.review}
             onClose={onClose}
         />
     );
@@ -155,14 +193,30 @@ function switchRows(job: DatapackJob): { replaces: string; savingStage?: string 
     return { replaces: heldName, ...(savingStage ? { savingStage } : {}) };
 }
 
+/** An uninstall's steps before and while its job runs: whether it saves first, its stage, where to. */
+function uninstallRows(job: DatapackJob): Uninstalling | undefined {
+    if (job.state.kind !== 'uninstall') return undefined;
+    const { savingStage, savedTo } = job.switching;
+    return { saves: savedTo !== undefined, ...(savingStage ? { savingStage } : {}), ...(savedTo ? { savedTo } : {}) };
+}
+
+/** What the run window draws: the pack's steps' name and version, its types, its columns. */
+interface RunShape {
+    name: string;
+    version: string;
+    types: string[];
+    columns: 1 | 2;
+}
+
 /** The run window: running, or ended with a problem on its steps. A Retry is a new run, a new clock. */
-function RunPhase({ job, run, onClose }: { job: DatapackJob; run: { name: string; version: string; types: string[]; columns: 1 | 2 }; onClose: () => void }): React.ReactElement {
+function RunPhase({ job, run, opened, onClose }: { job: DatapackJob; run: RunShape; opened: Opened; onClose: () => void }): React.ReactElement {
     const ended = job.state.phase === 'ended' ? job.result : null;
     const switching = switchRows(job);
+    const uninstalling = uninstallRows(job);
     return (
         <DatapackRunWindow
             key={`run-${job.retries}`}
-            title={runTitle(job, run.name)}
+            title={runTitle(job, opened)}
             {...(ended ? { status: resultStatus(ended) } : {})}
             record={job.record}
             ended={ended}
@@ -171,6 +225,7 @@ function RunPhase({ job, run, onClose }: { job: DatapackJob; run: { name: string
             columns={run.columns}
             opensRunning={job.state.kind === 'watch'}
             {...(switching ? { switching } : {})}
+            {...(uninstalling ? { uninstalling } : {})}
             actionButtons={ended ? endButtons(job, ended) : []}
             onClose={onClose}
         />
@@ -195,11 +250,11 @@ function ResultPhase({ job, result, onClose }: { job: DatapackJob; result: Resul
 }
 
 /** The windows that leave the summary and come back: Review Records, a Dry Run's answer, the save question. */
-function asideWindow(job: DatapackJob, name: string, close: () => void): React.ReactElement | null {
+function asideWindow(job: DatapackJob, opened: Opened, close: () => void): React.ReactElement | null {
     const { phase } = job.state;
     if (phase === 'records') {
         const records = job.recordsReading ? NO_RECORDS : job.records;
-        const title = job.state.kind === 'switch' ? `Switch to ${name}?` : installTitle(name);
+        const { title } = summaryFrame(job, opened, false);
         return <RecordsWindow title={title} rows={job.rows} records={records} reading={job.recordsReading} onBack={job.back} onClose={close} />;
     }
     if (phase === 'dry-result' && job.result) {
@@ -209,7 +264,7 @@ function asideWindow(job: DatapackJob, name: string, close: () => void): React.R
         const { changes, answer } = job.switching;
         return (
             <SaveFirstWindow
-                verb="Switch"
+                verb={opened.verb}
                 rows={changes.rows}
                 readFailed={changes.readFailed}
                 {...(changes.saveAs ? { saveAs: changes.saveAs } : {})}
@@ -222,43 +277,42 @@ function asideWindow(job: DatapackJob, name: string, close: () => void): React.R
 }
 
 /** The one window the job's phase is on. */
-function windowFor(job: DatapackJob, run: { name: string; version: string; types: string[]; columns: 1 | 2 }, close: () => void): React.ReactElement {
+function windowFor(job: DatapackJob, run: RunShape, opened: Opened, close: () => void): React.ReactElement {
     const { phase } = job.state;
-    const aside = asideWindow(job, run.name, close);
+    const aside = asideWindow(job, opened, close);
     if (aside) return aside;
     if (phase === 'no-instance') return <JobResultWindow result={NO_INSTANCE} onClose={close} />;
     if ((phase === 'done' || phase === 'ended') && job.result && !job.result.run)
         return <ResultPhase job={job} result={job.result} onClose={close} />;
-    if (phase === 'run' || phase === 'ended') return <RunPhase job={job} run={run} onClose={close} />;
-    return <SummaryPhase job={job} name={run.name} onClose={close} />;
+    if (phase === 'run' || phase === 'ended') return <RunPhase job={job} run={run} opened={opened} onClose={close} />;
+    return <SummaryPhase job={job} opened={opened} onClose={close} />;
 }
 
-export function DatapackJobWindow({
-    id,
-    displayName,
-    types: given,
-    source,
-    startsAt,
-    switching,
-    onClose,
-}: DatapackJobWindowProps): React.ReactElement {
+export function DatapackJobWindow(props: DatapackJobWindowProps): React.ReactElement {
+    const { id, displayName, types: given, source, switching, uninstalling, onClose } = props;
     const { types, reading } = useVersionTypes(id, source, given);
     const columns = useRunColumns(types.length);
-    const kind = kindOf(startsAt, switching !== undefined);
-    const ownNames = switching?.ownNames ?? NO_NAMES;
-    const job = useDatapackJob({ id, displayName, source, types, readingTypes: reading, kind, ownNames });
+    const opened = openedAs(props);
+    const ownNames = switching?.ownNames ?? uninstalling?.ownNames ?? NO_NAMES;
+    const job = useDatapackJob({
+        id,
+        displayName: opened.name,
+        source,
+        types,
+        readingTypes: reading,
+        kind: opened.kind,
+        ownNames,
+    });
 
+    // Closing a job still running, or still starting (a save first included), hands it over.
     const close = (): void => {
         if (job.state.phase === 'run' && (job.running || job.starting)) {
-            const title =
-                kind === 'switch'
-                    ? jobWords('switch', displayName).running
-                    : backgroundTitle(job.record?.operation === 'reset', displayName);
+            const title = jobWords(runningPurpose(job, opened), opened.name).running;
             webviewClient.postMessage('backgroundOperation', { id: DATAPACK_OPERATION_ID, title });
         }
         onClose();
     };
 
     const run = { name: displayName, version: id.version, types, columns };
-    return <DialogContainer onDismiss={close}>{windowFor(job, run, close)}</DialogContainer>;
+    return <DialogContainer onDismiss={close}>{windowFor(job, run, opened, close)}</DialogContainer>;
 }

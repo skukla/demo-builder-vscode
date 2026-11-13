@@ -6,7 +6,7 @@
  * - unsaved edits (`CHANGES_NEED_ANSWER`): the flyout asks "Restore <name>?" (`PackActions`), and
  *   Restore sends it again confirmed;
  * - started (a newer save, or once confirmed): the import window opens on the version restored,
- *   where it picks the running job up (`ImportDatapackModal`), as Undo Last Save's does.
+ *   where it picks the running job up (`DatapackJobWindow`), as Undo Last Save's does.
  *
  * @module features/data-installer/ui/hooks/useRestoreDatapack
  */

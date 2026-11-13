@@ -172,3 +172,33 @@ describe('a switch', () => {
         expect(datapackJob(from, { type: 'save-first' })).toBe(from);
     });
 });
+
+// Step 03, S7: Uninstall (decisions J5-1, J5-2). Its check ends on the question, "Uninstall My
+// Luma?", which is the summary's place; the run is the removal's, keyed as the last action so the
+// result reads the uninstall's request and never an install's.
+describe('an uninstall', () => {
+    const un = (phase: JobPhase, over: Partial<JobState> = {}): JobState => at(phase, { kind: 'uninstall', ...over });
+
+    it('opens on its check', () => {
+        expect(startJob('uninstall')).toEqual({ kind: 'uninstall', phase: 'check', lastAction: null });
+    });
+
+    it.each<[string, JobState, JobEvent, JobState]>([
+        ['the check answered: the question', un('check'), { type: 'checked' }, un('summary')],
+        ['Uninstall with changes: the save question', un('summary'), { type: 'save-first' }, un('save-first')],
+        ['Uninstall with nothing to save: the run, keyed on the removal', un('summary'), { type: 'start' }, un('run', { lastAction: 'reset' })],
+        ['the save question answered: the run', un('save-first'), { type: 'start' }, un('run', { lastAction: 'reset' })],
+        ['Retry on a stopped run: the run again', un('ended', { lastAction: 'reset' }), { type: 'start' }, un('run', { lastAction: 'reset' })],
+        ['Back from a start that never ran: the question', un('ended', { lastAction: 'reset' }), { type: 'back' }, un('summary', { lastAction: 'reset' })],
+    ])('%s', (_name, from, event, to) => {
+        expect(datapackJob(from, event)).toEqual(to);
+    });
+
+    it.each<[string, JobEvent]>([
+        ['Review Records: the question has none', { type: 'review' }],
+        ['Dry Run: an uninstall has none', { type: 'dry-run' }],
+    ])('moves nothing on %s', (_name, event) => {
+        const from = un('summary');
+        expect(datapackJob(from, event)).toBe(from);
+    });
+});
