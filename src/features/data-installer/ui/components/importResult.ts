@@ -108,8 +108,8 @@ export function resolveResult(
         /** How many times Retry was pressed on this import. */
         retries?: number;
         dryRun: DataInstallerRequest<{ valid: boolean; reason?: string }>;
-        start: DataInstallerRequest<{ activationId: string }>;
-        reset: DataInstallerRequest<{ activationId: string; savedNote?: string }>;
+        start: DataInstallerRequest<unknown>;
+        reset: DataInstallerRequest<unknown>;
         record: ImportJobRecord | null;
         startedActivation: string | undefined;
         /** The import replaces the demo's pack (walk F97): that pack's name, and the types asked for. */

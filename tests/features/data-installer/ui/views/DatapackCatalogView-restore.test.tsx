@@ -1,11 +1,10 @@
 /**
- * DatapackCatalogView — Restore (Phase 3/5, owner 2026-11-12, J4-2 to J4-4). On the datapack the demo
- * uses, the flyout's main button reads "Restore My Luma" in place of Install. Pressing it sends the
- * check (`restore-datapack` without confirm) and the flyout waits. Then:
- * - up to date: the small result "My Luma Is Up to Date", nothing started;
- * - unsaved edits: "Restore My Luma?" (Cancel / Restore, blue), and Restore sends it confirmed;
- * - started (a newer save, or after the confirm): the import window opens on the version restored,
- *   watching the running job.
+ * DatapackCatalogView — Restore (Phase 3/5, owner 2026-11-12, J4-2 to J4-4; step 03, S8). On the
+ * datapack the demo uses, the flyout's main button reads "Restore My Luma" in place of Install.
+ * Pressing it opens the job window on Restore's check; the check, its question, its result and its
+ * run are the window's, pinned in `DatapackJobWindow-restore.test.tsx`. Here: the button, and that
+ * it reaches the window end to end (both paths to the run: confirmed over unsaved edits, and a
+ * newer save alone).
  */
 
 import { render, screen, within } from '@testing-library/react';
@@ -149,20 +148,6 @@ describe('Restore, in the flyout of the datapack the demo uses', () => {
         expect(await inFlyout().findByRole('button', { name: 'Install' })).toBeInTheDocument();
     });
 
-    it('up to date: says so in a small result and starts nothing', async () => {
-        store({ success: true, data: { upToDate: true, displayName: 'My Luma' } });
-        await openFlyout();
-
-        await press(await inFlyout().findByRole('button', { name: 'Restore My Luma' }));
-        await settle();
-
-        expect(restoreSends()).toEqual([{ datapackName: 'my-luma' }]);
-        expect(
-            await screen.findByRole('heading', { name: 'My Luma Is Up to Date' })
-        ).toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: 'Run in Background' })).not.toBeInTheDocument();
-    });
-
     it('unsaved edits: asks "Restore My Luma?", and Restore sends it confirmed and opens the run', async () => {
         store(EDITS, STARTED);
         await openFlyout();
@@ -187,19 +172,6 @@ describe('Restore, in the flyout of the datapack the demo uses', () => {
         ).toBeInTheDocument();
     });
 
-    it('CONTROL: Cancel sends nothing more and opens no run', async () => {
-        store(EDITS, STARTED);
-        await openFlyout();
-
-        await press(await inFlyout().findByRole('button', { name: 'Restore My Luma' }));
-        await settle();
-        await press(await screen.findByRole('button', { name: 'Cancel' }));
-        await settle();
-
-        expect(restoreSends()).toEqual([{ datapackName: 'my-luma' }]);
-        expect(screen.queryByRole('button', { name: 'Run in Background' })).not.toBeInTheDocument();
-    });
-
     it('only a newer save: the check starts it, and the run opens with no question', async () => {
         store(STARTED);
         await openFlyout();
@@ -212,20 +184,5 @@ describe('Restore, in the flyout of the datapack the demo uses', () => {
             await screen.findByRole('button', { name: 'Run in Background' })
         ).toBeInTheDocument();
         expect(screen.queryByRole('checkbox', { name: 'Products' })).not.toBeInTheDocument();
-    });
-
-    it('a refusal shows under the actions, and no run opens', async () => {
-        store({
-            success: false,
-            error: 'Demo Builder has no record of installing this datapack.',
-            code: ErrorCode.INVALID_OPERATION,
-        });
-        await openFlyout();
-
-        await press(await inFlyout().findByRole('button', { name: 'Restore My Luma' }));
-        await settle();
-
-        expect(inFlyout().getByText(/no record of installing this datapack/u)).toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: 'Run in Background' })).not.toBeInTheDocument();
     });
 });

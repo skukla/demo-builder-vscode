@@ -444,6 +444,7 @@ describe('windowRoute', () => {
         ['a first install, the project holding no datapack', { id }, 'install'],
         ['a run opened by Undo or Restore', { id, holding: { pack: luma, recorded: true }, opensOn: 'run' as const }, 'watch'],
         ['Uninstall', { id, holding: { pack: luma, recorded: true }, opensOn: 'remove' as const }, 'uninstall'],
+        ['Restore, from its check', { id, holding: { pack: luma, recorded: true }, opensOn: 'restore' as const }, 'restore'],
         ['a switch over another datapack Demo Builder installed', { id, holding: { pack: luma, recorded: true } }, 'switch'],
         ['another datapack with nothing to uninstall it by: an install', { id, holding: { pack: luma, recorded: false } }, 'install'],
         ['another version of the datapack the project holds', { id, holding: { pack: bodea, recorded: true } }, 'version'],

@@ -1,6 +1,7 @@
 /**
- * The phase each answer moves a datapack job to (step 03, S4, S6 and S7): the check's end, a Dry Run's
- * answer, the run's end (`datapackJob.ts`). Split out of `useDatapackJob`.
+ * The phase each answer moves a datapack job to (step 03, S4, S6, S7 and S8): the check's end, a Dry
+ * Run's answer, the run's end, and Restore's check answered without a job (`datapackJob.ts`). Split
+ * out of `useDatapackJob`.
  *
  * @module features/data-installer/ui/hooks/useJobPhases
  */
@@ -25,7 +26,8 @@ export function useJobPhases(
     }, [phase, running, noInstance, checked, dispatch]);
     useEffect(() => {
         if (phase === 'dry-wait' && result) dispatch({ type: 'dry-answered' });
-        if (phase === 'run' && result)
+        // A check ends on a result only for Restore, whose check is its start (`datapackJob.ts`).
+        if ((phase === 'run' || phase === 'check') && result)
             dispatch({ type: 'ended', clean: result.finished === true && !result.run });
     }, [phase, result, dispatch]);
 }

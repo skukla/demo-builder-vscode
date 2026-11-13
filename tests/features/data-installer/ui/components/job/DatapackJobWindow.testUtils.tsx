@@ -78,6 +78,10 @@ export interface Answers {
     scope: unknown;
     /** An uninstall's start (S7). */
     reset: unknown;
+    /** Restore's check: `restore-datapack` without `confirm` (S8). */
+    restore: unknown;
+    /** Restore sent again, confirmed, from its question (S8). */
+    restoreConfirmed: unknown;
 }
 
 const DEFAULT_ANSWERS: Answers = {
@@ -97,14 +101,24 @@ const DEFAULT_ANSWERS: Answers = {
     changes: { success: true, data: { count: 0, kinds: [], alwaysSave: false } },
     scope: { success: true, data: { kinds: null } },
     reset: { success: true, data: { activationId: 'act-1' } },
+    restore: { success: true, data: { activationId: 'act-1', target: { name: 'my-luma', version: 'v2' } } },
+    restoreConfirmed: {
+        success: true,
+        data: { activationId: 'act-1', target: { name: 'my-luma', version: 'v2' } },
+    },
 };
+
+/** Whether an answer accepted a job: the status reads report it from then on. */
+const accepted = (given: unknown): boolean =>
+    typeof given === 'object' && given !== null && 'data' in given &&
+    typeof given.data === 'object' && given.data !== null && 'activationId' in given.data;
 
 /** Answer every request the window sends; `never` leaves that one unanswered. */
 export function answer(over: Partial<Answers> = {}, never: string[] = []): void {
     const a = { ...DEFAULT_ANSWERS, ...over };
     let started = false;
     mockRequest.mockReset();
-    mockRequest.mockImplementation(async (type: string) => {
+    mockRequest.mockImplementation(async (type: string, payload?: { confirm?: boolean }) => {
         if (never.includes(type)) return new Promise(() => undefined);
         switch (type) {
             case 'get-datapack-import-target':
@@ -127,6 +141,11 @@ export function answer(over: Partial<Answers> = {}, never: string[] = []): void 
             case 'reset-datapack':
                 started = true;
                 return a.reset;
+            case 'restore-datapack': {
+                const given = payload?.confirm ? a.restoreConfirmed : a.restore;
+                started = started || accepted(given);
+                return given;
+            }
             default:
                 return { success: true, data: null };
         }

@@ -202,3 +202,44 @@ describe('an uninstall', () => {
         expect(datapackJob(from, event)).toBe(from);
     });
 });
+
+// Step 03, S8: Restore (decisions J4-2 to J4-4). Its check IS its start: `restore-datapack` without
+// confirm starts when nothing of the SC's would be lost, so the job is keyed on the start from the
+// moment it opens. The check ends on a result (up to date, refused), the question, or the run.
+describe('a restore', () => {
+    const re = (phase: JobPhase): JobState => ({ kind: 'restore', phase, lastAction: 'start' });
+
+    it('opens on its check, keyed on the start the check sends', () => {
+        expect(startJob('restore')).toEqual(re('check'));
+    });
+
+    it.each<[string, JobState, JobEvent, JobState]>([
+        ['unsaved edits: the question', re('check'), { type: 'asks' }, re('question')],
+        ['the question answered: the run', re('question'), { type: 'start' }, re('run')],
+        ['a newer save alone: the run', re('check'), { type: 'running' }, re('run')],
+        ['up to date: the result', re('check'), { type: 'ended', clean: true }, re('done')],
+        ['refused: the result', re('check'), { type: 'ended', clean: false }, re('ended')],
+    ])('%s', (_name, from, event, to) => {
+        expect(datapackJob(from, event)).toEqual(to);
+    });
+
+    it.each<[string, JobState, JobEvent]>([
+        ['the summary: a restore has none', re('check'), { type: 'checked' }],
+        ['no instance: the refusal says why', re('check'), { type: 'no-instance' }],
+        ['Back from a refusal: nothing behind it', re('ended'), { type: 'back' }],
+        ['Retry: the restore offers none', re('ended'), { type: 'start' }],
+        ['Review Records', re('question'), { type: 'review' }],
+        ['Dry Run', re('question'), { type: 'dry-run' }],
+        ['the save question', re('question'), { type: 'save-first' }],
+    ])('moves nothing on %s', (_name, from, event) => {
+        expect(datapackJob(from, event)).toBe(from);
+    });
+
+    it.each<[string, JobState]>([
+        ['an install check', at('check')],
+        ['an uninstall check', at('check', { kind: 'uninstall' })],
+    ])('asks nothing and ends nothing from %s', (_name, from) => {
+        expect(datapackJob(from, { type: 'asks' })).toBe(from);
+        expect(datapackJob(from, { type: 'ended', clean: true })).toBe(from);
+    });
+});

@@ -7,25 +7,28 @@
  *   dry result → `DryRunWindow`   save question → `SaveFirstWindow`
  *   run, an end with a problem → `DatapackRunWindow`
  *   a clean end, a start that never ran, no instance → `JobResultWindow`
+ *   Restore's check and question → `RestorePhase`
  *
  * Serves a first install of a pack the project does not hold; a switch over the datapack it holds
  * ("Switch to Bodea?", then "Save Your Changes First?" when it has changes; decisions J2-3, J8-1),
  * which for another version of the held datapack keeps Install's words ("Install Bodea,
  * eds-compatible?", Install, "Installing ..."; walked by nobody yet, the plan's Q11); an uninstall
  * ("Uninstall My Luma?" over what its record lists, a red Uninstall, the same save question, and
- * its run as steps; J5-1, J5-2); and a job already running when it opened (Undo, Restore, an
- * agent's), titled by what that job is for (`jobWords`). Closing a job still running hands it to a progress notification, as every
+ * its run as steps; J5-1, J5-2); a restore of the datapack the demo uses ("Restore My Luma" while
+ * it checks, "Restore My Luma?" over unsaved edits, "My Luma Is Up to Date" when there is nothing to
+ * do, else its run; S8, J4-2 to J4-4); and a job already running when it opened (Undo, an agent's),
+ * titled by what that job is for (`jobWords`). Closing a job still running hands it to a progress notification, as every
  * progress window does: nothing is cancelled, since there is nothing to cancel with.
  *
  * The phases' windows are their own files: `SummaryPhase`, `RunPhase`, `ResultPhase` (with the
- * end buttons), and `jobOpened` for what the window was opened for.
+ * end buttons), `RestorePhase`, and `jobOpened` for what the window was opened for.
  *
  * @module features/data-installer/ui/components/job/DatapackJobWindow
  */
 
 import { DialogContainer } from '@adobe/react-spectrum';
 import React from 'react';
-import { INSTALL, jobWords, UNINSTALL } from '../../../datapackWords';
+import { INSTALL, jobWords, RESTORE, UNINSTALL } from '../../../datapackWords';
 import { packLine } from '../../../packVersions';
 import { useDatapackJob, type DatapackJob } from '../../hooks/useDatapackJob';
 import { useRunColumns } from '../../hooks/useRunColumns';
@@ -35,6 +38,7 @@ import { DryRunWindow } from './DryRunWindow';
 import { type Opened, runningPurpose } from './jobOpened';
 import { JobResultWindow } from './JobResultWindow';
 import { RecordsWindow } from './RecordsWindow';
+import { RestorePhase } from './RestorePhase';
 import { ResultPhase } from './ResultPhase';
 import { type RunShape, RunPhase } from './RunPhase';
 import { SaveFirstWindow } from './SaveFirstWindow';
@@ -58,6 +62,8 @@ export interface DatapackJobWindowProps {
     switching?: { ownNames: string[]; verb?: 'Install' };
     /** An uninstall of the datapack the window opened on (S7): the SC's own datapacks' names. */
     uninstalling?: { ownNames: string[] };
+    /** Restore on the datapack the demo uses (S8): its check, then its question or its run. */
+    restoring?: true;
     onClose: () => void;
 }
 
@@ -71,8 +77,9 @@ const NO_NAMES: string[] = [];
 
 /** What the window was opened for. */
 function openedAs(props: DatapackJobWindowProps): Opened {
-    const { startsAt, switching, uninstalling, displayName, id } = props;
+    const { startsAt, switching, uninstalling, restoring, displayName, id } = props;
     if (startsAt === 'run') return { kind: 'watch', verb: INSTALL, name: displayName };
+    if (restoring) return { kind: 'restore', verb: RESTORE, name: displayName };
     if (uninstalling) return { kind: 'uninstall', verb: UNINSTALL, name: displayName };
     if (switching?.verb) return { kind: 'switch', verb: INSTALL, name: packLine(displayName, id.version) };
     if (switching) return { kind: 'switch', verb: 'Switch', name: displayName };
@@ -115,6 +122,8 @@ function windowFor(job: DatapackJob, run: RunShape, opened: Opened, close: () =>
     if ((phase === 'done' || phase === 'ended') && job.result && !job.result.run)
         return <ResultPhase job={job} result={job.result} onClose={close} />;
     if (phase === 'run' || phase === 'ended') return <RunPhase job={job} run={run} opened={opened} onClose={close} />;
+    if (opened.kind === 'restore')
+        return <RestorePhase job={job} name={opened.name} onClose={close} />;
     return <SummaryPhase job={job} opened={opened} onClose={close} />;
 }
 

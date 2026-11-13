@@ -19,9 +19,9 @@ export interface Opened {
     name: string;
 }
 
-/** What the job is for before its record says: a switch, an uninstall, else an install. */
+/** What the job is for before its record says: a switch, an uninstall, a restore, or an install. */
 function purposeOf(opened: Opened): JobPurpose {
-    if (opened.kind === 'uninstall') return 'uninstall';
+    if (opened.kind === 'uninstall' || opened.kind === 'restore') return opened.kind;
     return opened.verb === 'Switch' ? 'switch' : 'install';
 }
 

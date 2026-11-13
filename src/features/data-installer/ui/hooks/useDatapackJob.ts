@@ -40,6 +40,7 @@ import { useJobResult } from './useJobResult';
 import { useJobStart } from './useJobStart';
 import { useJobStatus } from './useJobStatus';
 import { type JobSwitch, useJobSwitch } from './useJobSwitch';
+import { useRestoreCheck } from './useRestoreCheck';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 import type { DatapackRecordsResult } from '@/types/webviewRequests';
 
@@ -116,6 +117,7 @@ export function useDatapackJob(args: DatapackJobArgs): DatapackJob {
     const watch = useJobStatus(state);
     const body = useRequestBody(args, target.value, pack);
     const starts = useJobStart(args.kind, body, dispatch);
+    useRestoreCheck(args.id, state, starts.start, dispatch);
     const switching = useJobSwitch(args, checks, starts, dispatch);
     const heldName = switching.heldName;
     const { result, starting } = useJobResult(args, state, { dry, starts, watch, heldName });

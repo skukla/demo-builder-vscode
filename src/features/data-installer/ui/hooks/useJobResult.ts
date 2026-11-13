@@ -6,13 +6,35 @@
  * @module features/data-installer/ui/hooks/useJobResult
  */
 
-import { resolveResult } from '../components/importResult';
+import { jobWords } from '../../datapackWords';
+import { type ResultContent, resolveResult } from '../components/importResult';
 import type { JobState } from '../components/job/datapackJob';
 import type { DataInstallerRequest } from './useDataInstallerRequest';
 import { useJobPickup } from './useJobPickup';
 import type { JobReadsArgs } from './useJobReads';
-import type { useJobStart } from './useJobStart';
+import { acceptedActivation, type useJobStart } from './useJobStart';
 import type { useJobStatus } from './useJobStatus';
+import { ErrorCode } from '@/types/errorCodes';
+
+/**
+ * What Restore's check answered, when it answered without a job (S8): up to date, the small result
+ * that closes itself; refused, its own words. Unsaved edits are its question, no result; `undefined`
+ * when it accepted a job, whose end is read as any start's.
+ */
+function restoreAnswer(
+    starts: ReturnType<typeof useJobStart>,
+    name: string,
+): ResultContent | null | undefined {
+    const { failure, value } = starts.start;
+    if (failure?.code === ErrorCode.CHANGES_NEED_ANSWER) return null;
+    if (failure) {
+        return { variant: 'error', title: jobWords('restore', name).failed, message: failure.message };
+    }
+    if (value && 'upToDate' in value) {
+        return { variant: 'success', title: `${name} Is Up to Date`, finished: true };
+    }
+    return undefined;
+}
 
 /** What the result reads: the last action's request, the job watched, a switch's failed save. */
 export function useJobResult(
@@ -29,9 +51,10 @@ export function useJobResult(
     const { start, runs } = starts;
     // The one write this window makes: the job watched is the one it started, else the one found.
     const wrote = state.lastAction === 'start' || state.lastAction === 'reset';
-    const started = state.lastAction ? start.value?.activationId : watch.found;
+    const accepted = acceptedActivation(start.value);
+    const started = state.lastAction ? accepted : watch.found;
     const pickingUp = useJobPickup(
-        wrote ? start.value?.activationId : undefined,
+        wrote ? accepted : undefined,
         watch.record,
         watch.status.loading,
         watch.status.load,
@@ -42,6 +65,9 @@ export function useJobResult(
         state.kind === 'switch' && heldName
             ? { replacing: { name: heldName, dataTypes: args.types } }
             : {};
+    const restoring = state.kind === 'restore' && !busy;
+    const answered = restoring ? restoreAnswer(starts, args.displayName) : undefined;
+    if (answered !== undefined) return { result: answered, starting: false };
     const result = busy
         ? null
         : resolveResult(action, {

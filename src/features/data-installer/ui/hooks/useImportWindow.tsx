@@ -11,7 +11,7 @@
  *
  * One window serves every path (`DatapackJobWindow`, step 03), on the job `windowRoute` picks: a
  * first install (S4), a switch over another datapack (S6), Uninstall and another version of the held
- * datapack (S7), and a run already started (Undo, Restore).
+ * datapack (S7), Restore from its check (S8), and a run already started (Undo).
  *
  * @module features/data-installer/ui/hooks/useImportWindow
  */
@@ -35,18 +35,22 @@ export interface ImportWindow {
     /** The data types the version holds, when the flyout had read that version; else the window reads them. */
     types?: string[];
     /**
-     * Opened by Uninstall: the uninstall's check, then its question (F118, J5-1). Opened by Undo or
-     * Restore once its job was accepted: straight to the run.
+     * Opened by Uninstall: the uninstall's check, then its question (F118, J5-1). Opened by Restore:
+     * its check, then its question or its run (S8, J4-2 to J4-4). Opened by Undo once its job was
+     * accepted: straight to the run.
      */
-    opensOn?: 'remove' | 'run';
+    opensOn?: OpensOn;
     /** The datapack the project held when the window opened: installing another is a switch. */
     holding?: Holding;
     /** The names of the SC's own datapacks: a new one's name may not be one of them. */
     ownNames: string[];
 }
 
+/** Where an opener asks the window to start, other than an install's or a switch's check. */
+export type OpensOn = 'remove' | 'restore' | 'run';
+
 /** The job the window opens on. */
-export type WindowRoute = 'install' | 'switch' | 'version' | 'uninstall' | 'watch';
+export type WindowRoute = 'install' | 'switch' | 'version' | 'uninstall' | 'restore' | 'watch';
 
 /**
  * Which job the window opens on (step 03, S4, S6, S7). With no record of the held datapack there is
@@ -58,6 +62,7 @@ export type WindowRoute = 'install' | 'switch' | 'version' | 'uninstall' | 'watc
 export function windowRoute(opened: Pick<ImportWindow, 'id' | 'opensOn' | 'holding'>): WindowRoute {
     if (opened.opensOn === 'run') return 'watch';
     if (opened.opensOn === 'remove') return 'uninstall';
+    if (opened.opensOn === 'restore') return 'restore';
     const { holding } = opened;
     if (!holding?.recorded) return 'install';
     if (holding.pack.name !== opened.id.name) return 'switch';
@@ -101,13 +106,13 @@ export function useImportWindow(
     owned: Owned,
 ): {
     window: ImportWindow | undefined;
-    open: (id: DatapackId, opensOn?: 'run') => void;
+    open: (id: DatapackId, opensOn?: Exclude<OpensOn, 'remove'>) => void;
     openRemoval: () => void;
     close: () => void;
 } {
     const [opened, setOpened] = useState<ImportWindow | undefined>(undefined);
     const open = useCallback(
-        (id: DatapackId, opensOn?: 'run'): void => {
+        (id: DatapackId, opensOn?: Exclude<OpensOn, 'remove'>): void => {
             if (!shown) return;
             const same = shown.detail.id.version === id.version;
             setOpened({
@@ -141,6 +146,7 @@ function routeProps(route: WindowRoute, ownNames: string[]): Partial<React.Compo
     if (route === 'uninstall') return { uninstalling: { ownNames } };
     if (route === 'switch') return { switching: { ownNames } };
     if (route === 'version') return { switching: { ownNames, verb: 'Install' } };
+    if (route === 'restore') return { restoring: true };
     return {};
 }
 

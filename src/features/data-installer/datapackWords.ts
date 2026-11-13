@@ -14,14 +14,20 @@
 
 import type { ImportJobRecord, JobPurpose } from './types';
 
-/** The verb of a datapack's moves in Commerce: a Switch installs over another datapack. */
-export type DatapackVerb = 'Install' | 'Uninstall' | 'Switch';
+/**
+ * The verb of a datapack's moves in Commerce: a Switch installs over another datapack; a Restore
+ * puts back the demo's datapack as last saved.
+ */
+export type DatapackVerb = 'Install' | 'Uninstall' | 'Switch' | 'Restore';
 
 /** The button that puts a datapack into Commerce. */
 export const INSTALL = 'Install';
 
 /** The button that takes a datapack's data out of Commerce. */
 export const UNINSTALL = 'Uninstall';
+
+/** The button that puts the demo's datapack back as last saved (J4-2). */
+export const RESTORE = 'Restore';
 
 /** The button that asks whether an install would go through, writing nothing (D6). */
 export const DRY_RUN = 'Dry Run';
