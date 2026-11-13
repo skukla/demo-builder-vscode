@@ -209,8 +209,16 @@ Live notes; rewritten as the final report at the loop's close.
   categories show as that tree, ticking unchanged. The filter now matches a category's own name (as
   the prototype does), not its full path. Style check: nothing moved; the tree's rules measured in
   the Datapacks screen. Full gate green (2,410 suites, 38,626 tests).
-- Step-06 C2a (Clear's engine and check: whole websites, full record lists, kinds of failed read,
-  the shared-website warning): with a builder.
+- Step-06 C2a: f28dc929a. Clear works on every website the project uses, whole (no store picker),
+  with a full list per type and no kept reasons; a website another project uses warns and Clear
+  continues (owner's P6-Q2); failed reads split by kind from existing pieces (P6-Q3). An independent
+  review found one blocking problem (with orders unread, the ERP integration was still asked to close
+  those stores' orders); fixed, with: the count matching what the clear removes (the datapack's records
+  are left for C3's uninstall), records another project lists kept, categories a remaining cart rule
+  uses kept, categories left alone when products or cart rules are unread, access-refused reads
+  offering Open Commerce Admin, and the agent's consent naming the websites. Nothing is deleted that
+  was not before. Full gate green (2,410 suites, 38,621 tests). Live Clear owed after C3.
+- Step-06 C2b (Clear's window: summary, Review Records with Removed and Kept tabs): with a builder.
 - Phase 1b, done while waiting: ERP Downtime (863c5c2ca) and Edit Demo Package (f8ece2e6e) moved
   onto the Form layout, whose failure line is what both waited for. Same words; Cancel beside the
   commit, as every form; a read failure is a result window with Close. An unused style rule removed.
