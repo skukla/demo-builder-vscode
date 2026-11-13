@@ -246,7 +246,11 @@ Live notes; rewritten as the final report at the loop's close.
   (this also protects Uninstall, Reset and Delete); the list is re-checked before any uninstall.
   Full gate green (2,420 suites, 38,764 tests). Live cycle owed: two projects on one website, a
   datapack also on a second website, a project with an older datapack's records.
-- Step-06 C5 (the header's Clear menu and the Command Palette entries): with a builder.
+- Step-06 C5: 335cb189e. The Datapacks header's Clear button is a Clear menu (Clear Demo Data, Clear
+  Commerce Instance); two Command Palette entries open the current project's Datapacks with that
+  window open, refusing without a project or a Commerce backend. Full gate green (2,422 suites,
+  38,794 tests).
+- Step-06 C6 (the agent tools for Clear Commerce Instance): with a builder.
 - Phase 1b, done while waiting: ERP Downtime (863c5c2ca) and Edit Demo Package (f8ece2e6e) moved
   onto the Form layout, whose failure line is what both waited for. Same words; Cancel beside the
   commit, as every form; a read failure is a result window with Close. An unused style rule removed.
@@ -350,5 +354,8 @@ Live notes; rewritten as the final report at the loop's close.
   strange); refused and strange types get no problem line (the row says it); returns get a "Closed"
   tab like orders; a check that fails before it knows the project is titled "Clear Demo Data".
   Recommend keeping all four.
+- From C5: the "I understand every project on these websites loses its data" checkbox keeps sentence
+  capitals (it is a sentence); menu items are not checked by the Title Case scan anywhere (a gap in
+  the scan). Recommend keeping the sentence.
 - Phase 2 live cycle on the test store (save twice, Undo Last Save, Restore, reinstall with nothing
   sent, uninstall), once Phase 2 is built.
