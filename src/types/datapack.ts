@@ -73,6 +73,18 @@ export interface DatapackInstallFailure extends DatapackId {
 export type DatapackInstallFailed = Pick<DatapackInstallFailure, 'reason' | 'retries'>;
 
 /**
+ * What `get-datapack-line` answers: the dashboard Datapacks card's line, and whether the project's
+ * datapack failed to install (step-04 S9). The failure travels beside the name, never inside it:
+ * the card shows it as a dot whose hover is the words (J6-4).
+ */
+export interface DatapackLine {
+    /** The pack's name ("My Luma", "Luma, eds-compatible"), "None", or whose data it is. */
+    line: string;
+    /** Present only when the project's datapack failed to install. */
+    failed?: true;
+}
+
+/**
  * The reference as a project can record it, or none.
  *
  * A project records a name AND a version, so a reference naming no version records

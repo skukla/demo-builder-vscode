@@ -103,6 +103,36 @@ describe('DataInstallerTile', () => {
         expect(screen.getByText('Venia, eds-compatible')).toBeInTheDocument();
     });
 
+    it('wears no dot while the install has not failed', async () => {
+        await renderTile();
+
+        expect(screen.queryByTestId('datapacks-failed')).not.toBeInTheDocument();
+        expect(screen.getByRole('tooltip')).toHaveTextContent("Install, save or change this demo's datapack");
+    });
+
+    /** J6-4: the bare name, the error dot, and "Install failed" on hover; no reason beside the name. */
+    it('wears the error dot, explained on hover, when the install failed', async () => {
+        posted.request.mockResolvedValue({ success: true, data: { line: 'My Luma', failed: true } });
+        await renderTile();
+
+        expect(screen.getByTestId('datapacks-failed')).toBeInTheDocument();
+        expect(screen.getByRole('tooltip')).toHaveTextContent(/^Install failed$/);
+        expect(screen.getByText('My Luma')).toBeInTheDocument();
+        expect(screen.getByRole('button')).toHaveAttribute('aria-label', 'Datapacks, Install failed');
+    });
+
+    it('drops the dot when a later read says the install no longer fails', async () => {
+        posted.request.mockResolvedValue({ success: true, data: { line: 'My Luma', failed: true } });
+        await renderTile();
+        posted.request.mockResolvedValue({ success: true, data: { line: 'My Luma' } });
+
+        await act(async () => {
+            document.dispatchEvent(new Event('visibilitychange'));
+        });
+
+        expect(screen.queryByTestId('datapacks-failed')).not.toBeInTheDocument();
+    });
+
     it('shows no line when the extension cannot answer', async () => {
         posted.request.mockResolvedValue({ success: false, error: 'no' });
         await renderTile();

@@ -14,13 +14,24 @@ import type { Project } from '@/types/base';
 
 const mockName = libraryDisplayName as jest.Mock;
 
-function contextHolding(datapack: Project['datapack'], remembered: Record<string, string> = {}) {
+function contextHolding(
+    datapack: Project['datapack'],
+    remembered: Record<string, string> = {},
+    datapackInstallFailure?: Project['datapackInstallFailure'],
+) {
     const context = createMockHandlerContext();
     (context.context.globalState.get as jest.Mock).mockImplementation((key: string) =>
         key === PACK_NAMES_KEY ? remembered : undefined);
-    (context.stateManager.getCurrentProject as jest.Mock).mockResolvedValue(createMockProject({ datapack }));
+    (context.stateManager.getCurrentProject as jest.Mock).mockResolvedValue(
+        createMockProject({ datapack, datapackInstallFailure }),
+    );
     return context;
 }
+
+/** A recorded failed install of `luma` at `version` (S7's record). */
+const failureOf = (version: string): Project['datapackInstallFailure'] => ({
+    name: 'luma', version, reason: 'Products stopped at 12 of 56.', at: '2026-11-12T09:00:00.000Z', retries: 0,
+});
 
 beforeEach(() => jest.clearAllMocks());
 
@@ -41,11 +52,30 @@ describe('get-datapack-line', () => {
         expect(answer.data).toStrictEqual({ line: 'Datapack for Khalil' });
     });
 
-    it('says No Datapack for a demo that holds none, asking nothing', async () => {
+    it('says None for a demo that holds none, asking nothing (step-04 S9)', async () => {
         const answer = await handleGetDatapackLine(contextHolding(undefined));
 
-        expect(answer.data).toStrictEqual({ line: NO_DATAPACK });
+        expect(answer.data).toStrictEqual({ line: 'None' });
+        expect(NO_DATAPACK).toBe('None');
         expect(mockName).not.toHaveBeenCalled();
+    });
+
+    it('says the install failed, beside the name and never inside it (J6-4)', async () => {
+        mockName.mockResolvedValue('My Luma');
+        const held = { name: 'luma', version: '20261110-091500', store: 'library' as const };
+
+        const answer = await handleGetDatapackLine(contextHolding(held, {}, failureOf('20261110-091500')));
+
+        expect(answer.data).toStrictEqual({ line: 'My Luma', failed: true });
+    });
+
+    it('says nothing failed when the record names another version of the pack', async () => {
+        mockName.mockResolvedValue('My Luma');
+        const held = { name: 'luma', version: '20261110-091500', store: 'library' as const };
+
+        const answer = await handleGetDatapackLine(contextHolding(held, {}, failureOf('20261101-080000')));
+
+        expect(answer.data).toStrictEqual({ line: 'My Luma' });
     });
 
     it('says whose data it is, never the id, when the name cannot be read', async () => {

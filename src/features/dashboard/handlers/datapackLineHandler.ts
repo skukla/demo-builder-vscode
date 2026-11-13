@@ -1,6 +1,6 @@
 /**
  * The dashboard's Datapacks card line (owner, 2026-11-07): the pack this demo holds, "Luma,
- * eds-compatible", or "No Datapack". The sidebar's Datapacks tile opens the Datapack Library, every
+ * eds-compatible", or "None" (step-04 S9). The sidebar's Datapacks tile opens the Datapack Library, every
  * pack; this card opens this demo's Datapacks, and its line is what tells the two apart.
  *
  * A project records its pack by id ("luma"), so the name the SC knows is read from the library
@@ -12,30 +12,35 @@
  * card drew without a line and gained one a moment later. The remembered name answers now, and the
  * read still runs behind it, so a name changed elsewhere shows the next time the card draws.
  *
+ * **A failed install is said beside the name, never in it** (step-04 J6-4): `failed: true` when the
+ * project's failure record names its datapack (`installFailedOf`, S7's rule). The card turns it into
+ * the error dot with "Install failed" on hover; the line stays the bare name, with no reason.
+ *
  * @module features/dashboard/handlers/datapackLineHandler
  */
 
 import { libraryDisplayName } from '@/features/data-installer/handlers/libraryWriter';
 import { packLine } from '@/features/data-installer/packVersions';
+import { installFailedOf } from '@/features/data-installer/services/installFailure';
 import { rememberedPackName } from '@/features/data-installer/services/packNames';
+import type { DatapackLine } from '@/types/datapack';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 
-export const NO_DATAPACK = 'No Datapack';
+export const NO_DATAPACK = 'None';
 export const UNNAMED_DATAPACK = "This demo's data";
 
 /** `get-datapack-line`: the Datapacks card's line for the open project. */
 export async function handleGetDatapackLine(context: HandlerContext): Promise<HandlerResponse> {
     const project = await context.stateManager.getCurrentProject();
     const held = project?.datapack;
-    if (!held) return { success: true, data: { line: NO_DATAPACK } };
+    if (!held) return { success: true, data: { line: NO_DATAPACK } satisfies DatapackLine };
     // No panel: the library guard then reports a missing sign-in instead of asking for one.
     const reading = libraryDisplayName({ ...context, panel: undefined }, held);
     const known = held.store === 'library'
         ? rememberedPackName(context.context.globalState, held.name)
         : undefined;
     const name = known ?? (await reading);
-    return {
-        success: true,
-        data: { line: name ? packLine(name, held.version) : UNNAMED_DATAPACK },
-    };
+    const line = name ? packLine(name, held.version) : UNNAMED_DATAPACK;
+    const data: DatapackLine = installFailedOf(project) ? { line, failed: true } : { line };
+    return { success: true, data };
 }
