@@ -234,7 +234,19 @@ Live notes; rewritten as the final report at the loop's close.
   once cannot both uninstall. Full gate green (2,415 suites, 38,712 tests). Live cycle owed: install,
   reinstall with nothing sent, Clear, a second Clear changes nothing; plus a store where another demo's
   product and one where your own product carries a datapack attribute.
-- Step-06 C4 (Clear Commerce Instance): with a builder.
+- Step-06 C4: 55b4065f5. Clear Commerce Instance: choose websites (each shows which projects use
+  it), then the summary, the warning and "I understand". Each project whose datapack sits wholly on
+  the chosen websites of this instance is uninstalled first (the batch save question for unsaved
+  changes; its project file written without switching), then the chosen websites are cleared. Two
+  independent reviews found real problems, all fixed: a datapack also on an unchosen website was
+  being uninstalled from there too (now it stays, and the window says so); a project whose Commerce
+  address was spelled differently could be wiped while still naming its datapack (now matched on the
+  key the uninstall uses, and unmatched projects stay protected); an older datapack's data and data
+  left on purpose stay protected; the engine now keeps a customer group a remaining cart rule uses
+  (this also protects Uninstall, Reset and Delete); the list is re-checked before any uninstall.
+  Full gate green (2,420 suites, 38,764 tests). Live cycle owed: two projects on one website, a
+  datapack also on a second website, a project with an older datapack's records.
+- Step-06 C5 (the header's Clear menu and the Command Palette entries): with a builder.
 - Phase 1b, done while waiting: ERP Downtime (863c5c2ca) and Edit Demo Package (f8ece2e6e) moved
   onto the Form layout, whose failure line is what both waited for. Same words; Cancel beside the
   commit, as every form; a read failure is a result window with Close. An unused style rule removed.
