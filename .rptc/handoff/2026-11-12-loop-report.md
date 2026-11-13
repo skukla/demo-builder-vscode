@@ -150,7 +150,11 @@ Live notes; rewritten as the final report at the loop's close.
   naming it when everything came out of Commerce (the Datapacks screen Uninstall's rule); it keeps
   the name when part was left, the removal failed or was skipped. Only the project record changes.
   Full gate green (2,410 suites, 38,668 tests). Live reset owed.
-- Step-05 R2 (the save question's window moves to shared code): next.
+- Step-05 R2: 208fb758a. The "Save Your Changes First?" window's frame moved to shared code, so
+  the batch reset and delete can use the same window as Switch and Uninstall. Switch and Uninstall's
+  tests pass unedited; style check: nothing moved on the nine screens, and the moved rule measured
+  in the Datapacks screen matches the old one. Full gate green (2,411 suites, 38,672 tests).
+- Step-05 S1 (the batch save question replaces Datapack Changes): with a builder.
 - Phase 1b, done while waiting: ERP Downtime (863c5c2ca) and Edit Demo Package (f8ece2e6e) moved
   onto the Form layout, whose failure line is what both waited for. Same words; Cancel beside the
   commit, as every form; a read failure is a result window with Close. An unused style rule removed.
