@@ -163,7 +163,12 @@ Live notes; rewritten as the final report at the loop's close.
   removes one nobody was asked about; its one finding (two projects on one own datapack could not
   both save into it) is fixed and pinned by a test proven red on the old rule. Full gate green
   (2,411 suites, 38,690 tests). Live batch reset owed.
-- Step-05 S2 (one project opens the same window, titled by name): with a builder.
+- Step-05 S2: 851fa48e1. A project's Reset or Delete on the projects list opens the batch window
+  with one row instead of VS Code dialogs: "Reset Kukla Luma?", button "Reset", "Resetting Kukla
+  Luma", "Kukla Luma Reset" (P5-Q1 as recommended). Several projects keep their words. The list's
+  old one-project handlers are gone; the dashboard keeps its own until S4; agent tools unchanged.
+  Full gate green (2,411 suites, 38,687 tests).
+- Step-05 S3 (the reading wait as its own small window): with a builder.
 - Phase 1b, done while waiting: ERP Downtime (863c5c2ca) and Edit Demo Package (f8ece2e6e) moved
   onto the Form layout, whose failure line is what both waited for. Same words; Cancel beside the
   commit, as every form; a read failure is a result window with Close. An unused style rule removed.
@@ -252,5 +257,7 @@ Live notes; rewritten as the final report at the loop's close.
   (b) The batch window's look (the switch to the save window changes the window's size; a very long
   name may run sideways) is for the screenshot pass. (c) Each row shows the project under the
   datapack's name (two projects on one datapack would otherwise read the same); not in the mockup.
+- From S2: the window's words follow the number of projects, so ticking one project and pressing
+  Reset Selected also reads "Reset Kukla Luma?" ("Reset 1 Project" is gone). Recommend keeping it.
 - Phase 2 live cycle on the test store (save twice, Undo Last Save, Restore, reinstall with nothing
   sent, uninstall), once Phase 2 is built.
