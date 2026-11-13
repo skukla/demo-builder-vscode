@@ -1,9 +1,10 @@
 /**
  * What the catalog offers for the pack the open project holds:
  *
- * - Save Changes, in the flyout of the demo's pack and in the header, whoever owns the pack: into it
- *   when it is the SC's, else into a new pack of theirs (owner, 2026-11-09); the header's Create
- *   Datapack when the demo has none. The pick screens and the progress window (`useSaveStoreChanges`).
+ * - Save Changes, in the flyout of the demo's pack, whoever owns the pack: into it when it is the
+ *   SC's, else into a new pack of theirs (owner, 2026-11-09). The header's Save and Save As New on
+ *   the demo's pack, and its Create when the demo has none (step-04 S1, `headerSave`). The pick
+ *   screens and the progress window (`useSaveStoreChanges`).
  *   A finished save calls `onSaved`, since the library now holds a new version and the demo uses it.
  * - The pack's one Admin step (step 12), when Demo Builder's engine installed it: a quiet line for
  *   the flyout, its dialog mounted beside the flyout (`usePackSetupStep`).
@@ -14,18 +15,12 @@
  * @module features/data-installer/ui/hooks/useHeldPack
  */
 
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
+import type { PackBeingSaved } from '../components/create-flow/datapackFlowStages';
+import { type HeldPackInfo, savesInto } from '../headerSave';
 import { usePackSetupStep } from './usePackSetupStep';
 import { type SaveStoreChanges, useSaveStoreChanges } from './useSaveStoreChanges';
-import type { DatapackId, DatapackStoreName, ProjectDatapack } from '@/types/datapack';
-
-/** What decides where a save of the demo's pack goes: its name, and whose it is. */
-export interface HeldPackInfo {
-    displayName: string;
-    store?: DatapackStoreName;
-    mine?: boolean;
-    team?: boolean;
-}
+import type { DatapackId, ProjectDatapack } from '@/types/datapack';
 
 export interface HeldPackInput {
     /** The pack whose flyout is open. */
@@ -36,7 +31,7 @@ export interface HeldPackInput {
     installedAt?: string;
     /** The open flyout's detail, once loaded. */
     detail?: HeldPackInfo;
-    /** The demo's pack as the catalog lists it, for the header's Save Changes. */
+    /** The demo's pack as the catalog lists it, for the header's save. */
     heldInCatalog?: HeldPackInfo;
     /** True while the flyout's detail is loading. */
     detailLoading: boolean;
@@ -51,27 +46,27 @@ export interface HeldPack {
     saveChanges?: () => void;
     /** The flyout's save makes a new pack (a team pack, or a colleague's): it reads Save As New Datapack. */
     saveChangesAsNew: boolean;
-    /** Save Changes in the header: the same save, for the demo's pack, from anywhere on the screen. */
-    saveDemoChanges?: () => void;
-    /** The header's save makes a new pack: it reads Save As New Datapack. */
-    saveDemoAsNew: boolean;
+    /** The header's Save: into the demo's pack, a new version. Stable. */
+    saveDemo: () => void;
+    /** The header's Save As New: a new pack of the SC's from the demo's pack. Stable. */
+    saveDemoAsNew: () => void;
     /** The held pack's Admin step, as one line for the flyout. */
     setupStepLine: React.JSX.Element | null;
     /** The pick screen, the save's progress window and the Admin step's dialog: mount once, beside the flyout. */
     windows: React.JSX.Element;
 }
 
-/**
- * Where a save of the demo's pack goes (owner, 2026-11-09, walk F83): into it, a new version, when
- * it is the SC's own library pack; else into a new pack of theirs (a team pack, or another SC's),
- * which the demo then uses. The server decides the same (`saveIntoFor`).
- */
-function savesInto(held: ProjectDatapack, info: HeldPackInfo): boolean {
-    return (held.store ?? 'library') === 'library' && info.mine === true && info.team !== true;
+/** The demo's pack, as a save names it: by the catalog's name for it, else its own. */
+function packOf(held: ProjectDatapack, info: HeldPackInfo | undefined): PackBeingSaved {
+    return { id: { name: held.name, version: held.version }, displayName: info?.displayName ?? held.name, source: held.store ?? 'library' };
 }
 
+/**
+ * Where a save of the demo's pack goes (owner, 2026-11-09, walk F83): into it, a new version, when
+ * it is the SC's own library pack (`savesInto`); else into a new pack of theirs.
+ */
 function saveOf(held: ProjectDatapack, info: HeldPackInfo, offers: Pick<SaveStoreChanges, 'offer' | 'offerSaveAs'>): () => void {
-    const pack = { id: { name: held.name, version: held.version }, displayName: info.displayName, source: held.store ?? 'library' };
+    const pack = packOf(held, info);
     if (savesInto(held, info)) return () => offers.offer(pack);
     return () => offers.offerSaveAs('', pack);
 }
@@ -91,10 +86,13 @@ export function useHeldPack({ selected, held, installedAt, detail, heldInCatalog
         () => (flyoutShowsHeld && detail ? saveOf(held, detail, { offer, offerSaveAs }) : undefined),
         [flyoutShowsHeld, held, detail, offer, offerSaveAs],
     );
-    const saveDemoChanges = useMemo(
-        () => (installedHere && heldInCatalog ? saveOf(held, heldInCatalog, { offer, offerSaveAs }) : undefined),
-        [installedHere, held, heldInCatalog, offer, offerSaveAs],
-    );
+    // The header's choices: `headerSave` decides which are drawn, so each acts only on a held pack.
+    const saveDemo = useCallback((): void => {
+        if (held) offer(packOf(held, heldInCatalog));
+    }, [held, heldInCatalog, offer]);
+    const saveDemoAsNew = useCallback((): void => {
+        if (held) offerSaveAs('', packOf(held, heldInCatalog));
+    }, [held, heldInCatalog, offerSaveAs]);
 
     return {
         offerSaveAs: storeChanges.offerSaveAs,
@@ -102,8 +100,8 @@ export function useHeldPack({ selected, held, installedAt, detail, heldInCatalog
         // Named for what happens (owner, 2026-11-09): Save Changes into the SC's own pack, Save As
         // New Datapack from anyone else's, which "Save Changes" read as changing.
         saveChangesAsNew: Boolean(held && detail && !savesInto(held, detail)),
-        ...(saveDemoChanges ? { saveDemoChanges } : {}),
-        saveDemoAsNew: Boolean(held && heldInCatalog && !savesInto(held, heldInCatalog)),
+        saveDemo,
+        saveDemoAsNew,
         setupStepLine: setupStep.line,
         windows: (
             <>

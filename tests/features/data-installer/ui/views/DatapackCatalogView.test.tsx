@@ -349,7 +349,7 @@ describe('DatapackCatalogView', () => {
             // the detail time to arrive. Settle explicitly instead of relying on
             // the timing of a query.
             await settle();
-            await press(await screen.findByRole('button', { name: /^install/i }));
+            await press(await screen.findByRole('button', { name: /^install$/i }));
             // The modal is its own component with its own mount requests (its
             // import target and job status). Opening it is one interaction, but
             // its requests are only ISSUED once it has mounted — which the
@@ -368,7 +368,7 @@ describe('DatapackCatalogView', () => {
             const cards = await screen.findAllByTestId('datapack-card');
 
             await press(cards[0]);
-            await screen.findByRole('button', { name: /^install/i });
+            await screen.findByRole('button', { name: /^install$/i });
 
             expect(screen.queryByText('Commerce instance')).not.toBeInTheDocument();
         });

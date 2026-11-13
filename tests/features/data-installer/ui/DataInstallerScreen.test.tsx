@@ -184,7 +184,8 @@ describe('DataInstallerScreen', () => {
             await settle();
 
             expect(await screen.findByRole('button', { name: /Add from File/ })).toBeInTheDocument();
-            expect(screen.queryByRole('button', { name: /Create Datapack/ })).not.toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /^(Create|Save|Save As New|Loading)$/ })).not.toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /Install from File/ })).not.toBeInTheDocument();
             expect(screen.queryByRole('button', { name: /Clear Demo Data/ })).not.toBeInTheDocument();
         });
 
@@ -193,7 +194,8 @@ describe('DataInstallerScreen', () => {
             await settle();
 
             expect(screen.getByText('scratch-1028')).toBeInTheDocument();
-            expect(await screen.findByRole('button', { name: /Create Datapack/ })).toBeInTheDocument();
+            expect(await screen.findByRole('button', { name: /Install from File/ })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /Clear Demo Data/ })).toBeInTheDocument();
             expect(screen.getByRole('button', { name: 'Activity' })).toBeInTheDocument();
             await waitFor(() => expect(requestedTypes()).toContain('get-datapack-import-target'));
         });

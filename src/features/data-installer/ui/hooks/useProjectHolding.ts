@@ -32,9 +32,8 @@ export interface ProjectHolding {
     /** Every pack name believed to be on the project's instance. */
     installedPacks: Set<string>;
     /**
-     * Meant as "the project read has answered, either way" (walk F92). It is TRUE from the first
-     * render today: the request hook's unanswered state is `null`, and this compares with
-     * `undefined`, as the view did before the move (step-04 R1 kept it as found).
+     * The project read has answered, either way (walk F92): the flyout waits for it in a project's
+     * Datapacks. Always true in the Datapack Library, which reads no project.
      */
     projectAnswered: boolean;
     /** Reads the project again. */
@@ -117,7 +116,7 @@ export function useProjectHolding(library: boolean): ProjectHolding {
         held: projectContext.value?.datapack,
         installedAt: projectContext.value?.installedAt,
         installedPacks,
-        projectAnswered: projectContext.value !== undefined || projectContext.failure !== undefined,
+        projectAnswered: library || projectContext.settled,
         reloadProject,
         reloadHolding,
     };

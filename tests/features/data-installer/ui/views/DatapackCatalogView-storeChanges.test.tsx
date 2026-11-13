@@ -86,8 +86,12 @@ describe("the demo's datapack in the library", () => {
 const AT = '2026-11-08T03:20:44.746Z';
 const OWN: Held = { name: 'acme-1a2b3c', version: OLDER.id.version, store: 'library' };
 const TEAM = makeSummary('luma', 'eds-compatible', { displayName: 'Luma', store: 'library', mine: true, team: true });
-/** The open flyout: the header has its own Save Changes (owner, 2026-11-09). */
+/** The open flyout: the header has its own save button (owner, 2026-11-09). */
 const inFlyout = () => within(screen.getByRole('dialog', { name: / details$/ }));
+/** The open save window, by its title: the header's Save ▾ shares its Save button's name (step-04 S1). */
+async function inWindow(title: string | RegExp): Promise<ReturnType<typeof within>> {
+    return within((await screen.findByRole('heading', { name: title })).closest('[role="dialog"]') as HTMLElement);
+}
 
 // Owner, 2026-11-09 (the save mockup, F83): Save Changes on the demo's pack, whoever owns it; into
 // it when it is the SC's, else into a new pack of theirs, saying why.
@@ -98,9 +102,9 @@ describe('Save Changes, in the flyout', () => {
         await press(card('acme-1a2b3c'));
 
         await press(await inFlyout().findByRole('button', { name: 'Save Changes' }));
-        expect(await screen.findByRole('heading', { name: 'Save Changes' })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Save As New' })).toBeInTheDocument();
-        await press(screen.getByRole('button', { name: 'Save' }));
+        const saveWindow = await inWindow('Save Changes');
+        expect(saveWindow.getByRole('button', { name: 'Save As New' })).toBeInTheDocument();
+        await press(saveWindow.getByRole('button', { name: 'Save' }));
 
         expect(mockPost).toHaveBeenCalledWith('save-store-changes-to-pack', {
             datapackName: 'acme-1a2b3c',
@@ -163,7 +167,7 @@ describe('Save Changes, in the flyout', () => {
         await renderView();
         await press(card('acme-1a2b3c'));
         await press(await inFlyout().findByRole('button', { name: 'Save Changes' }));
-        await press(await screen.findByRole('button', { name: 'Save' }));
+        await press((await inWindow('Save Changes')).getByRole('button', { name: 'Save' }));
         const before = catalogReads();
 
         await push({ id: 'datapack-save', state: 'succeeded' });
@@ -178,7 +182,7 @@ describe('Save Changes, in the flyout', () => {
         await renderView();
         await press(card('acme-1a2b3c'));
         await press(await inFlyout().findByRole('button', { name: 'Save Changes' }));
-        await press(await screen.findByRole('button', { name: 'Save' }));
+        await press((await inWindow('Save Changes')).getByRole('button', { name: 'Save' }));
 
         await push({ id: 'datapack-save', state: 'succeeded' });
 
@@ -187,39 +191,57 @@ describe('Save Changes, in the flyout', () => {
     });
 });
 
-// Owner, 2026-11-09 (the save mockup): the header is Create Datapack until the demo has a pack, then
-// the same Save Changes as the flyout's.
+// The header's save button, one state (step-04 S1; decisions Phase 7 and 7b): Create with no datapack,
+// Save ▾ on the SC's own, Save As New on someone else's, none with no install record (P4-Q4).
 describe('the header button', () => {
-    it("says Create Datapack, from nothing, while the demo has no pack Demo Builder installed", async () => {
-        store(OWN);
+    it('reads Create while the demo has no datapack, and opens the create flow', async () => {
+        store(undefined);
         await renderView();
 
-        await press(screen.getByRole('button', { name: 'Create Datapack' }));
+        await press(screen.getByRole('button', { name: 'Create' }));
 
         expect(await screen.findByRole('heading', { name: 'Create Datapack' })).toBeInTheDocument();
         await change(screen.getByRole('textbox', { name: /Datapack Name/ }), 'Acme Test');
         await press(screen.getByRole('button', { name: 'Continue' }));
         expect(await screen.findByText("Select what to include from this demo's Commerce instance.")).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Create' })).toHaveAttribute('aria-disabled', 'true');
     });
 
-    it('says Save Changes once it has, and saves into your own pack as the flyout does', async () => {
+    it("offers no save button when Demo Builder did not install the demo's datapack", async () => {
+        store(OWN);
+        await renderView();
+
+        // CONTROL: the header is drawn.
+        expect(screen.getByRole('button', { name: 'Install from File' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /^(Create|Save|Save As New)$/u })).not.toBeInTheDocument();
+    });
+
+    it("is Save ▾ on the SC's own datapack: Save saves into it as the flyout does", async () => {
         store(OWN, MINE, false, AT);
         await renderView();
 
-        expect(screen.queryByRole('button', { name: 'Create Datapack' })).not.toBeInTheDocument();
-        await press(screen.getByRole('button', { name: 'Save Changes' }));
+        expect(screen.queryByRole('button', { name: 'Create' })).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Save' })).toHaveTextContent('Save▾');
+        await press(screen.getByRole('menuitem', { name: 'Save' }));
 
         expect(await screen.findByText('Saves everything this demo uses as a new version of Acme Bodea.')).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Save' })).toHaveAttribute('aria-disabled', 'false');
     });
 
-    it('says Save As New Datapack on a team pack, and saves to a new pack of yours, as the flyout does', async () => {
+    it("is Save ▾ on the SC's own datapack: Save As New makes a new datapack from it", async () => {
+        store(OWN, MINE, false, AT);
+        await renderView();
+
+        await press(screen.getByRole('menuitem', { name: 'Save As New' }));
+
+        expect(await screen.findByRole('heading', { name: 'Save As New Datapack' })).toBeInTheDocument();
+        expect(screen.getByText("Saves this demo's data as a new datapack.")).toBeInTheDocument();
+    });
+
+    it('is a plain Save As New on a team datapack, and saves to a new datapack of yours', async () => {
         store({ name: 'luma', version: 'eds-compatible', store: 'library' }, [TEAM, ...CATALOG], false, AT);
         await renderView();
 
-        expect(screen.queryByRole('button', { name: 'Save Changes' })).not.toBeInTheDocument();
-        await press(screen.getByRole('button', { name: 'Save As New Datapack' }));
+        expect(screen.queryByRole('menuitem', { name: 'Save' })).not.toBeInTheDocument();
+        await press(screen.getByRole('button', { name: 'Save As New' }));
 
         expect(await screen.findByRole('heading', { name: 'Save As New Datapack' })).toBeInTheDocument();
         expect(screen.getByText("Saves this demo's data as a new datapack.")).toBeInTheDocument();

@@ -67,7 +67,7 @@ describe('closing the import modal re-reads what this project holds', () => {
         const cards = await screen.findAllByTestId('datapack-card');
         await press(cards[0]);
         await settle();
-        await press(await screen.findByRole('button', { name: /^install/i }));
+        await press(await screen.findByRole('button', { name: /^install$/i }));
         await settle();
         await settle();
     }
@@ -229,9 +229,10 @@ describe('the two doors out of the catalog', () => {
     });
 
     // 2026-10-30 (owner): one Create datapack in place of "Export from this instance" and "Save
-    // from this store", quiet buttons rather than links; Clear demo data last.
+    // from this store", quiet buttons rather than links; Clear demo data last. Step-04 S1: the
+    // button reads Create, and the file action Install from File in a project's Datapacks.
     it(
-        'offers Create Datapack, Add from File and, last, Clear Demo Data',
+        'offers Create, Install from File and, last, Clear Demo Data',
         async () => {
             mockRequest.mockResolvedValue({
                 success: true,
@@ -241,7 +242,7 @@ describe('the two doors out of the catalog', () => {
             await settle();
             await screen.findAllByTestId('datapack-card');
 
-            const labels = ['Create Datapack', 'Add from File', 'Clear Demo Data'];
+            const labels = ['Create', 'Install from File', 'Clear Demo Data'];
             const buttons = labels.map((name) => screen.getByRole('button', { name }));
             expect(buttons.every((button, i) => i === 0 || buttons[i - 1].compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
             expect(screen.queryByText('Export from this instance')).not.toBeInTheDocument();
@@ -252,13 +253,13 @@ describe('the two doors out of the catalog', () => {
 
     // Save As with no name yet: the name first, then the picks (2026-11-03). The service's own
     // export window it opened with the service's engine was deleted on 2026-11-06 (DI-12).
-    it("opens Create Datapack's name screen first, empty", async () => {
+    it("opens Create's name screen first, empty", async () => {
         mockRequest.mockResolvedValue({ success: true, data: { items: CATALOG, count: CATALOG.length, total: CATALOG.length } });
         render(<DatapackCatalogView />);
         await settle();
         await screen.findAllByTestId('datapack-card');
 
-        await press(screen.getByRole('button', { name: 'Create Datapack' }));
+        await press(screen.getByRole('button', { name: 'Create' }));
 
         expect(await screen.findByRole('heading', { name: 'Create Datapack' })).toBeInTheDocument();
         expect(screen.getByRole('textbox', { name: /Datapack Name/ })).toHaveValue('');

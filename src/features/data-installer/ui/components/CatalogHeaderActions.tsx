@@ -1,58 +1,89 @@
 /**
- * The catalog header's actions (owner, 2026-10-30): Create datapack, Load from file, and, set
- * apart at the end because it deletes, Clear demo data.
+ * The Datapacks header's actions (step-04 S1; decisions Phase 7 and 7b): in a project's Datapacks
+ * the save button, Install from File, then Clear Demo Data set apart at the end because it deletes;
+ * in the Datapack Library Add from File alone, since the library touches no store (owner,
+ * 2026-11-07).
  *
- * Quiet buttons with icons (`ActionButton isQuiet`, the header's own refresh and view toggles;
- * glyphs from `renderMenuIcon`, so "delete" is one glyph everywhere). They were blue text links,
- * which read as navigation when every one is an action.
+ * The save button is one state (`headerSave`), decided before it is drawn: a button's words never
+ * change while it is on screen (7b). Until the project and the catalog have answered it is the
+ * header's waiting button (disabled, a spinner, no words, as its Refresh is while it reads). Then:
+ * Create with no datapack; Save ▾ (Save, Save As New) on the SC's own; a plain Save As New on
+ * someone else's; nothing when the datapack has no install record (P4-Q4). Each choice opens
+ * today's flow, through the handlers it is given.
  *
- * Create datapack is Save As with no name yet (`onCreate`): the new pack's name, then what goes
- * in it, and the demo then uses it; once a demo has a pack of the SC's, its flyout's Save Changes
- * saves it (owner, 2026-11-04). The service's own export into its shared catalog was deleted on
- * 2026-11-06 (DI-12): a pack goes there by Copy to the Data Installer. Clear demo data clears the
- * stores the SC ticks of what Demo Builder did not install (datapack-engine step 10), after its own confirmation, in the screen's progress
- * window.
+ * Install from File opens today's file load, which adds the datapack to My Datapacks; the job window
+ * after it (step-04 Design) is not wired yet. Clear Demo Data clears the stores the SC ticks of what
+ * Demo Builder did not install (datapack-engine step 10), after its own confirmation, in the
+ * screen's progress window.
  *
- * Each action owns the dialog it opens, so the catalog view carries no dialog's state.
- *
- * The Datapack Library (no `onCreate`) offers Add from File alone: Create Datapack reads a project's
- * store and Clear Demo Data clears stores, and the library touches none (owner, 2026-11-07).
+ * Quiet buttons with icons (`ActionButton isQuiet`, as the header's own Refresh and view toggles;
+ * glyphs from `renderMenuIcon`). Each action owns the dialog it opens, so the catalog view carries no
+ * dialog's state.
  *
  * @module features/data-installer/ui/components/CatalogHeaderActions
  */
 
-import { ActionButton, Divider, Text } from '@adobe/react-spectrum';
+import { ActionButton, Divider, Item, Text } from '@adobe/react-spectrum';
 import React, { useCallback, useState } from 'react';
+import type { HeaderSave } from '../headerSave';
 import { useClearDemoData } from '../hooks/useClearDemoData';
 import { ClearDemoDataModal } from './ClearDemoDataModal';
 import { LoadDatapackFileModal } from './LoadDatapackFileModal';
+import { CardActionsMenu } from '@/core/ui/components/ui/CardActionsMenu';
 import { renderMenuIcon } from '@/core/ui/components/ui/menuIcons';
+import { Spinner } from '@/core/ui/components/ui/Spinner';
 import type { WipeStoreChoice } from '@/types/demoDataWipe';
+
+/** The save button's state, and the flow each of its choices opens. Handlers stable. */
+export interface HeaderSaveActions {
+    state: HeaderSave;
+    /** Create: a new datapack from the project's store. */
+    onCreate: () => void;
+    /** Save: into the SC's own datapack, as a new version. */
+    onSave: () => void;
+    /** Save As New: a new datapack of the SC's from the one the project holds. */
+    onSaveAsNew: () => void;
+}
 
 export interface CatalogHeaderActionsProps {
     /** A file was loaded (or the load modal closed): the catalog may have changed. Stable. */
     onCatalogChanged: () => void;
-    /**
-     * Create Datapack, or Save Changes once the demo has a pack (owner, 2026-11-09): the save of the
-     * demo's pack, as its flyout's button. Absent in the Datapack Library. Stable.
-     */
-    onCreate?: () => void;
-    /**
-     * What `onCreate` does once the demo has a pack, in the flyout's own words: `into` saves into the
-     * SC's own pack (Save Changes), `as-new` makes a new pack from a team or colleague's pack (Save
-     * As New Datapack). Absent: Create Datapack, from nothing.
-     */
-    demoSave?: 'into' | 'as-new';
+    /** A project's Datapacks: the save button, and Install from File and Clear. Absent in the Datapack Library. */
+    save?: HeaderSaveActions;
+}
+
+/** The save button, as its state says (`headerSave`). */
+function SaveButton({ save }: { save: HeaderSaveActions }): React.JSX.Element | null {
+    const { state, onCreate, onSave, onSaveAsNew } = save;
+    const pick = useCallback((key: React.Key): void => (key === 'as-new' ? onSaveAsNew() : onSave()), [onSave, onSaveAsNew]);
+    if (state === 'none') return null;
+    if (state === 'pending') {
+        return (
+            <ActionButton isQuiet isDisabled aria-label="Loading">
+                <Spinner size="S" />
+            </ActionButton>
+        );
+    }
+    if (state === 'save-menu') {
+        return (
+            <CardActionsMenu label="Save" ariaLabel="Save" icon={renderMenuIcon('capture')} onAction={pick}>
+                {[<Item key="save">Save</Item>, <Item key="as-new">Save As New</Item>]}
+            </CardActionsMenu>
+        );
+    }
+    const create = state === 'create';
+    return (
+        <ActionButton isQuiet onPress={create ? onCreate : onSaveAsNew}>
+            {renderMenuIcon(create ? 'add' : 'capture')}
+            {create ? <Text>Create</Text> : <Text>Save As New</Text>}
+        </ActionButton>
+    );
 }
 
 /** Which dialog the header has open. */
 type Open = 'load' | 'clear' | null;
 
-export function CatalogHeaderActions({
-    onCatalogChanged,
-    onCreate,
-    demoSave,
-}: CatalogHeaderActionsProps): React.JSX.Element {
+export function CatalogHeaderActions({ onCatalogChanged, save }: CatalogHeaderActionsProps): React.JSX.Element {
     const [open, setOpen] = useState<Open>(null);
     const { clear, progressWindow } = useClearDemoData(onCatalogChanged);
 
@@ -72,19 +103,12 @@ export function CatalogHeaderActions({
 
     return (
         <>
-            {onCreate ? (
-                <ActionButton isQuiet onPress={onCreate}>
-                    {renderMenuIcon(demoSave ? 'capture' : 'add')}
-                    {demoSave === 'into' ? <Text>Save Changes</Text> : null}
-                    {demoSave === 'as-new' ? <Text>Save As New Datapack</Text> : null}
-                    {demoSave ? null : <Text>Create Datapack</Text>}
-                </ActionButton>
-            ) : null}
+            {save ? <SaveButton save={save} /> : null}
             <ActionButton isQuiet onPress={() => setOpen('load')}>
                 {renderMenuIcon('openFile')}
-                <Text>Add from File</Text>
+                {save ? <Text>Install from File</Text> : <Text>Add from File</Text>}
             </ActionButton>
-            {onCreate ? (
+            {save ? (
                 <>
                     <Divider orientation="vertical" size="S" />
                     <ActionButton isQuiet onPress={() => setOpen('clear')}>

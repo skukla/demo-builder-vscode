@@ -23,7 +23,7 @@ export function CatalogCountRow({ show, onShow, installerAnswered, ...actions }:
     return (
         <Flex gap="size-200" alignItems="center">
             <CatalogShowPicker show={show} onShow={onShow} installerAnswered={installerAnswered} />
-            {/* Create datapack, Load from file, then Clear demo data set apart. */}
+            {/* The save button, the file action, then Clear Demo Data set apart. */}
             <CatalogHeaderActions {...actions} />
         </Flex>
     );

@@ -48,10 +48,35 @@ describe('useProjectHolding', () => {
         expect(result.current.held).toBeUndefined();
     });
 
-    // Pinned AS FOUND, not as meant: the request hook's unanswered state is `null` and this
-    // compares with `undefined`, so the flyout's F92 wait never engages. Reported, not fixed,
-    // because fixing it would hold the Library's flyout loading forever (it reads no project).
-    it('reports projectAnswered from the first render, before any answer', () => {
+    // Walk F92: in a project's Datapacks the flyout waits for the project's first answer.
+    it('has not answered in a project until the project read comes back', async () => {
+        let resolveProject: (value: unknown) => void = () => undefined;
+        mockRequest.mockImplementation((type: string) =>
+            type === 'get-datapack-import-target'
+                ? new Promise((resolve) => {
+                      resolveProject = resolve;
+                  })
+                : new Promise(() => undefined)
+        );
+
+        const { result } = renderHook(() => useProjectHolding(false));
+
+        expect(result.current.projectAnswered).toBe(false);
+        await act(async () => resolveProject({ success: true, data: { projectName: 'demo' } }));
+        expect(result.current.projectAnswered).toBe(true);
+    });
+
+    it('has answered in a project once the project read refuses', async () => {
+        answer({});
+
+        const { result } = renderHook(() => useProjectHolding(false));
+
+        await waitFor(() => expect(result.current.projectAnswered).toBe(true));
+        expect(result.current.held).toBeUndefined();
+    });
+
+    // The Datapack Library reads no project, so there is nothing to wait for.
+    it('has answered in the Datapack Library from the first render', () => {
         mockRequest.mockReturnValue(new Promise(() => undefined));
 
         const { result } = renderHook(() => useProjectHolding(true));
