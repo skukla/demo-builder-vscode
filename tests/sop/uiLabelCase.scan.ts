@@ -39,6 +39,7 @@ const NAMING_ATTRIBUTES: Readonly<Record<string, readonly string[]>> = {
     PanelRow: ['label'],
     ChoiceCard: ['name'],
     OptionalNameField: ['fieldLabel'],
+    SaveFirstWindow: ['withoutSavingLabel', 'saveLabel'],
 };
 
 /** Components whose own text is a name. */

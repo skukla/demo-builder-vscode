@@ -475,20 +475,11 @@
 }
 }
 
-/* "Clear demo data" (ClearDemoDataModal, StorePickList): its groups 24 apart (dialog design rules),
-   the store tree with its stores indented under their website, scrolling past a dozen rows so the
-   list of what clearing does stays in view, and the spinner while a check runs. */
+/* "Clear demo data" (ClearDemoDataModal, StorePickList): the store tree with its stores indented
+   under their website, scrolling past a dozen rows so the list of what clearing does stays in view,
+   and the spinner while a check runs. Its groups 24 apart are `.clear-demo-body`, in core's
+   modal-text.css since the save window's frame moved to core (step-05, R2). */
 @layer theme {
-.clear-demo-body {
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-}
-
-.clear-demo-body > .lead-text {
-    margin-bottom: 0;
-}
-
 .clear-demo-store-list {
     max-height: 280px;
     overflow-y: auto;

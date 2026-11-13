@@ -3,12 +3,20 @@
  * content (`ui/SectionLabel`, `ui/LeadText`).
  *
  * REACHES ONLY THE BUNDLES THAT IMPORT IT (ADR-017 §6): `wizard` (add integration, add a
- * demo), `dashboard` and `integrations` (Export, Add another ERP, add integration) and
- * `projectsList` (the Updates modal, PL-80). A new host bundle imports it in its entry, or
+ * demo), `dashboard` and `integrations` (Export, Add another ERP, add integration),
+ * `projectsList` (the Updates modal, PL-80), `configure` and `dataInstaller` (the datapack
+ * windows). A new host bundle imports it in its entry, or
  * the text renders in the body style with no error.
  *
  * Moved unchanged on 2026-10-20 from the project-creation feature's add-integration-flow.css
  * (.intflow-section-label, .intflow-stage-lead), in the same layer.
+ *
+ * .clear-demo-body — a window's body as groups 24 apart, the lead first (the dialog design rules'
+ * gap between groups): "Save Your Changes First?" (`feedback/SaveFirstWindow`, rendered by
+ * dataInstaller now and by projectsList and dashboard next), and the Data Installer's Clear Demo
+ * Data and job summary windows. Moved unchanged, in the same layer, from the data-installer
+ * feature's data-installer.css (step-05, R2), because the frame moved to core and the projects
+ * screens' bundles never imported that sheet. The name is kept: the datapack mockups still name it.
  */
 
 @layer theme {
@@ -35,5 +43,16 @@
         margin: 0 0 4px;
         font-size: 12px;
         color: var(--spectrum-global-color-gray-600);
+    }
+
+    /* A window's body as groups 24 apart, the lead first (`feedback/SaveFirstWindow`). */
+    .clear-demo-body {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+    }
+
+    .clear-demo-body > .lead-text {
+        margin-bottom: 0;
     }
 }

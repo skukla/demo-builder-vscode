@@ -4,7 +4,7 @@
  * the requests and the events they send are `useDatapackJob`'s, the bodies are each window's.
  *
  *   check, summary, dry wait → `JobSummaryWindow`   records → `RecordsWindow`
- *   dry result → `DryRunWindow`   save question → `SaveFirstWindow`
+ *   dry result → `DryRunWindow`   save question → `SaveFirstWindow` (core) over `SaveChangesBody`
  *   run, an end with a problem → `DatapackRunWindow`
  *   a clean end, a start that never ran, no instance → `JobResultWindow`
  *   Restore's check and question → `RestorePhase`
@@ -28,7 +28,14 @@
 
 import { DialogContainer } from '@adobe/react-spectrum';
 import React from 'react';
-import { INSTALL, jobWords, RESTORE, UNINSTALL } from '../../../datapackWords';
+import {
+    INSTALL,
+    jobWords,
+    RESTORE,
+    saveFirstLabel,
+    UNINSTALL,
+    withoutSavingLabel,
+} from '../../../datapackWords';
 import { packLine } from '../../../packVersions';
 import { useDatapackJob, type DatapackJob } from '../../hooks/useDatapackJob';
 import { useRunColumns } from '../../hooks/useRunColumns';
@@ -41,8 +48,9 @@ import { RecordsWindow } from './RecordsWindow';
 import { RestorePhase } from './RestorePhase';
 import { ResultPhase } from './ResultPhase';
 import { type RunShape, RunPhase } from './RunPhase';
-import { SaveFirstWindow } from './SaveFirstWindow';
+import { SaveChangesBody } from './SaveChangesBody';
 import { SummaryPhase, summaryFrame } from './SummaryPhase';
+import { SaveFirstWindow } from '@/core/ui/components/feedback/SaveFirstWindow';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
@@ -86,6 +94,26 @@ function openedAs(props: DatapackJobWindowProps): Opened {
     return { kind: 'install', verb: INSTALL, name: displayName };
 }
 
+/** "Save Your Changes First?": the shared frame in the job's verb, over the changes by type. */
+function saveFirstWindow(job: DatapackJob, opened: Opened, close: () => void): React.ReactElement {
+    const { changes, answer } = job.switching;
+    return (
+        <SaveFirstWindow
+            withoutSavingLabel={withoutSavingLabel(opened.verb)}
+            saveLabel={saveFirstLabel(opened.verb, false)}
+            saveDisabled={changes.saveAs?.problem !== undefined}
+            onAnswer={answer}
+            onClose={close}
+        >
+            <SaveChangesBody
+                rows={changes.rows}
+                readFailed={changes.readFailed}
+                {...(changes.saveAs ? { saveAs: changes.saveAs } : {})}
+            />
+        </SaveFirstWindow>
+    );
+}
+
 /** The windows that leave the summary and come back: Review Records, a Dry Run's answer, the save question. */
 function asideWindow(job: DatapackJob, opened: Opened, close: () => void): React.ReactElement | null {
     const { phase } = job.state;
@@ -97,19 +125,7 @@ function asideWindow(job: DatapackJob, opened: Opened, close: () => void): React
     if (phase === 'dry-result' && job.result) {
         return <DryRunWindow result={job.result} onBack={job.back} onInstall={job.install} onRetry={job.dryRun} onFix={job.fixDryRun} onClose={close} />;
     }
-    if (phase === 'save-first') {
-        const { changes, answer } = job.switching;
-        return (
-            <SaveFirstWindow
-                verb={opened.verb}
-                rows={changes.rows}
-                readFailed={changes.readFailed}
-                {...(changes.saveAs ? { saveAs: changes.saveAs } : {})}
-                onAnswer={answer}
-                onClose={close}
-            />
-        );
-    }
+    if (phase === 'save-first') return saveFirstWindow(job, opened, close);
     return null;
 }
 

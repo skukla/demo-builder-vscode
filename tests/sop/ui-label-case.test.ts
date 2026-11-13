@@ -48,11 +48,14 @@ const DYNAMIC_PIN = 66;
  * layout's own forwarding is not one more string the scan cannot read. A literal inside a layout
  * is still checked like any other.
  */
-const LAYOUT_FILES: ReadonlySet<string> = new Set(
-    ['ConfirmActionDialog', 'FormDialog', 'ProgressDialog', 'ResultDialog', 'GuideDialog', 'StepsDialog'].map(
+const LAYOUT_FILES: ReadonlySet<string> = new Set([
+    ...['ConfirmActionDialog', 'FormDialog', 'ProgressDialog', 'ResultDialog', 'GuideDialog', 'StepsDialog'].map(
         (name) => `src/core/ui/components/ui/${name}.tsx`
-    )
-);
+    ),
+    // The save question's frame over the Steps layout (step-05, R2): its two button labels are its
+    // caller's, read where the caller writes them (`SaveFirstWindow.saveLabel`, ...).
+    'src/core/ui/components/feedback/SaveFirstWindow.tsx',
+]);
 
 const forwardedByALayout = (site: LabelSite): boolean =>
     site.text === undefined && LAYOUT_FILES.has(site.file);
