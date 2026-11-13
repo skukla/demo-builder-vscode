@@ -27,11 +27,10 @@
 
 import { ActionButton, Badge, Item, Picker, Text, Tooltip, TooltipTrigger } from '@adobe/react-spectrum';
 import React, { useCallback, useState } from 'react';
-import { isSavedVersion, versionLabel } from '../../packVersions';
+import { isSavedVersion, shownVersion, versionChanged } from '../../packVersions';
 import type { DatapackGroup } from '../../services/datapackCatalog';
 import type { DatapackArt, DatapackSummary } from '../../types';
 import { packSource, type PackSource } from '../catalogShow';
-import { versionChanged } from './projectPackNewer';
 import { SelectionCheck } from '@/core/ui/components/ui/SelectionCheck';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import { useActivateOnKey } from '@/core/ui/hooks/useActivateOnKey';
@@ -74,11 +73,10 @@ export interface DatapackCardProps {
      */
     isInstalled?: boolean;
     /**
-     * What changed in the demo's own pack since it was installed, if anything (`newerLabel`):
-     * "Updated on Nov 6". The card marks it with the house amber dot beside the version, the
-     * dashboard's "due" mark, and says this on hover in Spectrum's tooltip, as the dashboard's dots
-     * do (owner, 2026-11-07: a browser `title` never showed here); taking it is the SC's choice,
-     * from the version picker (owner, 2026-11-04).
+     * The amber dot's words, present only on the demo's own pack while Restore would install a save
+     * newer than the one the project holds: "Newer save available" (J4-1, `restoreIsNewer`). The
+     * house amber dot beside the date, the dashboard's "due" mark, says this on hover in Spectrum's
+     * tooltip, as the dashboard's dots do (owner, 2026-11-07: a browser `title` never showed here).
      */
     newer?: string;
 }
@@ -127,7 +125,7 @@ export function DatapackCard({
             role={choosing ? 'radio' : 'button'}
             {...(choosing ? { 'aria-checked': selected } : {})}
             tabIndex={0}
-            aria-label={`${group.displayName}, ${shownAs(selectedVersion)}`}
+            aria-label={`${group.displayName}, ${shownVersion(selectedVersion)}`}
             // `is-selected` is the accent border, and the project's pack earns it
             // for the same reason a chosen card does: it is the one that matters
             // in this grid. The two never conflict — a wizard card that is both
@@ -181,11 +179,6 @@ export function DatapackCard({
     );
 }
 
-/** A version as the card names it: a save by when, "Saved Nov 9, 1:56 PM"; a named one as it is. */
-function shownAs(version: string): string {
-    return isSavedVersion(version) ? `Saved ${versionLabel(version)}` : version;
-}
-
 /**
  * The versions to choose from: the named ones (`main`, `eds-compatible`), each a variant, and the
  * pack's saves as one, the save on show (owner, 2026-11-09, walk F99): a pack of saves is one thing,
@@ -194,7 +187,7 @@ function shownAs(version: string): string {
  */
 function VersionChoice({ group, selectedVersion, onVersionChange }: Pick<DatapackCardProps, 'group' | 'selectedVersion' | 'onVersionChange'>): React.JSX.Element {
     const named = group.versions.filter((candidate) => !isSavedVersion(candidate.id.version));
-    if (named.length === 0) return <span className="text-sm text-gray-700">{shownAs(selectedVersion)}</span>;
+    if (named.length === 0) return <span className="text-sm text-gray-700">{shownVersion(selectedVersion)}</span>;
     const save = isSavedVersion(selectedVersion) ? selectedVersion : group.versions.find((candidate) => isSavedVersion(candidate.id.version))?.id.version;
     const choices = save ? [...named.map((candidate) => candidate.id.version), save] : named.map((candidate) => candidate.id.version);
     const changed = (version: string): string | undefined => {
@@ -204,8 +197,8 @@ function VersionChoice({ group, selectedVersion, onVersionChange }: Pick<Datapac
     return (
         <Picker aria-label={`Version of ${group.displayName}`} selectedKey={selectedVersion} onSelectionChange={(key) => onVersionChange(String(key))}>
             {choices.map((version) => (
-                <Item key={version} textValue={shownAs(version)}>
-                    <Text>{shownAs(version)}</Text>
+                <Item key={version} textValue={shownVersion(version)}>
+                    <Text>{shownVersion(version)}</Text>
                     {changed(version) ? <Text slot="description">{changed(version)}</Text> : null}
                 </Item>
             ))}
@@ -289,12 +282,12 @@ function initial(displayName: string): string {
 /**
  * The words for where a pack comes from, one per source, each matching its Show choice. A team pack
  * said nothing until 2026-11-09 (owner, walk F86): beside Mine, Data Installer and Community it read
- * as unlabelled. It says Team: whose it is, as Mine and Community say, and a hint that it is shared
- * to use, not to change (its save makes a new pack).
+ * as unlabelled. It says Demo Builder, whose it is, as Mine and Community say (step-04 S6, J8-2,
+ * owner 2026-11-12); the source's key stays `team`.
  */
 const CARD_TAG: Record<PackSource, string> = {
     yours: 'Mine',
-    team: 'Team',
+    team: 'Demo Builder',
     installer: 'Data Installer',
     community: 'Community',
 };

@@ -4,7 +4,7 @@
  * edits made since.
  *
  * The target is the project's datapack. When that is one of the SC's own library packs, it is its
- * newest save (`savesOf`), which may be newer than the one installed (the amber dot). Otherwise (a
+ * newest save (`restoreTargetVersion`), which may be newer than the one installed (the amber dot). Otherwise (a
  * team pack, a colleague's, a Data Installer pack, a named version) it is the version installed.
  *
  * The check comes first and writes nothing. It reads Commerce against the version installed with
@@ -25,7 +25,7 @@
  * @module features/data-installer/handlers/restoreDatapack
  */
 
-import { isSavedVersion, savesOf } from '../packVersions';
+import { restoreLooksForSaves, restoreTargetVersion } from '../packVersions';
 import { changesFromPreview } from '../removalChanges';
 import { nodeRecordFiles, readInstallRecord } from '../services/demoBuilderEngine/installRecord';
 import { previewChanges } from '../services/demoBuilderEngine/storeChanges';
@@ -70,13 +70,14 @@ const refuse = (error: string): { response: HandlerResponse } => ({
     response: { success: false, error, code: ErrorCode.INVALID_OPERATION },
 });
 
-/** The version a restore installs: the SC's own pack's newest save, else the version installed. */
+/**
+ * The version a restore installs (`restoreTargetVersion`, the rule the card's amber dot shares): the
+ * library is read only when the rule can pick anything but the version installed.
+ */
 async function targetVersion(access: Access, held: Held): Promise<string> {
-    if (held.store !== 'library' || !isSavedVersion(held.version)) return held.version;
+    if (!restoreLooksForSaves(held)) return held.version;
     const page = await access.client.findDatapacks({ datapackName: held.name });
-    const mine = page.items.filter((item) => item.mine === true && item.id.name === held.name);
-    if (mine.length === 0 || mine.some((item) => item.team === true)) return held.version;
-    return savesOf(mine.map((item) => item.id.version))[0] ?? held.version;
+    return restoreTargetVersion(held, page.items);
 }
 
 /** The target's name and the data types it holds, as the import form reads them. */

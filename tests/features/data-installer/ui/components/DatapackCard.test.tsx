@@ -469,8 +469,8 @@ describe('DatapackCard — as a choice', () => {
 });
 
 describe('DatapackCard — where the pack lives', () => {
-    // Owner, 2026-11-09 (walk F86): a team pack says Team, as every other source says its own word.
-    it("tags a team pack Team, a colleague's pack Community, and Mine when the SC owns it", () => {
+    // Owner, 2026-11-09 (walk F86): a team pack says its own word; it says Demo Builder (step-04 S6, J8-2).
+    it("tags a team pack Demo Builder, a colleague's pack Community, and Mine when the SC owns it", () => {
         const onOpen = jest.fn();
         const { unmount } = render(
             <DatapackCard
@@ -480,7 +480,7 @@ describe('DatapackCard — where the pack lives', () => {
                 onOpen={onOpen}
             />,
         );
-        expect(tagsShown()).toStrictEqual(['Team']);
+        expect(tagsShown()).toStrictEqual(['Demo Builder']);
         fireEvent.click(screen.getByTestId('datapack-card'));
         expect(onOpen).toHaveBeenCalledWith({ name: 'bodea', version: 'main' }, 'library');
         unmount();
@@ -511,7 +511,7 @@ describe('DatapackCard — where the pack lives', () => {
 
     // A team pack is the library's, whoever uploaded it (owner, 2026-11-03): the SC who loaded the
     // team's packs saw "Mine" on all of them.
-    it('tags a team pack Team, and not Mine, even for the SC who uploaded it', () => {
+    it('tags a team pack Demo Builder, and not Mine, even for the SC who uploaded it', () => {
         render(
             <DatapackCard
                 group={makeGroup({ key: 'library:bodea', store: 'library', shared: true, team: true, mine: true })}
@@ -521,7 +521,7 @@ describe('DatapackCard — where the pack lives', () => {
             />,
         );
 
-        expect(tagsShown()).toStrictEqual(['Team']);
+        expect(tagsShown()).toStrictEqual(['Demo Builder']);
     });
 });
 

@@ -74,15 +74,29 @@ describe("the demo's datapack in the library", () => {
         expect(screen.queryByRole('region', { name: "This Demo's Datapack" })).not.toBeInTheDocument();
     });
 
-    // Owner, 2026-11-09 (walk F99): a pack of saves is one thing; a later save is not a newer version.
-    it('shows the save in use with no version picker and no newer dot, though a later save exists', async () => {
+    // Owner, 2026-11-09 (walk F99): a pack of saves is one thing, so no version picker. Step-04 S6
+    // (J4-1): a later save is what Restore installs, so the amber dot says "Newer save available".
+    it('shows the save in use with no version picker, and the amber dot while a later save exists', async () => {
         const items = [{ ...OLDER, createdAt: '2026-11-01T09:00:00Z' }, { ...NEWER, createdAt: '2026-11-03T12:00:00Z' }];
-        store({ name: 'acme-1a2b3c', version: OLDER.id.version, store: 'library' }, items);
+        store({ name: 'acme-1a2b3c', version: OLDER.id.version, store: 'library' }, items, false, AT);
         await renderView();
 
         expect(within(card('acme-1a2b3c')).getByText(`Saved ${versionLabel(OLDER.id.version)}`)).toBeInTheDocument();
         expect(within(card('acme-1a2b3c')).queryByRole('button', { name: /Version of/u })).not.toBeInTheDocument();
-        expect(within(card('acme-1a2b3c')).queryByRole('button', { name: /Newer|Updated/u })).not.toBeInTheDocument();
+        expect(within(card('acme-1a2b3c')).getByRole('button', { name: 'Newer save available' })).toBeInTheDocument();
+    });
+
+    it('CONTROL: no dot when the save in use is the newest', async () => {
+        store({ name: 'acme-1a2b3c', version: NEWER.id.version, store: 'library' }, MINE, false, AT);
+        await renderView();
+        expect(within(card('acme-1a2b3c')).queryByRole('button', { name: 'Newer save available' })).not.toBeInTheDocument();
+    });
+
+    it('CONTROL: no dot without an install record, though a later save exists', async () => {
+        store({ name: 'acme-1a2b3c', version: OLDER.id.version, store: 'library' });
+        await renderView();
+        expect(within(card('acme-1a2b3c')).getByTestId('datapack-card-project-check')).toBeInTheDocument();
+        expect(within(card('acme-1a2b3c')).queryByRole('button', { name: 'Newer save available' })).not.toBeInTheDocument();
     });
 });
 

@@ -3,7 +3,7 @@
  * cards, one per pack name, each wearing the installed check when the pack is on this instance.
  *
  * The demo's own pack (`project.datapack`) wears the check wherever it lives, the SC's library
- * included, opens on the version the demo uses, and marks a newer one (owner, 2026-11-04: it is
+ * included, opens on the version the demo uses, and marks a newer save (owner, 2026-11-04: it is
  * one of the library's cards, shown as selected, not a section of its own above them).
  *
  * Moved out of `DatapackCatalogView` unchanged (datapack-engine step 05), so the view could host
@@ -14,10 +14,10 @@
  */
 
 import React from 'react';
+import { restoreIsNewer } from '../../packVersions';
 import { type DatapackGroup, isHeld, pickDefaultVersion } from '../../services/datapackCatalog';
 import { EMPTY_SHOW_TITLE, type CatalogShow } from '../catalogShow';
 import { DatapackCard } from './DatapackCard';
-import { newerLabel, newerVersionOf } from './projectPackNewer';
 import { EmptyState } from '@/core/ui/components/feedback/EmptyState';
 import type { DatapackId, DatapackStoreName, ProjectDatapack } from '@/types/datapack';
 
@@ -48,7 +48,7 @@ export interface DatapackCatalogGridProps {
     installedPacks?: ReadonlySet<string>;
     /** The pack the open project installs from and resets to, as it records it. */
     held?: ProjectDatapack;
-    /** When Demo Builder's engine installed it, when it did: what a newer version is newer than. */
+    /** When Demo Builder's engine installed it, when it did: none, no install record to restore by. */
     installedAt?: string;
 }
 
@@ -106,8 +106,15 @@ export function DatapackCatalogGrid({
     );
 }
 
-/** The dot's words for the demo's own pack, when the version it installed changed since (`newerLabel`). */
-function newerOf(group: DatapackGroup, held: DatapackId | undefined, installedAt: string | undefined): string | undefined {
-    const newer = newerVersionOf(group, held, installedAt);
-    return newer ? newerLabel(newer) : undefined;
+/** The amber dot's hover (J4-1, owner 2026-11-12). */
+const NEWER_SAVE = 'Newer save available';
+
+/**
+ * The dot's words for the demo's own pack: present exactly when Restore would install a save newer
+ * than the one it holds (`restoreIsNewer`, the rule the handler uses). Restore needs Demo Builder's
+ * install record, so with no record (`installedAt`) there is nothing to restore and no dot.
+ */
+function newerOf(group: DatapackGroup, held: ProjectDatapack | undefined, installedAt: string | undefined): string | undefined {
+    if (!held || installedAt === undefined) return undefined;
+    return restoreIsNewer(held, group.versions) ? NEWER_SAVE : undefined;
 }

@@ -29,7 +29,7 @@
 import { ActionButton } from '@adobe/react-spectrum';
 import Close from '@spectrum-icons/workflow/Close';
 import React, { useState } from 'react';
-import { isSavedVersion, versionLabel } from '../../packVersions';
+import { datapackDate, shownVersion } from '../../packVersions';
 import { inPickOrder } from '../../pickableKinds';
 import type { DataItemInventory, DatapackDetail, PackDetailLayer } from '../../types';
 import { renderDataInstallerFailure } from '../dataInstallerFailure';
@@ -144,7 +144,7 @@ export function DatapackDetailPanel({
                     <div className="db-drawer-head">
                         <div className="datapack-panel-title">
                             <DatapackPanelTitle title={title} detail={loading || failure || working ? null : detail} onRename={onRename} />
-                            <span className="datapack-panel-version">{isSavedVersion(selected.version) ? `Saved ${versionLabel(selected.version)}` : selected.version}</span>
+                            <span className="datapack-panel-version">{shownVersion(selected.version)}</span>
                         </div>
                         <ActionButton isQuiet aria-label="Close details" onPress={onClose}>
                             <Close size="S" />
@@ -303,13 +303,13 @@ function visibleTo(detail: DatapackDetail): string {
 }
 
 /**
- * Render an ISO timestamp as a plain date.
+ * Render an ISO timestamp in the one datapack format (`datapackDate`, J8-2), or as it arrived when
+ * it cannot be read.
  *
- * Locale-formatted rather than sliced: these cross the webview boundary as ISO
+ * Formatted in local time rather than sliced: these cross the webview boundary as ISO
  * strings (see `types.ts`), and a `slice(0, 10)` would show a UTC date that is
  * wrong by a day for anyone west of Greenwich in the evening.
  */
 function formatDate(iso: string): string {
-    const parsed = new Date(iso);
-    return Number.isNaN(parsed.getTime()) ? iso : parsed.toLocaleDateString();
+    return datapackDate(iso) || iso;
 }

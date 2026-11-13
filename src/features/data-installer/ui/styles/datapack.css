@@ -160,20 +160,28 @@
 
 @layer theme {
 /* The version and the tags, on the card's last line: pinned to the bottom, so the tags sit in one
-   place on every card in a row however long a name runs (owner, 2026-11-05). */
+   place on every card in a row however long a name runs (owner, 2026-11-05). One line: the tag
+   sits on the date's line and never drops below it (step-04 S6, J8-2); on a narrow card the date
+   gives way inside its own span, never the tag. */
 .datapack-card-version-row {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
     justify-content: space-between;
     gap: 8px;
     margin-top: auto;
 }
 
+.datapack-card-version-row > .datapack-card-version {
+    min-width: 0;
+}
+
 .datapack-card-tags {
     display: flex;
-    flex-wrap: wrap;
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
     gap: 4px;
+    white-space: nowrap;
 }
 }
 

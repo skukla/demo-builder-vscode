@@ -13,7 +13,7 @@ import type { DatapackGroup } from '../services/datapackCatalog';
 export type PackSource = 'yours' | 'team' | 'installer' | 'community';
 
 /**
- * Where a pack comes from. Team before Yours (owner, 2026-11-03): a team pack is the store's,
+ * Where a pack comes from. Team (Demo Builder's) before Yours (owner, 2026-11-03): a team pack is the store's,
  * whoever uploaded it. Every Data Installer pack is the Data Installer's, curated or not (owner,
  * 2026-11-05: its uncurated packs read as mislabelled under Community); Community is colleagues'.
  *
@@ -42,8 +42,8 @@ export const DEFAULT_SHOW: CatalogShow = 'recommended';
 const SHOW_OPTIONS: ReadonlyArray<{ key: CatalogShow; label: string }> = [
     { key: 'recommended', label: 'Recommended' },
     { key: 'yours', label: 'My Datapacks' },
-    // Team, as its cards' tag says (owner, 2026-11-09, walk F86; was Demo Builder Datapacks).
-    { key: 'team', label: 'Team Datapacks' },
+    // As its cards' tag says (step-04 S6, J8-2, owner 2026-11-12); the key stays `team`.
+    { key: 'team', label: 'Demo Builder Datapacks' },
     { key: 'installer', label: 'Data Installer Datapacks' },
     { key: 'community', label: 'Community Datapacks' },
     { key: 'all', label: 'All Datapacks' },
@@ -62,7 +62,7 @@ export function showOptions(installerAnswered: boolean): ReadonlyArray<{ key: Ca
 /** What a Show choice with nothing in it says. Recommended and All mean the catalog is empty. */
 export const EMPTY_SHOW_TITLE: Partial<Record<CatalogShow, string>> = {
     yours: "You Don't Have Any Datapacks",
-    team: 'No Team Datapacks',
+    team: 'No Demo Builder Datapacks',
     installer: 'No Data Installer Datapacks',
     community: 'No Community Datapacks',
 };

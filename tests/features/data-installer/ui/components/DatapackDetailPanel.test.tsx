@@ -22,6 +22,9 @@ import '@testing-library/jest-dom';
 import { DatapackDetailPanel } from '@/features/data-installer/ui/components/DatapackDetailPanel';
 import type { DatapackDetail, DataItemInventory } from '@/features/data-installer/types';
 
+/** The one datapack date format (J8-2), in whatever time zone the suite runs. */
+const ONE_FORMAT = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+
 function makeDetail(overrides: Partial<DatapackDetail> = {}): DatapackDetail {
     return {
         id: { name: 'bodea', version: 'main' },
@@ -224,10 +227,11 @@ describe('DatapackDetailPanel', () => {
         // These cross the webview boundary as ISO strings, and a raw one on screen
         // is both unreadable and a UTC date that is wrong by a day for anyone west
         // of Greenwich in the evening.
-        it('shows the update date formatted, never the raw ISO string', () => {
+        // Step-04 S6 (J8-2): one absolute format for every datapack date, "Nov 10, 9:15 AM".
+        it('shows the update date in the one datapack format, never the raw ISO string', () => {
             renderPanel();
 
-            const formatted = new Date('2026-08-06T18:12:13.115Z').toLocaleDateString();
+            const formatted = ONE_FORMAT.format(new Date('2026-08-06T18:12:13.115Z'));
             expect(screen.getByText(formatted)).toBeInTheDocument();
             expect(screen.queryByText('2026-08-06T18:12:13.115Z')).not.toBeInTheDocument();
         });

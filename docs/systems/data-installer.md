@@ -23,7 +23,7 @@ once, as the store's. Nothing gates on the Data Installer any more: the wizard's
 Datapacks step and the dashboard tile always show, and the panel is titled
 **Datapacks**. That screen and the wizard's Datapacks step load every pack once, and their
 **Show** list filters what they hold (`ui/catalogShow.ts`, owner, 2026-11-05): **Recommended** (the default: your packs, the team's and the Data Installer's curated ones),
-**My Datapacks**, **Team Datapacks**, **Data Installer Datapacks**,
+**My Datapacks**, **Demo Builder Datapacks** (the source keyed `team`), **Data Installer Datapacks**,
 **Community Datapacks** and **All Datapacks**. Both surfaces read the list again when
 `dataInstaller.apiBaseUrl`, `dataInstaller.enabled` or `datapackStore.apiBaseUrl` changes
 (`affectsDatapackList`), with no Refresh. The Data Installer choice
@@ -386,11 +386,14 @@ included, and opening on the version the demo uses (`DatapackCatalogGrid`):
   `startDatapackImport` that uninstalls the pack by its install record and installs the target,
   changes dropped, never saved, and opens the import window on it; a same-version restore is a
   real replace (`restore`), where an ordinary import of the same version updates in place.
-- **The updated dot**, the house amber dot beside the card's version picker, when the named version
-  installed changed in the library since (`updatedAt` after the install record's `startedAt`; team
-  packs are updated in place as `main`): "Updated on Nov 9". A later save never lights it: a later
-  save is not a newer version. It is deliberately not an update in the Updates window: a
-  demo may stay on an older version on purpose.
+- **The newer-save dot**, the house amber dot beside the card's date, exactly when Restore would
+  install a save newer than the one the project holds: "Newer save available" (J4-1). One rule,
+  `restoreTargetVersion` in `packVersions.ts`, picks Restore's target for the handler and the card
+  (`restoreIsNewer`); with no install record there is nothing to restore and no dot. A named
+  version changed in place does not light it, as Restore installs the version installed. It is
+  deliberately not an update in the Updates window: a demo may stay on an older save on purpose.
+- **One date format**: every datapack date a card or the flyout shows is absolute, "Saved Nov 10,
+  9:15 AM" (`datapackDate`, J8-2).
 
 A finished save reads the catalog again at once (`useSaveStoreChanges`), so closing its window
 only closes it. A pinned section above the grid with Save and Save As beside the demo's card

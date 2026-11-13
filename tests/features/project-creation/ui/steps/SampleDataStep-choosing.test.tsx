@@ -98,7 +98,7 @@ describe('SampleDataStep — the Show list', () => {
 
         fireEvent.change(showSelect(), { target: { value: 'team' } });
 
-        expect(await screen.findByText('No Team Datapacks. Try All Datapacks.')).toBeInTheDocument();
+        expect(await screen.findByText('No Demo Builder Datapacks. Try All Datapacks.')).toBeInTheDocument();
         expect(screen.getByRole('radio', { name: 'None' })).toBeInTheDocument();
     });
 });
