@@ -15,14 +15,15 @@
  *   new datapack's name when the datapack is not theirs, or drop. An uninstall's Retry takes out what
  *   its record still lists, losing nothing more: a save made first is already behind it.
  *
+ * Its parts are their own hooks: `useJobStatus`, `useJobStart`, `useJobSwitch`, `useJobResult`
+ * and `useJobPhases`.
+ *
  * @module features/data-installer/ui/hooks/useDatapackJob
  */
 
-import { type Dispatch, useCallback, useEffect, useReducer, useRef, useState } from 'react';
-import { replacedName } from '../../replaceWords';
+import { type Dispatch, useCallback, useReducer } from 'react';
 import type { ImportJobRecord } from '../../types';
-import { STATUS_POLL_MS } from '../components/importModalJob';
-import { resolveResult, type ResultContent } from '../components/importResult';
+import type { ResultContent } from '../components/importResult';
 import {
     datapackJob,
     startJob,
@@ -32,12 +33,13 @@ import {
 } from '../components/job/datapackJob';
 import type { TypeRow } from '../components/job/installRows';
 import { type DataInstallerRequest, useDataInstallerRequest } from './useDataInstallerRequest';
-import { type ImportRuns, useImportRetry } from './useImportRetry';
-import { useJobPickup } from './useJobPickup';
+import type { ImportRuns } from './useImportRetry';
+import { useJobPhases } from './useJobPhases';
 import { useJobReads, useRequestBody } from './useJobReads';
-import { type RemovalAnswer, type SwitchChanges, useSavingStage } from './useSwitchChanges';
-import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { useJobResult } from './useJobResult';
+import { useJobStart } from './useJobStart';
+import { useJobStatus } from './useJobStatus';
+import { type JobSwitch, useJobSwitch } from './useJobSwitch';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 import type { DatapackRecordsResult } from '@/types/webviewRequests';
 
@@ -52,21 +54,6 @@ export interface DatapackJobArgs {
     kind: JobKind;
     /** A switch's or an uninstall's: the SC's own datapacks' names, which a new one may not take. */
     ownNames: readonly string[];
-}
-
-/** A switch's or an uninstall's part of the job: the SC's changes and the save question's answers. */
-export interface JobSwitch {
-    changes: SwitchChanges;
-    /** The held datapack, as a switch's run's Uninstall row names it. */
-    heldName?: string;
-    /** The save's stage while the start waits on it. */
-    savingStage?: string;
-    /** Where the save made first went, once the SC chose to save: the run's Save Your Changes says it. */
-    savedTo?: string;
-    /** Switch or Uninstall pressed: the save question, or the run. */
-    press: () => void;
-    /** The save question answered. */
-    answer: (saves: boolean) => void;
 }
 
 export interface DatapackJob {
@@ -93,173 +80,6 @@ export interface DatapackJob {
     fixWithAi: () => void;
     /** Fix with AI on a Dry Run that found a problem. */
     fixDryRun: () => void;
-}
-
-/** A switch's or an uninstall's start may save the SC's changes first, and answers after it (walk F105). */
-const SAVE_THEN_WRITE = { timeout: TIMEOUTS.DATAPACK_SAVE_THEN_WRITE };
-/** The message asking for the one-time tip about the setting (webview only; agents never send it). */
-const SAVE_QUESTION_ANSWERED = 'datapack-save-question-answered';
-
-/** The job's status: read on open, again while it runs, and the running job it found, if any. */
-function useJobStatus(state: JobState) {
-    const status = useDataInstallerRequest<ImportJobRecord | null>('get-datapack-import-status');
-    const record = status.value ?? null;
-    const running = record?.outcome === 'watching';
-    const { load } = status;
-    useEffect(() => load({}), [load]);
-    useEffect(() => {
-        if (!running) return undefined;
-        const timer = setInterval(() => load({}), STATUS_POLL_MS);
-        return () => clearInterval(timer);
-    }, [running, load]);
-    // A job found running, or the one a window opened on a run was opened for, is the one watched.
-    const [found, setFound] = useState<string | undefined>(undefined);
-    const watches =
-        record !== null && state.lastAction === null && (running || state.kind === 'watch');
-    if (watches && found === undefined) setFound(record.activationId);
-    return { status, record, running, found };
-}
-
-/**
- * The start: Install, Switch or Uninstall with its answer about the SC's changes, and Retry. An
- * uninstall's Retry takes out what the stopped job's record still lists, and drops: whatever was to
- * be saved was saved before that job began, and the record moved onto the save.
- */
-function useJobStart(kind: JobKind, body: () => object, dispatch: Dispatch<JobEvent>) {
-    const start = useDataInstallerRequest<{ activationId: string }>(
-        kind === 'uninstall' ? 'reset-datapack' : 'start-datapack-import',
-        SAVE_THEN_WRITE,
-    );
-    // The answer, kept so a run started again sends the same one; and what a Retry takes out.
-    const answer = useRef<RemovalAnswer | undefined>(undefined);
-    const again = useRef<object | undefined>(undefined);
-    const [savesFirst, setSavesFirst] = useState(false);
-    const loadStart = start.load;
-    const runStart = useCallback((): void => {
-        dispatch({ type: 'start' });
-        loadStart({ ...body(), ...again.current, ...answer.current });
-    }, [loadStart, body, dispatch]);
-    const runs = useImportRetry(runStart);
-    const { startImport, retry } = runs;
-    const startWith = useCallback(
-        (given: RemovalAnswer): void => {
-            answer.current = given;
-            again.current = undefined;
-            setSavesFirst(given.changes === 'keep');
-            startImport();
-        },
-        [startImport],
-    );
-    const retryFrom = useCallback(
-        (record: ImportJobRecord | null): void => {
-            if (kind === 'uninstall' && record) {
-                again.current = { datapackName: record.datapackName, version: record.version };
-                answer.current = { changes: 'drop' };
-                setSavesFirst(false);
-            }
-            retry();
-        },
-        [kind, retry],
-    );
-    return { start, runs, startWith, retryFrom, savesFirst };
-}
-
-/** Where a save made first goes: into the SC's own datapack, or the new one by the name given. */
-function savedToOf(starts: ReturnType<typeof useJobStart>, changes: SwitchChanges, name: string | undefined) {
-    if (!starts.savesFirst) return undefined;
-    return changes.saveAs?.name.trim() ?? name;
-}
-
-/** What a switch or an uninstall adds: the press, the save question's answers, the save's stage. */
-function useJobSwitch(
-    args: DatapackJobArgs,
-    checks: ReturnType<typeof useJobReads>,
-    starts: ReturnType<typeof useJobStart>,
-    dispatch: Dispatch<JobEvent>,
-): JobSwitch {
-    const { changes } = checks;
-    const savingStage = useSavingStage(starts.savesFirst && starts.start.loading);
-    const held = checks.target.value?.datapack;
-    // As the run's Uninstall row names it: "Luma", or "Luma, eds-compatible" for a named version.
-    const heldName = held ? replacedName(held, checks.target.value?.heldName ?? held.name) : undefined;
-    const savedTo = savedToOf(starts, changes, args.kind === 'uninstall' ? args.displayName : heldName);
-    return {
-        changes,
-        ...(heldName ? { heldName } : {}),
-        ...(savingStage ? { savingStage } : {}),
-        ...(savedTo ? { savedTo } : {}),
-        press: () => {
-            const next = changes.onSwitch();
-            if (next === 'ask') dispatch({ type: 'save-first' });
-            else starts.startWith(next);
-        },
-        answer: (saves) => {
-            webviewClient.postMessage(SAVE_QUESTION_ANSWERED);
-            starts.startWith(changes.answer(saves));
-        },
-    };
-}
-
-/** The phase each answer moves the job to: the check's end, a Dry Run's answer, the run's end. */
-function useJobPhases(
-    state: JobState,
-    dispatch: Dispatch<JobEvent>,
-    seen: { running: boolean; checked: boolean; noInstance: boolean; result: ResultContent | null },
-): void {
-    const { phase } = state;
-    const { running, checked, noInstance, result } = seen;
-    useEffect(() => {
-        if (phase !== 'check') return;
-        if (running) dispatch({ type: 'running' });
-        else if (noInstance) dispatch({ type: 'no-instance' });
-        else if (checked) dispatch({ type: 'checked' });
-    }, [phase, running, noInstance, checked, dispatch]);
-    useEffect(() => {
-        if (phase === 'dry-wait' && result) dispatch({ type: 'dry-answered' });
-        if (phase === 'run' && result)
-            dispatch({ type: 'ended', clean: result.finished === true && !result.run });
-    }, [phase, result, dispatch]);
-}
-
-/** What the result reads: the last action's request, the job watched, a switch's failed save. */
-function useJobResult(
-    args: DatapackJobArgs,
-    state: JobState,
-    reqs: {
-        dry: DataInstallerRequest<{ valid: boolean; reason?: string }>;
-        starts: ReturnType<typeof useJobStart>;
-        watch: ReturnType<typeof useJobStatus>;
-        heldName?: string;
-    },
-) {
-    const { dry, starts, watch, heldName } = reqs;
-    const { start, runs } = starts;
-    // The one write this window makes: the job watched is the one it started, else the one found.
-    const wrote = state.lastAction === 'start' || state.lastAction === 'reset';
-    const started = state.lastAction ? start.value?.activationId : watch.found;
-    const pickingUp = useJobPickup(
-        wrote ? start.value?.activationId : undefined,
-        watch.record,
-        watch.status.loading,
-        watch.status.load,
-    );
-    const busy = dry.loading || start.loading || pickingUp;
-    const action = state.lastAction ?? (watch.found ? 'start' : null);
-    const replacing =
-        state.kind === 'switch' && heldName ? { replacing: { name: heldName, dataTypes: args.types } } : {};
-    const result = busy
-        ? null
-        : resolveResult(action, {
-              name: args.displayName,
-              retries: runs.retries,
-              dryRun: dry,
-              start,
-              reset: start,
-              record: watch.record,
-              startedActivation: started,
-              ...replacing,
-          });
-    return { result, starting: start.loading || pickingUp };
 }
 
 /** The presses every window offers: Review Records, Back, Dry Run, Install and its ends. */

@@ -17,40 +17,30 @@
  * agent's), titled by what that job is for (`jobWords`). Closing a job still running hands it to a progress notification, as every
  * progress window does: nothing is cancelled, since there is nothing to cancel with.
  *
+ * The phases' windows are their own files: `SummaryPhase`, `RunPhase`, `ResultPhase` (with the
+ * end buttons), and `jobOpened` for what the window was opened for.
+ *
  * @module features/data-installer/ui/components/job/DatapackJobWindow
  */
 
 import { DialogContainer } from '@adobe/react-spectrum';
 import React from 'react';
-import {
-    type DatapackVerb,
-    DRY_RUN,
-    FIX_WITH_AI,
-    FIX_WITH_AI_HINT,
-    INSTALL,
-    installTitle,
-    jobPurpose,
-    jobWords,
-    UNINSTALL,
-} from '../../../datapackWords';
+import { INSTALL, jobWords, UNINSTALL } from '../../../datapackWords';
 import { packLine } from '../../../packVersions';
-import type { JobPurpose } from '../../../types';
 import { useDatapackJob, type DatapackJob } from '../../hooks/useDatapackJob';
 import { useRunColumns } from '../../hooks/useRunColumns';
 import { useVersionTypes } from '../../hooks/useVersionTypes';
-import { type ResultContent, resultStatus } from '../importResult';
-import type { JobKind } from './datapackJob';
-import { DatapackRunWindow } from './DatapackRunWindow';
+import type { ResultContent } from '../importResult';
 import { DryRunWindow } from './DryRunWindow';
+import { type Opened, runningPurpose } from './jobOpened';
 import { JobResultWindow } from './JobResultWindow';
-import { JobSummaryWindow } from './JobSummaryWindow';
 import { RecordsWindow } from './RecordsWindow';
-import type { Uninstalling } from './runSteps';
+import { ResultPhase } from './ResultPhase';
+import { type RunShape, RunPhase } from './RunPhase';
 import { SaveFirstWindow } from './SaveFirstWindow';
-import type { ActionButton } from '@/core/ui/components/ui/Modal';
+import { SummaryPhase, summaryFrame } from './SummaryPhase';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
-import { WAIT_STAGES } from '@/core/utils/waitStages';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 
 export interface DatapackJobWindowProps {
@@ -71,14 +61,6 @@ export interface DatapackJobWindowProps {
     onClose: () => void;
 }
 
-/** What the window was opened for, in the words it uses: its kind, verb and name. */
-interface Opened {
-    kind: JobKind;
-    verb: DatapackVerb;
-    /** The datapack as titles name it: "Bodea", or "Bodea, eds-compatible" for another version. */
-    name: string;
-}
-
 const NO_INSTANCE: ResultContent = {
     variant: 'warning',
     title: 'No Commerce Instance',
@@ -86,9 +68,6 @@ const NO_INSTANCE: ResultContent = {
 };
 const NO_RECORDS: Record<string, string[]> = {};
 const NO_NAMES: string[] = [];
-const CHANGES_UNCHECKED = "Your changes couldn't be checked.";
-const PREVIEW_UNREAD = "What installing would change couldn't be read.";
-const RECORD_UNREAD = "What the datapack installed couldn't be read.";
 
 /** What the window was opened for. */
 function openedAs(props: DatapackJobWindowProps): Opened {
@@ -98,155 +77,6 @@ function openedAs(props: DatapackJobWindowProps): Opened {
     if (switching?.verb) return { kind: 'switch', verb: INSTALL, name: packLine(displayName, id.version) };
     if (switching) return { kind: 'switch', verb: 'Switch', name: displayName };
     return { kind: 'install', verb: INSTALL, name: displayName };
-}
-
-/** What the job is for before its record says: a switch, an uninstall, else an install. */
-function purposeOf(opened: Opened): JobPurpose {
-    if (opened.kind === 'uninstall') return 'uninstall';
-    return opened.verb === 'Switch' ? 'switch' : 'install';
-}
-
-/** An end's one action beside Close (rule 16): Retry, or Fix with AI. Retry only on this window's own install or uninstall. */
-function endButtons(job: DatapackJob, result: ResultContent): ActionButton[] {
-    const own = job.state.kind === 'install' || job.state.kind === 'uninstall';
-    if (result.action === 'retry' && own)
-        return [{ label: 'Retry', variant: 'accent', onPress: job.retry }];
-    if (result.action === 'fix')
-        return [
-            { label: FIX_WITH_AI, variant: 'accent', onPress: job.fixWithAi, hint: FIX_WITH_AI_HINT },
-        ];
-    return [];
-}
-
-/** What the job running is for: its record's purpose once it is recorded, else what the window opened for. */
-function runningPurpose(job: DatapackJob, opened: Opened): JobPurpose {
-    return job.record?.outcome === 'watching' ? jobPurpose(job.record) : purposeOf(opened);
-}
-
-/** The run's title: the end's once it ended with a problem, else what the job watched is for. */
-function runTitle(job: DatapackJob, opened: Opened): string {
-    if (job.result?.run) return job.result.title;
-    return jobWords(runningPurpose(job, opened), opened.name).running;
-}
-
-/** A question's title: without its question mark while the check reads. */
-const asked = (title: string, checking: boolean): string => (checking ? title : `${title}?`);
-
-/**
- * The summary's frame: Install's; or a question, no opening line and the warning icon, over the same
- * table: a switch's blue Switch, another version's blue Install, an uninstall's red Uninstall (rule
- * 20), which has no Review Records.
- */
-function summaryFrame(job: DatapackJob, opened: Opened, checking: boolean) {
-    const { name, verb, kind } = opened;
-    if (kind === 'install') {
-        return {
-            title: installTitle(name),
-            actionButtons: [
-                { label: DRY_RUN, variant: 'secondary' as const, onPress: job.dryRun },
-                { label: INSTALL, variant: 'accent' as const, onPress: job.install },
-            ],
-            problem: job.checkFailed ? PREVIEW_UNREAD : undefined,
-            onReview: job.review,
-        };
-    }
-    const uninstall = kind === 'uninstall';
-    const title = verb === 'Switch' ? `Switch to ${name}` : `${verb} ${name}`;
-    const unread = job.checkFailed ? (uninstall ? RECORD_UNREAD : PREVIEW_UNREAD) : undefined;
-    return {
-        title: asked(title, checking),
-        status: 'warning' as const,
-        actionButtons: [{ label: verb, variant: uninstall ? ('negative' as const) : ('accent' as const), onPress: job.switching.press }],
-        problem: job.switching.changes.readFailed ? CHANGES_UNCHECKED : unread,
-        ...(uninstall ? {} : { onReview: job.review }),
-    };
-}
-
-/** The wait the summary shows: the check's, or a Dry Run's. */
-function summaryWait(job: DatapackJob) {
-    const { phase, kind } = job.state;
-    if (phase === 'dry-wait') return WAIT_STAGES.checkingImport;
-    if (phase !== 'check') return false;
-    return kind === 'install' ? WAIT_STAGES.readingWhatToSelect : WAIT_STAGES.checkingForChanges;
-}
-
-/** The summary window: the check's wait, the type table, a Dry Run's wait. */
-function SummaryPhase({ job, opened, onClose }: { job: DatapackJob; opened: Opened; onClose: () => void }): React.ReactElement {
-    const checking = job.state.phase === 'check';
-    const { problem, ...frame } = summaryFrame(job, opened, checking);
-    return (
-        <JobSummaryWindow
-            {...frame}
-            rows={job.rows}
-            {...(problem ? { problem } : {})}
-            ready={!checking}
-            waiting={summaryWait(job)}
-            onClose={onClose}
-        />
-    );
-}
-
-/** A switch's rows before its job is recorded: the datapack it uninstalls, and the save's stage. */
-function switchRows(job: DatapackJob): { replaces: string; savingStage?: string } | undefined {
-    const { heldName, savingStage } = job.switching;
-    if (job.state.kind !== 'switch' || !heldName) return undefined;
-    return { replaces: heldName, ...(savingStage ? { savingStage } : {}) };
-}
-
-/** An uninstall's steps before and while its job runs: whether it saves first, its stage, where to. */
-function uninstallRows(job: DatapackJob): Uninstalling | undefined {
-    if (job.state.kind !== 'uninstall') return undefined;
-    const { savingStage, savedTo } = job.switching;
-    return { saves: savedTo !== undefined, ...(savingStage ? { savingStage } : {}), ...(savedTo ? { savedTo } : {}) };
-}
-
-/** What the run window draws: the pack's steps' name and version, its types, its columns. */
-interface RunShape {
-    name: string;
-    version: string;
-    types: string[];
-    columns: 1 | 2;
-}
-
-/** The run window: running, or ended with a problem on its steps. A Retry is a new run, a new clock. */
-function RunPhase({ job, run, opened, onClose }: { job: DatapackJob; run: RunShape; opened: Opened; onClose: () => void }): React.ReactElement {
-    const ended = job.state.phase === 'ended' ? job.result : null;
-    const switching = switchRows(job);
-    const uninstalling = uninstallRows(job);
-    return (
-        <DatapackRunWindow
-            key={`run-${job.retries}`}
-            title={runTitle(job, opened)}
-            {...(ended ? { status: resultStatus(ended) } : {})}
-            record={job.record}
-            ended={ended}
-            types={run.types}
-            installing={{ name: run.name, version: run.version }}
-            columns={run.columns}
-            opensRunning={job.state.kind === 'watch'}
-            {...(switching ? { switching } : {})}
-            {...(uninstalling ? { uninstalling } : {})}
-            actionButtons={ended ? endButtons(job, ended) : []}
-            onClose={onClose}
-        />
-    );
-}
-
-/** A result in the small window: a clean end, a start that never ran; Back after an own start. */
-function ResultPhase({ job, result, onClose }: { job: DatapackJob; result: ResultContent; onClose: () => void }): React.ReactElement {
-    const { phase, kind } = job.state;
-    const back: ActionButton[] =
-        phase === 'ended' && kind !== 'watch'
-            ? [{ label: 'Back', variant: 'secondary', onPress: job.back }]
-            : [];
-    return (
-        <JobResultWindow
-            key={phase}
-            result={result}
-            actionButtons={[...back, ...endButtons(job, result)]}
-            onClose={onClose}
-        />
-    );
 }
 
 /** The windows that leave the summary and come back: Review Records, a Dry Run's answer, the save question. */

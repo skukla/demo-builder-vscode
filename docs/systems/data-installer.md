@@ -127,8 +127,9 @@ which lists every object the install made. It never removes by name.
   ends on its Admin step instead. A removal's check asks nothing of the pack, so a pack deleted from
   its store can still be removed (`validateRemoval`); it refuses only a store other than the one on
   the record. With no record it is refused, and Clear Demo Data clears what that install left.
-- **Installing another pack or version over the project's replaces it** (walk F97, 2026-11-09,
-  `handlers/importReplacement.ts`). It used to run as a first install: products already in the store
+- **Installing another pack over the project's is a Switch; another version of it is an Install
+  that does the same** (walk F97, 2026-11-09, `handlers/importReplacement.ts`). Both uninstall the
+  held pack and install the new one. It used to run as a first install: products already in the store
   were left alone, the project named the new pack, and the old data had nothing pointing at it. Now,
   when Demo Builder installed the pack the project uses, the job window's check reads what installing
   changes and the SC's changes to the held pack together ("Checking for your changes", walk F114), then
@@ -143,32 +144,33 @@ which lists every object the install made. It never removes by name.
   webview's 30 s default gave up on a 1 min 28 s save and said it couldn't start over an
   install that then ran (walk F105). **The run is steps** (owner, 2026-11-09, `importSteps.ts`,
   `.rptc/research/replace-flow-steps/`), each named for what it does, in the order it runs, only those
-  that apply: **Save Your Changes** (its stage, then "Saved as Nov 9, 1:56 PM", the record's
-  `savedAs`), **Uninstall the Previous Version** (or Previous Datapack: "Reading the new version",
-  then "Uninstalling Nov 9, 9:15 AM, …", then "Uninstalled Nov 9, 9:15 AM", the record's `replacesVersion`),
-  **Install the Version from Nov 9, 1:56 PM** (or "Install My Luma"; its line a plain count, "5 of
-  11 data types"), its data types under it, small, with small icons, the one in progress with a
+  that apply: **Save Your Changes** (its stage, then "Saved to My Luma", the datapack the record's
+  `savedAs` names), **Uninstall Luma** (the held pack by name, never by date: "Reading the new
+  version", then "Uninstalling 1,200 of 2,197", then "Uninstalled"), **Install My Luma** (or
+  "Install Luma, eds-compatible" for a named version; its line a plain count, "5 of 11 data
+  types"), its data types under it, small, with small icons, the one in progress with a
   second line, the word first and then the count: "Installing 1,200 of 2,046", or "Linking product
-  options 2,044 of 2,046" while configurable products go in (walk F133, `doingLine`), and **Verify Installation** ("Recording what went in", "Checking the products against the
-  datapack", then "Checked 2,048 products against the datapack: all match"). The job removes the old
+  options 2,044 of 2,046" while configurable products go in (walk F133, `doingLine`), and **Verify Installation** ("Recording installed items", "Checking products", then "2,048
+  products match the datapack", or in amber "3 of 2,048 products differ from the datapack"). The job removes the old
   pack by its record, through the same removal a reset runs (`demoBuilderEngine/engineRemoval.ts`),
   after the new pack is read and checked and before anything is installed. The window is fixed to
   the import it opened for (`useImportWindow`, walk F113: it used to follow the flyout, and closed a
   second into an import whose save moved the flyout), reads its own version's data types when the
   flyout has not (`useVersionTypes`, F107), keeps one height to the end (F116, with room for the
-  working data type's second line held the whole time, F133), and ends on Close alone when the
-  import ran to its end (F117). Step titles are bold over a small muted line, with the same space
+  working data type's second line held the whole time, F133), and offers no Back once the import
+  ran to its end (F117): a clean end has only Close, one with a problem Fix with AI beside it. Step titles are bold over a small muted line, with the same space
   between every step (F132). No line wraps or is cut short: the window picks its width when it
   opens, two columns of data types at large for more than six, one at medium for six or fewer or
-  in an editor too narrow for two (`runColumns`, F135), and the check and question before a replace
+  in an editor too narrow for two (`runColumns`, F135), and the check and question before a switch
   take that width (F127). **A clean finish hands off to the small result** (owner, 2026-11-10, walk
   F134): "My Luma Installed", then "New products can take 20 minutes to show in search." when
-  products went in, and nothing else. A save that ran first is not repeated there: its own step said
-  where the changes went (Phase 2).
+  products went in, after any line the engine has for the SC (what it kept of theirs, a step left
+  in the Admin). With nothing under its title it closes itself. A save that ran first is not
+  repeated there: its own step said where the changes went (Phase 2).
   A finish with a problem (a data type refused rows, the check found products that differ, the
-  store configuration failed) stays on its steps under the same title in amber, with Fix with AI, the
-  sentence ("This demo now uses My Luma from Nov 9, 9:15 AM. Your changes are saved as Nov 9, 1:56
-  PM.") and "Took …" under them; a stop is "Install Stopped" on its steps. A save or removal that fails installs nothing, says why in red on its step, and leaves the
+  store configuration failed) stays on its steps under the same title in amber, with Fix with AI,
+  how long search takes and "Took …" under them; a stop is "Couldn't Install My Luma" on its
+  steps, with Retry while a retry can get past it (twice), then Fix with AI. A save or removal that fails installs nothing, says why in red on its step, and leaves the
   project naming the old pack; the project names the new pack once the old one is gone, so a reset
   then removes the new one. Agents get the same through `start_datapack_import` (`changes`,
   `saveAs`, `CHANGES_NEED_ANSWER`). Installing the same version again replaces nothing.
@@ -203,22 +205,23 @@ which lists every object the install made. It never removes by name.
   reused to read all 2,048 again (14.8 s). A first install's check now reads no products. A
   reinstall that wrote nothing still reads them, since its read-back read none.
 - **Anything the SC changed since the install is settled first** (step 05,
-  `handlers/removalChanges.ts`). The confirm reads it (`get-datapack-removal-changes`, the
-  preview's own read) and, when there is something to lose, says what and offers two buttons:
-  **Save and Remove** and **Remove Without Saving**. When the demo's pack is the SC's own, saving is
-  Save, a new version of it, the previous one kept. There is no "Always" box (removed
-  2026-11-12, step 03 S6): with `demoBuilder.dataInstaller.changesOnRemoval` set to `save` in
-  Settings, the SC's own pack is saved without asking, and the first answered save question shows a
-  one-time tip pointing to that setting (`datapack-save-question-answered`). When it is not (a team pack), saving is
-  Save As: the confirm asks the new pack's name, starting empty as Create Datapack's does (owner,
-  2026-11-04: two demos of Bodea both suggested "Bodea Copy"), and the main button
-  says **Save As New and Remove**. The removal is then of the saved version,
-  since the install record moved onto it. A save that fails removes nothing. A read that fails says
-  so and offers Remove anyway. A project reset or an Edit that removes the pack saves first without
-  a second question when the pack is the SC's; when it is not, it asks the same two answers, in its
-  progress window (**Save Changes As**, required, then **Save As New and Remove**, or **Remove
-  Without Saving**), and closing the question keeps the data (owner, 2026-11-04: an empty name used
-  to lose the changes). `reset_datapack` names the changes and refuses until `changes` is `keep` or
+  `handlers/removalChanges.ts`). The job window's check reads it (`get-datapack-removal-changes`,
+  the preview's own read) and, when there is something to lose, Uninstall or Switch asks **"Save
+  Your Changes First?"** (`SaveFirstWindow`): the changes counted by type, **Uninstall Without
+  Saving** at the footer's start, **Cancel** and **Save and Uninstall** at its end (a switch's
+  say Switch, or Install for another version). When the demo's pack is the SC's own, saving is Save, a new version
+  of it, the previous one kept. There is no "Always" box (removed 2026-11-12, step 03 S6): with
+  `demoBuilder.dataInstaller.changesOnRemoval` set to `save` in Settings, the SC's own pack is saved
+  without asking, and the first answered save question shows a one-time tip pointing to that
+  setting (`datapack-save-question-answered`). When it is not (a team pack), saving makes a new
+  pack: the question has a **Save As** field, starting "My Luma", or "My Luma 2" when that is taken,
+  and a name it refuses says why and holds the save button. The removal is then of the saved
+  version, since the install record moved onto it. A save that fails removes nothing. A read that
+  fails still asks, saying "Your changes couldn't be checked." in place of the counts. A project
+  reset or an Edit that removes the pack saves first without a second question when the pack is the
+  SC's; when it is not, it asks in its progress window (**Save Changes As**, required and starting
+  empty, then **Save As New and Uninstall**, or **Uninstall Without Saving**), and closing the
+  question keeps the data (owner, 2026-11-04: an empty name used to lose the changes). `reset_datapack` names the changes and refuses until `changes` is `keep` or
   `drop`, unless the setting answers.
 - **A project delete removes the data only when asked** (owner, 2026-11-09, walk F96,
   `projects-dashboard/services/datapackDataRemoval.ts`). Its question has **Uninstall Datapack**,
@@ -510,8 +513,8 @@ rows. It is ordinary pack rows, moved like any pack. Only Demo Builder's engine 
 | Trouble after the data | a setting Commerce refuses, one with no value anywhere, or a write with no answer: the data stays, and the note names it. Removal takes the data out and puts back what was applied |
 | Library cannot be asked | the data installs and the note says so. A recorded setting is left alone, since "cannot ask" is not "gone" |
 
-**Where a person sees it.** The pack's flyout has an "Also sets" row (path and value) before Import
-is pressed. The install's note says "From bodea-settings@2: Set catalog/frontend/grid_per_page: 12 →
+**Where a person sees it.** The pack's flyout has a **Store Configuration** row ("4 Settings", each
+path and value behind Show) before Install is pressed (`StoreConfigurationRow`). The install's note says "From bodea-settings@2: Set catalog/frontend/grid_per_page: 12 →
 24." `preview_datapack_changes` answers `settings` (`layer` and `changes`, by path, old and new value).
 
 **The catalog offers no card for a layer while its pack is listed** (`withoutLayerCards`, the Data
@@ -546,7 +549,7 @@ AND name, so a library pack never folds into a Data Installer pack of the same n
 A library card is tagged "Library", or "Mine" when the SC owns it — the library says
 so itself (`mine`), because only it knows the caller's verified email.
 
-A library pack's flyout offers Import, with Save as file and, when it is yours, Share or Stop
+A library pack's flyout offers Install, with Save as file and, when it is yours, Share or Stop
 sharing and Remove from library in its menu (`PackActions`). Demo Builder installs it straight
 from the library; agents pass `source: "library"` to `validate_datapack_import`,
 `start_datapack_import` and `reset_datapack`. While the Data Installer is on (its address set and
@@ -617,7 +620,7 @@ A zip whose files sit under one root folder reads the same.
 | Write it into a store | "Load from file", library by default | `load_datapack_zip` |
 | Undo a load into the library | "Remove it from the library", in the load result | `delete_library_datapack` |
 
-Loading puts a pack in a store; installing it into Commerce is still Import. Each data
+Loading puts a pack in a store; installing it into Commerce is still Install. Each data
 type is one `add-data-item` request, so a type too large for one request is refused by
 name and the others still land. An agent's paths must be inside the open project; the
 panel uses VS Code's own dialogs.
