@@ -184,7 +184,16 @@ Live notes; rewritten as the final report at the loop's close.
   on the dashboard, projects list or integrations. Found by that check: the projects list threw on
   every load reading an answer with no data; fixed, with the same latent read in the Updates
   hand-off, both pinned by tests proven red first. Full gate green (2,411 suites, 38,705 tests).
-- Step-05 S5 (delete the one-project code nothing calls) next.
+- Owner answered P6-Q3 on 11-13: failed reads in Clear reuse only existing pieces (recorded).
+- Step-05 S5: 3e947288b. The one-project reset and delete code nothing calls is deleted (the confirm
+  dialog path, the reset notifications, resetProjectWithUI, deleteProject, deletionConfirmation.ts
+  and more); tests that reached live code through it now drive the batch's functions; the batch,
+  Edit and agent-tool suites unedited. Found: a batch EDS reset that succeeds with warnings (code
+  not published, pages undone, mesh redeploy failed) no longer shows them; that came with S2 and S4.
+  Fixing next. P5-Q8's mid-batch dialog is still reachable. Full gate green (2,405 suites, 38,551
+  tests).
+- Step-05 next: batch reset warnings on their row, and S6 (a ticked Uninstall Datapack uninstalls on
+  every reset).
 - Phase 1b, done while waiting: ERP Downtime (863c5c2ca) and Edit Demo Package (f8ece2e6e) moved
   onto the Form layout, whose failure line is what both waited for. Same words; Cancel beside the
   commit, as every form; a read failure is a result window with Close. An unused style rule removed.
@@ -195,6 +204,11 @@ Live notes; rewritten as the final report at the loop's close.
   ending "Last Save Undone"; the same-pack replace step still reads "Uninstall the Previous Version".
 
 ## Retracted / corrected
+- A docs commit (c8d35d150) swept up a source deletion a builder had staged, because it was made
+  with `git add <file> && git commit`, which commits everything staged; the branch did not build at
+  that commit. It was the latest commit and unpushed, so it was redone with the docs file only
+  (d44f49d22); the deletion went into S5. The other docs commits of the day were checked: none
+  touched a file outside .rptc. Docs commits now name their paths (`git commit -- <paths>`).
 - S6 was committed before its gate passed: the commit command did not depend on the gate's result,
   and one test had failed (a token check reading git's file list still named a file the slice had
   deleted but not yet committed). The test passed once the deletion was committed, and the full gate
