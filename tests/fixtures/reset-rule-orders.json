@@ -1,0 +1,201 @@
+{
+  "about": "The order reset rule's cases (owner's names, word for word). The source is demo-builder-vscode tests/fixtures/reset-rule-orders.json; commerce-erp-integration test/fixtures/reset-rule-orders.json is a byte-for-byte copy made by demo-builder-vscode scripts/sync-reset-rule-orders.mjs. Edit the source only; both repositories pin this file's sha-256.",
+  "cases": [
+    {
+      "name": "(1) pending, nothing invoiced → canceled",
+      "expected": "canceled",
+      "order": {
+        "entity_id": 701,
+        "increment_id": "000000701",
+        "state": "new",
+        "status": "pending",
+        "store_id": 6,
+        "items": [
+          {
+            "item_id": 71,
+            "sku": "RULE-71",
+            "qty_ordered": 2,
+            "qty_invoiced": 0,
+            "qty_refunded": 0,
+            "qty_canceled": 0,
+            "qty_shipped": 0
+          }
+        ]
+      },
+      "returns": []
+    },
+    {
+      "name": "(2) invoiced, not shipped → refunded, closed",
+      "expected": "refunded",
+      "order": {
+        "entity_id": 702,
+        "increment_id": "000000702",
+        "state": "processing",
+        "status": "processing",
+        "store_id": 6,
+        "base_shipping_invoiced": 10,
+        "base_shipping_refunded": 0,
+        "items": [
+          {
+            "item_id": 72,
+            "sku": "RULE-72",
+            "qty_ordered": 1,
+            "qty_invoiced": 1,
+            "qty_refunded": 0,
+            "qty_canceled": 0,
+            "qty_shipped": 0
+          }
+        ]
+      },
+      "returns": []
+    },
+    {
+      "name": "(3) invoiced and shipped → refunded, closed",
+      "expected": "refunded",
+      "order": {
+        "entity_id": 703,
+        "increment_id": "000000703",
+        "state": "complete",
+        "status": "complete",
+        "store_id": 6,
+        "base_shipping_invoiced": 5,
+        "base_shipping_refunded": 0,
+        "items": [
+          {
+            "item_id": 73,
+            "sku": "RULE-73",
+            "qty_ordered": 3,
+            "qty_invoiced": 3,
+            "qty_refunded": 0,
+            "qty_canceled": 0,
+            "qty_shipped": 3
+          }
+        ]
+      },
+      "returns": []
+    },
+    {
+      "name": "(4) invoiced with an open return → refunded, closed, return closed",
+      "expected": "refunded",
+      "closesReturn": 40,
+      "order": {
+        "entity_id": 704,
+        "increment_id": "000000704",
+        "state": "complete",
+        "status": "complete",
+        "store_id": 6,
+        "base_shipping_invoiced": 0,
+        "base_shipping_refunded": 0,
+        "items": [
+          {
+            "item_id": 74,
+            "sku": "RULE-74",
+            "qty_ordered": 1,
+            "qty_invoiced": 1,
+            "qty_refunded": 0,
+            "qty_canceled": 0,
+            "qty_shipped": 1
+          }
+        ]
+      },
+      "returns": [
+        {
+          "entity_id": 40,
+          "increment_id": "R40",
+          "order_id": 704,
+          "order_increment_id": "000000704",
+          "store_id": 6,
+          "status": "authorized",
+          "customer_id": 70,
+          "date_requested": "2026-10-30 10:00:00",
+          "customer_custom_email": "",
+          "items": [],
+          "comments": [],
+          "tracks": []
+        }
+      ]
+    },
+    {
+      "name": "(5) already closed → untouched",
+      "expected": "untouched",
+      "order": {
+        "entity_id": 705,
+        "increment_id": "000000705",
+        "state": "closed",
+        "status": "closed",
+        "store_id": 6,
+        "items": [
+          {
+            "item_id": 75,
+            "sku": "RULE-75",
+            "qty_ordered": 1,
+            "qty_invoiced": 1,
+            "qty_refunded": 1,
+            "qty_canceled": 0,
+            "qty_shipped": 1
+          }
+        ]
+      },
+      "returns": []
+    },
+    {
+      "name": "shipped, not invoiced → invoiced, refunded, closed",
+      "expected": "refunded",
+      "invoices": true,
+      "order": {
+        "entity_id": 706,
+        "increment_id": "000000706",
+        "state": "processing",
+        "status": "processing",
+        "store_id": 6,
+        "items": [
+          {
+            "item_id": 76,
+            "sku": "RULE-76",
+            "qty_ordered": 2,
+            "qty_invoiced": 0,
+            "qty_refunded": 0,
+            "qty_canceled": 0,
+            "qty_shipped": 2
+          }
+        ]
+      },
+      "returns": []
+    },
+    {
+      "name": "partly invoiced → invoiced, refunded, closed",
+      "expected": "refunded",
+      "invoices": true,
+      "order": {
+        "entity_id": 707,
+        "increment_id": "000000707",
+        "state": "processing",
+        "status": "processing",
+        "store_id": 6,
+        "base_shipping_invoiced": 5,
+        "base_shipping_refunded": 0,
+        "items": [
+          {
+            "item_id": 77,
+            "sku": "RULE-77",
+            "qty_ordered": 1,
+            "qty_invoiced": 1,
+            "qty_refunded": 0,
+            "qty_canceled": 0,
+            "qty_shipped": 0
+          },
+          {
+            "item_id": 78,
+            "sku": "RULE-78",
+            "qty_ordered": 1,
+            "qty_invoiced": 0,
+            "qty_refunded": 0,
+            "qty_canceled": 0,
+            "qty_shipped": 0
+          }
+        ]
+      },
+      "returns": []
+    }
+  ]
+}
