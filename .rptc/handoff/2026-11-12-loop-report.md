@@ -123,7 +123,12 @@ Live notes; rewritten as the final report at the loop's close.
   anything that makes the project name another datapack or none clears it. Agents see the same
   failure and reason when they ask where a datapack would install. Shared project files never carry
   it (pinned by a test). Old projects show nothing. Full gate green (2,408 suites, 38,606 tests).
-- Step-04 S8 (the failed install on screen): next.
+- Step-04 S8: a246381f8. A failed install shows on its card (red dot, "Install failed", no check,
+  no border) and in the panel (the label and the reason, then Retry). Retry starts the install and
+  opens the install window on it; after two failed retries the button is Fix with AI. A Retry that
+  works makes the card show installed again. Agents can do the same (read the failure, start the
+  install again). No styles changed. Full gate green (2,409 suites, 38,627 tests).
+- Step-04 S9 (the dashboard line): next.
 - Phase 1b, done while waiting: ERP Downtime (863c5c2ca) and Edit Demo Package (f8ece2e6e) moved
   onto the Form layout, whose failure line is what both waited for. Same words; Cancel beside the
   commit, as every form; a read failure is a result window with Close. An unused style rule removed.
@@ -186,5 +191,10 @@ Live notes; rewritten as the final report at the loop's close.
   reset that uninstalls the datapack never clears which datapack the project names (only the
   Datapacks screen's Uninstall does), so after a reset the card still shows the check. Recommend the
   reset clears it, as Uninstall does; built with Phase 6 (reset and Clear) unless you say otherwise.
+- From S8: choices the prototype does not settle: the amber "Newer save available" dot is hidden on a
+  failed card (Restore is not offered there); Uninstall stays in More when the failed run left part
+  of the datapack in Commerce; Fix with AI's refusal (no failed install to fix) shows nothing, as the
+  install window's Fix with AI already does. Recommend keeping the first two; the third is an old
+  gap in both places worth a line on screen.
 - Phase 2 live cycle on the test store (save twice, Undo Last Save, Restore, reinstall with nothing
   sent, uninstall), once Phase 2 is built.
