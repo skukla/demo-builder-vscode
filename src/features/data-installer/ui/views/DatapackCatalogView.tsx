@@ -172,13 +172,13 @@ export function DatapackCatalogView({ library = false }: { library?: boolean } =
         detail: detail.value?.detail,
         heldInCatalog,
         detailLoading: flyoutLoading,
+        ownNames: owned.ownNames,
         onSaved: afterSave,
     });
 
     // The header's save button, one state (step-04 S1): Create, Save ▾ or Save As New, each opening
-    // today's flow. None in the Datapack Library.
-    const { offerSaveAs, saveDemo, saveDemoAsNew } = heldPack;
-    const createDatapack = useCallback((): void => offerSaveAs(''), [offerSaveAs]);
+    // its window (S2). None in the Datapack Library.
+    const { create: createDatapack, saveDemo, saveDemoAsNew } = heldPack;
     const saveState = headerSave({ projectAnswered, catalogAnswered: settled, held, installedAt, heldInCatalog });
     const save = useMemo(
         (): HeaderSaveActions | undefined =>

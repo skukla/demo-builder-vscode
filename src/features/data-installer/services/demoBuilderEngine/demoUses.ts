@@ -1,6 +1,7 @@
 /**
  * What this demo uses in its store (owner, 2026-11-09, walk F85): a save from a pack takes all of
- * it, with nothing to tick, and Add Items offers the rest of four kinds.
+ * it, with nothing to tick. Add Unused Items, which offered the rest of four kinds, was removed
+ * (overview 7b, 2026-11-10).
  *
  * Products, gift cards, customers and cart rules are the demo's website's, categories sit under its
  * root, and companies are its customers' (`storeItems.ts`), so every one of them is the demo's. The
@@ -19,15 +20,15 @@
  * and the other 13 none; `color` has a value on 1,856, and `cs_format`, `brand` and `erp_owner`,
  * which sit in Luma's sets, on none. An attribute counted by its sets would have taken those three.
  *
- * Anything else of those four kinds is unused: another demo's, or something the SC made to use
- * during the demo, which Commerce cannot tell apart, so Add Items lists them and the SC chooses.
+ * Anything else of those four kinds is another demo's, or something the SC made during the demo
+ * and never used, which Commerce cannot tell apart, so a save leaves it out.
  *
  * Reads only.
  *
  * @module features/data-installer/services/demoBuilderEngine/demoUses
  */
 
-import { type PickableKind, type StoreItem, UNUSED_KINDS } from '../../pickableKinds';
+import { INSTANCE_KINDS, type PickableKind, type StoreItem } from '../../pickableKinds';
 import { readWebsiteCustomers } from '../demoDataWipe/wipeReads';
 import { CATALOG_KIND, CUSTOMER_GROUP_KIND } from './b2bKeys';
 import { readCatalogs } from './b2bReads';
@@ -40,16 +41,10 @@ import type { CommerceSalesRule } from '@/types/commerceSalesRule';
 import type { CommerceCompanyRow, CommerceProduct } from '@/types/commerceWire';
 
 /** Whether Commerce keeps a kind for the whole instance, so only some of it is this demo's. */
-const isInstanceKind = (kind: PickableKind): boolean => UNUSED_KINDS.includes(kind);
+const isInstanceKind = (kind: PickableKind): boolean => INSTANCE_KINDS.includes(kind);
 
 /** How many counts of what the demo's products use go to Commerce at once. */
 const COUNTS_AT_ONCE = 6;
-
-/** One kind's items, as this demo uses them. */
-export interface KindUse {
-    used: StoreItem[];
-    unused: StoreItem[];
-}
 
 const idsOf = (ids: Array<number | undefined>): Set<string> =>
     new Set(ids.filter((id): id is number => id !== undefined).map(String));
@@ -100,7 +95,7 @@ async function usedByProducts(
  * @param websiteProducts - the website's products, read whole once by a save (walk F90); products
  *   and gift cards are listed from them, rather than read again
  */
-export function demoUses(ctx: KindContext, websiteProducts?: Promise<CommerceProduct[]>): { of: (kind: PickableKind) => Promise<KindUse> } {
+export function demoUses(ctx: KindContext, websiteProducts?: Promise<CommerceProduct[]>): { of: (kind: PickableKind) => Promise<StoreItem[]> } {
     let groups: Promise<Set<string>> | undefined;
     const groupIds = (): Promise<Set<string>> => (groups ??= usedGroupIds(ctx));
 
@@ -131,12 +126,9 @@ export function demoUses(ctx: KindContext, websiteProducts?: Promise<CommercePro
     return {
         async of(kind) {
             const items = await itemsOf(kind);
-            if (!isInstanceKind(kind)) return { used: items, unused: [] };
+            if (!isInstanceKind(kind)) return items;
             const used = await usedIds(kind, items);
-            return {
-                used: items.filter((i) => used.has(i.id)),
-                unused: items.filter((i) => !used.has(i.id)),
-            };
+            return items.filter((i) => used.has(i.id));
         },
     };
 }

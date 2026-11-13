@@ -39,7 +39,7 @@
  * @module features/data-installer/handlers/storeChangesHandlers
  */
 
-import { KIND_NOUNS, PICKABLE_KINDS, type Selections, type StorePicks, isPickableKind, picksOf } from '../pickableKinds';
+import { KIND_NOUNS, PICKABLE_KINDS, type Selections, type StorePicks, isPickableKind, pickCount, picksOf } from '../pickableKinds';
 import { layerFinder, projectCommerce, readPackItems } from '../services/buildDatapackEngine';
 import type { ReadWindowUse } from '../services/commerceReadWindow';
 import { nodeRecordFiles, readInstallRecord } from '../services/demoBuilderEngine/installRecord';
@@ -180,8 +180,19 @@ export async function openSave(context: HandlerContext, payload: StoreChangesPay
     if ('response' in store) return store;
     const target = await packToSave(store.project, payload);
     if ('error' in target) return { response: { success: false, error: target.error } };
+    if (target.pack && pickCount(read.picks) > 0) return { response: PICKS_WITH_PACK };
     return { ...store, ...target, picks: read.picks };
 }
+
+/**
+ * A save from a datapack takes everything the demo uses, so there is nothing left to pick: Add
+ * Unused Items was removed (overview 7b, 2026-11-10). Picks are a save from nothing's alone.
+ */
+const PICKS_WITH_PACK: HandlerResponse = {
+    success: false,
+    error: "A save from a datapack takes everything this demo uses, so selections cannot be sent with one. Send selections only for a save with no datapack, with saveAs.",
+    code: ErrorCode.INVALID_OPERATION,
+};
 
 export interface SaveOpened extends ProjectStore {
     pack?: DatapackId;
@@ -198,10 +209,9 @@ function setupStepAnswer(pack: DatapackId, step: PackRootStep | undefined): Hand
 /**
  * One kind of the project's store to pick from, for a save with Demo Builder's engine (step 14):
  * the export door's `list-datapack-export-items`. Less what the pack being saved holds (the one
- * named, else the project's own when Demo Builder installed it). With `unused`, Add Items's list:
- * only what this demo does not use (`demoUses.ts`). Reads only.
+ * named, else the project's own when Demo Builder installed it). Reads only.
  */
-export async function listPickableItems(context: HandlerContext, payload: (StoreChangesPayload & { dataType?: string; unused?: boolean }) | undefined): Promise<HandlerResponse> {
+export async function listPickableItems(context: HandlerContext, payload: (StoreChangesPayload & { dataType?: string }) | undefined): Promise<HandlerResponse> {
     const kind = payload?.dataType ?? '';
     if (!isPickableKind(kind)) return { success: false, error: `Choose what to list: one of ${PICKABLE_KINDS.join(', ')}.` };
     const store = await openProjectStore(context);
@@ -209,7 +219,7 @@ export async function listPickableItems(context: HandlerContext, payload: (Store
     const target = await packToSave(store.project, payload);
     if ('error' in target) return { success: false, error: target.error };
     try {
-        return { success: true, data: await listPickable(store.deps, kind, target.pack, target.source, payload?.unused === true) };
+        return { success: true, data: await listPickable(store.deps, kind, target.pack, target.source) };
     } catch (error) {
         return failure(context, error, `Commerce's ${KIND_NOUNS[kind][1]} could not be listed.`);
     }

@@ -746,14 +746,16 @@ the store's copy of the pack into the datapack library, Save or Save As (2026-11
 `saveAs` the new latest save of the pack the project uses, only when it is the user's own (the save
 before it is kept for `undo_last_save` and older saves are deleted, Phase 2); otherwise it
 writes nothing and answers `data.needsName`, and `saveAs: {displayName}`
-makes a new pack of the user's under that name. Either way it saves what the install record lists and
+makes a new pack of the user's under that name (a name the user already has for one of their own
+datapacks is refused). Either way it saves what the install record lists and
 the installed version's own products, attributes and sets, read from the store, leaves the pack
 installed as it was, moves the project onto the new save (recording the store and the pack it was
 made from), and changes nothing in Commerce; `undo_last_save` goes back to the save before it. There is no automatic pack per demo.
 Step 14 (2026-10-30): it takes `selections` too (`{kind: {field: [ids]}}`, the service's export
-shape; kinds and fields in `src/features/data-installer/pickableKinds.ts`), so what the SC added by
-hand in the Admin goes in when picked, and it never joins the install record, so removing the pack
-leaves it. With no pack named it reads the project's when Demo Builder installed it, else saves the
+shape; kinds and fields in `src/features/data-installer/pickableKinds.ts`), only for a save with no
+pack: a save from a pack takes everything the demo uses and is refused with `selections` (Add Unused
+Items removed, 2026-11-10). A pick never joins the install record, so removing the pack leaves it.
+With no pack named it reads the project's when Demo Builder installed it, else saves the
 picks alone (send `saveAs`): a pack from a store Demo Builder did not fill, which the project then uses.
 It answers `unnamed` (ids kept because the store could not name them) and `leftOut` (what the store
 has, of products, gift cards, categories, cart rules, customers and companies, that the version

@@ -4,8 +4,8 @@
  * that failed or was not none. A kind's list, once answered, decides. The kind shown moves on from
  * one with nothing to select.
  *
- * A save from a pack has no kinds to tick (walk F85): its Add Unused Items lists the four kinds a demo may
- * not use all of, and asks only for what it does not use.
+ * Drawn in Create Datapack's dialog. A save from a datapack has no kinds to tick (walk F85), and Add
+ * Unused Items was removed (overview 7b, 2026-11-10).
  */
 
 import '../../../../../../helpers/webviewClientMock';
@@ -17,7 +17,7 @@ import { press, settle } from '../../../../../../helpers/reactSettle';
 // Below the mock on purpose (webview-test-authoring §3).
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { PICKABLE_KINDS, type StoreItemPage, type StoreKindCounts } from '@/features/data-installer/pickableKinds';
-import { SaveFromStoreModal } from '@/features/data-installer/ui/components/SaveFromStoreModal';
+import { DatapackFlowDialog } from '@/features/data-installer/ui/components/create-flow/DatapackFlowDialog';
 
 const mockRequest = webviewClient.request as jest.Mock;
 
@@ -26,7 +26,6 @@ const LIST = 'list-datapack-export-items';
 const NONE_NOTE = 'None available';
 const PRODUCTS: StoreItemPage = { items: [{ id: 'VR-Rack', displayName: 'VR Rack', detail: 'VR-Rack', key: 'VR-Rack' }], totalCount: 1, excludedCount: 0, inPackCount: 0 };
 const NOTHING_LEFT: StoreItemPage = { items: [], totalCount: 3, excludedCount: 0, inPackCount: 0 };
-const PACK = { id: { name: 'bodea', version: 'main' }, displayName: 'Bodea', source: 'library' as const };
 
 function answer(counts: unknown, pages: Record<string, StoreItemPage> = {}) {
     mockRequest.mockImplementation(async (type: string, payload?: { dataType?: string }) => {
@@ -41,8 +40,8 @@ const row = (name: string) => screen.getByRole('button', { name: new RegExp(`^${
 const rows = () => screen.getAllByRole('button').filter((b) => b.classList.contains('datapack-picks-kind'));
 const shown = () => rows().find((b) => b.getAttribute('aria-current') === 'true');
 
-async function open(props: Partial<React.ComponentProps<typeof SaveFromStoreModal>> = {}) {
-    render(<SaveFromStoreModal onClose={jest.fn()} onSave={jest.fn()} {...props} />);
+async function open() {
+    render(<DatapackFlowDialog title="Create Datapack" onClose={jest.fn()} onSave={jest.fn()} />);
     await settle();
 }
 
@@ -207,31 +206,8 @@ describe('a count and a list', () => {
     });
 });
 
-describe('a save from a pack (walk F85)', () => {
-    it('has no kinds to tick, and asks no counts', async () => {
-        answer(counted({}));
-        await open({ pack: PACK });
-
-        expect(rows()).toHaveLength(0);
-        expect(callsOf(COUNT)).toHaveLength(0);
-    });
-
-    it('lists, under Add Unused Items, the four kinds a demo may not use all of, asking only for what it does not use', async () => {
-        answer(counted({}));
-        await open({ pack: PACK });
-
-        await press(screen.getByRole('button', { name: 'Add Unused Items' }));
-
-        expect(rows()).toHaveLength(4);
-        expect(row('Customer Groups')).toHaveAttribute('aria-current', 'true');
-        expect(callsOf(LIST)[0][1]).toStrictEqual({ dataType: 'customer_groups', datapackName: 'bodea', version: 'main', source: 'library', unused: true });
-        expect(screen.queryByRole('checkbox', { name: 'Select All Data' })).not.toBeInTheDocument();
-        expect(callsOf(COUNT)).toHaveLength(0);
-    });
-});
-
 describe('what the count is asked of', () => {
-    it('names none when no pack is being saved', async () => {
+    it('names no datapack', async () => {
         answer(counted({}));
         await open();
 

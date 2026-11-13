@@ -1,6 +1,6 @@
 /**
- * What a demo uses (walk F85): a save from a pack takes it all, and Add Items offers the rest of
- * the four kinds Commerce keeps for the whole instance. The store here is shared by two demos, as
+ * What a demo uses (walk F85): a save from a pack takes it all, and leaves out the rest of the four
+ * kinds Commerce keeps for the whole instance. The store here is shared by two demos, as
  * Scratch 1028 is: website 1 is this demo's, website 2 another's.
  *
  * Its answers are typed to the interfaces the engine reads; the rules were read live on Scratch
@@ -157,8 +157,7 @@ describe('what this demo uses, of the kinds Commerce keeps for the whole instanc
 
         const groups = await demoUses(ctx).of('customer_groups');
 
-        expect(ids(groups.used)).toEqual(['21', '23', '25']);
-        expect(ids(groups.unused)).toEqual(['22', '24', '26', '27']);
+        expect(ids(groups)).toEqual(['21', '23', '25']);
     });
 
     it('takes a shared catalog for one of those groups', async () => {
@@ -166,8 +165,7 @@ describe('what this demo uses, of the kinds Commerce keeps for the whole instanc
 
         const catalogs = await demoUses(ctx).of('b2b_shared_catalogs');
 
-        expect(ids(catalogs.used)).toEqual(['14']);
-        expect(ids(catalogs.unused)).toEqual(['15']);
+        expect(ids(catalogs)).toEqual(['14']);
     });
 
     it('reads the groups once for the groups and the catalogs', async () => {
@@ -185,8 +183,7 @@ describe('what this demo uses, of the kinds Commerce keeps for the whole instanc
 
         const sets = await demoUses(ctx).of('attribute_sets');
 
-        expect(ids(sets.used)).toEqual(['16']);
-        expect(ids(sets.unused)).toEqual(['17']);
+        expect(ids(sets)).toEqual(['16']);
     });
 
     it('takes an attribute only when one of its products has a value for it', async () => {
@@ -194,8 +191,7 @@ describe('what this demo uses, of the kinds Commerce keeps for the whole instanc
 
         const attributes = await demoUses(ctx).of('product_attributes');
 
-        expect(ids(attributes.used)).toEqual(['color']);
-        expect(ids(attributes.unused)).toEqual(['cs_format']);
+        expect(ids(attributes)).toEqual(['color']);
     });
 
     it("takes every one of its website's products: they are all the demo's", async () => {
@@ -203,7 +199,6 @@ describe('what this demo uses, of the kinds Commerce keeps for the whole instanc
 
         const products = await demoUses(ctx).of('products');
 
-        expect(ids(products.used)).toEqual(['tee']);
-        expect(products.unused).toStrictEqual([]);
+        expect(ids(products)).toEqual(['tee']);
     });
 });

@@ -14,8 +14,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { ChangesAnswer, DatapackRemovalChanges } from '../../removalChanges';
+import { freeName, nameProblem } from '../../saveAsName';
 import { countedRows, type TypeRow } from '../components/job/installRows';
-import { freeName, nameProblem } from '../components/job/saveAsName';
 import { useDataInstallerRequest } from './useDataInstallerRequest';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';

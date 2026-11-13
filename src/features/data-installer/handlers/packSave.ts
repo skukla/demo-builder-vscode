@@ -4,7 +4,8 @@
  * opens the store and dispatches, when the two doors became one decision that also serves a
  * removal's "save my changes first" (`removalChanges.ts`).
  *
- * - `saveIntoFor`: a new pack under the name sent (Save As), else the demo's pack when the
+ * - `saveIntoFor`: a new pack under the name sent (Save As), unless the SC already has one by that
+ *   name, else the demo's pack when the
  *   library lists it as the SC's (Save), else the answer that a name is needed. A library that
  *   cannot be asked is never taken to mean the SC's: Save As is the safe answer.
  * - `saveToPack`: capture, write the new version into the library (never `update`), and record
@@ -13,6 +14,7 @@
  * @module features/data-installer/handlers/packSave
  */
 
+import { nameProblem } from '../saveAsName';
 import { DatapackStoreWriter } from '../services/datapackStoreWriter';
 import { writePackToStore } from '../services/datapackTransfer';
 import { saveNote } from '../services/demoBuilderEngine/saveOutcome';
@@ -49,7 +51,25 @@ function needsName(): HandlerResponse {
 }
 
 /**
- * Where a save goes: a new pack under the name sent (Save As), else the demo's pack when it is
+ * The names of the SC's own datapacks in the library, as the Datapacks screen counts them
+ * (`ownedOf`): a new one may not take one (J3-1). None when the library
+ * cannot be asked: the library's own name is generated (`packIdFor`), so a repeated display name
+ * overwrites nothing.
+ */
+async function ownNames(context: HandlerContext): Promise<string[]> {
+    const library = await resolveDataInstallerAccess(context, 'library');
+    if (!library.ok) return [];
+    try {
+        const page = await library.client.findDatapacks({});
+        return page.items.filter((item) => item.mine === true).map((item) => item.displayName);
+    } catch (error) {
+        context.debugLogger.debug(`${LOG_PREFIX} Could not read your datapacks' names: ${error instanceof Error ? error.message : String(error)}`);
+        return [];
+    }
+}
+
+/**
+ * Where a save goes: a new pack under the name sent (Save As), refused when the SC already has one by that name, else the demo's pack when it is
  * the SC's (Save); or the answer that a name is needed.
  */
 export async function saveIntoFor(
@@ -58,7 +78,10 @@ export async function saveIntoFor(
     saveAs: { displayName?: unknown } | undefined,
 ): Promise<SaveInto | { response: HandlerResponse }> {
     const typed = typeof saveAs?.displayName === 'string' ? saveAs.displayName.trim() : '';
-    if (typed) return { displayName: typed };
+    if (typed) {
+        const taken = nameProblem(typed, await ownNames(context));
+        return taken ? { response: { success: false, error: taken, code: ErrorCode.INVALID_OPERATION } } : { displayName: typed };
+    }
     const held = store.project.datapack;
     if (held?.store === 'library') {
         const library = await resolveDataInstallerAccess(context, 'library');

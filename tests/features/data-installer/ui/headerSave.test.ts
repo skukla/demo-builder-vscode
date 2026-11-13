@@ -3,9 +3,10 @@
  * One state, decided before anything is drawn: the button's words never change on screen.
  */
 
-import { headerSave, type HeaderSaveInput } from '@/features/data-installer/ui/headerSave';
+import { headerSave, savesInto, type HeaderSaveInput } from '@/features/data-installer/ui/headerSave';
 
-const LUMA = { name: 'luma', version: 'v2' };
+// A library datapack, as a save records it: a store-less one is a Data Installer datapack (storeOf).
+const LUMA = { name: 'luma', version: 'v2', store: 'library' as const };
 const INSTALLED = '2026-11-10T09:15:00Z';
 const ANSWERED = { projectAnswered: true, catalogAnswered: true };
 
@@ -79,5 +80,17 @@ describe('headerSave', () => {
         ],
     ])('%s', (_case, input, expected) => {
         expect(headerSave(input)).toBe(expected);
+    });
+});
+
+// A datapack recorded with no store is a Data Installer one (storeOf), as heldInCatalogOf already
+// reads it: never saved into as if it were the SC's library datapack.
+describe('savesInto', () => {
+    it('never saves into a datapack recorded with no store', () => {
+        expect(savesInto({ name: 'luma', version: 'main' }, { displayName: 'Luma', mine: true })).toBe(false);
+    });
+
+    it("saves into the SC's own library datapack", () => {
+        expect(savesInto({ name: 'my-luma', version: '20261110-091500', store: 'library' }, { displayName: 'My Luma', mine: true })).toBe(true);
     });
 });

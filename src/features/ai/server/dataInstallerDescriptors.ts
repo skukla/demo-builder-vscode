@@ -82,7 +82,7 @@ const SELECTIONS = z
     .record(z.record(z.array(z.union([z.string(), z.number()]))))
     .optional()
     .describe(
-        `Things to pick from the store, as {kind: {field: [ids]}} with ids from list_datapack_export_items: ${PICKABLE_KINDS.map((kind) => `${kind} by ${PICK_FIELDS[kind]}`).join(', ')}`,
+        `Things to pick from the store for a save with no datapack (refused with one), as {kind: {field: [ids]}} with ids from list_datapack_export_items: ${PICKABLE_KINDS.map((kind) => `${kind} by ${PICK_FIELDS[kind]}`).join(', ')}`,
     );
 
 /** The export fields only an ACO pack (aco:true) takes: a save from the store refuses them. */
@@ -242,8 +242,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             'the public catalog) is counted in excludedCount. Items the pack being saved already holds (the ' +
             "pack named, else the project's own when Demo Builder installed it) are left off, counted in " +
             'inPackCount: what is left is what was added by hand. A save from a pack takes everything the demo ' +
-            'uses on its own; unused: true lists what it does not use (customer groups, shared catalogs, product ' +
-            'attributes and attribute sets nothing of this demo uses), the only things worth naming in selections then. ' +
+            'uses on its own and takes no selections, so this list is for a save with no pack. ' +
             'Send only dataType (and datapackName with version for a pack named).',
         map: importHandlers,
         type: 'list-datapack-export-items',
@@ -252,7 +251,6 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             version: z.string().optional().describe('That pack\'s version'),
             source: PACK_SOURCE,
             dataType: z.string().describe('The single data type to enumerate'),
-            unused: z.boolean().optional().describe('Only what this demo does not use, for a save from a pack (customer groups, shared catalogs, product attributes, attribute sets)'),
             limit: z
                 .number()
                 .optional()
@@ -336,9 +334,10 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             'older saves are deleted); when it is not (a team pack such as ' +
             'Bodea, or a colleague\'s), nothing is written and the answer has data.needsName: ' +
             'ask the user for a name, then call again with saveAs.displayName (Save As), which makes a NEW pack of ' +
-            'theirs. Either way the project then uses the new save. Everything the demo uses goes in on its own, ' +
-            'what was added by hand in the Admin included; selections add what it does not use yet ' +
-            '(list_datapack_export_items with unused: true lists them). No pack named: the project\'s when ' +
+            'theirs; a name the user already has for one of their datapacks is refused (ask for another). Either way the ' +
+            'project then uses the new save. Everything the demo uses goes in on its own, what was added by hand in the ' +
+            'Admin included, so a save from a pack is refused with selections: send selections only for a save with no ' +
+            'datapack. No pack named: the project\'s when ' +
             'Demo Builder installed it, else none, and the version holds only what is picked (a store Demo Builder ' +
             'did not fill; send saveAs). The pack installed is never changed, and nothing picked is ever removed with it; ' +
             'undo_last_save goes back to the save before it. Store configuration a pack does not hold ' +

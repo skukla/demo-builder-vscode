@@ -1,11 +1,12 @@
 /**
- * The name the SC's changes are saved under when the held datapack is not theirs (step 03, S6; the
- * owner's Q1 choice, following J7-2): it starts "My Bodea", or "My Bodea 2" when that is taken, and
- * a name that is empty or already one of theirs is refused, so Save and Switch waits.
+ * The name a new datapack of the SC's is saved under: the save question's when the held datapack is
+ * not theirs (step 03, S6; the owner's Q1 choice, following J7-2), and Save As New's (step-04 S2,
+ * J3-1). It starts "My Bodea", or "My Bodea 2" when that is taken, and a name that is empty or
+ * already one of theirs is refused: on screen, and by the save itself (`packSave.ts`).
  *
- * Pure: no React.
+ * Pure: the webview and the extension share it.
  *
- * @module features/data-installer/ui/components/job/saveAsName
+ * @module features/data-installer/saveAsName
  */
 
 const sameName = (a: string, b: string): boolean => a.trim().toLowerCase() === b.trim().toLowerCase();

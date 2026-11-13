@@ -23,12 +23,12 @@
  *
  * A save from a pack takes everything this demo uses (`demoUses.ts`, owner, 2026-11-09, walk F85),
  * with nothing to tick: the pack's data as the store holds it now, and whatever of the demo's the
- * pack does not hold yet. Picks add what the demo does not use yet (Add Items). So nothing of what
- * the demo uses is left out, and the left-out list is a save from nothing's alone.
+ * pack does not hold yet. So nothing of what the demo uses is left out, and the left-out list is a
+ * save from nothing's alone. The handler sends picks only for a save from nothing (Add Unused
+ * Items removed, overview 7b, 2026-11-10).
  *
  * `listPickable` is the pick list: one kind of the store's items, less what the pack being saved
- * holds already; or, for Add Items, what this demo does not use. `countPickable` is what its cards
- * are greyed by: how many of each kind.
+ * holds already. `countPickable` is what its cards are greyed by: how many of each kind.
  *
  * @module features/data-installer/services/demoBuilderEngine/saveStore
  */
@@ -93,8 +93,8 @@ export interface SaveTarget {
     source?: DatapackStoreName;
     saveAs: SaveAs;
     /**
-     * Things picked to go in too: from nothing, all there is; from a pack, what the demo does not use
-     * yet (Add Items). Never put on the install record.
+     * Things picked to go in too: from nothing, all there is. The handler refuses picks with a pack
+     * (Add Unused Items removed, overview 7b). Never put on the install record.
      */
     picks?: StorePicks;
 }
@@ -290,7 +290,7 @@ async function demoPicks(ctx: KindContext, created: readonly CreatedObject[], ro
         PICKABLE_KINDS.map(async (kind) => {
             const started = Date.now();
             const holds = holdsOf(kind, created, rows);
-            const ids = (await uses.of(kind)).used.filter((item) => !holds(item)).map((item) => item.id);
+            const ids = (await uses.of(kind)).filter((item) => !holds(item)).map((item) => item.id);
             ctx.log(`what the demo uses: ${kind} in ${Date.now() - started} ms, ${ids.length} not in the pack`);
             return [kind, ids] as const;
         }),
@@ -299,8 +299,8 @@ async function demoPicks(ctx: KindContext, created: readonly CreatedObject[], ro
 }
 
 /**
- * What a save takes beyond the record: from a pack, all the demo uses and Add Unused Items's picks;
- * from nothing, the picks. From a pack, the website's products are read whole once, both to find
+ * What a save takes beyond the record: from a pack, all the demo uses (with any picks a direct caller
+ * hands in); from nothing, the picks. From a pack, the website's products are read whole once, both to find
  * what the demo uses and as the products capture turns into rows (walk F90).
  */
 async function picksOf(ctx: KindContext, record: InstallRecord | undefined, rows: Record<string, unknown>, chosen: StorePicks | undefined): Promise<{ picks: StorePicks; products: CommerceProduct[] }> {
@@ -351,15 +351,13 @@ function refuseUninstallable(items: Record<string, unknown>): void {
  * (step 14, item 11): what the SC made by hand is what is left. Reads only.
  *
  * @param pack - the pack being saved, when there is one
- * @param unused - Add Items: only what this demo does not use (`demoUses.ts`)
  */
-export async function listPickable(deps: StoreChangesDeps, kind: PickableKind, pack?: DatapackId, source?: DatapackStoreName, unused = false): Promise<StoreItemPage> {
+export async function listPickable(deps: StoreChangesDeps, kind: PickableKind, pack?: DatapackId, source?: DatapackStoreName): Promise<StoreItemPage> {
     const started = Date.now();
     const record = pack ? await readInstallRecord(deps.files ?? nodeRecordFiles, deps.projectPath, pack) : undefined;
-    const listOf = (ctx: KindContext) => (unused ? demoUses(ctx).of(kind).then((use) => ({ items: use.unused, excluded: 0 })) : listStoreItems(ctx, kind));
     // Commerce and the pack are read at once; the pack once a visit (`packReadCache`, walk F81).
     const [store, held] = await Promise.all([
-        openStore(deps, pack, record).then(listOf).then((listed) => ({ ...listed, ms: Date.now() - started })),
+        openStore(deps, pack, record).then((ctx) => listStoreItems(ctx, kind)).then((listed) => ({ ...listed, ms: Date.now() - started })),
         pack ? packRowsOf(deps, pack, source) : Promise.resolve(undefined),
     ]);
     const { items, excluded } = store;
@@ -367,8 +365,7 @@ export async function listPickable(deps: StoreChangesDeps, kind: PickableKind, p
     deps.log(`Listed ${kind}: Commerce in ${store.ms} ms${held ? `, ${labelPack(held.pack)} in ${held.ms} ms` : ''}`);
     const holds = holdsOf(kind, record?.created ?? [], rows);
     const offered = items.filter((item) => !holds(item));
-    // Add Items says nothing of the pack: what it holds is not what the SC is choosing among.
-    return { items: offered, totalCount: items.length, excludedCount: excluded, inPackCount: unused ? 0 : items.length - offered.length };
+    return { items: offered, totalCount: items.length, excludedCount: excluded, inPackCount: items.length - offered.length };
 }
 
 /** The pack's rows for a list (read once a visit, `packReadCache`); none when it cannot be read, as before. */

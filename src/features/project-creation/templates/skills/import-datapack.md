@@ -182,12 +182,11 @@ added in the Admin), never another demo's on a shared instance.
 Either way the project then uses the new save: it installs from it and resets to it. With no
 pack named it saves only what is picked, which is how a store built by hand in the Admin becomes
 a pack (send `saveAs`). `start_datapack_export` is the same save: send `selections`, `saveAs`
-and `confirm`.
+and `confirm`. A name the user already has for one of their own datapacks is refused: ask for
+another.
 
-- **From a pack, pick only what the demo does not use yet**: a customer group, shared catalog,
-  attribute or attribute set made to use during the demo. `list_datapack_export_items` with
-  `unused: true` lists them (`dataType`: customer_groups, b2b_shared_catalogs, product_attributes,
-  attribute_sets). Ask the user which, if any; most saves need none.
+- **From a pack, pick nothing**: the save takes everything the demo uses, and `selections` with
+  a pack is refused.
 - **With no pack, pick everything** with `list_datapack_export_items` (`dataType`: products,
   giftcards, categories, cart_rules, customers, b2b_companies, customer_groups,
   b2b_shared_catalogs, product_attributes, attribute_sets).

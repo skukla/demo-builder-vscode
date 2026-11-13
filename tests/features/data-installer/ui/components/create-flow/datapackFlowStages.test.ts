@@ -27,7 +27,7 @@ describe('routeOf', () => {
 
 describe('stageOrder', () => {
     it('is the pack type alone until one is chosen', () => {
-        expect(stageOrder(undefined, false)).toEqual(['pack-type']);
+        expect(stageOrder(undefined)).toEqual(['pack-type']);
     });
 
     // No pack-type screen in front while ACO packs are held back (owner, 2026-11-03); the ACO line
@@ -36,16 +36,17 @@ describe('stageOrder', () => {
         ['store', ['store-picks']],
         ['aco', ['aco-views', 'aco-kinds', 'pack-name']],
     ] as const)('walks the %s route with no pack-type screen in front', (route, order) => {
-        expect(stageOrder(route, false)).toEqual(order);
+        expect(stageOrder(route)).toEqual(order);
     });
 
-    it('starts at the picks with no pack type to ask', () => {
-        expect(stageOrder('store', true)).toEqual(['store-picks']);
+    // Create Datapack names the new pack first (step-04 S3 turns this round).
+    it('asks the name first, then the picks, when named', () => {
+        expect(stageOrder('store', true)).toEqual(['save-as-name', 'store-picks']);
     });
 });
 
 describe('previousStage and nextStage', () => {
-    const order = stageOrder('aco', false);
+    const order = stageOrder('aco');
 
     it('walks back to the start and no further', () => {
         expect(previousStage('pack-name', order)).toBe('aco-kinds');
@@ -58,7 +59,7 @@ describe('previousStage and nextStage', () => {
     });
 
     it('has nothing behind the picks when they are the start', () => {
-        expect(previousStage('store-picks', stageOrder('store', true))).toBeNull();
+        expect(previousStage('store-picks', stageOrder('store'))).toBeNull();
     });
 });
 
@@ -84,10 +85,10 @@ describe('the main button', () => {
         expect(canProceed(stage, { ...NOTHING, [gate]: true })).toBe(true);
     });
 
-    it('says Save for a new version of a pack, and Create for a new one', () => {
-        expect(mainLabel('save', true)).toBe('Save');
-        expect(mainLabel('save', false)).toBe('Create');
-        expect(mainLabel('continue', false)).toBe('Continue');
-        expect(mainLabel('export', false)).toBe('Export');
+    // A save from a datapack is its own window (step-04 S2): this flow only creates.
+    it('says Create for the new pack', () => {
+        expect(mainLabel('save')).toBe('Create');
+        expect(mainLabel('continue')).toBe('Continue');
+        expect(mainLabel('export')).toBe('Export');
     });
 });

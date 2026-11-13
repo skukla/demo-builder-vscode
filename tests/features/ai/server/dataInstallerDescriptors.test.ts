@@ -334,9 +334,10 @@ describe('what each row accepts', () => {
         expect(description).toContain('install only when the user asks');
     });
 
-    it('gives the export item list a single data type to enumerate, a limit, and Add Items\'s unused', () => {
+    // Overview 7b (2026-11-10): Add Unused Items is removed, and its `unused` with it.
+    it('gives the export item list a single data type to enumerate and a limit', () => {
         expect(keys('list_datapack_export_items')).toEqual(
-            ['dataType', 'datapackName', 'limit', 'source', 'unused', 'version'].sort(),
+            ['dataType', 'datapackName', 'limit', 'source', 'version'].sort(),
         );
     });
 
@@ -356,6 +357,14 @@ describe('what each row accepts', () => {
         expect(() => schema.selections.parse({ products: ['VR-Rack'] })).toThrow();
         expect(schema.saveAs.parse({ displayName: 'My Bodea' })).toEqual({ displayName: 'My Bodea' });
         expect(() => schema.saveAs.parse({ displayName: '' })).toThrow();
+    });
+
+    // Overview 7b (2026-11-10): no picks with a datapack, so no tool points an agent at `unused`.
+    it('tells an agent picks go only with no datapack, and names no unused list', () => {
+        const save = row('save_store_changes_to_pack')!.description;
+        expect(save).toContain('selections only for a save with no datapack');
+        expect(save).not.toMatch(/unused/u);
+        expect(row('list_datapack_export_items')!.description).not.toMatch(/unused/u);
     });
 
     it('asks the two project-derived reads for nothing at all', () => {

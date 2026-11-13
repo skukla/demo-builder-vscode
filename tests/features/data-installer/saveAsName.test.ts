@@ -4,7 +4,7 @@
  * an empty or taken name is refused with the house problem line.
  */
 
-import { freeName, nameProblem } from '@/features/data-installer/ui/components/job/saveAsName';
+import { freeName, nameProblem } from '@/features/data-installer/saveAsName';
 
 describe('freeName', () => {
     it('starts "My <Datapack>"', () => {

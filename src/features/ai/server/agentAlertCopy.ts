@@ -457,7 +457,7 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     save_store_changes_to_pack: {
         action: 'Save Commerce changes to a datapack',
         consequence:
-            "Saves this datapack as the project's Commerce instance now holds it, with anything picked from Commerce, into My Datapacks: a new save of the project's datapack when it is yours (the save before it is kept; older ones are deleted), else a new datapack of yours by the name given. The datapack installed is kept as it is, and nothing in Commerce changes.",
+            "Saves this datapack as the project's Commerce instance now holds it (or, with no datapack, what was picked from Commerce) into My Datapacks: a new save of the project's datapack when it is yours (the save before it is kept; older ones are deleted), else a new datapack of yours by the name given. The datapack installed is kept as it is, and nothing in Commerce changes.",
         target: ['datapackName', 'version'],
         sessionGrant: false,
     },

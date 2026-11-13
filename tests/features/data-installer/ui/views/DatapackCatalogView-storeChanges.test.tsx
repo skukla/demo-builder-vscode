@@ -5,6 +5,9 @@
  * The pack the project installs from and resets to is one of the library's cards, wearing the
  * check, wherever it lives. Its flyout leads with Save Changes when the pack is the SC's own. A new
  * pack is the header's Create Datapack. A finished save reads the catalog again at once, so Close only closes.
+ *
+ * Save opens "Save Changes to Acme Bodea" and Save As New "Save As New Datapack", its own form
+ * (step-04 S2; decisions Phase 7b, J3-1): the windows' own suites are in `components/save/`.
  */
 
 import { act, render, screen, waitFor, within } from '@testing-library/react';
@@ -102,8 +105,9 @@ describe('Save Changes, in the flyout', () => {
         await press(card('acme-1a2b3c'));
 
         await press(await inFlyout().findByRole('button', { name: 'Save Changes' }));
-        const saveWindow = await inWindow('Save Changes');
-        expect(saveWindow.getByRole('button', { name: 'Save As New' })).toBeInTheDocument();
+        const saveWindow = await inWindow('Save Changes to Acme Bodea');
+        // Review Records, Cancel and Save: Save As New is the header's (J3-1).
+        expect(saveWindow.queryByRole('button', { name: 'Save As New' })).not.toBeInTheDocument();
         await press(saveWindow.getByRole('button', { name: 'Save' }));
 
         expect(mockPost).toHaveBeenCalledWith('save-store-changes-to-pack', {
@@ -127,7 +131,8 @@ describe('Save Changes, in the flyout', () => {
     });
 
     // Owner, 2026-11-09: "Save Changes" on a team pack read as changing it; it is named for what it does.
-    it('is offered on a team pack as Save As New Datapack, and says the new pack is yours', async () => {
+    // J3-1 (owner, 2026-11-12): from someone else's datapack the name starts "My <Datapack>".
+    it('is offered on a team pack as Save As New Datapack, its name starting "My Luma"', async () => {
         store({ name: 'luma', version: 'eds-compatible', store: 'library' }, [TEAM, ...CATALOG], false, AT);
         await renderView();
         await press(card('luma'));
@@ -136,18 +141,41 @@ describe('Save Changes, in the flyout', () => {
         await press(await inFlyout().findByRole('button', { name: 'Save As New Datapack' }));
 
         expect(await screen.findByRole('heading', { name: 'Save As New Datapack' })).toBeInTheDocument();
-        expect(screen.getByText("Saves this demo's data as a new datapack.")).toBeInTheDocument();
-        expect(screen.getByRole('textbox', { name: /Datapack Name/ })).toHaveValue('');
+        expect(screen.getByRole('textbox', { name: /Datapack Name/ })).toHaveValue('My Luma');
     });
 
-    it("is offered on another SC's pack, and saves to a new pack of yours", async () => {
+    it("is offered on another SC's pack, and saves to a new pack of yours under the name typed", async () => {
         store({ name: 'bodea', version: 'main' }, MINE, false, AT);
         await renderView();
         await press(card('bodea'));
 
         await press(await inFlyout().findByRole('button', { name: 'Save As New Datapack' }));
+        await change(await screen.findByRole('textbox', { name: /Datapack Name/ }), 'Luma Holiday');
+        await press((await inWindow('Save As New Datapack')).getByRole('button', { name: 'Save' }));
 
-        expect(await screen.findByText("Saves this demo's data as a new datapack.")).toBeInTheDocument();
+        expect(mockPost).toHaveBeenCalledWith('save-store-changes-to-pack', {
+            datapackName: 'bodea',
+            version: 'main',
+            source: 'installer',
+            saveAs: { displayName: 'Luma Holiday' },
+            confirm: true,
+            id: 'datapack-save',
+            progress: 'modal',
+        });
+    });
+
+    // J3-1: a save as a new datapack ends on its name, "Saved as Luma Holiday".
+    it('ends a save as a new datapack on "Saved as" its name', async () => {
+        store({ name: 'bodea', version: 'main' }, MINE, false, AT);
+        await renderView();
+        await press(card('bodea'));
+        await press(await inFlyout().findByRole('button', { name: 'Save As New Datapack' }));
+        await change(await screen.findByRole('textbox', { name: /Datapack Name/ }), 'Luma Holiday');
+        await press((await inWindow('Save As New Datapack')).getByRole('button', { name: 'Save' }));
+
+        await push({ id: 'datapack-save', state: 'succeeded' });
+
+        expect(await screen.findByRole('heading', { name: /Saved as Luma Holiday$/u })).toBeInTheDocument();
     });
 
     // Owner, 2026-11-06: Copy to the Data Installer is off until our accounts can write to it.
@@ -167,7 +195,7 @@ describe('Save Changes, in the flyout', () => {
         await renderView();
         await press(card('acme-1a2b3c'));
         await press(await inFlyout().findByRole('button', { name: 'Save Changes' }));
-        await press((await inWindow('Save Changes')).getByRole('button', { name: 'Save' }));
+        await press((await inWindow('Save Changes to Acme Bodea')).getByRole('button', { name: 'Save' }));
         const before = catalogReads();
 
         await push({ id: 'datapack-save', state: 'succeeded' });
@@ -182,7 +210,7 @@ describe('Save Changes, in the flyout', () => {
         await renderView();
         await press(card('acme-1a2b3c'));
         await press(await inFlyout().findByRole('button', { name: 'Save Changes' }));
-        await press((await inWindow('Save Changes')).getByRole('button', { name: 'Save' }));
+        await press((await inWindow('Save Changes to Acme Bodea')).getByRole('button', { name: 'Save' }));
 
         await push({ id: 'datapack-save', state: 'succeeded' });
 
@@ -223,7 +251,7 @@ describe('the header button', () => {
         expect(screen.getByRole('button', { name: 'Save' })).toHaveTextContent('Save▾');
         await press(screen.getByRole('menuitem', { name: 'Save' }));
 
-        expect(await screen.findByText('Saves everything this demo uses as a new version of Acme Bodea.')).toBeInTheDocument();
+        expect(await screen.findByRole('heading', { name: 'Save Changes to Acme Bodea' })).toBeInTheDocument();
     });
 
     it("is Save ▾ on the SC's own datapack: Save As New makes a new datapack from it", async () => {
@@ -233,7 +261,8 @@ describe('the header button', () => {
         await press(screen.getByRole('menuitem', { name: 'Save As New' }));
 
         expect(await screen.findByRole('heading', { name: 'Save As New Datapack' })).toBeInTheDocument();
-        expect(screen.getByText("Saves this demo's data as a new datapack.")).toBeInTheDocument();
+        // From the SC's own datapack the name starts empty (J3-1).
+        expect(screen.getByRole('textbox', { name: /Datapack Name/ })).toHaveValue('');
     });
 
     it('is a plain Save As New on a team datapack, and saves to a new datapack of yours', async () => {
@@ -244,6 +273,6 @@ describe('the header button', () => {
         await press(screen.getByRole('button', { name: 'Save As New' }));
 
         expect(await screen.findByRole('heading', { name: 'Save As New Datapack' })).toBeInTheDocument();
-        expect(screen.getByText("Saves this demo's data as a new datapack.")).toBeInTheDocument();
+        expect(screen.getByRole('textbox', { name: /Datapack Name/ })).toHaveValue('My Luma');
     });
 });

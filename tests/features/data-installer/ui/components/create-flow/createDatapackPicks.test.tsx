@@ -1,26 +1,26 @@
 /**
- * The screen that selects from the store, as Save and Save As open it (datapack-engine step 14,
- * `.rptc/plans/datapack-save-as/`). The kinds on the left; clicking one shows its checklist on the right, its items asked of
- * `list-datapack-export-items` (less what the pack being saved holds); selections kept across kinds
- * and counted on each row; Save hands them on.
+ * Create Datapack's pick screen (datapack-engine step 14, `.rptc/plans/datapack-save-as/`): the kinds
+ * on the left; clicking one shows its checklist on the right, its items asked of
+ * `list-datapack-export-items`; selections kept across kinds and counted on each row; Create hands
+ * them on.
  *
- * A save from a pack has no picks screen (walk F85): Save Changes is one sentence and Save As New
- * Datapack the name, each with Add Unused Items for what the demo does not use yet. The picks screen is
- * Create Datapack's, from nothing.
+ * Ported from `SaveFromStoreModal.test.tsx` (deleted in step-04 S2) for what is still true of
+ * Create. A save from a datapack is no longer this dialog: Save Changes and Save As New are their own
+ * windows (`components/save/`), and Add Unused Items was removed (overview 7b, 2026-11-10).
  *
  * The list answers are `StoreItemPage`s, typed to the handler's own interface.
  */
 
-import '../../../../helpers/webviewClientMock';
+import '../../../../../helpers/webviewClientMock';
 import React from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { press, settle } from '../../../../helpers/reactSettle';
+import { press, settle } from '../../../../../helpers/reactSettle';
 
 // Below the mock on purpose (webview-test-authoring §3).
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { PICKABLE_KINDS, type StoreItemPage } from '@/features/data-installer/pickableKinds';
-import { SaveFromStoreModal } from '@/features/data-installer/ui/components/SaveFromStoreModal';
+import { DatapackFlowDialog } from '@/features/data-installer/ui/components/create-flow/DatapackFlowDialog';
 import { dataTypeLabel } from '@/features/data-installer/ui/dataTypeLabel';
 
 const mockRequest = webviewClient.request as jest.Mock;
@@ -36,8 +36,6 @@ const PRODUCTS: StoreItemPage = {
 };
 const RULES: StoreItemPage = { items: [{ id: '7', displayName: 'Spring Sale', key: 'Spring Sale' }], totalCount: 1, excludedCount: 0, inPackCount: 0 };
 const NONE: StoreItemPage = { items: [], totalCount: 0, excludedCount: 0, inPackCount: 0 };
-const UNUSED_GROUPS: StoreItemPage = { items: [{ id: '31', displayName: 'Live Demo', key: 'Live Demo' }], totalCount: 1, excludedCount: 0, inPackCount: 0 };
-const PACK = { id: { name: 'bodea', version: 'main' }, displayName: 'Bodea', source: 'library' as const };
 
 function answer(pages: Record<string, StoreItemPage>) {
     mockRequest.mockImplementation(async (type: string, payload?: { dataType?: string }) =>
@@ -49,9 +47,9 @@ const listCalls = () => mockRequest.mock.calls.filter((c) => c[0] === 'list-data
 const row = (name: string) => screen.getByRole('button', { name: new RegExp(`^${name}`) });
 const button = (name: string) => screen.getByRole('button', { name });
 
-async function open(props: Partial<React.ComponentProps<typeof SaveFromStoreModal>> = {}) {
+async function open(props: Partial<React.ComponentProps<typeof DatapackFlowDialog>> = {}) {
     const onSave = jest.fn();
-    render(<SaveFromStoreModal onClose={jest.fn()} onSave={onSave} {...props} />);
+    render(<DatapackFlowDialog title="Create Datapack" onClose={jest.fn()} onSave={onSave} {...props} />);
     await settle();
     return onSave;
 }
@@ -112,20 +110,7 @@ describe('the screen', () => {
         expect(button('Cancel')).toBeInTheDocument();
     });
 
-    // Owner, 2026-11-09 (walk F85): from a pack there is nothing to tick.
-    it('says a save into the pack makes a new version of it, with Add Unused Items, Save As New and Save, and nothing to tick', async () => {
-        answer({ products: PRODUCTS });
-        await open({ pack: PACK });
-
-        expect(screen.getByRole('heading', { name: 'Save Changes' })).toBeInTheDocument();
-        expect(screen.getByText('Saves everything this demo uses as a new version of Bodea.')).toBeInTheDocument();
-        expect(button('Add Unused Items')).toBeInTheDocument();
-        expect(button('Save As New')).toBeInTheDocument();
-        expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
-        expect(listCalls()).toStrictEqual([]);
-    });
-
-    it('says what to include from a store with no pack, and offers no Save As New', async () => {
+    it('says what to include, and offers no Save As New', async () => {
         answer({ products: PRODUCTS });
         await open();
         expect(screen.getByText("Select what to include from this demo's Commerce instance.")).toBeInTheDocument();
@@ -134,7 +119,7 @@ describe('the screen', () => {
 });
 
 describe('selecting the items', () => {
-    it('lists the first kind on opening, with no pack named for a store Demo Builder did not fill', async () => {
+    it('lists the first kind on opening, naming no datapack', async () => {
         answer({ products: PRODUCTS });
         await open();
 
@@ -291,8 +276,8 @@ describe('a read that fails', () => {
     });
 });
 
-describe('Save', () => {
-    it('cannot save nothing from a store Demo Builder did not fill', async () => {
+describe('Create', () => {
+    it('cannot save nothing', async () => {
         answer({ products: PRODUCTS });
         await open();
 
@@ -309,88 +294,26 @@ describe('Save', () => {
 
         expect(button('Create')).toHaveAttribute('aria-disabled', 'true');
     });
-
-    it('can save a pack Demo Builder installed with nothing selected', async () => {
-        answer({ products: PRODUCTS });
-        const onSave = await open({ pack: { ...PACK, source: 'installer' } });
-
-        await press(button('Save'));
-
-        expect(onSave).toHaveBeenCalledWith({});
-    });
 });
 
-describe('Save As', () => {
-    it("asks the new pack's name, starting from the one given, and saves from there", async () => {
-        answer({});
-        const onSave = await open({ pack: PACK, saveAsName: 'Bodea Copy' });
-
-        expect(screen.getByRole('heading', { name: 'Save As New Datapack' })).toBeInTheDocument();
-        expect(screen.getByText("Saves this demo's data as a new datapack.")).toBeInTheDocument();
-        const name = screen.getByRole('textbox', { name: /Datapack Name/ });
-        expect(name).toHaveValue('Bodea Copy');
-        fireEvent.change(name, { target: { value: 'My Bodea' } });
-        await press(button('Save'));
-
-        expect(onSave).toHaveBeenCalledWith({}, 'My Bodea');
-    });
-
-    it('branches off with Save As New: the name, keeping what Add Unused Items added', async () => {
-        answer({ customer_groups: UNUSED_GROUPS });
-        const onSave = await open({ pack: PACK });
-        await press(button('Add Unused Items'));
-        await press(screen.getByRole('checkbox', { name: /Live Demo/ }));
-        await press(button('Add'));
-
-        await press(button('Save As New'));
-        expect(screen.getByRole('heading', { name: 'Save As New Datapack' })).toBeInTheDocument();
-        expect(screen.getByText("Saves this demo's data as a new datapack.")).toBeInTheDocument();
-        fireEvent.change(screen.getByRole('textbox', { name: /Datapack Name/ }), { target: { value: 'Bodea Retail' } });
-        expect(screen.queryByRole('button', { name: 'Save As New' })).not.toBeInTheDocument();
-        await press(button('Save'));
-
-        expect(onSave).toHaveBeenCalledWith({ customer_groups: ['31'] }, 'Bodea Retail');
-    });
-
+describe('the name, first', () => {
     it('will not go on without a name, from nothing', async () => {
         answer({ products: PRODUCTS });
         await open({ saveAsName: '' });
 
         expect(button('Continue')).toHaveAttribute('aria-disabled', 'true');
     });
-});
 
-describe('Add Unused Items (walk F85)', () => {
-    it("opens over the save, adds what is ticked, and says how many on its button", async () => {
-        answer({ customer_groups: UNUSED_GROUPS });
-        const onSave = await open({ pack: PACK });
+    it('asks the name, then what goes in it, and hands both to Create', async () => {
+        answer({ products: PRODUCTS });
+        const onSave = await open({ saveAsName: '' });
 
-        await press(button('Add Unused Items'));
-        expect(screen.getByRole('heading', { name: 'Add Unused Items' })).toBeInTheDocument();
-        expect(screen.getByText("This demo doesn't use these yet. Select any to include.")).toBeInTheDocument();
-        await press(screen.getByRole('checkbox', { name: /Live Demo/ }));
-        await press(button('Add'));
+        fireEvent.change(screen.getByRole('textbox', { name: /Datapack Name/ }), { target: { value: ' Hand Built ' } });
+        await press(button('Continue'));
+        await press(screen.getByRole('checkbox', { name: /VR Rack/ }));
+        await press(button('Create'));
 
-        expect(screen.getByRole('heading', { name: 'Save Changes' })).toBeInTheDocument();
-        await press(button('Add Unused Items (1)'));
-        expect(screen.getByRole('checkbox', { name: /Live Demo/ })).toBeChecked();
-        await press(button('Add'));
-        await press(button('Save'));
-        expect(onSave).toHaveBeenCalledWith({ customer_groups: ['31'] });
-    });
-
-    it('puts the selections back as they were on Cancel, and returns to the save', async () => {
-        answer({ customer_groups: UNUSED_GROUPS });
-        const onSave = await open({ pack: PACK });
-
-        await press(button('Add Unused Items'));
-        await press(screen.getByRole('checkbox', { name: /Live Demo/ }));
-        await press(button('Cancel'));
-
-        expect(screen.getByRole('heading', { name: 'Save Changes' })).toBeInTheDocument();
-        expect(button('Add Unused Items')).toBeInTheDocument();
-        await press(button('Save'));
-        expect(onSave).toHaveBeenCalledWith({});
+        expect(onSave).toHaveBeenCalledWith({ products: ['VR-Rack'] }, 'Hand Built');
     });
 });
 

@@ -12,7 +12,6 @@ import { settle } from '../../../../../helpers/reactSettle';
 // Below the mock on purpose (webview-test-authoring §3).
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { StoreItemPage } from '@/features/data-installer/pickableKinds';
-import type { PackBeingSaved } from '@/features/data-installer/ui/components/create-flow/datapackFlowStages';
 import { type CreateDatapackFlowArgs, useCreateDatapackFlow } from '@/features/data-installer/ui/components/create-flow/useCreateDatapackFlow';
 import type { TargetWebsite } from '@/features/data-installer/ui/hooks/useAcoExportChoice';
 
@@ -20,7 +19,6 @@ const mockRequest = webviewClient.request as jest.Mock;
 
 const PAGE: StoreItemPage = { items: [{ id: 'VR-Rack', displayName: 'VR Rack', key: 'VR-Rack' }], totalCount: 1, excludedCount: 0, inPackCount: 0 };
 const NONE: StoreItemPage = { items: [], totalCount: 0, excludedCount: 0, inPackCount: 0 };
-const PACK: PackBeingSaved = { id: { name: 'bodea', version: 'main' }, displayName: 'Bodea', source: 'library' };
 const WEBSITES: TargetWebsite[] = [{ code: 'base', name: 'Main Website', storeViews: [{ code: 'default', name: 'Default' }, { code: 'fr', name: 'French' }] }];
 
 
@@ -144,21 +142,29 @@ describe('the store route', () => {
     });
 });
 
-describe('starting at the picks', () => {
-    it('has nothing behind the picks and no pack type to ask', async () => {
-        const { result } = await flowFor({ startsAtPicks: true });
+// Create Datapack, as the header opens it: the name, then the picks (step-04 S3 turns this round).
+describe('naming the new pack first', () => {
+    it('waits for a name, then goes on to the picks with the name behind them', async () => {
+        const { result, step } = await flowFor({ saveAsName: '' });
+        expect(result.current.stage).toBe('save-as-name');
+        expect(result.current.main).toMatchObject({ label: 'Continue', isDisabled: true });
+
+        await step(() => result.current.setSaveAsName('Hand Built'));
+        await step(() => result.current.main.onPress());
 
         expect(result.current.stage).toBe('store-picks');
-        expect(result.current.route).toBe('store');
-        expect(result.current.canGoBack).toBe(false);
+        expect(result.current.canGoBack).toBe(true);
     });
 
-    it('can save a pack with nothing picked, and a store only with something picked', async () => {
-        const held = await flowFor({ startsAtPicks: true, pack: PACK });
-        expect(held.result.current.main.isDisabled).toBe(false);
+    it('hands the picks and the name, trimmed, to Create', async () => {
+        const { result, step, onSave } = await flowFor({ saveAsName: '' });
+        await step(() => result.current.setSaveAsName('  Hand Built '));
+        await step(() => result.current.main.onPress());
+        await step(() => result.current.store.setPicked(['VR-Rack']));
 
-        const alone = await flowFor({ startsAtPicks: true });
-        expect(alone.result.current.main.isDisabled).toBe(true);
+        await step(() => result.current.main.onPress());
+
+        expect(onSave).toHaveBeenCalledWith({ products: ['VR-Rack'] }, 'Hand Built');
     });
 });
 

@@ -16,7 +16,7 @@
  */
 
 import type { CatalogPage } from '../types';
-import type { DatapackStoreName, ProjectDatapack } from '@/types/datapack';
+import { storeOf, type DatapackStoreName, type ProjectDatapack } from '@/types/datapack';
 
 /** What decides where a save of the demo's datapack goes: its name, and whose it is. */
 export interface HeldPackInfo {
@@ -51,7 +51,8 @@ export interface HeaderSaveInput {
  * @returns true when a save writes a new version of it
  */
 export function savesInto(held: ProjectDatapack, info: HeldPackInfo): boolean {
-    return (held.store ?? 'library') === 'library' && info.mine === true && info.team !== true;
+    // A datapack recorded with no store is a Data Installer one (`storeOf`), as heldInCatalogOf reads it.
+    return storeOf(held) === 'library' && info.mine === true && info.team !== true;
 }
 
 /**

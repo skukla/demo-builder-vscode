@@ -337,15 +337,22 @@ included, and opening on the version the demo uses (`DatapackCatalogGrid`):
 - **Save Changes** or **Save As New Datapack**, once the demo has a pack Demo Builder installed: in
   the header, and leading the flyout of the demo's pack, the same button and dialog from either place
   (owner, 2026-11-09, walk F83: an SC could not tell which door saved what). On the SC's own library
-  pack (`mine`, not `team`) it is Save Changes, a new version, with **Save As New** beside Save to
-  branch off into a second pack. On a team pack or a colleague's it is Save As New Datapack, named for
-  what it does ("Save Changes" read as changing the team pack): it makes a new pack of the SC's, and
-  each screen says what the save takes in one line ("Saves everything this demo uses as a new
-  datapack of yours.", walk F85: two lines were too busy). The words are in
-  `create-flow/saveWords.ts`; a save into the SC's own pack ends on its title, "Saved to My Luma"
-  (J3-1, owner 2026-11-12), and a new pack on `saveNote` ("Saved as Acme Test. Scratch 1028 now
-  uses it."), over one line per data type with its count. The server decides the same
-  (`saveIntoFor`): a team pack is never saved into, even by its owner.
+  pack (`mine`, not `team`) it is Save Changes, a new version; the header's Save ▾ also offers
+  **Save As New** to branch off into a second pack. On a team pack or a colleague's it is Save As New
+  Datapack, named for what it does ("Save Changes" read as changing the team pack): it makes a new
+  pack of the SC's. Save opens **"Save Changes to My Luma"** (`components/save/SaveChangesWindow`,
+  step-04 S2, J3-1): what My Luma will hold, read-only, one row per type from what its install record
+  lists (`get-datapack-removal-scope`), "2,046, 4 changed" where the SC changed some
+  (`get-datapack-removal-changes`), no line above the table; Review Records opens the install's spot
+  check, Back only; Cancel and Save. Records added by hand since the install show only once saved:
+  neither read sees them. Save As New opens **"Save As New Datapack"** (`SaveAsNewWindow`), the house
+  form with one field, Datapack Name, Cancel and Save and no line; its name starts empty, or "My
+  Bodea" from someone else's datapack ("My Bodea 2" when taken), and a refused name shows under the
+  field in room kept for it ("Give it a name.", "You already have a datapack named My Luma."); the
+  save refuses the same names (`saveIntoFor`, `saveAsName.ts`). A save into the SC's own pack ends on
+  "Saved to My Luma", a new pack on "Saved as Luma Holiday" (J3-1, owner 2026-11-12). The server
+  decides where it goes the same way (`saveIntoFor`): a team pack is never saved into, even by its
+  owner.
 - **A pack of saves is one thing** (owner, 2026-11-09, walk F99; Phase 2, 2026-11-12). A save's
   version is never shown as its id: everywhere it appears it reads as when it was saved, in the SC's
   own time ("Nov 9, 9:15 AM", `versionLabel` in `packVersions.ts`). The card shows the save the demo
@@ -397,13 +404,9 @@ product attributes Commerce keeps for the whole instance, several demos' on a sh
 counts only when something of the demo uses it: a group its customers, cart rules or companies are
 in; a catalog for one of those groups; a set one of its products has; an attribute one of its products
 has a value for (read live on Scratch 1028: an attribute counted by its sets took three that no
-product had a value for). Save As New Datapack is the name screen and Save Changes one sentence, each
-with **Add Unused Items** at the footer's start: a list of only those four kinds, of what the demo does not
-use yet (`list-datapack-export-items` with `unused`), for something the SC made to use during the
-demo; Commerce cannot tell that from another demo's, so the SC chooses. Its Cancel puts the
-selections back and returns to the save; its count shows on the button ("Add Unused Items (1)"), and
-its one sentence says "Nothing in this demo uses these yet. Select any to include." Nothing of
-what the demo uses is left out, so the left-out list is a save from nothing's alone.
+product had a value for). Add Unused Items, which listed the rest of those four kinds to pick, was
+removed (overview 7b, 2026-11-10), and the save refuses `selections` with a pack. Nothing of what
+the demo uses is left out, so the left-out list is a save from nothing's alone.
 
 **Create Datapack, from nothing,** walks the pick screens (`create-flow/DatapackFlowDialog`): a card
 per kind (products, gift cards, categories, cart rules, customers, companies, customer groups, shared

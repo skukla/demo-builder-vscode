@@ -89,10 +89,28 @@ beforeEach(() => {
 const SAVE_AS = { displayName: 'Hand Built' };
 
 describe('save-store-changes-to-pack with picks', () => {
-    it('hands the save the picks, by kind, as strings', async () => {
-        await storeChangesHandlers['save-store-changes-to-pack'](makeImportHarness(project()).context, { datapackName: 'bodea', version: 'main', selections: PICKS, saveAs: SAVE_AS, confirm: true });
+    it('hands a save from nothing the picks, by kind, as strings', async () => {
+        await storeChangesHandlers['save-store-changes-to-pack'](makeImportHarness(project()).context, { selections: PICKS, saveAs: SAVE_AS, confirm: true });
 
-        expect(mockedSave.mock.calls[0][1]).toMatchObject({ pack: BODEA, picks: { products: ['VR-Rack'], cart_rules: ['7'] } });
+        expect(mockedSave.mock.calls[0][1]).toMatchObject({ picks: { products: ['VR-Rack'], cart_rules: ['7'] } });
+    });
+
+    // Overview 7b (2026-11-10): Add Unused Items is removed. A save from a datapack takes everything
+    // the demo uses, so there is nothing left to pick.
+    it('refuses picks with a datapack named, saving nothing', async () => {
+        const result = await storeChangesHandlers['save-store-changes-to-pack'](makeImportHarness(project()).context, { datapackName: 'bodea', version: 'main', selections: PICKS, saveAs: SAVE_AS, confirm: true });
+
+        expect(result).toMatchObject({ success: false, code: ErrorCode.INVALID_OPERATION, error: expect.stringMatching(/selections cannot be sent/u) });
+        expect(mockedSave).not.toHaveBeenCalled();
+    });
+
+    it("refuses picks with the project's own datapack, when Demo Builder installed it", async () => {
+        mockedRecord.mockResolvedValue(RECORD);
+
+        const result = await storeChangesHandlers['save-store-changes-to-pack'](makeImportHarness(project()).context, { selections: PICKS, saveAs: SAVE_AS, confirm: true });
+
+        expect(result).toMatchObject({ success: false, code: ErrorCode.INVALID_OPERATION });
+        expect(mockedSave).not.toHaveBeenCalled();
     });
 
     it('refuses a kind that cannot be picked, asking nothing of the store', async () => {
@@ -105,7 +123,7 @@ describe('save-store-changes-to-pack with picks', () => {
     it("with no pack named, saves the project's pack when Demo Builder installed it", async () => {
         mockedRecord.mockResolvedValue(RECORD);
 
-        await storeChangesHandlers['save-store-changes-to-pack'](makeImportHarness(project()).context, { selections: PICKS, saveAs: SAVE_AS, confirm: true });
+        await storeChangesHandlers['save-store-changes-to-pack'](makeImportHarness(project()).context, { saveAs: SAVE_AS, confirm: true });
 
         expect(mockedRecord).toHaveBeenCalledWith(expect.anything(), '/nonexistent/projects/acme', BODEA);
         expect(mockedSave.mock.calls[0][1]).toMatchObject({ pack: BODEA, source: 'library' });
@@ -120,6 +138,31 @@ describe('save-store-changes-to-pack with picks', () => {
         const recorded = (context.stateManager.saveProject as jest.Mock).mock.calls[0][0] as Project;
         expect(recorded.datapack).toEqual({ name: expect.stringMatching(/^hand-built-[0-9a-f]{6}$/u), version: expect.any(String), store: 'library' });
         expect(result).toMatchObject({ success: true, data: expect.not.objectContaining({ previous: expect.anything() }) });
+    });
+});
+
+// Decisions Phase 7b (J3-1): Save As New refuses a name the SC already has, on screen and here, so an
+// agent and a stale list are refused too. Only the SC's own count, as the screen counts them
+// (`ownedOf`): a colleague's may share the name.
+describe("Save As's name", () => {
+    const row = (displayName: string, extra: { mine?: boolean; team?: boolean }) => ({ id: { name: `${displayName.toLowerCase()}-1a2b3c`, version: '1' }, displayName, shared: false, dataTypes: [], art: {}, ...extra });
+
+    it('refuses a name the SC already has, whatever its capitals, saving nothing', async () => {
+        jest.spyOn(DataInstallerClient.prototype, 'findDatapacks').mockResolvedValue({ items: [row('Hand Built', { mine: true })], count: 1 });
+
+        const result = await storeChangesHandlers['save-store-changes-to-pack'](makeImportHarness(project()).context, { saveAs: { displayName: ' hand built ' }, selections: PICKS, confirm: true });
+
+        expect(result).toMatchObject({ success: false, code: ErrorCode.INVALID_OPERATION, error: 'You already have a datapack named hand built.' });
+        expect(mockedSave).not.toHaveBeenCalled();
+    });
+
+    it("takes a name only a colleague's datapack has", async () => {
+        jest.spyOn(DataInstallerClient.prototype, 'findDatapacks').mockResolvedValue({ items: [row('Hand Built', {})], count: 1 });
+
+        const result = await storeChangesHandlers['save-store-changes-to-pack'](makeImportHarness(project()).context, { saveAs: SAVE_AS, selections: PICKS, confirm: true });
+
+        expect(result).toMatchObject({ success: true });
+        expect(mockedSave).toHaveBeenCalled();
     });
 });
 
@@ -154,17 +197,8 @@ describe('the export door with Demo Builder engine', () => {
 
         const result = await exportHandlers['list-datapack-export-items'](makeImportHarness(project()).context, { dataType: 'products' });
 
-        expect(mockedList).toHaveBeenCalledWith(expect.objectContaining({ projectPath: '/nonexistent/projects/acme' }), 'products', BODEA, 'library', false);
+        expect(mockedList).toHaveBeenCalledWith(expect.objectContaining({ projectPath: '/nonexistent/projects/acme' }), 'products', BODEA, 'library');
         expect(result).toEqual({ success: true, data: page });
-    });
-
-    it("passes on Add Items's unused, so the list is what the demo does not use (walk F85)", async () => {
-        mockedRecord.mockResolvedValue(RECORD);
-        mockedList.mockResolvedValue({ items: [], totalCount: 0, excludedCount: 0, inPackCount: 0 });
-
-        await exportHandlers['list-datapack-export-items'](makeImportHarness(project()).context, { dataType: 'customer_groups', unused: true });
-
-        expect(mockedList).toHaveBeenCalledWith(expect.objectContaining({ projectPath: '/nonexistent/projects/acme' }), 'customer_groups', BODEA, 'library', true);
     });
 
     it('refuses a kind that cannot be listed for picking, naming those that can', async () => {

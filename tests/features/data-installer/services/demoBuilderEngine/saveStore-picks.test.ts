@@ -10,7 +10,7 @@
 import { installRecordPath, readInstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import { forgetPackReads } from '@/features/data-installer/services/packReadCache';
 import { listPickable, saveStoreChanges } from '@/features/data-installer/services/demoBuilderEngine/saveStore';
-import { PACK, PROJECT, page } from './demoBuilderEngine.testUtils';
+import { PACK, PROJECT } from './demoBuilderEngine.testUtils';
 import { RACKS, SAVE_AS, deps } from './storeChanges.testUtils';
 
 // Pack reads are kept between callers (walk F82): each test starts with none kept.
@@ -110,26 +110,5 @@ describe('listPickable', () => {
 
         expect(page.items.map((i) => i.id)).toEqual(['41', '42']);
         expect(page.inPackCount).toBe(0);
-    });
-});
-
-describe('Add Items: what the demo does not use (walk F85)', () => {
-    it('lists the groups nothing of the demo uses, less what the pack holds, and says nothing of the pack', async () => {
-        const groups = {
-            [page('customerGroups/search')]: {
-                items: [
-                    { id: 1, code: 'General' },
-                    { id: 30, code: 'VIP' },
-                    { id: 31, code: 'Live Demo' },
-                ],
-                total_count: 3,
-            },
-        };
-        const { d } = await deps(true, groups, { ...PACK_ROWS, customer_groups: [{ customer_group: { code: 'VIP' } }] });
-
-        const listed = await listPickable(d, 'customer_groups', PACK, undefined, true);
-
-        expect(listed.items.map((i) => i.displayName)).toEqual(['Live Demo']);
-        expect(listed.inPackCount).toBe(0);
     });
 });
