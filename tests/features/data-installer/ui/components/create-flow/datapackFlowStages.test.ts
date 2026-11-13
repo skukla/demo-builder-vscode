@@ -13,7 +13,7 @@ import {
     stageOrder,
 } from '@/features/data-installer/ui/components/create-flow/datapackFlowStages';
 
-const NOTHING: FlowGates = { packTypeChosen: false, canSave: false, viewsChosen: false, kindsChosen: false, named: false, saveAsNamed: false };
+const NOTHING: FlowGates = { packTypeChosen: false, canSave: false, viewsChosen: false, kindsChosen: false, named: false };
 
 // One route per pack type: the Data Installer service's own export route was deleted on 2026-11-06 (DI-12).
 describe('routeOf', () => {
@@ -32,16 +32,12 @@ describe('stageOrder', () => {
 
     // No pack-type screen in front while ACO packs are held back (owner, 2026-11-03); the ACO line
     // reverts this.
+    // Create is two windows (step-04 S3; decisions Phase 7b, J3-2): what it holds, then the name.
     it.each([
-        ['store', ['store-picks']],
+        ['store', ['store-picks', 'create-name']],
         ['aco', ['aco-views', 'aco-kinds', 'pack-name']],
     ] as const)('walks the %s route with no pack-type screen in front', (route, order) => {
         expect(stageOrder(route)).toEqual(order);
-    });
-
-    // Create Datapack names the new pack first (step-04 S3 turns this round).
-    it('asks the name first, then the picks, when named', () => {
-        expect(stageOrder('store', true)).toEqual(['save-as-name', 'store-picks']);
     });
 });
 
@@ -58,15 +54,18 @@ describe('previousStage and nextStage', () => {
         expect(nextStage('pack-name', order)).toBeNull();
     });
 
-    it('has nothing behind the picks when they are the start', () => {
+    it('has nothing behind the picks, and the picks behind the name', () => {
         expect(previousStage('store-picks', stageOrder('store'))).toBeNull();
+        expect(previousStage('create-name', stageOrder('store'))).toBe('store-picks');
+        expect(nextStage('store-picks', stageOrder('store'))).toBe('create-name');
     });
 });
 
 describe('the main button', () => {
     it.each([
         ['pack-type', 'continue'],
-        ['store-picks', 'save'],
+        ['store-picks', 'next'],
+        ['create-name', 'save'],
         ['aco-views', 'continue'],
         ['aco-kinds', 'continue'],
         ['pack-name', 'export'],
@@ -85,8 +84,14 @@ describe('the main button', () => {
         expect(canProceed(stage, { ...NOTHING, [gate]: true })).toBe(true);
     });
 
+    // The name's rules are Save As New's: Create is on, and a name it refuses says why under the field.
+    it('leaves Create on with no name, as Save As New leaves Save', () => {
+        expect(canProceed('create-name', NOTHING)).toBe(true);
+    });
+
     // A save from a datapack is its own window (step-04 S2): this flow only creates.
-    it('says Create for the new pack', () => {
+    it('says Next on the picks, and Create for the new pack', () => {
+        expect(mainLabel('next')).toBe('Next');
         expect(mainLabel('save')).toBe('Create');
         expect(mainLabel('continue')).toBe('Continue');
         expect(mainLabel('export')).toBe('Export');

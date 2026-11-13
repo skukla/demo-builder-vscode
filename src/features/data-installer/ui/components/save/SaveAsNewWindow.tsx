@@ -10,7 +10,7 @@
  */
 
 import React, { useMemo, useState } from 'react';
-import { nameProblem } from '../../../saveAsName';
+import { longestNameProblem, nameProblem } from '../../../saveAsName';
 import { NameField } from './NameField';
 import { FormDialog } from '@/core/ui/components/ui/FormDialog';
 
@@ -24,15 +24,6 @@ export interface SaveAsNewWindowProps {
     onClose: () => void;
 }
 
-/** The longest reason the field could give, for the room kept under it. */
-function longestProblem(ownNames: readonly string[]): string {
-    const reasons = [
-        nameProblem('', []) ?? '',
-        ...ownNames.map((name) => nameProblem(name, [name]) ?? ''),
-    ];
-    return reasons.reduce((longest, each) => (each.length > longest.length ? each : longest), '');
-}
-
 export function SaveAsNewWindow({
     startName,
     ownNames,
@@ -41,7 +32,7 @@ export function SaveAsNewWindow({
 }: SaveAsNewWindowProps): React.ReactElement {
     const [name, setName] = useState(startName);
     const [error, setError] = useState<string | undefined>(undefined);
-    const room = useMemo(() => longestProblem(ownNames), [ownNames]);
+    const room = useMemo(() => longestNameProblem(ownNames), [ownNames]);
     const rename = (next: string): void => {
         setName(next);
         setError(undefined);

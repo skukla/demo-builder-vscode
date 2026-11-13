@@ -15,8 +15,9 @@
  *
  * `everything` is the same row one level up, over a list of lists: Create Datapack's kinds ("Select
  * All Data", owner 2026-11-03: "Select Everything" read as an AI talking), where it ticks every item
- * of every kind, with the spinner while it reads the kinds not opened yet (owner, 2026-11-03, chosen over a footer button because it shows the
- * partial state and sits on what it changes).
+ * of every kind (owner, 2026-11-03, chosen over a footer button because it shows the partial state
+ * and sits on what it changes). It reads nothing: a kind is ticked whole until its ids are needed
+ * (step-04 S3).
  *
  * Styled by `core/ui/styles/checkbox-row.css` (`.select-all-row`), which every host bundle imports.
  *
@@ -34,19 +35,15 @@ export interface SelectAllRowProps {
     onToggle: () => void;
     /** Over a list of lists: every item of every one ("Select All Data"). */
     everything?: boolean;
-    /** Still reading what it would tick: the spinner, and the box waits. */
-    isPending?: boolean;
 }
 
-export function SelectAllRow({ all, some, onToggle, everything = false, isPending = false }: SelectAllRowProps): React.JSX.Element {
+export function SelectAllRow({ all, some, onToggle, everything = false }: SelectAllRowProps): React.JSX.Element {
     return (
         <div className="select-all-row">
             <CheckboxRow
                 label={everything ? 'Select All Data' : 'Select All'}
                 isSelected={all}
                 isIndeterminate={some && !all}
-                isDisabled={isPending}
-                {...(isPending ? { pending: 'Reading the data to select' } : {})}
                 onChange={onToggle}
             />
         </div>

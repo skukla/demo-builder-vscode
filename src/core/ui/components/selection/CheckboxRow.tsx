@@ -15,8 +15,6 @@
 
 import { Checkbox } from '@adobe/react-spectrum';
 import React from 'react';
-import { Spinner } from '@/core/ui/components/ui/Spinner';
-import { cn } from '@/core/ui/utils/classNames';
 
 export interface CheckboxRowProps {
     /** The name, in the primary register. */
@@ -29,11 +27,6 @@ export interface CheckboxRowProps {
     /** Some, not all, of what the row stands for is ticked (a website with some of its stores). */
     isIndeterminate?: boolean;
     isDisabled?: boolean;
-    /**
-     * Still working out what ticking it means: the house spinner takes the box's place, at its size,
-     * as a dialog button's does its label's (owner, 2026-11-03), so nothing beside it moves.
-     */
-    pending?: string;
     onChange: () => void;
 }
 
@@ -45,21 +38,15 @@ export function CheckboxRow({
     isSelected,
     isIndeterminate,
     isDisabled,
-    pending,
     onChange,
 }: CheckboxRowProps): React.ReactElement {
     return (
-        <div className={cn('checkbox-row', pending !== undefined && 'checkbox-row--pending')}>
+        <div className="checkbox-row">
             <Checkbox isSelected={isSelected} isIndeterminate={isIndeterminate} isDisabled={isDisabled} onChange={onChange}>
                 <span className="checkbox-row-label">{label}</span>
                 {detail !== undefined && <span className="checkbox-row-detail">{detail}</span>}
                 {reason !== undefined && <span className="checkbox-row-reason">{reason}</span>}
             </Checkbox>
-            {pending !== undefined && (
-                <span className="checkbox-row-pending">
-                    <Spinner size="S" aria-label={pending} />
-                </span>
-            )}
         </div>
     );
 }

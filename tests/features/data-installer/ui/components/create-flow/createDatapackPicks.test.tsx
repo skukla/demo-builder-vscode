@@ -1,8 +1,9 @@
 /**
  * Create Datapack's pick screen (datapack-engine step 14, `.rptc/plans/datapack-save-as/`): the kinds
  * on the left; clicking one shows its checklist on the right, its items asked of
- * `list-datapack-export-items`; selections kept across kinds and counted on each row; Create hands
- * them on.
+ * `list-datapack-export-items`; selections kept across kinds and counted on each row; Next goes on to
+ * the name, and Create hands both on. Create is two windows (step-04 S3; decisions Phase 7b, J3-2):
+ * what it holds, everything ticked to start (overview 7b), then the name.
  *
  * Ported from `SaveFromStoreModal.test.tsx` (deleted in step-04 S2) for what is still true of
  * Create. A save from a datapack is no longer this dialog: Save Changes and Save As New are their own
@@ -46,12 +47,28 @@ function answer(pages: Record<string, StoreItemPage>) {
 const listCalls = () => mockRequest.mock.calls.filter((c) => c[0] === 'list-datapack-export-items').map((c) => c[1]);
 const row = (name: string) => screen.getByRole('button', { name: new RegExp(`^${name}`) });
 const button = (name: string) => screen.getByRole('button', { name });
+const everything = () => screen.getByRole('checkbox', { name: 'Select All Data' });
+const NO_NAMES: readonly string[] = [];
 
 async function open(props: Partial<React.ComponentProps<typeof DatapackFlowDialog>> = {}) {
     const onSave = jest.fn();
-    render(<DatapackFlowDialog title="Create Datapack" onClose={jest.fn()} onSave={onSave} {...props} />);
+    render(<DatapackFlowDialog title="Create Datapack" ownNames={NO_NAMES} onClose={jest.fn()} onSave={onSave} {...props} />);
     await settle();
     return onSave;
+}
+
+/** Open with nothing ticked, to tick by hand. */
+async function openCleared() {
+    const onSave = await open();
+    await press(everything());
+    return onSave;
+}
+
+/** Next, then name it and Create. */
+async function create(name = 'Hand Built') {
+    await press(button('Next'));
+    fireEvent.change(screen.getByRole('textbox', { name: /Datapack Name/ }), { target: { value: name } });
+    await press(button('Create'));
 }
 
 beforeEach(() => mockRequest.mockReset());
@@ -67,19 +84,20 @@ describe('the screen', () => {
         expect(screen.queryByRole('button', { name: /Commerce Datapack/ })).not.toBeInTheDocument();
     });
 
-    it('says what selecting also saves, on the kinds that bring something', async () => {
-        answer({ products: PRODUCTS, cart_rules: RULES, customers: RULES });
+    // Prototype conventions rules 1 and 2: no grey line under a row, no "Includes related" line.
+    it('says nothing of what selecting also saves, and draws no detail under an item', async () => {
+        answer({ products: PRODUCTS, cart_rules: RULES });
         await open();
-        expect(screen.getByText('Includes related categories, attributes and stock.')).toBeInTheDocument();
+        // CONTROL: the item is drawn.
+        expect(screen.getByRole('checkbox', { name: 'VR Rack' })).toBeInTheDocument();
+        expect(screen.queryByText('VR-Rack')).not.toBeInTheDocument();
+        expect(screen.queryByText(/^Includes/)).not.toBeInTheDocument();
 
         await press(row('Cart Rules'));
-        expect(screen.getByText('Includes related coupons.')).toBeInTheDocument();
-
-        await press(row('Customers'));
         expect(screen.queryByText(/^Includes/)).not.toBeInTheDocument();
     });
 
-    it('keeps the same layout on a short list with a note: filter, count, Select All, rows, then the note', async () => {
+    it('keeps the same layout on a short list: filter, count, Select All, then the rows', async () => {
         answer({ products: PRODUCTS, cart_rules: RULES });
         await open();
         await press(row('Cart Rules'));
@@ -89,7 +107,6 @@ describe('the screen', () => {
             screen.getByText('1 cart rule'),
             screen.getByRole('checkbox', { name: 'Select All' }),
             screen.getByRole('checkbox', { name: /Spring Sale/ }),
-            screen.getByText('Includes related coupons.'),
         ];
         order.slice(1).forEach((later, i) => {
             expect(order[i].compareDocumentPosition(later) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -110,11 +127,14 @@ describe('the screen', () => {
         expect(button('Cancel')).toBeInTheDocument();
     });
 
-    it('says what to include, and offers no Save As New', async () => {
+    // J3-2: the picker has no heading or intro line; its buttons are Cancel and Next.
+    it('has no intro line, and offers Cancel and Next only', async () => {
         answer({ products: PRODUCTS });
         await open();
-        expect(screen.getByText("Select what to include from this demo's Commerce instance.")).toBeInTheDocument();
+        expect(screen.queryByText("Select what to include from this demo's Commerce instance.")).not.toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Save As New' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Create' })).not.toBeInTheDocument();
+        expect(button('Next')).toBeInTheDocument();
     });
 });
 
@@ -129,7 +149,7 @@ describe('selecting the items', () => {
 
     it('counts on the row as items are selected, and does not read a kind twice', async () => {
         answer({ products: PRODUCTS, cart_rules: RULES });
-        await open();
+        await openCleared();
         await press(screen.getByRole('checkbox', { name: /VR Rack/ }));
 
         expect(row('Products')).toHaveTextContent('1 selected');
@@ -142,28 +162,28 @@ describe('selecting the items', () => {
         expect(listCalls().filter((c) => c.dataType === 'products')).toHaveLength(1);
     });
 
-    it('keeps the selections of every kind, and hands them all to Save', async () => {
+    it('keeps the selections of every kind, and hands them all to Create', async () => {
         answer({ products: PRODUCTS, cart_rules: RULES });
-        const onSave = await open();
+        const onSave = await openCleared();
 
         await press(screen.getByRole('checkbox', { name: /VR Rack/ }));
         await press(row('Cart Rules'));
         await press(screen.getByRole('checkbox', { name: /Spring Sale/ }));
-        await press(button('Create'));
+        await create();
 
-        expect(onSave).toHaveBeenCalledWith({ products: ['VR-Rack'], cart_rules: ['7'] });
+        expect(onSave).toHaveBeenCalledWith({ products: ['VR-Rack'], cart_rules: ['7'] }, 'Hand Built');
     });
 
     it('ticks every item the filter shows with Select All, showing a dash for some', async () => {
         answer({ products: PRODUCTS });
-        const onSave = await open();
+        const onSave = await openCleared();
         await press(screen.getByRole('checkbox', { name: /VR Rack/ }));
         expect(screen.getByRole('checkbox', { name: 'Select All' })).toBePartiallyChecked();
 
         await press(screen.getByRole('checkbox', { name: 'Select All' }));
-        await press(button('Create'));
+        await create();
 
-        expect(onSave).toHaveBeenCalledWith({ products: ['VR-Rack', 'Cable-Tray'] });
+        expect(onSave).toHaveBeenCalledWith({ products: ['VR-Rack', 'Cable-Tray'] }, 'Hand Built');
     });
 
     it('writes a large count with separators', async () => {
@@ -171,25 +191,23 @@ describe('selecting the items', () => {
         answer({ products: { items, totalCount: 1284, excludedCount: 0, inPackCount: 0 } });
         await open();
 
-        await press(screen.getByRole('checkbox', { name: 'Select All' }));
-
         expect(row('Products')).toHaveTextContent('1,284 selected');
     });
 
     // Owner, 2026-11-08 (F79): the pane's bare spinner said nothing; it waits in the house rows.
-    it('reads in its pane, saying what it reads, keeping the rows and Save, so a slow read costs nothing', async () => {
+    it('reads in its pane, saying what it reads, keeping the rows and Next, so a slow read costs nothing', async () => {
         mockRequest.mockImplementation((type: string, payload?: { dataType?: string }) => {
             if (type !== 'list-datapack-export-items') return Promise.resolve({ success: true, data: {} });
             return payload?.dataType === 'products' ? Promise.resolve({ success: true, data: PRODUCTS }) : new Promise(() => undefined);
         });
-        await open();
+        await openCleared();
         await press(screen.getByRole('checkbox', { name: /VR Rack/ }));
 
         await press(row('Cart Rules'));
 
         expect(screen.getByText('Reading cart rules')).toBeInTheDocument();
         expect(screen.getByText('From Commerce')).toBeInTheDocument();
-        expect(button('Create')).toHaveAttribute('aria-disabled', 'false');
+        expect(button('Next')).toHaveAttribute('aria-disabled', 'false');
 
         await press(row('Products'));
 
@@ -276,65 +294,90 @@ describe('a read that fails', () => {
     });
 });
 
-describe('Create', () => {
-    it('cannot save nothing', async () => {
+describe('Next', () => {
+    it('cannot go on with nothing ticked', async () => {
         answer({ products: PRODUCTS });
-        await open();
+        await openCleared();
 
-        expect(button('Create')).toHaveAttribute('aria-disabled', 'true');
+        expect(button('Next')).toHaveAttribute('aria-disabled', 'true');
     });
 
     it('is off again when the last selection is taken away', async () => {
         answer({ products: PRODUCTS });
-        await open();
+        await openCleared();
         await press(screen.getByRole('checkbox', { name: /VR Rack/ }));
-        expect(button('Create')).toHaveAttribute('aria-disabled', 'false');
+        expect(button('Next')).toHaveAttribute('aria-disabled', 'false');
 
         await press(screen.getByRole('checkbox', { name: /VR Rack/ }));
 
-        expect(button('Create')).toHaveAttribute('aria-disabled', 'true');
+        expect(button('Next')).toHaveAttribute('aria-disabled', 'true');
     });
 });
 
-describe('the name, first', () => {
-    it('will not go on without a name, from nothing', async () => {
+// J3-2: the second window, also "Create Datapack": the name, with Back, Cancel and Create.
+describe('the name, second', () => {
+    it('opens on the name, empty, with Back, Cancel and Create, and no picks', async () => {
         answer({ products: PRODUCTS });
-        await open({ saveAsName: '' });
+        await open();
 
-        expect(button('Continue')).toHaveAttribute('aria-disabled', 'true');
+        await press(button('Next'));
+
+        expect(screen.getByRole('heading', { name: 'Create Datapack' })).toBeInTheDocument();
+        expect(screen.getByRole('textbox', { name: /Datapack Name/ })).toHaveValue('');
+        expect(['Back', 'Cancel', 'Create'].map((name) => button(name))).toHaveLength(3);
+        expect(screen.queryByRole('checkbox', { name: 'Select All Data' })).not.toBeInTheDocument();
     });
 
-    it('asks the name, then what goes in it, and hands both to Create', async () => {
+    it('goes back to the picks with them kept', async () => {
         answer({ products: PRODUCTS });
-        const onSave = await open({ saveAsName: '' });
-
-        fireEvent.change(screen.getByRole('textbox', { name: /Datapack Name/ }), { target: { value: ' Hand Built ' } });
-        await press(button('Continue'));
+        await openCleared();
         await press(screen.getByRole('checkbox', { name: /VR Rack/ }));
-        await press(button('Create'));
+        await press(button('Next'));
+
+        await press(button('Back'));
+
+        expect(screen.getByRole('checkbox', { name: /VR Rack/ })).toBeChecked();
+        expect(screen.getByRole('checkbox', { name: /Cable Tray/ })).not.toBeChecked();
+    });
+
+    it('hands the picks and the name, trimmed, to Create', async () => {
+        answer({ products: PRODUCTS });
+        const onSave = await openCleared();
+        await press(screen.getByRole('checkbox', { name: /VR Rack/ }));
+
+        await create(' Hand Built ');
 
         expect(onSave).toHaveBeenCalledWith({ products: ['VR-Rack'] }, 'Hand Built');
     });
+
+    // Save As New's rules (`nameProblem`), under the field.
+    it.each([
+        ['', 'Give it a name.'],
+        ['my luma', 'You already have a datapack named my luma.'],
+    ])('refuses "%s" under the field, and creates nothing', async (name, problem) => {
+        answer({ products: PRODUCTS });
+        const onSave = await open({ ownNames: ['My Luma'] });
+
+        await create(name);
+
+        expect(screen.getByText(problem)).toBeInTheDocument();
+        expect(onSave).not.toHaveBeenCalled();
+    });
 });
 
-describe('Select All Data (2026-11-03)', () => {
-    const everything = () => screen.getByRole('checkbox', { name: 'Select All Data' });
-
-    it('reads the kinds not opened yet, ticks every item of every kind, and hands them all to Save', async () => {
+describe('Select All Data (2026-11-03; ticked to start, overview 7b)', () => {
+    it('starts ticked, reads only the kind shown, and hands every item of every kind to Create', async () => {
         answer({ products: PRODUCTS, cart_rules: RULES });
         const onSave = await open();
-        expect(everything()).not.toBeChecked();
-
-        await press(everything());
-        await settle();
-
-        // Every kind that may have something was asked for, once each.
-        expect(listCalls().map((call) => call.dataType)).toEqual(expect.arrayContaining(['products', 'cart_rules', 'customers']));
         expect(everything()).toBeChecked();
+        expect(listCalls()).toEqual([{ dataType: 'products' }]);
         expect(row('Products')).toHaveTextContent('2 selected');
-        expect(row('Cart Rules')).toHaveTextContent('1 selected');
-        await press(button('Create'));
-        expect(onSave).toHaveBeenCalledWith({ products: ['VR-Rack', 'Cable-Tray'], cart_rules: ['7'] });
+
+        await create();
+
+        // Every kind that may have something was asked for, once each, at Next.
+        expect(listCalls().map((call) => call.dataType)).toEqual(PICKABLE_KINDS);
+        expect(onSave).toHaveBeenCalledWith({ products: ['VR-Rack', 'Cable-Tray'], cart_rules: ['7'] }, 'Hand Built');
     });
 
     it('shows the dash when only some are ticked, and clears every kind when unticked', async () => {
@@ -345,7 +388,6 @@ describe('Select All Data (2026-11-03)', () => {
         expect(everything()).toHaveAttribute('aria-checked', 'mixed');
 
         await press(everything());
-        await settle();
         expect(everything()).toBeChecked();
         await press(everything());
 
@@ -353,7 +395,18 @@ describe('Select All Data (2026-11-03)', () => {
         expect(row('Products')).not.toHaveTextContent('selected');
     });
 
-    it('shows the spinner and waits while it reads, then ticks what answered', async () => {
+    it('ticks everything again without reading anything', async () => {
+        answer({ products: PRODUCTS, cart_rules: RULES });
+        await openCleared();
+        const reads = listCalls().length;
+
+        await press(everything());
+
+        expect(everything()).toBeChecked();
+        expect(listCalls()).toHaveLength(reads);
+    });
+
+    it('shows the spinner on Next while it reads the kinds not yet read, then goes on', async () => {
         let answerCustomers: (value: unknown) => void = () => undefined;
         mockRequest.mockImplementation((type: string, payload?: { dataType?: string }) => {
             if (type !== 'list-datapack-export-items') return Promise.resolve({ success: true, data: null });
@@ -362,28 +415,39 @@ describe('Select All Data (2026-11-03)', () => {
         });
         await open();
 
-        await press(screen.getByRole('checkbox', { name: /^Select All Data/ }));
+        await press(button('Next'));
 
-        expect(screen.getByRole('progressbar', { name: 'Reading the data to select' })).toBeInTheDocument();
-        expect(screen.getByRole('checkbox', { name: /^Select All Data/ })).toBeDisabled();
+        expect(screen.getByRole('button', { name: /^Next/ })).toHaveAttribute('aria-busy', 'true');
         await act(async () => answerCustomers({ success: true, data: RULES }));
         await settle();
-        expect(screen.queryByRole('progressbar', { name: 'Reading the data to select' })).not.toBeInTheDocument();
-        expect(everything()).toBeChecked();
+        expect(screen.getByRole('textbox', { name: /Datapack Name/ })).toBeInTheDocument();
     });
 
-    it("says on a kind's row when its list could not be read, and ticks the rest", async () => {
+    it('hands on what was read when one kind could not be read at Next', async () => {
+        mockRequest.mockImplementation((type: string, payload?: { dataType?: string }) => {
+            if (type !== 'list-datapack-export-items') return Promise.resolve({ success: true, data: null });
+            if (payload?.dataType === 'customers') return Promise.resolve({ success: false, error: 'No answer.' });
+            return Promise.resolve({ success: true, data: payload?.dataType === 'products' ? PRODUCTS : NONE });
+        });
+        const onSave = await open();
+
+        await create();
+        expect(onSave).toHaveBeenCalledWith({ products: ['VR-Rack', 'Cable-Tray'] }, 'Hand Built');
+    });
+
+    it("stays on the picks when Next finds nothing to hand on, saying so on the kind's row", async () => {
         mockRequest.mockImplementation((type: string, payload?: { dataType?: string }) => {
             if (type !== 'list-datapack-export-items') return Promise.resolve({ success: true, data: null });
             if (payload?.dataType === 'customers') return Promise.resolve({ success: false, error: 'No answer.' });
             return Promise.resolve({ success: true, data: payload?.dataType === 'products' ? PRODUCTS : NONE });
         });
         await open();
+        await press(row('Products'));
+        await press(screen.getByRole('checkbox', { name: 'Select All' }));
 
-        await press(everything());
-        await settle();
+        await press(button('Next'));
 
+        expect(screen.queryByRole('textbox', { name: /Datapack Name/ })).not.toBeInTheDocument();
         expect(row('Customers')).toHaveTextContent("Couldn't be read");
-        expect(row('Products')).toHaveTextContent('2 selected');
     });
 });

@@ -15,8 +15,12 @@
  * pane, with the kinds and the buttons still on, since a slow read must not cost what is already
  * selected.
  *
+ * Create is two windows, both titled "Create Datapack" (step-04 S3; decisions Phase 7b, J3-2): what
+ * it holds, the wide picker with Cancel and Next, then the name, small, with Back, Cancel and Create.
+ * The name window keeps room for a refusal under the field (`NameField`), so it never grows.
+ *
  * A save from a datapack is not this dialog: Save Changes and Save As New are their own windows
- * (`components/save/`, step-04 S2). Step-04 S3 shrinks this to two windows.
+ * (`components/save/`, step-04 S2).
  *
  * @module features/data-installer/ui/components/create-flow/DatapackFlowDialog
  */
@@ -26,11 +30,12 @@ import React from 'react';
 import type { StorePicks } from '../../../pickableKinds';
 import { ExportDatapackResult } from '../ExportDatapackResult';
 import { resultStatus } from '../importResult';
+import { NameField } from '../save/NameField';
 import { AcoKindsStage } from './stages/AcoKindsStage';
 import { AcoViewsStage } from './stages/AcoViewsStage';
-import { PackNameStage, SaveAsNameStage } from './stages/PackNameStage';
+import { PackNameStage } from './stages/PackNameStage';
 import { PackTypeStage } from './stages/PackTypeStage';
-import { PICKS_INTRO, StorePicksStage } from './stages/StorePicksStage';
+import { StorePicksStage } from './stages/StorePicksStage';
 import { type CreateDatapackFlow, useCreateDatapackFlow } from './useCreateDatapackFlow';
 import type { ActionButton, ModalWait } from '@/core/ui/components/ui/Modal';
 import { ResultWindow } from '@/core/ui/components/ui/ResultDialog';
@@ -39,11 +44,11 @@ import { WAIT_STAGES } from '@/core/utils/waitStages';
 
 export interface DatapackFlowDialogProps {
     title: string;
-    /** Ask the new pack's name first, starting with this. */
-    saveAsName?: string;
+    /** The SC's own datapacks' names, which a new one may not take. Must be stable. */
+    ownNames: readonly string[];
     onClose: () => void;
-    /** Start the save with these picks, and the new pack's name. Must be stable. */
-    onSave: (picks: StorePicks, saveAsName?: string) => void;
+    /** Start the save with these picks, and the new pack's name. */
+    onSave: (picks: StorePicks, name: string) => void;
 }
 
 /** The read of what the screen will show: the store's data to pick from, or ACO's catalog views. */
@@ -61,31 +66,32 @@ function isPicks(stage: string): boolean {
 
 interface Footer {
     actionButtons: ActionButton[];
-    startButtons?: ActionButton[];
-    hideClose?: boolean;
+    startButtons: ActionButton[];
 }
 
 /**
- * The pick window's room, held from its first frame (the wait included): its intro and its two
- * columns, which take one height whatever is read (`.datapack-picks`).
+ * The pick window's room, held from its first frame (the wait included): its two columns, which
+ * take one height whatever is read (`.datapack-picks`).
  */
 const PICKS_ROOM = (
     <div className="datapack-export-body">
-        <p className="datapack-export-intro">{PICKS_INTRO}</p>
         <div className="datapack-picks" />
     </div>
 );
 
+/** Back at the start of the row, on a window with one behind it; the main button last. */
 function footerOf(flow: CreateDatapackFlow): Footer {
     const main: ActionButton = { label: flow.main.label, variant: 'accent', onPress: flow.main.onPress, isDisabled: flow.main.isDisabled, isPending: flow.main.isPending };
-    const back: ActionButton[] = flow.hasSteps ? [{ label: 'Back', variant: 'secondary', onPress: flow.back, isDisabled: !flow.canGoBack }] : [];
-    return { actionButtons: [...back, main] };
+    const back: ActionButton[] = flow.canGoBack ? [{ label: 'Back', variant: 'secondary', onPress: flow.back }] : [];
+    return { actionButtons: [main], startButtons: back };
 }
 
 /** The body the stage asks for. */
 function StageBody({ flow }: { flow: CreateDatapackFlow }): React.ReactElement {
     const { stage, store, answers } = flow;
-    if (stage === 'save-as-name') return <SaveAsNameStage name={flow.saveAsName} onChange={flow.setSaveAsName} />;
+    if (stage === 'create-name') {
+        return <NameField name={flow.name} onChange={flow.setName} {...(flow.nameError ? { error: flow.nameError } : {})} room={flow.nameRoom} />;
+    }
     if (stage === 'pack-type') return <PackTypeStage packType={flow.packType} onPick={flow.pickPackType} />;
     if (stage === 'store-picks') return <StorePicksStage store={store} />;
     if (stage === 'aco-views') return <AcoViewsStage aco={answers.aco} />;
@@ -93,8 +99,8 @@ function StageBody({ flow }: { flow: CreateDatapackFlow }): React.ReactElement {
     return <PackNameStage answers={answers} />;
 }
 
-export function DatapackFlowDialog({ title, saveAsName, onClose, onSave }: DatapackFlowDialogProps): React.ReactElement {
-    const flow = useCreateDatapackFlow({ saveAsName, onSave });
+export function DatapackFlowDialog({ title, ownNames, onClose, onSave }: DatapackFlowDialogProps): React.ReactElement {
+    const flow = useCreateDatapackFlow({ ownNames, onSave });
     const { result, savable } = flow.answers;
     return (
         <DialogContainer onDismiss={onClose}>

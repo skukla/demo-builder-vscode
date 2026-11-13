@@ -27,3 +27,9 @@ export function nameProblem(name: string, taken: readonly string[]): string | un
     if (taken.some((each) => sameName(each, trimmed))) return `You already have a datapack named ${trimmed}.`;
     return undefined;
 }
+
+/** The longest reason {@link nameProblem} could give against these names: the room kept under a name field. */
+export function longestNameProblem(taken: readonly string[]): string {
+    const reasons = [nameProblem('', []) ?? '', ...taken.map((name) => nameProblem(name, [name]) ?? '')];
+    return reasons.reduce((longest, each) => (each.length > longest.length ? each : longest), '');
+}

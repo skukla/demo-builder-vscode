@@ -4,7 +4,9 @@
  *
  * `SearchHeader` is the search box and count every list here uses; `CheckboxRow` is the row the
  * API picker, the Updates modal and "Clear demo data" use (its sheet is in this bundle's entry).
- * `SearchableList` was not used: it picks ONE item, where this picks many.
+ * `SearchableList` was not used: it picks ONE item, where this picks many. A row is the item's name
+ * alone, no grey detail under it (prototype-conventions rule 1, step-04 S3); the filter still
+ * matches the detail (a SKU, an email), which the SC knows the item by.
  *
  * @module features/data-installer/ui/components/StoreItemChecklist
  */
@@ -56,7 +58,7 @@ export function StoreItemChecklist({ items, nouns, picked, onChange }: StoreItem
             {shown.length > 0 ? <SelectAllRow all={allShown} some={shown.some((item) => ticked.has(item.id))} onToggle={toggleShown} /> : null}
             <div className="datapack-pick-rows">
                 {shown.map((item) => (
-                    <CheckboxRow key={item.id} label={item.displayName} detail={item.detail} isSelected={ticked.has(item.id)} onChange={() => toggle(item.id)} />
+                    <CheckboxRow key={item.id} label={item.displayName} isSelected={ticked.has(item.id)} onChange={() => toggle(item.id)} />
                 ))}
             </div>
         </div>

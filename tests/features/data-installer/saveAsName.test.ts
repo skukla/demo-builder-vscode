@@ -4,7 +4,7 @@
  * an empty or taken name is refused with the house problem line.
  */
 
-import { freeName, nameProblem } from '@/features/data-installer/saveAsName';
+import { freeName, longestNameProblem, nameProblem } from '@/features/data-installer/saveAsName';
 
 describe('freeName', () => {
     it('starts "My <Datapack>"', () => {
@@ -28,5 +28,13 @@ describe('nameProblem', () => {
 
     it('takes any other name', () => {
         expect(nameProblem('My Bodea', ['My Luma'])).toBeUndefined();
+    });
+});
+
+// The room a name field keeps under it (rule 14): the longest refusal it could show.
+describe('longestNameProblem', () => {
+    it('is the empty-name line with no names taken, and the longest taken name\'s line otherwise', () => {
+        expect(longestNameProblem([])).toBe('Give it a name.');
+        expect(longestNameProblem(['Luma', 'Luma Holiday'])).toBe('You already have a datapack named Luma Holiday.');
     });
 });

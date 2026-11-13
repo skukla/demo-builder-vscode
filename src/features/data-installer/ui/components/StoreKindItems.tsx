@@ -6,8 +6,7 @@
  * Commerce (owner, 2026-11-08, F79: a bare spinner said nothing). A kind with nothing to select
  * never rests here: the flow moves on to the next kind, and its row is greyed out.
  *
- * Its notes sit under the list, so the filter, count and Select All are in the same place on every
- * kind, whichever ones have a note (owner, 2026-11-02).
+ * No line says what selecting an item also saves (prototype-conventions rule 2, step-04 S3).
  *
  * @module features/data-installer/ui/components/StoreKindItems
  */
@@ -17,13 +16,6 @@ import { KIND_NOUNS, type PickableKind, type StoreItemPage } from '../../pickabl
 import { StoreItemChecklist } from './StoreItemChecklist';
 import { StageWait } from '@/core/ui/components/feedback/StageWait';
 import { readingKind } from '@/core/utils/waitStages';
-
-/** What selecting one of these also saves, on the kinds where the SC needs to know. */
-const INCLUDES: Partial<Record<PickableKind, string>> = {
-    products: 'Includes related categories, attributes and stock.',
-    cart_rules: 'Includes related coupons.',
-    b2b_companies: 'Includes the company admin.',
-};
 
 export interface StoreKindItemsProps {
     kind: PickableKind;
@@ -44,10 +36,5 @@ export function StoreKindItems({ kind, page, failure, loading, picked, onChange 
         );
     }
     if (failure || !page) return <p className="dialog-problem text-negative">Couldn&apos;t load {many}: {failure}</p>;
-    return (
-        <>
-            <StoreItemChecklist items={page.items} nouns={[one, many]} picked={picked} onChange={onChange} />
-            {INCLUDES[kind] ? <p className="datapack-export-note">{INCLUDES[kind]}</p> : null}
-        </>
-    );
+    return <StoreItemChecklist items={page.items} nouns={[one, many]} picked={picked} onChange={onChange} />;
 }

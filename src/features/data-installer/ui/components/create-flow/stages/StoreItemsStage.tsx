@@ -16,6 +16,8 @@ export interface StoreItemsStageProps {
     /** What an earlier read of this kind answered. */
     answered?: StoreItemPage;
     picked: string[];
+    /** The kind is ticked whole: every item it lists is ticked, from the first frame it lists them. */
+    whole: boolean;
     onChange: (ids: string[]) => void;
     /** Stable. */
     onAnswered: (kind: PickableKind, page: StoreItemPage | null) => void;
@@ -38,15 +40,16 @@ function useKindRead({ kind, answered, onAnswered }: KindReadArgs) {
     return { value, failure, loading: needsRead && !settled };
 }
 
-export function StoreItemsStage({ kind, answered, picked, onChange, onAnswered }: StoreItemsStageProps): React.ReactElement {
+export function StoreItemsStage({ kind, answered, picked, whole, onChange, onAnswered }: StoreItemsStageProps): React.ReactElement {
     const { value, failure, loading } = useKindRead({ kind, answered, onAnswered });
+    const page = answered ?? value;
     return (
         <StoreKindItems
             kind={kind}
-            page={answered ?? value}
+            page={page}
             failure={failure?.message}
             loading={loading}
-            picked={picked}
+            picked={whole ? (page?.items.map((item) => item.id) ?? picked) : picked}
             onChange={onChange}
         />
     );

@@ -24,6 +24,7 @@ const mockRequest = webviewClient.request as jest.Mock;
 const COUNT = 'count-datapack-export-items';
 const LIST = 'list-datapack-export-items';
 const NONE_NOTE = 'None available';
+const NO_NAMES: readonly string[] = [];
 const PRODUCTS: StoreItemPage = { items: [{ id: 'VR-Rack', displayName: 'VR Rack', detail: 'VR-Rack', key: 'VR-Rack' }], totalCount: 1, excludedCount: 0, inPackCount: 0 };
 const NOTHING_LEFT: StoreItemPage = { items: [], totalCount: 3, excludedCount: 0, inPackCount: 0 };
 
@@ -41,7 +42,7 @@ const rows = () => screen.getAllByRole('button').filter((b) => b.classList.conta
 const shown = () => rows().find((b) => b.getAttribute('aria-current') === 'true');
 
 async function open() {
-    render(<DatapackFlowDialog title="Create Datapack" onClose={jest.fn()} onSave={jest.fn()} />);
+    render(<DatapackFlowDialog title="Create Datapack" ownNames={NO_NAMES} onClose={jest.fn()} onSave={jest.fn()} />);
     await settle();
 }
 
@@ -193,15 +194,16 @@ describe('a count and a list', () => {
         expect(row('Products')).toHaveTextContent(NONE_NOTE);
     });
 
+    // Overview 7b: everything starts ticked, so a listed kind's row counts all of it at once.
     it('says how many are selected on the row', async () => {
         const TWO: StoreItemPage = { ...PRODUCTS, items: [...PRODUCTS.items, { id: 'Tray', displayName: 'Cable Tray', key: 'Tray' }], totalCount: 2 };
         answer(counted({ products: 2 }), { products: TWO });
         await open();
+        expect(row('Products')).toHaveTextContent('2 selected');
 
         await press(screen.getByRole('checkbox', { name: /VR Rack/ }));
-        await press(screen.getByRole('checkbox', { name: /Cable Tray/ }));
 
-        expect(row('Products')).toHaveTextContent('2 selected');
+        expect(row('Products')).toHaveTextContent('1 selected');
         expect(callsOf(COUNT)).toHaveLength(1);
     });
 });

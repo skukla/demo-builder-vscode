@@ -9,6 +9,9 @@
  * across the whole store (`storeItems.ts`). So a row with a count above none stays clickable until
  * its list has answered, and is greyed out from then on if nothing was left to select.
  *
+ * No intro line (decisions Phase 7b, J3-2): the window's title says what it is for. A kind ticked
+ * whole draws its items ticked from its first read (`useStorePicks`).
+ *
  * @module features/data-installer/ui/components/create-flow/stages/StorePicksStage
  */
 
@@ -22,9 +25,6 @@ import { cn } from '@/core/ui/utils/classNames';
 
 const NO_PICKS: string[] = [];
 
-/** Create Datapack's pick screen: from nothing, the SC chooses everything the pack holds. */
-export const PICKS_INTRO = "Select what to include from this demo's Commerce instance.";
-
 /** Why a row is greyed out, or how many are selected, or that its list did not answer, or nothing. */
 function noteOf(page: StoreItemPage | null | undefined, count: number | undefined, picked: number): string | undefined {
     // A read that did not answer says so on its row, wherever the SC is (Select All Data reads kinds unopened).
@@ -35,13 +35,14 @@ function noteOf(page: StoreItemPage | null | undefined, count: number | undefine
 
 function KindRow({ kind, store }: { kind: PickableKind; store: StorePicksState }): React.ReactElement {
     const picked = store.picks[kind]?.length ?? 0;
+    const ticked = picked > 0 || store.whole.has(kind);
     const shown = kind === store.kind;
     const note = noteOf(store.reads[kind], store.counts[kind], picked);
     return (
         <li>
             <button
                 type="button"
-                className={cn('datapack-picks-kind', shown && 'datapack-picks-kind--shown', picked > 0 && 'datapack-picks-kind--picked')}
+                className={cn('datapack-picks-kind', shown && 'datapack-picks-kind--shown', ticked && 'datapack-picks-kind--picked')}
                 aria-current={shown ? 'true' : undefined}
                 disabled={isKnownEmpty(store.reads[kind], store.counts[kind])}
                 onClick={() => store.open(kind)}
@@ -60,36 +61,33 @@ export interface StorePicksStageProps {
 export function StorePicksStage({ store }: StorePicksStageProps): React.ReactElement {
     const { kind } = store;
     return (
-        <>
-            <p className="datapack-export-intro">{PICKS_INTRO}</p>
-            <div className="datapack-picks">
-                <ul className="datapack-picks-rail">
-                    <li>
-                        <SelectAllRow
-                            everything
-                            all={store.everything.all}
-                            some={store.everything.some}
-                            isPending={store.everything.busy}
-                            onToggle={() => void store.selectEverything(!store.everything.all)}
-                        />
-                    </li>
-                    {store.kinds.map((each) => <KindRow key={each} kind={each} store={store} />)}
-                </ul>
-                <div className="datapack-picks-pane">
-                    {kind ? (
-                        <StoreItemsStage
-                            key={kind}
-                            kind={kind}
-                            answered={store.reads[kind] ?? undefined}
-                            picked={store.picks[kind] ?? NO_PICKS}
-                            onChange={store.setPicked}
-                            onAnswered={store.answered}
-                        />
-                    ) : (
-                        <p className="datapack-export-note">Commerce has nothing to select.</p>
-                    )}
-                </div>
+        <div className="datapack-picks">
+            <ul className="datapack-picks-rail">
+                <li>
+                    <SelectAllRow
+                        everything
+                        all={store.everything.all}
+                        some={store.everything.some}
+                        onToggle={() => store.selectEverything(!store.everything.all)}
+                    />
+                </li>
+                {store.kinds.map((each) => <KindRow key={each} kind={each} store={store} />)}
+            </ul>
+            <div className="datapack-picks-pane">
+                {kind ? (
+                    <StoreItemsStage
+                        key={kind}
+                        kind={kind}
+                        answered={store.reads[kind] ?? undefined}
+                        picked={store.picks[kind] ?? NO_PICKS}
+                        whole={store.whole.has(kind)}
+                        onChange={store.setPicked}
+                        onAnswered={store.answered}
+                    />
+                ) : (
+                    <p className="datapack-export-note">Commerce has nothing to select.</p>
+                )}
             </div>
-        </>
+        </div>
     );
 }

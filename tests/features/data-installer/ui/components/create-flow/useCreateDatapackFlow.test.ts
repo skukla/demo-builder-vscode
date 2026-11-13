@@ -22,9 +22,11 @@ const NONE: StoreItemPage = { items: [], totalCount: 0, excludedCount: 0, inPack
 const WEBSITES: TargetWebsite[] = [{ code: 'base', name: 'Main Website', storeViews: [{ code: 'default', name: 'Default' }, { code: 'fr', name: 'French' }] }];
 
 
+const NO_NAMES: readonly string[] = [];
+
 async function flowFor(args: Partial<CreateDatapackFlowArgs> = {}) {
     const onSave = jest.fn();
-    const { result } = renderHook(() => useCreateDatapackFlow({ onSave, ...args }));
+    const { result } = renderHook(() => useCreateDatapackFlow({ onSave, ownNames: NO_NAMES, ...args }));
     await settle();
     /** Do something, then let what it asked for answer. */
     const step = async (action: () => void): Promise<void> => {
@@ -85,27 +87,55 @@ describe('the store route', () => {
         expect(result.current.waiting).toBe(false);
     });
 
-    it('keeps selections across kinds, and saves them all', async () => {
+    it('keeps selections across kinds, and hands them all to Create', async () => {
         const { result, step, onSave } = await onThePicks();
+        await step(() => void result.current.store.selectEverything(false));
         await step(() => result.current.store.open('products'));
         await step(() => result.current.store.setPicked(['VR-Rack', 'Tray']));
         await step(() => result.current.store.open('cart_rules'));
         await step(() => result.current.store.setPicked(['7']));
 
         expect(result.current.stage).toBe('store-picks');
-        expect(result.current.main).toMatchObject({ label: 'Create', isDisabled: false });
+        expect(result.current.main).toMatchObject({ label: 'Next', isDisabled: false });
 
         await step(() => result.current.main.onPress());
+        await step(() => result.current.setName('Hand Built'));
+        await step(() => result.current.main.onPress());
 
-        expect(onSave).toHaveBeenCalledWith({ products: ['VR-Rack', 'Tray'], cart_rules: ['7'] });
+        expect(onSave).toHaveBeenCalledWith({ products: ['VR-Rack', 'Tray'], cart_rules: ['7'] }, 'Hand Built');
     });
 
-    it('has the main button off until something is selected', async () => {
+    // Overview 7b: Create Datapack's picker starts with everything ticked, so Next is on at once.
+    it('starts with everything ticked, and has Next off once nothing is', async () => {
         const { result, step } = await onThePicks();
-        expect(result.current.main).toMatchObject({ label: 'Create', isDisabled: true });
+        expect(result.current.store.everything.all).toBe(true);
+        expect(result.current.main).toMatchObject({ label: 'Next', isDisabled: false });
+
+        await step(() => void result.current.store.selectEverything(false));
+        expect(result.current.main).toMatchObject({ label: 'Next', isDisabled: true });
 
         await step(() => result.current.store.setPicked(['VR-Rack']));
-        expect(result.current.main).toMatchObject({ label: 'Create', isDisabled: false });
+        expect(result.current.main).toMatchObject({ label: 'Next', isDisabled: false });
+    });
+
+    // Everything ticked is the kind-level "all": nothing is read for it until Next needs the ids.
+    it('reads no kind for everything ticked until Next, then reads each one not yet read', async () => {
+        const answering = mockRequest.getMockImplementation();
+        mockRequest.mockImplementation(async (type: string, payload?: { dataType?: string }) => {
+            if (type !== 'list-datapack-export-items') return answering?.(type, payload);
+            return { success: true, data: payload?.dataType === 'products' ? PAGE : NONE };
+        });
+        const { result, step, onSave } = await onThePicks();
+        const lists = () => mockRequest.mock.calls.filter((call) => call[0] === 'list-datapack-export-items');
+        expect(lists()).toHaveLength(0);
+
+        await step(() => result.current.main.onPress());
+        expect(result.current.stage).toBe('create-name');
+        expect(lists()).toHaveLength(10);
+
+        await step(() => result.current.setName('Everything'));
+        await step(() => result.current.main.onPress());
+        expect(onSave).toHaveBeenCalledWith({ products: ['VR-Rack'] }, 'Everything');
     });
 
     it('moves to the next kind when a read leaves nothing to select, and keeps the answer', async () => {
@@ -142,29 +172,63 @@ describe('the store route', () => {
     });
 });
 
-// Create Datapack, as the header opens it: the name, then the picks (step-04 S3 turns this round).
-describe('naming the new pack first', () => {
-    it('waits for a name, then goes on to the picks with the name behind them', async () => {
-        const { result, step } = await flowFor({ saveAsName: '' });
-        expect(result.current.stage).toBe('save-as-name');
-        expect(result.current.main).toMatchObject({ label: 'Continue', isDisabled: true });
+// Create's second window (step-04 S3; decisions Phase 7b, J3-2): the name, with Back, Cancel and Create.
+describe('naming the new pack', () => {
+    async function onTheName(ownNames: readonly string[] = NO_NAMES) {
+        const flow = await flowFor({ ownNames });
+        await flow.step(() => void flow.result.current.store.selectEverything(false));
+        await flow.step(() => flow.result.current.store.setPicked(['VR-Rack']));
+        await flow.step(() => flow.result.current.main.onPress());
+        return flow;
+    }
 
-        await step(() => result.current.setSaveAsName('Hand Built'));
-        await step(() => result.current.main.onPress());
+    it('comes after the picks, with the picks behind it and Create on', async () => {
+        const { result } = await onTheName();
+
+        expect(result.current.stage).toBe('create-name');
+        expect(result.current.name).toBe('');
+        expect(result.current.canGoBack).toBe(true);
+        expect(result.current.main).toMatchObject({ label: 'Create', isDisabled: false });
+    });
+
+    it('goes back to the picks with them kept', async () => {
+        const { result, step } = await onTheName();
+
+        await step(() => result.current.back());
 
         expect(result.current.stage).toBe('store-picks');
-        expect(result.current.canGoBack).toBe(true);
+        expect(result.current.store.picks).toEqual({ products: ['VR-Rack'] });
     });
 
     it('hands the picks and the name, trimmed, to Create', async () => {
-        const { result, step, onSave } = await flowFor({ saveAsName: '' });
-        await step(() => result.current.setSaveAsName('  Hand Built '));
-        await step(() => result.current.main.onPress());
-        await step(() => result.current.store.setPicked(['VR-Rack']));
+        const { result, step, onSave } = await onTheName();
+        await step(() => result.current.setName('  Hand Built '));
 
         await step(() => result.current.main.onPress());
 
         expect(onSave).toHaveBeenCalledWith({ products: ['VR-Rack'] }, 'Hand Built');
     });
-});
 
+    // Save As New's rules (`nameProblem`): an empty name, or one of the SC's own, is refused on screen.
+    it.each([
+        ['', 'Give it a name.'],
+        ['my luma', 'You already have a datapack named my luma.'],
+    ])('refuses "%s", saying why, and starts nothing', async (name, problem) => {
+        const { result, step, onSave } = await onTheName(['My Luma']);
+        await step(() => result.current.setName(name));
+
+        await step(() => result.current.main.onPress());
+
+        expect(result.current.nameError).toBe(problem);
+        expect(onSave).not.toHaveBeenCalled();
+    });
+
+    it('clears the refusal as the name changes', async () => {
+        const { result, step } = await onTheName();
+        await step(() => result.current.main.onPress());
+
+        await step(() => result.current.setName('H'));
+
+        expect(result.current.nameError).toBeUndefined();
+    });
+});

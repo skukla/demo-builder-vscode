@@ -251,10 +251,15 @@ describe('the two doors out of the catalog', () => {
         },
     );
 
-    // Save As with no name yet: the name first, then the picks (2026-11-03). The service's own
-    // export window it opened with the service's engine was deleted on 2026-11-06 (DI-12).
-    it("opens Create's name screen first, empty", async () => {
-        mockRequest.mockResolvedValue({ success: true, data: { items: CATALOG, count: CATALOG.length, total: CATALOG.length } });
+    // Create is two windows (step-04 S3; J3-2): what it holds first, everything ticked, then the
+    // name. The service's own export window was deleted on 2026-11-06 (DI-12).
+    it("opens Create's picks first, everything ticked, with Next on", async () => {
+        const PAGE = { items: [{ id: 'VR-Rack', displayName: 'VR Rack', key: 'VR-Rack' }], totalCount: 1, excludedCount: 0, inPackCount: 0 };
+        mockRequest.mockImplementation(async (type: string) => {
+            if (type === 'list-datapack-export-items') return { success: true, data: PAGE };
+            if (type === 'count-datapack-export-items') return { success: true, data: {} };
+            return { success: true, data: { items: CATALOG, count: CATALOG.length, total: CATALOG.length } };
+        });
         render(<DatapackCatalogView />);
         await settle();
         await screen.findAllByTestId('datapack-card');
@@ -262,8 +267,9 @@ describe('the two doors out of the catalog', () => {
         await press(screen.getByRole('button', { name: 'Create' }));
 
         expect(await screen.findByRole('heading', { name: 'Create Datapack' })).toBeInTheDocument();
-        expect(screen.getByRole('textbox', { name: /Datapack Name/ })).toHaveValue('');
-        expect(screen.getByRole('button', { name: 'Continue' })).toHaveAttribute('aria-disabled', 'true');
+        expect(screen.queryByRole('textbox', { name: /Datapack Name/ })).not.toBeInTheDocument();
+        expect(screen.getByRole('checkbox', { name: 'Select All Data' })).toBeChecked();
+        expect(screen.getByRole('button', { name: 'Next' })).toHaveAttribute('aria-disabled', 'false');
     });
 });
 

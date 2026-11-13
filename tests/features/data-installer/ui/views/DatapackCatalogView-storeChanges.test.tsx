@@ -222,16 +222,34 @@ describe('Save Changes, in the flyout', () => {
 // The header's save button, one state (step-04 S1; decisions Phase 7 and 7b): Create with no datapack,
 // Save ▾ on the SC's own, Save As New on someone else's, none with no install record (P4-Q4).
 describe('the header button', () => {
-    it('reads Create while the demo has no datapack, and opens the create flow', async () => {
+    // Create is two windows (step-04 S3; J3-2): the picks, everything ticked, then the name; the run
+    // ends on "Acme Test Created" (P4-Q1, rule 21: the thing first).
+    it('reads Create while the demo has no datapack, and creates from the picks under the name typed', async () => {
         store(undefined);
+        const answering = mockRequest.getMockImplementation();
+        mockRequest.mockImplementation((type: string, payload?: { dataType?: string }) => {
+            if (type !== 'list-datapack-export-items') return answering?.(type, payload);
+            const items = payload?.dataType === 'products' ? [{ id: 'VR-Rack', displayName: 'VR Rack', key: 'VR-Rack' }] : [];
+            return Promise.resolve({ success: true, data: { items, totalCount: items.length, excludedCount: 0, inPackCount: 0 } });
+        });
         await renderView();
 
         await press(screen.getByRole('button', { name: 'Create' }));
+        const picks = await inWindow('Create Datapack');
+        expect(picks.getByRole('checkbox', { name: 'Select All Data' })).toBeChecked();
+        await press(picks.getByRole('button', { name: 'Next' }));
+        await change(await screen.findByRole('textbox', { name: /Datapack Name/ }), 'Acme Test');
+        await press((await inWindow('Create Datapack')).getByRole('button', { name: 'Create' }));
 
-        expect(await screen.findByRole('heading', { name: 'Create Datapack' })).toBeInTheDocument();
-        await change(screen.getByRole('textbox', { name: /Datapack Name/ }), 'Acme Test');
-        await press(screen.getByRole('button', { name: 'Continue' }));
-        expect(await screen.findByText("Select what to include from this demo's Commerce instance.")).toBeInTheDocument();
+        expect(mockPost).toHaveBeenCalledWith('save-store-changes-to-pack', {
+            selections: { products: { sku: ['VR-Rack'] } },
+            saveAs: { displayName: 'Acme Test' },
+            confirm: true,
+            id: 'datapack-save',
+            progress: 'modal',
+        });
+        await push({ id: 'datapack-save', state: 'succeeded' });
+        expect(await screen.findByRole('heading', { name: /Acme Test Created$/u })).toBeInTheDocument();
     });
 
     it("offers no save button when Demo Builder did not install the demo's datapack", async () => {

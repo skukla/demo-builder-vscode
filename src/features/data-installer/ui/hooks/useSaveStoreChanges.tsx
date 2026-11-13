@@ -7,7 +7,7 @@
  * |---|---|---|
  * | Save, on the SC's own datapack | `SaveChangesWindow` ("Save Changes to My Luma") | "Saved to My Luma" |
  * | Save As New, on any datapack | `SaveAsNewWindow` ("Save As New Datapack") | "Saved as Luma Holiday" |
- * | Create, with no datapack | the create flow (`DatapackFlowDialog`, step-04 S3 reshapes it) | "Luma Holiday Created" |
+ * | Create, with no datapack | `DatapackFlowDialog` ("Create Datapack": the picks, then the name) | "Luma Holiday Created" |
  *
  * (step-04 S2; decisions Phase 7b, J3-1.) A save from a datapack sends no picks: it takes everything
  * the demo uses (Add Unused Items removed, overview 7b, 2026-11-10); only Create picks.
@@ -85,7 +85,7 @@ function useSavedOnce(onSaved: () => void): () => void {
 
 /**
  * @param onSaved - called once per save, when it finishes, to read the catalog again. Must be stable.
- * @param ownNames - the SC's own datapacks' names, which Save As New refuses. Must be stable.
+ * @param ownNames - the SC's own datapacks' names, which Save As New and Create refuse. Must be stable.
  */
 export function useSaveStoreChanges(onSaved: () => void, ownNames: readonly string[]): SaveStoreChanges {
     const { start, open, retry, close } = useOperationRunner();
@@ -104,12 +104,11 @@ export function useSaveStoreChanges(onSaved: () => void, ownNames: readonly stri
         },
         [start, next],
     );
-    // Create names the datapack first, so its name is always there.
-    const created = useCallback((picks: StorePicks, name = ''): void => begin(name, createBody(picks, name), 'create'), [begin]);
+    const created = useCallback((picks: StorePicks, name: string): void => begin(name, createBody(picks, name), 'create'), [begin]);
 
     const windows = (
         <>
-            {offered?.kind === 'create' ? <DatapackFlowDialog title="Create Datapack" saveAsName="" onClose={closeOffer} onSave={created} /> : null}
+            {offered?.kind === 'create' ? <DatapackFlowDialog title="Create Datapack" ownNames={ownNames} onClose={closeOffer} onSave={created} /> : null}
             {offered?.kind === 'save' ? <SaveChangesWindow pack={offered.pack} onSave={() => begin(offered.pack.displayName, packFields(offered.pack), 'into')} onClose={closeOffer} /> : null}
             {offered?.kind === 'as-new' ? (
                 <SaveAsNewWindow
