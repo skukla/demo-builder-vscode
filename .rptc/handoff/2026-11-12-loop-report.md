@@ -85,8 +85,13 @@ Live notes; rewritten as the final report at the loop's close.
   waiting, Create, Save (Save, Save As New), Save As New, or none with no install record. Full gate
   green (2,406 suites, 38,507 tests). Not wired: Install from File opening the install window; folded
   into P4-Q10, since it needs the dialog's words and an undo case decided.
-- Step-04 S2 (the Save windows; Add Unused Items removed from the screen and the agent tools): with a
-  test-first builder now.
+- Step-04 S2: 608a811ec. "Save Changes to My Luma" (read-only type table, "4 changed", Review
+  Records, no line) and "Save As New Datapack" (one name field, empty or "My Luma" from someone else's,
+  error room kept). Add Unused Items removed from the screen and the agent tools; the save refuses a
+  taken Save As name. Fixed on the way: a store-less datapack was treated as a library one in two
+  places. Full gate green (2,407 suites, 38,521 tests). Note: until AI_CONTEXT_VERSION is bumped after
+  Phase 8, existing projects' agent skill still describes the removed inputs (the tools refuse them).
+- Step-04 S3 (Create as two windows, everything ticked; "My Luma Created" per P4-Q1): with a builder.
 - Phase 1b, done while waiting: ERP Downtime (863c5c2ca) and Edit Demo Package (f8ece2e6e) moved
   onto the Form layout, whose failure line is what both waited for. Same words; Cancel beside the
   commit, as every form; a read failure is a result window with Close. An unused style rule removed.
