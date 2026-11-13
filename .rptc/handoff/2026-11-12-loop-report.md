@@ -74,6 +74,9 @@ Live notes; rewritten as the final report at the loop's close.
   Restore and Undo (built as "Couldn't Restore My Luma" and "Couldn't Undo Last Save", the house
   "Couldn't …" rule; change if wanted); Q6 Restore's check in a window; Q7 the store name leaving the Uninstall title;
   Q8 installing a pack Commerce already matches.
+- Q11 (from S7): installing another version of the same datapack (a team datapack's "main" or
+  "eds-compatible") was never walked. Built as the switch flow with Install words: "Install Bodea,
+  eds-compatible?", button Install, run "Installing …". Recommend keeping it.
 - Q10 (from S6): the prototype shows Retry after a stopped switch, but a switch that stopped after
   the old datapack was uninstalled is not a simple repeat. Offer Retry (re-run the install of the new
   datapack only), or Close only? Recommend Retry installing the new datapack, since the old one is
