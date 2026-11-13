@@ -154,7 +154,16 @@ Live notes; rewritten as the final report at the loop's close.
   the batch reset and delete can use the same window as Switch and Uninstall. Switch and Uninstall's
   tests pass unedited; style check: nothing moved on the nine screens, and the moved rule measured
   in the Datapacks screen matches the old one. Full gate green (2,411 suites, 38,672 tests).
-- Step-05 S1 (the batch save question replaces Datapack Changes): with a builder.
+- Step-05 S1: 29a59686f. Reset and Delete Selected: when a datapack being removed has changes, the
+  red button opens "Save Your Changes First?" with a Datapack / Save As row per datapack (own under
+  its own name, someone else's "My Bodea"), buttons "Reset Without Saving", "Cancel", "Save and
+  Reset". The old Datapack Changes step is gone. Found: the run never read the answer for the SC's
+  own datapack (it always saved first), so Without Saving and a typed name would have been ignored;
+  fixed. An independent review found no path that loses changes, saves into the wrong datapack or
+  removes one nobody was asked about; its one finding (two projects on one own datapack could not
+  both save into it) is fixed and pinned by a test proven red on the old rule. Full gate green
+  (2,411 suites, 38,690 tests). Live batch reset owed.
+- Step-05 S2 (one project opens the same window, titled by name): with a builder.
 - Phase 1b, done while waiting: ERP Downtime (863c5c2ca) and Edit Demo Package (f8ece2e6e) moved
   onto the Form layout, whose failure line is what both waited for. Same words; Cancel beside the
   commit, as every form; a read failure is a result window with Close. An unused style rule removed.
@@ -238,5 +247,10 @@ Live notes; rewritten as the final report at the loop's close.
   the project, leaving that data with nothing naming it (cannot be undone). Recommend the delete
   stops and says so. (b) An Edit whose old-datapack removal fails still records the new datapack, so
   the old one is in Commerce with nothing naming it (old behaviour). Recommend the Edit stops there.
+- From S1: (a) when the "always save" setting leaves your own datapack out of the question, "Reset
+  Without Saving" still saves it and the window does not say so; recommend one line saying it.
+  (b) The batch window's look (the switch to the save window changes the window's size; a very long
+  name may run sideways) is for the screenshot pass. (c) Each row shows the project under the
+  datapack's name (two projects on one datapack would otherwise read the same); not in the mockup.
 - Phase 2 live cycle on the test store (save twice, Undo Last Save, Restore, reinstall with nothing
   sent, uninstall), once Phase 2 is built.
