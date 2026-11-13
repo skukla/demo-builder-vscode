@@ -131,7 +131,17 @@ Live notes; rewritten as the final report at the loop's close.
 - Step-04 S9: 16a8ecbea. The dashboard's Datapacks line says "None" with no datapack; a failed install
   keeps the bare name and adds the red dot, its hover "Install failed". No agent tool reads this line.
   Full gate green (2,409 suites, 38,632 tests).
-- Step-04 S10 (Phase 7's remaining items): next.
+- Step-04 S10: 92bcdbc97. A search that finds nothing under the filter choice on view but finds
+  datapacks elsewhere says so ("No matches in Recommended. 1 in Community Datapacks.") with a button
+  there, on the Datapacks screen and the wizard. Load from File drops its Replace checkbox: the button
+  reads "Replace Existing" only when the SC's own library already holds that datapack. Six unused
+  styles deleted (none referenced). The builder raised a limit on the Title Case check to allow a
+  label built at run time; undone, the labels are written out and the check proved to read them.
+- Step-04 closed: f82e98082. The closing scans found no import cycles and no stale doc names; one
+  declared request shape nobody used turned out to be the Review Records request, whose two senders
+  passed an untyped object; both now use it (a misspelt field is rejected). Full gate green
+  (2,410 suites, 38,653 tests). Phases 5, 7 and 7b are built.
+- Phase 6 (reset, delete and Clear): planning pass next.
 - Phase 1b, done while waiting: ERP Downtime (863c5c2ca) and Edit Demo Package (f8ece2e6e) moved
   onto the Form layout, whose failure line is what both waited for. Same words; Cancel beside the
   commit, as every form; a read failure is a result window with Close. An unused style rule removed.
@@ -202,5 +212,9 @@ Live notes; rewritten as the final report at the loop's close.
 - From S9: a Demo Builder datapack's named version stays on the dashboard line ("Luma,
   eds-compatible"); the mockup showed only a save. Drop the version everywhere? Recommend keeping it
   (it says which variant the demo holds).
+- From S10: (a) the filter choice "Recommended" is the one name the research says reads poorly;
+  recommend keeping what it shows and you choosing a label. (b) P4-Q9, the wizard cards listing
+  what a datapack holds: type names cost no extra read, but you called that line crowded on 11-05;
+  record counts would need one read per card. Recommend leaving the cards as they are.
 - Phase 2 live cycle on the test store (save twice, Undo Last Save, Restore, reinstall with nothing
   sent, uninstall), once Phase 2 is built.

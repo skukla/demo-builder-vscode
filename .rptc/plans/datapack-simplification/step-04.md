@@ -126,3 +126,7 @@ lines, or the name field's room does not hold one height. `AI_CONTEXT_VERSION` a
 - CSS reach: `integration-cards.css` reaches the wizard (which renders `DatapackCard`); step rows in the
   shared progress modal reach every bundle hosting it. Visual check before and after S4, S6, S10.
 - Window heights and live cycles need the owner.
+
+## Status (2026-11-13, unattended loop)
+
+R1 to R3 and S1 to S10 built and gated, each its own commit (6a7e13d28 to 92bcdbc97, then f82e98082). Still owed: the live save, the owner's screenshot pass (the save's steps in the shared window, the narrow card, the failed card and flyout, the filter note), and the P4 questions in the loop report.
