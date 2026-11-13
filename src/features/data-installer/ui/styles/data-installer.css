@@ -551,4 +551,14 @@
     padding: 5px 0;
     border-bottom: 1px solid var(--spectrum-global-color-gray-300);
 }
+
+/* Clear's kept slot after a type's count (step 06, C2b; J1-3b): on every row, a dot's width, so the
+   counts and the notice dots each line up down the column (rule 11). Its words are the hover text. */
+.type-rail-kept {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 8px;
+    margin-left: 8px;
+}
 }

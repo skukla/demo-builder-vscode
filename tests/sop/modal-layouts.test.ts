@@ -32,8 +32,6 @@ const LAYOUTS = [
 
 /** Files that render `Modal` directly today, each with the change that moves it. Shrink only. */
 const LEDGER: Readonly<Record<string, string>> = {
-    'src/features/data-installer/ui/components/ClearDemoDataModal.tsx':
-        'waits for a layout: rebuilt to J1 (type table, Review Records, Removed and Kept tabs) in the build',
     'src/features/dashboard/ui/components/ManageApisModal.tsx':
         'waits for a layout: a Form at L whose title, status and action change with each view, and FormDialog is M only',
     'src/features/dashboard/ui/components/AssignErpProductsModal.tsx':

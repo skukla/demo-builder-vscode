@@ -8,6 +8,7 @@ import type { ClearCheck } from '@/types/demoDataWipe';
 
 /** Clearing the Bodea website: products, categories as a tree, customers with one kept, closed orders. */
 export const BODEA_CHECK: ClearCheck = {
+    project: 'Bodea',
     websites: [{ code: 'bodea', name: 'Bodea' }],
     rows: [
         { type: 'products', label: 'Products', count: 2, happens: '2 removed' },
@@ -26,4 +27,4 @@ export const BODEA_CHECK: ClearCheck = {
 };
 
 /** The same, with nothing to clear. */
-export const EMPTY_CHECK: ClearCheck = { websites: [{ code: 'bodea', name: 'Bodea' }], rows: [], records: {}, total: 0, token: 'tok-0' };
+export const EMPTY_CHECK: ClearCheck = { project: 'Bodea', websites: [{ code: 'bodea', name: 'Bodea' }], rows: [], records: {}, total: 0, token: 'tok-0' };

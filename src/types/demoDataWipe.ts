@@ -64,6 +64,8 @@ export interface ClearDatapack {
 
 /** `check-demo-data`'s answer: what clearing the project's websites would do, type by type. */
 export interface ClearCheck {
+    /** The project, as the SC knows it: the window's title names it. */
+    project: string;
     websites: Array<{ code: string; name: string }>;
     /** One row per data type with anything removed, kept or not read, in a fixed order. */
     rows: TypeRow[];

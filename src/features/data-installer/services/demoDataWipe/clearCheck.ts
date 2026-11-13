@@ -90,8 +90,8 @@ function happensOf(type: string, count: number, unread: ClearUnread | undefined)
 const orderOf = (type: string): number =>
     TYPE_ORDER.includes(type) ? TYPE_ORDER.indexOf(type) : TYPE_ORDER.length;
 
-/** The answer, without the token, the warning and the datapack, which the plan and the handler add. */
-export function checkOf(inputs: CheckInputs): Omit<ClearCheck, 'token' | 'warning' | 'datapack'> {
+/** The answer, without the project, the token, the warning and the datapack, which the plan and the handler add. */
+export function checkOf(inputs: CheckInputs): Omit<ClearCheck, 'project' | 'token' | 'warning' | 'datapack'> {
     const records = inputs.planned;
     const unread: Record<string, ClearUnread> = {};
     for (const [type, error] of inputs.failures) unread[type] = unreadKind(error);

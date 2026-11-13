@@ -12,9 +12,9 @@
  * today's flow, through the handlers it is given.
  *
  * Install from File opens today's file load, which adds the datapack to My Datapacks; the job window
- * after it (step-04 Design) is not wired yet. Clear Demo Data clears the stores the SC ticks of what
- * Demo Builder did not install (datapack-engine step 10), after its own confirmation, in the
- * screen's progress window.
+ * after it (step-04 Design) is not wired yet. Clear Demo Data clears every website the project uses
+ * (datapack-engine step 10; step 06), after its own window (`ProjectClearWindow`), in the screen's
+ * progress window.
  *
  * Quiet buttons with icons (`ActionButton isQuiet`, as the header's own Refresh and view toggles;
  * glyphs from `renderMenuIcon`). Each action owns the dialog it opens, so the catalog view carries no
@@ -27,8 +27,8 @@ import { ActionButton, Divider, Item, Text } from '@adobe/react-spectrum';
 import React, { useCallback, useState } from 'react';
 import type { HeaderSave } from '../headerSave';
 import { useClearDemoData } from '../hooks/useClearDemoData';
-import { ClearDemoDataModal } from './ClearDemoDataModal';
 import { LoadDatapackFileModal } from './LoadDatapackFileModal';
+import { ProjectClearWindow } from './ProjectClearWindow';
 import { CardActionsMenu } from '@/core/ui/components/ui/CardActionsMenu';
 import { renderMenuIcon } from '@/core/ui/components/ui/menuIcons';
 import { Spinner } from '@/core/ui/components/ui/Spinner';
@@ -120,7 +120,7 @@ export function CatalogHeaderActions({ onCatalogChanged, save, mySaves }: Catalo
                 </>
             ) : null}
             {open === 'load' ? <LoadDatapackFileModal onClose={closeLoad} mySaves={mySaves} /> : null}
-            {open === 'clear' ? <ClearDemoDataModal onClose={close} onClear={startClear} /> : null}
+            {open === 'clear' ? <ProjectClearWindow onClose={close} onClear={startClear} /> : null}
             {progressWindow}
         </>
     );

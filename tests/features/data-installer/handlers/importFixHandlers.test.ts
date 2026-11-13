@@ -1,18 +1,22 @@
 /**
  * Fix with AI on an import that ended with a problem (owner, 2026-11-07): the prompt names the pack,
  * the project and each problem from the RECORDED job, never from the window, and the handler opens
- * the SC's AI on it through the Chat command the Updates window uses.
+ * the SC's AI on it through the Chat command the Updates window uses. Clear Demo Data's check has it
+ * too (step 06, C2b; P6-Q3): its prompt names the types the newest check could not read, from what
+ * the check recorded (`shownClears.ts`), and never asks for the clearing.
  */
 
 import * as vscode from 'vscode';
 import {
     DRY_RUN_KEY,
     type DryRunRecord,
+    fixClearCheckPrompt,
     fixDryRunPrompt,
     fixImportPrompt,
     importFixWithAiHandlers,
 } from '@/features/data-installer/handlers/importFixHandlers';
 import { JOB_KEY } from '@/features/data-installer/handlers/importJobWatch';
+import { rememberShownClear } from '@/features/data-installer/services/demoDataWipe/shownClears';
 import type { ImportJobRecord } from '@/features/data-installer/types';
 import {
     createMockExtensionContext,
@@ -318,5 +322,71 @@ describe('fix-datapack-import-with-ai from a failed install', () => {
         );
 
         expect(result.success).toBe(false);
+    });
+});
+
+/* Clear Demo Data's check (step 06, C2b). */
+
+const UNREAD = {
+    companies: { kind: 'strange' as const, detail: 'Commerce answered 500 for company' },
+    customers: { kind: 'slow' as const, detail: 'The read timed out' },
+};
+
+function clearContext() {
+    return createMockHandlerContext({
+        logger: createMockLogger(),
+        stateManager: createMockStateManager({
+            getCurrentProject: jest.fn().mockResolvedValue(createMockProject({ name: 'Kukla Bodea' })),
+        }),
+    });
+}
+
+function sentClearPrompt(): string {
+    const [command, request] = jest.mocked(vscode.commands.executeCommand).mock.calls[0] as [string, { prompt: string; fresh: boolean }];
+    expect(command).toBe('demoBuilder.openInClaude');
+    expect(request.fresh).toBe(true);
+    return request.prompt;
+}
+
+describe('fixClearCheckPrompt', () => {
+    it("names the project, each type it could not read with Commerce's words, and the tools that find the cause", () => {
+        const prompt = fixClearCheckPrompt(UNREAD, 'Kukla Bodea') ?? '';
+
+        expect(prompt).toContain('Kukla Bodea');
+        expect(prompt).toContain('- Companies: Commerce answered 500 for company');
+        expect(prompt).toContain('- Customers: The read timed out');
+        expect(prompt).toContain('run_commerce_rest');
+        expect(prompt).toContain('check_demo_data');
+    });
+
+    it('never asks for the clearing', () => {
+        expect(fixClearCheckPrompt(UNREAD, 'Kukla Bodea')).toContain('Do not clear the demo data until I ask you to.');
+    });
+
+    it('CONTROL: has nothing to say when every type was read', () => {
+        expect(fixClearCheckPrompt({}, 'Kukla Bodea')).toBeUndefined();
+    });
+});
+
+describe("fix-datapack-import-with-ai from Clear Demo Data's check", () => {
+    beforeEach(() => jest.mocked(vscode.commands.executeCommand).mockClear());
+
+    it('opens the SC’s AI on the last check’s unread types', async () => {
+        rememberShownClear('tok-unread', { websites: ['bodea'], unread: UNREAD });
+
+        const result = await importFixWithAiHandlers['fix-datapack-import-with-ai'](clearContext(), { from: 'clear-check' });
+
+        expect(result).toEqual({ success: true });
+        expect(sentClearPrompt()).toContain('- Customers: The read timed out');
+    });
+
+    it('reads the newest check: refuses plainly, opening nothing, once a check read every type', async () => {
+        rememberShownClear('tok-unread', { websites: ['bodea'], unread: UNREAD });
+        rememberShownClear('tok-clean', { websites: ['bodea'] });
+
+        const result = await importFixWithAiHandlers['fix-datapack-import-with-ai'](clearContext(), { from: 'clear-check' });
+
+        expect(result).toEqual({ success: false, error: 'The last check of the demo data read every data type.' });
+        expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
     });
 });

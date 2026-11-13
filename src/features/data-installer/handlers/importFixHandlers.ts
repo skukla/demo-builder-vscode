@@ -18,10 +18,15 @@
  * `datapackInstallFailure` record (`installFailure.ts`), the datapack the project names, the reason
  * and the retries.
  *
+ * Clear Demo Data's window has it too, on a data type its check could not read (step 06, C2b;
+ * P6-Q3): the request says `from: 'clear-check'`, and the prompt is built from what the newest check
+ * recorded (`shownClears.ts`), each type with Commerce's words.
+ *
  * @module features/data-installer/handlers/importFixHandlers
  */
 
 import * as vscode from 'vscode';
+import { type ShownUnread, latestShownClear } from '../services/demoDataWipe/shownClears';
 import { installFailedOf } from '../services/installFailure';
 import { FINISHING_STOP, type ImportJobRecord } from '../types';
 import { dataTypeLabel } from '../ui/dataTypeLabel';
@@ -142,7 +147,30 @@ export function fixDryRunPrompt(
     ].join('\n');
 }
 
-/** The prompt the request asks for: the failed install's, the dry run's, or the last install's. */
+/**
+ * The prompt for Clear Demo Data's check (step 06, C2b; P6-Q3): the data types it could not read,
+ * each with Commerce's words, or undefined when it read them all. It never asks for the clearing.
+ *
+ * @param projectName - the open project, which the check and the clearing act on
+ */
+export function fixClearCheckPrompt(
+    unread: Readonly<Record<string, ShownUnread>>,
+    projectName: string | undefined,
+): string | undefined {
+    const types = Object.entries(unread);
+    if (types.length === 0) return undefined;
+    return [
+        `Checking what Clear Demo Data would remove from the Commerce instance of the Demo Builder project ${projectName ?? 'that is open'} could not read every data type.`,
+        ...types.map(([type, { detail }]) => `- ${dataTypeLabel(type)}: ${detail}`),
+        '',
+        'Find the cause: read the same data from Commerce with run_commerce_rest. Fix it where it ' +
+            'lives, in Commerce with write_commerce_rest when the store is the cause. Then check again ' +
+            'with check_demo_data. Tell me what you found, what you changed, and what the check says ' +
+            'now. Do not clear the demo data until I ask you to.',
+    ].join('\n');
+}
+
+/** The prompt the request asks for: the failed install's, the dry run's, Clear's check's, or the last install's. */
 async function promptFor(
     context: HandlerContext,
     from: unknown,
@@ -154,6 +182,14 @@ async function promptFor(
             prompt: installFailedPrompt(project),
             pack: `${project?.datapack?.name}@${project?.datapack?.version}`,
             refusal: 'This datapack has no failed install to fix.',
+        };
+    }
+    if (from === 'clear-check') {
+        const unread = latestShownClear()?.unread ?? {};
+        return {
+            prompt: fixClearCheckPrompt(unread, project?.name),
+            pack: 'the demo data check',
+            refusal: 'The last check of the demo data read every data type.',
         };
     }
     if (from === 'dry-run') {

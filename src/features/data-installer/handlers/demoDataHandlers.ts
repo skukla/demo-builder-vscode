@@ -27,6 +27,9 @@
  * an ERP, its ERP is brought in line and filled again from Commerce after the clearing ("One action,
  * ERP included", owner 2026-10-30; Commerce is the source system, 2026-11-11).
  *
+ * A third, `open-commerce-admin`, opens the project's Commerce Admin through the house opener
+ * (`openCommerceAdmin`): the window's way to a type Commerce refused to read.
+ *
  * Both open the project's own signed Commerce access (`projectCommerce`, Store: `all`), after the
  * sign-in is checked against the org that owns the store (`orgGuard`, adobe-org-context).
  *
@@ -37,7 +40,7 @@ import { projectCommerce } from '../services/buildDatapackEngine';
 import { phaseLine } from '../services/datapackTypesLine';
 import { type RecordFiles, nodeRecordFiles } from '../services/demoBuilderEngine/installRecord';
 import type { RemovalAccess } from '../services/demoBuilderEngine/removers';
-import { rememberShownClear } from '../services/demoDataWipe/shownClears';
+import { type ShownUnread, rememberShownClear } from '../services/demoDataWipe/shownClears';
 import { type WipeClaims, readWipeClaims } from '../services/demoDataWipe/wipeClaims';
 import type { WipeErp } from '../services/demoDataWipe/wipeErp';
 import { findWipeErp } from '../services/demoDataWipe/wipeErpDeps';
@@ -51,8 +54,10 @@ import { dataTypeLabel } from '../ui/dataTypeLabel';
 import { classifyTransience } from '@/core/errors';
 import { loadOtherProjects } from '@/core/state/otherProjects';
 import { andList } from '@/core/utils/andList';
+import { type AdminOpening, openCommerceAdmin } from '@/core/utils/commerceAdmin';
 import { DATAPACK_STAGES } from '@/core/utils/datapackStages';
 import { DEMO_DATA_CLEAR_OPERATION_ID } from '@/core/utils/operationIds';
+import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { narrateOutcomeToModal } from '@/core/vscode/operationProgress';
 import { withOperationProgress } from '@/core/vscode/withOperationProgress';
 import { orgGuard } from '@/features/authentication/services/projectOrgGuard';
@@ -73,6 +78,8 @@ export interface DemoDataDeps {
     others: (context: HandlerContext, project: Project) => Promise<Project[]>;
     /** The ERP integration serving the project's Commerce instance, from any of those projects. */
     erp: (context: HandlerContext, project: Project, others: readonly Project[]) => WipeErp | undefined;
+    /** Opens the project's Commerce Admin: a type Commerce refused to read is looked at there. */
+    openAdmin: (project: Project) => Promise<AdminOpening>;
 }
 
 /** The plans shown, by token, newest last; a few is plenty, since one is shown per question. */
@@ -139,8 +146,16 @@ async function checkPlan(opened: Opened, claims: WipeClaims, context: HandlerCon
 function answerOf(plan: WipePlan, claims: WipeClaims, project: Project): ClearCheck {
     const datapack = project.datapack ? { datapack: { name: project.datapack.name, changes: 'unchecked' as const } } : {};
     const warning = claims.warning ? { warning: claims.warning } : {};
-    rememberShownClear(plan.check.token, { websites: plan.websiteCodes, ...warning });
-    return { ...plan.check, ...warning, ...datapack };
+    const unread = unreadOf(plan);
+    rememberShownClear(plan.check.token, { websites: plan.websiteCodes, ...warning, ...(unread ? { unread } : {}) });
+    return { ...plan.check, project: getProjectDisplayName(project), ...warning, ...datapack };
+}
+
+/** The types the plan could not read, each with how and Commerce's words: Fix with AI's prompt reads them. */
+function unreadOf(plan: WipePlan): Record<string, ShownUnread> | undefined {
+    const kinds = Object.entries(plan.check.unread ?? {});
+    if (kinds.length === 0) return undefined;
+    return Object.fromEntries(kinds.map(([type, kind]) => [type, { kind, detail: plan.unreadDetails[type] ?? '' }]));
 }
 
 async function check(deps: DemoDataDeps, plans: Map<string, WipePlan>, context: HandlerContext): Promise<HandlerResponse> {
@@ -220,8 +235,18 @@ async function clear(deps: DemoDataDeps, plans: Map<string, WipePlan>, context: 
     });
 }
 
+/** What opening the Admin came to, as the window's problem line says it when it did not open. */
+async function openAdmin(deps: DemoDataDeps, context: HandlerContext): Promise<HandlerResponse> {
+    const project = await context.stateManager.getCurrentProject();
+    if (!project) return NO_PROJECT;
+    const opening = await deps.openAdmin(project);
+    if (opening.outcome === 'opened') return { success: true };
+    return { success: false, error: opening.outcome === 'no-url' ? 'No Admin Panel URL is set for this project.' : "This project's Admin Panel URL is not valid." };
+}
+
 /**
- * The two handlers over the deps given.
+ * The handlers over the deps given: the check, the clearing, and Open Commerce Admin for a type
+ * Commerce refused to read (step 06, C2b).
  *
  * @param deps - Commerce access, the org check, the record files and the other projects
  */
@@ -233,6 +258,7 @@ export function createDemoDataHandlers(deps: DemoDataDeps) {
             (context, payload) => clear(deps, plans, context, payload),
             () => DEMO_DATA_CLEAR_OPERATION_ID,
         ),
+        'open-commerce-admin': (context: HandlerContext) => openAdmin(deps, context),
     });
 }
 /** The project's own access, the org check against the store's org, the records on disk, and every other local project. */
@@ -242,6 +268,8 @@ export const DEFAULT_DEMO_DATA_DEPS: DemoDataDeps = {
     files: nodeRecordFiles,
     others: (context, project) => loadOtherProjects(context, project.path),
     erp: findWipeErp,
+    // No button spinner waits on it, so the notification shows Chrome starting (`openCommerceAdmin`).
+    openAdmin: (project) => openCommerceAdmin(project, { notify: true }),
 };
 
 export const demoDataHandlers = createDemoDataHandlers(DEFAULT_DEMO_DATA_DEPS);

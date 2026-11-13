@@ -58,10 +58,11 @@ export interface UndoLastSaveResult {
  * `fix-datapack-import-with-ai` — open the SC's AI on a datapack problem the extension recorded.
  * Only `from` is sent: the prompt is built from the record, never from the webview. Absent, the
  * last install's job; `dry-run`, the last Dry Run's answer; `install-failed`, the project's failed
- * install (step-04 S8).
+ * install (step-04 S8); `clear-check`, the types Clear Demo Data's newest check could not read
+ * (step 06, C2b).
  */
 export interface FixDatapackImportWithAiRequest {
-    from?: 'dry-run' | 'install-failed';
+    from?: 'dry-run' | 'install-failed' | 'clear-check';
 }
 
 /**

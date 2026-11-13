@@ -10,12 +10,17 @@
  * record lists, a red Uninstall and no Review Records (S7, J5-1). The host hands in the frame's
  * buttons and problem line.
  *
+ * Clear Demo Data asks over the same table (step 06, C2b; `j1-windows.tsx`): its lead names the
+ * websites, its notices sit under the table, and it holds room for the problem line its Retry may
+ * bring, so the window never grows.
+ *
  * @module features/data-installer/ui/components/job/JobSummaryWindow
  */
 
 import React from 'react';
 import { TypeTable } from '../typeSummary/TypeTable';
 import type { TypeRow } from './installRows';
+import { LeadText } from '@/core/ui/components/ui/LeadText';
 import type { ActionButton, ModalStatus, ModalWait } from '@/core/ui/components/ui/Modal';
 import { StepsWindow } from '@/core/ui/components/ui/StepsDialog';
 
@@ -34,7 +39,19 @@ export interface JobSummaryWindowProps {
     /** Dry Run and Install; or the question's one action. */
     actionButtons: ActionButton[];
     onClose: () => void;
+    /** The opening sentence above the table: Clear's names its websites. */
+    lead?: string;
+    /** Notices under the table: Clear's warning and its datapack. */
+    children?: React.ReactNode;
+    /**
+     * Hold room for the problem line though none shows yet: Clear's Retry and Open Commerce Admin
+     * may bring one, and the window never grows (rule 14).
+     */
+    holdProblemRoom?: boolean;
 }
+
+/** Room for one problem line, drawn hidden: a no-break space keeps the line's height. */
+const PROBLEM_ROOM = '\u00a0';
 
 export function JobSummaryWindow({
     title,
@@ -46,7 +63,18 @@ export function JobSummaryWindow({
     onReview,
     actionButtons,
     onClose,
+    lead,
+    children,
+    holdProblemRoom = false,
 }: JobSummaryWindowProps): React.ReactElement {
+    const body = (line: string | undefined): React.ReactElement => (
+        <div className="clear-demo-body">
+            {lead ? <LeadText>{lead}</LeadText> : null}
+            <TypeTable rows={rows} />
+            {children}
+            {line ? <p className="dialog-problem text-notice">{line}</p> : null}
+        </div>
+    );
     return (
         <StepsWindow
             title={title}
@@ -57,11 +85,9 @@ export function JobSummaryWindow({
             startButtons={onReview ? [{ label: 'Review Records', variant: 'secondary', onPress: onReview }] : []}
             actionButtons={actionButtons}
             onClose={onClose}
+            {...(holdProblemRoom && !problem ? { reserve: body(PROBLEM_ROOM) } : {})}
         >
-            <div className="clear-demo-body">
-                <TypeTable rows={rows} />
-                {problem ? <p className="dialog-problem text-notice">{problem}</p> : null}
-            </div>
+            {body(problem)}
         </StepsWindow>
     );
 }

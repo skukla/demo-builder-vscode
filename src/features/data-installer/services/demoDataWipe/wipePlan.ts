@@ -72,7 +72,7 @@ export interface WipePlan {
     websiteCodes: string[];
     /** The chosen websites as one key, the same however they were named. */
     scopeKey: string;
-    check: Omit<ClearCheck, 'warning' | 'datapack'>;
+    check: Omit<ClearCheck, 'project' | 'warning' | 'datapack'>;
     deleteSkus: string[];
     takeOff: Array<{ sku: string; websiteId: number }>;
     /** The top categories going first, then each one under them (`categoryUnder`). */

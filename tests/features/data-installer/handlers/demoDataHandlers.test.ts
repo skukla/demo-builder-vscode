@@ -34,7 +34,7 @@ function setUp(overrides: Partial<DemoDataDeps> = {}, store = sandbox(), project
     // The project's own record on disk: the check plans as if its datapack were gone.
     const [record] = PROJECT_RECORDS;
     const files = memoryFiles({ [installRecordPath(project.path, record.pack)]: JSON.stringify(record) });
-    const deps: DemoDataDeps = { commerce: async () => store, guard: async () => undefined, files, others: async () => [], erp: () => undefined, ...overrides };
+    const deps: DemoDataDeps = { commerce: async () => store, guard: async () => undefined, files, others: async () => [], erp: () => undefined, openAdmin: async () => ({ outcome: 'opened' }), ...overrides };
     const handlers = createDemoDataHandlers(deps);
     const context = createMockHandlerContext({ stateManager: createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(project) }) }) as HandlerContext;
     return { handlers, context, store, files };
@@ -74,6 +74,13 @@ describe('check-demo-data', () => {
         expect(check.datapack).toEqual({ name: 'zz-test', changes: 'unchecked' });
         expect(check.warning).toBeUndefined();
         expect(store.sent).toStrictEqual([]);
+    });
+
+    it('names the project as the SC knows it, for the window title', async () => {
+        const titled = createMockProject({ ...PROJECT, title: 'Kukla Bodea' });
+        const { handlers, context } = setUp({}, sandbox(), titled);
+
+        expect(checked((await handlers['check-demo-data'](context)).data).project).toBe('Kukla Bodea');
     });
 
     it("notes what its answer covers by the token, so clear_demo_data's consent can name the websites and the warning (S3)", async () => {
@@ -161,6 +168,16 @@ describe('check-demo-data', () => {
         expect(check.rows[0]).toMatchObject({ label: 'Products', happens: "Couldn't be read" });
         expect(check.records.customers.removed).toHaveLength(1);
         expect((context.logger.warn as jest.Mock).mock.calls.flat().join(' ')).toContain('Products could not be read: Commerce answered 500 for products');
+    });
+
+    it("notes each type it could not read, its kind and Commerce's words, for Fix with AI's prompt", async () => {
+        const store = sandbox();
+        const get = (path: string) => (path.startsWith('products?') ? Promise.reject(new Error('Commerce answered 500 for products')) : store.get(path));
+        const { handlers, context } = setUp({ commerce: async () => ({ ...store, get }) }, store);
+
+        const check = checked((await handlers['check-demo-data'](context)).data);
+
+        expect(shownClearFor(check.token)?.unread?.products).toEqual({ kind: 'strange', detail: 'Commerce answered 500 for products' });
     });
 
     it.each([
@@ -337,5 +354,29 @@ describe('clear-demo-data', () => {
         expect(res.error).toMatch(/Commerce changed since the list was made/);
         expect(checked(res.data).records.customers.removed).toContain('new@example.com');
         expect(store.sent).toStrictEqual([]);
+    });
+});
+
+describe('open-commerce-admin', () => {
+    it("opens the project's Commerce Admin through the house opener", async () => {
+        const openAdmin = jest.fn().mockResolvedValue({ outcome: 'opened' });
+        const { handlers, context } = setUp({ openAdmin });
+
+        const res = await handlers['open-commerce-admin'](context);
+
+        expect(res).toEqual({ success: true });
+        expect(openAdmin).toHaveBeenCalledWith(PROJECT);
+    });
+
+    it('says so when the project has no Admin address', async () => {
+        const { handlers, context } = setUp({ openAdmin: async () => ({ outcome: 'no-url' as const }) });
+
+        expect(await handlers['open-commerce-admin'](context)).toEqual({ success: false, error: 'No Admin Panel URL is set for this project.' });
+    });
+
+    it("says so when the project's Admin address is not valid", async () => {
+        const { handlers, context } = setUp({ openAdmin: async () => ({ outcome: 'invalid' as const, error: new Error('bad') }) });
+
+        expect(await handlers['open-commerce-admin'](context)).toEqual({ success: false, error: "This project's Admin Panel URL is not valid." });
     });
 });
