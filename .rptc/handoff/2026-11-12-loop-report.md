@@ -269,7 +269,15 @@ Live notes; rewritten as the final report at the loop's close.
   header was stale). The ERP half is committed on a local branch there (commerce-erp-integration,
   fix/shared-order-cases, f64bd32, based on the shared main because local main was 72 commits behind),
   NOT pushed: pushing needs the owner's go. Full gate green (2,424 suites, 38,827 tests).
-- Phase 6 (reset, delete and Clear) is built. Phase 8 (agents match the screen) next.
+- Phase 6 (reset, delete and Clear) is built.
+- Phase 8: 44b1b96ac. Agents match the screen: the Data Installer destination is gone for agents
+  (D7; copy_library_datapack_to_installer removed, load_datapack_zip forces the library); agent Delete
+  can remove a pack of saves whole, as the screen does; every datapack tool's description, narration
+  and consent use the screen's words; the import-datapack guide gains a screen-to-tool table, Retry and
+  the save question. AI_CONTEXT_VERSION 61 -> 62, so existing projects refresh their guides on the
+  next start. The agent test set's copy prompt now checks the agent says it cannot. Full gate green
+  (2,425 suites, 38,851 tests). All datapack phases (2 to 8) are built.
+- Phase 1b, the nine non-datapack windows onto the layouts: next.
 - Phase 1b, done while waiting: ERP Downtime (863c5c2ca) and Edit Demo Package (f8ece2e6e) moved
   onto the Form layout, whose failure line is what both waited for. Same words; Cancel beside the
   commit, as every form; a read failure is a result window with Close. An unused style rule removed.
@@ -383,5 +391,9 @@ Live notes; rewritten as the final report at the loop's close.
 - From C7: (a) the small data-type rows nested under the install and save steps keep a wrapping
   problem line (walk F135 chose that); (b) a warning that belongs to no row still shows under the rows,
   so that window can grow by one line in that case. Recommend keeping both.
+- From Phase 8: (a) rename the old-named agent tools and guide (start_datapack_import,
+  load_datapack_zip, mark_team_datapack, the import-datapack guide) to the screen's words as their own
+  change? It breaks the test set and agents' habits; recommend next release. (b) The agent-reach scan
+  also files anything starting with "copy" as screen-only (a second blind spot).
 - Phase 2 live cycle on the test store (save twice, Undo Last Save, Restore, reinstall with nothing
   sent, uninstall), once Phase 2 is built.
