@@ -20,6 +20,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { ErrorCode } from '@/types/errorCodes';
 
 /** One operation, as the modal and the runner know it. */
 export interface ScreenOperation {
@@ -71,10 +72,13 @@ function hasBegun(push: { stage?: string; prompt?: unknown }): boolean {
     return Boolean(push.stage || push.prompt);
 }
 
-/** A run that ended in a real failure, not one the SC declined. */
+/**
+ * A run that ended in a real failure: not one the SC declined, nor one that stopped on a question
+ * the screen asks itself (`CHANGES_NEED_ANSWER`, the save question; C3 review, 2026-11-13).
+ */
 function endedInFailure(response: unknown): boolean {
-    const answer = response as { success?: boolean; cancelled?: boolean } | undefined;
-    return answer?.success === false && answer.cancelled !== true;
+    const answer = response as { success?: boolean; cancelled?: boolean; code?: string } | undefined;
+    return answer?.success === false && answer.cancelled !== true && answer.code !== ErrorCode.CHANGES_NEED_ANSWER;
 }
 
 /** An operation as a caller starts one: the runner counts the runs. */
@@ -91,10 +95,10 @@ export interface OperationRunnerControls {
      * operation whose first seconds belong to VS Code's own dialogs — a reset
      * confirms, then may ask about sample data — where opening on the click would
      * put a spinner behind a question. `onSettled` fires when the message
-     * answers, which is also how a run that never started (the SC said no) stops
-     * being waited for.
+     * answers, with the answer, which is also how a run that never started (the SC said no, or it
+     * needs the screen's own question answered) stops being waited for.
      */
-    startWhenItBegins: (operation: StartableOperation, onSettled?: () => void) => void;
+    startWhenItBegins: (operation: StartableOperation, onSettled?: (response?: unknown) => void) => void;
     /**
      * Show the modal for an operation something else has already started. `resume`
      * when its first steps have already gone by, so the modal asks where it is; not
@@ -143,7 +147,7 @@ export function useOperationRunner(): OperationRunnerControls {
     );
 
     const startWhenItBegins = useCallback(
-        (operation: StartableOperation, onSettled?: () => void): void => {
+        (operation: StartableOperation, onSettled?: (response?: unknown) => void): void => {
             pending.current = operation;
             // A request, not a push: its answer is how we learn that a run which
             // never began is over, and when a caller may refresh what changed.
@@ -160,7 +164,7 @@ export function useOperationRunner(): OperationRunnerControls {
                             // Failed before its first step: still say why.
                             if (endedInFailure(response)) openModal(operation, true);
                         }
-                        onSettled?.();
+                        onSettled?.(response);
                     },
                     // A timeout is not an end: the SC may take longer than the
                     // request waits to answer VS Code's question, and the run

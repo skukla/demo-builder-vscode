@@ -202,8 +202,8 @@ server IS — transport, lifecycle, scoping, security — is in
 | Tool | | What it does |
 |---|---|---|
 | `build_datapack_from_export` |  | Build a datapack file from a Commerce product export (the CSV System > Data Transfer > Export writes, |
-| `check_demo_data` | read | What clearing every website this project uses (its own and every website its datapack was installed to) would do in its Commerce instance. |
-| `clear_demo_data` | **confirm** | Clear this project's websites of everything check_demo_data listed: deletes those products, categories, customers, cart rules |
+| `check_demo_data` | read | What clearing every website this project uses (its own and every website its datapack was installed to) would do in its Commerce instance, |
+| `clear_demo_data` | **confirm** | Clear this project's websites of everything check_demo_data listed. When data.datapack named one, it uninstalls this project's datapack first, as reset_datapack does: |
 | `copy_library_datapack_to_installer` | **confirm** | Copy a datapack library pack into the Data Installer's catalog, so other teams can find and install |
 | `delete_library_datapack` | **confirm** | Delete one of your own packs from the datapack library — the undo of |
 | `get_datapack_import_status` | read | Progress of the running or most recent datapack install or uninstall: its purpose (install, switch, |

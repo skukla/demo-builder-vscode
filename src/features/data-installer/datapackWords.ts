@@ -114,8 +114,8 @@ export function configurationSettingsCount(count: number): string {
     return `${count} ${count === 1 ? 'Setting' : 'Settings'}`;
 }
 
-/** The confirm's way on that loses the SC's changes: "Uninstall Without Saving", "Install Without Saving". */
-export function withoutSavingLabel(verb: DatapackVerb): string {
+/** The confirm's way on that loses the SC's changes: "Uninstall Without Saving", "Clear Without Saving". */
+export function withoutSavingLabel(verb: DatapackVerb | 'Clear'): string {
     return `${verb} Without Saving`;
 }
 
@@ -123,6 +123,6 @@ export function withoutSavingLabel(verb: DatapackVerb): string {
  * The confirm's way on that saves the SC's changes first: into the demo's own datapack ("Save and
  * Uninstall"), or as a new datapack when the demo's is not theirs ("Save As New and Uninstall").
  */
-export function saveFirstLabel(verb: DatapackVerb, savesAs: boolean): string {
+export function saveFirstLabel(verb: DatapackVerb | 'Clear', savesAs: boolean): string {
     return savesAs ? `Save As New and ${verb}` : `Save and ${verb}`;
 }

@@ -9,7 +9,7 @@
  */
 
 import { screen } from '@testing-library/react';
-import { BODEA_CHECK, EMPTY_CHECK } from '../../../../helpers/clearCheckFixtures';
+import { BODEA_CHECK, BODEA_PACK_CHECK, EMPTY_CHECK } from '../../../../helpers/clearCheckFixtures';
 import {
     answering,
     button,
@@ -130,14 +130,12 @@ describe('the summary', () => {
         expect(button('Clear 8 Items')).not.toHaveAttribute('aria-disabled', 'true');
     });
 
-    it("says the project's datapack is left for its uninstall, when the check names one", async () => {
-        answering({ ...BODEA_CHECK, datapack: { name: 'Bodea B2B', changes: 'unchecked' } });
+    it("names nothing of the project's datapack on the summary: its records are counted with the rest (C3)", async () => {
+        answering(BODEA_PACK_CHECK);
 
         await openWindow();
 
-        expect(
-            screen.getByText('What the datapack Bodea B2B installed is left for its uninstall.')
-        ).toBeInTheDocument();
+        expect(screen.queryByText(/datapack/i)).not.toBeInTheDocument();
     });
 
     it('says there is nothing to clear, and offers no clearing and no records', async () => {

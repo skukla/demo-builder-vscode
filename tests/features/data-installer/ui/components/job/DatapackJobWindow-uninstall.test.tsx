@@ -163,7 +163,9 @@ describe('the question', () => {
 });
 
 describe('Uninstall with nothing changed', () => {
-    it('removes at once, confirmed from the press alone, the record deciding what goes and where', async () => {
+    // C3 review (2026-11-13): with no answer, the host reads the changes again, so one made after the
+    // window read them is saved or asked about, never dropped unasked.
+    it('removes at once with no answer about changes, confirmed from the press alone, the record deciding what goes and where', async () => {
         holding(NOTHING, { statusAfter: UNINSTALLING });
         await openUninstall();
         await heading('Uninstall My Luma?');
@@ -177,10 +179,27 @@ describe('Uninstall with nothing changed', () => {
             commerceInstance: 'inst',
             source: 'library',
             confirm: true,
-            changes: 'drop',
         });
         const call = mockRequest.mock.calls.find(([type]) => type === 'reset-datapack');
         expect(call?.[2]).toBe(TIMEOUTS.DATAPACK_SAVE_THEN_WRITE);
+    });
+
+    it('asks "Save Your Changes First?" over the changes read again when the host refuses for an answer, and sends the answer given', async () => {
+        holding(NOTHING);
+        await openUninstall({ uninstalling: { ownNames: [] } });
+        await heading('Uninstall My Luma?');
+        const refusal = { success: false, error: 'You changed 3 things since it was installed.', code: ErrorCode.CHANGES_NEED_ANSWER };
+        holding(CHANGED_THEIRS, { reset: refusal });
+
+        await press(button('Uninstall'));
+        await settle();
+
+        expect(await heading('Save Your Changes First?')).toBeInTheDocument();
+        expect(sends('get-datapack-removal-changes')).toBe(1);
+        await press(button('Save and Uninstall'));
+        const resets = mockRequest.mock.calls.filter(([type]) => type === 'reset-datapack').map(([, body]) => body as Record<string, unknown>);
+        expect(resets[0]).not.toHaveProperty('changes');
+        expect(resets[1]).toMatchObject({ changes: 'keep', saveAs: { displayName: 'My My Luma' } });
     });
 
     it('runs as steps, Uninstall My Luma, titled "Uninstalling My Luma", and hands over to a notification named for it', async () => {

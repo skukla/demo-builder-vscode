@@ -171,6 +171,13 @@ describe('a switch', () => {
     ])('asks nothing %s', (_name, from) => {
         expect(datapackJob(from, { type: 'save-first' })).toBe(from);
     });
+
+    // C3 review (2026-11-13): a start sent with no answer, refused by the host for one, asks from the run.
+    it('asks from the run when the host refused a start for an answer about changes', () => {
+        const running: JobState = { kind: 'switch', phase: 'run', lastAction: 'start' };
+
+        expect(datapackJob(running, { type: 'needs-answer' })).toEqual({ ...running, phase: 'save-first' });
+    });
 });
 
 // Step 03, S7: Uninstall (decisions J5-1, J5-2). Its check ends on the question, "Uninstall My

@@ -26,12 +26,14 @@ export interface AnsweredDatapack {
  * What a removal did to the store: `kept` is why the data did not all come out (absent when it
  * did), `partly` that some of it came out before it stopped, `unanswered` that nothing came out
  * because the changes in a pack that is not the SC's had no answer (the agent's reset refuses on
- * it, step-05 S7).
+ * it, step-05 S7), `leftInStore` that it all ran but left part in the store on purpose (still on the
+ * install record, so the project keeps naming the pack; Clear's result says it, step-06 C3).
  */
 export interface DatapackRemoval {
     kept?: string;
     partly?: boolean;
     unanswered?: true;
+    leftInStore?: true;
 }
 
 /**

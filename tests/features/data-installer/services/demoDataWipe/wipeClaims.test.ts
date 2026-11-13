@@ -115,6 +115,40 @@ describe('readWipeClaims, project scope', () => {
         expect(answer.respects).toMatchObject({ records: [own, theirs], everyRecord: [own, theirs] });
     });
 
+    it("drops the record of the datapack the clearing uninstalls first, and its website settings, keeping the rest (C3)", async () => {
+        const layer: InstallRecord = {
+            ...record('own-pack', 'justrite_test_website', 'OWN'),
+            created: [
+                { kind: 'products', id: 'OWN' },
+                { kind: 'store_config', id: 'catalog/frontend/grid_per_page@website', key: 'catalog/frontend/grid_per_page@website' },
+            ],
+        };
+        const leftover = record('old-pack', 'justrite_test_website', 'OLD');
+        const other = accsProject('other-demo', 'bodea', 'bodea_en');
+        const theirs = record('their-pack', 'justrite_test_website', 'OWN');
+        const files = filesWith([
+            [TESTER, layer],
+            [TESTER, leftover],
+            [other, theirs],
+        ]);
+
+        const answer = await readWipeClaims(files, TESTER, [other], STRUCTURE, PROJECT_SCOPE, { asIfRemoved: { name: 'own-pack', version: '1' } });
+
+        expect(answer.respects.records).toEqual([leftover, theirs]);
+        expect(answer.respects.everyRecord).toEqual([leftover, theirs]);
+        expect([...answer.respects.settingsKept]).toStrictEqual([]);
+        expect(answer.removing).toEqual({ setBack: ['justrite_test_website/catalog/frontend/grid_per_page'] });
+    });
+
+    it('drops nothing, and names no removal, when the datapack named has no record here (a pack the service installed)', async () => {
+        const files = filesWith([[TESTER, PROJECT_RECORDS[0]]]);
+
+        const answer = await readWipeClaims(files, TESTER, [], STRUCTURE, PROJECT_SCOPE, { asIfRemoved: { name: 'service-pack', version: '1' } });
+
+        expect(answer.respects.records).toEqual([PROJECT_RECORDS[0]]);
+        expect(answer.removing).toBeUndefined();
+    });
+
     it('names what is true when the project records no website at all', async () => {
         const bare = createMockProject({ name: 'bare', path: '/nonexistent/projects/bare', componentConfigs: {} });
 

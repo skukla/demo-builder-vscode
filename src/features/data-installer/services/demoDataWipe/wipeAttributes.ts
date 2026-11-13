@@ -31,11 +31,12 @@
  * | what a set holds | `GET products/attribute-sets/{id}/attributes`: `attribute_code` | yes (`erpOwnerAttributeSets`) |
  * | the products in a set | `GET products`, `attribute_set_id` eq, through `productsWhere` (the pack's own removal) | **no** |
  * | an attribute | `GET products/attributes/{code}`: `is_user_defined` | yes (`storeItems.ts`) |
- * | the products carrying one | `GET products`, the attribute's code `notnull`, value 1 | **no**, and it may be read only at the default scope, so a value set on one store view alone may not show. The set rule above is why that does not decide it. A search Commerce refuses keeps the attribute |
+ * | the products carrying one | `GET products`, the attribute's code `notnull`, value 1 (`carriersOf`, the engine removal's own read) | **no**, and it may be read only at the default scope, so a value set on one store view alone may not show. The set rule above is why that does not decide it. A search Commerce refuses keeps the attribute |
  *
  * @module features/data-installer/services/demoDataWipe/wipeAttributes
  */
 
+import { carriersOf } from '../demoBuilderEngine/attributeHolds';
 import { removeAttributeSet } from '../demoBuilderEngine/attributeSetsKind';
 import { readOrNull, segment } from '../demoBuilderEngine/kindContext';
 import { type RemovalAccess, productsWhere } from '../demoBuilderEngine/removers';
@@ -106,16 +107,13 @@ function testsAttribute(condition: CommerceRuleCondition | undefined, code: stri
     return condition.attribute_name === code || (condition.conditions ?? []).some((child) => testsAttribute(child, code));
 }
 
-const NOT_NULL = (code: string): string =>
-    `&searchCriteria[filterGroups][0][filters][0][field]=${code}&searchCriteria[filterGroups][0][filters][0][value]=1&searchCriteria[filterGroups][0][filters][0][conditionType]=notnull&fields=total_count,items[sku]`;
-
 /** Whether an attribute stays, by the rows of the module's table. */
 async function attributeStays(get: CommerceGet, code: string, inputs: AttributeInputs, heldBySets: ReadonlySet<string>, going: ReadonlySet<string>): Promise<boolean> {
     if (ERP_ATTRIBUTE_CODES.includes(code) || INTEGRATION_ATTRIBUTE.test(code)) return true;
     if (inputs.recorded.attributes.has(code) || heldBySets.has(code)) return true;
     if (inputs.stayingRules.some((rule) => testsAttribute(rule.condition, code) || testsAttribute(rule.action_condition, code))) return true;
-    const carriers = await readAllPages<{ sku: string }>(get, 'products', NOT_NULL(code));
-    return carriers.some((p) => !going.has(p.sku));
+    // The engine's own read (`carriersOf`): its removal keeps an attribute a staying product carries, so the two agree.
+    return (await carriersOf(get, code)).some((p) => !going.has(p.sku));
 }
 
 /** What must be gone before an attribute goes: the sets holding it, and the products carrying it. */

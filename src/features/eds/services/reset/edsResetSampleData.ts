@@ -234,7 +234,8 @@ function anyRemoved(perType: Record<string, string> | undefined): boolean {
 
 /**
  * The same removal, saying also whether part of the data came out before it stopped, for a reset
- * row to say what happened to the store (review, 2026-11-13).
+ * row to say what happened to the store (review, 2026-11-13). `alsoLeaving` is Clear Demo Data's:
+ * products its wipe deletes right after, whose holds count as going.
  *
  * @returns why the data was not all removed and whether some was, or `{}` when it all was
  */
@@ -243,6 +244,7 @@ export async function removeProjectSampleDataOutcome(
     context: HandlerContext,
     report: ReportStage,
     askName?: SaveAsAnswering,
+    alsoLeaving?: readonly string[],
 ): Promise<DatapackRemoval> {
     try {
         // The SC's changes first: this door's question was already asked, and keeping the work is
@@ -273,6 +275,8 @@ export async function removeProjectSampleDataOutcome(
                 (sd) => report(OPERATION_STAGES.removingDatapack.label, typesLine(sd.done, sd.total, sd.processing)),
                 'remove',
             ),
+            // Clear Demo Data's: the products its wipe deletes next count as going (step-06 C3 re-review).
+            ...(alsoLeaving ? [{ alsoLeaving: [...alsoLeaving] }] : []),
         );
 
         if (result.ran && result.outcome !== 'success') {
@@ -289,7 +293,8 @@ export async function removeProjectSampleDataOutcome(
             return { kept: result.reason ?? 'The datapack was not uninstalled.' };
         }
         // Part left in the store on purpose: the record still describes what Commerce holds.
-        if (!result.leftInStore) await forgetRemovedPack(project, context);
+        if (result.leftInStore) return { leftInStore: true };
+        await forgetRemovedPack(project, context);
         return {};
     } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
@@ -307,15 +312,21 @@ export async function removeProjectSampleDataOutcome(
  * so a clear on another copy would be written back over. Saved without making it the open project,
  * since a batch's rows are not (`createNonSwitchingStateManager`). Never fatal: the data is out of
  * Commerce either way, and a delete reads this module's answer to decide whether the files may go.
+ * Clear Demo Data uses it too, for a pack the service installed that its wipe took out whole
+ * (step-06 C3 review), and reads whether the save went through.
+ *
+ * @returns whether the project was saved without the pack
  */
-async function forgetRemovedPack(project: Project, context: HandlerContext): Promise<void> {
+export async function forgetRemovedPack(project: Project, context: HandlerContext): Promise<boolean> {
     project.datapack = undefined;
     dropStaleFailure(project);
     try {
         await createNonSwitchingStateManager(context.stateManager).saveProject(project);
+        return true;
     } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
         context.logger.warn(`[EdsReset] The datapack was uninstalled; the project could not be saved without it: ${reason}`);
+        return false;
     }
 }
 

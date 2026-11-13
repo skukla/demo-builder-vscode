@@ -1,6 +1,6 @@
 /**
- * What each check the SC or an agent was shown covers, by its token: the websites, and the warning
- * when another local project uses one (datapack-simplification step 06, owner review 2026-11-13).
+ * What each check the SC or an agent was shown covers, by its token: the websites, the warning
+ * when another local project uses one, and the datapack uninstalled first (datapack-simplification step 06, owner review 2026-11-13).
  *
  * `clear_demo_data` is handed only that token, so its consent dialog reads this to name what it
  * clears (`agentAlertCopy.ts`), rather than an unnamed "this project's demo data". The check handler
@@ -29,6 +29,8 @@ export interface ShownClear {
     warning?: string;
     /** The types it could not read, for Fix with AI's prompt (`importFixHandlers.ts`). */
     unread?: Record<string, ShownUnread>;
+    /** The project's datapack, as the SC knows it, which the clearing uninstalls first (step 06, C3). */
+    datapack?: string;
 }
 
 /** As many as the handler keeps plans: one is shown per question, so a few is plenty. */

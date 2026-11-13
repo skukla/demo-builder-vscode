@@ -2,7 +2,11 @@
  * What a switch knows about the datapack it switches from (step 03, S6; decisions J2-3, J8-1), and an
  * uninstall about the datapack it uninstalls (S7, J5-1): the SC's changes to it, read in the job's
  * check (`get-datapack-removal-changes`, counts only), and what Switch or Uninstall does with them.
- * With nothing changed, it starts at once; with the setting
+ * With nothing changed, it starts at once with no answer, so the host reads the changes afresh. An
+ * edit made after the read is never dropped unasked: a switch (and Clear) saves one in the SC's own
+ * pack into it; otherwise the host refuses with `CHANGES_NEED_ANSWER` (a pack not the SC's, or any
+ * pack for Uninstall, which asks with no answer, `unanswered: 'refuse'`), and that reopens the
+ * question over the changes read again (`reread`). With the setting
  * `demoBuilder.dataInstaller.changesOnRemoval` on save and the datapack the SC's own, it saves into
  * it without asking; otherwise, or when the read failed, "Save Your Changes First?" asks.
  *
@@ -12,7 +16,7 @@
  * @module features/data-installer/ui/hooks/useSwitchChanges
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ChangesAnswer, DatapackRemovalChanges } from '../../removalChanges';
 import { freeName, nameProblem } from '../../saveAsName';
 import { countedRows, type TypeRow } from '../components/job/installRows';
@@ -53,8 +57,10 @@ export interface SwitchChanges {
     readFailed: boolean;
     /** Present when saving makes a new datapack, which needs a name. */
     saveAs?: SaveAsField;
-    /** What Switch or Uninstall does: ask the save question, or start with this answer. */
-    onSwitch: () => RemovalAnswer | 'ask';
+    /** What Switch or Uninstall does: ask the save question, or start with this answer (none when nothing changed). */
+    onSwitch: () => RemovalAnswer | 'ask' | undefined;
+    /** Read the changes again: the host refused with `CHANGES_NEED_ANSWER`, so the question asks over what is there now. */
+    reread: () => void;
     /** The save question answered: save first or not. */
     answer: (saves: boolean) => RemovalAnswer;
 }
@@ -77,7 +83,7 @@ function useChangesRead(active: boolean, from: SwitchedFrom | null) {
     );
     const held = from?.datapack;
     const { load } = read;
-    useEffect(() => {
+    const reread = useCallback((): void => {
         if (!active || !held) return;
         load({
             datapackName: held.name,
@@ -85,7 +91,8 @@ function useChangesRead(active: boolean, from: SwitchedFrom | null) {
             ...(held.store === 'library' ? { source: 'library' } : {}),
         });
     }, [active, held, load]);
-    return { read, held };
+    useEffect(() => reread(), [reread]);
+    return { read, held, reread };
 }
 
 /**
@@ -98,7 +105,7 @@ export function useSwitchChanges(
     from: SwitchedFrom | null,
     ownNames: readonly string[],
 ): SwitchChanges {
-    const { read, held } = useChangesRead(active, from);
+    const { read, held, reread } = useChangesRead(active, from);
     const [typed, setTyped] = useState<string | undefined>(undefined);
     const changes = read.value;
     const readFailed = read.failure !== null;
@@ -116,8 +123,9 @@ export function useSwitchChanges(
         ...(own ? {} : { saveAs: { name, ...(problem ? { problem } : {}), onName: setTyped } }),
         onSwitch: () => {
             if (mustAsk(changes, readFailed)) return 'ask';
-            return changes && changes.count > 0 ? { changes: 'keep' } : { changes: 'drop' };
+            return changes && changes.count > 0 ? { changes: 'keep' } : undefined;
         },
+        reread,
         answer: (saves) => (saves ? keep() : { changes: 'drop' }),
     };
 }

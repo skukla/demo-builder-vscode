@@ -64,6 +64,15 @@ describe('buildConsentPrompt for clear_demo_data', () => {
         expect(buildConsentPrompt('clear_demo_data', { token: 'tok-consent-2', confirm: true }, OPEN)?.detail).toMatch(/\nWebsites: bodea$/);
     });
 
+    it("names the datapack the clearing uninstalls first, and the call's answer about its changes (C3)", () => {
+        rememberShownClear('tok-consent-3', { websites: ['bodea'], datapack: 'Bodea B2B' });
+
+        const prompt = buildConsentPrompt('clear_demo_data', { token: 'tok-consent-3', confirm: true, changes: 'keep', saveAs: { displayName: 'My Bodea' } }, OPEN);
+
+        expect(prompt?.detail).toContain("Uninstalls this project's datapack first");
+        expect(prompt?.detail.endsWith(`${OPEN}\nWebsites: bodea\nUninstalls first: Bodea B2B\nYour changes: keep`)).toBe(true);
+    });
+
     it('names the project alone for a token no check answered: the handler refuses that call', () => {
         expect(buildConsentPrompt('clear_demo_data', { token: 'never-shown', confirm: true }, OPEN)?.detail).toMatch(/\n\nProject: zz-tester$/);
     });

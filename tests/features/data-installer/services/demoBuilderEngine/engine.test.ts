@@ -259,6 +259,18 @@ describe('demoBuilderEngine removal', () => {
         expect(status.leftInStore).toBe(true);
     });
 
+    // Step-06 C3 re-review: what a clearing deletes next counts as leaving, so the hold lets it go.
+    it("lets go of an attribute only products the clearing deletes next carry, when the request names them", async () => {
+        const carrying = 'products?searchCriteria[currentPage]=1&searchCriteria[pageSize]=100&searchCriteria[filterGroups][0][filters][0][field]=material&searchCriteria[filterGroups][0][filters][0][value]=1&searchCriteria[filterGroups][0][filters][0][conditionType]=notnull&fields=total_count,items[sku]';
+        const { engine, ctx, files } = await engineWith({ [carrying]: { items: [{ sku: 'sc-own-cap' }], total_count: 1 } }, () => true);
+        await (await openInstallRecord(files, PROJECT, PACK, () => 'then')).record({ kind: 'product_attributes', id: 'material' });
+
+        const { activationId } = await engine.startDelete({ ...request(), alsoLeaving: ['sc-own-cap'] });
+        await settle(engine, activationId);
+
+        expect(ctx.sent).toEqual([{ method: 'DELETE', path: 'products/attributes/material', body: undefined }]);
+    });
+
     it('says nothing is left in the store when it took everything out', async () => {
         const { engine, files } = await engineWith({}, () => true);
         await (await openInstallRecord(files, PROJECT, PACK, () => 'then')).record({ kind: 'categories', id: '40' });

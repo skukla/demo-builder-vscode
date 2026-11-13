@@ -132,13 +132,15 @@ interface WipeStep {
 export interface WipeOutcome {
     removed: WipeCounts;
     orders: OrderCounts;
-    /** Each step with refusals: how many, and the first in Commerce's words. */
-    failed: Array<{ what: string; count: number; first: string }>;
+    /** Each step with refusals, by its key (`settings` for the settings): how many, and the first in Commerce's words. */
+    failed: Array<{ what: string; count: number; first: string; step: string }>;
     sentence: string;
     /** Orders left open with a note, by number (payment review, or nothing to invoice or refund): for the SC to finish in the Admin. */
     leftOpen: string[];
     /** List settings that differ from the default, which no write can put back: "Use Default Value" in the Admin does. */
     listSettings: string[];
+    /** The website settings it set to the default's value, as `<website>/<path>` (those Commerce refused included). */
+    settingsSet: string[];
     /** What no read would find again, for the next clearing of these websites to look at (`wipeUnfinished.ts`). */
     unfinished?: WipeUnfinished;
     /** The ERP step, when an integration routed some chosen websites: never counted in `orders` or `failed`. */
@@ -317,12 +319,13 @@ export async function runWipe(commerce: RemovalAccess, plan: WipePlan, report: (
         if (step.writes.length > 0) done(0);
         const refused = await runStep(key, step, { removed, orders, notDone }, done);
         if (key === 'orders') orders.failed += refused.length;
-        if (refused.length > 0) failed.push({ what: step.failed, count: refused.length, first: refused[0] });
+        if (refused.length > 0) failed.push({ what: step.failed, count: refused.length, first: refused[0], step: key });
     }
     await runSettings(commerce, plan, report, removed, failed);
     const unfinished = unfinishedOf(plan, notDone);
     const leftOpen = plan.orders.filter((o) => o.action === 'note').map((o) => o.number);
-    return { removed, orders, failed, leftOpen, listSettings: plan.listSettings, sentence: sentenceOf(plan.check, removed, orders, failed), ...(unfinished ? { unfinished } : {}) };
+    const settingsSet = plan.settings.map((s) => `${s.websiteCode}/${s.path}`);
+    return { removed, orders, failed, leftOpen, listSettings: plan.listSettings, settingsSet, sentence: sentenceOf(plan.check, removed, orders, failed), ...(unfinished ? { unfinished } : {}) };
 }
 
 /** Every write of one step, what it needs first checked; answers each it could not do, as "id: why". */
@@ -353,7 +356,7 @@ async function runSettings(commerce: RemovalAccess, plan: WipePlan, report: (sta
     report(DATAPACK_STAGES.resettingSettings.label);
     const outcome = await putBackSettings(commerce, plan.settings);
     removed.settings = outcome.count;
-    if (outcome.refused.length > 0) failed.push({ what: 'set 1 of the website settings back', count: outcome.refused.length, first: outcome.refused[0] });
+    if (outcome.refused.length > 0) failed.push({ what: 'set 1 of the website settings back', count: outcome.refused.length, first: outcome.refused[0], step: 'settings' });
 }
 
 /** What was not done and no read would find again, or nothing when all of it was. */
@@ -386,6 +389,7 @@ export async function clearShown(commerce: RemovalAccess, shown: WipePlan, input
     const now = await planWipeFor(commerce.get, shown.websiteCodes, inputs);
     if (!withinPlan(shown, now)) throw new WipeChangedError(now.check);
     const outcome = await runWipe(commerce, now, report);
+    await inputs.onWiped?.(outcome, now);
     const closed = await closeErpOrders(erp, now.erp, report);
     return withErp(outcome, now, closed, await refreshErp(erp, now.erp, report));
 }

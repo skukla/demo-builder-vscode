@@ -195,6 +195,42 @@ describe('a pack installed, installed again, and removed', () => {
         await expect(readInstallRecord(files, PROJECT, PACK)).resolves.toBeUndefined();
     });
 
+    // C3 review (2026-11-13): another demo's product carrying the pack's attribute, and one of the
+    // values the pack added to color, keeps both: deleting them would blank its values (DI-8's damage).
+    it("keeps the pack's attribute and option a product that stays carries, on the record, and takes the rest", async () => {
+        const store = memoryStore();
+        const settings = configStore({ default: { [GRID]: '12' } });
+        const access = commerce(store, settings);
+        const files = memoryFiles();
+        await installPack(await opened(access, files, []), PACK_ROWS);
+        const made = (await readInstallRecord(files, PROJECT, PACK))?.created ?? [];
+        const blue = made.find((o) => o.kind === 'attribute_options' && o.key === 'color/Blue');
+        const blueValue = blue?.id.split('/')[1] ?? '';
+        store.products.set('theirs-scarf', {
+            sku: 'theirs-scarf',
+            name: 'Their Scarf',
+            type_id: 'simple',
+            attribute_set_id: 4,
+            custom_attributes: [
+                { attribute_code: 'cycle_material', value: 'Silk' },
+                { attribute_code: 'color', value: blueValue },
+            ],
+        });
+
+        const removed = await removePack(access, files, { projectPath: PROJECT, pack: PACK });
+
+        expect(removed.kept.map((k) => [k.kind, k.object.kind])).toEqual(
+            expect.arrayContaining([
+                ['attribute', 'product_attributes'],
+                ['attribute option', 'attribute_options'],
+            ])
+        );
+        const left = (await readInstallRecord(files, PROJECT, PACK))?.created.map((o) => o.kind).sort();
+        expect(left).toEqual(['attribute_options', 'product_attributes']);
+        expect([...store.attributes.keys()]).toEqual(expect.arrayContaining(['cycle_material']));
+        expect(store.products.has('cycle-tee')).toBe(false);
+    });
+
     it.each(Object.keys(IMPORT_FORM_PACKS))('does the same for a %s pack', async (kind) => {
         const { first, made, again, sentAgain, store, settings, before, removed } = await cycle(
             IMPORT_FORM_PACKS[kind]

@@ -15,6 +15,7 @@ import type { StoreCategory } from '@/features/data-installer/services/demoBuild
 import { containersLine, decideRemovals, takeBack } from '@/features/data-installer/services/demoBuilderEngine/removers';
 import { filterBy } from '@/features/data-installer/services/demoBuilderEngine/b2bReads';
 import { fakeContext, page } from './demoBuilderEngine.testUtils';
+import { CommerceReadError } from '@/features/app-builder/services/erpFillReaders';
 
 const inSet = (id: string) =>
     page('products', `&searchCriteria[filterGroups][0][filters][0][field]=attribute_set_id&searchCriteria[filterGroups][0][filters][0][value]=${id}&fields=total_count,items[sku]`);
@@ -151,6 +152,64 @@ describe('decideRemovals: gift cards and cart rules (step 11)', () => {
         await takeBack(ctx, obj('cart_rules', '41'));
 
         expect(ctx.sent.map((c) => `${c.method} ${c.path}`)).toEqual(['DELETE products/zz-giftcard', 'DELETE coupons/88', 'DELETE salesRules/41']);
+    });
+});
+
+/** Who carries an attribute: a `notnull` search on its code, with the values (C3 review, the attribute and option holds). */
+// SKUs alone for an attribute; the values only when an option of it is decided (re-review item 4: cost).
+const carrying = (code: string, fields = 'items[sku]') =>
+    page('products', `&searchCriteria[filterGroups][0][filters][0][field]=${code}&searchCriteria[filterGroups][0][filters][0][value]=1&searchCriteria[filterGroups][0][filters][0][conditionType]=notnull&fields=total_count,${fields}`);
+const carrier = (sku: string, code: string, value: string) => ({ sku, custom_attributes: [{ attribute_code: code, value }] });
+
+describe('decideRemovals: attributes and options a product that stays carries', () => {
+    it("keeps an attribute a product that stays carries a value for, and its place in a set, not counting the pack's own products", async () => {
+        const ctx = await fakeContext({ [carrying('material')]: { items: [{ sku: 'pack-cap' }, { sku: 'theirs-1' }], total_count: 2 } });
+        const newestFirst = [obj('products', 'pack-cap'), obj('attribute_assign_to_set', '4/material'), obj('product_attributes', 'material')];
+
+        const decided = await decideRemovals(ctx.get, newestFirst);
+
+        expect(decided.take).toEqual([obj('products', 'pack-cap')]);
+        expect(decided.kept).toEqual([{ object: obj('product_attributes', 'material'), kind: 'attribute', name: 'material', count: 1, holds: 'product', reason: '1 product that stays carries a value for it' }]);
+    });
+
+    it("takes out an attribute only the pack's own products carry, and its options with it", async () => {
+        const ctx = await fakeContext({
+            [carrying('material')]: { items: [{ sku: 'pack-cap' }], total_count: 1 },
+            [carrying('material', 'items[sku,custom_attributes]')]: { items: [carrier('pack-cap', 'material', '41')], total_count: 1 },
+        });
+        const newestFirst = [obj('products', 'pack-cap'), obj('attribute_options', 'material/41'), obj('product_attributes', 'material')];
+
+        expect(await decideRemovals(ctx.get, newestFirst)).toEqual({ take: newestFirst, kept: [] });
+    });
+
+    it('keeps an option a product that stays carries, in a list or alone, and takes the one nobody staying carries', async () => {
+        const ctx = await fakeContext({ [carrying('color', 'items[sku,custom_attributes]')]: { items: [carrier('pack-cap', 'color', '50'), carrier('theirs-1', 'color', '49,51')], total_count: 2 } });
+        const newestFirst = [obj('products', 'pack-cap'), obj('attribute_options', 'color/51'), obj('attribute_options', 'color/50')];
+
+        const decided = await decideRemovals(ctx.get, newestFirst);
+
+        expect(decided.take).toEqual([obj('products', 'pack-cap'), obj('attribute_options', 'color/50')]);
+        expect(decided.kept).toEqual([{ object: obj('attribute_options', 'color/51'), kind: 'attribute option', name: 'color/51', count: 1, holds: 'product', reason: '1 product that stays carries it' }]);
+    });
+
+    // Re-review item 3: Clear deletes the SC's own products on its websites right after the uninstall,
+    // so the uninstall counts them as leaving too, as Clear's check does.
+    it('counts the products a clearing deletes next as leaving, when it is told them', async () => {
+        const ctx = await fakeContext({ [carrying('material')]: { items: [{ sku: 'pack-cap' }, { sku: 'sc-own-cap' }], total_count: 2 } });
+        const newestFirst = [obj('products', 'pack-cap'), obj('product_attributes', 'material')];
+
+        expect((await decideRemovals(ctx.get, newestFirst)).kept).toHaveLength(1);
+        expect(await decideRemovals(ctx.get, newestFirst, { alsoLeaving: ['sc-own-cap'] })).toEqual({ take: newestFirst, kept: [] });
+    });
+
+    it("keeps an attribute when who carries it cannot be read, rather than blank what might be the SC's", async () => {
+        const ctx = await fakeContext({});
+        const get = (path: string) => (path.startsWith('products?') && path.includes('notnull') ? Promise.reject(new CommerceReadError('Commerce answered 500', 500)) : ctx.get(path));
+
+        const decided = await decideRemovals(get, [obj('product_attributes', 'material')]);
+
+        expect(decided.take).toStrictEqual([]);
+        expect(decided.kept[0]).toMatchObject({ kind: 'attribute', reason: 'Demo Builder could not read which products carry it' });
     });
 });
 

@@ -354,7 +354,8 @@ export function demoBuilderEngine(deps: DemoBuilderEngineDeps): DatapackEngine {
         startDelete: async (request) =>
             start(deps, jobs, request, 'delete', async (job) => {
                 const progress = (line: string): void => void (job.detail = line);
-                const result = await removeRecordedPack(await access(deps), deps.files ?? nodeRecordFiles, { projectPath: deps.projectPath, pack: request.id, log: deps.log, progress });
+                const leaving = request.alsoLeaving ? { alsoLeaving: request.alsoLeaving } : {};
+                const result = await removeRecordedPack(await access(deps), deps.files ?? nodeRecordFiles, { projectPath: deps.projectPath, pack: request.id, log: deps.log, progress, ...leaving });
                 job.detail = undefined;
                 job.note = result.note;
                 if (result.leftInStore) job.leftInStore = true;

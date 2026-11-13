@@ -49,6 +49,8 @@ export async function removeRecordedPack(
         pack: DatapackId;
         log: (line: string) => void;
         progress: (line: string) => void;
+        /** Products a clearing deletes right after (Clear Demo Data): what they hold counts as going. */
+        alsoLeaving?: readonly string[];
     },
 ): Promise<RecordedRemoval> {
     const result = await removePack(commerce, files, target);

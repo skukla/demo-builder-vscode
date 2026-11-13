@@ -28,3 +28,9 @@ export const BODEA_CHECK: ClearCheck = {
 
 /** The same, with nothing to clear. */
 export const EMPTY_CHECK: ClearCheck = { project: 'Bodea', websites: [{ code: 'bodea', name: 'Bodea' }], rows: [], records: {}, total: 0, token: 'tok-0' };
+
+/** Bodea with its datapack, which the clearing uninstalls first (C3): the window reads its changes before Clear. */
+export const BODEA_PACK_CHECK: ClearCheck = {
+    ...BODEA_CHECK,
+    datapack: { name: 'Bodea B2B', changes: 'unchecked', pack: { name: 'bodea-b2b', version: '1', store: 'library' } },
+};

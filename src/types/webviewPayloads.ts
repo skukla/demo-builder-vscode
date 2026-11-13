@@ -487,9 +487,13 @@ export interface OperationProgressPayload {
 
 /**
  * A next step offered when a run succeeds: "Add another ERP" whose new ERP owns nothing yet
- * offers "Assign products" for it (AB-74). The screen turns it into the modal's button.
+ * offers "Assign products" for it (AB-74); a Clear that left payment-review orders or list settings
+ * offers Open Commerce Admin (step 06 C3). The screen turns it into the modal's button.
  */
-export interface OperationOffer {
+export type OperationOffer = AssignErpProductsOffer | { action: 'open-commerce-admin' };
+
+/** "Assign products" for an ERP that owns nothing yet (AB-74). */
+export interface AssignErpProductsOffer {
     action: 'assign-erp-products';
     /** The ERP integration. */
     id: string;

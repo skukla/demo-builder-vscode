@@ -178,7 +178,7 @@ describe('runWipe, website settings', () => {
         expect(stages).toEqual(['Restoring default configuration']);
         expect(outcome.removed.settings).toBe(1);
         expect(outcome.sentence).toContain("Set 1 website setting to the default's value. Commerce can't clear a website's own value, so a later change to the default won't reach it.");
-        expect(outcome.failed).toEqual([{ what: 'set 1 of the website settings back', count: 1, first: expect.stringContaining(REFUSED_SETTING) }]);
+        expect(outcome.failed).toEqual([{ what: 'set 1 of the website settings back', count: 1, first: expect.stringContaining(REFUSED_SETTING), step: 'settings' }]);
     });
 
     it('reads the same as the default afterwards, so a second clearing has only the setting Commerce refused', async () => {

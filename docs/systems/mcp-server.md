@@ -966,11 +966,14 @@ SC ticks) is step 06's C4, and the tools' inputs are redesigned in its C6.
 `check_demo_data` (a read) answers one `ClearCheck` (`src/types/demoDataWipe.ts`): `data.websites`;
 `data.rows`, one per data type, each with its count and what happens ("12 removed", "3 closed", "2
 set back to the default value"); `data.records`, every record of each type by name, `removed` and
-`kept` (with a `tree` for categories); `data.total`; and a `token`. What any install record lists,
-this project's included, is left: `data.datapack` names the project's datapack, whose uninstall
-(`reset_datapack`) removes what it installed, until step 06's C3 runs that removal before the
-clearing. The count is what the clearing does. Each record counts under its own type (a shared catalog's customer group under
-customer groups, a company's customers under customers). Kept is what any project's install
+`kept` (with a `tree` for categories); `data.total`; and a `token`. The list is made as if this
+project's datapack were already uninstalled (step 06 C3): `clear_demo_data` uninstalls it first, so
+what it installed counts as removed, and `data.datapack` names it. Only a pack Demo Builder installed
+(its install record is beside the project) is dropped this way and uninstalled; a pack the service
+installed has no record, and what it put in is cleared with the rest; once a clearing ends with nothing
+refused, every type read (by the list and again at run time) and nothing kept or only taken off a
+website, the project stops naming it, and the note says so only when that save went through. Each record counts under its own type (a shared catalog's customer group under
+customer groups, a company's customers under customers). Kept is what another project's install
 records list on these websites, an instance-wide thing (company, catalog, group, attribute set,
 attribute) any other project's records list, and anything a website not chosen uses; kept records
 carry no reason. Orders already Canceled or Closed, and protected settings, are not listed; orders
@@ -984,18 +987,33 @@ catalogs, groups and attributes when cart rules are. A category a cart rule that
 full, so a large store answers a long check.
 
 `clear_demo_data` (confirm-gated) needs that token. It refuses while the list it names has a slow
-type. It makes the list again and writes nothing if the store would now clear anything the list did
-not hold, answering the new list instead; otherwise it closes off the orders by the one reset rule
+type. When the list named a datapack it uninstalls it first, through the reset's own removal
+(`removeProjectSampleDataOutcome`), the user's changes settled by `changes` and `saveAs` as
+`reset_project` and `delete_project` read them (`datapackAnswerArgs.ts`): changes in a pack not the
+user's with no answer answer `CHANGES_NEED_ANSWER` before anything runs, and nothing is cleared
+(the window then asks "Save Your Changes First?"). The token is claimed for one run, and given back
+when it stops before writing. A save or uninstall that
+fails clears nothing, says why, and the project keeps naming its pack; the token stays, so a retry runs
+it again. A full uninstall leaves the project naming no datapack; one that left part in Commerce on
+purpose keeps the record, the clearing respects it, and the note says so. It then makes the list again
+with the records as the removal left them and writes nothing more if the store would now clear
+anything the list did not hold (a website setting the removal put back is allowed, `setBack`, and the note says when it was then
+set to the default),
+answering the new list instead; otherwise it closes off the orders by the one reset rule
 shared with the ERP integration's reset (each noted first, its open returns closed; nothing invoiced
 or shipped: cancelled; any other: invoiced in full and refunded with an offline credit memo), then
 deletes companies, customers, products (or takes shared ones off these websites), cart rules (or takes
 shared ones off), shared catalogs with their groups, customer groups, categories (the top ones, Commerce
 taking those under them), attribute sets and attributes, and sets website settings to the default's
-value. Its `note` says what it did, exactly what Commerce refused, and that the project's datapack
-was left for its uninstall. Orders are never deleted. When the orders could not be read, the ERP step
+value. Its `note` starts with what became of the datapack, then says what it did and exactly what
+Commerce refused; what it could not finish is noted beside the project, and a second clear picks it
+up. Orders are never deleted. When the orders could not be read, the ERP step
 is held and says why: the integration is asked only once every order is closed. Its consent dialog
-names the websites the token's check covered, and the shared-website warning (`shownClears.ts`).
-Cannot be undone. The Data Installer's "Clear Demo Data" is the human surface; no reset offers it
+names the websites the token's check covered, the datapack it uninstalls first, the answer about its
+changes, and the shared-website warning (`shownClears.ts`). Cannot be undone, except the datapack,
+which installing it again puts back. From the screen it runs in one progress window: "Uninstall
+<Datapack>", then a row per data type; payment-review orders and list settings end it amber with
+Open Commerce Admin. The Data Installer's "Clear Demo Data" is the human surface; no reset offers it
 (owner, 2026-11-12), neither the buttons nor `reset_project`. Plans:
 `.rptc/plans/datapack-engine/step-10-wipe.md`, `.rptc/plans/datapack-simplification/step-06.md`.
 

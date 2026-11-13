@@ -56,10 +56,10 @@ export function useJobStart(kind: JobKind, body: () => object, dispatch: Dispatc
     const runs = useImportRetry(runStart);
     const { startImport, retry } = runs;
     const startWith = useCallback(
-        (given: RemovalAnswer): void => {
+        (given: RemovalAnswer | undefined): void => {
             answer.current = given;
             again.current = undefined;
-            setSavesFirst(given.changes === 'keep');
+            setSavesFirst(given?.changes === 'keep');
             startImport();
         },
         [startImport],

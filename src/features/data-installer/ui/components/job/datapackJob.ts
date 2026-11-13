@@ -60,6 +60,8 @@ export type JobEvent =
     | { type: 'start' }
     /** Switch or Uninstall pressed with changes to lose: the save question. */
     | { type: 'save-first' }
+    /** A start sent with no answer (nothing had changed when read) that the host refused with CHANGES_NEED_ANSWER: the save question. */
+    | { type: 'needs-answer' }
     /** Restore's check found unsaved edits: its question. */
     | { type: 'asks' }
     | { type: 'ended'; clean: boolean };
@@ -84,6 +86,7 @@ const FROM: Record<JobEvent['type'], readonly JobPhase[]> = {
     'dry-answered': ['dry-wait'],
     start: ['summary', 'dry-result', 'save-first', 'question', 'ended'],
     'save-first': ['summary'],
+    'needs-answer': ['run'],
     asks: ['check'],
     ended: ['run', 'check'],
 };
@@ -105,6 +108,7 @@ function next(state: JobState, event: JobEvent): JobState {
         case 'running':
             return { ...state, phase: 'run' };
         case 'save-first':
+        case 'needs-answer':
             return { ...state, phase: 'save-first' };
         case 'asks':
             return { ...state, phase: 'question' };
@@ -144,7 +148,7 @@ function kindTakes(state: JobState, event: JobEvent): boolean {
 export function datapackJob(state: JobState, event: JobEvent): JobState {
     if (!FROM[event.type].includes(state.phase)) return state;
     if (!kindTakes(state, event)) return state;
-    if (event.type === 'save-first' && !ASKS_SAVE.includes(state.kind)) return state;
+    if ((event.type === 'save-first' || event.type === 'needs-answer') && !ASKS_SAVE.includes(state.kind)) return state;
     if (state.kind === 'uninstall' && NOT_UNINSTALL.includes(event.type)) return state;
     if (state.kind === 'watch' && (event.type === 'back' || event.type === 'start')) return state;
     return next(state, event);

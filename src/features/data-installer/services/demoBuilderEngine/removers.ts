@@ -4,7 +4,7 @@
  * has (`repeatInstall.ts`), and by the preview of one, so the three never decide two ways.
  *
  * A category, an attribute set or a cart rule this engine made is kept while it holds anything the
- * engine did not make, or is not taking out in the same removal (a rule's coupons go with it, step 11): Commerce deletes a category's children with
+ * engine did not make (and an attribute or option while a product that stays carries it), or is not taking out in the same removal (a rule's coupons go with it, step 11): Commerce deletes a category's children with
  * it and leaves its products in no category, and (by Magento's schema, from memory, not yet checked
  * live) deletes a set's products with it.
  *
@@ -17,8 +17,9 @@
  * @module features/data-installer/services/demoBuilderEngine/removers
  */
 
-import { removeAssignment, removeAttributeSet } from './attributeSetsKind';
-import { removeAttribute, removeAttributeOption } from './attributesKind';
+import { type Carrier, attributeHold, carriersOnce } from './attributeHolds';
+import { ASSIGNMENT_KIND, removeAssignment, removeAttributeSet } from './attributeSetsKind';
+import { ATTRIBUTE_KIND, ATTRIBUTE_OPTION_KIND, removeAttribute, removeAttributeOption } from './attributesKind';
 import { type Taking, b2bHeldByOthers, isB2bContainer } from './b2bContainers';
 import { type AssignmentKind, CATALOG_CATEGORIES_KIND, CATALOG_COMPANIES_KIND, CATALOG_KIND, CATALOG_PRODUCTS_KIND, COMPANY_KIND, isAssignmentKind } from './b2bKeys';
 import { CART_RULE_KIND, removeCartRule } from './cartRulesKind';
@@ -108,7 +109,7 @@ export class TakeBackRefused extends CommerceReadError {
 /** A container kept because it holds what the engine did not make. */
 export interface KeptContainer {
     object: CreatedObject;
-    kind: 'category' | 'set' | 'company' | 'shared catalog' | 'customer group' | 'customer' | 'cart rule';
+    kind: 'category' | 'set' | 'company' | 'shared catalog' | 'customer group' | 'customer' | 'cart rule' | 'attribute' | 'attribute option';
     name: string;
     /** How many things of the SC's it holds. */
     count: number;
@@ -205,6 +206,16 @@ async function setHeld(get: CommerceGet, object: CreatedObject, taking: Readonly
     return { object, kind: 'set', name: set?.attribute_set_name ?? object.id, count: others.length, holds: 'product' };
 }
 
+/**
+ * An attribute, or an option of one, this engine made, kept while a product that stays carries a
+ * value for it (`attributeHolds.ts`; C3 review, 2026-11-13).
+ */
+async function attributeHeld(read: (code: string, values: boolean) => Promise<Carrier[]>, object: CreatedObject, taking: ReadonlySet<string>): Promise<KeptContainer | undefined> {
+    const held = await attributeHold(read, object, (sku) => !takingSku(taking, sku));
+    if (!held) return undefined;
+    return { object, kind: object.kind === ATTRIBUTE_OPTION_KIND ? 'attribute option' : 'attribute', name: object.key ?? object.id, ...held };
+}
+
 /** The kind an assignment's member is recorded under. */
 const MEMBER_KIND: Record<AssignmentKind, string> = {
     [CATALOG_COMPANIES_KIND]: COMPANY_KIND,
@@ -241,6 +252,7 @@ async function keptContainers(get: CommerceGet, newestFirst: readonly CreatedObj
         of: (kind) => newestFirst.filter((o) => o.kind === kind && taking.has(keyOfObject(o.kind, o.id))),
     };
     const decisions: Array<Promise<KeptContainer | undefined>> = [];
+    const carriers = carriersOnce(get);
     // Where each container other than the B2B ones is first decided; asked again, it answers the same.
     const firstAt = new Map<string, number>();
     const childStays = (at: number) => async (id: string): Promise<boolean> => {
@@ -253,6 +265,7 @@ async function keptContainers(get: CommerceGet, newestFirst: readonly CreatedObj
         if (object.kind === 'categories') return categoryHeld(get, object, taking, childStays(at));
         if (object.kind === 'attribute_sets') return setHeld(get, object, taking);
         if (object.kind === CART_RULE_KIND) return cartRuleHeld(get, object, taking);
+        if (object.kind === ATTRIBUTE_KIND || object.kind === ATTRIBUTE_OPTION_KIND) return attributeHeld(carriers, object, taking);
         return Promise.resolve(undefined);
     };
     let inTurn: Promise<unknown> = Promise.resolve();
@@ -289,15 +302,24 @@ async function keptContainers(get: CommerceGet, newestFirst: readonly CreatedObj
  *
  * @param newestFirst - what a removal would take out, newest first, so a child is decided
  *   before the container it sits in; a kept child keeps its container too
+ * @param options.alsoLeaving - products, by SKU, a clearing deletes right after this removal (Clear
+ *   Demo Data, step-06 C3 re-review): what they hold counts as going, as Clear's check counts it
  * @returns `take` in the order given, so writes still run newest first
  */
-export async function decideRemovals(get: CommerceGet, newestFirst: readonly CreatedObject[]): Promise<{ take: CreatedObject[]; kept: KeptContainer[] }> {
+export async function decideRemovals(get: CommerceGet, newestFirst: readonly CreatedObject[], options: { alsoLeaving?: readonly string[] } = {}): Promise<{ take: CreatedObject[]; kept: KeptContainer[] }> {
     const listed = new Set(newestFirst.map((o) => keyOfObject(o.kind, o.id)));
-    // Still to be taken: shrinks as decisions keep things.
-    const taking = new Set(listed);
+    // Still to be taken: shrinks as decisions keep things. Products leaving with the clearing count as taken.
+    const taking = new Set([...listed, ...(options.alsoLeaving ?? []).map((sku) => keyOfObject('products', sku))]);
     const kept = await keptContainers(fewReadsAtOnce(get, REQUESTS_AT_ONCE), newestFirst, taking);
     for (const one of keptObjects(kept)) taking.delete(keyOfObject(one.kind, one.id));
     const staying = (kind: string, id: string) => listed.has(keyOfObject(kind, id)) && !taking.has(keyOfObject(kind, id));
+    // An attribute kept keeps its place in each set that stays: taking it out of a set blanks its values there.
+    const heldAttributes = new Set(kept.filter((k) => k.kind === 'attribute').map((k) => k.object.id));
+    const placeStays = (o: CreatedObject): boolean => {
+        const [setId, code] = o.id.split('/');
+        return heldAttributes.has(code ?? '') && !taking.has(keyOfObject('attribute_sets', setId));
+    };
+    for (const placed of newestFirst.filter((o) => o.kind === ASSIGNMENT_KIND && placeStays(o))) taking.delete(keyOfObject(placed.kind, placed.id));
     for (const pair of newestFirst.filter((o) => isAssignmentKind(o.kind))) {
         const { catalogId, ref } = splitPair(pair.id);
         if (staying(CATALOG_KIND, catalogId) || staying(MEMBER_KIND[pair.kind as AssignmentKind], ref)) taking.delete(keyOfObject(pair.kind, pair.id));

@@ -142,7 +142,7 @@ describe('the reset rule at its edges', () => {
 
         const second = await planAndRun(store);
 
-        expect(first.failed).toEqual([{ what: 'close 1 of the orders', count: 1, first: '000000704: Commerce answered 400: The product is in use.' }]);
+        expect(first.failed).toEqual([{ what: 'close 1 of the orders', count: 1, first: '000000704: Commerce answered 400: The product is in use.', step: 'orders' }]);
         expect(store.sent).toEqual([
             note(704, REFUNDED),
             closeReturn(withReturn.returns[0]),
@@ -236,7 +236,7 @@ describe('the reset rule at its edges', () => {
         const outcome = await planAndRun(store);
 
         expect(store.sent).toEqual([note(704, REFUNDED), closeReturn(withReturn.returns[0])]);
-        expect(outcome.failed).toContainEqual({ what: 'close 1 of the orders', count: 1, first: '000000704: Commerce kept return R40 authorized' });
+        expect(outcome.failed).toContainEqual({ what: 'close 1 of the orders', count: 1, first: '000000704: Commerce kept return R40 authorized', step: 'orders' });
         expect(outcome.orders).toMatchObject({ failed: 1, returnsClosed: 0, refunded: 0 });
     });
 

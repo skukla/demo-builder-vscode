@@ -33,6 +33,7 @@
  */
 
 import { z } from 'zod';
+import { CLEAR_CHANGES_DESCRIPTION } from './datapackAnswerArgs';
 import { AGENT_PAGE_SIZE } from './projectors';
 import type { ToolDescriptor } from './toolDescriptors';
 import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
@@ -359,9 +360,10 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: true, // reads the store structure, the project's websites' products, categories, customers, cart rules, orders and returns, the companies, catalogs, groups, attribute sets, attributes and settings they use, the records, and the ERP integration's erp/status and erp/settings (GETs)
         description:
-            "What clearing every website this project uses (its own and every website its datapack was installed to) would do in its Commerce instance. " +
-            "What any datapack Demo Builder installed lists is left, this project's included: data.datapack names this project's, which its uninstall " +
-            '(reset_datapack) removes. Answers data.websites; data.rows, one per data type ' +
+            "What clearing every website this project uses (its own and every website its datapack was installed to) would do in its Commerce instance, " +
+            "planned as if this project's datapack were already uninstalled: clear_demo_data uninstalls it first, so what it installed counts as removed. " +
+            "data.datapack names it (only a pack Demo Builder installed; a pack the service installed has no record, is not uninstalled, and what it put in is cleared with the rest; the project stops naming it once a clearing ends with nothing refused, unread or kept). " +
+            "What another project's datapack lists is kept. Answers data.websites; data.rows, one per data type " +
             '(products, categories, customers, companies, shared catalogs, cart rules, customer groups, attribute sets, attributes, website settings, ' +
             'orders, returns), each with its count and what happens ("12 removed", "3 closed", ' +
             '"2 set back to the default value"); data.records, every record of each type by name, removed and kept (kept: what another ' +
@@ -382,22 +384,27 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: false,
         description:
-            "Clear this project's websites of everything check_demo_data listed: deletes those products, categories, customers, cart rules " +
+            "Clear this project's websites of everything check_demo_data listed. When data.datapack named one, it uninstalls this project's datapack first, as reset_datapack does: " +
+            "changes the user made in it are saved first (into the user's own pack; a pack not theirs needs changes:\"keep\" with saveAs, or changes:\"drop\", " +
+            'else it answers code CHANGES_NEED_ANSWER and clears nothing, before anything runs). A save or uninstall that fails clears nothing and the project keeps naming its pack; ' +
+            "after a full uninstall the project names no datapack. Then it deletes those products, categories, customers, cart rules " +
             "(their coupons with them), companies, shared catalogs (their customer groups with them), customer groups, attribute sets and attributes, sets those websites' settings to the default value, " +
             'takes the shared products and cart rules off these websites, cancels or refunds their orders (closing them, never deleting) and closes their ' +
             "returns, those an ERP integration sends to an ERP included; then that integration's ERP is brought in line with Commerce and " +
             "filled again, in the same call. When that step fails or is held, data.erp.broughtInLine is false and data.erp.problem says why; " +
-            "the orders stay closed. Cannot be undone. Show the user check_demo_data's list and ask first. Needs the token from that check; " +
-            'refused while that check named a type Commerce was too slow to answer (check again). If the store would now clear anything the list did not hold, nothing is written and the ' +
-            "new list comes back as data. Never touches what any project's install records list, anything a website not chosen also uses, Commerce's own customer groups and attributes, " +
-            "the public catalog, the Default attribute set, stocks, the default settings or another website's, nor what this project's datapack installed " +
-            "(left for reset_datapack; the note says so). Answers data.leftOpen (orders left open " +
+            "the orders stay closed. Cannot be undone, except the datapack, which installing it again puts back. Show the user check_demo_data's list and ask first. Needs the token from that check; " +
+            'refused while that check named a type Commerce was too slow to answer (check again). If the store would now clear anything the list did not hold, nothing more is written and the ' +
+            "new list comes back as data. Never touches what another project's install records list, what this project's datapack uninstall left in Commerce on purpose (the note says so), " +
+            "anything a website not chosen also uses, Commerce's own customer groups and attributes, the public catalog, the Default attribute set, stocks, the default settings or another website's. " +
+            "The note starts with what became of the datapack. Answers data.leftOpen (orders left open " +
             'with a note, to finish in the Commerce Admin) and data.listSettings (list settings only the Admin can set back). A partial failure says what finished; running it again picks up what is left.',
         map: importHandlers,
         type: 'clear-demo-data',
         confirm: true, // gated twice, as reset_datapack is: the row, then the handler's own check
         inputSchema: {
             token: z.string().describe("check_demo_data's token"),
+            changes: z.enum(['keep', 'drop']).optional().describe(CLEAR_CHANGES_DESCRIPTION),
+            saveAs: SAVE_AS,
         },
     },
 

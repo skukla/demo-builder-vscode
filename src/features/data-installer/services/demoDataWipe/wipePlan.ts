@@ -31,9 +31,9 @@
  * each order's work; and the ERP step is held when the orders are unknown.
  *
  * Never touched, whatever is there: anything an install record lists, this project's and every other
- * local project's (`readWipeClaims`; this project's datapack is left for its uninstall until step 06's
- * C3 runs that removal first); Commerce's own customer groups and attributes, the public catalog and
- * the Default attribute set; stocks and sources (the Default Stock and Source included); websites,
+ * local project's (`readWipeClaims`; the check plans as if this project's datapack were already
+ * uninstalled, since the clearing runs that removal first, step 06 C3); Commerce's own customer
+ * groups and attributes, the public catalog and the Default attribute set; stocks and sources (the Default Stock and Source included); websites,
  * stores, store views and root categories; the Default scope's settings and another website's; admin
  * users; the integration's credential.
  *
@@ -59,6 +59,7 @@ import { type OrderReturn, type OrderStep, openReturns, orderStepOf } from './wi
 import { type ProductDecision, decideProducts } from './wipeProducts';
 import { type WipeCategory, readCategoryTree, readOrderReturns, readViewOrders, readWebsiteProducts, readWipeStructure } from './wipeReads';
 import { type Recorded, type RecordedOnInstance, recordedIds, recordedOnInstance } from './wipeRecorded';
+import type { WipeOutcome } from './wipeRun';
 import { type WipeScope, resolveWipeScope } from './wipeScope';
 import { type SettingsDecision, decideSettings } from './wipeSettings';
 import { sha256 } from '@/core/utils/sha256';
@@ -108,6 +109,8 @@ export interface WipePlan {
     erp?: WipeErpPlan;
     /** Each type a read failed for, with what Commerce said: for the Debug Logs. */
     unreadDetails: Record<string, string>;
+    /** Website settings the datapack's removal puts back before the re-plan (`<website>/<path>`), which it may then set back. */
+    setBack?: string[];
 }
 
 /**
@@ -118,6 +121,8 @@ export interface WipeInputs extends Pick<WipeRespects, 'records'>, Partial<Omit<
     erp?: WipeErp;
     /** Told as each of `WIPE_PHASES` starts, by its place in the list: the check's progress. */
     onPhase?: (at: number) => void;
+    /** Told the wipe's outcome, and the plan it ran (made again at run time), before the ERP steps (`clearShown`). */
+    onWiped?: (outcome: WipeOutcome, ran: WipePlan) => Promise<void>;
 }
 
 const skus = (products: readonly CommerceProduct[]) => products.map((p) => p.sku);
@@ -354,7 +359,7 @@ const WRITES: Array<(plan: WipePlan) => readonly string[]> = [
     (p) => p.groups.flatMap((g) => (g.catalog ? [String(g.catalog.id)] : [])),
     (p) => p.attributeSets.map((s) => String(s.id)),
     (p) => p.attributes.map((a) => a.code),
-    (p) => p.settings.map((s) => `${s.websiteCode}/${s.path}`),
+    (p) => [...p.settings.map((s) => `${s.websiteCode}/${s.path}`), ...(p.setBack ?? [])],
     (p) => p.ruleIds,
     (p) => p.ruleTakeOff.map((t) => `${t.id}@${t.websiteIds.join(',')}`),
     (p) => orderIds(p, (o) => o.action === 'cancel'),
@@ -369,7 +374,10 @@ const WRITES: Array<(plan: WipePlan) => readonly string[]> = [
  * Whether a plan made now takes nothing the plan the SC saw did not: the same websites, and every id
  * it would delete, take off, clear, set back, cancel, invoice, refund, release or close was in the
  * one shown, and the ERP integration is asked about no store the list said it would not be (it was
- * held then). Things gone or closed since are fine.
+ * held then). Things gone or closed since are fine. So is a website setting the datapack's removal
+ * put back (`setBack`): the removal changes settings only that way (`putBackSettings`, by the record's
+ * `previous`), so a value the list saw as the default's may differ from it again; everything else
+ * the removal deletes, or keeps on its record, which the re-plan respects.
  */
 export function withinPlan(shown: WipePlan, now: WipePlan): boolean {
     return now.scopeKey === shown.scopeKey && WRITES.every((ids) => ids(now).every((id) => ids(shown).includes(id)));

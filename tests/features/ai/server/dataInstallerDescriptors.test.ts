@@ -276,6 +276,19 @@ describe('what each row accepts', () => {
         expect(keys('reset_datapack')).toEqual([...expected, 'changes', 'saveAs', 'waitSeconds'].sort());
     });
 
+    // Step 06 C3: clear_demo_data uninstalls the project's datapack first, so it takes the same answer
+    // about the user's changes as reset_project and delete_project, read the same way.
+    it("gives clear_demo_data the check's token and the answer about the datapack's changes", () => {
+        const schema = row('clear_demo_data')!.inputSchema!;
+
+        expect(keys('clear_demo_data')).toEqual(['changes', 'saveAs', 'token']);
+        expect(schema.changes.parse('drop')).toBe('drop');
+        expect(() => schema.changes.parse('maybe')).toThrow();
+        expect(row('clear_demo_data')!.description).toMatch(/uninstalls this project's datapack first/);
+        expect(row('clear_demo_data')!.description).toMatch(/CHANGES_NEED_ANSWER/);
+        expect(row('check_demo_data')!.description).toMatch(/as if this project's datapack were already uninstalled/);
+    });
+
     // Restore picks its own version and target from the project and drops the changes itself, so an
     // agent names only the pack (and may wait); the row's gate supplies confirm.
     it('gives restore_datapack the pack and the wait, nothing that could choose a version or save', () => {

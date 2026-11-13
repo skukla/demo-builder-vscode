@@ -33,6 +33,11 @@ export interface ImportRequest {
      * it by its install record first, and installs nothing when that removal fails.
      */
     replaces?: DatapackId;
+    /**
+     * A removal only, Demo Builder's engine only: products, by SKU, a clearing deletes right after it
+     * (Clear Demo Data, step-06 C3 re-review). What they hold counts as going (`decideRemovals`).
+     */
+    alsoLeaving?: string[];
 }
 
 /**

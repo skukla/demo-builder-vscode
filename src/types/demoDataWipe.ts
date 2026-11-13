@@ -14,6 +14,7 @@
 
 import type { TreeListNode } from '@/core/ui/components/ui/TreeList';
 import type { TypeRow } from '@/features/data-installer/ui/components/job/installRows';
+import type { ProjectDatapack } from '@/types/datapack';
 
 /**
  * Which websites a clearing covers. `project`: every website the project uses, from its install
@@ -55,11 +56,18 @@ export interface ClearRecords {
  */
 export type ClearUnread = 'slow' | 'refused' | 'strange';
 
-/** The datapack the project names, which the clearing takes out first (C3). */
+/**
+ * The datapack the project names, which the clearing uninstalls first through the engine's own
+ * removal (C3). Present only when Demo Builder installed it (its install record is here): the list is
+ * made as if it were already gone.
+ */
 export interface ClearDatapack {
+    /** As the SC knows it: the run's "Uninstall <name>" row. */
     name: string;
     /** Whether the SC changed what it put in Commerce: not checked by the check itself. */
     changes: 'none' | 'asks' | 'saves' | 'unchecked';
+    /** The pack itself, for the window's read of those changes (`get-datapack-removal-changes`). */
+    pack: ProjectDatapack;
 }
 
 /** `check-demo-data`'s answer: what clearing the project's websites would do, type by type. */
@@ -94,4 +102,11 @@ export interface DemoDataRequest {
     confirm?: boolean;
     /** Started from the Data Installer's button, so its progress goes to the screen's progress window. */
     progress?: 'modal';
+    /**
+     * Clear only, when the datapack has changes: the save question's answer, as Uninstall's (`keep`
+     * saves them, into the SC's own pack or as the new one `saveAs` names; `drop` loses them). Left
+     * out, changes in the SC's own pack are saved into it, and changes in another's stop the clearing.
+     */
+    changes?: 'keep' | 'drop';
+    saveAs?: { displayName: string };
 }

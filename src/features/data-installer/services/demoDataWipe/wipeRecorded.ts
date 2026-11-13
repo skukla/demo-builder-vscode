@@ -57,14 +57,20 @@ export function recordedOnInstance(records: readonly InstallRecord[]): RecordedO
 
 const WEBSITE_SCOPE = '@website';
 
-/** Website settings a record of the project says Demo Builder wrote, as `<website code>/<path>`. */
-export function settingsKeptBy(project: Project, records: readonly InstallRecord[]): string[] {
+/** Website settings these install records say a datapack wrote, as `<website code>/<path>`: its removal puts them back. */
+export function recordedSettings(project: Project, records: readonly InstallRecord[]): string[] {
     const own = resolveInstallTarget(project)?.websiteCode;
-    const fromRecords = records.flatMap((record) =>
+    return records.flatMap((record) =>
         record.created
             .filter((o) => o.kind === STORE_CONFIG_KIND && (o.key ?? o.id).endsWith(WEBSITE_SCOPE))
             .map((o) => `${record.target?.websiteCode ?? own}/${(o.key ?? o.id).slice(0, -WEBSITE_SCOPE.length)}`),
     );
+}
+
+/** Website settings a record of the project, or its setup guide, says Demo Builder wrote, as `<website code>/<path>`. */
+export function settingsKeptBy(project: Project, records: readonly InstallRecord[]): string[] {
+    const own = resolveInstallTarget(project)?.websiteCode;
+    const fromRecords = recordedSettings(project, records);
     const steps = Object.values(project.appBuilderComponents ?? {}).flatMap((component) => Object.values(component.storePreparation?.steps ?? {}));
     const written = [...steps.flatMap((step) => (step.kind === 'config' ? step.previous : [])), ...(project.commerceConfigChange?.previous ?? [])];
     return [...fromRecords, ...written.filter((row) => row.scope === 'website').map((row) => `${row.scopeCode ?? own}/${row.path}`)];

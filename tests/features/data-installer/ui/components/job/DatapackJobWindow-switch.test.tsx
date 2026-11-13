@@ -29,6 +29,7 @@ import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { DatapackRemovalChanges } from '@/features/data-installer/removalChanges';
 import type { ProjectDatapack } from '@/types/datapack';
+import { ErrorCode } from '@/types/errorCodes';
 
 const LUMA: ProjectDatapack = { name: 'luma', version: 'v1', store: 'library' };
 const TARGET = {
@@ -140,13 +141,32 @@ describe('Switch with nothing changed', () => {
         await press(button('Switch'));
 
         expect(screen.queryByRole('heading', { name: 'Save Your Changes First?' })).toBeNull();
+        // No answer about changes (C3 review): the host reads them again, so none made since is dropped unasked.
+        expect(sent('start-datapack-import')).not.toHaveProperty('changes');
         expect(sent('start-datapack-import')).toMatchObject({
             datapackName: 'bodea',
             version: 'main',
-            changes: 'drop',
         });
         expect(await heading('Switching to Bodea')).toBeInTheDocument();
         expect(tipCalls()).toHaveLength(0);
+    });
+
+    // C3 re-review: sent with no answer, the host found changes made since in a pack not the SC's.
+    it('asks "Save Your Changes First?" over the changes read again when the host refuses for an answer, and sends the answer given', async () => {
+        holding(NOTHING);
+        await openSwitch();
+        const refusal = { success: false, error: 'You changed 3 things since it was installed.', code: ErrorCode.CHANGES_NEED_ANSWER };
+        holding(CHANGED_THEIRS, { start: refusal });
+
+        await press(button('Switch'));
+        await settle();
+
+        expect(await heading('Save Your Changes First?')).toBeInTheDocument();
+        expect(sends('get-datapack-removal-changes')).toBe(1);
+        await press(button('Switch Without Saving'));
+        const starts = mockRequest.mock.calls.filter(([type]) => type === 'start-datapack-import').map(([, body]) => body as Record<string, unknown>);
+        expect(starts[0]).not.toHaveProperty('changes');
+        expect(starts[1]).toMatchObject({ changes: 'drop' });
     });
 
     it('hands the run to a notification titled for the switch', async () => {
@@ -396,7 +416,8 @@ describe('another version of the held datapack', () => {
 
         await press(button('Install'));
 
-        expect(sent('start-datapack-import')).toMatchObject({ datapackName: 'bodea', version: 'eds-compatible', changes: 'drop' });
+        expect(sent('start-datapack-import')).toMatchObject({ datapackName: 'bodea', version: 'eds-compatible' });
+        expect(sent('start-datapack-import')).not.toHaveProperty('changes');
         expect(await heading('Installing Bodea, eds-compatible')).toBeInTheDocument();
         await press(button('Run in Background'));
         expect(mockPostMessage.mock.calls).toStrictEqual([

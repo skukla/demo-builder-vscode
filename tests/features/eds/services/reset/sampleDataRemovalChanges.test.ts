@@ -146,6 +146,22 @@ describe('removeProjectSampleData, answered up front by a batch', () => {
         });
     });
 
+    // step-06 C3: Clear's result says the removal left part in the store on purpose.
+    it('marks a removal that ran but left part in the store on purpose, keeping nothing back', async () => {
+        mockedRemove.mockResolvedValueOnce({ ran: true, outcome: 'success', leftInStore: true });
+
+        await expect(removeProjectSampleDataOutcome(project(), context(), jest.fn(), { given: undefined })).resolves.toStrictEqual({ leftInStore: true });
+    });
+
+    // Step-06 C3 re-review: Clear's uninstall names the products its wipe deletes next.
+    it("passes Clear's leaving products to the removal, and nothing of the kind for a reset", async () => {
+        await removeProjectSampleDataOutcome(project(), context(), jest.fn(), { given: undefined }, ['SC-OWN-1']);
+        await removeProjectSampleDataOutcome(project(), context(), jest.fn(), { given: undefined });
+
+        expect(mockedRemove.mock.calls[0][2]).toEqual({ alsoLeaving: ['SC-OWN-1'] });
+        expect(mockedRemove.mock.calls[1]).toHaveLength(2);
+    });
+
     it('CONTROL: a refused answer keeps the data without that mark: it was answered', async () => {
         mockedSettle.mockResolvedValueOnce({ response: { success: false, error: 'You already have a datapack named My Copy.', code: ErrorCode.CHANGES_NEED_ANSWER } });
 

@@ -5,13 +5,14 @@
  * @module features/data-installer/ui/hooks/useJobSwitch
  */
 
-import type { Dispatch } from 'react';
+import { type Dispatch, useEffect } from 'react';
 import { replacedName } from '../../replaceWords';
 import type { JobEvent } from '../components/job/datapackJob';
 import type { JobReadsArgs, useJobReads } from './useJobReads';
 import type { useJobStart } from './useJobStart';
 import { type SwitchChanges, useSavingStage } from './useSwitchChanges';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { ErrorCode } from '@/types/errorCodes';
 
 /** A switch's or an uninstall's part of the job: the SC's changes and the save question's answers. */
 export interface JobSwitch {
@@ -49,6 +50,15 @@ export function useJobSwitch(
     dispatch: Dispatch<JobEvent>,
 ): JobSwitch {
     const { changes } = checks;
+    // Sent with no answer (nothing had changed when read), the host found changes in a pack not the
+    // SC's: ask the save question over what is there now, never drop them (C3 review, 2026-11-13).
+    const refused = starts.start.failure?.code === ErrorCode.CHANGES_NEED_ANSWER;
+    const { reread } = changes;
+    useEffect(() => {
+        if (!refused) return;
+        reread();
+        dispatch({ type: 'needs-answer' });
+    }, [refused, reread, dispatch]);
     const savingStage = useSavingStage(starts.savesFirst && starts.start.loading);
     const held = checks.target.value?.datapack;
     // As the run's Uninstall row names it: "Luma", or "Luma, eds-compatible" for a named version.

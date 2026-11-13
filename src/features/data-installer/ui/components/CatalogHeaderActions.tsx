@@ -24,9 +24,10 @@
  */
 
 import { ActionButton, Divider, Item, Text } from '@adobe/react-spectrum';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import type { HeaderSave } from '../headerSave';
 import { useClearDemoData } from '../hooks/useClearDemoData';
+import type { RemovalAnswer } from '../hooks/useSwitchChanges';
 import { LoadDatapackFileModal } from './LoadDatapackFileModal';
 import { ProjectClearWindow } from './ProjectClearWindow';
 import { CardActionsMenu } from '@/core/ui/components/ui/CardActionsMenu';
@@ -52,6 +53,8 @@ export interface CatalogHeaderActionsProps {
     save?: HeaderSaveActions;
     /** The SC's own datapacks in My Datapacks: the file load asks to replace only one of these. */
     mySaves?: readonly DatapackId[];
+    /** The SC's own datapacks' names: Clear's save question may not name a new one after them. Must be stable. */
+    ownNames?: readonly string[];
 }
 
 /** The save button, as its state says (`headerSave`). */
@@ -85,16 +88,18 @@ function SaveButton({ save }: { save: HeaderSaveActions }): React.JSX.Element | 
 /** Which dialog the header has open. */
 type Open = 'load' | 'clear' | null;
 
-export function CatalogHeaderActions({ onCatalogChanged, save, mySaves }: CatalogHeaderActionsProps): React.JSX.Element {
+export function CatalogHeaderActions({ onCatalogChanged, save, mySaves, ownNames }: CatalogHeaderActionsProps): React.JSX.Element {
     const [open, setOpen] = useState<Open>(null);
-    const { clear, progressWindow } = useClearDemoData(onCatalogChanged);
+    const { clear, running, progressWindow } = useClearDemoData(onCatalogChanged);
+    // The Clear window stays until the run begins, so a refusal for an answer about the datapack's
+    // changes is asked there (C3 review); the progress window then takes over.
+    useEffect(() => {
+        if (running) setOpen((current) => (current === 'clear' ? null : current));
+    }, [running]);
 
     const close = useCallback((): void => setOpen(null), []);
     const startClear = useCallback(
-        (token: string, websites: string[]): void => {
-            setOpen(null);
-            clear(token, websites);
-        },
+        (token: string, websites: string[], answer?: RemovalAnswer): Promise<boolean> => clear(token, websites, answer),
         [clear],
     );
     // Stable, because the load modal's effect depends on it.
@@ -120,7 +125,7 @@ export function CatalogHeaderActions({ onCatalogChanged, save, mySaves }: Catalo
                 </>
             ) : null}
             {open === 'load' ? <LoadDatapackFileModal onClose={closeLoad} mySaves={mySaves} /> : null}
-            {open === 'clear' ? <ProjectClearWindow onClose={close} onClear={startClear} /> : null}
+            {open === 'clear' ? <ProjectClearWindow onClose={close} onClear={startClear} {...(ownNames ? { ownNames } : {})} /> : null}
             {progressWindow}
         </>
     );

@@ -9,6 +9,7 @@ import type { InstallRecord } from '@/features/data-installer/services/demoBuild
 import type { CommerceSalesRule } from '@/types/commerceSalesRule';
 import { DEFAULT_SET_PRODUCT, JUSTRITE_CAN, JUSTRITE_WIPER, OWNED_PRODUCT, WIPER_1, WIPER_2, attributeInstance } from '../../../../helpers/commerceWipeInstanceFixtures';
 import { sandbox } from './wipe.testUtils';
+import { decideRemovals } from '@/features/data-installer/services/demoBuilderEngine/removers';
 
 const TEST_STORE = ['justrite_test_website'];
 const NOTHING = { customers: [], orders: [] };
@@ -187,5 +188,50 @@ describe('removeEmptySet', () => {
 
         await expect(removeEmptySet(store, { id: 40, name: 'Wipers', needs: [] })).rejects.toThrow('removing it would delete them');
         expect(store.sent).toStrictEqual([]);
+    });
+});
+
+/**
+ * C3 review (2026-11-13), two projects: project A's datapack made `wiper_size`; a product of another
+ * demo, on JustRite's website, carries it. Clear's check (as if A's datapack were gone) keeps it, and
+ * A's uninstall, which Clear runs first, keeps it too: the same read decides both (`carriersOf`).
+ */
+describe("an attribute another demo's product carries, the check and the removal agree", () => {
+    const theirs = { ...JUSTRITE_CAN, sku: 'JR-CAN-2', custom_attributes: [{ attribute_code: 'wiper_size', value: '1' }] };
+
+    it("is kept by Clear's check and by the datapack's removal", async () => {
+        const store = sandbox({ ...NOTHING, products: [WIPER_1, theirs], instance: attributeInstance() });
+
+        const plan = await planWipeFor(store.get, TEST_STORE, { records: [] });
+        const removal = await decideRemovals(store.get, [{ kind: 'products', id: 'ZZ-WIPER-1' }, { kind: 'product_attributes', id: 'wiper_size' }]);
+
+        expect(keptOf(plan, 'product_attributes')).toContain('wiper_size');
+        expect(removal.take).toEqual([{ kind: 'products', id: 'ZZ-WIPER-1' }]);
+        expect(removal.kept.map((k) => k.object)).toEqual([{ kind: 'product_attributes', id: 'wiper_size' }]);
+    });
+
+    // Re-review item 3: the SC's own product on the cleared website carries it. The check removes it (that
+    // product goes too); Clear's uninstall, told the products the wipe deletes, takes it as well.
+    it("is removed by both when only the SC's own product on the cleared website carries it besides the pack's", async () => {
+        const store = sandbox({ ...NOTHING, products: [WIPER_1, { ...DEFAULT_SET_PRODUCT, custom_attributes: [{ attribute_code: 'wiper_size', value: '1' }] }], instance: attributeInstance() });
+
+        const plan = await planWipeFor(store.get, TEST_STORE, { records: [] });
+        const removal = await decideRemovals(store.get, [{ kind: 'products', id: 'ZZ-WIPER-1' }, { kind: 'product_attributes', id: 'wiper_size' }], { alsoLeaving: plan.deleteSkus });
+        const plain = await decideRemovals(store.get, [{ kind: 'products', id: 'ZZ-WIPER-1' }, { kind: 'product_attributes', id: 'wiper_size' }]);
+
+        expect(plan.attributes.map((a) => a.code)).toContain('wiper_size');
+        expect(removal.kept).toStrictEqual([]);
+        // Plain Uninstall, told nothing, still keeps it for the SC's product.
+        expect(plain.kept.map((k) => k.object.id)).toEqual(['wiper_size']);
+    });
+
+    it('CONTROL: with nobody else carrying it, both take it', async () => {
+        const store = sandbox({ ...NOTHING, products: [WIPER_1], instance: attributeInstance() });
+
+        const plan = await planWipeFor(store.get, TEST_STORE, { records: [] });
+        const removal = await decideRemovals(store.get, [{ kind: 'products', id: 'ZZ-WIPER-1' }, { kind: 'product_attributes', id: 'wiper_size' }]);
+
+        expect(plan.attributes.map((a) => a.code)).toContain('wiper_size');
+        expect(removal.kept).toStrictEqual([]);
     });
 });

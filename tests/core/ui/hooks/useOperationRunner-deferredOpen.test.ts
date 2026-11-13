@@ -9,6 +9,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { useOperationRunner } from '@/core/ui/hooks/useOperationRunner';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { ErrorCode } from '@/types/errorCodes';
 
 jest.mock('@/core/ui/utils/WebviewClient', () => ({
     webviewClient: {
@@ -142,6 +143,23 @@ describe('startWhenItBegins', () => {
         });
 
         expect(result.current.open).toEqual(expect.objectContaining({ id: 'reset:bodea', resume: true }));
+    });
+
+    // C3 review (2026-11-13): a run that stopped before its first step on a question for the screen
+    // (CHANGES_NEED_ANSWER: changes in a pack not the SC's) is not a failure: the screen asks it, so the
+    // modal stays shut and the answer reaches the caller.
+    it('stays shut on a refusal that asks the screen a question, and hands the caller the answer', async () => {
+        const refusal = { success: false, error: 'You changed 2 things.', code: ErrorCode.CHANGES_NEED_ANSWER };
+        request.mockResolvedValue(refusal);
+        const onSettled = jest.fn();
+        const { result } = renderHook(() => useOperationRunner());
+
+        await act(async () => {
+            result.current.startWhenItBegins(RESET, onSettled);
+        });
+
+        expect(result.current.open).toBeNull();
+        expect(onSettled).toHaveBeenCalledWith(refusal);
     });
 
     // The request gives up after 30s; the SC can take longer than that to answer.

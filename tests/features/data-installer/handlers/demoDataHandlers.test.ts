@@ -2,59 +2,24 @@
  * The two handlers behind "check this demo's store data" and "clear it" (datapack-engine step 10;
  * datapack-simplification step 06), driven against the sandbox fake with the real plan and clearing:
  * the check covers every website the project uses and writes nothing, and the clearing refuses until
- * it is confirmed and handed the list that was shown.
+ * it is confirmed and handed the list that was shown. The project's datapack is uninstalled first,
+ * through the removal it is handed (step 06 C3); here a fake of the engine's removal on the sandbox.
  */
 
-import { type DemoDataDeps, createDemoDataHandlers } from '@/features/data-installer/handlers/demoDataHandlers';
 import { type InstallRecord, installRecordPath } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import { shownClearFor } from '@/features/data-installer/services/demoDataWipe/shownClears';
 import type { WipeOutcome } from '@/features/data-installer/services/demoDataWipe/wipeRun';
-import type { ClearCheck } from '@/types/demoDataWipe';
 import { ErrorCode } from '@/types/errorCodes';
-import type { HandlerContext } from '@/types/handlers';
-import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockProject } from '../../../helpers/projectFake';
-import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { memoryFiles } from '../services/demoBuilderEngine/demoBuilderEngine.testUtils';
 import { PROJECT_RECORDS, sandbox } from '../services/demoDataWipe/wipe.testUtils';
 import { fakeErp } from '../services/demoDataWipe/wipeErp.testUtils';
 import { RESET_RULE_CASES } from '../../../helpers/resetRuleOrders';
 import { ADMIN_64, BUYER_65, CATALOG_20, COMPANY_28, b2bInstance } from '../../../helpers/commerceWipeInstanceFixtures';
-
-/** A project on the test website, where its record (PROJECT_RECORDS) was installed too. */
-const PROJECT = createMockProject({
-    name: 'zz-tester',
-    path: '/nonexistent/projects/zz-tester',
-    componentSelections: { backend: 'adobe-commerce-accs' },
-    componentConfigs: { 'adobe-commerce-accs': { ACCS_WEBSITE_CODE: 'justrite_test_website', ACCS_STORE_VIEW_CODE: 'justrite_test_view' } },
-    datapack: { name: 'zz-test', version: '1' },
-});
-
-function setUp(overrides: Partial<DemoDataDeps> = {}, store = sandbox(), project = PROJECT) {
-    // The project's own record on disk: the check plans as if its datapack were gone.
-    const [record] = PROJECT_RECORDS;
-    const files = memoryFiles({ [installRecordPath(project.path, record.pack)]: JSON.stringify(record) });
-    const deps: DemoDataDeps = { commerce: async () => store, guard: async () => undefined, files, others: async () => [], erp: () => undefined, openAdmin: async () => ({ outcome: 'opened' }), ...overrides };
-    const handlers = createDemoDataHandlers(deps);
-    const context = createMockHandlerContext({ stateManager: createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(project) }) }) as HandlerContext;
-    return { handlers, context, store, files };
-}
-
-/** Another project on the same test website. */
-const NEIGHBOUR = createMockProject({
-    name: 'neighbour',
-    title: 'Neighbour Demo',
-    path: '/nonexistent/projects/neighbour',
-    componentSelections: { backend: 'adobe-commerce-accs' },
-    componentConfigs: { 'adobe-commerce-accs': { ACCS_WEBSITE_CODE: 'justrite_test_website', ACCS_STORE_VIEW_CODE: 'justrite_test_view' } },
-});
-/** JustRite's project elsewhere on the machine, on no website the tests clear. */
-const JUSTRITE_ELSEWHERE = createMockProject({ name: 'justrite', path: '/nonexistent/projects/justrite', componentConfigs: {} });
-
-const checked = (data: unknown) => data as ClearCheck;
+import { PROJECT, setUp, NEIGHBOUR, JUSTRITE_ELSEWHERE, checked } from './demoDataHandlers.testUtils';
 
 describe('check-demo-data', () => {
-    it("answers what clearing the project's websites would do, type by type, leaving what its datapack installed, writing nothing", async () => {
+    it("answers what clearing the project's websites would do, type by type, as if its datapack were already uninstalled, writing nothing (C3)", async () => {
         const { handlers, context, store } = setUp();
 
         const res = await handlers['check-demo-data'](context);
@@ -62,18 +27,28 @@ describe('check-demo-data', () => {
         expect(res.success).toBe(true);
         const check = checked(res.data);
         expect(check.websites).toEqual([{ code: 'justrite_test_website', name: 'JustRite Test' }]);
-        // Until C3 runs the datapack's removal first, what its record lists is kept: the count is what this clear does.
-        expect(check.records.products).toEqual({ removed: ['ZZ-ONLY-HERE', 'ZZ-JACKET', 'ZZ-JACKET-RED', 'ZZ-SHARED-WITH-JUSTRITE'], kept: ['ZZ-LONE-VARIANT', 'ZZ-MADE-BY-DEMO-BUILDER'] });
-        expect(check.records.customers).toEqual({ removed: ['zz.shopper@example.com'], kept: ['zz.admin@example.com', 'zz.made@example.com'] });
+        // The clearing uninstalls the datapack first, so what its record lists is counted as removed.
+        expect(check.records.products).toEqual({ removed: ['ZZ-ONLY-HERE', 'ZZ-JACKET', 'ZZ-JACKET-RED', 'ZZ-MADE-BY-DEMO-BUILDER', 'ZZ-SHARED-WITH-JUSTRITE'], kept: ['ZZ-LONE-VARIANT'] });
+        expect(check.records.customers).toEqual({ removed: ['zz.shopper@example.com', 'zz.made@example.com'], kept: ['zz.admin@example.com'] });
         expect(check.rows.map((r) => [r.label, r.happens])).toEqual([
-            ['Products', '4 removed'],
+            ['Products', '5 removed'],
             ['Categories', '0 removed'],
-            ['Customers', '1 removed'],
+            ['Customers', '2 removed'],
         ]);
-        expect(check.total).toBe(5);
-        expect(check.datapack).toEqual({ name: 'zz-test', changes: 'unchecked' });
+        expect(check.total).toBe(7);
+        expect(check.datapack).toEqual({ name: 'zz-test', changes: 'unchecked', pack: { name: 'zz-test', version: '1' } });
         expect(check.warning).toBeUndefined();
         expect(store.sent).toStrictEqual([]);
+    });
+
+    it('names no datapack, and plans with every record, when the pack the project names has no record here (one the service installed)', async () => {
+        const servicePack = createMockProject({ ...PROJECT, datapack: { name: 'service-pack', version: '1' } });
+        const { handlers, context } = setUp({}, sandbox(), servicePack);
+
+        const check = checked((await handlers['check-demo-data'](context)).data);
+
+        expect(check.datapack).toBeUndefined();
+        expect(check.records.products.kept).toContain('ZZ-MADE-BY-DEMO-BUILDER');
     });
 
     it('names the project as the SC knows it, for the window title', async () => {
@@ -88,7 +63,7 @@ describe('check-demo-data', () => {
 
         const check = checked((await handlers['check-demo-data'](context)).data);
 
-        expect(shownClearFor(check.token)).toEqual({ websites: ['justrite_test_website'], warning: check.warning });
+        expect(shownClearFor(check.token)).toEqual({ websites: ['justrite_test_website'], warning: check.warning, datapack: 'zz-test' });
     });
 
     it('stops at an org mismatch before reading the store', async () => {
@@ -108,7 +83,7 @@ describe('check-demo-data', () => {
 
         const check = checked(res.data);
         expect(check.warning).toBe('The project Neighbour Demo also uses the website justrite_test_website. Clearing it also removes what was added there by hand for that project.');
-        expect(check.total).toBe(5);
+        expect(check.total).toBe(7);
         expect(others).toHaveBeenCalledWith(context, PROJECT);
     });
 
@@ -166,7 +141,7 @@ describe('check-demo-data', () => {
 
         expect(check.unread).toEqual({ products: 'strange', categories: 'strange' });
         expect(check.rows[0]).toMatchObject({ label: 'Products', happens: "Couldn't be read" });
-        expect(check.records.customers.removed).toHaveLength(1);
+        expect(check.records.customers.removed).toHaveLength(2);
         expect((context.logger.warn as jest.Mock).mock.calls.flat().join(' ')).toContain('Products could not be read: Commerce answered 500 for products');
     });
 
@@ -290,16 +265,16 @@ describe('clear-demo-data', () => {
         expect(checked(again.data).records.b2b_shared_catalogs.removed).toEqual([CATALOG_20.name]);
     });
 
-    it("clears what was shown, once, leaving the datapack's records to its removal, and says what it did", async () => {
-        const { handlers, context, token, store } = await shown();
+    it("uninstalls the datapack first, then clears what was shown, once, and says both", async () => {
+        const { handlers, context, token, store, seen } = await shown();
 
         const res = await handlers['clear-demo-data'](context, { token, confirm: true });
 
         expect(res.success).toBe(true);
+        expect(seen.writesBefore).toEqual([0]);
         expect((res.data as WipeOutcome).removed).toMatchObject({ customers: 1, products: 3, takenOff: 1, cartRules: 0, rulesTakenOff: 0, categories: 0 });
-        expect(res.note).toMatch(/^Removed 3 products and 1 customer from the website justrite_test_website\./);
-        expect(res.note).toMatch(/ What the datapack zz-test installed is left for its uninstall\.$/);
-        expect(store.sent.map((w) => w.path)).not.toContain('products/ZZ-MADE-BY-DEMO-BUILDER');
+        expect(res.note).toMatch(/^Uninstalled the datapack zz-test first\. Removed 3 products and 1 customer from the website justrite_test_website\./);
+        expect(res.note).not.toMatch(/left for its uninstall/);
         expect(store.sent).toHaveLength(5);
         expect((await handlers['clear-demo-data'](context, { token, confirm: true })).error).toMatch(/no longer known/);
     });
@@ -316,7 +291,7 @@ describe('clear-demo-data', () => {
         expect(pushed).toContainEqual(expect.objectContaining({ stage: 'Verifying demo data', step: '10 of 11 data types: Orders' }));
         // Each removal step counts its items the same way.
         expect(pushed).toContainEqual(expect.objectContaining({ stage: 'Deleting products', step: '3 of 3 products' }));
-        expect(pushed).toContainEqual(expect.objectContaining({ id: 'demo-data-clear', state: 'succeeded', note: expect.stringMatching(/^Removed 3 products/) }));
+        expect(pushed).toContainEqual(expect.objectContaining({ id: 'demo-data-clear', state: 'succeeded', note: expect.stringMatching(/^Uninstalled the datapack zz-test first\. Removed 3 products/) }));
     });
 
     it('clears, with the warning given, though another project uses the same website (P6-Q2)', async () => {

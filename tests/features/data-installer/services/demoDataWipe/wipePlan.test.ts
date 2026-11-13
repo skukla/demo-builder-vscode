@@ -253,6 +253,21 @@ describe('withinPlan', () => {
         expect(now.check.token).not.toBe(shown.check.token);
     });
 
+    it("lets through a website setting the datapack's removal set back, though the list did not show it (C3)", async () => {
+        // Shown with the pack's value in place, the same as the default: nothing to set back then.
+        const packWrote = settingsInstance();
+        const setting = packWrote.settings?.websites.justrite_test_website.find((r) => r.path === 'sales/totals_sort/tax');
+        if (setting) setting.value = '40';
+        const shown = { ...(await planWipeFor(sandbox({ customers: [], products: [], instance: packWrote }).get, TEST_SITE, { records: [] })), setBack: ['justrite_test_website/sales/totals_sort/tax'] };
+        // The removal put back what the website held before the pack (41), which differs from the default.
+        const now = await planWipeFor(sandbox({ customers: [], products: [], instance: settingsInstance() }).get, TEST_SITE, { records: [] });
+
+        expect(now.settings.map((s) => s.path)).toContain('sales/totals_sort/tax');
+        expect(shown.settings.map((s) => s.path)).not.toContain('sales/totals_sort/tax');
+        expect(withinPlan(shown, now)).toBe(true);
+        expect(withinPlan({ ...shown, setBack: [] }, now)).toBe(false);
+    });
+
     it('stops a plan that would now close an order the list did not hold', async () => {
         const shown = await planWipeFor(sandbox().get, TEST_SITE, { records: [] });
         const order = { entity_id: 800, increment_id: '000000800', state: 'new', store_id: 6, items: [{ item_id: 1, qty_ordered: 1 }] };

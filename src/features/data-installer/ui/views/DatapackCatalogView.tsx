@@ -282,6 +282,7 @@ export function DatapackCatalogView({ library = false }: { library?: boolean } =
                                 onCatalogChanged={refresh}
                                 save={save}
                                 mySaves={mySaves}
+                                ownNames={owned.ownNames}
                             />
                         }
                     />

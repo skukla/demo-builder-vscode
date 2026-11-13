@@ -337,7 +337,7 @@ export function kindsOnRecord(record: Pick<InstallRecord, 'created' | 'pending'>
 export async function removePack(
     commerce: RemovalAccess,
     files: RecordFiles,
-    target: { projectPath: string; pack: DatapackId; log?: (line: string) => void; progress?: (line: string) => void },
+    target: { projectPath: string; pack: DatapackId; log?: (line: string) => void; progress?: (line: string) => void; alsoLeaving?: readonly string[] },
 ): Promise<RemovalResult> {
     const record = await readInstallRecord(files, target.projectPath, target.pack);
     if (!record) return { removed: 0, noRecord: true, kept: [], refused: [] };
@@ -350,7 +350,8 @@ export async function removePack(
     // Settings first: they went in last. Each leaves the record once put back or kept.
     const settingObjects = created.filter((o) => o.kind === STORE_CONFIG_KIND);
     const settings = settingObjects.length > 0 ? await putBackSettings(commerce, settingObjects, (o) => recorder.drop(o)) : undefined;
-    const { take, kept } = await decideRemovals(commerce.get, removalOrder({ ...record, created: [...created] }).filter((o) => o.kind !== STORE_CONFIG_KIND));
+    const leaving = target.alsoLeaving ? { alsoLeaving: target.alsoLeaving } : {};
+    const { take, kept } = await decideRemovals(commerce.get, removalOrder({ ...record, created: [...created] }).filter((o) => o.kind !== STORE_CONFIG_KIND), leaving);
     took(`decided what to take back: ${take.length} objects, ${kept.length} kept`);
     // In the record's order, with as few calls as Commerce allows (`removalRuns.ts`).
     let taken = 0;

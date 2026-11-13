@@ -403,6 +403,18 @@ describe('removeSampleData', () => {
         );
     });
 
+    // Step-06 C3 re-review: Clear's removal names the products its wipe deletes next.
+    it('hands the delete the products a clearing deletes next, and nothing of the kind otherwise', async () => {
+        const told = deps();
+        const plain = deps();
+
+        await removeSampleData(project(), told, { alsoLeaving: ['SC-OWN-1'] });
+        await removeSampleData(project(), plain);
+
+        expect(told.startDelete).toHaveBeenCalledWith(expect.objectContaining({ alsoLeaving: ['SC-OWN-1'] }));
+        expect(plain.startDelete.mock.calls[0][0]).not.toHaveProperty('alsoLeaving');
+    });
+
     it('watches the delete it started, not some other job', async () => {
         const d = deps();
 

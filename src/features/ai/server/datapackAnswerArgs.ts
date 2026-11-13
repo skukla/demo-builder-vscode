@@ -27,12 +27,21 @@ export interface DatapackAnswerArgs {
 }
 
 /**
- * What `changes` means, said once for both tools: what the window's answers mean (step-05 S1,
- * Phase 8: agents match the screen). Delete Without Saving sends `drop` for every pack, the SC's own
- * included, so `drop` here does too.
+ * What `changes` means, said once for every tool that uninstalls a datapack: what the window's
+ * answers mean (step-05 S1, Phase 8: agents match the screen). Delete Without Saving sends `drop` for
+ * every pack, the SC's own included, so `drop` here does too.
+ *
+ * @param when - when the answer applies: "With removeData" for delete and reset; Clear's names its check
  */
-export const CHANGES_DESCRIPTION =
-    "With removeData: keep saves the user's changes in the pack as a new datapack named by saveAs; drop loses them, in the user's own pack too. Left out, changes in the user's own pack are saved into it";
+export function changesDescriptionFor(when: string): string {
+    return `${when}: keep saves the user's changes in the pack as a new datapack named by saveAs; drop loses them, in the user's own pack too. Left out, changes in the user's own pack are saved into it`;
+}
+
+/** `delete_project`'s and `reset_project`'s, whose uninstall is `removeData`. */
+export const CHANGES_DESCRIPTION = changesDescriptionFor('With removeData');
+
+/** `clear_demo_data`'s, which uninstalls the datapack its check named, with no `removeData` (step-06 C3). */
+export const CLEAR_CHANGES_DESCRIPTION = changesDescriptionFor('When check_demo_data named a datapack');
 
 /**
  * The call's answer about the user's changes, handed to the removal as given, as the window hands
@@ -55,18 +64,20 @@ export function answeredOf(args: DatapackAnswerArgs | undefined): AnsweredDatapa
 }
 
 /**
- * The refusal when the user's changes had no answer: nothing was done, and how to answer.
+ * The refusal when the user's changes had no answer: nothing was done, and how to answer. Clear has
+ * no `removeData` (its check names the datapack), so its call again leaves it out.
  *
  * @param why - what the user changed, in the removal's words
- * @param undone - what was not done, past tense ("deleted", "reset")
+ * @param undone - what was not done, past tense ("deleted", "reset", "cleared")
  */
 export function changesNeedAnswer(
     why: string,
-    undone: 'deleted' | 'reset',
+    undone: 'deleted' | 'reset' | 'cleared',
 ): { code: 'CHANGES_NEED_ANSWER'; error: string } {
+    const removeData = undone === 'cleared' ? '' : 'removeData:true and ';
     return {
         code: 'CHANGES_NEED_ANSWER',
-        error: `${why} Nothing was ${undone}. Tell the user, then call again with removeData:true and changes:"keep" with saveAs (the name the user gives the new datapack), or changes:"drop" to lose them.`,
+        error: `${why} Nothing was ${undone}. Tell the user, then call again with ${removeData}changes:"keep" with saveAs (the name the user gives the new datapack), or changes:"drop" to lose them.`,
     };
 }
 

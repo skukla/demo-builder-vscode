@@ -182,6 +182,14 @@ which lists every object the install made. It never removes by name.
   decisions where one depends on another (a category counts only child categories decided before
   it; companies, shared catalogs and customer groups one after another), with exactly the reads it
   made before. A Luma-sized test store: the same 153 reads in 33 rounds instead of 153.
+  An attribute, or an option of one, the pack made is kept while a product that stays carries a
+  value for it (step-06 C3 review, 2026-11-13): one `notnull` products search per attribute
+  (`carriersOf`), which Clear's check reads too, so the two agree; a read that fails keeps it. A
+  kept attribute keeps its place in each set that stays. What is kept stays on the record, and the
+  project keeps naming the pack, as for any container kept. Each attribute adds one SKU-only read
+  to a removal, and one with values when an option of it is decided. Clear Demo Data's uninstall
+  also counts the products its wipe deletes next as leaving (`alsoLeaving`), so it lets go of what
+  Clear's check removes; a plain Uninstall is told nothing of the kind.
 - **A save's record is built from what the save read** (`rebaseRecord`, `recordFingerprints.ts`). The
   record moving onto the version a save made used to read every recorded object from the store again
   (36 s on Luma), moments after the capture read the same store through the same converters. It now
@@ -240,8 +248,9 @@ which lists every object the install made. It never removes by name.
 - **A pack it has no record of** (one the service installed, or one installed from
   another project) is refused, and nothing is removed (owner, 2026-10-30, step 14
   item 20). The refusal points the SC at **Clear demo data** on the Data Installer
-  screen (agents: `check_demo_data`, then `clear_demo_data`), which clears what Demo
-  Builder did not install from every website the project uses, whole
+  screen (agents: `check_demo_data`, then `clear_demo_data`), which uninstalls the
+  project's datapack first when Demo Builder installed it (its changes saved first, by
+  the same save question Uninstall asks), then clears every website the project uses, whole
   (`demoDataWipe/wipePlan.ts`; websites since datapack-simplification step 06):
   products, categories, customers and cart rules; companies, shared catalogs,
   customer groups, attribute sets and attributes, each only when nothing else on the

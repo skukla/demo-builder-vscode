@@ -119,11 +119,12 @@ export interface AgentAlertCopy {
  * interrupting, because a prompt on a cheap mutation trains people to click
  * Allow without reading, which costs more than it saves.
  */
-/** "Websites: bodea, justrite", and the shared-website warning, for the check the token names; nothing for one no check answered. */
+/** "Websites: bodea, justrite", the datapack uninstalled first, and the shared-website warning, for the check the token names; nothing for one no check answered. */
 function clearedWebsitesLines(args: unknown): string | undefined {
     const shown = shownClearFor((args as { token?: unknown } | null | undefined)?.token);
     if (!shown) return undefined;
-    return [`Websites: ${shown.websites.join(', ')}`, shown.warning].filter(Boolean).join('\n');
+    const datapack = shown.datapack ? `Uninstalls first: ${shown.datapack}` : undefined;
+    return [`Websites: ${shown.websites.join(', ')}`, datapack, shown.warning].filter(Boolean).join('\n');
 }
 
 export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
@@ -281,9 +282,11 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     clear_demo_data: {
         action: "Clear this project's demo data",
         consequence:
-            "Deletes what only this project's websites use and no datapack lists, as listed: products, categories, customers, cart rules, companies, shared catalogs, customer groups, attribute sets and attributes. Sets the website settings to the default's value, takes products other websites sell off them, cancels or refunds their orders and closes their returns (bringing in line the ERP of an ERP integration that serves these websites, from Commerce). This can't be undone.",
+            "Uninstalls this project's datapack first, when Demo Builder installed it (your changes in it saved first unless the agent was told to drop them). Then deletes what only this project's websites use and no other project's datapack lists, as listed: products, categories, customers, cart rules, companies, shared catalogs, customer groups, attribute sets and attributes. Sets the website settings to the default's value, takes products other websites sell off them, cancels or refunds their orders and closes their returns (bringing in line the ERP of an ERP integration that serves these websites, from Commerce). This can't be undone, except the datapack, which installing it again puts back.",
         target: [],
         describe: (args) => clearedWebsitesLines(args),
+        // saveAs is a name in an object, which the dialog does not draw (`consentValue`); changes is the decision.
+        choices: ['changes'],
         sessionGrant: false,
     },
     reinstall_integration: {

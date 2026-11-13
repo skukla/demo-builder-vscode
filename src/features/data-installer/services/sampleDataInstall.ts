@@ -167,14 +167,16 @@ export function installSampleData(
 export function removeSampleData(
     project: ProjectLike,
     deps: SampleDataDeps,
+    options: Pick<ImportRequest, 'alsoLeaving'> = {},
 ): Promise<SampleDataResult> {
-    return runSampleDataJob(project, deps, 'remove');
+    return runSampleDataJob(project, deps, 'remove', options);
 }
 
 async function runSampleDataJob(
     project: ProjectLike,
     deps: SampleDataDeps,
     mode: 'install' | 'remove',
+    options: Pick<ImportRequest, 'alsoLeaving'> = {},
 ): Promise<SampleDataResult> {
     const recorded = project.datapack;
     if (!recorded) {
@@ -226,6 +228,8 @@ async function runSampleDataJob(
             target,
             // Absent for the Data Installer, as every request before the store was recorded.
             ...(source === 'library' ? { source } : {}),
+            // Clear Demo Data's removal: the products its wipe deletes next (step-06 C3 re-review).
+            ...(options.alsoLeaving ? { alsoLeaving: options.alsoLeaving } : {}),
         };
         const start = mode === 'remove' ? deps.startDelete : deps.startImport;
         if (!start) {
