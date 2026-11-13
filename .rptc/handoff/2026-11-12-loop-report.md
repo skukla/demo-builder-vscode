@@ -222,7 +222,19 @@ Live notes; rewritten as the final report at the loop's close.
   Review Records with Removed and Kept tabs (the notice dot on kept counts, categories as a tree),
   red "Clear N Items"; failed reads with the agreed offers. The install window's shared pieces are
   unchanged (its tests unedited); style check: nothing moved. Full gate green (2,411 suites, 38,648).
-- Step-06 C3 (the datapack uninstalled first, then the clear, one run window): with a builder.
+- Step-06 C3: 07950f078. Clear Demo Data is complete: pressing Clear asks "Save Your Changes First?"
+  when the datapack has changes, uninstalls the datapack through the engine's own removal, then clears
+  the rest, in one run window ending with Open Commerce Admin for what Commerce cannot reset. A failed
+  save or removal stops before anything else is cleared, with Retry. Two independent reviews found
+  real data-safety problems, all fixed: the uninstall deleted attributes another demo's products still
+  used (the engine now keeps them, which also changes plain Uninstall); a window that read no changes
+  told the uninstall to drop changes, so later edits were lost unasked (it now sends no answer and the
+  extension reads fresh, asking when needed, in Clear, Uninstall and Switch); a Data Installer datapack
+  is forgotten only when nothing of it can be left; Retry works after an early error; two clears at
+  once cannot both uninstall. Full gate green (2,415 suites, 38,712 tests). Live cycle owed: install,
+  reinstall with nothing sent, Clear, a second Clear changes nothing; plus a store where another demo's
+  product and one where your own product carries a datapack attribute.
+- Step-06 C4 (Clear Commerce Instance): with a builder.
 - Phase 1b, done while waiting: ERP Downtime (863c5c2ca) and Edit Demo Package (f8ece2e6e) moved
   onto the Form layout, whose failure line is what both waited for. Same words; Cancel beside the
   commit, as every form; a read failure is a result window with Close. An unused style rule removed.
