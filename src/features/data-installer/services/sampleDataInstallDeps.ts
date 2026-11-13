@@ -110,7 +110,12 @@ export function buildSampleDataDeps(
                 operation: operation ?? (mode === 'remove' ? 'reset' : 'import'),
                 ...(onProgress ? { onProgress } : {}),
             });
-            return { outcome: result.outcome, perType: result.perType, ...(result.reason ? { reason: result.reason } : {}) };
+            return {
+                outcome: result.outcome,
+                perType: result.perType,
+                ...(result.reason ? { reason: result.reason } : {}),
+                ...(result.leftInStore ? { leftInStore: true } : {}),
+            };
         },
 
         onProgress: (perType) => {

@@ -419,6 +419,21 @@ describe('removeSampleData', () => {
         expect(result).toMatchObject({ ran: true, outcome: 'success' });
     });
 
+    // What a reset reads to decide whether the project still names the pack (step-05 R1).
+    it('says when the removal left part of the pack in the store', async () => {
+        const watch = jest.fn().mockResolvedValue({ outcome: 'success', perType: { categories: 'success' }, leftInStore: true });
+
+        const result = await removeSampleData(project(), deps({ watch }));
+
+        expect(result).toStrictEqual({ ran: true, outcome: 'success', perType: { categories: 'success' }, leftInStore: true });
+    });
+
+    it('CONTROL: says nothing of it when the removal took everything', async () => {
+        const result = await removeSampleData(project(), deps());
+
+        expect(result).not.toHaveProperty('leftInStore');
+    });
+
     /** A reset must not be failed by the optional half of it. */
     it('never throws when the delete refuses', async () => {
         const d = deps({ startDelete: jest.fn().mockRejectedValue(new Error('service down')) });

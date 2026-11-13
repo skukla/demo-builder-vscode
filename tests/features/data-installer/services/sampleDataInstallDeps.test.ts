@@ -161,6 +161,16 @@ describe('buildSampleDataDeps — watch', () => {
 
         expect(watched).toStrictEqual({ outcome: 'partial', perType: { products: 'error' }, reason: 'Products refused.' });
     });
+
+    // The Datapacks screen's Uninstall reads the same flag (`importJobWatch`, step-05 R1).
+    it('hands back that a removal left part of the pack in the store', async () => {
+        watchImportJob.mockResolvedValue({ outcome: 'success', perType: { categories: 'success' }, leftInStore: true });
+        const deps = buildSampleDataDeps(makeImportHarness(), PROJECT, jest.fn(), 'remove');
+
+        const watched = await deps.watch({ activationId: 'act-1', requestedTypes: [] });
+
+        expect(watched).toStrictEqual({ outcome: 'success', perType: { categories: 'success' }, leftInStore: true });
+    });
 });
 
 /**

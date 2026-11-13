@@ -48,6 +48,8 @@ export interface SampleDataResult {
     perType?: Record<string, DataTypeStatus>;
     /** Why it did not run, or did not finish cleanly. Never a credential. */
     reason?: string;
+    /** A removal left part of the pack in the store on purpose (`ImportJobResult.leftInStore`). */
+    leftInStore?: boolean;
 }
 
 /** The per-backend spelling of the same two facts. */
@@ -137,7 +139,7 @@ export interface SampleDataDeps {
          */
         operation?: 'import' | 'reset';
         onProgress?: (perType: Record<string, DataTypeStatus>) => void;
-    }) => Promise<{ outcome: string; perType: Record<string, DataTypeStatus>; reason?: string }>;
+    }) => Promise<{ outcome: string; perType: Record<string, DataTypeStatus>; reason?: string; leftInStore?: boolean }>;
     /** Live per-type progress, for the build's progress line. */
     onProgress?: (perType: Record<string, DataTypeStatus>) => void;
 }
@@ -243,7 +245,9 @@ async function runSampleDataJob(
 
         // The run's reason travels too: a failed creation install records it (step-04 S7).
         const reason = watched.reason ? { reason: watched.reason } : {};
-        return { ran: true, outcome: watched.outcome, perType: watched.perType, ...reason };
+        // A reset reads it to decide whether the project still names the pack (step-05 R1).
+        const left = watched.leftInStore ? { leftInStore: true } : {};
+        return { ran: true, outcome: watched.outcome, perType: watched.perType, ...reason, ...left };
     } catch (error) {
         // Swallowed on purpose — see the module docstring. A build must not fail
         // over optional content, least of all after the instance is already

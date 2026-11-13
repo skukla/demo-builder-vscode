@@ -121,6 +121,26 @@ describe('applyDatapackChange', () => {
         expect(executeCatalogMenuPhase).not.toHaveBeenCalled();
     });
 
+    // Step-05 R1: a removal that took everything clears the old pack on the project and saves it.
+    // The new pack is recorded after it, so the Edit's own save is the one that names it.
+    it('still records the new pack when the removal cleared the old one', async () => {
+        const { context, project, progress, stateManager } = setup();
+        (removeProjectSampleData as jest.Mock).mockImplementationOnce(async (p: Project, c: typeof context) => {
+            p.datapack = undefined;
+            await c.stateManager.saveProject(p);
+        });
+        const named: Array<Project['datapack']> = [];
+        stateManager.saveProject.mockImplementation(async (p: Project) => {
+            named.push(p.datapack);
+        });
+
+        await applyDatapackChange(context, project, toNew, { changes: true, removeOld: true }, progress);
+
+        expect(named).toStrictEqual([undefined, NEW]);
+        expect(project.datapack).toStrictEqual(NEW);
+        expect(executeSampleDataPhase).toHaveBeenCalledWith(context, project, progress);
+    });
+
     // Step-04 S7: an Edit to no datapack saves the project without the old one's failed install.
     it('saves the project without a failed install of the pack it no longer names', async () => {
         const failure = { ...OLD, reason: 'Products refused.', at: '2026-11-12T10:00:00.000Z', retries: 0 };

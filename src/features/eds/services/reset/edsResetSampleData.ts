@@ -9,6 +9,7 @@
  * @module features/eds/services/reset/edsResetSampleData
  */
 
+import { createNonSwitchingStateManager } from '@/core/state/workingProjectStateManager';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { askForDetailsDuringOperation, modalIsAsking } from '@/core/vscode/operationPrompt';
 import type { ReportStage } from '@/core/vscode/withOperationProgress';
@@ -16,6 +17,7 @@ import { saveFirstLabel, UNINSTALL_DATAPACK, withoutSavingLabel } from '@/featur
 import { installedByDemoBuilder } from '@/features/data-installer/services/buildDatapackEngine';
 import { commerceBackendOf } from '@/features/data-installer/services/commerceBackend';
 import { typesLine } from '@/features/data-installer/services/datapackTypesLine';
+import { dropStaleFailure } from '@/features/data-installer/services/installFailure';
 import { rememberedPackName, type NameMemory } from '@/features/data-installer/services/packNames';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
@@ -182,7 +184,8 @@ async function settleBeforeReset(
 /**
  * Remove the project's datapack data, its changes settled first (`settleBeforeReset`), reporting
  * rather than throwing. A reset ignores the answer; a project delete stops on it, since deleting the
- * project would leave the data with no record (walk F96).
+ * project would leave the data with no record (walk F96). A removal that took everything clears
+ * the project's pack (`forgetRemovedPack`); one that left part in the store on purpose keeps it.
  *
  * @returns why the data was not all removed, or undefined when it was
  */
@@ -235,11 +238,34 @@ export async function removeProjectSampleData(
             );
             return result.reason ?? 'The datapack was not uninstalled.';
         }
+        // Part left in the store on purpose: the record still describes what Commerce holds.
+        if (!result.leftInStore) await forgetRemovedPack(project, context);
         return undefined;
     } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
         context.logger.warn(`[EdsReset] Sample data removal failed, reset stands: ${reason}`);
         return reason;
+    }
+}
+
+/**
+ * A removal that took everything: the project stops naming the pack, by the Datapacks screen's
+ * Uninstall's rule (`settleProjectAfterJob` in `importJobWatch.ts`). Without it a reset left the
+ * project naming a pack Commerce no longer held (step-05 R1).
+ *
+ * On the object this was handed: a reset's `finally` saves the object it holds (`edsResetUI.ts`),
+ * so a clear on another copy would be written back over. Saved without making it the open project,
+ * since a batch's rows are not (`createNonSwitchingStateManager`). Never fatal: the data is out of
+ * Commerce either way, and a delete reads this module's answer to decide whether the files may go.
+ */
+async function forgetRemovedPack(project: Project, context: HandlerContext): Promise<void> {
+    project.datapack = undefined;
+    dropStaleFailure(project);
+    try {
+        await createNonSwitchingStateManager(context.stateManager).saveProject(project);
+    } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        context.logger.warn(`[EdsReset] The datapack was uninstalled; the project could not be saved without it: ${reason}`);
     }
 }
 

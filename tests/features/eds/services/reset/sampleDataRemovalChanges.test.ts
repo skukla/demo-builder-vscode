@@ -21,6 +21,7 @@ jest.mock('@/features/data-installer/services/buildDatapackEngine', () => ({
 import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 import { createMockProject } from '../../../../helpers/projectFake';
+import { createMockStateManager } from '../../../../helpers/stateManagerFake';
 import { contextForProject, settleChangesBeforeRemoval } from '@/features/data-installer/handlers/removalChanges';
 import { installedByDemoBuilder } from '@/features/data-installer/services/buildDatapackEngine';
 import { removeSampleData } from '@/features/data-installer/services/sampleDataInstall';
@@ -137,6 +138,78 @@ describe('removeProjectSampleData', () => {
         await removeProjectSampleData(project(), createMockHandlerContext({ logger: createMockLogger() }), report);
 
         expect(report).toHaveBeenCalledWith('Saving to the library');
+    });
+});
+
+/**
+ * Reset, a batch reset, a delete that stops later and an Edit all remove through here, and the
+ * project must stop naming a pack Commerce no longer holds (step-05 R1, the S7 b defect). The rule
+ * is the Datapacks screen's Uninstall's (`importJobWatch`): only a removal that finished with
+ * nothing left in the store clears it.
+ */
+describe('the project record after the removal', () => {
+    const failedBefore = { name: 'bodea', version: 'main', reason: 'Products refused.', at: '2026-11-01T00:00:00.000Z', retries: 0 };
+    const held = (): Project =>
+        createMockProject({
+            name: 'acme',
+            path: '/nonexistent/acme',
+            datapack: { name: 'bodea', version: 'main', store: 'library' },
+            datapackInstallFailure: failedBefore,
+        });
+
+    it('clears the pack and its failed install on the project it was handed, and saves that project', async () => {
+        const context = createMockHandlerContext({ logger: createMockLogger() });
+        const project = held();
+
+        await expect(removeProjectSampleData(project, context, jest.fn())).resolves.toBeUndefined();
+
+        expect(project.datapack).toBeUndefined();
+        expect(project.datapackInstallFailure).toBeUndefined();
+        // Not the open project: written to disk without making it the open one (a batch's rows).
+        expect(context.stateManager.saveProjectConfigOnly).toHaveBeenCalledWith(project);
+        expect(context.stateManager.saveProject).not.toHaveBeenCalled();
+    });
+
+    it('saves the open project the ordinary way, so its screens see the change', async () => {
+        const project = held();
+        const stateManager = createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(project) });
+        const context = createMockHandlerContext({ logger: createMockLogger(), stateManager });
+
+        await removeProjectSampleData(project, context, jest.fn());
+
+        expect(stateManager.saveProject).toHaveBeenCalledWith(project);
+        expect(stateManager.saveProject.mock.calls[0]?.[0]?.datapack).toBeUndefined();
+        expect(stateManager.saveProjectConfigOnly).not.toHaveBeenCalled();
+    });
+
+    it.each<[string, () => void]>([
+        ['finished but left part of the pack in the store', () => mockedRemove.mockResolvedValueOnce({ ran: true, outcome: 'success', leftInStore: true })],
+        ['ran and did not succeed', () => mockedRemove.mockResolvedValueOnce({ ran: true, outcome: 'failed', reason: 'Commerce refused 2 products.' })],
+        ['was skipped', () => mockedRemove.mockResolvedValueOnce({ ran: false, skipped: true, reason: 'The service holds no data for this datapack.' })],
+        ['threw', () => mockedRemove.mockRejectedValueOnce(new Error('socket hang up'))],
+        ['never started: the changes could not be saved', () => mockedSettle.mockResolvedValueOnce({ response: { success: false, error: 'The library is not answering.', code: ErrorCode.CHANGES_NOT_SAVED } })],
+    ])('keeps the pack named when the removal %s', async (_case, arrange) => {
+        arrange();
+        const context = createMockHandlerContext({ logger: createMockLogger() });
+        const project = held();
+
+        await removeProjectSampleData(project, context, jest.fn());
+
+        expect(project.datapack).toStrictEqual({ name: 'bodea', version: 'main', store: 'library' });
+        expect(project.datapackInstallFailure).toStrictEqual(failedBefore);
+        expect(context.stateManager.saveProject).not.toHaveBeenCalled();
+        expect(context.stateManager.saveProjectConfigOnly).not.toHaveBeenCalled();
+    });
+
+    it('still answers that the data came out when the record could not be saved', async () => {
+        const logger = createMockLogger();
+        const stateManager = createMockStateManager({ saveProjectConfigOnly: jest.fn().mockRejectedValue(new Error('disk full')) });
+        const context = createMockHandlerContext({ logger, stateManager });
+
+        // A delete reads the answer to decide whether the files may go: the data is out of Commerce.
+        await expect(removeProjectSampleData(held(), context, jest.fn())).resolves.toBeUndefined();
+
+        expect(logger.warn).toHaveBeenCalledTimes(1);
     });
 });
 

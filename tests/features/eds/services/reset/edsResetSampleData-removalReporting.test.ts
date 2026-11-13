@@ -255,3 +255,42 @@ describe('the removal report', () => {
         );
     });
 });
+
+// The S7 b defect (step-05 R1): a reset's removal never cleared the project's pack, so the card
+// showed it installed after the reset. The trap: the reset's `finally` saves the project object it
+// holds, so a clear on any other copy would be written back over by that last save.
+describe('the project record after the reset', () => {
+    const resetWith = async (project: Project, context: HandlerContext) =>
+        resetEdsProjectWithUI({ githubAppService: fakeGitHubAppService, meshDeps, project, context });
+    const lastSaved = (context: HandlerContext): Project | undefined =>
+        jest.mocked(context.stateManager.saveProject).mock.calls.at(-1)?.[0];
+
+    it('names no datapack in the reset\'s last save once the removal took everything', async () => {
+        const context = createContext();
+        const project = createProject();
+
+        await resetWith(project, context);
+
+        expect(lastSaved(context)).toBe(project);
+        expect(lastSaved(context)?.datapack).toBeUndefined();
+    });
+
+    it('still names the datapack when the removal left part of it in Commerce', async () => {
+        mockedRemove.mockResolvedValue({ ran: true, outcome: 'success', leftInStore: true });
+        const context = createContext();
+
+        await resetWith(createProject(), context);
+
+        expect(lastSaved(context)?.datapack).toStrictEqual({ name: 'bodea', version: 'main' });
+    });
+
+    it('CONTROL: still names the datapack when the SC kept it', async () => {
+        (vscode.window.showWarningMessage as jest.Mock).mockReset().mockResolvedValueOnce(RESET).mockResolvedValue(KEEP);
+        const context = createContext();
+
+        await resetWith(createProject(), context);
+
+        expect(mockedRemove).not.toHaveBeenCalled();
+        expect(lastSaved(context)?.datapack).toStrictEqual({ name: 'bodea', version: 'main' });
+    });
+});
