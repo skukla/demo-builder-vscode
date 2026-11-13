@@ -50,6 +50,11 @@ export interface DatapackCatalogGridProps {
     held?: ProjectDatapack;
     /** When Demo Builder's engine installed it, when it did: none, no install record to restore by. */
     installedAt?: string;
+    /**
+     * Its install failed (step-04 S8, J6-1): its card says so, with no check and no border, and no
+     * newer save, since Restore is not offered.
+     */
+    heldFailed?: boolean;
 }
 
 /** Pick the one body state to show under the header. */
@@ -64,6 +69,7 @@ export function DatapackCatalogGrid({
     installedPacks,
     held,
     installedAt,
+    heldFailed = false,
 }: DatapackCatalogGridProps): React.JSX.Element {
     if (groups.length === 0) {
         return (
@@ -89,6 +95,7 @@ export function DatapackCatalogGrid({
         <div className="datapack-grid">
             {filtered.map((group) => {
                 const own = isHeld(group, held);
+                const failed = own && heldFailed;
                 const shown = versions[group.key] ?? (own ? listedVersion(group, held) : undefined) ?? pickDefaultVersion(group) ?? '';
                 return (
                     <DatapackCard
@@ -97,8 +104,9 @@ export function DatapackCatalogGrid({
                         selectedVersion={shown}
                         onVersionChange={(version) => pickVersion(group.key, version)}
                         onOpen={openDetail}
-                        isInstalled={installedHere(group, installedPacks, held)}
-                        newer={own ? newerOf(group, held, installedAt) : undefined}
+                        isInstalled={!failed && installedHere(group, installedPacks, held)}
+                        newer={own && !failed ? newerOf(group, held, installedAt) : undefined}
+                        installFailed={failed}
                     />
                 );
             })}

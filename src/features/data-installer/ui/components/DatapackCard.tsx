@@ -31,6 +31,7 @@ import { isSavedVersion, shownVersion, versionChanged } from '../../packVersions
 import type { DatapackGroup } from '../../services/datapackCatalog';
 import type { DatapackArt, DatapackSummary } from '../../types';
 import { packSource, type PackSource } from '../catalogShow';
+import { InstallFailedLine } from './FailedHealthLine';
 import { SelectionCheck } from '@/core/ui/components/ui/SelectionCheck';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import { useActivateOnKey } from '@/core/ui/hooks/useActivateOnKey';
@@ -79,6 +80,11 @@ export interface DatapackCardProps {
      * tooltip, as the dashboard's dots do (owner, 2026-11-07: a browser `title` never showed here).
      */
     newer?: string;
+    /**
+     * The demo's datapack failed to install (step-04 S8, J6-1): the error dot and "Install failed"
+     * under the name. The caller drops `isInstalled`, so there is no check and no border.
+     */
+    installFailed?: boolean;
 }
 
 /**
@@ -97,6 +103,7 @@ export function DatapackCard({
     selected,
     isInstalled,
     newer,
+    installFailed,
 }: DatapackCardProps): React.JSX.Element {
     // Checked for PRESENCE: `false` means selectable-and-unselected, which is
     // still a radio. Truthiness here would silently make every unselected card
@@ -155,6 +162,7 @@ export function DatapackCard({
                         name that wrapped, they moved with it. */}
                     {isInstalled ? <SelectionCheck testId="datapack-card-project-check" /> : null}
                 </div>
+                {installFailed ? <InstallFailedLine /> : null}
                 <div className="datapack-card-version-row">
                 {/* Containment: the picker's press must not bubble to the card,
                     or choosing a version would also open the flyout — the

@@ -4,6 +4,7 @@
  * and Share or Stop Sharing, and whose lower section is Uninstall and Delete. Bare verbs; Delete is
  * hidden on a Demo Builder datapack; the flyout saves nothing (the header does). In the Datapack
  * Library the bar is More alone. Each removal asks in a dialog, and the flyout waits while a row works.
+ * On a failed install of the held datapack, Retry, then Fix with AI (step-04 S8).
  *
  * Moved here from DatapackDetailPanel.test.tsx with the actions, from buttons to menu rows.
  */
@@ -18,7 +19,9 @@ import { press, settle } from '../../../../helpers/reactSettle';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { DatapackDetail } from '@/features/data-installer/types';
 import { DatapackDetailPanel } from '@/features/data-installer/ui/components/DatapackDetailPanel';
+import { RETRIES_BEFORE_FIX } from '@/features/data-installer/ui/components/importResult';
 import { PackActions } from '@/features/data-installer/ui/components/PackActions';
+import type { HeldFailure } from '@/features/data-installer/ui/hooks/useProjectHolding';
 import { SHARE_CONSENT } from '@/features/data-installer/shareWording';
 
 const mockRequest = webviewClient.request as jest.Mock;
@@ -480,5 +483,99 @@ describe('Delete on a pack of saves', () => {
             { datapackName: 'my-luma', everyVersion: true, confirm: true },
             undefined
         );
+    });
+});
+
+// Step-04 S8 (decisions J6-2, J6-3): on a failed install of the held datapack the main button is
+// Retry, which starts the install and opens the job window on its run (Undo's pattern), and once
+// retries have not helped (`RETRIES_BEFORE_FIX`) it is Fix with AI, built from the project's record.
+const FAILED_DETAIL: DatapackDetail = {
+    id: { name: 'my-luma', version: '20261112-120000' },
+    displayName: 'My Luma',
+    shared: false,
+    dataTypes: ['categories', 'products'],
+    art: {},
+    store: 'library',
+    mine: true,
+};
+
+const FAILED: HeldFailure = {
+    reason: "Commerce didn't answer in time",
+    retries: 0,
+    commerceInstance: 'https://store.example.test',
+    scope: { websiteCode: 'base', storeCode: 'default' },
+};
+
+function renderFailed(failed: HeldFailure = FAILED) {
+    const props = {
+        detail: FAILED_DETAIL,
+        onImport: jest.fn(),
+        onRemoved: jest.fn(),
+        installerOn: false,
+        failed,
+        importable: ['categories', 'products'],
+    };
+    render(<PackActions {...props} />);
+    return props;
+}
+
+const sent = (type: string) => mockRequest.mock.calls.filter(([t]) => t === type).map(([, body]) => body);
+
+describe('a failed install: Retry', () => {
+    it('is the main button in place of Install or Restore, beside More', () => {
+        renderFailed();
+
+        expect(screen.getAllByRole('button').map((button) => button.textContent)).toEqual(['Retry', 'More▾']);
+    });
+
+    it('starts the install of the whole pack to the project’s target, then opens the window on its run', async () => {
+        mockRequest.mockResolvedValue({ success: true, data: { activationId: 'act-1' } });
+        const props = renderFailed();
+
+        await press(screen.getByRole('button', { name: 'Retry' }));
+        await settle();
+
+        expect(sent('start-datapack-import')).toEqual([
+            {
+                datapackName: 'my-luma',
+                version: '20261112-120000',
+                source: 'library',
+                commerceInstance: 'https://store.example.test',
+                dataTypes: ['categories', 'products'],
+                websiteCode: 'base',
+                storeCode: 'default',
+            },
+        ]);
+        expect(props.onImport).toHaveBeenCalledWith(FAILED_DETAIL.id, 'run');
+    });
+
+    it('says why when the install could not start, and opens no run', async () => {
+        mockRequest.mockResolvedValue({ success: false, error: 'A Commerce instance is required: it is where the data will be written.' });
+        const props = renderFailed();
+
+        await press(screen.getByRole('button', { name: 'Retry' }));
+        await settle();
+
+        expect(screen.getByText(/A Commerce instance is required/u)).toBeInTheDocument();
+        expect(props.onImport).not.toHaveBeenCalled();
+    });
+
+    it(`CONTROL: is still Retry after ${RETRIES_BEFORE_FIX - 1} retry`, () => {
+        renderFailed({ ...FAILED, retries: RETRIES_BEFORE_FIX - 1 });
+
+        expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    });
+});
+
+describe('a failed install: Fix with AI', () => {
+    it('takes Retry’s place once retries have not helped, and asks from the failed install', async () => {
+        const props = renderFailed({ ...FAILED, retries: RETRIES_BEFORE_FIX });
+
+        expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+        await press(screen.getByRole('button', { name: 'Fix with AI' }));
+
+        expect(sent('fix-datapack-import-with-ai')).toEqual([{ from: 'install-failed' }]);
+        expect(sent('start-datapack-import')).toStrictEqual([]);
+        expect(props.onImport).not.toHaveBeenCalled();
     });
 });

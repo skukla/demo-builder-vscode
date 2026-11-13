@@ -11,7 +11,7 @@
  *
  * One window serves every path (`DatapackJobWindow`, step 03), on the job `windowRoute` picks: a
  * first install (S4), a switch over another datapack (S6), Uninstall and another version of the held
- * datapack (S7), Restore from its check (S8), and a run already started (Undo).
+ * datapack (S7), Restore from its check (S8), and a run already started (Undo, a failed install's Retry).
  *
  * @module features/data-installer/ui/hooks/useImportWindow
  */
@@ -36,8 +36,8 @@ export interface ImportWindow {
     types?: string[];
     /**
      * Opened by Uninstall: the uninstall's check, then its question (F118, J5-1). Opened by Restore:
-     * its check, then its question or its run (S8, J4-2 to J4-4). Opened by Undo once its job was
-     * accepted: straight to the run.
+     * its check, then its question or its run (S8, J4-2 to J4-4). Opened by Undo, or by a failed
+     * install's Retry (step-04 S8), once its job was accepted: straight to the run.
      */
     opensOn?: OpensOn;
     /** The datapack the project held when the window opened: installing another is a switch. */

@@ -80,6 +80,8 @@ export const WAIT_STAGES = {
     deletingPack: { label: 'Deleting the datapack', expectation: FEW_SECONDS },
     // Undo Last Save, until its run is accepted and its window takes over (Phase 2).
     startingUndo: { label: 'Starting the undo', expectation: FEW_SECONDS },
+    // Retry on a failed install, until its run is accepted and its window takes over (step-04 S8).
+    startingInstall: { label: 'Starting the install', expectation: FEW_SECONDS },
 } as const satisfies Record<string, WaitStage>;
 
 /**

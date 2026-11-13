@@ -97,7 +97,7 @@ export function DatapackCatalogView({ library = false }: { library?: boolean } =
     const onPacksChanged = useRef<(() => void) | undefined>(undefined);
     const { refresh, loading, value, failure, settled, noticePage, dismissNoAccess } = useDatapackCatalog(onPacksChanged);
     const detail = useDataInstallerRequest<DatapackDetailResponse>('get-datapack-detail');
-    const { held, installedAt, installedPacks, projectAnswered, reloadProject, reloadHolding } = useProjectHolding(library);
+    const { held, installedAt, failed, installedPacks, projectAnswered, reloadProject, reloadHolding } = useProjectHolding(library);
     const { show, setShow, installerAnswered, shown, filtered, hideRemoved } = useCatalogShow({
         page: value,
         installedPacks,
@@ -290,6 +290,7 @@ export function DatapackCatalogView({ library = false }: { library?: boolean } =
                     installedPacks={installedPacks}
                     held={held}
                     installedAt={installedAt}
+                    heldFailed={failed !== undefined}
                 />
             </FullScreenSurface>
 
@@ -311,7 +312,7 @@ export function DatapackCatalogView({ library = false }: { library?: boolean } =
                 onSharingChanged={sharingChanged}
                 settingsLayer={detail.value?.settingsLayer}
                 {...(flyout.undoTo ? { undoTo: flyout.undoTo } : {})}
-                {...installedPackProps({ library, held, installedAt, selected }, importWindow.openRemoval)}
+                {...installedPackProps({ library, held, installedAt, selected, failed }, importWindow.openRemoval)}
             />
             {heldPack.windows}
 

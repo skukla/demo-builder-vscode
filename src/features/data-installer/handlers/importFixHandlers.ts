@@ -13,15 +13,24 @@
  * and the prompt is built from the dry run's recorded answer (`recordDryRun`), the datapack, its
  * version and the reason, the same reason `validate_datapack_import` answers an agent with.
  *
+ * A failed creation install has it too, in its flyout once retries have not helped (step-04 S8,
+ * J6-3): the request says `from: 'install-failed'`, and the prompt is built from the project's
+ * `datapackInstallFailure` record (`installFailure.ts`), the datapack the project names, the reason
+ * and the retries.
+ *
  * @module features/data-installer/handlers/importFixHandlers
  */
 
 import * as vscode from 'vscode';
+import { installFailedOf } from '../services/installFailure';
 import { FINISHING_STOP, type ImportJobRecord } from '../types';
 import { dataTypeLabel } from '../ui/dataTypeLabel';
 import { JOB_KEY } from './importJobWatch';
 import { TransientStateManager } from '@/core/state/transientStateManager';
+import type { Project } from '@/types/base';
+import type { DatapackId, DatapackInstallFailed } from '@/types/datapack';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
+import type { FixDatapackImportWithAiRequest } from '@/types/webviewRequests';
 
 /** Where the import stopped and why, when it did. */
 function stoppedLine(record: ImportJobRecord): string | undefined {
@@ -54,12 +63,42 @@ export function fixImportPrompt(
         `Installing the datapack ${pack} into the Commerce instance of the Demo Builder project ${projectName ?? 'that is open'} ended with a problem.`,
         ...problems.map((line) => `- ${line}`),
         '',
-        "Find the cause with get_datapack_import_status (its skipped rows carry Commerce's reasons) and " +
-            'verify_datapack_install. Fix it where it lives: in Commerce with write_commerce_rest, or in ' +
-            'the datapack (save_datapack_zip, correct the rows, load_datapack_zip). Then install the datapack ' +
-            'again with start_datapack_import: data types already in send nothing. Tell me what you ' +
-            'found and what you changed.',
+        FIX_INSTALL_STEPS,
     ].join('\n');
+}
+
+/** What the agent is asked to do about an install that went wrong: find, fix, install again. */
+const FIX_INSTALL_STEPS =
+    "Find the cause with get_datapack_import_status (its skipped rows carry Commerce's reasons) and " +
+    'verify_datapack_install. Fix it where it lives: in Commerce with write_commerce_rest, or in ' +
+    'the datapack (save_datapack_zip, correct the rows, load_datapack_zip). Then install the datapack ' +
+    'again with start_datapack_import: data types already in send nothing. Tell me what you ' +
+    'found and what you changed.';
+
+/**
+ * The prompt for the project's failed install (step-04 S8): the datapack it names, why the install
+ * failed and how many retries have not helped.
+ *
+ * @param projectName - the open project, which every datapack tool acts on
+ */
+export function fixInstallFailedPrompt(
+    pack: DatapackId,
+    failed: DatapackInstallFailed,
+    projectName: string | undefined,
+): string {
+    const tries = failed.retries === 1 ? '1 retry has' : `${failed.retries} retries have`;
+    return [
+        `Installing the datapack ${pack.name}@${pack.version} into the Commerce instance of the Demo Builder project ${projectName ?? 'that is open'} failed, and ${tries} not helped.`,
+        `- ${failed.reason}`,
+        '',
+        FIX_INSTALL_STEPS,
+    ].join('\n');
+}
+
+/** The failed install's prompt, when the project's datapack has one. */
+function installFailedPrompt(project: Project | undefined): string | undefined {
+    const failed = installFailedOf(project);
+    return failed && project?.datapack ? fixInstallFailedPrompt(project.datapack, failed, project.name) : undefined;
 }
 
 /** Where the last dry run's answer is recorded. One per extension host; a later dry run replaces it. */
@@ -103,14 +142,21 @@ export function fixDryRunPrompt(
     ].join('\n');
 }
 
-/** The prompt the request asks for: the dry run's, or the last install's. */
+/** The prompt the request asks for: the failed install's, the dry run's, or the last install's. */
 async function promptFor(
     context: HandlerContext,
-    fromDryRun: boolean,
+    from: unknown,
 ): Promise<{ prompt?: string; pack?: string; refusal: string }> {
     const state = new TransientStateManager(context.context);
     const project = await context.stateManager.getCurrentProject();
-    if (fromDryRun) {
+    if (from === 'install-failed') {
+        return {
+            prompt: installFailedPrompt(project),
+            pack: `${project?.datapack?.name}@${project?.datapack?.version}`,
+            refusal: 'This datapack has no failed install to fix.',
+        };
+    }
+    if (from === 'dry-run') {
         const dry = await state.get<DryRunRecord | null>(DRY_RUN_KEY, null);
         return {
             prompt: dry ? fixDryRunPrompt(dry, project?.name) : undefined,
@@ -130,9 +176,10 @@ export const importFixWithAiHandlers = defineHandlers({
     // Only `from` is read from the request: everything the prompt says comes from a record.
     'fix-datapack-import-with-ai': async (
         context: HandlerContext,
-        payload?: { from?: unknown },
+        // Sent as `FixDatapackImportWithAiRequest`; read as unknown, since it crosses from the webview.
+        payload?: { [K in keyof FixDatapackImportWithAiRequest]?: unknown },
     ): Promise<HandlerResponse> => {
-        const { prompt, pack, refusal } = await promptFor(context, payload?.from === 'dry-run');
+        const { prompt, pack, refusal } = await promptFor(context, payload?.from);
         if (!prompt) return { success: false, error: refusal };
         await vscode.commands.executeCommand('demoBuilder.openInClaude', { prompt, fresh: true });
         context.logger.info(`[Data Installer] Opened Fix with AI on ${pack}`);

@@ -13,6 +13,10 @@
 
 import { useCallback, useState } from 'react';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import type { FixDatapackImportWithAiRequest } from '@/types/webviewRequests';
+
+/** Fix with AI on the recorded Dry Run, not the last install. */
+const FROM_DRY_RUN: FixDatapackImportWithAiRequest = { from: 'dry-run' };
 
 export interface ImportRuns {
     /** How many times Retry was pressed on this import; a fresh Import starts again at none. */
@@ -40,7 +44,7 @@ export function useImportRetry(runImport: () => void): ImportRuns {
         void webviewClient.request('fix-datapack-import-with-ai', {});
     }, []);
     const fixDryRunWithAi = useCallback((): void => {
-        void webviewClient.request('fix-datapack-import-with-ai', { from: 'dry-run' });
+        void webviewClient.request('fix-datapack-import-with-ai', FROM_DRY_RUN);
     }, []);
     return { retries, startImport, retry, fixWithAi, fixDryRunWithAi };
 }

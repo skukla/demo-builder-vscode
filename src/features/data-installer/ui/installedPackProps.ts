@@ -8,6 +8,7 @@
  */
 
 import { windowRoute } from './hooks/useImportWindow';
+import type { HeldFailure } from './hooks/useProjectHolding';
 import type { DatapackId, ProjectDatapack } from '@/types/datapack';
 
 /** Where the flyout stands: which view, what the project holds, and which version is open. */
@@ -16,6 +17,17 @@ export interface InstalledPackAt {
     held: ProjectDatapack | undefined;
     installedAt: string | undefined;
     selected: DatapackId | undefined;
+    /** A failed install of `held` (step-04 S8). */
+    failed?: HeldFailure;
+}
+
+/** The flyout's extra props. */
+export interface InstalledPackProps {
+    onRemoveData?: () => void;
+    restores?: true;
+    switches?: true;
+    /** The held version's install failed: Retry or Fix with AI in place of the main button (S8). */
+    failed?: HeldFailure;
 }
 
 /**
@@ -24,7 +36,8 @@ export interface InstalledPackAt {
  * install's record to take it out. On another datapack over that one: Switch to in place of Install
  * (J8-1, owner 2026-11-12), exactly when the job window opens on a switch (`windowRoute`), so the
  * button never names a job the window will not run. Not in the Datapack Library, which touches no
- * store.
+ * store. On the held version whose install failed: failed, in place of Restore (step-04 S8, J6-2),
+ * keeping Uninstall while that install left a record of what it put in.
  *
  * @param at - the view, the held datapack, its install record, and the open version
  * @param open - opens the job window on Uninstall
@@ -33,9 +46,12 @@ export interface InstalledPackAt {
 export function installedPackProps(
     at: InstalledPackAt,
     open: () => void,
-): { onRemoveData?: () => void; restores?: true; switches?: true } {
-    const { library, held, installedAt, selected } = at;
-    if (library || installedAt === undefined || held === undefined || selected === undefined) return {};
-    if (held.name === selected.name && held.version === selected.version) return { onRemoveData: open, restores: true };
+): InstalledPackProps {
+    const { library, held, installedAt, selected, failed } = at;
+    if (library || held === undefined || selected === undefined) return {};
+    const heldVersion = held.name === selected.name && held.version === selected.version;
+    if (heldVersion && failed) return { failed, ...(installedAt === undefined ? {} : { onRemoveData: open }) };
+    if (installedAt === undefined) return {};
+    if (heldVersion) return { onRemoveData: open, restores: true };
     return windowRoute({ id: selected, holding: { pack: held, recorded: true } }) === 'switch' ? { switches: true } : {};
 }

@@ -35,7 +35,9 @@ import type { DataItemInventory, DatapackDetail, PackDetailLayer } from '../../t
 import { renderDataInstallerFailure } from '../dataInstallerFailure';
 import { dataTypeLabel } from '../dataTypeLabel';
 import type { DataInstallerFailure } from '../hooks/useDataInstallerRequest';
+import type { HeldFailure } from '../hooks/useProjectHolding';
 import { DatapackPanelTitle } from './DatapackPanelTitle';
+import { FailedHead } from './FailedHealthLine';
 import { PackActions } from './PackActions';
 import { StoreConfigurationRow } from './StoreConfigurationRow';
 import { StageWait } from '@/core/ui/components/feedback/StageWait';
@@ -97,6 +99,8 @@ export interface DatapackDetailPanelProps {
     restores?: boolean;
     /** Another datapack the demo holds, which Demo Builder installed: its main button is Switch to (J8-1). */
     switches?: boolean;
+    /** That same version's install failed (step-04 S8): the label and reason under the title, and Retry. */
+    failed?: HeldFailure;
 }
 
 export function DatapackDetailPanel({
@@ -120,6 +124,7 @@ export function DatapackDetailPanel({
     onRemoveData,
     restores = false,
     switches = false,
+    failed,
 }: DatapackDetailPanelProps): React.JSX.Element {
     const title = detail?.displayName ?? selectedName ?? selected?.name ?? 'Datapack';
     // A read of the pack already on show (after Share, Stop Sharing or a rename) updates it in
@@ -141,15 +146,19 @@ export function DatapackDetailPanel({
         <Drawer isOpen={selected !== undefined} onClose={onClose} ariaLabel={`${title} details`}>
             {selected ? (
                 <>
-                    <div className="db-drawer-head">
+                    <FailedHead
+                        failed={failed}
+                        close={
+                            <ActionButton isQuiet aria-label="Close details" onPress={onClose}>
+                                <Close size="S" />
+                            </ActionButton>
+                        }
+                    >
                         <div className="datapack-panel-title">
                             <DatapackPanelTitle title={title} detail={loading || failure || working ? null : detail} onRename={onRename} />
                             <span className="datapack-panel-version">{shownVersion(selected.version)}</span>
                         </div>
-                        <ActionButton isQuiet aria-label="Close details" onPress={onClose}>
-                            <Close size="S" />
-                        </ActionButton>
-                    </div>
+                    </FailedHead>
                     <div className="db-drawer-body">
                         {working ? null : renderPanelBody({ detail, inventory, loading, failure, onRetry, settingsLayer })}
                         {detail && !loading && !working ? setupStep : null}
@@ -166,6 +175,8 @@ export function DatapackDetailPanel({
                                 {...(onRemoveData ? { onRemoveData } : {})}
                                 restores={restores}
                                 switches={switches}
+                                failed={failed}
+                                importable={importable}
                             />
                         ) : null}
                     </div>

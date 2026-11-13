@@ -11,6 +11,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 // Below the mock on purpose (see useDataInstallerRequest's suite).
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { useProjectHolding } from '@/features/data-installer/ui/hooks/useProjectHolding';
+import type { DatapackInstallFailed } from '@/types/datapack';
 
 const mockRequest = webviewClient.request as jest.Mock;
 
@@ -127,5 +128,42 @@ describe('useProjectHolding', () => {
         await act(async () => result.current.reloadProject());
         expect(callsOf('get-datapack-import-target')).toHaveLength(3);
         expect(callsOf('list-installed-datapacks')).toHaveLength(2);
+    });
+
+    // Step-04 S8: a failed install of the held datapack (S7's `installFailed`), with where a Retry
+    // writes: the project's instance and its recorded website and store view.
+    describe('a failed install', () => {
+        const SCOPE = { websiteCode: 'base', storeCode: 'default' };
+
+        it('reports the failure with the project’s instance and scope', async () => {
+            const installFailed: DatapackInstallFailed = { reason: 'Products could not be installed.', retries: 1 };
+            answer({ 'get-datapack-import-target': { ...PROJECT, scope: SCOPE, installFailed }, 'list-installed-datapacks': { items: [] } });
+
+            const { result } = renderHook(() => useProjectHolding(false));
+
+            await waitFor(() => expect(result.current.failed).toBeDefined());
+            expect(result.current.failed).toEqual({ ...installFailed, commerceInstance: PROJECT.instance, scope: SCOPE });
+        });
+
+        it('has none once a read answers without it (a Retry worked)', async () => {
+            const installFailed: DatapackInstallFailed = { reason: 'Products could not be installed.', retries: 0 };
+            answer({ 'get-datapack-import-target': { ...PROJECT, installFailed }, 'list-installed-datapacks': { items: [] } });
+            const { result } = renderHook(() => useProjectHolding(false));
+            await waitFor(() => expect(result.current.failed).toBeDefined());
+
+            answer({ 'get-datapack-import-target': PROJECT, 'list-installed-datapacks': { items: [] } });
+            await act(async () => result.current.reloadHolding());
+
+            await waitFor(() => expect(result.current.failed).toBeUndefined());
+        });
+
+        it('CONTROL: has none on a project with no failure', async () => {
+            answer({ 'get-datapack-import-target': PROJECT, 'list-installed-datapacks': { items: [] } });
+
+            const { result } = renderHook(() => useProjectHolding(false));
+
+            await waitFor(() => expect(result.current.projectAnswered).toBe(true));
+            expect(result.current.failed).toBeUndefined();
+        });
     });
 });

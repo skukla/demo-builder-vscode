@@ -55,6 +55,16 @@ export interface UndoLastSaveResult {
 }
 
 /**
+ * `fix-datapack-import-with-ai` — open the SC's AI on a datapack problem the extension recorded.
+ * Only `from` is sent: the prompt is built from the record, never from the webview. Absent, the
+ * last install's job; `dry-run`, the last Dry Run's answer; `install-failed`, the project's failed
+ * install (step-04 S8).
+ */
+export interface FixDatapackImportWithAiRequest {
+    from?: 'dry-run' | 'install-failed';
+}
+
+/**
  * `restore-datapack` — put Commerce back to the datapack the project uses as its latest save,
  * losing the SC's Commerce edits made since (Phase 3/5, owner 2026-11-12, J4-3). Sent by the
  * Datapacks flyout's Restore button, first without `confirm` (the check), and by the agent tool.

@@ -2,6 +2,9 @@
  * What the open project holds, for the Datapacks screen: the datapack recorded on it, when Demo
  * Builder's engine installed it, and every pack believed to be on its Commerce instance.
  *
+ * A failed install of that datapack (step-04 S8, S7's `installFailed`) comes with where a Retry
+ * writes: the project's instance and its recorded website and store view, as the job window sends.
+ *
  * Two reads: `get-datapack-import-target` (the project) and `list-installed-datapacks` (scoped to
  * the project's instance, so it waits for the first). The Datapack Library reads neither.
  *
@@ -11,16 +14,25 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import type { InstalledDatapack, Page } from '../../types';
 import { useDataInstallerRequest } from './useDataInstallerRequest';
-import type { ProjectDatapack } from '@/types/datapack';
+import type { JobTarget } from './useJobReads';
+import type { DatapackInstallFailed, ProjectDatapack } from '@/types/datapack';
 
 /** What `get-datapack-import-target` reports about the open project. */
-interface ProjectSampleData {
+interface ProjectSampleData extends Pick<JobTarget, 'scope'> {
     projectName?: string;
     /** When Demo Builder's engine installed the pack, when it did. */
     installedAt?: string;
     /** The Commerce instance this project writes to — scopes the installed list. */
     instance?: string;
     datapack?: ProjectDatapack;
+    /** A creation install of `datapack` that did not succeed (step-04 S7). */
+    installFailed?: DatapackInstallFailed;
+}
+
+/** A failed install of the held datapack, and where a Retry writes: the project's own target. */
+export interface HeldFailure extends DatapackInstallFailed, Pick<JobTarget, 'scope'> {
+    /** Empty when the project names none: the start then says an instance is required. */
+    commerceInstance: string;
 }
 
 /** What the screen knows about the open project's datapack. */
@@ -29,6 +41,8 @@ export interface ProjectHolding {
     held: ProjectDatapack | undefined;
     /** When Demo Builder's engine installed `held`, if it did. */
     installedAt: string | undefined;
+    /** A failed install of `held`, if it failed (step-04 S8). */
+    failed: HeldFailure | undefined;
     /** Every pack name believed to be on the project's instance. */
     installedPacks: Set<string>;
     /**
@@ -104,6 +118,13 @@ export function useProjectHolding(library: boolean): ProjectHolding {
         return names;
     }, [installed.value, projectContext.value]);
 
+    const project = projectContext.value;
+    const failed = useMemo((): HeldFailure | undefined => {
+        const installFailed = project?.installFailed;
+        if (!installFailed) return undefined;
+        return { ...installFailed, commerceInstance: project.instance ?? '', ...(project.scope ? { scope: project.scope } : {}) };
+    }, [project]);
+
     const reloadProject = useCallback((): void => loadProjectContext({}), [loadProjectContext]);
     const reloadHolding = useCallback((): void => {
         loadProjectContext({});
@@ -115,6 +136,7 @@ export function useProjectHolding(library: boolean): ProjectHolding {
     return {
         held: projectContext.value?.datapack,
         installedAt: projectContext.value?.installedAt,
+        failed,
         installedPacks,
         projectAnswered: library || projectContext.settled,
         reloadProject,

@@ -5,9 +5,10 @@
  * @module features/data-installer/ui/components/packMenu
  */
 
-import { INSTALL, RESTORE } from '../../datapackWords';
+import { FIX_WITH_AI, INSTALL, RESTORE } from '../../datapackWords';
 import { SHARE_CONSENT } from '../../shareWording';
 import type { DatapackDetail } from '../../types';
+import { RETRIES_BEFORE_FIX } from './importResult';
 import type { ConfirmActionDialogProps } from '@/core/ui/components/ui/ConfirmActionDialog';
 
 /** One menu row: its icon and label. */
@@ -94,4 +95,14 @@ export function confirmCopy(asking: Asking, detail: DatapackDetail, sharedInFile
 export function mainButtonLabel(detail: DatapackDetail, restores: boolean, switches = false): string {
     if (restores) return `${RESTORE} ${detail.displayName}`;
     return switches ? `Switch to ${detail.displayName}` : INSTALL;
+}
+
+/**
+ * The main button on a failed install of the demo's datapack (step-04 S8): Retry, then Fix with AI
+ * once retries have not helped, as the job window decides (`RETRIES_BEFORE_FIX`, J6-3).
+ *
+ * @param retries - installs of it tried since, all failed
+ */
+export function failedButtonLabel(retries: number): string {
+    return retries < RETRIES_BEFORE_FIX ? 'Retry' : FIX_WITH_AI;
 }

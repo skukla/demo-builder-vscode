@@ -20,7 +20,10 @@ import {
 } from '../../../helpers/extensionContextFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { DATAPACK_INSTALL_FAILURE, FAILED_PACK } from '../../../helpers/datapackInstallFailureFixtures';
+import { createMockProject } from '../../../helpers/projectFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import type { Project } from '@/types/base';
 
 const RECORD: ImportJobRecord = {
     activationId: 'demo-builder-1',
@@ -240,5 +243,80 @@ describe('fix-datapack-import-with-ai from the dry run', () => {
         );
 
         expect(result).toEqual({ success: false, error: 'The last Dry Run found no problem to fix.' });
+    });
+});
+
+// Step-04 S8 (J6-3, owner 2026-11-12): a failed creation install's flyout offers Fix with AI once
+// retries have not helped. The prompt is built from the project's record, never from the window.
+describe('fix-datapack-import-with-ai from a failed install', () => {
+    const FAILED = { ...DATAPACK_INSTALL_FAILURE, retries: 2 };
+
+    function contextWith(project: Partial<Project>, job: ImportJobRecord | null = null) {
+        const { globalState } = createStatefulGlobalState();
+        void globalState.update(JOB_KEY, job);
+        return createMockHandlerContext({
+            logger: createMockLogger(),
+            context: createMockExtensionContext({ globalState }),
+            stateManager: createMockStateManager({
+                getCurrentProject: jest.fn().mockResolvedValue(createMockProject({ name: 'Justrite Demo', ...project })),
+            }),
+        });
+    }
+
+    function sentPrompt(): string {
+        const [, request] = jest.mocked(vscode.commands.executeCommand).mock.calls[0] as [string, { prompt: string }];
+        return request.prompt;
+    }
+
+    beforeEach(() => jest.mocked(vscode.commands.executeCommand).mockClear());
+
+    it('opens the SC’s AI on the recorded failure: the pack, the project, the reason, the retries', async () => {
+        const result = await importFixWithAiHandlers['fix-datapack-import-with-ai'](
+            contextWith({ datapack: FAILED_PACK, datapackInstallFailure: FAILED }),
+            { from: 'install-failed' }
+        );
+
+        expect(result).toEqual({ success: true });
+        const prompt = sentPrompt();
+        expect(prompt).toContain('bodea@1.0.0');
+        expect(prompt).toContain('Justrite Demo');
+        expect(prompt).toContain(`- ${FAILED.reason}`);
+        expect(prompt).toContain('2 retries');
+        expect(prompt).toContain('start_datapack_import');
+    });
+
+    it('reads the project’s record, not the last job, and nothing the window sends', async () => {
+        // What a webview could put on the wire; the handler declares only `from`.
+        const sentByWindow = { from: 'install-failed', reason: 'INJECTED reason' };
+        await importFixWithAiHandlers['fix-datapack-import-with-ai'](
+            contextWith(
+                { datapack: FAILED_PACK, datapackInstallFailure: FAILED },
+                { ...RECORD, rowNotes: { products: 'Job problem.' } }
+            ),
+            sentByWindow
+        );
+
+        const prompt = sentPrompt();
+        expect(prompt).not.toContain('Job problem.');
+        expect(prompt).not.toContain('INJECTED');
+    });
+
+    it('refuses plainly, opening nothing, when the project’s datapack has no failed install', async () => {
+        const result = await importFixWithAiHandlers['fix-datapack-import-with-ai'](
+            contextWith({ datapack: FAILED_PACK }),
+            { from: 'install-failed' }
+        );
+
+        expect(result).toEqual({ success: false, error: 'This datapack has no failed install to fix.' });
+        expect(vscode.commands.executeCommand).not.toHaveBeenCalled();
+    });
+
+    it('CONTROL: refuses a record of another datapack than the one the project names', async () => {
+        const result = await importFixWithAiHandlers['fix-datapack-import-with-ai'](
+            contextWith({ datapack: { ...FAILED_PACK, name: 'luma' }, datapackInstallFailure: FAILED }),
+            { from: 'install-failed' }
+        );
+
+        expect(result.success).toBe(false);
     });
 });

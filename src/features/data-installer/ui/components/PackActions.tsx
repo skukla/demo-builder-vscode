@@ -5,7 +5,9 @@
  *
  * The main button: **Install**; **Switch to <Name>** over another datapack the demo holds and Demo
  * Builder installed (J8-1, owner 2026-11-12), whose window asks "Switch to Bodea?"; and **Restore
- * <Name>** on the demo's installed version (J4-2), which opens the job window on Restore's check (S8).
+ * <Name>** on the demo's installed version (J4-2), which opens the job window on Restore's check (S8);
+ * and on a failed install of it, **Retry**, which starts the install and opens the window on its run,
+ * then **Fix with AI** once retries have not helped (step-04 S8, J6-2, J6-3; `useRetryInstall`).
  * The flyout saves nothing: saving lives in the header (step-04 S1, S5).
  *
  * More, upper section: Save as File; Undo Last Save, on the datapack the demo uses when there is a
@@ -35,9 +37,11 @@ import { INSTALLER_WRITES_SHOWN } from '../../installerWrites';
 import { isSavedVersion } from '../../packVersions';
 import type { DatapackDetail } from '../../types';
 import { useLibrarySharing } from '../hooks/useLibrarySharing';
+import type { HeldFailure } from '../hooks/useProjectHolding';
+import { useRetryInstall } from '../hooks/useRetryInstall';
 import { useUndoLastSave } from '../hooks/useUndoLastSave';
 import { CopyToInstallerButton } from './CopyToInstallerButton';
-import { type Asking, confirmCopy, deletable, mainButtonLabel, type PackMenuRow, packRows, removeRows } from './packMenu';
+import { type Asking, confirmCopy, deletable, failedButtonLabel, mainButtonLabel, type PackMenuRow, packRows, removeRows } from './packMenu';
 import { useLibraryRemoval } from './RemoveFromLibraryButton';
 import { useSaveDatapackFile } from './SaveDatapackFileButton';
 import { StageWait, type WaitLines } from '@/core/ui/components/feedback/StageWait';
@@ -69,17 +73,25 @@ export interface PackActionsProps {
     restores?: boolean;
     /** Another datapack the demo holds, which Demo Builder installed: the main button is Switch to (J8-1). */
     switches?: boolean;
+    /** This version's install failed (step-04 S8): the main button is Retry, then Fix with AI. */
+    failed?: HeldFailure;
+    /** The data types the service holds for this version: a Retry installs every one. */
+    importable?: readonly string[];
 }
+
+const NO_TYPES: readonly string[] = [];
 
 /** What the flyout says while a menu row's work runs; a removal when it is none of the others. */
 function workLines(work: {
     saveFile: { saving: boolean };
     undo: { working: boolean };
+    retry: { working: boolean };
     sharing: { working: boolean };
     shared?: boolean;
 }): WaitLines {
     if (work.saveFile.saving) return WAIT_STAGES.savingPackFile;
     if (work.undo.working) return WAIT_STAGES.startingUndo;
+    if (work.retry.working) return WAIT_STAGES.startingInstall;
     if (work.sharing.working) return work.shared ? WAIT_STAGES.makingPackPrivate : WAIT_STAGES.sharingPack;
     return WAIT_STAGES.deletingPack;
 }
@@ -96,6 +108,8 @@ export function PackActions({
     onRemoveData,
     restores = false,
     switches = false,
+    failed,
+    importable = NO_TYPES,
 }: PackActionsProps): React.JSX.Element {
     const library = detail.store === 'library';
     const [asking, setAsking] = useState<Asking>(null);
@@ -105,9 +119,10 @@ export function PackActions({
     // Undo opens the window once its job is accepted, straight on its run.
     const openRun = useCallback((id: DatapackId): void => onImport?.(id, 'run'), [onImport]);
     const undo = useUndoLastSave(detail.id.name, undoTo, openRun);
+    const retry = useRetryInstall({ id: detail.id, store: detail.store, failed, types: importable }, openRun);
     const doneAsking = useCallback((): void => setAsking(null), []);
     // Still waiting once the pack is gone, as the flyout closes: its rows must not flash back.
-    const working = saveFile.saving || undo.working || sharing.working || removal.removing || removal.removed;
+    const working = saveFile.saving || undo.working || retry.working || sharing.working || removal.removing || removal.removed;
 
     // Before the paint, or the flyout's rows would show for a frame beside the spinner. The cleanup is
     // for a flyout closed during the wait, which unmounts this with the work still running.
@@ -140,7 +155,7 @@ export function PackActions({
         <>
             {working ? (
                 <div className="datapack-panel-loading">
-                    <StageWait brief lines={workLines({ saveFile, undo, sharing, shared: detail.shared })} />
+                    <StageWait brief lines={workLines({ saveFile, undo, retry, sharing, shared: detail.shared })} />
                 </div>
             ) : null}
             {/* Kept mounted through a wait: a copy's own result would be lost with it. */}
@@ -152,7 +167,8 @@ export function PackActions({
             {working ? null : (
                 <>
                     <div className="db-drawer-actions">
-                        {onImport ? (
+                        {onImport && failed ? <FailedButton retries={failed.retries} retry={retry} /> : null}
+                        {onImport && !failed ? (
                             <Button variant="accent" onPress={() => (restores ? onImport(detail.id, 'restore') : onImport(detail.id))}>
                                 {mainButtonLabel(detail, restores, switches)}
                             </Button>
@@ -165,6 +181,7 @@ export function PackActions({
                     <PackActionNotes>
                         {saveFile.note}
                         {undo.note}
+                        {retry.note}
                         {sharing.note}
                         {removal.note}
                     </PackActionNotes>
@@ -184,4 +201,14 @@ export function PackActions({
 function PackActionNotes({ children }: { children: React.ReactNode }): React.JSX.Element | null {
     const said = React.Children.toArray(children);
     return said.length > 0 ? <div className="datapack-action-notes">{said}</div> : null;
+}
+
+/** The main button on a failed install: Retry, or Fix with AI once retries have not helped. */
+function FailedButton({ retries, retry }: { retries: number; retry: { start: () => void; fixWithAi: () => void } }): React.JSX.Element {
+    const label = failedButtonLabel(retries);
+    return (
+        <Button variant="accent" onPress={label === 'Retry' ? retry.start : retry.fixWithAi}>
+            {label}
+        </Button>
+    );
 }
