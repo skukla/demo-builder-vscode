@@ -1,6 +1,30 @@
 # Loop report, 2026-11-12 (owner away): datapack simplification
 
-Live notes; rewritten as the final report at the loop's close.
+## Summary (loop closed 2026-11-13)
+
+Every phase of the datapack simplification is built and committed on fix/release-walk-fixes
+(Phases 2 to 8, plus Phase 1b's windows). Each commit passed the full gate; the last run was
+2,425 test suites and 38,858 tests. Nothing is pushed.
+
+What is left needs you, in this order:
+1. **Push go**: this branch, and the ERP integration's local branch fix/shared-order-cases (f64bd32).
+2. **Live cycles on the test store** (they write to a real store, so they wait for you): Phase 2's
+   saves, Undo Last Save and Restore; install, switch and uninstall; batch and agent reset; Clear
+   Demo Data; Clear Commerce Instance; the held-attribute cases. Listed per slice below.
+3. **Screenshot pass**: the visual check cannot open dialogs, so every resized window needs your eyes.
+4. **Six windows Phase 1b left alone** (Share, Add a Demo, Add Integration, Setup Guide, the projects
+   batch run, the Updates run): one decision each, recommendations in the walkthrough queue.
+5. **The open questions below**, each with a recommendation. The ones that change what happens to real
+   data come first: P5-Q3, P5-Q4, P5-Q5 and R1 (a) and (b).
+6. Step-03's background-ending question (Q4), then cut beta.153.
+
+Record check at close (rptc-hygiene-scan): backlog valid (379 items), no dead links, nothing
+unindexed. Eleven old line citations point at moved or deleted files; none come from this loop's
+work, and most point into the ERP repositories, so they were left alone.
+
+---
+
+Live notes from the run follow.
 
 ## Rails for this run
 - Branch commits on fix/release-walk-fixes only (owner-authorized for this plan); never pushed.
