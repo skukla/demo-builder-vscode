@@ -53,6 +53,13 @@ Live notes; rewritten as the final report at the loop's close.
   following J7-2), the run "Switching to Bodea", and the one-time tip after the first answer. The
   always-save box and its writer are gone; the setting stays, with glossary words. Full gate green
   (2,408 suites, 38,698 tests).
+- Phases 3 to 5, S7: 176a9e756. Uninstall opens the new window ("Uninstall My Luma?" over the type
+  table, red Uninstall, no store name; the save question only with unsaved changes; the run as steps;
+  "My Luma Uninstalled"). Every screen path now uses the new window, and the old install window, its
+  form, pickers, removal confirm and spinner are deleted, after their still-true tests were ported
+  (each dropped case names the decision that ended it). Full gate green (2,399 suites, 38,432 tests).
+- Correction (mine): the plan said to rethink the window's host past 200 lines; it passed that at S6
+  and I missed it. Now splitting the host and its hook, behaviour unchanged, before S8.
 - Phase 1b, done while waiting: ERP Downtime (863c5c2ca) and Edit Demo Package (f8ece2e6e) moved
   onto the Form layout, whose failure line is what both waited for. Same words; Cancel beside the
   commit, as every form; a read failure is a result window with Close. An unused style rule removed.
