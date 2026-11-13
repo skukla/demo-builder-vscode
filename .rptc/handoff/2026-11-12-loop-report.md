@@ -168,7 +168,14 @@ Live notes; rewritten as the final report at the loop's close.
   Luma", "Kukla Luma Reset" (P5-Q1 as recommended). Several projects keep their words. The list's
   old one-project handlers are gone; the dashboard keeps its own until S4; agent tools unchanged.
   Full gate green (2,411 suites, 38,687 tests).
-- Step-05 S3 (the reading wait as its own small window): with a builder.
+- Step-05 S3: c65799909. The batch window no longer grows on screen: while it reads, only a
+  spinner with today's words shows where it will open; it appears once, at the questions' size
+  (the install window's own mechanism). The run opens as its own window. Full gate green.
+- Reset stops offering Clear: b9c1946b2. The one-project reset (list, dashboard, Edit) no longer reads
+  the store or asks "Clear Demo Data Too" (owner 11-12). Clear Demo Data itself is unchanged. Full
+  gate green (2,411 suites, 38,687 tests).
+- Owner answered P5-Q2, Q3, Q4 and Q9 on 11-13 (all as recommended); recorded in decisions.md.
+- Step-05 S4 (the dashboard's Reset and Delete) next; the Clear planning pass (step-06) running.
 - Phase 1b, done while waiting: ERP Downtime (863c5c2ca) and Edit Demo Package (f8ece2e6e) moved
   onto the Form layout, whose failure line is what both waited for. Same words; Cancel beside the
   commit, as every form; a read failure is a result window with Close. An unused style rule removed.

@@ -213,6 +213,17 @@ Reset and delete:
   "Cancel", "Save and Delete" (built with J7-2's save question, the verb swapped as Switch and
   Uninstall swap it).
 
+- The project dashboard's Reset opens the same one-row batch window on the dashboard; its Delete
+  opens the projects list on its one-row Delete window, since the dashboard closes when its project
+  is deleted (P5-Q2, owner 2026-11-13: "Reset here, Delete via list").
+- A batch reset with Uninstall Datapack ticked uninstalls it, for every project with a Commerce
+  backend, not only EDS storefronts (P5-Q3, owner 2026-11-13: "Uninstall it").
+- The agent's `reset_project` gets the same uninstall choice as the window, with the save answers
+  (`removeData`, `changes`, `saveAs`, as `delete_project` has them), in this phase (P5-Q4, owner
+  2026-11-13: "Yes, in this phase").
+- Clear is planned in its own pass (step-06) and built within beta.153 (P5-Q9, owner 2026-11-13:
+  "Own planning pass now").
+
 ## Phase 7: the Datapacks screen
 
 - The header: the save button (Create with no datapack), "Install from File" in a project's

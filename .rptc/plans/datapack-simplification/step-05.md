@@ -151,3 +151,11 @@ Open, `prototype-conventions.md`, overview Phase 6, the walked J7 (`mockups/flow
 - CSS reach: R2 (Datapacks screen), S1 and S3 (projectsList), S4 (dashboard) each need a visual
   check; a `projects-batch.css` class drawn on the dashboard fails silently until its entry imports it.
 - Window height (rule 14) and the J7-2 review once built need the owner.
+
+## Owner answers (2026-11-13)
+
+P5-Q2: Reset here, Delete via the list (as recommended). P5-Q3: uninstall it. P5-Q4: yes, in this phase. P5-Q9: own planning pass now, within beta.153. Recorded in decisions.md Phase 6. Still open: P5-Q1 (built as recommended in S2), P5-Q5 to P5-Q8.
+
+## Status
+
+R1 a6df67dad, R2 208fb758a, S1 29a59686f, S2 851fa48e1, S3 c65799909; reset stops offering Clear b9c1946b2.
