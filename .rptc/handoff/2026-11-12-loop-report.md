@@ -128,7 +128,10 @@ Live notes; rewritten as the final report at the loop's close.
   opens the install window on it; after two failed retries the button is Fix with AI. A Retry that
   works makes the card show installed again. Agents can do the same (read the failure, start the
   install again). No styles changed. Full gate green (2,409 suites, 38,627 tests).
-- Step-04 S9 (the dashboard line): next.
+- Step-04 S9: 16a8ecbea. The dashboard's Datapacks line says "None" with no datapack; a failed install
+  keeps the bare name and adds the red dot, its hover "Install failed". No agent tool reads this line.
+  Full gate green (2,409 suites, 38,632 tests).
+- Step-04 S10 (Phase 7's remaining items): next.
 - Phase 1b, done while waiting: ERP Downtime (863c5c2ca) and Edit Demo Package (f8ece2e6e) moved
   onto the Form layout, whose failure line is what both waited for. Same words; Cancel beside the
   commit, as every form; a read failure is a result window with Close. An unused style rule removed.
@@ -196,5 +199,8 @@ Live notes; rewritten as the final report at the loop's close.
   of the datapack in Commerce; Fix with AI's refusal (no failed install to fix) shows nothing, as the
   install window's Fix with AI already does. Recommend keeping the first two; the third is an old
   gap in both places worth a line on screen.
+- From S9: a Demo Builder datapack's named version stays on the dashboard line ("Luma,
+  eds-compatible"); the mockup showed only a save. Drop the version everywhere? Recommend keeping it
+  (it says which variant the demo holds).
 - Phase 2 live cycle on the test store (save twice, Undo Last Save, Restore, reinstall with nothing
   sent, uninstall), once Phase 2 is built.
