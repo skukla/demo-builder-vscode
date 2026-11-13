@@ -13,23 +13,24 @@
  * and unsubscribes anything dropped). Success closes; failure is the title's
  * outcome, in red, and stays open. Apply is disabled until the set changes.
  *
- * What the dialog shows follows the dialog design rules: the read is the Modal's
- * wait, with no words, from the first frame (the state below mounts per opening, so
- * nothing is drawn before it); a failed read and "signed out" are the title's
- * outcome with the one way on as the action.
+ * What the dialog shows follows the dialog design rules, on the Steps layout (Phase 1b): the
+ * read is the window's wait, the list and the apply follow at one height, and a failed apply is
+ * the title's outcome. A failed read and "signed out" are a small result window in its place
+ * (`ResultWindow`): the title's outcome, with the one way on as the action.
  *
  * Hosting mirrors {@link AppBuilderComponentRemoveDialog}: an always-mounted
- * DialogContainer with the Modal rendered only while `isOpen`; the list owns
+ * DialogContainer with the window rendered only while `isOpen`; the list owns
  * ONE shared instance keyed by the pending row id.
  *
  * @module features/dashboard/ui/components/ManageApisModal
  */
 
-import { DialogContainer, Text } from '@adobe/react-spectrum';
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
+import { DialogContainer } from '@adobe/react-spectrum';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ApiAccessPicker, type ApiAccessOption } from '@/core/ui/components/selection/ApiAccessPicker';
-import { Modal, type ActionButton, type ModalProps, type ModalWait } from '@/core/ui/components/ui/Modal';
+import type { ActionButton, ModalWait } from '@/core/ui/components/ui/Modal';
+import { ResultWindow } from '@/core/ui/components/ui/ResultDialog';
+import { StepsWindow } from '@/core/ui/components/ui/StepsDialog';
 import { useOperationProgress } from '@/core/ui/hooks/useOperationProgress';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { CONSOLE_APIS_OPERATION_ID } from '@/core/utils/operationIds';
@@ -95,8 +96,6 @@ export const MANAGE_APIS_COPY = {
     signInBody: "Your Adobe session has ended. Sign in to manage this app's API access. Adobe sign-in will open in your browser.",
     applyFailedTitle: "Couldn't Update API Access",
 };
-
-/** A dialog reading what it will show says nothing while it does. */
 
 function toMessage(err: unknown): string {
     return err instanceof Error ? err.message : String(err);
@@ -190,50 +189,33 @@ function useApiList(componentId: string | undefined): ApiList {
 }
 
 /**
- * The height the list arrives at, as a floor: the dialog fits the list, and filtering the list
- * then changes only what is in it, not the size of the dialog.
+ * The subscribe's own lines while it applies, with its stage's expectation from the stage table:
+ * it reads the workspace's credentials and can wait on Adobe for a minute (PL-59 slice 6).
  */
-function useListFloor(listShown: boolean): { ref: React.RefObject<HTMLDivElement | null>; floor: number } {
-    const ref = useRef<HTMLDivElement>(null);
-    const [floor, setFloor] = useState(0);
-    useLayoutEffect(() => {
-        if (listShown && floor === 0 && ref.current) setFloor(ref.current.getBoundingClientRect().height);
-    }, [listShown, floor]);
-    return { ref, floor };
-}
-
-/** The title, the wait and the way on, for where the read and the apply stand. */
-/** The subscribe's own lines while it applies, with its stage's expectation from the stage table. */
 function applyingWait(stage: string | undefined, step: string | undefined): ModalWait {
     const label = stage ?? 'Applying';
     return { label, detail: step, expectation: expectationFor(label) };
 }
 
-function viewOf(
-    name: string,
-    list: ApiList,
-    apply: ActionButton,
-    applying: { isApplying: boolean; stage?: string; step?: string; error: string | null },
-): Pick<ModalProps, 'title' | 'status' | 'waiting' | 'actionButtons' | 'closeLabel'> {
-    const title = MANAGE_APIS_COPY.title(name);
-    if (applying.isApplying) {
-        // The subscribe's own lines: it reads the workspace's credentials and can wait on Adobe
-        // for a minute (PL-59 slice 6). Work the SC started says what is happening.
-        return { title, waiting: applyingWait(applying.stage, applying.step), closeLabel: 'Cancel' };
-    }
-    if (list.isLoading) return { title, waiting: WAIT_STAGES.readingAdobeServices, closeLabel: 'Cancel' };
+/**
+ * A read with no list to show: signed out, whose one way on is signing in (never a Retry), or a
+ * failed read, whose way on is Retry. Its own small result window, in place of the steps.
+ */
+function NoListWindow({ list, onClose }: { list: ApiList; onClose: () => void }): React.ReactElement {
     if (list.needsSignIn) {
         const signIn: ActionButton = { label: MANAGE_APIS_COPY.signIn, variant: 'accent', onPress: list.signIn };
-        return { title: MANAGE_APIS_COPY.signInTitle, status: 'warning', actionButtons: [signIn] };
+        return (
+            <ResultWindow title={MANAGE_APIS_COPY.signInTitle} status="warning" actionButtons={[signIn]} onClose={onClose}>
+                <p className="dialog-line">{MANAGE_APIS_COPY.signInBody}</p>
+            </ResultWindow>
+        );
     }
-    if (list.loadError) {
-        const retry: ActionButton = { label: MANAGE_APIS_COPY.retry, variant: 'accent', onPress: list.retry };
-        return { title: MANAGE_APIS_COPY.loadFailedTitle, status: 'error', actionButtons: [retry] };
-    }
-    if (applying.error) {
-        return { title: MANAGE_APIS_COPY.applyFailedTitle, status: 'error', actionButtons: [apply], closeLabel: 'Cancel' };
-    }
-    return { title, actionButtons: [apply], closeLabel: 'Cancel' };
+    const retry: ActionButton = { label: MANAGE_APIS_COPY.retry, variant: 'accent', onPress: list.retry };
+    return (
+        <ResultWindow title={MANAGE_APIS_COPY.loadFailedTitle} status="error" actionButtons={[retry]} onClose={onClose}>
+            <p className="dialog-line">{list.loadError}</p>
+        </ResultWindow>
+    );
 }
 
 /**
@@ -286,31 +268,37 @@ function useApply(componentId: string | undefined, list: ApiList, onClose: () =>
     return { button, state: { isApplying, stage: progress?.stage, step: progress?.step, error } };
 }
 
-/** The open dialog: mounted per opening, so each starts on its wait. */
+/**
+ * The open dialog: mounted per opening, so each starts on its wait. The Steps layout's window: it
+ * stays unseen while the list is read, opens at the list's height and keeps it through the apply
+ * and its failure (rule 14); filtering the list changes what is in it, never the window.
+ */
 function ManageApisDialog({ componentName, componentId, onClose }: Omit<ManageApisModalProps, 'isOpen'>): React.ReactElement {
     const list = useApiList(componentId);
     const apply = useApply(componentId, list, onClose);
-    const listShown = !list.isLoading && !list.needsSignIn && !list.loadError;
-    const { ref, floor } = useListFloor(listShown && !apply.state.isApplying);
+    const { isApplying, stage, step, error } = apply.state;
+    if (list.needsSignIn || list.loadError) return <NoListWindow list={list} onClose={onClose} />;
+    let waiting: ModalWait | false = false;
+    if (isApplying) waiting = applyingWait(stage, step);
+    else if (list.isLoading) waiting = WAIT_STAGES.readingAdobeServices;
 
     return (
-        <Modal fitContent size="L" onClose={onClose} {...viewOf(componentName, list, apply.button, apply.state)}>
-            {list.needsSignIn && <Text>{MANAGE_APIS_COPY.signInBody}</Text>}
-            {!list.needsSignIn && list.loadError && <Text>{list.loadError}</Text>}
-            {listShown && (
-                <SteadyHeight minHeight={floor} align="start">
-                    {/* A plain div, NOT Spectrum's Flex: Flex caps its width at
-                        ~450px (root CLAUDE.md gotcha), and inside a size-L dialog
-                        the API list is wider than that — so the body overflowed
-                        its own container and the modal grew a horizontal
-                        scrollbar. */}
-                    <div className="manage-apis-body" ref={ref}>
-                        {apply.state.error && <Text>{apply.state.error}</Text>}
-                        <ApiAccessPicker apis={list.apis} selected={list.selected} onToggle={list.toggle} />
-                    </div>
-                </SteadyHeight>
-            )}
-        </Modal>
+        <StepsWindow
+            title={error ? MANAGE_APIS_COPY.applyFailedTitle : MANAGE_APIS_COPY.title(componentName)}
+            status={error ? 'error' : undefined}
+            waiting={waiting}
+            ready={!list.isLoading}
+            closeLabel="Cancel"
+            actionButtons={[apply.button]}
+            onClose={onClose}
+        >
+            {/* A plain div, NOT Spectrum's Flex: Flex caps its width at ~450px (root CLAUDE.md
+                gotcha), and inside a size-L dialog the API list is wider than that. */}
+            <div className="manage-apis-body">
+                {error && <p className="dialog-line">{error}</p>}
+                <ApiAccessPicker apis={list.apis} selected={list.selected} onToggle={list.toggle} />
+            </div>
+        </StepsWindow>
     );
 }
 

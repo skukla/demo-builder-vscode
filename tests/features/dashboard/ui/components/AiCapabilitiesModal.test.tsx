@@ -382,6 +382,13 @@ describe('AiCapabilitiesModal', () => {
         expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
     });
 
+    // Phase 1b: the Steps layout. Large, at one height from the read through a regenerate (rule 14).
+    it('is large and holds its height once the inventory is read, through a regenerate', () => {
+        renderModal({ skills: SKILLS, mcps: MCPS, isBusy: true, progress: { currentOperation: 'Writing skills' } });
+        expect(screen.getByRole('dialog')).toHaveAttribute('data-size', 'L');
+        expect(screen.getByRole('dialog')).toHaveClass('is-locked');
+    });
+
     it('never tells you to regenerate files it has not looked at', () => {
         renderModal({ isLoading: true });
         expect(screen.queryByTestId('ai-mcps-empty')).not.toBeInTheDocument();

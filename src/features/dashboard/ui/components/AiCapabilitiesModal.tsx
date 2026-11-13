@@ -15,8 +15,12 @@
  * that fact is about (owner, 2026-10-22). No middle dots anywhere.
  *
  * While the verify reads what the dialog will show, and while a regenerate runs, the dialog is
- * the Modal's wait: nothing else on screen, no words for the read, the step's own words for the
- * regenerate (dialog design rules). A regenerate that failed is the title's outcome, in red.
+ * its wait: nothing else on screen, the read's words, the step's own words for the regenerate
+ * (dialog design rules). A regenerate that failed is the title's outcome, in red.
+ *
+ * Built on the Steps layout's window (`StepsWindow`, Phase 1b) in the dashboard's own dialog
+ * container (`DashboardDialogs`): unseen until the inventory is read, then large at the height the
+ * lists set, kept through a regenerate and its result (a window never changes height, rule 14).
  */
 
 import { Flex, Heading } from '@adobe/react-spectrum';
@@ -25,7 +29,8 @@ import { regenerateKeepsSentence } from './aiEditedNote';
 import { buildIntegrationSections } from './aiIntegrations';
 import { AiMcpsList } from './AiMcpsList';
 import { AiSkillsList } from './AiSkillsList';
-import { Modal, type ModalWait } from '@/core/ui/components/ui/Modal';
+import type { ModalWait } from '@/core/ui/components/ui/Modal';
+import { StepsWindow } from '@/core/ui/components/ui/StepsDialog';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { AI_FILES_OPERATION_ID } from '@/core/utils/operationIds';
 import { WAIT_STAGES } from '@/core/utils/waitStages';
@@ -151,25 +156,11 @@ export function AiCapabilitiesModal({
         onClose();
     };
 
-    return (
-        <Modal
-            title={regenFailed ? "Couldn't Regenerate AI Files" : 'AI Capabilities'}
-            status={regenFailed ? 'error' : undefined}
-            size="L"
-            fitContent
-            onClose={close}
-            closeLabel={isBusy ? 'Run in Background' : undefined}
-            waiting={waitOf(isBusy, isLoading, progress)}
-            actionButtons={[
-                {
-                    label: 'Regenerate AI Files',
-                    variant: 'secondary',
-                    onPress: () => {
-                        void onRegenerate();
-                    },
-                },
-            ]}
-        >
+    // The lists and the Regenerate sentence: the window's one view, also reserved while it waits
+    // so a regenerate's wait keeps the height the lists set (rule 14). Nothing is reserved during
+    // the first read: there is nothing yet to show.
+    const body = (
+        <>
             {/* ONE scroll region for everything beneath the modal heading —
                 MCP servers and skills scroll together; the frame stays put.
                 A plain div, not Spectrum Flex, for the columns: Flex caps
@@ -253,6 +244,29 @@ export function AiCapabilitiesModal({
                     {keepsSentence}
                 </p>
             )}
-        </Modal>
+        </>
+    );
+
+    return (
+        <StepsWindow
+            title={regenFailed ? "Couldn't Regenerate AI Files" : 'AI Capabilities'}
+            status={regenFailed ? 'error' : undefined}
+            waiting={waitOf(isBusy, isLoading, progress)}
+            ready={!isLoading}
+            reserve={isLoading ? undefined : body}
+            onClose={close}
+            closeLabel={isBusy ? 'Run in Background' : 'Close'}
+            actionButtons={[
+                {
+                    label: 'Regenerate AI Files',
+                    variant: 'secondary',
+                    onPress: () => {
+                        void onRegenerate();
+                    },
+                },
+            ]}
+        >
+            {body}
+        </StepsWindow>
     );
 }

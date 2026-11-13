@@ -32,24 +32,18 @@ const LAYOUTS = [
 
 /** Files that render `Modal` directly today, each with the change that moves it. Shrink only. */
 const LEDGER: Readonly<Record<string, string>> = {
-    'src/features/dashboard/ui/components/ManageApisModal.tsx':
-        'waits for a layout: a Form at L whose title, status and action change with each view, and FormDialog is M only',
-    'src/features/dashboard/ui/components/AssignErpProductsModal.tsx':
-        'waits for a layout: a Form at L wide for its product list, and FormDialog is M only',
     'src/features/dashboard/ui/components/integrations/SetupGuideModal.tsx':
-        'waits for a layout: a Guide at L wide with a step list, start buttons and per step actions, and GuideDialog takes no actions',
-    'src/features/dashboard/ui/components/AiCapabilitiesModal.tsx':
-        'waits for a layout: a Guide at L with a Regenerate action, a wait and Run in Background, and GuideDialog takes no actions',
+        'waits for a layout: a Guide at L wide with the step list beside the chosen step, list buttons at the footer start and the step buttons on the right; GuideDialog draws one column of rows, each with its own buttons',
     'src/features/dashboard/ui/components/share/ShareModal.tsx':
-        'waits for a layout: a Form at L with no submit, only Close, and FormDialog is M with a submit',
+        'waits for the owner (Phase 1b question): two forms whose buttons sit in the body and whose notes and details grow it; a Steps window holds one height, so they would scroll',
     'src/features/project-creation/ui/components/add-demo/AddDemoModal.tsx':
-        'waits for a layout: a staged Form at L with Back, a start button and an answer with a status, and FormDialog is M with none',
+        'waits for the owner (Phase 1b question): stages of different heights; a Steps window holds the first stage, so the taller found stage scrolls, unless each stage is its own window',
     'src/features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal.tsx':
-        'waits for a layout: a staged Form at L with Back, a status per stage and a confirm in its own window',
+        'waits for the owner (Phase 1b question): five stages of five heights; a Steps window holds the first stage, so the API and project lists scroll, unless each stage is its own window',
     'src/features/projects-dashboard/ui/components/ProjectsBatchModal.tsx':
-        'waits for a layout: a Confirm read in a Steps window, then a run with questions and a result on Modal, at L or wide (the save question is the core SaveFirstWindow)',
+        'the read, the questions and the save question are already Steps windows; the run waits for a layout: rows at L or wide, a question under its row that hides Close, then the small result; ProgressDialog is M and cannot hide Close',
     'src/features/projects-dashboard/ui/components/UpdatesModal.tsx':
-        'waits for a layout: one window through a Form at L, a run with questions that hide Close, and a result with Back to Updates',
+        'waits for a layout: one window through the update list, a run whose questions hide Close or take the window, and a small result with Back to Updates; ProgressDialog is M and cannot hide Close',
 };
 
 /** Feature stylesheets that set a layout's text or weight today, with why. Shrink only. */

@@ -47,8 +47,10 @@ const LEDGER: Readonly<Record<string, Reason>> = {
  * 64 -> 66 on 2026-11-13 (step 06, C5): Clear Commerce Instance's window joined the bundle with the
  * header's Clear menu, and with it the website list's two runtime labels (`CheckboxRow.label`, a
  * website's name or, without one, its code): Commerce's own words for the SC's websites.
+ * 66 -> 65 on 2026-11-13 (Phase 1b, the last windows): AI Capabilities moved onto the Steps
+ * window, and its dismiss label, `undefined` when nothing ran, is now the literal Close.
  */
-const DYNAMIC_PIN = 66;
+const DYNAMIC_PIN = 65;
 
 /**
  * The six dialog layouts (the Steps layout joined 2026-11-11) hand their caller's words on to Modal (`title={title}`). Those words are

@@ -306,6 +306,24 @@ describe('AssignErpProductsModal', () => {
         expect(screen.queryByTestId('spectrum-searchfield')).toBeNull();
         expect(screen.getByText('Reading products')).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: ASSIGN_COPY.actionIdle })).toBeNull();
+        // Cancel beside a commit, even while the commit waits (Phase 1b, the window rules).
+        expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+    });
+
+    // Phase 1b: the Steps layout. One wide window from the read to Assign, at one height (rule 14);
+    // a read with no list is its own small result window with Close.
+    it('is wide and large, holds its height once read, and offers Cancel beside Assign', async () => {
+        await open();
+        expect(screen.getByRole('dialog')).toHaveAttribute('data-size', 'L');
+        expect(screen.getByRole('dialog')).toHaveClass('modal-wide');
+        expect(screen.getByRole('dialog')).toHaveClass('is-locked');
+        expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Close' })).toBeNull();
+    });
+
+    it('shows nothing to assign as a small result window with Close', async () => {
+        await open({ ...STORE, ownerValue: undefined, refusal: 'Not by erp_owner.' });
+        expect(screen.getByRole('dialog')).toHaveAttribute('data-size', 'S');
         expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
     });
 

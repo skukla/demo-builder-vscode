@@ -13,10 +13,12 @@
  * it writes, so the count the SC confirms is the count written. Attribute sets without
  * `erp_owner` are named at the top with the fix, since their products cannot be written.
  *
- * Built like `AddErpDialog`: the core Modal in a DialogContainer, one accent action. While reading
- * the dialog is the Modal's wait, with no words and nothing else on screen (dialog design rules,
- * owner 2026-11-01). A read that failed and nothing to assign are the title's outcome, with what
- * is left to know under it, in a small dialog with Close alone. No intro under the title (owner,
+ * Built on the Steps layout's window (`StepsWindow`, Phase 1b), wide for the table, in its own
+ * DialogContainer, with Cancel beside its one accent action. While reading it stays unseen and
+ * its wait shows, with nothing else on screen (dialog design rules, owner 2026-11-01); it opens at
+ * the table's height and keeps it (rule 14). A read that failed and nothing to assign are the
+ * title's outcome, with what is left to know under it, in a small result window
+ * (`ResultWindow`) with Close alone. No intro under the title (owner,
  * 2026-10-19: "still feels busy"): the title says what it does, and the website is in the count.
  * The attribute-set warning is a problem note over the list it is about, with its fix beside it.
  *
@@ -26,7 +28,9 @@
 import { DialogContainer } from '@adobe/react-spectrum';
 import React, { useMemo, useState } from 'react';
 import { AssignProductList } from './AssignProductList';
-import { Modal, type ModalStatus, type ModalWait } from '@/core/ui/components/ui/Modal';
+import type { ModalStatus, ModalWait } from '@/core/ui/components/ui/Modal';
+import { ResultWindow } from '@/core/ui/components/ui/ResultDialog';
+import { StepsWindow } from '@/core/ui/components/ui/StepsDialog';
 import { WAIT_STAGES } from '@/core/utils/waitStages';
 import { previewAssignment } from '@/features/app-builder/services/erpAssignSelection';
 import { setsInWords } from '@/features/app-builder/services/erpOwnerAttributeSets';
@@ -141,19 +145,19 @@ function AssignForm({ target, onClose, onAssign, onAddSets }: AssignErpProductsM
     };
     if (noList) {
         return (
-            <Modal title={noList.title} status={noList.status} size="S" fitContent onClose={onClose}>
+            <ResultWindow title={noList.title} status={noList.status} onClose={onClose}>
                 <p className="dialog-line">{noList.body}</p>
-            </Modal>
+            </ResultWindow>
         );
     }
     return (
-        <Modal
+        <StepsWindow
             title={ASSIGN_COPY.title(target.name)}
-            size="L"
             wide
-            fitContent
             waiting={options ? false : READING}
+            ready={Boolean(options)}
             onClose={onClose}
+            closeLabel="Cancel"
             actionButtons={[{ label: count > 0 ? ASSIGN_COPY.action(count) : ASSIGN_COPY.actionIdle, variant: 'accent', onPress: assign, isDisabled: count === 0 }]}
         >
             {options && (
@@ -179,6 +183,6 @@ function AssignForm({ target, onClose, onAssign, onAddSets }: AssignErpProductsM
                     />
                 </div>
             )}
-        </Modal>
+        </StepsWindow>
     );
 }

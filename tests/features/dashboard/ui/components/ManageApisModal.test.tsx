@@ -404,6 +404,47 @@ describe('ManageApisModal', () => {
         });
     });
 
+    // Phase 1b: the Steps layout. One large window from the read to the apply, at one height
+    // (rule 14); a read with no list to show is its own small result window.
+    describe('one window at one height', () => {
+        it('is large and holds its height once the list is read', async () => {
+            mockRequest();
+            renderModal();
+            await flush();
+
+            expect(screen.getByRole('dialog')).toHaveAttribute('data-size', 'L');
+            expect(screen.getByRole('dialog')).toHaveClass('is-locked');
+        });
+
+        it('keeps that height through the apply and its failure', async () => {
+            mockRequest((type) =>
+                type === 'listConsoleApis'
+                    ? Promise.resolve({ success: true, data: { apis: ORG_APIS } })
+                    : Promise.resolve({ success: false, error: 'needs a product profile' })
+            );
+            renderModal();
+            await flush();
+            fireEvent.click(checkboxFor('Firefly Services'));
+            fireEvent.click(applyButton());
+            await flush();
+
+            expect(screen.getByRole('dialog')).toHaveClass('is-locked');
+            expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+        });
+
+        it.each([
+            ['a failed read', { success: false, error: 'boom' }],
+            ['signed out', { success: false, error: 'Sign in.', code: 'AUTH_REQUIRED' }],
+        ])('shows %s as a small result window with Close', async (_what, answer) => {
+            getClient().request.mockResolvedValue(answer);
+            renderModal();
+            await flush();
+
+            expect(screen.getByRole('dialog')).toHaveAttribute('data-size', 'S');
+            expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
+        });
+    });
+
     /**
      * Step 05 — the modal edits ONE integration, not the project.
      *
