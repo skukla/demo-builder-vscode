@@ -34,7 +34,7 @@ const CONSENT_KEY_LABELS: Record<string, string> = {
     projectName: 'Project',
     // reset_datapack: "keep" or "drop" alone would not say whose changes.
     changes: 'Your changes',
-    // delete_project: the button's box, Uninstall Datapack.
+    // delete_project and reset_project: the button's box, Uninstall Datapack.
     removeData: 'Uninstall Datapack',
 };
 
@@ -131,8 +131,10 @@ export function buildConsentPrompt(
     const target = copy.target.length
         ? renderTargetForConsent(args, copy.target)
         : (fallbackTarget ?? '');
+    // The choices the call made, under the target (`reset_project`'s Uninstall Datapack).
+    const named = [target, renderTargetForConsent(args, copy.choices ?? [])].filter(Boolean).join('\n');
     return {
         title: `${agentNotice(copy.action)}?`,
-        detail: [copy.consequence, target].filter(Boolean).join('\n\n'),
+        detail: [copy.consequence, named].filter(Boolean).join('\n\n'),
     };
 }

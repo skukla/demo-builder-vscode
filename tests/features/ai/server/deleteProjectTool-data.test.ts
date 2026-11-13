@@ -3,7 +3,8 @@
  * project's datapack put in Commerce, removed BEFORE anything else, as the button removes it. Off
  * unless asked, never turned on by the cleanupBehavior setting. When the pack is not the user's
  * and has changes, it refuses until `changes` answers (keep with `saveAs`, or drop), and a removal
- * that does not finish deletes nothing. The removal is mocked in the shared wall and asserted by
+ * that does not finish deletes nothing. An answer goes up front, as the window's Delete Without
+ * Saving sends it (step-05 S1): `drop` loses the changes in any pack, the user's own included. The removal is mocked in the shared wall and asserted by
  * what it is handed; its own suite is `datapackDataRemoval.test.ts`.
  */
 
@@ -41,10 +42,10 @@ function register() {
     return { server, ctx: () => ctx };
 }
 
-/** The question asked, as the real removal asks it; the agent's delete always asks, never gives. */
+/** The answer the removal ends up with: given up front, or asked as the real removal asks it. */
 async function askedWith(askName: SaveAsAnswering | undefined): Promise<SaveAsAnswer> {
     if (askName === undefined) return undefined;
-    if (typeof askName !== 'function') throw new Error('The agent\'s delete gave an answer up front; it asks.');
+    if (typeof askName !== 'function') return askName.given;
     return askName({ sentence: SENTENCE });
 }
 
@@ -123,18 +124,24 @@ describe("delete_project and the datapack's data", () => {
         expect(answer.error).toContain('changes:"keep" with saveAs');
     });
 
+    // Up front, as the window's answers go (step-05 S1, Phase 8: agents match the screen), so a
+    // drop reaches the user's own pack too, as Delete Without Saving does.
     it.each([
-        [{ changes: 'keep', saveAs: { displayName: ' My Copy ' } }, { saveAs: 'My Copy' }],
-        [{ changes: 'drop' }, 'drop'],
-    ])('answers the changes question with %j, then deletes', async (given, expected) => {
-        removalAsks();
-        let handed: unknown;
-        mockedRemove.mockImplementation(async (_c, _p, _r, askName?: SaveAsAnswering) => void (handed = await askedWith(askName)));
+        [{ changes: 'keep', saveAs: { displayName: ' My Copy ' } }, { given: { saveAs: 'My Copy' } }],
+        [{ changes: 'drop' }, { given: 'drop' }],
+    ])('hands the removal the answer %j as given, then deletes', async (args, expected) => {
+        const answer = await register().server.call({ ...CONFIRMED, removeData: true, ...args });
 
-        const answer = await register().server.call({ ...CONFIRMED, removeData: true, ...given });
-
-        expect(handed).toStrictEqual(expected);
+        expect(mockedRemove.mock.calls[0][3]).toStrictEqual(expected);
         expect(answer.deleted).toBe(true);
+    });
+
+    it("drops nothing on keep without a name: the removal asks, and the user's own pack is saved into", async () => {
+        await register().server.call({ ...CONFIRMED, removeData: true, changes: 'keep' });
+
+        const answering = mockedRemove.mock.calls[0][3];
+        expect(typeof answering).toBe('function');
+        expect(answering).not.toStrictEqual({ given: 'drop' });
     });
 
     it('deletes, saying there was no data, when the project has none', async () => {

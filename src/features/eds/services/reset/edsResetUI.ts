@@ -32,12 +32,8 @@ import {
     checkOrgContext,
     recordSignedInOrg,
 } from './edsResetPreflight';
-import {
-    beginSampleDataRemovalCheck,
-    removeProjectSampleDataOutcome,
-} from './edsResetSampleData';
 import { executeEdsReset } from './edsResetService';
-import { FailedAfterDatapack, type AnsweredDatapack } from './resetDatapackStep';
+import { FailedAfterDatapack, removeAnsweredDatapack, type AnsweredDatapack } from './resetDatapackStep';
 import { whileRunning } from '@/core/state/projectWorkRunning';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { resetStageLabel } from '@/core/utils/resetStages';
@@ -184,11 +180,6 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
     const { repoOwner, repoName } = paramsResult.params;
     const repoFullName = `${repoOwner}/${repoName}`;
 
-    // Whether there is sample data this project can remove, asked only when a batch answered
-    // Uninstall Datapack. Gated on the recorded pack rather than on asking the service what is
-    // installed; the removal itself reports when there was nothing there.
-    const answered = options.answered;
-    const removeData = answered?.removeDatapack === true && (await beginSampleDataRemovalCheck(project)) === true;
     // No reset offers Clear Demo Data (owner, 2026-11-12): it is its own command on the Datapacks screen.
 
     // Listed as resetting for the whole run: the projects list reads that, never
@@ -291,10 +282,10 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
             // Never allowed to fail the reset: the storefront reset is what
             // was asked for, and a data step that refuses is reported while
             // the reset still stands.
-            // A batch answered the changes already; asking here would stop it mid-run.
-            const datapackRemoval = removeData
-                ? await removeProjectSampleDataOutcome(project, context, report, { given: answered?.changes })
-                : undefined;
+            // A batch answered the changes already; asking here would stop it mid-run. Only when
+            // it answered Uninstall Datapack, gated on the recorded pack rather than on asking the
+            // service what is installed; the removal itself reports when there was nothing there.
+            const datapackRemoval = await removeAnsweredDatapack(project, context, report, options.answered);
 
             // The reset's steps are a fixed list, so the count is known up
             // front and rides the stage as "(4 of 12)" — the one shape a count

@@ -435,7 +435,8 @@ describe('what each input is described as', () => {
                 "Also delete the project's DA.live site and take its pages off the CDN (default: false, or true when the cleanupBehavior setting is deleteAll)",
             removeData:
                 "Also remove the project's datapack data from its Commerce instance, before anything else (default: false under every cleanupBehavior; refused under localOnly)",
-            changes: "With removeData, when the pack is not the user's: keep saves their changes as a new datapack named by saveAs, drop loses them",
+            changes:
+                "With removeData: keep saves the user's changes in the pack as a new datapack named by saveAs; drop loses them, in the user's own pack too. Left out, changes in the user's own pack are saved into it",
             saveAs: 'With changes:"keep": the new datapack of the user\'s that their changes are saved as',
         });
     });

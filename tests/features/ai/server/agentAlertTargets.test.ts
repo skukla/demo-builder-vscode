@@ -106,7 +106,8 @@ describe('consent targets name real arguments', () => {
         for (const [tool, copy] of entries) {
             const keys = declared.get(tool);
             if (!keys) continue;
-            for (const key of copy.target) {
+            // The choices shown beneath the target are argument keys too (reset_project, step-05 S7).
+            for (const key of [...copy.target, ...(copy.choices ?? [])]) {
                 if (!keys.has(key)) bogus.push(`${tool}: ${key}`);
             }
         }

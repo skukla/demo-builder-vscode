@@ -46,40 +46,13 @@ jest.mock('@/core/utils/agentPhaseChannel', () => ({
 
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { runWithAdobeTarget } from '@/features/ai/server/adobeTargetStore';
-import { registerResetProjectTool } from '@/features/ai/server/resetProjectTool';
 import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
 import { executeProjectReset } from '@/features/lifecycle/services/projectResetService';
 import type { Project } from '@/types/base';
-import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
-import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
-import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
-import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { callResetProject as call, getCurrentProject, logger } from './resetProjectTool.testUtils';
 
 const executeProjectResetMock = executeProjectReset as jest.Mock;
-
-type ToolHandler = (args: unknown) => Promise<{ content: Array<{ text: string }> }>;
-
-function fakeServer() {
-    const tools = new Map<string, ToolHandler>();
-    return {
-        registerTool(name: string, _def: unknown, handler: ToolHandler) {
-            tools.set(name, handler);
-        },
-        async call(args?: unknown): Promise<Record<string, unknown>> {
-            return JSON.parse((await tools.get('reset_project')!(args)).content[0].text);
-        },
-    };
-}
-
-const getCurrentProject = jest.fn();
-const logger = createMockLogger();
-const ctxFactory = () =>
-    createMockHandlerContext({
-        stateManager: createMockStateManager({ getCurrentProject }),
-        context: createMockExtensionContext(),
-        logger,
-    });
 
 /** A headless project as the manifest holds one: a stack, a frontend instance, no storefront repo. */
 function headlessProject(overrides: Partial<Project> = {}): Project {
@@ -101,12 +74,6 @@ const MESH_INSTANCE = {
     status: 'deployed' as const,
     path: '/p/headless-demo/components/commerce-mesh',
 };
-
-function call(args?: unknown) {
-    const s = fakeServer();
-    registerResetProjectTool(s, ctxFactory);
-    return s.call(args);
-}
 
 describe('reset_project on a headless project', () => {
     beforeEach(() => {

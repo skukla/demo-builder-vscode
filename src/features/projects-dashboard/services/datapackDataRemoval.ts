@@ -1,7 +1,7 @@
 /**
  * "Uninstall Datapack" on a project delete (owner, 2026-11-09, walk F96): the data the project's
  * datapack put in Commerce, removed before the project's files, the SC's changes in it settled
- * first, as a reset removes it (`removeProjectSampleData`: saved into the SC's own pack, else the
+ * first, as a reset removes it (`removeProjectSampleDataOutcome`: saved into the SC's own pack, else the
  * reset's Save As question). Without it the data stays in Commerce, and the delete says so.
  *
  * Offered only where a removal can work: the project has a datapack Demo Builder installed (an
@@ -17,7 +17,7 @@
 import type { ReportStage } from '@/core/vscode/withOperationProgress';
 import { installedByDemoBuilder } from '@/features/data-installer/services/buildDatapackEngine';
 import { commerceBackendOf } from '@/features/data-installer/services/commerceBackend';
-import { removeProjectSampleData, type SaveAsAnswering } from '@/features/eds/services/reset/edsResetSampleData';
+import { removeProjectSampleDataOutcome, type SaveAsAnswering } from '@/features/eds/services/reset/edsResetSampleData';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -37,9 +37,11 @@ export async function hasRemovableData(project: Project): Promise<boolean> {
  *
  * @param askName - the SC's answer about a pack that is not theirs: asked in the window, or
  *   given up front (a batch, an agent)
- * @returns why the data was not all removed, so the delete stops; undefined when it was
+ * @returns why the data was not all removed, so the delete stops; undefined when it was. A removal
+ *   that stopped partway says part of it came out (step-05 S7), never "was not uninstalled".
  */
 export async function removeDataBeforeDelete(context: HandlerContext, project: Project, report: ReportStage, askName?: SaveAsAnswering): Promise<string | undefined> {
-    const why = await removeProjectSampleData(project, context, report, askName);
-    return why ? `Its datapack was not uninstalled, so the project was kept: ${why}` : undefined;
+    const { kept, partly } = await removeProjectSampleDataOutcome(project, context, report, askName);
+    if (kept === undefined) return undefined;
+    return partly ? `Part of its datapack was uninstalled, so the project was kept: ${kept}` : `Its datapack was not uninstalled, so the project was kept: ${kept}`;
 }

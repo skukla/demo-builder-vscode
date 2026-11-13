@@ -391,9 +391,13 @@ describe('reset_project on an Edge Delivery project', () => {
         const def = s.def();
         expect(def.needsAuth).toEqual(['adobe', 'dalive']);
         expect(def.annotations).toEqual({ readOnlyHint: false, destructiveHint: true });
+        // removeData, changes and saveAs: Uninstall Datapack, as delete_project takes it (step-05 S7).
         expect(Object.keys(def.inputSchema!)).toEqual([
             'includeBlockLibrary',
             'verifyCdn',
+            'removeData',
+            'changes',
+            'saveAs',
             'confirm',
         ]);
     });

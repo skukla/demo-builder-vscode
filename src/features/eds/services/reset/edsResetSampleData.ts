@@ -170,14 +170,14 @@ function askerOf(answering: SaveAsAnswering | undefined): AskSaveAsName | undefi
  * theirs, else as a new pack under the name `askName` gets (Save As, owner 2026-11-03), else lost.
  * A save that fails removes nothing.
  *
- * @returns why the pack must stay, or undefined when it may go
+ * @returns why the pack must stay (marked when it was for want of an answer), or undefined when it may go
  */
 async function settleBeforeReset(
     project: Project,
     context: HandlerContext,
     report: ReportStage,
     answering: SaveAsAnswering | undefined,
-): Promise<string | undefined> {
+): Promise<DatapackRemoval | undefined> {
     const datapack = project.datapack;
     if (!datapack) return undefined;
     const { contextForProject, settleChangesBeforeRemoval } = await import('@/features/data-installer/handlers/removalChanges');
@@ -196,7 +196,8 @@ async function settleBeforeReset(
         const chosen = await askName(asked?.sentence ? { sentence: asked.sentence } : {});
         if (chosen === undefined) {
             context.logger.info('[EdsReset] Sample data kept: the changes in it were not answered.');
-            return asked?.sentence ? `${asked.sentence} They were not answered.` : 'The changes in it were not answered.';
+            const kept = asked?.sentence ? `${asked.sentence} They were not answered.` : 'The changes in it were not answered.';
+            return { kept, unanswered: true };
         }
         const answer = chosen === 'drop' ? { answer: 'drop' as const } : { answer: 'keep' as const, saveAs: { displayName: chosen.saveAs } };
         settled = await settleChangesBeforeRemoval(forProject, { ...request, ...answer }, (stage) => report(stage));
@@ -204,7 +205,7 @@ async function settleBeforeReset(
     if ('response' in settled) {
         const reason = settled.response.error ?? 'Its changes could not be saved.';
         context.logger.error(`[EdsReset] Sample data was NOT removed: ${reason}`);
-        return reason;
+        return { kept: reason };
     }
     return undefined;
 }
@@ -249,7 +250,7 @@ export async function removeProjectSampleDataOutcome(
         // the reset stands.
         if (project.datapack) {
             const kept = await settleBeforeReset(project, context, report, askName);
-            if (kept) return { kept };
+            if (kept) return kept;
         }
 
         report(OPERATION_STAGES.removingDatapack.label);

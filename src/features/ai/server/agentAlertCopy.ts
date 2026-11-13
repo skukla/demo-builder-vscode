@@ -71,6 +71,13 @@ export interface AgentAlertCopy {
      */
     target: string[];
     /**
+     * Argument keys for the choices a call made about the thing (a box ticked, an answer given),
+     * shown beneath the target. For a tool that acts on the open project and still has a choice to
+     * show: `reset_project`'s Uninstall Datapack (step-05 S7), where naming the choice in `target`
+     * would have dropped the line naming the project.
+     */
+    choices?: string[];
+    /**
      * May the user say "don't ask again this session" for this tool?
      *
      * REQUIRED, so every entry makes the decision explicitly. An optional flag
@@ -108,7 +115,7 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     delete_project: {
         action: 'Delete this project',
         consequence:
-            "Removes the project from this machine, its GitHub repository and DA.live site if the agent asked or your cleanup setting deletes everything, and its datapack's data from Commerce only if the agent asked (Uninstall Datapack below), your changes in it saved first. This can't be undone.",
+            "Removes the project from this machine, its GitHub repository and DA.live site if the agent asked or your cleanup setting deletes everything, and its datapack's data from Commerce only if the agent asked (Uninstall Datapack below), your changes in it saved first unless the agent was told to drop them. This can't be undone.",
         target: ['name', 'removeData', 'changes', 'saveAs'],
         sessionGrant: false,
     },
@@ -244,8 +251,9 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     reset_project: {
         action: 'Reset this project',
         consequence:
-            "Puts the project back to its starting point: a storefront's code and content return to the original template, a headless project's components are deleted and installed again. Anything customised there is lost.",
+            "Puts the project back to its starting point: a storefront's code and content return to the original template, a headless project's components are deleted and installed again. Anything customised there is lost, and its datapack's data is removed from Commerce too if the agent asked (Uninstall Datapack below), your changes in it saved first unless the agent was told to drop them.",
         target: [],
+        choices: ['removeData', 'changes', 'saveAs'],
         sessionGrant: false,
     },
     reset_datapack: {

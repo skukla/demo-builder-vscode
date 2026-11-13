@@ -16,6 +16,7 @@
  */
 
 import { runWithAdobeTarget } from './adobeTargetStore';
+import { answeredOf, changesNeedAnswer, datapackAnswer, type DatapackAnswerArgs } from './datapackAnswerArgs';
 import { requireDaLive, requireGitHub } from './edsToolGuards';
 import { asText } from './mcpToolResult';
 import { ServiceLocator } from '@/core/di/serviceLocator';
@@ -29,6 +30,7 @@ import {
 import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveTokenProviders';
 import { extractResetParams, resetCaveats, type EdsResetResult } from '@/features/eds/services/reset/edsResetParams';
 import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
+import { removeAnsweredDatapack } from '@/features/eds/services/reset/resetDatapackStep';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 import { getMeshComponentInstance } from '@/types/typeGuards';
@@ -52,8 +54,8 @@ export async function adobeAuthed(): Promise<boolean> {
     }
 }
 
-/** The arguments of `reset_project` that only a storefront reset reads. */
-interface EdsResetArgs {
+/** The arguments of `reset_project` a storefront reset reads: its own two, and Uninstall Datapack. */
+interface EdsResetArgs extends DatapackAnswerArgs {
     includeBlockLibrary?: boolean;
     verifyCdn?: boolean;
 }
@@ -93,6 +95,15 @@ export async function runEdsReset(
 
     const phases: Array<{ step: number; totalSteps: number; message: string }> = [];
     const sayStep = stepPhaseReporter();
+    // Uninstall Datapack, as the window's storefront reset runs it (`resetEdsProjectWithUI`): BEFORE
+    // the reset, whose last step pre-warms the catalog; changes nobody answered refuse the call
+    // with nothing removed and nothing reset (step-05 S7).
+    const answered = answeredOf(args);
+    const removal = await removeAnsweredDatapack(project, ctx, (stage) => sayStep(stage), answered);
+    if (removal?.unanswered) {
+        return asText({ reset: false, project: project.name, ...changesNeedAnswer(removal.kept ?? '', 'reset') });
+    }
+    const datapack = await datapackAnswer(project, answered, removal);
     const tokenProvider = createDaLiveServiceTokenProvider(getDaLiveAuthService(ctx.context));
     try {
         // VS Code setting `demoBuilder.byom.overlayUrl` wins over
@@ -146,6 +157,7 @@ export async function runEdsReset(
                 stage: 'eds-reset',
                 error: result.error,
                 errorType: result.errorType,
+                ...datapack,
                 phases,
                 rerunSafe: true,
             });
@@ -156,6 +168,8 @@ export async function runEdsReset(
             kind: 'storefront',
             // What the reset finished around or could not do, in the words the SC sees.
             ...caveatsOf(result),
+            // What became of the datapack, when the call asked to uninstall it.
+            ...datapack,
             // Category pages and the catalog menu, re-written by the reset (EDS-24) —
             // including pages someone else made, left alone by name.
             ...(result.catalogMenu ? { categoryPages: result.catalogMenu } : {}),
@@ -177,6 +191,7 @@ export async function runEdsReset(
             reset: false,
             stage: 'eds-reset',
             error: err instanceof Error ? err.message : String(err),
+            ...datapack,
             phases,
             rerunSafe: true,
         });

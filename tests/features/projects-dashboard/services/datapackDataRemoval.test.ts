@@ -6,17 +6,17 @@
  */
 
 jest.mock('@/features/data-installer/services/buildDatapackEngine', () => ({ installedByDemoBuilder: jest.fn() }));
-jest.mock('@/features/eds/services/reset/edsResetSampleData', () => ({ removeProjectSampleData: jest.fn() }));
+jest.mock('@/features/eds/services/reset/edsResetSampleData', () => ({ removeProjectSampleDataOutcome: jest.fn() }));
 
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockProject } from '../../../helpers/projectFake';
 import { installedByDemoBuilder } from '@/features/data-installer/services/buildDatapackEngine';
-import { removeProjectSampleData } from '@/features/eds/services/reset/edsResetSampleData';
+import { removeProjectSampleDataOutcome } from '@/features/eds/services/reset/edsResetSampleData';
 import { hasRemovableData, removeDataBeforeDelete } from '@/features/projects-dashboard/services/datapackDataRemoval';
 import type { Project } from '@/types/base';
 
 const mockedOurs = installedByDemoBuilder as jest.MockedFunction<typeof installedByDemoBuilder>;
-const mockedRemove = removeProjectSampleData as jest.MockedFunction<typeof removeProjectSampleData>;
+const mockedRemove = removeProjectSampleDataOutcome as jest.MockedFunction<typeof removeProjectSampleDataOutcome>;
 
 const PACK = { name: 'bodea', version: 'main', store: 'library' as const };
 const withPack = (overrides: Partial<Project> = {}): Project =>
@@ -41,7 +41,7 @@ describe('whether a delete may remove datapack data', () => {
 
 describe('removing it before the delete', () => {
     it("removes through the reset's removal with the answer it was handed, and lets the delete go on", async () => {
-        mockedRemove.mockResolvedValue(undefined);
+        mockedRemove.mockResolvedValue({});
         const context = createMockHandlerContext();
         const project = withPack();
         const report = jest.fn();
@@ -53,10 +53,20 @@ describe('removing it before the delete', () => {
     });
 
     it('says the project was kept, and why, when the data did not all come out', async () => {
-        mockedRemove.mockResolvedValue('Commerce refused 2 products.');
+        mockedRemove.mockResolvedValue({ kept: 'Commerce refused 2 products.' });
 
         await expect(removeDataBeforeDelete(createMockHandlerContext(), withPack(), jest.fn())).resolves.toBe(
             "Its datapack was not uninstalled, so the project was kept: Commerce refused 2 products.",
+        );
+    });
+
+    // step-05 S7: a removal that stopped partway read "was not uninstalled" over its own reason
+    // "The datapack was not all uninstalled.", which contradicted it.
+    it('says part of it was uninstalled when the removal stopped partway', async () => {
+        mockedRemove.mockResolvedValue({ kept: 'Categories could not be removed.', partly: true });
+
+        await expect(removeDataBeforeDelete(createMockHandlerContext(), withPack(), jest.fn())).resolves.toBe(
+            'Part of its datapack was uninstalled, so the project was kept: Categories could not be removed.',
         );
     });
 });

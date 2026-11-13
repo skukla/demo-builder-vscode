@@ -8,7 +8,7 @@
  * Reuses:
  * - cloneAllComponents / installAllComponents from componentInstallationOrchestrator
  * - the component definitions read from the saved project (`projectResetComponents`)
- * - a storefront reset's datapack removal (`removeProjectSampleDataOutcome`), when a batch ticked it
+ * - a storefront reset's datapack step (`removeAnsweredDatapack`), when a batch or the agent asked
  * - generateComponentEnvFile for .env regeneration
  * - StopDemo command for stopping running demos
  *
@@ -23,10 +23,10 @@ import { numberedSteps } from '@/core/utils/numberedSteps';
 import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
 import type { ReportStage } from '@/core/vscode/withOperationProgress';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
-import { beginSampleDataRemovalCheck, removeProjectSampleDataOutcome } from '@/features/eds/services/reset/edsResetSampleData';
 import {
     datapackStepLine,
     FailedAfterDatapack,
+    removeAnsweredDatapack,
     type AnsweredDatapack,
     type DatapackRemoval,
 } from '@/features/eds/services/reset/resetDatapackStep';
@@ -136,6 +136,8 @@ export interface ProjectResetOutcome {
     success: boolean;
     error?: string;
     meshRedeployed?: boolean;
+    /** What the datapack step did to the store, when it ran (the agent's reset, step-05 S7). */
+    datapackRemoval?: DatapackRemoval;
 }
 
 /**
@@ -212,13 +214,14 @@ async function rebuildComponents(
 
 /**
  * The steps, numbered and reported through `show`. Throws on failure; the caller decides who hears.
- * `beforeRebuild` runs once the components are known and before anything is removed (a batch's
- * datapack step), so a reset that cannot read what to rebuild touches nothing.
+ * `beforeRebuild` runs once the components are known and before anything is removed (the datapack
+ * step), so a reset that cannot read what to rebuild touches nothing; a reason it returns ends the
+ * reset there, before anything is removed.
  */
 async function runResetSteps(
     deps: ProjectResetDeps,
     show: ReportStage,
-    beforeRebuild?: () => Promise<void>,
+    beforeRebuild?: () => Promise<string | undefined>,
 ): Promise<ProjectResetOutcome> {
     const { project, context, logPrefix = '[ProjectReset]', commandManager, authManager } = deps;
     const vscode = await import('vscode');
@@ -233,7 +236,8 @@ async function runResetSteps(
     }
     context.logger.info(`${logPrefix} Found ${loaded.componentDefinitions.size} components to reset`);
 
-    await beforeRebuild?.();
+    const stop = await beforeRebuild?.();
+    if (stop !== undefined) return { success: false, error: stop };
     await rebuildComponents(deps, loaded, report);
 
     // Steps 6–7: check Adobe access, redeploy the API Mesh (if project has mesh)
@@ -270,16 +274,51 @@ async function runResetSteps(
  *
  * It does not stop a running demo — the caller does, by whatever means it has.
  *
+ * The call's Uninstall Datapack runs as a batch's does (step-05 S7), with one difference: changes
+ * nobody answered end the reset before anything is removed, since an agent can ask the user and
+ * call again, where a batch row already had its one chance to ask.
+ *
  * @param deps - the project, its context and the two services the rebuild uses
  * @param report - told each stage as it starts
- * @returns the outcome, with what the mesh leg did
- * @throws whatever a step threw, after the project's status is put back
+ * @param answered - the call's Uninstall Datapack and its answer about the changes
+ * @returns the outcome, with what the mesh leg and the datapack step did
+ * @throws whatever a step threw, after the project's status is put back; after the datapack step,
+ *   as a `FailedAfterDatapack` carrying what it did
  */
 export async function executeProjectReset(
     deps: ProjectResetDeps,
     report: ReportStage,
+    answered?: AnsweredDatapack,
 ): Promise<ProjectResetOutcome> {
-    return whileResetting(deps, () => runResetSteps(deps, report));
+    return whileResetting(deps, async () => {
+        const { outcome, removal } = await resetWithDatapack(deps, report, answered, true);
+        return removal ? { ...outcome, datapackRemoval: removal } : outcome;
+    });
+}
+
+/**
+ * The steps with the datapack step before the rebuild. A failure after it throws as a
+ * `FailedAfterDatapack`, so the caller can still say what became of the store.
+ *
+ * @param stopUnanswered - end the reset when the changes had no answer (the agent's door)
+ */
+async function resetWithDatapack(
+    deps: ProjectResetDeps,
+    report: ReportStage,
+    answered: AnsweredDatapack | undefined,
+    stopUnanswered: boolean,
+): Promise<{ outcome: ProjectResetOutcome; removal?: DatapackRemoval }> {
+    const step: { removal?: DatapackRemoval } = {};
+    const removeFirst = async (): Promise<string | undefined> => {
+        step.removal = await removeAnsweredDatapack(deps.project, deps.context, report, answered);
+        return stopUnanswered && step.removal?.unanswered ? step.removal.kept : undefined;
+    };
+    try {
+        return { outcome: await runResetSteps(deps, report, removeFirst), removal: step.removal };
+    } catch (error) {
+        // The same failure; after a datapack step it carries what the step did to the store.
+        throw step.removal ? new FailedAfterDatapack(error, step.removal) : error;
+    }
 }
 
 /** What a batch row reads: a failure's reason, or what a reset that finished could not do. */
@@ -304,18 +343,6 @@ function asRowOutcome({ success, error }: ProjectResetOutcome, removal: Datapack
 }
 
 /**
- * Uninstall Datapack, as the batch answered it (step-05 S6, owner 2026-11-13, P5-Q3): only when
- * ticked and the project has a pack and a Commerce backend; the changes settled with the save
- * question's answer, given, so nothing is dropped that the SC did not answer for.
- *
- * @returns what the removal did, or undefined when there was none to do
- */
-async function removeAnsweredDatapack(deps: ProjectResetDeps, report: ReportStage, answered?: AnsweredDatapack): Promise<DatapackRemoval | undefined> {
-    if (answered?.removeDatapack !== true || (await beginSampleDataRemovalCheck(deps.project)) !== true) return undefined;
-    return removeProjectSampleDataOutcome(deps.project, deps.context, report, { given: answered.changes });
-}
-
-/**
  * The same reset, answered up front by a batch (the projects list's Reset Selected, owner
  * 2026-11-04): no question, and it reports into the batch's window. A running demo is stopped
  * first, as the single reset stops it: only one demo runs at a time, so it is this one.
@@ -337,15 +364,9 @@ export async function runProjectResetAnswered(
         await vscode.commands.executeCommand('demoBuilder.stopDemo');
     }
     return whileResetting(deps, async () => {
-        const step: { removal?: DatapackRemoval } = {};
-        const removeFirst = async (): Promise<void> => {
-            step.removal = await removeAnsweredDatapack(deps, report, answered);
-        };
-        try {
-            return asRowOutcome(await runResetSteps(deps, report, removeFirst), step.removal);
-        } catch (error) {
-            // The same failure; after a datapack step it carries what the step did to the store.
-            throw step.removal ? new FailedAfterDatapack(error, step.removal) : error;
-        }
+        // Uninstall Datapack as the batch answered it (step-05 S6, P5-Q3); a removal that stops is
+        // said on the row and the reset still runs.
+        const { outcome, removal } = await resetWithDatapack(deps, report, answered, false);
+        return asRowOutcome(outcome, removal);
     });
 }

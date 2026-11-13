@@ -23,11 +23,12 @@
 
 import { z } from 'zod';
 import { type CloudCleanupChoice, cleanUpProjectCloud, resolveCloudCleanup } from './agentProjectCleanup';
+import { CHANGES_DESCRIPTION, changesAnswer, changesNeedAnswer, type DatapackAnswerArgs } from './datapackAnswerArgs';
 import { asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
 import { reportPhase } from '@/core/utils/agentPhaseChannel';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
-import type { AskSaveAsName, SaveAsAnswer } from '@/features/eds/services/reset/edsResetSampleData';
+import type { AskSaveAsName } from '@/features/eds/services/reset/edsResetSampleData';
 import { extractEdsMetadata } from '@/features/eds/services/resourceCleanupHelpers';
 import { type SharedOnline, sharedOnlineOf } from '@/features/eds/services/storefront/sharedRepoProjects';
 import { hasRemovableData, removeDataBeforeDelete } from '@/features/projects-dashboard/services/datapackDataRemoval';
@@ -51,7 +52,7 @@ export function registerDeleteProjectTool(
             needsAuth: false,
             annotations: { readOnlyHint: false, destructiveHint: true },
             description:
-                `Permanently delete a project: its local files, optionally (removeData:true) its datapack's data in Commerce first, which datapackData reports (the user's changes in it are saved into their own pack; when the pack is not theirs it answers code CHANGES_NEED_ANSWER and deletes nothing until changes is keep with saveAs, or drop; a removal that does not finish deletes nothing), and optionally its GitHub repo and DA.live site (which also unpublishes the storefront and removes its product pages; productPages in the result says what happened to them; daLiveSite.publishSummary says whether the pages are gone, checked on the live host, or that it could not tell). When the pages are still live it stops: nothing else is deleted, the project is kept, and stopped says why. Irreversible. Requires confirm:true and confirmName="<project name>".`,
+                `Permanently delete a project: its local files, optionally (removeData:true) its datapack's data in Commerce first, which datapackData reports (the user's changes in it are saved into their own pack; when the pack is not theirs it answers code CHANGES_NEED_ANSWER and deletes nothing until changes is keep with saveAs, or drop; changes:"drop" loses the user's changes in any pack, their own included; a removal that does not finish deletes nothing), and optionally its GitHub repo and DA.live site (which also unpublishes the storefront and removes its product pages; productPages in the result says what happened to them; daLiveSite.publishSummary says whether the pages are gone, checked on the live host, or that it could not tell). When the pages are still live it stops: nothing else is deleted, the project is kept, and stopped says why. Irreversible. Requires confirm:true and confirmName="<project name>".`,
             inputSchema: {
                 name: z.string().describe('Name of the project to delete'),
                 confirm: z.boolean().optional().describe('Must be true to proceed'),
@@ -77,10 +78,7 @@ export function registerDeleteProjectTool(
                     .describe(
                         "Also remove the project's datapack data from its Commerce instance, before anything else (default: false under every cleanupBehavior; refused under localOnly)",
                     ),
-                changes: z
-                    .enum(['keep', 'drop'])
-                    .optional()
-                    .describe("With removeData, when the pack is not the user's: keep saves their changes as a new datapack named by saveAs, drop loses them"),
+                changes: z.enum(['keep', 'drop']).optional().describe(CHANGES_DESCRIPTION),
                 saveAs: z
                     .object({ displayName: z.string().min(1).describe('The name the user gave the new datapack, e.g. My Bodea') })
                     .optional()
@@ -171,36 +169,24 @@ function keepShared(choice: CloudCleanupChoice, shared: SharedOnline): { choice:
     return { choice: out, kept };
 }
 
-/** The call's answer about the user's changes, when the pack is not theirs; none until it gives one. */
-function changesAnswer(args: { changes?: unknown; saveAs?: { displayName?: unknown } } | undefined): SaveAsAnswer {
-    if (args?.changes === 'drop') return 'drop';
-    const name = args?.saveAs?.displayName;
-    return args?.changes === 'keep' && typeof name === 'string' && name.trim() ? { saveAs: name.trim() } : undefined;
-}
-
 /** What removing the data did: reported beside the delete, or why nothing was deleted. */
 type DataOutcome = { datapackData: { removed: boolean; note?: string } } | { stop: Record<string, unknown> };
 
 /** The project's datapack data, removed before anything else, as the button removes it. */
-async function removeDataFirst(ctx: HandlerContext, project: Project, args: Parameters<typeof changesAnswer>[0]): Promise<DataOutcome> {
+async function removeDataFirst(ctx: HandlerContext, project: Project, args: DatapackAnswerArgs | undefined): Promise<DataOutcome> {
     if (!(await hasRemovableData(project))) {
         return { datapackData: { removed: false, note: 'This project has no datapack data Demo Builder installed in a Commerce instance, so there was none to remove.' } };
     }
+    // An answer goes up front, as the window's does (step-05 S1), so a drop reaches the user's own
+    // pack too; with none, the removal asks, and a pack that is not theirs stops the delete.
     let unanswered: string | undefined;
     const askName: AskSaveAsName = (asked) => {
-        const answer = changesAnswer(args);
-        if (answer === undefined) unanswered = asked.sentence ?? "The user changed this datapack's data since it was installed.";
-        return Promise.resolve(answer);
+        unanswered = asked.sentence ?? "The user changed this datapack's data since it was installed.";
+        return Promise.resolve(undefined);
     };
-    const why = await removeDataBeforeDelete(ctx, project, (stage) => reportPhase(stage), askName);
-    if (unanswered !== undefined) {
-        return {
-            stop: {
-                code: 'CHANGES_NEED_ANSWER',
-                error: `${unanswered} Nothing was deleted. Tell the user, then call again with removeData:true and changes:"keep" with saveAs (the name the user gives the new datapack), or changes:"drop" to lose them.`,
-            },
-        };
-    }
+    const answer = changesAnswer(args);
+    const why = await removeDataBeforeDelete(ctx, project, (stage) => reportPhase(stage), answer === undefined ? askName : { given: answer });
+    if (unanswered !== undefined) return { stop: changesNeedAnswer(unanswered, 'deleted') };
     return why ? { stop: { error: why } } : { datapackData: { removed: true } };
 }
 

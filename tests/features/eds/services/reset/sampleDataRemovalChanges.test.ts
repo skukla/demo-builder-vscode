@@ -26,7 +26,7 @@ import { contextForProject, settleChangesBeforeRemoval } from '@/features/data-i
 import { installedByDemoBuilder } from '@/features/data-installer/services/buildDatapackEngine';
 import { removeSampleData } from '@/features/data-installer/services/sampleDataInstall';
 import type { NameMemory } from '@/features/data-installer/services/packNames';
-import { confirmSampleDataRemoval, removeProjectSampleData } from '@/features/eds/services/reset/edsResetSampleData';
+import { confirmSampleDataRemoval, removeProjectSampleData, removeProjectSampleDataOutcome } from '@/features/eds/services/reset/edsResetSampleData';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 
@@ -133,6 +133,25 @@ describe('removeProjectSampleData, answered up front by a batch', () => {
         expect(mockedSettle.mock.calls[0][1]).toStrictEqual(base);
         expect(why).toBe(`${sentence} They were not answered.`);
         expect(mockedRemove).not.toHaveBeenCalled();
+    });
+
+    // step-05 S7: the agent's reset stops on this, so the outcome says it was the missing answer.
+    it('marks the data kept for want of an answer, so a caller can refuse rather than go on', async () => {
+        const sentence = 'You changed 2 things since it was installed.';
+        mockedSettle.mockResolvedValueOnce({ response: { success: false, error: 'Name it.', code: ErrorCode.CHANGES_NEED_ANSWER, data: { sentence } } });
+
+        await expect(removeProjectSampleDataOutcome(project(), context(), jest.fn(), { given: undefined })).resolves.toStrictEqual({
+            kept: `${sentence} They were not answered.`,
+            unanswered: true,
+        });
+    });
+
+    it('CONTROL: a refused answer keeps the data without that mark: it was answered', async () => {
+        mockedSettle.mockResolvedValueOnce({ response: { success: false, error: 'You already have a datapack named My Copy.', code: ErrorCode.CHANGES_NEED_ANSWER } });
+
+        await expect(removeProjectSampleDataOutcome(project(), context(), jest.fn(), { given: { saveAs: 'My Copy' } })).resolves.toStrictEqual({
+            kept: 'You already have a datapack named My Copy.',
+        });
     });
 });
 

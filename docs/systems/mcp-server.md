@@ -567,7 +567,7 @@ its Commerce instance, removed FIRST, through the reset's own removal, so a remo
 finish deletes nothing and `error` says why. The user's changes in it are settled as
 `reset_datapack` settles them: saved into their own pack without asking; when the pack is not
 theirs, the call answers `code: CHANGES_NEED_ANSWER` and deletes nothing until `changes` is `keep`
-with `saveAs`, or `drop`. It is off unless the call asks, `deleteAll` never turns it on (it writes to
+with `saveAs`, or `drop`. `changes: drop` loses the user's changes in any pack, their own included, as the window's Without Saving answer does (step-05 S1). It is off unless the call asks, `deleteAll` never turns it on (it writes to
 a store), and `localOnly` refuses it with a `note`. `datapackData.removed` in the answer says whether
 it went; a project with no datapack Demo Builder installed answers `removed: false` with a `note`.
 Deleting a datapack itself is the library's job (`delete_library_datapack`); a project delete never
@@ -615,6 +615,17 @@ refused a headless project. The headless half refuses a running demo and names
 `stop_demo` rather than stopping it unasked, and asks for the Adobe sign-in only
 when there is a mesh to redeploy. Nothing undoes a reset — it is the return to
 zero — which is why it is consent-gated (`reversibility.ledger.json`).
+
+**Uninstall Datapack on a reset (step-05 S7, 2026-11-13).** `reset_project` takes `removeData`,
+`changes` and `saveAs`, the same arguments `delete_project` takes, and both kinds of reset run the
+Reset window's own datapack step with them (`removeAnsweredDatapack`, the answer passed as given):
+a headless reset removes the data once the components are read and before anything is removed, a
+storefront reset before the storefront reset runs, as the window's does. With no answer, the user's
+changes in their own pack are saved into it; changes in a pack that is not theirs make the call
+answer `code: CHANGES_NEED_ANSWER` with nothing removed and nothing reset, until `changes` is
+`keep` with `saveAs`, or `drop`. `changes: drop` loses the user's changes in any pack, their own included, as the window's Without Saving answer does (step-05 S1). `datapack` in the answer is the window row's line for what happened
+(uninstalled, part of it, or not, with why); a removal that stops does not stop the reset. The
+consent dialog shows the Uninstall Datapack choice under the open project's name.
 
 ### A creation's name, and a creation that fails (2026-10-16)
 
