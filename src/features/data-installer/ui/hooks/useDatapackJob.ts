@@ -130,10 +130,12 @@ export function useDatapackJob(args: DatapackJobArgs): DatapackJob {
     useRestoreCheck(args.id, state, starts.start, dispatch);
     const switching = useJobSwitch(args, checks, starts, dispatch);
     const heldName = switching.heldName;
-    const { result, starting } = useJobResult(args, state, { dry, starts, watch, heldName, update: table.update });
-    // An update's check that found nothing, or failed, ends on its result rather than the summary.
+    const { result, starting } = useJobResult(args, state, { dry, starts, watch, heldName, update: table.update, matches: table.matches });
+    // An update's check that found nothing, or failed, ends on its result rather than the summary; so
+    // does an install of what the store already matches.
     const updateEnds = args.kind === 'update' && (table.update.upToDate || table.update.failure !== null);
-    const settled = target.settled && watch.status.settled && table.settled && checks.changes.settled && !updateEnds;
+    const checkEnds = updateEnds || table.matches;
+    const settled = target.settled && watch.status.settled && table.settled && checks.changes.settled && !checkEnds;
     const noInstance = target.settled && !target.value?.instance;
     useJobPhases(state, dispatch, {
         running: watch.running,

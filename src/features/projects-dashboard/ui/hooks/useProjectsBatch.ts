@@ -16,7 +16,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { deleteAnswers, resetAnswers, saveQuestionOf } from '../batchChoices';
-import { batchSubject, runningTitle } from '../batchWords';
+import { batchSubject, endTitle, runningTitle } from '../batchWords';
 import { useBatchChoices, type BatchChoices } from './useBatchChoices';
 import { useOperationProgress } from '@/core/ui/hooks/useOperationProgress';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
@@ -31,6 +31,7 @@ import type {
     RunProjectsBatchRequest,
 } from '@/types/projectsBatch';
 import type { OperationProgressPayload } from '@/types/webviewPayloads';
+import type { BackgroundOperationRequest } from '@/types/webviewRequests';
 
 /** One project as the run lists it. */
 export interface BatchRunRow {
@@ -214,8 +215,16 @@ export function useProjectsBatch(onClosedAfterRun: () => void): ProjectsBatchCon
             if (progress?.prompt && !hasEnded(progress)) {
                 answer(undefined);
             } else if (!hasEnded(progress)) {
-                const title = runningTitle(batchSubject(view.action, view.rows.map((row) => row.name)));
-                webviewClient.postMessage('backgroundOperation', { id: PROJECTS_BATCH_OPERATION_ID, title });
+                const subject = batchSubject(view.action, view.rows.map((row) => row.name));
+                // The window's own titles: some project not going through ends it as a failure does.
+                const request: BackgroundOperationRequest = {
+                    id: PROJECTS_BATCH_OPERATION_ID,
+                    title: runningTitle(subject),
+                    doneTitle: endTitle(subject, false),
+                    failedTitle: endTitle(subject, true),
+                    warnedTitle: endTitle(subject, true),
+                };
+                webviewClient.postMessage('backgroundOperation', request);
             }
             onClosedAfterRun();
         }

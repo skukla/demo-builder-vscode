@@ -7,7 +7,7 @@
  */
 
 import { jobWords } from '../../datapackWords';
-import { type ResultContent, resolveResult } from '../components/importResult';
+import { type ResultContent, resolveResult, upToDateResult } from '../components/importResult';
 import type { JobState } from '../components/job/datapackJob';
 import type { DataInstallerRequest } from './useDataInstallerRequest';
 import { useJobPickup } from './useJobPickup';
@@ -43,9 +43,9 @@ function updateAnswer(state: JobState, update: UpdateCheck | undefined, name: st
     return update.upToDate ? upToDateResult(name) : undefined;
 }
 
-/** "Luma Is Up to Date": a check that found nothing to do, the small result that closes itself. */
-export function upToDateResult(name: string): ResultContent {
-    return { variant: 'success', title: `${name} Is Up to Date`, finished: true };
+/** An install's check that found the store already matches (owner walk Q8): before Install is pressed. */
+function installAnswer(state: JobState, matches: boolean | undefined, name: string): ResultContent | undefined {
+    return state.kind === 'install' && state.lastAction === null && matches ? upToDateResult(name) : undefined;
 }
 
 /** What the result reads: the last action's request, the job watched, a switch's failed save. */
@@ -59,9 +59,11 @@ export function useJobResult(
         heldName?: string;
         /** Update's check (step-07 U1): nothing left to apply, or why it could not tell. */
         update?: UpdateCheck;
+        /** An install's check found the store already matches the datapack. */
+        matches?: boolean;
     },
 ) {
-    const { dry, starts, watch, heldName, update } = reqs;
+    const { dry, starts, watch, heldName, update, matches } = reqs;
     const { start, runs } = starts;
     // The one write this window makes: the job watched is the one it started, else the one found.
     const wrote = state.lastAction === 'start' || state.lastAction === 'reset';
@@ -80,7 +82,9 @@ export function useJobResult(
             ? { replacing: { name: heldName, dataTypes: args.types } }
             : {};
     const restoring = state.kind === 'restore' && !busy;
-    const answered = restoring ? restoreAnswer(starts, args.displayName) : updateAnswer(state, update, args.displayName);
+    const answered = restoring
+        ? restoreAnswer(starts, args.displayName)
+        : (updateAnswer(state, update, args.displayName) ?? installAnswer(state, matches, args.displayName));
     if (answered !== undefined) return { result: answered, starting: false };
     const result = busy
         ? null

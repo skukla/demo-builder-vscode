@@ -323,8 +323,8 @@ export async function handleRegenerateAiFiles(context: HandlerContext): Promise<
     // cache so the next verify re-spawns from a clean slate.
     clearMcpCache();
 
-    // Ends the run on the shared channel: a modal closes, a backgrounded run
-    // says "— done" (PL-59 R6).
+    // Ends the run on the shared channel: a modal closes, a backgrounded run ends in
+    // its result's words, "AI Files Regenerated" (PL-59 R6; `operationBackgroundNotice`).
     await pushOperationProgress({ id: AI_FILES_OPERATION_ID, state: 'succeeded' });
     return { success: true, skippedFiles, removedFiles };
 }

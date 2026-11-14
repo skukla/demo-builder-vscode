@@ -59,6 +59,7 @@ import { SaveFirstWindow } from '@/core/ui/components/feedback/SaveFirstWindow';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
+import type { BackgroundOperationRequest } from '@/types/webviewRequests';
 
 export interface DatapackJobWindowProps {
     id: DatapackId;
@@ -173,8 +174,15 @@ export function DatapackJobWindow(props: DatapackJobWindowProps): React.ReactEle
     // Closing a job still running, or still starting (a save first included), hands it over.
     const close = (): void => {
         if (job.state.phase === 'run' && (job.running || job.starting)) {
-            const title = jobWords(runningPurpose(job, opened), opened.name).running;
-            webviewClient.postMessage('backgroundOperation', { id: DATAPACK_OPERATION_ID, title });
+            const words = jobWords(runningPurpose(job, opened), opened.name);
+            // Running, then the result's own words: "Bodea Installed", "Couldn't Install Bodea" (rule 21).
+            const request: BackgroundOperationRequest = {
+                id: DATAPACK_OPERATION_ID,
+                title: words.running,
+                doneTitle: words.done,
+                failedTitle: words.failed,
+            };
+            webviewClient.postMessage('backgroundOperation', request);
         }
         onClose();
     };

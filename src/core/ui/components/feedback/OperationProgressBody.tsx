@@ -22,7 +22,7 @@ import { LeadText } from '@/core/ui/components/ui/LeadText';
 import type { ModalStatus } from '@/core/ui/components/ui/Modal';
 import { useRunClock } from '@/core/ui/hooks/useRunClock';
 import { cn } from '@/core/ui/utils/classNames';
-import { endsSmall } from '@/core/ui/utils/runEnding';
+import { endStatus, endsSmall, type RunEnding } from '@/core/ui/utils/runEnding';
 import { stageLine } from '@/core/utils/stageLine';
 import type { OperationChange, OperationPrompt, OperationProgressPayload, OperationRow } from '@/types/webviewPayloads';
 
@@ -118,8 +118,16 @@ function RunningRows({ rows, startedAt }: { rows: OperationRow[]; startedAt?: nu
  */
 export function keepsRows(progress?: OperationProgressPayload | null): boolean {
     // A step's nested rows count as its own: a problem on a data type under a step keeps them too.
-    const rows = (progress?.rows ?? []).flatMap((row) => [row, ...(row.types ?? [])]);
-    return rows.length > 0 && !endsSmall({ succeeded: true, warning: progress?.warning, rows });
+    return (progress?.rows ?? []).length > 0 && !endsSmall({ succeeded: true, ...progressEnding(progress) });
+}
+
+/**
+ * A progress payload as the shared ending rules read it: its warning, and its rows, each with its
+ * nested rows. Every row's problem is one (Commerce refused, a part that failed); the run's note,
+ * details and changes are things to know, which the rows do not carry.
+ */
+export function progressEnding(progress?: OperationProgressPayload | null): Pick<RunEnding, 'warning' | 'rows'> {
+    return { warning: progress?.warning, rows: progress?.rows ?? [] };
 }
 
 /**
@@ -206,7 +214,8 @@ export interface ProgressFrame {
 
 /**
  * The progress window's title for where the run stands: the run's own title while it works, the
- * outcome when it ends (green, amber when it succeeded with a warning, red when it failed), and a
+ * outcome when it ends (green, amber when it succeeded with a warning or a row's problem by the one
+ * amber rule, `endStatus`, red when it failed), and a
  * question with buttons as its own heading with an amber icon. A question with fields sits under
  * the run's title, as its form does.
  */
@@ -217,11 +226,12 @@ export function progressFrame(a: {
     prompt?: OperationPrompt;
     failed: boolean;
     succeeded: boolean;
-    warned: boolean;
+    /** How it ended, for the colour (`endStatus`): its warning and its rows (`progressEnding`). */
+    ending: Pick<RunEnding, 'warning' | 'rows'>;
 }): ProgressFrame {
     if (a.prompt) return questionFrame(a.prompt, a.title);
     if (a.failed) return { title: a.failureTitle, status: 'error' };
-    if (a.succeeded) return { title: a.successTitle, status: a.warned ? 'warning' : 'success' };
+    if (a.succeeded) return { title: a.successTitle, status: endStatus({ succeeded: true, ...a.ending }) };
     return { title: a.title };
 }
 

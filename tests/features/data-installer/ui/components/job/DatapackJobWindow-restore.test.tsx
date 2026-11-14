@@ -217,7 +217,15 @@ describe('the run', () => {
         await press(button('Run in Background'));
 
         expect(mockPostMessage.mock.calls).toStrictEqual([
-            ['backgroundOperation', { id: DATAPACK_OPERATION_ID, title: 'Restoring My Luma' }],
+            [
+                'backgroundOperation',
+                {
+                    id: DATAPACK_OPERATION_ID,
+                    title: 'Restoring My Luma',
+                    doneTitle: 'My Luma Restored',
+                    failedTitle: "Couldn't Restore My Luma",
+                },
+            ],
         ]);
         expect(onClose).toHaveBeenCalledTimes(1);
     });

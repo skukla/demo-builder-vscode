@@ -32,11 +32,17 @@
  */
 
 import React, { useCallback, useRef } from 'react';
-import { keepsRows, OperationProgressBody, progressFrame } from '@/core/ui/components/feedback/OperationProgressBody';
+import {
+    keepsRows,
+    OperationProgressBody,
+    progressEnding,
+    progressFrame,
+} from '@/core/ui/components/feedback/OperationProgressBody';
 import { ProgressDialog, type ProgressAction } from '@/core/ui/components/ui/ProgressDialog';
 import { useOperationProgress } from '@/core/ui/hooks/useOperationProgress';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { OperationOffer, OperationProgressPayload, OperationPrompt } from '@/types/webviewPayloads';
+import type { BackgroundOperationRequest } from '@/types/webviewRequests';
 
 /**
  * A success that says something beyond its title (a warning, a note, what it changed, rows it keeps
@@ -237,10 +243,14 @@ export function OperationProgressModal({
         if (prompt) {
             answer(undefined);
         } else if (operation && !failed && !succeeded) {
-            webviewClient.postMessage('backgroundOperation', {
+            const request: BackgroundOperationRequest = {
                 id: operation.id,
                 title: operation.subject ? `${operation.title}: ${operation.subject}` : operation.title,
-            });
+                // The notification ends in the window's own result titles (rule 21).
+                doneTitle: operation.successTitle,
+                failedTitle: operation.failureTitle,
+            };
+            webviewClient.postMessage('backgroundOperation', request);
         }
         onClose();
     }, [operation, failed, succeeded, prompt, answer, onClose]);
@@ -256,7 +266,7 @@ export function OperationProgressModal({
         prompt,
         failed,
         succeeded,
-        warned: Boolean(warning),
+        ending: progressEnding(progress),
     });
 
     return (

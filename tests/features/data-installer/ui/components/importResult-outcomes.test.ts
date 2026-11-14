@@ -34,7 +34,9 @@ const done = (...kinds: string[]): Record<string, DataTypeStatus> =>
     Object.fromEntries(kinds.map((kind) => [kind, 'success' as DataTypeStatus]));
 
 describe('an import that finished cleanly (walk F134)', () => {
-    it('is the small result: the pack Imported, and how long search takes, nothing else', () => {
+    // Owner walk Q3 (2026-11-13): the search-delay line goes from the clean result, so it is the title
+    // alone and closes itself. The line stays for an ending that keeps its steps, and for agents.
+    it('is the small result: the pack Installed, nothing else, not even how long search takes', () => {
         const record = {
             outcome: 'success' as const,
             perType: done('categories', 'products'),
@@ -42,18 +44,17 @@ describe('an import that finished cleanly (walk F134)', () => {
             processingTimeMs: 72_000,
         };
 
-        // No `run` (so no steps), no lead, no "Took …".
+        // No `run` (so no steps), no lead, no "Took …", no line: the title alone, which closes itself.
         expect(outcomeOf(record)).toEqual({
             variant: 'success',
             title: `${PACK_NAME} Installed`,
             finished: true,
-            message: SEARCH,
         });
     });
 
     // Review, 2026-11-10: only a problem keeps the steps. The engine's lines for the SC go in the small
-    // result's body, before the search line, a line each.
-    it('is the small result with the engine\'s lines in its body, before the search line', () => {
+    // result's body, a line each, and keep it open to be read (owner walk Q3).
+    it('is the small result with the engine\'s lines in its body, and no search line', () => {
         const result = outcomeOf({
             outcome: 'success',
             perType: done('categories', 'products'),
@@ -67,7 +68,7 @@ describe('an import that finished cleanly (walk F134)', () => {
             variant: 'success',
             title: `${PACK_NAME} Installed`,
             finished: true,
-            details: ['Kept 2 things you had changed in the Admin.', SEARCH],
+            details: ['Kept 2 things you had changed in the Admin.'],
         });
     });
 
@@ -82,7 +83,8 @@ describe('an import that finished cleanly (walk F134)', () => {
             searchDelay: SEARCH,
         });
 
-        expect(result?.message).toBe(SEARCH);
+        expect(result?.message).toBeUndefined();
+        expect(result?.details).toBeUndefined();
     });
 
     it('is the title alone when there is nothing left to know', () => {

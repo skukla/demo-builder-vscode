@@ -9,15 +9,27 @@
  * Each window now hands this its rows. `tests/core/ui/utils/runEnding.test.tsx` drives all
  * four with the same cases.
  *
+ * The same rows decide the colour of the end (`endStatus`; owner walk Q9 and Q6, 2026-11-13): amber
+ * on a warning or a row's problem, green with notes alone. `tests/core/ui/utils/runEnding-status.test.ts`
+ * drives the four windows that colour an end with the same five cases.
+ *
  * @module core/ui/utils/runEnding
  */
 
 /** One part of a run, as far as its ending is concerned. */
 export interface EndingRow {
-    /** What went wrong on it: a failure, a skip, a part that did not finish. Present and not false. */
+    /**
+     * What went wrong on it: a failure, a skip, a part that did not finish, rows Commerce refused, or
+     * something a reset should have done and did not. Present and not false. Turns the end amber.
+     */
     problem?: boolean | { text: string };
-    /** Something left to read under it. */
+    /**
+     * Something left to read under it that is not wrong (edits kept, rows already there, content kept
+     * on purpose, "Saved to My Luma."): it keeps the window open, and the end stays green.
+     */
     note?: string;
+    /** Rows nested under it, small (a step's data types): they count as its own. */
+    types?: readonly EndingRow[];
 }
 
 /** A run as it ended. */
@@ -35,5 +47,26 @@ export interface RunEnding {
  * @returns true when the window should leave the rows for the small result
  */
 export function endsSmall(run: RunEnding): boolean {
-    return run.succeeded && !run.warning && run.rows.every((row) => !row.problem && !row.note);
+    return run.succeeded && !run.warning && everyRow(run.rows).every((row) => !row.problem && !row.note);
+}
+
+/** How a run's end is coloured: the title's status icon. */
+export type EndStatus = 'success' | 'warning' | 'error';
+
+/**
+ * The one amber rule: red when the run failed; amber when it has a warning or any row, a nested one
+ * included, has a problem; green otherwise, notes and all.
+ *
+ * @param run - how the run ended, with its rows
+ * @returns the status the window's title shows
+ */
+export function endStatus(run: RunEnding): EndStatus {
+    if (!run.succeeded) return 'error';
+    const problem = everyRow(run.rows).some((row) => Boolean(row.problem));
+    return run.warning || problem ? 'warning' : 'success';
+}
+
+/** The rows and every row nested under them. */
+function everyRow(rows: readonly EndingRow[]): EndingRow[] {
+    return rows.flatMap((row) => [row, ...everyRow(row.types ?? [])]);
 }

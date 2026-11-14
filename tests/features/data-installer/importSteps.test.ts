@@ -202,6 +202,33 @@ describe('Uninstall’s lines', () => {
         expect(install(steps).line).toBe('Not run');
         expect(verify(steps).line).toBe('Not run');
     });
+
+    // Owner walk Q10, words 2026-11-14 ("Back on track"): a switch that stopped after the old datapack
+    // came out says so on that row, and only that: Retry installs the new datapack alone (rules 5, 6).
+    it('says the old datapack was uninstalled when the switch stopped after it came out', () => {
+        const steps = importSteps(
+            source({
+                installing: { name: 'Bodea', version: 'main' },
+                replaces: 'My Luma',
+                replacing: 'success',
+                running: false,
+                perType: { categories: 'success', products: 'error' },
+                stoppedAt: 'products',
+                reason: 'Commerce did not respond.',
+            })
+        );
+
+        expect(remove(steps)).toEqual({ kind: REPLACE_STOP, label: 'Uninstall My Luma', status: 'success', line: 'My Luma was uninstalled.' });
+        expect(install(steps).status).toBe('error');
+    });
+
+    it('CONTROL: keeps the bare Uninstalled while the switch goes on, and when it ended cleanly', () => {
+        const running = source({ ...SAME_PACK, replacing: 'success', perType: { products: 'processing' } });
+        const clean = source({ ...SAME_PACK, replacing: 'success', running: false, perType: { products: 'success', categories: 'success' } });
+
+        expect(remove(importSteps(running)).line).toBe('Uninstalled');
+        expect(remove(importSteps(clean)).line).toBe('Uninstalled');
+    });
 });
 
 describe('Install’s lines', () => {

@@ -247,9 +247,19 @@ describe('a restore', () => {
     it.each<[string, JobState]>([
         ['an install check', at('check')],
         ['an uninstall check', at('check', { kind: 'uninstall' })],
-    ])('asks nothing and ends nothing from %s', (_name, from) => {
+    ])('asks nothing and ends on no problem from %s', (_name, from) => {
         expect(datapackJob(from, { type: 'asks' })).toBe(from);
+        expect(datapackJob(from, { type: 'ended', clean: false })).toBe(from);
+    });
+
+    it('ends nothing clean from an uninstall check', () => {
+        const from = at('check', { kind: 'uninstall' });
         expect(datapackJob(from, { type: 'ended', clean: true })).toBe(from);
+    });
+
+    // Owner walk Q8 (2026-11-13): installing what the store already matches ends at its check.
+    it('ends an install check on the up-to-date result', () => {
+        expect(datapackJob(at('check'), { type: 'ended', clean: true })).toEqual(at('done'));
     });
 });
 

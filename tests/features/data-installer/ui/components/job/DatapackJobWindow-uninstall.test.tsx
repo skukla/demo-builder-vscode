@@ -217,7 +217,15 @@ describe('Uninstall with nothing changed', () => {
         await press(button('Run in Background'));
 
         expect(mockPostMessage.mock.calls).toStrictEqual([
-            ['backgroundOperation', { id: DATAPACK_OPERATION_ID, title: 'Uninstalling My Luma' }],
+            [
+                'backgroundOperation',
+                {
+                    id: DATAPACK_OPERATION_ID,
+                    title: 'Uninstalling My Luma',
+                    doneTitle: 'My Luma Uninstalled',
+                    failedTitle: "Couldn't Uninstall My Luma",
+                },
+            ],
         ]);
         expect(onClose).toHaveBeenCalledTimes(1);
     });
@@ -394,7 +402,12 @@ describe('Save Your Changes First?', () => {
 
         expect(mockPostMessage.mock.calls).toContainEqual([
             'backgroundOperation',
-            { id: DATAPACK_OPERATION_ID, title: 'Uninstalling My Luma' },
+            {
+                id: DATAPACK_OPERATION_ID,
+                title: 'Uninstalling My Luma',
+                doneTitle: 'My Luma Uninstalled',
+                failedTitle: "Couldn't Uninstall My Luma",
+            },
         ]);
         expect(onClose).toHaveBeenCalledTimes(1);
     });

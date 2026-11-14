@@ -36,7 +36,7 @@ import { SaveFirstWindow } from '@/core/ui/components/feedback/SaveFirstWindow';
 import type { WaitLines } from '@/core/ui/components/feedback/StageWait';
 import { Modal, type ActionButton, type ModalStatus } from '@/core/ui/components/ui/Modal';
 import { StepsWindow } from '@/core/ui/components/ui/StepsDialog';
-import { endsSmall } from '@/core/ui/utils/runEnding';
+import { endStatus, endsSmall } from '@/core/ui/utils/runEnding';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { WAIT_STAGES } from '@/core/utils/waitStages';
 import type { SaveQuestion } from '@/features/data-installer/saveAsName';
@@ -104,14 +104,26 @@ function titleOf(controls: ProjectsBatchControls): string {
     return askingOf(controls)?.title ?? runningTitle(subject);
 }
 
+/**
+ * How an ended run is coloured, by the one amber rule (`endStatus`): amber on the run's warning or a
+ * project that did not finish what it should have (failed, or done with warnings: the code not
+ * published, the mesh not redeployed); green with notes alone ("Saved to My Luma.", content kept on
+ * purpose). Undefined while it runs.
+ */
+export function runStatus(controls: Pick<ProjectsBatchControls, 'view' | 'progress' | 'statuses'>): ModalStatus | undefined {
+    const { view, progress, statuses } = controls;
+    if (view.phase !== 'running' || (progress?.state !== 'succeeded' && progress?.state !== 'failed')) return undefined;
+    const rows = view.rows.map((row) => endingRowOf(statuses[row.path]));
+    return endStatus({ succeeded: progress.state === 'succeeded', warning: progress.warning, rows });
+}
+
 function statusOf(controls: ProjectsBatchControls): ModalStatus | undefined {
-    const { view, progress } = controls;
-    if (view.phase === 'unread' || (view.phase === 'running' && progress?.state === 'failed')) return 'error';
+    const { view } = controls;
+    if (view.phase === 'unread') return 'error';
     if (askingOf(controls)?.title) return 'warning';
     // Both confirms are dangerous: amber, as the dialog rules have it.
     if (view.phase === 'asking') return 'warning';
-    if (view.phase !== 'running' || progress?.state !== 'succeeded') return undefined;
-    return progress.warning ? 'warning' : 'success';
+    return runStatus(controls);
 }
 
 /** The run's dismiss: into the background while it goes, Close once it has ended. */

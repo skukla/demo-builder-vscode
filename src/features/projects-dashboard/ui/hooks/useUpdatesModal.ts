@@ -37,9 +37,14 @@ import type {
     UpdateRowStatus,
 } from '@/types/pendingUpdates';
 import type { OperationProgressPayload } from '@/types/webviewPayloads';
+import type { BackgroundOperationRequest } from '@/types/webviewRequests';
 
 /** The run's title: the modal's while it runs, and the notification's on handover. */
 export const APPLYING_TITLE = 'Applying Updates';
+/** How the run ends, in the window's titles and the notification's when it ran in the background. */
+export const APPLIED_TITLE = 'Updates Applied';
+export const NOT_APPLIED_TITLE = "Couldn't Apply the Updates";
+export const SOME_NOT_APPLIED_TITLE = "Some updates didn't apply";
 
 /** What the modal shows. */
 export type UpdatesView =
@@ -194,7 +199,14 @@ export function useUpdatesModal(onApplied: () => void): UpdatesModalControls {
         if (applying && progress?.prompt && !hasEnded(progress)) {
             answer(undefined);
         } else if (applying && !hasEnded(progress)) {
-            webviewClient.postMessage('backgroundOperation', { id: UPDATES_OPERATION_ID, title: APPLYING_TITLE });
+            const request: BackgroundOperationRequest = {
+                id: UPDATES_OPERATION_ID,
+                title: APPLYING_TITLE,
+                doneTitle: APPLIED_TITLE,
+                failedTitle: NOT_APPLIED_TITLE,
+                warnedTitle: SOME_NOT_APPLIED_TITLE,
+            };
+            webviewClient.postMessage('backgroundOperation', request);
         }
         setView(CLOSED);
     }, [applying, progress, answer]);

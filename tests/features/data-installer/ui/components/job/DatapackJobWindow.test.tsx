@@ -24,6 +24,7 @@ import {
     settle,
     PROJECT_SCOPE,
 } from './DatapackJobWindow.testUtils';
+import { MATCHING_PREVIEW } from '../../../../../helpers/changePreviewFixtures';
 import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { windowRoute } from '@/features/data-installer/ui/hooks/useImportWindow';
@@ -74,6 +75,22 @@ describe('the check', () => {
             version: 'main',
             source: 'library',
         });
+    });
+});
+
+// Owner walk Q8 (2026-11-13): installing what the store already matches has nothing to do.
+describe('a datapack the store already matches', () => {
+    it('ends at "Bodea Is Up to Date", which closes itself, with no Install and nothing started', async () => {
+        answer({ preview: { success: true, data: MATCHING_PREVIEW } });
+        const { onClose } = await openOnSummary();
+
+        expect(await heading('Bodea Is Up to Date')).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Install' })).not.toBeInTheDocument();
+        expect(sends('start-datapack-import')).toBe(0);
+        await act(async () => {
+            jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE);
+        });
+        expect(onClose).toHaveBeenCalledTimes(1);
     });
 });
 
@@ -190,7 +207,16 @@ describe('Install', () => {
         expect(screen.queryByRole('button', { name: 'Close' })).not.toBeInTheDocument();
         await press(button('Run in Background'));
         expect(mockPostMessage.mock.calls).toStrictEqual([
-            ['backgroundOperation', { id: DATAPACK_OPERATION_ID, title: 'Installing Bodea' }],
+            // Running, then the result's own words (rule 21).
+            [
+                'backgroundOperation',
+                {
+                    id: DATAPACK_OPERATION_ID,
+                    title: 'Installing Bodea',
+                    doneTitle: 'Bodea Installed',
+                    failedTitle: "Couldn't Install Bodea",
+                },
+            ],
         ]);
         expect(onClose).toHaveBeenCalledTimes(1);
     });

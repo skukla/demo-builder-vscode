@@ -17,6 +17,7 @@
  * the demo uses (S8), whose check IS its start (`restore-datapack` without `confirm` starts when
  * nothing of the SC's would be lost), so it is keyed on the start from the moment it opens, and the
  * check ends on a result (up to date, refused), the question "Restore My Luma?", or the run; and
+ * an install's check ends on "Bodea Is Up to Date" when the store already matches (owner walk Q8);
  * `update` (step-07 U1, J9-2), from its check (`update-datapack` without `confirm`), which ends on
  * the up-to-date result or the summary of what changed, its types ticked, with Review Records and no
  * Dry Run; its restore's question may go to the save question (J9-7: Original over unsaved edits); and
@@ -136,13 +137,19 @@ const RESTORE_ONLY: ReadonlyArray<JobEvent['type']> = ['asks'];
 /** What a restore never moves on: it has no summary, and no Retry or Back after a refusal. */
 const NOT_RESTORE: ReadonlyArray<JobEvent['type']> = ['checked', 'no-instance', 'back'];
 
+/** Whether a kind's check may end on a result: an update's either way, an install's only clean. */
+function endsCheck(kind: JobKind, clean: boolean): boolean {
+    return kind === 'update' || (kind === 'install' && clean);
+}
+
 /** Whether the job's kind takes the event: what is one kind's alone moves no other. */
 function kindTakes(state: JobState, event: JobEvent): boolean {
     const { kind, phase } = state;
     if (kind === 'update' && NOT_UPDATE.includes(event.type)) return false;
     if (kind !== 'restore') {
-        // An update's check may end on its result: nothing left to apply (J9-4).
-        const endsAtCheck = event.type === 'ended' && phase === 'check' && kind !== 'update';
+        // An update's check may end on its result: nothing left to apply (J9-4); an install's only on
+        // the up-to-date result, when the store already matches (owner walk Q8).
+        const endsAtCheck = event.type === 'ended' && phase === 'check' && !endsCheck(kind, event.clean);
         return !RESTORE_ONLY.includes(event.type) && !endsAtCheck;
     }
     if (NOT_RESTORE.includes(event.type)) return false;

@@ -291,6 +291,8 @@ describe('ProjectsBatchModal: the run', () => {
 
     it('ends as its title says, with its icon, and Close refreshes the list', async () => {
         const { user, onClosed } = await running();
+        // Every project through: a row never told would be one that did not happen, amber (I3).
+        for (const path of ['/p/a', '/p/b', '/p/c']) await push('projectsBatchRow', { path, state: 'done' });
         await push('operationProgress', { id: ID, state: 'succeeded' });
 
         const dialog = screen.getByRole('dialog', { name: 'Projects Deleted' });
@@ -394,7 +396,13 @@ describe('ProjectsBatchModal: the run', () => {
 
         await user.click(screen.getByRole('button', { name: 'Run in Background' }));
 
-        expect(mockPostMessage).toHaveBeenCalledWith('backgroundOperation', { id: ID, title: 'Deleting Projects' });
+        expect(mockPostMessage).toHaveBeenCalledWith('backgroundOperation', {
+            id: ID,
+            title: 'Deleting Projects',
+            doneTitle: 'Projects Deleted',
+            failedTitle: "Couldn't Delete Projects",
+            warnedTitle: "Couldn't Delete Projects",
+        });
         expect(onClosed).toHaveBeenCalledTimes(1);
         expect(screen.queryByRole('dialog')).toBeNull();
     });
@@ -472,7 +480,13 @@ describe('ProjectsBatchModal: one project, its words by name', () => {
 
             await user.click(screen.getByRole('button', { name: 'Run in Background' }));
 
-            expect(mockPostMessage).toHaveBeenCalledWith('backgroundOperation', { id: ID, title: words.running });
+            expect(mockPostMessage).toHaveBeenCalledWith('backgroundOperation', {
+                id: ID,
+                title: words.running,
+                doneTitle: words.done,
+                failedTitle: words.failed,
+                warnedTitle: words.failed,
+            });
         });
     });
 });

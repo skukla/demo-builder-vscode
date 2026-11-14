@@ -15,6 +15,7 @@ import { useCallback, useEffect, useMemo } from 'react';
 import type { DatapackRemovalScope } from '../../removalChanges';
 import type { ChangePreview } from '../../services/demoBuilderEngine/storeChanges';
 import { libraryField } from '../components/importModalJob';
+import { isUpToDate } from '../components/importResult';
 import type { JobKind } from '../components/job/datapackJob';
 import { countedRows, installRows, type TypeRow } from '../components/job/installRows';
 import { updateRows } from '../components/job/updateRows';
@@ -149,7 +150,9 @@ function useTableRead(args: JobReadsArgs, pack: object) {
         if (kind === 'update') return updateRows(changes);
         return kinds ? installRows(kinds) : NO_ROWS;
     }, [kind, kinds, recorded, changes]);
-    return { settled: read.settled, failed: read.failure !== null, rows, update: update.answer };
+    // An install of what the store already matches has nothing to do (owner walk Q8).
+    const matches = kind === 'install' && preview.value !== null && isUpToDate(preview.value);
+    return { settled: read.settled, failed: read.failure !== null, rows, update: update.answer, matches };
 }
 
 /** The check's reads: the target, the type table's read, and the SC's changes. */

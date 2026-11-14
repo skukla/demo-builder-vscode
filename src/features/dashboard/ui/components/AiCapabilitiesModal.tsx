@@ -35,6 +35,10 @@ import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { AI_FILES_OPERATION_ID } from '@/core/utils/operationIds';
 import { WAIT_STAGES } from '@/core/utils/waitStages';
 import type { McpInventoryEntry, SkillInventoryEntry } from '@/types/ai';
+import type { BackgroundOperationRequest } from '@/types/webviewRequests';
+
+/** A regenerate that failed: the window's title, and the notification's when it ran in the background. */
+const REGENERATE_FAILED_TITLE = "Couldn't Regenerate AI Files";
 
 /**
  * Live regenerate-step shape, mirrored from the wizard's `creationProgress`
@@ -148,10 +152,13 @@ export function AiCapabilitiesModal({
     // every progress modal offers (PL-59 R8). Nothing is cancelled.
     const close = (): void => {
         if (isBusy) {
-            webviewClient.postMessage('backgroundOperation', {
+            const request: BackgroundOperationRequest = {
                 id: AI_FILES_OPERATION_ID,
                 title: 'Regenerating AI Files',
-            });
+                doneTitle: 'AI Files Regenerated',
+                failedTitle: REGENERATE_FAILED_TITLE,
+            };
+            webviewClient.postMessage('backgroundOperation', request);
         }
         onClose();
     };
@@ -249,7 +256,7 @@ export function AiCapabilitiesModal({
 
     return (
         <StepsWindow
-            title={regenFailed ? "Couldn't Regenerate AI Files" : 'AI Capabilities'}
+            title={regenFailed ? REGENERATE_FAILED_TITLE : 'AI Capabilities'}
             status={regenFailed ? 'error' : undefined}
             waiting={waitOf(isBusy, isLoading, progress)}
             ready={!isLoading}

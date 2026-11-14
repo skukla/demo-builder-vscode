@@ -305,6 +305,8 @@ describe('the progress modal', () => {
         expect(getClient().postMessage).toHaveBeenCalledWith('backgroundOperation', {
             id: 'custom-app',
             title: 'Deploying custom-app',
+            doneTitle: 'custom-app Deployed',
+            failedTitle: "Couldn't Deploy custom-app",
         });
     });
 

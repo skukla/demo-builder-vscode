@@ -491,7 +491,8 @@ describe('UpdatesModal', () => {
             render(<UpdatesModal controls={ended(1)} />);
 
             expect(screen.getByText('1 update pending')).toHaveClass('work-row-note');
-            expect(screen.getByRole('dialog', { name: 'Updates Applied' })).toBeInTheDocument();
+            // The second update was never told done: one that did not apply, amber by the one rule (I3).
+            expect(screen.getByRole('dialog', { name: "Some updates didn't apply" })).toHaveAttribute('data-status', 'warning');
         });
 
         it('offers only Close when nothing the SC left is waiting', () => {

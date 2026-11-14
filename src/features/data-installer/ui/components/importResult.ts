@@ -13,10 +13,11 @@
  * @module features/data-installer/ui/components/importResult
  */
 
+import type { ChangePreview } from '../../services/demoBuilderEngine/storeChanges';
 import { FINISHING_STOP, type ImportJobRecord, type KeptRootStep, SAVE_STOP } from '../../types';
 import type { DataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import type { ModalStatus } from '@/core/ui/components/ui/Modal';
-import { endsSmall, type RunEnding } from '@/core/ui/utils/runEnding';
+import { endStatus, endsSmall, type RunEnding } from '@/core/ui/utils/runEnding';
 import { jobPurpose, jobWords } from '@/features/data-installer/datapackWords';
 import { ErrorCode } from '@/types/errorCodes';
 
@@ -73,6 +74,24 @@ const RESULT_STATUS: Record<ResultContent['variant'], ModalStatus | undefined> =
 /** The icon before a result's title. */
 export function resultStatus(result: ResultContent): ModalStatus | undefined {
     return RESULT_STATUS[result.variant];
+}
+
+/**
+ * "Bodea Is Up to Date": a check that found nothing to do, the small result that closes itself. One
+ * result for Restore, Update and an install of what the store already matches (owner walk Q8).
+ */
+export function upToDateResult(name: string): ResultContent {
+    return { variant: 'success', title: `${name} Is Up to Date`, finished: true };
+}
+
+/**
+ * Whether installing a pack would do nothing: Demo Builder installed it here (so its record is
+ * already written), and installing again adds, updates, removes and keeps nothing, settings included.
+ * Rows the store already had that the install leaves as they are change nothing.
+ */
+export function isUpToDate(preview: ChangePreview): boolean {
+    if (!preview.installed || (preview.settings?.changes.length ?? 0) > 0) return false;
+    return preview.kinds.every((kind) => kind.add.count + kind.update.count + kind.remove.count + kind.keep.count === 0);
 }
 
 /** Which operation, in the words each place needs. */
@@ -188,30 +207,30 @@ function ranOnRows(record: ImportJobRecord): boolean {
 
 /**
  * What is left to know after a clean import: the engine's lines for the SC (what it kept of theirs, a
- * step left in the Admin), then how long search takes. Without engine lines it is one sentence; with
- * them, a line each (review, 2026-11-10). A save made first is not repeated: its own step said
- * where the changes went (Phase 2, owner 2026-11-12; rule 3, say a fact once).
+ * step left in the Admin), a line each (review, 2026-11-10), which keep the window open to be read.
+ * How long search takes is not one of them: a clean install is its title alone and closes itself
+ * (owner walk Q3, 2026-11-13); the line stays for an ending on its steps (`runResult`) and for agents
+ * (the record's note). A save made first is not repeated: its own step said where the changes went
+ * (Phase 2, owner 2026-11-12; rule 3, say a fact once).
  */
-function leftToKnow(record: ImportJobRecord): Pick<ResultContent, 'message' | 'details'> {
+function leftToKnow(record: ImportJobRecord): Pick<ResultContent, 'details'> {
     const scLines = record.scLines ?? [];
-    const lines = [...scLines, record.searchDelay].filter(
-        (line): line is string => Boolean(line),
-    );
-    if (lines.length === 0) return {};
-    return scLines.length > 0 ? { details: lines } : { message: lines.join(' ') };
+    return scLines.length > 0 ? { details: scLines } : {};
 }
 
 /**
- * The import as the shared ending rule reads it: a data type that failed is a row's problem, a row's
- * note is a note, and a check that differs is the run's warning.
+ * The import as the shared ending rules read it: a data type that failed is a row's problem, and so is
+ * a row's note, which is the rows Commerce refused (`rowNotesOf`); a check that differs is the run's
+ * warning. What it kept of the SC's is not here: those lines are the small result's to read, green
+ * (`leftToKnow`).
  */
 function endingOf(record: ImportJobRecord, ranToEnd: boolean): RunEnding {
     const failed = Object.values(record.perType).map((state) => ({ problem: state === 'error' }));
-    const notes = Object.values(record.rowNotes ?? {}).map((note) => ({ note }));
+    const refused = Object.values(record.rowNotes ?? {}).map((note) => ({ problem: { text: note } }));
     return {
         succeeded: ranToEnd,
         warning: record.check !== undefined && record.check.verdict !== 'matches',
-        rows: [...failed, ...notes],
+        rows: [...failed, ...refused],
     };
 }
 
@@ -233,9 +252,11 @@ function runResult(record: ImportJobRecord, name: string, retries: number): Resu
         return { variant: 'error', title: words.failed, run: record, action: retry ? 'retry' : 'fix', ...took };
     }
     const title = words.done;
-    if (endsSmall(endingOf(record, ranToEnd))) return { variant: 'success', title, finished: true, ...leftToKnow(record) };
+    const ending = endingOf(record, ranToEnd);
+    if (endsSmall(ending)) return { variant: 'success', title, finished: true, ...leftToKnow(record) };
     const lead = record.searchDelay ? { lead: record.searchDelay } : {};
-    return { variant: 'warning', title, run: record, finished: true, action: 'fix', ...lead, ...took };
+    // Coloured by the one amber rule (`endStatus`), as every run window's end is.
+    return { variant: endStatus(ending), title, run: record, finished: true, action: 'fix', ...lead, ...took };
 }
 
 /**

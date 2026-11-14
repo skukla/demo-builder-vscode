@@ -215,9 +215,12 @@ it('still offers Run in Background when nothing is being asked', async () => {
 
     await user().click(screen.getByRole('button', { name: 'Run in Background' }));
 
+    // It ends in the window's own result titles (rule 21).
     expect(mockPostMessage).toHaveBeenCalledWith('backgroundOperation', {
         id: OPERATION.id,
         title: OPERATION.title,
+        doneTitle: 'Bodea Republished',
+        failedTitle: "Couldn't Republish Bodea",
     });
 });
 
@@ -242,6 +245,8 @@ describe('an operation with a subject', () => {
         expect(mockPostMessage).toHaveBeenCalledWith('backgroundOperation', {
             id: OPERATION.id,
             title: 'Changing Destination: Kukla Test App 2, Production',
+            doneTitle: 'Bodea Republished',
+            failedTitle: "Couldn't Republish Bodea",
         });
     });
 });

@@ -75,9 +75,11 @@ const runReset: RunReset = async (context, project, answer, report) => {
             if (result.datapackRemoval) under.push(datapackStepLine(result.datapackRemoval));
             return { success: false, ...(result.error ? { error: result.error } : {}), ...(under.length > 0 ? { warnings: under } : {}) };
         }
-        const warnings = resetCaveats(result);
-        // Where the changes went first, when the SC's own pack took them (owner, 2026-11-14).
-        const note = savedIntoLine(result.datapackRemoval);
+        // What it should have done and did not is a warning, amber; content kept on purpose is not
+        // (owner walk Q6, plan step-07 I3): it is the row's note, after where the changes went first
+        // when the SC's own pack took them (owner, 2026-11-14).
+        const warnings = resetCaveats({ ...result, contentKept: undefined });
+        const note = [savedIntoLine(result.datapackRemoval), result.contentKept].filter(Boolean).join(' ');
         return { success: true, ...(warnings.length > 0 ? { warnings } : {}), ...(note ? { note } : {}) };
     }
     const { runProjectResetAnswered } = await import('@/features/lifecycle/services/projectResetService');

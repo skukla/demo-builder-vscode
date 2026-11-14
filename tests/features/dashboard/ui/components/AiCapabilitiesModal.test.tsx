@@ -545,6 +545,8 @@ describe('AiCapabilitiesModal — closing', () => {
         expect(postMessage).toHaveBeenCalledWith('backgroundOperation', {
             id: 'ai-files',
             title: 'Regenerating AI Files',
+            doneTitle: 'AI Files Regenerated',
+            failedTitle: "Couldn't Regenerate AI Files",
         });
         expect(onClose).toHaveBeenCalledTimes(1);
     });

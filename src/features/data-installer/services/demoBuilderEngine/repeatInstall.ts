@@ -68,6 +68,8 @@ export interface KindPlan {
 export interface KeptThing {
     kind: string;
     key: string;
+    /** The SC deleted it in the Admin, so it stays deleted: counted on its own line (`keptLine`). */
+    deleted?: true;
 }
 
 type Items = Record<string, unknown>;
@@ -297,12 +299,25 @@ export function tookOutLine(tookOut: readonly CreatedObject[]): string | undefin
 /** What the plan keeps because the SC changed or deleted it. */
 export function keptOf(plans: readonly KindPlan[]): KeptThing[] {
     return plans.flatMap(({ kind, objects }) =>
-        objects.filter((o) => o.outcome === 'leave-edited' || o.outcome === 'create').map((o) => ({ kind, key: o.object.key ?? o.object.id })),
+        objects
+            .filter((o) => o.outcome === 'leave-edited' || o.outcome === 'create')
+            .map((o) => ({ kind, key: o.object.key ?? o.object.id, ...(o.outcome === 'create' ? { deleted: true as const } : {}) })),
     );
 }
 
-/** The one line a repeat install says about what it kept, or nothing when it kept nothing. */
+const items = (n: number): string => (n === 1 ? '1 item' : `${n.toLocaleString('en-US')} items`);
+
+/**
+ * What a repeat install says about what it kept, or nothing when it kept nothing: what the SC changed,
+ * then what they deleted, each line only when it applies (owner, 2026-11-14): "Kept 3 items changed in
+ * the Admin. Left out 1 item deleted in the Admin."
+ */
 export function keptLine(kept: readonly KeptThing[]): string | undefined {
-    if (kept.length === 0) return undefined;
-    return `Kept ${kept.length} ${kept.length === 1 ? 'item' : 'items'} changed in the Admin.`;
+    const deleted = kept.filter((thing) => thing.deleted).length;
+    const changed = kept.length - deleted;
+    const lines = [
+        changed > 0 ? `Kept ${items(changed)} changed in the Admin.` : undefined,
+        deleted > 0 ? `Left out ${items(deleted)} deleted in the Admin.` : undefined,
+    ];
+    return lines.filter(Boolean).join(' ') || undefined;
 }

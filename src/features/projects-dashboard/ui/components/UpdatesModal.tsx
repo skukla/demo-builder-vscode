@@ -31,7 +31,14 @@
 
 import { DialogContainer } from '@adobe/react-spectrum';
 import React from 'react';
-import { APPLYING_TITLE, type RowStatuses, type UpdatesModalControls } from '../hooks/useUpdatesModal';
+import {
+    APPLIED_TITLE,
+    APPLYING_TITLE,
+    NOT_APPLIED_TITLE,
+    type RowStatuses,
+    SOME_NOT_APPLIED_TITLE,
+    type UpdatesModalControls,
+} from '../hooks/useUpdatesModal';
 import { endingRowOf, promptButtons } from './runWindowParts';
 import { groupsOf, updatesLiveSite, type RowGroup } from './updateGroups';
 import { UpdatesRunView, waitingLine } from './UpdatesRunView';
@@ -39,7 +46,7 @@ import { OperationQuestion, questionTakesWindow } from '@/core/ui/components/fee
 import { CheckboxRow } from '@/core/ui/components/selection/CheckboxRow';
 import { LeadText } from '@/core/ui/components/ui/LeadText';
 import { Modal, type ActionButton, type ModalStatus } from '@/core/ui/components/ui/Modal';
-import { endsSmall } from '@/core/ui/utils/runEnding';
+import { type EndingRow, endStatus, endsSmall } from '@/core/ui/utils/runEnding';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { PendingUpdateRow } from '@/types/pendingUpdates';
 import type { OperationProgressPayload, OperationPrompt } from '@/types/webviewPayloads';
@@ -117,17 +124,22 @@ interface Heading {
 }
 
 /**
- * The run's title: what it is doing, then how it ended. A row can end after the run: the
- * SC's AI finishing a kept fix turns its row done (EDS-56), so every row done is
- * "Updates applied" whatever the run's warning said when it ended.
+ * The run's title: what it is doing, then how it ended, coloured by the one amber rule (`endStatus`):
+ * amber on the run's warning or a row that did not apply, green when every row is done, notes and
+ * all. A row can end after the run: the SC's AI finishing a kept fix turns its row done (EDS-56), so
+ * every row done is "Updates applied" whatever the run's warning said when it ended.
  */
-function runHeadingOf(progress: OperationProgressPayload | null, rows: PendingUpdateRow[], statuses: RowStatuses): Heading {
-    if (progress?.state === 'failed') return { title: "Couldn't Apply the Updates", status: 'error' };
+export function runHeadingOf(progress: OperationProgressPayload | null, rows: PendingUpdateRow[], statuses: RowStatuses): Heading {
+    if (progress?.state === 'failed') return { title: NOT_APPLIED_TITLE, status: 'error' };
     if (progress?.state !== 'succeeded') return { title: APPLYING_TITLE };
     const allDone = rows.every((row) => statuses[row.id]?.state === 'done');
-    return progress.warning && !allDone
-        ? { title: "Some updates didn't apply", status: 'warning' }
-        : { title: 'Updates Applied', status: 'success' };
+    const status = endStatus({ succeeded: true, warning: allDone ? undefined : progress.warning, rows: endingRowsOf(rows, statuses) });
+    return status === 'warning' ? { title: SOME_NOT_APPLIED_TITLE, status } : { title: APPLIED_TITLE, status };
+}
+
+/** Every row as the ending rules read it, the local copy steps included. */
+function endingRowsOf(rows: PendingUpdateRow[], statuses: RowStatuses): EndingRow[] {
+    return [...rows.map((row) => statuses[row.id]), ...Object.values(statuses)].map(endingRowOf);
 }
 
 /**
@@ -136,15 +148,14 @@ function runHeadingOf(progress: OperationProgressPayload | null, rows: PendingUp
  * the window leave the rows (walk F134).
  */
 export function endedClean(progress: OperationProgressPayload | null, rows: PendingUpdateRow[], statuses: RowStatuses): boolean {
-    const all = [...rows.map((row) => statuses[row.id]), ...Object.values(statuses)];
     const succeeded = progress?.state === 'succeeded';
-    return endsSmall({ succeeded, warning: progress?.warning, rows: all.map(endingRowOf) });
+    return endsSmall({ succeeded, warning: progress?.warning, rows: endingRowsOf(rows, statuses) });
 }
 
 /** The small result a clean run ends on: its title, and how many updates the SC left for later. */
 function cleanEnd(controls: UpdatesModalControls): Chrome & Heading & { body: React.ReactNode; size: 'S' } {
     const body = controls.remaining > 0 ? <LeadText>{waitingLine(controls.remaining)}</LeadText> : null;
-    return { title: 'Updates Applied', status: 'success', body, size: 'S', ...runChrome(controls) };
+    return { title: APPLIED_TITLE, status: 'success', body, size: 'S', ...runChrome(controls) };
 }
 
 /** The window's dismiss button and the buttons beside it. */

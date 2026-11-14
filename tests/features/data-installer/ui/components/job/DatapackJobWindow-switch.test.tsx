@@ -177,7 +177,15 @@ describe('Switch with nothing changed', () => {
         await press(button('Run in Background'));
 
         expect(mockPostMessage.mock.calls).toStrictEqual([
-            ['backgroundOperation', { id: DATAPACK_OPERATION_ID, title: 'Switching to Bodea' }],
+            [
+                'backgroundOperation',
+                {
+                    id: DATAPACK_OPERATION_ID,
+                    title: 'Switching to Bodea',
+                    doneTitle: 'Bodea Installed',
+                    failedTitle: "Couldn't Install Bodea",
+                },
+            ],
         ]);
         expect(onClose).toHaveBeenCalledTimes(1);
     });
@@ -465,7 +473,15 @@ describe('another version of the held datapack', () => {
         expect(await heading('Installing Bodea, eds-compatible')).toBeInTheDocument();
         await press(button('Run in Background'));
         expect(mockPostMessage.mock.calls).toStrictEqual([
-            ['backgroundOperation', { id: DATAPACK_OPERATION_ID, title: 'Installing Bodea, eds-compatible' }],
+            [
+                'backgroundOperation',
+                {
+                    id: DATAPACK_OPERATION_ID,
+                    title: 'Installing Bodea, eds-compatible',
+                    doneTitle: 'Bodea, eds-compatible Installed',
+                    failedTitle: "Couldn't Install Bodea, eds-compatible",
+                },
+            ],
         ]);
         expect(onClose).toHaveBeenCalledTimes(1);
     });

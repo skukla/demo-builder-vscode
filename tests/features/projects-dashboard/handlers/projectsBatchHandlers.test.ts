@@ -216,6 +216,21 @@ describe("runProjectsBatch's storefront reset, finished around something", () =>
         expect(result).toStrictEqual({ success: true, note: 'Saved to My Luma.' });
     });
 
+    // Owner walk Q6 (2026-11-13; plan step-07 I3): content kept on purpose is something to know, not
+    // something that went wrong, so it is the row's note, green, beside where the changes were saved.
+    it('says the content was kept as a note, never a warning, on a reset that finished', async () => {
+        const runReset = await wiredRunReset();
+        (resetEdsProjectWithUI as jest.Mock).mockResolvedValue({
+            success: true,
+            contentKept: "Content kept: the demo's pages can't be reached.",
+            datapackRemoval: { savedInto: 'My Luma' },
+        });
+
+        const result = await runReset(createMockHandlerContext(), createMockProject({ selectedStack: 'eds-paas' }), { path: '/p', removeDatapack: true }, jest.fn());
+
+        expect(result).toStrictEqual({ success: true, note: "Saved to My Luma. Content kept: the demo's pages can't be reached." });
+    });
+
     // Review 2026-11-14 (item 8): a failed reset that kept the content says so too.
     it('says the content was kept on a reset that failed', async () => {
         const runReset = await wiredRunReset();

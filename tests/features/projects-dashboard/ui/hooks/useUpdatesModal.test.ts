@@ -198,7 +198,13 @@ describe('useUpdatesModal', () => {
 
         act(() => result.current.close());
 
-        expect(mockPostMessage).toHaveBeenCalledWith('backgroundOperation', { id: UPDATES_OPERATION_ID, title: 'Applying Updates' });
+        expect(mockPostMessage).toHaveBeenCalledWith('backgroundOperation', {
+            id: UPDATES_OPERATION_ID,
+            title: 'Applying Updates',
+            doneTitle: 'Updates Applied',
+            failedTitle: "Couldn't Apply the Updates",
+            warnedTitle: "Some updates didn't apply",
+        });
         expect(result.current.view).toEqual({ phase: 'closed' });
     });
 

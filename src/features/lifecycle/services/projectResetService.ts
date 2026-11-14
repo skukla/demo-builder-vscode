@@ -260,8 +260,8 @@ async function runResetSteps(
     project.status = 'ready';
     await context.stateManager.saveProject(project);
 
-    // No timed success toast (PL-59 R6): the modal closes itself, and
-    // a run handed to the background ends with "— done". What the mesh
+    // No timed success toast (PL-59 R6): the modal closes itself, and a run handed to
+    // the background ends in its result's words (`operationBackgroundNotice`). What the mesh
     // did belongs in the log, which is where anyone checking will look.
     context.logger.info(
         `${logPrefix} Project reset completed` + (meshRedeployed ? ' (mesh redeployed)' : ''),

@@ -1103,3 +1103,20 @@ export interface DatapackRecordsResult {
     /** Each data type's records by the name the pack gives them (`keyOf`), in the pack's order. */
     records: Record<string, string[]>;
 }
+
+/**
+ * `backgroundOperation`: the SC closed a running operation's window, so a VS Code progress
+ * notification carries it on (PL-59). It ends in the result's own words (prototype-conventions rule
+ * 21): a clean success as a notification that closes itself, a warning or a failure as one that stays.
+ */
+export interface BackgroundOperationRequest {
+    id: string;
+    /** The window's running title: the notification's while the operation goes. */
+    title: string;
+    /** The window's success title: "Bodea Installed". */
+    doneTitle: string;
+    /** The window's failure title: "Couldn't Install Bodea". */
+    failedTitle: string;
+    /** The title the window ends on with a warning, when it is neither of those ("Some updates didn't apply"). */
+    warnedTitle?: string;
+}

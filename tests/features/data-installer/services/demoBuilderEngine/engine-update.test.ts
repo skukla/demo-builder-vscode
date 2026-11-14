@@ -115,6 +115,8 @@ describe('an update over the version installed', () => {
         expect(store.products.get('cycle-gift')?.name).toBe('Rider Gift Card');
         expect(ruleDiscount(store)).toBe(15);
         expect(status.note).toContain('Kept 1 item changed in the Admin.');
+        // CONTROL: an edit is no deletion (owner, 2026-11-14: deletions on their own line).
+        expect(status.note).not.toContain('deleted in the Admin');
         expect(store.sent.some((call) => call.method === 'DELETE')).toBe(false);
     });
 
@@ -245,7 +247,9 @@ describe('a record the SC deleted in the Admin since the install', () => {
 
         expect(store.products.has('cycle-tee')).toBe(false);
         expect(store.products.get('cycle-sock')?.name).toBe('Cycle Sock');
-        expect(status.note).toContain('Kept 1 item changed in the Admin.');
+        // Counted on its own line, not as a change (owner, 2026-11-14).
+        expect(status.note).toContain('Left out 1 item deleted in the Admin.');
+        expect(status.note).not.toContain('Kept 1 item changed in the Admin.');
     });
 });
 

@@ -87,7 +87,11 @@ function removeStep(source: StepSource): ImportStep[] {
     const what = source.replaces;
     const row = { kind: REPLACING, label: `${UNINSTALL} ${what}` };
     const state = source.replacing ?? 'pending';
-    // The row names the datapack; its line says only where it stands (rule 3: a fact once).
+    // The row names the datapack; its line says only where it stands (rule 3: a fact once). A switch
+    // that stopped after it says the old one is out, and only that: Retry installs the new datapack
+    // alone (owner walk Q10; words 2026-11-14, rules 5 and 6).
+    if (state === 'success' && !source.running && source.stoppedAt)
+        return [{ ...row, status: 'success', line: `${what} was uninstalled.` }];
     if (state === 'success') return [{ ...row, status: 'success', line: 'Uninstalled' }];
     if (source.stoppedAt === REPLACE_STOP || state === 'error')
         return [{ ...row, ...failed(source.reason) }];

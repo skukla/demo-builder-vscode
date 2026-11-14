@@ -3,8 +3,8 @@ import * as vscode from 'vscode';
 import { createWorkingProjectStateManager } from '@/core/state/workingProjectStateManager';
 import { hasActivePhaseSinks, reportPhase } from '@/core/utils/agentPhaseChannel';
 import { DisposableStore } from '@/core/utils/disposableStore';
-import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { showSelfClosingNotice } from '@/core/vscode/selfClosingNotice';
 import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/types/state';
 
@@ -171,25 +171,16 @@ export abstract class BaseCommand implements vscode.Disposable {
     }
 
     /**
-     * Show an auto-dismissing progress notification
+     * Show an auto-dismissing progress notification (the house's self-closing popup)
      * Use for informational messages that should disappear automatically
      * @param message Message to display
-     * @param duration Duration in milliseconds (default NOTIFICATION_AUTO_DISMISS)
+     * @param duration Duration in milliseconds (default TIMEOUTS.UI.NOTIFICATION)
      */
     protected async showProgressNotification(
         message: string,
         duration: number = TIMEOUTS.UI.NOTIFICATION,
     ): Promise<void> {
-        await vscode.window.withProgress(
-            {
-                location: vscode.ProgressLocation.Notification,
-                title: message,
-                cancellable: false,
-            },
-            async () => {
-                await sleep(duration);
-            },
-        );
+        await showSelfClosingNotice(message, duration);
     }
 
     /**

@@ -114,7 +114,7 @@ describe('installing a pack again', () => {
         const outcome = await installPack(ctx, { products: [PACK_ROW] });
 
         expect(ctx.sent).toStrictEqual([]);
-        expect(outcome.kept).toEqual([{ kind: 'products', key: 'vrrack' }]);
+        expect(outcome.kept).toEqual([{ kind: 'products', key: 'vrrack', deleted: true }]);
         expect(ctx.recorder.has('products', 'vrrack')).toBe(true);
     });
 
@@ -255,7 +255,8 @@ describe('things the SC renamed or deleted in the Admin', () => {
         const outcome = await installPack(ctx, { categories: { categories: [RACKS, CHILD] } });
 
         expect(ctx.sent).toStrictEqual([]);
-        expect(outcome.kept).toEqual([{ kind: 'categories', key: 'Racks' }]);
+        // Kept deleted: told apart from a change, for its own line (owner, 2026-11-14).
+        expect(outcome.kept).toEqual([{ kind: 'categories', key: 'Racks', deleted: true }]);
     });
 
     it('does not make again an attribute the SC deleted', async () => {
@@ -266,7 +267,7 @@ describe('things the SC renamed or deleted in the Admin', () => {
         const outcome = await installPack(ctx, { product_attributes: [ROW] });
 
         expect(ctx.sent).toStrictEqual([]);
-        expect(outcome.kept).toEqual([{ kind: 'product_attributes', key: 'bodea_fabric' }]);
+        expect(outcome.kept).toEqual([{ kind: 'product_attributes', key: 'bodea_fabric', deleted: true }]);
     });
 
     it('adds an option the pack gained to a swatch it made, with its swatch', async () => {
@@ -413,5 +414,24 @@ describe('keptLine', () => {
         expect(keptLine([])).toBeUndefined();
         expect(keptLine([{ kind: 'products', key: 'vrrack' }])).toBe('Kept 1 item changed in the Admin.');
         expect(keptLine([{ kind: 'products', key: 'a' }, { kind: 'categories', key: 'b' }])).toBe('Kept 2 items changed in the Admin.');
+    });
+
+    // Owner, 2026-11-14: deletions are counted on their own line, each line only when it applies.
+    it('counts what the SC deleted on its own line', () => {
+        expect(keptLine([{ kind: 'products', key: 'a', deleted: true }])).toBe('Left out 1 item deleted in the Admin.');
+        expect(keptLine([{ kind: 'products', key: 'a', deleted: true }, { kind: 'categories', key: 'b', deleted: true }])).toBe(
+            'Left out 2 items deleted in the Admin.',
+        );
+    });
+
+    it('says both, changes first, when the SC changed some and deleted others', () => {
+        const kept = [
+            { kind: 'products', key: 'a' },
+            { kind: 'products', key: 'b' },
+            { kind: 'categories', key: 'c' },
+            { kind: 'products', key: 'd', deleted: true as const },
+        ];
+
+        expect(keptLine(kept)).toBe('Kept 3 items changed in the Admin. Left out 1 item deleted in the Admin.');
     });
 });
