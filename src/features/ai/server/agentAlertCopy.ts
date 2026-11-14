@@ -317,7 +317,7 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         choices: ['removeData', 'changes', 'saveAs'],
         sessionGrant: false,
     },
-    reset_datapack: {
+    uninstall_datapack: {
         action: 'Uninstall a datapack',
         consequence:
             "Deletes what this datapack put in Commerce and puts back any store configuration it changed. This can't be undone.",
@@ -512,14 +512,14 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         // the case a grant exists for.
         sessionGrant: true,
     },
-    start_datapack_import: {
+    install_datapack: {
         action: 'Install a datapack',
         consequence:
             'Writes the chosen data types and what they need into the live Commerce instance, then the datapack\'s store configuration when all of it is chosen. Installing again updates or removes what the datapack made earlier of those types, keeping anything changed in the Admin. Switching to another datapack, or another version of the one this demo uses, uninstalls that one first. Takes several minutes and cannot be paused.',
         target: ['datapackName', 'version', 'changes'],
         sessionGrant: false,
     },
-    start_datapack_export: {
+    create_datapack: {
         action: 'Save to a datapack',
         consequence:
             "Saves what was picked from this project's Commerce instance into My Datapacks: a new save of the project's datapack when it is yours (the save before it is kept; older ones are deleted), else a new datapack of yours by the name given. Nothing in Commerce changes, and nothing goes into the Data Installer's shared catalog.",
@@ -570,11 +570,11 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         target: ['datapackName', 'displayName'],
         sessionGrant: false,
     },
-    mark_team_datapack: {
+    mark_demo_builder_datapack: {
         action: 'Mark a Demo Builder datapack',
         consequence:
             'This datapack is listed under Demo Builder Datapacks for everyone it is shared with, and can no longer be deleted. An agent cannot take the mark off.',
-        target: ['datapackName', 'team'],
+        target: ['datapackName', 'demoBuilder'],
         sessionGrant: false,
     },
     share_datapack: {
@@ -583,7 +583,7 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         target: ['datapackName', 'shared'],
         sessionGrant: false,
     },
-    load_datapack_zip: {
+    add_datapack_from_file: {
         action: 'Add a datapack from a file',
         consequence:
             'Adds the datapack in this file to My Datapacks, private to you until you share it, with any store configuration the file carries.',

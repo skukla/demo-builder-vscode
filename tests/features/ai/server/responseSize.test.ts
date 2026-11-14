@@ -349,8 +349,8 @@ describe('rows with no output safety net are classified', () => {
         'list_datapack_import_scopes',
         'get_datapack_import_status',
         'validate_datapack_import',
-        'start_datapack_import',
-        'reset_datapack',
+        'install_datapack',
+        'uninstall_datapack',
         // Undo Last Save starts the same import through `startDatapackImport`: `{activationId}` too.
         'undo_last_save',
         // Restore starts the same import (`{activationId, target}`), or answers `{upToDate, displayName}`.
@@ -362,7 +362,7 @@ describe('rows with no output safety net are classified', () => {
         // Same category, listed separately because it is the one that does NOT
         // go through `runAndWatch`: the export is synchronous (the service gives
         // no activation id to watch) and returns per-type outcomes inline.
-        'start_datapack_export',
+        'create_datapack',
         // AB-5 pair, both category 2 and both read before being listed:
         // `handleInstallAppBuilderComponent` returns `{installation: {status,
         // detail, at}}` and `handleGetAppBuilderInstallStatus` returns
@@ -430,8 +430,8 @@ describe('rows with no output safety net are classified', () => {
         // `{path, datapackName, version, displayName, dataTypes, …}` and load answers
         // `{datapackName, version, target, pack, stored, failed}` — fixed fields.
         'save_datapack_zip',
-        'open_datapack_zip',
-        'load_datapack_zip',
+        'read_datapack_file',
+        'add_datapack_from_file',
         // `{path, bytes, dataTypes, products, giftCards, categories}` and three short lists, at most a
         // few dozen attribute codes and paths (`exportPackHandlers.ts`).
         'build_datapack_from_export',
@@ -462,7 +462,7 @@ describe('rows with no output safety net are classified', () => {
         'share_datapack',
         // HANDLER RETURNS DATA (beta.153, read in datapackLibraryHandlers.ts):
         // `{datapackName, team, versions}`, three fixed fields.
-        'mark_team_datapack',
+        'mark_demo_builder_datapack',
     ];
 
     it('the set matches exactly — a new row must be classified before it ships', async () => {

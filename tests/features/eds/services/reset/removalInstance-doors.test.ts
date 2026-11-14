@@ -8,7 +8,7 @@
  * and the record on disk. The deps are the edge (`buildSampleDataDeps`), so what reaches the
  * delete is asserted. Clear Demo Data and Clear Commerce Instance remove through
  * `removeProjectSampleDataOutcome` (`demoDataHandlers.ts`), and Edit too (`executorEditDatapack.ts`);
- * the screen's Uninstall and the agent's `reset_datapack` are `reset-datapack`.
+ * the screen's Uninstall and the agent's `uninstall_datapack` are `reset-datapack`.
  */
 
 jest.mock('@/features/data-installer/services/sampleDataInstallDeps', () => ({
@@ -134,7 +134,7 @@ describe('a pack installed on another Commerce instance', () => {
         expect(startDelete).not.toHaveBeenCalled();
     });
 
-    it("Uninstall (the screen's and reset_datapack) refuses before anything is saved or removed", async () => {
+    it("Uninstall (the screen's and uninstall_datapack) refuses before anything is saved or removed", async () => {
         const project = await projectWith({ instance: 'OldTenant0123456789AB' });
 
         const answer = await importHandlers['reset-datapack'](context(project), {

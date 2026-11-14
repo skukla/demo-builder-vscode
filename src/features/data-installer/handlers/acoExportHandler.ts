@@ -1,5 +1,5 @@
 /**
- * "Make an ACO pack": the export screen's and `start_datapack_export`'s ACO choice
+ * "Make an ACO pack": the export screen's and `create_datapack`'s ACO choice
  * (`aco: true`), datapack-engine step 14 item 19 (PL-60). Reached through `start-datapack-export`
  * so the human and the agent export from the one place they already do.
  *

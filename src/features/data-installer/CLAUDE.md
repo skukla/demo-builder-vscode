@@ -29,11 +29,11 @@ names in that file the test that proves it instead. The file fails for a data ty
 **An engine change is done only after the live cycle**, on the test store and with the owner's
 go (it writes to a real store), through the MCP tools, not scripts:
 
-1. `start_datapack_import` on a store without the pack: the note's check says all match.
-2. `preview_datapack_changes`, then `start_datapack_import` again with the same pack: the preview
+1. `install_datapack` on a store without the pack: the note's check says all match.
+2. `preview_datapack_changes`, then `install_datapack` again with the same pack: the preview
    shows nothing to update, add or remove; the note has no "Took out" line and the check no
    `leftOut`.
-3. `reset_datapack`: nothing is left in the store unless the note says why.
+3. `uninstall_datapack`: nothing is left in the store unless the note says why.
 
 A first install alone proves only the first install. The reinstall is the step that found both
 bugs.

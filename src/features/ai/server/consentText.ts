@@ -27,12 +27,12 @@ const CONSENT_DETAIL_VALUE_MAX = 60;
  * rendered because the dialog printed every scalar it was handed. Now that only
  * authored target keys are shown, and no tool names `confirmName` as its target
  * (the tools that require it already name the same thing properly, e.g.
- * `start_datapack_export` shows the pack rather than the echo), the entry was
+ * `create_datapack` shows the pack rather than the echo), the entry was
  * unreachable and is gone rather than left as a stub.
  */
 const CONSENT_KEY_LABELS: Record<string, string> = {
     projectName: 'Project',
-    // reset_datapack: "keep" or "drop" alone would not say whose changes.
+    // uninstall_datapack: "keep" or "drop" alone would not say whose changes.
     changes: 'Your changes',
     // delete_project and reset_project: the button's box, Uninstall Datapack.
     removeData: 'Uninstall Datapack',

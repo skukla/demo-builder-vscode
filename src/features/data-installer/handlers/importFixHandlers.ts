@@ -76,8 +76,8 @@ export function fixImportPrompt(
 const FIX_INSTALL_STEPS =
     "Find the cause with get_datapack_import_status (its skipped rows carry Commerce's reasons) and " +
     'verify_datapack_install. Fix it where it lives: in Commerce with write_commerce_rest, or in ' +
-    'the datapack (save_datapack_zip, correct the rows, load_datapack_zip). Then install the datapack ' +
-    'again with start_datapack_import: data types already in send nothing. Tell me what you ' +
+    'the datapack (save_datapack_zip, correct the rows, add_datapack_from_file). Then install the datapack ' +
+    'again with install_datapack: data types already in send nothing. Tell me what you ' +
     'found and what you changed.';
 
 /**
@@ -141,7 +141,7 @@ export function fixDryRunPrompt(
         `A Dry Run of installing the datapack ${pack} into the Commerce instance of the Demo Builder project ${projectName ?? 'that is open'} found a problem.`,
         `- ${record.reason}`,
         '',
-        'Fix the datapack: save_datapack_zip, correct the rows, load_datapack_zip. Then run ' +
+        'Fix the datapack: save_datapack_zip, correct the rows, add_datapack_from_file. Then run ' +
             'validate_datapack_import again. Tell me what you found, what you changed, and what ' +
             'the Dry Run says now. Do not install the datapack until I ask you to.',
     ].join('\n');

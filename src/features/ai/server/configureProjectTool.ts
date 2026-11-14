@@ -333,7 +333,7 @@ export function registerConfigureProjectTool(
                         .enum(['keep'])
                         .optional()
                         .describe(
-                            'Only when the user agreed: change the Commerce connection while a datapack is installed, leaving it in the current instance (uninstall it first with reset_datapack instead)',
+                            'Only when the user agreed: change the Commerce connection while a datapack is installed, leaving it in the current instance (uninstall it first with uninstall_datapack instead)',
                         ),
                 })
                 .strict(),

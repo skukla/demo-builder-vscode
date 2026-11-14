@@ -27,8 +27,8 @@ describe('the ceiling table tracks the tool surface', () => {
         // bounded by the 28 type codes, never by the size of the pack's rows, which
         // go to disk or to the store and never into the response.
         'save_datapack_zip',
-        'open_datapack_zip',
-        'load_datapack_zip',
+        'read_datapack_file',
+        'add_datapack_from_file',
         // Counts, and two lists cut at 50 entries with a count past that (`exportPackHandlers.ts`).
         'build_datapack_from_export',
         'delete_library_datapack',
@@ -91,8 +91,8 @@ describe('the ceiling table tracks the tool surface', () => {
         // in one datapack, not by how much data moved. Since 2026-11-05 the start
         // and the removal may carry the job record (`waitSeconds`), whose note names
         // at most ten skipped rows (`skippedLine`), so that stays bounded too.
-        'start_datapack_import',
-        'reset_datapack',
+        'install_datapack',
+        'uninstall_datapack',
         // Undo Last Save starts the same import (`startDatapackImport`), so it answers the same.
         'undo_last_save',
         // Restore starts the same import too, or answers upToDate: fixed-shape either way.
@@ -100,7 +100,7 @@ describe('the ceiling table tracks the tool surface', () => {
         // Update starts the same import too, answers upToDate, or its check: a row per data type,
         // at most three names each (`records`, every name, is the screen's alone).
         'update_datapack',
-        'start_datapack_export',
+        'create_datapack',
         // A target reference and a status record. Both fixed-shape; the record's note
         // names at most ten skipped rows (`skippedLine`, 2026-11-05).
         'get_datapack_import_target',
@@ -195,8 +195,8 @@ describe('the ceiling table tracks the tool surface', () => {
             'clear_commerce_instance',
             // share_datapack (owner, 2026-10-30): three fixed fields; not yet run live.
             'share_datapack',
-            // mark_team_datapack (beta.153): three fixed fields; not yet run live.
-            'mark_team_datapack',
+            // mark_demo_builder_datapack (beta.153): three fixed fields; not yet run live.
+            'mark_demo_builder_datapack',
             // verify_datapack_install (2026-11-06): counts and at most 20 examples per finding.
             'verify_datapack_install',
         ]);

@@ -1,6 +1,6 @@
 /**
  * What a removal does about the SC's changes (datapack-engine step 05). One path for every door:
- * the job window's Uninstall and Switch, `reset_datapack`, and a project reset or Edit that removes
+ * the job window's Uninstall and Switch, `uninstall_datapack`, and a project reset or Edit that removes
  * the pack.
  *
  * It finds changes with the preview's own read (`previewChanges`) and saves them with the save

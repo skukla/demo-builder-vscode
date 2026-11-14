@@ -201,28 +201,28 @@ server IS — transport, lifecycle, scoping, security — is in
 
 | Tool | | What it does |
 |---|---|---|
+| `add_datapack_from_file` | **confirm** | Add the pack in a datapack zip file to My Datapacks, the user's own datapack library (the screen's Add from File; |
 | `build_datapack_from_export` |  | Build a datapack file from a Commerce product export (the CSV System > Data Transfer > Export writes, |
 | `check_demo_data` | read | What clearing every website this project uses (its own and every website its datapack was installed to) would do in its Commerce instance, |
 | `clear_commerce_instance` | **confirm** | Clear whole websites of this project's Commerce instance, whoever put the data there (the screen's Clear Commerce Instance): everything the instance |
-| `clear_demo_data` | **confirm** | Clear this project's websites of everything check_demo_data listed. When data.datapack named one, it uninstalls this project's datapack first, as reset_datapack does: |
+| `clear_demo_data` | **confirm** | Clear this project's websites of everything check_demo_data listed. When data.datapack named one, it uninstalls this project's datapack first, as uninstall_datapack does: |
+| `create_datapack` | **confirm** | Capture data from this project's Commerce store into a datapack: saves what is picked in selections, and every item of each data type in wholeKinds, |
 | `delete_library_datapack` | **confirm** | Delete one of your own datapacks from My Datapacks (the screen's Delete). Cannot be undone. A datapack of saves is |
 | `get_datapack_import_status` | read | Progress of the running or most recent datapack install or uninstall: its purpose (install, switch, |
 | `get_datapack_import_target` | read | Which Commerce instance an install would land on, derived from the current project, |
+| `install_datapack` | **confirm** | Install a datapack into a live Commerce instance. Returns an activationId once the job starts. |
 | `list_datapack_export_items` | read | What this Commerce instance holds for one data type, to choose from before exporting. |
 | `list_datapack_import_scopes` | read | The websites and store views an install can be scoped to on this project's instance. |
-| `load_datapack_zip` | **confirm** | Add the pack in a datapack zip file to My Datapacks, the user's own datapack library (the screen's Add from File; |
-| `mark_team_datapack` | **confirm** | Mark one of your own datapacks in Demo Builder's datapack store as a Demo Builder datapack: every |
-| `open_datapack_zip` | read | Say what a datapack zip file holds — name, version, data types, and any settings layer by path — |
+| `mark_demo_builder_datapack` | **confirm** | Mark one of your own datapacks in Demo Builder's datapack store as a Demo Builder datapack: every |
 | `preview_datapack_changes` | read | What installing a datapack again would change in this project\ |
+| `read_datapack_file` | read | Say what a datapack zip file holds — name, version, data types, and any settings layer by path — |
 | `rename_datapack` | **confirm** | Rename one of your own datapack library packs: every version takes the new display |
-| `reset_datapack` | **confirm** | Uninstall a datapack: take its data out of the Commerce instance so the project can be reused (the screen's Uninstall). |
 | `restore_datapack` | **confirm** | Restore the project's datapack: put Commerce back to a previous state of it, losing what was changed in the |
 | `save_datapack_zip` |  | Save a datapack from the Data Installer or the datapack library as a zip file in the project (the screen's Save as File) — |
 | `save_store_changes_to_pack` | **confirm** | Save the store\ |
 | `share_datapack` | **confirm** | Share one of your own datapacks in My Datapacks, or stop sharing it (the screen's Share and Stop Sharing): every version. |
-| `start_datapack_export` | **confirm** | Capture data from this project's Commerce store into a datapack: saves what is picked in selections, and every item of each data type in wholeKinds, |
-| `start_datapack_import` | **confirm** | Install a datapack into a live Commerce instance. Returns an activationId once the job starts. |
 | `undo_last_save` | **confirm** | Undo the last save of the project's own datapack: Commerce goes back to the save before it. The datapack must |
+| `uninstall_datapack` | **confirm** | Uninstall a datapack: take its data out of the Commerce instance so the project can be reused (the screen's Uninstall). |
 | `update_datapack` | **confirm** | Update the project's datapack: apply what a newer version of it changed, keeping every record the user |
 | `validate_datapack_import` | read | Dry run: try an install with the same guard, same credentials, same request body as the real thing, |
 | `verify_datapack_install` | read | Check that the store holds what a datapack says, after installing it: for each product the pack |

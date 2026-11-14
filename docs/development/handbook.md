@@ -1286,8 +1286,8 @@ promising an agent that every response parses.
 > *The first pass wrote 6, and two of them were wrong* — a gap was recorded without
 > checking whether the capability already existed. `set_console_apis` sets
 > subscriptions to exactly a list, so it un-adds what `add_console_apis` added;
-> `reset_datapack` removes a datapack's data from the instance, which is what
-> `start_datapack_import` put there. Both were found by asking "is there already a
+> `uninstall_datapack` removes a datapack's data from the instance, which is what
+> `install_datapack` put there. Both were found by asking "is there already a
 > reversal?" instead of "is the name paired?", which is the question the ledger exists
 > to force and which its own author skipped.
 > *Not a naming rule, and that was measured:* inferring `delete_x` from `create_x` flags

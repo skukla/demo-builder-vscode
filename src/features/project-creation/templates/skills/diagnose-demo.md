@@ -105,7 +105,7 @@ So, in order:
 2. If scope is fine, check the flat category list rather than the tree.
 3. If the categories exist but the store shows none, the root category has not
    been assigned. That is an Admin step: give the user the store and the value,
-   rather than reinstalling. Running `start_datapack_import` again afterwards only
+   rather than reinstalling. Running `install_datapack` again afterwards only
    re-checks it and marks it done.
 4. Set but the storefront still shows nothing: Catalog Service can lag behind the
    store; on an Edge Delivery storefront, `republish` rebuilds the catalog menu.

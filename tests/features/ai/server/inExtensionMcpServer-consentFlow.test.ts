@@ -24,7 +24,7 @@ import { InExtensionMcpServer } from '@/features/ai/server/inExtensionMcpServer'
 import { connectAndInit, makeLogger, SocketRpc } from './inExtensionMcpServer.testUtils';
 
 /** A real destructive tool name — the gate reads the authored copy table. */
-const DESTRUCTIVE = 'reset_datapack';
+const DESTRUCTIVE = 'uninstall_datapack';
 /** A write tool with no authored consent copy — so it interrupts nobody. */
 const HARMLESS = 'set_probe_harmless';
 

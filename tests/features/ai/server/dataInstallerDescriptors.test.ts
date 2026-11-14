@@ -23,32 +23,32 @@ import type { HandlerResponse } from '@/types/handlers';
 const row = (tool: string) => DATA_INSTALLER_DESCRIPTORS.find((d) => d.tool === tool);
 
 // Twenty-five since update_datapack (step-07 U1, 2026-11-14); twenty-four since Phase 8 removed copy_library_datapack_to_installer (D7, 2026-11-13); twenty-five since clear_commerce_instance (step 06 C6, 2026-11-13); twenty-four since restore_datapack (Phase 3/5, 2026-11-12); twenty-three since undo_last_save (Phase 2, 2026-11-12; twenty-two since verify_datapack_install, the count
-// in this test's name had stayed at twenty-one); twenty-one since build_datapack_from_export (2026-11-05); twenty since mark_team_datapack (beta.153); nineteen since share_datapack (owner, 2026-10-30); eighteen since datapack-engine step 10 added
+// in this test's name had stayed at twenty-one); twenty-one since build_datapack_from_export (2026-11-05); twenty since mark_demo_builder_datapack (beta.153); nineteen since share_datapack (owner, 2026-10-30); eighteen since datapack-engine step 10 added
 // check_demo_data and clear_demo_data (sixteen since step 07 added rename_datapack, fifteen since step 05).
 it('registers the twenty-five tools, and only those', () => {
     expect(DATA_INSTALLER_DESCRIPTORS.map((d) => d.tool).sort()).toEqual([
+        'add_datapack_from_file',
         'build_datapack_from_export',
         'check_demo_data',
         'clear_commerce_instance',
         'clear_demo_data',
+        'create_datapack',
         'delete_library_datapack',
         'get_datapack_import_status',
         'get_datapack_import_target',
+        'install_datapack',
         'list_datapack_export_items',
         'list_datapack_import_scopes',
-        'load_datapack_zip',
-        'mark_team_datapack',
-        'open_datapack_zip',
+        'mark_demo_builder_datapack',
         'preview_datapack_changes',
+        'read_datapack_file',
         'rename_datapack',
-        'reset_datapack',
         'restore_datapack',
         'save_datapack_zip',
         'save_store_changes_to_pack',
         'share_datapack',
-        'start_datapack_export',
-        'start_datapack_import',
         'undo_last_save',
+        'uninstall_datapack',
         'update_datapack',
         'validate_datapack_import',
         'verify_datapack_install',
@@ -69,19 +69,19 @@ describe('gates', () => {
     it('gates exactly the fourteen writes that reach a store or an instance', () => {
         const gated = DATA_INSTALLER_DESCRIPTORS.filter((d) => d.confirm).map((d) => d.tool);
         expect(gated.sort()).toEqual([
+            'add_datapack_from_file',
             'clear_commerce_instance',
             'clear_demo_data',
+            'create_datapack',
             'delete_library_datapack',
-            'load_datapack_zip',
-            'mark_team_datapack',
+            'install_datapack',
+            'mark_demo_builder_datapack',
             'rename_datapack',
-            'reset_datapack',
             'restore_datapack',
             'save_store_changes_to_pack',
             'share_datapack',
-            'start_datapack_export',
-            'start_datapack_import',
             'undo_last_save',
+            'uninstall_datapack',
             'update_datapack',
         ]);
     });
@@ -104,8 +104,8 @@ describe('gates', () => {
     });
 });
 
-describe('start_datapack_export name echo', () => {
-    const preflight = () => row('start_datapack_export')!.preflight!;
+describe('create_datapack name echo', () => {
+    const preflight = () => row('create_datapack')!.preflight!;
 
     it('refuses when the echo does not match', () => {
         const out = preflight()({ datapackName: 'aco-pack', confirmName: 'wrong' }) as { error: string };
@@ -121,7 +121,7 @@ describe('start_datapack_export name echo', () => {
     it('names the library it writes into, never the shared catalog', () => {
         const out = preflight()({ datapackName: 'aco_acme', aco: true }) as { error: string };
 
-        expect(out).toEqual({ error: 'start_datapack_export writes "aco_acme" into My Datapacks. To proceed, call again with confirmName:"aco_acme".' });
+        expect(out).toEqual({ error: 'create_datapack writes "aco_acme" into My Datapacks. To proceed, call again with confirmName:"aco_acme".' });
     });
 
     it('allows dispatch when the echo matches', () => {
@@ -139,11 +139,11 @@ describe('start_datapack_export name echo', () => {
 // Owner, 2026-11-14 ("Close it"): an agent cannot take the Demo Builder mark off, since that would
 // reopen the Delete step-07 A1 refuses. The screen can (Remove Demo Builder Mark), through the same
 // handler, so the refusal sits on the agent's tool, before dispatch, and only there.
-describe('mark_team_datapack refuses to unmark, for agents only', () => {
-    const preflight = () => row('mark_team_datapack')!.preflight!;
+describe('mark_demo_builder_datapack refuses to unmark, for agents only', () => {
+    const preflight = () => row('mark_demo_builder_datapack')!.preflight!;
 
-    it('answers team:false with the refusal, so the handler never runs', () => {
-        expect(preflight()({ datapackName: 'frescopa', team: false, confirm: true })).toEqual({
+    it('answers demoBuilder:false with the refusal, so the handler never runs', () => {
+        expect(preflight()({ datapackName: 'frescopa', demoBuilder: false, confirm: true })).toEqual({
             success: false,
             error: "Demo Builder datapacks can't be unmarked by an agent.",
             code: ErrorCode.INVALID_OPERATION,
@@ -151,7 +151,7 @@ describe('mark_team_datapack refuses to unmark, for agents only', () => {
     });
 
     it('lets a mark through to the handler', () => {
-        expect(preflight()({ datapackName: 'frescopa', team: true, confirm: true })).toBeUndefined();
+        expect(preflight()({ datapackName: 'frescopa', demoBuilder: true, confirm: true })).toBeUndefined();
     });
 });
 
@@ -225,9 +225,9 @@ describe('list_datapack_export_items paging', () => {
 // any handler runs — which sign-in is required, whether the tool is exposed as a
 // read, and what a caller may send. Nothing else checks them.
 describe('what each row declares', () => {
-    // open_datapack_zip and build_datapack_from_export only touch local files, so they need no sign-in.
+    // read_datapack_file and build_datapack_from_export only touch local files, so they need no sign-in.
     it('requires an Adobe sign-in on every row that reaches a service', () => {
-        const local = new Set(['open_datapack_zip', 'build_datapack_from_export']);
+        const local = new Set(['read_datapack_file', 'build_datapack_from_export']);
         for (const d of DATA_INSTALLER_DESCRIPTORS) {
             expect(d.needsAuth).toStrictEqual(local.has(d.tool) ? [] : ['adobe']);
         }
@@ -247,27 +247,27 @@ describe('what each row declares', () => {
             'get_datapack_import_target',
             'list_datapack_export_items',
             'list_datapack_import_scopes',
-            'open_datapack_zip',
             'preview_datapack_changes',
+            'read_datapack_file',
             'validate_datapack_import',
             'verify_datapack_install',
         ]);
         expect(byFlag(false)).toEqual([
+            'add_datapack_from_file',
             'build_datapack_from_export',
             'clear_commerce_instance',
             'clear_demo_data',
+            'create_datapack',
             'delete_library_datapack',
-            'load_datapack_zip',
-            'mark_team_datapack',
+            'install_datapack',
+            'mark_demo_builder_datapack',
             'rename_datapack',
-            'reset_datapack',
             'restore_datapack',
             'save_datapack_zip',
             'save_store_changes_to_pack',
             'share_datapack',
-            'start_datapack_export',
-            'start_datapack_import',
             'undo_last_save',
+            'uninstall_datapack',
             'update_datapack',
         ]);
     });
@@ -293,10 +293,10 @@ describe('what each row accepts', () => {
         expect(keys('validate_datapack_import')).toEqual(expected);
         // The start may wait on the job it began, rather than an agent polling it (2026-11-05), and
         // answers for the changes in the pack it replaces, as a reset does (walk F97).
-        expect(keys('start_datapack_import')).toEqual([...expected, 'changes', 'saveAs', 'waitSeconds'].sort());
+        expect(keys('install_datapack')).toEqual([...expected, 'changes', 'saveAs', 'waitSeconds'].sort());
         // Its one addition: the answer to the changes it names (step 05).
         // And Save As's name, for changes kept when the project's pack is not the user's; and the wait.
-        expect(keys('reset_datapack')).toEqual([...expected, 'changes', 'saveAs', 'waitSeconds'].sort());
+        expect(keys('uninstall_datapack')).toEqual([...expected, 'changes', 'saveAs', 'waitSeconds'].sort());
     });
 
     // Step 06 C3: clear_demo_data uninstalls the project's datapack first, so it takes the same answer
@@ -325,8 +325,8 @@ describe('what each row accepts', () => {
         expect(keys('update_datapack')).toEqual(['dataTypes', 'datapackName', 'waitSeconds']);
     });
 
-    it('lets reset_datapack answer keep or drop, and gives an agent no way to turn on "always"', () => {
-        const schema = row('reset_datapack')!.inputSchema!;
+    it('lets uninstall_datapack answer keep or drop, and gives an agent no way to turn on "always"', () => {
+        const schema = row('uninstall_datapack')!.inputSchema!;
 
         expect(schema.changes.parse('keep')).toBe('keep');
         expect(schema.changes.parse('drop')).toBe('drop');
@@ -339,8 +339,8 @@ describe('what each row accepts', () => {
 
     // Step 03, S6 (decisions J8-1, Phase 8): the screen's Replace became Switch, so the tool says it too.
     it('calls installing another pack over the project\'s a switch, as the screen does', () => {
-        const { description } = row('start_datapack_import')!;
-        const changes = row('start_datapack_import')!.inputSchema!.changes.description;
+        const { description } = row('install_datapack')!;
+        const changes = row('install_datapack')!.inputSchema!.changes.description;
 
         expect(description).toContain("the screen's Switch");
         expect(description).not.toMatch(/\breplaces it\b/u);
@@ -348,20 +348,20 @@ describe('what each row accepts', () => {
         expect(changes).toContain('switch');
     });
 
-    it('lets reset_datapack omit dataTypes, since its record decides, but not an import or a dry run', () => {
-        expect(() => row('reset_datapack')!.inputSchema!.dataTypes.parse(undefined)).not.toThrow();
-        expect(() => row('start_datapack_import')!.inputSchema!.dataTypes.parse(undefined)).toThrow();
+    it('lets uninstall_datapack omit dataTypes, since its record decides, but not an import or a dry run', () => {
+        expect(() => row('uninstall_datapack')!.inputSchema!.dataTypes.parse(undefined)).not.toThrow();
+        expect(() => row('install_datapack')!.inputSchema!.dataTypes.parse(undefined)).toThrow();
         expect(() => row('validate_datapack_import')!.inputSchema!.dataTypes.parse(undefined)).toThrow();
     });
 
     it('says what the ticks mean, for an import and for a removal', () => {
-        expect(row('start_datapack_import')!.description).toContain('Only the dataTypes named install, with what they need');
-        expect(row('start_datapack_import')!.description).toContain('A kind left out is left alone');
-        expect(row('reset_datapack')!.description).toContain('takes everything the install record lists, whatever dataTypes names');
+        expect(row('install_datapack')!.description).toContain('Only the dataTypes named install, with what they need');
+        expect(row('install_datapack')!.description).toContain('A kind left out is left alone');
+        expect(row('uninstall_datapack')!.description).toContain('takes everything the install record lists, whatever dataTypes names');
     });
 
-    it('says what reset_datapack does about changes, including what the setting does', () => {
-        const { description } = row('reset_datapack')!;
+    it('says what uninstall_datapack does about changes, including what the setting does', () => {
+        const { description } = row('uninstall_datapack')!;
 
         expect(description).toContain('uninstalls nothing until changes answers');
         expect(description).toContain('demoBuilder.dataInstaller.changesOnRemoval');
@@ -372,7 +372,7 @@ describe('what each row accepts', () => {
     it('tells an agent how to fix what a refused dry run names, and not to install unasked', () => {
         const { description } = row('validate_datapack_import')!;
 
-        expect(description).toContain('save_datapack_zip, correct the rows, load_datapack_zip');
+        expect(description).toContain('save_datapack_zip, correct the rows, add_datapack_from_file');
         expect(description).toContain('run this again');
         expect(description).toContain('install only when the user asks');
     });
@@ -385,7 +385,7 @@ describe('what each row accepts', () => {
     });
 
     it('gives the export the picks, the Save As name, and the ACO choice with its name echo', () => {
-        expect(keys('start_datapack_export')).toEqual(
+        expect(keys('create_datapack')).toEqual(
             ['aco', 'confirmName', 'dataTypes', 'datapackName', 'saveAs', 'selections', 'storeViews', 'version', 'wholeKinds'].sort(),
         );
     });
@@ -404,7 +404,7 @@ describe('what each row accepts', () => {
 
     // step-07 E2 (S3-a): a whole data type needs no ids; an unknown one is refused before dispatch.
     it('takes whole data types on both saves, refusing a kind that cannot be picked', () => {
-        for (const tool of ['save_store_changes_to_pack', 'start_datapack_export']) {
+        for (const tool of ['save_store_changes_to_pack', 'create_datapack']) {
             const schema = row(tool)!.inputSchema!;
             expect(schema.wholeKinds.parse(['products', 'customers'])).toEqual(['products', 'customers']);
             expect(() => schema.wholeKinds.parse(['orders'])).toThrow();
@@ -444,9 +444,9 @@ describe('what each row accepts', () => {
     it('requires at least one data type wherever dataTypes appears', () => {
         for (const tool of [
             'validate_datapack_import',
-            'start_datapack_import',
-            'reset_datapack',
-            'start_datapack_export',
+            'install_datapack',
+            'uninstall_datapack',
+            'create_datapack',
         ]) {
             const dataTypes = row(tool)!.inputSchema!.dataTypes;
 

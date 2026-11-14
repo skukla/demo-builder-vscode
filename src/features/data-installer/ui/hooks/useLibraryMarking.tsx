@@ -3,8 +3,8 @@
  * it, confirmed (the flyout has asked, `PackActions`). The Datapack Library's More menu only (owner,
  * 2026-11-14; rule 1, reversibility). `useLibrarySharing`'s shape, for the same flyout.
  *
- * It calls the same handler as the agent tool `mark_team_datapack`. Agents cannot unmark: their
- * tool refuses `team: false` before it dispatches, so this screen path is the only way to.
+ * It calls the same handler as the agent tool `mark_demo_builder_datapack`. Agents cannot unmark: their
+ * tool refuses `demoBuilder: false` before it dispatches, so this screen path is the only way to.
  *
  * @module features/data-installer/ui/hooks/useLibraryMarking
  */
@@ -34,10 +34,10 @@ export function useLibraryMarking(
     team: boolean,
     onChanged?: () => void,
 ): LibraryMarking {
-    const request = useDataInstallerRequest<{ team?: boolean }>('mark-team-datapack');
+    const request = useDataInstallerRequest<{ demoBuilder?: boolean }>('mark-team-datapack');
     const run = request.load;
     const start = useCallback((): void => {
-        run({ datapackName: id.name, team: !team });
+        run({ datapackName: id.name, demoBuilder: !team });
     }, [run, id.name, team]);
 
     // Before the paint: the flyout goes from this wait to its reload with nothing between them.

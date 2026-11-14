@@ -18,7 +18,7 @@
  *
  * A customer segment condition (`Magento\CustomerSegment\…\Segment`) names a segment by THIS
  * store's id, which no lookup can carry to another store: it is sent as it is, and the install says
- * so in Debug Logs (the import-datapack skill already tells the SC such a rule needs fixing).
+ * so in Debug Logs (the datapacks skill already tells the SC such a rule needs fixing).
  *
  * @module features/data-installer/services/demoBuilderEngine/ruleConditions
  */

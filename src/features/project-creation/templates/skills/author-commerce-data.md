@@ -7,8 +7,8 @@ description: Builds a demo's catalog data in the project's Commerce store from a
 
 Two jobs look alike and are kept apart:
 
-- **Sharing finished data** with other SCs is a datapack. Use `import-datapack` (install, uninstall,
-  save). A datapack is versioned and removable; prefer it whenever one fits the brief.
+- **Sharing finished data** with other SCs is a datapack. Use the `datapacks` skill (install,
+  uninstall, save). A datapack is versioned and removable; prefer it whenever one fits the brief.
 - **This skill** is building or fixing data in THIS project's store, from a brief ("three brands,
   about forty products, contract prices for two companies") or from a spreadsheet a colleague sent.
 
@@ -134,4 +134,4 @@ is a refusal: ask the user to sign in, then continue from the last step you veri
 Everything this skill creates can be deleted with `write_commerce_rest` DELETE, one record at a
 time (`products/<sku>`, `categories/<id>`, …), children before parents. Keep the list of what you
 created as you go and offer it to the user at the end — it is the undo list. A datapack, by
-contrast, is removed in one call (`reset_datapack`); that is the reason to prefer one when it fits.
+contrast, is removed in one call (`uninstall_datapack`); that is the reason to prefer one when it fits.

@@ -5,7 +5,7 @@
  *
  * - **No Data Installer destination (D7).** The screen hides writing into the Data Installer
  *   (`INSTALLER_WRITES_SHOWN`), since our accounts cannot write there and every try fails. The agent
- *   tools lose it outright: `copy_library_datapack_to_installer` is gone, and `load_datapack_zip`
+ *   tools lose it outright: `copy_library_datapack_to_installer` is gone, and `add_datapack_from_file`
  *   writes into My Datapacks only. Its `target` is FORCED, not defaulted, so an agent whose session
  *   still holds the old schema cannot send `target: "installer"` and reach it. The argument the
  *   handler receives is asserted, because a mock cannot see a malformed call.
@@ -47,13 +47,13 @@ describe('D7: no Data Installer destination on the agent surface', () => {
     });
 
     // saveAs is the screen's Keep Both (step-07 F1).
-    it('gives load_datapack_zip no destination and no name echo, and forces My Datapacks', () => {
-        expect(keys('load_datapack_zip')).toEqual(['path', 'saveAs', 'update']);
-        expect(row('load_datapack_zip').argDefaults).toStrictEqual({ target: 'library' });
+    it('gives add_datapack_from_file no destination and no name echo, and forces My Datapacks', () => {
+        expect(keys('add_datapack_from_file')).toEqual(['path', 'saveAs', 'update']);
+        expect(row('add_datapack_from_file').argDefaults).toStrictEqual({ target: 'library' });
     });
 
-    it("says load_datapack_zip is the screen's Add from File, into My Datapacks", () => {
-        const { description } = row('load_datapack_zip');
+    it("says add_datapack_from_file is the screen's Add from File, into My Datapacks", () => {
+        const { description } = row('add_datapack_from_file');
 
         expect(description).toContain("the screen's Add from File");
         expect(description).toContain('My Datapacks');
@@ -76,10 +76,10 @@ describe('D7: no Data Installer destination on the agent surface', () => {
 
         it('hands the handler target library even when an old session sends installer', async () => {
             const server = fakeServer();
-            registerDescriptorTools(server, [row('load_datapack_zip')], () =>
+            registerDescriptorTools(server, [row('add_datapack_from_file')], () =>
                 createMockHandlerContext()
             );
-            const tool = server.tools.get('load_datapack_zip');
+            const tool = server.tools.get('add_datapack_from_file');
             if (!tool) throw new Error('not registered');
 
             await tool.handler({
@@ -118,7 +118,7 @@ describe("Delete, as the screen's Delete", () => {
 
         expect(description).toContain("the screen's Delete");
         expect(description).toContain('everyVersion');
-        expect(description).not.toMatch(/the undo of\s+load_datapack_zip/u);
+        expect(description).not.toMatch(/the undo of\s+add_datapack_from_file/u);
     });
 
     // Step-07 A1: the screen offers no Delete on a Demo Builder datapack, and the tool says it refuses one.
@@ -140,7 +140,7 @@ describe("the screen's words", () => {
     });
 
     it("says what the Demo Builder datapack mark does in the screen's list names", () => {
-        const text = textOf(row('mark_team_datapack'));
+        const text = textOf(row('mark_demo_builder_datapack'));
 
         expect(text).toContain('Demo Builder Datapacks');
         expect(text).toContain('Community Datapacks');
@@ -158,12 +158,12 @@ describe("the consent dialog says the screen's words", () => {
     it('asks nothing about a Data Installer copy, and adds a file to My Datapacks only', () => {
         expect(alertCopyFor('copy_library_datapack_to_installer')).toBeUndefined();
         // Replace and Keep Both are named too (step-07 F1 review): each changes what the call does.
-        expect(alertCopyFor('load_datapack_zip')).toMatchObject({ action: 'Add a datapack from a file', target: ['path', 'update', 'saveAs'] });
-        expect(alertCopyFor('load_datapack_zip')?.consequence).not.toContain('Data Installer');
+        expect(alertCopyFor('add_datapack_from_file')).toMatchObject({ action: 'Add a datapack from a file', target: ['path', 'update', 'saveAs'] });
+        expect(alertCopyFor('add_datapack_from_file')?.consequence).not.toContain('Data Installer');
     });
 
     it("says what Replace and Keep Both do, in the dialog's lines", () => {
-        const describe = alertCopyFor('load_datapack_zip')?.describe;
+        const describe = alertCopyFor('add_datapack_from_file')?.describe;
 
         expect(describe?.({ path: 'luma.zip', update: true })).toBe('Replaces the datapack of the same version in My Datapacks.');
         expect(describe?.({ path: 'luma.zip', saveAs: 'My Luma 2' })).toBe('Adds it as My Luma 2, leaving the one already in My Datapacks as it is.');
@@ -175,7 +175,7 @@ describe("the consent dialog says the screen's words", () => {
     });
 
     it('calls the mark a Demo Builder datapack, in the screen\'s list names', () => {
-        const copy = alertCopyFor('mark_team_datapack');
+        const copy = alertCopyFor('mark_demo_builder_datapack');
 
         expect(copy?.action).toBe('Mark a Demo Builder datapack');
         expect(copy?.consequence).toContain('Demo Builder Datapacks');
@@ -183,6 +183,6 @@ describe("the consent dialog says the screen's words", () => {
     });
 
     it('calls the export a save, as the screen does', () => {
-        expect(alertCopyFor('start_datapack_export')?.action).toBe('Save to a datapack');
+        expect(alertCopyFor('create_datapack')?.action).toBe('Save to a datapack');
     });
 });

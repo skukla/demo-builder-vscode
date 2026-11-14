@@ -54,7 +54,7 @@ describe('fixImportPrompt', () => {
             'get_datapack_import_status',
             'verify_datapack_install',
             'write_commerce_rest',
-            'start_datapack_import',
+            'install_datapack',
         ]) {
             expect(prompt).toContain(tool);
         }
@@ -150,7 +150,7 @@ describe('fixDryRunPrompt', () => {
     it('asks for the datapack fixed, the dry run run again, and a report', () => {
         const prompt = fixDryRunPrompt(DRY_RUN, 'Justrite Demo')!;
 
-        expect(prompt).toContain('save_datapack_zip, correct the rows, load_datapack_zip');
+        expect(prompt).toContain('save_datapack_zip, correct the rows, add_datapack_from_file');
         expect(prompt).toContain('validate_datapack_import again');
         expect(prompt).toMatch(/Tell me what/);
     });
@@ -286,7 +286,7 @@ describe('fix-datapack-import-with-ai from a failed install', () => {
         expect(prompt).toContain('Justrite Demo');
         expect(prompt).toContain(`- ${FAILED.reason}`);
         expect(prompt).toContain('2 retries');
-        expect(prompt).toContain('start_datapack_import');
+        expect(prompt).toContain('install_datapack');
     });
 
     it('reads the project’s record, not the last job, and nothing the window sends', async () => {

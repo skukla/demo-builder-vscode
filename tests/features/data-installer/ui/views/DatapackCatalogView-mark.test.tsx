@@ -2,7 +2,7 @@
  * DatapackCatalogView — the Demo Builder mark on the screen (owner, 2026-11-14; rule 1).
  *
  * The Datapack Library offers Remove Demo Builder Mark on the SC's own Demo Builder datapack, asks in
- * the house confirm window, sends `mark-team-datapack` with `team: false`, and reads the catalog and
+ * the house confirm window, sends `mark-team-datapack` with `demoBuilder: false`, and reads the catalog and
  * the pack again. A project's Datapacks offers no mark row.
  */
 
@@ -17,7 +17,7 @@ beforeEach(() => {
     mockRequest.mockImplementation((type: string) => {
         if (type === 'find-datapacks') return Promise.resolve({ success: true, data: { items: [OWN_DEMO_BUILDER], count: 1, engine: 'demo-builder' } });
         if (type === 'get-datapack-detail') return Promise.resolve({ success: true, data: { detail: OWN_DEMO_BUILDER, inventory: INVENTORY_COMPLETE } });
-        if (type === 'mark-team-datapack') return Promise.resolve({ success: true, data: { datapackName: 'bodea', team: false, versions: 1 } });
+        if (type === 'mark-team-datapack') return Promise.resolve({ success: true, data: { datapackName: 'bodea', demoBuilder: false, versions: 1 } });
         return Promise.resolve({ success: true, data: null });
     });
 });
@@ -40,7 +40,7 @@ it('takes the mark off in the Datapack Library, after asking, then reads the cat
     await press(screen.getByRole('button', { name: 'Remove Mark' }));
     await settle();
 
-    expect(calls('mark-team-datapack').map((c) => c[1])).toEqual([{ datapackName: 'bodea', team: false }]);
+    expect(calls('mark-team-datapack').map((c) => c[1])).toEqual([{ datapackName: 'bodea', demoBuilder: false }]);
     await waitFor(() => expect(calls('find-datapacks').length).toBeGreaterThan(findsBefore));
     expect(calls('get-datapack-detail').length).toBeGreaterThan(1);
 });

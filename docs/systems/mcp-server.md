@@ -480,7 +480,7 @@ every ERP and closes off the orders they hold (AB-16n). `get_erp_status` lists e
 integration serves — each row with its `listId`, the value a product's `erp_owner` takes to
 route to that ERP (AB-51) — and its live health is the named ERP's.
 
-`reset_erp_records` (2026-09-14) is gated for the same reason `reset_datapack` is: it wipes
+`reset_erp_records` (2026-09-14) is gated for the same reason `uninstall_datapack` is: it wipes
 every ERP the ERP integration serves, cancels the open orders they hold (a cancelled order
 cannot be reopened) and undoes what those ERPs wrote into Commerce companies. Its read, `get_erp_status`, is not. `open_erp_screen` (2026-09-16) is gated for
 `open_url`'s reason: it opens a browser window.
@@ -567,7 +567,7 @@ its Commerce instance, removed FIRST, through the reset's own removal, so a remo
 finish, or one that left part in Commerce on purpose, deletes nothing and `error` says why (for part
 left behind, "Part of its datapack was left in Commerce, so the project was kept: " and the engine's
 note; step-07 D1). The user's changes in it are settled as
-`reset_datapack` settles them: saved into their own pack without asking; when the pack is not
+`uninstall_datapack` settles them: saved into their own pack without asking; when the pack is not
 theirs, the call answers `code: CHANGES_NEED_ANSWER` and deletes nothing until `changes` is `keep`
 with `saveAs`, or `drop`. `changes: drop` loses the user's changes in any pack, their own included, as the window's Without Saving answer does (step-05 S1). It is off unless the call asks, `deleteAll` never turns it on (it writes to
 a store), and `localOnly` refuses it with a `note`. `datapackData.removed` in the answer says whether
@@ -759,7 +759,7 @@ removed."). One service does it for every door (`storeScopePages.ts`).
 A `configure_project` change that points a project holding a datapack at another Commerce
 instance (step-07 D6) applies nothing and says so: the datapack would stay in the instance
 it went into, where nothing could then uninstall it. The agent uninstalls it first with
-`reset_datapack`, or calls again with `installedDatapack: "keep"` once the user agrees to
+`uninstall_datapack`, or calls again with `installedDatapack: "keep"` once the user agrees to
 leave it there. Configure's Save asks the SC the same question
 (`datapackLeftByChange`, `connectionChange.ts`). The install record notes the instance
 (`instance`), and every removal, save and changes read stops when the project now points
@@ -770,7 +770,7 @@ before it rebuilds (`executorEditConnection.ts`).
 
 ### Installing a datapack again, and saving the store back (datapack-engine step 05, 2026-10-29)
 
-With Demo Builder's engine, `start_datapack_import` on a pack it already installed in the project
+With Demo Builder's engine, `install_datapack` on a pack it already installed in the project
 brings what it made up to the pack, takes out what the pack no longer has, and keeps anything
 changed in the Admin. It never overwrites that: the outcome `get_datapack_import_status` reads
 carries one line, `note` ("Kept 2 things you had changed in the Admin."). The start itself still
@@ -798,7 +798,7 @@ has, of products, gift cards, categories, cart rules, customers and companies, t
 does not hold), both also in its message, and a version the install's own parsers would refuse is
 not saved. `list_datapack_export_items` lists one kind of the project's store to pick from
 (website-scoped where Commerce scopes it, less what the pack being saved holds, counted in
-`inPackCount`), and `start_datapack_export` is the same save, sent `selections`, `saveAs` and
+`inPackCount`), and `create_datapack` is the same save, sent `selections`, `saveAs` and
 `confirm`. Both saves take `wholeKinds` beside `selections` (step-07 E2): data types saved whole, each
 listed inside the save, so a whole type needs no ids; an unknown type is refused, and both are
 refused with a datapack. The fields that name a pack (`datapackName`, `version`, `dataTypes`) are an ACO pack's
@@ -806,35 +806,37 @@ alone and refused on a save, and the name echo applies only to a call naming a p
 Installer service's own engine and export, and the Engine setting that chose them, were
 deleted on 2026-11-06 with the setting (DI-12): the service had ignored the Commerce credentials a
 caller sends since 2026-10-27. Agents cannot write into the Data Installer (D7, datapack-simplification
-Phase 8): `copy_library_datapack_to_installer` was removed and `load_datapack_zip` forces `target: "library"`
+Phase 8): `copy_library_datapack_to_installer` was removed and `add_datapack_from_file` forces `target: "library"`
 (`argDefaults`), as the screen hides both behind `INSTALLER_WRITES_SHOWN`. A pack only the Data Installer
 holds is installed by Demo Builder. `delete_library_datapack` refuses a Demo Builder datapack ("Demo Builder
 datapacks can't be deleted."), as the screen offers no Delete on one (step-07 A1), and takes `everyVersion`, as the screen's Delete
 does for a datapack of saves, and `keepSettingsLayer`, which leaves the layer of the same version: the
-file load's one Delete removes only what the load made (step-07 F2). `load_datapack_zip` takes `saveAs`,
+file load's one Delete removes only what the load made (step-07 F2). `add_datapack_from_file` takes `saveAs`,
 the screen's Keep Both for a file whose datapack is already in My Datapacks: a new datapack under that
 name, the first left as it is (step-07 F1). The datapack tools' descriptions, narration and consent copy use the
 Datapacks screen's words (Install, Uninstall, Switch, Save As New, Add from File, Delete, "Demo Builder
-datapack"); the tool names and `mark_team_datapack`'s `team` argument stay as identifiers.
+datapack"), and since step-07 A3 (owner answer Q5) so do the tool names: `install_datapack`,
+`add_datapack_from_file`, `read_datapack_file`, `uninstall_datapack`, `create_datapack` and
+`mark_demo_builder_datapack`, whose argument is `demoBuilder`. There are no aliases for the old names.
 A creation install that does not end in success, a partly installed one included, is recorded on
 the project (step-04 S7, `installFailure.ts`), and `get_datapack_import_target` answers
 `installFailed: {reason, retries}` while the project names that datapack. A later
-`start_datapack_import` of it clears the record on success and adds one to `retries` on failure;
+`install_datapack` of it clears the record on success and adds one to `retries` on failure;
 the project naming another datapack, or none, drops it. A project file never carries it.
 A project's datapack records the store that holds it (`installer` or `library`): creation, a copy
 and a project file install from that store, `configure_project` takes it as `datapack.store`, and
 `create_project_from_file` answers `datapackNote` when the pack named can't be read (the pack it
-was made from, or none, is installed instead) or a colleague's private pack is copied into your library first, as a pack of yours. `start_datapack_import` installs only the `dataTypes` named and
+was made from, or none, is installed instead) or a colleague's private pack is copied into your library first, as a pack of yours. `install_datapack` installs only the `dataTypes` named and
 what they need, and leaves the rest of the pack alone; `validate_datapack_import` and
-`preview_datapack_changes` decide it the same way. `reset_datapack` takes all the install record
+`preview_datapack_changes` decide it the same way. `uninstall_datapack` takes all the install record
 lists, whichever `dataTypes` it is sent (it may be omitted), and its job reports the kinds on the
-record; a pack the service installed has no record, and is answered with Clear Demo Data. Every removal path, `reset_datapack`
+record; a pack the service installed has no record, and is answered with Clear Demo Data. Every removal path, `uninstall_datapack`
 included, keeps a category or set the pack made that holds something it did not, and the
-outcome's `note` says so ("Kept the set Racks: it holds 2 products you added."). A `reset_datapack`
+outcome's `note` says so ("Kept the set Racks: it holds 2 products you added."). A `uninstall_datapack`
 clears the project's datapack only when the removal finishes having taken everything out: one that
 stops, or keeps a container holding the SC's things, leaves the project naming the pack, so the
 next removal can finish the job (live, 2026-10-30). If the SC changed anything the pack made,
-`reset_datapack` names the changes and removes nothing until `changes` answers: `keep` saves them
+`uninstall_datapack` names the changes and removes nothing until `changes` answers: `keep` saves them
 first, into the user's own pack or as a new one named by `saveAs` (the new version is what is then
 removed; a failed save, code
 `CHANGES_NOT_SAVED`, removes nothing), `drop` loses them. With `changes` omitted and
@@ -846,10 +848,10 @@ credential, behind the same org guard as the import. Plan:
 
 ### Switching to another pack, or another version (walk F97, 2026-11-09)
 
-No new tool. When the project uses a pack Demo Builder's engine installed, `start_datapack_import`
+No new tool. When the project uses a pack Demo Builder's engine installed, `install_datapack`
 of **another pack** (a switch, the screen's Switch since step 03 S6, 2026-11-12) **or another
 version** uninstalls it in the same job: the old pack is removed first, by its
-install record, through the same removal `reset_datapack` runs (`engineRemoval.ts`), then the new one
+install record, through the same removal `uninstall_datapack` runs (`engineRemoval.ts`), then the new one
 installs. Before anything is removed the user's changes to the old pack are settled as
 a project reset settles them (`settleChangesBeforeRemoval`, in `importReplacement.ts`): with no
 answer they are saved into the user's own pack first; when the pack is not theirs the call answers
@@ -881,7 +883,7 @@ back exactly as before. Both stay reads. Details: `docs/systems/data-installer.m
 
 ### Customers and B2B through Demo Builder's engine (datapack-engine step 08, 2026-10-29)
 
-No new tool. `start_datapack_import` now installs customer groups, customers, shared catalogs,
+No new tool. `install_datapack` now installs customer groups, customers, shared catalogs,
 companies and the three shared-catalog assignment kinds (all fourteen of Bodea's kinds); its
 answer stays a job id, and the outcome still reports kinds, never rows. `customers_export` (the
 bulk import) is still refused, before anything is written. A company is made over REST with its
@@ -898,7 +900,7 @@ record, and never written into a saved pack, a copy between stores or a zip. Pla
 
 ### Cart rules, coupons and gift cards through Demo Builder's engine (datapack-engine step 11, 2026-10-30)
 
-No new tool. `start_datapack_import` now installs `cart_rules`, `coupons` and `giftcards`; its
+No new tool. `install_datapack` now installs `cart_rules`, `coupons` and `giftcards`; its
 answer stays a job id. A rule is made on the install target's website whatever websites the pack
 names, its customer groups and its conditions' categories, sets and option labels turned into this
 store's ids; a coupon is made on the rule its pack row names by NAME, its code kept exactly; a
@@ -939,12 +941,12 @@ read back by email, recorded with the store's id, and a refused one is named in 
 
 ### Store configuration in a pack (datapack-engine step 09, 2026-10-30)
 
-No new tool. `start_datapack_import` installs a pack's `store_config` rows (`{path, value, scope,
+No new tool. `install_datapack` installs a pack's `store_config` rows (`{path, value, scope,
 scope_code}`) last, through the setup guide's settings fix: store-wide (`default`) or for the
 install target's website, whatever website the row names; a store-view row, a path outside the
 allowed sections (below), or a path that holds no value anywhere is refused before anything is
 written. The outcome's `note` names each setting set ("Set catalog/frontend/grid_per_page: 12 →
-24."). `reset_datapack` puts each back first, keeping one the SC changed since ("Kept
+24."). `uninstall_datapack` puts each back first, keeping one the SC changed since ("Kept
 catalog/frontend/grid_per_page as it is: it was changed after Demo Builder set it."), and the
 `note` says which. `preview_datapack_changes` counts settings like any kind. Plan:
 `.rptc/plans/datapack-engine/step-09-store-settings.md`.
@@ -959,17 +961,17 @@ justrite_test_website. Remove it first, or install it there."), by `validate_dat
 
 ### A pack's settings layer (datapack-engine step 09, 2026-11-02)
 
-No new tool. With Demo Builder's engine, `start_datapack_import` on a pack holding no `store_config`
+No new tool. With Demo Builder's engine, `install_datapack` on a pack holding no `store_config`
 also applies its settings layer: the newest library pack named `<pack>-settings` that holds only
 `store_config`, written after the pack's data, on the pack's own record, when `dataTypes` names every
 kind the pack holds or `store_config`; otherwise the layer is left as it is and the note says so.
-`reset_datapack` takes both.
+`uninstall_datapack` takes both.
 `validate_datapack_import` refuses a layer's path a pack may not set, as the install does before any
 write; the allowed sections are `catalog/`, `sales/`, `checkout/`, `customer/`, `btob/` and
 `cataloginventory/`, and `web/`, `admin/` and any path ending in password, secret, token or key stay
 refused. `preview_datapack_changes` answers `settings`: `changes` by path with old and new value, and
 `layer` naming where they come from. `get_datapack` answers `settingsLayer`. `save_datapack_zip`,
-`open_datapack_zip` and `load_datapack_zip` carry it as the file's second section (`settingsLayer`
+`read_datapack_file` and `add_datapack_from_file` carry it as the file's second section (`settingsLayer`
 says what became of it); `save_store_changes_to_pack` writes settings to a layer beside the new
 version (`settingsLayer`), and `delete_library_datapack` on that version takes it too. `find_datapacks`
 lists layers as rows: only the screens hide them. Details: `docs/systems/data-installer.md`.
@@ -977,7 +979,7 @@ lists layers as rows: only the screens hide them. Details: `docs/systems/data-in
 ### A pack's own root category (datapack-engine step 12, 2026-10-30)
 
 No new tool. A store shows only the categories under its root, and no API can change a store's
-root (`POST/PUT /V1/store/storeGroups` answer 404 on ACCS). So `start_datapack_import`, for a pack
+root (`POST/PUT /V1/store/storeGroups` answer 404 on ACCS). So `install_datapack`, for a pack
 with a `root_category` of its own: when no other store shows the install target's store root, it
 leaves the pack's root out and puts its categories under the store's root, and the outcome's `note`
 says so. When another store shares that root (`justrite_test_website` shows JustRite's root 119), it
@@ -985,7 +987,7 @@ makes the pack's root and asks the user, mid-install, through `askDuringOperatio
 under an agent): Open the Admin, I've done it, Skip for now. "I've done it" re-reads
 `GET store/storeGroups`; "Skip for now" finishes with the step left open on the install record and
 named in the `note` (Stores > All Stores > the store, Root Category: the pack's root). Running
-`start_datapack_import` again re-checks it (a repeat install rewrites nothing unchanged) and marks it
+`install_datapack` again re-checks it (a repeat install rewrites nothing unchanged) and marks it
 done once set; the Data Installer's pack flyout shows the step with its own Check.
 `preview_datapack_changes` answers `root`, the same sentence beforehand. Removal keeps the pack's
 root while a store shows it as its root, saying to point that store back first. "Save store changes"
@@ -1099,7 +1101,7 @@ Admin website (`admin`, id 0) is never read as one of the websites.
 
 ### Waiting on a datapack job instead of polling it (owner, 2026-11-05)
 
-No new tool. `start_datapack_import`, `reset_datapack` and `get_datapack_import_status` take
+No new tool. `install_datapack`, `uninstall_datapack` and `get_datapack_import_status` take
 `waitSeconds`, at most 45 (`importJobWait.ts`). The call waits for the job to end. While it waits,
 it sends each change of progress into the agent's chat as a phase line, for example "Installing the
 datapack: 450 of 2,046 products". It answers when the job ends, or when the wait is up with
@@ -1195,9 +1197,9 @@ the same question once, with Share, and declining exports anyway.
 
 ### Team packs (beta.153, 2026-11-03)
 
-`mark_team_datapack` (confirm-gated; the consent names the pack) marks every version of a store
+`mark_demo_builder_datapack` (confirm-gated; the consent names the pack) marks every version of a store
 pack as a team pack through the store's owner-only `update-datapack-metadata` (`team`). It does not
-unmark: `team: false` is refused with "Demo Builder datapacks can't be unmarked by an agent."
+unmark: `demoBuilder: false` is refused with "Demo Builder datapacks can't be unmarked by an agent."
 (owner, 2026-11-14), because a marked pack cannot be deleted and unmarking would reopen that. The
 refusal is the tool's `preflight`, so the handler never runs; the Datapack Library's own Remove Demo
 Builder Mark (and Mark as Demo Builder Datapack) reach the same handler from the screen. A team pack is in every SC's default
@@ -1211,13 +1213,13 @@ the save before its newest. It works only on the pack the open project uses, whe
 of the SC's own in the library (not a team pack), the project is on its newest save, Demo Builder's
 engine installed it, and there is an earlier save; otherwise it refuses and nothing changes ("There
 is no earlier save to go back to."). Without `confirm` it answers what it would do. It is one job,
-started the way `start_datapack_import` starts one (`startDatapackImport`, `importStart.ts`): the
+started the way `install_datapack` starts one (`startDatapackImport`, `importStart.ts`): the
 newest save is uninstalled by its install record and the save before it installed, onto the
 website and store view the install record names, with the SC's unsaved changes dropped and never
 saved. Only once that job ends in success is the newest save deleted from the library with its
 settings layer (`runAndWatch`'s `afterSuccess`, then `deleteVersionWithLayer`); a job that fails or
 stops deletes nothing and the project keeps naming the newest save. A save another local project
-still names is kept. It answers as `start_datapack_import` does: `{activationId}`, and `job` with
+still names is kept. It answers as `install_datapack` does: `{activationId}`, and `job` with
 `waitSeconds`.
 
 ### Restore (Phase 3/5, 2026-11-12; points since step-07 U1, 2026-11-14)
@@ -1237,7 +1239,7 @@ has no install record of it, or when the project names no Commerce instance. It 
 the preview's own read (`previewChanges`): without `confirm` it starts nothing and answers
 `{upToDate, displayName}` when nothing would change, else the question the screen shows,
 `{asks, displayName, own?: {lastSaved?, original}, changes?}`. With `confirm` it is one job, started
-as `start_datapack_import` starts one (`startDatapackImport`, `restoreDatapack.ts`): the pack
+as `install_datapack` starts one (`startDatapackImport`, `restoreDatapack.ts`): the pack
 installed is uninstalled by its install record and the point installed onto the website and store
 view that record names. A same-version restore is a real replace (the start's `restore` option).
 The row's gate means an agent always sends `confirm`. It answers `{activationId, target}`, and

@@ -49,7 +49,7 @@ export function datapackLeftByChange(project: Project, changes: ComponentConfigs
 export function datapackLeftLine(displayName: string): string {
     return (
         `${displayName} is installed in the current Commerce instance, and this change points the project at another one, ` +
-        'where it could not be uninstalled. Nothing was applied. Tell the user, then uninstall it first with reset_datapack, ' +
+        'where it could not be uninstalled. Nothing was applied. Tell the user, then uninstall it first with uninstall_datapack, ' +
         'or call again with installedDatapack:"keep" to leave it there.'
     );
 }

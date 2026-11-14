@@ -1,7 +1,7 @@
 /**
  * What a removal says about the changes it found (datapack-engine step 05): the SC's edits to what
  * a pack made, from the preview's own `keep`: counted by type for the save question, and as the one
- * sentence `reset_datapack` reads. Pure, so the webview and the extension share it.
+ * sentence `uninstall_datapack` reads. Pure, so the webview and the extension share it.
  *
  * @module features/data-installer/removalChanges
  */

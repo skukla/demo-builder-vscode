@@ -73,9 +73,9 @@ export interface RenameLibraryDatapackPayload {
     confirm?: boolean;
 }
 
-export interface MarkTeamDatapackPayload {
+export interface MarkDemoBuilderDatapackPayload {
     datapackName?: string;
-    team?: boolean;
+    demoBuilder?: boolean;
 }
 
 export interface ShareLibraryDatapackPayload {
@@ -350,13 +350,13 @@ export const datapackLibraryHandlers = defineHandlers({
 
     // Mark or unmark every version of the SC's own pack. The Datapack Library's More menu does both
     // (owner, 2026-11-14; rule 1). Agents cannot unmark, as that would reopen the Delete the guard
-    // above refuses: `mark_team_datapack` refuses team:false before it dispatches here.
+    // above refuses: `mark_demo_builder_datapack` refuses demoBuilder:false before it dispatches here.
     'mark-team-datapack': async (
         context: HandlerContext,
-        payload?: MarkTeamDatapackPayload,
+        payload?: MarkDemoBuilderDatapackPayload,
     ): Promise<HandlerResponse> => {
         const name = payload?.datapackName;
-        if (!name || typeof payload?.team !== 'boolean') {
+        if (!name || typeof payload?.demoBuilder !== 'boolean') {
             return { success: false, error: 'Name the datapack, and say whether it is a Demo Builder datapack.' };
         }
         const access = await resolveDataInstallerAccess(context, 'library');
@@ -367,10 +367,10 @@ export const datapackLibraryHandlers = defineHandlers({
                 return { success: false, error: `Demo Builder's datapack store has no datapack of yours named ${name}.`, code: ErrorCode.INVALID_OPERATION };
             }
             const writer = writerFor(context, access, 'library');
-            for (const version of versions) await writer.updateTeam(version, payload.team);
-            const did = payload.team ? 'Marked' : 'Took the Demo Builder mark off';
+            for (const version of versions) await writer.updateTeam(version, payload.demoBuilder);
+            const did = payload.demoBuilder ? 'Marked' : 'Took the Demo Builder mark off';
             context.logger.info(`${LOG_PREFIX} ${did} ${name} (${versions.length} versions).`);
-            return { success: true, data: { datapackName: name, team: payload.team, versions: versions.length } };
+            return { success: true, data: { datapackName: name, demoBuilder: payload.demoBuilder, versions: versions.length } };
         } catch (error) {
             return failure(context, error, 'The Demo Builder datapack mark could not be changed.');
         }

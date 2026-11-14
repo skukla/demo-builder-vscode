@@ -25,7 +25,7 @@
  *
  * ## Shared infrastructure, and what that changes
  *
- * A save (`start_datapack_export`, `save_store_changes_to_pack`) writes a new
+ * A save (`create_datapack`, `save_store_changes_to_pack`) writes a new
  * version into the datapack library, never into the Data Installer's shared
  * catalog (D7: agents have no Data Installer destination). When it names a
  * datapack it takes a name echo (`confirmName`) as well as a confirm, the same
@@ -216,7 +216,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             'Which Commerce instance an install would land on, derived from the current project, ' +
             'plus the datapack the project was created to hold and the website/store-view scope ' +
             'it recorded. installFailed (reason, retries) when the install of that datapack at creation ' +
-            'did not succeed: install it again with start_datapack_import. Answers; does not decide.',
+            'did not succeed: install it again with install_datapack. Answers; does not decide.',
         map: importHandlers,
         type: 'get-datapack-import-target',
     },
@@ -294,10 +294,10 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         readOnly: true,
         description:
             'Dry run: try an install with the same guard, same credentials, same request body as the real thing, ' +
-            'without writing. Run this before start_datapack_import. A refusal comes back as ' +
+            'without writing. Run this before install_datapack. A refusal comes back as ' +
             "valid:false with a reason, not as an error. It also reads the pack's rows and names each kind " +
             'whose rows Commerce could not take. To fix what a reason names in the pack: ' +
-            'save_datapack_zip, correct the rows, load_datapack_zip, then run this again; ' +
+            'save_datapack_zip, correct the rows, add_datapack_from_file, then run this again; ' +
             'install only when the user asks.',
         map: importHandlers,
         type: 'validate-datapack-import',
@@ -347,7 +347,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             'that its price matches. Answers verdict (matches or differs), checked, compared (how many values, prices ' +
             'and configurables it actually compared: a match that compared nothing is no proof), and per finding a count and up ' +
             'to 20 examples: missing, configurablesWithoutOptions, configurablesDiffer, valuesDiffer, pricesDiffer. ' +
-            'Writes nothing. Run it after start_datapack_import succeeds: an install can report success with ' +
+            'Writes nothing. Run it after install_datapack succeeds: an install can report success with ' +
             'products whose sizes or options are wrong.',
         map: importHandlers,
         type: 'verify-datapack-install',
@@ -378,7 +378,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             'why. Nothing in Commerce changes.',
         map: importHandlers,
         type: 'save-store-changes-to-pack',
-        // Gated twice, as reset_datapack is: the row refuses before dispatch, and the same flag
+        // Gated twice, as uninstall_datapack is: the row refuses before dispatch, and the same flag
         // satisfies the handler's own confirm check.
         confirm: true,
         inputSchema: {
@@ -431,7 +431,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: false,
         description:
-            "Clear this project's websites of everything check_demo_data listed. When data.datapack named one, it uninstalls this project's datapack first, as reset_datapack does: " +
+            "Clear this project's websites of everything check_demo_data listed. When data.datapack named one, it uninstalls this project's datapack first, as uninstall_datapack does: " +
             "changes the user made in it are saved first (into the user's own pack; a pack not theirs needs changes:\"keep\" with saveAs, or changes:\"drop\", " +
             'else it answers code CHANGES_NEED_ANSWER and clears nothing, before anything runs). A save or uninstall that fails clears nothing and the project keeps naming its pack; ' +
             "after a full uninstall the project names no datapack. Then it deletes those products, categories, customers, cart rules " +
@@ -447,7 +447,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             'with a note, to finish in the Commerce Admin) and data.listSettings (list settings only the Admin can set back). A partial failure says what finished; running it again picks up what is left.',
         map: importHandlers,
         type: 'clear-demo-data',
-        confirm: true, // gated twice, as reset_datapack is: the row, then the handler's own check
+        confirm: true, // gated twice, as uninstall_datapack is: the row, then the handler's own check
         inputSchema: {
             token: z.string().describe("check_demo_data's token"),
             changes: z.enum(['keep', 'drop']).optional().describe(CLEAR_CHANGES_DESCRIPTION),
@@ -461,7 +461,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         description:
             "Clear whole websites of this project's Commerce instance, whoever put the data there (the screen's Clear Commerce Instance): everything the instance " +
             'check (check_demo_data with website codes) listed. Show the user that list, its projects and what each loses, and ask first; understood:true says the ' +
-            'user understood. First it uninstalls the datapack of each project the list names with one, in turn, as reset_datapack does: ' +
+            'user understood. First it uninstalls the datapack of each project the list names with one, in turn, as uninstall_datapack does: ' +
             "changes in the user's own pack are saved into it; changes in a pack not theirs need an answer by project path, changes {path: \"keep\"} with " +
             'saveAs {path: name} (a new datapack of theirs) or changes {path: "drop"} (lost; drop loses changes in the user\'s own pack too). A project with ' +
             'unanswered changes in a pack not theirs answers code CHANGES_NEED_ANSWER naming it, and nothing is cleared. A save or uninstall that fails stops ' +
@@ -488,7 +488,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
 
     // ── writes ──────────────────────────────────────────────────────────────
     {
-        tool: 'start_datapack_import',
+        tool: 'install_datapack',
         needsAuth: ['adobe'],
         readOnly: false,
         description:
@@ -517,7 +517,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             'running it again carries on and counts anything made without an answer as the pack\'s. ' +
             "Installing another pack over the one the project uses (Demo Builder installed it) is a switch (the screen's " +
             'Switch), and installing another version of that pack works the same way: the pack in use is uninstalled first, ' +
-            'in the same job, as reset_datapack uninstalls it, then this one installs; an uninstall that fails installs ' +
+            'in the same job, as uninstall_datapack uninstalls it, then this one installs; an uninstall that fails installs ' +
             'nothing (stoppedAt replacing) and the project keeps naming the old pack, else it names the new one. Changes ' +
             "the user made since it was installed are saved into the user's own pack first; when the old pack is not " +
             'theirs, this names the changes and installs nothing until changes answers: keep saves them as a new pack ' +
@@ -537,7 +537,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         },
     },
     {
-        tool: 'reset_datapack',
+        tool: 'uninstall_datapack',
         needsAuth: ['adobe'],
         readOnly: false,
         description:
@@ -579,7 +579,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         description:
             "Undo the last save of the project's own datapack: Commerce goes back to the save before it. The datapack must " +
             "be the one this project uses and one of the user's own in My Datapacks (not a Demo Builder datapack), with an earlier save " +
-            'to go back to; otherwise this refuses and nothing changes. One job, as start_datapack_import over the pack in use: ' +
+            'to go back to; otherwise this refuses and nothing changes. One job, as install_datapack over the pack in use: ' +
             'the last save is uninstalled and the one before it installed, onto the website and store view the pack is ' +
             'installed to. Changes made in the Admin since are lost, never saved. Only once the job succeeds is the last ' +
             'save deleted from My Datapacks, with its store configuration; a job that fails deletes nothing and the project ' +
@@ -587,7 +587,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             'carries the outcome as job; else follow with get_datapack_import_status. Ask the user first.',
         map: importHandlers,
         type: 'undo-last-save',
-        // Gated twice, as reset_datapack is: the row, then the handler's own check.
+        // Gated twice, as uninstall_datapack is: the row, then the handler's own check.
         confirm: true,
         inputSchema: {
             datapackName: z.string().describe("The project's datapack, by its name from find_datapacks (one of yours)"),
@@ -614,7 +614,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             'as job; else follow with get_datapack_import_status. Ask the user first, naming the point.',
         map: importHandlers,
         type: 'restore-datapack',
-        // Gated twice, as reset_datapack is: the row, then the handler, which starts only with confirm.
+        // Gated twice, as uninstall_datapack is: the row, then the handler, which starts only with confirm.
         // The row's flag satisfies it, so an agent always asks the user.
         confirm: true,
         inputSchema: {
@@ -660,7 +660,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         },
     },
     {
-        tool: 'start_datapack_export',
+        tool: 'create_datapack',
         needsAuth: ['adobe'],
         readOnly: false,
         description:
@@ -700,7 +700,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
                 ? undefined
                 : {
                       error:
-                          `start_datapack_export writes "${String(args.datapackName)}" into My Datapacks. ` +
+                          `create_datapack writes "${String(args.datapackName)}" into My Datapacks. ` +
                           `To proceed, call again with confirmName:"${String(args.datapackName)}".`,
                   },
     },
@@ -753,7 +753,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             'named <displayName> Catalog and products keep Commerce\'s own fields; leftOutAttributes names the rest. ' +
             'SKUs are kept as exported. unmatchedOptions names each select value that matches no option of the base ' +
             "pack's attribute (an install would refuse that row or set another option): fix those before loading it. The pack is checked with " +
-            "the install's own checks first and not written if it would be refused. Load it with load_datapack_zip.",
+            "the install's own checks first and not written if it would be refused. Load it with add_datapack_from_file.",
         map: importHandlers,
         type: 'build-datapack-from-export',
         inputSchema: {
@@ -781,23 +781,23 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         },
     },
     {
-        tool: 'open_datapack_zip',
+        tool: 'read_datapack_file',
         needsAuth: [],
         readOnly: true,
         description:
             'Say what a datapack zip file holds — name, version, data types, and any settings layer by path — ' +
-            'without writing anything. Run before load_datapack_zip.',
+            'without writing anything. Run before add_datapack_from_file.',
         map: importHandlers,
         type: 'open-datapack-zip',
         inputSchema: { path: z.string().describe('The datapack file, inside the project') },
     },
     {
-        tool: 'load_datapack_zip',
+        tool: 'add_datapack_from_file',
         needsAuth: ['adobe'],
         readOnly: false,
         description:
             "Add the pack in a datapack zip file to My Datapacks, the user's own datapack library (the screen's Add from File; " +
-            "Install from File is this, then start_datapack_import). It is private to the user until shared. A settings layer " +
+            "Install from File is this, then install_datapack). It is private to the user until shared. A settings layer " +
             'in the file goes into My Datapacks with it; settingsLayer says what became of it. A file whose layer holds a path a ' +
             'pack may not set is refused before any write. This does not install anything into Commerce.',
         map: importHandlers,
@@ -836,7 +836,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             'takes your settings layer of the same version with it (`settingsLayerDeleted: true`).',
         map: importHandlers,
         type: 'delete-library-datapack',
-        // Gated twice, as reset_datapack is: the row refuses before dispatch, and the
+        // Gated twice, as uninstall_datapack is: the row refuses before dispatch, and the
         // same flag satisfies the handler's own confirm check.
         confirm: true,
         inputSchema: {
@@ -847,7 +847,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
                 .boolean()
                 .optional()
                 .describe(
-                    'true: leave your settings layer of the same version. When removing what load_datapack_zip added, always send it, ' +
+                    'true: leave your settings layer of the same version. When removing what add_datapack_from_file added, always send it, ' +
                         'and delete a layer the load created (settingsLayer.outcome created) by its own id in a call of its own',
                 ),
         },
@@ -887,27 +887,27 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         },
     },
     {
-        tool: 'mark_team_datapack',
+        tool: 'mark_demo_builder_datapack',
         needsAuth: ['adobe'],
         readOnly: false,
         description:
             "Mark one of your own datapacks in Demo Builder's datapack store as a Demo Builder datapack: every " +
             'version. A marked datapack is listed under Demo Builder Datapacks; any other shared one under ' +
             'Community Datapacks. A marked datapack cannot be deleted, and an agent cannot take the mark off: ' +
-            'team:false is refused. It does not share the datapack: share_datapack does that. The store refuses ' +
+            'demoBuilder:false is refused. It does not share the datapack: share_datapack does that. The store refuses ' +
             'anyone not on its list of Demo Builder datapack owners. Ask the user first.',
         map: importHandlers,
         type: 'mark-team-datapack',
         confirm: true,
         inputSchema: {
             datapackName: z.string().describe('The pack name from find_datapacks (one of yours)'),
-            team: z.boolean().describe('true to mark it as a Demo Builder datapack; false is refused for agents'),
+            demoBuilder: z.boolean().describe('true to mark it as a Demo Builder datapack; false is refused for agents'),
         },
         // Unmarking would reopen the Delete a Demo Builder datapack refuses (owner, 2026-11-14,
         // "Close it"). The screen's Remove Demo Builder Mark reaches the same handler, so the refusal
         // is here, on the agent's tool only, before dispatch.
         preflight: (args) =>
-            args.team === false
+            args.demoBuilder === false
                 ? { success: false, error: DEMO_BUILDER_UNMARK_REFUSAL, code: ErrorCode.INVALID_OPERATION }
                 : undefined,
     },

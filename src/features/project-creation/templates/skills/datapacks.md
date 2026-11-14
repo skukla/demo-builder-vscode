@@ -1,5 +1,5 @@
 ---
-name: import-datapack
+name: datapacks
 description: Installs a datapack (products, categories, customers, B2B companies) into a project's Commerce instance, switches, restores or uninstalls it, saves Commerce back into a datapack, and clears demo data. Use when a demo needs catalog data, when the storefront renders but has nothing in it, or when the user asks to install, switch, restore, uninstall, save, undo a save or clear sample data. Seven ordered calls with three traps — read this before calling any of them.
 ---
 
@@ -17,13 +17,13 @@ get_datapack_import_target      → WHICH INSTANCE this project implies
 list_datapack_import_scopes     → optional: narrow to a website / store view
 validate_datapack_import        → dry run; free, ungated, do it every time
 preview_datapack_changes        → when the pack is installed already: what installing again changes
-start_datapack_import           → confirm:true; returns a HANDLE, not a result
+install_datapack           → confirm:true; returns a HANDLE, not a result
 get_datapack_import_status      → poll until outcome is not "watching"; read its check
 ```
 
 ## Trap 1 — the start call does not mean it worked
 
-`start_datapack_import` returns as soon as the job is accepted:
+`install_datapack` returns as soon as the job is accepted:
 
 ```json
 {"activationId": "..."}
@@ -51,7 +51,7 @@ for example after products were edited by hand.
 ## Installing a pack again
 
 When `get_datapack_import_target` or `list_installed_datapacks` shows the pack is already
-installed, **call `preview_datapack_changes` before `start_datapack_import`**. It reads only, and
+installed, **call `preview_datapack_changes` before `install_datapack`**. It reads only, and
 says by data type what installing again would update, add, remove, or keep because it was changed
 in the Admin. Show the user what it would remove: removing things can blank product values with
 them, and it cannot be undone.
@@ -68,7 +68,7 @@ deleted them in the Admin; `verify_datapack_install` checks every product.
 ## Putting the store back: restore_datapack
 
 To throw away what the user changed in Commerce and go back to a previous state of the datapack,
-use `restore_datapack`, not `start_datapack_import` (installing the same version again updates in
+use `restore_datapack`, not `install_datapack` (installing the same version again updates in
 place and keeps Admin edits). A Demo Builder datapack goes back as it ships. One of the user's own
 goes back to `to: "lastSaved"` (their last save, throwing away unsaved edits) or `to: "original"`
 (its first save, which is kept for good); without `to` nothing starts and the answer is the question
@@ -84,13 +84,13 @@ When the library has a newer version of the datapack the project uses (the card'
 every record the user edited in the Admin. It checks first and answers up to date when there is
 nothing to write. A datapack is built out additively, so applying part of it is fine: `dataTypes`
 picks the data types to update (default every type that changed), and the rest can be updated
-later. Agents keep installing chosen types with `start_datapack_import` too. Ask the user first.
+later. Agents keep installing chosen types with `install_datapack` too. Ask the user first.
 
 ## Switching to another pack, or another version
 
 When the project uses a pack Demo Builder installed and you install **another pack** (a switch, the
-screen's Switch) **or another version of it**, `start_datapack_import` uninstalls the pack in use
-first: its data is removed in the same job, the way `reset_datapack` removes it, then the new one
+screen's Switch) **or another version of it**, `install_datapack` uninstalls the pack in use
+first: its data is removed in the same job, the way `uninstall_datapack` removes it, then the new one
 installs. Tell the user that before you start.
 
 - Changes the user made to the old pack since it was installed are saved into their own pack first,
@@ -100,7 +100,7 @@ installs. Tell the user that before you start.
   `changes: "drop"` (lost).
 - An uninstall that fails installs nothing: the status's `stoppedAt` is `replacing`, its `reason`
   says why, and the project still names the old pack.
-- Once the old pack is gone the project names the new one, and `reset_datapack` removes the new one.
+- Once the old pack is gone the project names the new one, and `uninstall_datapack` removes the new one.
 - To bring in a newer version of the same datapack while keeping the user's Admin edits, use
   `update_datapack` instead: it uninstalls nothing.
 
@@ -110,7 +110,7 @@ Installing the same version again uninstalls nothing: it updates in place, as ab
 
 When the install of the project's datapack at creation did not succeed, `get_datapack_import_target`
 answers `installFailed` with the `reason` and how many `retries` were made. The screen shows the card
-with a red dot and offers Retry. Retry is `start_datapack_import` with the same datapack, version and
+with a red dot and offers Retry. Retry is `install_datapack` with the same datapack, version and
 scope; read the reason to the user first, since a cause in the pack or the instance fails again.
 After two failed retries the screen offers Fix with AI instead: find the cause before a third try.
 An install that succeeds clears the record.
@@ -169,12 +169,12 @@ All four, on every write call:
 - `commerceInstance` — see trap 2
 - `dataTypes` — at least one, from `list_datapack_data_types`. Omitting it does not mean
   "all"; it fails. An install writes only these and what they need, and leaves the rest of the
-  pack alone: not installed, not removed. `reset_datapack` is the one exception: it ignores
+  pack alone: not installed, not removed. `uninstall_datapack` is the one exception: it ignores
   them, as the next section says
 
 ## Removing data — scoped, not a wipe
 
-`reset_datapack` is **install in reverse**: it takes back what the install made. It removes
+`uninstall_datapack` is **install in reverse**: it takes back what the install made. It removes
 what the pack put there and nothing else — it is not an instance wipe, and data that arrived
 some other way is untouched.
 
@@ -228,7 +228,7 @@ hand since the install, by data kind, beside `keep`, what was changed.
 
 Either way the project then uses the new save: it installs from it and resets to it. With no
 pack named it saves only what is picked, which is how a store built by hand in the Admin becomes
-a pack (send `saveAs`; the screen's Create). `start_datapack_export` is the same save: send
+a pack (send `saveAs`; the screen's Create). `create_datapack` is the same save: send
 `selections` and/or `wholeKinds`, `saveAs` and `confirm`. Every save goes into My Datapacks, never into the Data
 Installer. A name the user already has for one of their own datapacks is refused: ask for
 another.
@@ -255,14 +255,14 @@ another.
 ## ACO packs
 
 **ACO packs** (Adobe Commerce Optimizer) come with ACO support, in a later release:
-`start_datapack_export` refuses `aco: true` until then. Say so if the user asks for one.
+`create_datapack` refuses `aco: true` until then. Say so if the user asks for one.
 
 ## The Datapacks screen's words, and the tool for each
 
 | The screen says | The tool |
 |---|---|
-| Install, Switch to | `start_datapack_import` |
-| Uninstall | `reset_datapack` |
+| Install, Switch to | `install_datapack` |
+| Uninstall | `uninstall_datapack` |
 | Restore | `restore_datapack` |
 | Update | `update_datapack` |
 | Save, Save As New, Create | `save_store_changes_to_pack` |
@@ -270,13 +270,13 @@ another.
 | Clear Demo Data | `check_demo_data`, then `clear_demo_data` |
 | Clear Commerce Instance | `check_demo_data` with website codes, then `clear_commerce_instance` |
 | Save as File | `save_datapack_zip` |
-| Add from File (Install from File is this, then Install) | `open_datapack_zip`, then `load_datapack_zip` |
+| Add from File (Install from File is this, then Install) | `read_datapack_file`, then `add_datapack_from_file` |
 | Share, Stop Sharing | `share_datapack` |
 | Delete | `delete_library_datapack` (a datapack of saves: `everyVersion: true`, as the screen does) |
 
 Use the screen's words with the user: Install, not import; Uninstall, not reset; Save, not export.
 Datapacks Demo Builder publishes are "Demo Builder datapacks". An agent cannot put a datapack into the
-Data Installer: `load_datapack_zip` adds a file to My Datapacks only. A file whose datapack is already
+Data Installer: `add_datapack_from_file` adds a file to My Datapacks only. A file whose datapack is already
 there asks the screen's Replace or Keep Both: Replace is `update: true`; Keep Both is `saveAs` with a new
 name (the screen offers "My Luma 2", then "My Luma 3"), which adds a new datapack and leaves the first as
 it is. To undo a load, delete exactly what it created, always with `keepSettingsLayer: true`: the
@@ -312,7 +312,7 @@ root (the store routes are read-only):
   store > Root Category). "Skip for now" finishes the install with that step left
   open; the note (`get_datapack_import_status`) names the store and the value, and
   `preview_datapack_changes` says it beforehand (`root`). Pass the step to the
-  user word for word: you cannot do it. Running `start_datapack_import` again
+  user word for word: you cannot do it. Running `install_datapack` again
   re-checks it (nothing else is rewritten) and marks it done once it is set.
 
 `diagnose-demo` carries the full symptom, including why `GET /V1/categories` hides it. On an Edge Delivery storefront, `republish`

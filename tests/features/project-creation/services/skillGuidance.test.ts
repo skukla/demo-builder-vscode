@@ -11,7 +11,7 @@
  *   that builds, pushes and browses and serves no product page. An agent
  *   following the old table found scope healthy and reported an empty catalog
  *   while the catalog was fine.
- * - `import-datapack`'s worst trap is that `start_datapack_import` returns a
+ * - `datapacks`'s worst trap is that `install_datapack` returns a
  *   RECEIPT. Reporting it as an outcome is invisible: the user sees "imported"
  *   and an empty catalog.
  *
@@ -107,16 +107,16 @@ describe('diagnose-demo routes the empty-product-page symptom correctly', () => 
     });
 });
 
-describe('import-datapack teaches the traps, not just the sequence', () => {
-    const content = () => skill('import-datapack');
+describe('datapacks teaches the traps, not just the sequence', () => {
+    const content = () => skill('datapacks');
 
     it('ships as an always-on skill', () => {
-        expect([...DEMO_BUILDER_ALWAYS_ON_SKILLS]).toContain('import-datapack');
+        expect([...DEMO_BUILDER_ALWAYS_ON_SKILLS]).toContain('datapacks');
     });
 
     it('says the start call returns a handle and must be polled', () => {
         const c = content();
-        expect(c).toContain('start_datapack_import');
+        expect(c).toContain('install_datapack');
         expect(c).toContain('get_datapack_import_status');
         // NOT `/receipt|handle/` — that matched the one-line sequence block, so
         // gutting the whole trap section still passed. Pin the two sentences
@@ -148,14 +148,14 @@ describe('import-datapack teaches the traps, not just the sequence', () => {
 
     it('warns that reset cannot be undone', () => {
         const c = content();
-        expect(c).toContain('reset_datapack');
+        expect(c).toContain('uninstall_datapack');
         expect(c).toMatch(/cannot be undone/i);
     });
 
     // Phase 8 (D7): nothing an agent saves reaches the Data Installer's shared catalog.
     it('says a save goes to My Datapacks, never the shared catalog', () => {
         const c = content();
-        expect(c).toContain('start_datapack_export');
+        expect(c).toContain('create_datapack');
         expect(c).toMatch(/never into the Data\s+Installer/i);
     });
 
@@ -186,7 +186,7 @@ describe('import-datapack teaches the traps, not just the sequence', () => {
     it("maps the Datapacks screen's words to the tools", () => {
         const c = content();
         for (const [word, tool] of [
-            ['Add from File', 'load_datapack_zip'],
+            ['Add from File', 'add_datapack_from_file'],
             ['Save as File', 'save_datapack_zip'],
             ['Save As New', 'save_store_changes_to_pack'],
             ['Undo Last Save', 'undo_last_save'],
@@ -244,13 +244,13 @@ describe('import-datapack teaches the traps, not just the sequence', () => {
 describe('author-commerce-data', () => {
     const content = () => skill('author-commerce-data');
 
-    it('ships as an always-on skill, like import-datapack', () => {
+    it('ships as an always-on skill, like datapacks', () => {
         expect([...DEMO_BUILDER_ALWAYS_ON_SKILLS]).toContain('author-commerce-data');
     });
 
     it('keeps the two purposes apart: sharing is a datapack, this is working the store', () => {
         // Owner, 2026-10-01: "two purposes, kept apart".
-        expect(content()).toMatch(/import-datapack/);
+        expect(content()).toMatch(/the `datapacks` skill/);
         expect(content()).toMatch(/Sharing finished data/i);
     });
 

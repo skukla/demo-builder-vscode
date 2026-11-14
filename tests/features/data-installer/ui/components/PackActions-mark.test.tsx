@@ -44,7 +44,7 @@ describe('Remove Demo Builder Mark', () => {
     it('asks first, and takes the mark off only when the window says so', async () => {
         mockRequest.mockResolvedValue({
             success: true,
-            data: { datapackName: 'bodea', team: false, versions: 1 },
+            data: { datapackName: 'bodea', demoBuilder: false, versions: 1 },
         });
         const onMarkChanged = renderInLibrary(OWN_DEMO_BUILDER);
 
@@ -62,7 +62,7 @@ describe('Remove Demo Builder Mark', () => {
         await press(screen.getByRole('button', { name: 'Remove Mark' }));
         expect(mockRequest).toHaveBeenCalledWith(
             'mark-team-datapack',
-            { datapackName: 'bodea', team: false },
+            { datapackName: 'bodea', demoBuilder: false },
             undefined
         );
         await settle();
@@ -111,7 +111,7 @@ describe('Mark as Demo Builder Datapack', () => {
     it('asks first, then marks it', async () => {
         mockRequest.mockResolvedValue({
             success: true,
-            data: { datapackName: 'bodea', team: true, versions: 1 },
+            data: { datapackName: 'bodea', demoBuilder: true, versions: 1 },
         });
         const onMarkChanged = renderInLibrary(OWN);
 
@@ -123,7 +123,7 @@ describe('Mark as Demo Builder Datapack', () => {
 
         expect(mockRequest).toHaveBeenCalledWith(
             'mark-team-datapack',
-            { datapackName: 'bodea', team: true },
+            { datapackName: 'bodea', demoBuilder: true },
             undefined
         );
         await settle();

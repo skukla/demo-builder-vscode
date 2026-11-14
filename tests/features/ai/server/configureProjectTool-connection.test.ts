@@ -26,11 +26,11 @@ beforeEach(() => {
 });
 
 describe('configure_project, changing the Commerce connection with a datapack installed', () => {
-    it('applies nothing and asks for an answer, naming the datapack and reset_datapack', async () => {
+    it('applies nothing and asks for an answer, naming the datapack and uninstall_datapack', async () => {
         const out = await serve()(MOVE);
 
         expect(out.error).toMatch(/^luma is installed in the current Commerce instance/u);
-        expect(out.error).toMatch(/reset_datapack/u);
+        expect(out.error).toMatch(/uninstall_datapack/u);
         expect(out.error).toMatch(/installedDatapack:"keep"/u);
         expect(saveProject).not.toHaveBeenCalled();
     });

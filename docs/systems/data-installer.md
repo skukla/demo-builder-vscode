@@ -39,7 +39,7 @@ answer, an amber banner says so (`storeMissing`). Only when neither
 answers does the list fail, with the store's reason, and its title is "Datapacks
 Aren't Available".
 
-The store's default list is its **team** packs (marked with `mark_team_datapack`)
+The store's default list is its **team** packs (marked with `mark_demo_builder_datapack`)
 and the SC's own; a colleague's shared pack is **Community**. Every Data Installer pack is tagged
 the Data Installer's, curated or not (owner, 2026-11-05); Recommended leaves all of them out.
 Agents' `find_datapacks` lists every datapack by default, each row's `source` saying whose it is
@@ -111,7 +111,7 @@ which lists every object the install made. It never removes by name.
 
 - **An install takes the whole pack on screen; an agent may ask for less; a removal takes what the
   record lists** (`demoBuilderEngine/askedKinds.ts`). The screen installs every data type the pack
-  holds (step 03, decisions J2-1); `start_datapack_import`'s `dataTypes` still installs the kinds asked
+  holds (step 03, decisions J2-1); `install_datapack`'s `dataTypes` still installs the kinds asked
   for and what they need (`ui/importDependencies.ts`), and nothing else. A kind left out is left
   alone: not installed, not compared, not removed, not put back, and still on the record. The dry run
   and `preview_datapack_changes` decide it the same way. A removal takes what the record lists,
@@ -175,7 +175,7 @@ which lists every object the install made. It never removes by name.
   how long search takes and "Took …" under them; a stop is "Couldn't Install My Luma" on its
   steps, with Retry while a retry can get past it (twice), then Fix with AI. A save or removal that fails installs nothing, says why in red on its step, and leaves the
   project naming the old pack; the project names the new pack once the old one is gone, so a reset
-  then removes the new one. Agents get the same through `start_datapack_import` (`changes`,
+  then removes the new one. Agents get the same through `install_datapack` (`changes`,
   `saveAs`, `CHANGES_NEED_ANSWER`). Installing the same version again replaces nothing.
 - **What a removal keeps is decided several reads at a time** (2026-11-09, `removers.ts`,
   `fewReadsAtOnce.ts`). Before anything is taken out, `decideRemovals` asks of each container the
@@ -235,7 +235,7 @@ which lists every object the install made. It never removes by name.
   reset or an Edit that removes the pack saves first without a second question when the pack is the
   SC's; when it is not, it asks in its progress window (**Save Changes As**, required and starting
   empty, then **Save As New and Uninstall**, or **Uninstall Without Saving**), and closing the
-  question keeps the data (owner, 2026-11-04: an empty name used to lose the changes). `reset_datapack` names the changes and refuses until `changes` is `keep` or
+  question keeps the data (owner, 2026-11-04: an empty name used to lose the changes). `uninstall_datapack` names the changes and refuses until `changes` is `keep` or
   `drop`, unless the setting answers.
 - **A project delete removes the data only when asked** (owner, 2026-11-09, walk F96,
   `projects-dashboard/services/datapackDataRemoval.ts`). Its question has **Uninstall Datapack**,
@@ -341,8 +341,8 @@ judgement in this feature:
   entries other teams depend on, `delete-datapack` cascades, there is no undo and no
   ownership guard. One agent typo removes a colleague's demo. Writing into it at all is not
   offered to agents (D7, datapack-simplification Phase 8): our accounts cannot write there, and the
-  screen hides it too (`INSTALLER_WRITES_SHOWN`). `start_datapack_export` saves into the SC's own
-  datapack library (Save or Save As New), and `load_datapack_zip` writes into it alone (its `target`
+  screen hides it too (`INSTALLER_WRITES_SHOWN`). `create_datapack` saves into the SC's own
+  datapack library (Save or Save As New), and `add_datapack_from_file` writes into it alone (its `target`
   is forced to `library`). The datapack library does have an ownership check, so updating your own
   pack is offered there.
 - **`DELETE get-installed-datapacks`** — clears tracking without uninstalling
@@ -545,11 +545,11 @@ tools stay, and a refusal for who we are (401 or 403) answers in plain words
 ### An ACO pack from a Commerce store
 
 **Held back in beta.153** (owner, 2026-11-03): Create Datapack opens straight on the Commerce
-pack, with no pack-type screen, and `start_datapack_export` refuses `aco: true`
+pack, with no pack-type screen, and `create_datapack` refuses `aco: true`
 (`ACO_HELD_BACK`). An ACO pack saved now would sit in the library with nothing to install it. The
 code below ships unreached. The ACO line reverts the hold commit when ACO support is released.
 
-The export screen's "Pack type" choice, and `start_datapack_export` with `aco: true`, make an
+The export screen's "Pack type" choice, and `create_datapack` with `aco: true`, make an
 Adobe Commerce Optimizer pack from the project's own store (datapack-engine step 14 item 19,
 PL-60): `aco_metadata`, `aco_categories`, `aco_products`, `aco_price_books` and `aco_prices`,
 for the store views the SC ticks (none named means every one). It is Demo Builder's port of the
@@ -618,7 +618,7 @@ so itself (`mine`), because only it knows the caller's verified email.
 A library pack's flyout offers Install, with Save as File and, when it is yours, Share or Stop
 Sharing and Delete in its More menu (`PackActions`); in the Datapack Library the bar is More alone. Demo Builder installs it straight
 from the library; agents pass `source: "library"` to `validate_datapack_import`,
-`start_datapack_import` and `reset_datapack`. Copy to the Data Installer
+`install_datapack` and `uninstall_datapack`. Copy to the Data Installer
 (`copy-library-datapack-to-installer`) puts a library pack where other teams can find and install
 it. It is built, but hidden behind `INSTALLER_WRITES_SHOWN` (off, owner 2026-11-06) until our accounts
 can write there, and offered then only while the Data Installer is on (the catalog's `installerOn`).
@@ -679,11 +679,11 @@ A zip whose files sit under one root folder reads the same.
 |---|---|---|
 | Save a pack from either store | Save as File in a pack's flyout menu, and after an export | `save_datapack_zip`; `dataTypes` saves only the types named (to leave out one the store cannot send) |
 | Remove your own library pack | "Delete" in its flyout menu (not on a Demo Builder datapack); a pack of saves goes whole | `delete_library_datapack`; `everyVersion: true` for a pack of saves |
-| Install a library pack | "Install" in its flyout | `start_datapack_import` with `source: "library"` |
+| Install a library pack | "Install" in its flyout | `install_datapack` with `source: "library"` |
 | Put a library pack in the Data Installer's catalog (needs write access, which our accounts lack today) | Not on screen until then (`INSTALLER_WRITES_SHOWN`) | none (D7) |
-| See what a file holds, writing nothing | the first step of Add from File (Install from File in a project) | `open_datapack_zip` |
+| See what a file holds, writing nothing | the first step of Add from File (Install from File in a project) | `read_datapack_file` |
 | Build a pack file from a Commerce product export | none (agent only) | `build_datapack_from_export` |
-| Write it into My Datapacks | Add from File (Install from File in a project); the Data Installer only under `INSTALLER_WRITES_SHOWN` | `load_datapack_zip`, My Datapacks only |
+| Write it into My Datapacks | Add from File (Install from File in a project); the Data Installer only under `INSTALLER_WRITES_SHOWN` | `add_datapack_from_file`, My Datapacks only |
 | A file whose version is already in My Datapacks | Replace or Keep Both in the form; Keep Both's name starts "My Luma 2" | `update: true`, or `saveAs` with the new name |
 | Undo a load into the library | the one Delete on the load result's row | `delete_library_datapack` with `keepSettingsLayer: true`, once per id the load created |
 

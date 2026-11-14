@@ -48,7 +48,7 @@ it("is reachable through the panel's one handler map", () => {
 
 it("marks every version of the SC's own pack, and only those", async () => {
     const team = true;
-    const result = await mark(createMockHandlerContext(), { datapackName: 'frescopa', team });
+    const result = await mark(createMockHandlerContext(), { datapackName: 'frescopa', demoBuilder: team });
 
     expect(mockAccess).toHaveBeenCalledWith(expect.anything(), 'library');
     expect(library.findDatapacks).toHaveBeenCalledWith(expect.objectContaining({ datapackName: 'frescopa' }));
@@ -56,25 +56,25 @@ it("marks every version of the SC's own pack, and only those", async () => {
         { datapack_name: 'frescopa', version: '1.0.0', team },
         { datapack_name: 'frescopa', version: '1.1.0', team },
     ]);
-    expect(result).toEqual({ success: true, data: { datapackName: 'frescopa', team, versions: 2 } });
+    expect(result).toEqual({ success: true, data: { datapackName: 'frescopa', demoBuilder: team, versions: 2 } });
 });
 
 // Owner, 2026-11-14: the screen's Remove Demo Builder Mark takes the mark off through this handler
-// (rule 1, reversibility). Agents still cannot: their tool refuses team:false before dispatch
-// (`mark_team_datapack`'s preflight, pinned in dataInstallerDescriptors.test.ts).
+// (rule 1, reversibility). Agents still cannot: their tool refuses demoBuilder:false before dispatch
+// (`mark_demo_builder_datapack`'s preflight, pinned in dataInstallerDescriptors.test.ts).
 it("takes the mark off every version of the SC's own pack, for the screen", async () => {
-    const result = await mark(createMockHandlerContext(), { datapackName: 'frescopa', team: false });
+    const result = await mark(createMockHandlerContext(), { datapackName: 'frescopa', demoBuilder: false });
 
     expect(puts()).toEqual([
         { datapack_name: 'frescopa', version: '1.0.0', team: false },
         { datapack_name: 'frescopa', version: '1.1.0', team: false },
     ]);
-    expect(result).toEqual({ success: true, data: { datapackName: 'frescopa', team: false, versions: 2 } });
+    expect(result).toEqual({ success: true, data: { datapackName: 'frescopa', demoBuilder: false, versions: 2 } });
 });
 
 it.each([
-    ['no name', { team: true }],
-    ['no team', { datapackName: 'frescopa' }],
+    ['no name', { demoBuilder: true }],
+    ['no demoBuilder', { datapackName: 'frescopa' }],
     ['no payload', undefined],
 ])('refuses, asking nothing of the store, with %s', async (_label, payload) => {
     expect(await mark(createMockHandlerContext(), payload)).toEqual({
@@ -89,14 +89,14 @@ it('passes on the refusal when the store cannot be opened', async () => {
     const refusal = { success: false, error: 'Sign in with Adobe.', code: ErrorCode.AUTH_REQUIRED };
     mockAccess.mockResolvedValue({ ok: false, response: refusal });
 
-    expect(await mark(createMockHandlerContext(), { datapackName: 'frescopa', team: true })).toEqual(refusal);
+    expect(await mark(createMockHandlerContext(), { datapackName: 'frescopa', demoBuilder: true })).toEqual(refusal);
     expect(fetchMock).not.toHaveBeenCalled();
 });
 
 it('refuses a pack the SC does not own, writing nothing', async () => {
     library.findDatapacks.mockResolvedValue({ items: [row('theirs', false)], count: 1 });
 
-    const result = await mark(createMockHandlerContext(), { datapackName: 'frescopa', team: true });
+    const result = await mark(createMockHandlerContext(), { datapackName: 'frescopa', demoBuilder: true });
 
     expect(result).toEqual({
         success: false,
@@ -109,7 +109,7 @@ it('refuses a pack the SC does not own, writing nothing', async () => {
 it("surfaces the store's refusal of someone not on its list of team pack owners", async () => {
     fetchMock.mockImplementation(async () => ({ ok: false, status: 403, text: async () => '{"success":false,"error":"Only team pack owners can do this."}' }));
 
-    const result = await mark(createMockHandlerContext(), { datapackName: 'frescopa', team: true });
+    const result = await mark(createMockHandlerContext(), { datapackName: 'frescopa', demoBuilder: true });
 
     expect(result.success).toBe(false);
     expect(result.error).toContain('Only team pack owners can do this.');

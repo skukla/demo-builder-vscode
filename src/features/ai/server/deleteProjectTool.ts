@@ -15,7 +15,7 @@
  *
  * `removeData` is the button's third box, "Uninstall Datapack" (walk F96): the data the
  * project's datapack put in Commerce, removed FIRST, the user's changes in it settled as
- * reset_datapack settles them (saved into their own pack; else `changes` and `saveAs`, refused
+ * uninstall_datapack settles them (saved into their own pack; else `changes` and `saveAs`, refused
  * until answered). A removal that does not finish deletes nothing. Off unless asked, and no
  * setting turns it on: it writes to a store. Deleting a datapack itself is the library's job
  * (delete_library_datapack), never a project delete's.
