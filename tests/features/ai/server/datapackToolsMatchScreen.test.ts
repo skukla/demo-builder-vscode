@@ -46,8 +46,9 @@ describe('D7: no Data Installer destination on the agent surface', () => {
         }
     });
 
+    // saveAs is the screen's Keep Both (step-07 F1).
     it('gives load_datapack_zip no destination and no name echo, and forces My Datapacks', () => {
-        expect(keys('load_datapack_zip')).toEqual(['path', 'update']);
+        expect(keys('load_datapack_zip')).toEqual(['path', 'saveAs', 'update']);
         expect(row('load_datapack_zip').argDefaults).toStrictEqual({ target: 'library' });
     });
 
@@ -101,9 +102,11 @@ describe("Delete, as the screen's Delete", () => {
     it('takes everyVersion, and a version only when deleting one', () => {
         const schema = row('delete_library_datapack').inputSchema ?? {};
 
+        // keepSettingsLayer: the screen's one Delete after a load removes only what the load made (step-07 F2).
         expect(keys('delete_library_datapack')).toEqual([
             'datapackName',
             'everyVersion',
+            'keepSettingsLayer',
             'version',
         ]);
         expect(schema.everyVersion.parse(true)).toBe(true);
@@ -149,8 +152,17 @@ describe("the screen's words", () => {
 describe("the consent dialog says the screen's words", () => {
     it('asks nothing about a Data Installer copy, and adds a file to My Datapacks only', () => {
         expect(alertCopyFor('copy_library_datapack_to_installer')).toBeUndefined();
-        expect(alertCopyFor('load_datapack_zip')).toMatchObject({ action: 'Add a datapack from a file', target: ['path'] });
+        // Replace and Keep Both are named too (step-07 F1 review): each changes what the call does.
+        expect(alertCopyFor('load_datapack_zip')).toMatchObject({ action: 'Add a datapack from a file', target: ['path', 'update', 'saveAs'] });
         expect(alertCopyFor('load_datapack_zip')?.consequence).not.toContain('Data Installer');
+    });
+
+    it("says what Replace and Keep Both do, in the dialog's lines", () => {
+        const describe = alertCopyFor('load_datapack_zip')?.describe;
+
+        expect(describe?.({ path: 'luma.zip', update: true })).toBe('Replaces the datapack of the same version in My Datapacks.');
+        expect(describe?.({ path: 'luma.zip', saveAs: 'My Luma 2' })).toBe('Adds it as My Luma 2, leaving the one already in My Datapacks as it is.');
+        expect(describe?.({ path: 'luma.zip' })).toBeUndefined();
     });
 
     it('says Delete takes every save when asked to', () => {

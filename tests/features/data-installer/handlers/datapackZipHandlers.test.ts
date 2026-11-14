@@ -10,26 +10,21 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { resolveDataInstallerAccess } from '@/features/data-installer/handlers/dataInstallerHandlers';
 import {
+    contextFor,
     datapackZipHandlers,
     INSTALLER_UPDATE_REFUSED,
     installerEchoRefusal,
-} from '@/features/data-installer/handlers/datapackZipHandlers';
+    mockAccess,
+    storeFetch,
+    tempProject,
+    zipFile,
+} from './datapackZipHandlers.testUtils';
 import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
 import { buildDatapackZip, readDatapackZip } from '@/features/data-installer/services/datapackZip';
 import type { DatapackDetail } from '@/features/data-installer/types';
-import type { Project } from '@/types/base';
-import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockProject } from '../../../helpers/projectFake';
-import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
 
-jest.mock('@/features/data-installer/handlers/dataInstallerHandlers', () => ({
-    ...jest.requireActual('@/features/data-installer/handlers/dataInstallerHandlers'),
-    resolveDataInstallerAccess: jest.fn(),
-}));
-
-const mockAccess = resolveDataInstallerAccess as jest.Mock;
 const mockSave = vscode.window.showSaveDialog as jest.Mock;
 const mockOpen = vscode.window.showOpenDialog as jest.Mock;
 
@@ -52,28 +47,13 @@ const catalog = {
 let dir: string;
 let fetchMock: jest.Mock;
 
-function contextFor(project: Project | null, withPanel: boolean) {
-    const context = createMockHandlerContext(withPanel ? { panel: createMockWebviewPanel() } : {});
-    (context.stateManager.getCurrentProject as jest.Mock).mockResolvedValue(project);
-    return context;
-}
-
 function packFile(name = 'pack.datapack.zip'): string {
-    const file = path.join(dir, name);
-    fs.writeFileSync(
-        file,
-        buildDatapackZip({
-            id: ID,
-            displayName: 'Justrite B2B',
-            items: [{ dataType: 'categories', records: ROWS }],
-        })
-    );
-    return file;
+    return zipFile(dir, { id: ID, displayName: 'Justrite B2B', items: [{ dataType: 'categories', records: ROWS }] }, name);
 }
 
 beforeEach(() => {
     jest.clearAllMocks();
-    dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'datapack-zip-')));
+    dir = tempProject('datapack-zip-');
     catalog.getDatapackDetail.mockResolvedValue(DETAIL);
     catalog.getDataItem.mockResolvedValue({ dataType: 'categories', records: ROWS });
     mockAccess.mockResolvedValue({
@@ -82,12 +62,7 @@ beforeEach(() => {
         baseUrl: STORE,
         getToken: async () => 'tok',
     });
-    fetchMock = jest.fn(async () => ({
-        ok: true,
-        status: 201,
-        text: async () => '{"success":true}',
-    }));
-    global.fetch = fetchMock as unknown as typeof fetch;
+    fetchMock = storeFetch();
 });
 
 it("is reachable through the panel's one handler map", () => {
@@ -442,6 +417,29 @@ describe('load-datapack-zip', () => {
                 ],
             },
         });
+    });
+
+    // Review of F1/F2: a load that stored nothing left an empty datapack behind with no Delete
+    // offered, and kept the name Keep Both had taken. What it created goes before it answers.
+    it('deletes the datapack it created when no type could be stored, and says so', async () => {
+        fetchMock
+            .mockResolvedValueOnce({ ok: true, status: 201, text: async () => '{}' })
+            .mockResolvedValueOnce({ ok: false, status: 413, text: async () => '' });
+
+        const result = await load(contextFor(createMockProject({ path: dir }), false), { path: packFile() });
+
+        expect(sentRoutes()).toEqual(['create-datapack', 'add-data-item', 'delete-datapack?datapack_name=justrite&version=v1']);
+        expect(result).toMatchObject({ success: false, error: 'No data type could be stored.', data: { pack: 'created', removed: true } });
+    });
+
+    it('CONTROL: leaves a datapack it only updated, when no type could be stored', async () => {
+        fetchMock
+            .mockResolvedValueOnce({ ok: false, status: 409, text: async () => '{}' })
+            .mockResolvedValueOnce({ ok: false, status: 413, text: async () => '' });
+
+        await load(contextFor(createMockProject({ path: dir }), false), { path: packFile(), update: true });
+
+        expect(sentRoutes()).toEqual(['create-datapack', 'add-data-item']);
     });
 
     it('into the Data Installer, refuses until the pack name is sent back, then writes it', async () => {

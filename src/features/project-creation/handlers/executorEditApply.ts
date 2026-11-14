@@ -166,11 +166,14 @@ async function applyInPlace(
     // A datapack part that stopped says why; the rest of the Edit stands (owner Q1).
     const datapackStopped = await applyDatapackChange(context, project, config, datapack, progressTracker, packageChange.resets);
     if (datapackStopped) warnings.push(datapackStopped);
-    // What the storefront reset finished around joins the Edit's warnings (owner, 2026-11-14).
-    warnings.push(...(await applyPackageChange(context, project, config, packageChange, progressTracker)));
+    // What the storefront reset finished around joins the Edit's warnings (owner, 2026-11-14); content
+    // it kept on purpose is a note, not a warning, as the batch reset says it (owner walk Q6).
+    const ending = await applyPackageChange(context, project, config, packageChange, progressTracker);
+    warnings.push(...ending.warnings);
     project.lastModified = new Date();
     await context.stateManager.saveProject(project);
     if (warnings.length > 0) void vscode.window.showWarningMessage(warnings.join(' '));
+    if (ending.notes.length > 0) void vscode.window.showInformationMessage(ending.notes.join(' '));
     // The sentinel the wizard's progress screen finishes on.
     progressTracker('Project Created', 100, 'Changes applied');
     return true;

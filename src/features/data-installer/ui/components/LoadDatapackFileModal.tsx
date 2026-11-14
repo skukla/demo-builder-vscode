@@ -12,44 +12,34 @@
  * into it would fail every time. When it is offered, the choice is spelled out because the two
  * differ in who sees the result: the Data Installer's catalog is shared with other teams, so
  * choosing it is the confirmation (the handler also wants the pack's name back, which this
- * sends). Replacing is asked only when My Datapacks already holds the file's version (Clarity 1.15,
- * step-04 S10): the sentence says so and the button reads Replace Existing. Only into My Datapacks:
- * the Data Installer cannot tell whose pack is whose, and the handler refuses it there.
+ * sends). When My Datapacks already holds the file's version (Clarity 1.15, step-04 S10) the form
+ * asks Replace or Keep Both (step-07 F1, P4-Q10; `LoadFileForm`): Replace writes over it, Keep
+ * Both adds the file as a new datapack under the name in its box (`saveAs`), the first left as
+ * it is. Only into My Datapacks: the Data Installer cannot tell whose pack is whose.
  *
- * Loading writes a pack into a store; it installs nothing into Commerce. That is
- * still the catalog's Import.
+ * In a project's Datapacks a clean load hands the datapack to the install window (step-07 F2,
+ * P4-Q7; `onInstall`): Install from File adds, then installs. Cancelling that window leaves the
+ * datapack in My Datapacks (owner Q8). In the Datapack Library, with no project, a load only adds.
  *
  * A file can carry the pack's settings layer as a second section (datapack-engine step 09). The
- * form says so, since the layer goes to the library whichever store the SC chooses, and the result
- * offers its own undo unless removing the pack takes it (a layer of the same version does).
+ * form says so, since the layer goes to the library whichever store the SC chooses. The result
+ * has one row for what this load created, with one Delete that removes all of it, the datapack and
+ * any layer the load created, and never a layer that was there before (owner rule 1).
  *
  * @module features/data-installer/ui/components/LoadDatapackFileModal
  */
 
-import { Radio, RadioGroup } from '@adobe/react-spectrum';
-import React, { useCallback, useEffect, useState } from 'react';
-import { configurationSettingsCount } from '../../datapackWords';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { INSTALLER_WRITES_SHOWN } from '../../installerWrites';
-import { isSavedVersion, packLine, versionLabel } from '../../packVersions';
+import { copyName, longestNameProblem, nameProblem } from '../../saveAsName';
 import { dataTypeLabel } from '../dataTypeLabel';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import { type ResultContent, resultStatus } from './importResult';
+import { LoadFileForm, type OpenedFile } from './LoadFileForm';
 import { RemoveFromLibraryButton } from './RemoveFromLibraryButton';
 import { FormDialog } from '@/core/ui/components/ui/FormDialog';
-import { LeadText } from '@/core/ui/components/ui/LeadText';
 import { ResultDialog, type ResultRow } from '@/core/ui/components/ui/ResultDialog';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
-
-/** What `open-datapack-zip` says about a file. */
-interface OpenedFile {
-    cancelled?: boolean;
-    path?: string;
-    datapackName?: string;
-    version?: string;
-    displayName?: string;
-    dataTypes?: string[];
-    settingsLayer?: { paths: string[] };
-}
 
 /** What loading the file's settings layer did. */
 interface LoadedLayer {
@@ -60,9 +50,11 @@ interface LoadedLayer {
 }
 
 /** What `load-datapack-zip` did. */
-interface LoadOutcome {
+export interface LoadOutcome {
     datapackName: string;
     version: string;
+    /** The name a Keep Both load gave the new datapack. */
+    displayName?: string;
     target: DatapackStoreName;
     pack: 'created' | 'updated';
     stored: string[];
@@ -70,11 +62,13 @@ interface LoadOutcome {
     settingsLayer?: LoadedLayer;
 }
 
-/** The undo for a layer this load created, unless removing the pack takes it. */
-function layerToUndo(outcome: LoadOutcome | null, packUndoable: boolean): LoadedLayer | undefined {
-    const layer = outcome?.settingsLayer;
-    if (layer?.outcome !== 'created') return undefined;
-    return packUndoable && layer.version === outcome?.version ? undefined : layer;
+/**
+ * A datapack a clean load added to My Datapacks, as the install window opens on it: by id and name
+ * only. The window reads the datapack's own types; a Replace may have stored only some of them.
+ */
+export interface LoadedDatapack {
+    id: DatapackId;
+    displayName: string;
 }
 
 export interface LoadDatapackFileModalProps {
@@ -82,21 +76,55 @@ export interface LoadDatapackFileModalProps {
     onClose: () => void;
     /** Whether the Data Installer is offered as a destination; off while our accounts cannot write there. */
     offersInstaller?: boolean;
-    /** The SC's own datapacks in My Datapacks, by id: replacing is asked only about one of these. */
+    /** The SC's own datapacks in My Datapacks, by id: Replace or Keep Both is asked only about one of these. */
     mySaves?: readonly DatapackId[];
+    /** The SC's own datapacks' names: Keep Both's name may not be one of them. Must be stable. */
+    ownNames?: readonly string[];
+    /** A project's Datapacks: a clean load into My Datapacks goes on to install (F2). Absent in the Datapack Library. */
+    onInstall?: (loaded: LoadedDatapack) => void;
 }
 
 const NO_SAVES: readonly DatapackId[] = [];
+const NO_NAMES: readonly string[] = [];
 
 /** Whether My Datapacks already holds the file's version. */
 function alreadyHeld(file: OpenedFile | null, mySaves: readonly DatapackId[]): boolean {
     return file !== null && mySaves.some((id) => id.name === file.datapackName && id.version === file.version);
 }
 
+/** The name the SC knows the loaded datapack by: Keep Both's new name, else the file's. */
+function loadedName(file: OpenedFile | null, outcome: LoadOutcome | null): string {
+    return outcome?.displayName ?? file?.displayName ?? outcome?.datapackName ?? file?.datapackName ?? 'Datapack';
+}
+
+/**
+ * Exactly what this load created in My Datapacks, for the one Delete: the datapack when the load
+ * created it there, and the settings layer when the load created that. A layer left as it was, or
+ * a pack the load updated, is not the load's to remove.
+ */
+function createdIds(outcome: LoadOutcome | null): DatapackId[] {
+    if (!outcome) return [];
+    const pack = outcome.target === 'library' && outcome.pack === 'created' ? [{ name: outcome.datapackName, version: outcome.version }] : [];
+    const layer = outcome.settingsLayer?.outcome === 'created' ? [{ name: outcome.settingsLayer.datapackName, version: outcome.settingsLayer.version }] : [];
+    return [...pack, ...layer];
+}
+
+/** Keep Both's name: what was typed, else where it starts ("My Luma 2"). */
+function useCopyName(file: OpenedFile | null, ownNames: readonly string[]) {
+    const [keepBoth, setKeepBoth] = useState(false);
+    const [typed, setTyped] = useState<string | undefined>(undefined);
+    const start = useMemo(() => copyName(file?.displayName ?? file?.datapackName ?? '', ownNames), [file, ownNames]);
+    const name = typed ?? start;
+    const room = useMemo(() => longestNameProblem(ownNames), [ownNames]);
+    return { keepBoth, onKeepBoth: setKeepBoth, name, onName: setTyped, problem: nameProblem(name, ownNames), room };
+}
+
 export function LoadDatapackFileModal({
     onClose,
     offersInstaller = INSTALLER_WRITES_SHOWN,
     mySaves = NO_SAVES,
+    ownNames = NO_NAMES,
+    onInstall,
 }: LoadDatapackFileModalProps): React.JSX.Element | null {
     const [target, setTarget] = useState<DatapackStoreName>('library');
     const opened = useDataInstallerRequest<OpenedFile>('open-datapack-zip');
@@ -113,33 +141,39 @@ export function LoadDatapackFileModal({
     }, [opened.value, onClose]);
 
     const file = opened.value?.path ? opened.value : null;
-    const replaces = target === 'library' && alreadyHeld(file, mySaves);
+    const held = alreadyHeld(file, mySaves);
+    const copy = useCopyName(file, ownNames);
+    const asks = held && target === 'library';
+    const keepsBoth = asks && copy.keepBoth;
     const runLoad = loading.load;
     const load = useCallback((): void => {
         if (!file) return;
         runLoad({
             path: file.path,
             target,
-            update: replaces,
+            update: asks && !copy.keepBoth,
+            ...(keepsBoth ? { saveAs: copy.name.trim() } : {}),
             ...(target === 'installer' ? { confirmName: file.datapackName } : {}),
         });
-    }, [runLoad, file, target, replaces]);
+    }, [runLoad, file, target, asks, keepsBoth, copy.keepBoth, copy.name]);
 
-    if (!opened.settled || opened.value?.cancelled) return null;
     const outcome = loading.value;
+    const undo = useMemo(() => createdIds(loading.failure ? null : outcome), [loading.failure, outcome]);
     const result = loadResult({ openError: opened.failure?.message, file, outcome, loadError: loading.failure?.message });
-    // Only an exact undo is offered: a pack this load CREATED in the library.
-    const undoable = !loading.failure && outcome?.target === 'library' && outcome.pack === 'created';
-    const undoLayer = layerToUndo(outcome, undoable);
-    const undoPack = undoable ? packCreated(file, outcome) : undefined;
+    // In a project's Datapacks a clean load into My Datapacks goes on to install it (F2).
+    const installs = onInstall !== undefined && outcome?.target === 'library' && result?.variant === 'success';
+    useEffect(() => {
+        if (installs && outcome) onInstall({ id: { name: outcome.datapackName, version: outcome.version }, displayName: loadedName(file, outcome) });
+    }, [installs, outcome, file, onInstall]);
 
+    if (!opened.settled || opened.value?.cancelled || installs) return null;
     if (result) {
         return (
             <ResultDialog
                 isOpen
                 title={result.title}
                 status={resultStatus(result) ?? 'warning'}
-                rows={resultRows(outcome, undoPack, undoLayer)}
+                rows={resultRows(outcome, undo, loadedName(file, outcome))}
                 onClose={onClose}
             >
                 {result.message}
@@ -151,28 +185,22 @@ export function LoadDatapackFileModal({
         <FormDialog
             isOpen
             title="Add from File"
-            submitLabel={replaces ? 'Replace Existing' : 'Load'}
+            submitLabel={asks && !copy.keepBoth ? 'Replace' : 'Load'}
             onSubmit={load}
-            submitDisabled={!file}
+            submitDisabled={!file || (keepsBoth && copy.problem !== undefined)}
             submitPending={loading.loading}
             onClose={onClose}
         >
             {file ? (
-                <LoadForm
+                <LoadFileForm
                     file={file}
-                    choice={{ target, replaces, onTarget: setTarget }}
+                    choice={{ target, held, onTarget: setTarget }}
+                    copy={copy}
                     offersInstaller={offersInstaller}
                 />
             ) : null}
         </FormDialog>
     );
-}
-
-interface TargetChoice {
-    target: DatapackStoreName;
-    /** My Datapacks already holds this version, and the load replaces it. */
-    replaces: boolean;
-    onTarget: (target: DatapackStoreName) => void;
 }
 
 /**
@@ -189,7 +217,7 @@ function loadResult(args: {
     if (openError || !file) {
         return { variant: 'error', title: "Couldn't Open the File", message: openError ?? 'No file was opened.' };
     }
-    const name = file.displayName ?? file.datapackName ?? 'Datapack';
+    const name = loadedName(file, outcome);
     if (!outcome && !loadError) return null;
     const layer = outcome?.settingsLayer;
     const details = [
@@ -209,33 +237,20 @@ function loadResult(args: {
     return { variant: 'warning', title: `${name} ${failed > 0 ? 'Partly Loaded' : 'Loaded'}`, message: `${partly}${where}`, details };
 }
 
-/** The pack this load created, by the name the SC knows it by. */
-function packCreated(file: { displayName?: string } | null, outcome: { datapackName: string }): { name: string } {
-    return { name: file?.displayName ?? outcome.datapackName };
-}
-
 /**
- * The result's lines, each with what can be done about it (layout variant 6): a type the store
- * refused, with its reason under it, and what this load created, with its own Delete.
+ * The result's lines (layout variant 6): a type the store refused, with its reason under it, and ONE
+ * row for what this load created, with the one Delete that removes all of it (F2). The row is the
+ * datapack by its name; when the load created only a settings layer (the data went to the Data
+ * Installer, or replaced a datapack), it is that layer.
  */
-function resultRows(outcome: LoadOutcome | null, createdPack?: { name: string }, createdLayer?: LoadedLayer): ResultRow[] {
+function resultRows(outcome: LoadOutcome | null, created: readonly DatapackId[], name: string): ResultRow[] {
     const rows: ResultRow[] = (outcome?.failed ?? []).map((f) => ({ label: dataTypeLabel(f.dataType), status: 'warning', note: f.reason }));
     const layer = outcome?.settingsLayer;
     if (layer?.reason) rows.push({ label: 'Store Configuration', status: 'warning', note: layer.reason });
-    if (outcome && createdPack) {
-        rows.push({
-            // The SC never sees a version (D3): the datapack by its name alone.
-            label: createdPack.name,
-            status: 'success',
-            action: <RemoveFromLibraryButton id={{ name: outcome.datapackName, version: outcome.version }} />,
-        });
-    }
-    if (createdLayer) {
-        rows.push({
-            label: 'Store Configuration',
-            status: 'success',
-            action: <RemoveFromLibraryButton id={{ name: createdLayer.datapackName, version: createdLayer.version }} label="Delete Store Configuration" />,
-        });
+    if (outcome && created.length > 0) {
+        const packCreated = created.some((id) => id.name === outcome.datapackName);
+        // The SC never sees a version (D3): the datapack by its name alone.
+        rows.push({ label: packCreated ? name : 'Store Configuration', status: 'success', action: <RemoveFromLibraryButton ids={created} /> });
     }
     return rows;
 }
@@ -244,54 +259,4 @@ function resultRows(outcome: LoadOutcome | null, createdPack?: { name: string },
 function loadedWhere(intoInstaller: boolean, settingsLanded: boolean): string {
     if (intoInstaller) return `Added to the Data Installer.${settingsLanded ? ' Its store configuration is in My Datapacks.' : ''}`;
     return `Added to My Datapacks${settingsLanded ? ', with its store configuration' : ''}.`;
-}
-
-/** "My Luma, saved Nov 9, 9:15 AM" or "Luma, main": a save by its date, never its id. */
-function fileLine(file: OpenedFile): string {
-    const name = file.displayName ?? file.datapackName ?? '';
-    const version = file.version ?? '';
-    if (!version) return name;
-    return isSavedVersion(version) ? `${name}, saved ${versionLabel(version)}` : packLine(name, version);
-}
-
-/** What is in the file, and where it should go. */
-function LoadForm({ file, choice, offersInstaller }: { file: OpenedFile; choice: TargetChoice; offersInstaller: boolean }): React.JSX.Element {
-    const types = (file.dataTypes ?? []).map(dataTypeLabel).join(', ');
-    return (
-        <>
-            <LeadText>
-                {fileLine(file)}. It holds {types}.{choice.replaces ? " It's already in My Datapacks." : ''}
-            </LeadText>
-            {file.settingsLayer ? (
-                <p className="dialog-note">
-                    Its store configuration ({configurationSettingsCount(file.settingsLayer.paths.length).toLowerCase()}) goes into My Datapacks.
-                </p>
-            ) : null}
-            {offersInstaller ? <DestinationChoice name={file.datapackName} choice={choice} /> : null}
-        </>
-    );
-}
-
-/** My Datapacks or the Data Installer, only while the Data Installer takes our writes. */
-function DestinationChoice({ name, choice }: { name?: string; choice: TargetChoice }): React.JSX.Element {
-    return (
-        <>
-            <RadioGroup
-                label="Destination"
-                value={choice.target}
-                onChange={(value) => choice.onTarget(value as DatapackStoreName)}
-            >
-                <Radio value="library">
-                    My Datapacks (Private Until Shared)
-                </Radio>
-                <Radio value="installer">Data Installer (Shared Catalog)</Radio>
-            </RadioGroup>
-            {choice.target === 'installer' ? (
-                <p className="dialog-note">
-                    Other teams will see {name} in the shared catalog. If that name and
-                    version already exist there, nothing is changed.
-                </p>
-            ) : null}
-        </>
-    );
 }

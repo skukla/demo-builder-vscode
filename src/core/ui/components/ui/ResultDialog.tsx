@@ -5,7 +5,7 @@
  * action (Retry, Fix with AI, Open).
  *
  * A result can carry rows of its own, each a `WorkRow` with the button that acts on that line alone
- * (Delete Store Configuration beside the store configuration it loaded): the row owns its button's
+ * (Delete beside the datapack a file load created): the row owns its button's
  * wait and note, so Close stays the only window button.
  *
  * A clean result that is its title alone closes itself after a glance (`useCloseWhenClean`);

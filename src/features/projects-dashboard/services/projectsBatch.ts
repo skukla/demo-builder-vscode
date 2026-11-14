@@ -29,7 +29,7 @@ import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { stageLine } from '@/core/utils/stageLine';
 import type { ReportStage } from '@/core/vscode/withOperationProgress';
 import { libraryDisplayName } from '@/features/data-installer/handlers/libraryWriter';
-import { ownNames } from '@/features/data-installer/handlers/packSave';
+import { ownNames } from '@/features/data-installer/handlers/ownDatapackNames';
 import { readRemovalChangesOf } from '@/features/data-installer/handlers/removalChanges';
 import { commerceBackendOf } from '@/features/data-installer/services/commerceBackend';
 import { changesOnRemoval } from '@/features/data-installer/services/dataInstallerConfig';

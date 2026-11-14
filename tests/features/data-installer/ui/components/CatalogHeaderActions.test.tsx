@@ -9,6 +9,7 @@ import '../../../../helpers/webviewClientMock';
 import React from 'react';
 import { render, screen, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import { loadedFile, OPENED_FILE } from '../../../../helpers/datapackFileFixtures';
 import { press, settle } from '../../../../helpers/reactSettle';
 
 // Below the mock on purpose — see webview-test-authoring §3.
@@ -54,6 +55,15 @@ beforeEach(() => {
     mockRequest.mockReset();
     mockRequest.mockResolvedValue({ success: true, data: null });
 });
+
+/** The host's answers to a file opened and loaded cleanly into My Datapacks. */
+function loadAnswers(): void {
+    mockRequest.mockImplementation(async (type: string) => {
+        if (type === 'open-datapack-zip') return { success: true, data: OPENED_FILE };
+        if (type === 'load-datapack-zip') return { success: true, data: loadedFile() };
+        return { success: true, data: null };
+    });
+}
 
 describe("in a project's Datapacks", () => {
     it('waits, disabled and with no words, until the state is known', () => {
@@ -121,6 +131,24 @@ describe("in a project's Datapacks", () => {
         await press(screen.getByRole('button', { name: 'Install from File' }));
 
         expect(mockRequest.mock.calls.map((call) => call[0])).toContain('open-datapack-zip');
+    });
+
+    // Step-07 F2 (P4-Q7): Install from File adds, then opens the install window on what it added.
+    it('opens the install window on a datapack Install from File added cleanly, closing the load', async () => {
+        loadAnswers();
+        const onInstall = jest.fn();
+        const onCatalogChanged = jest.fn();
+        render(<CatalogHeaderActions onCatalogChanged={onCatalogChanged} save={saveActions('create')} onInstall={onInstall} />);
+
+        await press(screen.getByRole('button', { name: 'Install from File' }));
+        await settle();
+        await press(screen.getByRole('button', { name: 'Load' }));
+        await settle();
+
+        expect(onInstall).toHaveBeenCalledWith({ id: { name: 'justrite', version: 'v1' }, displayName: 'Justrite B2B' });
+        expect(onCatalogChanged).toHaveBeenCalled();
+        expect(screen.queryByRole('heading', { name: 'Add from File' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('heading', { name: 'Justrite B2B Loaded' })).not.toBeInTheDocument();
     });
 
     // 7b: a button's words never change while it is on screen. The first words drawn are the last.
@@ -209,5 +237,20 @@ describe('in the Datapack Library', () => {
         renderHeader();
 
         expect(buttonsInOrder(['Add from File'])).toEqual(['Add from File']);
+    });
+
+    // Step-07 F2: with no project, Add from File only adds; it ends on its result.
+    it('only adds: a clean load ends on its result and opens no install window', async () => {
+        loadAnswers();
+        const onInstall = jest.fn();
+        render(<CatalogHeaderActions onCatalogChanged={jest.fn()} onInstall={onInstall} />);
+
+        await press(screen.getByRole('button', { name: 'Add from File' }));
+        await settle();
+        await press(screen.getByRole('button', { name: 'Load' }));
+        await settle();
+
+        expect(onInstall).not.toHaveBeenCalled();
+        expect(screen.getByRole('heading', { name: 'Justrite B2B Loaded' })).toBeInTheDocument();
     });
 });

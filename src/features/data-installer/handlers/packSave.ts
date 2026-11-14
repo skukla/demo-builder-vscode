@@ -24,6 +24,7 @@ import { saveStoreChanges } from '../services/demoBuilderEngine/saveStore';
 import { StoreChangesError } from '../services/demoBuilderEngine/storeAccess';
 import { type SaveInto, planSave, recordSave } from '../services/demoPack';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
+import { ownNames } from './ownDatapackNames';
 import type { ProjectStore, SaveOpened } from './storeChangesHandlers';
 import { trimOldSaves } from './trimSaves';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
@@ -51,25 +52,6 @@ function needsName(): HandlerResponse {
         code: ErrorCode.INVALID_OPERATION,
         data: { needsName: true },
     };
-}
-
-/**
- * The names of the SC's own datapacks in the library, as the Datapacks screen counts them
- * (`ownedOf`): a new one may not take one (J3-1). The projects list's save question reads it too
- * (`projectsBatch.ts`). None when the library
- * cannot be asked: the library's own name is generated (`packIdFor`), so a repeated display name
- * overwrites nothing.
- */
-export async function ownNames(context: HandlerContext): Promise<string[]> {
-    const library = await resolveDataInstallerAccess(context, 'library');
-    if (!library.ok) return [];
-    try {
-        const page = await library.client.findDatapacks({});
-        return page.items.filter((item) => item.mine === true).map((item) => item.displayName);
-    } catch (error) {
-        context.debugLogger.debug(`${LOG_PREFIX} Could not read your datapacks' names: ${error instanceof Error ? error.message : String(error)}`);
-        return [];
-    }
 }
 
 /**

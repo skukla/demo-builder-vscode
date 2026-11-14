@@ -11,7 +11,8 @@
  *
  * One window serves every path (`DatapackJobWindow`, step 03), on the job `windowRoute` picks: a
  * first install (S4), a switch over another datapack (S6), Uninstall and another version of the held
- * datapack (S7), Restore from its check (S8), Update from its check (step-07 U1), and a run already started (Undo, a failed install's Retry).
+ * datapack (S7), Restore from its check (S8), Update from its check (step-07 U1), a datapack Install
+ * from File just added (step-07 F2, `openLoaded`), and a run already started (Undo, a failed install's Retry).
  *
  * @module features/data-installer/ui/hooks/useImportWindow
  */
@@ -19,6 +20,7 @@
 import React, { useCallback, useState } from 'react';
 import type { DataItemInventory, DatapackDetail, DatapackSummary } from '../../types';
 import { DatapackJobWindow } from '../components/job/DatapackJobWindow';
+import type { LoadedDatapack } from '../components/LoadDatapackFileModal';
 import type { DatapackId, DatapackStoreName, ProjectDatapack } from '@/types/datapack';
 
 /** The datapack the project holds, and whether Demo Builder installed it (so can uninstall it). */
@@ -56,8 +58,10 @@ export type WindowRoute = 'install' | 'switch' | 'version' | 'uninstall' | 'rest
  * Which job the window opens on (step 03, S4, S6, S7). With no record of the held datapack there is
  * nothing to uninstall it by, so installing over it is an install. Another version of the held
  * datapack is a switch in Install's words (`version`). The same version again installs in place,
- * replacing nothing, as the handler does (`importReplacement.ts`); on screen it is reached only
- * when there is no record, since Restore stands in Install's place otherwise (`installedPackProps`).
+ * replacing nothing, as the handler does (`importReplacement.ts`). On screen it is reached when there
+ * is no record, since Restore stands in Install's place otherwise (`installedPackProps`), and after
+ * Install from File with Replace on the version the project holds (step-07 F2), which installs that
+ * version again in place over its own record.
  */
 export function windowRoute(opened: Pick<ImportWindow, 'id' | 'opensOn' | 'holding'>): WindowRoute {
     if (opened.opensOn === 'run') return 'watch';
@@ -68,6 +72,12 @@ export function windowRoute(opened: Pick<ImportWindow, 'id' | 'opensOn' | 'holdi
     if (!holding?.recorded) return 'install';
     if (holding.pack.name !== opened.id.name) return 'switch';
     return holding.pack.version === opened.id.version ? 'install' : 'version';
+}
+
+/** The names, with this one added unless it is there already, whatever its capitals. */
+function withName(names: readonly string[], name: string): string[] {
+    const has = names.some((each) => each.trim().toLowerCase() === name.trim().toLowerCase());
+    return has ? [...names] : [...names, name];
 }
 
 /** The flyout's read: the detail and what is stored, as `get-datapack-detail` answers. */
@@ -109,6 +119,7 @@ export function useImportWindow(
     window: ImportWindow | undefined;
     open: (id: DatapackId, opensOn?: Exclude<OpensOn, 'remove'>) => void;
     openRemoval: () => void;
+    openLoaded: (loaded: LoadedDatapack) => void;
     close: () => void;
 } {
     const [opened, setOpened] = useState<ImportWindow | undefined>(undefined);
@@ -138,8 +149,16 @@ export function useImportWindow(
             ...owned,
         });
     }, [shown, store, owned]);
+    // Install from File (step-07 F2): the datapack the load just added to My Datapacks, with no flyout.
+    // No types: the window reads the datapack's own. Its name joins the SC's own names, read before
+    // the load, so the switch's save question cannot offer the name the load just took.
+    const openLoaded = useCallback(
+        (loaded: LoadedDatapack): void =>
+            setOpened({ id: loaded.id, store: 'library', displayName: loaded.displayName, ...owned, ownNames: withName(owned.ownNames, loaded.displayName) }),
+        [owned],
+    );
     const close = useCallback((): void => setOpened(undefined), []);
-    return { window: opened, open, openRemoval, close };
+    return { window: opened, open, openRemoval, openLoaded, close };
 }
 
 /** The props each route adds to the job window. */

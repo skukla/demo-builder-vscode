@@ -588,7 +588,9 @@ describe('reset_project on an Edge Delivery project', () => {
             const res = await s.call({ confirm: true });
 
             expect(executeEdsResetMock.mock.calls[0][0]).toMatchObject({ keepContent: true });
-            expect(res).toMatchObject({ reset: true, caveats: [CONTENT_KEPT_LINE] });
+            // Kept on purpose is a note, not a caveat, as both screens say it (review of step-07 small fix 2).
+            expect(res).toMatchObject({ reset: true, note: CONTENT_KEPT_LINE });
+            expect('caveats' in res).toBe(false);
         });
 
         it('CONTROL: sends no keepContent when the source and its pages answer', async () => {

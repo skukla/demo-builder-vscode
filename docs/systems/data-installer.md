@@ -679,17 +679,23 @@ A zip whose files sit under one root folder reads the same.
 | See what a file holds, writing nothing | the first step of Add from File (Install from File in a project) | `open_datapack_zip` |
 | Build a pack file from a Commerce product export | none (agent only) | `build_datapack_from_export` |
 | Write it into My Datapacks | Add from File (Install from File in a project); the Data Installer only under `INSTALLER_WRITES_SHOWN` | `load_datapack_zip`, My Datapacks only |
-| Undo a load into the library | "Remove it from the library", in the load result | `delete_library_datapack` |
+| A file whose version is already in My Datapacks | Replace or Keep Both in the form; Keep Both's name starts "My Luma 2" | `update: true`, or `saveAs` with the new name |
+| Undo a load into the library | the one Delete on the load result's row | `delete_library_datapack` with `keepSettingsLayer: true`, once per id the load created |
 
-Loading puts a pack in a store; installing it into Commerce is still Install. Each data
+Loading puts a pack in a store; installing it into Commerce is Install. In a project's Datapacks,
+Install from File does both: a clean load opens the install window on the datapack it added
+(step-07 F2), and cancelling that window leaves the datapack in My Datapacks. In the Datapack
+Library, Add from File only adds. Each data
 type is one `add-data-item` request, so a type too large for one request is refused by
 name and the others still land. An agent's paths must be inside the open project; the
 panel uses VS Code's own dialogs.
 
 **Undo is library-only, by design.** `delete-library-datapack` deletes one of the
 caller's own library packs; the library refuses anyone else's as if it did not exist.
-The panel offers it only after a load that CREATED the pack, where it is an exact
-undo — after an update it would also remove what the pack held before. Deleting from
+The panel offers one Delete for what a load CREATED, the datapack and any settings layer, each by
+id and each with `keepSettingsLayer`, so a layer that was in My Datapacks before the load stays
+(owner rule 1). A pack the load updated is not on it: deleting would also remove what the pack held
+before. Deleting from
 the Data Installer stays unoffered, for the reasons under "What agents are not given".
 A load into the Data Installer therefore still cannot be undone from here.
 

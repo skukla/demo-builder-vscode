@@ -160,8 +160,9 @@ describe('AI_CONTEXT_VERSION', () => {
     // 62: the datapack skills use the Datapacks screen's words, and offer no Data Installer copy (Phase 8).
     // 63: import-datapack sends wholeKinds for a whole data type and asks preview_datapack_changes for "added" (step-07 E1, E2).
     // 64: import-datapack gains update_datapack and restore_datapack's points (step-07 U1).
-    it('is 64 (import-datapack offers Update and Restore to Last Saved or Original, step-07 U1)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(64);
+    // 65: import-datapack gives Keep Both, the exact undo of a load, and check.leftOutDeleted (step-07 F1, F2).
+    it('is 65 (import-datapack gives Keep Both and the exact undo of a load, step-07 F1/F2)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(65);
     });
 });
 

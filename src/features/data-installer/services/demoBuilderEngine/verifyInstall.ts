@@ -48,6 +48,8 @@ interface PackProduct {
 
 /** What the check reads of an install record: the objects the pack made. */
 type MadeObjects = Pick<InstallRecord, 'created'> | Pick<InstallRecorder, 'created'>;
+/** Why a reinstall left a product out of the check: the SC changed it, or deleted it, in the Admin. */
+type KeptAs = 'changed' | 'deleted';
 
 const seconds = (ms: number): string => `${(ms / 1000).toFixed(1)} s`;
 const finding = <T>(all: T[]): CheckFinding<T> => ({
@@ -224,15 +226,15 @@ async function primeAttributes(lk: ProductLookups, wanted: readonly PackProduct[
  *
  * @param record - the install record, when this engine installed the pack; without one every product
  *   the pack holds is checked
- * @param kept - SKUs (lowercased) a reinstall kept because the SC changed them in the Admin: left out,
- *   since their difference from the pack is the SC's own
+ * @param kept - SKUs (lowercased) a reinstall kept because the SC changed them in the Admin, or left
+ *   out because they deleted them: left out, since their difference from the pack is the SC's own
  * @param known - products already read as the store holds them now; only the rest are read
  */
 export async function verifyInstall(
     ctx: KindContext,
     items: Record<string, unknown>,
     record: MadeObjects | undefined,
-    kept: ReadonlySet<string> = new Set(),
+    kept: ReadonlyMap<string, KeptAs> = new Map(),
     known: readonly CommerceProduct[] = [],
 ): Promise<InstallCheck> {
     const made = record
@@ -244,7 +246,8 @@ export async function verifyInstall(
         : undefined;
     const ours = packProducts(items).filter((p) => !made || made.has(p.sku.toLowerCase()));
     const wanted = ours.filter((p) => !kept.has(p.sku.toLowerCase()));
-    const leftOut = ours.length - wanted.length;
+    const leftOutDeleted = ours.filter((p) => kept.get(p.sku.toLowerCase()) === 'deleted').length;
+    const leftOut = ours.length - wanted.length - leftOutDeleted;
     const began = Date.now();
     const stored = await productsOf(
         ctx,
@@ -291,6 +294,7 @@ export async function verifyInstall(
         checked: wanted.length,
         productsDiffer: differing.size,
         ...(leftOut > 0 ? { leftOut } : {}),
+        ...(leftOutDeleted > 0 ? { leftOutDeleted } : {}),
         compared,
         missing: finding(missing.sort()),
         configurablesWithoutOptions: finding(bare.sort()),
@@ -335,16 +339,20 @@ export function checkLine(check: InstallCheck): string {
     return `${checked}: ${findingsOf(check)}.${leftOutOf(check)}`;
 }
 
+const productCount = (n: number): string => (n === 1 ? '1 product' : `${n.toLocaleString('en-US')} products`);
+
 /**
  * The products a reinstall kept, said beside the verdict. "All match" over 1,948 products once hid
  * 100 left out (2026-11-06): their values were blanked by the install itself, which reads the same
- * as an SC's edit, so only a check of every product shows them.
+ * as an SC's edit, so only a check of every product shows them. Ones the SC deleted are said as
+ * deleted, as the install note's "Left out 1 item deleted in the Admin." (`keptLine`).
  */
 function leftOutOf(check: InstallCheck): string {
-    const n = check.leftOut ?? 0;
-    if (n === 0) return '';
-    const what = n === 1 ? '1 product' : `${n.toLocaleString('en-US')} products`;
-    return ` It left out ${what} kept as changed in the Admin; verify_datapack_install checks every product.`;
+    const { leftOut: changed = 0, leftOutDeleted: deleted = 0 } = check;
+    const parts = [[changed, 'kept as changed'], [deleted, 'deleted']] as const;
+    const said = parts.filter(([n]) => n > 0).map(([n, how]) => `${productCount(n)} ${how} in the Admin`);
+    if (said.length === 0) return '';
+    return ` It left out ${said.join(' and ')}; verify_datapack_install checks every product.`;
 }
 
 export function findingsOf(check: InstallCheck): string {
@@ -374,13 +382,12 @@ export function findingsOf(check: InstallCheck): string {
 export async function checkAfterInstall(
     ctx: KindContext,
     items: Record<string, unknown>,
-    kept: ReadonlyArray<{ kind: string; key: string }>,
+    kept: ReadonlyArray<{ kind: string; key: string; deleted?: true }>,
     productsRead: readonly CommerceProduct[] = [],
 ): Promise<{ check?: InstallCheck; line?: string }> {
     if (!holdsProducts(items)) return {};
-    const keptSkus = new Set(
-        kept.filter((k) => [...PRODUCT_KINDS, PRODUCT_EXPORT_KIND].includes(k.kind)).map((k) => k.key.toLowerCase()),
-    );
+    const products = kept.filter((k) => [...PRODUCT_KINDS, PRODUCT_EXPORT_KIND].includes(k.kind));
+    const keptSkus = new Map(products.map((k): [string, KeptAs] => [k.key.toLowerCase(), k.deleted ? 'deleted' : 'changed']));
     try {
         const check = await verifyInstall(ctx, items, ctx.recorder, keptSkus, productsRead);
         // Nothing the pack made to compare (an empty product list): nothing worth a line.

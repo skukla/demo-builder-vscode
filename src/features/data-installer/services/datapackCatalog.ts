@@ -68,6 +68,14 @@ export function settingsLayerName(packName: string): string {
     return `${packName}${LAYER_SUFFIX}`;
 }
 
+/** The name and description a settings layer carries for the datapack the SC knows by this name. */
+export function layerWords(displayName: string): { displayName: string; description: string } {
+    return {
+        displayName: `${displayName} settings`,
+        description: `Store configuration for ${displayName}, applied after its data when Demo Builder installs it.`,
+    };
+}
+
 /**
  * Whether a row is a settings layer: named as one, AND holding nothing but store configuration. A demo
  * whose name happens to end in `-settings` holds data, and stays a demo.

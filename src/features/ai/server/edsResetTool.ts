@@ -40,11 +40,16 @@ import { getMeshComponentInstance } from '@/types/typeGuards';
 
 /**
  * The reset's caveats for the agent, in the words and order the SC reads them (`resetCaveats`, which
- * a batch row's warnings read too). No key when there are none.
+ * a batch row's warnings read too), less content kept on purpose (`noteOf`). No key when there are none.
  */
 function caveatsOf(result: EdsResetResult): { caveats?: string[] } {
     const caveats = resetCaveats(result);
     return caveats.length > 0 ? { caveats } : {};
+}
+
+/** Content kept on purpose (the demo's pages could not be reached), as the agent's `note`; no key without it. */
+function noteOf(contentKept: string | undefined): { note?: string } {
+    return contentKept ? { note: contentKept } : {};
 }
 
 /** Silent Adobe IMS auth pre-flight. */
@@ -176,8 +181,10 @@ export async function runEdsReset(
             reset: true,
             project: project.name,
             kind: 'storefront',
-            // What the reset finished around or could not do, in the words the SC sees.
-            ...caveatsOf({ ...result, ...kept }),
+            // What the reset could not do, in the words the SC sees; content kept on purpose is the
+            // note, not a caveat, as the batch row and the Edit say it (owner walk Q6).
+            ...caveatsOf({ ...result, contentKept: undefined }),
+            ...noteOf(kept.contentKept ?? result.contentKept),
             // What became of the datapack, when the call asked to uninstall it.
             ...datapack,
             // Category pages and the catalog menu, re-written by the reset (EDS-24) —

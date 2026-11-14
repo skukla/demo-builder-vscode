@@ -62,7 +62,8 @@ installing: it means Demo Builder has lost track of what it made. That check is 
 unchanged version. A Demo Builder datapack updated in place since it was installed, or another version, is
 expected to change things: show the user the preview and go on. Afterwards the note says what was
 taken out ("Took out 3 items the pack no longer has: …"), and `check.leftOut` counts products the
-check skipped because they were kept; `verify_datapack_install` checks every product.
+check skipped because the user changed them, `check.leftOutDeleted` those it skipped because the user
+deleted them in the Admin; `verify_datapack_install` checks every product.
 
 ## Putting the store back: restore_datapack
 
@@ -275,7 +276,11 @@ another.
 
 Use the screen's words with the user: Install, not import; Uninstall, not reset; Save, not export.
 Datapacks Demo Builder publishes are "Demo Builder datapacks". An agent cannot put a datapack into the
-Data Installer: `load_datapack_zip` adds a file to My Datapacks only. Every write above asks the user
+Data Installer: `load_datapack_zip` adds a file to My Datapacks only. A file whose datapack is already
+there asks the screen's Replace or Keep Both: Replace is `update: true`; Keep Both is `saveAs` with a new
+name (the screen offers "My Luma 2", then "My Luma 3"), which adds a new datapack and leaves the first as
+it is. To undo a load, delete exactly what it created, always with `keepSettingsLayer: true`: the
+datapack, and its settings layer by its own id only when `settingsLayer.outcome` was `created`. Every write above asks the user
 first.
 
 ## What the INSTANCE needs, which the install cannot check

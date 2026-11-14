@@ -374,7 +374,11 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // newer version's changes, the user's edits kept, chosen data types) and restore_datapack's points
 // (`to: lastSaved | original`, `changes` for Original over unsaved edits), and maps Update to its tool.
 // Existing projects would keep telling the agent Restore installs the newest save, and never offer Update.
-export const AI_CONTEXT_VERSION = 64;
+// v65 (2026-11-14, datapack simplification step-07 F1/F2): import-datapack gives Keep Both (`saveAs` on
+// load_datapack_zip), the exact undo of a load (`keepSettingsLayer` on delete_library_datapack), and
+// reads `check.leftOutDeleted` (products the user deleted, no longer counted as kept as changed).
+// Existing projects would keep offering only Replace for a file already in My Datapacks.
+export const AI_CONTEXT_VERSION = 65;
 
 /**
  * Component IDs for standardized component instance access

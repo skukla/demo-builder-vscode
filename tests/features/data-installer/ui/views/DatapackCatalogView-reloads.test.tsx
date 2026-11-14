@@ -299,7 +299,8 @@ describe('the file load and My Datapacks', () => {
             return { success: true, data: { items, count: items.length, total: items.length } };
         });
 
-    it('offers Replace Existing for a version the SC already has', async () => {
+    // Asked as Replace or Keep Both since step-07 F1; the form starts on Replace.
+    it('offers Replace or Keep Both for a version the SC already has', async () => {
         answer([makeSummary('acme', '20261109-141504', { store: 'library', mine: true, shared: false })]);
         render(<DatapackCatalogView library />);
         await settle();
@@ -308,7 +309,8 @@ describe('the file load and My Datapacks', () => {
         await press(screen.getByRole('button', { name: 'Add from File' }));
         await settle();
 
-        expect(screen.getByRole('button', { name: 'Replace Existing' })).toBeInTheDocument();
+        expect(screen.getByRole('radio', { name: 'Keep Both' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Replace' })).toBeInTheDocument();
     });
 
     it("offers Load when the same version is someone else's, not the SC's", async () => {

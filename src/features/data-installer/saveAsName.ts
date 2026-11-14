@@ -18,13 +18,20 @@ import type { BatchDatapack } from '@/types/projectsBatch';
 
 const sameName = (a: string, b: string): boolean => a.trim().toLowerCase() === b.trim().toLowerCase();
 
-/** "My <Datapack>", counting on (" 2", " 3" …) past the names already taken. */
-export function freeName(datapack: string, taken: readonly string[]): string {
-    const base = `My ${datapack}`;
+/**
+ * The name, counting on (" 2", " 3" …) past the names already taken: Keep Both's name for a file whose
+ * datapack the SC already has (step-07 F1), "My Luma 2" then "My Luma 3".
+ */
+export function copyName(base: string, taken: readonly string[]): string {
     const isTaken = (name: string): boolean => taken.some((each) => sameName(each, name));
     let name = base;
     for (let n = 2; isTaken(name); n += 1) name = `${base} ${n}`;
     return name;
+}
+
+/** "My <Datapack>", counting on (" 2", " 3" …) past the names already taken. */
+export function freeName(datapack: string, taken: readonly string[]): string {
+    return copyName(`My ${datapack}`, taken);
 }
 
 /** Why the name cannot be used, as the house problem line says it; none when it can. */

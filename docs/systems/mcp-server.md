@@ -623,7 +623,8 @@ touched, a storefront built on an added demo has its source checked (`decideRese
 `resetSourceDecision.ts`, which the Reset window runs too): a repository that can't be reached
 refuses with the same sentence the window shows and `errorType: DEMO_SOURCE_UNREACHABLE`, nothing
 reset; when only the demo's pages can't be reached, the reset keeps the storefront's content, resets
-the code, and `caveats` says "Content kept: the demo's pages can't be reached." Until then the
+the code, and `note` says "Content kept: the demo's pages can't be reached." (a note, not a
+`caveats` line: kept on purpose, as the batch row and the Edit say it). Until then the
 agent's reset cleared the content and left the site empty.
 
 **Uninstall Datapack on a reset (step-05 S7, 2026-11-13).** `reset_project` takes `removeData`,
@@ -808,7 +809,10 @@ caller sends since 2026-10-27. Agents cannot write into the Data Installer (D7, 
 Phase 8): `copy_library_datapack_to_installer` was removed and `load_datapack_zip` forces `target: "library"`
 (`argDefaults`), as the screen hides both behind `INSTALLER_WRITES_SHOWN`. A pack only the Data Installer
 holds is installed by Demo Builder. `delete_library_datapack` takes `everyVersion`, as the screen's Delete
-does for a datapack of saves. The datapack tools' descriptions, narration and consent copy use the
+does for a datapack of saves, and `keepSettingsLayer`, which leaves the layer of the same version: the
+file load's one Delete removes only what the load made (step-07 F2). `load_datapack_zip` takes `saveAs`,
+the screen's Keep Both for a file whose datapack is already in My Datapacks: a new datapack under that
+name, the first left as it is (step-07 F1). The datapack tools' descriptions, narration and consent copy use the
 Datapacks screen's words (Install, Uninstall, Switch, Save As New, Add from File, Delete, "Demo Builder
 datapack"); the tool names and `mark_team_datapack`'s `team` argument stay as identifiers.
 A creation install that does not end in success, a partly installed one included, is recorded on
@@ -1156,7 +1160,8 @@ so not even the install record is touched.
 
 Demo Builder's engine also runs the check at the end of every install that wrote products, with the
 pack already in memory (about 16 s on Luma), and leaves out products a reinstall kept because the SC
-changed them, counting them as `leftOut` and saying so in its sentence: on 2026-11-06 "all match" over
+changed them, counting them as `leftOut`, and those the SC deleted, as `leftOutDeleted`, saying each
+in its sentence: on 2026-11-06 "all match" over
 1,948 products hid 100 whose values the install itself had blanked, which reads the same as an SC's
 edit, so only the standalone tool, which checks every product, showed them. The last data type stays
 in progress while it runs, so anything waiting on the install waits for it, though its seconds in

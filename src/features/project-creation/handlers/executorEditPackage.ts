@@ -35,6 +35,12 @@ export interface PackagePlan {
     resets: boolean;
 }
 
+/** What the reset finished around: warnings for what it did not do, notes for what it kept on purpose. */
+export interface PackageChangeEnding {
+    warnings: string[];
+    notes: string[];
+}
+
 /**
  * The reset that follows redeploys the mesh, so the settings staging need not
  * judge it: nothing is left out of date.
@@ -65,8 +71,9 @@ export async function planPackageChange(
  * Record the package's choices, write the settings files, then reset the
  * storefront onto it and refresh the AI files that name the package.
  *
- * @returns what the reset finished around, in the batch row's words (`resetCaveats`), for the
- *   Edit's warnings: the content kept when the demo's pages could not be reached, among them
+ * @returns what the reset finished around, as the batch reset splits it (owner walk Q6): what it
+ *   should have done and did not is a warning (`resetCaveats`); content kept on purpose, when the
+ *   demo's pages could not be reached, is a note
  * @throws when the reset does not finish
  */
 export async function applyPackageChange(
@@ -75,8 +82,8 @@ export async function applyPackageChange(
     config: ProjectCreationConfig,
     plan: PackagePlan,
     progressTracker: ProgressTracker,
-): Promise<string[]> {
-    if (!plan.resets) return [];
+): Promise<PackageChangeEnding> {
+    if (!plan.resets) return { warnings: [], notes: [] };
     project.selectedPackage = config.selectedPackage;
     // The added demo wins over the package wherever a storefront is resolved, so
     // it must follow the choice, cleared included (the rebuild could never clear it).
@@ -127,5 +134,5 @@ export async function applyPackageChange(
     } catch (error) {
         context.logger.warn(`[Project Edit] AI files not refreshed: ${(error as Error).message}`);
     }
-    return resetCaveats(reset);
+    return { warnings: resetCaveats({ ...reset, contentKept: undefined }), notes: reset.contentKept ? [reset.contentKept] : [] };
 }

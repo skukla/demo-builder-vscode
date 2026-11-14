@@ -34,7 +34,7 @@
  */
 
 import { KIND_NOUNS, type LeftOut, type PickableKind, type StoreItemPage, type StoreKindCounts, type StorePicks, pickCount } from '../../pickableKinds';
-import { STORE_CONFIG_KIND, settingsLayerName } from '../datapackCatalog';
+import { layerWords, STORE_CONFIG_KIND, settingsLayerName } from '../datapackCatalog';
 import type { PackWriteOutcome } from '../datapackTransfer';
 import type { DatapackFile } from '../datapackZip';
 import { capturePack } from './capture';
@@ -156,8 +156,7 @@ function splitSettings(items: Record<string, unknown>, packHoldsSettings: boolea
 function layerFile(saveAs: SaveAs, records: unknown[], exportedAt: string): DatapackFile {
     return {
         id: { name: settingsLayerName(saveAs.id.name), version: saveAs.id.version },
-        displayName: `${saveAs.displayName} settings`,
-        description: `Store configuration for ${saveAs.displayName}, applied after its data when Demo Builder installs it.`,
+        ...layerWords(saveAs.displayName),
         items: [{ dataType: STORE_CONFIG_KIND, records }],
         source: 'library',
         exportedAt,

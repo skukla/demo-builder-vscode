@@ -4,7 +4,7 @@
  * an empty or taken name is refused with the house problem line.
  */
 
-import { freeName, longestNameProblem, nameProblem } from '@/features/data-installer/saveAsName';
+import { copyName, freeName, longestNameProblem, nameProblem } from '@/features/data-installer/saveAsName';
 
 describe('freeName', () => {
     it('starts "My <Datapack>"', () => {
@@ -14,6 +14,19 @@ describe('freeName', () => {
     it('counts on when that is taken, whatever its capitals', () => {
         expect(freeName('Bodea', ['my bodea'])).toBe('My Bodea 2');
         expect(freeName('Bodea', ['My Bodea', 'My Bodea 2'])).toBe('My Bodea 3');
+    });
+});
+
+// Keep Both (step-07 F1, P4-Q10; decisions "Back on track"): the copy is numbered as J7-2 numbers a
+// taken name, "My Luma 2" then "My Luma 3", never "My Luma Copy".
+describe('copyName', () => {
+    it('counts on from the name past the SC\'s datapacks, starting at 2', () => {
+        expect(copyName('My Luma', ['My Luma'])).toBe('My Luma 2');
+        expect(copyName('My Luma', ['my luma', 'My Luma 2'])).toBe('My Luma 3');
+    });
+
+    it('keeps the name when nobody has it', () => {
+        expect(copyName('My Luma', ['My Bodea'])).toBe('My Luma');
     });
 });
 

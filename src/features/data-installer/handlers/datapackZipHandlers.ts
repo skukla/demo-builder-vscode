@@ -9,7 +9,8 @@
  * - `save-datapack-zip` — read a pack from `source`, write the file.
  * - `open-datapack-zip` — read a file and say what is in it. Writes nothing; it is
  *   how the SC sees name, version and types before choosing where it goes.
- * - `load-datapack-zip` — write the file's pack into `target`.
+ * - `load-datapack-zip` — write the file's pack into `target`; with `saveAs` (Keep Both, step-07 F1)
+ *   as a new datapack of the SC's under that name, the one already there left as it is.
  *
  * A pack's settings layer travels with it (step 09, `settingsLayerFile.ts`): the save carries it as
  * the file's second section, and the load puts it in the library, wherever the data goes.
@@ -29,7 +30,9 @@
  */
 
 import * as vscode from 'vscode';
+import { nameProblem } from '../saveAsName';
 import { DataInstallerApiError } from '../services/dataInstallerErrors';
+import { layerWords, settingsLayerName } from '../services/datapackCatalog';
 import { DatapackStoreWriter } from '../services/datapackStoreWriter';
 import {
     DatapackTransferError,
@@ -38,20 +41,29 @@ import {
 } from '../services/datapackTransfer';
 import {
     buildDatapackZip,
+    type DatapackFile,
     datapackZipName,
     DatapackZipError,
     readDatapackZip,
 } from '../services/datapackZip';
+import { packIdFor } from '../services/demoPack';
 import { InstallerFormError, toInstallerForm } from '../services/installerForm';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
 import { projectPath, readPackFile, writeZip } from './datapackFiles';
+import { readOwnNames } from './ownDatapackNames';
 import { fileLayerFacts, loadFileLayer, withFileLayer } from './settingsLayerFile';
-import type { DatapackStoreName } from '@/types/datapack';
+import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
 
 const LOG_PREFIX = '[Data Installer]';
 const ZIP_FILTER = { 'Datapack file': ['zip'] };
+
+/** Keep Both makes a datapack of the SC's own, which only My Datapacks can hold. */
+export const KEEP_BOTH_LIBRARY_ONLY = 'Keep Both adds a datapack to My Datapacks only.';
+
+/** Keep Both's name could not be checked against the SC's datapacks, so nothing was written. */
+export const KEEP_BOTH_NAMES_UNREAD = "My Datapacks couldn't be read to check the name, so nothing was added. Try again.";
 
 export const INSTALLER_UPDATE_REFUSED =
     "Updating an existing datapack in the Data Installer is not offered: it cannot tell whose datapack it is, so an update could overwrite a colleague's data. Load it under a new version, or into the datapack library.";
@@ -81,6 +93,71 @@ export interface LoadDatapackZipPayload {
     update?: boolean;
     /** Into the Data Installer only: must equal the pack's name, as proof of intent. */
     confirmName?: string;
+    /**
+     * Keep Both (step-07 F1): add the file as a new datapack of the SC's under this name, leaving the
+     * one already there as it is. Library only, never with `update`; a name the SC has is refused.
+     */
+    saveAs?: string;
+}
+
+/**
+ * The file's pack as a new datapack under the name the SC gave: the library's own name is made from
+ * it (`packIdFor`), and its settings layer follows that name and is named for it (`layerWords`, as a
+ * save names its layer), so nothing already there is written.
+ */
+function asNewDatapack(pack: DatapackFile, displayName: string): DatapackFile {
+    const name = packIdFor(displayName);
+    const layer = pack.settingsLayer;
+    return {
+        ...pack,
+        id: { name, version: pack.id.version },
+        displayName,
+        ...(layer ? { settingsLayer: { ...layer, id: { name: settingsLayerName(name), version: layer.id.version }, ...layerWords(displayName) } } : {}),
+    };
+}
+
+/**
+ * A datapack this load created in My Datapacks and could put nothing in is deleted before the load
+ * answers (review of step-07 F1/F2): left, it was an empty datapack with no Delete offered, holding
+ * the name Keep Both took. Never in the Data Installer, which this feature never deletes from; never
+ * a pack the load only updated. No layer was loaded for it (`loadFileLayer` runs only after a type
+ * landed), so there is nothing else to take.
+ */
+async function removeIfEmpty(
+    context: HandlerContext,
+    load: { writer: DatapackStoreWriter; target: DatapackStoreName; id: DatapackId; outcome: { pack: string; stored: string[] } },
+): Promise<{ removed?: true; removedNot?: string }> {
+    const { writer, target, id, outcome } = load;
+    if (target !== 'library' || outcome.pack !== 'created' || outcome.stored.length > 0) return {};
+    try {
+        await writer.deleteDatapack(id);
+        return { removed: true };
+    } catch (error) {
+        context.logger.warn(`${LOG_PREFIX} Could not delete the empty ${id.name}@${id.version}: ${error instanceof Error ? error.message : String(error)}`);
+        return { removedNot: `${id.name}@${id.version} may still be in My Datapacks, empty: it could not be deleted.` };
+    }
+}
+
+/** Keep Both's pack under its new name, or the refusal of a name the SC already has. */
+async function keptBoth(context: HandlerContext, pack: DatapackFile, name: string): Promise<DatapackFile | HandlerResponse> {
+    const names = await readOwnNames(context);
+    // Unread is never taken to mean free: the new datapack could share a name the SC already has.
+    if (!names) return { success: false, error: KEEP_BOTH_NAMES_UNREAD, code: ErrorCode.INVALID_OPERATION };
+    const taken = nameProblem(name, names);
+    return taken ? { success: false, error: taken, code: ErrorCode.INVALID_OPERATION } : asNewDatapack(pack, name);
+}
+
+/** Why the load cannot run as sent, before the file is read: Replace or Keep Both where it cannot go. */
+function refusedBeforeReading(payload: LoadDatapackZipPayload, target: DatapackStoreName): HandlerResponse | undefined {
+    if (target === 'installer' && payload.update) {
+        // The library only lets a pack's owner write to it; the Data Installer
+        // has no such check, so an update there could overwrite a colleague's pack.
+        return { success: false, error: INSTALLER_UPDATE_REFUSED, code: ErrorCode.INVALID_OPERATION };
+    }
+    if (payload.saveAs === undefined) return undefined;
+    if (payload.update) return { success: false, error: 'Choose Replace or Keep Both, not both.', code: ErrorCode.INVALID_OPERATION };
+    if (target !== 'library') return { success: false, error: KEEP_BOTH_LIBRARY_ONLY, code: ErrorCode.INVALID_OPERATION };
+    return undefined;
 }
 
 /** The Data Installer's catalog is shared: any write into it names the pack back first. */
@@ -237,19 +314,15 @@ export const datapackZipHandlers = defineHandlers({
     ): Promise<HandlerResponse> => {
         const target = payload?.target ?? 'library';
         if (!payload?.path) return { success: false, error: 'Open a datapack file first.' };
-        if (target === 'installer' && payload.update) {
-            // The library only lets a pack's owner write to it; the Data Installer
-            // has no such check, so an update there could overwrite a colleague's pack.
-            return {
-                success: false,
-                error: INSTALLER_UPDATE_REFUSED,
-                code: ErrorCode.INVALID_OPERATION,
-            };
-        }
+        const refused = refusedBeforeReading(payload, target);
+        if (refused) return refused;
         try {
             const file = await openSource(context, payload.path);
             if (!file) return { success: false, error: 'Open a datapack file first.' };
-            const read = readDatapackZip(await readPackFile(context, file));
+            const opened = readDatapackZip(await readPackFile(context, file));
+            const newName = typeof payload.saveAs === 'string' ? payload.saveAs.trim() : undefined;
+            const read = newName === undefined ? opened : await keptBoth(context, opened, newName);
+            if ('success' in read) return read;
             // In the Data Installer's form, or refused, before anything is sent (`installerForm.ts`).
             const { pack, changes } = target === 'installer' ? toInstallerForm(read) : { pack: read, changes: [] as string[] };
             if (pack.settingsLayer) fileLayerFacts(pack.settingsLayer);
@@ -282,15 +355,18 @@ export const datapackZipHandlers = defineHandlers({
                 context.logger.warn(`${LOG_PREFIX} ${label}: ${f.reason}`),
             );
             const settingsLayer = pack.settingsLayer && outcome.stored.length > 0 ? await loadFileLayer(context, pack.settingsLayer, payload.update === true) : undefined;
+            const emptied = await removeIfEmpty(context, { writer, target, id: pack.id, outcome });
             return {
                 success: outcome.stored.length > 0,
                 ...(outcome.stored.length === 0 ? { error: 'No data type could be stored.' } : {}),
                 data: {
                     datapackName: pack.id.name,
                     version: pack.id.version,
+                    ...(newName !== undefined ? { displayName: pack.displayName } : {}),
                     target,
                     ...outcome,
                     ...(settingsLayer ? { settingsLayer } : {}),
+                    ...emptied,
                     ...(changes.length > 0 ? { changed: changes } : {}),
                 },
             };

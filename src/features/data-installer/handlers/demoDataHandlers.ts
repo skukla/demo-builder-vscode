@@ -43,7 +43,7 @@ import { clearDemoData } from './demoDataClear';
 import { checkInstance, instanceChoices } from './demoDataInstanceCheck';
 import { clearInstance } from './demoDataInstanceClear';
 import { type DemoDataDeps, NO_PROJECT, type ShownPlans } from './demoDataStore';
-import { ownNames } from './packSave';
+import { ownNames } from './ownDatapackNames';
 import { readRemovalChangesOf } from './removalChanges';
 import { loadOtherProjects } from '@/core/state/otherProjects';
 import { openCommerceAdmin } from '@/core/utils/commerceAdmin';

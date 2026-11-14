@@ -248,6 +248,20 @@ describe('checkLine', () => {
         );
     });
 
+    // A product the SC deleted in the Admin stays deleted; the line says so, as the install note's
+    // "Left out 1 item deleted in the Admin." does, never that it was kept as changed.
+    it('says a product the SC deleted was left out as deleted, not kept as changed', () => {
+        expect(checkLine({ ...base, verdict: 'matches', checked: 2047, leftOutDeleted: 1 })).toBe(
+            'Checked 2,047 products against the datapack: all match. It left out 1 product deleted in the Admin; verify_datapack_install checks every product.',
+        );
+    });
+
+    it('names the changed and the deleted apart when a reinstall left out both', () => {
+        expect(checkLine({ ...base, verdict: 'matches', checked: 1945, leftOut: 2, leftOutDeleted: 3 })).toBe(
+            'Checked 1,945 products against the datapack: all match. It left out 2 products kept as changed in the Admin and 3 products deleted in the Admin; verify_datapack_install checks every product.',
+        );
+    });
+
     it('names each kind of difference with its count', () => {
         const line = checkLine({
             ...base,
@@ -281,6 +295,20 @@ describe('checkAfterInstall', () => {
         );
 
         expect(check).toMatchObject({ verdict: 'matches', checked: 1, leftOut: 1 });
+    });
+
+    it('counts a product the SC deleted apart from one they changed', async () => {
+        const ctx = await fakeContext({ ...COMMON, [skuIn('OTHER')]: { items: [stored(21, 'OTHER', { custom_attributes: [{ attribute_code: 'size', value: '33' }] })], total_count: 1 } });
+        for (const id of ['EDITED', 'GONE', 'OTHER']) await ctx.recorder.record({ kind: 'products', id });
+
+        const { check, line } = await checkAfterInstall(
+            ctx,
+            { products: [packSimple('EDITED', 'Size 32'), packSimple('GONE', 'Size 32'), packSimple('OTHER', 'Size 32')] },
+            [{ kind: 'products', key: 'EDITED' }, { kind: 'products', key: 'GONE', deleted: true }],
+        );
+
+        expect(check).toMatchObject({ verdict: 'matches', checked: 1, leftOut: 1, leftOutDeleted: 1 });
+        expect(line).toContain('1 product kept as changed in the Admin and 1 product deleted in the Admin');
     });
 
     it('never fails the install when the store cannot be read; the line says so', async () => {

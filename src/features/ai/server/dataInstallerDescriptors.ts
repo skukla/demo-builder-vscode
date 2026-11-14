@@ -804,7 +804,14 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             update: z
                 .boolean()
                 .optional()
-                .describe("Replace the data types this file carries in a datapack of yours that already exists (the screen's Replace Existing)"),
+                .describe("Replace the data types this file carries in a datapack of yours that already exists (the screen's Replace)"),
+            saveAs: z
+                .string()
+                .optional()
+                .describe(
+                    "The screen's Keep Both, for a file whose datapack you already have: add it as a new datapack of yours under this name " +
+                        '(the screen offers "My Luma 2", then "My Luma 3"), leaving the one already there as it is. Never with update; a name you already have is refused, and so is any name while My Datapacks cannot be read',
+                ),
         },
         // D7 (owner, 2026-11-10): agents get no Data Installer destination, which fails for our accounts;
         // the screen hides it too (`INSTALLER_WRITES_SHOWN`). Forced, so a session holding the old schema
@@ -831,6 +838,13 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             datapackName: z.string().describe('Your datapack, by its name from find_datapacks'),
             version: z.string().optional().describe('One version to delete, e.g. main; omit with everyVersion'),
             everyVersion: z.boolean().optional().describe('true: delete every version (every save) of the datapack, as the screen does'),
+            keepSettingsLayer: z
+                .boolean()
+                .optional()
+                .describe(
+                    'true: leave your settings layer of the same version. When removing what load_datapack_zip added, always send it, ' +
+                        'and delete a layer the load created (settingsLayer.outcome created) by its own id in a call of its own',
+                ),
         },
     },
     {

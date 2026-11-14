@@ -114,6 +114,19 @@ describe("the pack's settings layer (datapack-engine step 09): a version takes i
         expect(result).toMatchObject({ success: true, data: { deleted: true, settingsLayerDeleted: true } });
     });
 
+    // Step-07 F2: the load result's one Delete removes only what the load made. A layer that was in
+    // My Datapacks before the load is not the load's to remove (owner rule 1, reversibility).
+    it('leaves the layer at the same version when asked to keep it, and never asks the library about it', async () => {
+        library.findDatapacks.mockResolvedValue({ items: [layerRow('v1')], count: 1 });
+
+        const result = await remove(contextFor(null), { datapackName: 'bodea', version: 'v1', confirm: true, keepSettingsLayer: true });
+
+        expect(deletes()).toEqual(['datapack_name=bodea&version=v1']);
+        expect(library.findDatapacks).not.toHaveBeenCalledWith({ datapackName: 'bodea-settings' });
+        expect(result).toMatchObject({ success: true, data: { deleted: true } });
+        expect(result.data).not.toHaveProperty('settingsLayerDeleted');
+    });
+
     it.each([
         ['another version', layerRow('v2')],
         ['a colleague', layerRow('v1', { mine: undefined })],

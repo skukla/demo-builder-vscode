@@ -9,7 +9,7 @@ jest.mock('@/features/projects-dashboard/services/projectDeletionService', () =>
 jest.mock('@/features/projects-dashboard/services/datapackDataRemoval', () => ({ hasRemovableData: jest.fn() }));
 jest.mock('@/features/data-installer/handlers/removalChanges', () => ({ readRemovalChangesOf: jest.fn() }));
 jest.mock('@/features/eds/services/storefront/sharedRepoProjects', () => ({ sharedOnlineOf: jest.fn() }));
-jest.mock('@/features/data-installer/handlers/packSave', () => ({ ownNames: jest.fn() }));
+jest.mock('@/features/data-installer/handlers/ownDatapackNames', () => ({ ownNames: jest.fn() }));
 // The library, for a pack's display name: unreachable unless a test says otherwise.
 jest.mock('@/features/data-installer/handlers/libraryWriter', () => ({
     openLibraryWriter: jest.fn(async () => ({ ok: false, reason: 'not in this test' })),
@@ -21,7 +21,7 @@ import * as vscode from 'vscode';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockProject } from '../../../helpers/projectFake';
 import { libraryDisplayName } from '@/features/data-installer/handlers/libraryWriter';
-import { ownNames } from '@/features/data-installer/handlers/packSave';
+import { ownNames } from '@/features/data-installer/handlers/ownDatapackNames';
 import { readRemovalChangesOf } from '@/features/data-installer/handlers/removalChanges';
 import { sharedOnlineOf } from '@/features/eds/services/storefront/sharedRepoProjects';
 import { hasRemovableData } from '@/features/projects-dashboard/services/datapackDataRemoval';

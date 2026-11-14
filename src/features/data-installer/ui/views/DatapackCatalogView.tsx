@@ -290,6 +290,7 @@ export function DatapackCatalogView({ library = false, clearArrival }: { library
                                 ownNames={owned.ownNames}
                                 clearRequest={clearArrival?.request}
                                 onClearRequestTaken={clearArrival?.taken}
+                                onInstall={library ? undefined : importWindow.openLoaded}
                             />
                         }
                     />

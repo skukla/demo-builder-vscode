@@ -11,8 +11,9 @@
  * someone else's; nothing when the datapack has no install record (P4-Q4). Each choice opens
  * today's flow, through the handlers it is given.
  *
- * Install from File opens today's file load, which adds the datapack to My Datapacks; the job window
- * after it (step-04 Design) is not wired yet. Clear ▾ holds two items (step 06 C5; decisions J1-1):
+ * Install from File adds the file's datapack to My Datapacks, then, after a clean load, opens the
+ * install window on it (step-07 F2, P4-Q7; the screen's `onInstall`); cancelling that window leaves
+ * the datapack in My Datapacks (owner Q8). Add from File, in the Datapack Library, only adds. Clear ▾ holds two items (step 06 C5; decisions J1-1):
  * Clear Demo Data clears every website the project uses, after its own window
  * (`ProjectClearWindow`); Clear Commerce Instance clears the websites the SC ticks, whoever put the
  * data there (`InstanceClearWindow`). Both run in the screen's progress window. The Command Palette
@@ -31,7 +32,7 @@ import type { HeaderSave } from '../headerSave';
 import { useClearDemoData } from '../hooks/useClearDemoData';
 import type { RemovalAnswer } from '../hooks/useSwitchChanges';
 import { InstanceClearWindow } from './InstanceClearWindow';
-import { LoadDatapackFileModal } from './LoadDatapackFileModal';
+import { type LoadedDatapack, LoadDatapackFileModal } from './LoadDatapackFileModal';
 import { ProjectClearWindow } from './ProjectClearWindow';
 import { CardActionsMenu } from '@/core/ui/components/ui/CardActionsMenu';
 import { renderMenuIcon } from '@/core/ui/components/ui/menuIcons';
@@ -63,6 +64,8 @@ export interface CatalogHeaderActionsProps {
     clearRequest?: ClearWindowKind | null;
     /** The header opened `clearRequest`. Stable. */
     onClearRequestTaken?: () => void;
+    /** A project's Datapacks: open the install window on a datapack Install from File just added. Stable. */
+    onInstall?: (loaded: LoadedDatapack) => void;
 }
 
 /** The save button, as its state says (`headerSave`). */
@@ -124,7 +127,7 @@ function useClearArrivalOpens(
 }
 
 export function CatalogHeaderActions(props: CatalogHeaderActionsProps): React.JSX.Element {
-    const { onCatalogChanged, save, mySaves, ownNames, clearRequest, onClearRequestTaken } = props;
+    const { onCatalogChanged, save, mySaves, ownNames, clearRequest, onClearRequestTaken, onInstall } = props;
     const [open, setOpen] = useState<Open>(null);
     const { clear, clearInstance, running, progressWindow } = useClearDemoData(onCatalogChanged);
     useClearArrivalOpens(save !== undefined, clearRequest, onClearRequestTaken, setOpen);
@@ -144,6 +147,15 @@ export function CatalogHeaderActions(props: CatalogHeaderActionsProps): React.JS
         setOpen(null);
         onCatalogChanged();
     }, [onCatalogChanged]);
+    // Install from File: the load closes, and the install window opens on what it added (F2).
+    const installLoaded = useCallback(
+        (loaded: LoadedDatapack): void => {
+            closeLoad();
+            onInstall?.(loaded);
+        },
+        [closeLoad, onInstall],
+    );
+    const loadProps = { mySaves, ...(ownNames ? { ownNames } : {}), ...(save && onInstall ? { onInstall: installLoaded } : {}) };
 
     return (
         <>
@@ -158,7 +170,7 @@ export function CatalogHeaderActions(props: CatalogHeaderActionsProps): React.JS
                     <ClearMenu onPick={setOpen} />
                 </>
             ) : null}
-            {open === 'load' ? <LoadDatapackFileModal onClose={closeLoad} mySaves={mySaves} /> : null}
+            {open === 'load' ? <LoadDatapackFileModal onClose={closeLoad} {...loadProps} /> : null}
             {open === 'clear' ? <ProjectClearWindow onClose={close} onClear={startClear} {...(ownNames ? { ownNames } : {})} /> : null}
             {open === 'instance' ? <InstanceClearWindow onClose={close} onClear={clearInstance} /> : null}
             {progressWindow}

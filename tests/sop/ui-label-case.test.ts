@@ -51,8 +51,10 @@ const LEDGER: Readonly<Record<string, Reason>> = {
  * window, and its dismiss label, `undefined` when nothing ran, is now the literal Close.
  * 65 -> 66 on 2026-11-14 (step-07 U1): Update's type table puts a tick on each type, whose label is
  * the data type's name (`dataTypeLabel`, the Title Case names the table already shows as text).
+ * 66 -> 65 on 2026-11-14 (step-07 F2 review): the file load's Delete button lost its `label` prop,
+ * and now says the literal Delete.
  */
-const DYNAMIC_PIN = 66;
+const DYNAMIC_PIN = 65;
 
 /**
  * The six dialog layouts (the Steps layout joined 2026-11-11) hand their caller's words on to Modal (`title={title}`). Those words are

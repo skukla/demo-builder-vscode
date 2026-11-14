@@ -342,6 +342,8 @@ export interface InstallCheck {
     productsDiffer?: number;
     /** Products the pack made that a reinstall kept as changed in the Admin, and the check left out. */
     leftOut?: number;
+    /** Products the pack made that the SC deleted in the Admin, which a reinstall left deleted and the check left out. */
+    leftOutDeleted?: number;
     /**
      * How many of each the check actually compared, so a `matches` that compared nothing (a pack whose
      * values name no attribute the store has, say) reads as that rather than as a clean install.

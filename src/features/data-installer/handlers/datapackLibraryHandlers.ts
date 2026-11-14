@@ -56,6 +56,11 @@ export interface DeleteLibraryDatapackPayload {
      * A pack of saves is one thing to the SC, so removing it takes every save. `version` is then not needed.
      */
     everyVersion?: boolean;
+    /**
+     * Leave the SC's settings layer of the same version (step-07 F2): the file load's one Delete removes
+     * only what the load made, and a layer already in My Datapacks before it is not the load's.
+     */
+    keepSettingsLayer?: boolean;
     /** Must be true. Nothing is deleted by default. */
     confirm?: boolean;
 }
@@ -252,7 +257,7 @@ export const datapackLibraryHandlers = defineHandlers({
             context.logger.info(
                 `${LOG_PREFIX} Deleted ${id.name}@${id.version} from the datapack library`,
             );
-            const layer = await deleteLayerOf(context, access, id);
+            const layer = payload?.keepSettingsLayer === true ? {} : await deleteLayerOf(context, access, id);
             return {
                 success: true,
                 data: {

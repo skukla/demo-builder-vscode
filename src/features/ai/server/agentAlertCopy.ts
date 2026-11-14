@@ -163,6 +163,15 @@ function instanceClearLines(args: unknown): string | undefined {
         .join('\n');
 }
 
+/** What a file load's Replace (`update`) or Keep Both (`saveAs`) does, in one sentence; nothing for a plain add. */
+function fileLoadChoiceLine(args: unknown): string | undefined {
+    const call = (args ?? {}) as { update?: unknown; saveAs?: unknown };
+    if (typeof call.saveAs === 'string' && call.saveAs.trim() !== '') {
+        return `Adds it as ${call.saveAs.trim()}, leaving the one already in My Datapacks as it is.`;
+    }
+    return call.update === true ? 'Replaces the datapack of the same version in My Datapacks.' : undefined;
+}
+
 export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     delete_project: {
         action: 'Delete this project',
@@ -577,7 +586,9 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         action: 'Add a datapack from a file',
         consequence:
             'Adds the datapack in this file to My Datapacks, private to you until you share it, with any store configuration the file carries.',
-        target: ['path'],
+        // Replace and Keep Both change what the call does (step-07 F1): named, each with what it does.
+        target: ['path', 'update', 'saveAs'],
+        describe: (args) => fileLoadChoiceLine(args),
         sessionGrant: false,
     },
 };
