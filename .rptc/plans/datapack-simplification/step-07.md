@@ -248,6 +248,15 @@ Live cycle owed (update, restore to original, restore to last saved).
 - Configure: changing the Commerce connection while a datapack is installed warns first and offers to
   uninstall it (house confirm window; words for the owner to approve at the screenshot pass).
 
+## D6 built (2026-11-14)
+Committed after review (one blocking: a same-pack reinstall on a new instance reused the old record;
+fixed in the engine). Known limit, recorded not fixed: install records written before D6 never gain an
+instance, even after a reinstall, because backfilling on carry-on is unsafe for the same reason; those
+projects are protected only by the Configure/Edit question. Clear Demo Data's single-project wipe still
+respects other projects' records without reading their instance (only Clear Commerce Instance does).
+Owed at the screenshot pass: the Configure confirm's words, Uninstall First red or blue, Edit's VS Code
+dialog with the same words.
+
 ## Risks
 - Cloud operations: E1, E2, F2's install half; live cycles with the owner's go, through MCP tools.
 - Reversibility: F2's Delete removes exactly what the load created.
