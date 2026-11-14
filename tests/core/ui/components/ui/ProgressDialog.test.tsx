@@ -104,6 +104,21 @@ describe('ProgressDialog', () => {
         expect(onPress).toHaveBeenCalledTimes(1);
     });
 
+    // Step-07 Win1: a question about one row is asked under that row, the rest still in view.
+    it('asks a question under the row it is about', () => {
+        const rows: NonNullable<ProgressDialogProps['rows']> = [
+            ROWS[0],
+            { ...ROWS[1], question: <p>Stop the demo first?</p> },
+            ROWS[2],
+        ];
+        renderProgress({ rows });
+
+        const items = Array.from(document.querySelectorAll('.dialog-stack > ul.work-row-list > li'));
+        expect(items[1]).toHaveTextContent('Stop the demo first?');
+        expect(items[1].querySelector('.work-row')).toHaveTextContent('Stop the demo first?');
+        expect(items[0]).not.toHaveTextContent('Stop the demo first?');
+    });
+
     it('closes itself a glance after it ended clean with nothing to read', () => {
         const { onClose } = renderProgress({ rows: ROWS, title: 'My Luma Installed', status: 'success' });
 
@@ -171,6 +186,31 @@ describe('ProgressDialog', () => {
                 jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE);
             });
             expect(onClose).toHaveBeenCalledTimes(1);
+        });
+
+        // Step-07 Win1: the projects batch run and the Updates run, whose rows can each be asked a
+        // question, open large; a list of names that cannot be broken opens wide.
+        it('opens large when a question can be asked under its rows, and wide for unbreakable names', () => {
+            const { rerender } = renderProgress({ stream, asksUnderRows: true });
+            expect(screen.getByRole('dialog')).toHaveAttribute('data-size', 'L');
+            expect(screen.getByRole('dialog')).not.toHaveClass('modal-wide');
+
+            rerender({ stream, asksUnderRows: true, wide: true });
+            expect(screen.getByRole('dialog')).toHaveClass('modal-wide');
+        });
+
+        it('hides Close while a question waits whose answers are every way on', () => {
+            renderProgress({
+                stream,
+                title: 'Stop the Demo?',
+                hideClose: true,
+                actions: [
+                    { label: 'Skip', variant: 'secondary', onPress: jest.fn() },
+                    { label: 'Stop It', variant: 'accent', onPress: jest.fn() },
+                ],
+            });
+
+            expect(buttonNames()).toEqual(['Skip', 'Stop It']);
         });
 
         it.each<[string, Partial<ProgressDialogProps>]>([

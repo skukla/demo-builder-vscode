@@ -9,9 +9,14 @@
  * the chosen one (owner, 2026-10-22: two described cards, an eyebrow and a
  * green checklist read as "too busy"). A link (`ShareLinkForm`), when the
  * colleague can reach your GitHub; a file (`ShareFileForm`), when they cannot.
- * The storefront is read once on open, behind the Modal's wait, with no words,
- * before either form shows. A storefront that could not be read is a note line
- * where the link would be: the file still works.
+ * The storefront is read once on open, behind the window's wait, before either
+ * form shows. A storefront that could not be read is a note line where the link
+ * would be: the file still works.
+ *
+ * A Steps window (step-07 Win2): each form's main button, Copy Link or Save File,
+ * sits in the footer beside Close, and both forms are drawn hidden as the window
+ * opens (`reserve`), so it opens at the taller one and never grows; a note that
+ * appears after scrolls in the middle.
  *
  * @module features/dashboard/ui/components/share/ShareModal
  */
@@ -20,8 +25,11 @@ import { DialogContainer, Radio, RadioGroup } from '@adobe/react-spectrum';
 import React, { useEffect, useState } from 'react';
 import { SHARE_COPY } from './shareCopy';
 import { ShareFileForm } from './ShareFileForm';
-import { ShareLinkForm } from './ShareLinkForm';
-import { Modal, type ModalWait } from '@/core/ui/components/ui/Modal';
+import { buttonLabel, ShareLinkForm } from './ShareLinkForm';
+import { useShareFile, type UseShareFile } from './useShareFile';
+import { useShareLink, type UseShareLink } from './useShareLink';
+import type { ActionButton, ModalWait } from '@/core/ui/components/ui/Modal';
+import { StepsWindow } from '@/core/ui/components/ui/StepsDialog';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
 import { WAIT_STAGES } from '@/core/utils/waitStages';
 import type { DemoPackagePreview } from '@/types/webviewRequests';
@@ -30,6 +38,18 @@ type ShareForm = 'link' | 'file';
 
 /** A dialog reading what it will show says nothing while it does. */
 const READING: ModalWait = WAIT_STAGES.readingDemo;
+
+/** Save File: the file form's one act, named for what it makes beside Close. */
+const SAVE_FILE = 'Save File';
+
+/**
+ * Every label the footer button can show, on either form: it holds the widest one's width, so
+ * Close never moves as the label or the form changes.
+ */
+const BUTTON_LABELS = [SHARE_COPY.copyLink, SHARE_COPY.saveAndCopy, SHARE_COPY.copied, SAVE_FILE];
+
+/** What the link flow is handed before the storefront is read: never shown, never pressed. */
+const UNREAD: DemoPackagePreview = { draft: { name: '', description: '' }, checks: [], link: '', saved: false, onList: false };
 
 /** A handler's answer: branch on `success` before reading anything else (webview-command-handler). */
 interface Answer<D> {
@@ -100,10 +120,10 @@ function useStorefrontState(isEds: boolean): StorefrontState {
     return state;
 }
 
-function LinkForm({ state }: { state: StorefrontState }): React.ReactElement {
+function LinkForm({ state, flow }: { state: StorefrontState; flow: UseShareLink }): React.ReactElement {
     let body: React.ReactElement;
     if (state.status === 'ready') {
-        body = <ShareLinkForm preview={state.preview} />;
+        body = <ShareLinkForm preview={state.preview} flow={flow} />;
     } else if (state.status === 'failed') {
         body = <p className="dialog-problem text-negative" data-testid="share-link-failed">{SHARE_COPY.storefrontFailed} {state.error}</p>;
     } else {
@@ -116,24 +136,58 @@ function LinkForm({ state }: { state: StorefrontState }): React.ReactElement {
     );
 }
 
-function Journey({ isEds, onClose }: Omit<ShareModalProps, 'isOpen'>): React.ReactElement {
+/** The footer's button for the chosen form: the link's only once there is one. */
+function mainButton(form: ShareForm, state: StorefrontState, flow: UseShareLink, file: UseShareFile): ActionButton[] {
+    if (form === 'file') {
+        return [{ label: SAVE_FILE, variant: 'accent', onPress: file.save, isDisabled: file.nothing, isPending: file.busy, sizeLabels: BUTTON_LABELS }];
+    }
+    if (state.status !== 'ready') return [];
+    return [
+        {
+            label: buttonLabel(flow),
+            variant: 'accent',
+            onPress: flow.press,
+            isDisabled: !flow.canPress && flow.busy !== 'save',
+            isPending: flow.busy === 'save',
+            sizeLabels: BUTTON_LABELS,
+        },
+    ];
+}
+
+interface WindowProps extends Omit<ShareModalProps, 'isOpen'> {
+    storefront: StorefrontState;
+}
+
+/** The window, once per storefront state: the link flow starts from what the read answered. */
+function ShareWindow({ isEds, onClose, storefront }: WindowProps): React.ReactElement {
     const [form, setForm] = useState<ShareForm>('link');
-    const storefront = useStorefrontState(isEds);
-    return (
-        <Modal
-            title={SHARE_COPY.title}
-            size="L"
-            fitContent
-            onClose={onClose}
-            closeLabel="Close"
-            waiting={storefront.status === 'loading' ? READING : false}
-        >
-            <div className="intflow-stage-body export-body">
-                <FormChoice form={form} onChange={setForm} />
-                {form === 'link' ? <LinkForm state={storefront} /> : <ShareFileForm isEds={isEds} />}
-            </div>
-        </Modal>
+    const flow = useShareLink(storefront.status === 'ready' ? storefront.preview : UNREAD);
+    const file = useShareFile(isEds);
+    const loading = storefront.status === 'loading';
+    const step = (shown: ShareForm): React.ReactElement => (
+        <div className="intflow-stage-body export-body">
+            <FormChoice form={shown} onChange={setForm} />
+            {shown === 'link' ? <LinkForm state={storefront} flow={flow} /> : <ShareFileForm isEds={isEds} file={file} />}
+        </div>
     );
+    return (
+        <StepsWindow
+            title={SHARE_COPY.title}
+            ready={!loading}
+            waiting={loading ? READING : false}
+            reserve={loading ? null : [step('link'), step('file')]}
+            actionButtons={mainButton(form, storefront, flow, file)}
+            onClose={onClose}
+        >
+            {step(form)}
+        </StepsWindow>
+    );
+}
+
+function Journey({ isEds, onClose }: Omit<ShareModalProps, 'isOpen'>): React.ReactElement {
+    const storefront = useStorefrontState(isEds);
+    // A new window once the read answers: the one before it was unseen, only its wait showing.
+    return <ShareWindow key={storefront.status} isEds={isEds} onClose={onClose} storefront={storefront} />;
 }
 
 /**

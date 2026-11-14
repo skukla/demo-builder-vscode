@@ -20,11 +20,13 @@
  * pages, which would hide rows being approved (2026-11-07). The groups with chevrons it replaces
  * (2026-10-20) had a group's own tick-all; a project's updates are now ticked one by one or all at
  * once. One sentence under the title, only when a listed update reaches the live site (owner,
- * 2026-11-05). Built from the house pieces: `ui/Modal`, `CheckboxRow`, and the batch window's table
- * classes (`projects-batch.css`).
+ * 2026-11-05). Built from the house pieces: the layouts' windows in one `DialogContainer` (the list a
+ * Steps window, the run the Progress layout's, the small result a Result window; step-07 Win1),
+ * `CheckboxRow`, and the batch window's table classes (`projects-batch.css`).
  * How a run ended is the title with its status icon. A run where every update applied with nothing
  * to read hands off to the small result, "Updates Applied" and only what is left to know; a run
  * with a problem, or a row with something to read, stays on its rows (owner, 2026-11-10, walk F134).
+ * The list and the run each hold the height they open at (rule 14).
  *
  * @module features/projects-dashboard/ui/components/UpdatesModal
  */
@@ -45,7 +47,10 @@ import { UpdatesRunView, waitingLine } from './UpdatesRunView';
 import { OperationQuestion, questionTakesWindow } from '@/core/ui/components/feedback/OperationQuestion';
 import { CheckboxRow } from '@/core/ui/components/selection/CheckboxRow';
 import { LeadText } from '@/core/ui/components/ui/LeadText';
-import { Modal, type ActionButton, type ModalStatus } from '@/core/ui/components/ui/Modal';
+import type { ActionButton, ModalStatus } from '@/core/ui/components/ui/Modal';
+import { ProgressWindow } from '@/core/ui/components/ui/ProgressDialog';
+import { ResultWindow } from '@/core/ui/components/ui/ResultDialog';
+import { StepsWindow } from '@/core/ui/components/ui/StepsDialog';
 import { type EndingRow, endStatus, endsSmall } from '@/core/ui/utils/runEnding';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { PendingUpdateRow } from '@/types/pendingUpdates';
@@ -152,15 +157,9 @@ export function endedClean(progress: OperationProgressPayload | null, rows: Pend
     return endsSmall({ succeeded, warning: progress?.warning, rows: endingRowsOf(rows, statuses) });
 }
 
-/** The small result a clean run ends on: its title, and how many updates the SC left for later. */
-function cleanEnd(controls: UpdatesModalControls): Chrome & Heading & { body: React.ReactNode; size: 'S' } {
-    const body = controls.remaining > 0 ? <LeadText>{waitingLine(controls.remaining)}</LeadText> : null;
-    return { title: APPLIED_TITLE, status: 'success', body, size: 'S', ...runChrome(controls) };
-}
-
 /** The window's dismiss button and the buttons beside it. */
 interface Chrome {
-    closeLabel?: string;
+    closeLabel?: 'Close' | 'Run in Background' | 'Cancel';
     hideClose?: boolean;
     actions: ActionButton[];
 }
@@ -207,62 +206,86 @@ function askingOf(controls: UpdatesModalControls): OperationPrompt | undefined {
     return progress?.state === 'running' ? progress.prompt : undefined;
 }
 
-/** What the modal shows: its title, body, dismiss label and the buttons beside it. */
-function contentFor(controls: UpdatesModalControls): Chrome & Heading & { body: React.ReactNode; size?: 'S' } {
-    const { view } = controls;
-    const asking = askingOf(controls);
-    if (view.phase === 'applying' && asking && questionTakesWindow(asking)) {
-        const body = <OperationQuestion prompt={asking} onTyped={controls.onTyped} />;
-        return { title: asking.title ?? APPLYING_TITLE, status: 'warning', body, ...runChrome(controls) };
-    }
-    if (view.phase === 'applying' && endedClean(controls.progress, view.rows, controls.statuses)) return cleanEnd(controls);
-    if (view.phase === 'applying') {
-        const body = (
-            <UpdatesRunView
-                rows={view.rows}
-                statuses={controls.statuses}
-                progress={controls.progress}
-                onTyped={controls.onTyped}
-                remaining={controls.remaining}
-            />
-        );
-        return { ...runHeadingOf(controls.progress, view.rows, controls.statuses), body, ...runChrome(controls) };
-    }
-    const rows = view.phase === 'list' ? view.rows : [];
+/** The list: a Steps window holding the height it opens at; the table scrolls in its own pane. */
+function ListWindow({ rows, controls, onClose }: { rows: PendingUpdateRow[]; controls: UpdatesModalControls; onClose: () => void }) {
     const count = rows.filter((r) => controls.ticked.has(r.id) && !r.lockedReason).length;
-    const label = applyLabel(count);
-    return {
-        title: LIST_TITLE,
-        body: <UpdateList rows={rows} controls={controls} />,
-        actions: [
-            { label, variant: 'accent', onPress: controls.apply, isDisabled: count === 0, sizeLabels: applyLabelsOf(rows) },
-        ],
+    const apply: ActionButton = {
+        label: applyLabel(count),
+        variant: 'accent',
+        onPress: controls.apply,
+        isDisabled: count === 0,
+        sizeLabels: applyLabelsOf(rows),
     };
+    return (
+        <StepsWindow title={LIST_TITLE} actionButtons={[apply]} onClose={onClose}>
+            <UpdateList rows={rows} controls={controls} />
+        </StepsWindow>
+    );
+}
+
+/** A task taking the window (a sign-in): its own heading, amber. */
+function taskHeading(asking: OperationPrompt): Heading {
+    return { title: asking.title ?? APPLYING_TITLE, status: 'warning' };
+}
+
+/**
+ * The run, in the Progress layout (step-07 Win1): large, as a question is asked under the row it is
+ * about, and holding the height it opens at. A task (a sign-in) takes the window's body and its
+ * heading the title. While a question waits whose answers are every way on, Close is hidden.
+ */
+function RunWindow({ rows, controls, onClose }: { rows: PendingUpdateRow[]; controls: UpdatesModalControls; onClose: () => void }) {
+    const asking = askingOf(controls);
+    const takes = asking && questionTakesWindow(asking);
+    const heading = takes ? taskHeading(asking) : runHeadingOf(controls.progress, rows, controls.statuses);
+    const chrome = runChrome(controls);
+    const stream = takes ? (
+        <OperationQuestion prompt={asking} onTyped={controls.onTyped} />
+    ) : (
+        <UpdatesRunView rows={rows} statuses={controls.statuses} progress={controls.progress} onTyped={controls.onTyped} remaining={controls.remaining} />
+    );
+    const ended = controls.progress?.state === 'succeeded' || controls.progress?.state === 'failed';
+    return (
+        <ProgressWindow
+            title={heading.title}
+            {...(heading.status ? { status: heading.status } : {})}
+            stream={stream}
+            actions={chrome.actions}
+            {...(chrome.closeLabel ? { closeLabel: chrome.closeLabel } : {})}
+            hideClose={Boolean(chrome.hideClose)}
+            asksUnderRows
+            // An ended run that is not clean keeps its rows to read (walk F134).
+            holds={ended}
+            onClose={onClose}
+        />
+    );
+}
+
+/** The small result a clean run ends on: its title, and how many updates the SC left for later. */
+function CleanEnd({ controls }: { controls: UpdatesModalControls }) {
+    return (
+        <ResultWindow title={APPLIED_TITLE} status="success" actionButtons={backTo(controls)} onClose={controls.close}>
+            {controls.remaining > 0 ? <LeadText>{waitingLine(controls.remaining)}</LeadText> : null}
+        </ResultWindow>
+    );
+}
+
+/** The window the view shows: the list, the run, or the small result. */
+function UpdatesWindow({ controls, onClose }: { controls: UpdatesModalControls; onClose: () => void }) {
+    const { view } = controls;
+    if (view.phase === 'closed') return null;
+    if (view.phase === 'list') return <ListWindow rows={view.rows} controls={controls} onClose={onClose} />;
+    if (endedClean(controls.progress, view.rows, controls.statuses)) return <CleanEnd controls={controls} />;
+    return <RunWindow rows={view.rows} controls={controls} onClose={onClose} />;
 }
 
 /** The Updates modal; nothing while closed. */
 export function UpdatesModal({ controls }: { controls: UpdatesModalControls }): React.ReactElement {
-    const open = controls.view.phase !== 'closed';
-    const content = open ? contentFor(controls) : undefined;
     // Cancel on a sign-in answers it and keeps the window for the rest of the run.
     const signingIn = controls.view.phase === 'applying' && Boolean(askingOf(controls)?.fields?.length);
     const dismiss = signingIn ? () => controls.answer(undefined) : controls.close;
     return (
         <DialogContainer onDismiss={dismiss}>
-            {content && (
-                <Modal
-                    title={content.title}
-                    status={content.status}
-                    size={content.size ?? 'L'}
-                    fitContent
-                    onClose={dismiss}
-                    closeLabel={content.closeLabel}
-                    hideClose={content.hideClose}
-                    actionButtons={content.actions}
-                >
-                    {content.body}
-                </Modal>
-            )}
+            <UpdatesWindow controls={controls} onClose={dismiss} />
         </DialogContainer>
     );
 }

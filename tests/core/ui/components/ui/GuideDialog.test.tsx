@@ -10,7 +10,10 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 import { GuideDialog, type GuideDialogProps } from '@/core/ui/components/ui/GuideDialog';
 
-function renderGuide(props: Partial<GuideDialogProps> = {}) {
+/** The one-column guide's props: the two-column option is drawn by its own helper below. */
+type OneColumnProps = Extract<GuideDialogProps, { steps: unknown }>;
+
+function renderGuide(props: Partial<OneColumnProps> = {}) {
     const onClose = jest.fn();
     render(
         <Provider theme={defaultTheme}>
@@ -112,5 +115,57 @@ describe('GuideDialog', () => {
         renderGuide();
 
         expect(document.querySelector('.modal-dialog')).toHaveClass('is-locked');
+    });
+
+    // Step-07 Win4: the demo setup guide's shape, as a Guide option. The step list on the left,
+    // the chosen step on the right, what acts on the list at the footer's start, the chosen
+    // step's buttons on the right, wide.
+    describe('in two columns', () => {
+        function renderColumns() {
+            const onCheckAll = jest.fn();
+            const onOpen = jest.fn();
+            render(
+                <Provider theme={defaultTheme}>
+                    <GuideDialog
+                        isOpen
+                        columns="two"
+                        title="Demo Setup: ERP"
+                        list={<ul data-testid="steps"><li>Turn It On</li></ul>}
+                        chosen={<p data-testid="chosen">Stores &gt; Configuration</p>}
+                        listActions={[{ label: 'Check All Steps', variant: 'secondary', onPress: onCheckAll }]}
+                        stepActions={[{ label: 'Open Commerce Admin', variant: 'accent', onPress: onOpen }]}
+                        onClose={jest.fn()}
+                    />
+                </Provider>,
+            );
+            return { onCheckAll, onOpen };
+        }
+
+        it('draws the list on the left and the chosen step on the right, wide', () => {
+            renderColumns();
+
+            const columns = document.querySelector('.guide-columns') as HTMLElement;
+            expect(columns.children[0]).toHaveClass('guide-columns-list');
+            expect(columns.children[0]).toContainElement(screen.getByTestId('steps'));
+            expect(columns.children[1]).toContainElement(screen.getByTestId('chosen'));
+            expect(screen.getByRole('dialog')).toHaveAttribute('data-size', 'L');
+            expect(screen.getByRole('dialog')).toHaveClass('modal-wide');
+        });
+
+        it("puts the list's buttons at the footer start and the step's beside Close", () => {
+            const { onCheckAll } = renderColumns();
+
+            expect(document.querySelector('.modal-footer-start')).toHaveTextContent('Check All Steps');
+            const footer = Array.from(document.querySelectorAll('.modal-footer-actions [role="button"]'));
+            expect(footer.map((button) => button.textContent)).toEqual(['Check All Steps', 'Close', 'Open Commerce Admin']);
+            fireEvent.click(screen.getByRole('button', { name: 'Check All Steps' }));
+            expect(onCheckAll).toHaveBeenCalledTimes(1);
+        });
+
+        it('holds the height it opens at', () => {
+            renderColumns();
+
+            expect(document.querySelector('.modal-dialog')).toHaveClass('is-locked');
+        });
     });
 });

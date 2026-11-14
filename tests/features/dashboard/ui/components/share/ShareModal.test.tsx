@@ -10,7 +10,7 @@
  * The file form is unchanged from Export.
  */
 
-import { act, fireEvent, screen } from '@testing-library/react';
+import { act, fireEvent, screen, within } from '@testing-library/react';
 import {
     answer,
     button,
@@ -217,7 +217,7 @@ describe('ShareModal', () => {
             await renderShare();
             await openDetails();
             fireEvent.change(nameInput(), { target: { value: '   ' } });
-            expect(button(SAVE_AND_COPY)).toBeDisabled();
+            expect(button(SAVE_AND_COPY)).toHaveAttribute('aria-disabled', 'true');
         });
     });
 
@@ -282,7 +282,7 @@ describe('ShareModal', () => {
                 answer({ path: '/Users/steve/bodea-demo-bundle.zip', fileCount: 813, bytes: 1_000, parts: ['setup', 'storefront'] }),
             );
 
-            await click('Save');
+            await click('Save File');
 
             expect(mockRequest).toHaveBeenLastCalledWith('exportDemoBundle', { setup: true, storefront: true });
             expect(screen.getByTestId('export-saved')).toHaveTextContent(
@@ -296,11 +296,11 @@ describe('ShareModal', () => {
             await chooseFile();
             fireEvent.click(partBox('part-storefront'));
             mockRequest.mockResolvedValueOnce(answer({ path: '/p/x.json', fileCount: 1, parts: ['setup'] }));
-            await click('Save');
+            await click('Save File');
             expect(mockRequest).toHaveBeenLastCalledWith('exportDemoBundle', { setup: true, storefront: false });
 
             fireEvent.click(partBox('part-setup'));
-            expect(button('Save')).toBeDisabled();
+            expect(button('Save File')).toHaveAttribute('aria-disabled', 'true');
             expect(screen.getByTestId('export-file-form')).toHaveTextContent('Select at least one part.');
         });
 
@@ -310,7 +310,7 @@ describe('ShareModal', () => {
             expect(partBox('part-storefront').checked).toBe(false);
             expect(partBox('part-storefront').disabled).toBe(true);
             mockRequest.mockResolvedValueOnce({ success: false, error: 'Failed to download archive: HTTP 404' });
-            await click('Save');
+            await click('Save File');
             expect(screen.getByTestId('export-error')).toHaveTextContent('HTTP 404');
         });
 
@@ -318,8 +318,56 @@ describe('ShareModal', () => {
             await renderShare();
             await chooseFile();
             mockRequest.mockResolvedValueOnce(answer({ cancelled: true }));
-            await click('Save');
+            await click('Save File');
             expect(screen.queryByTestId('export-saved')).not.toBeInTheDocument();
+        });
+    });
+
+    // Step-07 Win2: a Steps window. Each form's main button sits in the footer, and the window
+    // opens at the taller form's height and holds it, so switching forms or a note never grows it.
+    describe('the window', () => {
+        const footer = (): HTMLElement => document.querySelector('.modal-footer-actions') as HTMLElement;
+        const body = (): HTMLElement => document.querySelector('.modal-body') as HTMLElement;
+
+        it("puts the link form's button in the footer, beside Close", async () => {
+            await renderShare(answer({ ...PREVIEW, saved: true, onList: true }));
+
+            expect(within(footer()).getByRole('button', { name: 'Copy Link' })).toBeInTheDocument();
+            expect(within(body()).queryByRole('button', { name: 'Copy Link' })).toBeNull();
+            expect(within(footer()).getByRole('button', { name: 'Close' })).toBeInTheDocument();
+        });
+
+        it("puts the file form's Save File in the footer in its place", async () => {
+            await renderShare();
+            await chooseFile();
+
+            expect(within(footer()).getByRole('button', { name: 'Save File' })).toBeInTheDocument();
+            expect(within(footer()).queryByRole('button', { name: SAVE_AND_COPY })).toBeNull();
+            expect(within(body()).queryByRole('button', { name: 'Save File' })).toBeNull();
+        });
+
+        it('offers no link button when there is no storefront to link to', async () => {
+            await renderShare(undefined, { isEds: false });
+
+            expect(within(footer()).getAllByRole('button').map((b) => b.textContent)).toEqual(['Close']);
+        });
+
+        it('holds the height it opens at through a change of form', async () => {
+            await renderShare();
+            const dialog = screen.getByRole('dialog');
+            expect(dialog).toHaveClass('is-locked');
+
+            await chooseFile();
+
+            expect(screen.getByRole('dialog')).toBe(dialog);
+            expect(dialog).toHaveClass('is-locked');
+        });
+
+        it('keeps the button the width of its widest label, so Close never moves', async () => {
+            await renderShare();
+            const sizers = Array.from(footer().querySelectorAll('.modal-button-sizer')).map((s) => s.textContent);
+
+            expect(sizers).toEqual(expect.arrayContaining(['Copy Link', SAVE_AND_COPY, 'Copied', 'Save File']));
         });
     });
 

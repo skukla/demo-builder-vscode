@@ -328,6 +328,25 @@
     margin: 0;
 }
 
+/* The Guide layout in two columns (`GuideDialog` columns="two", step-07 Win4; moved from the setup
+   guide's own sheet, declarations unchanged): the step list wide enough to read its labels whole,
+   with the rule beside it, and the chosen step taking the rest. */
+.guide-columns {
+    display: grid;
+    grid-template-columns: 232px minmax(0, 1fr);
+    gap: 40px;
+    align-items: start;
+}
+
+.guide-columns-list {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    padding-right: 24px;
+    border-right: 1px solid var(--spectrum-global-color-gray-300);
+}
+
 /* A guide step: its row (or the step drawn whole), then its own buttons beside it, small and in
    the footer's order (`GuideDialog`). The rows keep the rule between them that a bare
    `work-row-list` draws. */

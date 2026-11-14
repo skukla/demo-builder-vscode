@@ -47,7 +47,7 @@ const HOLDS = [
     /<CenteredFeedbackContainer[\s>]/,
     /\bwaiting=\{/,
     /<(StepsDialog|StepsWindow)[\s>]/,
-    /<ProgressDialog[\s>][\s\S]*?\bstream=\{/,
+    /<(ProgressDialog|ProgressWindow)[\s>][\s\S]*?\bstream=\{/,
 ];
 
 const COMPONENTS = workingTreeFiles('src')
@@ -86,7 +86,7 @@ function withoutImports(source: string): string {
 /** Every component that renders a dialog and switches between views inside it. */
 // A layout component (Phase 1b) renders the Modal for its caller, so the caller is still the
 // dialog whose body switches views: it counts as rendering one.
-const RENDERS_DIALOG = /<(Modal|FormDialog|ConfirmActionDialog|ProgressDialog|ResultDialog|GuideDialog|StepsDialog|StepsWindow|ResultWindow)[\s>]/;
+const RENDERS_DIALOG = /<(Modal|FormDialog|ConfirmActionDialog|ProgressDialog|ProgressWindow|ResultDialog|GuideDialog|StepsDialog|StepsWindow|ResultWindow)[\s>]/;
 function modalsWithViews(): Modal[] {
     const found: Modal[] = [];
     for (const file of COMPONENTS) {

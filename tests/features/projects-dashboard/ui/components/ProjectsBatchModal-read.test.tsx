@@ -100,12 +100,17 @@ describe.each(CASES)(
             expect(within(dialog).getByRole('button', { name: button })).toBeInTheDocument();
         });
 
-        it('runs in a window of its own, not held at the height of the questions', async () => {
+        // The run is the Progress layout's window (step-07 Win1): a new window, so it is not held at
+        // the questions' height, and it holds its own from its first frame (rule 14).
+        it('runs in a window of its own, holding its own height from the first frame', async () => {
             const { user } = await openOn(action, answerFor(action, count), projects);
+            const questions = screen.getByRole('dialog', { name: title });
             await user.click(screen.getByRole('button', { name: button }));
 
             const run = screen.getByRole('dialog');
-            expect(run).not.toHaveAttribute('data-locked');
+            expect(run).not.toBe(questions);
+            expect(questions).not.toBeInTheDocument();
+            expect(run).toHaveAttribute('data-locked', 'true');
             expect(run).not.toHaveAttribute('data-measuring');
         });
 
@@ -114,6 +119,8 @@ describe.each(CASES)(
 
             const dialog = screen.getByRole('dialog', { name: "Couldn't Read Projects" });
             expect(dialog).toHaveAttribute('data-status', 'error');
+            // A result, at the Result layout's small size (it was the run's large window).
+            expect(dialog).toHaveAttribute('data-size', 'S');
             expect(dialog).not.toHaveAttribute('data-measuring');
             expect(within(dialog).getByText('No such project')).toBeInTheDocument();
         });

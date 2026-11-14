@@ -21,6 +21,7 @@ jest.mock('@/core/ui/components/ui/Modal', () => ({
         onClose,
         closeLabel,
         hideClose,
+        lockHeight,
         children,
     }: {
         title: string;
@@ -30,9 +31,11 @@ jest.mock('@/core/ui/components/ui/Modal', () => ({
         onClose: () => void;
         closeLabel?: string;
         hideClose?: boolean;
+        lockHeight?: boolean;
         children: React.ReactNode;
     }) => (
-        <div role="dialog" aria-label={title} data-size={size} data-status={status}>
+        // `data-locked`: the layouts' hold on the height a window opens at (rule 14).
+        <div role="dialog" aria-label={title} data-size={size} data-status={status} data-locked={lockHeight ? 'true' : undefined}>
             {children}
             {!hideClose && <button onClick={onClose}>{closeLabel ?? 'Close'}</button>}
             {actionButtons.map((b) => (
@@ -559,6 +562,19 @@ describe('UpdatesModal', () => {
             expect(screen.queryByRole('button', { name: 'Back to Updates' })).toBeNull();
             expect(screen.queryByText(/still waiting/)).toBeNull();
         });
+    });
+
+    // Step-07 Win1: the list is a Steps window and the run the Progress layout's; each holds the
+    // height it opens at, so a question under a row never grows the window (rule 14).
+    it('holds the height the list opens at, and the height the run opens at', () => {
+        const { unmount } = render(<UpdatesModal controls={controls({ phase: 'list', rows: ROWS })} />);
+        expect(screen.getByRole('dialog', { name: 'Updates Available' })).toHaveAttribute('data-locked', 'true');
+        unmount();
+
+        render(<UpdatesModal controls={running({ 'blockLibrary:0': { id: 'blockLibrary:0', state: 'running' } })} />);
+        const run = screen.getByRole('dialog', { name: 'Applying Updates' });
+        expect(run).toHaveAttribute('data-locked', 'true');
+        expect(run).toHaveAttribute('data-size', 'L');
     });
 
     it('closes through the controls', async () => {

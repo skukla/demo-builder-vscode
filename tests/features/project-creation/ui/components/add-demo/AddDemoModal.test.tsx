@@ -70,7 +70,7 @@ describe('AddDemoModal', () => {
         // The failure replaces the form (owner, 2026-09-14), and Back returns to it.
         expect(title("Couldn't Add Zip File").innerHTML).toContain('text-negative');
         expect(screen.getByTestId('zip-error')).toHaveTextContent('it has no head.html');
-        expect(footerButtons()).toEqual(['Close', 'Back']);
+        expect(footerButtons()).toEqual(['Back', 'Close']);
         expect(screen.queryByTestId('zip-public')).not.toBeInTheDocument();
         await click('Back');
         expect(screen.getByTestId('zip-public')).toBeInTheDocument();
@@ -95,7 +95,7 @@ describe('AddDemoModal', () => {
         expect(title('Repository Name Already Exists').innerHTML).not.toContain('text-negative');
         expect(screen.queryByRole('heading', { name: "Couldn't Add Zip File" })).not.toBeInTheDocument();
         // The way forward is the footer's main button, last.
-        expect(footerButtons()).toEqual(['Cancel', 'Back', 'Add from Repository']);
+        expect(footerButtons()).toEqual(['Back', 'Cancel', 'Add from Repository']);
 
         mockRequest.mockResolvedValueOnce({ success: true, result: { ...READ, fullName: 'steve/citisignal-b2b-summit' } });
         await click('Add from Repository');
@@ -175,7 +175,7 @@ describe('AddDemoModal', () => {
         expect(title("Unsupported Demo").innerHTML).toContain('text-negative');
         expect(screen.getByText(/missing scripts\/scripts.js/)).toBeInTheDocument();
         // Nothing to go on to, so no main button shown off beside Back.
-        expect(footerButtons()).toEqual(['Close', 'Back']);
+        expect(footerButtons()).toEqual(['Back', 'Close']);
         expect(button('Back')).toHaveAttribute('aria-disabled', 'false');
     });
 
@@ -185,7 +185,7 @@ describe('AddDemoModal', () => {
         expect(title('Sign In to GitHub First').innerHTML).toContain('text-notice');
         expect(screen.getByText(/Sign in to GitHub in VS Code/)).toBeInTheDocument();
         expect(screen.queryByText("Unsupported Demo")).not.toBeInTheDocument();
-        expect(footerButtons()).toEqual(['Close', 'Back']);
+        expect(footerButtons()).toEqual(['Back', 'Close']);
     });
 
     // A read that did not finish says nothing about the demo.
@@ -209,7 +209,7 @@ describe('AddDemoModal', () => {
         await probeWith({ success: true, result: { outcome: 'unreadable', reason: 'No such repository.' } });
         expect(title("Couldn't Read Storefront")).toBeInTheDocument();
         expect(screen.getByText('No such repository.')).toBeInTheDocument();
-        expect(footerButtons()).toEqual(['Close', 'Back']);
+        expect(footerButtons()).toEqual(['Back', 'Close']);
     });
 
     it('goes back from a refusal to the link, still filled in', async () => {
@@ -237,7 +237,7 @@ describe('AddDemoModal', () => {
         expect(title('This is the demo behind Starter (B2B + B2C)').innerHTML).toContain('text-notice');
         expect(screen.getByTestId('shipped-notice')).toHaveTextContent('Use the Starter (B2B + B2C) card instead');
         expect(screen.getByTestId('shipped-notice').querySelector('.inline-notice')).toBeNull();
-        expect(footerButtons()).toEqual(['Cancel', 'Back', 'Use Starter (B2B + B2C)']);
+        expect(footerButtons()).toEqual(['Back', 'Cancel', 'Use Starter (B2B + B2C)']);
         await click('Use Starter (B2B + B2C)');
         expect(props.onUseShipped).toHaveBeenCalledWith('starter');
         expect(props.onClose).toHaveBeenCalled();
@@ -263,7 +263,7 @@ describe('AddDemoModal', () => {
 
         expect(screen.getByTestId('bundle-setup')).toHaveClass('add-demo-note');
         expect(screen.getByTestId('bundle-setup')).toHaveTextContent('This bundle also carries setup');
-        expect(footerButtons()).toEqual(['Cancel', 'Back', 'Start a Project with It', 'Add Demo Package']);
+        expect(footerButtons()).toEqual(['Back', 'Cancel', 'Start a Project with It', 'Add Demo Package']);
     });
 
     it('shows the add failure inside the dialog and stays open', async () => {

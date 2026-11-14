@@ -80,7 +80,7 @@ describe('AddIntegrationFlowModal — while it reads the APIs', () => {
 
         expect(await screen.findByTestId('api-picker-stage')).toBeInTheDocument();
         expect(screen.getByText('Demo Project')).toBeInTheDocument();
-        expect(footerButtons()).toEqual(['Cancel', 'Back', 'Save']);
+        expect(footerButtons()).toEqual(['Back', 'Cancel', 'Save']);
     });
 });
 
@@ -93,7 +93,7 @@ describe('AddIntegrationFlowModal — a failed read of the APIs', () => {
         expect(title.innerHTML).toContain('text-negative');
         expect(screen.getByTestId('api-access-problem')).toHaveTextContent('Adobe API catalog unavailable.');
         expect(screen.queryByText('Demo Project')).not.toBeInTheDocument();
-        expect(footerButtons()).toEqual(['Cancel', 'Back', 'Retry']);
+        expect(footerButtons()).toEqual(['Back', 'Cancel', 'Retry']);
     });
 
     it('reads again on Retry, back to the list', async () => {
@@ -114,7 +114,7 @@ describe('AddIntegrationFlowModal — a failed read of the APIs', () => {
         const { builder, onClose } = await walkAddToApis();
 
         await screen.findByRole('heading', { name: "Couldn't Load Adobe APIs" });
-        expect(footerButtons()).toEqual(['Cancel', 'Back', 'Retry', 'Add Integration']);
+        expect(footerButtons()).toEqual(['Back', 'Cancel', 'Retry', 'Add Integration']);
 
         await click('Add Integration');
         await waitFor(() => expect(builder.onAddCustomAppBuilderComponent).toHaveBeenCalled());
@@ -131,7 +131,7 @@ describe('AddIntegrationFlowModal — signed out when it reads the APIs', () => 
         expect(title.innerHTML).toContain('text-notice');
         expect(screen.getByText(/Your Adobe session has ended/)).toBeInTheDocument();
         expect(screen.getByText('Adobe sign-in will open in your browser.')).toBeInTheDocument();
-        expect(footerButtons()).toEqual(['Cancel', 'Back', 'Sign In with Adobe']);
+        expect(footerButtons()).toEqual(['Back', 'Cancel', 'Sign In with Adobe']);
     });
 
     it('reads again once the host sign-in finishes', async () => {
@@ -152,7 +152,7 @@ describe('AddIntegrationFlowModal — signed out when it reads the APIs', () => 
         renderEdit();
 
         await screen.findByRole('heading', { name: 'Sign In to Adobe' });
-        expect(footerButtons()).toEqual(['Cancel', 'Back']);
+        expect(footerButtons()).toEqual(['Back', 'Cancel']);
     });
 
     it('puts the sign-in before the main button on an add', async () => {
@@ -160,7 +160,7 @@ describe('AddIntegrationFlowModal — signed out when it reads the APIs', () => 
         await walkAddToApis(jest.fn().mockResolvedValue(undefined));
 
         await screen.findByRole('heading', { name: 'Sign In to Adobe' });
-        expect(footerButtons()).toEqual(['Cancel', 'Back', 'Sign In with Adobe', 'Add Integration']);
+        expect(footerButtons()).toEqual(['Back', 'Cancel', 'Sign In with Adobe', 'Add Integration']);
     });
 });
 
@@ -176,7 +176,7 @@ describe('AddIntegrationFlowModal — a destination stage that failed', () => {
         const title = screen.getByRole('heading', { name: 'Project Setup Failed' });
         expect(title.querySelector('.modal-status-icon .text-negative')).not.toBeNull();
         expect(screen.getByText('Adobe did not answer.')).toHaveClass('dialog-line');
-        expect(footerButtons()).toEqual(['Cancel', 'Back', 'Retry']);
+        expect(footerButtons()).toEqual(['Back', 'Cancel', 'Retry']);
 
         await click('Retry');
         expect(retry).toHaveBeenCalledTimes(1);
@@ -188,7 +188,7 @@ describe('AddIntegrationFlowModal — a destination stage that failed', () => {
         await act(async () => {});
 
         expect(screen.getByRole('heading', { name: 'Deployment Destination' })).toBeInTheDocument();
-        expect(footerButtons()).toEqual(['Cancel', 'Back', 'Continue']);
+        expect(footerButtons()).toEqual(['Back', 'Cancel', 'Continue']);
     });
 });
 
@@ -205,6 +205,6 @@ describe('AddIntegrationFlowModal — a destination list reading what it will sh
         expect(screen.getByRole('heading', { name: 'Deployment Destination' })).toBeInTheDocument();
 
         await click('list-stops-waiting');
-        expect(footerButtons()).toEqual(['Cancel', 'Back', 'Continue']);
+        expect(footerButtons()).toEqual(['Back', 'Cancel', 'Continue']);
     });
 });

@@ -1,7 +1,7 @@
 /**
  * ProjectsBatchModal — the one window behind Reset Selected and Delete Selected on the projects
- * list (owner, 2026-11-04), built as the Updates window is: the house `ui/Modal` in a
- * `DialogContainer`, the controls handed in (`useProjectsBatch`).
+ * list (owner, 2026-11-04), built as the Updates window is: one `DialogContainer` showing one layout
+ * window at a time (Steps, Progress, Result), the controls handed in (`useProjectsBatch`).
  *
  * Reading and the questions are one Steps window (`StepsWindow`, step-05 S3): while the read is out
  * it is unseen and only its wait shows, where it will open, "Reading demo data" for a reset and
@@ -13,10 +13,11 @@
  * container (step-05 S1, decisions J7-2): the shared `SaveFirstWindow` over `BatchSaveTable`, Reset
  * or Delete Without Saving, Cancel (which closes everything), and Save and Reset or Save and Delete.
  * Only those two, or the red button when nothing is asked, start the run.
- * The run: `ProjectsBatchRunView`, closed into the background while it goes, its end
- * the title with its status icon, as the Updates run ends. A run where every project went through
- * hands off to the small result, the title alone; one with a problem stays on its rows (owner,
- * 2026-11-10, walk F134).
+ * The run: `ProjectsBatchRunView` in the Progress layout's window (step-07 Win1), large and holding
+ * the height it opens at, closed into the background while it goes, its end the title with its
+ * status icon, as the Updates run ends. A run where every project went through hands off to the
+ * small result (`ResultWindow`), the title alone; one with a problem stays on its rows (owner,
+ * 2026-11-10, walk F134). A failed read is a small result too.
  *
  * @module features/projects-dashboard/ui/components/ProjectsBatchModal
  */
@@ -34,7 +35,9 @@ import { BatchSaveTable } from '@/core/ui/components/feedback/BatchSaveTable';
 import { OperationQuestion, questionTakesWindow } from '@/core/ui/components/feedback/OperationQuestion';
 import { SaveFirstWindow } from '@/core/ui/components/feedback/SaveFirstWindow';
 import type { WaitLines } from '@/core/ui/components/feedback/StageWait';
-import { Modal, type ActionButton, type ModalStatus } from '@/core/ui/components/ui/Modal';
+import type { ActionButton, ModalStatus } from '@/core/ui/components/ui/Modal';
+import { ProgressWindow } from '@/core/ui/components/ui/ProgressDialog';
+import { ResultWindow } from '@/core/ui/components/ui/ResultDialog';
 import { StepsWindow } from '@/core/ui/components/ui/StepsDialog';
 import { endStatus, endsSmall } from '@/core/ui/utils/runEnding';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
@@ -44,6 +47,9 @@ import type { ProjectsBatchAction } from '@/types/projectsBatch';
 import type { OperationPrompt } from '@/types/webviewPayloads';
 
 const NO_ACTIONS: ActionButton[] = [];
+
+/** A failed read's title, a literal type, so the label scan reads it where the window draws it. */
+const UNREAD_TITLE = "Couldn't Read Projects";
 
 /** The question the run is paused on, while it is. A task's heading is the window's title. */
 function askingOf(controls: ProjectsBatchControls): OperationPrompt | undefined {
@@ -95,7 +101,7 @@ function saveQuestionOfView(controls: ProjectsBatchControls): SaveQuestion | und
 function titleOf(controls: ProjectsBatchControls): string {
     const { view, progress } = controls;
     if (view.phase === 'closed') return '';
-    if (view.phase === 'unread') return "Couldn't Read Projects";
+    if (view.phase === 'unread') return UNREAD_TITLE;
     const subject = subjectOf(view);
     if (view.phase !== 'running') return confirmTitle(subject);
     if (progress?.state === 'succeeded' || progress?.state === 'failed') {
@@ -127,7 +133,7 @@ function statusOf(controls: ProjectsBatchControls): ModalStatus | undefined {
 }
 
 /** The run's dismiss: into the background while it goes, Close once it has ended. */
-function closeLabelOf(controls: ProjectsBatchControls): string {
+function closeLabelOf(controls: ProjectsBatchControls): 'Close' | 'Run in Background' | 'Cancel' {
     const { view, progress } = controls;
     if (view.phase === 'asking' || askingOf(controls)) return 'Cancel';
     const going = view.phase === 'running' && progress?.state !== 'succeeded' && progress?.state !== 'failed';
@@ -156,14 +162,16 @@ function actionsOf(controls: ProjectsBatchControls): ActionButton[] {
     return [{ label, variant: 'negative', onPress: () => (asks ? choices.askToSave() : controls.run()) }];
 }
 
-function BodyOf({ controls }: { controls: ProjectsBatchControls }): React.ReactElement | null {
-    const { view } = controls;
-    if (view.phase === 'unread') return <p className="work-row-why">{view.error}</p>;
-    if (view.phase === 'asking' && view.questions.action === 'delete') {
+/** The questions, Delete's or Reset's. */
+function QuestionsBody({ controls, view }: { controls: ProjectsBatchControls; view: Extract<BatchView, { phase: 'asking' }> }): React.ReactElement {
+    if (view.questions.action === 'delete') {
         return <BatchDeleteQuestions rows={view.questions.rows} choices={controls.choices} />;
     }
-    if (view.phase === 'asking') return <BatchResetQuestions rows={view.questions.rows} choices={controls.choices} />;
-    if (view.phase !== 'running' || endedClean(controls)) return null;
+    return <BatchResetQuestions rows={view.questions.rows} choices={controls.choices} />;
+}
+
+/** The run's own view: its rows with a question under the running one, or a task taking the window. */
+function RunBody({ controls, view }: { controls: ProjectsBatchControls; view: Extract<BatchView, { phase: 'running' }> }): React.ReactElement {
     const asking = askingOf(controls);
     if (asking && questionTakesWindow(asking)) {
         return <OperationQuestion prompt={asking} onTyped={controls.onTyped} />;
@@ -221,55 +229,68 @@ function QuestionsWindow({ controls, view }: { controls: ProjectsBatchControls; 
             actionButtons={actionsOf(controls)}
             onClose={controls.close}
         >
-            <BodyOf controls={controls} />
+            {view.phase === 'asking' ? <QuestionsBody controls={controls} view={view} /> : null}
         </StepsWindow>
     );
 }
 
-/** The batch window; nothing while closed. */
-export function ProjectsBatchModal({ controls }: { controls: ProjectsBatchControls }): React.ReactElement {
-    const { view } = controls;
+/**
+ * The run, in the Progress layout (step-07 Win1): large, as its rows can each be asked a question
+ * under them, and wide for Delete's names (owner, 2026-11-05); it holds the height it opens at.
+ * While a question waits whose answers are every way on, Close is hidden; a sign-in keeps Cancel.
+ */
+function RunWindow({ controls, view, onClose }: { controls: ProjectsBatchControls; view: Extract<BatchView, { phase: 'running' }>; onClose: () => void }): React.ReactElement {
     const asking = askingOf(controls);
-    const clean = endedClean(controls);
-    const saving = view.phase === 'asking' && controls.choices.saving ? saveQuestionOf(view.questions, controls.choices) : undefined;
-    // Cancel on a question answers it and keeps the window: the run goes on to the next project.
-    const dismiss = asking ? () => controls.answer(undefined) : controls.close;
-    if (view.phase === 'asking' && saving) {
-        // Cancel, or Escape, closes everything (J7-2).
+    const status = statusOf(controls);
+    const ended = controls.progress?.state === 'succeeded' || controls.progress?.state === 'failed';
+    return (
+        <ProgressWindow
+            title={titleOf(controls)}
+            {...(status ? { status } : {})}
+            stream={<RunBody controls={controls} view={view} />}
+            actions={actionsOf(controls)}
+            closeLabel={closeLabelOf(controls)}
+            hideClose={asking ? !cancels(asking) : false}
+            asksUnderRows
+            wide={subjectOf(view).action === 'delete'}
+            // An ended run that is not clean keeps its rows to read (walk F134).
+            holds={ended}
+            onClose={onClose}
+        />
+    );
+}
+
+/** The window in the container: the questions, the save question, the run, or a result. */
+function BatchWindow({ controls, onDismiss }: { controls: ProjectsBatchControls; onDismiss: () => void }): React.ReactElement | null {
+    const { view } = controls;
+    if (view.phase === 'closed') return null;
+    if (view.phase === 'unread') {
         return (
-            <DialogContainer onDismiss={controls.close}>
-                <SaveFirstOf controls={controls} action={view.questions.action} question={saving} />
-            </DialogContainer>
+            <ResultWindow title={UNREAD_TITLE} status="error" onClose={controls.close}>
+                <p className="work-row-why">{view.error}</p>
+            </ResultWindow>
         );
+    }
+    if (view.phase === 'asking' && controls.choices.saving) {
+        return <SaveFirstOf controls={controls} action={view.questions.action} question={saveQuestionOf(view.questions, controls.choices)} />;
     }
     if (view.phase === 'reading' || view.phase === 'asking') {
-        return (
-            <DialogContainer onDismiss={controls.close}>
-                <QuestionsWindow key="questions" controls={controls} view={view} />
-            </DialogContainer>
-        );
+        return <QuestionsWindow key="questions" controls={controls} view={view} />;
     }
+    // A clean end is the small result, the title alone (walk F134).
+    if (endedClean(controls)) return <ResultWindow title={titleOf(controls)} status="success" onClose={controls.close} />;
+    return <RunWindow controls={controls} view={view} onClose={onDismiss} />;
+}
+
+/** The batch window; nothing while closed. */
+export function ProjectsBatchModal({ controls }: { controls: ProjectsBatchControls }): React.ReactElement {
+    const asking = askingOf(controls);
+    // Cancel on a question answers it and keeps the window: the run goes on to the next project.
+    // Cancel or Escape on the save question closes everything (J7-2).
+    const dismiss = asking ? () => controls.answer(undefined) : controls.close;
     return (
         <DialogContainer onDismiss={dismiss}>
-            {view.phase !== 'closed' && (
-                <Modal
-                    key="run"
-                    title={titleOf(controls)}
-                    status={statusOf(controls)}
-                    // A clean end is the small result, the title alone (walk F134).
-                    size={clean ? 'S' : 'L'}
-                    // Delete's rows hold the same names as its questions: extra-wide (owner,
-                    // 2026-11-05).
-                    wide={!clean && subjectOf(view).action === 'delete'}
-                    fitContent
-                    onClose={dismiss}
-                    closeLabel={closeLabelOf(controls)}
-                    hideClose={asking ? !cancels(asking) : false}
-                    actionButtons={actionsOf(controls)}
-                >
-                    <BodyOf controls={controls} />
-                </Modal>
-            )}
+            <BatchWindow controls={controls} onDismiss={dismiss} />
         </DialogContainer>
     );
 }

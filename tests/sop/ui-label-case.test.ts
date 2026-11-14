@@ -53,8 +53,18 @@ const LEDGER: Readonly<Record<string, Reason>> = {
  * the data type's name (`dataTypeLabel`, the Title Case names the table already shows as text).
  * 66 -> 65 on 2026-11-14 (step-07 F2 review): the file load's Delete button lost its `label` prop,
  * and now says the literal Delete.
+ * 65 -> 75 on 2026-11-14 (step-07 Win1 to Win4): wider coverage, not looser. The scan now reads
+ * the layouts' window titles (`StepsWindow`, `StepsDialog`, `ResultWindow`, `ProgressWindow`,
+ * `ConfirmActionWindow`), which it never read, so a window moved onto one dropped out of view (AI
+ * Capabilities' 66 -> 65 above was one). Every literal title they hold is now checked (all pass).
+ * The runtime ones: 9 that already existed and were invisible (the batch questions' title, Assign
+ * ERP Products' no-list title, and the datapack job summary, records, create flow (2), dry run,
+ * job result and run windows' titles); Add a Demo's and Add Integration's titles, counted before as
+ * `Modal.title` and still counted, now on their Steps windows; and one new site, the projects batch
+ * window's small clean result ("Kukla Luma Reset", a project name), split from the run's one
+ * `Modal.title`. The batch's failed-read title was written out as a literal (`UNREAD_TITLE`).
  */
-const DYNAMIC_PIN = 65;
+const DYNAMIC_PIN = 75;
 
 /**
  * The six dialog layouts (the Steps layout joined 2026-11-11) hand their caller's words on to Modal (`title={title}`). Those words are

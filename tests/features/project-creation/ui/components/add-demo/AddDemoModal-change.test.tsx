@@ -62,7 +62,7 @@ describe('AddDemoModal — change mode', () => {
 
         expect(title('This demo is a different kind of storefront').innerHTML).toContain('text-negative');
         expect(screen.getByText('This project uses a headless demo. Select a demo of the same type.')).toBeInTheDocument();
-        expect(footerButtons()).toEqual(['Close', 'Back']);
+        expect(footerButtons()).toEqual(['Back', 'Close']);
         expect(mockRequest).toHaveBeenCalledTimes(1);
     });
 
@@ -75,7 +75,7 @@ describe('AddDemoModal — change mode', () => {
 
         expect(title('This is the demo behind Starter (B2B + B2C)').innerHTML).toContain('text-notice');
         expect(screen.getByTestId('shipped-notice')).toHaveTextContent("A project can't point to a demo that's already available");
-        expect(footerButtons()).toEqual(['Close', 'Back']);
+        expect(footerButtons()).toEqual(['Back', 'Close']);
     });
 
     it('shows the change failure inside the dialog and stays open', async () => {

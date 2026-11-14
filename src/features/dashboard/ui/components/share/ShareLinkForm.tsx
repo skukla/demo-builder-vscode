@@ -1,9 +1,10 @@
 /**
  * The Share dialog's "Send a link" form, once the storefront has been read.
  *
- * Top to bottom: the link and its one button with what became of the press
- * under it, the Welcome box, the name and description behind a quiet link, any
- * check that needs the SC, then the undo with what became of that under it. What
+ * Top to bottom: the link with what became of the press (its button is the
+ * window's footer button) under it, the Welcome box, the name and description
+ * behind a quiet link, any check that needs the SC, then the undo with what
+ * became of that under it. What
  * the link does is said once, under the choice. The button names the write when
  * the press will make one (owner, 2026-10-22: a copy button must not silently
  * write). The checks are the ones Save as demo package showed, here because this
@@ -15,16 +16,16 @@
  * @module features/dashboard/ui/components/share/ShareLinkForm
  */
 
-import { Button, Checkbox, TextArea, TextField } from '@adobe/react-spectrum';
+import { Checkbox, TextArea, TextField } from '@adobe/react-spectrum';
 import React, { useState } from 'react';
 import { SHARE_COPY } from './shareCopy';
-import { useShareLink, type UseShareLink } from './useShareLink';
+import type { UseShareLink } from './useShareLink';
 import { SectionLabel } from '@/core/ui/components/ui/SectionLabel';
 import { Spinner } from '@/core/ui/components/ui/Spinner';
 import type { DemoPackageCheck, DemoPackagePreview, RemoveDemoPackageResult } from '@/types/webviewRequests';
 
 /** The button's words: copied for a moment, else the act it will do. Its spinner says it is working. */
-function buttonLabel(flow: UseShareLink): string {
+export function buttonLabel(flow: UseShareLink): string {
     if (flow.copied) return SHARE_COPY.copied;
     return flow.needsSave ? SHARE_COPY.saveAndCopy : SHARE_COPY.copyLink;
 }
@@ -119,26 +120,17 @@ function RemoveNotes({ flow }: { flow: UseShareLink }): React.ReactElement {
 }
 
 /**
- * The link form.
+ * The link form; its button is the window's footer button (step-07 Win2).
  *
  * @param props.preview - what the storefront read answered
+ * @param props.flow - the form's state (`useShareLink`)
  * @returns the form
  */
-export function ShareLinkForm({ preview }: { preview: DemoPackagePreview }): React.ReactElement {
-    const flow = useShareLink(preview);
+export function ShareLinkForm({ preview, flow }: { preview: DemoPackagePreview; flow: UseShareLink }): React.ReactElement {
     return (
         <div className="export-link" data-testid="share-link">
             <div className="export-link-row">
                 <code className="export-link-text">{preview.link}</code>
-                <Button
-                    variant="accent"
-                    onPress={flow.press}
-                    isDisabled={!flow.canPress && flow.busy !== 'save'}
-                    isPending={flow.busy === 'save'}
-                    data-testid="share-copy-link"
-                >
-                    {buttonLabel(flow)}
-                </Button>
             </div>
             <PressNotes flow={flow} />
             <Checkbox isSelected={flow.welcome} onChange={flow.setWelcome} data-testid="share-welcome">

@@ -5,8 +5,8 @@
  * caller passes words and actions. So only those six components (and `Modal` itself) render
  * `Modal`. Steps (2026-11-11) is the window that goes Form, Running, Result at one fixed height.
  *
- * Every file that renders `Modal` directly today is in the ledger, each with the feature whose
- * migration moves it. The ledger only shrinks: a file not in it fails, and a row for a file that no
+ * Every file that renders `Modal` directly outside them is in the ledger, each with the feature whose
+ * migration moves it; it is empty since step-07 Win1 to Win4 (2026-11-14). The ledger only shrinks: a file not in it fails, and a row for a file that no
  * longer renders `Modal` fails too, so a migrated window cannot keep its exemption.
  *
  * The second half is the stylesheet: the 60-character line, the 16px lead and Spectrum's button
@@ -31,20 +31,7 @@ const LAYOUTS = [
 ];
 
 /** Files that render `Modal` directly today, each with the change that moves it. Shrink only. */
-const LEDGER: Readonly<Record<string, string>> = {
-    'src/features/dashboard/ui/components/integrations/SetupGuideModal.tsx':
-        'waits for a layout: a Guide at L wide with the step list beside the chosen step, list buttons at the footer start and the step buttons on the right; GuideDialog draws one column of rows, each with its own buttons',
-    'src/features/dashboard/ui/components/share/ShareModal.tsx':
-        'waits for the owner (Phase 1b question): two forms whose buttons sit in the body and whose notes and details grow it; a Steps window holds one height, so they would scroll',
-    'src/features/project-creation/ui/components/add-demo/AddDemoModal.tsx':
-        'waits for the owner (Phase 1b question): stages of different heights; a Steps window holds the first stage, so the taller found stage scrolls, unless each stage is its own window',
-    'src/features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal.tsx':
-        'waits for the owner (Phase 1b question): five stages of five heights; a Steps window holds the first stage, so the API and project lists scroll, unless each stage is its own window',
-    'src/features/projects-dashboard/ui/components/ProjectsBatchModal.tsx':
-        'the read, the questions and the save question are already Steps windows; the run waits for a layout: rows at L or wide, a question under its row that hides Close, then the small result; ProgressDialog is M and cannot hide Close',
-    'src/features/projects-dashboard/ui/components/UpdatesModal.tsx':
-        'waits for a layout: one window through the update list, a run whose questions hide Close or take the window, and a small result with Back to Updates; ProgressDialog is M and cannot hide Close',
-};
+const LEDGER: Readonly<Record<string, string>> = {};
 
 /** Feature stylesheets that set a layout's text or weight today, with why. Shrink only. */
 const STYLE_LEDGER: Readonly<Record<string, string>> = {};
@@ -81,9 +68,11 @@ describe('one component per layout: only the six layouts render Modal', () => {
     const tsx = workingTreeFiles('src').filter((file) => file.endsWith('.tsx'));
     const direct = tsx.filter((file) => rendersModal(read(file)));
 
-    it('CONTROL: found the layouts and the windows not yet moved', () => {
+    // The ledger reached zero with step-07 Win1 to Win4 (2026-11-14): the control is now that the
+    // reader finds exactly the six layouts, so a broken reader (finding none) still fails here.
+    it('CONTROL: found the six layouts, and nothing else renders Modal', () => {
         expect(direct).toEqual(expect.arrayContaining(LAYOUTS));
-        expect(direct.length).toBeGreaterThan(LAYOUTS.length);
+        expect(direct).toHaveLength(LAYOUTS.length);
     });
 
     it('a file outside the six layouts that renders Modal is in the ledger', () => {

@@ -1,10 +1,15 @@
 /**
- * AddDemoModal — the "Add a demo package" dialog shell: the core Modal in a
+ * AddDemoModal — the "Add a demo package" dialog shell: Steps windows in a
  * DialogContainer, mounted only while open (the reset-on-open seam the Add
  * Integration modal established), a two-stage body over {@link useAddDemoFlow},
- * and a Back/Continue footer driven by the hook. An answer instead of a form
+ * and a footer driven by the hook, Back at its start. An answer instead of a form
  * (`addDemoOutcome`) is the title and its status icon, with the footer's main button
  * only when there is something to go on to.
+ *
+ * Each stage is a window of its own (step-07 Win3; owner 2026-11-14, rule 14): what was found is
+ * much taller than the link, so it opens at its own size, unseen while the link is read, rather
+ * than scrolling in the first stage's box. The first stage reserves both ways in (a link, a zip),
+ * so switching never grows it.
  *
  * @module features/project-creation/ui/components/add-demo/AddDemoModal
  */
@@ -16,7 +21,8 @@ import { outcomeOf, type AddDemoOutcome } from './addDemoOutcome';
 import { FoundStage } from './FoundStage';
 import { LinkStage } from './LinkStage';
 import { useAddDemoFlow, type UseAddDemoFlowArgs } from './useAddDemoFlow';
-import { Modal, type ActionButton, type ModalWait } from '@/core/ui/components/ui/Modal';
+import type { ActionButton, ModalWait } from '@/core/ui/components/ui/Modal';
+import { StepsWindow } from '@/core/ui/components/ui/StepsDialog';
 import { WAIT_STAGES } from '@/core/utils/waitStages';
 import type { AddedDemo } from '@/types/projectFile';
 
@@ -32,7 +38,25 @@ type BodyProps = Omit<AddDemoModalProps, 'isOpen'> & {
     outcome: AddDemoOutcome | undefined;
 };
 
-/** One view at a time: an answer, the first stage, or what was found. The waits are the Modal's own. */
+/** The first stage, on the given way in: the way shown, or the other one, reserved. */
+function LinkStageOf({ flow, mode, way, addedDemos }: Omit<BodyProps, 'outcome'> & { way: BodyProps['flow']['way'] }): React.ReactElement {
+    return (
+        <LinkStage
+            addedDemos={addedDemos}
+            source={flow.draft.source}
+            onSourceChange={flow.setSource}
+            mode={mode}
+            zip={{
+                way,
+                onWayChange: flow.setWay,
+                makePublic: flow.makePublic,
+                onMakePublicChange: flow.setMakePublic,
+            }}
+        />
+    );
+}
+
+/** One view at a time: an answer, the first stage, or what was found. The waits are the window's own. */
 function Body({ flow, mode, outcome, ...props }: BodyProps): React.ReactElement | null {
     if (outcome) {
         return (
@@ -43,22 +67,7 @@ function Body({ flow, mode, outcome, ...props }: BodyProps): React.ReactElement 
             </div>
         );
     }
-    if (flow.stage === 'link') {
-        return (
-            <LinkStage
-                addedDemos={props.addedDemos}
-                source={flow.draft.source}
-                onSourceChange={flow.setSource}
-                mode={mode}
-                zip={{
-                    way: flow.way,
-                    onWayChange: flow.setWay,
-                    makePublic: flow.makePublic,
-                    onMakePublicChange: flow.setMakePublic,
-                }}
-            />
-        );
-    }
+    if (flow.stage === 'link') return <LinkStageOf {...props} flow={flow} mode={mode} way={flow.way} />;
     const result = flow.probe.status === 'done' ? flow.probe.result : undefined;
     if (!isBuildable(result)) return null;
     return (
@@ -89,16 +98,20 @@ function waitOf(flow: BodyProps['flow'], mode: BodyProps['mode']): ModalWait | f
     return false;
 }
 
+/** The footer: Back at its start (step-07 Win3), the rest beside Cancel or Close, the main one last. */
+interface Footer {
+    start: ActionButton[];
+    actions: ActionButton[];
+}
+
 /**
  * The buttons beside Cancel or Close. An answer with nothing to go on to has no main button: a
  * disabled one beside Back only showed what could not be done.
  */
-function footerOf(flow: BodyProps['flow'], mode: BodyProps['mode'], outcome: AddDemoOutcome | undefined): ActionButton[] {
-    const back: ActionButton = { label: 'Back', variant: 'secondary', onPress: flow.onBack, isDisabled: !flow.canGoBack };
-    if (flow.zipConflict) {
-        return [back, { label: COPY.useExisting, variant: 'accent', onPress: flow.useExistingRepo }];
-    }
-    if (outcome && !flow.canContinue) return [back];
+function footerOf(flow: BodyProps['flow'], mode: BodyProps['mode'], outcome: AddDemoOutcome | undefined): Footer {
+    const start: ActionButton[] = [{ label: 'Back', variant: 'secondary', onPress: flow.onBack, isDisabled: !flow.canGoBack }];
+    if (flow.zipConflict) return { start, actions: [{ label: COPY.useExisting, variant: 'accent', onPress: flow.useExistingRepo }] };
+    if (outcome && !flow.canContinue) return { start, actions: [] };
     const main: ActionButton = {
         label: flow.continueLabel,
         variant: 'accent',
@@ -106,9 +119,19 @@ function footerOf(flow: BodyProps['flow'], mode: BodyProps['mode'], outcome: Add
         isDisabled: !flow.canContinue,
     };
     const offersBundle = !outcome && flow.stage === 'found' && mode === 'add' && Boolean(flow.bundleSetup);
-    return offersBundle
-        ? [back, { label: COPY.bundleStart, variant: 'secondary', onPress: flow.startFromBundle }, main]
-        : [back, main];
+    const actions = offersBundle ? [{ label: COPY.bundleStart, variant: 'secondary' as const, onPress: flow.startFromBundle }, main] : [main];
+    return { start, actions };
+}
+
+/** The first stage's other way in, drawn hidden as it opens, so the taller sets its height. */
+function reserveOf(props: Omit<BodyProps, 'outcome'>): React.ReactNode {
+    if (props.flow.stage !== 'link' || props.mode !== 'add') return null;
+    return <LinkStageOf {...props} way={props.flow.way === 'link' ? 'zip' : 'link'} />;
+}
+
+/** Whether the window knows what it shows: what was found waits for the read of the link. */
+function readyOf(flow: BodyProps['flow']): boolean {
+    return flow.stage !== 'found' || (flow.probe.status !== 'idle' && flow.probe.status !== 'loading');
 }
 
 function Journey(props: Omit<AddDemoModalProps, 'isOpen'>): React.ReactElement {
@@ -127,23 +150,26 @@ function Journey(props: Omit<AddDemoModalProps, 'isOpen'>): React.ReactElement {
               currentKind: props.currentKind,
               packages: props.packages,
           });
-    const actions = footerOf(flow, mode, outcome);
+    const footer = footerOf(flow, mode, outcome);
     return (
-        <Modal
+        <StepsWindow
+            // A window per stage: what was found opens at its own size (rule 14).
+            key={flow.stage}
             title={outcome?.title ?? (mode === 'change' ? COPY.change.title : COPY.title)}
-            status={outcome?.status}
-            size="L"
-            fitContent
+            {...(outcome?.status ? { status: outcome.status } : {})}
+            ready={readyOf(flow)}
             waiting={wait}
+            reserve={reserveOf({ ...props, flow, mode })}
             onClose={props.onClose}
             // Nothing is left to cancel once only Back remains.
-            closeLabel={outcome && actions.length === 1 ? 'Close' : 'Cancel'}
-            actionButtons={actions}
+            closeLabel={outcome && footer.actions.length === 0 ? 'Close' : 'Cancel'}
+            startButtons={footer.start}
+            actionButtons={footer.actions}
         >
             <div className="intflow-stage-body">
                 <Body {...props} flow={flow} mode={mode} outcome={outcome} />
             </div>
-        </Modal>
+        </StepsWindow>
     );
 }
 

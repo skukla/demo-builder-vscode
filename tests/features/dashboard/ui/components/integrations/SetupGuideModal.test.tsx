@@ -434,7 +434,9 @@ describe('SetupGuideModal', () => {
         const notice = screen.getByTestId('setup-guide-notice');
         expect(notice).toHaveClass('dialog-problem', 'text-negative');
         expect(notice.closest('[data-testid="setup-guide-step"]')).not.toBeNull();
-        expect(notice.closest('.setup-guide-side')).toBeNull();
+        // Control: the list column exists, so the null above is about where the notice sits.
+        expect(document.querySelector('.guide-columns-list')).not.toBeNull();
+        expect(notice.closest('.guide-columns-list')).toBeNull();
     });
 
     it('says a failed check on its own step, and marks the others in the list', async () => {

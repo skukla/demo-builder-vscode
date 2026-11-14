@@ -66,7 +66,8 @@
 /* The demo setup guide's step (SetupGuideModal): state, title, why, where, actions — each
    its own paragraph, with room between them, since the SC reads one step at a time. */
 /* The demo setup guide (SetupGuideModal): a two-pane body — every step down the left, the
-   chosen one on the right. The step's buttons live in the dialog footer.
+   chosen one on the right, laid out by the Guide layout's two columns (`.guide-columns` in
+   core modal.css, step-07 Win4). The step's buttons live in the dialog footer.
 
    Type: ONE body size everywhere (the dialog's own 14px) and the step title one size up.
    Labels are muted, not smaller. The first cut mixed 11px uppercase, 12px, 14px and a 16px
@@ -74,25 +75,8 @@
 
    Spacing is generous on purpose: the SC reads a step, switches to the Admin and comes
    back, and the tighter cut read as cramped (owner, 2026-10-01). */
-.setup-guide-layout {
-    display: grid;
-    grid-template-columns: 232px minmax(0, 1fr);
-    gap: 40px;
-    align-items: start;
-}
-
 /* The list is wide enough to read its labels whole, and a label may wrap: a list of cut-off
    titles was "pointless as it is". */
-/* The list and, under it, Apply all (AB-82), with the rule beside both. */
-.setup-guide-side {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-    padding-right: 24px;
-    border-right: 1px solid var(--spectrum-global-color-gray-300);
-}
-
 .setup-guide-rail {
     list-style: none;
     margin: 0;

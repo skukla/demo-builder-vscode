@@ -1,9 +1,10 @@
 /**
- * AddIntegrationFlowModal — the one-modal Add Integration journey shell:
- * a {@link DialogContainer}-hosted core {@link Modal} whose body is the stage
- * switch ({@link FlowStageBody}) over {@link useIntegrationFlow} and whose
- * Back/Continue footer is driven entirely by the hook's gates and labels — NO
- * business logic here.
+ * AddIntegrationFlowModal — the Add Integration journey shell: Steps windows in a
+ * {@link DialogContainer}, whose body is the stage switch ({@link FlowStageBody})
+ * over {@link useIntegrationFlow} and whose footer (Back at its start, Continue
+ * beside Cancel) is driven entirely by the hook's gates and labels — NO business
+ * logic here. Comparable stages share the first stage's window; a much taller one
+ * opens its own (`WINDOW_OF`, step-07 Win3).
  *
  * The journey mounts ONLY while open (`{isOpen && …}` — mandatory: the Spectrum
  * test mock renders dialogs eagerly). That conditional mount is also the
@@ -33,6 +34,7 @@ import React from 'react';
 import { isAdobeSignedIn } from '../../steps/tileStatus';
 import type { UseProjectBuilderReturn } from '../../steps/useProjectBuilder';
 import { apiAccessProblemOf, type ApiAccessProblem } from './apiAccessProblem';
+import { journeyFooter, type Footer } from './flowFooter';
 import { FlowStageBody } from './FlowStageBody';
 import { type FlowMode, FlowStageId } from './flowStages';
 import type { UnavailableEntries } from './stages/CatalogStage';
@@ -42,10 +44,9 @@ import {
     type UseIntegrationFlowReturn,
 } from './useIntegrationFlow';
 import { useOrgApis } from './useOrgApis';
-import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
 import { DestinationContext as SharedDestinationContext } from '@/core/ui/components/ui/DestinationContext';
 import type { DialogOutcome } from '@/core/ui/components/ui/DialogOutcome';
-import { Modal, type ActionButton } from '@/core/ui/components/ui/Modal';
+import { StepsWindow } from '@/core/ui/components/ui/StepsDialog';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
 import { WAIT_STAGES } from '@/core/utils/waitStages';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
@@ -162,60 +163,101 @@ function DestinationContext({
 }
 
 /**
- * The buttons beside Cancel. After a failed read of the APIs, an add can still finish, since its
- * picks are optional and can change later in Manage APIs, so the put-it-right button sits before
- * it. Editing picks has nothing to save without the list.
+ * Which window each stage is drawn in (step-07 Win3; owner 2026-11-14, rule 14): the kind and the
+ * two naming stages are of a comparable height and share the first window, which holds the tallest
+ * of them; a stage much taller than the first (the pre-built gallery, the project and workspace
+ * lists, the API list) opens as a window of its own at its own size, never a scrolling body. A long
+ * list scrolls in its own pane. Signing in is a short window of its own between them.
  */
-function footerOf(
-    flow: UseIntegrationFlowReturn,
-    mode: FlowMode,
-    problem: ApiAccessProblem | undefined,
-): ActionButton[] {
-    const back: ActionButton = {
-        label: 'Back',
-        variant: 'secondary',
-        onPress: flow.onBack,
-        isDisabled: !flow.canGoBack,
-    };
-    const main: ActionButton = {
-        label: flow.continueLabel,
-        variant: 'accent',
-        onPress: flow.onContinue,
-        isDisabled: !flow.canContinue,
-    };
-    if (!problem) return [back, main];
-    const fix = problem.action;
-    if (mode === 'add') return fix ? [back, { ...fix, variant: 'secondary' }, main] : [back, main];
-    return fix ? [back, { ...fix, variant: 'accent' }] : [back];
+const WINDOW_OF: Record<FlowStageId, string> = {
+    kind: 'choose',
+    'source-blank': 'choose',
+    'source-custom': 'choose',
+    'source-catalog': 'catalog',
+    'dest-signin': 'signin',
+    'dest-project': 'destination',
+    'dest-workspace': 'destination',
+    'api-access': 'apis',
+};
+
+const CHOOSE_STAGES: FlowStageId[] = ['kind', 'source-blank', 'source-custom'];
+
+interface StageViewProps {
+    flow: UseIntegrationFlowReturn;
+    props: JourneyProps;
+    apis: ReturnType<typeof useOrgApis>['apis'];
+    problem: ApiAccessProblem | undefined;
+    onOutcome: (outcome: DialogOutcome | null) => void;
+    onWaiting: (waiting: boolean) => void;
 }
 
-/** A destination stage's outcome has nowhere to continue to: Cancel, Back and what it offers, the main one last. */
-function outcomeFooter(flow: UseIntegrationFlowReturn, outcome: DialogOutcome): ActionButton[] {
-    const { actions } = outcome;
-    return [
-        { label: 'Back', variant: 'secondary', onPress: flow.onBack, isDisabled: !flow.canGoBack },
-        ...actions.map(
-            ({ label, onPress }, index): ActionButton => ({
-                label,
-                onPress,
-                variant: index === actions.length - 1 ? 'accent' : 'secondary',
-            }),
-        ),
-    ];
+/** One stage's body: the read's problem, or the destination line over the stage. */
+function StageView({ flow, props, apis, problem, onOutcome, onWaiting }: StageViewProps): React.ReactElement {
+    return (
+        <div className="intflow-stage-body">
+            {problem ? (
+                <div className="dialog-stack" data-testid="api-access-problem">
+                    {problem.lines.map((line) => (
+                        <p key={line} className="dialog-line">
+                            {line}
+                        </p>
+                    ))}
+                </div>
+            ) : (
+                <>
+                    <DestinationContext state={props.state} stage={flow.stage} onChange={flow.changeDestination} />
+                    <FlowStageBody flow={flow} props={props} apis={apis} onOutcome={onOutcome} onWaiting={onWaiting} />
+                </>
+            )}
+        </div>
+    );
 }
 
-/** The buttons beside Cancel: none in a stage's silent wait, an outcome's own, else the journey's. */
-function journeyFooter(
-    flow: UseIntegrationFlowReturn,
-    mode: FlowMode,
-    problem: ApiAccessProblem | undefined,
-    stage: { waiting: boolean; outcome: DialogOutcome | null },
-): ActionButton[] {
-    if (stage.waiting) return [];
-    return stage.outcome ? outcomeFooter(flow, stage.outcome) : footerOf(flow, mode, problem);
+/** The window's other stages, drawn hidden as it opens so the tallest sets its height. */
+function reserveOf(view: StageViewProps): React.ReactNode {
+    if (WINDOW_OF[view.flow.stage] !== 'choose') return null;
+    return CHOOSE_STAGES.filter((stage) => stage !== view.flow.stage).map((stage) => (
+        <StageView key={stage} {...view} problem={undefined} flow={{ ...view.flow, stage }} />
+    ));
 }
 
-/** The mounted-while-open journey: the hook + Modal shell (switch + footer only). */
+interface FlowWindowProps extends StageViewProps {
+    heading: { title: string; status?: DialogOutcome['status'] } | undefined;
+    footer: Footer;
+    /** The API read is out: only the wait and the way out. */
+    reading: boolean;
+    /** A destination list's silent wait is on: the stage stays mounted, holding the read. */
+    stageWaiting: boolean;
+}
+
+/**
+ * One window, keyed by `WINDOW_OF`, so a much taller stage opens a new one. It stays unseen until
+ * what it shows is known (a destination list read, the API read), so it opens at that height and
+ * holds it. `settled` waits one commit, so a stage's wait reported on mount counts before the
+ * height is held.
+ */
+function FlowWindow({ heading, footer, reading, stageWaiting, ...view }: FlowWindowProps): React.ReactElement {
+    const [settled, setSettled] = React.useState(false);
+    React.useEffect(() => setSettled(true), []);
+    return (
+        <StepsWindow
+            title={heading?.title ?? TITLES[view.props.mode]}
+            {...(heading?.status ? { status: heading.status } : {})}
+            ready={settled && !stageWaiting && !reading}
+            // Reading what it will show: only the way out, and the one line a read this long needs.
+            waiting={reading ? WAIT_STAGES.readingAdobeServices : false}
+            reserve={reserveOf(view)}
+            closeLabel="Cancel"
+            startButtons={footer.start}
+            actionButtons={footer.actions}
+            onClose={view.props.onClose}
+        >
+            <StageView {...view} />
+        </StepsWindow>
+    );
+}
+
+/** The mounted-while-open journey: the hook, and the window its stage is drawn in. */
 function FlowJourney(props: JourneyProps): React.ReactElement {
     // JourneyProps is structurally UseIntegrationFlowArgs — the hook takes it whole.
     const flow = useIntegrationFlow(props);
@@ -227,60 +269,20 @@ function FlowJourney(props: JourneyProps): React.ReactElement {
     const problem = onApiStage ? apiAccessProblemOf(orgApis, props.onSignIn) : undefined;
     const [outcome, setOutcome] = React.useState<DialogOutcome | null>(null);
     const [stageWaiting, setStageWaiting] = React.useState(false);
-    const heading = problem ?? outcome;
     return (
-        <Modal
-            title={heading?.title ?? TITLES[props.mode]}
-            status={heading?.status}
-            size="L"
-            // Every stage sizes to ITS content: the kind/name/destination stages are
-            // short, the api-access list is long and still scrolls at max-height.
-            fitContent
-            // Reading what it will show: only the way out, and the one line a read this long needs.
-            waiting={onApiStage && orgApis.loading ? WAIT_STAGES.readingAdobeServices : false}
-            onClose={props.onClose}
-            closeLabel="Cancel"
-            // A stage's wait keeps the box it found, and stays mounted: it holds the read.
-            holdSize={stageWaiting}
-            actionButtons={journeyFooter(flow, props.mode, problem, {
-                waiting: stageWaiting,
-                outcome,
-            })}
-        >
-            {/* Five stages, five natural heights. The dialog jumped at every step
-                without a floor under them (owner, 2026-09-20). Pinned to the top: a
-                short stage after a tall one (the create form after the project
-                list) floated mid-window when centred (owner, 2026-10-17). Its
-                spinners centre themselves in their own containers. */}
-            <SteadyHeight align="start">
-                <div className="intflow-stage-body">
-                    {problem ? (
-                        <div className="dialog-stack" data-testid="api-access-problem">
-                            {problem.lines.map((line) => (
-                                <p key={line} className="dialog-line">
-                                    {line}
-                                </p>
-                            ))}
-                        </div>
-                    ) : (
-                        <>
-                            <DestinationContext
-                                state={props.state}
-                                stage={flow.stage}
-                                onChange={flow.changeDestination}
-                            />
-                            <FlowStageBody
-                                flow={flow}
-                                props={props}
-                                apis={orgApis.apis}
-                                onOutcome={setOutcome}
-                                onWaiting={setStageWaiting}
-                            />
-                        </>
-                    )}
-                </div>
-            </SteadyHeight>
-        </Modal>
+        <FlowWindow
+            key={WINDOW_OF[flow.stage]}
+            flow={flow}
+            props={props}
+            apis={orgApis.apis}
+            problem={problem}
+            onOutcome={setOutcome}
+            onWaiting={setStageWaiting}
+            heading={problem ?? outcome ?? undefined}
+            footer={journeyFooter(flow, props.mode, problem, { waiting: stageWaiting, outcome })}
+            reading={onApiStage && orgApis.loading}
+            stageWaiting={stageWaiting}
+        />
     );
 }
 

@@ -87,6 +87,9 @@ import {
     row,
 } from './IntegrationsStep.testUtils';
 
+/** The window on screen now: a taller stage opens a new one (step-07 Win3); never hold an old one. */
+const currentDialog = (): HTMLElement => screen.getByRole('dialog');
+
 async function renderStep(state: WizardState, updateState = jest.fn()) {
     const ui = (next: WizardState) => (
         <Provider theme={defaultTheme}>
@@ -163,11 +166,11 @@ describe('IntegrationsStep — the modal it hosts', () => {
         );
 
         await press(row('widget'));
-        const dialog = await screen.findByRole('dialog');
+        await screen.findByRole('dialog');
         await settle();
 
-        expect(within(dialog).getByRole('checkbox', { name: /Adobe Analytics/ })).toBeChecked();
-        expect(within(dialog).getByRole('checkbox', { name: /Adobe Campaign/ })).not.toBeChecked();
+        expect(within(currentDialog()).getByRole('checkbox', { name: /Adobe Analytics/ })).toBeChecked();
+        expect(within(currentDialog()).getByRole('checkbox', { name: /Adobe Campaign/ })).not.toBeChecked();
     });
 
     it('seeds nothing when the SAME surface then opens the add journey', async () => {
@@ -198,14 +201,13 @@ describe('IntegrationsStep — the modal it hosts', () => {
         await settle();
         await press(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' }));
         await press(screen.getByRole('button', { name: 'Add Integration' }));
-        const dialog = screen.getByRole('dialog');
-        await press(within(dialog).getByRole('button', { name: /Build Custom/ }));
-        await press(within(dialog).getByRole('button', { name: 'Continue' }));
-        await press(within(dialog).getByRole('button', { name: 'Continue' }));
+        await press(within(currentDialog()).getByRole('button', { name: /Build Custom/ }));
+        await press(within(currentDialog()).getByRole('button', { name: 'Continue' }));
+        await press(within(currentDialog()).getByRole('button', { name: 'Continue' }));
         await settle();
 
         // A fresh app starts with no picks — the previous row's must not carry over.
-        expect(within(dialog).getByRole('checkbox', { name: /Adobe Analytics/ })).not.toBeChecked();
+        expect(within(currentDialog()).getByRole('checkbox', { name: /Adobe Analytics/ })).not.toBeChecked();
     });
 
     it('routes the picker’s sign-in through the WIZARD’s authenticate message', async () => {
@@ -224,9 +226,9 @@ describe('IntegrationsStep — the modal it hosts', () => {
         );
 
         await press(row('widget'));
-        const dialog = await screen.findByRole('dialog');
+        await screen.findByRole('dialog');
         await settle();
-        await press(within(dialog).getByRole('button', { name: /Sign In with Adobe/ }));
+        await press(within(currentDialog()).getByRole('button', { name: /Sign In with Adobe/ }));
 
         expect(mockRequest).toHaveBeenCalledWith('authenticate', { force: false });
     });
@@ -244,9 +246,9 @@ describe('IntegrationsStep — acting on the rows it has NOW', () => {
         await rerenderWith(baseState({ ...SIGNED_IN, ...COMMITTED_DEST, ...WIDGET }));
         await press(row('widget'));
 
-        const dialog = await screen.findByRole('dialog');
+        await screen.findByRole('dialog');
         expect(
-            within(dialog).getByRole('heading', { name: 'Edit API Access' })
+            within(currentDialog()).getByRole('heading', { name: 'Edit API Access' })
         ).toBeInTheDocument();
     });
 
@@ -308,11 +310,11 @@ describe('IntegrationsStep — acting on the rows it has NOW', () => {
 
         await rerenderWith(withPicks(['CampaignSDK']));
         await press(row('widget'));
-        const dialog = await screen.findByRole('dialog');
+        await screen.findByRole('dialog');
         await settle();
 
-        expect(within(dialog).getByRole('checkbox', { name: /Adobe Campaign/ })).toBeChecked();
-        expect(within(dialog).getByRole('checkbox', { name: /Adobe Analytics/ })).not.toBeChecked();
+        expect(within(currentDialog()).getByRole('checkbox', { name: /Adobe Campaign/ })).toBeChecked();
+        expect(within(currentDialog()).getByRole('checkbox', { name: /Adobe Analytics/ })).not.toBeChecked();
     });
 
     it('checks a rename against a row that only appeared on a later render', async () => {
@@ -366,16 +368,15 @@ describe('IntegrationsStep — minting against the catalog as it stands NOW', ()
     /** Walk the Build-custom journey to its commit, returning the source write. */
     async function addCustomNamed(updateState: jest.Mock, label: string) {
         await press(screen.getByRole('button', { name: 'Add Integration' }));
-        const dialog = screen.getByRole('dialog');
-        await press(within(dialog).getByRole('button', { name: /Build Custom/ }));
-        await press(within(dialog).getByRole('button', { name: 'Continue' }));
-        await change(within(dialog).getByLabelText(/Name \(Optional\)/), label);
+        await press(within(currentDialog()).getByRole('button', { name: /Build Custom/ }));
+        await press(within(currentDialog()).getByRole('button', { name: 'Continue' }));
+        await change(within(currentDialog()).getByLabelText(/Name \(Optional\)/), label);
         for (let step = 0; step < 4; step += 1) {
-            const next = within(dialog).queryByRole('button', { name: 'Continue' });
+            const next = within(currentDialog()).queryByRole('button', { name: 'Continue' });
             if (!next) break;
             await press(next);
         }
-        await press(within(dialog).getByRole('button', { name: 'Add Integration' }));
+        await press(within(currentDialog()).getByRole('button', { name: 'Add Integration' }));
         return updateState.mock.calls
             .map((c) => c[0])
             .filter((u) => u && 'appBuilderComponentSources' in u)

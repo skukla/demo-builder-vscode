@@ -16,15 +16,16 @@
  * the only progress (a bar above it said the same thing twice). The flyout keeps only the
  * summary and the way in (owner, 2026-09-27).
  *
- * Built on the house `Modal` (inside the `DialogContainer` it expects, as the Settings modal
- * is) and `SteadyHeight`; the step's requests are the existing `useSetupChecklist`. The
+ * Built on the Guide layout in two columns (`GuideDialog` columns="two", step-07 Win4): the list on
+ * the left with Check All Steps and Apply All at the footer's start, the chosen step on the right
+ * with its buttons beside Close, wide, holding the height it opens at. The step's requests are the
+ * existing `useSetupChecklist`. The
  * steps come from the card model, which the extension's snapshot push redraws after each
  * change, so the modal is handed the CURRENT model on every render rather than keeping a copy.
  *
  * @module features/dashboard/ui/components/integrations/SetupGuideModal
  */
 
-import { DialogContainer } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { IntegrationCardModel } from './integrationCardModel';
 import { applyAllIds, checkableIds, footerButtons, listActionButtons } from './setupGuideFooter';
@@ -32,8 +33,7 @@ import { SetupGuideStep, StepList } from './SetupGuideStep';
 import { useGuideRun } from './useGuideRun';
 import { type SetupChecklistActions, useSetupChecklist } from './useSetupChecklist';
 import { isLeftToDo } from '@/core/ui/components/integrations/setupLeftToDo';
-import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
-import { Modal } from '@/core/ui/components/ui/Modal';
+import { GuideDialog } from '@/core/ui/components/ui/GuideDialog';
 import type { StartableOperation } from '@/core/ui/hooks/useOperationRunner';
 import type { SetupChecklistItem } from '@/types/appBuilderComponents';
 
@@ -170,49 +170,44 @@ function Guide({
     });
     const failedIds = new Set(actions.failures.map((failure) => failure.stepId));
     return (
-        <Modal
+        <GuideDialog
+            isOpen
+            columns="two"
             title={`Demo Setup: ${model.name}`}
-            size="L"
-            wide
             onClose={onClose}
-            actionButtons={buttons}
-            startButtons={listButtons}
-        >
-            <div className="setup-guide-layout">
-                <div className="setup-guide-side">
-                    <StepList
-                        items={items}
-                        index={index}
-                        onSelect={setIndex}
-                        checkingId={actions.progress?.stepId ?? run.workingId}
-                        animateMarks={hasChecked}
-                        failedIds={failedIds}
-                        waitingIds={actions.waiting}
-                    />
+            listActions={listButtons}
+            stepActions={buttons}
+            list={
+                <StepList
+                    items={items}
+                    index={index}
+                    onSelect={setIndex}
+                    checkingId={actions.progress?.stepId ?? run.workingId}
+                    animateMarks={hasChecked}
+                    failedIds={failedIds}
+                    waitingIds={actions.waiting}
+                />
+            }
+            chosen={
+                // Steps differ in length. Every step is laid in the same cell and only the shown
+                // one is visible, so the pane is as tall as the TALLEST step from the moment it
+                // opens, and the window holds that height (owner, 2026-10-01).
+                <div className="setup-guide-panes">
+                    {items.map((step) => (
+                        <SetupGuideStep
+                            key={step.id}
+                            item={step}
+                            shown={step.id === item?.id}
+                            busy={busyNow}
+                            checking={step.id === actions.progress?.stepId}
+                            onSet={(state) => actions.setStep(step.id, state)}
+                            integrationId={model.id}
+                            {...(step.id === item?.id ? { run, problem: problemOn(step.id, actions) } : {})}
+                        />
+                    ))}
                 </div>
-                {/* Steps differ in length. Every step is laid in the same cell and only the
-                    shown one is visible, so the pane is as tall as the TALLEST step from the
-                    moment it opens. SteadyHeight alone grew only on a step's first visit, so
-                    a guide opening on a short step jumped when a taller one was chosen
-                    (owner, 2026-10-01); it stays for a result notice that arrives later. */}
-                <SteadyHeight>
-                    <div className="setup-guide-panes">
-                        {items.map((step) => (
-                            <SetupGuideStep
-                                key={step.id}
-                                item={step}
-                                shown={step.id === item?.id}
-                                busy={busyNow}
-                                checking={step.id === actions.progress?.stepId}
-                                onSet={(state) => actions.setStep(step.id, state)}
-                                integrationId={model.id}
-                                {...(step.id === item?.id ? { run, problem: problemOn(step.id, actions) } : {})}
-                            />
-                        ))}
-                    </div>
-                </SteadyHeight>
-            </div>
-        </Modal>
+            }
+        />
     );
 }
 
@@ -234,15 +229,13 @@ export function SetupGuideModal({
     // slot (the OperationProgressModal rule, 2026-09-19).
     if (!model || (model.setupChecklist?.length ?? 0) === 0) return <></>;
     return (
-        <DialogContainer onDismiss={onClose}>
-            <Guide
-                key={model.id}
-                model={model}
-                onClose={onClose}
-                onOpenAdmin={onOpenAdmin}
-                onAsk={onAsk}
-                startAt={startAt}
-            />
-        </DialogContainer>
+        <Guide
+            key={model.id}
+            model={model}
+            onClose={onClose}
+            onOpenAdmin={onOpenAdmin}
+            onAsk={onAsk}
+            startAt={startAt}
+        />
     );
 }
