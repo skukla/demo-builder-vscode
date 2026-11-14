@@ -384,10 +384,10 @@
     },
     {
         "id": "skill-datapack",
-        "prompt": "I want to load sample data into this project. Follow your import-datapack skill and tell me the exact call sequence it prescribes and the traps it warns about — do not actually import anything.",
+        "prompt": "I want to load sample data into this project. Follow your datapacks skill and tell me the exact call sequence it prescribes and the traps it warns about — do not actually import anything.",
         "expect": [],
         "expectSkill": [
-            "import-datapack"
+            "datapacks"
         ],
         "cwd": "project",
         "why": "AI-1q skills half. Read-only by instruction; the skill is the route under test."
@@ -515,11 +515,11 @@
         "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug — so per-scope verification is real, not redundant."
     },
     {
-        "id": "skill-import-datapack-home",
-        "prompt": "I want to load sample data into a project. Follow your import-datapack skill and tell me the call sequence and the traps it warns about — do not import anything.",
+        "id": "skill-datapacks-home",
+        "prompt": "I want to load sample data into a project. Follow your datapacks skill and tell me the call sequence and the traps it warns about — do not import anything.",
         "expect": [],
         "expectSkill": [
-            "import-datapack"
+            "datapacks"
         ],
         "why": "AI-1q skills half, home-scope coverage: the home bundle is written by homeAiContextWriter, a DIFFERENT writer than the project bundle's skillsWriter, and both carried the pre-v27 flat-file bug — so per-scope verification is real, not redundant."
     },
@@ -1422,8 +1422,8 @@
         "prompt": "Save the Data Installer's citisignal datapack, version main, as a file in this project. Tell me what is in the file, load it into our datapack library, then delete it from the library again.",
         "expect": [
             "save_datapack_zip",
-            "open_datapack_zip",
-            "load_datapack_zip",
+            "read_datapack_file",
+            "add_datapack_from_file",
             "delete_library_datapack"
         ],
         "why": "Datapack files (owner, 2026-10-01: an optional export to zip from either store, import the same way). Neither store has a file form, so without these tools an agent pages every data type over curl and hand-builds a zip. Tier 2: it writes a local file and a private pack into the team library. The ask contains its own undo (delete_library_datapack), so the journey ends at zero."
@@ -1442,10 +1442,10 @@
         "prompt": "Our datapack library has my justrite pack, version v1. Make it installable by copying it into the Data Installer.",
         "expect": [],
         "expectSkill": [
-            "import-datapack"
+            "datapacks"
         ],
         "cwd": "project",
-        "why": "D7 (datapack simplification Phase 8, 2026-11-13): agents lose the Data Installer as a destination, as the screen hides it; copy_library_datapack_to_installer was removed. The right answer is that a library datapack installs from the library as it is (start_datapack_import with source library) and that putting a datapack into the Data Installer is not something Demo Builder does, per the import-datapack skill. Reaching for a copy, or claiming to have copied it, is the failure this judges."
+        "why": "D7 (datapack simplification Phase 8, 2026-11-13): agents lose the Data Installer as a destination, as the screen hides it; copy_library_datapack_to_installer was removed. The right answer is that a library datapack installs from the library as it is (install_datapack with source library) and that putting a datapack into the Data Installer is not something Demo Builder does, per the datapacks skill. Reaching for a copy, or claiming to have copied it, is the failure this judges."
     },
     {
         "id": "verify-datapack-install",
@@ -1472,7 +1472,7 @@
             "save_store_changes_to_pack"
         ],
         "cwd": "project",
-        "why": "Datapack-engine step 05: the store changes and the pack follows. The tool saves the store's copy as a new version in the library and keeps the old one; without it an agent would try start_datapack_export, which writes into the shared catalog and has failed to save since August. Confirm-gated, so what this judges is findability."
+        "why": "Datapack-engine step 05: the store changes and the pack follows. The tool saves the store's copy as a new version in the library and keeps the old one; without it an agent would try create_datapack, which writes into the shared catalog and has failed to save since August. Confirm-gated, so what this judges is findability."
     },
     {
         "id": "rename-demo-pack",
@@ -1495,19 +1495,19 @@
         "id": "install-bodea-b2b",
         "prompt": "Install the Bodea datapack into this project's store, with its customers and companies.",
         "expect": [
-            "start_datapack_import"
+            "install_datapack"
         ],
         "cwd": "project",
-        "why": "Datapack-engine step 08: Demo Builder's engine now installs Bodea's customer groups, customers, companies and shared catalogs, so the whole pack goes through the one import tool with no service copy first. What this judges is that the agent reaches start_datapack_import (after validate_datapack_import at most) and reads the outcome from get_datapack_import_status, without detours or a write_commerce_rest per customer. Writes to a store, so the battery stops at the consent."
+        "why": "Datapack-engine step 08: Demo Builder's engine now installs Bodea's customer groups, customers, companies and shared catalogs, so the whole pack goes through the one import tool with no service copy first. What this judges is that the agent reaches install_datapack (after validate_datapack_import at most) and reads the outcome from get_datapack_import_status, without detours or a write_commerce_rest per customer. Writes to a store, so the battery stops at the consent."
     },
     {
         "id": "install-pack-with-store-settings",
         "prompt": "Install the store-settings test pack from the datapack library onto this project's test website, and tell me which Commerce settings it changed and what they were before.",
         "expect": [
-            "start_datapack_import"
+            "install_datapack"
         ],
         "cwd": "project",
-        "why": "Datapack-engine step 09: a pack's store_config rows install through the one import tool, last, through the setup guide's settings fix. What this judges is that the agent reaches start_datapack_import and reads the settings it set, by path with old and new value, from get_datapack_import_status's note, without a set_commerce_config or write_commerce_rest per setting. Writes to a store, so the battery stops at the consent."
+        "why": "Datapack-engine step 09: a pack's store_config rows install through the one import tool, last, through the setup guide's settings fix. What this judges is that the agent reaches install_datapack and reads the settings it set, by path with old and new value, from get_datapack_import_status's note, without a set_commerce_config or write_commerce_rest per setting. Writes to a store, so the battery stops at the consent."
     },
     {
         "id": "reset-demo-leave-store-empty",
@@ -1532,10 +1532,10 @@
         "id": "mark-team-pack",
         "prompt": "Make my Bodea pack one of the official team packs, so everyone sees it without turning on Include Community.",
         "expect": [
-            "mark_team_datapack"
+            "mark_demo_builder_datapack"
         ],
         "cwd": "project",
-        "why": "Owner, beta.153: team packs are in the default list and every other shared pack is behind Include Community. Judges that the agent finds the pack (find_datapacks mine), asks the user, and calls mark_team_datapack with team:true rather than share_datapack, which only shares it. Writes to the store, so the battery stops at the consent."
+        "why": "Owner, beta.153: team packs are in the default list and every other shared pack is behind Include Community. Judges that the agent finds the pack (find_datapacks mine), asks the user, and calls mark_demo_builder_datapack with team:true rather than share_datapack, which only shares it. Writes to the store, so the battery stops at the consent."
     },
     {
         "id": "undo-last-save",
@@ -1544,7 +1544,7 @@
             "undo_last_save"
         ],
         "cwd": "project",
-        "why": "Phase 2 slice 5: judges that the agent calls undo_last_save, not reset_datapack or delete_library_datapack, and asks the user first. Writes to the store, so the battery stops at the consent."
+        "why": "Phase 2 slice 5: judges that the agent calls undo_last_save, not uninstall_datapack or delete_library_datapack, and asks the user first. Writes to the store, so the battery stops at the consent."
     },
     {
         "id": "restore-datapack",
@@ -1553,7 +1553,7 @@
             "restore_datapack"
         ],
         "cwd": "project",
-        "why": "Phase 3/5 Restore (owner 2026-11-12, J4-3): judges that the agent calls restore_datapack, not reset_datapack or start_datapack_import, and asks the user first. Writes to the store, so the battery stops at the consent."
+        "why": "Phase 3/5 Restore (owner 2026-11-12, J4-3): judges that the agent calls restore_datapack, not uninstall_datapack or install_datapack, and asks the user first. Writes to the store, so the battery stops at the consent."
     },
     {
         "id": "clear-commerce-instance-websites",
