@@ -5,11 +5,12 @@
  * this window's. The controls are handed in, so each view is driven directly.
  */
 
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 import type { ActionButton } from '@/core/ui/components/ui/Modal';
 import { ruleFor } from '../../../../helpers/cssRules';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { PendingUpdateRow } from '@/types/pendingUpdates';
 
 jest.mock('@/core/ui/components/ui/Modal', () => ({
@@ -533,6 +534,30 @@ describe('UpdatesModal', () => {
             expect(screen.getByRole('dialog', { name: 'Updates Applied' })).toHaveAttribute('data-size', 'S');
             expect(screen.getByText('2 updates pending')).toBeInTheDocument();
             expect(screen.getByRole('button', { name: 'Back to Updates' })).toBeInTheDocument();
+        });
+
+        // Rule 17 (step-07 follow-up): the small result closes itself when it is its title alone, as
+        // the install window's clean result does; one that says what is left stays.
+        it('closes the small result by itself after a glance when nothing is left', () => {
+            const c = allApplied(0);
+            render(<UpdatesModal controls={c} />);
+
+            act(() => {
+                jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE);
+            });
+
+            expect(c.close).toHaveBeenCalledTimes(1);
+        });
+
+        it('CONTROL: keeps the small result open while it says how many updates wait', () => {
+            const c = allApplied(2);
+            render(<UpdatesModal controls={c} />);
+
+            act(() => {
+                jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 3);
+            });
+
+            expect(c.close).not.toHaveBeenCalled();
         });
 
         it('CONTROL: a run with a row that failed stays on its rows, large', () => {

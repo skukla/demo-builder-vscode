@@ -439,6 +439,24 @@ describe('SetupGuideModal', () => {
         expect(notice.closest('.guide-columns-list')).toBeNull();
     });
 
+    // Rules 13 and 14 (step-07 follow-up): every step holds one notice line's room at its end from
+    // the first frame, so a notice arriving under a step's title never grows or scrolls the window.
+    it("holds a notice line's room on every step until a notice takes it", async () => {
+        answerChecks(async () => ({ success: false, error: 'Adobe Sign-In Required.' }));
+        await renderGuide([step({ id: 'a', title: 'Step A', checkable: true }), step({ id: 'b', title: 'Step B' })]);
+        const rooms = (): Element[] => Array.from(document.querySelectorAll('.setup-guide-step > .dialog-problem.modal-steps-ghost'));
+        expect(rooms()).toHaveLength(2);
+
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', { name: 'Check All Steps' }));
+        });
+        await screen.findByTestId('setup-guide-notice');
+
+        // The shown step's notice took its room; the hidden step keeps its own.
+        expect(rooms()).toHaveLength(1);
+        expect(screen.getByTestId('setup-guide-step').querySelector('.modal-steps-ghost')).toBeNull();
+    });
+
     it('says a failed check on its own step, and marks the others in the list', async () => {
         answerChecks(async (_type, payload) => ((payload as { stepId: string }).stepId === 'b'
             ? { success: false, error: 'Commerce did not answer.' }

@@ -51,6 +51,7 @@ import type { ActionButton, ModalStatus } from '@/core/ui/components/ui/Modal';
 import { ProgressWindow } from '@/core/ui/components/ui/ProgressDialog';
 import { ResultWindow } from '@/core/ui/components/ui/ResultDialog';
 import { StepsWindow } from '@/core/ui/components/ui/StepsDialog';
+import { useCloseWhenClean } from '@/core/ui/hooks/useCloseWhenClean';
 import { type EndingRow, endStatus, endsSmall } from '@/core/ui/utils/runEnding';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { PendingUpdateRow } from '@/types/pendingUpdates';
@@ -262,6 +263,9 @@ function RunWindow({ rows, controls, onClose }: { rows: PendingUpdateRow[]; cont
 
 /** The small result a clean run ends on: its title, and how many updates the SC left for later. */
 function CleanEnd({ controls }: { controls: UpdatesModalControls }) {
+    // Its title alone closes itself after a glance, as the install window's clean result does
+    // (rule 17); one saying how many updates wait, with Back to Updates, stays.
+    useCloseWhenClean(controls.remaining === 0, controls.close);
     return (
         <ResultWindow title={APPLIED_TITLE} status="success" actionButtons={backTo(controls)} onClose={controls.close}>
             {controls.remaining > 0 ? <LeadText>{waitingLine(controls.remaining)}</LeadText> : null}

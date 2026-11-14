@@ -16,8 +16,8 @@
  * The run: `ProjectsBatchRunView` in the Progress layout's window (step-07 Win1), large and holding
  * the height it opens at, closed into the background while it goes, its end the title with its
  * status icon, as the Updates run ends. A run where every project went through hands off to the
- * small result (`ResultWindow`), the title alone; one with a problem stays on its rows (owner,
- * 2026-11-10, walk F134). A failed read is a small result too.
+ * small result (`ResultWindow`), the title alone, which closes itself (rule 17); one with a problem
+ * stays on its rows (owner, 2026-11-10, walk F134). A failed read is a small result too.
  *
  * @module features/projects-dashboard/ui/components/ProjectsBatchModal
  */
@@ -39,6 +39,7 @@ import type { ActionButton, ModalStatus } from '@/core/ui/components/ui/Modal';
 import { ProgressWindow } from '@/core/ui/components/ui/ProgressDialog';
 import { ResultWindow } from '@/core/ui/components/ui/ResultDialog';
 import { StepsWindow } from '@/core/ui/components/ui/StepsDialog';
+import { useCloseWhenClean } from '@/core/ui/hooks/useCloseWhenClean';
 import { endStatus, endsSmall } from '@/core/ui/utils/runEnding';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { WAIT_STAGES } from '@/core/utils/waitStages';
@@ -260,6 +261,15 @@ function RunWindow({ controls, view, onClose }: { controls: ProjectsBatchControl
     );
 }
 
+/**
+ * The small result a clean run ends on, its title alone (walk F134). It closes itself after a
+ * glance, as the install window's clean result does (rule 17, `useCloseWhenClean`).
+ */
+function CleanEnd({ title, onClose }: { title: string; onClose: () => void }): React.ReactElement {
+    useCloseWhenClean(true, onClose);
+    return <ResultWindow title={title} status="success" onClose={onClose} />;
+}
+
 /** The window in the container: the questions, the save question, the run, or a result. */
 function BatchWindow({ controls, onDismiss }: { controls: ProjectsBatchControls; onDismiss: () => void }): React.ReactElement | null {
     const { view } = controls;
@@ -278,7 +288,7 @@ function BatchWindow({ controls, onDismiss }: { controls: ProjectsBatchControls;
         return <QuestionsWindow key="questions" controls={controls} view={view} />;
     }
     // A clean end is the small result, the title alone (walk F134).
-    if (endedClean(controls)) return <ResultWindow title={titleOf(controls)} status="success" onClose={controls.close} />;
+    if (endedClean(controls)) return <CleanEnd title={titleOf(controls)} onClose={controls.close} />;
     return <RunWindow controls={controls} view={view} onClose={onDismiss} />;
 }
 

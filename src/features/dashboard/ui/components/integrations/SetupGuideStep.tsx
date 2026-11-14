@@ -177,6 +177,9 @@ export interface StepProps {
     problem?: string;
 }
 
+/** A notice line's room: one line of the notice's own class, never shown. */
+const NOTICE_ROOM = '\u00a0';
+
 /** The quiet link's words for each state: what pressing it will do. */
 const SKIP_OR_REOPEN = {
     open: 'Skip this step',
@@ -222,6 +225,14 @@ export function SetupGuideStep(props: StepProps): React.ReactElement {
             </div>
             <SetupStepFacts item={item} />
             <SkipOrReopen {...props} />
+            {/* A notice's room, held at the step's end until one arrives under its title, so every
+                step keeps one height and the held window never scrolls for it (rules 13 and 14). One
+                line: "Couldn't check this step." and the reason fit one at the guide's width. */}
+            {props.problem ? null : (
+                <p className="dialog-problem modal-steps-ghost" aria-hidden="true">
+                    {NOTICE_ROOM}
+                </p>
+            )}
         </div>
     );
 }

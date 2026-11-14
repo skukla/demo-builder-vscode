@@ -2,9 +2,10 @@
  * ProjectsBatchRunView — the batch window while its projects are reset or deleted (owner,
  * 2026-11-04): one row per project, drawn as the Updates run draws its rows (`WorkRow`, its icons
  * from `UpdatesRunView`), in the order the extension runs them. The running row says the step it
- * is on; a row that failed says why under its name; what a reset finished around, or what a failed
- * one did to the store, is said in orange under it; a question the run is paused on is asked under
- * the running row, or above the list before any row runs.
+ * is on; once a row ends, what it has to say takes that line's room (rule 15): where its changes
+ * were saved, or its problem as one line, red when it failed and orange when it finished around
+ * something, its whole text on hover; a question the run is paused on is asked under the running
+ * row, or above the list before any row runs.
  *
  * @module features/projects-dashboard/ui/components/ProjectsBatchRunView
  */
@@ -12,11 +13,20 @@
 import React from 'react';
 import type { BatchRowStatuses, BatchRowTimings, BatchRunRow } from '../hooks/useProjectsBatch';
 import { ICON_OF, RunQuestion } from './runWindowParts';
-import { RunFoot } from '@/core/ui/components/feedback/RunFoot';
+import { RunFoot, type RunFootProps } from '@/core/ui/components/feedback/RunFoot';
 import { WorkRow } from '@/core/ui/components/feedback/WorkRow';
 import { spanValue, useRunClock } from '@/core/ui/hooks/useRunClock';
 import type { UpdateRowState } from '@/types/pendingUpdates';
 import type { OperationProgressPayload, OperationPrompt } from '@/types/webviewPayloads';
+
+/** The run has no clock of its own (each row keeps one): the foot only holds the Took line's room. */
+const NOT_TIMED: NonNullable<RunFootProps['running']> = {};
+
+/** The foot's props: the Took line once ended, its held room while the run goes. */
+function footOf(ended: boolean, progress: OperationProgressPayload | null): Pick<RunFootProps, 'tookMs' | 'running'> {
+    if (ended) return { tookMs: progress?.tookMs };
+    return { running: NOT_TIMED };
+}
 
 interface RunViewProps {
     rows: BatchRunRow[];
@@ -45,12 +55,27 @@ interface RowProps {
 
 /**
  * The line under a project's name: every row has one, so none changes height as the run goes
- * (owner, 2026-11-04). A failure's reason takes its place, in its own colour.
+ * (owner, 2026-11-04). Where a finished project's changes were saved takes Finished's place.
  */
 function lineOf(state: UpdateRowState, message: string | undefined): string | undefined {
     if (state === 'waiting') return 'Waiting';
     if (state === 'running') return message ?? 'Starting';
-    if (state === 'done') return 'Finished';
+    if (state === 'done') return message ?? 'Finished';
+    return undefined;
+}
+
+/**
+ * What an ended row has to say that is a problem, as ONE line in the room its working line held
+ * (rules 13 to 15, step-07 follow-up; the house `WorkRow.problem`): a failed project's reason, red,
+ * with what became of its datapack after it; a finished project's warnings (the code not published,
+ * a datapack that stayed), orange, with where its changes were saved. The whole text is on hover.
+ */
+function problemOf(state: UpdateRowState, status: BatchRowStatuses[string]): { text: string; failed: boolean } | undefined {
+    const warnings = status?.warnings ?? [];
+    if (state === 'failed') return { text: [status?.message ?? 'Failed', ...warnings].join(' '), failed: true };
+    if (state === 'done' && warnings.length > 0) {
+        return { text: [...warnings, ...(status?.message ? [status.message] : [])].join(' '), failed: false };
+    }
     return undefined;
 }
 
@@ -60,28 +85,22 @@ function RunRow({ row, statuses, timing, asking, onTyped }: RowProps) {
     // The single progress window's clock, per row (owner, 2026-11-04).
     const clock = useRunClock(state === 'running' ? timing?.startedAt : undefined);
     const question = state === 'running' ? asking : undefined;
-    const detail = question ? undefined : lineOf(state, status?.message);
-    // An ended row says what it has to: under Finished, or in place of it when it failed or was
-    // left alone.
-    const note = state === 'waiting' || state === 'running' ? undefined : status?.message;
-    // What a reset finished around, or what a failed one did to the store: each line an orange
-    // note, as a run row with a problem that did not fail is drawn (`StepRows`). A done row with
-    // any turns amber; a failed one stays red.
-    const warnings = state === 'done' || state === 'failed' ? (status?.warnings ?? []) : [];
-    const amber = question || (state === 'done' && warnings.length > 0);
+    const problem = problemOf(state, status);
+    const detail = question || problem ? undefined : lineOf(state, status?.message);
+    // A row left alone says why under its name, in place of a working line it never had.
+    const note = state === 'skipped' ? status?.message : undefined;
+    // A done row with a warning turns amber; a failed one stays red.
+    const amber = question || (state === 'done' && problem !== undefined);
     return (
         <WorkRow
             status={amber ? 'warning' : ICON_OF[state]}
             label={row.name}
             detail={detail}
             note={note}
-            why={state === 'failed'}
+            {...(problem ? { problem } : {})}
             state={state}
             time={state === 'running' ? clock : spanValue(timing?.startedAt, timing?.endedAt)}
         >
-            {warnings.map((line, index) => (
-                <p key={`${index}:${line}`} className="dialog-problem text-notice">{line}</p>
-            ))}
             {question && <RunQuestion prompt={question} onTyped={onTyped} />}
         </WorkRow>
     );
@@ -140,8 +159,9 @@ export function ProjectsBatchRunView({ rows, order, statuses, timings, progress,
                     />
                 ),
             )}
-            {/* How long the run took, as the single window ends a long one (over a minute). */}
-            {ended ? <RunFoot tookMs={progress?.tookMs} className="projects-batch-took" /> : null}
+            {/* How long the run took, as the single window ends a long one (over a minute). Its line is
+                held while the run goes (the foot's held line), so it never grows the held window. */}
+            <RunFoot {...footOf(ended, progress)} className="projects-batch-took" />
         </div>
     );
 }

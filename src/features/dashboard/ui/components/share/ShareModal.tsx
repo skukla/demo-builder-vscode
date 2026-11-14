@@ -154,6 +154,26 @@ function mainButton(form: ShareForm, state: StorefrontState, flow: UseShareLink,
     ];
 }
 
+/**
+ * A line's length the extension's reasons run to (why the details file was left alone, why a save
+ * failed): reserved at the longest local sentence, which wraps to two lines at L.
+ */
+const REASON_ROOM = SHARE_COPY.removedFileSkipped;
+
+/**
+ * The link form as tall as it can get after it opens (rules 13 and 14): the press note, the undo a
+ * save makes, and what the undo did, each at its longest. Never shown: drawn hidden as the window
+ * opens, so the held height already has their room.
+ */
+function linkRoom(flow: UseShareLink): UseShareLink {
+    return { ...flow, skipped: REASON_ROOM, canRemove: true, removed: { file: 'skipped', removedFromList: true } };
+}
+
+/** The file form at its tallest: "Select at least one part." and what Save File wrote, two lines. */
+function fileRoom(file: UseShareFile): UseShareFile {
+    return { ...file, nothing: true, saved: { path: REASON_ROOM, fileCount: 1000, parts: ['setup', 'storefront'] } };
+}
+
 interface WindowProps extends Omit<ShareModalProps, 'isOpen'> {
     storefront: StorefrontState;
 }
@@ -164,10 +184,14 @@ function ShareWindow({ isEds, onClose, storefront }: WindowProps): React.ReactEl
     const flow = useShareLink(storefront.status === 'ready' ? storefront.preview : UNREAD);
     const file = useShareFile(isEds);
     const loading = storefront.status === 'loading';
-    const step = (shown: ShareForm): React.ReactElement => (
+    const step = (shown: ShareForm, withRoom = false): React.ReactElement => (
         <div className="intflow-stage-body export-body">
             <FormChoice form={shown} onChange={setForm} />
-            {shown === 'link' ? <LinkForm state={storefront} flow={flow} /> : <ShareFileForm isEds={isEds} file={file} />}
+            {shown === 'link' ? (
+                <LinkForm state={storefront} flow={withRoom ? linkRoom(flow) : flow} />
+            ) : (
+                <ShareFileForm isEds={isEds} file={withRoom ? fileRoom(file) : file} />
+            )}
         </div>
     );
     return (
@@ -175,7 +199,7 @@ function ShareWindow({ isEds, onClose, storefront }: WindowProps): React.ReactEl
             title={SHARE_COPY.title}
             ready={!loading}
             waiting={loading ? READING : false}
-            reserve={loading ? null : [step('link'), step('file')]}
+            reserve={loading ? null : [step('link', true), step('file', true)]}
             actionButtons={mainButton(form, storefront, flow, file)}
             onClose={onClose}
         >

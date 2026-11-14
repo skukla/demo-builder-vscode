@@ -94,7 +94,8 @@ describe('ProjectsBatchModal: the run', () => {
         ]);
         const [a, b, c] = Array.from(document.querySelectorAll('.work-row')) as HTMLElement[];
         expect(within(a).getByText('Finished')).toHaveClass('work-row-detail');
-        expect(within(b).getByText('The repository could not be deleted.')).toHaveClass('work-row-why');
+        // A failure's reason takes the working line's room, red (rule 15, step-07 follow-up).
+        expect(within(b).getByText('The repository could not be deleted.')).toHaveClass('work-row-problem', 'text-negative');
         expect(b.querySelector('.work-row-detail')).toBeNull();
         expect(within(c).getByText('Deleting the DA.live site')).toHaveClass('work-row-detail');
     });
@@ -329,12 +330,13 @@ describe('ProjectsBatchModal: the run', () => {
 
         const dialog = screen.getByRole('dialog', { name: "Couldn't Delete Projects" });
         expect(dialog).toHaveAttribute('data-size', 'L');
-        expect(screen.getByText('GitHub refused the delete.')).toHaveClass('work-row-why');
+        expect(screen.getByText('GitHub refused the delete.')).toHaveClass('work-row-problem', 'text-negative');
     });
 
     // A reset that finished around something (the code not published, a datapack that stayed) said
-    // nothing on its row until 2026-11-13: each line is an orange note, and the run keeps its rows.
-    it("a reset that finished around something keeps its rows, each warning an orange note under it", async () => {
+    // nothing on its row until 2026-11-13. Its warnings are one orange line in the working line's
+    // room (rule 15, step-07 follow-up), and the run keeps its rows.
+    it("a reset that finished around something keeps its rows, its warnings one orange line", async () => {
         const reset: PrepareEnvelope = {
             success: true,
             data: resetQuestions([
@@ -353,14 +355,14 @@ describe('ProjectsBatchModal: the run', () => {
 
         const dialog = screen.getByRole('dialog', { name: 'Projects Reset' });
         expect(dialog).toHaveAttribute('data-size', 'L');
-        for (const line of warnings) expect(screen.getByText(line)).toHaveClass('dialog-problem', 'text-notice');
+        expect(screen.getByText(warnings.join(' '))).toHaveClass('dialog-problem', 'text-notice', 'work-row-problem');
         expect(rows()).toEqual([
             ['A', 'done'],
             ['B', 'done'],
         ]);
     });
 
-    it('a failed row says why in red and what became of the datapack in orange; a repeated line shows twice', async () => {
+    it('a failed row says why in red with what became of the datapack after it; a repeated line shows twice', async () => {
         await running();
         await push('projectsBatchRow', {
             path: '/p/a',
@@ -369,10 +371,8 @@ describe('ProjectsBatchModal: the run', () => {
             warnings: ['Its datapack was uninstalled.', 'Its datapack was uninstalled.'],
         });
 
-        expect(screen.getByText('git clone failed')).toHaveClass('work-row-why');
-        const notes = screen.getAllByText('Its datapack was uninstalled.');
-        expect(notes).toHaveLength(2);
-        for (const note of notes) expect(note).toHaveClass('dialog-problem', 'text-notice');
+        const line = screen.getByText('git clone failed Its datapack was uninstalled. Its datapack was uninstalled.');
+        expect(line).toHaveClass('dialog-problem', 'text-negative', 'work-row-problem');
     });
 
     it('a run some projects did not finish ends on the warning', async () => {
