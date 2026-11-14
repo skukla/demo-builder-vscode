@@ -106,8 +106,9 @@ spacing, hierarchy, size and button rules stop being things a window can get wro
 
 **A window never changes height once it is on screen** (owner, 2026-11-11, after clicking through
 the real-bundle prototype in `mockups/flow/`). A window with several steps opens at the height of
-its tallest step and keeps it for every step; its buttons stay pinned at the bottom and only the
-middle scrolls. A window whose content grows (a preview appearing in Clear Demo Data) reserves
+its tallest step of comparable size and keeps it for every step; its buttons stay pinned at the
+bottom. Content does not scroll for an ordinary amount (rule 13; the J1 walk failed every scrolling
+variant). A window whose content grows (a preview appearing in Clear Demo Data) reserves
 that space from the start. This replaces `SteadyHeight`'s fit-and-ease (2026-10-31), which still
 moved the window, and `modal-steady-height.test.ts` changes to match. A NEW window, such as the
 small result after an install, may be its own size (owner, same day): the rule is about one
@@ -118,7 +119,9 @@ window not moving.
 - **Size to the content, not to the worst case.** Save As New Datapack opened 710px tall for one
   name field, mostly empty. A window is sized for what it shows: a short form is a short window.
   It reserves only for steps of comparable size; a step much larger than the rest (a long picker,
-  a progress list) is a NEW window or scrolls in the middle, never a reason to pad the first step.
+  a progress list) is a NEW window at its own size (rule 14), never a reason to pad the first step
+and never a scrolling middle (J1.1 to J1.3; corrected 2026-11-14, when this line misled a walk
+answer). A long list may scroll inside its own pane (J1-3c).
 - **A window appears at its final size.** Install opened as an empty box, grew a little, then
   showed its content: the box was on screen before its size was known (before `ready`). A window
   is not shown, or shows no box, until the size it will keep is measured; there is no first frame
