@@ -27,7 +27,7 @@ describe('AI_CONTEXT_VERSION', () => {
     // cause is a refused Configuration Service write, whose distinguishing tools
     // (get_site_access, repair_site_configuration) did not exist when that skill
     // was written; an agent following the old table reported an empty catalog
-    // while the catalog was fine. Plus the new datapacks skill. Without the
+    // while the catalog was fine. Plus the new import-datapack skill. Without the
     // bump, existing projects keep the wrong routing table.
     // v12: import scope defaults to the project's, not the service's. Without
     // the bump, existing projects keep a skill that does not say so — and the
@@ -144,18 +144,18 @@ describe('AI_CONTEXT_VERSION', () => {
     // v44: the skills name `republish`, which took `sync_content`'s job (EDS-63).
     // v45: header-nav-footer names the "Commerce: All" catalog line, not "Shop the catalog".
     // v46: AGENTS.md says the smart-404 recovery script lives in 404.html, not delayed.js.
-    // v47: datapacks and diagnose-demo say a pack's root goes under the store's own root,
+    // v47: import-datapack and diagnose-demo say a pack's root goes under the store's own root,
     // and only a shared root leaves the one Admin step (datapack-engine step 12).
-    // 49: datapacks says an import installs what is ticked, and a removal takes the whole record.
+    // 49: import-datapack says an import installs what is ticked, and a removal takes the whole record.
     // 50: a project that never chose an authoring experience now links Experience Workspace.
     // 51: update-credentials no longer names the ACCS OAuth pair.
     // 52: datapacks come from Demo Builder's datapack store first. 53: datapack Save and Save As.
-    // 54: datapacks no longer offers a suggested Save As name.
-    // 55: datapacks and diagnose-demo name dataInstaller.enabled.
-    // 56: datapacks runs verify_datapack_install after a successful install.
-    // 57: an install checks itself; datapacks reads its check.
-    // 58: datapacks previews before installing a pack again.
-    // 60: a save from a pack takes everything the demo uses; datapacks picks only what it does not use.
+    // 54: import-datapack no longer offers a suggested Save As name.
+    // 55: import-datapack and diagnose-demo name dataInstaller.enabled.
+    // 56: import-datapack runs verify_datapack_install after a successful install.
+    // 57: an install checks itself; import-datapack reads its check.
+    // 58: import-datapack previews before installing a pack again.
+    // 60: a save from a pack takes everything the demo uses; import-datapack picks only what it does not use.
     // 61: importing another pack or version over the project's removes that one first.
     // 62: the datapack skills use the Datapacks screen's words, and offer no Data Installer copy (Phase 8).
     // 63: datapacks sends wholeKinds for a whole data type and asks preview_datapack_changes for "added" (step-07 E1, E2).

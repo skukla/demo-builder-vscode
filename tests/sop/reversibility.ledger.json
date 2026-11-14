@@ -8,7 +8,7 @@
         "The reversal need not share a verb stem. `deploy_mesh` is undone by `delete_mesh`, `publish_page` by `delete_page`. A naming rule was measured and REJECTED - it wrongly flags at least three - see PL-55's design section."
     ],
     "_measured": "2026-09-10: 109 tools across both registration forms, read via tests/sop/tool.testUtils.ts (`src/features/ai/server/*.ts`, `src/mcp-server.ts`, `src/mcp/*.ts`). 15 create-shaped. An earlier hand-rolled walk read only one directory and found 100 - the shared helper exists because that mistake has now been made twice.",
-    "openReasonCeiling": 4,
+    "openReasonCeiling": 3,
     "entries": [
         {
             "tool": "add_integration",
@@ -98,7 +98,8 @@
         },
         {
             "tool": "create_datapack",
-            "reason": "Writes into the SHARED datapack catalog, so the reversal is not merely a delete - it would have to consider other consumers. DECIDED 2026-09-11 (owner): design it now. Note the boundary - the catalog is owned by the data-installer service, so the design may conclude the reversal does not live in this repo."
+            "reverses": "delete_library_datapack",
+            "note": "Corrected 2026-11-14 (step-07 A3). The old row said this writes into the SHARED Data Installer catalog; since D7 (2026-11-13) agents have no Data Installer destination, so a save goes only into the user's own My Datapacks, and delete_library_datapack removes it."
         },
         {
             "tool": "add_datapack_from_file",
