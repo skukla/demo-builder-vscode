@@ -419,6 +419,10 @@ An audit found five walk answers that contradicted earlier decisions. The owner'
   keeps Save as File, Share and Delete (J8-3); the words "Updating Luma" / "Luma Updated", the "Changed"
   tab, and J9-6's "Commerce goes back to My Luma's original from <date>." Build item: the working line
   under an update's type says "Updating 24 of 48", not "Installing".
+- Update leaves a record the SC deleted in the Admin deleted (verified by test, 2026-11-14). Its note
+  counts deletions on their own line (owner, 2026-11-14): "Kept 3 items changed in the Admin. Left out 1
+  item deleted in the Admin.", each line only when it applies. A failed card keeps its amber dot hidden
+  even with an update waiting (S8 stands); the flyout still offers Update.
 - Already on track: the reset's "Content kept" row is built amber; Q6 makes kept-on-purpose green
   (slice I3).
 
