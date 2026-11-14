@@ -412,6 +412,13 @@ An audit found five walk answers that contradicted earlier decisions. The owner'
     recorded before this keep today's behaviour;
   - Configure warns when the Commerce connection changes while a datapack is installed, and offers to
     uninstall it first.
+- J9 (Update and Restore prototype) passed as shown (owner, 2026-11-14: "J9 looks good."), so these stand
+  as drawn: with an update waiting, Update <pack> is the main button and More has no Restore; Restore
+  Luma on a Demo Builder datapack with edits has no save offer; Update's table counts only what it
+  writes, and the SC's kept edits show in Review Records (Kept tab, notice dot), as Clear's do; More
+  keeps Save as File, Share and Delete (J8-3); the words "Updating Luma" / "Luma Updated", the "Changed"
+  tab, and J9-6's "Commerce goes back to My Luma's original from <date>." Build item: the working line
+  under an update's type says "Updating 24 of 48", not "Installing".
 - Already on track: the reset's "Content kept" row is built amber; Q6 makes kept-on-purpose green
   (slice I3).
 

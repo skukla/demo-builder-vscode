@@ -232,6 +232,13 @@ See decisions.md "Back on track". Plan changes:
   changed; Restore goes back to a previous state).
 - D-follow-up: rewrite `demoBuilder.dataInstaller.changesOnRemoval`'s description (words to the owner).
 
+## U1 is cleared to build (J9 passed, 2026-11-14)
+Build Update <pack> and the Restore design exactly as prototype J9 draws them
+(`mockups/flow/j9-*.tsx`, `scenarioUpdate.ts`; decisions.md "Where 'back' goes" and "J9 ... passed").
+Includes: the original kept for good beside the two newest saves; Last Saved / Original choice; the
+save question only for Original; Update's type choice for screen and agents; "Updating 24 of 48".
+Live cycle owed (update, restore to original, restore to last saved).
+
 ## D6 (owner 2026-11-14): removals go where the data went
 - The removal target is the install record's website/store view first, today's codes only as fallback
   (E-group built it the other way round, bb2d03e27).
