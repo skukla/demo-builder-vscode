@@ -427,6 +427,12 @@ An audit found five walk answers that contradicted earlier decisions. The owner'
   click away, as Finder and Windows do (owner, 2026-11-14). A file holding a NEWER version or save is not
   asked about: it is added beside the old one, the card shows "Newer version available", and Update
   applies it.
+- Agent prefix stays "Agent:"; the owner checks the real notifications at the screenshot pass for a
+  doubled colon (the September reason for "Agent ·") (owner, 2026-11-14).
+- Agents cannot unmark a Demo Builder datapack (mark_team_datapack team:false) to then delete it: the
+  path is closed for agents (owner, 2026-11-14, "Close it").
+- When Demo Builder's datapack store can't be reached, the Datapacks screen opens on "Data Installer
+  Datapacks" so the banner and the list agree (owner, 2026-11-14).
 - Already on track: the reset's "Content kept" row is built amber; Q6 makes kept-on-purpose green
   (slice I3).
 
