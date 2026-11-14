@@ -423,6 +423,10 @@ An audit found five walk answers that contradicted earlier decisions. The owner'
   counts deletions on their own line (owner, 2026-11-14): "Kept 3 items changed in the Admin. Left out 1
   item deleted in the Admin.", each line only when it applies. A failed card keeps its amber dot hidden
   even with an update waiting (S8 stands); the flyout still offers Update.
+- Install from File with the SAME name and version already in My Datapacks opens on Replace, Keep Both one
+  click away, as Finder and Windows do (owner, 2026-11-14). A file holding a NEWER version or save is not
+  asked about: it is added beside the old one, the card shows "Newer version available", and Update
+  applies it.
 - Already on track: the reset's "Content kept" row is built amber; Q6 makes kept-on-purpose green
   (slice I3).
 
