@@ -98,6 +98,7 @@ export const mockStageReport = jest.fn();
 /** What an answered delete left: why it stopped, if it did, and what each cleanup step did. */
 export interface AnsweredDeleteRun {
     stopped?: string;
+    saved?: string;
     cleanupResults: CleanupResultItem[];
 }
 

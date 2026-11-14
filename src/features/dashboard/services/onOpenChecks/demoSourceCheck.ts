@@ -26,7 +26,7 @@ export interface DemoSourceCheckData {
     demoName: string;
     /** The repository does not answer (reset and updates refuse). */
     unreachable: boolean;
-    /** The content site publishes no index (reset offers to keep current content). */
+    /** The content site publishes no index (a reset keeps the current content and says so). */
     contentUnreachable: boolean;
 }
 

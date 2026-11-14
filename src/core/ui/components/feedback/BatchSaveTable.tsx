@@ -14,6 +14,8 @@
  * (`batch-changes-head`), so every batch table draws a column one way. Each row keeps its problem
  * line from the start, one line high (the table's cells do not wrap), so the window never grows
  * (rule 14). The field's label is for screen readers only: in a table the column's header says it.
+ * Under the table, one line names the SC's own datapacks the always-save setting saves first, which
+ * have no row (step-07 D3, S1-a): known when the window opens, so it is there from the start.
  *
  * Styled by `projects-batch.css` (projects-dashboard's sheet): a host bundle imports it in its entry,
  * as the dashboard's and the Data Installer's do (ADR-017 §6).
@@ -23,6 +25,7 @@
 
 import { TextField } from '@adobe/react-spectrum';
 import React from 'react';
+import { andList } from '@/core/utils/andList';
 
 /** One datapack's row: the project, and its pack's name. */
 export interface SaveTableRow {
@@ -31,11 +34,20 @@ export interface SaveTableRow {
     datapack?: { name: string };
 }
 
-/** The question as drawn: its rows, each row's name, and why a name is refused, by project path. */
+/**
+ * The question as drawn: its rows, each row's name, why a name is refused, by project path, and the
+ * SC's own datapacks the always-save setting saves first, which have no row.
+ */
 export interface SaveTableQuestion {
     rows: readonly SaveTableRow[];
     names: Readonly<Record<string, string>>;
     problems: Readonly<Record<string, string>>;
+    savedFirst?: readonly string[];
+}
+
+/** "My Luma is saved first (your setting)." for the packs the setting saves without a row (step-07 D3). */
+function savedFirstLine(names: readonly string[]): string {
+    return `${andList(names)} ${names.length === 1 ? 'is' : 'are'} saved first (your setting).`;
 }
 
 /** Kept in an empty problem line, so it holds its height. */
@@ -72,27 +84,31 @@ function SaveAsCell({
 
 /** Where each datapack's changes go: its own pack, or a new one under the name given. */
 export function BatchSaveTable({ question, onName }: Props): React.ReactElement {
+    const savedFirst = question.savedFirst ?? [];
     return (
-        <div className="batch-delete scroll-fade scroll-fade--capped">
-            <table className="batch-delete-table batch-changes-table">
-                <thead>
-                    <tr>
-                        <td className="batch-changes-head">Datapack</td>
-                        <td className="batch-changes-head">Save As</td>
-                    </tr>
-                </thead>
-                <tbody>
-                    {question.rows.map((row) => (
-                        <tr key={row.path}>
-                            <th scope="row">
-                                <span className="checkbox-row-label">{row.datapack?.name}</span>
-                                <div className="work-row-detail">{row.name}</div>
-                            </th>
-                            <SaveAsCell row={row} question={question} onName={onName} />
+        <>
+            <div className="batch-delete scroll-fade scroll-fade--capped">
+                <table className="batch-delete-table batch-changes-table">
+                    <thead>
+                        <tr>
+                            <td className="batch-changes-head">Datapack</td>
+                            <td className="batch-changes-head">Save As</td>
                         </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
+                    </thead>
+                    <tbody>
+                        {question.rows.map((row) => (
+                            <tr key={row.path}>
+                                <th scope="row">
+                                    <span className="checkbox-row-label">{row.datapack?.name}</span>
+                                    <div className="work-row-detail">{row.name}</div>
+                                </th>
+                                <SaveAsCell row={row} question={question} onName={onName} />
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+            {savedFirst.length > 0 && <p className="dialog-line">{savedFirstLine(savedFirst)}</p>}
+        </>
     );
 }

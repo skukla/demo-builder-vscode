@@ -33,6 +33,7 @@ import type { HandlerContext } from '@/types/handlers';
 import type { DataTypeStatus } from '@/features/data-installer/types';
 import { dataInstallerAddress, importHarness, ACCS_PROJECT, INSTALLER_ADDRESS } from './sampleDataInstallDeps.testUtils';
 import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
+import { WATCHED_LEFT_IN_STORE } from '../../../helpers/datapackRemovalFixtures';
 
 const PROJECT = ACCS_PROJECT;
 
@@ -170,6 +171,16 @@ describe('buildSampleDataDeps — watch', () => {
         const watched = await deps.watch({ activationId: 'act-1', requestedTypes: [] });
 
         expect(watched).toStrictEqual({ outcome: 'success', perType: { categories: 'success' }, leftInStore: true });
+    });
+
+    // step-07 D1: what was left is named on a delete that stops.
+    it("hands back the engine's note on what a removal left", async () => {
+        watchImportJob.mockResolvedValue(WATCHED_LEFT_IN_STORE);
+        const deps = buildSampleDataDeps(makeImportHarness(), PROJECT, jest.fn(), 'remove');
+
+        const watched = await deps.watch({ activationId: 'act-1', requestedTypes: [] });
+
+        expect(watched).toStrictEqual(WATCHED_LEFT_IN_STORE);
     });
 });
 

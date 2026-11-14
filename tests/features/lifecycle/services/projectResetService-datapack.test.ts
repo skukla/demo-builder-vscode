@@ -29,6 +29,7 @@ import {
 } from './projectResetService-answered.testUtils';
 import { removeProjectSampleDataOutcome } from '@/features/eds/services/reset/edsResetSampleData';
 import { FailedAfterDatapack } from '@/features/eds/services/reset/resetDatapackStep';
+import { LEFT_NOTE, REMOVAL_LEFT_IN_STORE } from '../../../helpers/datapackRemovalFixtures';
 import type { Project } from '@/types/base';
 
 const mockedRemove = removeProjectSampleDataOutcome as jest.MockedFunction<typeof removeProjectSampleDataOutcome>;
@@ -110,6 +111,28 @@ describe('a headless reset with Uninstall Datapack ticked', () => {
             warnings: ['Its datapack was not uninstalled: Its changes could not be saved.'],
         });
         expect(mockCloneAllComponents).toHaveBeenCalledTimes(1);
+    });
+});
+
+// Owner 2026-11-14 (item 5): a save into the SC's own pack first is said on the row.
+describe("a headless reset whose changes went into the SC's own pack", () => {
+    it('says where they went on the row', async () => {
+        mockedRemove.mockResolvedValue({ savedInto: 'My Luma' });
+
+        const { outcome } = run(withPack(), { removeDatapack: true });
+
+        await expect(outcome).resolves.toEqual({ success: true, note: 'Saved to My Luma.' });
+    });
+});
+
+// Review 2026-11-14 (item 7): a removal that left part in Commerce says so on the row, with the note.
+describe('a headless reset whose removal left part in Commerce', () => {
+    it("says what was left on the row, in the engine's note", async () => {
+        mockedRemove.mockResolvedValue(REMOVAL_LEFT_IN_STORE);
+
+        const { outcome } = run(withPack(), { removeDatapack: true, changes: 'drop' });
+
+        await expect(outcome).resolves.toEqual({ success: true, warnings: [`Part of its datapack was left in Commerce: ${LEFT_NOTE}`] });
     });
 });
 

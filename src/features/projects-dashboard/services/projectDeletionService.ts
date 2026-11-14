@@ -38,20 +38,22 @@ export interface AnsweredDelete {
  * at a time, reporting into its window.
  *
  * @returns why it stopped, when the data was not all removed or the storefront's pages are still
- *   live, and the project was kept
+ *   live, and the project was kept; else where the changes went first, when they were saved
  */
 export async function runProjectDelete(
     context: HandlerContext,
     project: Project,
     answered: AnsweredDelete,
     report: ReportStage,
-): Promise<{ stopped?: string }> {
+): Promise<{ stopped?: string; saved?: string }> {
     const { cleanupOptions, askName, cleanupResults, services } = answered;
+    let saved: string | undefined;
     // The data first: while the project is here a second try can find it, so a removal that
     // does not finish keeps the project (walk F96).
     if (cleanupOptions.removeDatapackData) {
-        const why = await removeDataBeforeDelete(context, project, report, askName);
-        if (why) return { stopped: why };
+        const removal = await removeDataBeforeDelete(context, project, report, askName);
+        if (removal.stopped) return { stopped: removal.stopped };
+        saved = removal.saved;
     }
     const edsMetadata = extractEdsMetadata(project);
     const online = edsMetadata ? edsCleanupSteps(edsMetadata, cleanupOptions) : [];
@@ -78,5 +80,6 @@ export async function runProjectDelete(
 
     // Local deletion (stop demo, remove files, drop from recent, clear current).
     await deleteProjectFiles(context, project);
-    return {};
+    // Where the changes went first, for the batch row (owner, 2026-11-14).
+    return saved ? { saved } : {};
 }

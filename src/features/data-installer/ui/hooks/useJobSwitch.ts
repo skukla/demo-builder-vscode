@@ -32,14 +32,18 @@ export interface JobSwitch {
 /** The message asking for the one-time tip about the setting (webview only; agents never send it). */
 const SAVE_QUESTION_ANSWERED = 'datapack-save-question-answered';
 
-/** Where a save made first goes: into the SC's own datapack, or the new one by the name given. */
+/**
+ * Where a save made first goes: the datapack it went into, by its real name (`savesInto`), so its
+ * own name typed in another case still reads as the library names it (review, 2026-11-14); the held
+ * datapack's name when nothing was read to name it by.
+ */
 function savedToOf(
     starts: ReturnType<typeof useJobStart>,
     changes: SwitchChanges,
     name: string | undefined,
 ) {
     if (!starts.savesFirst) return undefined;
-    return changes.saveAs?.name.trim() ?? name;
+    return changes.savesInto.trim() || name;
 }
 
 /** What a switch or an uninstall adds: the press, the save question's answers, the save's stage. */

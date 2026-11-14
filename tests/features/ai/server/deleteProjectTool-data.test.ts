@@ -8,6 +8,12 @@
  * what it is handed; its own suite is `datapackDataRemoval.test.ts`.
  */
 
+// The removal under the real `removeDataBeforeDelete`, for the door case that drives it through.
+jest.mock('@/features/eds/services/reset/edsResetSampleData', () => ({
+    ...jest.requireActual('@/features/eds/services/reset/edsResetSampleData'),
+    removeProjectSampleDataOutcome: jest.fn(),
+}));
+
 // The shared wall first: it owns the subject import (webview-test-authoring §3).
 import {
     cleanupBehavior,
@@ -19,7 +25,8 @@ import {
 } from './deleteProjectTool.testUtils';
 import { z } from 'zod';
 import { cleanUpProjectCloud } from '@/features/ai/server/agentProjectCleanup';
-import type { SaveAsAnswer, SaveAsAnswering } from '@/features/eds/services/reset/edsResetSampleData';
+import { removeProjectSampleDataOutcome, type SaveAsAnswer, type SaveAsAnswering } from '@/features/eds/services/reset/edsResetSampleData';
+import { LEFT_NOTE, REMOVAL_LEFT_IN_STORE } from '../../../helpers/datapackRemovalFixtures';
 import { hasRemovableData, removeDataBeforeDelete } from '@/features/projects-dashboard/services/datapackDataRemoval';
 import { deleteProjectFiles } from '@/features/projects-dashboard/services/projectFilesDeletion';
 import type { HandlerContext } from '@/types/handlers';
@@ -53,7 +60,7 @@ async function askedWith(askName: SaveAsAnswering | undefined): Promise<SaveAsAn
 function removalAsks() {
     mockedRemove.mockImplementation(async (_ctx, _project, _report, askName?: SaveAsAnswering) => {
         const answer = await askedWith(askName);
-        return answer === undefined ? `Its datapack's data was not removed, so the project was kept: ${SENTENCE} They were not answered.` : undefined;
+        return answer === undefined ? { stopped: `Its datapack's data was not removed, so the project was kept: ${SENTENCE} They were not answered.` } : {};
     });
 }
 
@@ -63,7 +70,7 @@ beforeEach(() => {
     getAllProjects.mockResolvedValue([{ name: 'acme-demo', path: '/p/acme-demo' }]);
     loadProjectFromPath.mockResolvedValue(PROJECT);
     mockedHasData.mockResolvedValue(true);
-    mockedRemove.mockResolvedValue(undefined);
+    mockedRemove.mockResolvedValue({});
     mockedFiles.mockResolvedValue(undefined);
     mockedCloud.mockResolvedValue({});
 });
@@ -90,7 +97,10 @@ describe("delete_project and the datapack's data", () => {
 
     it('removes the data before the cloud and the files when asked, and says so', async () => {
         const order: string[] = [];
-        mockedRemove.mockImplementation(async () => void order.push('data'));
+        mockedRemove.mockImplementation(async () => {
+            order.push('data');
+            return {};
+        });
         mockedCloud.mockImplementation(async () => (order.push('cloud'), {}));
         mockedFiles.mockImplementation(async () => void order.push('files'));
         const tool = register();
@@ -104,7 +114,7 @@ describe("delete_project and the datapack's data", () => {
 
     it('deletes nothing when the data does not all come out, and says why', async () => {
         const why = "Its datapack's data was not removed, so the project was kept: Commerce refused 2 products.";
-        mockedRemove.mockResolvedValue(why);
+        mockedRemove.mockResolvedValue({ stopped: why });
 
         const answer = await register().server.call({ ...CONFIRMED, removeData: true });
 
@@ -160,5 +170,21 @@ describe("delete_project and the datapack's data", () => {
 
         expect(mockedRemove).not.toHaveBeenCalled();
         expect(answer.note).toContain('localOnly');
+    });
+
+    // Review 2026-11-14 (item 10): the door, through the real removeDataBeforeDelete. A removal that
+    // left part of the datapack in Commerce keeps the project, and the agent reads what was left.
+    it('deletes nothing when the removal left part in Commerce, answering with what was left', async () => {
+        const real = jest.requireActual<typeof import('@/features/projects-dashboard/services/datapackDataRemoval')>(
+            '@/features/projects-dashboard/services/datapackDataRemoval',
+        );
+        mockedRemove.mockImplementation(real.removeDataBeforeDelete);
+        (removeProjectSampleDataOutcome as jest.MockedFunction<typeof removeProjectSampleDataOutcome>).mockResolvedValue(REMOVAL_LEFT_IN_STORE);
+
+        const answer = await register().server.call({ ...CONFIRMED, removeData: true, changes: 'drop' });
+
+        expect(mockedCloud).not.toHaveBeenCalled();
+        expect(mockedFiles).not.toHaveBeenCalled();
+        expect(answer).toEqual({ deleted: false, name: 'acme-demo', error: `Part of its datapack was left in Commerce, so the project was kept: ${LEFT_NOTE}` });
     });
 });

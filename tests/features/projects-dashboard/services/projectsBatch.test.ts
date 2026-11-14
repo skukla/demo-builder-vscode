@@ -34,6 +34,7 @@ import {
     saveNamesOf,
 } from '@/features/projects-dashboard/services/projectsBatch';
 import { FailedAfterDatapack } from '@/features/eds/services/reset/resetDatapackStep';
+import { CONTENT_KEPT_LINE } from '@/features/eds/services/reset/demoSourceCheck';
 import type { Project } from '@/types/base';
 import type { ProjectsBatchRowStatus } from '@/types/projectsBatch';
 
@@ -298,6 +299,17 @@ describe('runDeleteBatch', () => {
         expect(mockedDelete.mock.calls[0][2]).toMatchObject({ cleanupOptions: { deleteGitHubRepo: true, deleteDaLiveSite: false, removeDatapackData: false } });
     });
 
+    // Owner 2026-11-14 (item 5): the same on a delete's row.
+    it('says where the changes were saved on a delete done row', async () => {
+        const a = withData('a');
+        const told: ProjectsBatchRowStatus[] = [];
+        mockedDelete.mockResolvedValue({ saved: 'Saved to My Luma.' });
+
+        await runDeleteBatch(contextWith(a), [{ path: a.path, deleteGitHubRepo: false, deleteDaLiveSite: false, removeDatapackData: true }], (s) => told.push(s), jest.fn());
+
+        expect(told.at(-1)).toStrictEqual({ path: a.path, state: 'done', message: 'Saved to My Luma.' });
+    });
+
     // The save question's answer goes in up front: the removal asks nothing in the window (walk F96).
     it("removes the data when ticked, answering the changes question with the save question's answer", async () => {
         const a = withData('a');
@@ -380,6 +392,28 @@ describe('runResetBatch', () => {
             message: 'git clone failed',
             warnings: ['Part of its datapack was uninstalled: Categories could not be removed.'],
         });
+    });
+
+    // Review 2026-11-14 (item 8): the kept content is said beside the datapack step.
+    it('says the content was kept under a reset that threw after its datapack step', async () => {
+        const one = storefront('one');
+        const told: ProjectsBatchRowStatus[] = [];
+        const runReset = jest.fn().mockRejectedValue(new FailedAfterDatapack(new Error('git clone failed'), {}, CONTENT_KEPT_LINE));
+
+        await runResetBatch(contextWith(one), [{ path: one.path, removeDatapack: true }], { tell: (s) => told.push(s), report: jest.fn(), runReset });
+
+        expect(told.at(-1)?.warnings).toStrictEqual(['Its datapack was uninstalled.', CONTENT_KEPT_LINE]);
+    });
+
+    // Owner 2026-11-14 (item 5): a save into the SC's own pack, with no save window, is said on its row.
+    it('says where the changes were saved on a reset done row', async () => {
+        const one = storefront('one');
+        const told: ProjectsBatchRowStatus[] = [];
+        const runReset = jest.fn().mockResolvedValue({ success: true, note: 'Saved to My Luma.' });
+
+        await runResetBatch(contextWith(one), [{ path: one.path, removeDatapack: true }], { tell: (s) => told.push(s), report: jest.fn(), runReset });
+
+        expect(told.at(-1)).toStrictEqual({ path: one.path, state: 'done', message: 'Saved to My Luma.' });
     });
 
     it('ends a clean reset done with nothing under it', async () => {

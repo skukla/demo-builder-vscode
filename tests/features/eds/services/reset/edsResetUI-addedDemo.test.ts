@@ -1,11 +1,11 @@
 /**
  * The reset door for a project built on an added demo.
  *
- * Decided 2026-09-11: the source is checked before anything runs, an
- * unreachable one refuses in a sentence, and a missing content site offers to
- * keep the current content. Each case pins the arguments the VS Code window API
- * and the reset service receive. Driven as the batch runs it (`withinEdit`);
- * the keep-content offer is still a VS Code dialog there (open question P5-Q8).
+ * Decided 2026-09-11: the source is checked before anything runs and an
+ * unreachable one refuses in a sentence. A missing content site no longer asks
+ * (P5-Q8, owner walk 2026-11-13, step-07 D5): the reset carries on, keeps the
+ * content and says so on its row, with no VS Code dialog mid-run. Each case pins
+ * the arguments the reset service receives. Driven as the batch runs it (`withinEdit`).
  */
 
 import {
@@ -17,7 +17,7 @@ import {
     fakeGitHubAppService,
 } from './edsResetUI.testUtils';
 import type { DemoSourceCheck } from '@/features/eds/services/reset/demoSourceCheck';
-import type { EdsResetResult } from '@/features/eds/services/reset/edsResetParams';
+import { resetCaveats, type EdsResetResult } from '@/features/eds/services/reset/edsResetParams';
 import type { Project, ProjectStatus } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -33,7 +33,7 @@ jest.mock('@/features/eds/services/reset/edsResetParams', () => ({
         params: { repoOwner: 'test-owner', repoName: 'test-repo' },
     }),
 }));
-// The check is faked; the keep-content question that lives beside it stays real.
+// The check is faked.
 jest.mock('@/features/eds/services/reset/demoSourceCheck', () => ({
     ...jest.requireActual('@/features/eds/services/reset/demoSourceCheck'),
     checkDemoSource: jest.fn(),
@@ -55,6 +55,8 @@ const mockedReset = executeEdsReset as jest.MockedFunction<typeof executeEdsRese
 const mockedCheck = checkDemoSource as jest.MockedFunction<typeof checkDemoSource>;
 const meshDeps = createMeshDepsFake();
 const UNREACHABLE = "The Isle5 by Jen demo's repository can't be reached. Reset and updates are unavailable until it is.";
+/** The row's line for the kept content (step-07 D5; the owner's words, 2026-11-14). */
+const CONTENT_KEPT = "Content kept: the demo's pages can't be reached.";
 const REACHABLE: DemoSourceCheck = { reachable: true, checked: true, message: '', contentReachable: true };
 const CONTENT_GONE: DemoSourceCheck = {
     reachable: true, checked: true,
@@ -128,28 +130,24 @@ describe('reset of a project built on an added demo — the source check', () =>
         expect(mockedReset).toHaveBeenCalledTimes(1);
     });
 
-    it('refuses in one sentence when the source is unreachable', async () => {
+    // P5-Q8 (step-07 D5): the refusal is the row's line, never a VS Code popup mid-run.
+    it('refuses in one sentence when the source is unreachable, with no dialog', async () => {
         mockedCheck.mockResolvedValue({ reachable: false, checked: true, message: UNREACHABLE, contentReachable: false });
 
         const result = await run();
 
         expect(result).toEqual({ success: false, error: UNREACHABLE, errorType: 'DEMO_SOURCE_UNREACHABLE' });
-        expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(UNREACHABLE);
+        expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
         expect(mockedReset).not.toHaveBeenCalled();
     });
 
-    it('offers to keep the current content when the content site is gone, and resets the code only', async () => {
+    // P5-Q8 (step-07 D5): carries on, resets the code only, and says the content was kept.
+    it('keeps the current content without asking when the content site is gone, and says so', async () => {
         mockedCheck.mockResolvedValue(CONTENT_GONE);
-        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValueOnce({ title: 'Keep Current Content' });
 
-        await run();
+        const result = await run();
 
-        expect(vscode.window.showWarningMessage).toHaveBeenNthCalledWith(
-            1,
-            "The Isle5 by Jen demo's pages can't be reached right now. You can reset the code and keep the content this site has now.",
-            { modal: true },
-            { title: 'Keep Current Content' },
-        );
+        expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
         expect(mockedReset).toHaveBeenCalledWith(
             expect.objectContaining({ keepContent: true }),
             expect.anything(),
@@ -157,16 +155,7 @@ describe('reset of a project built on an added demo — the source check', () =>
             expect.anything(),
             expect.anything(),
         );
-    });
-
-    it('stops, without resetting, when the keep-content offer is dismissed', async () => {
-        mockedCheck.mockResolvedValue(CONTENT_GONE);
-        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValueOnce(undefined);
-
-        const result = await run();
-
-        expect(result).toEqual({ success: false, cancelled: true });
-        expect(mockedReset).not.toHaveBeenCalled();
+        expect(resetCaveats(result)).toStrictEqual([CONTENT_KEPT]);
     });
 
     // Found by the first mutation run of edsResetUI on its own (EDS-8, 2026-10-08).
@@ -188,26 +177,16 @@ describe('reset of a project built on an added demo — the source check', () =>
         expect(mockedReset).toHaveBeenCalledTimes(1);
     });
 
-    it("names the demo in the keep-content offer when the check gave no sentence of its own", async () => {
-        mockedCheck.mockResolvedValue({ ...CONTENT_GONE, contentMessage: undefined });
-        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValueOnce(undefined);
-        const project = createProject();
-
-        await run();
-
-        expect(vscode.window.showWarningMessage).toHaveBeenNthCalledWith(
-            1,
-            `The ${project.demo!.name} demo's pages can't be reached right now. ` +
-                'You can reset the code and keep the content this site has now.',
-            { modal: true },
-            { title: 'Keep Current Content' },
-        );
-    });
-
     it('never sends keepContent for a reachable content site', async () => {
         await run();
 
         const params = mockedReset.mock.calls[0][0];
         expect('keepContent' in params).toBe(false);
+    });
+
+    it('CONTROL: says nothing of content for a reachable content site', async () => {
+        const result = await run();
+
+        expect(resetCaveats(result)).toStrictEqual([]);
     });
 });

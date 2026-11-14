@@ -17,6 +17,7 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import { componentRegistryFrom } from '@/features/components/services/componentRegistryAccess';
 import { diffConfigs } from '@/features/dashboard/services/configureConfigChanges';
 import { stageSettingsChange } from '@/features/dashboard/services/projectSettingsChange';
+import { resetCaveats } from '@/features/eds/services/reset/edsResetParams';
 import { resetEdsProjectWithUI } from '@/features/eds/services/reset/edsResetUI';
 import type { MeshChanges } from '@/features/mesh/services/types';
 import { regenerateProjectEnvFiles } from '@/features/project-creation/helpers/envFileRegeneration';
@@ -64,6 +65,8 @@ export async function planPackageChange(
  * Record the package's choices, write the settings files, then reset the
  * storefront onto it and refresh the AI files that name the package.
  *
+ * @returns what the reset finished around, in the batch row's words (`resetCaveats`), for the
+ *   Edit's warnings: the content kept when the demo's pages could not be reached, among them
  * @throws when the reset does not finish
  */
 export async function applyPackageChange(
@@ -72,8 +75,8 @@ export async function applyPackageChange(
     config: ProjectCreationConfig,
     plan: PackagePlan,
     progressTracker: ProgressTracker,
-): Promise<void> {
-    if (!plan.resets) return;
+): Promise<string[]> {
+    if (!plan.resets) return [];
     project.selectedPackage = config.selectedPackage;
     // The added demo wins over the package wherever a storefront is resolved, so
     // it must follow the choice, cleared included (the rebuild could never clear it).
@@ -124,4 +127,5 @@ export async function applyPackageChange(
     } catch (error) {
         context.logger.warn(`[Project Edit] AI files not refreshed: ${(error as Error).message}`);
     }
+    return resetCaveats(reset);
 }

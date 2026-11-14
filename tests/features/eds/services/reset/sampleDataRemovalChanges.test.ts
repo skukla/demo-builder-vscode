@@ -1,6 +1,6 @@
 /**
  * The other doors to a pack's removal: a project reset and an Edit that drops the pack, which both
- * come through `removeProjectSampleData` with their own question already asked (datapack-engine
+ * come through `removeProjectSampleDataOutcome` with their own question already asked (datapack-engine
  * step 05). They go through the one path, and a save that fails removes nothing and fails nothing.
  */
 
@@ -18,6 +18,7 @@ jest.mock('@/features/data-installer/services/buildDatapackEngine', () => ({
     installedByDemoBuilder: jest.fn(),
 }));
 
+import { REMOVAL_LEFT_IN_STORE, RESULT_LEFT_IN_STORE } from '../../../../helpers/datapackRemovalFixtures';
 import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 import { createMockProject } from '../../../../helpers/projectFake';
@@ -26,13 +27,17 @@ import { contextForProject, settleChangesBeforeRemoval } from '@/features/data-i
 import { installedByDemoBuilder } from '@/features/data-installer/services/buildDatapackEngine';
 import { removeSampleData } from '@/features/data-installer/services/sampleDataInstall';
 import type { NameMemory } from '@/features/data-installer/services/packNames';
-import { confirmSampleDataRemoval, removeProjectSampleData, removeProjectSampleDataOutcome } from '@/features/eds/services/reset/edsResetSampleData';
+import { confirmSampleDataRemoval, removeProjectSampleDataOutcome } from '@/features/eds/services/reset/edsResetSampleData';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 
 const mockedSettle = settleChangesBeforeRemoval as jest.MockedFunction<typeof settleChangesBeforeRemoval>;
 const mockedRemove = removeSampleData as jest.MockedFunction<typeof removeSampleData>;
 const mockedOurs = installedByDemoBuilder as jest.MockedFunction<typeof installedByDemoBuilder>;
+
+/** Why the data was not all removed (the outcome's `kept`), or undefined when it was: what these cases read. */
+const keptReason = async (...args: Parameters<typeof removeProjectSampleDataOutcome>): Promise<string | undefined> =>
+    (await removeProjectSampleDataOutcome(...args)).kept;
 
 const project = (): Project =>
     createMockProject({ name: 'acme', path: '/nonexistent/acme', datapack: { name: 'bodea', version: 'main', store: 'library' } });
@@ -43,7 +48,7 @@ beforeEach(() => {
     mockedRemove.mockResolvedValue({ ran: true, outcome: 'success' });
 });
 
-describe("removeProjectSampleData, when the demo's pack is not the SC's (Save As, 2026-11-03)", () => {
+describe("removeProjectSampleDataOutcome, when the demo's pack is not the SC's (Save As, 2026-11-03)", () => {
     const sentence = 'You changed 2 things since it was installed.';
     const needsName = { response: { success: false, error: 'Name it.', code: ErrorCode.CHANGES_NEED_ANSWER, data: { sentence } } };
 
@@ -51,7 +56,7 @@ describe("removeProjectSampleData, when the demo's pack is not the SC's (Save As
         mockedSettle.mockResolvedValueOnce(needsName).mockResolvedValueOnce({});
         const askName = jest.fn().mockResolvedValue({ saveAs: 'My Bodea' });
 
-        await removeProjectSampleData(project(), createMockHandlerContext({ logger: createMockLogger() }), jest.fn(), askName);
+        await keptReason(project(), createMockHandlerContext({ logger: createMockLogger() }), jest.fn(), askName);
 
         expect(askName).toHaveBeenCalledWith({ sentence });
         expect(mockedSettle.mock.calls[1][1]).toMatchObject({ answer: 'keep', saveAs: { displayName: 'My Bodea' } });
@@ -61,7 +66,7 @@ describe("removeProjectSampleData, when the demo's pack is not the SC's (Save As
     it('loses the changes only when Uninstall Without Saving is the answer, and still removes', async () => {
         mockedSettle.mockResolvedValueOnce(needsName).mockResolvedValueOnce({});
 
-        await removeProjectSampleData(project(), createMockHandlerContext({ logger: createMockLogger() }), jest.fn(), jest.fn().mockResolvedValue('drop'));
+        await keptReason(project(), createMockHandlerContext({ logger: createMockLogger() }), jest.fn(), jest.fn().mockResolvedValue('drop'));
 
         expect(mockedSettle.mock.calls[1][1]).toMatchObject({ answer: 'drop' });
         expect(mockedRemove).toHaveBeenCalledTimes(1);
@@ -70,7 +75,7 @@ describe("removeProjectSampleData, when the demo's pack is not the SC's (Save As
     it('keeps the data, removing nothing, when the question is closed unanswered, and says why', async () => {
         mockedSettle.mockResolvedValueOnce(needsName);
 
-        const why = await removeProjectSampleData(project(), createMockHandlerContext({ logger: createMockLogger() }), jest.fn(), jest.fn().mockResolvedValue(undefined));
+        const why = await keptReason(project(), createMockHandlerContext({ logger: createMockLogger() }), jest.fn(), jest.fn().mockResolvedValue(undefined));
 
         // A project delete stops on this (walk F96), so it names what was not answered.
         expect(why).toBe(`${sentence} They were not answered.`);
@@ -83,7 +88,7 @@ describe("removeProjectSampleData, when the demo's pack is not the SC's (Save As
         mockedSettle.mockResolvedValueOnce(needsName);
         const logger = createMockLogger();
 
-        await removeProjectSampleData(project(), createMockHandlerContext({ logger }), jest.fn());
+        await keptReason(project(), createMockHandlerContext({ logger }), jest.fn());
 
         expect(mockedRemove).not.toHaveBeenCalled();
         expect(logger.error).toHaveBeenCalledTimes(1);
@@ -95,12 +100,12 @@ describe("removeProjectSampleData, when the demo's pack is not the SC's (Save As
  * asked only when a name is needed, a "drop" or a new name for the SC's own pack would never be
  * asked for, and the run would save into their pack whatever they pressed.
  */
-describe('removeProjectSampleData, answered up front by a batch', () => {
+describe('removeProjectSampleDataOutcome, answered up front by a batch', () => {
     const base = { pack: { name: 'bodea', version: 'main' }, source: 'library', unanswered: 'keep' };
     const context = () => createMockHandlerContext({ logger: createMockLogger() });
 
     it("sends 'drop' with the first read, then removes", async () => {
-        await expect(removeProjectSampleData(project(), context(), jest.fn(), { given: 'drop' })).resolves.toBeUndefined();
+        await expect(keptReason(project(), context(), jest.fn(), { given: 'drop' })).resolves.toBeUndefined();
 
         expect(mockedSettle).toHaveBeenCalledTimes(1);
         expect(mockedSettle.mock.calls[0][1]).toStrictEqual({ ...base, answer: 'drop' });
@@ -108,7 +113,7 @@ describe('removeProjectSampleData, answered up front by a batch', () => {
     });
 
     it('sends a new name with the first read, as a save into a new datapack', async () => {
-        await removeProjectSampleData(project(), context(), jest.fn(), { given: { saveAs: 'My Copy' } });
+        await keptReason(project(), context(), jest.fn(), { given: { saveAs: 'My Copy' } });
 
         expect(mockedSettle).toHaveBeenCalledTimes(1);
         expect(mockedSettle.mock.calls[0][1]).toStrictEqual({ ...base, answer: 'keep', saveAs: { displayName: 'My Copy' } });
@@ -117,7 +122,7 @@ describe('removeProjectSampleData, answered up front by a batch', () => {
     it('removes nothing when that name is refused, and says why, asking nothing again', async () => {
         mockedSettle.mockResolvedValueOnce({ response: { success: false, error: 'You already have a datapack named My Copy.', code: ErrorCode.CHANGES_NEED_ANSWER } });
 
-        const why = await removeProjectSampleData(project(), context(), jest.fn(), { given: { saveAs: 'My Copy' } });
+        const why = await keptReason(project(), context(), jest.fn(), { given: { saveAs: 'My Copy' } });
 
         expect(why).toBe('You already have a datapack named My Copy.');
         expect(mockedSettle).toHaveBeenCalledTimes(1);
@@ -128,7 +133,7 @@ describe('removeProjectSampleData, answered up front by a batch', () => {
         const sentence = 'You changed 2 things since it was installed.';
         mockedSettle.mockResolvedValueOnce({ response: { success: false, error: 'Name it.', code: ErrorCode.CHANGES_NEED_ANSWER, data: { sentence } } });
 
-        const why = await removeProjectSampleData(project(), context(), jest.fn(), { given: undefined });
+        const why = await keptReason(project(), context(), jest.fn(), { given: undefined });
 
         expect(mockedSettle.mock.calls[0][1]).toStrictEqual(base);
         expect(why).toBe(`${sentence} They were not answered.`);
@@ -153,6 +158,32 @@ describe('removeProjectSampleData, answered up front by a batch', () => {
         await expect(removeProjectSampleDataOutcome(project(), context(), jest.fn(), { given: undefined })).resolves.toStrictEqual({ leftInStore: true });
     });
 
+    it('marks a removal skipped for want of an install target', async () => {
+        mockedRemove.mockResolvedValueOnce({ ran: false, skipped: true, noTarget: true, reason: 'No website and store view were recorded for this project.' });
+
+        await expect(removeProjectSampleDataOutcome(project(), context(), jest.fn(), { given: undefined })).resolves.toStrictEqual({
+            kept: 'No website and store view were recorded for this project.',
+            noTarget: true,
+        });
+    });
+
+    // Owner 2026-11-14 (item 5): a save into the SC's own pack is named, so the run's row can say it.
+    it("names the SC's own pack the changes were saved into first, and nothing for a new one", async () => {
+        const into = (name: string, displayName: string) => ({ saved: { id: { name, version: 'v2' }, dataTypes: ['products'], note: `Saved to ${displayName}.`, displayName } });
+        mockedSettle.mockResolvedValueOnce(into('bodea', 'My Bodea'));
+        await expect(removeProjectSampleDataOutcome(project(), context(), jest.fn(), { given: undefined })).resolves.toStrictEqual({ savedInto: 'My Bodea' });
+
+        mockedSettle.mockResolvedValueOnce(into('my-copy', 'My Copy'));
+        await expect(removeProjectSampleDataOutcome(project(), context(), jest.fn(), { given: { saveAs: 'My Copy' } })).resolves.toStrictEqual({});
+    });
+
+    // step-07 D1: a delete stops on it and names what was left.
+    it("carries the engine's note on what the removal left in the store", async () => {
+        mockedRemove.mockResolvedValueOnce(RESULT_LEFT_IN_STORE);
+
+        await expect(removeProjectSampleDataOutcome(project(), context(), jest.fn(), { given: undefined })).resolves.toStrictEqual(REMOVAL_LEFT_IN_STORE);
+    });
+
     // Step-06 C3 re-review: Clear's uninstall names the products its wipe deletes next.
     it("passes Clear's leaving products to the removal, and nothing of the kind for a reset", async () => {
         await removeProjectSampleDataOutcome(project(), context(), jest.fn(), { given: undefined }, ['SC-OWN-1']);
@@ -171,7 +202,7 @@ describe('removeProjectSampleData, answered up front by a batch', () => {
     });
 });
 
-describe('removeProjectSampleData', () => {
+describe('removeProjectSampleDataOutcome: what stays and what goes', () => {
     it('settles the changes first, with no answer needed, then removes', async () => {
         const order: string[] = [];
         mockedSettle.mockImplementation(async () => (order.push('settle'), {}));
@@ -179,7 +210,7 @@ describe('removeProjectSampleData', () => {
         const context = createMockHandlerContext({ logger: createMockLogger() });
         const held = project();
 
-        await removeProjectSampleData(held, context, jest.fn());
+        await keptReason(held, context, jest.fn());
 
         expect(contextForProject).toHaveBeenCalledWith(context, held);
         expect(mockedSettle).toHaveBeenCalledWith(context, { pack: { name: 'bodea', version: 'main' }, source: 'library', unanswered: 'keep' }, expect.any(Function));
@@ -190,7 +221,7 @@ describe('removeProjectSampleData', () => {
         mockedSettle.mockResolvedValue({ response: { success: false, error: 'The library is not answering.', code: ErrorCode.CHANGES_NOT_SAVED } });
         const logger = createMockLogger();
 
-        await expect(removeProjectSampleData(project(), createMockHandlerContext({ logger }), jest.fn())).resolves.toBe('The library is not answering.');
+        await expect(keptReason(project(), createMockHandlerContext({ logger }), jest.fn())).resolves.toBe('The library is not answering.');
 
         expect(mockedRemove).not.toHaveBeenCalled();
         expect(logger.error).toHaveBeenCalledTimes(1);
@@ -200,23 +231,23 @@ describe('removeProjectSampleData', () => {
     it('answers nothing when the data all came out, and why when it did not', async () => {
         const context = createMockHandlerContext({ logger: createMockLogger() });
 
-        await expect(removeProjectSampleData(project(), context, jest.fn())).resolves.toBeUndefined();
+        await expect(keptReason(project(), context, jest.fn())).resolves.toBeUndefined();
 
         mockedRemove.mockResolvedValueOnce({ ran: true, outcome: 'failed', reason: 'Commerce refused 2 products.' });
-        await expect(removeProjectSampleData(project(), context, jest.fn())).resolves.toBe('Commerce refused 2 products.');
+        await expect(keptReason(project(), context, jest.fn())).resolves.toBe('Commerce refused 2 products.');
 
         mockedRemove.mockResolvedValueOnce({ ran: false });
-        await expect(removeProjectSampleData(project(), context, jest.fn())).resolves.toBe('The datapack was not uninstalled.');
+        await expect(keptReason(project(), context, jest.fn())).resolves.toBe('The datapack was not uninstalled.');
 
         mockedRemove.mockRejectedValueOnce(new Error('socket hang up'));
-        await expect(removeProjectSampleData(project(), context, jest.fn())).resolves.toBe('socket hang up');
+        await expect(keptReason(project(), context, jest.fn())).resolves.toBe('socket hang up');
     });
 
     it('passes the save\'s stages on', async () => {
         mockedSettle.mockImplementation(async (_context, _request, report) => (report('Saving to the library'), {}));
         const report = jest.fn();
 
-        await removeProjectSampleData(project(), createMockHandlerContext({ logger: createMockLogger() }), report);
+        await keptReason(project(), createMockHandlerContext({ logger: createMockLogger() }), report);
 
         expect(report).toHaveBeenCalledWith('Saving to the library');
     });
@@ -242,7 +273,7 @@ describe('the project record after the removal', () => {
         const context = createMockHandlerContext({ logger: createMockLogger() });
         const project = held();
 
-        await expect(removeProjectSampleData(project, context, jest.fn())).resolves.toBeUndefined();
+        await expect(keptReason(project, context, jest.fn())).resolves.toBeUndefined();
 
         expect(project.datapack).toBeUndefined();
         expect(project.datapackInstallFailure).toBeUndefined();
@@ -256,7 +287,7 @@ describe('the project record after the removal', () => {
         const stateManager = createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(project) });
         const context = createMockHandlerContext({ logger: createMockLogger(), stateManager });
 
-        await removeProjectSampleData(project, context, jest.fn());
+        await keptReason(project, context, jest.fn());
 
         expect(stateManager.saveProject).toHaveBeenCalledWith(project);
         expect(stateManager.saveProject.mock.calls[0]?.[0]?.datapack).toBeUndefined();
@@ -274,7 +305,7 @@ describe('the project record after the removal', () => {
         const context = createMockHandlerContext({ logger: createMockLogger() });
         const project = held();
 
-        await removeProjectSampleData(project, context, jest.fn());
+        await keptReason(project, context, jest.fn());
 
         expect(project.datapack).toStrictEqual({ name: 'bodea', version: 'main', store: 'library' });
         expect(project.datapackInstallFailure).toStrictEqual(failedBefore);
@@ -288,7 +319,7 @@ describe('the project record after the removal', () => {
         const context = createMockHandlerContext({ logger, stateManager });
 
         // A delete reads the answer to decide whether the files may go: the data is out of Commerce.
-        await expect(removeProjectSampleData(held(), context, jest.fn())).resolves.toBeUndefined();
+        await expect(keptReason(held(), context, jest.fn())).resolves.toBeUndefined();
 
         expect(logger.warn).toHaveBeenCalledTimes(1);
     });

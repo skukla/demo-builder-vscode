@@ -11,7 +11,7 @@
  */
 
 import type { LeftoverPagesResult } from '../storefront/leftoverPages';
-import { datapackStepLine, type DatapackRemoval } from './resetDatapackStep';
+import { datapackLeftSomething, datapackStepLine, type DatapackRemoval } from './resetDatapackStep';
 import { COMPONENT_IDS } from '@/core/constants';
 import { resolveStorefrontForProject } from '@/features/components/services/storefrontResolver';
 import type { Project } from '@/types/base';
@@ -159,6 +159,8 @@ export interface EdsResetResult extends HandlerResponse {
      * palette. Absent when it had nothing to say.
      */
     pipelineWarnings?: string[];
+    /** The added demo's content site was unreachable, so its content was kept (P5-Q8): the row's line. */
+    contentKept?: string;
     /**
      * What the datapack step did, when a batch asked to uninstall the datapack: why it did not all
      * come out and whether part did (`DatapackRemoval`). Absent when there was no such step.
@@ -179,14 +181,15 @@ export interface EdsResetResult extends HandlerResponse {
  * @returns the lines, none when the reset did all it set out to
  */
 export function resetCaveats(
-    result: Pick<EdsResetResult, 'codeNotPublished' | 'error' | 'pageWarnings' | 'pipelineWarnings' | 'datapackRemoval'>,
+    result: Pick<EdsResetResult, 'codeNotPublished' | 'error' | 'pageWarnings' | 'pipelineWarnings' | 'contentKept' | 'datapackRemoval'>,
 ): string[] {
     return [
         ...(result.codeNotPublished ? [result.codeNotPublished] : []),
         ...(result.error ? [result.error] : []),
         ...(result.pageWarnings ?? []),
         ...(result.pipelineWarnings ?? []),
-        ...(result.datapackRemoval?.kept ? [datapackStepLine(result.datapackRemoval)] : []),
+        ...(result.contentKept ? [result.contentKept] : []),
+        ...(datapackLeftSomething(result.datapackRemoval) ? [datapackStepLine(result.datapackRemoval)] : []),
     ];
 }
 

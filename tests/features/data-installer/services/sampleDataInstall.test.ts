@@ -35,6 +35,7 @@ import {
     installSampleData,
     removeSampleData,
 } from '@/features/data-installer/services/sampleDataInstall';
+import { RESULT_LEFT_IN_STORE, WATCHED_LEFT_IN_STORE } from '../../../helpers/datapackRemovalFixtures';
 
 const ACCS = 'adobe-commerce-accs';
 const PAAS = 'adobe-commerce-paas';
@@ -438,6 +439,22 @@ describe('removeSampleData', () => {
         const result = await removeSampleData(project(), deps({ watch }));
 
         expect(result).toStrictEqual({ ran: true, outcome: 'success', perType: { categories: 'success' }, leftInStore: true });
+    });
+
+    // Owner 2026-11-14 (item 6): with no target nothing can have been installed, so an Edit treats it as nothing to remove.
+    it('marks a removal skipped for want of a website and store view', async () => {
+        const result = await removeSampleData(project({ componentConfigs: {} }), deps());
+
+        expect(result).toMatchObject({ ran: false, skipped: true, noTarget: true });
+    });
+
+    // step-07 D1: a delete names what was left, so the engine's note travels with the flag.
+    it("carries the engine's note on what it left in the store", async () => {
+        const watch = jest.fn().mockResolvedValue(WATCHED_LEFT_IN_STORE);
+
+        const result = await removeSampleData(project(), deps({ watch }));
+
+        expect(result).toStrictEqual(RESULT_LEFT_IN_STORE);
     });
 
     it('CONTROL: says nothing of it when the removal took everything', async () => {

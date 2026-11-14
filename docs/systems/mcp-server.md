@@ -564,7 +564,9 @@ keeps the project too.
 **A project's datapack data comes out only when asked.** `delete_project` takes `removeData`, the
 button's "Uninstall Datapack" box (walk F96, 2026-11-09): the data the project's datapack put in
 its Commerce instance, removed FIRST, through the reset's own removal, so a removal that does not
-finish deletes nothing and `error` says why. The user's changes in it are settled as
+finish, or one that left part in Commerce on purpose, deletes nothing and `error` says why (for part
+left behind, "Part of its datapack was left in Commerce, so the project was kept: " and the engine's
+note; step-07 D1). The user's changes in it are settled as
 `reset_datapack` settles them: saved into their own pack without asking; when the pack is not
 theirs, the call answers `code: CHANGES_NEED_ANSWER` and deletes nothing until `changes` is `keep`
 with `saveAs`, or `drop`. `changes: drop` loses the user's changes in any pack, their own included, as the window's Without Saving answer does (step-05 S1). It is off unless the call asks, `deleteAll` never turns it on (it writes to
@@ -616,6 +618,14 @@ refused a headless project. The headless half refuses a running demo and names
 when there is a mesh to redeploy. Nothing undoes a reset — it is the return to
 zero — which is why it is consent-gated (`reversibility.ledger.json`).
 
+**An added demo's source, checked as the button checks it (owner, 2026-11-14).** Before anything is
+touched, a storefront built on an added demo has its source checked (`decideResetSource` in
+`resetSourceDecision.ts`, which the Reset window runs too): a repository that can't be reached
+refuses with the same sentence the window shows and `errorType: DEMO_SOURCE_UNREACHABLE`, nothing
+reset; when only the demo's pages can't be reached, the reset keeps the storefront's content, resets
+the code, and `caveats` says "Content kept: the demo's pages can't be reached." Until then the
+agent's reset cleared the content and left the site empty.
+
 **Uninstall Datapack on a reset (step-05 S7, 2026-11-13).** `reset_project` takes `removeData`,
 `changes` and `saveAs`, the same arguments `delete_project` takes, and both kinds of reset run the
 Reset window's own datapack step with them (`removeAnsweredDatapack`, the answer passed as given):
@@ -624,7 +634,8 @@ storefront reset before the storefront reset runs, as the window's does. With no
 changes in their own pack are saved into it; changes in a pack that is not theirs make the call
 answer `code: CHANGES_NEED_ANSWER` with nothing removed and nothing reset, until `changes` is
 `keep` with `saveAs`, or `drop`. `changes: drop` loses the user's changes in any pack, their own included, as the window's Without Saving answer does (step-05 S1). `datapack` in the answer is the window row's line for what happened
-(uninstalled, part of it, or not, with why); a removal that stops does not stop the reset. The
+(uninstalled, part of it, part left in Commerce with the engine's note, or not, with why); a removal
+that stops does not stop the reset. The
 consent dialog shows the Uninstall Datapack choice under the open project's name.
 
 ### A creation's name, and a creation that fails (2026-10-16)

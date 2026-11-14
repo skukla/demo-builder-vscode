@@ -22,8 +22,6 @@ import { LeadText } from '@/core/ui/components/ui/LeadText';
 import { UNINSTALL_DATAPACK } from '@/features/data-installer/datapackWords';
 import type { BatchResetRow } from '@/types/projectsBatch';
 
-
-/** A pack whose changes could not be read: the status the house writes, not a sentence. */
 /** A pack whose changes could not be read: the batch keeps its data (owner, 2026-11-04). */
 export const UNCHECKED_NOTE = "Couldn't check for changes. Datapack kept.";
 

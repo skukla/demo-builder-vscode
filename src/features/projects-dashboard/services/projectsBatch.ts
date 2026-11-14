@@ -33,7 +33,7 @@ import { ownNames } from '@/features/data-installer/handlers/packSave';
 import { readRemovalChangesOf } from '@/features/data-installer/handlers/removalChanges';
 import { commerceBackendOf } from '@/features/data-installer/services/commerceBackend';
 import { changesOnRemoval } from '@/features/data-installer/services/dataInstallerConfig';
-import { datapackStepLine, FailedAfterDatapack } from '@/features/eds/services/reset/resetDatapackStep';
+import { FailedAfterDatapack } from '@/features/eds/services/reset/resetDatapackStep';
 import { extractEdsMetadata } from '@/features/eds/services/resourceCleanupHelpers';
 import { sharedOnlineOf } from '@/features/eds/services/storefront/sharedRepoProjects';
 import { getBrandStackSummary } from '@/features/projects-dashboard/utils/componentSummaryUtils';
@@ -54,17 +54,18 @@ export type TellRow = (status: ProjectsBatchRowStatus) => void;
 
 /**
  * Runs one project's reset, answered, reporting into the batch (wired by the handler). `warnings`:
- * what a reset that finished could not do, in its own words, for the row.
+ * what a reset that finished could not do, in its own words, for the row; `note`: where its changes
+ * went first, when the SC's own pack took them (owner, 2026-11-14).
  */
 export type RunReset = (
     context: HandlerContext,
     project: Project,
     answer: BatchResetAnswer,
     report: ReportStage,
-) => Promise<{ success: boolean; error?: string; warnings?: string[] }>;
+) => Promise<{ success: boolean; error?: string; warnings?: string[]; note?: string }>;
 
-/** What one project's work came to: why it failed, and what it finished around or did to the store. */
-type RowOutcome = { error?: string; warnings?: string[] } | undefined;
+/** A row's end: why it failed, what it finished around (orange), and a plain note on a done row. */
+type RowOutcome = { error?: string; warnings?: string[]; note?: string } | undefined;
 
 /** Each project picked, loaded, in the order picked; a path that no longer loads is left out. */
 async function loadAll(context: HandlerContext, paths: readonly string[]): Promise<Project[]> {
@@ -171,11 +172,11 @@ async function runRow(path: string, tell: TellRow, outer: ReportStage, work: (re
             tell({ path, state: 'failed', message: outcome.error, ...under });
             return false;
         }
-        tell({ path, state: 'done', ...under });
+        tell({ path, state: 'done', ...under, ...(outcome?.note ? { message: outcome.note } : {}) });
         return true;
     } catch (error) {
         // A reset that threw after its datapack step says what that step did to the store, too.
-        const under = error instanceof FailedAfterDatapack ? { warnings: [datapackStepLine(error.removal)] } : {};
+        const under = error instanceof FailedAfterDatapack ? { warnings: error.lines() } : {};
         tell({ path, state: 'failed', message: error instanceof Error ? error.message : String(error), ...under });
         return false;
     }
@@ -200,7 +201,9 @@ export async function runDeleteBatch(context: HandlerContext, answers: readonly 
             const cleanupOptions = { deleteGitHubRepo: answer.deleteGitHubRepo, deleteDaLiveSite: answer.deleteDaLiveSite, removeDatapackData: answer.removeDatapackData };
             // Given up front, by the save question, as a reset batch's are (`edsResetUI`).
             const ran = await runProjectDelete(context, project, { cleanupOptions, askName: { given: answer.changes }, cleanupResults: [] }, rowReport);
-            return ran.stopped ? { error: ran.stopped } : undefined;
+            if (ran.stopped) return { error: ran.stopped };
+            // Where the changes went first, said on the row (owner, 2026-11-14).
+            return ran.saved ? { note: ran.saved } : undefined;
         });
         if (!ok) failed++;
     }
@@ -293,7 +296,8 @@ export async function runResetBatch(
             const project = projects.get(answer.path);
             if (!project) return { error: 'This project is no longer on this computer.' };
             const result = await runReset(context, project, answer, rowReport);
-            return result.success ? { warnings: result.warnings } : { error: result.error ?? 'The reset did not finish.', warnings: result.warnings };
+            if (!result.success) return { error: result.error ?? 'The reset did not finish.', warnings: result.warnings };
+            return { warnings: result.warnings, ...(result.note ? { note: result.note } : {}) };
         });
     // One org at a time, the token reaching one; within it, side by side (owner, 2026-11-04).
     let failed = 0;

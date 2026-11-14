@@ -25,12 +25,15 @@ import { resetStageLabel } from '@/core/utils/resetStages';
 import { stageLine } from '@/core/utils/stageLine';
 import {
     getDaLiveAuthService,
+    getGitHubServices,
     resolveByomOverlayConfig,
 } from '@/features/eds/handlers/edsHelpers';
 import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveTokenProviders';
+import { CONTENT_KEPT_LINE } from '@/features/eds/services/reset/demoSourceCheck';
 import { extractResetParams, resetCaveats, type EdsResetResult } from '@/features/eds/services/reset/edsResetParams';
 import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
 import { removeAnsweredDatapack } from '@/features/eds/services/reset/resetDatapackStep';
+import { decideResetSource } from '@/features/eds/services/reset/resetSourceDecision';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 import { getMeshComponentInstance } from '@/types/typeGuards';
@@ -84,6 +87,12 @@ export async function runEdsReset(
     const daLive = await requireDaLive(ctx);
     if (daLive) return asText(daLive);
 
+    // An added demo's source, checked as the window's reset checks it, before anything is touched
+    // (owner, 2026-11-14): an unreachable repository refuses; unreachable pages keep the content.
+    const source = await decideResetSource(project, () => getGitHubServices(ctx.context.secrets).repoOperations, ctx);
+    if (source.refused) return asText({ reset: false, project: project.name, ...source.refused });
+    const kept = source.keepContent ? { contentKept: CONTENT_KEPT_LINE } : {};
+
     const hasMesh = Boolean(getMeshComponentInstance(project)?.path);
     if (hasMesh && !(await adobeAuthed())) {
         return asText({
@@ -124,6 +133,7 @@ export async function runEdsReset(
                     includeBlockLibrary: args?.includeBlockLibrary ?? false,
                     verifyCdn: args?.verifyCdn ?? false,
                     redeployMesh: hasMesh,
+                    ...(source.keepContent ? { keepContent: true } : {}),
                 },
                 ctx,
                 tokenProvider,
@@ -167,7 +177,7 @@ export async function runEdsReset(
             project: project.name,
             kind: 'storefront',
             // What the reset finished around or could not do, in the words the SC sees.
-            ...caveatsOf(result),
+            ...caveatsOf({ ...result, ...kept }),
             // What became of the datapack, when the call asked to uninstall it.
             ...datapack,
             // Category pages and the catalog menu, re-written by the reset (EDS-24) —

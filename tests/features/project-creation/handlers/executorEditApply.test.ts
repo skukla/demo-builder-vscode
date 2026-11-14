@@ -19,7 +19,7 @@ jest.mock('@/features/project-creation/handlers/executorEditDestination', () => 
 }));
 jest.mock('@/features/project-creation/handlers/executorEditPackage', () => ({
     planPackageChange: jest.fn().mockResolvedValue({ resets: false }),
-    applyPackageChange: jest.fn().mockResolvedValue(undefined),
+    applyPackageChange: jest.fn().mockResolvedValue([]),
 }));
 jest.mock('@/features/project-creation/handlers/executorEditDatapack', () => ({
     planDatapackChange: jest.fn().mockResolvedValue({ changes: false, removeOld: false }),
@@ -309,6 +309,20 @@ describe('finishEditWithoutRebuild — the datapack changed', () => {
         expect(progress).toHaveBeenLastCalledWith('Project Created', 100, expect.any(String));
     });
 
+    // step-07 D2, owner Q1: only the datapack part stops; the rest of the Edit stands, with its line.
+    it("tells the SC why the datapack was not changed, and finishes the rest of the Edit", async () => {
+        const { context, progress, ask } = setup();
+        const line = "Luma couldn't be uninstalled, so the datapack is still Luma: Commerce refused 2 products.";
+        (planDatapackChange as jest.Mock).mockResolvedValueOnce({ changes: true, removeOld: true });
+        (applyDatapackChange as jest.Mock).mockResolvedValueOnce(line);
+
+        expect(await finishEditWithoutRebuild(context, NEW_PACK, progress, ask)).toBe(true);
+
+        expect(applyPackageChange).toHaveBeenCalled();
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(line);
+        expect(progress).toHaveBeenLastCalledWith('Project Created', 100, expect.any(String));
+    });
+
     it('asks nothing about the datapack when the SC declines the integration removal', async () => {
         const { context, progress, confirm, ask } = setup();
         confirm.mockResolvedValue(false);
@@ -375,13 +389,30 @@ describe('finishEditWithoutRebuild — the package changed on Edge Delivery', ()
         editChanges: ['datapack', 'selectedPackage'],
     });
 
+    // Owner 2026-11-14 (item 3): the reset's caveats reach the SC with the Edit's other warnings.
+    it("tells the SC what the storefront reset finished around", async () => {
+        const { context, progress, ask } = setup();
+        (planPackageChange as jest.Mock).mockResolvedValueOnce({ resets: true });
+        (applyPackageChange as jest.Mock).mockResolvedValueOnce(["Content kept: the demo's pages can't be reached."]);
+
+        await finishEditWithoutRebuild(context, NEW_PACKAGE, progress, ask);
+
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledWith("Content kept: the demo's pages can't be reached.");
+    });
+
     it('asks first, then resets last, and tells the datapack step the reset writes the pages', async () => {
         const { context, progress, ask, project } = setup();
         const order: string[] = [];
         (planDatapackChange as jest.Mock).mockResolvedValueOnce({ changes: true, removeOld: false });
         (planPackageChange as jest.Mock).mockResolvedValueOnce({ resets: true });
-        (applyDatapackChange as jest.Mock).mockImplementationOnce(async () => order.push('datapack'));
-        (applyPackageChange as jest.Mock).mockImplementationOnce(async () => order.push('reset'));
+        (applyDatapackChange as jest.Mock).mockImplementationOnce(async () => {
+            order.push('datapack');
+            return undefined;
+        });
+        (applyPackageChange as jest.Mock).mockImplementationOnce(async () => {
+            order.push('reset');
+            return [];
+        });
 
         expect(await finishEditWithoutRebuild(context, NEW_PACKAGE, progress, ask)).toBe(true);
 

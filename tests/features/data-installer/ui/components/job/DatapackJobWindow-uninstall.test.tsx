@@ -374,6 +374,18 @@ describe('Save Your Changes First?', () => {
         expect(within(run).getByText('Saved to My Luma')).toBeInTheDocument();
     });
 
+    // Review 2026-11-14 (item 9): its own name typed in another case still names the real datapack.
+    it('names the datapack by its own name when the field holds it in another case', async () => {
+        await asked(CHANGED_MINE, { statusAfter: UNINSTALLING });
+        fireEvent.change(screen.getByRole('textbox', { name: 'Save As' }), { target: { value: ' my luma ' } });
+        await settle();
+
+        await press(button('Save and Uninstall'));
+        await settle();
+
+        expect(within(screen.getByTestId('import-run')).getByText('Saved to My Luma')).toBeInTheDocument();
+    });
+
     it('closing while it saves hands it to a notification rather than stopping it', async () => {
         const { onClose } = await asked(CHANGED_MINE, {}, ['reset-datapack']);
         await press(button('Save and Uninstall'));
@@ -439,6 +451,22 @@ describe('the setting saves without asking', () => {
         await press(button('Uninstall'));
 
         expect(screen.queryByRole('heading', { name: 'Save Your Changes First?' })).toBeNull();
+        expect(sent('reset-datapack')).toMatchObject({ changes: 'keep' });
+        expect(sent('reset-datapack')).not.toHaveProperty('saveAs');
+    });
+});
+
+// P5-Q7 (step-07 D4): the SC's own datapack has the name box too, starting with its own name.
+describe("the SC's own datapack", () => {
+    it('starts the name box with its own name, and saves into it when untouched', async () => {
+        holding(CHANGED_MINE);
+        await openUninstall();
+        await heading('Uninstall My Luma?');
+        await press(button('Uninstall'));
+
+        expect(screen.getByRole('textbox', { name: 'Save As' })).toHaveValue('My Luma');
+        await press(button('Save and Uninstall'));
+
         expect(sent('reset-datapack')).toMatchObject({ changes: 'keep' });
         expect(sent('reset-datapack')).not.toHaveProperty('saveAs');
     });

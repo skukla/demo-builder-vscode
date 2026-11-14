@@ -126,14 +126,14 @@ function saveFirstWindow(
         <SaveFirstWindow
             withoutSavingLabel={withoutSavingLabel('Clear')}
             saveLabel={saveFirstLabel('Clear', false)}
-            saveDisabled={changes.saveAs?.problem !== undefined}
+            saveDisabled={changes.saveAs.problem !== undefined}
             onAnswer={answer}
             onClose={onClose}
         >
             <SaveChangesBody
                 rows={changes.rows}
                 readFailed={changes.readFailed}
-                {...(changes.saveAs ? { saveAs: changes.saveAs } : {})}
+                saveAs={changes.saveAs}
             />
         </SaveFirstWindow>
     );

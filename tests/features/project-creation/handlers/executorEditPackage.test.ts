@@ -164,4 +164,22 @@ describe('applyPackageChange', () => {
         expect(project.selectedPackage).toBe('citisignal');
         expect(resetEdsProjectWithUI).not.toHaveBeenCalled();
     });
+
+    // Owner 2026-11-14 (item 3): what the reset finished around reaches the Edit's warnings,
+    // the content-kept line included.
+    it("hands back what the reset finished around, for the Edit's warnings", async () => {
+        const { project, context, progress } = setup();
+        (resetEdsProjectWithUI as jest.Mock).mockResolvedValueOnce({ success: true, contentKept: "Content kept: the demo's pages can't be reached." });
+
+        await expect(applyPackageChange(context, project, toBodea, { resets: true }, progress)).resolves.toStrictEqual([
+            "Content kept: the demo's pages can't be reached.",
+        ]);
+    });
+
+    it('CONTROL: hands back nothing without a package change or a caveat', async () => {
+        const { project, context, progress } = setup();
+
+        await expect(applyPackageChange(context, project, toBodea, { resets: false }, progress)).resolves.toStrictEqual([]);
+        await expect(applyPackageChange(context, project, toBodea, { resets: true }, progress)).resolves.toStrictEqual([]);
+    });
 });

@@ -6,7 +6,7 @@
  * the red button clears as before. Nothing is dropped without "Clear Without Saving".
  */
 
-import { screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { BODEA_CHECK, BODEA_PACK_CHECK } from '../../../../helpers/clearCheckFixtures';
 import {
     answeringWith,
@@ -109,6 +109,20 @@ it("Save and Clear saves into the SC's own pack: the answer travels with the cle
     await press(button('Save and Clear'));
 
     expect(onClear).toHaveBeenCalledWith('tok-1', ['bodea'], { changes: 'keep' });
+});
+
+// P5-Q7 (step-07 D4): the name box on the SC's own pack too; another name saves a new datapack.
+it("Save and Clear on the SC's own pack under another name saves a new one by that name", async () => {
+    answeringWith({ changes: OWN_CHANGES }, BODEA_PACK_CHECK);
+    const { onClear } = await openWindow(['Bodea B2B']);
+    await press(button('Clear 8 Items'));
+
+    expect(screen.getByRole('textbox', { name: 'Save As' })).toHaveValue('Bodea B2B');
+    fireEvent.change(screen.getByRole('textbox', { name: 'Save As' }), { target: { value: 'Bodea Fall' } });
+    await settle();
+    await press(button('Save and Clear'));
+
+    expect(onClear).toHaveBeenCalledWith('tok-1', ['bodea'], { changes: 'keep', saveAs: { displayName: 'Bodea Fall' } });
 });
 
 it("Save and Clear on a pack not the SC's saves a new one under the name in the field", async () => {

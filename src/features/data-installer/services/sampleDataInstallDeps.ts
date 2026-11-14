@@ -115,6 +115,7 @@ export function buildSampleDataDeps(
                 perType: result.perType,
                 ...(result.reason ? { reason: result.reason } : {}),
                 ...(result.leftInStore ? { leftInStore: true } : {}),
+                ...(result.note ? { note: result.note } : {}),
             };
         },
 

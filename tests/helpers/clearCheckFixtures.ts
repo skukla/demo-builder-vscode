@@ -65,3 +65,20 @@ export const INSTANCE_CHECK_NO_CHANGES: ClearCheck = {
     ...INSTANCE_CHECK,
     instance: { projects: [{ path: '/p/luma-test', name: 'Luma Test', datapack: { name: 'Luma Test Pack' } }], ownNames: [], alwaysSave: false },
 };
+
+/**
+ * The always-save setting on, two projects holding the SC's own datapacks with changes (saved first
+ * without a row) and one holding someone else's (step-07 D3).
+ */
+export const INSTANCE_CHECK_ALWAYS_SAVE: ClearCheck = {
+    ...INSTANCE_CHECK,
+    instance: {
+        projects: [
+            { path: '/p/kukla-luma', name: 'Kukla Luma', datapack: { name: 'Luma', changes: 'asks' } },
+            { path: '/p/my-luma', name: 'My Luma Demo', datapack: { name: 'My Luma', changes: 'saves' } },
+            { path: '/p/my-bodea', name: 'My Bodea Demo', datapack: { name: 'My Bodea', changes: 'saves' } },
+        ],
+        ownNames: ['My Luma', 'My Bodea'],
+        alwaysSave: true,
+    },
+};

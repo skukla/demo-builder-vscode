@@ -159,12 +159,12 @@ export const mockSleep = jest.fn().mockResolvedValue(undefined);
 jest.mock('@/core/utils/sleep', () => ({ sleep: (...a: unknown[]) => mockSleep(...a) }));
 
 /**
- * Uninstall Datapack (walk F96): removing the data (`removeDataBeforeDelete`, undefined when it
- * all came out, else why it did not). The real module reaches the store; its own suite is
- * `datapackDataRemoval.test.ts`, and every delete suite asserts only whether, and with what, it
- * is called.
+ * Uninstall Datapack (walk F96): removing the data (`removeDataBeforeDelete`: `stopped` saying why
+ * it did not all come out, `saved` where the changes went first; `{}` when it all came out with
+ * nothing to say). The real module reaches the store; its own suite is `datapackDataRemoval.test.ts`,
+ * and every delete suite asserts only whether, and with what, it is called.
  */
-export const mockRemoveDataBeforeDelete = jest.fn().mockResolvedValue(undefined);
+export const mockRemoveDataBeforeDelete = jest.fn().mockResolvedValue({});
 jest.mock('@/features/projects-dashboard/services/datapackDataRemoval', () => ({
     removeDataBeforeDelete: (...a: unknown[]) => mockRemoveDataBeforeDelete(...a),
 }));

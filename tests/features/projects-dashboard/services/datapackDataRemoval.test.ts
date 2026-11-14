@@ -8,6 +8,7 @@
 jest.mock('@/features/data-installer/services/buildDatapackEngine', () => ({ installedByDemoBuilder: jest.fn() }));
 jest.mock('@/features/eds/services/reset/edsResetSampleData', () => ({ removeProjectSampleDataOutcome: jest.fn() }));
 
+import { LEFT_NOTE, REMOVAL_LEFT_IN_STORE } from '../../../helpers/datapackRemovalFixtures';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockProject } from '../../../helpers/projectFake';
 import { installedByDemoBuilder } from '@/features/data-installer/services/buildDatapackEngine';
@@ -47,7 +48,7 @@ describe('removing it before the delete', () => {
         const report = jest.fn();
         const askName = jest.fn();
 
-        await expect(removeDataBeforeDelete(context, project, report, askName)).resolves.toBeUndefined();
+        await expect(removeDataBeforeDelete(context, project, report, askName)).resolves.toStrictEqual({});
 
         expect(mockedRemove).toHaveBeenCalledWith(project, context, report, askName);
     });
@@ -55,9 +56,9 @@ describe('removing it before the delete', () => {
     it('says the project was kept, and why, when the data did not all come out', async () => {
         mockedRemove.mockResolvedValue({ kept: 'Commerce refused 2 products.' });
 
-        await expect(removeDataBeforeDelete(createMockHandlerContext(), withPack(), jest.fn())).resolves.toBe(
-            "Its datapack was not uninstalled, so the project was kept: Commerce refused 2 products.",
-        );
+        await expect(removeDataBeforeDelete(createMockHandlerContext(), withPack(), jest.fn())).resolves.toStrictEqual({
+            stopped: "Its datapack was not uninstalled, so the project was kept: Commerce refused 2 products.",
+        });
     });
 
     // step-05 S7: a removal that stopped partway read "was not uninstalled" over its own reason
@@ -65,8 +66,33 @@ describe('removing it before the delete', () => {
     it('says part of it was uninstalled when the removal stopped partway', async () => {
         mockedRemove.mockResolvedValue({ kept: 'Categories could not be removed.', partly: true });
 
-        await expect(removeDataBeforeDelete(createMockHandlerContext(), withPack(), jest.fn())).resolves.toBe(
-            'Part of its datapack was uninstalled, so the project was kept: Categories could not be removed.',
-        );
+        await expect(removeDataBeforeDelete(createMockHandlerContext(), withPack(), jest.fn())).resolves.toStrictEqual({
+            stopped: 'Part of its datapack was uninstalled, so the project was kept: Categories could not be removed.',
+        });
+    });
+
+    // step-07 D1 (R1-a): a removal that left part in Commerce went on to delete the files, so the
+    // data stayed in the store with no project naming it.
+    it('keeps the project when the removal left part of the datapack in Commerce, naming what', async () => {
+        mockedRemove.mockResolvedValue(REMOVAL_LEFT_IN_STORE);
+
+        await expect(removeDataBeforeDelete(createMockHandlerContext(), withPack(), jest.fn())).resolves.toStrictEqual({
+            stopped: `Part of its datapack was left in Commerce, so the project was kept: ${LEFT_NOTE}`,
+        });
+    });
+
+    it('still keeps it when the engine gave no note', async () => {
+        mockedRemove.mockResolvedValue({ leftInStore: true });
+
+        await expect(removeDataBeforeDelete(createMockHandlerContext(), withPack(), jest.fn())).resolves.toStrictEqual({
+            stopped: 'Part of its datapack was left in Commerce, so the project was kept.',
+        });
+    });
+
+    // Owner 2026-11-14 (item 5): the delete's row says where the changes went.
+    it("names the SC's own pack the changes were saved into, and lets the delete go on", async () => {
+        mockedRemove.mockResolvedValue({ savedInto: 'My Luma' });
+
+        await expect(removeDataBeforeDelete(createMockHandlerContext(), withPack(), jest.fn())).resolves.toStrictEqual({ saved: 'Saved to My Luma.' });
     });
 });

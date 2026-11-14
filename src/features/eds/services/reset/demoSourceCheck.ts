@@ -21,6 +21,13 @@ import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/types/state';
 
+/**
+ * A reset's line when the demo's content site cannot be reached, so it kept the storefront's content
+ * and reset the code only (P5-Q8, owner 2026-11-14): the window's row and the agent's caveat say it
+ * alike, in the words of the dashboard's pages notice.
+ */
+export const CONTENT_KEPT_LINE = "Content kept: the demo's pages can't be reached.";
+
 /** What the check needs from its caller: a logger, and a place to save a followed rename. */
 export interface DemoSourceCheckContext {
     logger: Logger;
@@ -136,25 +143,4 @@ async function indexReachable(
 ): Promise<boolean> {
     if (!contentSource) return true;
     return (await resolveContentIndex(contentSource, fetchImpl, logger)).found;
-}
-
-/**
- * The demo's content site cannot be reached: reset the code only and keep the
- * current content, or stop. Content is not forkable, so there is nothing else
- * to offer. Undefined = cancelled. Asked by `edsResetUI` before a reset runs; moved here, beside
- * the check that finds the site unreachable, when that file passed its size limit (2026-11-04).
- */
-export async function offerToKeepContent(
-    vscode: typeof import('vscode'),
-    demoName: string,
-    check: DemoSourceCheck,
-): Promise<boolean | undefined> {
-    const keepButton: import('vscode').MessageItem = { title: 'Keep Current Content' };
-    const answer = await vscode.window.showWarningMessage(
-        `${check.contentMessage ?? `The ${demoName} demo's pages can't be reached right now.`} ` +
-            'You can reset the code and keep the content this site has now.',
-        { modal: true },
-        keepButton,
-    );
-    return answer?.title === keepButton.title ? true : undefined;
 }

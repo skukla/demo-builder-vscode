@@ -16,12 +16,13 @@ import * as vscode from 'vscode';
 import { executeSampleDataPhase } from './executorSampleDataPhase';
 import type { ProgressTracker } from './shared';
 import { dropStaleFailure } from '@/features/data-installer/services/installFailure';
-import type { NameMemory } from '@/features/data-installer/services/packNames';
+import { type NameMemory, rememberedPackName } from '@/features/data-installer/services/packNames';
 import {
     beginSampleDataRemovalCheck,
     askSaveAsNameWith,
-    removeProjectSampleData,
+    removeProjectSampleDataOutcome,
 } from '@/features/eds/services/reset/edsResetSampleData';
+import type { DatapackRemoval } from '@/features/eds/services/reset/resetDatapackStep';
 import {
     executeCatalogMenuPhase,
     rewriteCatalogMenuPhase,
@@ -68,10 +69,30 @@ export async function planDatapackChange(
 }
 
 /**
+ * The Edit's line when the old pack's data did not all come out: the datapack part stops, so the
+ * old pack stays recorded and nothing is installed over it (step-07 D2, owner Q1). Short, cause
+ * first, naming the pack as the SC knows it (owner, 2026-11-14). A removal skipped because no
+ * install target was ever recorded found nothing installed, so it is nothing to remove.
+ *
+ * @param name - the old pack's name as the SC knows it
+ * @returns the line, or undefined when the Edit may switch the datapack
+ */
+function datapackNotChanged(removal: DatapackRemoval, name: string): string | undefined {
+    const still = `so the datapack is still ${name}`;
+    const withWhy = (line: string, why: string | undefined): string => (why ? `${line}: ${why}` : `${line}.`);
+    if (removal.leftInStore) return withWhy(`Part of ${name} was left in Commerce, ${still}`, removal.note);
+    if (removal.kept === undefined || removal.noTarget) return undefined;
+    if (removal.partly) return withWhy(`Part of ${name} was uninstalled, ${still}`, removal.kept);
+    return withWhy(`${name} couldn't be uninstalled, ${still}`, removal.kept);
+}
+
+/**
  * Carry out the plan: remove the old pack's data when asked to, record the new
  * choice (which may be none), then the steps creation runs after its import.
  * None of them throws: a project is usable whatever its sample data did, and each
- * step says on the progress line what happened.
+ * step says on the progress line what happened. A removal that did not take all
+ * the old data stops here, the old pack still recorded, and the rest of the Edit
+ * goes on (owner Q1).
  *
  * @param context - the handler context
  * @param project - the project, as the Edit's other changes left it
@@ -80,6 +101,7 @@ export async function planDatapackChange(
  * @param progressTracker - the wizard's progress screen
  * @param storefrontResetFollows - a package change resets the storefront next, and
  *   the reset warms the catalog and writes the category pages itself
+ * @returns why the datapack was not changed, for the Edit's warnings; undefined when it was
  */
 export async function applyDatapackChange(
     context: HandlerContext,
@@ -88,23 +110,29 @@ export async function applyDatapackChange(
     plan: DatapackPlan,
     progressTracker: ProgressTracker,
     storefrontResetFollows = false,
-): Promise<void> {
-    if (!plan.changes) return;
+): Promise<string | undefined> {
+    if (!plan.changes) return undefined;
     if (plan.removeOld) {
-        await removeProjectSampleData(project, context, (stage, step) => progressTracker(stage, 90, step ?? ''), askSaveAsNameWith(vscode));
+        const report = (stage: string, step?: string) => progressTracker(stage, 90, step ?? '');
+        const held = project.datapack?.name ?? '';
+        const name = rememberedPackName(context.context.globalState, held) ?? held;
+        const removal = await removeProjectSampleDataOutcome(project, context, report, askSaveAsNameWith(vscode));
+        const stopped = datapackNotChanged(removal, name);
+        if (stopped) return stopped;
     }
     project.datapack = config.datapack;
     // A failed install of the old pack no longer applies (step-04 S7).
     dropStaleFailure(project);
     await context.stateManager.saveProject(project);
-    if (!project.datapack) return;
+    if (!project.datapack) return undefined;
     await executeSampleDataPhase(context, project, progressTracker);
-    if (storefrontResetFollows) return;
+    if (storefrontResetFollows) return undefined;
     await executeCatalogPrewarmPhase(context, project, progressTracker);
-    if (!isEdsProject(project)) return;
+    if (!isEdsProject(project)) return undefined;
     // With the old data gone, its categories are too: Reset's removal of the pages
     // Demo Builder wrote comes first, so none is left for a category that no longer
     // exists. With it kept, the old categories still stand and the write only adds.
     if (plan.removeOld) await rewriteCatalogMenuPhase(context, project, progressTracker);
     else await executeCatalogMenuPhase(context, project, progressTracker);
+    return undefined;
 }

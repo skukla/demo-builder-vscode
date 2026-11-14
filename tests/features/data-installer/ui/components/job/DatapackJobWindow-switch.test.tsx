@@ -219,7 +219,8 @@ describe('Switch when the setting saves without asking', () => {
 });
 
 describe('Save Your Changes First?', () => {
-    it('counts the changes by type under the one line, with no names, no box and no name field', async () => {
+    // P5-Q7 (owner walk 2026-11-13, step-07 D4): the SC's own datapack has the name box too, its own name in it.
+    it('counts the changes by type under the one line, with no names, no box, and the own name in the field', async () => {
         holding(CHANGED_MINE);
         await openSwitch();
 
@@ -235,7 +236,7 @@ describe('Save Your Changes First?', () => {
         expect(rows).toStrictEqual(['Products2', 'Categories1']);
         expect(screen.queryByText(/24-MB01/u)).toBeNull();
         expect(screen.queryByRole('checkbox')).toBeNull();
-        expect(screen.queryByRole('textbox')).toBeNull();
+        expect(screen.getByRole('textbox', { name: 'Save As' })).toHaveValue('My Luma');
         expect(sends('start-datapack-import')).toBe(0);
     });
 
@@ -302,6 +303,49 @@ describe('Save Your Changes First?', () => {
 
         expect(await heading('Save Your Changes First?')).toBeInTheDocument();
         expect(screen.getByText("Your changes couldn't be checked.")).toBeInTheDocument();
+    });
+});
+
+/**
+ * The SC's own datapack (P5-Q7, step-07 D4): the name box starts with its own name. Untouched, the
+ * save goes into it; another name saves a new datapack; another of the SC's names is refused.
+ */
+describe("Save Your Changes First? for the SC's own datapack", () => {
+    const field = () => screen.getByRole('textbox', { name: 'Save As' });
+    const asked = async (ownNames: string[] = ['My Luma']) => {
+        holding(CHANGED_MINE);
+        await openSwitch(ownNames);
+        await press(button('Switch'));
+    };
+
+    it('saves a new datapack under another name', async () => {
+        await asked();
+        fireEvent.change(field(), { target: { value: ' Luma Holiday ' } });
+        await settle();
+
+        await press(button('Save and Switch'));
+
+        expect(sent('start-datapack-import')).toMatchObject({ changes: 'keep', saveAs: { displayName: 'Luma Holiday' } });
+    });
+
+    it('never sends its own name as a new datapack, however it is typed', async () => {
+        await asked();
+        fireEvent.change(field(), { target: { value: ' my luma ' } });
+        await settle();
+
+        await press(button('Save and Switch'));
+
+        expect(sent('start-datapack-import')).toMatchObject({ changes: 'keep' });
+        expect(sent('start-datapack-import')).not.toHaveProperty('saveAs');
+    });
+
+    it("refuses another of the SC's datapacks' names, and Save and Switch waits", async () => {
+        await asked(['My Luma', 'My Bodea']);
+        fireEvent.change(field(), { target: { value: 'My Bodea' } });
+        await settle();
+
+        expect(screen.getByText('You already have a datapack named My Bodea.')).toBeInTheDocument();
+        expect(button('Save and Switch')).toHaveAttribute('aria-disabled', 'true');
     });
 });
 

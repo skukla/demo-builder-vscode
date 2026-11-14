@@ -2,7 +2,7 @@
  * EDS Reset UI Orchestration
  *
  * A storefront reset run inside a caller's own window, in order:
- * - the added-demo source check (refuses, or offers to keep the content)
+ * - the added-demo source check (refuses, or keeps the content and says so on the row)
  * - the pre-flight checks, told to the caller's `report`
  * - the reset itself (executeEdsReset)
  *
@@ -18,7 +18,7 @@
 
 import type { GitHubAppService } from '../github/githubAppService';
 import type { GitHubRepoOperations } from '../github/githubRepoOperations';
-import { checkDemoSource, offerToKeepContent } from './demoSourceCheck';
+import { CONTENT_KEPT_LINE } from './demoSourceCheck';
 import type { MeshRedeployDeps } from './edsResetMeshHelper';
 import {
     extractResetParams,
@@ -34,6 +34,7 @@ import {
 } from './edsResetPreflight';
 import { executeEdsReset } from './edsResetService';
 import { FailedAfterDatapack, removeAnsweredDatapack, type AnsweredDatapack } from './resetDatapackStep';
+import { decideResetSource } from './resetSourceDecision';
 import { whileRunning } from '@/core/state/projectWorkRunning';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { resetStageLabel } from '@/core/utils/resetStages';
@@ -110,7 +111,6 @@ export interface EdsResetWithUIOptions {
     fetchImpl?: typeof fetch;
 }
 
-
 // ==========================================================
 // Main Entry Point
 // ==========================================================
@@ -147,29 +147,18 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
     // An added demo's source is checked BEFORE the first modal (decided 2026-09-11):
     // a reset that cannot reach the demo refuses in a sentence here rather than
     // failing midway with git output. A renamed repository is followed silently.
-    let keepContent = false;
-    if (project.demo) {
-        const { getGitHubServices } = await import('../../handlers/edsHelpers');
-        const sourceCheck = await checkDemoSource(
-            project,
-            options.repoOperations ?? getGitHubServices(context.context.secrets).repoOperations,
-            context,
-            options.fetchImpl,
-        );
-        if (!sourceCheck.reachable) {
-            context.logger.warn(`${logPrefix} resetEds: ${sourceCheck.message}`);
-            void vscode.window.showWarningMessage(sourceCheck.message);
-            return { success: false, error: sourceCheck.message, errorType: 'DEMO_SOURCE_UNREACHABLE' };
-        }
-        if (!sourceCheck.contentReachable) {
-            const keep = await offerToKeepContent(vscode, project.demo.name, sourceCheck);
-            if (keep === undefined) {
-                context.logger.info(`${logPrefix} resetEds: User cancelled reset (content site unreachable)`);
-                return { success: false, cancelled: true };
-            }
-            keepContent = keep;
-        }
-    }
+    // A content site that cannot be reached asks nothing: the reset keeps the
+    // content and says so on its row, never a dialog mid-run (P5-Q8, step-07 D5).
+    const { getGitHubServices } = await import('../../handlers/edsHelpers');
+    const source = await decideResetSource(
+        project,
+        () => options.repoOperations ?? getGitHubServices(context.context.secrets).repoOperations,
+        context,
+        options.fetchImpl,
+    );
+    if (source.refused) return { success: false, ...source.refused };
+    const { keepContent } = source;
+    const kept = keepContent ? { contentKept: CONTENT_KEPT_LINE } : {};
 
     const paramsResult = extractResetParams(project, packages);
     if (!paramsResult.success) {
@@ -294,12 +283,12 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
                 const stage = resetStageLabel(p.step);
                 report(stage ?? p.message, stage ? p.message : undefined, { index: p.step, total: p.totalSteps });
             });
-            if (!datapackRemoval) return await steps;
+            if (!datapackRemoval) return { ...(await steps), ...kept };
             // The store was touched: whatever the reset does next, the row says what became of it.
             try {
-                return { ...(await steps), datapackRemoval };
+                return { ...(await steps), ...kept, datapackRemoval };
             } catch (error) {
-                throw new FailedAfterDatapack(error, datapackRemoval);
+                throw new FailedAfterDatapack(error, datapackRemoval, kept.contentKept);
             }
         } finally {
             project.status = originalStatus;

@@ -56,7 +56,7 @@ const runReset: RunReset = async (context, project, answer, report) => {
     if (isEdsProject(project)) {
         const { resetEdsProjectWithUI } = await import('@/features/eds/services/reset/edsResetUI');
         const { resetCaveats } = await import('@/features/eds/services/reset/edsResetParams');
-        const { datapackStepLine } = await import('@/features/eds/services/reset/resetDatapackStep');
+        const { datapackStepLine, savedIntoLine } = await import('@/features/eds/services/reset/resetDatapackStep');
         const result = await resetEdsProjectWithUI({
             meshDeps: { commandManager, authManager },
             project,
@@ -68,12 +68,17 @@ const runReset: RunReset = async (context, project, answer, report) => {
             answered,
         });
         if (!result.success) {
-            // What the datapack step did to the store, said beside the failure (review, 2026-11-13).
-            const removal = result.datapackRemoval ? { warnings: [datapackStepLine(result.datapackRemoval)] } : {};
-            return { success: false, ...(result.error ? { error: result.error } : {}), ...removal };
+            // What the datapack step did to the store, and kept content, said beside the failure
+            // (reviews, 2026-11-13 and 2026-11-14).
+            const under: string[] = [];
+            if (result.contentKept) under.push(result.contentKept);
+            if (result.datapackRemoval) under.push(datapackStepLine(result.datapackRemoval));
+            return { success: false, ...(result.error ? { error: result.error } : {}), ...(under.length > 0 ? { warnings: under } : {}) };
         }
         const warnings = resetCaveats(result);
-        return { success: true, ...(warnings.length > 0 ? { warnings } : {}) };
+        // Where the changes went first, when the SC's own pack took them (owner, 2026-11-14).
+        const note = savedIntoLine(result.datapackRemoval);
+        return { success: true, ...(warnings.length > 0 ? { warnings } : {}), ...(note ? { note } : {}) };
     }
     const { runProjectResetAnswered } = await import('@/features/lifecycle/services/projectResetService');
     return runProjectResetAnswered({ commandManager, authManager, project, context, logPrefix: '[ProjectsBatch]' }, report, answered);

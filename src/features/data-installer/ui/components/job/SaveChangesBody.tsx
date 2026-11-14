@@ -5,8 +5,9 @@
  * counted by type, no names (decisions Phase 3, J2-1, J2-3). No box: saving without asking is the
  * setting only.
  *
- * When the held datapack is not the SC's, a save makes a new one, named in the field here; a
- * refused name shows the house problem line, and the caller holds the save (`saveDisabled`). Room
+ * The field here says where a save goes, on every datapack (P5-Q7, step-07 D4): the SC's own starts
+ * with its own name and saves into it, another name makes a new one; someone else's makes a new one.
+ * A refused name shows the house problem line, and the caller holds the save (`saveDisabled`). Room
  * for that line is always kept, so the window never grows (rule 14).
  *
  * @module features/data-installer/ui/components/job/SaveChangesBody
@@ -23,8 +24,8 @@ export interface SaveChangesBodyProps {
     rows: readonly TypeRow[];
     /** The changes could not be read: nothing is known of them. */
     readFailed: boolean;
-    /** Present when a save makes a new datapack, which needs a name. */
-    saveAs?: SaveAsField;
+    /** Where a save goes: the name field. */
+    saveAs: SaveAsField;
 }
 
 /** The name a new datapack takes, its problem under it. */
@@ -56,7 +57,7 @@ export function SaveChangesBody({
             ) : (
                 <TypeTable rows={rows} label="Your changes by type of data" />
             )}
-            {saveAs ? <SaveAsName field={saveAs} /> : null}
+            <SaveAsName field={saveAs} />
         </>
     );
 }

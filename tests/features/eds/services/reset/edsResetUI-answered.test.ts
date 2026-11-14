@@ -33,6 +33,11 @@ jest.mock('@/features/eds/services/reset/edsResetParams', () => ({
     }),
 }));
 jest.mock('@/core/utils/sleep');
+// The added demo's source check, faked for the content-kept case; real for everything else.
+jest.mock('@/features/eds/services/reset/demoSourceCheck', () => ({
+    ...jest.requireActual('@/features/eds/services/reset/demoSourceCheck'),
+    checkDemoSource: jest.fn(async () => ({ reachable: true, checked: true, message: '', contentReachable: false })),
+}));
 // The datapack's removal is its own suite's (sampleDataRemovalChanges); here only what it is handed.
 jest.mock('@/features/eds/services/reset/edsResetSampleData', () => ({
     ...jest.requireActual('@/features/eds/services/reset/edsResetSampleData'),
@@ -44,6 +49,8 @@ import { runningWork } from '@/core/state/projectWorkRunning';
 import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
 import { removeProjectSampleDataOutcome } from '@/features/eds/services/reset/edsResetSampleData';
 import { FailedAfterDatapack } from '@/features/eds/services/reset/resetDatapackStep';
+import { CONTENT_KEPT_LINE } from '@/features/eds/services/reset/demoSourceCheck';
+import { makeAddedDemo } from '../../../../helpers/demoPackageFixtures';
 import { createMeshDepsFake } from '../../../../helpers/meshDepsFake';
 import { createMockStateManager } from '../../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../../helpers/loggerFake';
@@ -272,6 +279,21 @@ describe('resetEdsProjectWithUI — answered by a batch', () => {
         // The same failure in the same words, carrying what the datapack step did.
         expect(thrown).toBeInstanceOf(FailedAfterDatapack);
         expect(thrown).toMatchObject({ message: 'pipeline died', removal: {} });
+    });
+
+    // Review 2026-11-14 (item 8): a reset that kept the content says so on every way it ends.
+    it('carries the content-kept line on a failure, and on the failure thrown after the datapack step', async () => {
+        const demo = (): Project => ({ ...withPack(), demo: makeAddedDemo() });
+        const options = { githubAppService: fakeGitHubAppService, meshDeps, context: createContext(), withinEdit: { report: jest.fn() }, repoOperations: { getRepository: jest.fn() } };
+        mockedReset.mockResolvedValueOnce({ success: false, error: 'pipeline died' });
+
+        const failed = await resetEdsProjectWithUI({ ...options, project: demo() });
+        mockedReset.mockRejectedValueOnce(new Error('pipeline died'));
+        const thrown = await resetEdsProjectWithUI({ ...options, project: demo(), answered: { removeDatapack: true, changes: 'drop' } }).catch((e: unknown) => e);
+
+        expect(failed.contentKept).toBe(CONTENT_KEPT_LINE);
+        expect(thrown).toBeInstanceOf(FailedAfterDatapack);
+        expect(thrown).toMatchObject({ contentKept: CONTENT_KEPT_LINE });
     });
 
     it('keeps the datapack when the batch said not to remove it', async () => {

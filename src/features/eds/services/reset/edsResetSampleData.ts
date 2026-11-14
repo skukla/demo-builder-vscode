@@ -170,16 +170,17 @@ function askerOf(answering: SaveAsAnswering | undefined): AskSaveAsName | undefi
  * theirs, else as a new pack under the name `askName` gets (Save As, owner 2026-11-03), else lost.
  * A save that fails removes nothing.
  *
- * @returns why the pack must stay (marked when it was for want of an answer), or undefined when it may go
+ * @returns why the pack must stay (`kept`, marked when it was for want of an answer), else the SC's
+ *   own pack the changes went into (`savedInto`), or `{}`
  */
 async function settleBeforeReset(
     project: Project,
     context: HandlerContext,
     report: ReportStage,
     answering: SaveAsAnswering | undefined,
-): Promise<DatapackRemoval | undefined> {
+): Promise<DatapackRemoval> {
     const datapack = project.datapack;
-    if (!datapack) return undefined;
+    if (!datapack) return {};
     const { contextForProject, settleChangesBeforeRemoval } = await import('@/features/data-installer/handlers/removalChanges');
     const forProject = contextForProject(context, project);
     const request = {
@@ -207,24 +208,9 @@ async function settleBeforeReset(
         context.logger.error(`[EdsReset] Sample data was NOT removed: ${reason}`);
         return { kept: reason };
     }
-    return undefined;
-}
-
-/**
- * Remove the project's datapack data, its changes settled first (`settleBeforeReset`), reporting
- * rather than throwing. A reset ignores the answer; a project delete stops on it, since deleting the
- * project would leave the data with no record (walk F96). A removal that took everything clears
- * the project's pack (`forgetRemovedPack`); one that left part in the store on purpose keeps it.
- *
- * @returns why the data was not all removed, or undefined when it was
- */
-export async function removeProjectSampleData(
-    project: Project,
-    context: HandlerContext,
-    report: ReportStage,
-    askName?: SaveAsAnswering,
-): Promise<string | undefined> {
-    return (await removeProjectSampleDataOutcome(project, context, report, askName)).kept;
+    // Into the SC's own pack: the run's row names it (owner, 2026-11-14).
+    const saved = settled.saved;
+    return saved?.displayName && saved.id.name === datapack.name ? { savedInto: saved.displayName } : {};
 }
 
 /** Whether any data type came out of the store before a removal stopped. */
@@ -233,7 +219,11 @@ function anyRemoved(perType: Record<string, string> | undefined): boolean {
 }
 
 /**
- * The same removal, saying also whether part of the data came out before it stopped, for a reset
+ * Remove the project's datapack data, its changes settled first (`settleBeforeReset`), reporting
+ * rather than throwing. A reset reads the answer for its row; a project delete and an Edit stop on
+ * it, since going on would leave the data with no record (walk F96, step-07 D2). A removal that took
+ * everything clears the project's pack (`forgetRemovedPack`); one that left part in the store on
+ * purpose keeps it. It says also whether part of the data came out before it stopped, for a reset
  * row to say what happened to the store (review, 2026-11-13). `alsoLeaving` is Clear Demo Data's:
  * products its wipe deletes right after, whose holds count as going.
  *
@@ -250,10 +240,9 @@ export async function removeProjectSampleDataOutcome(
         // The SC's changes first: this door's question was already asked, and keeping the work is
         // the likely intent. Reported, as everything here is: a save that fails removes nothing and
         // the reset stands.
-        if (project.datapack) {
-            const kept = await settleBeforeReset(project, context, report, askName);
-            if (kept) return kept;
-        }
+        const settled = await settleBeforeReset(project, context, report, askName);
+        if (settled.kept !== undefined) return settled;
+        const saved = settled.savedInto ? { savedInto: settled.savedInto } : {};
 
         report(OPERATION_STAGES.removingDatapack.label);
 
@@ -284,18 +273,19 @@ export async function removeProjectSampleDataOutcome(
                 `[EdsReset] Sample data was NOT removed: ${result.reason ?? 'no reason given'}`,
             );
             const kept = result.reason ?? 'The datapack was not all uninstalled.';
-            return anyRemoved(result.perType) ? { kept, partly: true } : { kept };
+            return anyRemoved(result.perType) ? { kept, partly: true, ...saved } : { kept, ...saved };
         }
         if (!result.ran) {
             context.logger.warn(
                 `[EdsReset] Sample data was not removed: ${result.reason ?? 'no reason given'}`,
             );
-            return { kept: result.reason ?? 'The datapack was not uninstalled.' };
+            const kept = result.reason ?? 'The datapack was not uninstalled.';
+            return result.noTarget ? { kept, noTarget: true, ...saved } : { kept, ...saved };
         }
         // Part left in the store on purpose: the record still describes what Commerce holds.
-        if (result.leftInStore) return { leftInStore: true };
+        if (result.leftInStore) return { leftInStore: true, ...(result.note ? { note: result.note } : {}), ...saved };
         await forgetRemovedPack(project, context);
-        return {};
+        return saved;
     } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
         context.logger.warn(`[EdsReset] Sample data removal failed, reset stands: ${reason}`);

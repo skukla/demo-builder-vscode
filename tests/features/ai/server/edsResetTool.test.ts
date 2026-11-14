@@ -28,6 +28,11 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
     createDaLiveServiceTokenProvider: jest.fn(() => ({})),
 }));
+// The added demo's source check (owner, 2026-11-14): faked, reachable unless a case says otherwise.
+jest.mock('@/features/eds/services/reset/demoSourceCheck', () => ({
+    ...jest.requireActual('@/features/eds/services/reset/demoSourceCheck'),
+    checkDemoSource: jest.fn(),
+}));
 jest.mock('@/types/typeGuards', () => ({
     isEdsProject: jest.fn(),
     getMeshComponentInstance: jest.fn(),
@@ -56,6 +61,8 @@ import { extractResetParams } from '@/features/eds/services/reset/edsResetParams
 import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { isEdsProject, getMeshComponentInstance } from '@/types/typeGuards';
+import { CONTENT_KEPT_LINE, checkDemoSource } from '@/features/eds/services/reset/demoSourceCheck';
+import { makeAddedDemo } from '../../../helpers/demoPackageFixtures';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
@@ -67,6 +74,7 @@ const getGitHubServicesMock = getGitHubServices as jest.Mock;
 const getDaLiveAuthServiceMock = getDaLiveAuthService as jest.Mock;
 const isEdsProjectMock = isEdsProject as unknown as jest.Mock;
 const getMeshComponentInstanceMock = getMeshComponentInstance as unknown as jest.Mock;
+const checkDemoSourceMock = checkDemoSource as jest.MockedFunction<typeof checkDemoSource>;
 
 interface CapturedDef {
     needsAuth?: unknown;
@@ -124,6 +132,7 @@ describe('reset_project on an Edge Delivery project', () => {
         });
         getDaLiveAuthServiceMock.mockReturnValue({ isAuthenticated: jest.fn(async () => true) });
         getMeshComponentInstanceMock.mockReturnValue(undefined);
+        checkDemoSourceMock.mockResolvedValue({ reachable: true, checked: true, message: '', contentReachable: true });
         mockInspectToken.mockResolvedValue({ valid: true });
         executeEdsResetMock.mockImplementation(
             async (
@@ -545,5 +554,51 @@ describe('reset_project on an Edge Delivery project', () => {
         registerResetProjectTool(s, ctxFactory);
         const res = await s.call({ confirm: true });
         expect(res).toMatchObject({ reset: false, error: 'boom', rerunSafe: true });
+    });
+
+    // Owner 2026-11-14 (item 4): the agent's reset checks an added demo's source as the screen's does.
+    describe('on a project built on an added demo', () => {
+        const UNREACHABLE = "The Isle5 by Jen demo's repository can't be reached. Reset and updates are unavailable until it is.";
+        const withDemo = { ...PROJECT, demo: makeAddedDemo() };
+
+        beforeEach(() => {
+            getCurrentProject.mockResolvedValue(withDemo);
+            getGitHubServicesMock.mockReturnValue({
+                tokenService: { validateToken: jest.fn(async () => ({ valid: true })) },
+                repoOperations: { getRepository: jest.fn() },
+            });
+        });
+
+        it("refuses in the screen's sentence when the repository can't be reached, resetting nothing", async () => {
+            checkDemoSourceMock.mockResolvedValue({ reachable: false, checked: true, message: UNREACHABLE, contentReachable: false });
+            const s = fakeServer();
+            registerResetProjectTool(s, ctxFactory);
+
+            const res = await s.call({ confirm: true });
+
+            expect(res).toMatchObject({ reset: false, project: 'eds-proj', error: UNREACHABLE, errorType: 'DEMO_SOURCE_UNREACHABLE' });
+            expect(executeEdsResetMock).not.toHaveBeenCalled();
+        });
+
+        it("keeps the content and says so when only the demo's pages can't be reached", async () => {
+            checkDemoSourceMock.mockResolvedValue({ reachable: true, checked: true, message: '', contentReachable: false });
+            const s = fakeServer();
+            registerResetProjectTool(s, ctxFactory);
+
+            const res = await s.call({ confirm: true });
+
+            expect(executeEdsResetMock.mock.calls[0][0]).toMatchObject({ keepContent: true });
+            expect(res).toMatchObject({ reset: true, caveats: [CONTENT_KEPT_LINE] });
+        });
+
+        it('CONTROL: sends no keepContent when the source and its pages answer', async () => {
+            const s = fakeServer();
+            registerResetProjectTool(s, ctxFactory);
+
+            const res = await s.call({ confirm: true });
+
+            expect('keepContent' in executeEdsResetMock.mock.calls[0][0]).toBe(false);
+            expect('caveats' in res).toBe(false);
+        });
     });
 });

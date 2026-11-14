@@ -164,6 +164,14 @@ describe('ProjectsBatchModal: Reset Selected', () => {
         expect((runRequest() as { answers: unknown[] }).answers[1]).toEqual({ path: '/p/b', removeDatapack: true });
     });
 
+    // step-07 D3 (S1-a): the row left out is named in one line under the table.
+    it("says the SC's own pack is saved first by the setting, under the table", async () => {
+        await pressReset(prepared(ROWS, { ownNames: ['Mine'], alwaysSave: true }));
+
+        const window = screen.getByRole('dialog', { name: 'Save Your Changes First?' });
+        expect(within(window).getByText('Mine is saved first (your setting).')).toBeInTheDocument();
+    });
+
     it('runs at once when the only pack with changes is the SC\'s own and the setting saves it', async () => {
         await pressReset(prepared([ROWS[1]], { ownNames: ['Mine'], alwaysSave: true }), 'Reset');
 

@@ -12,6 +12,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { press, settle } from '../../../../helpers/reactSettle';
 import {
     INSTANCE_CHECK,
+    INSTANCE_CHECK_ALWAYS_SAVE,
     INSTANCE_CHECK_NO_CHANGES,
     INSTANCE_CHOICES,
 } from '../../../../helpers/clearCheckFixtures';
@@ -170,6 +171,21 @@ describe('the batch save question (P6-Q4)', () => {
         expect(
             screen.queryByRole('textbox', { name: 'Save As, Luma Test' })
         ).not.toBeInTheDocument();
+    });
+
+    // step-07 D3 (S1-a): the setting saves the SC's own datapacks without a row; one line says so.
+    it("says which of the SC's own datapacks the setting saves first, with no row for them", async () => {
+        answering(INSTANCE_CHECK_ALWAYS_SAVE);
+        await asked();
+
+        expect(screen.getByText('My Luma and My Bodea are saved first (your setting).')).toBeInTheDocument();
+        expect(screen.queryByRole('textbox', { name: 'Save As, My Luma Demo' })).not.toBeInTheDocument();
+    });
+
+    it('CONTROL: says nothing of the setting when it is off', async () => {
+        await asked();
+
+        expect(screen.queryByText(/saved first \(your setting\)/)).not.toBeInTheDocument();
     });
 
     it('hands each answer by project path: Save and Clear', async () => {

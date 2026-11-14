@@ -138,8 +138,9 @@ which lists every object the install made. It never removes by name.
   version of the same one (S7; a save's dated version is never named). With changes **"Save Your
   Changes First?"** follows: the changes counted by type, no names, with **Switch Without Saving** (or
   **Install Without Saving**) at the footer's start and **Cancel** and **Save and Switch** (or **Save
-  and Install**) at its end, and an editable "My Bodea" name when the held pack is not the SC's; with
-  none it starts at once. The start and the removal wait up to
+  and Install**) at its end, and a **Save As** name field on every pack (P5-Q7, step-07 D4): the SC's
+  own starts with its own name and saves into it, another name saves a new one; someone else's starts
+  "My Bodea"; with none it starts at once. The start and the removal wait up to
   `TIMEOUTS.DATAPACK_SAVE_THEN_WRITE` (10 minutes), since a save runs before they answer: the
   webview's 30 s default gave up on a 1 min 28 s save and said it couldn't start over an
   install that then ran (walk F105). **The run is steps** (owner, 2026-11-09, `importSteps.ts`,
@@ -221,9 +222,12 @@ which lists every object the install made. It never removes by name.
   of it, the previous one kept. There is no "Always" box (removed 2026-11-12, step 03 S6): with
   `demoBuilder.dataInstaller.changesOnRemoval` set to `save` in Settings, the SC's own pack is saved
   without asking, and the first answered save question shows a one-time tip pointing to that
-  setting (`datapack-save-question-answered`). When it is not (a team pack), saving makes a new
-  pack: the question has a **Save As** field, starting "My Luma", or "My Luma 2" when that is taken,
-  and a name it refuses says why and holds the save button. The removal is then of the saved
+  setting (`datapack-save-question-answered`). The question always has a **Save As** field (P5-Q7,
+  owner walk 2026-11-13, step-07 D4), by the batch's rules (`saveAsName.ts`): on the SC's own pack it
+  starts with its own name, which saves into it (never sent as a new name, whatever its case), and
+  another name saves a new datapack; on a pack that is not theirs (a team pack) it starts "My Luma",
+  or "My Luma 2" when that is taken. A name that is empty or another of the SC's is refused, says why
+  and holds the save button. The removal is then of the saved
   version, since the install record moved onto it. A save that fails removes nothing. A read that
   fails still asks, saying "Your changes couldn't be checked." in place of the counts. A project
   reset or an Edit that removes the pack saves first without a second question when the pack is the
@@ -236,14 +240,17 @@ which lists every object the install made. It never removes by name.
   unticked, offered only when the project has a datapack Demo Builder installed and a Commerce
   backend, and its sentence says the data stays in Commerce unless removed. Ticked, the data comes
   out FIRST, through the reset's own removal and its changes question above; if it does not all
-  come out, the delete stops and the project is kept, since deleting it would leave the data with no
-  record. Delete Selected asks the same per project, as Reset Selected does: when a pack whose data
+  come out, or the removal left part in Commerce on purpose (the line names what, in the engine's
+  note, step-07 D1), the delete stops and the project is kept, since deleting it would leave the data
+  with no record. Delete Selected asks the same per project, as Reset Selected does: when a pack whose data
   goes has changes, the red button runs into **Save Your Changes First?** (step-05 S1, J7-2), a row
   per datapack under **Datapack** and **Save As**, each a filled-in name (the SC's own starts with
   its own name and saves into it; someone else's starts "My Bodea"), then **Reset/Delete Without
   Saving**, **Cancel** or **Save and Reset/Delete**. The SC's own is left out when
-  `changesOnRemoval` saves it; a pack whose changes could not be read keeps its data and is not
-  asked about. `delete_project` takes `removeData` with `changes` and `saveAs`. A project delete never
+  `changesOnRemoval` saves it, and one line under the table names it: "My Luma is saved first (your
+  setting)." (step-07 D3). With no save window at all (only the SC's own packs, the setting on),
+  each run row says where its changes went: "Saved to My Luma." (owner, 2026-11-14). A pack whose
+  changes could not be read keeps its data and is not asked about. `delete_project` takes `removeData` with `changes` and `saveAs`. A project delete never
   deletes a datapack: that is the library's Remove.
 - **A pack it has no record of** (one the service installed, or one installed from
   another project) is refused, and nothing is removed (owner, 2026-10-30, step 14

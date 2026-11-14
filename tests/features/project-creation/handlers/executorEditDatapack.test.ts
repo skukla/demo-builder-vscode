@@ -7,7 +7,7 @@
 
 jest.mock('@/features/eds/services/reset/edsResetSampleData', () => ({
     beginSampleDataRemovalCheck: jest.fn().mockReturnValue(Promise.resolve(true)),
-    removeProjectSampleData: jest.fn().mockResolvedValue(undefined),
+    removeProjectSampleDataOutcome: jest.fn().mockResolvedValue({}),
     // The Save As question a removal asks when the demo's pack is not the SC's: never shown here.
     askSaveAsNameWith: jest.fn(() => jest.fn()),
 }));
@@ -24,8 +24,9 @@ jest.mock('@/features/project-creation/services/catalogMenuPhase', () => ({
 
 import {
     beginSampleDataRemovalCheck,
-    removeProjectSampleData,
+    removeProjectSampleDataOutcome,
 } from '@/features/eds/services/reset/edsResetSampleData';
+import type { DatapackRemoval } from '@/features/eds/services/reset/resetDatapackStep';
 import {
     applyDatapackChange,
     planDatapackChange,
@@ -36,8 +37,11 @@ import {
     rewriteCatalogMenuPhase,
 } from '@/features/project-creation/services/catalogMenuPhase';
 import { executeCatalogPrewarmPhase } from '@/features/project-creation/services/catalogPrewarmPhase';
+import { PACK_NAMES_KEY } from '@/features/data-installer/services/packNames';
 import type { Project } from '@/types/base';
+import type { HandlerContext } from '@/types/handlers';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
+import { LEFT_NOTE, REMOVAL_LEFT_IN_STORE } from '../../../helpers/datapackRemovalFixtures';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockProject } from '../../../helpers/projectFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
@@ -53,6 +57,11 @@ function setup(overrides: Partial<Project> = {}) {
 }
 
 const toNew: ProjectCreationConfig = { projectName: 'justrite', datapack: NEW };
+/** The library's pack names as remembered in global state (`packNames.ts`). */
+function remembering(context: ReturnType<typeof setup>['context'], names: Record<string, string>): void {
+    (context.context.globalState.get as jest.Mock).mockImplementation((key: string) => (key === PACK_NAMES_KEY ? names : undefined));
+}
+const mockedRemove = removeProjectSampleDataOutcome as jest.MockedFunction<typeof removeProjectSampleDataOutcome>;
 
 beforeEach(() => jest.clearAllMocks());
 
@@ -105,8 +114,9 @@ describe('applyDatapackChange', () => {
         const { context, project, progress, stateManager } = setup();
         // The removal reads the pack off the project: it must still be the old one.
         let removed: unknown;
-        (removeProjectSampleData as jest.Mock).mockImplementationOnce(async (p: Project) => {
+        mockedRemove.mockImplementationOnce(async (p: Project) => {
             removed = p.datapack;
+            return {};
         });
 
         await applyDatapackChange(context, project, toNew, { changes: true, removeOld: true }, progress);
@@ -125,9 +135,10 @@ describe('applyDatapackChange', () => {
     // The new pack is recorded after it, so the Edit's own save is the one that names it.
     it('still records the new pack when the removal cleared the old one', async () => {
         const { context, project, progress, stateManager } = setup();
-        (removeProjectSampleData as jest.Mock).mockImplementationOnce(async (p: Project, c: typeof context) => {
+        mockedRemove.mockImplementationOnce(async (p: Project, c: HandlerContext) => {
             p.datapack = undefined;
             await c.stateManager.saveProject(p);
+            return {};
         });
         const named: Array<Project['datapack']> = [];
         stateManager.saveProject.mockImplementation(async (p: Project) => {
@@ -160,7 +171,7 @@ describe('applyDatapackChange', () => {
 
         await applyDatapackChange(context, project, toNew, { changes: true, removeOld: false }, progress);
 
-        expect(removeProjectSampleData).not.toHaveBeenCalled();
+        expect(mockedRemove).not.toHaveBeenCalled();
         expect(executeSampleDataPhase).toHaveBeenCalled();
         // The old categories still stand, so their pages do too: the write only adds.
         expect(executeCatalogMenuPhase).toHaveBeenCalledWith(context, project, progress);
@@ -201,5 +212,58 @@ describe('applyDatapackChange', () => {
         expect(project.datapack).toBeUndefined();
         expect(stateManager.saveProject).toHaveBeenCalledWith(project);
         expect(executeSampleDataPhase).not.toHaveBeenCalled();
+    });
+
+    // step-07 D2 (R1-b), owner Q1: the old pack's data did not all come out, so the datapack part
+    // stops; the rest of the Edit stands and the line goes into its warnings.
+    // Owner 2026-11-14: short, cause first, naming the datapack as the SC knows it.
+    it.each<[string, DatapackRemoval, string]>([
+        ['failed', { kept: 'Commerce refused 2 products.' }, "CitiSignal couldn't be uninstalled, so the datapack is still CitiSignal: Commerce refused 2 products."],
+        ['stopped partway', { kept: 'Categories could not be removed.', partly: true }, 'Part of CitiSignal was uninstalled, so the datapack is still CitiSignal: Categories could not be removed.'],
+        ['went unanswered', { kept: 'You changed 2 things since it was installed. They were not answered.', unanswered: true }, "CitiSignal couldn't be uninstalled, so the datapack is still CitiSignal: You changed 2 things since it was installed. They were not answered."],
+        ['left part in Commerce', REMOVAL_LEFT_IN_STORE, `Part of CitiSignal was left in Commerce, so the datapack is still CitiSignal: ${LEFT_NOTE}`],
+        ['left part in Commerce with no note', { leftInStore: true }, 'Part of CitiSignal was left in Commerce, so the datapack is still CitiSignal.'],
+    ])('keeps the old pack recorded and installs nothing when the removal %s', async (_case, removal, line) => {
+        const { context, project, progress, stateManager } = setup();
+        remembering(context, { citisignal: 'CitiSignal' });
+        mockedRemove.mockResolvedValueOnce(removal);
+
+        const warning = await applyDatapackChange(context, project, toNew, { changes: true, removeOld: true }, progress);
+
+        expect(warning).toBe(line);
+        expect(project.datapack).toStrictEqual(OLD);
+        expect(stateManager.saveProject).not.toHaveBeenCalled();
+        expect(executeSampleDataPhase).not.toHaveBeenCalled();
+        expect(executeCatalogPrewarmPhase).not.toHaveBeenCalled();
+        expect(rewriteCatalogMenuPhase).not.toHaveBeenCalled();
+        expect(executeCatalogMenuPhase).not.toHaveBeenCalled();
+    });
+
+    it("names the old pack by its id when its name was never read", async () => {
+        const { context, project, progress } = setup();
+        mockedRemove.mockResolvedValueOnce({ kept: 'Commerce refused 2 products.' });
+
+        const warning = await applyDatapackChange(context, project, toNew, { changes: true, removeOld: true }, progress);
+
+        expect(warning).toBe("citisignal couldn't be uninstalled, so the datapack is still citisignal: Commerce refused 2 products.");
+    });
+
+    // Owner 2026-11-14 (item 6): no website and store view was ever recorded, so nothing was
+    // installed: nothing to remove, and the Edit switches the datapack with no line.
+    it('switches the datapack with no line when the old one was never installed (no install target)', async () => {
+        const { context, project, progress } = setup();
+        mockedRemove.mockResolvedValueOnce({ kept: 'No website and store view were recorded for this project.', noTarget: true });
+
+        const warning = await applyDatapackChange(context, project, toNew, { changes: true, removeOld: true }, progress);
+
+        expect(warning).toBeUndefined();
+        expect(project.datapack).toStrictEqual(NEW);
+        expect(executeSampleDataPhase).toHaveBeenCalledWith(context, project, progress);
+    });
+
+    it('CONTROL: says nothing when the old data all came out', async () => {
+        const { context, project, progress } = setup();
+
+        await expect(applyDatapackChange(context, project, toNew, { changes: true, removeOld: true }, progress)).resolves.toBeUndefined();
     });
 });

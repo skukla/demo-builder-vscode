@@ -24,9 +24,11 @@ import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
 import type { ReportStage } from '@/core/vscode/withOperationProgress';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import {
+    datapackLeftSomething,
     datapackStepLine,
     FailedAfterDatapack,
     removeAnsweredDatapack,
+    savedIntoLine,
     type AnsweredDatapack,
     type DatapackRemoval,
 } from '@/features/eds/services/reset/resetDatapackStep';
@@ -330,6 +332,8 @@ export interface AnsweredResetOutcome {
      * all come out; on a failure it returns after the datapack step, what that step did to the store.
      */
     warnings?: string[];
+    /** A plain note on a done row: where the changes went first (owner, 2026-11-14). */
+    note?: string;
 }
 
 /** The outcome as the row reads it: a success's `error` is something it finished around. */
@@ -337,9 +341,10 @@ function asRowOutcome({ success, error }: ProjectResetOutcome, removal: Datapack
     const warnings: string[] = [];
     if (success && error) warnings.push(error);
     // A clean removal is said only beside a failure: the SC then needs to know the store was emptied.
-    if (removal && (!success || removal.kept !== undefined)) warnings.push(datapackStepLine(removal));
+    if (removal && (!success || datapackLeftSomething(removal))) warnings.push(datapackStepLine(removal));
     const reason = !success && error ? { error } : {};
-    return { success, ...reason, ...(warnings.length > 0 ? { warnings } : {}) };
+    const note = success ? savedIntoLine(removal) : undefined;
+    return { success, ...reason, ...(warnings.length > 0 ? { warnings } : {}), ...(note ? { note } : {}) };
 }
 
 /**

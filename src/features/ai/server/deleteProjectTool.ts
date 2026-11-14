@@ -52,7 +52,7 @@ export function registerDeleteProjectTool(
             needsAuth: false,
             annotations: { readOnlyHint: false, destructiveHint: true },
             description:
-                `Permanently delete a project: its local files, optionally (removeData:true) its datapack's data in Commerce first, which datapackData reports (the user's changes in it are saved into their own pack; when the pack is not theirs it answers code CHANGES_NEED_ANSWER and deletes nothing until changes is keep with saveAs, or drop; changes:"drop" loses the user's changes in any pack, their own included; a removal that does not finish deletes nothing), and optionally its GitHub repo and DA.live site (which also unpublishes the storefront and removes its product pages; productPages in the result says what happened to them; daLiveSite.publishSummary says whether the pages are gone, checked on the live host, or that it could not tell). When the pages are still live it stops: nothing else is deleted, the project is kept, and stopped says why. Irreversible. Requires confirm:true and confirmName="<project name>".`,
+                `Permanently delete a project: its local files, optionally (removeData:true) its datapack's data in Commerce first, which datapackData reports (the user's changes in it are saved into their own pack; when the pack is not theirs it answers code CHANGES_NEED_ANSWER and deletes nothing until changes is keep with saveAs, or drop; changes:"drop" loses the user's changes in any pack, their own included; a removal that does not finish, or that leaves part in Commerce, deletes nothing and error names what was left), and optionally its GitHub repo and DA.live site (which also unpublishes the storefront and removes its product pages; productPages in the result says what happened to them; daLiveSite.publishSummary says whether the pages are gone, checked on the live host, or that it could not tell). When the pages are still live it stops: nothing else is deleted, the project is kept, and stopped says why. Irreversible. Requires confirm:true and confirmName="<project name>".`,
             inputSchema: {
                 name: z.string().describe('Name of the project to delete'),
                 confirm: z.boolean().optional().describe('Must be true to proceed'),
@@ -185,9 +185,9 @@ async function removeDataFirst(ctx: HandlerContext, project: Project, args: Data
         return Promise.resolve(undefined);
     };
     const answer = changesAnswer(args);
-    const why = await removeDataBeforeDelete(ctx, project, (stage) => reportPhase(stage), answer === undefined ? askName : { given: answer });
+    const { stopped } = await removeDataBeforeDelete(ctx, project, (stage) => reportPhase(stage), answer === undefined ? askName : { given: answer });
     if (unanswered !== undefined) return { stop: changesNeedAnswer(unanswered, 'deleted') };
-    return why ? { stop: { error: why } } : { datapackData: { removed: true } };
+    return stopped ? { stop: { error: stopped } } : { datapackData: { removed: true } };
 }
 
 /** A checkbox argument: a boolean as given, anything else left for the setting to decide. */

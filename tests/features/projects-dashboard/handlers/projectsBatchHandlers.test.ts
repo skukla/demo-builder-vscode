@@ -206,6 +206,26 @@ describe("runProjectsBatch's storefront reset, finished around something", () =>
         await expect(runReset(createMockHandlerContext(), project, { path: '/p', removeDatapack: false }, jest.fn())).resolves.toStrictEqual({ success: false, error: 'Sign in to DA.live.' });
     });
 
+    // Owner 2026-11-14 (item 5): changes saved into the SC's own pack first are said on the row.
+    it("says where the changes were saved when the SC's own pack took them", async () => {
+        const runReset = await wiredRunReset();
+        (resetEdsProjectWithUI as jest.Mock).mockResolvedValue({ success: true, datapackRemoval: { savedInto: 'My Luma' } });
+
+        const result = await runReset(createMockHandlerContext(), createMockProject({ selectedStack: 'eds-paas' }), { path: '/p', removeDatapack: true }, jest.fn());
+
+        expect(result).toStrictEqual({ success: true, note: 'Saved to My Luma.' });
+    });
+
+    // Review 2026-11-14 (item 8): a failed reset that kept the content says so too.
+    it('says the content was kept on a reset that failed', async () => {
+        const runReset = await wiredRunReset();
+        (resetEdsProjectWithUI as jest.Mock).mockResolvedValue({ success: false, error: 'pipeline died', contentKept: "Content kept: the demo's pages can't be reached." });
+
+        const result = await runReset(createMockHandlerContext(), createMockProject({ selectedStack: 'eds-paas' }), { path: '/p', removeDatapack: false }, jest.fn());
+
+        expect(result).toStrictEqual({ success: false, error: 'pipeline died', warnings: ["Content kept: the demo's pages can't be reached."] });
+    });
+
     it('says what became of the datapack on a reset that failed after uninstalling it', async () => {
         const runReset = await wiredRunReset();
         (resetEdsProjectWithUI as jest.Mock).mockResolvedValue({ success: false, error: 'pipeline died', datapackRemoval: {} });

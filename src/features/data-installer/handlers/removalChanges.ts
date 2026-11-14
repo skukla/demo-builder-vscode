@@ -51,6 +51,8 @@ export interface SavedFirst {
     id: DatapackId;
     dataTypes: string[];
     note: string;
+    /** The pack saved into, as the SC knows it; a reset's row names it (owner, 2026-11-14). */
+    displayName?: string;
 }
 
 const isSamePack = (a: DatapackId, b: DatapackId): boolean => a.name === b.name && a.version === b.version;
@@ -127,7 +129,8 @@ async function saveFirst(context: HandlerContext, request: RemovalChangesRequest
     const result = await saveToPack(context, opened, into, report);
     if (!result.success) return { response: notSaved(result) };
     const data = result.data as SaveStoreChangesResult;
-    return { saved: { id: { name: data.datapackName, version: data.version }, dataTypes: Object.keys(data.counts), note: data.message } };
+    const named = data.displayName ? { displayName: data.displayName } : {};
+    return { saved: { id: { name: data.datapackName, version: data.version }, dataTypes: Object.keys(data.counts), note: data.message, ...named } };
 }
 
 /** A save that stopped: nothing is removed, and the confirm can say why. */

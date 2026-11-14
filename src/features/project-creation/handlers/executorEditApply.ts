@@ -163,8 +163,11 @@ async function applyInPlace(
         })),
     );
     // After the integrations, as in creation: a pack lands on the finished project.
-    await applyDatapackChange(context, project, config, datapack, progressTracker, packageChange.resets);
-    await applyPackageChange(context, project, config, packageChange, progressTracker);
+    // A datapack part that stopped says why; the rest of the Edit stands (owner Q1).
+    const datapackStopped = await applyDatapackChange(context, project, config, datapack, progressTracker, packageChange.resets);
+    if (datapackStopped) warnings.push(datapackStopped);
+    // What the storefront reset finished around joins the Edit's warnings (owner, 2026-11-14).
+    warnings.push(...(await applyPackageChange(context, project, config, packageChange, progressTracker)));
     project.lastModified = new Date();
     await context.stateManager.saveProject(project);
     if (warnings.length > 0) void vscode.window.showWarningMessage(warnings.join(' '));

@@ -59,7 +59,7 @@ beforeEach(() => {
         previewFailed: 0,
     });
     mockDeleteAdminApiKey.mockResolvedValue({ success: true });
-    mockRemoveDataBeforeDelete.mockResolvedValue(undefined);
+    mockRemoveDataBeforeDelete.mockResolvedValue({});
 });
 
 describe('CRITERION 1 — an UNTICKED resource is not destroyed', () => {
@@ -484,7 +484,10 @@ describe("the datapack's data", () => {
         const ctx = context();
         const project = edsProject();
         const order: string[] = [];
-        mockRemoveDataBeforeDelete.mockImplementation(async () => { order.push('data'); });
+        mockRemoveDataBeforeDelete.mockImplementation(async () => {
+            order.push('data');
+            return {};
+        });
         mockDeleteRepository.mockImplementation(async () => { order.push('repository'); });
         mockRm.mockImplementation(async () => { order.push('files'); });
 
@@ -497,12 +500,23 @@ describe("the datapack's data", () => {
 
     it('keeps the project, and everything online, when the data does not all come out', async () => {
         const why = "Its datapack's data was not removed, so the project was kept: Commerce refused 2 products.";
-        mockRemoveDataBeforeDelete.mockResolvedValue(why);
+        mockRemoveDataBeforeDelete.mockResolvedValue({ stopped: why });
 
         const result = await deleteAnswered(context(), edsProject(), SERVICES, ['github', 'datapackData']);
 
         expect(mockDeleteRepository).not.toHaveBeenCalled();
         expect(mockRm).not.toHaveBeenCalled();
         expect(result.stopped).toBe(why);
+    });
+
+    // Owner 2026-11-14 (item 5): where the changes went first reaches the batch row.
+    it('hands back where the changes were saved, and deletes', async () => {
+        mockRemoveDataBeforeDelete.mockResolvedValue({ saved: 'Saved to My Luma.' });
+
+        const result = await deleteAnswered(context(), edsProject(), SERVICES, ['github', 'datapackData']);
+
+        expect(mockRm).toHaveBeenCalled();
+        expect(result).toMatchObject({ saved: 'Saved to My Luma.' });
+        expect(result.stopped).toBeUndefined();
     });
 });

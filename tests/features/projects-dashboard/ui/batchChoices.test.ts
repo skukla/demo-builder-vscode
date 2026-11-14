@@ -15,6 +15,7 @@ import {
     removeColumnState,
     resetAnswers,
     saveRows,
+    savedBySetting,
     toggleColumn,
     toggleDeleteTick,
     toggleRemoveColumn,
@@ -158,6 +159,16 @@ describe('the save question', () => {
     // Switch does (`mustAsk`); someone else's still asks, since a save needs a name.
     it("leaves out the SC's own pack when the setting saves it without asking", () => {
         expect(saveRows(RESET_ROWS, ALL, true).map((row) => row.path)).toStrictEqual(['/p/a']);
+    });
+
+    // step-07 D3 (S1-a): the packs the setting saves first, named once each in the save question's line.
+    it("names the SC's own removed packs the setting saves first, once each, and none with it off", () => {
+        const twice: BatchResetRow[] = [...RESET_ROWS, { path: '/p/f', name: asDisplayName('F'), datapack: { name: asDisplayName('Mine'), changes: 'saves' } }];
+        const ticks = initialRemoveTicks(twice);
+
+        expect(savedBySetting(twice, ticks, true)).toStrictEqual(['Mine']);
+        expect(savedBySetting(twice, ticks, false)).toStrictEqual([]);
+        expect(savedBySetting(twice, { ...ticks, '/p/b': false, '/p/f': false }, true)).toStrictEqual([]);
     });
 
     it("starts the SC's own with its own name, someone else's with the first free \"My <Pack>\"", () => {

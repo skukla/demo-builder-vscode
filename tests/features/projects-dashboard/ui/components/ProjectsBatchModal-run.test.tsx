@@ -99,6 +99,17 @@ describe('ProjectsBatchModal: the run', () => {
         expect(within(c).getByText('Deleting the DA.live site')).toHaveClass('work-row-detail');
     });
 
+    // Owner 2026-11-14 (item 5): a done row says where its changes were saved, in plain text, not orange.
+    it('says under a finished row where its changes were saved, not as a warning', async () => {
+        await running();
+        await push('projectsBatchRow', { path: '/p/a', state: 'done', message: 'Saved to My Luma.' });
+
+        const [a] = Array.from(document.querySelectorAll('.work-row')) as HTMLElement[];
+        expect(within(a).getByText('Saved to My Luma.')).toBeInTheDocument();
+        expect(a.querySelector('.text-notice')).toBeNull();
+        expect(rows()[0]).toEqual(['A', 'done']);
+    });
+
     // Org headings only when a batch spans several orgs (owner, 2026-11-04): one org needs none.
     it('heads each org of a reset only when there is more than one', async () => {
         const reset: PrepareEnvelope = {

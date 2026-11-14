@@ -27,6 +27,7 @@ import {
 } from './edsResetUI.testUtils';
 import { confirmSampleDataRemoval } from '@/features/eds/services/reset/edsResetSampleData';
 import { resetCaveats } from '@/features/eds/services/reset/edsResetParams';
+import { LEFT_NOTE, RESULT_LEFT_IN_STORE } from '../../../../helpers/datapackRemovalFixtures';
 import type { SampleDataProgress } from '@/features/data-installer/services/sampleDataInstallDeps';
 import type { Project, ProjectStatus } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
@@ -216,6 +217,15 @@ describe('the removal report', () => {
 
         expect(result.datapackRemoval).toStrictEqual({ kept: 'The datapack was not all uninstalled.', partly: true });
         expect(resetCaveats(result)).toStrictEqual(['Part of its datapack was uninstalled: The datapack was not all uninstalled.']);
+    });
+
+    // Review 2026-11-14 (item 7): part left in Commerce on purpose is said on the row, with the note.
+    it('tells the row part of the datapack was left in Commerce, and what', async () => {
+        mockedRemove.mockResolvedValue(RESULT_LEFT_IN_STORE);
+
+        const result = await run();
+
+        expect(resetCaveats(result)).toStrictEqual([`Part of its datapack was left in Commerce: ${LEFT_NOTE}`]);
     });
 
     it('CONTROL: tells the row none of it came out when no type was removed', async () => {
