@@ -404,6 +404,14 @@ An audit found five walk answers that contradicted earlier decisions. The owner'
 - A reset where no website or store view was ever recorded leaves the project naming its datapack
   (owner, 2026-11-14): if the website was cleared after an install, forgetting it would hide data still
   in Commerce. Delete, Reset, Edit and Clear treat such a removal as nothing to remove.
+- A removal never reaches the wrong Commerce instance (owner, 2026-11-14, "Both, in beta.153"):
+  - the install record notes the Commerce instance it went into, and the record's website and store
+    view win over today's settings (the record is where the data is);
+  - Uninstall, Delete, Reset, Clear and Edit stop when the project now points at a different instance:
+    "Luma is installed on another Commerce instance. Switch the project back to remove it." Installs
+    recorded before this keep today's behaviour;
+  - Configure warns when the Commerce connection changes while a datapack is installed, and offers to
+    uninstall it first.
 - Already on track: the reset's "Content kept" row is built amber; Q6 makes kept-on-purpose green
   (slice I3).
 

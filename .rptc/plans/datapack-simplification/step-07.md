@@ -232,6 +232,15 @@ See decisions.md "Back on track". Plan changes:
   changed; Restore goes back to a previous state).
 - D-follow-up: rewrite `demoBuilder.dataInstaller.changesOnRemoval`'s description (words to the owner).
 
+## D6 (owner 2026-11-14): removals go where the data went
+- The removal target is the install record's website/store view first, today's codes only as fallback
+  (E-group built it the other way round, bb2d03e27).
+- The install record notes the Commerce instance (the backend's identity, from the project's commerce
+  config); a removal on a different instance stops with "Luma is installed on another Commerce instance.
+  Switch the project back to remove it." Older records without it keep today's behaviour.
+- Configure: changing the Commerce connection while a datapack is installed warns first and offers to
+  uninstall it (house confirm window; words for the owner to approve at the screenshot pass).
+
 ## Risks
 - Cloud operations: E1, E2, F2's install half; live cycles with the owner's go, through MCP tools.
 - Reversibility: F2's Delete removes exactly what the load created.
