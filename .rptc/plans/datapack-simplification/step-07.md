@@ -213,6 +213,20 @@ Win1 to Win5 (Win5 may go first: test-only). Live cycles run once, after the bui
 - Q8 Install window cancelled after Install from File: the datapack stays in My Datapacks.
 - I2 line: "My Luma was uninstalled. Retry installs Bodea."
 
+## Back on track (owner, 2026-11-14)
+See decisions.md "Back on track". Plan changes:
+- Win3: Add a Demo and Add Integration open a tall stage as its own window (no body scrolling); a long
+  list may scroll in its own pane.
+- P3: Create where Save would be; no line.
+- F1: Keep Both pre-fills "My Luma 2" (`copyName` follows J7-2's taken-name numbering).
+- P2 becomes U1: "Update Luma" in the flyout for an updated datapack (writes only what the datapack
+  changed, keeps the SC's edits), hover "Newer version available", with a type choice. Prototype first,
+  owner walks it, then build; verify in the engine that an install skips rows edited since (the
+  install record's fingerprints) before building. Live cycle owed.
+- Agents keep chosen-type installs (step-03 Q2 stands), stated in the guide with the additive use case.
+- Win1 also fixes the batch window growing when its questions replace the wait (319px to 446px).
+- D-follow-up: rewrite `demoBuilder.dataInstaller.changesOnRemoval`'s description (words to the owner).
+
 ## Risks
 - Cloud operations: E1, E2, F2's install half; live cycles with the owner's go, through MCP tools.
 - Reversibility: F2's Delete removes exactly what the load created.

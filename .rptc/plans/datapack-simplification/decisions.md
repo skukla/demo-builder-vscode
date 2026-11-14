@@ -361,6 +361,29 @@ answer that needs building; the rest confirm what is built.
   row's question waits; a question under its row) and move both onto it. New work.
 - The hosting check covers windows built on the layouts. New work.
 
+### Back on track (owner, 2026-11-14): walk answers checked against the earlier decisions
+An audit found five walk answers that contradicted earlier decisions. The owner's rulings:
+- Add a Demo and Add Integration do NOT scroll: a stage much taller than the first opens as its own
+  window at its own size (rule 14; J1.1-J1.3 failed "sized to the first step, later content scrolls" as
+  "the worst possible experience"). A long list may scroll inside its own pane (J1-3c). Replaces the
+  walk's "taller stages scroll", which the session had wrongly said the rules allowed (it cited an
+  older overview line the J1 walk superseded).
+- No install record: the header offers Create where Save would be, with NO explaining line (rule 6,
+  J3-2, rule 4). Replaces the walk's line.
+- Keep Both names the copy by the house pattern: "My Luma 2" (J7-2), not "My Luma Copy".
+- Restore is always the whole datapack. New flyout action "Update Luma" for an updated datapack: it
+  writes only what the datapack changed and keeps the SC's own edits (the install record's "edited
+  since" fingerprints); the amber dot's hover for this case is "Newer version available" (J4-1's
+  pattern). Replaces "Restore installs it" and the hover "Luma updated Nov 12".
+- A datapack is built out additively, so applying chosen parts is allowed: agents keep installing chosen
+  types (stated in their guide), and the screen's Update Luma gets a type choice, in beta.153. New
+  design: prototype it and walk it before building (the 2026-11-11 rule: conventions are decided in
+  prototypes, not code).
+- Put back in the plan: the batch window growing when its questions replace the wait (319px to 446px,
+  rule 14) goes into the batch-run slice; the always-save setting's description is rewritten.
+- Already on track: the reset's "Content kept" row is built amber; Q6 makes kept-on-purpose green
+  (slice I3).
+
 ## Open
 
 - **J6-2, the failure reason in the flyout**: kept for now, provisional. Owner 2026-11-12: "We can
