@@ -571,8 +571,9 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
         sessionGrant: false,
     },
     mark_team_datapack: {
-        action: 'Mark or unmark a Demo Builder datapack',
-        consequence: 'Marked, this datapack is listed under Demo Builder Datapacks for everyone it is shared with; unmarked, under Community Datapacks.',
+        action: 'Mark a Demo Builder datapack',
+        consequence:
+            'This datapack is listed under Demo Builder Datapacks for everyone it is shared with, and can no longer be deleted. An agent cannot take the mark off.',
         target: ['datapackName', 'team'],
         sessionGrant: false,
     },

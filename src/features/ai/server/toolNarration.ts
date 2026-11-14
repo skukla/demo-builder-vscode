@@ -274,7 +274,7 @@ export const TOOL_NARRATION: Record<string, string> = {
     load_datapack_zip: 'Adding a datapack from a file',
     delete_library_datapack: 'Deleting a datapack',
     rename_datapack: 'Renaming the datapack',
-    // "Mark one of your own datapacks ... as a Demo Builder datapack, or take the mark off".
+    // "Mark one of your own datapacks ... as a Demo Builder datapack".
     mark_team_datapack: 'Marking a Demo Builder datapack',
     // "Share one of your own datapacks in My Datapacks, or stop sharing it".
     share_datapack: 'Changing who can use a datapack',
@@ -364,7 +364,7 @@ const NAMED_NARRATION: Readonly<Record<string, NamedForm>> = {
     update_datapack: naming(['datapackName'], (name) => `Updating ${name}`),
     delete_library_datapack: naming(['datapackName'], (name) => `Deleting ${name}`),
     rename_datapack: naming(['datapackName'], (name) => `Renaming the ${name} pack`),
-    mark_team_datapack: naming(['datapackName'], (name) => `Changing whether ${name} is a Demo Builder datapack`),
+    mark_team_datapack: naming(['datapackName'], (name) => `Marking ${name} as a Demo Builder datapack`),
     share_datapack: naming(['datapackName'], (name) => `Changing who can use the ${name} pack`),
     remove_block_from_library: naming(['blockId'], (block) => `Removing the ${block} block`),
     set_site_admin: naming(['email'], (email) => `Changing ${email}'s access`),

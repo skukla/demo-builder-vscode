@@ -19,8 +19,8 @@ import {
     groupStoreViewsByWebsite,
 } from '../services/importScopeDiscovery';
 import { installFailedOf } from '../services/installFailure';
-import { resolveInstallTarget } from '../services/sampleDataInstall';
 import { heldDisplayName } from './libraryWriter';
+import { resolveInstallTarget } from '@/features/data-installer/installTarget';
 import { discoverStoreStructure } from '@/features/eds/services/commerceStoreDiscovery';
 import type { Project } from '@/types/base';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';

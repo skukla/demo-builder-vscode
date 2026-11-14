@@ -195,7 +195,7 @@ describe('every named form says what it acts on, from the argument that names it
         ['delete_page', { path: '/drafts/spring-sale' }, 'Deleting /drafts/spring-sale'],
         ['reset_datapack', { datapackName: 'Bodea B2B' }, 'Uninstalling Bodea B2B'],
         ['share_datapack', { datapackName: 'acme-1a2b3c' }, 'Changing who can use the acme-1a2b3c pack'],
-        ['mark_team_datapack', { datapackName: 'acme-1a2b3c' }, 'Changing whether acme-1a2b3c is a Demo Builder datapack'],
+        ['mark_team_datapack', { datapackName: 'acme-1a2b3c' }, 'Marking acme-1a2b3c as a Demo Builder datapack'],
         ['delete_library_datapack', { datapackName: 'Bodea B2B' }, 'Deleting Bodea B2B'],
         ['rename_datapack', { datapackName: 'acme-demo-1a2b3c' }, 'Renaming the acme-demo-1a2b3c pack'],
         ['start_datapack_import', { datapackName: 'Bodea B2B' }, 'Installing Bodea B2B'],

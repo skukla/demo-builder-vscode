@@ -30,8 +30,9 @@
  * and the list opens on the same view. Recommended keeps the chosen pack, so a colleague's pack a
  * project arrived with, or a demo asks for, is on view.
  *
- * Optional throughout: choosing nothing is a valid project, which is why the
- * sub-step is never locked and never blocks Continue (see `commerceSections`).
+ * Optional throughout: choosing nothing is a valid project and never blocks Continue. A chosen
+ * datapack with no website and store view for the backend does, since the build would skip its
+ * install (`datapackGate.ts`, step-07 W1).
  *
  * @module features/project-creation/ui/steps/SampleDataStep
  */

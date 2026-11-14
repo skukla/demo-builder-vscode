@@ -67,3 +67,42 @@ describe('useCatalogShow elsewhere', () => {
         expect(empty.result.current.elsewhere).toBeUndefined();
     });
 });
+
+// Owner, 2026-11-14: with Demo Builder's datapack store down, Recommended (yours and Demo
+// Builder's) is empty while the banner says "Only the Data Installer's are listed." So the list
+// opens on Data Installer Datapacks then, and nothing sticks: with the store back, Recommended.
+describe('useCatalogShow, opening with the datapack store down', () => {
+    const installers: DatapackSummary = { ...pack('luma', '1'), store: 'installer', mine: undefined };
+    const storeDown: CatalogPage = { ...pageOf(installers), storeMissing: true };
+    const open = (page: CatalogPage) =>
+        renderHook(({ p }) => useCatalogShow({ page: p, installedPacks: NONE, held: undefined, query: '', heldFirst: true }), {
+            initialProps: { p: page },
+        });
+
+    it("opens on the Data Installer's datapacks, so the list holds what the banner says", () => {
+        const { result } = open(storeDown);
+
+        expect(result.current.show).toBe('installer');
+        expect(names(result.current.shown)).toEqual(['luma']);
+    });
+
+    it('opens on Recommended again once the store answers', () => {
+        const { result, rerender } = open(storeDown);
+        rerender({ p: pageOf(pack('acme', '1'), installers) });
+
+        expect(result.current.show).toBe('recommended');
+    });
+
+    it("keeps Recommended when the Data Installer isn't answering either", () => {
+        const { result } = open({ ...pageOf(), storeMissing: true, installerMissing: 'no-answer' });
+
+        expect(result.current.show).toBe('recommended');
+    });
+
+    it('keeps what the SC chose while the store is down', () => {
+        const { result } = open(storeDown);
+        act(() => result.current.setShow('all'));
+
+        expect(result.current.show).toBe('all');
+    });
+});

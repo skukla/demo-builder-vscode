@@ -9,7 +9,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { groupDatapacks, isHeld, withoutLayerCards, type DatapackGroup } from '../../services/datapackCatalog';
 import type { CatalogPage } from '../../types';
-import { DEFAULT_SHOW, inShow, inShowOrder, matchesElsewhere, type CatalogShow, type ShowElsewhere } from '../catalogShow';
+import { DEFAULT_SHOW, inShow, inShowOrder, matchesElsewhere, openingShow, type CatalogShow, type ShowElsewhere } from '../catalogShow';
 import { matchesSearchFields } from '@/core/ui/hooks/useSearchFilter';
 import type { DatapackId, ProjectDatapack } from '@/types/datapack';
 
@@ -64,7 +64,8 @@ function withoutRemoved(page: CatalogPage | null | undefined, removed: readonly 
  * @returns the Show list's state and the packs to draw
  */
 export function useCatalogShow({ page, installedPacks, held, query, heldFirst }: CatalogShowOptions): CatalogShowState {
-    const [chosen, setShow] = useState<CatalogShow>(DEFAULT_SHOW);
+    // Unset until the SC picks one: until then the list follows this load (`openingShow`).
+    const [picked, setShow] = useState<CatalogShow | undefined>(undefined);
     // Kept with the page it was hidden from: the next page the screen loads has it gone for real.
     const [removed, setRemoved] = useState<{ from: typeof page; ids: DatapackId[] }>({ from: page, ids: [] });
     const hideRemoved = useCallback((id: DatapackId): void => {
@@ -74,6 +75,7 @@ export function useCatalogShow({ page, installedPacks, held, query, heldFirst }:
     // A choice that went away (the Data Installer stopped answering) falls back, rather than a list
     // showing a choice it no longer offers.
     const installerAnswered = page?.installerMissing === undefined;
+    const chosen = picked ?? openingShow(page);
     const show = chosen === 'installer' && !installerAnswered ? DEFAULT_SHOW : chosen;
     const groups = useMemo(() => {
         // A settings layer is reached from its pack's flyout, not as a demo of its own (step 09).

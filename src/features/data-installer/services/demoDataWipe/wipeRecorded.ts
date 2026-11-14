@@ -17,7 +17,7 @@ import { ATTRIBUTE_KIND, ATTRIBUTE_OPTION_KIND } from '../demoBuilderEngine/attr
 import { CATALOG_CATEGORIES_KIND, CATALOG_COMPANIES_KIND, CATALOG_KIND, CATALOG_PRODUCTS_KIND, COMPANY_KIND, CUSTOMER_GROUP_KIND, CUSTOMER_KIND } from '../demoBuilderEngine/b2bKeys';
 import type { InstallRecord } from '../demoBuilderEngine/installRecord';
 import { STORE_CONFIG_KIND } from '../demoBuilderEngine/storeConfigKind';
-import { resolveInstallTarget } from '../sampleDataInstall';
+import { resolveInstallTarget } from '@/features/data-installer/installTarget';
 import type { Project } from '@/types/base';
 
 /** What the records on the chosen websites list. */

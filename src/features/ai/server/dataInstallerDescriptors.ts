@@ -887,16 +887,17 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: false,
         description:
-            "Mark one of your own datapacks in Demo Builder's datapack store as a Demo Builder datapack, or take " +
-            'the mark off: every version. A marked datapack is listed under Demo Builder Datapacks; any other shared one under ' +
-            'Community Datapacks. It does not share the datapack: share_datapack does that. The store refuses anyone ' +
-            'not on its list of Demo Builder datapack owners. Ask the user first.',
+            "Mark one of your own datapacks in Demo Builder's datapack store as a Demo Builder datapack: every " +
+            'version. A marked datapack is listed under Demo Builder Datapacks; any other shared one under ' +
+            'Community Datapacks. A marked datapack cannot be deleted, and an agent cannot take the mark off: ' +
+            'team:false is refused. It does not share the datapack: share_datapack does that. The store refuses ' +
+            'anyone not on its list of Demo Builder datapack owners. Ask the user first.',
         map: importHandlers,
         type: 'mark-team-datapack',
         confirm: true,
         inputSchema: {
             datapackName: z.string().describe('The pack name from find_datapacks (one of yours)'),
-            team: z.boolean().describe('true to mark it as a Demo Builder datapack, false to take the mark off'),
+            team: z.boolean().describe('true to mark it as a Demo Builder datapack; false is refused for agents'),
         },
     },
 ];

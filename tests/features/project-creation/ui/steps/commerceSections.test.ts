@@ -520,15 +520,19 @@ describe('commerceSectionStates — Catalog is reachable while its own fields ar
  * Placement follows the data. A pack seeds the COMMERCE backend, so the choice
  * belongs beside the backend it targets.
  *
- * The one rule worth pinning: it is NEVER LOCKED. Every other config sub-step
- * chains — Business Structure needs Connection, Catalog needs a store view —
- * because each reads through the live connection. This one does not. The catalog
- * of packs comes from the Data Installer service, not from the instance, and
- * nothing is installed during the wizard at all. Locking it behind a reachable
- * backend would gate a choice that has no dependency on one.
+ * It is never locked behind the CONNECTION. Every other config sub-step chains —
+ * Business Structure needs Connection, Catalog needs a store view — because each
+ * reads through the live connection. This one does not: the catalog of packs is
+ * not read from the instance. Its one lock is a chosen datapack with no website
+ * and store view, which the build would skip (step-07 W1; pinned in
+ * commerceSections-datapackTarget.test.ts).
  */
 describe('commerceSectionStates — the sample data sub-step', () => {
     const ctx = { isAccs: false, signedIn: false };
+    /** A website and store view for the PaaS backend: where a chosen pack installs. */
+    const TARGET = {
+        [PAAS]: { ADOBE_COMMERCE_WEBSITE_CODE: 'base', ADOBE_COMMERCE_STORE_VIEW_CODE: 'default' },
+    };
 
     function sampleOf(over: Partial<WizardState> = {}) {
         return commerceSectionStates(
@@ -559,7 +563,8 @@ describe('commerceSectionStates — the sample data sub-step', () => {
     });
 
     it('carries the chosen pack as its summary value', () => {
-        expect(sampleOf({ datapack: { name: 'bodea', version: 'main' } })).toMatchObject({
+        const chosen = { datapack: { name: 'bodea', version: 'main' }, componentConfigs: TARGET };
+        expect(sampleOf(chosen)).toMatchObject({
             status: 'done',
             value: 'bodea',
         });
@@ -570,13 +575,17 @@ describe('commerceSectionStates — the sample data sub-step', () => {
         expect(sampleOf()).toMatchObject({ value: 'None' });
     });
 
-    it('never blocks Continue, chosen or not', () => {
+    it('does not block Continue with nothing chosen, or with a pack chosen and a target', () => {
         expect(isCommerceStepComplete(state({ selectedBackend: PAAS }), 'sample-data', ctx)).toBe(
             true,
         );
         expect(
             isCommerceStepComplete(
-                state({ selectedBackend: PAAS, datapack: { name: 'bodea', version: 'main' } }),
+                state({
+                    selectedBackend: PAAS,
+                    datapack: { name: 'bodea', version: 'main' },
+                    componentConfigs: TARGET,
+                }),
                 'sample-data',
                 ctx,
             ),

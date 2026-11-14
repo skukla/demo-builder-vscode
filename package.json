@@ -369,7 +369,7 @@
                             "Save your changes to your own datapack first, without asking."
                         ],
                         "default": "ask",
-                        "description": "What happens to your changes in a datapack when you uninstall it or switch to another. Ask shows Save Your Changes First? each time. Save saves them to your own datapack first, without asking; a datapack that is not yours still asks, since a save needs a name."
+                        "description": "What happens to your changes in a datapack before it is uninstalled, switched, reset, deleted or cleared. Ask shows Save Your Changes First? each time. Save saves your changes to your own datapack without asking; someone else's datapack still asks, because a new datapack needs a name."
                     },
                     "demoBuilder.dataInstaller.apiBaseUrl": {
                         "scope": "machine",

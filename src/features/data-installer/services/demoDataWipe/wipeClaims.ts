@@ -29,7 +29,6 @@
  */
 
 import { type InstallRecord, type RecordFiles, readProjectRecords } from '../demoBuilderEngine/installRecord';
-import { resolveInstallTarget } from '../sampleDataInstall';
 import { isPack, projectWebsites } from './recordWebsites';
 import { WipeScopeError } from './wipeReads';
 import { recordedSettings, settingsKeptBy } from './wipeRecorded';
@@ -37,6 +36,7 @@ import { type WipeScope, resolveWipeScope } from './wipeScope';
 import { type WipeUnfinished, readWipeUnfinished } from './wipeUnfinished';
 import { andList } from '@/core/utils/andList';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
+import { resolveInstallTarget } from '@/features/data-installer/installTarget';
 import type { Project } from '@/types/base';
 import type { CommerceStoreStructure } from '@/types/commerceStore';
 import type { DatapackId } from '@/types/datapack';

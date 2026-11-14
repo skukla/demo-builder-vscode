@@ -177,7 +177,7 @@ describe("the consent dialog says the screen's words", () => {
     it('calls the mark a Demo Builder datapack, in the screen\'s list names', () => {
         const copy = alertCopyFor('mark_team_datapack');
 
-        expect(copy?.action).toBe('Mark or unmark a Demo Builder datapack');
+        expect(copy?.action).toBe('Mark a Demo Builder datapack');
         expect(copy?.consequence).toContain('Demo Builder Datapacks');
         expect(copy?.consequence).not.toContain('Include Community');
     });

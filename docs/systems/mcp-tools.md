@@ -211,7 +211,7 @@ server IS — transport, lifecycle, scoping, security — is in
 | `list_datapack_export_items` | read | What this Commerce instance holds for one data type, to choose from before exporting. |
 | `list_datapack_import_scopes` | read | The websites and store views an install can be scoped to on this project's instance. |
 | `load_datapack_zip` | **confirm** | Add the pack in a datapack zip file to My Datapacks, the user's own datapack library (the screen's Add from File; |
-| `mark_team_datapack` | **confirm** | Mark one of your own datapacks in Demo Builder's datapack store as a Demo Builder datapack, or take |
+| `mark_team_datapack` | **confirm** | Mark one of your own datapacks in Demo Builder's datapack store as a Demo Builder datapack: every |
 | `open_datapack_zip` | read | Say what a datapack zip file holds — name, version, data types, and any settings layer by path — |
 | `preview_datapack_changes` | read | What installing a datapack again would change in this project\ |
 | `rename_datapack` | **confirm** | Rename one of your own datapack library packs: every version takes the new display |

@@ -183,6 +183,12 @@ export async function deleteVersionWithLayer(
 const DEMO_BUILDER_DELETE_REFUSAL = "Demo Builder datapacks can't be deleted.";
 
 /**
+ * Taking the mark off would open the Delete the guard below refuses (owner, 2026-11-14, "Close it").
+ * Only an agent reaches `mark-team-datapack` (the screen has no Unmark), so it is refused outright.
+ */
+const DEMO_BUILDER_UNMARK_REFUSAL = "Demo Builder datapacks can't be unmarked by an agent.";
+
+/**
  * The guard before both delete paths (step-07 A1, owner P4-Q8): a Demo Builder datapack is never
  * deleted here, as the screen offers no Delete on one (`deletable`). The library lets a pack's owner
  * delete it, so whoever uploaded it could otherwise. Reads the pack's `team` flag; a library that
@@ -356,6 +362,7 @@ export const datapackLibraryHandlers = defineHandlers({
         if (!name || typeof payload?.team !== 'boolean') {
             return { success: false, error: 'Name the datapack, and say whether it is a Demo Builder datapack.' };
         }
+        if (!payload.team) return { success: false, error: DEMO_BUILDER_UNMARK_REFUSAL, code: ErrorCode.INVALID_OPERATION };
         const access = await resolveDataInstallerAccess(context, 'library');
         if (!access.ok) return access.response;
         try {
@@ -365,7 +372,7 @@ export const datapackLibraryHandlers = defineHandlers({
             }
             const writer = writerFor(context, access, 'library');
             for (const version of versions) await writer.updateTeam(version, payload.team);
-            context.logger.info(`${LOG_PREFIX} ${payload.team ? 'Marked' : 'Unmarked'} ${name} as a Demo Builder datapack (${versions.length} versions).`);
+            context.logger.info(`${LOG_PREFIX} Marked ${name} as a Demo Builder datapack (${versions.length} versions).`);
             return { success: true, data: { datapackName: name, team: payload.team, versions: versions.length } };
         } catch (error) {
             return failure(context, error, 'The Demo Builder datapack mark could not be changed.');

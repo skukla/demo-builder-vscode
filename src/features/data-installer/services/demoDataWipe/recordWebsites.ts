@@ -8,7 +8,7 @@
  */
 
 import type { InstallRecord } from '../demoBuilderEngine/installRecord';
-import { resolveInstallTarget } from '../sampleDataInstall';
+import { resolveInstallTarget } from '@/features/data-installer/installTarget';
 import type { Project } from '@/types/base';
 import type { DatapackId } from '@/types/datapack';
 

@@ -46,7 +46,8 @@ it("is reachable through the panel's one handler map", () => {
     expect(importHandlers).toHaveProperty(['mark-team-datapack']);
 });
 
-it.each([true, false])("sets team to %s on every version of the SC's own pack, and only those", async (team) => {
+it("marks every version of the SC's own pack, and only those", async () => {
+    const team = true;
     const result = await mark(createMockHandlerContext(), { datapackName: 'frescopa', team });
 
     expect(mockAccess).toHaveBeenCalledWith(expect.anything(), 'library');
@@ -56,6 +57,19 @@ it.each([true, false])("sets team to %s on every version of the SC's own pack, a
         { datapack_name: 'frescopa', version: '1.1.0', team },
     ]);
     expect(result).toEqual({ success: true, data: { datapackName: 'frescopa', team, versions: 2 } });
+});
+
+// Owner, 2026-11-14 ("Close it"): taking the mark off is how an agent could reach a Demo Builder
+// datapack's Delete, which step-07 A1 refuses. Only an agent reaches this handler (the screen has no
+// Unmark), so the handler refuses it outright, before the store is asked anything.
+it('refuses to take the mark off, asking nothing of the store', async () => {
+    expect(await mark(createMockHandlerContext(), { datapackName: 'frescopa', team: false })).toEqual({
+        success: false,
+        error: "Demo Builder datapacks can't be unmarked by an agent.",
+        code: ErrorCode.INVALID_OPERATION,
+    });
+    expect(mockAccess).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
 });
 
 it.each([

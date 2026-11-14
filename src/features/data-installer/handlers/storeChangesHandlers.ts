@@ -50,7 +50,6 @@ import { countPickable, listPickable } from '../services/demoBuilderEngine/saveS
 import type { StoreChangesDeps } from '../services/demoBuilderEngine/storeAccess';
 import { previewChanges } from '../services/demoBuilderEngine/storeChanges';
 import { verifyPackInstall } from '../services/demoBuilderEngine/verifyInstall';
-import { resolveInstallTarget } from '../services/sampleDataInstall';
 import type { DatapackSetupStep } from '../types';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
 import { resolveDatapackWriteAccess } from './datapackWriteGate';
@@ -62,6 +61,7 @@ import { narrateOutcomeToModal } from '@/core/vscode/operationProgress';
 import { withOperationProgress } from '@/core/vscode/withOperationProgress';
 import { orgGuard } from '@/features/authentication/services/projectOrgGuard';
 import { handleOpenAdminPanel } from '@/features/dashboard/handlers/openUrlHandlers';
+import { resolveInstallTarget } from '@/features/data-installer/installTarget';
 import type { Project } from '@/types/base';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 import { ErrorCode } from '@/types/errorCodes';

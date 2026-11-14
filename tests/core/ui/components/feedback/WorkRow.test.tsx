@@ -7,7 +7,7 @@
 import { render, screen } from '@testing-library/react';
 import React from 'react';
 import { WorkRow } from '@/core/ui/components/feedback/WorkRow';
-import { ruleFor } from '../../../../helpers/cssRules';
+import { declares, ruleFor } from '../../../../helpers/cssRules';
 
 jest.mock('@/core/ui/components/feedback/StepStatusIcon', () => ({
     StepStatusIcon: ({ status }: { status: string }) => <span data-testid="icon">{status}</span>,
@@ -97,10 +97,28 @@ describe("a work row's problem", () => {
         render(<WorkRow status="warning" label="A" problem={{ text: 'A long reason.', failed: false }} />);
 
         expect(screen.getByText('A long reason.')).toHaveAttribute('title', 'A long reason.');
-        const rule = ruleFor('.work-row:not(.work-row--dense) .work-row-problem');
+        const rule = ruleFor('.work-row .work-row-problem');
         expect(rule).toMatch(/white-space:\s*nowrap/);
         expect(rule).toMatch(/overflow:\s*hidden/);
         expect(rule).toMatch(/text-overflow:\s*ellipsis/);
+    });
+
+    // Step-07 P6 (C7-a): a small nested row's problem takes one line too, like a main row's, its
+    // whole text on hover. It used to wrap (walk F135).
+    it("on a small nested row, fits one line too, with its whole text on hover", () => {
+        render(<WorkRow status="warning" label="Products" dense problem={{ text: '3 skipped.', failed: false }} />);
+
+        expect(screen.getByText('3 skipped.')).toHaveAttribute('title', '3 skipped.');
+        // The dense wrap no longer reaches the problem; the problem only keeps out of the column's
+        // width, so a long one cuts short instead of widening the column.
+        const wraps = ruleFor(
+            '.work-row--dense .work-row-why, .work-row--dense .work-row-note, '
+                + '.work-row--dense .dialog-problem:not(.work-row-problem)',
+        );
+        expect(wraps).toMatch(/white-space:\s*normal/);
+        const dense = ruleFor('.work-row--dense .work-row-problem');
+        expect(dense).toMatch(/contain:\s*inline-size/);
+        expect(declares(dense, 'white-space')).toBe(false);
     });
 
     it('CONTROL: a row without a problem keeps its progress line', () => {

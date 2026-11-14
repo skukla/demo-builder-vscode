@@ -13,7 +13,6 @@ import type { DatapackEngine } from '../services/datapackEngine';
 import { nodeRecordFiles, readInstallRecord } from '../services/demoBuilderEngine/installRecord';
 import { kindsOnRecord } from '../services/demoBuilderEngine/runPack';
 import type { ImportRequest, ImportTarget } from '../services/importRequest';
-import { resolveInstallTarget } from '../services/sampleDataInstall';
 import type { ImportJobRecord } from '../types';
 import { type DatapackWriteAccess, resolveDatapackWriteAccess } from './datapackWriteGate';
 import { waitForJob, waitMsOf } from './importJobWait';
@@ -22,6 +21,7 @@ import { type Replacement, settleReplacement, withSavedNote } from './importRepl
 import { SERVICE_REMOVAL_UNAVAILABLE, libraryReads } from './libraryReads';
 import { TransientStateManager } from '@/core/state/transientStateManager';
 import { orgGuard } from '@/features/authentication/services/projectOrgGuard';
+import { resolveInstallTarget } from '@/features/data-installer/installTarget';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';

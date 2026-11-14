@@ -1195,9 +1195,10 @@ the same question once, with Share, and declining exports anyway.
 
 ### Team packs (beta.153, 2026-11-03)
 
-`mark_team_datapack` (confirm-gated; the consent names the pack and whether it becomes a team
-pack) marks every version of a store pack as a team pack, or unmarks it (`team: false`), through
-the store's owner-only `update-datapack-metadata` (`team`). A team pack is in every SC's default
+`mark_team_datapack` (confirm-gated; the consent names the pack) marks every version of a store
+pack as a team pack through the store's owner-only `update-datapack-metadata` (`team`). It does not
+unmark: `team: false` is refused with "Demo Builder datapacks can't be unmarked by an agent."
+(owner, 2026-11-14), because a marked pack cannot be deleted and unmarking would reopen that. A team pack is in every SC's default
 list with no tag; any other shared pack is Community, which `find_datapacks` lists unless `includeCommunity` is false. It
 answers `{datapackName, team, versions}`.
 

@@ -29,14 +29,9 @@
 import type { DataTypeStatus } from '../types';
 import { deriveImportInstance } from './importInstance';
 import type { ImportRequest } from './importRequest';
+import { type InstallTarget, resolveInstallTarget } from '@/features/data-installer/installTarget';
 import type { ComponentConfigs } from '@/types/components';
 import type { DatapackLocation, ProjectDatapack } from '@/types/datapack';
-
-/** The scope an import writes into, as the wizard recorded it. */
-export interface InstallTarget {
-    websiteCode: string;
-    storeCode: string;
-}
 
 /** What the phase did, for the build to report. */
 export interface SampleDataResult {
@@ -59,39 +54,10 @@ export interface SampleDataResult {
     noTarget?: true;
 }
 
-/** The per-backend spelling of the same two facts. */
-const SCOPE_KEYS: Record<string, { website: string; store: string }> = {
-    'adobe-commerce-accs': { website: 'ACCS_WEBSITE_CODE', store: 'ACCS_STORE_VIEW_CODE' },
-    'adobe-commerce-paas': {
-        website: 'ADOBE_COMMERCE_WEBSITE_CODE',
-        store: 'ADOBE_COMMERCE_STORE_VIEW_CODE',
-    },
-};
-
 interface ProjectLike {
     datapack?: ProjectDatapack;
     componentSelections?: { backend?: string };
     componentConfigs?: ComponentConfigs;
-}
-
-/**
- * The website/store pair the Business Structure sub-step recorded.
- *
- * Both codes or nothing. The service validates them as a PAIR and falls back to
- * `base` when they are absent, so half a target is worse than none — it would
- * write into a scope nobody chose.
- */
-export function resolveInstallTarget(project: ProjectLike): InstallTarget | null {
-    const backend = project.componentSelections?.backend;
-    const keys = backend ? SCOPE_KEYS[backend] : undefined;
-    if (!backend || !keys) {
-        return null;
-    }
-    const config = project.componentConfigs?.[backend] ?? {};
-    const websiteCode = String(config[keys.website] ?? '');
-    const storeCode = String(config[keys.store] ?? '');
-
-    return websiteCode && storeCode ? { websiteCode, storeCode } : null;
 }
 
 /**
