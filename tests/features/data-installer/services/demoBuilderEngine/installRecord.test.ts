@@ -140,6 +140,34 @@ describe('the website and store view the pack was installed to', () => {
     });
 });
 
+// step-07 D6: which Commerce instance, so a removal never reaches another one.
+describe('the Commerce instance the pack was installed to', () => {
+    it('is written on a new record, and read back', async () => {
+        const files = memoryFiles();
+        await (await openInstallRecord(files, PROJECT, PACK, NOW, undefined, 'TenantA')).record({ kind: 'categories', id: '41' });
+
+        expect(stored(files)).toMatchObject({ instance: 'TenantA' });
+        expect((await readInstallRecord(files, PROJECT, PACK))?.instance).toBe('TenantA');
+    });
+
+    it('is kept as first written when the record is carried on from another instance', async () => {
+        const files = memoryFiles();
+        await (await openInstallRecord(files, PROJECT, PACK, NOW, undefined, 'TenantA')).record({ kind: 'categories', id: '41' });
+
+        await (await openInstallRecord(files, PROJECT, PACK, NOW, undefined, 'TenantB')).record({ kind: 'categories', id: '42' });
+
+        expect(stored(files)).toMatchObject({ instance: 'TenantA' });
+    });
+
+    it('is absent on a record written before instances were kept, which still reads (rule 3)', async () => {
+        const files = memoryFiles();
+        await (await openInstallRecord(files, PROJECT, PACK, NOW)).record({ kind: 'categories', id: '41' });
+
+        expect(stored(files)).not.toHaveProperty('instance');
+        expect(await readInstallRecord(files, PROJECT, PACK)).not.toHaveProperty('instance');
+    });
+});
+
 describe('what the record keeps about each object (step 05)', () => {
     it('keeps the pack\'s own name for an object and the two hashes a repeat install compares', async () => {
         const files = memoryFiles();

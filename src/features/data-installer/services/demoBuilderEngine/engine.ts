@@ -22,6 +22,7 @@ import * as crypto from 'crypto';
 import { type DataTypeStatus, ENGINE_PHASES, FINISHING_STOP, REPLACE_STOP, type ImportStart, type InstallCheck, type JobStatusSnapshot, type KeptRootStep, type ValidationResult } from '../../types';
 import type { DatapackEngine } from '../datapackEngine';
 import type { CredentialCheck, ImportRequest } from '../importRequest';
+import { installedOnAnotherInstanceLine, onAnotherInstance } from '../instanceKey';
 import { addedKindsLine, askedRows, missingKinds } from './askedKinds';
 import { removeRecordedPack, removeReplacedPack } from './engineRemoval';
 import { AFTER_PRODUCTS_LINES, type NoteLine, noteOf, rowNotesOf } from './installNote';
@@ -65,6 +66,12 @@ export interface DemoBuilderEngineDeps {
     onJobEnd?: (end: JobEnd) => void;
     /** The pack's settings layer from the library (step 09). Absent, a pack has none. */
     findLayer?: FindLayer;
+    /**
+     * The Commerce instance `commerce` reaches (`deriveImportInstance` of the project), written on a
+     * new install record so a removal from another instance stops (step-07 D6). Not the request's
+     * `commerceInstance`: this engine writes through the project's access, whatever a caller names.
+     */
+    instance?: string;
 }
 
 /** How one job ended, for the activity log (`engineActivityLog.ts`). */
@@ -175,6 +182,8 @@ async function access(deps: DemoBuilderEngineDeps): Promise<{ get: CommerceGet; 
 async function elsewhere(deps: DemoBuilderEngineDeps, request: ImportRequest, target: TargetCodes, ask = 'Uninstall it first, or install it there.'): Promise<string | undefined> {
     const record = await readInstallRecord(deps.files ?? nodeRecordFiles, deps.projectPath, request.id);
     if (!record) return undefined;
+    // Its ids are another instance's: reused here they would be read and written on this one (step-07 D6).
+    if (onAnotherInstance(record.instance, deps.instance)) return installedOnAnotherInstanceLine(request.id);
     const website = record.target?.websiteCode ?? settingsWebsite(record.created);
     const moved = website !== undefined && website !== target.websiteCode;
     const otherView = record.target !== undefined && record.target.storeCode !== target.storeCode;
@@ -210,7 +219,7 @@ async function runInstall(deps: DemoBuilderEngineDeps, request: ImportRequest, j
     // Step 12: whether another store shows this store's root decides where a pack's own root goes.
     if (packRootOf(items.categories)) session.storeRoot = await readStoreRoot(commerce.get, wanted);
     const now = deps.now ?? (() => new Date());
-    const recorder = await openInstallRecord(deps.files ?? nodeRecordFiles, deps.projectPath, request.id, () => now().toISOString(), wanted);
+    const recorder = await openInstallRecord(deps.files ?? nodeRecordFiles, deps.projectPath, request.id, () => now().toISOString(), wanted, deps.instance);
     let current: string | undefined;
     const progress = (line: string): void => void (job.detail = line);
     const ctx = { ...commerce, recorder, session, log: deps.log, asker: deps.asker, progress };
@@ -355,7 +364,7 @@ export function demoBuilderEngine(deps: DemoBuilderEngineDeps): DatapackEngine {
             start(deps, jobs, request, 'delete', async (job) => {
                 const progress = (line: string): void => void (job.detail = line);
                 const leaving = request.alsoLeaving ? { alsoLeaving: request.alsoLeaving } : {};
-                const result = await removeRecordedPack(await access(deps), deps.files ?? nodeRecordFiles, { projectPath: deps.projectPath, pack: request.id, log: deps.log, progress, ...leaving });
+                const result = await removeRecordedPack(await access(deps), deps.files ?? nodeRecordFiles, { projectPath: deps.projectPath, pack: request.id, log: deps.log, progress, instance: deps.instance, ...leaving });
                 job.detail = undefined;
                 job.note = result.note;
                 if (result.leftInStore) job.leftInStore = true;

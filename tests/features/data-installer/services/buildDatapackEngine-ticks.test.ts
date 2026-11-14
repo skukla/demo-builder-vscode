@@ -6,7 +6,7 @@
  */
 
 import { GRID, settingRow } from '../../../helpers/settingsLayerFixtures';
-import { CATEGORIES_LESS_CABLES, PACK, ROWS, ROWS_WITH_SETTINGS, type TicksHarness, request, ticksHarness } from './buildDatapackEngine-ticks.testUtils';
+import { CATEGORIES_LESS_CABLES, PACK, ROWS, ROWS_WITH_SETTINGS, TENANT, type TicksHarness, request, ticksHarness } from './buildDatapackEngine-ticks.testUtils';
 import { nodeRecordFiles, readInstallRecord, writeInstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import { saveStoreChanges } from '@/features/data-installer/services/demoBuilderEngine/saveStore';
 import { previewChanges } from '@/features/data-installer/services/demoBuilderEngine/storeChanges';
@@ -44,6 +44,13 @@ describe('importing part of a pack', () => {
         expect(categoryNames()).toEqual(['Default Category', 'Racks', 'Cables']);
         expect([...h.store.products.keys()]).toStrictEqual([]);
         expect((await h.onRecord()).map((o) => o.kind)).toEqual(['categories', 'categories']);
+    });
+
+    // step-07 D6: the instance the project's access reaches, so a removal from another one stops.
+    it("notes the project's Commerce instance on the install record", async () => {
+        await h.importTypes(['categories']);
+
+        expect((await readInstallRecord(nodeRecordFiles, h.dir, PACK))?.instance).toBe(TENANT);
     });
 
     it('CONTROL: asking for every kind writes every kind', async () => {

@@ -9,6 +9,10 @@
  * window alone is `ConfirmActionWindow`, for a host that keeps one DialogContainer and shows one
  * window at a time in it (a datapack job's Restore question).
  *
+ * A confirm with a second way on (Change Anyway beside Uninstall First, step-07 D6) passes it as
+ * `otherAction`: the losing choice, apart at the footer's start, as "Save Your Changes First?" draws
+ * its own (`SaveFirstWindow`).
+ *
  * Shared by Remove, Remove anyway, Reset ERPs, Fill from Commerce, Reinstall in Commerce, Undo last
  * assignment, adding erp_owner to the attribute sets and taking it out, and a datapack flyout's Share,
  * Stop Sharing and Remove. Moved here from the dashboard feature when the flyout became its second
@@ -36,6 +40,8 @@ export interface ConfirmActionDialogProps {
     children: React.ReactNode;
     onConfirm: () => void;
     onClose: () => void;
+    /** A second way on, at the footer's start, drawn outline: the choice that loses something. */
+    otherAction?: { label: string; onPress: () => void };
 }
 
 /** The confirm's window alone, for a host that owns the DialogContainer. */
@@ -46,6 +52,7 @@ export function ConfirmActionWindow({
     children,
     onConfirm,
     onClose,
+    otherAction,
 }: Omit<ConfirmActionDialogProps, 'isOpen'>): React.ReactElement {
     return (
         <Modal
@@ -56,6 +63,7 @@ export function ConfirmActionWindow({
             onClose={onClose}
             closeLabel="Cancel"
             actionButtons={[{ label: actionLabel, variant: actionVariant, onPress: onConfirm }]}
+            {...(otherAction ? { startButtons: [{ ...otherAction, variant: 'secondary' as const }] } : {})}
         >
             {/* No bullets and no box, 8 between rows (dialog design rules, owner 2026-11-02:
                 a block of ten lines read worse than the sentences it held). */}

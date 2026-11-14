@@ -45,6 +45,7 @@ import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 // ones and drive the rail the way a user does.
 import { StepAreaShell } from '@/core/ui/components/layout/StepAreaShell';
 import { StepRail } from '@/core/ui/components/navigation/StepRail';
+import { ConfirmActionDialog } from '@/core/ui/components/ui/ConfirmActionDialog';
 import { useFocusTrap } from '@/core/ui/hooks/useFocusTrap';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import type { AuthoringExperience, CommerceAdminExperience } from '@/types/base';
@@ -130,7 +131,7 @@ export function ConfigureScreen({
         markSaved,
     } = useConfigureFieldValues({ project, existingEnvValues });
 
-    const { isSaving, isDeploying, handleSave, handleCancel } = useConfigureSave({
+    const { isSaving, isDeploying, handleSave, handleCancel, connectionQuestion, answerConnectionQuestion } = useConfigureSave({
         configChanges,
         componentSecretFlags,
         touchedFields,
@@ -253,6 +254,19 @@ export function ConfigureScreen({
                 onRetry={republish.retry}
                 onClose={republish.close}
             />
+            {/* A save that would leave the datapack in the current Commerce instance (step-07 D6).
+                Uninstall First is red: it removes (prototype conventions, rule 20). */}
+            <ConfirmActionDialog
+                isOpen={connectionQuestion !== undefined}
+                title="Change the Commerce Connection?"
+                actionLabel="Uninstall First"
+                actionVariant="negative"
+                otherAction={{ label: 'Change Anyway', onPress: () => void answerConnectionQuestion('keep') }}
+                onConfirm={() => void answerConnectionQuestion('uninstall')}
+                onClose={() => void answerConnectionQuestion()}
+            >
+                {`${connectionQuestion ?? ''} is installed in the current Commerce instance. Uninstall it first, or it stays there.`}
+            </ConfirmActionDialog>
         </div>
     );
 }

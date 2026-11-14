@@ -7,7 +7,8 @@
  */
 
 import type { DataTypeStatus, KeptRootStep } from '../../types';
-import type { RecordFiles } from './installRecord';
+import { installedOnAnotherInstanceLine, onAnotherInstance } from '../instanceKey';
+import { type RecordFiles, readInstallRecord } from './installRecord';
 import { refusedRemovalsLine } from './removalRuns';
 import { containersLine } from './removers';
 import { removePack } from './runPack';
@@ -51,8 +52,13 @@ export async function removeRecordedPack(
         progress: (line: string) => void;
         /** Products a clearing deletes right after (Clear Demo Data): what they hold counts as going. */
         alsoLeaving?: readonly string[];
+        /** The Commerce instance the engine reaches: a record from another one is refused (step-07 D6). */
+        instance?: string;
     },
 ): Promise<RecordedRemoval> {
+    // Its ids are another instance's: deleting them here would take unrelated objects (step-07 D6).
+    const record = await readInstallRecord(files, target.projectPath, target.pack);
+    if (onAnotherInstance(record?.instance, target.instance)) throw new Error(installedOnAnotherInstanceLine(target.pack));
     const result = await removePack(commerce, files, target);
     if (result.noRecord) throw new Error(NO_RECORD);
     const lines = [
@@ -89,12 +95,12 @@ export async function removeReplacedPack(
     job: ReplacingJob,
     commerce: Parameters<typeof removePack>[0],
     files: RecordFiles,
-    target: { projectPath: string; pack: DatapackId; log: (line: string) => void },
+    target: { projectPath: string; pack: DatapackId; log: (line: string) => void; instance?: string },
 ): Promise<string | undefined> {
     job.phase = undefined;
     job.replacing = 'processing';
     const progress = (line: string): void => void (job.detail = line);
-    const removal = await removeRecordedPack(commerce, files, { projectPath: target.projectPath, pack: target.pack, log: target.log, progress });
+    const removal = await removeRecordedPack(commerce, files, { projectPath: target.projectPath, pack: target.pack, log: target.log, progress, instance: target.instance });
     job.detail = undefined;
     if (removal.refused) throw new Error(`${removal.note ?? 'Commerce refused part of the uninstall.'} Nothing was installed.`);
     job.replacing = 'success';

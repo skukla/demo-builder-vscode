@@ -54,6 +54,7 @@ import { resolveInstallTarget } from '../services/sampleDataInstall';
 import type { DatapackSetupStep } from '../types';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
 import { resolveDatapackWriteAccess } from './datapackWriteGate';
+import { installedElsewhere } from './installedElsewhere';
 import { libraryReads } from './libraryReads';
 import { failure, saveInWindow, saveIntoFor, saveToPack } from './packSave';
 import { DATAPACK_SAVE_OPERATION_ID } from '@/core/utils/operationIds';
@@ -143,6 +144,10 @@ export async function openProjectStore(context: HandlerContext, use?: ReadWindow
         const mismatch = await orgGuard(context, gate.project, context.authManager);
         if (mismatch) return { response: { success: false, error: mismatch.error, code: ErrorCode.ORG_MISMATCH } };
     }
+    // The project's pack went into another Commerce instance: its record says nothing of this one (step-07 D6).
+    const held = gate.project.datapack;
+    const elsewhere = held ? await installedElsewhere(context, gate.project, { name: held.name, version: held.version }) : undefined;
+    if (elsewhere) return { response: elsewhere };
     const libraryCatalog = libraryReads(context);
     const log = (line: string): void => context.debugLogger.debug(`${LOG_PREFIX} ${line}`);
     const deps: StoreChangesDeps = {

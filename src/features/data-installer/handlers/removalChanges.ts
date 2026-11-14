@@ -23,6 +23,7 @@ import { InstallRecordError, nodeRecordFiles, readInstallRecord } from '../servi
 import { kindsOnRecord } from '../services/demoBuilderEngine/runPack';
 import { previewChanges } from '../services/demoBuilderEngine/storeChanges';
 import { packKindOf } from '../services/demoBuilderEngine/storeCopies';
+import { installedElsewhere } from './installedElsewhere';
 import { failure, saveIntoFor, saveToPack } from './packSave';
 import { openProjectStore, openSave, readPayload, savedFrom, type StoreChangesPayload } from './storeChangesHandlers';
 import { reportPhase } from '@/core/utils/agentPhaseChannel';
@@ -188,6 +189,9 @@ export async function settleChangesBeforeRemoval(
 ): Promise<{ saved?: SavedFirst } | { response: HandlerResponse }> {
     const project = await context.stateManager.getCurrentProject();
     if (!project) return {};
+    // Installed on another Commerce instance: nothing is saved or removed from this one (step-07 D6).
+    const elsewhere = await installedElsewhere(context, project, request.pack);
+    if (elsewhere) return { response: elsewhere };
     const moved = await movedOn(project, request.pack);
     if (moved) return { response: moved };
     if (!(await hasRecord(project, request.pack)) || request.answer === 'drop') return {};

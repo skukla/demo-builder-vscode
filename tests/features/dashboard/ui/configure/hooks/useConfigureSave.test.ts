@@ -232,6 +232,46 @@ describe('useConfigureSave', () => {
         expect(result.current.isSaving).toBe(false);
     });
 
+    // step-07 D6: a save that would leave a datapack in the current Commerce instance asks first.
+    describe('a save answered with the datapack question', () => {
+        beforeEach(() => {
+            mockRequest.mockResolvedValueOnce({ success: false, data: { installedDatapack: 'Luma' } });
+        });
+
+        it('holds the question, naming the datapack, and is idle again', async () => {
+            const { result } = render();
+
+            await act(() => result.current.handleSave());
+
+            expect(result.current.connectionQuestion).toBe('Luma');
+            expect(result.current.isSaving).toBe(false);
+        });
+
+        it('sends the same save again with the answer, and closes the question', async () => {
+            const { result } = render();
+            await act(() => result.current.handleSave());
+
+            await act(() => result.current.answerConnectionQuestion('uninstall'));
+
+            expect(mockRequest).toHaveBeenCalledTimes(2);
+            expect(mockRequest.mock.calls[1]).toEqual([
+                'save-configuration',
+                { ...(mockRequest.mock.calls[0][1] as object), installedDatapack: 'uninstall' },
+            ]);
+            expect(result.current.connectionQuestion).toBeUndefined();
+        });
+
+        it('Cancel: closes the question and sends nothing more', async () => {
+            const { result } = render();
+            await act(() => result.current.handleSave());
+
+            await act(() => result.current.answerConnectionQuestion());
+
+            expect(mockRequest).toHaveBeenCalledTimes(1);
+            expect(result.current.connectionQuestion).toBeUndefined();
+        });
+    });
+
     it('asks the extension to close the panel on Close', () => {
         const { result } = render();
 

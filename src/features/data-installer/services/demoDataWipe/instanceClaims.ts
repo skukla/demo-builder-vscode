@@ -14,6 +14,10 @@
  * | `nothing` | no datapack, or one the service installed on websites not all chosen | unchanged | all respected |
  * | `unmatched` | its Commerce instance cannot be matched to this one, though it uses a website of the same code | untouched | all respected: it may be on this instance |
  *
+ * A record that notes its Commerce instance (step-07 D6) belongs where it says, whatever its project
+ * points at now: one noting another instance is not this clearing's (nothing of it respected, its pack
+ * never uninstalled here, `nothing`); one noting this instance is respected, as every record is.
+ *
  * A project using no chosen website keeps every record respected. The engine's uninstall deletes
  * everything a record lists wherever it is, which is why a pack also on a website not chosen is
  * never uninstalled here. The re-plan after the removals names the projects whose pack came out
@@ -24,6 +28,8 @@
  */
 
 import { type InstallRecord, type RecordFiles, readProjectRecords } from '../demoBuilderEngine/installRecord';
+import { deriveImportInstance } from '../importInstance';
+import { onAnotherInstance } from '../instanceKey';
 import { isPack, projectWebsites, websiteOf } from './recordWebsites';
 import type { WipeClaims, WipeRespects } from './wipeClaims';
 import { recordedSettings, settingsKeptBy } from './wipeRecorded';
@@ -81,10 +87,13 @@ interface OwnerRead {
     user?: InstanceUser;
 }
 
-async function readOwner(files: RecordFiles, owner: Project, chosen: ReadonlySet<string>, options: InstanceClaimsOptions): Promise<OwnerRead> {
-    const records = await readProjectRecords(files, owner.path);
+async function readOwner(files: RecordFiles, owner: Project, chosen: ReadonlySet<string>, options: InstanceClaimsOptions, here: string | undefined): Promise<OwnerRead> {
+    const all = await readProjectRecords(files, owner.path);
+    // A record from another Commerce instance lists that instance's ids: nothing of this clearing's (step-07 D6).
+    const records = all.filter((r) => !onAnotherInstance(r.instance, here));
+    const packElsewhere = records.length < all.length && all.some((r) => !records.includes(r) && isPack(r, owner.datapack));
     const websites = projectWebsites(owner, records).filter((code) => chosen.has(code));
-    const decided = websites.length > 0 ? decide(owner, records, chosen, options) : undefined;
+    const decided = websites.length > 0 ? (packElsewhere ? { decision: 'nothing' as const } : decide(owner, records, chosen, options)) : undefined;
     const onChosen = (r: InstallRecord): boolean => chosen.has(websiteOf(r, owner) ?? '');
     // Only the pack being uninstalled stops being respected: an older pack's record still lists its items.
     const dropped = decided?.decision === 'uninstall' ? records.filter((r) => onChosen(r) && isPack(r, owner.datapack)) : [];
@@ -109,7 +118,8 @@ async function readOwner(files: RecordFiles, owner: Project, chosen: ReadonlySet
 export async function readInstanceClaims(files: RecordFiles, project: Project, others: readonly Project[], scope: WipeScope, options: InstanceClaimsOptions): Promise<InstanceClaims> {
     const chosen = new Set(scope.websites.map((w) => w.code));
     const reads: OwnerRead[] = [];
-    for (const owner of [project, ...others.filter((o) => o.path !== project.path)]) reads.push(await readOwner(files, owner, chosen, options));
+    const here = deriveImportInstance(project.componentConfigs);
+    for (const owner of [project, ...others.filter((o) => o.path !== project.path)]) reads.push(await readOwner(files, owner, chosen, options, here));
     const note = await readWipeUnfinished(files, project.path);
     const setBack = reads.flatMap((r) => r.setBack);
     const respects: WipeRespects = {

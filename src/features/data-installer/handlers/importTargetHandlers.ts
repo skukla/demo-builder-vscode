@@ -20,7 +20,7 @@ import {
 } from '../services/importScopeDiscovery';
 import { installFailedOf } from '../services/installFailure';
 import { resolveInstallTarget } from '../services/sampleDataInstall';
-import { heldDisplayName } from './importReplacement';
+import { heldDisplayName } from './libraryWriter';
 import { discoverStoreStructure } from '@/features/eds/services/commerceStoreDiscovery';
 import type { Project } from '@/types/base';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';

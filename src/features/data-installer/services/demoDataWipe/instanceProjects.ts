@@ -15,22 +15,17 @@
 
 import { type RecordFiles, readProjectRecords } from '../demoBuilderEngine/installRecord';
 import { deriveImportInstance } from '../importInstance';
+import { instanceKey } from '../instanceKey';
 import { projectWebsites } from './recordWebsites';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import type { Project } from '@/types/base';
 import type { CommerceStoreStructure } from '@/types/commerceStore';
 import type { InstanceWebsite } from '@/types/demoDataWipe';
 
-/** The instance a project's removal acts on, spelled one way: "https://Shop.example/" and "http://shop.example" agree. */
+/** The instance a project's removal acts on, spelled one way (`instanceKey`). */
 export function instanceKeyOf(project: Project): string | undefined {
     const key = deriveImportInstance(project.componentConfigs)?.trim();
-    if (!key) return undefined;
-    const scheme = /^[a-z][a-z0-9+.-]*:\/\//iu;
-    // An ACCS tenant id is case-sensitive; only a URL's host is not.
-    if (!scheme.test(key)) return key;
-    const bare = key.replace(scheme, '').replace(/\/+$/u, '');
-    const slash = bare.indexOf('/');
-    return slash < 0 ? bare.toLowerCase() : `${bare.slice(0, slash).toLowerCase()}${bare.slice(slash)}`;
+    return key ? instanceKey(key) : undefined;
 }
 
 /** The open project, then every other project on the same Commerce instance, in the order given. */

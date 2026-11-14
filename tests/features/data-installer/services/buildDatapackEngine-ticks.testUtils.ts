@@ -31,6 +31,11 @@ jest.mock('@/features/project-creation/services/erpFillForProject', () => ({
 }));
 
 export const PACK: DatapackId = { name: 'racks', version: '1.0.0' };
+/** The project's Commerce backend: an ACCS tenant, which is the instance its install record names (step-07 D6). */
+export const TENANT = 'TicksTenant0123456789';
+const PROJECT_CONFIGS = {
+    'adobe-commerce-accs': { ACCS_GRAPHQL_ENDPOINT: `https://na1-sandbox.api.commerce.adobe.com/${TENANT}/graphql` },
+};
 
 const category = (name: string) => ({ category: { name, path: 'Default Category', is_active: true, custom_attributes: [{ attribute_code: 'url_key', value: name.toLowerCase() }] } });
 
@@ -140,7 +145,7 @@ export function ticksHarness(): TicksHarness {
     const accessOf = (rows: Record<string, unknown>, layer: PackStores["layer"]): DatapackEngineAccess => ({
         catalog: catalogOf(rows),
         libraryCatalog: libraryOf(layer),
-        project: createMockProject({ path: dir }),
+        project: createMockProject({ path: dir, componentConfigs: PROJECT_CONFIGS }),
         authManager: {} as DatapackEngineAccess['authManager'],
         secrets: undefined,
     });

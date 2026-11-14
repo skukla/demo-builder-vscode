@@ -206,6 +206,16 @@ describe('demoBuilderEngine and the website a pack was installed to', () => {
         expect((await readInstallRecord(files, PROJECT, PACK))?.target).toEqual({ websiteCode: 'base', storeCode: 'default' });
     });
 
+    // step-07 D6: the instance its Commerce access reaches, not what a caller names, so a removal
+    // from another one can be stopped.
+    it('writes the Commerce instance it installs to on the record', async () => {
+        const { engine, files } = await engineWith(READS, () => ({ id: 40 }), { instance: 'TenantA' });
+
+        await settle(engine, (await engine.startImport(request({ commerceInstance: 'named by a caller' }))).activationId);
+
+        expect((await readInstallRecord(files, PROJECT, PACK))?.instance).toBe('TenantA');
+    });
+
     it('refuses, writing nothing, to install again into a website other than the one the record names', async () => {
         const files = memoryFiles();
         await (await openInstallRecord(files, PROJECT, PACK, () => 'then', ELSEWHERE)).record({ kind: 'categories', id: '40' });
@@ -230,6 +240,51 @@ describe('demoBuilderEngine and the website a pack was installed to', () => {
 
         expect((await engine.getJobFailureReason(activationId))?.error).toBe(MOVED);
         expect(ctx.sent).toStrictEqual([]);
+    });
+});
+
+// D6 review B1: a record from another Commerce instance lists that instance's ids. Reused here, a
+// reinstall would read and write them on this one, and a removal would delete unrelated objects.
+describe('demoBuilderEngine and the Commerce instance a pack was installed to', () => {
+    const READS = { [SETS_PAGE]: { items: [], total_count: 0 }, ...noneUnder(2, { Sale: 'sale' }) };
+    const OTHER = `${PACK.name}@${PACK.version} is installed on another Commerce instance. Uninstall it there first.`;
+
+    async function recordedOn(instance: string) {
+        const files = memoryFiles();
+        const recorder = await openInstallRecord(files, PROJECT, PACK, () => 'then', { websiteCode: 'base', storeCode: 'default' }, instance);
+        await recorder.record({ kind: 'categories', id: '40' });
+        return files;
+    }
+
+    it('refuses, writing nothing, to install again on another instance', async () => {
+        const { engine, ctx } = await engineWith(READS, () => ({ id: 41 }), { files: await recordedOn('TenantA'), instance: 'TenantB' });
+
+        const { activationId } = await engine.startImport(request());
+        await settle(engine, activationId);
+
+        expect((await engine.getJobFailureReason(activationId))?.error).toBe(OTHER);
+        expect(ctx.sent).toStrictEqual([]);
+        expect(await engine.validateImport(request())).toEqual({ valid: false, reason: OTHER });
+    });
+
+    it('refuses, deleting nothing, to remove it from another instance', async () => {
+        const files = await recordedOn('TenantA');
+        const { engine, ctx } = await engineWith({}, () => true, { files, instance: 'TenantB' });
+
+        const { activationId } = await engine.startDelete(request());
+        await settle(engine, activationId);
+
+        expect((await engine.getJobFailureReason(activationId))?.error).toBe(OTHER);
+        expect(ctx.sent).toStrictEqual([]);
+        expect((await readInstallRecord(files, PROJECT, PACK))?.created).toHaveLength(1);
+    });
+
+    it('CONTROL: removes it from the instance it was installed to', async () => {
+        const { engine, ctx } = await engineWith({}, () => true, { files: await recordedOn('TenantA'), instance: 'TenantA' });
+
+        await settle(engine, (await engine.startDelete(request())).activationId);
+
+        expect(ctx.sent).toEqual([{ method: 'DELETE', path: 'categories/40', body: undefined }]);
     });
 });
 

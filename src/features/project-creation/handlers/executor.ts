@@ -25,6 +25,7 @@ import {
 } from './executorAppBuilderPhase';
 import { loadComponentDefinitions } from './executorComponentLoading';
 import { finishEditWithoutRebuild } from './executorEditApply';
+import { settleConnectionBeforeRebuild } from './executorEditConnection';
 import {
     carriedOverFromEdit,
     loadExistingProjectForEdit,
@@ -196,9 +197,7 @@ async function createOrRebuild(
     const progress = creationReporter(context.sendMessage);
     const progressTracker: ProgressTracker = progress.report;
 
-    // ========================================================================
-    // PRE-FLIGHT CHECKS
-    // ========================================================================
+    // ===== PRE-FLIGHT CHECKS =====
 
     // An Edit that changed nothing, or only integrations, is not a rebuild (PL-75).
     if (await finishEditWithoutRebuild(context, typedConfig, progressTracker)) return;
@@ -214,6 +213,7 @@ async function createOrRebuild(
     let existingProject: import('@/types/base').Project | undefined;
     if (isEditMode) {
         existingProject = await loadExistingProjectForEdit(projectPath, context);
+        if (existingProject) await settleConnectionBeforeRebuild(context, typedConfig, existingProject); // asked first (D6)
     } else {
         await cleanupOrphanedDirectory(projectPath, context, progressTracker, fsPromises);
     }

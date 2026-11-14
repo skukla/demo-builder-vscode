@@ -23,6 +23,7 @@ jest.mock('@/features/data-installer/services/buildDatapackEngine', () => ({
 import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 import { createMockProject } from '../../../../helpers/projectFake';
+import type { ImportRequest } from '@/features/data-installer/services/importRequest';
 import type { SampleDataDeps } from '@/features/data-installer/services/sampleDataInstall';
 import { buildSampleDataDeps } from '@/features/data-installer/services/sampleDataInstallDeps';
 import { removeProjectSampleDataOutcome } from '@/features/eds/services/reset/edsResetSampleData';
@@ -51,7 +52,7 @@ const cleared = (): Project =>
 
 /** The deps at the edge: a delete that takes everything, and the install record given. */
 function edge(record: { target?: typeof RECORDED } | undefined) {
-    const startDelete = jest.fn(async () => ({ activationId: 'act-1' }));
+    const startDelete = jest.fn(async (_request: ImportRequest) => ({ activationId: 'act-1' }));
     const deps: SampleDataDeps = {
         inventory: async () => ['products'],
         startImport: async () => ({ activationId: 'never' }),
@@ -111,6 +112,54 @@ describe('a pack with an install record, the website and store view cleared sinc
         expect(startDelete).not.toHaveBeenCalled();
         expect(removal.stopped).toMatch(
             /^Its datapack was not uninstalled, so the project was kept: No website and store view are set/u
+        );
+    });
+});
+
+/** A project whose website and store view were changed in Configure after the install. */
+const moved = (): Project => {
+    const project = cleared();
+    Object.assign(project.componentConfigs?.[ACCS] ?? {}, {
+        ACCS_WEBSITE_CODE: 'other',
+        ACCS_STORE_VIEW_CODE: 'other_en',
+    });
+    return project;
+};
+
+// D6 (owner, 2026-11-14): the record is where the data is, so its target wins over today's codes.
+describe('a pack with an install record, the website and store view changed since', () => {
+    it("is removed at the record's target, not today's (the shared removal)", async () => {
+        const startDelete = edge({ target: RECORDED });
+
+        await expect(
+            removeProjectSampleDataOutcome(moved(), context(), jest.fn())
+        ).resolves.toStrictEqual({});
+
+        expect(startDelete).toHaveBeenCalledWith(expect.objectContaining({ target: RECORDED }));
+    });
+
+    it("Delete and Reset: remove it at the record's target", async () => {
+        const startDelete = edge({ target: RECORDED });
+
+        await removeDataBeforeDelete(context(), moved(), jest.fn());
+        await removeAnsweredDatapack(moved(), context(), jest.fn(), {
+            removeDatapack: true,
+            changes: 'drop',
+        });
+
+        expect(startDelete.mock.calls.map(([request]) => request.target)).toStrictEqual([
+            RECORDED,
+            RECORDED,
+        ]);
+    });
+
+    it("CONTROL: a record written before targets were kept removes at today's codes", async () => {
+        const startDelete = edge({});
+
+        await removeProjectSampleDataOutcome(moved(), context(), jest.fn());
+
+        expect(startDelete).toHaveBeenCalledWith(
+            expect.objectContaining({ target: { websiteCode: 'other', storeCode: 'other_en' } })
         );
     });
 });

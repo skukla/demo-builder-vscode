@@ -23,9 +23,8 @@ import { replacedName, replacesHeld } from '../replaceWords';
 import type { DatapackEngine } from '../services/datapackEngine';
 import { nodeRecordFiles, readInstallRecord } from '../services/demoBuilderEngine/installRecord';
 import type { ImportRequest } from '../services/importRequest';
-import { rememberedPackName } from '../services/packNames';
 import type { ValidationResult } from '../types';
-import { libraryDisplayName } from './libraryWriter';
+import { heldDisplayName } from './libraryWriter';
 import {
     type SavedFirst,
     removalStageReporter,
@@ -57,26 +56,6 @@ export interface Replacement {
 }
 
 const REJECTED = 'The Data Installer rejected this install request.';
-
-/**
- * The project's pack by the name the SC knows it by: remembered, else read from the library without
- * a sign-in prompt, else its id.
- */
-export async function heldDisplayName(
-    context: HandlerContext,
-    held: NonNullable<Project['datapack']>,
-): Promise<string> {
-    try {
-        const known =
-            held.store === 'library'
-                ? rememberedPackName(context.context.globalState, held.name)
-                : undefined;
-        return known ?? (await libraryDisplayName({ ...context, panel: undefined }, held)) ?? held.name;
-    } catch {
-        // A name is not worth stopping for: the id still says which pack.
-        return held.name;
-    }
-}
 
 /**
  * The pack the open project uses, when importing `importing` replaces it: another pack or version,

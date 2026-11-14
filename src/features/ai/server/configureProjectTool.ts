@@ -59,7 +59,10 @@ import {
 } from './storeScope';
 import componentsConfig from '@/features/components/config/components.json';
 import { componentRegistryFrom } from '@/features/components/services/componentRegistryAccess';
+import { datapackLeftByChange, datapackLeftLine } from '@/features/dashboard/services/connectionChange';
 import { stageSettingsChange } from '@/features/dashboard/services/projectSettingsChange';
+import { recordedInstanceOf } from '@/features/data-installer/handlers/installedElsewhere';
+import { heldDisplayName } from '@/features/data-installer/handlers/libraryWriter';
 import { dropStaleFailure } from '@/features/data-installer/services/installFailure';
 import { isStoreScopeChange } from '@/features/eds/services/storefront/storeScopeChange';
 import type { MeshChanges } from '@/features/mesh/services/types';
@@ -99,7 +102,7 @@ function meshEnvDependencies(project: Project): Set<string> {
     return new Set(mesh?.configuration?.requiredEnvVars ?? []);
 }
 
-const ACCEPTED = ['datapack', 'addons', 'blockLibraries', 'storeScope', 'env'] as const;
+const ACCEPTED = ['datapack', 'addons', 'blockLibraries', 'storeScope', 'env', 'installedDatapack'] as const;
 
 interface Applied {
     [field: string]: unknown;
@@ -326,6 +329,12 @@ export function registerConfigureProjectTool(
                         .describe(
                             'Non-secret env vars, keyed by component id then var name. See get_component_requirements',
                         ),
+                    installedDatapack: z
+                        .enum(['keep'])
+                        .optional()
+                        .describe(
+                            'Only when the user agreed: change the Commerce connection while a datapack is installed, leaving it in the current instance (uninstall it first with reset_datapack instead)',
+                        ),
                 })
                 .strict(),
         },
@@ -354,9 +363,9 @@ export function registerConfigureProjectTool(
                     error: `Unknown field(s): ${unknown.join(', ')}. Accepted: ${ACCEPTED.join(', ')}.`,
                 });
             }
-            if (Object.keys(input).length === 0) {
+            if (Object.keys(input).filter((k) => k !== 'installedDatapack').length === 0) {
                 return asText({
-                    error: `Nothing to apply. Pass one or more of: ${ACCEPTED.join(', ')}.`,
+                    error: `Nothing to apply. Pass one or more of: ${ACCEPTED.filter((k) => k !== 'installedDatapack').join(', ')}.`,
                 });
             }
 
@@ -392,6 +401,10 @@ export function registerConfigureProjectTool(
 
             const change = settingsChangeFrom(project, input);
             if ('error' in change) return asText(change);
+            // Another Commerce instance would leave the datapack where nothing could uninstall it
+            // (step-07 D6): nothing is applied until the agent answers, as Configure asks the SC.
+            const left = input.installedDatapack === 'keep' ? undefined : datapackLeftByChange(project, change.changes, await recordedInstanceOf(project));
+            if (left) return asText({ error: datapackLeftLine(await heldDisplayName(ctx, left)) });
             const applied = { ...recordChoices(project, input), ...change.applied };
 
             // Only a call that changes settings is staged: one that records a

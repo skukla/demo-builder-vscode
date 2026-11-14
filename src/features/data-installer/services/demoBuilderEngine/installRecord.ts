@@ -97,6 +97,8 @@ export interface InstallRecord {
      * written before it was kept; those read at the project's (rule 3).
      */
     target?: TargetCodes;
+    /** The Commerce instance it went into (`deriveImportInstance`): a removal from another stops (step-07 D6). Absent before (rule 3). */
+    instance?: string;
     /** The Admin step the pack left, when its root is a root of its own (step 12). */
     rootStep?: PackRootStep;
     created: CreatedObject[];
@@ -159,6 +161,7 @@ const recordSchema = z.object({
     engine: z.literal('demo-builder'),
     startedAt: z.string(),
     target: z.object({ websiteCode: z.string(), storeCode: z.string() }).optional(),
+    instance: z.string().optional(),
     rootStep: z
         .object({
             state: z.enum(['open', 'done']),
@@ -185,9 +188,7 @@ const recordSchema = z.object({
     pending: z.array(pendingSchema).optional(),
 });
 
-function packLabel(pack: DatapackId): string {
-    return `${pack.name}@${pack.version}`;
-}
+const packLabel = (pack: DatapackId): string => `${pack.name}@${pack.version}`;
 
 /**
  * Where a pack's record lives: `<project>/.demo-builder/datapacks/<name>@<version>.json`.
@@ -261,14 +262,14 @@ function parseRecord(text: string, label: string): InstallRecord {
  * Start recording an install, or carry on the record a failed one left.
  *
  * @param now - the time to stamp a new record with
- * @param target - where a new record's install goes; a record carried on keeps the one it has
+ * @param target - where a new record's install goes, and `instance` the Commerce instance; a record carried on keeps both
  */
 export async function openInstallRecord(
     files: RecordFiles,
     projectPath: string,
     pack: DatapackId,
     now: () => string,
-    target?: TargetCodes,
+    target?: TargetCodes, instance?: string,
 ): Promise<InstallRecorder> {
     const filePath = installRecordPath(projectPath, pack);
     const record: InstallRecord = (await readInstallRecord(files, projectPath, pack)) ?? {
@@ -277,6 +278,7 @@ export async function openInstallRecord(
         engine: 'demo-builder',
         startedAt: now(),
         ...(target ? { target: { websiteCode: target.websiteCode, storeCode: target.storeCode } } : {}),
+        ...(instance ? { instance } : {}),
         created: [],
     };
     const pending: PendingObject[] = [...(record.pending ?? [])];
@@ -366,9 +368,7 @@ export async function forgetInstallRecord(
     await files.remove(installRecordPath(projectPath, pack));
 }
 
-function isMissing(error: unknown): boolean {
-    return (error as NodeJS.ErrnoException | undefined)?.code === 'ENOENT';
-}
+const isMissing = (error: unknown): boolean => (error as NodeJS.ErrnoException | undefined)?.code === 'ENOENT';
 
 /** The record on disk: written atomically, so a crash mid-write leaves the last good copy. */
 export const nodeRecordFiles: RecordFiles = {

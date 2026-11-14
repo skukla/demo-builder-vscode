@@ -157,8 +157,8 @@ export interface SampleDataDeps {
     onProgress?: (perType: Record<string, DataTypeStatus>) => void;
     /**
      * Demo Builder's install record of a pack in this project, when there is one: where it was
-     * installed. A removal reads it when the project names no website and store view now, since
-     * the owner's rule is "no target was EVER recorded" (review, 2026-11-14), not today's codes.
+     * installed. A removal goes there first, today's codes only when the record names none
+     * (step-07 D6): the record is where the data is.
      */
     installRecordOf?: (pack: { name: string; version: string }) => Promise<{ target?: InstallTarget } | undefined>;
 }
@@ -168,14 +168,15 @@ const NO_RECORDED_TARGET = 'No website and store view are set for this project, 
 
 /**
  * Where a job writes, or why it does not. An install goes where the project says now. A removal
- * goes there too, else where the install record says the pack went; only with no record at all
- * is there nothing to remove (`noTarget`), since nothing can have been installed.
+ * goes where the install record says the pack went, since that is where the data is (step-07 D6:
+ * a website changed since would strand it), else where the project says now; only with no record
+ * and no codes is there nothing to remove (`noTarget`), since nothing can have been installed.
  */
 async function targetOf(project: ProjectLike, deps: SampleDataDeps, mode: 'install' | 'remove', id: { name: string; version: string }): Promise<InstallTarget | SampleDataResult> {
-    const now = resolveInstallTarget(project);
-    if (now) return now;
     const record = mode === 'remove' ? await deps.installRecordOf?.(id) : undefined;
     if (record?.target) return record.target;
+    const now = resolveInstallTarget(project);
+    if (now) return now;
     if (record) return { ran: false, skipped: true, reason: NO_RECORDED_TARGET };
     return { ran: false, skipped: true, noTarget: true, reason: 'No website and store view were recorded for this project.' };
 }

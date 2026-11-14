@@ -755,6 +755,18 @@ kept). Both answer `storePages`, the one sentence the SC reads in Configure ("No
 CitiSignal: 11 category pages and 39 product pages published. 30 old product pages
 removed."). One service does it for every door (`storeScopePages.ts`).
 
+A `configure_project` change that points a project holding a datapack at another Commerce
+instance (step-07 D6) applies nothing and says so: the datapack would stay in the instance
+it went into, where nothing could then uninstall it. The agent uninstalls it first with
+`reset_datapack`, or calls again with `installedDatapack: "keep"` once the user agrees to
+leave it there. Configure's Save asks the SC the same question
+(`datapackLeftByChange`, `connectionChange.ts`). The install record notes the instance
+(`instance`), and every removal, save and changes read stops when the project now points
+at another one (`installedElsewhere.ts`). The engine refuses the same itself: an install
+again, a removal, or the removal an import runs for the pack it replaces, on another
+instance, writes nothing (`instanceKey.ts`). An Edit that changes the connection asks
+before it rebuilds (`executorEditConnection.ts`).
+
 ### Installing a datapack again, and saving the store back (datapack-engine step 05, 2026-10-29)
 
 With Demo Builder's engine, `start_datapack_import` on a pack it already installed in the project

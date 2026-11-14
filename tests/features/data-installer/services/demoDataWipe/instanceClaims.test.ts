@@ -205,3 +205,45 @@ it('sets back what the dropped records wrote, and keeps only the settings writte
     });
     expect([...answer.respects.settingsKept]).toEqual(['bodea/catalog/frontend/list_mode']);
 });
+
+// D6 review S3: a record says which Commerce instance its pack went into; that, not the project's
+// connection now, decides whether it belongs to the instance being cleared.
+describe('records that note their Commerce instance', () => {
+    const A = 'TenantA0123456789ABCD';
+    const onInstance = (p: Project, tenant: string): Project => ({
+        ...p,
+        componentConfigs: {
+            'adobe-commerce-accs': {
+                ...(p.componentConfigs?.['adobe-commerce-accs'] ?? {}),
+                ACCS_GRAPHQL_ENDPOINT: `https://na1-sandbox.api.commerce.adobe.com/${tenant}/graphql`,
+            },
+        },
+    });
+    const noted = (r: InstallRecord, instance: string): InstallRecord => ({ ...r, instance });
+    const OPEN_A = onInstance(project('open-a', SITE), A);
+    const claimsOnA = (files: ReturnType<typeof memoryFiles>, others: Project[], matched: Project[]) =>
+        readInstanceClaims(files, OPEN_A, others, resolveWipeScope(STRUCTURE, [SITE]), {
+            matched: new Set([OPEN_A, ...matched].map((p) => p.path)),
+        });
+
+    it('leaves a pack recorded on another instance alone, respecting nothing of it, though its project is here now', async () => {
+        const moved = onInstance(project('moved', SITE, 'nb-pack'), A);
+        const files = filesWith([[moved, noted(record('nb-pack', SITE, 'NB-ON-B'), 'TenantB0123456789ABCD')]]);
+
+        const answer = await claimsOnA(files, [moved], [moved]);
+
+        expect(answer.users.find((u) => u.project.path === moved.path)?.decision).toBe('nothing');
+        expect(answer.respects.everyRecord).toStrictEqual([]);
+    });
+
+    it("respects a record on this instance from a project that points elsewhere now, and never uninstalls it", async () => {
+        const away = onInstance(project('away', SITE, 'nb-pack'), 'TenantC0123456789ABCD');
+        const here = noted(record('nb-pack', SITE, 'NB-ON-A'), A);
+        const files = filesWith([[away, here]]);
+
+        const answer = await claimsOnA(files, [away], []);
+
+        expect(answer.users.find((u) => u.project.path === away.path)?.decision).not.toBe('uninstall');
+        expect(answer.respects.records).toEqual([here]);
+    });
+});

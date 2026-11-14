@@ -10,7 +10,7 @@
 
 import type { DataInstallerClient } from '../services/dataInstallerClient';
 import { DatapackStoreWriter } from '../services/datapackStoreWriter';
-import { rememberPackName } from '../services/packNames';
+import { rememberPackName, rememberedPackName } from '../services/packNames';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
@@ -59,5 +59,25 @@ export async function libraryDisplayName(context: HandlerContext, held: NonNulla
     } catch (error) {
         context.debugLogger.debug(`[Data Installer] Could not read ${held.name}'s display name: ${error instanceof Error ? error.message : String(error)}`);
         return undefined;
+    }
+}
+
+/**
+ * The project's pack by the name the SC knows it by: remembered, else read from the library without
+ * a sign-in prompt, else its id.
+ */
+export async function heldDisplayName(
+    context: HandlerContext,
+    held: NonNullable<Project['datapack']>,
+): Promise<string> {
+    try {
+        const known =
+            held.store === 'library'
+                ? rememberedPackName(context.context.globalState, held.name)
+                : undefined;
+        return known ?? (await libraryDisplayName({ ...context, panel: undefined }, held)) ?? held.name;
+    } catch {
+        // A name is not worth stopping for: the id still says which pack.
+        return held.name;
     }
 }

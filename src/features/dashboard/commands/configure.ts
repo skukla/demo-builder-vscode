@@ -1,6 +1,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { configureHandlers } from '../handlers/configureHandlers';
+import { answerConnectionChange, connectionAnswerDeps } from './configureConnectionAnswer';
 import { runConfigureRepublish } from './configureRepublishRun';
 import { storefrontPrompt } from './configureStorefrontRepublish';
 import { ProjectDashboardWebviewCommand } from './showDashboard';
@@ -24,6 +25,7 @@ import {
     describePendingBlockLibraryWork,
     hasPendingBlockLibraryWork,
 } from '@/features/dashboard/services/configureBlockLibraryWork';
+import type { InstalledDatapackAnswer } from '@/features/dashboard/services/connectionChange';
 import { sendAuthoringExperienceUpdate } from '@/features/dashboard/services/projectPanelPushes';
 import {
     readProjectSettings,
@@ -66,6 +68,8 @@ interface SaveConfigurationData extends BlockLibrarySelectionInput {
     configChanges?: ComponentConfigs;
     authoringExperience?: AuthoringExperience;
     commerceAdminExperience?: CommerceAdminExperience;
+    /** The SC's answer when the save points a project holding a datapack at another instance. */
+    installedDatapack?: InstalledDatapackAnswer;
 }
 
 export class ConfigureProjectWebviewCommand extends BundledPanelCommand<ConfigureInitialData> {
@@ -263,6 +267,9 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
             if (!project) {
                 throw new Error('No project found');
             }
+            // A datapack in the instance this moves away from: asked first, nothing saved (step-07 D6).
+            const asked = await answerConnectionChange(project, data.configChanges ?? {}, data.installedDatapack, connectionAnswerDeps(this.createHandlerContext()));
+            if (asked) return asked;
 
             // The screen sends only what the SC changed (PL-76). Staging lays it over
             // the settings as they are now, keeps integration settings, moves secrets,

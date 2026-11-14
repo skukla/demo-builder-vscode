@@ -46,13 +46,14 @@ function request(overrides: Partial<ImportRequest> = {}): ImportRequest {
     };
 }
 
-async function engineWith(answers: (call: SentCall) => unknown) {
+async function engineWith(answers: (call: SentCall) => unknown, where: { recorded?: string; now?: string } = {}) {
     const ctx = await fakeContext(STORE, answers);
     const files = memoryFiles();
     await (
-        await openInstallRecord(files, PROJECT, OLD, () => 'then')
+        await openInstallRecord(files, PROJECT, OLD, () => 'then', undefined, where.recorded)
     ).record({ kind: 'categories', id: '30' });
     const engine = demoBuilderEngine({
+        ...(where.now ? { instance: where.now } : {}),
         commerce: async () => ({ get: ctx.get, send: ctx.send }),
         readPack: async () => ITEMS,
         projectPath: PROJECT,
@@ -103,6 +104,22 @@ describe('an import that replaces the version the demo uses', () => {
         expect(ctx.sent.some((call) => call.method === 'DELETE')).toBe(false);
         expect(status.replacing).toBeUndefined();
         expect(await readInstallRecord(files, PROJECT, OLD)).toBeDefined();
+    });
+});
+
+// D6 review B1: the version replaced went into another Commerce instance; its ids are not this one's.
+describe('an import replacing a version installed on another Commerce instance', () => {
+    it('removes nothing, installs nothing, and keeps the old record', async () => {
+        const { engine, ctx, files } = await engineWith(answering(() => true), { recorded: 'TenantA', now: 'TenantB' });
+
+        const { activationId } = await engine.startImport(request({ replaces: OLD }));
+        await settle(engine, activationId);
+
+        expect(ctx.sent).toStrictEqual([]);
+        expect((await engine.getJobFailureReason(activationId))?.error).toBe(
+            `${OLD.name}@${OLD.version} is installed on another Commerce instance. Uninstall it there first.`
+        );
+        expect((await readInstallRecord(files, PROJECT, OLD))?.created).toHaveLength(1);
     });
 });
 

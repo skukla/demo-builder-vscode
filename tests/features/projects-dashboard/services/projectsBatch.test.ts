@@ -14,6 +14,7 @@ jest.mock('@/features/data-installer/handlers/packSave', () => ({ ownNames: jest
 jest.mock('@/features/data-installer/handlers/libraryWriter', () => ({
     openLibraryWriter: jest.fn(async () => ({ ok: false, reason: 'not in this test' })),
     libraryDisplayName: jest.fn(async () => undefined),
+    heldDisplayName: jest.fn(async (_context: unknown, held: { name: string }) => held.name),
 }));
 
 import * as vscode from 'vscode';

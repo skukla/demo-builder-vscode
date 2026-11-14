@@ -6,6 +6,10 @@
  * our own save in flight, and a mesh/storefront deployment the extension reports over
  * `deployment-status`.
  *
+ * A save that would point a project holding a datapack at another Commerce instance comes back
+ * with a question instead (step-07 D6): `connectionQuestion` names the datapack, and
+ * `answerConnectionQuestion` sends the same save again with the SC's answer, or drops it.
+ *
  * Moved out of ConfigureScreen (EDS-8) unchanged.
  *
  * @module features/dashboard/ui/configure/hooks/useConfigureSave
@@ -16,6 +20,7 @@ import type { SaveConfigurationResponse } from '../configureTypes';
 import { withStoredSecretsPreserved } from '../storedSecretPayload';
 import type { BlockLibrarySelection } from './useBlockLibrarySelection';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import type { InstalledDatapackAnswer } from '@/features/dashboard/services/connectionChange';
 import type { AuthoringExperience, CommerceAdminExperience } from '@/types/base';
 import type { ComponentConfigs } from '@/types/webview';
 import type { DeploymentStatusPayload } from '@/types/webviewPayloads';
@@ -55,6 +60,10 @@ export interface UseConfigureSaveReturn {
     isDeploying: boolean;
     /** Send what the SC changed to the extension. */
     handleSave: () => Promise<void>;
+    /** The datapack a save would leave in the current Commerce instance, while the SC is asked. */
+    connectionQuestion?: string;
+    /** Send the save again with the SC's answer; none drops it (Cancel). */
+    answerConnectionQuestion: (answer?: InstalledDatapackAnswer) => Promise<void>;
     /** Close the Configure panel. */
     handleCancel: () => void;
 }
@@ -84,6 +93,7 @@ export function useConfigureSave({
     // change" the second time (owner, 2026-10-17).
     const [savedAuthoring, setSavedAuthoring] = useState(initialAuthoringExperience);
     const [savedAdmin, setSavedAdmin] = useState(initialCommerceAdminExperience);
+    const [connectionQuestion, setConnectionQuestion] = useState<string>();
 
     // Listen for deployment status updates from backend
     // This keeps the Save button disabled during mesh/storefront deployment
@@ -95,7 +105,7 @@ export function useConfigureSave({
         return unsubscribe;
     }, []);
 
-    const handleSave = useCallback(async () => {
+    const send = useCallback(async (installedDatapack?: InstalledDatapackAnswer) => {
         setIsSaving(true);
         try {
             // The authoring-experience preference is EDS-only, and like the block
@@ -116,8 +126,14 @@ export function useConfigureSave({
                               ...blockLibrarySelection,
                           }
                         : {}),
+                    ...(installedDatapack ? { installedDatapack } : {}),
                 },
             );
+            // Asked instead of saved: the confirm takes it from here (step-07 D6).
+            if (result.data?.installedDatapack) {
+                setConnectionQuestion(result.data.installedDatapack);
+                return;
+            }
             if (!result.success) {
                 throw new Error(result.error || 'Failed to save configuration');
             }
@@ -148,9 +164,16 @@ export function useConfigureSave({
         onSaved,
     ]);
 
+    const handleSave = useCallback(() => send(), [send]);
+
+    const answerConnectionQuestion = useCallback(async (answer?: InstalledDatapackAnswer) => {
+        setConnectionQuestion(undefined);
+        if (answer) await send(answer);
+    }, [send]);
+
     const handleCancel = useCallback(() => {
         webviewClient.postMessage('cancel');
     }, []);
 
-    return { isSaving, isDeploying, handleSave, handleCancel };
+    return { isSaving, isDeploying, handleSave, handleCancel, connectionQuestion, answerConnectionQuestion };
 }

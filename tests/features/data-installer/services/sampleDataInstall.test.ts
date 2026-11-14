@@ -474,12 +474,23 @@ describe('removeSampleData', () => {
         expect(d.startDelete).not.toHaveBeenCalled();
     });
 
-    it('CONTROL: today\'s codes win when the project names them', async () => {
+    // step-07 D6: the record is where the data is, so it wins over a website changed since.
+    it("removes at the record's target even when the project names other codes now", async () => {
         const d = deps({ installRecordOf: jest.fn().mockResolvedValue({ target: { websiteCode: 'old', storeCode: 'old_en' } }) });
 
         await removeSampleData(project(), d);
 
-        expect(d.startDelete.mock.calls[0][0].target).not.toEqual({ websiteCode: 'old', storeCode: 'old_en' });
+        expect(d.startDelete.mock.calls[0][0].target).toEqual({ websiteCode: 'old', storeCode: 'old_en' });
+    });
+
+    it("CONTROL: an install goes where the project says now, whatever a record says", async () => {
+        const installRecordOf = jest.fn().mockResolvedValue({ target: { websiteCode: 'old', storeCode: 'old_en' } });
+        const d = deps({ installRecordOf });
+
+        await installSampleData(project(), d);
+
+        expect(installRecordOf).not.toHaveBeenCalled();
+        expect(d.startImport.mock.calls[0][0].target).not.toEqual({ websiteCode: 'old', storeCode: 'old_en' });
     });
 
     // step-07 D1: a delete names what was left, so the engine's note travels with the flag.

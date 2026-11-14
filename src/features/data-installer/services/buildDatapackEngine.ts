@@ -98,10 +98,11 @@ export function layerFinder(access: Pick<DatapackEngineAccess, 'libraryCatalog'>
  */
 export function buildDatapackEngine(access: DatapackEngineAccess, log: (line: string) => void): DatapackEngine {
     // Each finished job goes in the project's activity log (step 14): the service logs its own runs.
+    const instance = deriveImportInstance(access.project.componentConfigs);
     const writeActivity = recordJobEnd({
         files: nodeActivityFiles,
         projectPath: access.project.path,
-        commerceInstance: deriveImportInstance(access.project.componentConfigs),
+        commerceInstance: instance,
         log,
     });
     return demoBuilderEngine({
@@ -109,6 +110,8 @@ export function buildDatapackEngine(access: DatapackEngineAccess, log: (line: st
         commerce: projectCommerce(access, { use: 'reuse', log }),
         readPack: (pack, source) => readPackItems(access, pack, source),
         projectPath: access.project.path,
+        // Written on a new install record: a removal from another instance stops (step-07 D6).
+        ...(instance ? { instance } : {}),
         log,
         onJobEnd: (end) => void writeActivity(end),
         ...layerFinder(access),
