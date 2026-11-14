@@ -401,6 +401,9 @@ An audit found five walk answers that contradicted earlier decisions. The owner'
     Undo Last Save and Uninstall in More. To reach the pack My Luma came from, Switch to Luma.
   - The SC's own datapack keeps its original for good, beside the two newest saves.
   - Replaces J4-3 (Restore as last save, no save question). Prototype J9 first; build after the walk.
+- A reset where no website or store view was ever recorded leaves the project naming its datapack
+  (owner, 2026-11-14): if the website was cleared after an install, forgetting it would hide data still
+  in Commerce. Delete, Reset, Edit and Clear treat such a removal as nothing to remove.
 - Already on track: the reset's "Content kept" row is built amber; Q6 makes kept-on-purpose green
   (slice I3).
 
