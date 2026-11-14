@@ -4,14 +4,16 @@
  * The build's install skips a datapack when the project names no website and store view for its
  * backend (`resolveInstallTarget`), so a creation install could be skipped without a word. The
  * wizard now holds Continue until both codes are set for the chosen backend, whenever a datapack is
- * chosen. With no datapack chosen nothing changes. In Edit, where the codes live in Configure, the
- * Datapacks step is locked with the Configure line instead (owner, Q7).
+ * chosen. With no datapack chosen nothing changes. The Datapacks step itself is never locked, so the
+ * SC can always change or remove the pick; its line is the reason Continue is held, and in Edit,
+ * where the codes live in Configure, that line points to Configure (owner, Q7 and 2026-11-14).
  */
 
 import {
     commerceSectionStates,
     isCommerceStepComplete,
 } from '@/features/project-creation/ui/steps/commerceSections';
+import { datapackHeldReason } from '@/features/project-creation/ui/steps/datapackGate';
 import type { WizardState } from '@/types/webview';
 import { ACCS, PAAS, state } from './commerceSections.testUtils';
 
@@ -65,34 +67,37 @@ describe('Business Structure, with a datapack chosen', () => {
 });
 
 describe('the Datapacks step', () => {
-    it('is locked, and holds Continue, with a datapack chosen and no target', () => {
+    // Owner, 2026-11-14: the step stays clickable so the SC can always change or remove the pick;
+    // only Continue waits, and the line that was the lock is the reason Continue is held.
+    it('stays clickable, and holds Continue, with a datapack chosen and no target', () => {
         const s = ready({ datapack: PACK, componentConfigs: VIEW_ONLY_PAAS });
-        expect(datapackStep(s)).toMatchObject({
-            status: 'locked',
-            lockReason: 'Choose a website and store view first',
-        });
+        const step = datapackStep(s);
+        expect(step?.status).toBe('upcoming');
+        expect(step?.lockReason).toBeUndefined();
         expect(isCommerceStepComplete(s, 'sample-data', CTX)).toBe(false);
+        expect(datapackHeldReason(s)).toBe('Choose a website and store view first');
     });
 
     it('is done and lets Continue through with a datapack chosen and both codes', () => {
         const s = ready({ datapack: PACK, componentConfigs: BOTH_PAAS });
         expect(datapackStep(s)).toMatchObject({ status: 'done', value: 'bodea' });
         expect(isCommerceStepComplete(s, 'sample-data', CTX)).toBe(true);
+        expect(datapackHeldReason(s)).toBeUndefined();
     });
 
     it('changes nothing with no datapack chosen, even with no codes at all', () => {
         const s = ready();
         expect(datapackStep(s)).toMatchObject({ status: 'done', value: 'None' });
         expect(isCommerceStepComplete(s, 'sample-data', CTX)).toBe(true);
+        expect(datapackHeldReason(s)).toBeUndefined();
     });
 
-    it('in Edit, with the codes missing, points to Configure', () => {
+    it('in Edit, with the codes missing, stays clickable and holds Continue pointing to Configure', () => {
         const s = ready({ wizardMode: 'edit', datapack: PACK, componentConfigs: VIEW_ONLY_PAAS });
-        expect(datapackStep(s)).toMatchObject({
-            status: 'locked',
-            lockReason: 'Set the website and store view in Configure first.',
-        });
+        expect(datapackStep(s)?.status).toBe('upcoming');
+        expect(datapackStep(s)?.lockReason).toBeUndefined();
         expect(isCommerceStepComplete(s, 'sample-data', CTX)).toBe(false);
+        expect(datapackHeldReason(s)).toBe('Set the website and store view in Configure first.');
     });
 
     it('in Edit after the backend changed, asks for them here, since the strip shows them again', () => {
@@ -102,6 +107,6 @@ describe('the Datapacks step', () => {
             datapack: PACK,
             componentConfigs: VIEW_ONLY_PAAS,
         });
-        expect(datapackStep(s)?.lockReason).toBe('Choose a website and store view first');
+        expect(datapackHeldReason(s)).toBe('Choose a website and store view first');
     });
 });

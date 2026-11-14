@@ -40,7 +40,11 @@ import { AGENT_PAGE_SIZE } from './projectors';
 import type { ToolDescriptor } from './toolDescriptors';
 import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
 import { PICKABLE_KINDS, PICK_FIELDS } from '@/features/data-installer/pickableKinds';
+import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
+
+/** Agents cannot take the Demo Builder mark off (owner, 2026-11-14); the screen can. */
+const DEMO_BUILDER_UNMARK_REFUSAL = "Demo Builder datapacks can't be unmarked by an agent.";
 
 /**
  * The datapack an import/reset/export names.
@@ -899,5 +903,12 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             datapackName: z.string().describe('The pack name from find_datapacks (one of yours)'),
             team: z.boolean().describe('true to mark it as a Demo Builder datapack; false is refused for agents'),
         },
+        // Unmarking would reopen the Delete a Demo Builder datapack refuses (owner, 2026-11-14,
+        // "Close it"). The screen's Remove Demo Builder Mark reaches the same handler, so the refusal
+        // is here, on the agent's tool only, before dispatch.
+        preflight: (args) =>
+            args.team === false
+                ? { success: false, error: DEMO_BUILDER_UNMARK_REFUSAL, code: ErrorCode.INVALID_OPERATION }
+                : undefined,
     },
 ];

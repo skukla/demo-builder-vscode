@@ -1,6 +1,9 @@
 /**
  * datapackGate — a chosen datapack needs a website and store view before Continue.
  *
+ * The Datapacks step is never locked by this: the SC can always change or remove the pick there.
+ * Only Continue waits, and `datapackHeldReason` is the line that says why (owner, 2026-11-14).
+ *
  * The build installs the chosen datapack only when the project names both codes for its backend
  * (`resolveInstallTarget`); with either missing the install is skipped. This reads the wizard's
  * state through that same rule, so the wizard and the build cannot disagree, and a creation install
@@ -13,7 +16,7 @@ import { isSetInConfigure } from './editLocks';
 import { resolveInstallTarget } from '@/features/data-installer/installTarget';
 import type { WizardState } from '@/types/webview';
 
-/** The Datapacks step's lock while the strip shows Business Structure. */
+/** Why Continue is held on Datapacks while the strip shows Business Structure. */
 export const CHOOSE_TARGET_FIRST = 'Choose a website and store view first';
 
 /** The same in Edit, where the codes are changed in Configure (owner, Q7). */
@@ -40,12 +43,12 @@ export function datapackLacksTarget(state: GateState): boolean {
 }
 
 /**
- * Why the Datapacks step is locked, or undefined when it is not.
+ * Why Continue is held on the Datapacks step, or undefined when it is not.
  *
  * @param state - wizard state
- * @returns the lock line for this mode, or undefined
+ * @returns the held line for this mode, or undefined
  */
-export function datapackLockReason(state: GateState): string | undefined {
+export function datapackHeldReason(state: GateState): string | undefined {
     if (!datapackLacksTarget(state)) return undefined;
     return isSetInConfigure(state) ? SET_TARGET_IN_CONFIGURE : CHOOSE_TARGET_FIRST;
 }

@@ -89,6 +89,8 @@ export interface DatapackDetailPanelProps {
     sharedInFile?: string;
     /** The SC's own pack was shared or stopped being shared (owner, 2026-10-30). Stable. */
     onSharingChanged?: () => void;
+    /** The SC's own pack's Demo Builder mark changed. The Datapack Library only: it offers the mark rows. Stable. */
+    onMarkChanged?: () => void;
     /** The settings layer Import will apply after the pack's data (step 09). */
     settingsLayer?: PackDetailLayer;
     /** The save Undo Last Save goes back to, when the open pack offers it (`useDetailFlyout`). */
@@ -121,6 +123,7 @@ export function DatapackDetailPanel({
     onRename,
     sharedInFile,
     onSharingChanged,
+    onMarkChanged,
     settingsLayer,
     undoTo,
     onRemoveData,
@@ -173,6 +176,7 @@ export function DatapackDetailPanel({
                                 installerOn={installerOn}
                                 sharedInFile={sharedInFile}
                                 onSharingChanged={onSharingChanged}
+                                {...(onMarkChanged ? { onMarkChanged } : {})}
                                 onWorking={setWorking}
                                 {...(undoTo ? { undoTo } : {})}
                                 {...(onRemoveData ? { onRemoveData } : {})}

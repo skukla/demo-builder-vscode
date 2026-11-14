@@ -19,7 +19,7 @@
  * @module features/project-creation/ui/steps/commerceSections
  */
 
-import { datapackLacksTarget, datapackLockReason } from './datapackGate';
+import { datapackLacksTarget } from './datapackGate';
 import { isSetInConfigure } from './editLocks';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
@@ -238,19 +238,23 @@ export function commerceSectionStates(
     sections.push(catalogSection(state, gated, connectionDone));
 
     // Not chained on the connection like the sub-steps above it: choosing a datapack
-    // reads the pack catalog, not the instance. Its one lock is a chosen datapack with
-    // no website and store view, which the build would skip (datapackGate.ts).
+    // reads the pack catalog, not the instance. It is never locked, so the pick can always
+    // be changed or removed; a chosen datapack with no website and store view only holds
+    // Continue, since the build would skip it (datapackGate.ts).
     sections.push(sampleDataSection(state));
 
     return sections;
 }
 
-/** The Datapacks sub-step: done, unless a chosen datapack has nowhere to install. */
+/**
+ * The Datapacks sub-step: done, unless a chosen datapack has nowhere to install. Then it is
+ * still open (`upcoming`, never `locked`), so the SC can change or remove the pick; the step
+ * body says why Continue is held (owner, 2026-11-14).
+ */
 function sampleDataSection(state: WizardState): CommerceSectionState {
     const value = state.datapack?.name ?? 'None';
-    const lockReason = datapackLockReason(state);
-    if (lockReason) return { id: 'sample-data', status: 'locked', lockReason, value };
-    return { id: 'sample-data', status: 'done', value };
+    const status = datapackLacksTarget(state) ? 'upcoming' : 'done';
+    return { id: 'sample-data', status, value };
 }
 
 /**

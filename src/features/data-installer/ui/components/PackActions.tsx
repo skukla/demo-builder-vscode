@@ -13,12 +13,13 @@
  *
  * More, upper section: Save as File; Undo Last Save, on the datapack the demo uses when there is a
  * save to go back to (Phase 2, owner 2026-11-12); Share or Stop Sharing, on the SC's own library
- * datapack. Lower section: Uninstall, on the demo's installed version; Delete, on the SC's own library
+ * datapack; in the Datapack Library, Remove Demo Builder Mark on their own Demo Builder datapack and
+ * Mark as Demo Builder Datapack on their own other one (owner, 2026-11-14; rule 1). Lower section: Uninstall, on the demo's installed version; Delete, on the SC's own library
  * datapack but never a Demo Builder one (overview Phase 7). Bare verbs (J8-3): the datapack is the
  * menu's subject, and each window's title names it ("Delete My Luma?"). A pack of saves is deleted
  * whole; a named version alone (P4-Q6 is open).
  *
- * **Undo Last Save, Share, Stop Sharing and Delete ask in a dialog** (`ConfirmActionDialog`, owner,
+ * **Undo Last Save, Share, Stop Sharing, the two mark rows and Delete ask in a dialog** (`ConfirmActionDialog`, owner,
  * 2026-11-05). **While a menu row's work runs, the flyout waits**: its title and the medium spinner
  * its load shows, nothing else (dialog design rules), since the menu has closed and has no button to
  * spin. What each one says afterwards (where the file went, why it could not) shows under the actions.
@@ -37,6 +38,7 @@ import React, { useCallback, useLayoutEffect, useState } from 'react';
 import { INSTALLER_WRITES_SHOWN } from '../../installerWrites';
 import { isSavedVersion } from '../../packVersions';
 import type { DatapackDetail } from '../../types';
+import { useLibraryMarking } from '../hooks/useLibraryMarking';
 import { useLibrarySharing } from '../hooks/useLibrarySharing';
 import type { HeldFailure } from '../hooks/useProjectHolding';
 import { useRetryInstall } from '../hooks/useRetryInstall';
@@ -64,6 +66,11 @@ export interface PackActionsProps {
     sharedInFile?: string;
     /** The SC's own pack was shared or stopped being shared. Stable. */
     onSharingChanged?: () => void;
+    /**
+     * The SC's own pack's Demo Builder mark was changed. Handed only by the Datapack Library, and
+     * its presence is what offers the mark rows there. Stable.
+     */
+    onMarkChanged?: () => void;
     /** Whether a menu row's work is running: the flyout hides its other content. Stable. */
     onWorking?: (working: boolean) => void;
     /** The save Undo Last Save goes back to: More offers it only when there is one (`useDetailFlyout`). */
@@ -90,12 +97,14 @@ function workLines(work: {
     undo: { working: boolean };
     retry: { working: boolean };
     sharing: { working: boolean };
+    marking: { working: boolean };
     shared?: boolean;
 }): WaitLines {
     if (work.saveFile.saving) return WAIT_STAGES.savingPackFile;
     if (work.undo.working) return WAIT_STAGES.startingUndo;
     if (work.retry.working) return WAIT_STAGES.startingInstall;
     if (work.sharing.working) return work.shared ? WAIT_STAGES.makingPackPrivate : WAIT_STAGES.sharingPack;
+    if (work.marking.working) return WAIT_STAGES.changingPackMark;
     return WAIT_STAGES.deletingPack;
 }
 
@@ -106,6 +115,7 @@ export function PackActions({
     installerOn,
     sharedInFile,
     onSharingChanged,
+    onMarkChanged,
     onWorking,
     undoTo,
     onRemoveData,
@@ -120,13 +130,14 @@ export function PackActions({
     const saveFile = useSaveDatapackFile(detail.id, library ? 'library' : 'installer');
     const removal = useLibraryRemoval(detail.id, onRemoved, isSavedVersion(detail.id.version));
     const sharing = useLibrarySharing(detail.id, detail.shared, onSharingChanged);
+    const marking = useLibraryMarking(detail.id, detail.team === true, onMarkChanged);
     // Undo opens the window once its job is accepted, straight on its run.
     const openRun = useCallback((id: DatapackId): void => onImport?.(id, 'run'), [onImport]);
     const undo = useUndoLastSave(detail.id.name, undoTo, openRun);
     const retry = useRetryInstall({ id: detail.id, store: detail.store, failed, types: importable }, openRun);
     const doneAsking = useCallback((): void => setAsking(null), []);
     // Still waiting once the pack is gone, as the flyout closes: its rows must not flash back.
-    const working = saveFile.saving || undo.working || retry.working || sharing.working || removal.removing || removal.removed;
+    const working = saveFile.saving || undo.working || retry.working || sharing.working || marking.working || removal.removing || removal.removed;
 
     // Before the paint, or the flyout's rows would show for a frame beside the spinner. The cleanup is
     // for a flyout closed during the wait, which unmounts this with the work still running.
@@ -138,12 +149,13 @@ export function PackActions({
     const onAction = (key: React.Key): void => {
         if (key === 'save-file') saveFile.start();
         else if (key === 'remove-data') onRemoveData?.();
-        else if (key === 'undo' || key === 'share' || key === 'remove') setAsking(key);
+        else if (isAsked(key)) setAsking(key);
     };
     const confirm = (): void => {
         setAsking(null);
         if (asking === 'undo') undo.start();
         else if (asking === 'share') sharing.start();
+        else if (asking === 'mark' || asking === 'unmark') marking.start();
         else if (asking === 'remove') removal.start();
     };
 
@@ -159,7 +171,7 @@ export function PackActions({
         <>
             {working ? (
                 <div className="datapack-panel-loading">
-                    <StageWait brief lines={workLines({ saveFile, undo, retry, sharing, shared: detail.shared })} />
+                    <StageWait brief lines={workLines({ saveFile, undo, retry, sharing, marking, shared: detail.shared })} />
                 </div>
             ) : null}
             {/* Kept mounted through a wait: a copy's own result would be lost with it. */}
@@ -178,7 +190,7 @@ export function PackActions({
                             </Button>
                         ) : null}
                         <CardActionsMenu label="More" ariaLabel={`More actions for ${detail.displayName}`} onAction={onAction}>
-                            <Section key="pack">{packRows(detail, undoTo !== undefined).map(renderRow)}</Section>
+                            <Section key="pack">{packRows(detail, undoTo !== undefined, onMarkChanged !== undefined).map(renderRow)}</Section>
                             {removing.length > 0 ? <Section key="remove">{removing.map(renderRow)}</Section> : null}
                         </CardActionsMenu>
                     </div>
@@ -187,6 +199,7 @@ export function PackActions({
                         {undo.note}
                         {retry.note}
                         {sharing.note}
+                        {marking.note}
                         {removal.note}
                     </PackActionNotes>
                 </>
@@ -199,6 +212,12 @@ export function PackActions({
             />
         </>
     );
+}
+
+/** The menu rows that ask in a dialog first. */
+const ASKED: readonly React.Key[] = ['undo', 'share', 'mark', 'unmark', 'remove'];
+function isAsked(key: React.Key): key is NonNullable<Asking> {
+    return ASKED.includes(key);
 }
 
 /** Where the main button opens the job window: Update's check, Restore's, or an install's. */

@@ -32,14 +32,18 @@
  *
  * Optional throughout: choosing nothing is a valid project and never blocks Continue. A chosen
  * datapack with no website and store view for the backend does, since the build would skip its
- * install (`datapackGate.ts`, step-07 W1).
+ * install (`datapackGate.ts`, step-07 W1). The step stays open so the pick can be changed or
+ * removed, and says why Continue is held in one notice line above the grid, as the Integrations
+ * area does for its held Continue (owner, 2026-11-14).
  *
  * @module features/project-creation/ui/steps/SampleDataStep
  */
 
 import { SearchField } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { datapackHeldReason } from './datapackGate';
 import { RecordedPackNotice, isListed, isPack } from './RecordedPackNotice';
+import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { useActivateOnKey } from '@/core/ui/hooks/useActivateOnKey';
@@ -153,9 +157,11 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
     const useInstead = useCallback((pack: ProjectDatapack): void => updateState({ datapack: pack }), [updateState]);
 
     const clear = useCallback((): void => updateState({ datapack: undefined }), [updateState]);
+    const heldReason = datapackHeldReason(state);
 
     return (
         <div className="sample-data-area">
+            {heldReason ? <InlineNotice title={heldReason} testId="datapack-held" /> : null}
             {failure ? (
                 // The ONE failure treatment every Data Installer surface uses —
                 // its own module warns that this is the shape that drifts when it

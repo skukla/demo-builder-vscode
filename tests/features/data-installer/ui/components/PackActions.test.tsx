@@ -9,14 +9,13 @@
  * Moved here from DatapackDetailPanel.test.tsx with the actions, from buttons to menu rows.
  */
 
-import '../../../../helpers/webviewClientMock';
+import { makeDetail, menuLabels, mockRequest, resetRequests, row } from './PackActions.testUtils';
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { press, settle } from '../../../../helpers/reactSettle';
 
 // Below the mocks on purpose: they hoist above these imports.
-import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { DatapackDetail } from '@/features/data-installer/types';
 import { DatapackDetailPanel } from '@/features/data-installer/ui/components/DatapackDetailPanel';
 import { RETRIES_BEFORE_FIX } from '@/features/data-installer/ui/components/importResult';
@@ -24,18 +23,6 @@ import { PackActions } from '@/features/data-installer/ui/components/PackActions
 import type { HeldFailure } from '@/features/data-installer/ui/hooks/useProjectHolding';
 import { SHARE_CONSENT } from '@/features/data-installer/shareWording';
 
-const mockRequest = webviewClient.request as jest.Mock;
-
-function makeDetail(overrides: Partial<DatapackDetail> = {}): DatapackDetail {
-    return {
-        id: { name: 'bodea', version: 'main' },
-        displayName: 'Bodea',
-        shared: true,
-        dataTypes: ['categories', 'products'],
-        art: {},
-        ...overrides,
-    };
-}
 
 const LIBRARY = makeDetail({ store: 'library', shared: false });
 const OWN = makeDetail({ store: 'library', mine: true, shared: false });
@@ -53,13 +40,7 @@ function renderActions(over: Partial<React.ComponentProps<typeof PackActions>> =
     return props;
 }
 
-const menuLabels = () => screen.getAllByRole('menuitem').map((row) => row.textContent);
-const row = (name: string) => screen.getByRole('menuitem', { name });
-
-beforeEach(() => {
-    mockRequest.mockReset();
-    mockRequest.mockResolvedValue({ success: true, data: null });
-});
+beforeEach(resetRequests);
 
 describe('a Data Installer pack', () => {
     it('shows Install as the one button, and Save as File in the menu; never Share or Remove', async () => {

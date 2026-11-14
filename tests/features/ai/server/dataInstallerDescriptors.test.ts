@@ -17,6 +17,7 @@ import {
     DATA_INSTALLER_DESCRIPTORS,
 } from '@/features/ai/server/dataInstallerDescriptors';
 import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
+import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerResponse } from '@/types/handlers';
 
 const row = (tool: string) => DATA_INSTALLER_DESCRIPTORS.find((d) => d.tool === tool);
@@ -132,6 +133,25 @@ describe('start_datapack_export name echo', () => {
     // Step 14: a save from the store names no pack and writes none to the shared catalog.
     it('needs no echo from a call naming no pack, which writes into the demo\'s own pack', () => {
         expect(preflight()({ selections: { products: { sku: ['VR-Rack'] } } })).toBeUndefined();
+    });
+});
+
+// Owner, 2026-11-14 ("Close it"): an agent cannot take the Demo Builder mark off, since that would
+// reopen the Delete step-07 A1 refuses. The screen can (Remove Demo Builder Mark), through the same
+// handler, so the refusal sits on the agent's tool, before dispatch, and only there.
+describe('mark_team_datapack refuses to unmark, for agents only', () => {
+    const preflight = () => row('mark_team_datapack')!.preflight!;
+
+    it('answers team:false with the refusal, so the handler never runs', () => {
+        expect(preflight()({ datapackName: 'frescopa', team: false, confirm: true })).toEqual({
+            success: false,
+            error: "Demo Builder datapacks can't be unmarked by an agent.",
+            code: ErrorCode.INVALID_OPERATION,
+        });
+    });
+
+    it('lets a mark through to the handler', () => {
+        expect(preflight()({ datapackName: 'frescopa', team: true, confirm: true })).toBeUndefined();
     });
 });
 
