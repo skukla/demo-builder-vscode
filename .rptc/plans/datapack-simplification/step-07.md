@@ -150,8 +150,8 @@ has no `leftInStore` handling; `AGENT_PREFIX = 'Agent ·'`.
   (`RemoveFromLibraryButton` takes several ids). Must never remove a pre-existing layer.
 
 **Datapacks screen**
-- **P1. "My and Demo Builder Datapacks" (S10-a).** `catalogShow.ts`, `ShowElsewhereNote.tsx`,
-  `SampleDataStep.tsx`, `EMPTY_SHOW_TITLE`. Agent: Q4. Surfaces: dataInstaller, wizard.
+- **P1. "Recommended" means yours + Demo Builder's (S10-a, revised Q4).** `catalogShow.ts`, `ShowElsewhereNote.tsx`,
+  `SampleDataStep.tsx`, `EMPTY_SHOW_TITLE`; `find_datapacks` lists every datapack by default with its source. Surfaces: dataInstaller, wizard.
 - **P2. Amber dot for an updated Demo Builder datapack (S6-b).** `packVersions.ts` `updatedSince`,
   `DatapackCatalogGrid.tsx` `newerOf` (hover "Luma updated Nov 12"). Surfaces: dataInstaller, wizard.
 - **P3. No install record: Create plus the line (P4-Q4).** `headerSave.ts` (`'create-unrecorded'`),
@@ -192,15 +192,26 @@ has no `leftInStore` handling; `AGENT_PREFIX = 'Agent ·'`.
 D1 to D5, E1, E2, I1 to I3, F1, F2, P1 to P6, W1, A1, A2, A3 (one version bump covering E2, A1, A3), A4,
 Win1 to Win5 (Win5 may go first: test-only). Live cycles run once, after the build (owner, 2026-11-13).
 
-## Questions (owner)
-- Q1 (R1-b) the rest of an Edit when its datapack part stops.
-- Q2 (P4-Q4) where the no-record line goes (clashes with J3-2 "no intro line").
-- Q3 (S3-b) the count label.
-- Q4 (S10-a) agents' datapack list default.
-- Q5 (A3) other old-worded tools.
-- Q6 (I3) which reset warnings are amber.
-- Q7 (W1) Edit, where Business Structure lives in Configure.
-- Q8 (F2) an install window cancelled after the load.
+## Owner answers (2026-11-13/14)
+- Q1 Edit: the rest of the Edit stands; only the datapack part stops, with its line.
+- Q2 No install record: Create plus the line, in Create's first window (an exception to J3-2). Owner asked
+  whether a record could be added instead: no, a record after the fact would be a guess, and Uninstall
+  removes what the record lists (could delete the SC's own records). Restore writes a true one.
+- Q3 Count label: "48 of 480 selected", as the projects list; a type ticked whole and unread says
+  "All selected".
+- Q4 / S10-a revised: keep the name "Recommended" with a new meaning, yours + Demo Builder's (owner's
+  suggestion; now honest). Agents' `find_datapacks` lists EVERY datapack by default, each marked with its
+  source (yours, Demo Builder, Data Installer, Community).
+- Q5 Rename all old-worded tools together, one version bump: `start_datapack_import` to `install_datapack`;
+  `load_datapack_zip` to `add_datapack_from_file`; `open_datapack_zip` to `read_datapack_file`;
+  `reset_datapack` to `uninstall_datapack`; `start_datapack_export` to `create_datapack`;
+  `mark_team_datapack` to `mark_demo_builder_datapack`; guide `import-datapack` to `datapacks`.
+- Q6 Reset rows: amber when something that should have happened did not (not published, mesh redeploy
+  failed); kept on purpose stays green.
+- Q7 Edit without website/store view: the Datapacks step is locked with "Set the website and store view in
+  Configure first."
+- Q8 Install window cancelled after Install from File: the datapack stays in My Datapacks.
+- I2 line: "My Luma was uninstalled. Retry installs Bodea."
 
 ## Risks
 - Cloud operations: E1, E2, F2's install half; live cycles with the owner's go, through MCP tools.
