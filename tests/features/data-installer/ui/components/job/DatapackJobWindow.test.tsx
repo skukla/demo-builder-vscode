@@ -334,6 +334,24 @@ describe('Dry Run', () => {
         expect(sent('fix-datapack-import-with-ai')).toEqual({ from: 'dry-run' });
     });
 
+    // Step-07 P5 (S8): nothing to fix is said in the window, as a problem line, not dropped.
+    it('says so in the window when the dry run has nothing to fix', async () => {
+        answer(PROBLEM);
+        const given = mockRequest.getMockImplementation();
+        mockRequest.mockImplementation(async (type: string, payload?: { confirm?: boolean }) =>
+            type === 'fix-datapack-import-with-ai'
+                ? { success: false, error: 'The last Dry Run found no problem to fix.' }
+                : given?.(type, payload)
+        );
+        await openOnSummary();
+        await press(button('Dry Run'));
+        await heading('Dry Run Found a Problem');
+
+        await press(button('Fix with AI'));
+
+        expect(await screen.findByText('The last Dry Run found no problem to fix.')).toHaveClass('dialog-problem');
+    });
+
     it('answers Failed with Back and Retry, and Retry runs it again', async () => {
         answer({ validate: { success: false, error: 'Commerce could not be reached.' } });
         await openOnSummary();

@@ -78,6 +78,21 @@ export function versionChanged(summary: DatapackSummary): string | undefined {
     return when ? `Updated ${when}` : undefined;
 }
 
+/**
+ * The versions a pack offers to choose from (step-07 P4): its named ones, then its saves as one, the
+ * save on show (walk F99). The card draws its picker, and the dashboard line names the version, only
+ * when there are two or more (owner, P4-Q2 and S9).
+ *
+ * @param versions - the pack's version ids
+ * @param selected - the version on show, when it is a save
+ * @returns the choices, in order
+ */
+export function versionChoices(versions: readonly string[], selected?: string): string[] {
+    const named = versions.filter((version) => !isSavedVersion(version));
+    const save = selected !== undefined && isSavedVersion(selected) ? selected : versions.find(isSavedVersion);
+    return save ? [...named, save] : named;
+}
+
 /** A pack's saves among its versions, newest first. A save's id sorts by when. */
 export function savesOf(versions: readonly string[]): string[] {
     return versions.filter(isSavedVersion).sort().reverse();

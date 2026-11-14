@@ -177,3 +177,26 @@ describe('every version (everyVersion)', () => {
         expect(deletes()).toStrictEqual([]);
     });
 });
+
+// Step-07 A1 (owner, P4-Q8): agents cannot delete Demo Builder datapacks, as the screen offers no
+// Delete on one. Even the SC who uploaded it, whom the library itself would let delete it.
+describe('a Demo Builder datapack', () => {
+    const deletes = () => (global.fetch as jest.Mock).mock.calls.filter(([, init]) => (init as RequestInit).method === 'DELETE');
+    const TEAM = (version: string): DatapackSummary => ({ ...row(OWN, version, true), team: true });
+
+    it.each([
+        ['one version', { version: '20261109-141504' }],
+        ['every version', { everyVersion: true }],
+    ])('is refused, %s, and nothing is deleted', async (_how, which) => {
+        library.findDatapacks.mockResolvedValue({ items: [TEAM('20261109-141504')], count: 1 });
+
+        const result = await remove(contextFor(null), { datapackName: OWN, ...which, confirm: true });
+
+        expect(result).toStrictEqual({
+            success: false,
+            error: "Demo Builder datapacks can't be deleted.",
+            code: 'INVALID_OPERATION',
+        });
+        expect(deletes()).toHaveLength(0);
+    });
+});

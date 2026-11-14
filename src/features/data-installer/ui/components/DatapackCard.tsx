@@ -27,10 +27,10 @@
 
 import { ActionButton, Badge, Item, Picker, Text, Tooltip, TooltipTrigger } from '@adobe/react-spectrum';
 import React, { useCallback, useState } from 'react';
-import { isSavedVersion, shownVersion, versionChanged } from '../../packVersions';
+import { packSource, type PackSource } from '../../packSource';
+import { isSavedVersion, shownVersion, versionChanged, versionChoices } from '../../packVersions';
 import type { DatapackGroup } from '../../services/datapackCatalog';
 import type { DatapackArt, DatapackSummary } from '../../types';
-import { packSource, type PackSource } from '../catalogShow';
 import { InstallFailedLine } from './FailedHealthLine';
 import { SelectionCheck } from '@/core/ui/components/ui/SelectionCheck';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
@@ -188,20 +188,21 @@ export function DatapackCard({
 }
 
 /**
- * The versions to choose from: the named ones (`main`, `eds-compatible`), each a variant, and the
- * pack's saves as one, the save on show (owner, 2026-11-09, walk F99): a pack of saves is one thing,
- * and its earlier save is what Undo Last Save goes back to, not a version to pick. A pack of nothing but saves
- * has nothing to choose, so it says which save it is.
+ * The versions to choose from (`versionChoices`): the named ones (`main`, `eds-compatible`), each a
+ * variant, and the pack's saves as one, the save on show (owner, 2026-11-09, walk F99). With fewer
+ * than two there is nothing to choose (step-07 P4, P4-Q2): a save says which save it is, and a named
+ * version says when it last changed, "Updated Nov 6, 9:15 AM".
  */
 function VersionChoice({ group, selectedVersion, onVersionChange }: Pick<DatapackCardProps, 'group' | 'selectedVersion' | 'onVersionChange'>): React.JSX.Element {
-    const named = group.versions.filter((candidate) => !isSavedVersion(candidate.id.version));
-    if (named.length === 0) return <span className="text-sm text-gray-700">{shownVersion(selectedVersion)}</span>;
-    const save = isSavedVersion(selectedVersion) ? selectedVersion : group.versions.find((candidate) => isSavedVersion(candidate.id.version))?.id.version;
-    const choices = save ? [...named.map((candidate) => candidate.id.version), save] : named.map((candidate) => candidate.id.version);
+    const summaryOf = (version: string): DatapackSummary | undefined => group.versions.find((candidate) => candidate.id.version === version);
     const changed = (version: string): string | undefined => {
-        const summary = group.versions.find((candidate) => candidate.id.version === version);
+        const summary = summaryOf(version);
         return summary && !isSavedVersion(version) ? versionChanged(summary) : undefined;
     };
+    const choices = versionChoices(group.versions.map((candidate) => candidate.id.version), selectedVersion);
+    if (choices.length < 2) {
+        return <span className="text-sm text-gray-700">{changed(selectedVersion) ?? shownVersion(selectedVersion)}</span>;
+    }
     return (
         <Picker aria-label={`Version of ${group.displayName}`} selectedKey={selectedVersion} onSelectionChange={(key) => onVersionChange(String(key))}>
             {choices.map((version) => (

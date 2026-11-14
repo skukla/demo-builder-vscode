@@ -22,7 +22,7 @@ answers, asked at each load (`handlers/catalogLibraryRows.ts`). A pack in both s
 once, as the store's. Nothing gates on the Data Installer any more: the wizard's
 Datapacks step and the dashboard tile always show, and the panel is titled
 **Datapacks**. That screen and the wizard's Datapacks step load every pack once, and their
-**Show** list filters what they hold (`ui/catalogShow.ts`, owner, 2026-11-05): **Recommended** (the default: your packs, the team's and the Data Installer's curated ones),
+**Show** list filters what they hold (`ui/catalogShow.ts`, owner, 2026-11-05): **Recommended** (the default: your packs and Demo Builder's, plus the datapack the project holds; step-07 P1, owner 2026-11-14),
 **My Datapacks**, **Demo Builder Datapacks** (the source keyed `team`), **Data Installer Datapacks**,
 **Community Datapacks** and **All Datapacks**. Both surfaces read the list again when
 `dataInstaller.apiBaseUrl`, `dataInstaller.enabled` or `datapackStore.apiBaseUrl` changes
@@ -41,7 +41,9 @@ Aren't Available".
 
 The store's default list is its **team** packs (marked with `mark_team_datapack`)
 and the SC's own; a colleague's shared pack is **Community**. Every Data Installer pack is tagged
-the Data Installer's, curated or not (owner, 2026-11-05); Recommended leaves out its uncurated ones.
+the Data Installer's, curated or not (owner, 2026-11-05); Recommended leaves all of them out.
+Agents' `find_datapacks` lists every datapack by default, each row's `source` saying whose it is
+(`yours`, `demo-builder`, `data-installer` or `community`); `includeCommunity: false` narrows it.
 Packs nothing can install yet, empty ones and Adobe Commerce Optimizer ones, are not listed, except
 the SC's own (`isListable`). Removed with this: the
 on/off setting that gated the whole feature, the check that read it, and the Open
@@ -388,7 +390,10 @@ included, and opening on the version the demo uses (`DatapackCatalogGrid`):
   own time ("Nov 9, 9:15 AM", `versionLabel` in `packVersions.ts`). The card shows the save the demo
   uses (or, for a pack no demo uses, the newest) as "Saved Nov 9, 1:56 PM", with no version picker;
   named versions (`main`, `eds-compatible`) keep their picker, since each is a variant, and a pack
-  holding both lists its saves there as the one on show. A save keeps the pack's two newest saves
+  holding both lists its saves there as the one on show. The picker shows only with two or more
+  choices (`versionChoices`, step-07 P4); a pack with one named version reads "Updated Nov 6, 9:15 AM"
+  instead, and the dashboard's Datapacks line names the version only then too (the count is
+  remembered beside the pack's name, `packNames.ts`). A save keeps the pack's two newest saves
   and its first save, the original Restore goes back to, for good (step-07 U1, `saveTrim.ts`).
   Version History was removed (Phase 2): the flyout's More menu offers **Undo Last Save** instead,
   only on the datapack the demo uses, when it is the SC's own with an earlier save and the demo is

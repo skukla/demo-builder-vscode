@@ -250,6 +250,22 @@ describe('a type Commerce answered strangely', () => {
         await press(button('Clear 8 Items'));
         expect(onClear).toHaveBeenCalledWith('tok-1', ['bodea']);
     });
+
+    // Step-07 P5 (S8): the extension's refusal goes on the problem line, as the Admin's does.
+    it('says why on the problem line when there is nothing to fix', async () => {
+        answering(unreadCheck('strange'));
+        const check = mockRequest.getMockImplementation();
+        mockRequest.mockImplementation(async (type: string, payload: unknown) =>
+            type === 'fix-datapack-import-with-ai'
+                ? { success: false, error: 'The last check of the demo data read every data type.' }
+                : check?.(type, payload)
+        );
+        await openWindow();
+
+        await press(button('Fix with AI'));
+
+        expect(screen.getByText('The last check of the demo data read every data type.')).toHaveClass('dialog-problem');
+    });
 });
 
 describe('the whole check failing', () => {

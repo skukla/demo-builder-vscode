@@ -5,12 +5,12 @@
  * on screen (7b): until both the project and the catalog have answered it is the house pending
  * button, never another label first.
  *
- * - `create`: the project holds no datapack. The button reads Create.
+ * - `create`: the project holds no datapack, or one with no install record, so nothing a save could
+ *   count (step-07 P3, owner 2026-11-14). The button reads Create, with no line saying why (rule 6).
  * - `save-menu`: the project holds the SC's own library datapack and Demo Builder installed it.
  *   Save ▾, with Save and Save As New.
  * - `save-as-new`: it holds someone else's (a team pack, a colleague's, the Data Installer's),
  *   installed. A plain Save As New.
- * - `none`: it holds a datapack with no install record, so nothing in Commerce to save (P4-Q4).
  *
  * @module features/data-installer/ui/headerSave
  */
@@ -27,7 +27,7 @@ export interface HeldPackInfo {
 }
 
 /** The header's save button, as one state. */
-export type HeaderSave = 'pending' | 'create' | 'save-menu' | 'save-as-new' | 'none';
+export type HeaderSave = 'pending' | 'create' | 'save-menu' | 'save-as-new';
 
 export interface HeaderSaveInput {
     /** The project read has answered, either way. */
@@ -62,8 +62,7 @@ export function savesInto(held: ProjectDatapack, info: HeldPackInfo): boolean {
 export function headerSave(input: HeaderSaveInput): HeaderSave {
     const { projectAnswered, catalogAnswered, held, installedAt, heldInCatalog } = input;
     if (!projectAnswered || !catalogAnswered) return 'pending';
-    if (!held) return 'create';
-    if (installedAt === undefined) return 'none';
+    if (!held || installedAt === undefined) return 'create';
     return heldInCatalog && savesInto(held, heldInCatalog) ? 'save-menu' : 'save-as-new';
 }
 

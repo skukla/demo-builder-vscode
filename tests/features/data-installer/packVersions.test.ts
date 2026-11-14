@@ -13,6 +13,7 @@ import {
     savesOf,
     shownVersion,
     versionChanged,
+    versionChoices,
     versionLabel,
 } from '@/features/data-installer/packVersions';
 import { savedVersion } from '@/features/data-installer/services/demoPack';
@@ -144,5 +145,26 @@ describe("originalSave: a datapack's first save, kept for good (U1, J9-6)", () =
 
     it('is none for a datapack with no saves', () => {
         expect(originalSave(['main', 'eds-compatible'])).toBeUndefined();
+    });
+});
+
+// Step-07 P4 (owner, P4-Q2 and S9): the card's picker, and the dashboard line's version, only when
+// there are two or more to choose from. A pack's saves are one choice, the save on show.
+describe('versionChoices', () => {
+    it('lists the named versions, then one save', () => {
+        expect(versionChoices(['main', '20261101-080000', 'eds-compatible', '20261105-080000'])).toEqual([
+            'main',
+            'eds-compatible',
+            '20261101-080000',
+        ]);
+    });
+
+    it('offers the save on show as the save', () => {
+        expect(versionChoices(['main', '20261101-080000', '20261105-080000'], '20261105-080000')).toEqual(['main', '20261105-080000']);
+    });
+
+    it('has one choice for one named version, and for a pack of saves', () => {
+        expect(versionChoices(['main'])).toHaveLength(1);
+        expect(versionChoices(['20261101-080000', '20261105-080000'])).toHaveLength(1);
     });
 });

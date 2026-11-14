@@ -51,6 +51,8 @@ export interface DatapackRunWindowProps {
     uninstalling?: Uninstalling;
     actionButtons: ActionButton[];
     onClose: () => void;
+    /** Fix with AI had nothing to fix: the extension's refusal, on the problem line (step-07 P5). */
+    problem?: string;
 }
 
 /** A record shaped for the reserve: no job, only the steps' tallest states. */
@@ -212,6 +214,7 @@ export function DatapackRunWindow(props: DatapackRunWindowProps): React.ReactEle
             onClose={onClose}
         >
             <RunBody {...props} pressedAt={pressedAt} />
+            {props.problem ? <p className="dialog-problem text-notice">{props.problem}</p> : null}
         </StepsWindow>
     );
 }

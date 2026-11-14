@@ -74,6 +74,20 @@ describe('SampleDataStep — the Show list', () => {
         expect(screen.queryByText('Bodea')).not.toBeInTheDocument();
     });
 
+    // Step-07 P1: Recommended is yours and Demo Builder's; the Data Installer's are one choice away.
+    it("leaves the Data Installer's packs out of Recommended until asked for", async () => {
+        const installerPack = { id: { name: 'scratch', version: 'main' }, displayName: 'Installer Pack', shared: true, dataTypes: [], art: {} };
+        setMockState(envelope({ ...CATALOG, items: [...CATALOG.items, installerPack] }));
+        renderStep();
+
+        await screen.findAllByTestId('datapack-card');
+        expect(screen.queryByText('Installer Pack')).not.toBeInTheDocument();
+
+        fireEvent.change(showSelect(), { target: { value: 'installer' } });
+
+        expect(await screen.findByText('Installer Pack')).toBeInTheDocument();
+    });
+
     it("keeps a chosen colleague's pack on view in Recommended", async () => {
         const chosen = { name: 'colleague', version: 'main', store: 'library' as const };
         setMockState(envelope({ ...CATALOG, items: [...CATALOG.items, COLLEAGUE] }));
@@ -96,9 +110,10 @@ describe('SampleDataStep — the Show list', () => {
         renderStep();
         await screen.findAllByTestId('datapack-card');
 
-        fireEvent.change(showSelect(), { target: { value: 'team' } });
+        // The fixture's packs are Demo Builder's (step-07 P1), so the empty choice is Community.
+        fireEvent.change(showSelect(), { target: { value: 'community' } });
 
-        expect(await screen.findByText('No Demo Builder Datapacks. Try All Datapacks.')).toBeInTheDocument();
+        expect(await screen.findByText('No Community Datapacks. Try All Datapacks.')).toBeInTheDocument();
         expect(screen.getByRole('radio', { name: 'None' })).toBeInTheDocument();
     });
 });
@@ -145,8 +160,8 @@ describe('SampleDataStep — the version on show', () => {
 
         await waitFor(() => expect(cardFor('Bodea')).toBeInTheDocument());
         expect(versionShownOn('Bodea')).toBe('hold');
-        // The pack nobody chose still shows its own default.
-        expect(versionShownOn('CitiSignal')).toBe('main');
+        // The pack nobody chose still shows its own default, as text: it has one version (step-07 P4).
+        expect(cardFor('CitiSignal')).toHaveTextContent('main');
     });
 
     it('records the version on show, not the one the card opened at', async () => {
@@ -162,7 +177,7 @@ describe('SampleDataStep — the version on show', () => {
 
         await waitFor(() =>
             expect(updateState).toHaveBeenCalledWith({
-                datapack: { name: 'bodea', version: 'hold', store: 'installer' },
+                datapack: { name: 'bodea', version: 'hold', store: 'library' },
             })
         );
     });
@@ -177,7 +192,7 @@ describe('SampleDataStep — the version on show', () => {
 
         await waitFor(() =>
             expect(updateState).toHaveBeenCalledWith({
-                datapack: { name: 'bodea', version: 'hold', store: 'installer' },
+                datapack: { name: 'bodea', version: 'hold', store: 'library' },
             })
         );
     });
@@ -244,7 +259,7 @@ describe('SampleDataStep — writing through the CURRENT updater', () => {
         fireEvent.click(cardFor('Bodea'));
 
         await waitFor(() =>
-            expect(next).toHaveBeenCalledWith({ datapack: { name: 'bodea', version: 'main', store: 'installer' } })
+            expect(next).toHaveBeenCalledWith({ datapack: { name: 'bodea', version: 'main', store: 'library' } })
         );
         expect(view.updateState).not.toHaveBeenCalled();
     });
@@ -258,7 +273,7 @@ describe('SampleDataStep — writing through the CURRENT updater', () => {
         fireEvent.change(versionSelect('Bodea'), { target: { value: 'hold' } });
 
         await waitFor(() =>
-            expect(next).toHaveBeenCalledWith({ datapack: { name: 'bodea', version: 'hold', store: 'installer' } })
+            expect(next).toHaveBeenCalledWith({ datapack: { name: 'bodea', version: 'hold', store: 'library' } })
         );
         expect(view.updateState).not.toHaveBeenCalled();
     });
@@ -331,6 +346,8 @@ describe('SampleDataStep — the no-match note', () => {
                         shared: true,
                         dataTypes: [],
                         art: {},
+                        store: 'library' as const,
+                        team: true,
                     },
                 ],
                 total: 1,

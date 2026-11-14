@@ -808,7 +808,8 @@ deleted on 2026-11-06 with the setting (DI-12): the service had ignored the Comm
 caller sends since 2026-10-27. Agents cannot write into the Data Installer (D7, datapack-simplification
 Phase 8): `copy_library_datapack_to_installer` was removed and `load_datapack_zip` forces `target: "library"`
 (`argDefaults`), as the screen hides both behind `INSTALLER_WRITES_SHOWN`. A pack only the Data Installer
-holds is installed by Demo Builder. `delete_library_datapack` takes `everyVersion`, as the screen's Delete
+holds is installed by Demo Builder. `delete_library_datapack` refuses a Demo Builder datapack ("Demo Builder
+datapacks can't be deleted."), as the screen offers no Delete on one (step-07 A1), and takes `everyVersion`, as the screen's Delete
 does for a datapack of saves, and `keepSettingsLayer`, which leaves the layer of the same version: the
 file load's one Delete removes only what the load made (step-07 F2). `load_datapack_zip` takes `saveAs`,
 the screen's Keep Both for a file whose datapack is already in My Datapacks: a new datapack under that
@@ -1197,7 +1198,7 @@ the same question once, with Share, and declining exports anyway.
 `mark_team_datapack` (confirm-gated; the consent names the pack and whether it becomes a team
 pack) marks every version of a store pack as a team pack, or unmarks it (`team: false`), through
 the store's owner-only `update-datapack-metadata` (`team`). A team pack is in every SC's default
-list with no tag; any other shared pack is Community, listed only with `includeCommunity`. It
+list with no tag; any other shared pack is Community, which `find_datapacks` lists unless `includeCommunity` is false. It
 answers `{datapackName, team, versions}`.
 
 ### Undo Last Save (Phase 2, 2026-11-12)

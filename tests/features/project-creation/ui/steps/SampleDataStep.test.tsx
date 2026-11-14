@@ -45,7 +45,7 @@ describe('SampleDataStep', () => {
     it('offers no card for a settings layer while its pack is listed', async () => {
         setMockState(envelope({
             items: [
-                { id: { name: 'bodea', version: 'main' }, displayName: 'Bodea', shared: true, dataTypes: ['products'], art: {} },
+                { id: { name: 'bodea', version: 'main' }, displayName: 'Bodea', shared: true, dataTypes: ['products'], art: {}, store: 'library' as const, team: true },
                 { id: { name: 'bodea-settings', version: 'v1' }, displayName: 'Bodea settings', shared: true, dataTypes: ['store_config'], art: {} },
             ],
             count: 2,
@@ -74,7 +74,7 @@ describe('SampleDataStep', () => {
 
         await waitFor(() =>
             expect(updateState).toHaveBeenCalledWith({
-                datapack: { name: 'bodea', version: 'main', store: 'installer' },
+                datapack: { name: 'bodea', version: 'main', store: 'library' },
             })
         );
     });

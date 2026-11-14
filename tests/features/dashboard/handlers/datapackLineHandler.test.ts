@@ -13,7 +13,7 @@ import { createMockHandlerContext } from '../../../helpers/handlerContextTestHel
 import { createMockProject } from '../../../helpers/projectFake';
 import { NO_DATAPACK, UNNAMED_DATAPACK, handleGetDatapackLine } from '@/features/dashboard/handlers/datapackLineHandler';
 import { libraryDisplayName } from '@/features/data-installer/handlers/libraryWriter';
-import { PACK_NAMES_KEY } from '@/features/data-installer/services/packNames';
+import { PACK_CHOICES_KEY, PACK_NAMES_KEY } from '@/features/data-installer/services/packNames';
 import type { Project } from '@/types/base';
 
 const mockName = libraryDisplayName as jest.Mock;
@@ -22,10 +22,11 @@ function contextHolding(
     datapack: Project['datapack'],
     remembered: Record<string, string> = {},
     datapackInstallFailure?: Project['datapackInstallFailure'],
+    choices: Record<string, number> = { luma: 2 },
 ) {
     const context = createMockHandlerContext();
-    (context.context.globalState.get as jest.Mock).mockImplementation((key: string) =>
-        key === PACK_NAMES_KEY ? remembered : undefined);
+    const kept: Record<string, unknown> = { [PACK_NAMES_KEY]: remembered, [PACK_CHOICES_KEY]: choices };
+    (context.context.globalState.get as jest.Mock).mockImplementation((key: string) => kept[key]);
     (context.stateManager.getCurrentProject as jest.Mock).mockResolvedValue(
         createMockProject({ datapack, datapackInstallFailure }),
     );
@@ -46,6 +47,25 @@ describe('get-datapack-line', () => {
 
         await expect(handleGetDatapackLine(contextHolding(held))).resolves.toStrictEqual({ success: true, data: { line: 'Luma, eds-compatible' } });
         expect(mockName).toHaveBeenCalledWith(expect.objectContaining({ panel: undefined }), held);
+    });
+
+    // Step-07 P4 (owner, S9): the version only when the pack has two or more to choose from.
+    it('leaves out the version of a pack that has only one', async () => {
+        mockName.mockResolvedValue('Luma');
+        const held = { name: 'luma', version: 'main', store: 'library' as const };
+
+        const answer = await handleGetDatapackLine(contextHolding(held, {}, undefined, { luma: 1 }));
+
+        expect(answer.data).toStrictEqual({ line: 'Luma' });
+    });
+
+    it('leaves out the version while how many the pack has was never read', async () => {
+        mockName.mockResolvedValue('Luma');
+        const held = { name: 'luma', version: 'main', store: 'library' as const };
+
+        const answer = await handleGetDatapackLine(contextHolding(held, {}, undefined, {}));
+
+        expect(answer.data).toStrictEqual({ line: 'Luma' });
     });
 
     it('leaves out a save’s dated version', async () => {

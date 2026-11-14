@@ -72,6 +72,8 @@ export interface DatapackJob {
     /** The job watched is running. */
     running: boolean;
     retries: number;
+    /** Fix with AI had nothing to fix: the extension's refusal, for the window's problem line (step-07 P5). */
+    fixProblem?: string;
     switching: JobSwitch;
     /** Restore's question, once its check answered one (J9-5 to J9-7). */
     restoreQuestion: RestoreQuestion | null;
@@ -156,6 +158,7 @@ export function useDatapackJob(args: DatapackJobArgs): DatapackJob {
         starting,
         running: watch.running,
         retries: starts.runs.retries,
+        ...(starts.runs.fixProblem ? { fixProblem: starts.runs.fixProblem } : {}),
         switching,
         restoreQuestion: restoreQuestionOf(starts.start.value),
         update: table.update,

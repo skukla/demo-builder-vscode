@@ -87,6 +87,27 @@ describe('paged list reads default to an agent-sized page', () => {
     });
 });
 
+// Step-07 P1 (owner, 2026-11-14): an agent's first call lists every datapack, each with its source,
+// as the four Show choices on the screen name them.
+describe('find_datapacks lists every datapack by default, each with its source', () => {
+    it('asks for colleagues\' and uncurated packs unless told not to', () => {
+        const schema = row('find_datapacks')!.inputSchema!;
+        expect(schema.includeCommunity.parse(undefined)).toBe(true);
+        expect(schema.includeCommunity.parse(false)).toBe(false);
+    });
+
+    it.each([
+        ['your own', { store: 'library', mine: true }, 'yours'],
+        ['a Demo Builder pack, even one you uploaded', { store: 'library', team: true, mine: true }, 'demo-builder'],
+        ['a colleague\'s', { store: 'library' }, 'community'],
+        ['a Data Installer pack', { store: 'installer', shared: true }, 'data-installer'],
+    ])('marks %s', (_what, fields, source) => {
+        const res = { success: true as const, data: { items: [{ id: { name: 'p', version: 'main' }, ...fields }], count: 1 } };
+        const out = JSON.parse(row('find_datapacks')!.shape!(res, {}));
+        expect(out.items[0].source).toBe(source);
+    });
+});
+
 describe('datapack list rows drop dashboard-only fields', () => {
     const shapeOf = (tool: string) => row(tool)!.shape!;
     const RESPONSE = {
@@ -107,15 +128,20 @@ describe('datapack list rows drop dashboard-only fields', () => {
         },
     };
 
-    it.each(['find_datapacks', 'list_installed_datapacks'])(
+    // find_datapacks also says where each row comes from (step-07 P1); a row with no store is the Data Installer's.
+    it.each([
+        ['find_datapacks', { source: 'data-installer' }],
+        ['list_installed_datapacks', {}],
+    ])(
         '%s drops art and collapses dataTypes to a count',
-        (tool) => {
+        (tool, extra) => {
             const out = JSON.parse(shapeOf(tool)(RESPONSE, {}));
 
             expect(out.items[0]).toEqual({
                 id: { name: 'bodea', version: 'main' },
                 displayName: 'Bodea',
                 dataTypeCount: 3,
+                ...extra,
             });
             // The envelope survives: without total/limit/skip an agent cannot
             // tell a full answer from a first page.

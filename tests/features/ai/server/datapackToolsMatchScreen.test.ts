@@ -120,6 +120,11 @@ describe("Delete, as the screen's Delete", () => {
         expect(description).toContain('everyVersion');
         expect(description).not.toMatch(/the undo of\s+load_datapack_zip/u);
     });
+
+    // Step-07 A1: the screen offers no Delete on a Demo Builder datapack, and the tool says it refuses one.
+    it('says a Demo Builder datapack is refused', () => {
+        expect(row('delete_library_datapack').description).toContain('a Demo Builder datapack, as on the screen');
+    });
 });
 
 describe("the screen's words", () => {

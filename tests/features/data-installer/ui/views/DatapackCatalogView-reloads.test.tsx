@@ -160,7 +160,7 @@ describe('the flyout’s Retry', () => {
         expect(countOf('get-datapack-detail')).toBeGreaterThan(before);
         expect(requestOfType('get-datapack-detail')).toEqual({
             type: 'get-datapack-detail',
-            payload: { datapackName: 'bodea', version: 'main', store: 'installer' },
+            payload: { datapackName: 'bodea', version: 'main', store: 'library' },
         });
     });
 });

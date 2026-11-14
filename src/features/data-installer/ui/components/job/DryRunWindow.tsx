@@ -23,6 +23,8 @@ export interface DryRunWindowProps {
     /** Fix with AI on a problem: opens the SC's AI on the recorded dry run. */
     onFix: () => void;
     onClose: () => void;
+    /** Fix with AI had nothing to fix: the extension's refusal, on the problem line (step-07 P5). */
+    problem?: string;
 }
 
 type MainActions = Pick<DryRunWindowProps, 'onInstall' | 'onRetry' | 'onFix'>;
@@ -43,6 +45,7 @@ export function DryRunWindow({
     onRetry,
     onFix,
     onClose,
+    problem,
 }: DryRunWindowProps): React.ReactElement {
     return (
         <ResultWindow
@@ -55,6 +58,7 @@ export function DryRunWindow({
             onClose={onClose}
         >
             {result.message ? <LeadText sentences>{result.message}</LeadText> : null}
+            {problem ? <p className="dialog-problem text-notice">{problem}</p> : null}
         </ResultWindow>
     );
 }

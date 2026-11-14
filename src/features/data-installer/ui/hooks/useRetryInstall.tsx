@@ -6,7 +6,8 @@
  * the install worked is the project's record, which the screen reads again when the window closes.
  *
  * Fix with AI asks the extension to open the SC's AI on the project's failed install
- * (`importFixHandlers.ts`, `from: 'install-failed'`), sending nothing of the flyout.
+ * (`useFixWithAi`, `from: 'install-failed'`), sending nothing of the flyout; with nothing to fix, its
+ * refusal is the line under the buttons.
  *
  * @module features/data-installer/ui/hooks/useRetryInstall
  */
@@ -15,16 +16,13 @@ import React, { useCallback, useLayoutEffect, useRef } from 'react';
 import type { StartImportPayload } from '../../handlers/importStart';
 import { libraryField } from '../components/importModalJob';
 import { useDataInstallerRequest } from './useDataInstallerRequest';
+import { useFixWithAi } from './useFixWithAi';
 import type { HeldFailure } from './useProjectHolding';
-import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
-import type { FixDatapackImportWithAiRequest } from '@/types/webviewRequests';
 
 /** The install's start, as the job window's: it answers once the job is accepted. */
 const INSTALL_START = { timeout: TIMEOUTS.DATAPACK_SAVE_THEN_WRITE };
-/** Fix with AI on the project's failed install. */
-const FROM_INSTALL_FAILED: FixDatapackImportWithAiRequest = { from: 'install-failed' };
 
 /** What a Retry installs, and where. */
 export interface RetryInstallArgs {
@@ -56,6 +54,12 @@ function retryBody({ id, store, failed, types }: RetryInstallArgs): StartImportP
     };
 }
 
+/** Under the buttons: why the install could not start, or that Fix with AI had nothing to fix (step-07 P5). */
+function retryNote(startFailure: string | undefined, fixProblem: string | undefined): React.JSX.Element | null {
+    if (startFailure) return <p className="dialog-problem text-negative">The install couldn&rsquo;t be started: {startFailure}</p>;
+    return fixProblem ? <p className="dialog-problem text-notice">{fixProblem}</p> : null;
+}
+
 /**
  * @param args - what a Retry installs and where
  * @param onStarted - opens the run on the datapack. Must be stable: an effect depends on it
@@ -80,12 +84,7 @@ export function useRetryInstall(args: RetryInstallArgs, onStarted?: (id: Datapac
         onStarted?.(to);
     }, [started, onStarted]);
 
-    const fixWithAi = useCallback((): void => {
-        void webviewClient.request('fix-datapack-import-with-ai', FROM_INSTALL_FAILED);
-    }, []);
+    const fix = useFixWithAi('install-failed');
 
-    const note = request.failure ? (
-        <p className="dialog-problem text-negative">The install couldn&rsquo;t be started: {request.failure.message}</p>
-    ) : null;
-    return { start, working: request.loading, note, fixWithAi };
+    return { start, working: request.loading, note: retryNote(request.failure?.message, fix.problem), fixWithAi: fix.fixWithAi };
 }

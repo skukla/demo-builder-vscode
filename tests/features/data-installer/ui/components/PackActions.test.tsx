@@ -578,4 +578,15 @@ describe('a failed install: Fix with AI', () => {
         expect(sent('start-datapack-import')).toStrictEqual([]);
         expect(props.onImport).not.toHaveBeenCalled();
     });
+
+    // Step-07 P5 (S8): nothing to fix is said under the button, as a problem line.
+    it('says so under the button when there is nothing to fix', async () => {
+        mockRequest.mockResolvedValue({ success: false, error: 'This datapack has no failed install to fix.' });
+        renderFailed({ ...FAILED, retries: RETRIES_BEFORE_FIX });
+
+        await press(screen.getByRole('button', { name: 'Fix with AI' }));
+        await settle();
+
+        expect(screen.getByText('This datapack has no failed install to fix.')).toHaveClass('dialog-problem');
+    });
 });

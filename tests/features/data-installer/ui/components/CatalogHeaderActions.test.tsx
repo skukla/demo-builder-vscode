@@ -111,14 +111,6 @@ describe("in a project's Datapacks", () => {
         expect(save.onSave).not.toHaveBeenCalled();
     });
 
-    it('offers no save button when the datapack has no install record (P4-Q4)', () => {
-        renderHeader(saveActions('none'));
-
-        expect(screen.queryByRole('button', { name: SAVE_WORDS })).not.toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: 'Loading' })).not.toBeInTheDocument();
-        expect(buttonsInOrder(['Install from File', 'Clear'])).toEqual(['Install from File', 'Clear']);
-    });
-
     it('puts the save button first, then Install from File, then Clear', () => {
         renderHeader(saveActions('save-as-new'));
 

@@ -3,7 +3,7 @@
  * Data Installer so it can be installed.
  *
  * - `delete-library-datapack` — remove one of the caller's own library packs; the
- *   undo of loading a file into the library. Library only, by construction: the
+ *   undo of loading a file into the library. Never a Demo Builder datapack (step-07 A1). Library only, by construction: the
  *   library lets only a pack's owner delete it, and the Data Installer has no such
  *   check, so deleting there is offered nowhere in the extension. A pack this SC shared
  *   in a project file says so, without confirm and with it (`sharedInFiles.ts`). A version takes
@@ -180,6 +180,27 @@ export async function deleteVersionWithLayer(
     return 'deleted';
 }
 
+const DEMO_BUILDER_DELETE_REFUSAL = "Demo Builder datapacks can't be deleted.";
+
+/**
+ * The guard before both delete paths (step-07 A1, owner P4-Q8): a Demo Builder datapack is never
+ * deleted here, as the screen offers no Delete on one (`deletable`). The library lets a pack's owner
+ * delete it, so whoever uploaded it could otherwise. Reads the pack's `team` flag; a library that
+ * cannot be read leaves the answer to the delete path, which needs the same read.
+ */
+async function refuseDemoBuilderPack(context: HandlerContext, name: string | undefined): Promise<HandlerResponse | undefined> {
+    if (!name) return undefined;
+    const access = await resolveDataInstallerAccess(context, 'library');
+    if (!access.ok) return undefined;
+    try {
+        const page = await access.client.findDatapacks({ datapackName: name });
+        const team = (page?.items ?? []).some((item) => item.id.name === name && item.team === true);
+        return team ? { success: false, error: DEMO_BUILDER_DELETE_REFUSAL, code: ErrorCode.INVALID_OPERATION } : undefined;
+    } catch {
+        return undefined;
+    }
+}
+
 /** Delete every version of the SC's own pack, and each one's settings layer (`everyVersion`). */
 async function deleteEveryVersion(context: HandlerContext, payload: DeleteLibraryDatapackPayload): Promise<HandlerResponse> {
     const name = payload.datapackName;
@@ -223,6 +244,9 @@ export const datapackLibraryHandlers = defineHandlers({
         context: HandlerContext,
         payload?: DeleteLibraryDatapackPayload,
     ): Promise<HandlerResponse> => {
+        // Confirmed calls only: an unconfirmed one still touches nothing, the library included.
+        const demoBuilders = payload?.confirm === true ? await refuseDemoBuilderPack(context, payload.datapackName) : undefined;
+        if (demoBuilders) return demoBuilders;
         if (payload?.everyVersion === true) return deleteEveryVersion(context, payload);
         const id = idOf(payload);
         if (!id) {

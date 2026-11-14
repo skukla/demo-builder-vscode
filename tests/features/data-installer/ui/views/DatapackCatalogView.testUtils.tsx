@@ -63,13 +63,17 @@ function makeSummary(
     };
 }
 
-/** Three names across five rows — the shape the live catalog actually has. */
+/**
+ * Three names across five rows — the shape the live catalog actually has. Demo Builder's packs, so
+ * Recommended, where the list opens, draws them (step-07 P1).
+ */
+const TEAM = { store: 'library', team: true } as const;
 const CATALOG = [
-    makeSummary('bodea', 'main'),
-    makeSummary('bodea', 'tierpricingfix'),
-    makeSummary('wknd', 'main'),
-    makeSummary('wknd', 'archive_06112026'),
-    makeSummary('citisignal_new', 'main', { displayName: 'CitiSignal' }),
+    makeSummary('bodea', 'main', TEAM),
+    makeSummary('bodea', 'tierpricingfix', TEAM),
+    makeSummary('wknd', 'main', TEAM),
+    makeSummary('wknd', 'archive_06112026', TEAM),
+    makeSummary('citisignal_new', 'main', { ...TEAM, displayName: 'CitiSignal' }),
 ];
 
 function resolveWith(items: DatapackSummary[]) {

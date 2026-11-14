@@ -8,9 +8,10 @@
  * @module features/data-installer/handlers/libraryWriter
  */
 
+import { versionChoices } from '../packVersions';
 import type { DataInstallerClient } from '../services/dataInstallerClient';
 import { DatapackStoreWriter } from '../services/datapackStoreWriter';
-import { rememberPackName, rememberedPackName } from '../services/packNames';
+import { rememberPackChoices, rememberPackName, rememberedPackName } from '../services/packNames';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
@@ -43,7 +44,7 @@ export async function openLibraryWriter(context: HandlerContext): Promise<Opened
  * id, "kukla-justrite-a80dca"). Undefined for a pack outside the library, or a library that does not
  * answer: the caller falls back. Read by the Reset Selected confirm and the dashboard's Datapacks
  * card (owner, 2026-11-07). Every name read is remembered (`packNames`), so the card can show it at
- * once next time.
+ * once next time, with how many versions the pack offers (step-07 P4).
  *
  * @param context - a context with no `panel` reads without asking the SC to sign in
  */
@@ -53,8 +54,12 @@ export async function libraryDisplayName(context: HandlerContext, held: NonNulla
         const library = await openLibraryWriter(context);
         if (!library.ok) return undefined;
         const page = await library.client.findDatapacks({ datapackName: held.name });
-        const name = page.items.find((item) => item.id.name === held.name)?.displayName;
-        if (name) await rememberPackName(context.context.globalState, held.name, name);
+        const versions = page.items.filter((item) => item.id.name === held.name);
+        const name = versions[0]?.displayName;
+        if (!name) return undefined;
+        await rememberPackName(context.context.globalState, held.name, name);
+        // The same read says how many versions the pack offers: the dashboard line names one only with two (step-07 P4).
+        await rememberPackChoices(context.context.globalState, held.name, versionChoices(versions.map((item) => item.id.version)).length);
         return name;
     } catch (error) {
         context.debugLogger.debug(`[Data Installer] Could not read ${held.name}'s display name: ${error instanceof Error ? error.message : String(error)}`);

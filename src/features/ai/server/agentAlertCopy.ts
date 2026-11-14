@@ -15,7 +15,7 @@
  *
  * THE RULES THE TEXT FOLLOWS
  *
- * - `action` completes "Agent · ___?" — a verb phrase, no trailing period.
+ * - `action` completes "Agent: ___?" — a verb phrase, no trailing period.
  * - `consequence` is ONE plain sentence saying what changes. It is not a
  *   description of the tool. The reader has already decided they want the thing;
  *   they are deciding whether they want it NOW, to THIS.
@@ -49,7 +49,7 @@ import { type ShownProject, shownClearFor } from '@/features/data-installer/serv
 
 /** Authored strings for one tool's alerts. */
 export interface AgentAlertCopy {
-    /** Completes "Agent · ___?". Verb phrase, no full stop. */
+    /** Completes "Agent: ___?". Verb phrase, no full stop. */
     action: string;
     /** One sentence: what changes if they allow it. */
     consequence: string;

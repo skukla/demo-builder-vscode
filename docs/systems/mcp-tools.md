@@ -288,7 +288,7 @@ server IS — transport, lifecycle, scoping, security — is in
 |---|---|---|
 | `check_datapack_service` | read | Check whether the Data Installer API is configured and reachable. Use before the |
 | `check_mesh` | read | Report whether the current project's API mesh is deployed and up to date |
-| `find_datapacks` | read | The datapacks this SC can install: Demo Builder's datapack store (Demo Builder datapacks and your own, |
+| `find_datapacks` | read | Every datapack this SC can install: Demo Builder's datapack store (store:\ |
 | `get_datapack` | read | One datapack's metadata plus which of its declared data types the service actually |
 | `get_datapack_activity` | read | Which packs were installed, removed, imported, exported or validated, against which |
 | `get_erp_order_trace` | read | Read one Commerce order's whole life across Commerce, the ERP integration and the |

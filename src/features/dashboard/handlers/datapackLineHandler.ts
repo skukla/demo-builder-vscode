@@ -1,6 +1,6 @@
 /**
  * The dashboard's Datapacks card line (owner, 2026-11-07): the pack this demo holds, "Luma,
- * eds-compatible", or "None" (step-04 S9). The sidebar's Datapacks tile opens the Datapack Library, every
+ * eds-compatible" (the version only when it has two or more, step-07 P4), or "None" (step-04 S9). The sidebar's Datapacks tile opens the Datapack Library, every
  * pack; this card opens this demo's Datapacks, and its line is what tells the two apart.
  *
  * A project records its pack by id ("luma"), so the name the SC knows is read from the library
@@ -22,12 +22,23 @@
 import { libraryDisplayName } from '@/features/data-installer/handlers/libraryWriter';
 import { packLine } from '@/features/data-installer/packVersions';
 import { installFailedOf } from '@/features/data-installer/services/installFailure';
-import { rememberedPackName } from '@/features/data-installer/services/packNames';
+import { rememberedPackChoices, rememberedPackName } from '@/features/data-installer/services/packNames';
+import type { Project } from '@/types/base';
 import type { DatapackLine } from '@/types/datapack';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 
 export const NO_DATAPACK = 'None';
 export const UNNAMED_DATAPACK = "This demo's data";
+
+/**
+ * The pack's name, and its version only when it offers two or more (step-07 P4, S9). How many it
+ * offers is remembered by the same library read that remembers the name (`libraryDisplayName`), so
+ * no second read: a count never read leaves the version out until the read behind the line lands.
+ */
+function lineOf(name: string, held: NonNullable<Project['datapack']>, context: HandlerContext): string {
+    const offered = rememberedPackChoices(context.context.globalState, held.name) ?? 0;
+    return offered >= 2 ? packLine(name, held.version) : name;
+}
 
 /** `get-datapack-line`: the Datapacks card's line for the open project. */
 export async function handleGetDatapackLine(context: HandlerContext): Promise<HandlerResponse> {
@@ -40,7 +51,7 @@ export async function handleGetDatapackLine(context: HandlerContext): Promise<Ha
         ? rememberedPackName(context.context.globalState, held.name)
         : undefined;
     const name = known ?? (await reading);
-    const line = name ? packLine(name, held.version) : UNNAMED_DATAPACK;
+    const line = name ? lineOf(name, held, context) : UNNAMED_DATAPACK;
     const data: DatapackLine = installFailedOf(project) ? { line, failed: true } : { line };
     return { success: true, data };
 }

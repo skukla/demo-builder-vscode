@@ -1,6 +1,6 @@
 /**
  * The agent's progress card names the project a call acts in, when its named form uses it.
- * Live release test, 2026-10-22: "Agent · Adding another ERP: Loading demo data" ran for
+ * Live release test, 2026-10-22: "Agent: Adding another ERP: Loading demo data" ran for
  * fifteen minutes beside an action the SC started, and nothing said which was which.
  * Split from agentOperationNotifier.test.ts (its size); the same vscode stub.
  */
@@ -49,7 +49,7 @@ beforeEach(() => {
 it('names the ERP being added and the open project, in the card and in how it lands', async () => {
     mockGetStateManager.mockReturnValue(makeStateManager(createMockProject({ name: 'JustRite' })));
     await createAgentOperationNotifier(logger)('add_erp', async () => ({ ok: true }), { id: 'erp-integration', name: 'Accuform' });
-    expect(titles()).toStrictEqual(['Agent · Adding Accuform ERP to JustRite']);
+    expect(titles()).toStrictEqual(['Agent: Adding Accuform ERP to JustRite']);
     expect(mockSetStatusBarMessage).toHaveBeenCalledWith(expect.stringContaining('Adding Accuform ERP to JustRite — done'), expect.any(Number));
 });
 
@@ -58,5 +58,5 @@ it('names the ERP alone when no project can be read', async () => {
         throw new Error('not ready');
     });
     await createAgentOperationNotifier(logger)('add_erp', async () => ({ ok: true }), { name: 'Accuform' });
-    expect(titles()).toStrictEqual(['Agent · Adding Accuform ERP']);
+    expect(titles()).toStrictEqual(['Agent: Adding Accuform ERP']);
 });

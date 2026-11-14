@@ -62,6 +62,22 @@ export interface DatapackCatalogGridProps {
     heldFailed?: boolean;
     /** An update left data types of `held` on the older version (step-07 U1): the dot stays. */
     updateBehind?: boolean;
+    /** The catalog holds packs this choice leaves out, so an empty Recommended is not an empty catalog. */
+    othersListed?: boolean;
+}
+
+/** An empty choice's title: Recommended with nothing anywhere is the empty catalog. */
+function emptyTitle(show: CatalogShow, othersListed: boolean): string {
+    if (show === 'recommended' && !othersListed) return 'No Datapacks Yet';
+    return EMPTY_SHOW_TITLE[show] ?? 'No Datapacks Yet';
+}
+
+/** Where to look instead. Only your own, Recommended or the whole catalog can be filled from here. */
+function emptyDescription(show: CatalogShow, othersListed: boolean): string {
+    if (show === 'team' || show === 'installer' || show === 'community') return 'Try All Datapacks';
+    if (show === 'recommended' && othersListed) return 'Try All Datapacks';
+    if (show === 'yours') return 'Add one from a file.';
+    return "Add one from a file, or save this demo's.";
 }
 
 /** Pick the one body state to show under the header. */
@@ -80,21 +96,10 @@ export function DatapackCatalogGrid({
     installedAt,
     heldFailed = false,
     updateBehind = false,
+    othersListed = false,
 }: DatapackCatalogGridProps): React.JSX.Element {
     if (groups.length === 0) {
-        return (
-            <EmptyState
-                title={EMPTY_SHOW_TITLE[show] ?? 'No Datapacks Yet'}
-                // Only your own or the whole catalog can be filled from here.
-                description={
-                    show === 'team' || show === 'installer' || show === 'community'
-                        ? 'Try All Datapacks'
-                        : show === 'yours'
-                          ? 'Add one from a file.'
-                          : "Add one from a file, or save this demo's."
-                }
-            />
-        );
+        return <EmptyState title={emptyTitle(show, othersListed)} description={emptyDescription(show, othersListed)} />;
     }
 
     if (filtered.length === 0 && elsewhere) {

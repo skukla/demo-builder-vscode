@@ -106,7 +106,7 @@ export function DatapackCatalogView({ library = false, clearArrival }: { library
     const { refresh, loading, value, failure, settled, noticePage, dismissNoAccess } = useDatapackCatalog(onPacksChanged);
     const detail = useDataInstallerRequest<DatapackDetailResponse>('get-datapack-detail');
     const { held, installedAt, failed, updateBehind, installedPacks, projectAnswered, reloadProject, reloadHolding } = useProjectHolding(library);
-    const { show, setShow, installerAnswered, shown, filtered, elsewhere, hideRemoved } = useCatalogShow({
+    const { show, setShow, installerAnswered, groups, shown, filtered, elsewhere, hideRemoved } = useCatalogShow({
         page: value,
         installedPacks,
         held,
@@ -312,6 +312,7 @@ export function DatapackCatalogView({ library = false, clearArrival }: { library
                     installedAt={installedAt}
                     heldFailed={failed !== undefined}
                     updateBehind={updateBehind}
+                    othersListed={groups.length > shown.length}
                 />
             </FullScreenSurface>
 

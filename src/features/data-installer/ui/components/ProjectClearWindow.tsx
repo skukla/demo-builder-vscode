@@ -222,7 +222,7 @@ function ClearSteps({ onClose, onClear, ownNames = NO_NAMES }: ProjectClearWindo
     }
     if (check && clear.reviewing) return recordsWindow(check, clearTitle(check.project), clear.back, onClose);
     if (pressing.asking) return saveFirstWindow(pressing.changes, pressing.answer, onClose);
-    const problem = check?.problem ?? clear.adminProblem;
+    const problem = check?.problem ?? clear.fixProblem;
     return (
         <JobSummaryWindow
             title={check ? clearTitle(check.project) : CLEAR_DEMO_DATA}

@@ -825,7 +825,8 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         description:
             "Delete one of your own datapacks from My Datapacks (the screen's Delete). Cannot be undone. A datapack of saves is " +
             'deleted whole, as the screen does: send everyVersion:true and no version. A version names one version alone. ' +
-            "A datapack a project uses is refused. Only a pack's owner can delete it; the Data Installer's shared catalog is " +
+            "A datapack a project uses is refused, and so is a Demo Builder datapack, as on the screen. Only a pack's owner " +
+            "can delete it; the Data Installer's shared catalog is " +
             'never touched. When you shared the pack in a project file, the answer carries `warning` (without confirm, ' +
             '`sharedInFile`): anyone who has not created that project yet gets the pack it was made from instead. Each version ' +
             'takes your settings layer of the same version with it (`settingsLayerDeleted: true`).',

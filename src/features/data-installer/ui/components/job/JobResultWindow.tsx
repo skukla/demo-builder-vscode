@@ -18,6 +18,8 @@ export interface JobResultWindowProps {
     result: ResultContent;
     actionButtons?: ActionButton[];
     onClose: () => void;
+    /** Fix with AI had nothing to fix: the extension's refusal, on the problem line (step-07 P5). */
+    problem?: string;
 }
 
 /** A success with nothing to read or do: its title says it all. */
@@ -34,6 +36,7 @@ export function JobResultWindow({
     result,
     actionButtons,
     onClose,
+    problem,
 }: JobResultWindowProps): React.ReactElement {
     useCloseWhenClean(titleAlone(result) && !actionButtons?.length, onClose);
     return (
@@ -45,6 +48,7 @@ export function JobResultWindow({
             onClose={onClose}
         >
             <DatapackResultBody result={result} />
+            {problem ? <p className="dialog-problem text-notice">{problem}</p> : null}
         </ResultWindow>
     );
 }

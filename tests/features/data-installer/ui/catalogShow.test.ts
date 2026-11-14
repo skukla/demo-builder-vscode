@@ -3,13 +3,13 @@
  */
 
 import { inPickOrder } from '@/features/data-installer/pickableKinds';
+import { packSource } from '@/features/data-installer/packSource';
 import type { DatapackGroup } from '@/features/data-installer/services/datapackCatalog';
 import {
     elsewhereWords,
     inShow,
     matchesElsewhere,
     inShowOrder,
-    packSource,
     showOptions,
     type CatalogShow,
 } from '@/features/data-installer/ui/catalogShow';
@@ -33,7 +33,7 @@ describe('packSource', () => {
         ['your own', YOURS, 'yours'],
         ['a colleague\'s', COLLEAGUE, 'community'],
         ['a curated Data Installer pack', CURATED, 'installer'],
-        // Owner, 2026-11-05: by where it lives; Recommended is what leaves the uncurated out.
+        // Owner, 2026-11-05: by where it lives, curated or not.
         ['a Data Installer pack not curated', SCRATCH, 'installer'],
     ] as const)('reads %s', (_what, pack, source) => {
         expect(packSource(pack)).toBe(source);
@@ -43,7 +43,8 @@ describe('packSource', () => {
 describe('inShow', () => {
     const ALL = [YOURS, TEAM, COLLEAGUE, CURATED, SCRATCH];
     it.each<[CatalogShow, DatapackGroup[]]>([
-        ['recommended', [YOURS, TEAM, CURATED]],
+        // Step-07 P1 (owner, 2026-11-14): yours and Demo Builder's; the Data Installer's are one choice away.
+        ['recommended', [YOURS, TEAM]],
         ['yours', [YOURS]],
         ['team', [TEAM]],
         ['installer', [CURATED, SCRATCH]],

@@ -11,7 +11,7 @@ jest.mock('@/features/data-installer/handlers/dataInstallerHandlers', () => ({
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { resolveDataInstallerAccess } from '@/features/data-installer/handlers/dataInstallerHandlers';
 import { libraryDisplayName } from '@/features/data-installer/handlers/libraryWriter';
-import { PACK_NAMES_KEY } from '@/features/data-installer/services/packNames';
+import { PACK_CHOICES_KEY, PACK_NAMES_KEY } from '@/features/data-installer/services/packNames';
 
 const mockAccess = resolveDataInstallerAccess as jest.Mock;
 const LUMA = { name: 'luma', version: 'eds-compatible', store: 'library' as const };
@@ -42,6 +42,23 @@ describe('libraryDisplayName', () => {
         expect(find).toHaveBeenCalledWith({ datapackName: 'luma' });
         expect(mockAccess).toHaveBeenCalledWith(context, 'library');
         expect(context.context.globalState.update).toHaveBeenCalledWith(PACK_NAMES_KEY, { luma: 'Luma' });
+    });
+
+    // Step-07 P4: the same read says how many versions it offers, for the dashboard line.
+    it('remembers how many versions the pack offers, its saves as one', async () => {
+        libraryAnswering(jest.fn(async () => ({
+            items: [
+                { id: { name: 'luma', version: 'main' }, displayName: 'Luma' },
+                { id: { name: 'luma', version: 'eds-compatible' }, displayName: 'Luma' },
+                { id: { name: 'luma', version: '20261101-080000' }, displayName: 'Luma' },
+                { id: { name: 'luma-old', version: 'main' }, displayName: 'Old' },
+            ],
+        })));
+        const context = createMockHandlerContext();
+
+        await libraryDisplayName(context, LUMA);
+
+        expect(context.context.globalState.update).toHaveBeenCalledWith(PACK_CHOICES_KEY, { luma: 3 });
     });
 
     it('answers nothing for a Data Installer pack, without asking the library', async () => {

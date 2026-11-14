@@ -244,7 +244,7 @@ describe('saving the demo\'s datapack', () => {
 });
 
 // The header's save button, one state (step-04 S1; decisions Phase 7 and 7b): Create with no datapack,
-// Save ▾ on the SC's own, Save As New on someone else's, none with no install record (P4-Q4).
+// Save ▾ on the SC's own, Save As New on someone else's, Create with no install record (step-07 P3).
 describe('the header button', () => {
     // Create is two windows (step-04 S3; J3-2): the picks, everything ticked, then the name; the run
     // ends on "Acme Test Created" (P4-Q1, rule 21: the thing first).
@@ -277,13 +277,14 @@ describe('the header button', () => {
         expect(await screen.findByRole('heading', { name: /Acme Test Created$/u })).toBeInTheDocument();
     });
 
-    it("offers no save button when Demo Builder did not install the demo's datapack", async () => {
+    // Step-07 P3 (owner, 2026-11-14, rule 6): Create where Save would be, and no line saying why.
+    it("reads Create, with no line, when Demo Builder did not install the demo's datapack", async () => {
         store(OWN);
         await renderView();
 
-        // CONTROL: the header is drawn.
-        expect(screen.getByRole('button', { name: 'Install from File' })).toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: /^(Create|Save|Save As New)$/u })).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Create' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /^(Save|Save As New)$/u })).not.toBeInTheDocument();
+        expect(screen.queryByText(/install record/iu)).not.toBeInTheDocument();
     });
 
     it("is Save ▾ on the SC's own datapack: Save saves into it as the flyout does", async () => {

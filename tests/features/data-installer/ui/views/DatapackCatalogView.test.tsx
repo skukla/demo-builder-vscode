@@ -104,8 +104,9 @@ describe('DatapackCatalogView', () => {
         });
 
         expect(within(cards[0]).getByTestId('spectrum-picker')).toHaveTextContent('tierpricingfix');
-        // The sibling card is untouched — selection is per pack, not global.
-        expect(within(cards[1]).getByTestId('spectrum-picker')).toHaveTextContent('main');
+        // The sibling card is untouched — selection is per pack, not global. wknd, the other pack with
+        // two versions: CitiSignal has one, so no picker (step-07 P4).
+        expect(within(cards[2]).getByTestId('spectrum-picker')).toHaveTextContent('main');
     });
 
     // Owner, 2026-11-05: the Show list replaced two switches, each of which asked again and showed
@@ -121,6 +122,17 @@ describe('DatapackCatalogView', () => {
 
             expect(await screen.findByText('No Demo Builder Datapacks')).toBeInTheDocument();
             expect(screen.getByText('Try All Datapacks')).toBeInTheDocument();
+        });
+
+        // Step-07 P1: the Data Installer's packs are one choice away, so an empty Recommended says where.
+        it('opens on an empty Recommended when only the Data Installer has packs, and points at All', async () => {
+            resolveWith([makeSummary('curated', 'main', { shared: true })]);
+            render(<DatapackCatalogView />);
+            await settle();
+
+            expect(await screen.findByText('No Recommended Datapacks')).toBeInTheDocument();
+            expect(screen.getByText('Try All Datapacks')).toBeInTheDocument();
+            expect(screen.queryAllByTestId('datapack-card')).toHaveLength(0);
         });
 
         it('reads the catalog again when a setting it depends on changes, with no Refresh', async () => {
@@ -176,17 +188,18 @@ describe('DatapackCatalogView', () => {
         ];
         const cardNames = () => screen.getAllByTestId('datapack-card').map((card) => card.textContent);
 
-        it('opens on Recommended, leaving Community out, and switches with no second request', async () => {
+        // Step-07 P1: Recommended is yours and Demo Builder's; the Data Installer's are one choice away.
+        it('opens on Recommended, leaving Community and the Data Installer out, and switches with no second request', async () => {
             resolveWith(PACKS);
             render(<DatapackCatalogView />);
             await settle();
             await screen.findAllByTestId('datapack-card');
-            expect(cardNames()).toHaveLength(2);
+            expect(cardNames()).toEqual([expect.stringContaining('mine')]);
             const asked = mockRequest.mock.calls.filter((call) => call[0] === 'find-datapacks').length;
 
-            fireEvent.change(showSelect(), { target: { value: 'yours' } });
+            fireEvent.change(showSelect(), { target: { value: 'installer' } });
 
-            await waitFor(() => expect(cardNames()).toHaveLength(1));
+            await waitFor(() => expect(cardNames()).toEqual([expect.stringContaining('curated')]));
             expect(mockRequest.mock.calls.filter((call) => call[0] === 'find-datapacks')).toHaveLength(asked);
         });
     });
@@ -285,7 +298,7 @@ describe('DatapackCatalogView', () => {
             await waitFor(() =>
                 expect(lastRequest()).toEqual({
                     type: 'get-datapack-detail',
-                    payload: { datapackName: 'bodea', version: 'main', store: 'installer', why: 'the version its card showed' },
+                    payload: { datapackName: 'bodea', version: 'main', store: 'library', why: 'the version its card showed' },
                 })
             );
         });
@@ -322,7 +335,7 @@ describe('DatapackCatalogView', () => {
             await waitFor(() =>
                 expect(lastRequest()).toEqual({
                     type: 'get-datapack-detail',
-                    payload: { datapackName: 'bodea', version: 'tierpricingfix', store: 'installer', why: 'the version its card showed' },
+                    payload: { datapackName: 'bodea', version: 'tierpricingfix', store: 'library', why: 'the version its card showed' },
                 })
             );
         });
@@ -521,6 +534,8 @@ describe('DatapackCatalogView — Demo Builder\'s datapacks beside the Data Inst
 
         render(<DatapackCatalogView />);
         await settle();
+        // Recommended leaves the Data Installer's out (step-07 P1); All Datapacks draws both.
+        fireEvent.change(showSelect(), { target: { value: 'all' } });
 
         await waitFor(() => expect(screen.getAllByTestId('datapack-card')).toHaveLength(2));
         expect(screen.getAllByTestId('datapack-card')[0]).toHaveTextContent('Mine');
@@ -558,6 +573,8 @@ describe('DatapackCatalogView — Demo Builder\'s datapacks beside the Data Inst
 
         render(<DatapackCatalogView />);
         await settle();
+        // One choice away from Recommended, which holds only yours and Demo Builder's (step-07 P1).
+        fireEvent.change(showSelect(), { target: { value: 'installer' } });
 
         await waitFor(() => expect(screen.getAllByTestId('datapack-card')).toHaveLength(1));
         const notice = screen.getByTestId('datapack-source-notice');

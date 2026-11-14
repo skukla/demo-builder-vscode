@@ -94,7 +94,7 @@ fields, and the dialog shows these and nothing else, because it answers one ques
 
 | Field | Is |
 |---|---|
-| `action` | completes "Agent · ___?" (the one prefix every agent notification carries, `agentNotice.ts`) |
+| `action` | completes "Agent: ___?" (the one prefix every agent notification carries, `agentNotice.ts`) |
 | `consequence` | ONE sentence: what changes, and name the blast radius |
 | `target` | argument keys naming WHICH thing, in reading order |
 

@@ -246,7 +246,7 @@ function InstanceSteps({ onClose, onClear }: InstanceClearWindowProps): React.Re
     };
     const fix = fixButton(check, { ...fixes, retry: clear.retry, retries: clear.retries });
     const slow = Object.values(check.unread ?? {}).includes('slow');
-    const problem = check.problem ?? fixes.adminProblem;
+    const problem = check.problem ?? fixes.fixProblem;
     return (
         <JobSummaryWindow
             title={title}

@@ -207,6 +207,23 @@ describe('DatapackCard', () => {
         });
     });
 
+    // Step-07 P4 (owner, P4-Q2): no picker with nothing to choose; the version's last change instead.
+    describe('one version', () => {
+        it('draws no picker, and says when the version last changed', () => {
+            const { card } = renderCard(makeGroup({ versions: [makeVersion({ updatedAt: '2026-11-06T09:15:00' })] }));
+
+            expect(within(card).queryByTestId('spectrum-picker')).not.toBeInTheDocument();
+            expect(card).toHaveTextContent(/Updated Nov 6, 9:15\sAM/u);
+        });
+
+        it('names the version when it has no date', () => {
+            const { card } = renderCard(makeGroup());
+
+            expect(within(card).queryByTestId('spectrum-picker')).not.toBeInTheDocument();
+            expect(card).toHaveTextContent('main');
+        });
+    });
+
     describe('version picker', () => {
         const multi = makeGroup({
             versions: [

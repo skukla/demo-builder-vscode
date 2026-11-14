@@ -10,7 +10,8 @@ import { libraryRow } from '../../../../helpers/settingsLayerFixtures';
 import { DatapackCatalogView, mockRequest } from './DatapackCatalogView.testUtils';
 import '@testing-library/jest-dom';
 
-const BODEA = { ...libraryRow('bodea', 'main', { displayName: 'Bodea', dataTypes: ['products'], shared: true }), store: undefined };
+// A Demo Builder pack, so Recommended, where the list opens, draws it (step-07 P1).
+const BODEA = libraryRow('bodea', 'main', { displayName: 'Bodea', dataTypes: ['products'], shared: true, mine: false, team: true });
 
 function catalogOf(items: unknown[], datapack?: { name: string; version: string }) {
     mockRequest.mockReset();

@@ -79,6 +79,7 @@ export function RunPhase({
             {...(uninstalling ? { uninstalling } : {})}
             actionButtons={ended ? endButtons(job, ended) : []}
             onClose={onClose}
+            {...(job.fixProblem ? { problem: job.fixProblem } : {})}
         />
     );
 }

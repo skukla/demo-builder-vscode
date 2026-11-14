@@ -134,7 +134,17 @@ function asideWindow(job: DatapackJob, opened: Opened, close: () => void): React
         return <RecordsWindow title={title} rows={job.rows} records={records} reading={job.recordsReading} onBack={job.back} onClose={close} />;
     }
     if (phase === 'dry-result' && job.result) {
-        return <DryRunWindow result={job.result} onBack={job.back} onInstall={job.install} onRetry={job.dryRun} onFix={job.fixDryRun} onClose={close} />;
+        return (
+            <DryRunWindow
+                result={job.result}
+                onBack={job.back}
+                onInstall={job.install}
+                onRetry={job.dryRun}
+                onFix={job.fixDryRun}
+                onClose={close}
+                {...(job.fixProblem ? { problem: job.fixProblem } : {})}
+            />
+        );
     }
     if (phase === 'save-first') return saveFirstWindow(job, opened, close);
     return null;

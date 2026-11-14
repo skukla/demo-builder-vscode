@@ -19,6 +19,7 @@ import { defaultShape, type ToolDescriptor } from './toolDescriptors';
 import { aiHandlers } from '@/features/dashboard/handlers/aiHandlers';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
 import { dataInstallerHandlers } from '@/features/data-installer/handlers/dataInstallerHandlers';
+import { packSource, type PackOrigin, type PackSource } from '@/features/data-installer/packSource';
 import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
 import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
 import type { HandlerResponse } from '@/types/handlers';
@@ -75,6 +76,19 @@ function leanDatapackRow(row: Record<string, unknown>): Record<string, unknown> 
         ...keep,
         ...(Array.isArray(dataTypes) ? { dataTypeCount: dataTypes.length } : {}),
     };
+}
+
+/** The four sources, in the words the Show list uses (step-07 P1). */
+const AGENT_SOURCE: Readonly<Record<PackSource, string>> = {
+    yours: 'yours',
+    team: 'demo-builder',
+    installer: 'data-installer',
+    community: 'community',
+};
+
+/** A `find_datapacks` row: lean, and marked with where it comes from. */
+function sourcedDatapackRow(row: Record<string, unknown>): Record<string, unknown> {
+    return { ...leanDatapackRow(row), source: AGENT_SOURCE[packSource(row as PackOrigin)] };
 }
 
 /**
@@ -647,23 +661,24 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: true,
         description:
-            "The datapacks this SC can install: Demo Builder's datapack store (Demo Builder datapacks and your own, " +
-            "store:\"library\"), then whatever the Data Installer adds if it answers (store:\"installer\"). A pack in both " +
+            "Every datapack this SC can install: Demo Builder's datapack store (store:\"library\"), then whatever the " +
+            'Data Installer adds if it answers (store:"installer"). Each row\'s source says whose it is: yours, ' +
+            'demo-builder, data-installer or community. A pack in both ' +
             'shows once, as the store\'s. One row per (name, version). installerMissing says the Data Installer\'s packs ' +
             'are absent: no-address (none set), turned-off (demoBuilder.dataInstaller.enabled is off), no-access (it turned this Adobe account away; an admin of the org can ' +
             'add it to the Data Installer\'s product profile) or no-answer (down). includeInstaller:false leaves the ' +
             'Data Installer out (installerOff says so). ' +
-            'includeCommunity adds colleagues\' shared packs and non-curated Data Installer packs. store lists one alone. ' +
+            'includeCommunity:false leaves colleagues\' shared packs and non-curated Data Installer packs out. store lists one alone. ' +
             'A pack named <pack>-settings holding only store_config is that pack\'s settings layer, not a demo. This ' +
             'endpoint reports no total, so count === limit means there may be more; page with skip.',
         map: dataInstallerHandlers,
         type: 'find-datapacks',
-        shape: (res) => shapeRows(res, leanDatapackRow),
+        shape: (res) => shapeRows(res, sourcedDatapackRow),
         inputSchema: {
             includeCommunity: z
                 .boolean()
-                .optional()
-                .describe("Include colleagues' shared packs and non-curated Data Installer packs"),
+                .default(true)
+                .describe("false leaves colleagues' shared packs and non-curated Data Installer packs out (default: every pack)"),
             includeInstaller: z
                 .boolean()
                 .optional()

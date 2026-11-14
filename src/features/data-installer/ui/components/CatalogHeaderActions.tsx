@@ -7,8 +7,8 @@
  * The save button is one state (`headerSave`), decided before it is drawn: a button's words never
  * change while it is on screen (7b). Until the project and the catalog have answered it is the
  * header's waiting button (disabled, a spinner, no words, as its Refresh is while it reads). Then:
- * Create with no datapack; Save ▾ (Save, Save As New) on the SC's own; a plain Save As New on
- * someone else's; nothing when the datapack has no install record (P4-Q4). Each choice opens
+ * Create with no datapack, or one with no install record (step-07 P3); Save ▾ (Save, Save As New)
+ * on the SC's own; a plain Save As New on someone else's. Each choice opens
  * today's flow, through the handlers it is given.
  *
  * Install from File adds the file's datapack to My Datapacks, then, after a clean load, opens the
@@ -69,10 +69,9 @@ export interface CatalogHeaderActionsProps {
 }
 
 /** The save button, as its state says (`headerSave`). */
-function SaveButton({ save }: { save: HeaderSaveActions }): React.JSX.Element | null {
+function SaveButton({ save }: { save: HeaderSaveActions }): React.JSX.Element {
     const { state, onCreate, onSave, onSaveAsNew } = save;
     const pick = useCallback((key: React.Key): void => (key === 'as-new' ? onSaveAsNew() : onSave()), [onSave, onSaveAsNew]);
-    if (state === 'none') return null;
     if (state === 'pending') {
         return (
             <ActionButton isQuiet isDisabled aria-label="Loading">

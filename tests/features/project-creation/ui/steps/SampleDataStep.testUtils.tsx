@@ -127,7 +127,10 @@ import { SampleDataStep } from '@/features/project-creation/ui/steps/SampleDataS
 export { SampleDataStep };
 import type { WizardState } from '@/types/webview';
 
-/** Two names, three rows — so the grouping is actually exercised. */
+/**
+ * Two names, three rows — so the grouping is actually exercised. Demo Builder's packs, so
+ * Recommended, where the step opens, draws them (step-07 P1).
+ */
 export const CATALOG = {
     // The REAL DatapackSummary shape: identity is a nested `id: {name, version}`,
     // not flat fields. A flat fixture looks right and crashes groupDatapacks.
@@ -138,6 +141,8 @@ export const CATALOG = {
             shared: true,
             dataTypes: [],
             art: {},
+            store: 'library' as const,
+            team: true,
         },
         {
             id: { name: 'bodea', version: 'hold' },
@@ -145,6 +150,8 @@ export const CATALOG = {
             shared: true,
             dataTypes: [],
             art: {},
+            store: 'library' as const,
+            team: true,
         },
         {
             id: { name: 'citisignal_new', version: 'main' },
@@ -152,6 +159,8 @@ export const CATALOG = {
             shared: true,
             dataTypes: [],
             art: {},
+            store: 'library' as const,
+            team: true,
         },
     ],
     total: 3,

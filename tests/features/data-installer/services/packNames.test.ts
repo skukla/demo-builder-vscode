@@ -2,7 +2,15 @@
  * Library pack names, remembered once read (walk F69): the dashboard card shows the name at once.
  */
 
-import { PACK_NAMES_KEY, rememberPackName, rememberedPackName, type NameMemory } from '@/features/data-installer/services/packNames';
+import {
+    PACK_CHOICES_KEY,
+    PACK_NAMES_KEY,
+    rememberPackChoices,
+    rememberPackName,
+    rememberedPackChoices,
+    rememberedPackName,
+    type NameMemory,
+} from '@/features/data-installer/services/packNames';
 
 function memory(initial: Record<string, string> | undefined): NameMemory & { update: jest.Mock } {
     let stored: unknown = initial;
@@ -34,5 +42,34 @@ describe('pack names', () => {
         await rememberPackName(kept, 'luma', 'Luma');
 
         expect(kept.update).not.toHaveBeenCalled();
+    });
+});
+
+// Step-07 P4: how many versions a pack offers, kept beside its name, so the dashboard line knows
+// whether to name the version without a read.
+describe('pack version choices', () => {
+    function counts(initial: Record<string, number> | undefined): NameMemory & { update: jest.Mock } {
+        let stored: unknown = initial;
+        return {
+            get: <T>(key: string) => (key === PACK_CHOICES_KEY ? (stored as T) : undefined),
+            update: jest.fn(async (_key: string, value: unknown) => {
+                stored = value;
+            }),
+        };
+    }
+
+    it('knows nothing it never read', () => {
+        expect(rememberedPackChoices(counts(undefined), 'luma')).toBeUndefined();
+    });
+
+    it('keeps a count beside the others, and writes nothing when it is unchanged', async () => {
+        const kept = counts({ bodea: 1 });
+
+        await rememberPackChoices(kept, 'luma', 2);
+        await rememberPackChoices(kept, 'luma', 2);
+
+        expect(rememberedPackChoices(kept, 'luma')).toBe(2);
+        expect(rememberedPackChoices(kept, 'bodea')).toBe(1);
+        expect(kept.update).toHaveBeenCalledTimes(1);
     });
 });

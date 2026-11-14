@@ -122,7 +122,7 @@ describe('the phrases read as English, not as schema', () => {
     });
 });
 
-// The phrase is an agent notification's title ("Agent · <phrase>"), with the
+// The phrase is an agent notification's title ("Agent: <phrase>"), with the
 // current step after it. "Republishing the storefront configuration" plus a step
 // ran off the card (owner, 2026-09-21), the same wrap the 2026-08-27 feedback was
 // about. 32 characters keeps title and a short step on one line.
@@ -132,7 +132,7 @@ describe('every phrase fits a notification title', () => {
     });
 });
 
-// "Agent · Deleting the Adobe workspace" said everything but which one (owner,
+// "Agent: Deleting the Adobe workspace" said everything but which one (owner,
 // 2026-09-21). A call handed a readable name is narrated with it.
 describe('a call is narrated with the name it acts on', () => {
     it('names the workspace being deleted', () => {
@@ -266,7 +266,7 @@ describe("the datapack tools narrate in the screen's words", () => {
     });
 });
 
-// Live release test, 2026-10-22: "Agent · Adding another ERP: Loading demo data" showed for
+// Live release test, 2026-10-22: "Agent: Adding another ERP: Loading demo data" showed for
 // fifteen minutes beside an action the SC ran, and nothing said which was which.
 describe('a call that acts in the open project can name it', () => {
     it('names the ERP being added and the project it goes into', () => {

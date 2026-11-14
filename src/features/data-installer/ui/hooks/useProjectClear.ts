@@ -11,11 +11,9 @@
 
 import { useCallback, useState } from 'react';
 import { type DemoDataCheckState, useDemoDataCheck } from './useDemoDataCheck';
+import { useFixWithAi } from './useFixWithAi';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { HandlerResponse } from '@/types/handlers';
-import type { FixDatapackImportWithAiRequest } from '@/types/webviewRequests';
-
-const FROM_CLEAR_CHECK: FixDatapackImportWithAiRequest = { from: 'clear-check' };
 
 export interface ProjectClear extends DemoDataCheckState {
     reviewing: boolean;
@@ -23,20 +21,21 @@ export interface ProjectClear extends DemoDataCheckState {
     back: () => void;
     /** How many times Retry was pressed since the window opened. */
     retries: number;
-    /** Why Commerce Admin did not open, for the problem line; absent when it did. */
-    adminProblem?: string;
+    /**
+     * Why a way to a fix did not open, for the problem line: Commerce Admin's refusal, or Fix with AI's
+     * when there is nothing to fix (step-07 P5). Absent when it opened.
+     */
+    fixProblem?: string;
     fixWithAi: () => void;
     openAdmin: () => void;
 }
 
 /** The ways to a type a Clear check could not read, beyond Retry: Fix with AI and Open Commerce Admin. Clear Commerce Instance's too (C4). */
-export type ClearFixes = Pick<ProjectClear, 'adminProblem' | 'fixWithAi' | 'openAdmin'>;
+export type ClearFixes = Pick<ProjectClear, 'fixProblem' | 'fixWithAi' | 'openAdmin'>;
 
 export function useClearFixes(): ClearFixes {
     const [adminProblem, setAdminProblem] = useState<string | undefined>(undefined);
-    const fixWithAi = useCallback((): void => {
-        void webviewClient.request('fix-datapack-import-with-ai', FROM_CLEAR_CHECK);
-    }, []);
+    const fix = useFixWithAi('clear-check');
     const openAdmin = useCallback((): void => {
         setAdminProblem(undefined);
         void webviewClient
@@ -44,7 +43,8 @@ export function useClearFixes(): ClearFixes {
             .then((res) => setAdminProblem(res?.success === false ? res.error : undefined))
             .catch(() => undefined);
     }, []);
-    return { ...(adminProblem ? { adminProblem } : {}), fixWithAi, openAdmin };
+    const fixProblem = adminProblem ?? fix.problem;
+    return { ...(fixProblem ? { fixProblem } : {}), fixWithAi: fix.fixWithAi, openAdmin };
 }
 
 export function useProjectClear(): ProjectClear {

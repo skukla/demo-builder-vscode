@@ -68,15 +68,16 @@ describe('headerSave', () => {
             { ...ANSWERED, held: LUMA, installedAt: INSTALLED },
             'save-as-new',
         ],
+        // Step-07 P3 (owner, 2026-11-14): Create where Save would be, with no line saying why.
         [
             'the SC’s own datapack with no install record',
             { ...ANSWERED, held: LUMA, heldInCatalog: MINE },
-            'none',
+            'create',
         ],
         [
             'a colleague’s datapack with no install record',
             { ...ANSWERED, held: LUMA, heldInCatalog: COLLEAGUE },
-            'none',
+            'create',
         ],
     ])('%s', (_case, input, expected) => {
         expect(headerSave(input)).toBe(expected);

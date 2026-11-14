@@ -7,26 +7,8 @@
  * @module features/data-installer/ui/catalogShow
  */
 
+import { packSource, type PackSource } from '../packSource';
 import type { DatapackGroup } from '../services/datapackCatalog';
-
-/** Where a pack comes from, as an SC would say it. */
-export type PackSource = 'yours' | 'team' | 'installer' | 'community';
-
-/**
- * Where a pack comes from. Team (Demo Builder's) before Yours (owner, 2026-11-03): a team pack is the store's,
- * whoever uploaded it. Every Data Installer pack is the Data Installer's, curated or not (owner,
- * 2026-11-05: its uncurated packs read as mislabelled under Community); Community is colleagues'.
- *
- * @param group - the pack
- * @returns its source
- */
-export function packSource(group: DatapackGroup): PackSource {
-    if (group.store === 'library') {
-        if (group.team) return 'team';
-        return group.mine ? 'yours' : 'community';
-    }
-    return 'installer';
-}
 
 export type CatalogShow = 'recommended' | PackSource | 'all';
 
@@ -34,8 +16,8 @@ export type CatalogShow = 'recommended' | PackSource | 'all';
 export const CATALOG_REQUEST = { includeCommunity: true };
 
 /**
- * What the list opens on: your packs, the team's, and the Data Installer's curated ones. Not
- * Community, and not the Data Installer's uncurated packs: both are mostly people's test packs.
+ * What the list opens on: Recommended, your packs and Demo Builder's (step-07 P1, owner 2026-11-14):
+ * only packs a person chose. The Data Installer's and Community are one choice away.
  */
 export const DEFAULT_SHOW: CatalogShow = 'recommended';
 
@@ -99,8 +81,9 @@ export function elsewhereWords(show: CatalogShow, elsewhere: ShowElsewhere): str
     return `No matches in ${showLabel(show)}. ${elsewhere.count} in ${showLabel(elsewhere.show)}.`;
 }
 
-/** What a Show choice with nothing in it says. Recommended and All mean the catalog is empty. */
+/** What a Show choice with nothing in it says. All means the catalog is empty. */
 export const EMPTY_SHOW_TITLE: Partial<Record<CatalogShow, string>> = {
+    recommended: 'No Recommended Datapacks',
     yours: "You Don't Have Any Datapacks",
     team: 'No Demo Builder Datapacks',
     installer: 'No Data Installer Datapacks',
@@ -117,7 +100,7 @@ export const EMPTY_SHOW_TITLE: Partial<Record<CatalogShow, string>> = {
 export function inShow(group: DatapackGroup, show: CatalogShow): boolean {
     if (show === 'all') return true;
     const source = packSource(group);
-    if (show === 'recommended') return source === 'installer' ? group.shared : source !== 'community';
+    if (show === 'recommended') return source === 'yours' || source === 'team';
     // The SC's own shared pack is where its share said it would be, too (owner, 2026-11-05).
     if (show === 'community' && source === 'yours' && group.shared) return true;
     return source === show;

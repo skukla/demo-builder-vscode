@@ -330,7 +330,7 @@ function naming(keys: string[], phrase: (...values: string[]) => string): NamedF
 
 /**
  * "Adding Accuform ERP to JustRite": the ERP as the add will name it, and the project it goes
- * into when one is open. "Agent · Adding another ERP" ran for fifteen minutes beside an action
+ * into when one is open. "Agent: Adding another ERP" ran for fifteen minutes beside an action
  * the SC started, and nothing said which was which (live release test, 2026-10-22).
  */
 const addingErp: NamedForm = (args, project) => {
@@ -343,7 +343,7 @@ const addingErp: NamedForm = (args, project) => {
 /**
  * The phrase for a call that names what it acts on, when the name is readable.
  *
- * "Agent · Deleting the Adobe workspace" said everything but WHICH one (owner,
+ * "Agent: Deleting the Adobe workspace" said everything but WHICH one (owner,
  * 2026-09-21: "Should it not include the workspace's name?"). The consent dialog
  * already names it; the notification now does too. Only tools handed a name a
  * person reads — an internal id is not worth showing, so those keep their phrase.
