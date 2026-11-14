@@ -300,7 +300,10 @@ export function ProjectsBatchModal({ controls }: { controls: ProjectsBatchContro
     const dismiss = asking ? () => controls.answer(undefined) : controls.close;
     return (
         <DialogContainer onDismiss={dismiss}>
-            <BatchWindow controls={controls} onDismiss={dismiss} />
+            {/* Only while open: the container is open whenever its child is an element, even one that
+                draws nothing, and an open container dims the whole page (the visual baseline,
+                2026-11-14). */}
+            {controls.view.phase === 'closed' ? null : <BatchWindow controls={controls} onDismiss={dismiss} />}
         </DialogContainer>
     );
 }
