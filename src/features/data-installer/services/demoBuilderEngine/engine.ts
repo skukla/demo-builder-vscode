@@ -27,6 +27,7 @@ import { addedKindsLine, askedRows, missingKinds } from './askedKinds';
 import { removeRecordedPack, removeReplacedPack } from './engineRemoval';
 import { AFTER_PRODUCTS_LINES, type NoteLine, noteOf, rowNotesOf } from './installNote';
 import { type RecordFiles, type TargetCodes, nodeRecordFiles, openInstallRecord, readInstallRecord } from './installRecord';
+import { carryInstallRecord } from './installRecordUpdate';
 import { resolveEngineTarget, sessionFor } from './installTarget';
 import { timed } from './jobClock';
 import type { SkippedRow } from './kindContext';
@@ -180,7 +181,8 @@ async function access(deps: DemoBuilderEngineDeps): Promise<{ get: CommerceGet; 
  * record made before the target was kept says it by the website its settings went to.
  */
 async function elsewhere(deps: DemoBuilderEngineDeps, request: ImportRequest, target: TargetCodes, ask = 'Uninstall it first, or install it there.'): Promise<string | undefined> {
-    const record = await readInstallRecord(deps.files ?? nodeRecordFiles, deps.projectPath, request.id);
+    const read = (pack: DatapackId) => readInstallRecord(deps.files ?? nodeRecordFiles, deps.projectPath, pack);
+    const record = (await read(request.id)) ?? (request.updates && (await read(request.updates))); // an update's (U1)
     if (!record) return undefined;
     // Its ids are another instance's: reused here they would be read and written on this one (step-07 D6).
     if (onAnotherInstance(record.instance, deps.instance)) return installedOnAnotherInstanceLine(request.id);
@@ -203,6 +205,7 @@ async function runInstall(deps: DemoBuilderEngineDeps, request: ImportRequest, j
     if (!wanted) throw new Error(NO_TARGET);
     const conflict = await timed(deps.log, `Install of ${request.id.name}: checked other websites`, () => elsewhere(deps, request, wanted));
     if (conflict) throw new Error(conflict);
+    if (request.updates) await carryInstallRecord(deps.files ?? nodeRecordFiles, deps.projectPath, request.updates, request.id); // U1: only changes
     job.phase = ENGINE_PHASES.reading;
     const all = await timed(deps.log, `Install of ${request.id.name}: read the datapack`, () => deps.readPack(request.id, request.source ?? 'installer'));
     const items = askedRows(all, request.dataTypes);

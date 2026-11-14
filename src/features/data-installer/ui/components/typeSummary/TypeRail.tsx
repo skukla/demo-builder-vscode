@@ -11,7 +11,9 @@
  * greyed out when nothing stays, the house notice dot after the count of a type with kept records,
  * in a slot every row has so the counts and the dots line up (rule 11), and the same dot on its Kept
  * tab (rule 18). Both tabs have the one column header, and a type that nests (categories) is a
- * `TreeList`. A type that could not be read says so on its row and in its pane.
+ * `TreeList`. A type that could not be read says so on its row and in its pane. An update (step-07
+ * U1, J9-2) hands in its kept records the same way, with `firstTab` "Changed": what it writes, then
+ * the SC's edits it keeps.
  *
  * @module features/data-installer/ui/components/typeSummary/TypeRail
  */
@@ -43,22 +45,24 @@ export interface ClearRecordsShown {
     trees?: Record<string, TreeListNode[]>;
     /** The types that could not be read. */
     unread?: ReadonlySet<string>;
+    /** The first tab's name in place of Removed: an update's is Changed (J9-2). */
+    firstTab?: string;
 }
 
 /** The first tab's name: orders and returns are closed, never deleted (decisions Phase 6, J1-5). */
 const doneTab = (type: string): string => (type === 'orders' || type === 'returns' ? 'Closed' : 'Removed');
 
 /** The Removed and Kept tabs; the Kept one greyed out when nothing stays, else wearing the row's dot. */
-function RecordTabs({ type, kept, view, onSelect }: { type: string; kept: number; view: RecordView; onSelect: (view: RecordView) => void }) {
+function RecordTabs({ type, kept, view, onSelect, firstTab }: { type: string; kept: number; view: RecordView; onSelect: (view: RecordView) => void; firstTab?: string }) {
     const views = [
-        { id: 'removed', label: doneTab(type) },
+        { id: 'removed', label: firstTab ?? doneTab(type) },
         { id: 'kept', label: 'Kept', isDisabled: kept === 0, marker: kept > 0 ? <StatusDot variant="warning" /> : undefined },
     ];
     return <ViewSwitcher views={views} activeId={view} onSelect={(id) => onSelect(id === 'kept' ? 'kept' : 'removed')} />;
 }
 
 /** One type's records, filtered by name: a tree for a type that nests, else names. */
-function RecordPane({ row, names, kept, tree }: { row: TypeRow; names: readonly string[]; kept?: readonly string[]; tree?: readonly TreeListNode[] }) {
+function RecordPane({ row, names, kept, tree, firstTab }: { row: TypeRow; names: readonly string[]; kept?: readonly string[]; tree?: readonly TreeListNode[]; firstTab?: string }) {
     const [query, setQuery] = useState('');
     const [view, setView] = useState<RecordView>('removed');
     const noun = row.label.toLowerCase();
@@ -67,7 +71,7 @@ function RecordPane({ row, names, kept, tree }: { row: TypeRow; names: readonly 
     const shown = listed.filter((name) => matches(name, query));
     return (
         <div className="datapack-pick-list">
-            {kept ? <RecordTabs type={row.type} kept={kept.length} view={view} onSelect={setView} /> : null}
+            {kept ? <RecordTabs type={row.type} kept={kept.length} view={view} onSelect={setView} {...(firstTab ? { firstTab } : {})} /> : null}
             <SearchHeader
                 searchQuery={query}
                 onSearchQueryChange={setQuery}
@@ -127,7 +131,7 @@ export interface TypeRailProps extends ClearRecordsShown {
     records: Record<string, string[]> | null;
 }
 
-export function TypeRail({ rows, records, kept, trees, unread }: TypeRailProps): React.ReactElement {
+export function TypeRail({ rows, records, kept, trees, unread, firstTab }: TypeRailProps): React.ReactElement {
     const [shown, setShown] = useState(rows[0]?.type);
     const row = rows.find((r) => r.type === shown) ?? rows[0];
     const unreadRow = row !== undefined && unread?.has(row.type) === true;
@@ -163,6 +167,7 @@ export function TypeRail({ rows, records, kept, trees, unread }: TypeRailProps):
                         names={records[row.type] ?? NONE}
                         kept={keptOf(kept, row.type)}
                         {...(trees?.[row.type] ? { tree: trees[row.type] } : {})}
+                        {...(firstTab ? { firstTab } : {})}
                     />
                 ) : null}
             </div>

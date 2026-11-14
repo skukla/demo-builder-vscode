@@ -82,6 +82,10 @@ export interface Answers {
     restore: unknown;
     /** Restore sent again, confirmed, from its question (S8). */
     restoreConfirmed: unknown;
+    /** Update's check: `update-datapack` without `confirm` (step-07 U1). */
+    update: unknown;
+    /** Update sent again, confirmed, with the types ticked. */
+    updateConfirmed: unknown;
 }
 
 const DEFAULT_ANSWERS: Answers = {
@@ -101,10 +105,15 @@ const DEFAULT_ANSWERS: Answers = {
     changes: { success: true, data: { count: 0, kinds: [], alwaysSave: false } },
     scope: { success: true, data: { kinds: null } },
     reset: { success: true, data: { activationId: 'act-1' } },
-    restore: { success: true, data: { activationId: 'act-1', target: { name: 'my-luma', version: 'v2' } } },
+    restore: { success: true, data: { asks: true, displayName: 'Luma' } },
     restoreConfirmed: {
         success: true,
         data: { activationId: 'act-1', target: { name: 'my-luma', version: 'v2' } },
+    },
+    update: { success: true, data: { upToDate: true, displayName: 'Luma' } },
+    updateConfirmed: {
+        success: true,
+        data: { activationId: 'act-1', target: { name: 'luma', version: 'v2' } },
     },
 };
 
@@ -143,6 +152,11 @@ export function answer(over: Partial<Answers> = {}, never: string[] = []): void 
                 return a.reset;
             case 'restore-datapack': {
                 const given = payload?.confirm ? a.restoreConfirmed : a.restore;
+                started = started || accepted(given);
+                return given;
+            }
+            case 'update-datapack': {
+                const given = payload?.confirm ? a.updateConfirmed : a.update;
                 started = started || accepted(given);
                 return given;
             }

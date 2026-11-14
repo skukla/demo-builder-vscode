@@ -194,6 +194,27 @@ export function memoryStore(): MemoryStore {
             },
         ],
         [
+            // An update brings a product the engine made up to its row (`repeatInstall.ts`), over the copy.
+            'PUT',
+            /^products\/([^/?]+)$/u,
+            (body, m) => {
+                const sku = decodeURIComponent(m[1]);
+                const was = products.get(sku);
+                if (!was) throw new Error(`memoryStore: no product ${sku} to update`);
+                const { product } = body as { product: CommerceProduct };
+                const made: CommerceProduct = {
+                    ...was,
+                    ...product,
+                    id: was.id,
+                    attribute_set_id: setIdOf(
+                        product.attribute_set_id ?? was.attribute_set_id
+                    ) as CommerceProduct['attribute_set_id'],
+                };
+                products.set(sku, made);
+                return made;
+            },
+        ],
+        [
             'DELETE',
             /^products\/([^/?]+)$/u,
             (_body, m) => {

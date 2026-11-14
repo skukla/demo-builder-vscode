@@ -4,8 +4,9 @@
  * unclear; icons from `renderMenuIcon`).
  *
  * The main button: **Install**; **Switch to <Name>** over another datapack the demo holds and Demo
- * Builder installed (J8-1, owner 2026-11-12), whose window asks "Switch to Bodea?"; and **Restore
- * <Name>** on the demo's installed version (J4-2), which opens the job window on Restore's check (S8);
+ * Builder installed (J8-1, owner 2026-11-12), whose window asks "Switch to Bodea?"; **Update <Name>**
+ * on the demo's installed version while a newer version waits (J9-1), which opens the job window on
+ * Update's check; otherwise **Restore <Name>** there (J4-2), which opens it on Restore's check (S8);
  * and on a failed install of it, **Retry**, which starts the install and opens the window on its run,
  * then **Fix with AI** once retries have not helped (step-04 S8, J6-2, J6-3; `useRetryInstall`).
  * The flyout saves nothing: saving lives in the header (step-04 S1, S5).
@@ -53,8 +54,8 @@ import type { DatapackId } from '@/types/datapack';
 
 export interface PackActionsProps {
     detail: DatapackDetail;
-    /** Install: absent in the Datapack Library. Undo opens it on its run; Restore on its check. */
-    onImport?: (id: DatapackId, opensOn?: 'run' | 'restore') => void;
+    /** Install: absent in the Datapack Library. Undo opens it on its run; Restore and Update on their checks. */
+    onImport?: (id: DatapackId, opensOn?: 'run' | 'restore' | 'update') => void;
     /** A library pack the SC owned was removed. Stable — an effect depends on it. */
     onRemoved: () => void;
     /** The Data Installer's address is set and switched on: a library pack offers Copy to it. */
@@ -71,6 +72,8 @@ export interface PackActionsProps {
     onRemoveData?: () => void;
     /** That same version: the main button is Restore, in place of Install (J4-2). */
     restores?: boolean;
+    /** That same version while an update waits: the main button is Update, in place of Restore (J9-1). */
+    updates?: boolean;
     /** Another datapack the demo holds, which Demo Builder installed: the main button is Switch to (J8-1). */
     switches?: boolean;
     /** This version's install failed (step-04 S8): the main button is Retry, then Fix with AI. */
@@ -107,6 +110,7 @@ export function PackActions({
     undoTo,
     onRemoveData,
     restores = false,
+    updates = false,
     switches = false,
     failed,
     importable = NO_TYPES,
@@ -169,8 +173,8 @@ export function PackActions({
                     <div className="db-drawer-actions">
                         {onImport && failed ? <FailedButton retries={failed.retries} retry={retry} /> : null}
                         {onImport && !failed ? (
-                            <Button variant="accent" onPress={() => (restores ? onImport(detail.id, 'restore') : onImport(detail.id))}>
-                                {mainButtonLabel(detail, restores, switches)}
+                            <Button variant="accent" onPress={() => openMain(onImport, detail.id, mainOpensOn(restores, updates))}>
+                                {mainButtonLabel(detail, restores, switches, updates)}
                             </Button>
                         ) : null}
                         <CardActionsMenu label="More" ariaLabel={`More actions for ${detail.displayName}`} onAction={onAction}>
@@ -195,6 +199,18 @@ export function PackActions({
             />
         </>
     );
+}
+
+/** Where the main button opens the job window: Update's check, Restore's, or an install's. */
+function mainOpensOn(restores: boolean, updates: boolean): 'update' | 'restore' | undefined {
+    if (updates) return 'update';
+    return restores ? 'restore' : undefined;
+}
+
+/** Open the job window from the main button; an install's opens on its check, with nothing more said. */
+function openMain(onImport: NonNullable<PackActionsProps['onImport']>, id: DatapackId, opensOn: 'update' | 'restore' | undefined): void {
+    if (opensOn) onImport(id, opensOn);
+    else onImport(id);
 }
 
 /** What the actions say, under them; nothing at all when none has anything to say. */

@@ -1211,24 +1211,52 @@ stops deletes nothing and the project keeps naming the newest save. A save anoth
 still names is kept. It answers as `start_datapack_import` does: `{activationId}`, and `job` with
 `waitSeconds`.
 
-### Restore (Phase 3/5, 2026-11-12)
+### Restore (Phase 3/5, 2026-11-12; points since step-07 U1, 2026-11-14)
 
-`restore_datapack` (confirm-gated; the consent names the pack) puts Commerce back to the datapack
-the project uses as its latest save, losing what was changed in the Admin since. The target is the
-pack's newest save when it is one of the SC's own library packs (which may be newer than the save
-installed), and otherwise the version installed (a team pack, a colleague's, a Data Installer pack,
-a named version). It refuses, changing nothing, when the pack named is not the project's, when Demo
-Builder has no install record of it, or when the project names no Commerce instance. It checks
-first, writing nothing, with the preview's own read (`previewChanges`): when the target is the
-version installed and Commerce matches it, it answers `{upToDate, displayName}` and starts nothing.
-Otherwise it is one job, started as `start_datapack_import` starts one (`startDatapackImport`,
-`restoreDatapack.ts`): the pack installed is uninstalled by its install record and the target
-installed onto the website and store view that record names, with changes dropped and never saved.
-A same-version restore is a real replace (the start's `restore` option), unlike a same-version
-`start_datapack_import`, which updates in place and keeps Admin edits. From the screen, the handler
-asks only when the SC has edits in Commerce (`CHANGES_NEED_ANSWER`, `{asks, displayName}`); the
-row's gate means an agent always sends `confirm`. It answers `{activationId, target}`, and `job`
-with `waitSeconds`.
+`restore_datapack` (confirm-gated; the consent names the pack and the point) puts Commerce back to a
+previous state of the datapack the project uses, losing what was changed in the Admin since. A Demo
+Builder datapack, a colleague's, a Data Installer pack or a named version goes back to the version
+installed, as it ships; a newer version is `update_datapack`'s. One of the SC's own library
+datapacks goes back to `to: 'lastSaved'` (the save installed, throwing away unsaved edits) or `to:
+'original'` (its first save, which the save trim keeps for good, `saveTrim.ts`); a call that names
+no `to` starts nothing, even confirmed, and answers the question, so the consent never stands for a
+point nobody chose. `to: 'original'` over unsaved edits
+needs `changes`: `keep` saves them into the datapack first (a new last save), `drop` loses them;
+without it nothing starts (`CHANGES_NEED_ANSWER`). `to` on a datapack that is not the SC's own is
+refused. It refuses, changing nothing, when the pack named is not the project's, when Demo Builder
+has no install record of it, or when the project names no Commerce instance. It checks first with
+the preview's own read (`previewChanges`): without `confirm` it starts nothing and answers
+`{upToDate, displayName}` when nothing would change, else the question the screen shows,
+`{asks, displayName, own?: {lastSaved?, original}, changes?}`. With `confirm` it is one job, started
+as `start_datapack_import` starts one (`startDatapackImport`, `restoreDatapack.ts`): the pack
+installed is uninstalled by its install record and the point installed onto the website and store
+view that record names. A same-version restore is a real replace (the start's `restore` option).
+The row's gate means an agent always sends `confirm`. It answers `{activationId, target}`, and
+`job` with `waitSeconds`.
+
+### Update (step-07 U1, 2026-11-14)
+
+`update_datapack` (confirm-gated; the consent names the pack and the data types) writes what a newer
+version of the project's datapack changed, keeping every record the SC edited in the Admin since the
+install. The newer version is the library's newest save of the datapack, the SC's own or a Demo
+Builder one (`newerVersion`, the rule the card's amber dot shares); with none, it finishes data
+types an earlier update left out (`behind` on the install record). It checks first, against the
+version installed's record (`previewChanges` with `recordOf`), writing nothing: with nothing to
+write it answers `{upToDate, displayName}`, with `movesTo` when a newer version changed nothing here,
+and only a confirmed call then moves the record and the project onto it (the new record written, the
+project saved, the old record forgotten, in that order). Without `confirm` it answers what changed, `{changes, displayName, target}`, a
+row per data type with added, updated and removed counts, at most three record names each (the
+screen's `records` asks for every name). With `confirm` it is one job through
+`startDatapackImport` with nothing uninstalled and nothing saved: the newer version is written over
+the installed one in place. The installed version's record is copied onto the newer version before
+the start (`copyInstallRecord`), the project names the newer version once the job is accepted, and
+only then is the old record forgotten; a start refused or thrown forgets the copy. A stale record of
+the newer version is refused, never adopted. Only what changed is written and the SC's edits stay.
+An update job that does not end in success puts its types back on the note, so Update offers them
+again (and the run window's Retry repeats the update with the same types). `dataTypes` picks
+which types (default every type that changed; a type that did not change is refused); the rest are
+noted on the record and stay on the older version, and the card keeps its dot. It answers
+`{activationId, target}`, and `job` with `waitSeconds`.
 
 ### Renaming a library pack, and a pack shared in a file (datapack-engine step 07, 2026-10-29)
 

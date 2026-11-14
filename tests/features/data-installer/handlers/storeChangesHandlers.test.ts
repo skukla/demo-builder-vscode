@@ -416,8 +416,9 @@ describe('save-store-changes-to-pack', () => {
     });
 
     // Phase 2, step-02 slice 4: a save keeps the newest two saves and deletes older ones, never one
-    // a project uses; a trim that fails never fails the save.
-    describe('keeping two saves', () => {
+    // a project uses and never the first save, the original (step-07 U1); a trim that fails never
+    // fails the save.
+    describe('keeping two saves and the original', () => {
         const OWN = 'my-bodea-1a2b3c';
         const mineRow = (version: string) => ({ id: { name: OWN, version }, displayName: 'My Bodea', shared: false, dataTypes: [], art: {}, mine: true });
         const deleted = () => MockedWriter.mock.instances.flatMap((w) => jest.mocked(w.deleteDatapack).mock.calls.map(([id]) => id.version));
@@ -434,8 +435,8 @@ describe('save-store-changes-to-pack', () => {
             return { context, own };
         }
 
-        it('deletes every save older than the new one and the one before it', async () => {
-            const { context, own } = saveInto(['20261110-091500', '20261108-140200', '20261105-103000']);
+        it('deletes every save older than the new one and the one before it, bar the original', async () => {
+            const { context, own } = saveInto(['20261110-091500', '20261108-140200', '20261105-103000', '20261101-090000']);
             MockedWriter.prototype.deleteDatapack.mockResolvedValue('deleted');
 
             const result = await storeChangesHandlers['save-store-changes-to-pack'](context, { datapackName: own.name, version: own.version, confirm: true });
@@ -445,7 +446,7 @@ describe('save-store-changes-to-pack', () => {
         });
 
         it('keeps an old save another project on this machine uses', async () => {
-            const { context, own } = saveInto(['20261110-091500', '20261108-140200', '20261105-103000'], '20261105-103000');
+            const { context, own } = saveInto(['20261110-091500', '20261108-140200', '20261105-103000', '20261101-090000'], '20261105-103000');
             MockedWriter.prototype.deleteDatapack.mockResolvedValue('deleted');
 
             await storeChangesHandlers['save-store-changes-to-pack'](context, { datapackName: own.name, version: own.version, confirm: true });

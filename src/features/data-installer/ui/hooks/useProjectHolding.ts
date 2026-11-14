@@ -27,6 +27,8 @@ interface ProjectSampleData extends Pick<JobTarget, 'scope'> {
     datapack?: ProjectDatapack;
     /** A creation install of `datapack` that did not succeed (step-04 S7). */
     installFailed?: DatapackInstallFailed;
+    /** An update left data types of `datapack` on the older version (step-07 U1). */
+    updateBehind?: boolean;
 }
 
 /** A failed install of the held datapack, and where a Retry writes: the project's own target. */
@@ -43,6 +45,8 @@ export interface ProjectHolding {
     installedAt: string | undefined;
     /** A failed install of `held`, if it failed (step-04 S8). */
     failed: HeldFailure | undefined;
+    /** An update left data types of `held` on the older version: Update is still waiting (step-07 U1). */
+    updateBehind: boolean;
     /** Every pack name believed to be on the project's instance. */
     installedPacks: Set<string>;
     /**
@@ -137,6 +141,7 @@ export function useProjectHolding(library: boolean): ProjectHolding {
         held: projectContext.value?.datapack,
         installedAt: projectContext.value?.installedAt,
         failed,
+        updateBehind: projectContext.value?.updateBehind === true,
         installedPacks,
         projectAnswered: library || projectContext.settled,
         reloadProject,

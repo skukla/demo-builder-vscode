@@ -104,6 +104,8 @@ export interface InstallRecord {
     created: CreatedObject[];
     /** Creates whose answer has not come back (step 14 item 1); absent on a record written before. */
     pending?: PendingObject[];
+    /** Data types an update left on the version before (step-07 U1): the amber dot stays. Absent: none. */
+    behind?: string[];
 }
 
 /** The four file operations the record needs, handed in so tests need no disk. */
@@ -186,6 +188,7 @@ const recordSchema = z.object({
         }),
     ),
     pending: z.array(pendingSchema).optional(),
+    behind: z.array(z.string()).optional(),
 });
 
 const packLabel = (pack: DatapackId): string => `${pack.name}@${pack.version}`;
@@ -360,11 +363,7 @@ export function removalOrder(record: InstallRecord): CreatedObject[] {
 }
 
 /** Delete a pack's record once everything in it has been removed. */
-export async function forgetInstallRecord(
-    files: RecordFiles,
-    projectPath: string,
-    pack: DatapackId,
-): Promise<void> {
+export async function forgetInstallRecord(files: RecordFiles, projectPath: string, pack: DatapackId): Promise<void> {
     await files.remove(installRecordPath(projectPath, pack));
 }
 

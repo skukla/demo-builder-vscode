@@ -1,7 +1,7 @@
 /**
  * What a datapack's version says about it (owner, 2026-11-07). Pure, so the webview (the cards, the
  * flyout and the amber dot, `DatapackCatalogGrid`) and the extension (the dashboard's Datapacks card
- * line, `handlers/restoreDatapack.ts`) share it.
+ * line, `handlers/updateDatapack.ts`, `handlers/restoreDatapack.ts`) share it.
  *
  * A pack's versions are of two kinds. A save makes a dated version, one after another; a named
  * version (`main`, `eds-compatible`) is a variant beside the others, changed on its own.
@@ -10,7 +10,8 @@
  * as a code, so it is shown as when it was saved, "Nov 9, 9:15 AM", in the SC's own time. Nor is it
  * offered as a version to pick: a pack of saves is one thing, the save on show. It keeps its two
  * newest saves, and Undo Last Save goes back to the one before the newest (Phase 2, owner
- * 2026-11-12); the SC never manages versions.
+ * 2026-11-12), and its first save, the original Restore goes back to (step-07 U1); the SC never
+ * manages versions.
  *
  * Every datapack date the cards and the flyout show is written one way, absolute, "Nov 10, 9:15 AM"
  * (step-04 S6, J8-2, owner 2026-11-12): {@link datapackDate}.
@@ -86,31 +87,38 @@ export function savesOf(versions: readonly string[]): string[] {
 type ListedVersion = Pick<DatapackSummary, 'id' | 'mine' | 'team'>;
 
 /**
- * The version Restore installs (J4-3): the SC's own library pack's newest save; otherwise (a team
- * pack, a colleague's save, a Data Installer pack, a named version) the version installed. One rule
- * for the handler, which reads the library for `listed`, and the card's amber dot, which has the
- * catalog's versions of the pack (step-04 "One 'newer' rule").
+ * The version Update installs, and the amber dot's "Newer version available" (step-07 U1, J9-1): the
+ * newest save of the datapack the project holds, when it is newer than the save installed. Only a
+ * library datapack of saves that is the SC's own or Demo Builder's has one; a colleague's, a Data
+ * Installer pack and a named version never do. One rule for the card's dot, the flyout's main button
+ * and the `update-datapack` handler, which reads the library for `listed`.
  *
  * @param held - the datapack the project records
- * @param listed - the pack's versions as the library lists them
- * @returns the version a restore installs
+ * @param listed - the datapack's versions as the library lists them
+ * @returns the newer save, or undefined when there is none
  */
-export function restoreTargetVersion(held: ProjectDatapack, listed: readonly ListedVersion[]): string {
-    if (!restoreLooksForSaves(held)) return held.version;
-    const mine = listed.filter((item) => item.mine === true && item.id.name === held.name);
-    if (mine.length === 0 || mine.some((item) => item.team === true)) return held.version;
-    return savesOf(mine.map((item) => item.id.version))[0] ?? held.version;
-}
-
-/** Whether Restore can install anything but the version installed: a save of a library pack. */
-export function restoreLooksForSaves(held: ProjectDatapack): boolean {
-    return held.store === 'library' && isSavedVersion(held.version);
+export function newerVersion(held: ProjectDatapack, listed: readonly ListedVersion[]): string | undefined {
+    if (held.store !== 'library' || !isSavedVersion(held.version)) return undefined;
+    const ours = listed.filter((item) => item.id.name === held.name && (item.mine === true || item.team === true));
+    const newest = savesOf(ours.map((item) => item.id.version))[0];
+    return newest !== undefined && newest > held.version ? newest : undefined;
 }
 
 /**
- * Whether Restore would install a save newer than the one the project holds: the amber dot, "Newer
- * save available" (J4-1). A save's id sorts by when.
+ * Whether Update is waiting on the datapack the project holds (J9-1): a newer version in the library,
+ * or data types an earlier update left on the older version (`behind` on the install record). The
+ * amber dot and the flyout's main button, Update in place of Restore, read this one rule.
  */
-export function restoreIsNewer(held: ProjectDatapack, listed: readonly ListedVersion[]): boolean {
-    return restoreLooksForSaves(held) && restoreTargetVersion(held, listed) > held.version;
+export function updateWaiting(held: ProjectDatapack, listed: readonly ListedVersion[], behind: boolean): boolean {
+    return behind || newerVersion(held, listed) !== undefined;
+}
+
+/**
+ * A datapack's first save, its original: what Restore goes back to on the SC's own datapack (J9-6).
+ * The save trim keeps it for good (`saveTrim.ts`); a datapack whose first save was trimmed before
+ * that rule has its oldest save left as its original.
+ */
+export function originalSave(versions: readonly string[]): string | undefined {
+    const saves = savesOf(versions);
+    return saves[saves.length - 1];
 }

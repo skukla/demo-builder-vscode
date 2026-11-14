@@ -49,8 +49,10 @@ const LEDGER: Readonly<Record<string, Reason>> = {
  * website's name or, without one, its code): Commerce's own words for the SC's websites.
  * 66 -> 65 on 2026-11-13 (Phase 1b, the last windows): AI Capabilities moved onto the Steps
  * window, and its dismiss label, `undefined` when nothing ran, is now the literal Close.
+ * 65 -> 66 on 2026-11-14 (step-07 U1): Update's type table puts a tick on each type, whose label is
+ * the data type's name (`dataTypeLabel`, the Title Case names the table already shows as text).
  */
-const DYNAMIC_PIN = 65;
+const DYNAMIC_PIN = 66;
 
 /**
  * The six dialog layouts (the Steps layout joined 2026-11-11) hand their caller's words on to Modal (`title={title}`). Those words are

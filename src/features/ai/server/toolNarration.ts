@@ -263,6 +263,7 @@ export const TOOL_NARRATION: Record<string, string> = {
     reset_datapack: 'Uninstalling a datapack',
     undo_last_save: "Undoing a datapack's last save",
     restore_datapack: 'Restoring a datapack',
+    update_datapack: 'Updating a datapack',
     // "Clear this project's websites of everything check_demo_data listed".
     clear_demo_data: 'Clearing the demo data',
     // "Clear whole websites of this project's Commerce instance, whoever put the data there".
@@ -360,6 +361,7 @@ const NAMED_NARRATION: Readonly<Record<string, NamedForm>> = {
     start_datapack_export: naming(['datapackName'], (name) => `Saving to ${name}`),
     undo_last_save: naming(['datapackName'], (name) => `Undoing the last save of ${name}`),
     restore_datapack: naming(['datapackName'], (name) => `Restoring ${name}`),
+    update_datapack: naming(['datapackName'], (name) => `Updating ${name}`),
     delete_library_datapack: naming(['datapackName'], (name) => `Deleting ${name}`),
     rename_datapack: naming(['datapackName'], (name) => `Renaming the ${name} pack`),
     mark_team_datapack: naming(['datapackName'], (name) => `Changing whether ${name} is a Demo Builder datapack`),

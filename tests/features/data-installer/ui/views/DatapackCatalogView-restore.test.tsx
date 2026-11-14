@@ -1,10 +1,10 @@
 /**
- * DatapackCatalogView — Restore (Phase 3/5, owner 2026-11-12, J4-2 to J4-4; step 03, S8). On the
- * datapack the demo uses, the flyout's main button reads "Restore My Luma" in place of Install.
- * Pressing it opens the job window on Restore's check; the check, its question, its result and its
- * run are the window's, pinned in `DatapackJobWindow-restore.test.tsx`. Here: the button, and that
- * it reaches the window end to end (both paths to the run: confirmed over unsaved edits, and a
- * newer save alone).
+ * DatapackCatalogView — Restore and Update (Phase 3/5, J4-2; step 03, S8; step-07 U1, J9-1). On the
+ * datapack the demo uses, the flyout's main button reads "Restore My Luma" in place of Install, or
+ * "Update My Luma" while a newer version waits. Pressing it opens the job window on that check; the
+ * check, its question or summary, its result and its run are the window's, pinned in
+ * `DatapackJobWindow-restore.test.tsx` and `DatapackJobWindow-update.test.tsx`. Here: the buttons,
+ * and that each reaches its window end to end.
  */
 
 import { render, screen, within } from '@testing-library/react';
@@ -19,18 +19,17 @@ import {
 } from './DatapackCatalogView.testUtils';
 import type { DatapackSummary, ImportJobRecord } from '@/features/data-installer/types';
 import type { ProjectDatapack } from '@/types/datapack';
-import { ErrorCode } from '@/types/errorCodes';
 
 const SAVE = makeSummary('my-luma', '20261112-120000', {
     displayName: 'My Luma',
     store: 'library',
     mine: true,
 });
-const ITEMS: DatapackSummary[] = [SAVE, ...CATALOG];
+/** A newer save of My Luma, made from another demo: Update waits (J9-1). */
+const NEWER_SAVE = makeSummary('my-luma', '20261113-090000', { displayName: 'My Luma', store: 'library', mine: true });
+let ITEMS: DatapackSummary[] = [SAVE, ...CATALOG];
 const HELD: ProjectDatapack = { name: 'my-luma', version: SAVE.id.version, store: 'library' };
 const AT = '2026-11-12T12:00:00.000Z';
-const ASKS =
-    'Commerce goes back to My Luma as you last saved it. Anything you changed since is lost.';
 
 /** The restore's job, as the status read reports it while it runs. */
 const RUNNING: ImportJobRecord = {
@@ -82,9 +81,10 @@ function store(
             }
             if (type === 'restore-datapack')
                 return Promise.resolve(payload?.confirm ? confirmed : restore);
+            if (type === 'update-datapack') return Promise.resolve(payload?.confirm ? confirmed : restore);
             if (type === 'get-datapack-import-status') {
                 const started = mockRequest.mock.calls.some(
-                    ([sent]) => sent === 'restore-datapack'
+                    ([sent, body]) => (sent === 'restore-datapack' || sent === 'update-datapack') && (body as { confirm?: boolean } | undefined)?.confirm === true
                 );
                 return Promise.resolve({ success: true, data: started ? RUNNING : null });
             }
@@ -112,15 +112,14 @@ const STARTED: Answer = {
     success: true,
     data: { activationId: 'act-restore', target: { name: 'my-luma', version: SAVE.id.version } },
 };
-const EDITS: Answer = {
-    success: false,
-    code: ErrorCode.CHANGES_NEED_ANSWER,
-    error: `${ASKS} Send confirm:true to proceed.`,
-    data: { asks: true, displayName: 'My Luma' },
-};
+/** Restore's check on My Luma with nothing unsaved: its original is the one point (J9-6). */
+const QUESTION: Answer = { success: true, data: { asks: true, displayName: 'My Luma', own: { original: '20261103-144000' } } };
 
 // The calls are counted per test: each asserts exactly what it sent.
-beforeEach(() => mockRequest.mockClear());
+beforeEach(() => {
+    mockRequest.mockClear();
+    ITEMS = [SAVE, ...CATALOG];
+});
 
 describe('Restore, in the flyout of the datapack the demo uses', () => {
     it('reads "Restore My Luma" in place of Install', async () => {
@@ -164,41 +163,36 @@ describe('Restore, in the flyout of the datapack the demo uses', () => {
         expect(await inFlyout().findByRole('button', { name: 'Install' })).toBeInTheDocument();
     });
 
-    it('unsaved edits: asks "Restore My Luma?", and Restore sends it confirmed and opens the run', async () => {
-        store(EDITS, STARTED);
+    it('asks "Restore My Luma?", and Restore sends it confirmed to its point and opens the run', async () => {
+        store(QUESTION, STARTED);
         await openFlyout();
 
         await press(await inFlyout().findByRole('button', { name: 'Restore My Luma' }));
         await settle();
 
-        expect(
-            await screen.findByRole('heading', { name: 'Restore My Luma?' })
-        ).toBeInTheDocument();
-        expect(screen.getByText(ASKS)).toBeInTheDocument();
+        expect(await screen.findByRole('heading', { name: 'Restore My Luma?' })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
         await press(screen.getByRole('button', { name: 'Restore' }));
         await settle();
 
         expect(restoreSends()).toEqual([
             { datapackName: 'my-luma' },
-            { datapackName: 'my-luma', confirm: true },
+            { datapackName: 'my-luma', confirm: true, to: 'original' },
         ]);
-        expect(
-            await screen.findByRole('button', { name: 'Run in Background' })
-        ).toBeInTheDocument();
+        expect(await screen.findByRole('button', { name: 'Run in Background' })).toBeInTheDocument();
     });
 
-    it('only a newer save: the check starts it, and the run opens with no question', async () => {
-        store(STARTED);
+    // J9-1: a newer save waits, so the main button is Update, and it opens Update's check.
+    it('a newer version waiting: reads "Update My Luma", and opens Update\'s check', async () => {
+        ITEMS = [SAVE, NEWER_SAVE, ...CATALOG];
+        store({ success: true, data: { upToDate: true, displayName: 'My Luma' } });
         await openFlyout();
 
-        await press(await inFlyout().findByRole('button', { name: 'Restore My Luma' }));
+        await press(await inFlyout().findByRole('button', { name: 'Update My Luma' }));
         await settle();
 
-        expect(screen.queryByRole('heading', { name: 'Restore My Luma?' })).not.toBeInTheDocument();
-        expect(
-            await screen.findByRole('button', { name: 'Run in Background' })
-        ).toBeInTheDocument();
-        expect(screen.queryByRole('checkbox', { name: 'Products' })).not.toBeInTheDocument();
+        expect(inFlyout().queryByRole('button', { name: /^Restore/u })).not.toBeInTheDocument();
+        expect(mockRequest.mock.calls.filter(([type]) => type === 'update-datapack').map(([, sent]) => sent)).toEqual([{ datapackName: 'my-luma', records: true }]);
+        expect(await screen.findByRole('heading', { name: 'My Luma Is Up to Date' })).toBeInTheDocument();
     });
 });

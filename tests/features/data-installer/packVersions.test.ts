@@ -7,8 +7,8 @@ import {
     datapackDate,
     isSavedVersion,
     packLine,
-    restoreIsNewer,
-    restoreTargetVersion,
+    newerVersion,
+    originalSave,
     savedAt,
     savesOf,
     shownVersion,
@@ -110,46 +110,39 @@ describe('isSavedVersion', () => {
     });
 });
 
-describe('restoreTargetVersion: what Restore installs (J4-1, J4-3)', () => {
-    it("is the SC's own pack's newest save", () => {
-        const mine = [listed(INSTALLED, { mine: true }), listed(LATER, { mine: true })];
-
-        expect(restoreTargetVersion(OWN, mine)).toBe(LATER);
+describe('newerVersion: what Update installs, and the amber dot (U1, J9-1)', () => {
+    it("is the SC's own datapack's newest save, when newer than the one installed", () => {
+        expect(newerVersion(OWN, [listed(INSTALLED, { mine: true }), listed(LATER, { mine: true })])).toBe(LATER);
     });
 
-    it('is the version installed for a team pack, a colleague\'s save, a Data Installer pack or a named version', () => {
-        expect(restoreTargetVersion(OWN, [listed(INSTALLED, { mine: true, team: true }), listed(LATER, { mine: true, team: true })])).toBe(INSTALLED);
-        expect(restoreTargetVersion(OWN, [listed(INSTALLED, { mine: false }), listed(LATER, { mine: false })])).toBe(INSTALLED);
-        expect(restoreTargetVersion({ ...OWN, store: 'installer' }, [listed(LATER, { mine: true })])).toBe(INSTALLED);
-        expect(restoreTargetVersion({ ...OWN, version: 'main' }, [listed('main', { mine: true }), listed(LATER, { mine: true })])).toBe('main');
-    });
-
-    it('is the version installed when the library lists nothing of the pack', () => {
-        expect(restoreTargetVersion(OWN, [])).toBe(INSTALLED);
-        expect(restoreTargetVersion(OWN, [{ ...listed(LATER, { mine: true }), id: { name: 'other', version: LATER } }])).toBe(INSTALLED);
-    });
-});
-
-describe('restoreIsNewer: the amber dot, "Newer save available" (J4-1)', () => {
-    it("is lit when the SC's own pack has a save newer than the one installed", () => {
-        expect(restoreIsNewer(OWN, [listed(INSTALLED, { mine: true }), listed(LATER, { mine: true })])).toBe(true);
+    // J9-1: Luma, a Demo Builder datapack updated in the library, lights the dot too (was dark, J4-1).
+    it('is a Demo Builder datapack\'s newer save, whoever owns it', () => {
+        expect(newerVersion(OWN, [listed(INSTALLED, { team: true }), listed(LATER, { team: true })])).toBe(LATER);
+        expect(newerVersion(OWN, [listed(INSTALLED, { team: true, mine: true }), listed(LATER, { team: true, mine: true })])).toBe(LATER);
     });
 
     // Owner, 2026-11-09 (walk F88): Save As New moved the demo onto the save it made; nothing is newer.
-    it('is dark when the save installed is the newest', () => {
-        expect(restoreIsNewer({ ...OWN, version: LATER }, [listed(INSTALLED, { mine: true }), listed(LATER, { mine: true })])).toBe(false);
+    it('is none when the save installed is the newest, or the only other is older', () => {
+        expect(newerVersion({ ...OWN, version: LATER }, [listed(INSTALLED, { mine: true }), listed(LATER, { mine: true })])).toBeUndefined();
+        expect(newerVersion({ ...OWN, version: LATER }, [listed(INSTALLED, { mine: true })])).toBeUndefined();
     });
 
-    // Step-04 S6 (one rule with Restore): a named version changed in place no longer lights it, as
-    // Restore installs the version installed. Was "Updated on Nov 9".
-    it('is dark for a named version, changed since or not, and a team pack with a later save', () => {
+    it("is none for a colleague's datapack, a Data Installer pack, a named version, or another datapack", () => {
+        expect(newerVersion(OWN, [listed(INSTALLED, { mine: false }), listed(LATER, { mine: false })])).toBeUndefined();
+        expect(newerVersion({ ...OWN, store: 'installer' }, [listed(LATER, { mine: true })])).toBeUndefined();
         const main = listed('main', { mine: true, createdAt: '2026-10-01T00:00:00Z', updatedAt: '2026-11-02T00:00:00Z' });
+        expect(newerVersion({ ...OWN, version: 'main' }, [main, listed(LATER, { mine: true })])).toBeUndefined();
+        expect(newerVersion(OWN, [{ ...listed(LATER, { mine: true }), id: { name: 'other', version: LATER } }])).toBeUndefined();
+        expect(newerVersion(OWN, [])).toBeUndefined();
+    });
+});
 
-        expect(restoreIsNewer({ ...OWN, version: 'main' }, [main])).toBe(false);
-        expect(restoreIsNewer(OWN, [listed(INSTALLED, { team: true, mine: true }), listed(LATER, { team: true, mine: true })])).toBe(false);
+describe("originalSave: a datapack's first save, kept for good (U1, J9-6)", () => {
+    it('is the oldest save, whatever the order listed, and never a named version', () => {
+        expect(originalSave(['20261110-091500', 'main', '20261101-090000', '20261105-103000'])).toBe('20261101-090000');
     });
 
-    it('is dark when the only other save listed is older than the one installed', () => {
-        expect(restoreIsNewer({ ...OWN, version: LATER }, [listed(INSTALLED, { mine: true })])).toBe(false);
+    it('is none for a datapack with no saves', () => {
+        expect(originalSave(['main', 'eds-compatible'])).toBeUndefined();
     });
 });

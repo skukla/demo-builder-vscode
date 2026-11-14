@@ -43,6 +43,7 @@ import { restoreDatapackHandlers } from './restoreDatapack';
 import { saveQuestionTipHandlers } from './saveQuestionTip';
 import { storeChangesHandlers } from './storeChangesHandlers';
 import { undoLastSaveHandlers } from './undoLastSave';
+import { updateDatapackHandlers } from './updateDatapack';
 import { TransientStateManager } from '@/core/state/transientStateManager';
 import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
 import { handleBackgroundOperation, pushOperationProgress } from '@/core/vscode/operationProgress';
@@ -69,10 +70,17 @@ const CHANGES_PACKS = [
     'start-datapack-import',
     'reset-datapack',
     'undo-last-save',
-    'restore-datapack',
 ] as const;
 
-export const importHandlers = announcingChanges(defineHandlers({
+/**
+ * The actions whose call without `confirm` is a check that writes nothing (step-07 U1): Restore and
+ * Update announce only once confirmed, or every open screen would read everything again for a look.
+ */
+const CHANGES_PACKS_WHEN_CONFIRMED = ['restore-datapack', 'update-datapack'] as const;
+const confirmed = (payload: unknown): boolean =>
+    typeof payload === 'object' && payload !== null && (payload as { confirm?: unknown }).confirm === true;
+
+export const importHandlers = announcingChanges(announcingChanges(defineHandlers({
     // Closing a running import hands it to a notification that keeps narrating
     // (PL-59 R8); this is the channel that says so.
     backgroundOperation: handleBackgroundOperation,
@@ -103,8 +111,10 @@ export const importHandlers = announcingChanges(defineHandlers({
     ...importFixWithAiHandlers,
     // Undo Last Save: the save before the newest, installed over it through the import path (Phase 2).
     ...undoLastSaveHandlers,
-    // Restore: the demo's datapack, at its latest save, over what Commerce holds now (Phase 3/5).
+    // Restore: the demo's datapack back to a previous state, over what Commerce holds now (J9).
     ...restoreDatapackHandlers,
+    // Update: what a newer version changed, over the version installed, the SC's edits kept (step-07 U1).
+    ...updateDatapackHandlers,
     'start-datapack-import': async (
         context: HandlerContext,
         payload?: StartImportPayload,
@@ -207,7 +217,7 @@ export const importHandlers = announcingChanges(defineHandlers({
         const record = await waitForJob(read, waitMsOf(payload?.waitSeconds));
         return { success: true, data: record ? skippedPage(record, payload?.skippedFrom) : record };
     },
-}), CHANGES_PACKS);
+}), CHANGES_PACKS), CHANGES_PACKS_WHEN_CONFIRMED, confirmed);
 
 /**
  * Access first. If the service cannot sign in to the instance, whether the request is well-formed

@@ -16,7 +16,7 @@ import { ATTRIBUTE_OPTION_KIND, INSTALLS_WITH } from './attributesKind';
 import { sameText } from './b2bReads';
 import { CART_RULE_KIND, ruleByName } from './cartRulesKind';
 import { COUPON_KIND, couponByCode } from './couponsKind';
-import { type CreatedObject, nodeRecordFiles, readInstallRecord } from './installRecord';
+import { type CreatedObject, type InstallRecord, nodeRecordFiles, readInstallRecord } from './installRecord';
 import { type KindContext, segment } from './kindContext';
 import { type LayerLookup, layerLeftOutLine, layerProblems, layerRowsToApply, lookUpAskedLayer } from './layerStep';
 import { placeCategories, rootPlacement } from './packRoot';
@@ -188,8 +188,12 @@ const keyOfObject = (object: CreatedObject) => object.key ?? object.id;
 const isBlankOption = (kind: string, key: string): boolean =>
     kind === ATTRIBUTE_OPTION_KIND && key.slice(key.indexOf('/') + 1).trim() === '';
 
+/** Every name, for an update's spot check (step-07 U1), rather than the first few. */
+const allNamed = (names: string[]): Named => ({ count: names.length, names });
+
 /** Counted by kind; `taken` is what the removal would take out, so all else it was asked about stays. */
-async function summarize(ctx: KindContext, plans: readonly KindPlan[], taken: readonly CreatedObject[]): Promise<KindChanges[]> {
+async function summarize(ctx: KindContext, plans: readonly KindPlan[], taken: readonly CreatedObject[], allNames = false): Promise<KindChanges[]> {
+    const name = allNames ? allNamed : named;
     const keptHere = (o: PlannedObject) => o.outcome === 'remove' && !taken.includes(o.object);
     const inventory = onceInventory(ctx);
     return Promise.all(
@@ -199,11 +203,11 @@ async function summarize(ctx: KindContext, plans: readonly KindPlan[], taken: re
             const there = await alreadyInStore(ctx, kind, added, inventory);
             return {
                 kind,
-                update: named(keyed((o) => o.outcome === 'update')),
-                add: named(added.filter((key) => !there.has(key))),
-                inStore: named(added.filter((key) => there.has(key))),
-                remove: named(keyed((o) => o.outcome === 'remove' && !keptHere(o))),
-                keep: named(keyed((o) => o.outcome === 'leave-edited' || o.outcome === 'create' || keptHere(o))),
+                update: name(keyed((o) => o.outcome === 'update')),
+                add: name(added.filter((key) => !there.has(key))),
+                inStore: name(added.filter((key) => there.has(key))),
+                remove: name(keyed((o) => o.outcome === 'remove' && !keptHere(o))),
+                keep: name(keyed((o) => o.outcome === 'leave-edited' || o.outcome === 'create' || keptHere(o))),
                 ...(kind in INSTALLS_WITH ? { installsWith: INSTALLS_WITH[kind] } : {}),
             };
         }),
@@ -237,20 +241,40 @@ async function layerSettings(ctx: KindContext, items: Record<string, unknown>, l
     return { counts, preview: { ...(lookup.state === 'found' ? { layer: lookup.layer.id } : {}), ...preview } };
 }
 
+/** The record a preview compares against: the pack's own, else the version installed's (`recordOf`). */
+async function recordCompared(deps: StoreChangesDeps, pack: DatapackId, recordOf: DatapackId | undefined): Promise<InstallRecord | undefined> {
+    const files = deps.files ?? nodeRecordFiles;
+    const own = await readInstallRecord(files, deps.projectPath, pack);
+    if (own || !recordOf) return own;
+    return readInstallRecord(files, deps.projectPath, recordOf);
+}
+
+/** How a preview reads, beyond the pack: an update's (step-07 U1). */
+export interface PreviewOptions {
+    /**
+     * The version installed whose record the pack is compared against, when it is not the pack's own:
+     * an update installs a newer version over it, carrying its record over (`ImportRequest.updates`).
+     */
+    recordOf?: DatapackId;
+    /** Every record's name in each count, not the first few: an update's spot check lists them. */
+    allNames?: boolean;
+}
+
 /**
  * What installing the pack again would do, by kind, as the install decides it (`askedKinds.ts`).
  * Writes nothing to the store or the record.
  *
  * @param dataTypes - the kinds asked for; all the pack holds when absent
  */
-export async function previewChanges(deps: StoreChangesDeps, pack: DatapackId, source: DatapackStoreName, dataTypes?: string[]): Promise<ChangePreview> {
+export async function previewChanges(deps: StoreChangesDeps, pack: DatapackId, source: DatapackStoreName, dataTypes?: string[], options: PreviewOptions = {}): Promise<ChangePreview> {
     const all = await deps.readPack(pack, source);
     const asked = askedRows(all, dataTypes);
-    const record = await readInstallRecord(deps.files ?? nodeRecordFiles, deps.projectPath, pack);
+    const record = await recordCompared(deps, pack, options.recordOf);
     const lookup = await lookUpAskedLayer(deps.findLayer, pack, all, dataTypes);
     const refused = layerProblems(lookup, 'website');
     if (refused.length > 0) throw new StoreChangesError(refused.join(' '));
-    const ctx = await openStore(deps, pack, record, asked.categories);
+    // The record compared is the one opened: an update reads the version installed's (`recordOf`).
+    const ctx = await openStore(deps, record?.pack ?? pack, record, asked.categories);
     const placement = rootPlacement(asked.categories, record?.created ?? [], ctx.session.storeRoot);
     const items = placeCategories(asked, placement);
     const plans = await planRepeat(ctx, items, record?.created ?? []);
@@ -262,7 +286,7 @@ export async function previewChanges(deps: StoreChangesDeps, pack: DatapackId, s
     const { counts: settings, preview: settingsPreview } = await layerSettings(ctx, items, lookup, record?.created ?? []);
     const keptThings = [...keptOf(plans), ...(settings?.keep.names ?? []).map((key) => ({ kind: STORE_CONFIG_KIND, key }))];
     const kept = [keptLine(keptThings), containersLine(containers)].filter(Boolean).join(' ');
-    const kinds = [...(await summarize(ctx, plans, take)), ...(settings ? [settings] : [])];
+    const kinds = [...(await summarize(ctx, plans, take, options.allNames)), ...(settings ? [settings] : [])];
     // The run that may follow uses these plans instead of reading again (walk F74).
     const target = record?.target ?? deps.target;
     if (target) rememberComparison({ projectPath: deps.projectPath, pack, target }, record?.created ?? [], items, plans);

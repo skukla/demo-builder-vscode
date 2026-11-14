@@ -536,8 +536,15 @@ export const AGENT_ALERT_COPY: Record<string, AgentAlertCopy> = {
     restore_datapack: {
         action: 'Restore a datapack',
         consequence:
-            'Puts the live Commerce store back to the datapack as it was last saved. Changes made in the Admin since are lost.',
-        target: ['datapackName'],
+            'Puts the live Commerce store back to a previous state of the datapack: as it ships, or your last save or its original. Changes made in the Admin since are lost, unless you chose to save them first.',
+        target: ['datapackName', 'to'],
+        sessionGrant: false,
+    },
+    update_datapack: {
+        action: 'Update a datapack',
+        consequence:
+            "Writes what a newer version of the datapack changed into the live Commerce store, for the data types named (every type that changed when none are). Records you changed in the Admin are kept as they are.",
+        target: ['datapackName', 'dataTypes'],
         sessionGrant: false,
     },
     delete_library_datapack: {

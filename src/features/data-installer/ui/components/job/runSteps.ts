@@ -18,11 +18,19 @@ import {
 } from '../../../importSteps';
 import type { ImportJobRecord, ImportProgressMessage } from '../../../types';
 
-/** The pack installed, as the steps name it. */
+/** The pack installed, as the steps name it; `updating`, written over the version installed (step-07 U1). */
 export interface Installing {
     name: string;
     version: string;
+    updating?: boolean;
 }
+
+/** The pack a job record installs, as its steps name it: an update's says Update (step-07 U1). */
+const installingOf = (record: ImportJobRecord, name: string): Installing => ({
+    name,
+    version: record.version,
+    ...(record.purpose === 'update' ? { updating: true } : {}),
+});
 
 /** What the steps take from a job replacing the demo's pack (walk F97): the removal, and the save before it. */
 export function replacingOf(
@@ -60,7 +68,7 @@ export function liveSteps(
         detail: live ? live.detail : record.detail,
         phase: live ? live.phase : record.phase,
         running: true,
-        installing: { name, version: record.version },
+        installing: installingOf(record, name),
         ...replacingOf(record, live ? live.replacing : record.replacing),
     });
 }
@@ -73,7 +81,7 @@ export function endedSteps(run: ImportJobRecord, name: string): ImportStep[] {
         stoppedAt: run.stoppedAt,
         rowNotes: run.rowNotes,
         reason: run.reason,
-        installing: { name, version: run.version },
+        installing: installingOf(run, name),
         ...(run.check ? { check: run.check } : {}),
         ...replacingOf(run, run.replacing),
     });

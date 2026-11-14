@@ -1,6 +1,7 @@
 /**
- * After a save: delete the datapack's saves older than the new one and the one before it (Phase 2,
- * D3; owner, 2026-11-10: storage keeps two saves). Never a named version, never a save a project on
+ * After a save: delete the datapack's saves older than the new one and the one before it, bar its
+ * first save, the original Restore goes back to (Phase 2, D3; owner, 2026-11-10: storage keeps two
+ * saves; step-07 U1: and the original, for good; `saveTrim.ts`). Never a named version, never a save a project on
  * this machine uses, never one a project file shared (`sharedInFiles.ts`), and never anything when
  * the save was a Save As, which made a new datapack with one save.
  *
@@ -46,7 +47,7 @@ export async function trimOldSaves(
         for (const version of savesToTrim(versions, keep)) {
             if ((await deleteVersionWithLayer(context, access, { name: saved.name, version })) === 'deleted') deleted.push(version);
         }
-        if (deleted.length > 0) context.logger.info(`${LOG_PREFIX} Kept two saves of ${saved.name}; deleted ${deleted.join(', ')}`);
+        if (deleted.length > 0) context.logger.info(`${LOG_PREFIX} Kept the two newest saves and the original of ${saved.name}; deleted ${deleted.join(', ')}`);
     } catch (error) {
         context.debugLogger.debug(`${LOG_PREFIX} Could not delete the older saves of ${saved.name}: ${error instanceof Error ? error.message : String(error)}`);
     }

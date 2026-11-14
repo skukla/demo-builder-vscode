@@ -66,11 +66,24 @@ check skipped because they were kept; `verify_datapack_install` checks every pro
 
 ## Putting the store back: restore_datapack
 
-To throw away what the user changed in Commerce and put the datapack back as it was last saved,
+To throw away what the user changed in Commerce and go back to a previous state of the datapack,
 use `restore_datapack`, not `start_datapack_import` (installing the same version again updates in
-place and keeps Admin edits). It checks first: when nothing has changed it answers up to date and
-does nothing; otherwise it uninstalls the datapack and installs its latest save in one job. It asks
-the user first, since anything changed since the last save is lost.
+place and keeps Admin edits). A Demo Builder datapack goes back as it ships. One of the user's own
+goes back to `to: "lastSaved"` (their last save, throwing away unsaved edits) or `to: "original"`
+(its first save, which is kept for good); without `to` nothing starts and the answer is the question
+(`data.asks`, the two points by version): ask the user which, then call again with `to`. Going back to the original over unsaved edits needs
+`changes`: ask the user, then send `"keep"` (save them into the datapack first) or `"drop"` (lost).
+It checks first: when nothing would change it answers up to date and does nothing; otherwise it
+uninstalls the datapack and installs the point in one job. Ask the user first, naming where it goes.
+
+## A newer version: update_datapack
+
+When the library has a newer version of the datapack the project uses (the card's amber dot,
+"Newer version available"), `update_datapack` writes only what the newer version changed and keeps
+every record the user edited in the Admin. It checks first and answers up to date when there is
+nothing to write. A datapack is built out additively, so applying part of it is fine: `dataTypes`
+picks the data types to update (default every type that changed), and the rest can be updated
+later. Agents keep installing chosen types with `start_datapack_import` too. Ask the user first.
 
 ## Switching to another pack, or another version
 
@@ -87,6 +100,8 @@ installs. Tell the user that before you start.
 - An uninstall that fails installs nothing: the status's `stoppedAt` is `replacing`, its `reason`
   says why, and the project still names the old pack.
 - Once the old pack is gone the project names the new one, and `reset_datapack` removes the new one.
+- To bring in a newer version of the same datapack while keeping the user's Admin edits, use
+  `update_datapack` instead: it uninstalls nothing.
 
 Installing the same version again uninstalls nothing: it updates in place, as above.
 
@@ -248,6 +263,7 @@ another.
 | Install, Switch to | `start_datapack_import` |
 | Uninstall | `reset_datapack` |
 | Restore | `restore_datapack` |
+| Update | `update_datapack` |
 | Save, Save As New, Create | `save_store_changes_to_pack` |
 | Undo Last Save | `undo_last_save` |
 | Clear Demo Data | `check_demo_data`, then `clear_demo_data` |

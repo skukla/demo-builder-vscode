@@ -3,7 +3,7 @@
  * cards, one per pack name, each wearing the installed check when the pack is on this instance.
  *
  * The demo's own pack (`project.datapack`) wears the check wherever it lives, the SC's library
- * included, opens on the version the demo uses, and marks a newer save (owner, 2026-11-04: it is
+ * included, opens on the version the demo uses, and marks a newer version (owner, 2026-11-04: it is
  * one of the library's cards, shown as selected, not a section of its own above them).
  *
  * Moved out of `DatapackCatalogView` unchanged (datapack-engine step 05), so the view could host
@@ -14,7 +14,7 @@
  */
 
 import React from 'react';
-import { restoreIsNewer } from '../../packVersions';
+import { updateWaiting } from '../../packVersions';
 import { type DatapackGroup, isHeld, pickDefaultVersion } from '../../services/datapackCatalog';
 import { EMPTY_SHOW_TITLE, type CatalogShow, type ShowElsewhere } from '../catalogShow';
 import { DatapackCard } from './DatapackCard';
@@ -57,9 +57,11 @@ export interface DatapackCatalogGridProps {
     installedAt?: string;
     /**
      * Its install failed (step-04 S8, J6-1): its card says so, with no check and no border, and no
-     * newer save, since Restore is not offered.
+     * newer version, since Update is not offered.
      */
     heldFailed?: boolean;
+    /** An update left data types of `held` on the older version (step-07 U1): the dot stays. */
+    updateBehind?: boolean;
 }
 
 /** Pick the one body state to show under the header. */
@@ -77,6 +79,7 @@ export function DatapackCatalogGrid({
     held,
     installedAt,
     heldFailed = false,
+    updateBehind = false,
 }: DatapackCatalogGridProps): React.JSX.Element {
     if (groups.length === 0) {
         return (
@@ -120,7 +123,7 @@ export function DatapackCatalogGrid({
                         onVersionChange={(version) => pickVersion(group.key, version)}
                         onOpen={openDetail}
                         isInstalled={!failed && installedHere(group, installedPacks, held)}
-                        newer={own && !failed ? newerOf(group, held, installedAt) : undefined}
+                        newer={own && !failed ? newerOf(group, held, installedAt, updateBehind) : undefined}
                         installFailed={failed}
                     />
                 );
@@ -129,15 +132,16 @@ export function DatapackCatalogGrid({
     );
 }
 
-/** The amber dot's hover (J4-1, owner 2026-11-12). */
-const NEWER_SAVE = 'Newer save available';
+/** The amber dot's hover (J9-1, owner 2026-11-14, in J4-1's form). */
+const NEWER_VERSION = 'Newer version available';
 
 /**
- * The dot's words for the demo's own pack: present exactly when Restore would install a save newer
- * than the one it holds (`restoreIsNewer`, the rule the handler uses). Restore needs Demo Builder's
- * install record, so with no record (`installedAt`) there is nothing to restore and no dot.
+ * The dot's words for the demo's own pack: present exactly when Update is waiting (`updateWaiting`,
+ * the rule the flyout's main button and the handler share): a newer version of the SC's own datapack
+ * or Demo Builder's in the library, or types an update left behind. Update needs Demo Builder's
+ * install record, so with no record (`installedAt`) there is nothing to update and no dot.
  */
-function newerOf(group: DatapackGroup, held: ProjectDatapack | undefined, installedAt: string | undefined): string | undefined {
+function newerOf(group: DatapackGroup, held: ProjectDatapack | undefined, installedAt: string | undefined, behind: boolean): string | undefined {
     if (!held || installedAt === undefined) return undefined;
-    return restoreIsNewer(held, group.versions) ? NEWER_SAVE : undefined;
+    return updateWaiting(held, group.versions, behind) ? NEWER_VERSION : undefined;
 }

@@ -11,7 +11,8 @@
  *
  * A confirm with a second way on (Change Anyway beside Uninstall First, step-07 D6) passes it as
  * `otherAction`: the losing choice, apart at the footer's start, as "Save Your Changes First?" draws
- * its own (`SaveFirstWindow`).
+ * its own (`SaveFirstWindow`). A confirm that asks which of two points (Restore My Luma's Last Saved
+ * or Original, step-07 U1 J9-7) passes the house RadioGroup as `choice`, under the lines.
  *
  * Shared by Remove, Remove anyway, Reset ERPs, Fill from Commerce, Reinstall in Commerce, Undo last
  * assignment, adding erp_owner to the attribute sets and taking it out, and a datapack flyout's Share,
@@ -42,6 +43,8 @@ export interface ConfirmActionDialogProps {
     onClose: () => void;
     /** A second way on, at the footer's start, drawn outline: the choice that loses something. */
     otherAction?: { label: string; onPress: () => void };
+    /** A choice the confirm asks, under the lines: the house RadioGroup. */
+    choice?: React.ReactNode;
 }
 
 /** The confirm's window alone, for a host that owns the DialogContainer. */
@@ -53,6 +56,7 @@ export function ConfirmActionWindow({
     onConfirm,
     onClose,
     otherAction,
+    choice,
 }: Omit<ConfirmActionDialogProps, 'isOpen'>): React.ReactElement {
     return (
         <Modal
@@ -71,6 +75,7 @@ export function ConfirmActionWindow({
                 {React.Children.toArray(children).map((line, index) => (
                     <p key={index} className="dialog-line">{line}</p>
                 ))}
+                {choice}
             </div>
         </Modal>
     );

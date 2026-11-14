@@ -407,9 +407,10 @@ export interface ImportStart {
 /**
  * What a datapack job is for, as the SC started it: the words its window and its notification use
  * (`jobWords` in `datapackWords.ts`). A switch installs over another datapack; restore and undo
- * install a save over the one installed.
+ * install a save over the one installed; an update writes what a newer version changed over it,
+ * keeping the SC's edits (step-07 U1).
  */
-export type JobPurpose = 'install' | 'switch' | 'uninstall' | 'restore' | 'undo';
+export type JobPurpose = 'install' | 'switch' | 'uninstall' | 'restore' | 'undo' | 'update';
 
 /**
  * One import, as recorded on the extension host.

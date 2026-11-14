@@ -97,6 +97,9 @@ describe('the ceiling table tracks the tool surface', () => {
         'undo_last_save',
         // Restore starts the same import too, or answers upToDate: fixed-shape either way.
         'restore_datapack',
+        // Update starts the same import too, answers upToDate, or its check: a row per data type,
+        // at most three names each (`records`, every name, is the screen's alone).
+        'update_datapack',
         'start_datapack_export',
         // A target reference and a status record. Both fixed-shape; the record's note
         // names at most ten skipped rows (`skippedLine`, 2026-11-05).

@@ -1,6 +1,6 @@
 /**
- * What the flyout's main button is, by where it stands: Restore and Uninstall on the installed
- * version, Switch to on another datapack over it.
+ * What the flyout's main button is, by where it stands: Update or Restore, and Uninstall, on the
+ * installed version, Switch to on another datapack over it.
  *
  * Moved out of `DatapackCatalogView` (step-04 S1) to make room for the header's save button.
  *
@@ -19,12 +19,16 @@ export interface InstalledPackAt {
     selected: DatapackId | undefined;
     /** A failed install of `held` (step-04 S8). */
     failed?: HeldFailure;
+    /** Update is waiting on `held` (`updateWaiting`): a newer version, or types left behind (J9-1). */
+    updatable?: boolean;
 }
 
 /** The flyout's extra props. */
 export interface InstalledPackProps {
     onRemoveData?: () => void;
     restores?: true;
+    /** Update in place of Restore (J9-1: "Update means apply what changed"). */
+    updates?: true;
     switches?: true;
     /** The held version's install failed: Retry or Fix with AI in place of the main button (S8). */
     failed?: HeldFailure;
@@ -33,7 +37,7 @@ export interface InstalledPackProps {
 /**
  * On the flyout of the version whose data Demo Builder installed in this demo's store: Uninstall
  * (owner, 2026-11-09, walk F118), and Restore in place of Install (Phase 5, J4-2), which needs that
- * install's record to take it out. On another datapack over that one: Switch to in place of Install
+ * install's record to take it out; Update in place of Restore while an update waits (J9-1). On another datapack over that one: Switch to in place of Install
  * (J8-1, owner 2026-11-12), exactly when the job window opens on a switch (`windowRoute`), so the
  * button never names a job the window will not run. Not in the Datapack Library, which touches no
  * store. On the held version whose install failed: failed, in place of Restore (step-04 S8, J6-2),
@@ -47,11 +51,12 @@ export function installedPackProps(
     at: InstalledPackAt,
     open: () => void,
 ): InstalledPackProps {
-    const { library, held, installedAt, selected, failed } = at;
+    const { library, held, installedAt, selected, failed, updatable = false } = at;
     if (library || held === undefined || selected === undefined) return {};
     const heldVersion = held.name === selected.name && held.version === selected.version;
-    if (heldVersion && failed) return { failed, ...(installedAt === undefined ? {} : { onRemoveData: open }) };
+    // An update waiting takes Retry's place: Retry would install every type, Update only what is left.
+    if (heldVersion && failed && !(updatable && installedAt !== undefined)) return { failed, ...(installedAt === undefined ? {} : { onRemoveData: open }) };
     if (installedAt === undefined) return {};
-    if (heldVersion) return { onRemoveData: open, restores: true };
+    if (heldVersion) return updatable ? { onRemoveData: open, updates: true } : { onRemoveData: open, restores: true };
     return windowRoute({ id: selected, holding: { pack: held, recorded: true } }) === 'switch' ? { switches: true } : {};
 }

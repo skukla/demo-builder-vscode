@@ -159,8 +159,9 @@ describe('AI_CONTEXT_VERSION', () => {
     // 61: importing another pack or version over the project's removes that one first.
     // 62: the datapack skills use the Datapacks screen's words, and offer no Data Installer copy (Phase 8).
     // 63: import-datapack sends wholeKinds for a whole data type and asks preview_datapack_changes for "added" (step-07 E1, E2).
-    it('is 63 (import-datapack sends whole data types and counts what was added, step-07)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(63);
+    // 64: import-datapack gains update_datapack and restore_datapack's points (step-07 U1).
+    it('is 64 (import-datapack offers Update and Restore to Last Saved or Original, step-07 U1)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(64);
     });
 });
 

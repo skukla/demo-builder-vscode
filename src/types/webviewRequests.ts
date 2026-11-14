@@ -65,27 +65,106 @@ export interface FixDatapackImportWithAiRequest {
     from?: 'dry-run' | 'install-failed' | 'clear-check';
 }
 
+/** Where Restore takes Commerce on the SC's own datapack (step-07 U1, J9-7). */
+export type RestorePoint = 'lastSaved' | 'original';
+
 /**
- * `restore-datapack` — put Commerce back to the datapack the project uses as its latest save,
- * losing the SC's Commerce edits made since (Phase 3/5, owner 2026-11-12, J4-3). Sent by the
- * Datapacks flyout's Restore button, first without `confirm` (the check), and by the agent tool.
- * Without `confirm` it starts only when nothing of the SC's would be lost.
+ * `restore-datapack` — put Commerce back to a previous state of the datapack the project uses,
+ * losing the SC's Commerce edits made since (step-07 U1, J9; decisions "Where 'back' goes"). A Demo
+ * Builder or other datapack goes back as it ships (the version installed); the SC's own goes back to
+ * its last save or its original. Sent by the Datapacks flyout's Restore button, first without
+ * `confirm` (the check, which starts nothing), and by the agent tool.
  */
 export interface RestoreDatapackRequest {
     /** The project's datapack, by its name. */
     datapackName?: string;
-    /** Needed only when the SC has unsaved edits in Commerce. */
+    /**
+     * The SC's own datapack only. Absent: Last Saved when Commerce has unsaved edits, else the
+     * original (the only point there is then).
+     */
+    to?: RestorePoint;
+    /** Start it. Without, the check answers what the question shows. */
     confirm?: boolean;
+    /** Original over unsaved edits only: save them into the datapack first (`keep`), or lose them (`drop`). */
+    changes?: 'keep' | 'drop';
+}
+
+/** One data type of the SC's unsaved edits, counted: what "Save Your Changes First?" lists. */
+export interface RestoreChangeCount {
+    kind: string;
+    count: number;
+}
+
+/** What Restore's question shows (J9-5 to J9-7): read by the check, which starts nothing. */
+export interface RestoreQuestion {
+    asks: true;
+    displayName: string;
+    /**
+     * The SC's own datapack: its points, by version. `lastSaved` (the save installed) only while
+     * Commerce has unsaved edits and it is not the original. Absent: one point, "as it ships".
+     */
+    own?: { lastSaved?: string; original: string };
+    /** The SC's unsaved edits by type, for the save question Original asks over them. */
+    changes?: RestoreChangeCount[];
 }
 
 /**
- * `restore-datapack`'s `data`: up to date (nothing started); or the job accepted, as
- * `start-datapack-import` answers, with the version it restores. A check that found unsaved edits
- * and had no `confirm` answers `success: false`, `code: CHANGES_NEED_ANSWER`, with
- * `{ asks: true, displayName }`.
+ * `restore-datapack`'s `data`: up to date (nothing would change, nothing started); the question
+ * (a check); or the job accepted, as `start-datapack-import` answers, with the version it restores.
+ * Original confirmed over unsaved edits with no `changes` answers `success: false`, `code:
+ * CHANGES_NEED_ANSWER`.
  */
 export type RestoreDatapackResult =
     | { upToDate: true; displayName: string }
+    | RestoreQuestion
+    | { activationId: string; target: DatapackId };
+
+/**
+ * `update-datapack` — apply what a newer version of the project's datapack changed, only for the data
+ * types chosen, keeping the SC's own edits (step-07 U1, J9-2). Sent by the flyout's Update button,
+ * first without `confirm` (the check), and by the agent tool.
+ */
+export interface UpdateDatapackRequest {
+    /** The project's datapack, by its name. */
+    datapackName?: string;
+    /** The data types to update; absent, every type that changed. */
+    dataTypes?: string[];
+    /**
+     * Start it, or, when the check found nothing to write, move the project onto the newer version.
+     * Without, the check answers and writes nothing.
+     */
+    confirm?: boolean;
+    /** With `confirm`: the version the check answered for; refused when the library moved on since. */
+    version?: string;
+    /**
+     * The check names every record it would write and keep, for the screen's spot check (Review
+     * Records). Without it each type names its first few, as a preview does: an agent's answer stays
+     * bounded by the number of data types, not records.
+     */
+    records?: boolean;
+}
+
+/** One data type an update writes, as the check found it. */
+export interface UpdateTypeChange {
+    /** The data type's code, as the pack names it. */
+    type: string;
+    added: number;
+    updated: number;
+    removed: number;
+    /** The records it writes, by the datapack's name for each. */
+    changed: string[];
+    /** The records the SC edited since the install, which the update leaves as they are. */
+    kept: string[];
+}
+
+/**
+ * `update-datapack`'s `data`: up to date (nothing left to apply); what changed, by type (a check);
+ * or the job accepted, with the version it installs.
+ */
+export type UpdateDatapackResult =
+    /** `movesTo`: the newer version writes nothing here, and a confirm moves the project onto it. */
+    | { upToDate: true; displayName: string; movesTo?: string }
+    | { changes: UpdateTypeChange[]; displayName: string; target: DatapackId }
     | { activationId: string; target: DatapackId };
 
 /**

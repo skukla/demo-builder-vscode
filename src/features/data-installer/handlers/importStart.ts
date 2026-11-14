@@ -18,7 +18,7 @@ import type { ImportJobRecord } from '../types';
 import { type DatapackWriteAccess, resolveDatapackWriteAccess } from './datapackWriteGate';
 import { waitForJob, waitMsOf } from './importJobWait';
 import { JOB_KEY, runAndWatch } from './importJobWatch';
-import { settleReplacement, withSavedNote } from './importReplacement';
+import { type Replacement, settleReplacement, withSavedNote } from './importReplacement';
 import { SERVICE_REMOVAL_UNAVAILABLE, libraryReads } from './libraryReads';
 import { TransientStateManager } from '@/core/state/transientStateManager';
 import { orgGuard } from '@/features/authentication/services/projectOrgGuard';
@@ -71,9 +71,15 @@ export interface StartOptions {
     afterSuccess?: () => Promise<void>;
     /**
      * What the job is for when the start alone cannot say: Restore (`restoreDatapack.ts`), whose pack
-     * installed is replaced even by its own version, or Undo Last Save. Else install or switch.
+     * installed is replaced even by its own version, Undo Last Save, or Update. Else install or switch.
      */
-    purpose?: 'restore' | 'undo';
+    purpose?: 'restore' | 'undo' | 'update';
+    /**
+     * Update only (`updateDatapack.ts`): the version installed, which this newer version is written
+     * over in place, its record carried over (`ImportRequest.updates`). Nothing is uninstalled first
+     * and nothing is saved: the SC's edits stay in Commerce.
+     */
+    updates?: DatapackId;
 }
 
 /**
@@ -92,7 +98,10 @@ export async function startDatapackImport(
     }
     const { engine } = prepared;
     // Walk F97: over another pack or version the demo uses, that pack goes first, its changes settled.
-    const replacement = await settleReplacement(context, engine, prepared.request, payload, { restore: options.purpose === 'restore' });
+    // An update replaces nothing: it writes over the version installed, in place (step-07 U1).
+    const replacement: Replacement | { response: HandlerResponse } = options.updates
+        ? { request: { ...prepared.request, updates: options.updates } }
+        : await settleReplacement(context, engine, prepared.request, payload, { restore: options.purpose === 'restore' });
     if ('response' in replacement) {
         return replacement.response;
     }

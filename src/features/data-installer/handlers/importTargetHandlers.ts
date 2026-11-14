@@ -81,7 +81,7 @@ export const importTargetHandlers = defineHandlers({
         const instance = deriveImportInstance(configs);
         // When Demo Builder's engine installed the pack: so the demo's card can tell a team pack
         // updated in place since (owner, 2026-11-03, `.rptc/plans/datapack-save-as/`).
-        const installedAt = await installedAtOf(project, datapack);
+        const { installedAt, updateBehind } = await installedAtOf(project, datapack);
         // By the name the SC knows it, for the form's "Replaces …" when another pack is imported (walk F97).
         const heldName = installedAt && datapack ? await heldDisplayName(context, datapack) : undefined;
         // A creation install of that datapack that did not succeed (step-04 S7): the card and flyout
@@ -90,6 +90,8 @@ export const importTargetHandlers = defineHandlers({
         const held = {
             datapack,
             ...(installedAt ? { installedAt } : {}),
+            // An update left data types on the older version (step-07 U1): the amber dot stays.
+            ...(updateBehind ? { updateBehind: true } : {}),
             ...(heldName ? { heldName } : {}),
             ...(installFailed ? { installFailed } : {}),
         };
@@ -141,12 +143,17 @@ export const importTargetHandlers = defineHandlers({
     },
 });
 
-/** When Demo Builder's engine installed the project's pack; none without a record, or one that cannot be read. */
-async function installedAtOf(project: Project | undefined, datapack: Project['datapack']): Promise<string | undefined> {
-    if (!project?.path || !datapack) return undefined;
+/**
+ * When Demo Builder's engine installed the project's pack, and whether an update left data types on
+ * the older version; nothing without a record, or one that cannot be read.
+ */
+async function installedAtOf(project: Project | undefined, datapack: Project['datapack']): Promise<{ installedAt?: string; updateBehind?: boolean }> {
+    if (!project?.path || !datapack) return {};
     try {
-        return (await readInstallRecord(nodeRecordFiles, project.path, datapack))?.startedAt;
+        const record = await readInstallRecord(nodeRecordFiles, project.path, datapack);
+        if (!record) return {};
+        return { installedAt: record.startedAt, updateBehind: (record.behind ?? []).length > 0 };
     } catch {
-        return undefined;
+        return {};
     }
 }

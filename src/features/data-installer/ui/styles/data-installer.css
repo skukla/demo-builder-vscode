@@ -528,6 +528,17 @@
     overflow: hidden;
     text-overflow: ellipsis;
 }
+
+/* An update's table, a tick on each type (step-07 U1, J9-2, as the prototype drew it): Select All's
+   rule above stands in for the table's own, and the wider name column holds the checkbox. */
+.type-table--picks {
+    border-top: none;
+}
+
+.type-table--picks .type-row {
+    grid-template-columns: 180px minmax(0, 1fr);
+    align-items: center;
+}
 }
 
 /* Review Records (TypeRail, step 03 S4; rule 19): the picks layout read-only, one height whatever

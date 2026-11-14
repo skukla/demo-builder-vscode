@@ -202,6 +202,7 @@ describe('every named form says what it acts on, from the argument that names it
         ['start_datapack_export', { datapackName: 'Bodea B2B' }, 'Saving to Bodea B2B'],
         ['undo_last_save', { datapackName: 'my-luma-1a2b3c' }, 'Undoing the last save of my-luma-1a2b3c'],
         ['restore_datapack', { datapackName: 'my-luma-1a2b3c' }, 'Restoring my-luma-1a2b3c'],
+        ['update_datapack', { datapackName: 'luma-7f3e21' }, 'Updating luma-7f3e21'],
         ['remove_block_from_library', { blockId: 'hero-banner' }, 'Removing the hero-banner block'],
         ['set_site_admin', { email: 'fake-user@example.com' }, "Changing fake-user@example.com's access"],
         // Named as the ERP will be: the add makes the name end in "ERP" (pairNames).
@@ -246,6 +247,7 @@ describe("the datapack tools narrate in the screen's words", () => {
         ['start_datapack_export', 'Saving to a datapack'],
         ['save_store_changes_to_pack', 'Saving Commerce changes'],
         ['restore_datapack', 'Restoring a datapack'],
+        ['update_datapack', 'Updating a datapack'],
         ['load_datapack_zip', 'Adding a datapack from a file'],
         ['save_datapack_zip', 'Saving a datapack as a file'],
         ['delete_library_datapack', 'Deleting a datapack'],

@@ -34,6 +34,13 @@ export interface ImportRequest {
      */
     replaces?: DatapackId;
     /**
+     * Update only (step-07 U1): the version the demo has installed, of which `id` is a newer version.
+     * Its install record is carried over to `id` first, so the install writes only what the newer
+     * version changed and keeps what the SC edited since (the record's fingerprints). Without it a
+     * newer version installs as a first install, writing none of its changes over rows already there.
+     */
+    updates?: DatapackId;
+    /**
      * A removal only, Demo Builder's engine only: products, by SKU, a clearing deletes right after it
      * (Clear Demo Data, step-06 C3 re-review). What they hold counts as going (`decideRemovals`).
      */

@@ -74,8 +74,8 @@ export interface DatapackCardProps {
      */
     isInstalled?: boolean;
     /**
-     * The amber dot's words, present only on the demo's own pack while Restore would install a save
-     * newer than the one the project holds: "Newer save available" (J4-1, `restoreIsNewer`). The
+     * The amber dot's words, present only on the demo's own pack while Update is waiting: "Newer
+     * version available" (J9-1, `updateWaiting`). The
      * house amber dot beside the date, the dashboard's "due" mark, says this on hover in Spectrum's
      * tooltip, as the dashboard's dots do (owner, 2026-11-07: a browser `title` never showed here).
      */

@@ -370,7 +370,11 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // `wholeKinds` instead of paging list_datapack_export_items for every id, and asks
 // preview_datapack_changes with `added: true` what a Save takes. Existing projects would keep telling
 // the agent to list and send every id of a type.
-export const AI_CONTEXT_VERSION = 63;
+// v64 (2026-11-14, datapack simplification step-07 U1): import-datapack gains update_datapack (a
+// newer version's changes, the user's edits kept, chosen data types) and restore_datapack's points
+// (`to: lastSaved | original`, `changes` for Original over unsaved edits), and maps Update to its tool.
+// Existing projects would keep telling the agent Restore installs the newest save, and never offer Update.
+export const AI_CONTEXT_VERSION = 64;
 
 /**
  * Component IDs for standardized component instance access

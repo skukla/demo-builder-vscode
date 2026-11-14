@@ -595,24 +595,63 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: false,
         description:
-            "Restore the project's datapack: put Commerce back to the datapack as the user last saved it, losing what " +
-            "was changed in the Admin since (the screen's Restore). The datapack must be the one this project uses, installed " +
-            "by Demo Builder; otherwise this refuses and nothing changes. When it is one of the user's own in My Datapacks, " +
-            'it restores its newest save; otherwise (a Demo Builder datapack, a Data Installer pack) the version installed. It checks ' +
-            'Commerce first, writing nothing: when Commerce already matches, it answers data.upToDate and starts nothing. ' +
-            'Otherwise it is one job: what is installed is uninstalled by its install record and the datapack installed ' +
-            'again, onto the website and store view it is installed to, even when it is the same version (unlike ' +
-            'start_datapack_import, which keeps Admin edits then). Changes are lost, never saved: to keep them, ' +
-            'save_store_changes_to_pack first. Returns an activationId and target (the version restored); with waitSeconds ' +
-            '(up to 45) it waits for the job to end and carries the outcome as job; else follow with ' +
-            'get_datapack_import_status. Ask the user first.',
+            "Restore the project's datapack: put Commerce back to a previous state of it, losing what was changed in the " +
+            "Admin since (the screen's Restore). The datapack must be the one this project uses, installed by Demo Builder; " +
+            'otherwise this refuses and nothing changes. A Demo Builder datapack (or a Data Installer pack) goes back to the ' +
+            "version installed, as it ships; a newer version is update_datapack's, not this. One of the user's own in My " +
+            "Datapacks goes back to to:'lastSaved' (the save installed, throwing away unsaved edits) or to:'original' (its " +
+            "first save, kept for good); without to it starts nothing and answers the question (data.asks, data.own with " +
+            "lastSaved and original as versions, data.changes): ask the user which, then call again with to. to:'original' " +
+            "over unsaved edits needs changes: 'keep' saves them into the datapack first, 'drop' loses them; without it " +
+            'nothing starts (CHANGES_NEED_ANSWER). It checks Commerce first: when nothing would change it answers ' +
+            'data.upToDate and starts nothing. Otherwise it is one job: what is installed is uninstalled by its install ' +
+            'record and the point installed, onto the website and store view it is installed to. Returns an activationId and ' +
+            'target (the version restored); with waitSeconds (up to 45) it waits for the job to end and carries the outcome ' +
+            'as job; else follow with get_datapack_import_status. Ask the user first, naming the point.',
         map: importHandlers,
         type: 'restore-datapack',
-        // Gated twice, as reset_datapack is: the row, then the handler, which asks only when the
-        // user has edits in Commerce. The row's flag satisfies it, so an agent always asks the user.
+        // Gated twice, as reset_datapack is: the row, then the handler, which starts only with confirm.
+        // The row's flag satisfies it, so an agent always asks the user.
         confirm: true,
         inputSchema: {
             datapackName: z.string().describe("The project's datapack, by its name from get_datapack_import_target"),
+            to: z
+                .enum(['lastSaved', 'original'])
+                .optional()
+                .describe("The user's own datapack only: back to its last save, or its original (first save)"),
+            changes: z
+                .enum(['keep', 'drop'])
+                .optional()
+                .describe("to:'original' over unsaved edits only: save them into the datapack first, or lose them"),
+            ...WAIT_FOR_JOB,
+        },
+    },
+    {
+        tool: 'update_datapack',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        description:
+            "Update the project's datapack: apply what a newer version of it changed, keeping every record the user " +
+            "edited in the Admin since the install (the screen's Update). The newer version is the library's newest save " +
+            "of the datapack (the user's own or a Demo Builder one), when newer than the one installed; with none, it " +
+            'finishes data types an earlier update left out, or ones an update that stopped did not finish. It checks Commerce ' +
+            'first: with nothing to write it answers data.upToDate (and data.movesTo when a newer version writes nothing: call ' +
+            'again confirmed to move the project onto it; nothing is written without that). dataTypes picks which data types to update (default: every type that ' +
+            'changed); a type left out stays on the older version and can be updated later, since a datapack is built ' +
+            'out additively. One job, nothing uninstalled and nothing saved: the newer version is written over the one ' +
+            'installed, in place. Returns an activationId and target (the version installed); with waitSeconds (up to ' +
+            '45) it waits for the job to end and carries the outcome as job; else follow with get_datapack_import_status. ' +
+            'Ask the user first.',
+        map: importHandlers,
+        type: 'update-datapack',
+        // Gated twice: the row, then the handler, which starts only with confirm (the row's flag).
+        confirm: true,
+        inputSchema: {
+            datapackName: z.string().describe("The project's datapack, by its name from get_datapack_import_target"),
+            dataTypes: z
+                .array(z.string())
+                .optional()
+                .describe('The data types to update, by code; default every type the newer version changed'),
             ...WAIT_FOR_JOB,
         },
     },

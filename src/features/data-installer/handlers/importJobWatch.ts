@@ -16,6 +16,8 @@
 
 import { announceDatapacksChanged } from '../services/datapackChanges';
 import type { DatapackEngine } from '../services/datapackEngine';
+import { nodeRecordFiles } from '../services/demoBuilderEngine/installRecord';
+import { addUpdateBehind } from '../services/demoBuilderEngine/installRecordUpdate';
 import { type ImportJobResult, watchImportJob } from '../services/importJobRunner';
 import type { ImportRequest } from '../services/importRequest';
 import { dropStaleFailure, recordInstallEnd } from '../services/installFailure';
@@ -398,6 +400,17 @@ async function settleProjectAfterJob(
     }
     const failed = result.outcome === 'success' ? undefined : (result.reason ?? JOB_DID_NOT_FINISH);
     await settleInstallFailure(context, projectPath, pack, failed);
+    // An update that did not finish (step-07 U1): its types stay on the update note, so Update offers them again.
+    if (record.purpose === 'update' && failed !== undefined) await noteUpdateLeft(context, projectPath, pack, record.dataTypes);
+}
+
+/** Put an unfinished update's types back on the install record's update note. Never fatal. */
+async function noteUpdateLeft(context: HandlerContext, projectPath: string, pack: DatapackId, types: string[]): Promise<void> {
+    try {
+        if (projectPath !== '') await addUpdateBehind(nodeRecordFiles, projectPath, pack, types);
+    } catch (error) {
+        context.debugLogger.debug(`[Data Installer] could not note the update's types as left: ${errorText(error)}`);
+    }
 }
 
 /**

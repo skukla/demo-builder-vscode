@@ -73,7 +73,7 @@ export interface DatapackDetailPanelProps {
      *
      * Absent in the Datapack Library, which touches no store (owner, 2026-11-07).
      */
-    onImport?: (id: DatapackId, opensOn?: 'run' | 'restore') => void;
+    onImport?: (id: DatapackId, opensOn?: 'run' | 'restore' | 'update') => void;
     /** A library pack the SC owned was removed. Stable — an effect depends on it. */
     onRemoved: () => void;
     /** The Data Installer's address is set and switched on: a library pack offers Copy to it. */
@@ -97,6 +97,8 @@ export interface DatapackDetailPanelProps {
     onRemoveData?: () => void;
     /** That same version: its main button is Restore, not Install (Phase 5, J4-2). */
     restores?: boolean;
+    /** Update in place of Restore while an update waits (J9-1). */
+    updates?: boolean;
     /** Another datapack the demo holds, which Demo Builder installed: its main button is Switch to (J8-1). */
     switches?: boolean;
     /** That same version's install failed (step-04 S8): the label and reason under the title, and Retry. */
@@ -123,6 +125,7 @@ export function DatapackDetailPanel({
     undoTo,
     onRemoveData,
     restores = false,
+    updates = false,
     switches = false,
     failed,
 }: DatapackDetailPanelProps): React.JSX.Element {
@@ -174,6 +177,7 @@ export function DatapackDetailPanel({
                                 {...(undoTo ? { undoTo } : {})}
                                 {...(onRemoveData ? { onRemoveData } : {})}
                                 restores={restores}
+                                updates={updates}
                                 switches={switches}
                                 failed={failed}
                                 importable={importable}

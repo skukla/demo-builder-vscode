@@ -210,9 +210,9 @@ describe('an uninstall', () => {
     });
 });
 
-// Step 03, S8: Restore (decisions J4-2 to J4-4). Its check IS its start: `restore-datapack` without
-// confirm starts when nothing of the SC's would be lost, so the job is keyed on the start from the
-// moment it opens. The check ends on a result (up to date, refused), the question, or the run.
+// Step 03, S8; step-07 U1 (J9-5 to J9-7): Restore. Its check is its start request without confirm, so
+// the job is keyed on the start from the moment it opens. The check ends on a result (up to date,
+// refused) or the question; Original over unsaved edits goes from the question to the save question.
 describe('a restore', () => {
     const re = (phase: JobPhase): JobState => ({ kind: 'restore', phase, lastAction: 'start' });
 
@@ -221,8 +221,10 @@ describe('a restore', () => {
     });
 
     it.each<[string, JobState, JobEvent, JobState]>([
-        ['unsaved edits: the question', re('check'), { type: 'asks' }, re('question')],
+        ['the check answered: the question', re('check'), { type: 'asks' }, re('question')],
         ['the question answered: the run', re('question'), { type: 'start' }, re('run')],
+        ['Original over unsaved edits: the save question', re('question'), { type: 'save-first' }, re('save-first')],
+        ['the save question answered: the run', re('save-first'), { type: 'start' }, re('run')],
         ['a newer save alone: the run', re('check'), { type: 'running' }, re('run')],
         ['up to date: the result', re('check'), { type: 'ended', clean: true }, re('done')],
         ['refused: the result', re('check'), { type: 'ended', clean: false }, re('ended')],
@@ -237,7 +239,7 @@ describe('a restore', () => {
         ['Retry: the restore offers none', re('ended'), { type: 'start' }],
         ['Review Records', re('question'), { type: 'review' }],
         ['Dry Run', re('question'), { type: 'dry-run' }],
-        ['the save question', re('question'), { type: 'save-first' }],
+        ['the save question before the question', re('check'), { type: 'save-first' }],
     ])('moves nothing on %s', (_name, from, event) => {
         expect(datapackJob(from, event)).toBe(from);
     });
@@ -248,5 +250,34 @@ describe('a restore', () => {
     ])('asks nothing and ends nothing from %s', (_name, from) => {
         expect(datapackJob(from, { type: 'asks' })).toBe(from);
         expect(datapackJob(from, { type: 'ended', clean: true })).toBe(from);
+    });
+});
+
+// Step-07 U1 (J9-2): Update. Its check (`update-datapack` without confirm) ends on the summary of what
+// changed, or on its result (up to date, or a check that failed); the summary has Review Records, no
+// Dry Run and no save question.
+describe('an update', () => {
+    const up = (phase: JobPhase, lastAction: JobState['lastAction'] = null): JobState => ({ kind: 'update', phase, lastAction });
+
+    it('opens on its check, keyed on no start yet', () => {
+        expect(startJob('update')).toEqual(up('check'));
+    });
+
+    it.each<[string, JobState, JobEvent, JobState]>([
+        ['what changed: the summary', up('check'), { type: 'checked' }, up('summary')],
+        ['nothing left to apply: the result', up('check'), { type: 'ended', clean: true }, up('done')],
+        ['Review Records', up('summary'), { type: 'review' }, up('records')],
+        ['Back from Review Records', up('records'), { type: 'back' }, up('summary')],
+        ['Update: the run', up('summary'), { type: 'start' }, up('run', 'start')],
+    ])('%s', (_name, from, event, to) => {
+        expect(datapackJob(from, event)).toEqual(to);
+    });
+
+    it.each<[string, JobEvent]>([
+        ['Dry Run', { type: 'dry-run' }],
+        ['the save question', { type: 'save-first' }],
+        ["Restore's question", { type: 'asks' }],
+    ])('moves nothing on %s', (_name, event) => {
+        for (const from of [up('summary'), up('check')]) expect(datapackJob(from, event)).toBe(from);
     });
 });

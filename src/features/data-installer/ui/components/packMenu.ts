@@ -5,7 +5,7 @@
  * @module features/data-installer/ui/components/packMenu
  */
 
-import { FIX_WITH_AI, INSTALL, RESTORE } from '../../datapackWords';
+import { FIX_WITH_AI, INSTALL, RESTORE, UPDATE } from '../../datapackWords';
 import { SHARE_CONSENT } from '../../shareWording';
 import type { DatapackDetail } from '../../types';
 import { RETRIES_BEFORE_FIX } from './importResult';
@@ -89,10 +89,11 @@ export function confirmCopy(asking: Asking, detail: DatapackDetail, sharedInFile
 }
 
 /**
- * The main button's label: Restore on the demo's installed version (J4-2), Switch to over another
- * recorded datapack (J8-1, owner 2026-11-12), else Install.
+ * The main button's label: on the demo's installed version, Update while an update waits (J9-1), else
+ * Restore (J4-2); Switch to over another recorded datapack (J8-1, owner 2026-11-12); else Install.
  */
-export function mainButtonLabel(detail: DatapackDetail, restores: boolean, switches = false): string {
+export function mainButtonLabel(detail: DatapackDetail, restores: boolean, switches = false, updates = false): string {
+    if (updates) return `${UPDATE} ${detail.displayName}`;
     if (restores) return `${RESTORE} ${detail.displayName}`;
     return switches ? `Switch to ${detail.displayName}` : INSTALL;
 }

@@ -21,6 +21,14 @@ describe('installedPackProps', () => {
         });
     });
 
+    // J9-1: with an update waiting, Update is the main button in Restore's place.
+    it('updates, with Uninstall, on the held version while an update waits', () => {
+        expect(installedPackProps({ library: false, held: HELD, installedAt: AT, selected: { name: HELD.name, version: HELD.version }, updatable: true }, open)).toEqual({
+            onRemoveData: open,
+            updates: true,
+        });
+    });
+
     it('switches on another datapack over the recorded one', () => {
         expect(installedPackProps({ library: false, held: HELD, installedAt: AT, selected: { name: 'bodea', version: 'main' } }, open)).toEqual({
             switches: true,
@@ -48,6 +56,15 @@ describe('installedPackProps', () => {
             expect(installedPackProps({ library: false, held: HELD, installedAt: AT, selected: heldVersion, failed: FAILED }, open)).toEqual({
                 failed: FAILED,
                 onRemoveData: open,
+            });
+        });
+
+        // Review U1-3: an update waiting (a newer version, or types an update left out) takes Retry's
+        // place: Retry installs every type of the held version, Update applies only what is left.
+        it('is Update, not Retry, while an update waits', () => {
+            expect(installedPackProps({ library: false, held: HELD, installedAt: AT, selected: heldVersion, failed: FAILED, updatable: true }, open)).toEqual({
+                onRemoveData: open,
+                updates: true,
             });
         });
 

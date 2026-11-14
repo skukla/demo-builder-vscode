@@ -14,9 +14,12 @@ import type { JobKind } from './datapackJob';
 import { JobResultWindow } from './JobResultWindow';
 import type { ActionButton } from '@/core/ui/components/ui/Modal';
 
-/** An end's one action beside Close (rule 16): Retry, or Fix with AI. Retry only on this window's own install or uninstall. */
+/**
+ * An end's one action beside Close (rule 16): Retry, or Fix with AI. Retry only on this window's own
+ * install, uninstall or update; an update's repeats the update with the types it asked for (step-07 U1).
+ */
 export function endButtons(job: DatapackJob, result: ResultContent): ActionButton[] {
-    const own = job.state.kind === 'install' || job.state.kind === 'uninstall';
+    const own = job.state.kind === 'install' || job.state.kind === 'uninstall' || job.state.kind === 'update';
     if (result.action === 'retry' && own)
         return [{ label: 'Retry', variant: 'accent', onPress: job.retry }];
     if (result.action === 'fix')

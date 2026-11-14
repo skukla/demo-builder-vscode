@@ -45,13 +45,15 @@ export function announceDatapacksChanged(): void {
 
 /**
  * The map with these actions announcing a change once they succeed. A refusal (`success: false`)
- * changed nothing, so it announces nothing.
+ * changed nothing, so it announces nothing; nor does a call `wrote` says wrote nothing (a check).
  *
  * @param keys - the actions that change packs or which pack a project holds
+ * @param wrote - for an action that also answers a check: whether this call could have written
  */
 export function announcingChanges<M extends HandlerMap>(
     map: M,
     keys: readonly (keyof M & string)[],
+    wrote: (payload: unknown) => boolean = () => true,
 ): M {
     const wrapped: HandlerMap = { ...map };
     for (const key of keys) {
@@ -63,7 +65,7 @@ export function announcingChanges<M extends HandlerMap>(
             payload?: unknown,
         ): Promise<HandlerResponse> => {
             const result: HandlerResponse = await handler(context, payload);
-            if (result?.success !== false) announceDatapacksChanged();
+            if (result?.success !== false && wrote(payload)) announceDatapacksChanged();
             return result;
         };
     }

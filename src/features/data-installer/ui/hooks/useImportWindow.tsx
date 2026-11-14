@@ -11,7 +11,7 @@
  *
  * One window serves every path (`DatapackJobWindow`, step 03), on the job `windowRoute` picks: a
  * first install (S4), a switch over another datapack (S6), Uninstall and another version of the held
- * datapack (S7), Restore from its check (S8), and a run already started (Undo, a failed install's Retry).
+ * datapack (S7), Restore from its check (S8), Update from its check (step-07 U1), and a run already started (Undo, a failed install's Retry).
  *
  * @module features/data-installer/ui/hooks/useImportWindow
  */
@@ -47,10 +47,10 @@ export interface ImportWindow {
 }
 
 /** Where an opener asks the window to start, other than an install's or a switch's check. */
-export type OpensOn = 'remove' | 'restore' | 'run';
+export type OpensOn = 'remove' | 'restore' | 'update' | 'run';
 
 /** The job the window opens on. */
-export type WindowRoute = 'install' | 'switch' | 'version' | 'uninstall' | 'restore' | 'watch';
+export type WindowRoute = 'install' | 'switch' | 'version' | 'uninstall' | 'restore' | 'update' | 'watch';
 
 /**
  * Which job the window opens on (step 03, S4, S6, S7). With no record of the held datapack there is
@@ -63,6 +63,7 @@ export function windowRoute(opened: Pick<ImportWindow, 'id' | 'opensOn' | 'holdi
     if (opened.opensOn === 'run') return 'watch';
     if (opened.opensOn === 'remove') return 'uninstall';
     if (opened.opensOn === 'restore') return 'restore';
+    if (opened.opensOn === 'update') return 'update';
     const { holding } = opened;
     if (!holding?.recorded) return 'install';
     if (holding.pack.name !== opened.id.name) return 'switch';
@@ -147,6 +148,7 @@ function routeProps(route: WindowRoute, ownNames: string[]): Partial<React.Compo
     if (route === 'switch') return { switching: { ownNames } };
     if (route === 'version') return { switching: { ownNames, verb: 'Install' } };
     if (route === 'restore') return { restoring: true };
+    if (route === 'update') return { updating: true };
     return {};
 }
 

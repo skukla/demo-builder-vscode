@@ -1,22 +1,25 @@
 /**
- * Restore's check (step 03, S8; decisions J4-2, J4-3): on open, `restore-datapack` without
- * `confirm`, which writes nothing unless nothing of the SC's would be lost. It answers up to date,
- * accepted (a newer save alone), or that the SC has unsaved edits (`CHANGES_NEED_ANSWER`), which
- * moves the window to its question. Restore there sends it again confirmed, as the job's start
- * (`useJobStart`). Split out of `useDatapackJob`.
+ * Restore's check (step 03, S8; step-07 U1, J9-5 to J9-7): on open, `restore-datapack` without
+ * `confirm`, which starts nothing. It answers up to date (the small result), or the question
+ * (`RestoreQuestion`), which moves the window to it. Restore there sends it again confirmed, with the
+ * point chosen, as the job's start (`useJobStart`). Split out of `useDatapackJob`.
  *
  * @module features/data-installer/ui/hooks/useRestoreCheck
  */
 
 import { type Dispatch, useEffect } from 'react';
 import type { JobEvent, JobState } from '../components/job/datapackJob';
-import type { useJobStart } from './useJobStart';
+import type { StartAnswer, useJobStart } from './useJobStart';
 import type { DatapackId } from '@/types/datapack';
-import { ErrorCode } from '@/types/errorCodes';
-import type { RestoreDatapackRequest } from '@/types/webviewRequests';
+import type { RestoreDatapackRequest, RestoreQuestion } from '@/types/webviewRequests';
+
+/** The question the check answered, once it answered one: the one start answer that asks. */
+export function restoreQuestionOf(value: StartAnswer | null): RestoreQuestion | null {
+    return value !== null && 'asks' in value ? value : null;
+}
 
 /**
- * Send Restore's check once, on open, and ask its question when it found unsaved edits.
+ * Send Restore's check once, on open, and ask its question when it answered one.
  *
  * @param id - the datapack the window opened on
  * @param state - the job's phase; only a restore's check sends or asks
@@ -31,14 +34,13 @@ export function useRestoreCheck(
 ): void {
     const restores = state.kind === 'restore';
     const name = restores ? id.name : undefined;
-    const { load, loading, failure } = start;
+    const { load, loading, value } = start;
     useEffect(() => {
         if (!name) return;
         const check: RestoreDatapackRequest = { datapackName: name };
         load(check);
     }, [name, load]);
-    const edits = failure?.code === ErrorCode.CHANGES_NEED_ANSWER;
-    const asks = restores && state.phase === 'check' && !loading && edits;
+    const asks = restores && state.phase === 'check' && !loading && restoreQuestionOf(value) !== null;
     useEffect(() => {
         if (asks) dispatch({ type: 'asks' });
     }, [asks, dispatch]);

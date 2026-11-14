@@ -21,10 +21,10 @@ import type { HandlerResponse } from '@/types/handlers';
 
 const row = (tool: string) => DATA_INSTALLER_DESCRIPTORS.find((d) => d.tool === tool);
 
-// Twenty-four since Phase 8 removed copy_library_datapack_to_installer (D7, 2026-11-13); twenty-five since clear_commerce_instance (step 06 C6, 2026-11-13); twenty-four since restore_datapack (Phase 3/5, 2026-11-12); twenty-three since undo_last_save (Phase 2, 2026-11-12; twenty-two since verify_datapack_install, the count
+// Twenty-five since update_datapack (step-07 U1, 2026-11-14); twenty-four since Phase 8 removed copy_library_datapack_to_installer (D7, 2026-11-13); twenty-five since clear_commerce_instance (step 06 C6, 2026-11-13); twenty-four since restore_datapack (Phase 3/5, 2026-11-12); twenty-three since undo_last_save (Phase 2, 2026-11-12; twenty-two since verify_datapack_install, the count
 // in this test's name had stayed at twenty-one); twenty-one since build_datapack_from_export (2026-11-05); twenty since mark_team_datapack (beta.153); nineteen since share_datapack (owner, 2026-10-30); eighteen since datapack-engine step 10 added
 // check_demo_data and clear_demo_data (sixteen since step 07 added rename_datapack, fifteen since step 05).
-it('registers the twenty-four tools, and only those', () => {
+it('registers the twenty-five tools, and only those', () => {
     expect(DATA_INSTALLER_DESCRIPTORS.map((d) => d.tool).sort()).toEqual([
         'build_datapack_from_export',
         'check_demo_data',
@@ -48,6 +48,7 @@ it('registers the twenty-four tools, and only those', () => {
         'start_datapack_export',
         'start_datapack_import',
         'undo_last_save',
+        'update_datapack',
         'validate_datapack_import',
         'verify_datapack_install',
     ]);
@@ -64,7 +65,7 @@ it('every row dispatches to a handler that actually exists', () => {
 
 describe('gates', () => {
     // Saving a file into the project is not gated: it changes no store and no instance.
-    it('gates exactly the thirteen writes that reach a store or an instance', () => {
+    it('gates exactly the fourteen writes that reach a store or an instance', () => {
         const gated = DATA_INSTALLER_DESCRIPTORS.filter((d) => d.confirm).map((d) => d.tool);
         expect(gated.sort()).toEqual([
             'clear_commerce_instance',
@@ -80,6 +81,7 @@ describe('gates', () => {
             'start_datapack_export',
             'start_datapack_import',
             'undo_last_save',
+            'update_datapack',
         ]);
     });
 
@@ -213,7 +215,7 @@ describe('what each row declares', () => {
 
     // readOnly is what the write-gating machinery reads. The dry run is a read;
     // the three that touch a live instance or the shared catalog are not.
-    it('exposes nine reads and fifteen writes', () => {
+    it('exposes nine reads and sixteen writes', () => {
         const byFlag = (readOnly: boolean) =>
             DATA_INSTALLER_DESCRIPTORS.filter((d) => d.readOnly === readOnly)
                 .map((d) => d.tool)
@@ -246,6 +248,7 @@ describe('what each row declares', () => {
             'start_datapack_export',
             'start_datapack_import',
             'undo_last_save',
+            'update_datapack',
         ]);
     });
 });
@@ -289,10 +292,17 @@ describe('what each row accepts', () => {
         expect(row('check_demo_data')!.description).toMatch(/as if this project's datapack were already uninstalled/);
     });
 
-    // Restore picks its own version and target from the project and drops the changes itself, so an
-    // agent names only the pack (and may wait); the row's gate supplies confirm.
-    it('gives restore_datapack the pack and the wait, nothing that could choose a version or save', () => {
-        expect(keys('restore_datapack')).toEqual(['datapackName', 'waitSeconds']);
+    // Restore picks its version and target from the project, so an agent names the pack, the point
+    // (its own datapack's last save or original, J9-7) and, for Original over unsaved edits, whether
+    // to save them first; and may wait. The row's gate supplies confirm. No version, no target.
+    it('gives restore_datapack the pack, the point, the save answer and the wait, nothing that could name a version', () => {
+        expect(keys('restore_datapack')).toEqual(['changes', 'datapackName', 'to', 'waitSeconds']);
+    });
+
+    // Update reads its newer version from the library; an agent names the pack and, optionally, the
+    // data types (agents keep chosen-type installs, step-03 Q2). No version, no target.
+    it('gives update_datapack the pack, the data types and the wait', () => {
+        expect(keys('update_datapack')).toEqual(['dataTypes', 'datapackName', 'waitSeconds']);
     });
 
     it('lets reset_datapack answer keep or drop, and gives an agent no way to turn on "always"', () => {

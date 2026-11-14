@@ -388,7 +388,8 @@ included, and opening on the version the demo uses (`DatapackCatalogGrid`):
   own time ("Nov 9, 9:15 AM", `versionLabel` in `packVersions.ts`). The card shows the save the demo
   uses (or, for a pack no demo uses, the newest) as "Saved Nov 9, 1:56 PM", with no version picker;
   named versions (`main`, `eds-compatible`) keep their picker, since each is a variant, and a pack
-  holding both lists its saves there as the one on show. A save keeps the pack's two newest saves.
+  holding both lists its saves there as the one on show. A save keeps the pack's two newest saves
+  and its first save, the original Restore goes back to, for good (step-07 U1, `saveTrim.ts`).
   Version History was removed (Phase 2): the flyout's More menu offers **Undo Last Save** instead,
   only on the datapack the demo uses, when it is the SC's own with an earlier save and the demo is
   on the newest. It asks "Undo Last Save?" (Cancel, and Undo in blue), sends `undo-last-save`, and
@@ -405,24 +406,31 @@ included, and opening on the version the demo uses (`DatapackCatalogGrid`):
 - **Switch to** (J8-1, owner 2026-11-12; step-04 S5). Over a datapack the demo holds and Demo Builder
   installed, another datapack's main button reads "Switch to Bodea", exactly when the job window
   opens on a switch (`windowRoute`); another version of the held datapack keeps Install.
-- **Restore** (Phase 3/5, owner 2026-11-12, J4-2 to J4-4). On the version whose data Demo Builder
-  installed in the demo's store, the flyout's main button reads "Restore My Luma" in place of
-  Install. It sends `restore-datapack` without `confirm`, the flyout waiting on "Checking for your
-  changes": the check compares Commerce with the version installed (`previewChanges`) and writes
-  nothing. Up to date (the target is the version installed and nothing differs): the small result
-  "My Luma Is Up to Date", nothing started. Unsaved edits: "Restore My Luma?" ("Commerce goes back to
-  My Luma as you last saved it. Anything you changed since is lost.", Cancel and Restore in blue),
-  then sent confirmed. Anything else (a newer save, the amber dot) starts at once. The target is the
-  SC's own pack's newest save, else the version installed. A start is one job through
-  `startDatapackImport` that uninstalls the pack by its install record and installs the target,
-  changes dropped, never saved, and opens the import window on it; a same-version restore is a
-  real replace (`restore`), where an ordinary import of the same version updates in place.
-- **The newer-save dot**, the house amber dot beside the card's date, exactly when Restore would
-  install a save newer than the one the project holds: "Newer save available" (J4-1). One rule,
-  `restoreTargetVersion` in `packVersions.ts`, picks Restore's target for the handler and the card
-  (`restoreIsNewer`); with no install record there is nothing to restore and no dot. A named
-  version changed in place does not light it, as Restore installs the version installed. It is
-  deliberately not an update in the Updates window: a demo may stay on an older save on purpose.
+- **Restore** (step-07 U1, J9-5 to J9-7; decisions "Where 'back' goes"). On the version whose data
+  Demo Builder installed in the demo's store, with no update waiting, the flyout's main button reads
+  "Restore My Luma". It sends `restore-datapack` without `confirm`, which starts nothing: the check
+  compares Commerce with the version installed (`previewChanges`). Nothing would change: the small
+  result "My Luma Is Up to Date". Otherwise "Restore My Luma?", small, Cancel and Restore in blue: a
+  Demo Builder datapack has one line, "Commerce goes back to Luma as it ships."; the SC's own with
+  nothing unsaved, "Commerce goes back to My Luma's original from <date>."; the SC's own with unsaved
+  edits, the house RadioGroup "Last Saved, <date>" (picked first; throws the edits away) and
+  "Original, <date>". Last Saved runs; Original asks "Save Your Changes First?" (Restore Without
+  Saving, Cancel, Save and Restore) over the edits by type. A start is one job through
+  `startDatapackImport` that uninstalls the pack by its install record and installs the point; a
+  same-version restore is a real replace (`restore`).
+- **Update** (step-07 U1, J9-1 to J9-4). The house amber dot beside the card's date, hover "Newer
+  version available", exactly when Update waits (`updateWaiting` in `packVersions.ts`): a newer save
+  of the SC's own datapack or a Demo Builder one in the library (`newerVersion`), or data types an
+  earlier update left out (`behind` on the install record). Then the flyout's main button is "Update
+  Luma" and More has no Restore. It sends `update-datapack` without `confirm`; the check compares the
+  newer version with the installed version's record. Nothing to write: "Luma Is Up to Date". Else
+  "Update Luma": the type table with a tick per type and Select All, counts of what it writes ("12
+  added, 36 updated"), Review Records with Changed and Kept tabs (the SC's edits it keeps, the notice
+  dot as Clear's), Cancel and Update in blue, greyed while nothing is ticked. The run, "Updating
+  Luma", is one Update Luma step with a row per chosen type ("Updating 24 of 48"), then Verify,
+  ending "Luma Updated". The newer version is written over the installed one in place, its install
+  record carried over (`ImportRequest.updates`), so only what changed is written and the SC's edits
+  stay. It is deliberately not an update in the Updates window: a demo may stay on an older save.
 - **One date format**: every datapack date a card or the flyout shows is absolute, "Saved Nov 10,
   9:15 AM" (`datapackDate`, J8-2).
 

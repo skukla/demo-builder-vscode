@@ -2,7 +2,7 @@
  * The requests behind a datapack job window (step 03, S4, S6 and S7), and the events they send its
  * phases (`datapackJob.ts`): the job's status, the check (`useJobReads`), Review Records' read, Dry
  * Run, and the one start the window's kind makes: Install and Switch start an import, Uninstall a
- * removal (`reset-datapack`).
+ * removal (`reset-datapack`), Restore a restore and Update an update (step-07 U1).
  *
  * Kept from the window this replaced:
  * - **The result is keyed on the LAST ACTION** (`resolveResult`), and **the job watched is the one
@@ -35,14 +35,14 @@ import type { TypeRow } from '../components/job/installRows';
 import { type DataInstallerRequest, useDataInstallerRequest } from './useDataInstallerRequest';
 import type { ImportRuns } from './useImportRetry';
 import { useJobPhases } from './useJobPhases';
-import { useJobReads, useRequestBody } from './useJobReads';
+import { type UpdateCheck, useJobReads, useRequestBody } from './useJobReads';
 import { useJobResult } from './useJobResult';
-import { useJobStart } from './useJobStart';
+import { type StartExtra, useJobStart } from './useJobStart';
 import { useJobStatus } from './useJobStatus';
 import { type JobSwitch, useJobSwitch } from './useJobSwitch';
-import { useRestoreCheck } from './useRestoreCheck';
+import { restoreQuestionOf, useRestoreCheck } from './useRestoreCheck';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
-import type { DatapackRecordsResult } from '@/types/webviewRequests';
+import type { DatapackRecordsResult, RestoreQuestion } from '@/types/webviewRequests';
 
 export interface DatapackJobArgs {
     id: DatapackId;
@@ -73,8 +73,16 @@ export interface DatapackJob {
     running: boolean;
     retries: number;
     switching: JobSwitch;
+    /** Restore's question, once its check answered one (J9-5 to J9-7). */
+    restoreQuestion: RestoreQuestion | null;
+    /** Update's check: what the newer version changed, by type (step-07 U1). */
+    update: UpdateCheck;
+    /** Start with what the press adds: Restore's point, Update's types ticked. */
+    startWith: (extra?: StartExtra) => void;
     review: () => void;
     back: () => void;
+    /** Restore's Original over unsaved edits: "Save Your Changes First?" (J9-7). */
+    askSaveFirst: () => void;
     dryRun: () => void;
     install: () => void;
     retry: () => void;
@@ -87,16 +95,18 @@ export interface DatapackJob {
 function jobPresses(
     dispatch: Dispatch<JobEvent>,
     reads: { records: DataInstallerRequest<DatapackRecordsResult>; dry: DataInstallerRequest<unknown> },
-    send: { pack: object; body: () => object; runs: ImportRuns; retry: () => void },
+    send: { pack: object; body: () => object; runs: ImportRuns; retry: () => void; kind: JobKind },
 ) {
     const { records, dry } = reads;
     const { runs } = send;
     return {
         review: () => {
             dispatch({ type: 'review' });
-            if (!records.settled && !records.loading) records.load(send.pack);
+            // An update's records came with its check.
+            if (send.kind !== 'update' && !records.settled && !records.loading) records.load(send.pack);
         },
         back: () => dispatch({ type: 'back' }),
+        askSaveFirst: () => dispatch({ type: 'save-first' }),
         dryRun: () => {
             dispatch({ type: 'dry-run' });
             dry.load(send.body());
@@ -120,8 +130,10 @@ export function useDatapackJob(args: DatapackJobArgs): DatapackJob {
     useRestoreCheck(args.id, state, starts.start, dispatch);
     const switching = useJobSwitch(args, checks, starts, dispatch);
     const heldName = switching.heldName;
-    const { result, starting } = useJobResult(args, state, { dry, starts, watch, heldName });
-    const settled = target.settled && watch.status.settled && table.settled && checks.changes.settled;
+    const { result, starting } = useJobResult(args, state, { dry, starts, watch, heldName, update: table.update });
+    // An update's check that found nothing, or failed, ends on its result rather than the summary.
+    const updateEnds = args.kind === 'update' && (table.update.upToDate || table.update.failure !== null);
+    const settled = target.settled && watch.status.settled && table.settled && checks.changes.settled && !updateEnds;
     const noInstance = target.settled && !target.value?.instance;
     useJobPhases(state, dispatch, {
         running: watch.running,
@@ -143,6 +155,9 @@ export function useDatapackJob(args: DatapackJobArgs): DatapackJob {
         running: watch.running,
         retries: starts.runs.retries,
         switching,
-        ...jobPresses(dispatch, { records, dry }, { pack, body, runs: starts.runs, retry }),
+        restoreQuestion: restoreQuestionOf(starts.start.value),
+        update: table.update,
+        startWith: starts.startWith,
+        ...jobPresses(dispatch, { records, dry }, { pack, body, runs: starts.runs, retry, kind: args.kind }),
     };
 }

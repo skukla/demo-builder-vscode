@@ -16,9 +16,9 @@ import type { ImportJobRecord, JobPurpose } from './types';
 
 /**
  * The verb of a datapack's moves in Commerce: a Switch installs over another datapack; a Restore
- * puts back the demo's datapack as last saved.
+ * puts the demo's datapack back to a previous state; an Update applies what a newer version changed.
  */
-export type DatapackVerb = 'Install' | 'Uninstall' | 'Switch' | 'Restore';
+export type DatapackVerb = 'Install' | 'Uninstall' | 'Switch' | 'Restore' | 'Update';
 
 /** The button that puts a datapack into Commerce. */
 export const INSTALL = 'Install';
@@ -26,8 +26,17 @@ export const INSTALL = 'Install';
 /** The button that takes a datapack's data out of Commerce. */
 export const UNINSTALL = 'Uninstall';
 
-/** The button that puts the demo's datapack back as last saved (J4-2). */
+/**
+ * The button that puts the demo's datapack back to a previous state (J4-2; J9, owner 2026-11-14:
+ * "Restore means go back to a previous state"): its last save or its original.
+ */
 export const RESTORE = 'Restore';
+
+/**
+ * The button that applies what a newer version of the demo's datapack changed, keeping the SC's own
+ * edits (step-07 U1, J9; owner 2026-11-14: "Update means apply what changed").
+ */
+export const UPDATE = 'Update';
 
 /** The button that asks whether an install would go through, writing nothing (D6). */
 export const DRY_RUN = 'Dry Run';
@@ -80,6 +89,12 @@ export function jobWords(purpose: JobPurpose, name: string): JobWords {
                 running: `Restoring ${name}`,
                 done: `${name} Restored`,
                 failed: `Couldn't Restore ${name}`,
+            };
+        case 'update':
+            return {
+                running: `Updating ${name}`,
+                done: `${name} Updated`,
+                failed: `Couldn't ${UPDATE} ${name}`,
             };
         case 'undo':
             return {

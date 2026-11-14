@@ -11,14 +11,14 @@ import { type ResultContent, resolveResult } from '../components/importResult';
 import type { JobState } from '../components/job/datapackJob';
 import type { DataInstallerRequest } from './useDataInstallerRequest';
 import { useJobPickup } from './useJobPickup';
-import type { JobReadsArgs } from './useJobReads';
+import type { JobReadsArgs, UpdateCheck } from './useJobReads';
 import { acceptedActivation, type useJobStart } from './useJobStart';
 import type { useJobStatus } from './useJobStatus';
 import { ErrorCode } from '@/types/errorCodes';
 
 /**
  * What Restore's check answered, when it answered without a job (S8): up to date, the small result
- * that closes itself; refused, its own words. Unsaved edits are its question, no result; `undefined`
+ * that closes itself; refused, its own words. The question is no result (J9-5 to J9-7); `undefined`
  * when it accepted a job, whose end is read as any start's.
  */
 function restoreAnswer(
@@ -30,10 +30,22 @@ function restoreAnswer(
     if (failure) {
         return { variant: 'error', title: jobWords('restore', name).failed, message: failure.message };
     }
-    if (value && 'upToDate' in value) {
-        return { variant: 'success', title: `${name} Is Up to Date`, finished: true };
-    }
+    if (value && 'upToDate' in value) return upToDateResult(name);
+    if (value && 'asks' in value) return null;
     return undefined;
+}
+
+/** What Update's check answered without a summary (J9-4): up to date, or why it could not check. */
+function updateAnswer(state: JobState, update: UpdateCheck | undefined, name: string): ResultContent | undefined {
+    // Before Update is pressed: the check's answer stays the result once the window has moved to it.
+    if (state.kind !== 'update' || state.lastAction !== null || !update) return undefined;
+    if (update.failure) return { variant: 'error', title: jobWords('update', name).failed, message: update.failure };
+    return update.upToDate ? upToDateResult(name) : undefined;
+}
+
+/** "Luma Is Up to Date": a check that found nothing to do, the small result that closes itself. */
+export function upToDateResult(name: string): ResultContent {
+    return { variant: 'success', title: `${name} Is Up to Date`, finished: true };
 }
 
 /** What the result reads: the last action's request, the job watched, a switch's failed save. */
@@ -45,9 +57,11 @@ export function useJobResult(
         starts: ReturnType<typeof useJobStart>;
         watch: ReturnType<typeof useJobStatus>;
         heldName?: string;
+        /** Update's check (step-07 U1): nothing left to apply, or why it could not tell. */
+        update?: UpdateCheck;
     },
 ) {
-    const { dry, starts, watch, heldName } = reqs;
+    const { dry, starts, watch, heldName, update } = reqs;
     const { start, runs } = starts;
     // The one write this window makes: the job watched is the one it started, else the one found.
     const wrote = state.lastAction === 'start' || state.lastAction === 'reset';
@@ -66,7 +80,7 @@ export function useJobResult(
             ? { replacing: { name: heldName, dataTypes: args.types } }
             : {};
     const restoring = state.kind === 'restore' && !busy;
-    const answered = restoring ? restoreAnswer(starts, args.displayName) : undefined;
+    const answered = restoring ? restoreAnswer(starts, args.displayName) : updateAnswer(state, update, args.displayName);
     if (answered !== undefined) return { result: answered, starting: false };
     const result = busy
         ? null

@@ -7,7 +7,8 @@
  *   dry result → `DryRunWindow`   save question → `SaveFirstWindow` (core) over `SaveChangesBody`
  *   run, an end with a problem → `DatapackRunWindow`
  *   a clean end, a start that never ran, no instance → `JobResultWindow`
- *   Restore's check and question → `RestorePhase`
+ *   Restore's check and question → `RestorePhase`; its save question → `RestoreSaveFirst`
+ *   Update's check and summary → `UpdateSummary`; its records → `UpdateRecords`
  *
  * Serves a first install of a pack the project does not hold; a switch over the datapack it holds
  * ("Switch to Bodea?", then "Save Your Changes First?" when it has changes; decisions J2-3, J8-1),
@@ -17,7 +18,9 @@
  * its run as steps; J5-1, J5-2); a restore of the datapack the demo uses ("Restore My Luma" while
  * it checks, "Restore My Luma?" over unsaved edits, "My Luma Is Up to Date" when there is nothing to
  * do, else its run; S8, J4-2 to J4-4); and a job already running when it opened (Undo, an agent's),
- * titled by what that job is for (`jobWords`). Closing a job still running hands it to a progress notification, as every
+ * titled by what that job is for (`jobWords`); and an update of the datapack the demo uses (step-07
+ * U1, J9-2: "Update Luma" while it checks, the ticked table of what it writes, "Updating Luma", "Luma
+ * Updated", or "Luma Is Up to Date"). Closing a job still running hands it to a progress notification, as every
  * progress window does: nothing is cancelled, since there is nothing to cancel with.
  *
  * The phases' windows are their own files: `SummaryPhase`, `RunPhase`, `ResultPhase` (with the
@@ -34,6 +37,7 @@ import {
     RESTORE,
     saveFirstLabel,
     UNINSTALL,
+    UPDATE,
     withoutSavingLabel,
 } from '../../../datapackWords';
 import { packLine } from '../../../packVersions';
@@ -45,11 +49,12 @@ import { DryRunWindow } from './DryRunWindow';
 import { type Opened, runningPurpose } from './jobOpened';
 import { JobResultWindow } from './JobResultWindow';
 import { RecordsWindow } from './RecordsWindow';
-import { RestorePhase } from './RestorePhase';
+import { RestorePhase, RestoreSaveFirst } from './RestorePhase';
 import { ResultPhase } from './ResultPhase';
 import { type RunShape, RunPhase } from './RunPhase';
 import { SaveChangesBody } from './SaveChangesBody';
 import { SummaryPhase, summaryFrame } from './SummaryPhase';
+import { type UpdatePicks, UpdateRecords, UpdateSummary, useUpdatePicks } from './UpdateSummary';
 import { SaveFirstWindow } from '@/core/ui/components/feedback/SaveFirstWindow';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
@@ -72,6 +77,8 @@ export interface DatapackJobWindowProps {
     uninstalling?: { ownNames: string[] };
     /** Restore on the datapack the demo uses (S8): its check, then its question or its run. */
     restoring?: true;
+    /** Update of the datapack the demo uses (step-07 U1): its check, then what it writes, or its result. */
+    updating?: true;
     onClose: () => void;
 }
 
@@ -85,9 +92,10 @@ const NO_NAMES: string[] = [];
 
 /** What the window was opened for. */
 function openedAs(props: DatapackJobWindowProps): Opened {
-    const { startsAt, switching, uninstalling, restoring, displayName, id } = props;
+    const { startsAt, switching, uninstalling, restoring, updating, displayName, id } = props;
     if (startsAt === 'run') return { kind: 'watch', verb: INSTALL, name: displayName };
     if (restoring) return { kind: 'restore', verb: RESTORE, name: displayName };
+    if (updating) return { kind: 'update', verb: UPDATE, name: displayName };
     if (uninstalling) return { kind: 'uninstall', verb: UNINSTALL, name: displayName };
     if (switching?.verb) return { kind: 'switch', verb: INSTALL, name: packLine(displayName, id.version) };
     if (switching) return { kind: 'switch', verb: 'Switch', name: displayName };
@@ -117,6 +125,8 @@ function saveFirstWindow(job: DatapackJob, opened: Opened, close: () => void): R
 /** The windows that leave the summary and come back: Review Records, a Dry Run's answer, the save question. */
 function asideWindow(job: DatapackJob, opened: Opened, close: () => void): React.ReactElement | null {
     const { phase } = job.state;
+    if (phase === 'records' && opened.kind === 'update') return <UpdateRecords job={job} name={opened.name} onClose={close} />;
+    if (phase === 'save-first' && opened.kind === 'restore') return <RestoreSaveFirst job={job} onClose={close} />;
     if (phase === 'records') {
         const records = job.recordsReading ? NO_RECORDS : job.records;
         const { title } = summaryFrame(job, opened, false);
@@ -130,7 +140,7 @@ function asideWindow(job: DatapackJob, opened: Opened, close: () => void): React
 }
 
 /** The one window the job's phase is on. */
-function windowFor(job: DatapackJob, run: RunShape, opened: Opened, close: () => void): React.ReactElement {
+function windowFor(job: DatapackJob, run: RunShape, opened: Opened, close: () => void, picks: UpdatePicks): React.ReactElement {
     const { phase } = job.state;
     const aside = asideWindow(job, opened, close);
     if (aside) return aside;
@@ -140,6 +150,7 @@ function windowFor(job: DatapackJob, run: RunShape, opened: Opened, close: () =>
     if (phase === 'run' || phase === 'ended') return <RunPhase job={job} run={run} opened={opened} onClose={close} />;
     if (opened.kind === 'restore')
         return <RestorePhase job={job} name={opened.name} onClose={close} />;
+    if (opened.kind === 'update') return <UpdateSummary job={job} name={opened.name} picks={picks} onClose={close} />;
     return <SummaryPhase job={job} opened={opened} onClose={close} />;
 }
 
@@ -168,6 +179,10 @@ export function DatapackJobWindow(props: DatapackJobWindowProps): React.ReactEle
         onClose();
     };
 
-    const run = { name: displayName, version: id.version, types, columns };
-    return <DialogContainer onDismiss={close}>{windowFor(job, run, opened, close)}</DialogContainer>;
+    const picks = useUpdatePicks(job.rows);
+    // An update runs only the types ticked, written over the version installed (step-07 U1).
+    const updating = opened.kind === 'update';
+    const ran = updating ? job.rows.filter((row) => picks.ticked.has(row.type)).map((row) => row.type) : types;
+    const run: RunShape = { name: displayName, version: id.version, types: ran, columns, ...(updating ? { updating: true } : {}) };
+    return <DialogContainer onDismiss={close}>{windowFor(job, run, opened, close, picks)}</DialogContainer>;
 }

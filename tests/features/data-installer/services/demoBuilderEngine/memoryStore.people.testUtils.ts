@@ -141,6 +141,19 @@ export function peoplePart(ids: IdSource): StorePart & {
                 },
             ],
             [
+                // An update brings a rule the engine made up to its row (`updateCartRule`), whole.
+                'PUT',
+                /^salesRules\/(\d+)$/u,
+                (body, m) => {
+                    const made: CommerceSalesRule = {
+                        ...(body as { rule: CommerceSalesRule }).rule,
+                        rule_id: Number(m[1]),
+                    };
+                    rules.set(Number(m[1]), made);
+                    return made;
+                },
+            ],
+            [
                 'DELETE',
                 /^salesRules\/(\d+)$/u,
                 (_body, m) => {

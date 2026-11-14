@@ -1,15 +1,14 @@
 /**
- * Restore (Phase 3/5, owner 2026-11-12, J4-3): Commerce goes back to the datapack the demo uses as
- * its latest save, throwing away the SC's Commerce edits made since.
+ * Restore (step-07 U1, J9-5 to J9-7; decisions "Where 'back' goes"): Commerce goes back to a previous
+ * state of the datapack the demo uses, throwing away the SC's Commerce edits made since.
  *
- * The check comes first and writes nothing. It answers one of three ways:
- * - up to date: the target is the version installed and Commerce matches it, so nothing starts;
- * - unsaved edits: without confirm it asks ("Restore My Luma?"), with confirm it starts;
- * - only a newer save: it starts straight away, as nothing of the SC's is lost.
+ * The check comes first and starts nothing. It answers up to date (nothing would change), or the
+ * question: one point for a Demo Builder datapack ("as it ships"); for the SC's own, the original, and
+ * Last Saved too while there are unsaved edits, with those edits by type for Original's save question.
  *
- * A start is one job through the import path: what is installed is uninstalled by its install
- * record and the target installed, with the SC's changes dropped, never saved. A same-version
- * restore is a real replace, not the update in place an ordinary import of the same version does.
+ * A start (confirm) is one job through the import path: what is installed is uninstalled by its
+ * install record and the point installed. The SC's changes are dropped, except Original over unsaved
+ * edits, which must say keep (save first) or drop. A same-version restore is a real replace.
  *
  * The seams: the library's access guard (its client answers the SC's versions and what a save
  * holds), the install record, the store comparison (`previewChanges`, which reads Commerce), and
@@ -64,11 +63,10 @@ import type { DatapackId } from '@/types/datapack';
 import { ErrorCode } from '@/types/errorCodes';
 
 const NAME = 'my-luma-1a2b3c';
-const NEWEST = '20261112-120000';
 const INSTALLED = '20261110-090000';
+const MIDDLE = '20261105-090000';
+const ORIGINAL = '20261103-144000';
 const INSTANCE = 'https://paas.example.test';
-const ASKS =
-    'Commerce goes back to My Luma as you last saved it. Anything you changed since is lost. Send confirm:true to proceed.';
 
 const mockLibrary = resolveDataInstallerAccess as jest.Mock;
 const mockWriteAccess = resolveDatapackAccess as jest.Mock;
@@ -164,6 +162,9 @@ function kind(over: Partial<KindChanges> = {}): KindChanges {
 
 /** Commerce as the installed save left it: nothing to update, add, remove or keep. */
 const MATCHES: ChangePreview = { installed: true, kinds: [kind(), kind({ kind: 'categories' })] };
+/** A Demo Builder datapack: the library lists it as a team pack, saved by its owner. */
+const TEAM = [row(INSTALLED, { team: true, mine: false, displayName: 'Luma' }), row(MIDDLE, { team: true, mine: false })];
+
 /** The SC changed a product in the Admin since the install. */
 const EDITED: ChangePreview = {
     installed: true,
@@ -176,7 +177,7 @@ beforeEach(() => {
         record(pack.version, pack.name)
     );
     settle.mockResolvedValue({});
-    mockLibrary.mockResolvedValue(access([row(NEWEST), row(INSTALLED), row('main')]));
+    mockLibrary.mockResolvedValue(access([row(INSTALLED), row(MIDDLE), row(ORIGINAL), row('main')]));
     mockPreview.mockResolvedValue(MATCHES);
     // The write gate reads through this too; it stays real unless a test hands in a store.
     mockWriteAccess.mockImplementation(
@@ -189,87 +190,85 @@ const restore = (
     payload: object
 ) => importHandlers['restore-datapack'](context, payload);
 
-describe('up to date', () => {
-    it('answers upToDate and starts nothing when the installed save is the newest and Commerce matches it', async () => {
+describe('up to date: nothing would change, so nothing starts', () => {
+    it('a Demo Builder datapack Commerce matches', async () => {
         const { startImport } = happyEngine();
-        mockLibrary.mockResolvedValue(access([row(INSTALLED), row('main')]));
+        mockLibrary.mockResolvedValue(access(TEAM, 'Luma'));
         const { context } = makeImportHarness(projectOn());
 
         const response = await restore(context, { datapackName: NAME });
 
-        expect(response).toEqual({
-            success: true,
-            data: { upToDate: true, displayName: 'My Luma' },
-        });
+        expect(response).toEqual({ success: true, data: { upToDate: true, displayName: 'Luma' } });
         expect(startImport).not.toHaveBeenCalled();
         // The check read the version installed, where it is installed.
-        expect(mockPreview).toHaveBeenCalledWith(
-            expect.anything(),
-            { name: NAME, version: INSTALLED },
-            'library'
-        );
+        expect(mockPreview).toHaveBeenCalledWith(expect.anything(), { name: NAME, version: INSTALLED }, 'library');
     });
 
-    it('is up to date even with confirm: nothing to put back means nothing to run', async () => {
+    it('the SC\'s own datapack whose only save is the one installed, matched, even confirmed', async () => {
         const { startImport } = happyEngine();
         mockLibrary.mockResolvedValue(access([row(INSTALLED)]));
         const { context } = makeImportHarness(projectOn());
 
-        const response = await restore(context, { datapackName: NAME, confirm: true });
-
-        expect(response.data).toEqual({ upToDate: true, displayName: 'My Luma' });
+        expect((await restore(context, { datapackName: NAME })).data).toEqual({ upToDate: true, displayName: 'My Luma' });
+        expect((await restore(context, { datapackName: NAME, confirm: true })).data).toEqual({ upToDate: true, displayName: 'My Luma' });
         expect(startImport).not.toHaveBeenCalled();
     });
 });
 
-describe('unsaved edits', () => {
-    it('without confirm, asks and starts nothing', async () => {
+describe('the question (J9-5 to J9-7): the check starts nothing', () => {
+    it('a Demo Builder datapack with edits has one point, as it ships', async () => {
+        const { startImport } = happyEngine();
+        mockLibrary.mockResolvedValue(access(TEAM, 'Luma'));
+        mockPreview.mockResolvedValue(EDITED);
+        const { context } = makeImportHarness(projectOn());
+
+        const response = await restore(context, { datapackName: NAME });
+
+        expect(response).toEqual({ success: true, data: { asks: true, displayName: 'Luma', changes: [{ kind: 'products', count: 1 }] } });
+        expect(startImport).not.toHaveBeenCalled();
+    });
+
+    it("the SC's own with nothing unsaved has the original alone", async () => {
+        happyEngine();
+        const { context } = makeImportHarness(projectOn());
+
+        const response = await restore(context, { datapackName: NAME });
+
+        expect(response.data).toEqual({ asks: true, displayName: 'My Luma', own: { original: ORIGINAL } });
+    });
+
+    it("the SC's own with unsaved edits has Last Saved and the original, and the edits by type", async () => {
         const { startImport } = happyEngine();
         mockPreview.mockResolvedValue(EDITED);
         const { context } = makeImportHarness(projectOn());
 
         const response = await restore(context, { datapackName: NAME });
 
-        expect(response).toMatchObject({
-            success: false,
-            code: ErrorCode.CHANGES_NEED_ANSWER,
-            error: ASKS,
-            data: { asks: true, displayName: 'My Luma' },
+        expect(response.data).toEqual({
+            asks: true,
+            displayName: 'My Luma',
+            own: { lastSaved: INSTALLED, original: ORIGINAL },
+            changes: [{ kind: 'products', count: 1 }],
         });
         expect(startImport).not.toHaveBeenCalled();
     });
+});
 
-    it('asks on the same save too: Commerce differs from what it put there', async () => {
+describe('a start', () => {
+    const started = (startImport: jest.Mock) => startImport.mock.calls[0]?.[0];
+
+    it('a Demo Builder datapack: the version installed, uninstalled and installed again, edits dropped', async () => {
         const { startImport } = happyEngine();
-        mockLibrary.mockResolvedValue(access([row(INSTALLED)]));
-        mockPreview.mockResolvedValue(EDITED);
-        const { context } = makeImportHarness(projectOn());
-
-        const response = await restore(context, { datapackName: NAME });
-
-        expect(response.data).toEqual({ asks: true, displayName: 'My Luma' });
-        expect(startImport).not.toHaveBeenCalled();
-    });
-
-    it('with confirm, starts: the newest save over the installed one, changes dropped', async () => {
-        const { startImport } = happyEngine();
+        mockLibrary.mockResolvedValue(access(TEAM, 'Luma'));
         mockPreview.mockResolvedValue(EDITED);
         const { context } = makeImportHarness(projectOn());
 
         const response = await restore(context, { datapackName: NAME, confirm: true });
 
-        expect(response.success).toBe(true);
-        expect(response.data).toMatchObject({
-            activationId: 'act-1',
-            target: { name: NAME, version: NEWEST },
-        });
-        expect(settle).toHaveBeenCalledWith(
-            context,
-            expect.objectContaining({ pack: { name: NAME, version: INSTALLED }, answer: 'drop' }),
-            expect.any(Function)
-        );
+        expect(response.data).toMatchObject({ activationId: 'act-1', target: { name: NAME, version: INSTALLED } });
+        expect(settle).toHaveBeenCalledWith(context, expect.objectContaining({ pack: { name: NAME, version: INSTALLED }, answer: 'drop' }), expect.any(Function));
         expect(startImport).toHaveBeenCalledWith({
-            id: { name: NAME, version: NEWEST },
+            id: { name: NAME, version: INSTALLED },
             source: 'library',
             commerceInstance: INSTANCE,
             dataTypes: ['categories', 'products'],
@@ -277,99 +276,86 @@ describe('unsaved edits', () => {
             replaces: { name: NAME, version: INSTALLED },
         });
     });
-});
 
-describe('only a newer save', () => {
-    it('starts straight away without confirm, as nothing of the SC is lost', async () => {
+    // Review U1-4: the consent cannot name a point the agent did not choose, so none is picked for it.
+    it.each([
+        ['over unsaved edits', EDITED],
+        ['with nothing unsaved', MATCHES],
+    ])("the SC's own %s, confirmed with no point, answers the question and starts nothing", async (_label, preview) => {
         const { startImport } = happyEngine();
+        mockPreview.mockResolvedValue(preview);
         const { context } = makeImportHarness(projectOn());
 
-        const response = await restore(context, { datapackName: NAME });
+        const response = await restore(context, { datapackName: NAME, confirm: true });
 
-        expect(response.success).toBe(true);
-        expect(startImport).toHaveBeenCalledWith(
-            expect.objectContaining({
-                id: { name: NAME, version: NEWEST },
-                replaces: { name: NAME, version: INSTALLED },
-            })
-        );
+        expect(response).toMatchObject({ success: true, data: { asks: true, own: { original: ORIGINAL } } });
+        expect(startImport).not.toHaveBeenCalled();
     });
 
-    // Step 03, S2: the job's record says it is a restore, for the window and agents.
-    it('records the job as a restore', async () => {
-        happyEngine();
-        const { context } = makeImportHarness(projectOn());
-
-        await restore(context, { datapackName: NAME });
-
-        const status = await importHandlers['get-datapack-import-status'](context, {});
-        expect(status.data).toMatchObject({ purpose: 'restore' });
-    });
-});
-
-describe('a same-version restore is a real replace', () => {
-    it('uninstalls the version installed and installs it again, where an import of it would update in place', async () => {
+    it("the SC's own, confirmed to Last Saved over unsaved edits, drops them", async () => {
         const { startImport } = happyEngine();
-        mockLibrary.mockResolvedValue(access([row(INSTALLED)]));
         mockPreview.mockResolvedValue(EDITED);
         const { context } = makeImportHarness(projectOn());
 
-        await restore(context, { datapackName: NAME, confirm: true });
+        await restore(context, { datapackName: NAME, confirm: true, to: 'lastSaved' });
 
-        expect(startImport).toHaveBeenCalledWith(
-            expect.objectContaining({
-                id: { name: NAME, version: INSTALLED },
-                replaces: { name: NAME, version: INSTALLED },
-            })
-        );
-        expect(settle).toHaveBeenCalledWith(
-            context,
-            expect.objectContaining({ answer: 'drop' }),
-            expect.any(Function)
-        );
+        expect(started(startImport)).toMatchObject({ id: { name: NAME, version: INSTALLED }, replaces: { name: NAME, version: INSTALLED } });
+        expect(settle).toHaveBeenCalledWith(context, expect.objectContaining({ answer: 'drop' }), expect.any(Function));
     });
 
-    it('a team pack restores the version installed, read through the library', async () => {
+    it('Original over unsaved edits with no answer about them asks, and starts nothing', async () => {
         const { startImport } = happyEngine();
-        const team = [row('main', { team: true, mine: false, displayName: 'Bodea' })];
-        mockLibrary.mockResolvedValue(access(team, 'Bodea'));
-        mockPreview.mockResolvedValue(EDITED);
-        const { context } = makeImportHarness(
-            projectOn({ name: NAME, version: 'main', store: 'library' })
-        );
-
-        await restore(context, { datapackName: NAME, confirm: true });
-
-        expect(startImport).toHaveBeenCalledWith(
-            expect.objectContaining({
-                id: { name: NAME, version: 'main' },
-                replaces: { name: NAME, version: 'main' },
-            })
-        );
-    });
-
-    it("a colleague's save restores the save installed, not their newest", async () => {
-        const { startImport } = happyEngine();
-        mockLibrary.mockResolvedValue(
-            access([row(NEWEST, { mine: false }), row(INSTALLED, { mine: false })])
-        );
         mockPreview.mockResolvedValue(EDITED);
         const { context } = makeImportHarness(projectOn());
 
-        await restore(context, { datapackName: NAME, confirm: true });
+        const response = await restore(context, { datapackName: NAME, confirm: true, to: 'original' });
 
-        expect(startImport).toHaveBeenCalledWith(
-            expect.objectContaining({ id: { name: NAME, version: INSTALLED } })
-        );
+        expect(response).toMatchObject({ success: false, code: ErrorCode.CHANGES_NEED_ANSWER, data: { asks: true } });
+        expect(response.error).toContain('Send changes: keep');
+        expect(startImport).not.toHaveBeenCalled();
+    });
+
+    it.each([
+        ['keep', 'keep'],
+        ['drop', 'drop'],
+    ])('Original over unsaved edits with changes: %s installs the original, settling them that way', async (changes, answer) => {
+        const { startImport } = happyEngine();
+        mockPreview.mockResolvedValue(EDITED);
+        const { context } = makeImportHarness(projectOn());
+
+        const response = await restore(context, { datapackName: NAME, confirm: true, to: 'original', changes });
+
+        expect(response.data).toMatchObject({ target: { name: NAME, version: ORIGINAL } });
+        expect(started(startImport)).toMatchObject({ id: { name: NAME, version: ORIGINAL } });
+        expect(settle).toHaveBeenCalledWith(context, expect.objectContaining({ answer }), expect.any(Function));
+    });
+
+    it("the SC's own with nothing unsaved, confirmed to its original, goes there asking nothing more", async () => {
+        const { startImport } = happyEngine();
+        const { context } = makeImportHarness(projectOn());
+
+        await restore(context, { datapackName: NAME, confirm: true, to: 'original' });
+
+        expect(started(startImport)).toMatchObject({ id: { name: NAME, version: ORIGINAL } });
+        expect(settle).toHaveBeenCalledWith(context, expect.objectContaining({ answer: 'drop' }), expect.any(Function));
+    });
+
+    it('refuses a point on a datapack that is not the SC\'s own', async () => {
+        const { startImport } = happyEngine();
+        mockLibrary.mockResolvedValue(access(TEAM, 'Luma'));
+        const { context } = makeImportHarness(projectOn());
+
+        const response = await restore(context, { datapackName: NAME, confirm: true, to: 'original' });
+
+        expect(response).toMatchObject({ success: false, code: ErrorCode.INVALID_OPERATION });
+        expect(startImport).not.toHaveBeenCalled();
     });
 
     it('a Data Installer pack restores the version installed, read through the write access', async () => {
         const { startImport } = happyEngine();
         mockWriteAccess.mockResolvedValue(access([], 'Luma'));
         mockPreview.mockResolvedValue(EDITED);
-        const { context } = makeImportHarness(
-            projectOn({ name: 'luma', version: 'eds-compatible' })
-        );
+        const { context } = makeImportHarness(projectOn({ name: 'luma', version: 'eds-compatible' }));
 
         const response = await restore(context, { datapackName: 'luma' });
 
@@ -384,6 +370,17 @@ describe('a same-version restore is a real replace', () => {
         );
         expect(mockLibrary).not.toHaveBeenCalled();
     });
+
+    // Step 03, S2: the job's record says it is a restore, for the window and agents.
+    it('records the job as a restore', async () => {
+        happyEngine();
+        const { context } = makeImportHarness(projectOn());
+
+        await restore(context, { datapackName: NAME, confirm: true, to: 'original' });
+
+        const status = await importHandlers['get-datapack-import-status'](context, {});
+        expect(status.data).toMatchObject({ purpose: 'restore' });
+    });
 });
 
 describe('the agent waits', () => {
@@ -391,7 +388,7 @@ describe('the agent waits', () => {
         happyEngine();
         const { context } = makeImportHarness(projectOn());
 
-        const response = await restore(context, { datapackName: NAME, confirm: true, waitSeconds: 1 });
+        const response = await restore(context, { datapackName: NAME, confirm: true, to: 'original', waitSeconds: 1 });
 
         expect(response.data).toHaveProperty('job');
     });
@@ -459,7 +456,7 @@ describe('refusals', () => {
         const { startImport } = happyEngine();
         const { context } = makeImportHarness(projectOn());
 
-        await restore(context, { datapackName: NAME, confirm: true });
+        await restore(context, { datapackName: NAME, confirm: true, to: 'original' });
 
         expect(startImport).toHaveBeenCalledTimes(1);
     });

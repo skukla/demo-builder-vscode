@@ -17,6 +17,9 @@
  * the demo uses (S8), whose check IS its start (`restore-datapack` without `confirm` starts when
  * nothing of the SC's would be lost), so it is keyed on the start from the moment it opens, and the
  * check ends on a result (up to date, refused), the question "Restore My Luma?", or the run; and
+ * `update` (step-07 U1, J9-2), from its check (`update-datapack` without `confirm`), which ends on
+ * the up-to-date result or the summary of what changed, its types ticked, with Review Records and no
+ * Dry Run; its restore's question may go to the save question (J9-7: Original over unsaved edits); and
  * `watch`, a job already running when the window opened (Undo, an agent's), from its run.
  *
  * @module features/data-installer/ui/components/job/datapackJob
@@ -25,7 +28,7 @@
 import type { LastAction } from '../importResult';
 
 /** What the window was opened for. */
-export type JobKind = 'install' | 'switch' | 'uninstall' | 'restore' | 'watch';
+export type JobKind = 'install' | 'switch' | 'uninstall' | 'restore' | 'update' | 'watch';
 
 /** The window on screen. */
 export type JobPhase =
@@ -35,7 +38,7 @@ export type JobPhase =
     | 'dry-wait'
     | 'dry-result'
     | 'save-first'
-    /** Restore's question over unsaved edits. */
+    /** Restore's question: where Commerce goes back to. */
     | 'question'
     | 'run'
     | 'ended'
@@ -85,7 +88,7 @@ const FROM: Record<JobEvent['type'], readonly JobPhase[]> = {
     'dry-run': ['summary', 'dry-result'],
     'dry-answered': ['dry-wait'],
     start: ['summary', 'dry-result', 'save-first', 'question', 'ended'],
-    'save-first': ['summary'],
+    'save-first': ['summary', 'question'],
     'needs-answer': ['run'],
     asks: ['check'],
     ended: ['run', 'check'],
@@ -119,10 +122,15 @@ function next(state: JobState, event: JobEvent): JobState {
     }
 }
 
-/** The kinds that ask "Save Your Changes First?": those that uninstall the held datapack. */
-const ASKS_SAVE: readonly JobKind[] = ['switch', 'uninstall'];
+/**
+ * The kinds that ask "Save Your Changes First?": those that uninstall the held datapack, and a restore
+ * to its original over unsaved edits (J9-7), from its question.
+ */
+const ASKS_SAVE: readonly JobKind[] = ['switch', 'uninstall', 'restore'];
 /** What an uninstall's question does not offer. */
 const NOT_UNINSTALL: ReadonlyArray<JobEvent['type']> = ['review', 'dry-run'];
+/** What an update's summary does not offer: it writes only what changed, so there is nothing to dry-run. */
+const NOT_UPDATE: ReadonlyArray<JobEvent['type']> = ['dry-run', 'save-first', 'needs-answer'];
 /** What only a restore's check and question move on. */
 const RESTORE_ONLY: ReadonlyArray<JobEvent['type']> = ['asks'];
 /** What a restore never moves on: it has no summary, and no Retry or Back after a refusal. */
@@ -131,8 +139,10 @@ const NOT_RESTORE: ReadonlyArray<JobEvent['type']> = ['checked', 'no-instance', 
 /** Whether the job's kind takes the event: what is one kind's alone moves no other. */
 function kindTakes(state: JobState, event: JobEvent): boolean {
     const { kind, phase } = state;
+    if (kind === 'update' && NOT_UPDATE.includes(event.type)) return false;
     if (kind !== 'restore') {
-        const endsAtCheck = event.type === 'ended' && phase === 'check';
+        // An update's check may end on its result: nothing left to apply (J9-4).
+        const endsAtCheck = event.type === 'ended' && phase === 'check' && kind !== 'update';
         return !RESTORE_ONLY.includes(event.type) && !endsAtCheck;
     }
     if (NOT_RESTORE.includes(event.type)) return false;
@@ -142,8 +152,9 @@ function kindTakes(state: JobState, event: JobEvent): boolean {
 /**
  * The job after `event`; the same object when the event does not belong to the phase on screen.
  * A job opened running has no summary behind it, so its Back moves nothing; only what uninstalls
- * the held datapack asks the save question; an uninstall has no Review Records and no Dry Run; only
- * a restore asks its question or ends at its check, and it has no summary, Back or Retry.
+ * the held datapack, or restores to the original over edits, asks the save question; an uninstall has
+ * no Review Records and no Dry Run; an update no Dry Run; only a restore asks its question, a restore
+ * or an update ends at its check, and a restore has no summary, Back or Retry.
  */
 export function datapackJob(state: JobState, event: JobEvent): JobState {
     if (!FROM[event.type].includes(state.phase)) return state;

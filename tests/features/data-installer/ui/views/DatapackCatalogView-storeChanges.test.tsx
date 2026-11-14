@@ -28,10 +28,10 @@ const MINE = [OLDER, NEWER, ...CATALOG];
 type Held = { name: string; version: string; store?: 'library' | 'installer' } | undefined;
 
 /** The catalog, the open project's recorded pack, and the flyout's detail for whichever card opens. */
-function store(datapack: Held, items: DatapackSummary[] = MINE, installerOn = false, installedAt?: string) {
+function store(datapack: Held, items: DatapackSummary[] = MINE, installerOn = false, installedAt?: string, updateBehind = false) {
     mockRequest.mockImplementation((type: string, payload?: { datapackName?: string; version?: string }) => {
         if (type === 'find-datapacks') return Promise.resolve({ success: true, data: { items, count: items.length, total: items.length, ...(installerOn ? { installerOn } : {}) } });
-        if (type === 'get-datapack-import-target') return Promise.resolve({ success: true, data: { instance: 'inst', projectName: 'acme', datapack, ...(installedAt ? { installedAt } : {}) } });
+        if (type === 'get-datapack-import-target') return Promise.resolve({ success: true, data: { instance: 'inst', projectName: 'acme', datapack, ...(installedAt ? { installedAt } : {}), ...(updateBehind ? { updateBehind } : {}) } });
         if (type === 'get-datapack-detail') {
             const detail = items.find((item) => item.id.name === payload?.datapackName && item.id.version === payload.version) ?? items[0];
             return Promise.resolve({ success: true, data: { detail: { store: 'installer', ...detail }, inventory: INVENTORY_COMPLETE } });
@@ -75,8 +75,8 @@ describe("the demo's datapack in the library", () => {
         expect(screen.queryByRole('region', { name: "This Demo's Datapack" })).not.toBeInTheDocument();
     });
 
-    // Owner, 2026-11-09 (walk F99): a pack of saves is one thing, so no version picker. Step-04 S6
-    // (J4-1): a later save is what Restore installs, so the amber dot says "Newer save available".
+    // Owner, 2026-11-09 (walk F99): a pack of saves is one thing, so no version picker. Step-07 U1
+    // (J9-1): a later save is what Update installs, so the amber dot says "Newer version available".
     it('shows the save in use with no version picker, and the amber dot while a later save exists', async () => {
         const items = [{ ...OLDER, createdAt: '2026-11-01T09:00:00Z' }, { ...NEWER, createdAt: '2026-11-03T12:00:00Z' }];
         store({ name: 'acme-1a2b3c', version: OLDER.id.version, store: 'library' }, items, false, AT);
@@ -84,20 +84,34 @@ describe("the demo's datapack in the library", () => {
 
         expect(within(card('acme-1a2b3c')).getByText(`Saved ${versionLabel(OLDER.id.version)}`)).toBeInTheDocument();
         expect(within(card('acme-1a2b3c')).queryByRole('button', { name: /Version of/u })).not.toBeInTheDocument();
-        expect(within(card('acme-1a2b3c')).getByRole('button', { name: 'Newer save available' })).toBeInTheDocument();
+        expect(within(card('acme-1a2b3c')).getByRole('button', { name: 'Newer version available' })).toBeInTheDocument();
     });
 
     it('CONTROL: no dot when the save in use is the newest', async () => {
         store({ name: 'acme-1a2b3c', version: NEWER.id.version, store: 'library' }, MINE, false, AT);
         await renderView();
-        expect(within(card('acme-1a2b3c')).queryByRole('button', { name: 'Newer save available' })).not.toBeInTheDocument();
+        expect(within(card('acme-1a2b3c')).queryByRole('button', { name: 'Newer version available' })).not.toBeInTheDocument();
+    });
+
+    // J9-1: a Demo Builder datapack updated in the library lights the dot too (J4-1 left it dark).
+    it('lights the dot on a Demo Builder datapack with a newer version', async () => {
+        const team = (version: string) => makeSummary('luma', version, { displayName: 'Luma', store: 'library', team: true });
+        store({ name: 'luma', version: '20261101-090000', store: 'library' }, [team('20261101-090000'), team('20261110-091500'), ...CATALOG], false, AT);
+        await renderView();
+        expect(within(card('luma')).getByRole('button', { name: 'Newer version available' })).toBeInTheDocument();
+    });
+
+    it('keeps the dot while an update left data types on the older version', async () => {
+        store({ name: 'acme-1a2b3c', version: NEWER.id.version, store: 'library' }, MINE, false, AT, true);
+        await renderView();
+        expect(within(card('acme-1a2b3c')).getByRole('button', { name: 'Newer version available' })).toBeInTheDocument();
     });
 
     it('CONTROL: no dot without an install record, though a later save exists', async () => {
         store({ name: 'acme-1a2b3c', version: OLDER.id.version, store: 'library' });
         await renderView();
         expect(within(card('acme-1a2b3c')).getByTestId('datapack-card-project-check')).toBeInTheDocument();
-        expect(within(card('acme-1a2b3c')).queryByRole('button', { name: 'Newer save available' })).not.toBeInTheDocument();
+        expect(within(card('acme-1a2b3c')).queryByRole('button', { name: 'Newer version available' })).not.toBeInTheDocument();
     });
 });
 
@@ -117,7 +131,7 @@ async function inWindow(title: string | RegExp): Promise<ReturnType<typeof withi
 // into a new pack of theirs.
 describe('saving the demo\'s datapack', () => {
     it("offers no save in the flyout of the demo's own pack: Restore and More, no Copy", async () => {
-        store(OWN, MINE, true, AT);
+        store({ ...OWN, version: NEWER.id.version }, MINE, true, AT);
         await renderView();
         await press(card('acme-1a2b3c'));
 
@@ -126,6 +140,19 @@ describe('saving the demo\'s datapack', () => {
         expect(inFlyout().queryByRole('button', { name: /^Save/u })).not.toBeInTheDocument();
         // Owner, 2026-11-06: Copy to the Data Installer is off until our accounts can write to it.
         expect(screen.queryByRole('button', { name: 'Copy to the Data Installer' })).not.toBeInTheDocument();
+    });
+
+    // J9-1: with a newer version waiting, Update is the main button, and Restore is nowhere.
+    it("makes Update the main button while a newer version waits, with no Restore anywhere", async () => {
+        store(OWN, MINE, false, AT);
+        await renderView();
+        await press(card('acme-1a2b3c'));
+
+        expect(await inFlyout().findByRole('button', { name: 'Update Acme Bodea' })).toBeInTheDocument();
+        expect(inFlyout().queryByRole('button', { name: /Restore/u })).not.toBeInTheDocument();
+        await press(inFlyout().getByRole('button', { name: /More actions/u }));
+        expect(screen.queryByRole('menuitem', { name: /Restore/u })).not.toBeInTheDocument();
+        expect(screen.getByRole('menuitem', { name: 'Uninstall' })).toBeInTheDocument();
     });
 
     it("offers no save in the flyout of a team pack the demo uses", async () => {
