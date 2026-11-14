@@ -388,6 +388,18 @@ An audit found five walk answers that contradicted earlier decisions. The owner'
   and a line does not explain the button beside it).
 - With an update available, the flyout's main button is "Update Luma"; Restore is not the main action
   then. Owner: "Update means apply what changed. Restore means go back to a previous state."
+- Where "back" goes, each with its own name (owner, 2026-11-14, "following the way software works
+  today"), every action shown only when it means something:
+  - **Discard Changes**: back to the last save (today's Restore, renamed). Only with unsaved edits.
+  - **Undo Last Save**: back to the save before (as built).
+  - **Restore <pack>**: back to the datapack's ORIGINAL state. On a Demo Builder datapack: as it ships.
+    On the SC's own (My Luma): My Luma's first state. With unsaved edits it asks "Save Your Changes
+    First?" (saving keeps the edits as a newer save). The SC's own datapack therefore keeps its first
+    state for good, beside the two newest saves. To reach the pack My Luma came from (Luma), Switch to
+    Luma. Replaces J4-3's "no Save Changes First" and Restore-as-last-save.
+  - **Update <pack>**: apply what changed in the library, types chosen.
+  The destination is said on the button ("Restore My Luma"), in the window's one line, and in the
+  result title. One main button by situation; the rest in More. To be walked in prototype J9 first.
 - Already on track: the reset's "Content kept" row is built amber; Q6 makes kept-on-purpose green
   (slice I3).
 
