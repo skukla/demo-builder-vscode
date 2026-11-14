@@ -388,18 +388,19 @@ An audit found five walk answers that contradicted earlier decisions. The owner'
   and a line does not explain the button beside it).
 - With an update available, the flyout's main button is "Update Luma"; Restore is not the main action
   then. Owner: "Update means apply what changed. Restore means go back to a previous state."
-- Where "back" goes, each with its own name (owner, 2026-11-14, "following the way software works
-  today"), every action shown only when it means something:
-  - **Discard Changes**: back to the last save (today's Restore, renamed). Only with unsaved edits.
-  - **Undo Last Save**: back to the save before (as built).
-  - **Restore <pack>**: back to the datapack's ORIGINAL state. On a Demo Builder datapack: as it ships.
-    On the SC's own (My Luma): My Luma's first state. With unsaved edits it asks "Save Your Changes
-    First?" (saving keeps the edits as a newer save). The SC's own datapack therefore keeps its first
-    state for good, beside the two newest saves. To reach the pack My Luma came from (Luma), Switch to
-    Luma. Replaces J4-3's "no Save Changes First" and Restore-as-last-save.
-  - **Update <pack>**: apply what changed in the library, types chosen.
-  The destination is said on the button ("Restore My Luma"), in the window's one line, and in the
-  result title. One main button by situation; the rest in More. To be walked in prototype J9 first.
+- Where "back" goes (owner, 2026-11-14, confirmed after two rounds; "following the way software works
+  today"; the words are the pair Word, Photoshop and Apple Photos use):
+  - One action, **Restore <pack>**. On the SC's own datapack its window offers "Last Saved, <date>"
+    (only when there are unsaved edits; it throws them away) and "Original, <date>" (the datapack's
+    first state). On a Demo Builder datapack there is one point: "Commerce goes back to Luma as it
+    ships."
+  - "Save Your Changes First?" comes only when Original is picked and there are unsaved edits (saving
+    before Last Saved would leave nothing to restore).
+  - No separate Discard Changes: Restore's Last Saved is that job.
+  - Flyout: Update <pack> is the main button when the library copy is newer, otherwise Restore <pack>;
+    Undo Last Save and Uninstall in More. To reach the pack My Luma came from, Switch to Luma.
+  - The SC's own datapack keeps its original for good, beside the two newest saves.
+  - Replaces J4-3 (Restore as last save, no save question). Prototype J9 first; build after the walk.
 - Already on track: the reset's "Content kept" row is built amber; Q6 makes kept-on-purpose green
   (slice I3).
 
