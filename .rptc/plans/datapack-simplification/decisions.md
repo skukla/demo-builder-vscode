@@ -381,6 +381,13 @@ An audit found five walk answers that contradicted earlier decisions. The owner'
   prototypes, not code).
 - Put back in the plan: the batch window growing when its questions replace the wait (319px to 446px,
   rule 14) goes into the batch-run slice; the always-save setting's description is rewritten.
+- The save window's "My Luma is saved first (your setting)." line goes (J2-3: the setting was
+  removed from the save question as clutter; rule 3: say a fact once). The run row's "Saved to My Luma."
+  stays as the one place it is said, after the fact. Undoes part of D3 (built in 2a7ab54c9).
+- The stopped-switch line is "My Luma was uninstalled." only (rules 5 and 6: the title names the goal,
+  and a line does not explain the button beside it).
+- With an update available, the flyout's main button is "Update Luma"; Restore is not the main action
+  then. Owner: "Update means apply what changed. Restore means go back to a previous state."
 - Already on track: the reset's "Content kept" row is built amber; Q6 makes kept-on-purpose green
   (slice I3).
 

@@ -225,6 +225,11 @@ See decisions.md "Back on track". Plan changes:
   install record's fingerprints) before building. Live cycle owed.
 - Agents keep chosen-type installs (step-03 Q2 stands), stated in the guide with the additive use case.
 - Win1 also fixes the batch window growing when its questions replace the wait (319px to 446px).
+- D3 follow-up: remove the save window's always-save line (`savedBySetting`, `savedFirst`); keep the
+  run row's "Saved to My Luma.".
+- I2: the stopped-switch line is "My Luma was uninstalled." only.
+- U1: with an update available, "Update Luma" is the flyout's main button (owner: Update applies what
+  changed; Restore goes back to a previous state).
 - D-follow-up: rewrite `demoBuilder.dataInstaller.changesOnRemoval`'s description (words to the owner).
 
 ## Risks
