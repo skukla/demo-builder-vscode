@@ -456,7 +456,7 @@ An audit found five walk answers that contradicted earlier decisions. The owner'
   orders end Closed, nothing reaches an ERP, a second Clear changes nothing (J1-3b build item).
 - **One-project reset and delete still use VS Code dialogs today**. Decided to become the batch
   window titled by name (J7-1); the prototype still shows the product's "Reset 1 Project?" title.
-- **The batch window grows when its questions replace the read wait.** Measured in the J7
+- **RESOLVED (c65799909, 2026-11-13; confirmed 2026-11-14): the batch window grows when its questions replace the read wait.** Measured in the J7
   prototype, which renders the product's own `ProjectsBatchModal`: Reset 3 Projects opened at 319px
   and grew to 446px (the panel's size readout, 2026-11-12). A rule 14 failure in the product, to fix
   in the build.

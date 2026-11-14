@@ -257,6 +257,14 @@ respects other projects' records without reading their instance (only Clear Comm
 Owed at the screenshot pass: the Configure confirm's words, Uninstall First red or blue, Edit's VS Code
 dialog with the same words.
 
+## Built (2026-11-14)
+Every slice committed, each through the full gate; store-writing groups reviewed independently first:
+D1-D5 2a7ab54c9; E1/E2 bb2d03e27; D6 02571298f; U1 02e089000; I1-I3 c05614c05; F1/F2 34425b608;
+P1/P3-P5/A1/A2 0243361d6; W1/P6 5bc1f4b29; A4 + clickable step + screen mark 742fbd56c; A3 cc86048f1 and
+18a2b80a2; Win1-Win5 4aaa357d4 and fc07b2d10; af1d6622d (empty dialogs over the projects list, found by
+the visual baseline). Visual baseline vs the last push (b79801c87): 8 surfaces x 2 themes x 3 widths,
+zero differences at af1d6622d. Owed: push (owner go), live cycles, screenshots.
+
 ## Risks
 - Cloud operations: E1, E2, F2's install half; live cycles with the owner's go, through MCP tools.
 - Reversibility: F2's Delete removes exactly what the load created.
