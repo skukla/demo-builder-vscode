@@ -11,7 +11,7 @@ import { settle } from '../../../../../helpers/reactSettle';
 
 // Below the mock on purpose (webview-test-authoring §3).
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import type { StoreItemPage } from '@/features/data-installer/pickableKinds';
+import { PICKABLE_KINDS, type StoreItemPage } from '@/features/data-installer/pickableKinds';
 import { type CreateDatapackFlowArgs, useCreateDatapackFlow } from '@/features/data-installer/ui/components/create-flow/useCreateDatapackFlow';
 import type { TargetWebsite } from '@/features/data-installer/ui/hooks/useAcoExportChoice';
 
@@ -102,7 +102,7 @@ describe('the store route', () => {
         await step(() => result.current.setName('Hand Built'));
         await step(() => result.current.main.onPress());
 
-        expect(onSave).toHaveBeenCalledWith({ products: ['VR-Rack', 'Tray'], cart_rules: ['7'] }, 'Hand Built');
+        expect(onSave).toHaveBeenCalledWith({ picks: { products: ['VR-Rack', 'Tray'], cart_rules: ['7'] }, wholeKinds: [] }, 'Hand Built');
     });
 
     // Overview 7b: Create Datapack's picker starts with everything ticked, so Next is on at once.
@@ -118,8 +118,9 @@ describe('the store route', () => {
         expect(result.current.main).toMatchObject({ label: 'Next', isDisabled: false });
     });
 
-    // Everything ticked is the kind-level "all": nothing is read for it until Next needs the ids.
-    it('reads no kind for everything ticked until Next, then reads each one not yet read', async () => {
+    // Everything ticked is the kind-level "all": nothing is read for it, even on Next. The save lists
+    // each whole kind itself (step-07 E2, S3-a).
+    it('reads no kind for everything ticked, not even on Next, and hands every kind on whole', async () => {
         const answering = mockRequest.getMockImplementation();
         mockRequest.mockImplementation(async (type: string, payload?: { dataType?: string }) => {
             if (type !== 'list-datapack-export-items') return answering?.(type, payload);
@@ -131,11 +132,25 @@ describe('the store route', () => {
 
         await step(() => result.current.main.onPress());
         expect(result.current.stage).toBe('create-name');
-        expect(lists()).toHaveLength(10);
+        expect(lists()).toHaveLength(0);
 
         await step(() => result.current.setName('Everything'));
         await step(() => result.current.main.onPress());
-        expect(onSave).toHaveBeenCalledWith({ products: ['VR-Rack'] }, 'Everything');
+        expect(onSave).toHaveBeenCalledWith({ picks: {}, wholeKinds: PICKABLE_KINDS }, 'Everything');
+    });
+
+    // step-07 E2 (review, 2026-11-14): a kind ticked whole whose pane read failed is still ticked,
+    // so it is handed on; the save lists it and stops, writing nothing, if it still cannot.
+    it('hands on a kind ticked whole whose pane read failed, leaving the save to decide', async () => {
+        const { result, step, onSave } = await onThePicks();
+        await step(() => result.current.store.answered('customers', null));
+        expect(result.current.main).toMatchObject({ label: 'Next', isDisabled: false });
+
+        await step(() => result.current.main.onPress());
+        await step(() => result.current.setName('Everything'));
+        await step(() => result.current.main.onPress());
+
+        expect(onSave.mock.calls[0][0].wholeKinds).toContain('customers');
     });
 
     it('moves to the next kind when a read leaves nothing to select, and keeps the answer', async () => {
@@ -206,7 +221,7 @@ describe('naming the new pack', () => {
 
         await step(() => result.current.main.onPress());
 
-        expect(onSave).toHaveBeenCalledWith({ products: ['VR-Rack'] }, 'Hand Built');
+        expect(onSave).toHaveBeenCalledWith({ picks: { products: ['VR-Rack'] }, wholeKinds: [] }, 'Hand Built');
     });
 
     // Save As New's rules (`nameProblem`): an empty name, or one of the SC's own, is refused on screen.

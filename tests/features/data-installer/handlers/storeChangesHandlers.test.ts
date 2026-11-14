@@ -13,6 +13,10 @@ jest.mock('@/features/data-installer/services/demoBuilderEngine/storeChanges', (
     ...jest.requireActual('@/features/data-installer/services/demoBuilderEngine/storeChanges'),
     previewChanges: jest.fn(),
 }));
+jest.mock('@/features/data-installer/services/demoBuilderEngine/demoAdditions', () => ({
+    ...jest.requireActual('@/features/data-installer/services/demoBuilderEngine/demoAdditions'),
+    addedSinceInstall: jest.fn(),
+}));
 jest.mock('@/features/data-installer/services/demoBuilderEngine/verifyInstall', () => ({
     ...jest.requireActual('@/features/data-installer/services/demoBuilderEngine/verifyInstall'),
     verifyPackInstall: jest.fn(),
@@ -46,6 +50,7 @@ import { DataInstallerClient } from '@/features/data-installer/services/dataInst
 import { DatapackStoreWriter } from '@/features/data-installer/services/datapackStoreWriter';
 import { writePackToStore } from '@/features/data-installer/services/datapackTransfer';
 import type { DatapackFile } from '@/features/data-installer/services/datapackZip';
+import { addedSinceInstall } from '@/features/data-installer/services/demoBuilderEngine/demoAdditions';
 import { saveStoreChanges } from '@/features/data-installer/services/demoBuilderEngine/saveStore';
 import { StoreChangesError } from '@/features/data-installer/services/demoBuilderEngine/storeAccess';
 import { previewChanges } from '@/features/data-installer/services/demoBuilderEngine/storeChanges';
@@ -58,6 +63,7 @@ import { SAVE_WRITING } from '../../../helpers/operationRowFixtures';
 const mockedGuard = orgGuard as jest.MockedFunction<typeof orgGuard>;
 const mockedAccess = resolveDataInstallerAccess as jest.MockedFunction<typeof resolveDataInstallerAccess>;
 const mockedPreview = previewChanges as jest.MockedFunction<typeof previewChanges>;
+const mockedAdded = addedSinceInstall as jest.MockedFunction<typeof addedSinceInstall>;
 const mockedVerify = verifyPackInstall as jest.MockedFunction<typeof verifyPackInstall>;
 const mockedSave = saveStoreChanges as jest.MockedFunction<typeof saveStoreChanges>;
 const mockedWrite = writePackToStore as jest.MockedFunction<typeof writePackToStore>;
@@ -120,6 +126,51 @@ describe('preview-datapack-changes', () => {
             success: true,
             data: { datapackName: 'bodea', version: 'main', installed: true, kinds: [], kept: 'Kept 1 item changed in the Admin.' },
         });
+    });
+
+    // step-07 E1 (P4-Q3): asked for, what was added by hand since the install, from the same store.
+    it('answers what was added by hand since the install, by type, when asked, read from the store named', async () => {
+        mockedPreview.mockResolvedValue({ installed: true, kinds: [] });
+        mockedAdded.mockResolvedValue([{ kind: 'products', count: 2, names: ['Hand Tee', 'Hand Cap'] }]);
+
+        const result = await storeChangesHandlers['preview-datapack-changes'](harness(), { ...ID, source: 'library', added: true });
+
+        expect(mockedAdded).toHaveBeenCalledWith(
+            expect.objectContaining({ projectPath: '/nonexistent/projects/acme' }),
+            { name: 'bodea', version: 'main' },
+            'library',
+        );
+        expect(result).toMatchObject({ success: true, data: { added: [{ kind: 'products', count: 2, names: ['Hand Tee', 'Hand Cap'] }] } });
+    });
+
+    // Review 2026-11-14: "N added" must match what the save takes, so with no store named it reads the
+    // installed version where the save does: the store the project recorded, else library first.
+    it("counts what was added against the SC's own library datapack when no store is named", async () => {
+        mockedPreview.mockResolvedValue({ installed: true, kinds: [] });
+        mockedAdded.mockResolvedValue([]);
+        const { context } = makeImportHarness({ ...PROJECT, datapack: { name: 'bodea', version: 'main', store: 'library' } });
+
+        await storeChangesHandlers['preview-datapack-changes'](context, { ...ID, added: true });
+
+        expect(mockedAdded.mock.calls[0][2]).toBe('library');
+    });
+
+    it('leaves the store unnamed, so the save\'s own rule reads the library first, when the project records none', async () => {
+        mockedPreview.mockResolvedValue({ installed: true, kinds: [] });
+        mockedAdded.mockResolvedValue([]);
+
+        await storeChangesHandlers['preview-datapack-changes'](harness(), { ...ID, added: true });
+
+        expect(mockedAdded.mock.calls[0][2]).toBeUndefined();
+    });
+
+    it('CONTROL: reads nothing more, and answers no added, when not asked', async () => {
+        mockedPreview.mockResolvedValue({ installed: true, kinds: [] });
+
+        const result = await storeChangesHandlers['preview-datapack-changes'](harness(), ID);
+
+        expect(mockedAdded).not.toHaveBeenCalled();
+        expect(result.data).not.toHaveProperty('added');
     });
 
     it('refuses before reading anything when the sign-in is in another org than the store', async () => {

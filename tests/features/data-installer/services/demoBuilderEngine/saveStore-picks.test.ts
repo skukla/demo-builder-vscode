@@ -69,6 +69,61 @@ describe('a save of picks from a store Demo Builder did not fill', () => {
     });
 });
 
+// step-07 E2 (S3-a): a kind ticked whole is listed inside the save, under Export from Commerce,
+// rather than read on Next.
+describe('a save of whole kinds from a store Demo Builder did not fill', () => {
+    it('lists each whole kind inside the save and saves all of it, beside the ids picked', async () => {
+        const { d, written, write } = await deps(false, { ...BY_HAND, ...TREE });
+
+        await saveStoreChanges(d, { saveAs: SAVE_AS, wholeKinds: ['categories'] }, write);
+
+        expect(categoriesIn(written[0].items.find((i) => i.dataType === 'categories')?.records)).toEqual(['Server Racks', 'Cables']);
+    });
+
+    it("shows the whole kind's row under Export from Commerce from the save's first rows", async () => {
+        const { d, write } = await deps(false, { ...BY_HAND, ...TREE });
+        const report = jest.fn();
+
+        await saveStoreChanges(d, { saveAs: SAVE_AS, wholeKinds: ['categories'] }, write, report);
+
+        const first = report.mock.calls.find((call) => Array.isArray(call[3]))?.[3] as Array<{ label: string; types?: Array<{ label: string }> }>;
+        expect(first[0].label).toBe('Export from Commerce');
+        expect(first[0].types?.map((type) => type.label)).toContain('Categories');
+    });
+
+    it('stops, writing nothing, when a whole kind cannot be listed', async () => {
+        const { d, ctx, written, write } = await deps(false, BY_HAND);
+        const refusing = async (path: string): Promise<unknown> => {
+            if (path.startsWith('categories/list')) throw new Error('Commerce answered 503.');
+            return ctx.get(path);
+        };
+        d.commerce = async () => ({ get: refusing as typeof ctx.get, send: ctx.send });
+
+        await expect(saveStoreChanges(d, { saveAs: SAVE_AS, wholeKinds: ['categories'] }, write)).rejects.toThrow(
+            "Commerce's categories could not be listed, so nothing was saved: Commerce answered 503.",
+        );
+        expect(written).toStrictEqual([]);
+    });
+
+    it('CONTROL: a whole kind counts as something chosen: no "Select at least one item"', async () => {
+        const { d, write } = await deps(false, { ...BY_HAND, ...TREE });
+
+        await expect(saveStoreChanges(d, { saveAs: SAVE_AS, wholeKinds: ['categories'] }, write)).resolves.toMatchObject({ saved: SAVE_AS.id });
+    });
+});
+
+describe('a save of a pack Demo Builder installed, with whole kinds', () => {
+    // As the handler refuses it (`PICKS_WITH_PACK`): a save from a pack takes everything the demo uses.
+    it('refuses, writing nothing', async () => {
+        const { d, written, write } = await deps(true, { ...BY_HAND, ...TREE }, PACK_ROWS);
+
+        await expect(saveStoreChanges(d, { pack: PACK, saveAs: SAVE_AS, wholeKinds: ['categories'] }, write)).rejects.toThrow(
+            'A save from a datapack takes everything this demo uses, so no whole data types can be sent with one. Nothing was saved.',
+        );
+        expect(written).toStrictEqual([]);
+    });
+});
+
 describe('a save of a pack Demo Builder installed, with picks', () => {
     it('saves the pack and what was picked, and moves only what the engine made onto the record', async () => {
         const { d, files, written, write } = await deps(true, BY_HAND, PACK_ROWS);

@@ -39,9 +39,10 @@
  * @module features/data-installer/handlers/storeChangesHandlers
  */
 
-import { KIND_NOUNS, PICKABLE_KINDS, type Selections, type StorePicks, isPickableKind, pickCount, picksOf } from '../pickableKinds';
+import { KIND_NOUNS, PICKABLE_KINDS, type PickableKind, type Selections, type StorePicks, isPickableKind, pickCount, picksOf, wholeKindsOf } from '../pickableKinds';
 import { layerFinder, projectCommerce, readPackItems } from '../services/buildDatapackEngine';
 import type { ReadWindowUse } from '../services/commerceReadWindow';
+import { addedSinceInstall } from '../services/demoBuilderEngine/demoAdditions';
 import { nodeRecordFiles, readInstallRecord } from '../services/demoBuilderEngine/installRecord';
 import { checkRecordedRootStep, recordedRootStep, rootStepItem } from '../services/demoBuilderEngine/packRootCheck';
 import type { PackRootStep } from '../services/demoBuilderEngine/packRootStep';
@@ -69,7 +70,9 @@ import type { SaveStoreChangesRequest } from '@/types/webviewRequests';
 const LOG_PREFIX = '[Data Installer]';
 
 /** What either action may be sent. Every field is checked here: an agent sends these too. */
-export interface StoreChangesPayload extends Partial<Omit<SaveStoreChangesRequest, 'confirm' | 'source' | 'saveAs'>> {
+export interface StoreChangesPayload extends Partial<Omit<SaveStoreChangesRequest, 'confirm' | 'source' | 'saveAs' | 'wholeKinds'>> {
+    /** Kinds ticked whole, checked here (`wholeKindsOf`): an agent may send anything. */
+    wholeKinds?: unknown;
     /** Save As's name, checked here: an agent may send anything. */
     saveAs?: { displayName?: unknown };
     /**
@@ -80,6 +83,11 @@ export interface StoreChangesPayload extends Partial<Omit<SaveStoreChangesReques
     source?: string;
     /** The kinds to look at; all the pack holds when absent. Preview only. */
     dataTypes?: string[];
+    /**
+     * Also count what was added by hand since the install (`addedSinceInstall`): what a save would
+     * take that the pack does not hold, by type (step-07 E1). The preview's and the changes read's.
+     */
+    added?: boolean;
     /** Save only: must be true. */
     confirm?: boolean;
 }
@@ -151,6 +159,17 @@ export async function openProjectStore(context: HandlerContext, use?: ReadWindow
     return { project: gate.project, deps };
 }
 
+/**
+ * Where a save reads the installed version of this pack from: the store named, else the one the
+ * project records for it, else none, and the save's own rule reads the library first
+ * (`readInstalled`). "N added" reads it from the same place, so it counts what the save takes.
+ */
+export function savedFrom(project: Project, pack: DatapackId, named: DatapackStoreName | undefined): DatapackStoreName | undefined {
+    if (named) return named;
+    const held = project.datapack;
+    return held && held.name === pack.name && held.version === pack.version ? held.store : undefined;
+}
+
 /** The access the pack's actions share, or the response to answer instead. */
 async function openStoreChanges(context: HandlerContext, payload: StoreChangesPayload | undefined, use?: ReadWindowUse): Promise<OpenedStore | { response: HandlerResponse }> {
     const input = readPayload(payload);
@@ -175,13 +194,15 @@ export async function packToSave(project: Project, payload: StoreChangesPayload 
 export async function openSave(context: HandlerContext, payload: StoreChangesPayload): Promise<SaveOpened | { response: HandlerResponse }> {
     const read = picksOf(payload.selections);
     if ('error' in read) return { response: { success: false, error: read.error } };
+    const whole = wholeKindsOf(payload.wholeKinds);
+    if ('error' in whole) return { response: { success: false, error: whole.error } };
     // A save reads what a changes check just read, when one did (walk F128).
     const store = await openProjectStore(context, 'reuse');
     if ('response' in store) return store;
     const target = await packToSave(store.project, payload);
     if ('error' in target) return { response: { success: false, error: target.error } };
-    if (target.pack && pickCount(read.picks) > 0) return { response: PICKS_WITH_PACK };
-    return { ...store, ...target, picks: read.picks };
+    if (target.pack && (pickCount(read.picks) > 0 || whole.kinds.length > 0)) return { response: PICKS_WITH_PACK };
+    return { ...store, ...target, picks: read.picks, wholeKinds: whole.kinds };
 }
 
 /**
@@ -190,7 +211,7 @@ export async function openSave(context: HandlerContext, payload: StoreChangesPay
  */
 const PICKS_WITH_PACK: HandlerResponse = {
     success: false,
-    error: "A save from a datapack takes everything this demo uses, so selections cannot be sent with one. Send selections only for a save with no datapack, with saveAs.",
+    error: "A save from a datapack takes everything this demo uses, so selections cannot be sent with one, nor wholeKinds. Send them only for a save with no datapack, with saveAs.",
     code: ErrorCode.INVALID_OPERATION,
 };
 
@@ -198,6 +219,8 @@ export interface SaveOpened extends ProjectStore {
     pack?: DatapackId;
     source?: DatapackStoreName;
     picks: StorePicks;
+    /** Kinds ticked whole, listed inside the save (step-07 E2). */
+    wholeKinds: PickableKind[];
 }
 
 /** The step's answer: the pack, and its step as the setup guide lists one, or null. */
@@ -245,6 +268,7 @@ export async function countPickableItems(context: HandlerContext, payload: Store
 /** What the export door is sent: the picks, the name, and the service's own fields, which are refused here. */
 interface StoreSavePayload {
     selections?: Selections;
+    wholeKinds?: unknown;
     saveAs?: { displayName?: string };
     confirm?: boolean;
     progress?: 'modal';
@@ -270,11 +294,12 @@ export async function saveFromStore(context: HandlerContext, payload: StoreSaveP
     if (named.length > 0) {
         return {
             success: false,
-            error: `A save goes into My Datapacks under the project's datapack or saveAs, so ${named.join(', ')} cannot be sent. Send selections, and saveAs with a name for a new datapack.`,
+            error: `A save goes into My Datapacks under the project's datapack or saveAs, so ${named.join(', ')} cannot be sent. Send selections and/or wholeKinds, and saveAs with a name for a new datapack.`,
             code: ErrorCode.INVALID_OPERATION,
         };
     }
     const save: StoreChangesPayload = { selections: payload?.selections, confirm: payload?.confirm };
+    if (payload?.wholeKinds !== undefined) save.wholeKinds = payload.wholeKinds;
     if (payload?.saveAs) save.saveAs = payload.saveAs;
     if (payload?.progress) save.progress = payload.progress;
     return storeChangesHandlers['save-store-changes-to-pack'](context, save);
@@ -309,8 +334,10 @@ export const storeChangesHandlers = defineHandlers({
         const opened = await openStoreChanges(context, payload, 'remember');
         if ('response' in opened) return opened.response;
         try {
-            const preview = await previewChanges(opened.deps, opened.pack, opened.source ?? 'installer', payload?.dataTypes);
-            return { success: true, data: { datapackName: opened.pack.name, version: opened.pack.version, ...preview } };
+            const source = opened.source ?? 'installer';
+            const preview = await previewChanges(opened.deps, opened.pack, source, payload?.dataTypes);
+            const added = payload?.added === true ? { added: await addedSinceInstall(opened.deps, opened.pack, savedFrom(opened.project, opened.pack, opened.source)) } : {};
+            return { success: true, data: { datapackName: opened.pack.name, version: opened.pack.version, ...preview, ...added } };
         } catch (error) {
             return failure(context, error, 'What installing again would change could not be read.');
         }

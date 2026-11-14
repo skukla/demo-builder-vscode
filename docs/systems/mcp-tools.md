@@ -220,7 +220,7 @@ server IS — transport, lifecycle, scoping, security — is in
 | `save_datapack_zip` |  | Save a datapack from the Data Installer or the datapack library as a zip file in the project (the screen's Save as File) — |
 | `save_store_changes_to_pack` | **confirm** | Save the store\ |
 | `share_datapack` | **confirm** | Share one of your own datapacks in My Datapacks, or stop sharing it (the screen's Share and Stop Sharing): every version. |
-| `start_datapack_export` | **confirm** | Capture data from this project's Commerce store into a datapack: saves what is picked in selections |
+| `start_datapack_export` | **confirm** | Capture data from this project's Commerce store into a datapack: saves what is picked in selections, and every item of each data type in wholeKinds, |
 | `start_datapack_import` | **confirm** | Install a datapack into a live Commerce instance. Returns an activationId once the job starts. |
 | `undo_last_save` | **confirm** | Undo the last save of the project's own datapack: Commerce goes back to the save before it. The datapack must |
 | `validate_datapack_import` | read | Dry run: try an install with the same guard, same credentials, same request body as the real thing, |

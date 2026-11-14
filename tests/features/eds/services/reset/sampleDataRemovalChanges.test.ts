@@ -18,7 +18,7 @@ jest.mock('@/features/data-installer/services/buildDatapackEngine', () => ({
     installedByDemoBuilder: jest.fn(),
 }));
 
-import { REMOVAL_LEFT_IN_STORE, RESULT_LEFT_IN_STORE } from '../../../../helpers/datapackRemovalFixtures';
+import { REMOVAL_LEFT_IN_STORE, REMOVAL_NO_TARGET, RESULT_LEFT_IN_STORE, RESULT_NO_TARGET } from '../../../../helpers/datapackRemovalFixtures';
 import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 import { createMockProject } from '../../../../helpers/projectFake';
@@ -158,13 +158,12 @@ describe('removeProjectSampleDataOutcome, answered up front by a batch', () => {
         await expect(removeProjectSampleDataOutcome(project(), context(), jest.fn(), { given: undefined })).resolves.toStrictEqual({ leftInStore: true });
     });
 
-    it('marks a removal skipped for want of an install target', async () => {
-        mockedRemove.mockResolvedValueOnce({ ran: false, skipped: true, noTarget: true, reason: 'No website and store view were recorded for this project.' });
+    // step-07 (owner, 2026-11-14): no website and store view was ever recorded, so nothing can have
+    // been installed: nothing to remove, kept back by nothing, for every door alike.
+    it('marks a removal skipped for want of an install target as nothing to remove, keeping nothing back', async () => {
+        mockedRemove.mockResolvedValueOnce(RESULT_NO_TARGET);
 
-        await expect(removeProjectSampleDataOutcome(project(), context(), jest.fn(), { given: undefined })).resolves.toStrictEqual({
-            kept: 'No website and store view were recorded for this project.',
-            noTarget: true,
-        });
+        await expect(removeProjectSampleDataOutcome(project(), context(), jest.fn(), { given: undefined })).resolves.toStrictEqual(REMOVAL_NO_TARGET);
     });
 
     // Owner 2026-11-14 (item 5): a save into the SC's own pack is named, so the run's row can say it.

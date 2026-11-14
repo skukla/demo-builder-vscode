@@ -82,3 +82,25 @@ export async function openStore(deps: StoreChangesDeps, pack: DatapackId | undef
     if (packRootOf(categories)) session.storeRoot = await readStoreRoot(commerce.get, codes);
     return { ...commerce, recorder, session, log: deps.log };
 }
+
+/**
+ * The installed version's own rows: from the store named, else the library, else the Data
+ * Installer. A save that cannot read them stops, rather than save a version missing the pack's
+ * products the store already had.
+ */
+export async function readInstalled(
+    deps: StoreChangesDeps,
+    target: { pack: DatapackId; source?: DatapackStoreName },
+): Promise<{ rows: Record<string, unknown>; source: DatapackStoreName }> {
+    const stores: DatapackStoreName[] = target.source ? [target.source] : ['library', 'installer'];
+    for (const source of stores) {
+        try {
+            return { rows: await deps.readPack(target.pack, source), source };
+        } catch (error) {
+            deps.log(`could not read ${labelPack(target.pack)} from the ${source}: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    }
+    throw new StoreChangesError(
+        `${labelPack(target.pack)} cannot be read from the library or the Data Installer, so the products it holds that Commerce already had cannot be saved with it. Nothing was saved.`,
+    );
+}

@@ -173,19 +173,14 @@ describe('the batch save question (P6-Q4)', () => {
         ).not.toBeInTheDocument();
     });
 
-    // step-07 D3 (S1-a): the setting saves the SC's own datapacks without a row; one line says so.
-    it("says which of the SC's own datapacks the setting saves first, with no row for them", async () => {
+    // step-07 D3 follow-up (owner, 2026-11-14): the setting saves the SC's own datapacks without a
+    // row, and the save window does not restate it (J2-3, rule 3).
+    it("gives the SC's own datapacks the setting saves no row and no line", async () => {
         answering(INSTANCE_CHECK_ALWAYS_SAVE);
         await asked();
 
-        expect(screen.getByText('My Luma and My Bodea are saved first (your setting).')).toBeInTheDocument();
+        expect(screen.queryByText(/saved first/)).not.toBeInTheDocument();
         expect(screen.queryByRole('textbox', { name: 'Save As, My Luma Demo' })).not.toBeInTheDocument();
-    });
-
-    it('CONTROL: says nothing of the setting when it is off', async () => {
-        await asked();
-
-        expect(screen.queryByText(/saved first \(your setting\)/)).not.toBeInTheDocument();
     });
 
     it('hands each answer by project path: Save and Clear', async () => {

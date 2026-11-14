@@ -1,7 +1,8 @@
 /**
  * What "Save Changes to My Luma" reads (step-04 S2; decisions Phase 7b, J3-1; P4-Q3): what its
  * install record lists, by type (`get-datapack-removal-scope`), and the SC's changes, counted by type
- * (`get-datapack-removal-changes`), both sent once as the window opens; and, from Review Records, the
+ * and the records added by hand since the install (`get-datapack-removal-changes` with `added`,
+ * step-07 E1), both sent once as the window opens; and, from Review Records, the
  * datapack's records (`get-datapack-records`), read once. Two reads are enough: what the datapack
  * holds, and what changed in it.
  *
@@ -63,11 +64,12 @@ export function useSaveSummary(pack: PackBeingSaved): SaveSummary {
     const loadChanges = changes.load;
     useEffect(() => {
         loadScope({ datapackName: pack.id.name, version: pack.id.version });
-        loadChanges(packFields(pack));
+        loadChanges({ ...packFields(pack), added: true });
     }, [loadScope, loadChanges, pack]);
     const held = scope.value?.kinds;
     const changed = changes.value?.kinds;
-    const rows = useMemo(() => saveRows(held ?? [], changed ?? []), [held, changed]);
+    const added = changes.value?.added;
+    const rows = useMemo(() => saveRows(held ?? [], changed ?? [], added ?? []), [held, changed, added]);
     const problem = problemOf(
         scope.failure !== null || (scope.settled && !held),
         changes.failure !== null,

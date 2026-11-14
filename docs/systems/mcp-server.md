@@ -763,7 +763,8 @@ changed in the Admin. It never overwrites that: the outcome `get_datapack_import
 carries one line, `note` ("Kept 2 things you had changed in the Admin."). The start itself still
 answers only the job's id, so that line arrives with the outcome, not with the start.
 `preview_datapack_changes` (a read) says beforehand what an install would do: counts per data kind
-and at most three names per count, never rows. `save_store_changes_to_pack` (confirm-gated) saves
+and at most three names per count, never rows; with `added: true` it also answers `added`, what the
+user added by hand since the install that a save would take (step-07 E1). `save_store_changes_to_pack` (confirm-gated) saves
 the store's copy of the pack into the datapack library, Save or Save As (2026-11-03): without
 `saveAs` the new latest save of the pack the project uses, only when it is the user's own (the save
 before it is kept for `undo_last_save` and older saves are deleted, Phase 2); otherwise it
@@ -785,7 +786,9 @@ does not hold), both also in its message, and a version the install's own parser
 not saved. `list_datapack_export_items` lists one kind of the project's store to pick from
 (website-scoped where Commerce scopes it, less what the pack being saved holds, counted in
 `inPackCount`), and `start_datapack_export` is the same save, sent `selections`, `saveAs` and
-`confirm`: the fields that name a pack (`datapackName`, `version`, `dataTypes`) are an ACO pack's
+`confirm`. Both saves take `wholeKinds` beside `selections` (step-07 E2): data types saved whole, each
+listed inside the save, so a whole type needs no ids; an unknown type is refused, and both are
+refused with a datapack. The fields that name a pack (`datapackName`, `version`, `dataTypes`) are an ACO pack's
 alone and refused on a save, and the name echo applies only to a call naming a pack. The Data
 Installer service's own engine and export, and the Engine setting that chose them, were
 deleted on 2026-11-06 with the setting (DI-12): the service had ignored the Commerce credentials a

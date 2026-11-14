@@ -366,7 +366,11 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // Data uninstalls the datapack first, and drops copy_library_datapack_to_installer, which agents no
 // longer have (D7). Existing projects would keep sending the agent to a tool that is gone, and to the
 // removed `unused` and Data Installer inputs.
-export const AI_CONTEXT_VERSION = 62;
+// v63 (2026-11-14, datapack simplification step-07 E1/E2): import-datapack sends a whole data type as
+// `wholeKinds` instead of paging list_datapack_export_items for every id, and asks
+// preview_datapack_changes with `added: true` what a Save takes. Existing projects would keep telling
+// the agent to list and send every id of a type.
+export const AI_CONTEXT_VERSION = 63;
 
 /**
  * Component IDs for standardized component instance access

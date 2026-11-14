@@ -5,8 +5,8 @@
  * install's, Back only. Cancel and Save; Save hands on to the run.
  *
  * Counts come from what the install record lists (`get-datapack-removal-scope`), the changes from
- * the changes check (`get-datapack-removal-changes`). Records added by hand since the install show
- * only once saved (P4-Q3): neither read sees them.
+ * the changes check (`get-datapack-removal-changes`), which, asked with `added`, also counts the
+ * records added by hand since the install ("4 changed, 2 added"; step-07 E1, P4-Q3).
  *
  * Ported from `SaveFromStoreModal.test.tsx` for what is still true of Save Changes: its title names
  * the datapack, nothing is ticked, Save hands on with nothing picked, Cancel closes.
@@ -110,6 +110,7 @@ describe('the check', () => {
             datapackName: 'my-luma-1a2b3c',
             version: '20261110-091500',
             source: 'library',
+            added: true,
         });
         expect(sends('get-datapack-removal-changes')).toBe(1);
     });
@@ -121,6 +122,7 @@ describe('the check', () => {
         expect(sent('get-datapack-removal-changes')).toEqual({
             datapackName: 'my-luma-1a2b3c',
             version: '20261110-091500',
+            added: true,
         });
     });
 
@@ -173,6 +175,29 @@ describe('the summary', () => {
             'Categories41',
             'Products2,046',
             'Attribute Options2 changed',
+        ]);
+    });
+
+    // step-07 E1 (P4-Q3): what the SC added by hand since the install, beside what they changed.
+    it('says "N added" beside "N changed", and gives an added type the record does not count a row', async () => {
+        answer({
+            changes: {
+                success: true,
+                data: {
+                    ...CHANGES,
+                    added: [
+                        { kind: 'products', count: 2, names: ['Hand Tee', 'Hand Cap'] },
+                        { kind: 'customers', count: 1, names: ['Ann'] },
+                    ],
+                },
+            },
+        });
+        await open();
+
+        expect(rows()).toStrictEqual([
+            'Categories41',
+            'Products2,046, 4 changed, 2 added',
+            'Customers1 added',
         ]);
     });
 

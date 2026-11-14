@@ -26,7 +26,13 @@ jest.mock('@/features/data-installer/services/buildDatapackEngine', () => ({
     buildDatapackEngine: jest.fn(),
 }));
 
+jest.mock('@/features/data-installer/services/demoBuilderEngine/installRecord', () => ({
+    ...jest.requireActual('@/features/data-installer/services/demoBuilderEngine/installRecord'),
+    readInstallRecord: jest.fn(),
+}));
+
 import { buildDatapackEngine } from '@/features/data-installer/services/buildDatapackEngine';
+import { type InstallRecord, readInstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import type { DatapackEngine } from '@/features/data-installer/services/datapackEngine';
 import { buildSampleDataDeps } from '@/features/data-installer/services/sampleDataInstallDeps';
 import type { HandlerContext } from '@/types/handlers';
@@ -181,6 +187,29 @@ describe('buildSampleDataDeps — watch', () => {
         const watched = await deps.watch({ activationId: 'act-1', requestedTypes: [] });
 
         expect(watched).toStrictEqual(WATCHED_LEFT_IN_STORE);
+    });
+});
+
+// Review 2026-11-14: a removal falls back to where the install record says the pack went.
+describe('buildSampleDataDeps — the install record a removal reads', () => {
+    const mockedRecord = readInstallRecord as jest.MockedFunction<typeof readInstallRecord>;
+    const PACK = { name: 'bodea', version: 'main' };
+    const RECORD: InstallRecord = { format: 1, pack: PACK, engine: 'demo-builder', startedAt: '2026-11-01T00:00:00.000Z', created: [] };
+
+    it("answers the record's target, read from this project's folder", async () => {
+        mockedRecord.mockResolvedValue({ ...RECORD, target: { websiteCode: 'acme', storeCode: 'acme_en' } });
+        const deps = buildSampleDataDeps(makeImportHarness(), PROJECT, jest.fn(), 'remove');
+
+        await expect(deps.installRecordOf?.(PACK)).resolves.toStrictEqual({ target: { websiteCode: 'acme', storeCode: 'acme_en' } });
+        expect(mockedRecord).toHaveBeenCalledWith(expect.anything(), PROJECT.path, PACK);
+    });
+
+    it('answers a record with no target as one, and none as undefined', async () => {
+        const deps = buildSampleDataDeps(makeImportHarness(), PROJECT, jest.fn(), 'remove');
+        mockedRecord.mockResolvedValueOnce(RECORD);
+        await expect(deps.installRecordOf?.(PACK)).resolves.toStrictEqual({});
+        mockedRecord.mockResolvedValueOnce(undefined);
+        await expect(deps.installRecordOf?.(PACK)).resolves.toBeUndefined();
     });
 });
 

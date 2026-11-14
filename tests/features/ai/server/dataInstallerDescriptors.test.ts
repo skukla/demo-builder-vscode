@@ -356,20 +356,36 @@ describe('what each row accepts', () => {
 
     it('gives the export the picks, the Save As name, and the ACO choice with its name echo', () => {
         expect(keys('start_datapack_export')).toEqual(
-            ['aco', 'confirmName', 'dataTypes', 'datapackName', 'saveAs', 'selections', 'storeViews', 'version'].sort(),
+            ['aco', 'confirmName', 'dataTypes', 'datapackName', 'saveAs', 'selections', 'storeViews', 'version', 'wholeKinds'].sort(),
         );
     });
 
     // Step 14: what the SC added by hand goes in when picked; no pack named saves the project's, or picks alone.
     // Save As's name makes a new pack of the user's (2026-11-03).
     it('gives the save the picks and the Save As name, and lets it name no pack', () => {
-        expect(keys('save_store_changes_to_pack')).toEqual(['datapackName', 'saveAs', 'selections', 'source', 'version'].sort());
+        expect(keys('save_store_changes_to_pack')).toEqual(['datapackName', 'saveAs', 'selections', 'source', 'version', 'wholeKinds'].sort());
         const schema = row('save_store_changes_to_pack')!.inputSchema!;
         expect(() => schema.datapackName.parse(undefined)).not.toThrow();
         expect(() => schema.selections.parse({ products: { sku: ['VR-Rack'] }, cart_rules: { rule_id: [7] } })).not.toThrow();
         expect(() => schema.selections.parse({ products: ['VR-Rack'] })).toThrow();
         expect(schema.saveAs.parse({ displayName: 'My Bodea' })).toEqual({ displayName: 'My Bodea' });
         expect(() => schema.saveAs.parse({ displayName: '' })).toThrow();
+    });
+
+    // step-07 E2 (S3-a): a whole data type needs no ids; an unknown one is refused before dispatch.
+    it('takes whole data types on both saves, refusing a kind that cannot be picked', () => {
+        for (const tool of ['save_store_changes_to_pack', 'start_datapack_export']) {
+            const schema = row(tool)!.inputSchema!;
+            expect(schema.wholeKinds.parse(['products', 'customers'])).toEqual(['products', 'customers']);
+            expect(() => schema.wholeKinds.parse(['orders'])).toThrow();
+        }
+    });
+
+    // step-07 E1 (P4-Q3): the agent's changes read counts what was added by hand, when asked.
+    it('lets the preview count what was added by hand since the install', () => {
+        const preview = row('preview_datapack_changes')!;
+        expect(preview.inputSchema!.added.parse(true)).toBe(true);
+        expect(preview.description).toContain('With added:true it also answers added');
     });
 
     // Overview 7b (2026-11-10): no picks with a datapack, so no tool points an agent at `unused`.

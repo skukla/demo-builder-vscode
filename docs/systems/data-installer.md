@@ -242,14 +242,18 @@ which lists every object the install made. It never removes by name.
   out FIRST, through the reset's own removal and its changes question above; if it does not all
   come out, or the removal left part in Commerce on purpose (the line names what, in the engine's
   note, step-07 D1), the delete stops and the project is kept, since deleting it would leave the data
-  with no record. Delete Selected asks the same per project, as Reset Selected does: when a pack whose data
+  with no record. Every removal (Delete, Reset, Edit, Clear Demo Data, Clear Commerce Instance) goes
+  to the website and store view Configure names now, else to where the install record says the pack
+  went (`installRecordOf`, `sampleDataInstall.ts`): clearing the codes in Configure never strands the
+  data. Only with no install record and no codes is there nothing to remove (`noTarget`): every door
+  carries on with no line, and `delete_project` answers `datapackData.removed: false` with a note. A
+  record that names no target, with no codes now, keeps the data and stops a delete. Delete Selected asks the same per project, as Reset Selected does: when a pack whose data
   goes has changes, the red button runs into **Save Your Changes First?** (step-05 S1, J7-2), a row
   per datapack under **Datapack** and **Save As**, each a filled-in name (the SC's own starts with
   its own name and saves into it; someone else's starts "My Bodea"), then **Reset/Delete Without
   Saving**, **Cancel** or **Save and Reset/Delete**. The SC's own is left out when
-  `changesOnRemoval` saves it, and one line under the table names it: "My Luma is saved first (your
-  setting)." (step-07 D3). With no save window at all (only the SC's own packs, the setting on),
-  each run row says where its changes went: "Saved to My Luma." (owner, 2026-11-14). A pack whose
+  `changesOnRemoval` saves it, with no line about it in the save window (the setting is not restated
+  there, owner 2026-11-14): its run row says where its changes went, "Saved to My Luma.". A pack whose
   changes could not be read keeps its data and is not asked about. `delete_project` takes `removeData` with `changes` and `saveAs`. A project delete never
   deletes a datapack: that is the library's Remove.
 - **A pack it has no record of** (one the service installed, or one installed from
@@ -363,10 +367,15 @@ included, and opening on the version the demo uses (`DatapackCatalogGrid`):
   Datapack, named for what it does ("Save Changes" read as changing the team pack): it makes a new
   pack of the SC's. Save opens **"Save Changes to My Luma"** (`components/save/SaveChangesWindow`,
   step-04 S2, J3-1): what My Luma will hold, read-only, one row per type from what its install record
-  lists (`get-datapack-removal-scope`), "2,046, 4 changed" where the SC changed some
-  (`get-datapack-removal-changes`), no line above the table; Review Records opens the install's spot
-  check, Back only; Cancel and Save. Records added by hand since the install show only once saved:
-  neither read sees them. Save As New opens **"Save As New Datapack"** (`SaveAsNewWindow`), the house
+  lists (`get-datapack-removal-scope`), "2,046, 4 changed, 2 added" where the SC changed some or
+  added some by hand since the install (`get-datapack-removal-changes` with `added`; step-07 E1):
+  "added" counts the records the save takes that the datapack does not hold (`demoAdditions.ts`, the
+  save's own rule), by their own type: the top-level rows only, so a hand-added product counts once
+  even though the save also brings its categories, set and attributes. Never another demo's records
+  on the same instance; a type the record does not count
+  gets its own row ("2 added"). No line above the table; Review Records opens the install's spot
+  check, Back only; Cancel and Save. An agent reads the same count from `preview_datapack_changes`
+  with `added: true`. Save As New opens **"Save As New Datapack"** (`SaveAsNewWindow`), the house
   form with one field, Datapack Name, Cancel and Save and no line; its name starts empty, or "My
   Bodea" from someone else's datapack ("My Bodea 2" when taken), and a refused name shows under the
   field in room kept for it ("Give it a name.", "You already have a datapack named My Luma."); the
@@ -449,10 +458,14 @@ kinds' `total_count` at once (`pageSize=1`, `storeItems.ts`), reads only, with n
 and companies are scoped in code after their read, so theirs count the whole store and grey only when
 the whole store has none; a failed count says nothing. Any other card stays clickable until its list
 answers, and greys then if nothing was left to pick. **Select All Data**, at the head of the kinds,
-ticks every item of every kind that may have some, reading any kind not opened yet with a spinner
-beside it; a kind whose list does not answer says "Couldn't be read" on its row. Unticking it clears
-them all, and its box is dashed when some are ticked. The save (`packSave.ts`, `saveStore.ts`)
-writes what was picked, from a store Demo Builder did not fill. A pick brings what it needs (a
+ticks every kind that may have some whole, reading nothing (everything starts ticked); a kind whose
+list does not answer says "Couldn't be read" on its row. Unticking it clears them all, and its box is
+dashed when some are ticked. A row counts "48 of 480 selected" once its list is read (the projects
+list's words) and "All selected" for a kind ticked whole and unread (step-07 Q3). Next reads nothing:
+a kind ticked whole goes to the save as `wholeKinds`, which lists it inside the run under Export from
+Commerce (step-07 E2, S3-a); the ids picked go as `selections`. An unknown kind is refused, and both
+are refused with a datapack. The save (`packSave.ts`, `saveStore.ts`) writes what was picked, from a
+store Demo Builder did not fill. A pick brings what it needs (a
 product its categories, set, attributes and quantities; a rule its coupons; a company its admin),
 and never joins the install record, so removing the pack leaves it.
 

@@ -15,6 +15,7 @@ import { SERVICE_REMOVAL_UNAVAILABLE, libraryReads } from '../handlers/libraryRe
 import { dataTypeLabel } from '../ui/dataTypeLabel';
 import { buildDatapackEngine, installedByDemoBuilder } from './buildDatapackEngine';
 import type { DatapackEngine } from './datapackEngine';
+import { nodeRecordFiles, readInstallRecord } from './demoBuilderEngine/installRecord';
 import { watchImportJob } from './importJobRunner';
 import type { SampleDataDeps } from './sampleDataInstall';
 import { PollingService } from '@/core/shell/pollingService';
@@ -84,6 +85,12 @@ export function buildSampleDataDeps(
         },
 
         startImport: async (request) => (await engineOnce()).startImport(request),
+
+        // Where the pack went, for a removal when the project names no website and store view now.
+        installRecordOf: async (pack) => {
+            const record = await readInstallRecord(nodeRecordFiles, project.path, pack);
+            return record ? (record.target ? { target: record.target } : {}) : undefined;
+        },
 
         // The Reset workflow's half. Same request, same engine, different verb.
         startDelete: async (request) => (await engineOnce()).startDelete(request),

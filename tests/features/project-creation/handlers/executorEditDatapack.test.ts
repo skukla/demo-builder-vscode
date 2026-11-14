@@ -41,6 +41,7 @@ import { PACK_NAMES_KEY } from '@/features/data-installer/services/packNames';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
+import { REMOVAL_NO_TARGET } from '../../../helpers/datapackRemovalFixtures';
 import { LEFT_NOTE, REMOVAL_LEFT_IN_STORE } from '../../../helpers/datapackRemovalFixtures';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockProject } from '../../../helpers/projectFake';
@@ -252,7 +253,7 @@ describe('applyDatapackChange', () => {
     // installed: nothing to remove, and the Edit switches the datapack with no line.
     it('switches the datapack with no line when the old one was never installed (no install target)', async () => {
         const { context, project, progress } = setup();
-        mockedRemove.mockResolvedValueOnce({ kept: 'No website and store view were recorded for this project.', noTarget: true });
+        mockedRemove.mockResolvedValueOnce(REMOVAL_NO_TARGET);
 
         const warning = await applyDatapackChange(context, project, toNew, { changes: true, removeOld: true }, progress);
 

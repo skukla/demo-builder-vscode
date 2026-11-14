@@ -54,6 +54,8 @@ export interface ExportPayload {
     dataType?: string;
     /** `{<type>: {<idField>: [ids]}}`: what is picked of each kind. */
     selections?: Selections;
+    /** Kinds ticked whole, listed inside the save (step-07 E2); checked by the save. */
+    wholeKinds?: unknown;
     /** The save must be confirmed, as `save-store-changes-to-pack`'s is. */
     confirm?: boolean;
     /** Save As: a new datapack of the user's under this name. */

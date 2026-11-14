@@ -10,7 +10,7 @@
  * @module features/projects-dashboard/ui/batchChoices
  */
 
-import { type ChangesByPath, type PackRow, type SaveNames, type SaveQuestion, nameProblems, namesOf, ownPackNames } from '@/features/data-installer/saveAsName';
+import { type ChangesByPath, type PackRow, type SaveNames, type SaveQuestion, nameProblems, namesOf } from '@/features/data-installer/saveAsName';
 import type {
     BatchDatapack,
     BatchDeleteAnswer,
@@ -124,14 +124,6 @@ export function saveRows<Row extends PackRow>(rows: readonly Row[], ticks: Remov
     return rows.filter((row) => removes(row, ticks) && (row.datapack?.changes === 'asks' || (row.datapack?.changes === 'saves' && !alwaysSave)));
 }
 
-/**
- * The SC's own packs whose data goes that the setting saves first, so they have no row: named in the
- * save question's one line (step-07 D3, S1-a). None with the setting off.
- */
-export function savedBySetting(rows: readonly PackRow[], ticks: RemoveTicks, alwaysSave: boolean): string[] {
-    return alwaysSave ? ownPackNames(rows.filter((row) => removes(row, ticks))) : [];
-}
-
 /** Whose pack's data goes, by project path: a delete's Uninstall Datapack boxes, a reset's. */
 export function removingOf(questions: PrepareProjectsBatchResponse, ticks: DeleteTicks, removeTicks: RemoveTicks): RemoveTicks {
     return questions.action === 'delete' ? dataTicks(questions.rows, ticks) : removeTicks;
@@ -149,8 +141,7 @@ export function saveQuestionOf(questions: PrepareProjectsBatchResponse, chosen: 
     const removing = removingOf(questions, chosen.ticks, chosen.removeTicks);
     const rows: PackRow[] = saveRows<PackRow>(questions.rows, removing, questions.alwaysSave);
     const names = namesOf(rows, questions.ownNames, chosen.typedNames);
-    const savedFirst = savedBySetting(questions.rows, removing, questions.alwaysSave);
-    return { rows, names, problems: nameProblems(rows, names, questions.ownNames), savedFirst };
+    return { rows, names, problems: nameProblems(rows, names, questions.ownNames) };
 }
 
 /** A pack whose data goes carries the save question's answer, when it has one. */

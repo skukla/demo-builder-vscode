@@ -441,11 +441,45 @@ describe('removeSampleData', () => {
         expect(result).toStrictEqual({ ran: true, outcome: 'success', perType: { categories: 'success' }, leftInStore: true });
     });
 
-    // Owner 2026-11-14 (item 6): with no target nothing can have been installed, so an Edit treats it as nothing to remove.
-    it('marks a removal skipped for want of a website and store view', async () => {
-        const result = await removeSampleData(project({ componentConfigs: {} }), deps());
+    // The owner's rule is "no target was EVER recorded" (review, 2026-11-14): today's codes are not
+    // it. A pack whose install record says where it went is removed there, whatever Configure says now.
+    it('removes at the install record\'s target when the project names no website and store view now', async () => {
+        const installRecordOf = jest.fn().mockResolvedValue({ target: { websiteCode: 'acme', storeCode: 'acme_en' } });
+        const d = deps({ installRecordOf });
+
+        const result = await removeSampleData(project({ componentConfigs: { [ACCS]: { ACCS_GRAPHQL_ENDPOINT: 'https://na1-sandbox.api.commerce.adobe.com/TENANT123/graphql' } } }), d);
+
+        expect(installRecordOf).toHaveBeenCalledWith({ name: 'bodea', version: 'main' });
+        expect(d.startDelete.mock.calls[0][0]).toMatchObject({ target: { websiteCode: 'acme', storeCode: 'acme_en' } });
+        expect(result).toMatchObject({ ran: true, outcome: 'success' });
+        expect(result).not.toHaveProperty('noTarget');
+    });
+
+    it('keeps the data, saying why, when the record names no target and the project names none now', async () => {
+        const d = deps({ installRecordOf: jest.fn().mockResolvedValue({}) });
+
+        const result = await removeSampleData(project({ componentConfigs: { [ACCS]: { ACCS_GRAPHQL_ENDPOINT: 'https://na1-sandbox.api.commerce.adobe.com/TENANT123/graphql' } } }), d);
+
+        expect(d.startDelete).not.toHaveBeenCalled();
+        expect(result).toStrictEqual({ ran: false, skipped: true, reason: 'No website and store view are set for this project, and its install record names none, so its datapack cannot be uninstalled.' });
+    });
+
+    // Nothing can have been installed with no record and no target: nothing to remove (owner, 2026-11-14).
+    it('marks a removal with no install record and no website and store view as nothing to remove', async () => {
+        const d = deps({ installRecordOf: jest.fn().mockResolvedValue(undefined) });
+
+        const result = await removeSampleData(project({ componentConfigs: {} }), d);
 
         expect(result).toMatchObject({ ran: false, skipped: true, noTarget: true });
+        expect(d.startDelete).not.toHaveBeenCalled();
+    });
+
+    it('CONTROL: today\'s codes win when the project names them', async () => {
+        const d = deps({ installRecordOf: jest.fn().mockResolvedValue({ target: { websiteCode: 'old', storeCode: 'old_en' } }) });
+
+        await removeSampleData(project(), d);
+
+        expect(d.startDelete.mock.calls[0][0].target).not.toEqual({ websiteCode: 'old', storeCode: 'old_en' });
     });
 
     // step-07 D1: a delete names what was left, so the engine's note travels with the flag.

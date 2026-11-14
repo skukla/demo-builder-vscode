@@ -7,16 +7,15 @@
  * `useExportAnswers`, both kept when the SC goes back and forward. Choosing another pack type keeps
  * each route's own answers; nothing is sent until Create or Export.
  *
- * Create is two windows (step-04 S3; decisions Phase 7b, J3-2): the picks, then the name. Next reads
- * the kinds ticked whole that are not read yet, since the save takes ids, and goes on only when
- * something is left to hand on. The name follows Save As New's rules (`nameProblem`): Create is on,
+ * Create is two windows (step-04 S3; decisions Phase 7b, J3-2): the picks, then the name. Next goes
+ * on at once, reading nothing: a kind ticked whole is handed on as a kind, which the save lists
+ * inside its run (step-07 E2, S3-a). The name follows Save As New's rules (`nameProblem`): Create is on,
  * and a name it refuses says why under the field.
  *
  * @module features/data-installer/ui/components/create-flow/useCreateDatapackFlow
  */
 
 import { useMemo, useState } from 'react';
-import { type StorePicks, pickCount } from '../../../pickableKinds';
 import { longestNameProblem, nameProblem } from '../../../saveAsName';
 import {
     canProceed,
@@ -31,13 +30,13 @@ import {
     stageOrder,
 } from './datapackFlowStages';
 import { type ExportAnswers, useExportAnswers } from './useExportAnswers';
-import { type StorePicksState, useStorePicks } from './useStorePicks';
+import { type StoreChoice, type StorePicksState, useStorePicks } from './useStorePicks';
 
 export interface CreateDatapackFlowArgs {
     /** The SC's own datapacks' names, which a new one may not take. Must be stable. */
     ownNames: readonly string[];
-    /** Start the save with these picks, and the new pack's name. */
-    onSave: (picks: StorePicks, name: string) => void;
+    /** Start the save with what was chosen, and the new pack's name. */
+    onSave: (choice: StoreChoice, name: string) => void;
 }
 
 /** The main button, as the footer draws it. */
@@ -99,7 +98,6 @@ export function useCreateDatapackFlow({ ownNames, onSave }: CreateDatapackFlowAr
     // 2026-11-03), so there is no second type to ask about. The ACO line reverts this.
     const [packType, setPackType] = useState<PackType | undefined>('commerce');
     const [stage, setStage] = useState<DatapackFlowStage>(() => stageOrder(routeOf('commerce'))[0] ?? 'pack-type');
-    const [reading, setReading] = useState(false);
 
     const route = packType && routeOf(packType);
     const order = stageOrder(route);
@@ -108,18 +106,10 @@ export function useCreateDatapackFlow({ ownNames, onSave }: CreateDatapackFlowAr
 
     const action = mainActionOf(stage);
     const goOn = (): void => setStage(nextStage(stage, order) ?? stage);
-    const next = async (): Promise<void> => {
-        setReading(true);
-        try {
-            if (pickCount(await store.readWhole()) > 0) goOn();
-        } finally {
-            setReading(false);
-        }
-    };
     const proceed = (): void => {
         const name = action === 'save' ? newName.accepted() : undefined;
-        if (name !== undefined) onSave(store.picks, name);
-        else if (action === 'next') void next();
+        if (name !== undefined) onSave(store.choice, name);
+        else if (action === 'next') goOn();
         else if (action === 'export') answers.start();
         else if (action === 'continue') goOn();
     };
@@ -143,7 +133,7 @@ export function useCreateDatapackFlow({ ownNames, onSave }: CreateDatapackFlowAr
                 kindsChosen: answers.aco.pickedKinds.length > 0,
                 named: answers.named,
             }),
-            isPending: (action === 'export' && answers.running) || (action === 'next' && reading),
+            isPending: action === 'export' && answers.running,
             onPress: proceed,
         },
         store,

@@ -33,14 +33,14 @@
  * @module features/data-installer/services/demoBuilderEngine/saveStore
  */
 
-import { type LeftOut, PICKABLE_KINDS, type PickableKind, type StoreItemPage, type StoreKindCounts, type StorePicks, pickCount } from '../../pickableKinds';
+import { KIND_NOUNS, type LeftOut, type PickableKind, type StoreItemPage, type StoreKindCounts, type StorePicks, pickCount } from '../../pickableKinds';
 import { STORE_CONFIG_KIND, settingsLayerName } from '../datapackCatalog';
 import type { PackWriteOutcome } from '../datapackTransfer';
 import type { DatapackFile } from '../datapackZip';
 import { capturePack } from './capture';
 import { captureLines, captureRows } from './capturePhases';
-import { demoUses } from './demoUses';
-import { type CreatedObject, type InstallRecord, type RecordFiles, forgetInstallRecord, nodeRecordFiles, readInstallRecord, writeInstallRecord } from './installRecord';
+import { demoPicks, withPicks } from './demoAdditions';
+import { type InstallRecord, type RecordFiles, forgetInstallRecord, nodeRecordFiles, readInstallRecord, writeInstallRecord } from './installRecord';
 import { jobClock } from './jobClock';
 import type { KindContext } from './kindContext';
 import { lookUpLayer } from './layerStep';
@@ -48,34 +48,12 @@ import { rebaseRecord } from './recordFingerprints';
 import { packRowRefusals } from './runPack';
 import { layerLine, leftOutLine, resultLines, savedSentence, saveSentence, savingLine, unnamedLine } from './saveOutcome';
 import { NOTHING_TO_SAVE, unchangedPack } from './saveUnchanged';
-import { type StoreChangesDeps, StoreChangesError, labelPack, openStore } from './storeAccess';
+import { type StoreChangesDeps, StoreChangesError, labelPack, openStore, readInstalled } from './storeAccess';
 import { countStoreItems, holdsOf, leftOutOf, listStoreItems, readWebsiteProductsWhole, seedsOf } from './storeItems';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import type { CommerceProduct } from '@/types/commerceWire';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 import type { OperationPosition, OperationRow } from '@/types/webviewPayloads';
-
-/**
- * The installed version's own rows: from the store named, else the library, else the Data
- * Installer. A save that cannot read them stops, rather than save a version missing the pack's
- * products the store already had.
- */
-async function readInstalled(
-    deps: StoreChangesDeps,
-    target: { pack: DatapackId; source?: DatapackStoreName },
-): Promise<{ rows: Record<string, unknown>; source: DatapackStoreName }> {
-    const stores: DatapackStoreName[] = target.source ? [target.source] : ['library', 'installer'];
-    for (const source of stores) {
-        try {
-            return { rows: await deps.readPack(target.pack, source), source };
-        } catch (error) {
-            deps.log(`could not read ${labelPack(target.pack)} from the ${source}: ${error instanceof Error ? error.message : String(error)}`);
-        }
-    }
-    throw new StoreChangesError(
-        `${labelPack(target.pack)} cannot be read from the library or the Data Installer, so the products it holds that Commerce already had cannot be saved with it. Nothing was saved.`,
-    );
-}
 
 /** Where a save writes: the demo's own pack, at a new version, and what the SC sees it called. */
 export interface SaveAs {
@@ -97,6 +75,12 @@ export interface SaveTarget {
      * (Add Unused Items removed, overview 7b). Never put on the install record.
      */
     picks?: StorePicks;
+    /**
+     * Kinds ticked whole: each is listed inside the save, under Export from Commerce, and all of it
+     * goes in beside `picks` (step-07 E2, S3-a), so Create reads nothing on Next. From nothing only,
+     * as picks are.
+     */
+    wholeKinds?: readonly PickableKind[];
 }
 
 /** What a save did. */
@@ -136,8 +120,11 @@ interface SaveStart {
 async function startSave(deps: StoreChangesDeps, target: SaveTarget, files: RecordFiles): Promise<SaveStart> {
     const { pack } = target;
     if (!pack) {
-        if (pickCount(target.picks ?? {}) === 0) throw new StoreChangesError('Select at least one item from Commerce to save. Nothing was saved.');
+        if (pickCount(target.picks ?? {}) === 0 && (target.wholeKinds ?? []).length === 0) throw new StoreChangesError('Select at least one item from Commerce to save. Nothing was saved.');
         return { installed: { rows: {} } };
+    }
+    if ((target.wholeKinds ?? []).length > 0) {
+        throw new StoreChangesError('A save from a datapack takes everything this demo uses, so no whole data types can be sent with one. Nothing was saved.');
     }
     const record = await readInstallRecord(files, deps.projectPath, pack);
     if (!record) throw new StoreChangesError(`Demo Builder didn't install ${labelPack(pack)} in this project, so there is nothing to save.`);
@@ -213,7 +200,7 @@ export async function saveStoreChanges(
     // Each step's time in Debug Logs (walk F87: a save from Luma took 4 minutes and said nothing of where).
     const took = jobClock(deps.log, `Save of ${saveAs.displayName}`);
     const ctx = await openStore(deps, pack ?? saveAs.id, record);
-    const { picks, products } = await picksOf(ctx, record, installed.rows, target.picks);
+    const { picks, products } = await picksOf(ctx, record, installed.rows, target);
     took(`found what the demo uses, ${pickCount(picks)} not in the datapack`);
     const seeds = [...(record?.created ?? []), ...seedsOf(picks)];
     const seeded = [...seeds.map((seed) => seed.kind), ...Object.keys(installed.rows)];
@@ -276,26 +263,8 @@ const RECORD_STEP = 'Finishing the save';
 
 /** The steps before what the demo uses is known: the kinds the record, the pack and the picks name. */
 function preparingRows(record: InstallRecord | undefined, rows: Record<string, unknown>, target: SaveTarget): OperationRow[] {
-    const kinds = [...(record?.created ?? []).map((o) => o.kind), ...Object.keys(rows), ...seedsOf(target.picks ?? {}).map((o) => o.kind)];
+    const kinds = [...(record?.created ?? []).map((o) => o.kind), ...Object.keys(rows), ...seedsOf(target.picks ?? {}).map((o) => o.kind), ...(target.wholeKinds ?? [])];
     return captureRows(kinds, target.saveAs.displayName).preparing(firstStep(target) ?? 'Reading your selection');
-}
-
-/**
- * Everything this demo uses that the pack does not hold yet, by kind (walk F85): what the SC added
- * in the Admin. A kind the store cannot list stops the save, rather than save the demo without it.
- */
-async function demoPicks(ctx: KindContext, created: readonly CreatedObject[], rows: Record<string, unknown>, websiteProducts: Promise<CommerceProduct[]> | undefined): Promise<StorePicks> {
-    const uses = demoUses(ctx, websiteProducts);
-    const added = await Promise.all(
-        PICKABLE_KINDS.map(async (kind) => {
-            const started = Date.now();
-            const holds = holdsOf(kind, created, rows);
-            const ids = (await uses.of(kind)).filter((item) => !holds(item)).map((item) => item.id);
-            ctx.log(`what the demo uses: ${kind} in ${Date.now() - started} ms, ${ids.length} not in the pack`);
-            return [kind, ids] as const;
-        }),
-    );
-    return Object.fromEntries(added.filter(([, ids]) => ids.length > 0));
 }
 
 /**
@@ -303,22 +272,31 @@ async function demoPicks(ctx: KindContext, created: readonly CreatedObject[], ro
  * hands in); from nothing, the picks. From a pack, the website's products are read whole once, both to find
  * what the demo uses and as the products capture turns into rows (walk F90).
  */
-async function picksOf(ctx: KindContext, record: InstallRecord | undefined, rows: Record<string, unknown>, chosen: StorePicks | undefined): Promise<{ picks: StorePicks; products: CommerceProduct[] }> {
-    if (!record) return { picks: chosen ?? {}, products: [] };
+async function picksOf(ctx: KindContext, record: InstallRecord | undefined, rows: Record<string, unknown>, target: SaveTarget): Promise<{ picks: StorePicks; products: CommerceProduct[] }> {
+    const chosen = target.picks;
+    if (!record) return { picks: withPicks(await wholeKindPicks(ctx, target.wholeKinds ?? []), chosen), products: [] };
     const websiteProducts = readWebsiteProductsWhole(ctx);
     void websiteProducts.catch(() => undefined); // its failure reaches whoever awaits it, never as an unhandled one
     const picks = withPicks(await demoPicks(ctx, record.created, rows, websiteProducts), chosen);
     return { picks, products: await websiteProducts };
 }
 
-/** The demo's picks and the SC's, each id once. */
-function withPicks(demo: StorePicks, chosen: StorePicks | undefined): StorePicks {
-    const all: StorePicks = { ...demo };
-    for (const kind of PICKABLE_KINDS) {
-        const more = chosen?.[kind] ?? [];
-        if (more.length > 0) all[kind] = [...new Set([...(all[kind] ?? []), ...more])];
+/**
+ * Every item of each kind ticked whole, listed now, inside the save (step-07 E2): the same list
+ * Create's pane reads (`listStoreItems`). A kind that cannot be listed stops the save, rather than
+ * save a datapack without what was ticked.
+ */
+async function wholeKindPicks(ctx: KindContext, kinds: readonly PickableKind[]): Promise<StorePicks> {
+    const picks: StorePicks = {};
+    for (const kind of kinds) {
+        try {
+            picks[kind] = (await listStoreItems(ctx, kind)).items.map((item) => item.id);
+        } catch (error) {
+            const reason = error instanceof Error ? error.message : String(error);
+            throw new StoreChangesError(`Commerce's ${KIND_NOUNS[kind][1]} could not be listed, so nothing was saved: ${reason}`);
+        }
     }
-    return all;
+    return picks;
 }
 
 /** What the export step says before the data types are known: from a pack, the demo's data is found first. */

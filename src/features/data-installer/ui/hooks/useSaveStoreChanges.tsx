@@ -22,8 +22,9 @@
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { type StorePicks, selectionsOf } from '../../pickableKinds';
+import { pickCount, selectionsOf } from '../../pickableKinds';
 import { DatapackFlowDialog } from '../components/create-flow/DatapackFlowDialog';
+import type { StoreChoice } from '../components/create-flow/useStorePicks';
 import type { PackBeingSaved } from '../components/save/packBeingSaved';
 import { SaveAsNewWindow } from '../components/save/SaveAsNewWindow';
 import { SaveChangesWindow } from '../components/save/SaveChangesWindow';
@@ -65,9 +66,14 @@ function runOf(name: string, payload: SaveBody, ending: Ending): StartableOperat
 /** What a save from a datapack sends: the datapack, in its store, confirmed. */
 const packFields = (pack: PackBeingSaved): SaveBody => ({ datapackName: pack.id.name, version: pack.id.version, source: pack.source, confirm: true });
 
-/** What Create sends: the picks, and the new datapack's name. */
-function createBody(picks: StorePicks, name: string): SaveBody {
-    return { selections: selectionsOf(picks), saveAs: { displayName: name }, confirm: true };
+/** What Create sends: the ids picked, the kinds ticked whole (the save lists them), and the new name. */
+function createBody({ picks, wholeKinds }: StoreChoice, name: string): SaveBody {
+    return {
+        ...(pickCount(picks) > 0 ? { selections: selectionsOf(picks) } : {}),
+        ...(wholeKinds.length > 0 ? { wholeKinds } : {}),
+        saveAs: { displayName: name },
+        confirm: true,
+    };
 }
 
 /** Counts each save, and reads the catalog again once per save that succeeds. */
@@ -104,7 +110,7 @@ export function useSaveStoreChanges(onSaved: () => void, ownNames: readonly stri
         },
         [start, next],
     );
-    const created = useCallback((picks: StorePicks, name: string): void => begin(name, createBody(picks, name), 'create'), [begin]);
+    const created = useCallback((choice: StoreChoice, name: string): void => begin(name, createBody(choice, name), 'create'), [begin]);
 
     const windows = (
         <>

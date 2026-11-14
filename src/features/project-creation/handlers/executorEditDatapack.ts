@@ -72,7 +72,7 @@ export async function planDatapackChange(
  * The Edit's line when the old pack's data did not all come out: the datapack part stops, so the
  * old pack stays recorded and nothing is installed over it (step-07 D2, owner Q1). Short, cause
  * first, naming the pack as the SC knows it (owner, 2026-11-14). A removal skipped because no
- * install target was ever recorded found nothing installed, so it is nothing to remove.
+ * install target was ever recorded keeps nothing back (`noTarget`), so it is nothing to remove.
  *
  * @param name - the old pack's name as the SC knows it
  * @returns the line, or undefined when the Edit may switch the datapack
@@ -81,7 +81,7 @@ function datapackNotChanged(removal: DatapackRemoval, name: string): string | un
     const still = `so the datapack is still ${name}`;
     const withWhy = (line: string, why: string | undefined): string => (why ? `${line}: ${why}` : `${line}.`);
     if (removal.leftInStore) return withWhy(`Part of ${name} was left in Commerce, ${still}`, removal.note);
-    if (removal.kept === undefined || removal.noTarget) return undefined;
+    if (removal.kept === undefined) return undefined;
     if (removal.partly) return withWhy(`Part of ${name} was uninstalled, ${still}`, removal.kept);
     return withWhy(`${name} couldn't be uninstalled, ${still}`, removal.kept);
 }

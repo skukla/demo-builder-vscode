@@ -80,6 +80,17 @@ const SELECTIONS = z
         `Things to pick from the store for a save with no datapack (refused with one), as {kind: {field: [ids]}} with ids from list_datapack_export_items: ${PICKABLE_KINDS.map((kind) => `${kind} by ${PICK_FIELDS[kind]}`).join(', ')}`,
     );
 
+/**
+ * Whole data types to save (step-07 E2): each is listed inside the save, so an agent need not page
+ * list_datapack_export_items to send every id. Refused, as selections are, with a datapack.
+ */
+const WHOLE_KINDS = z
+    .array(z.enum(PICKABLE_KINDS))
+    .optional()
+    .describe(
+        'Data types to save whole, for a save with no datapack (refused with one): every item of each is listed inside the save, so no ids are needed; send ids in selections for the rest',
+    );
+
 /** The export fields only an ACO pack (aco:true) takes: a save from the store refuses them. */
 const ACO_ONLY = ' (with aco only; a save from the store refuses it)';
 
@@ -307,13 +318,17 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             'never installed the pack here, so every row would be new. root (a pack with a root category of its ' +
             "own) says where it would go: under the store's own root, or a root of its own with one Admin step. " +
             'settings names what an install would change in the store configuration, by path with old and new value, and ' +
-            'settings.layer the settings layer they come from (a library pack named <pack>-settings).',
+            'settings.layer the settings layer they come from (a library pack named <pack>-settings). ' +
+            'With added:true it also answers added: by data kind, how many things the user added by hand in the Admin ' +
+            'since the install, with a few names each, which save_store_changes_to_pack would take into the pack (keep ' +
+            'counts what they changed); another demo\'s records on the same instance are not counted.',
         map: importHandlers,
         type: 'preview-datapack-changes',
         inputSchema: {
             ...DATAPACK_ID,
             source: PACK_SOURCE,
             dataTypes: z.array(z.string()).optional().describe('The kinds an install would be asked for; the answer then covers these and what they need, as the install does. All the pack holds when omitted'),
+            added: z.boolean().optional().describe('Also count what was added by hand since the install, as a save would take it; reads more of the store'),
         },
     },
     {
@@ -347,8 +362,8 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             'ask the user for a name, then call again with saveAs.displayName (Save As), which makes a NEW pack of ' +
             'theirs (the screen\'s Save As New); a name the user already has for one of their datapacks is refused (ask for another). Either way the ' +
             'project then uses the new save. Everything the demo uses goes in on its own, what was added by hand in the ' +
-            'Admin included, so a save from a pack is refused with selections: send selections only for a save with no ' +
-            'datapack. No pack named: the project\'s when ' +
+            'Admin included, so a save from a pack is refused with selections or wholeKinds: send selections only for a save with no ' +
+            'datapack, and wholeKinds likewise (every item of a data type, listed inside the save). No pack named: the project\'s when ' +
             'Demo Builder installed it, else none, and the version holds only what is picked (a store Demo Builder ' +
             'did not fill; send saveAs). The pack installed is never changed, and nothing picked is ever removed with it; ' +
             'undo_last_save goes back to the save before it. Store configuration a pack does not hold ' +
@@ -367,6 +382,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             version: z.string().optional().describe('Its version, e.g. main (required with datapackName)'),
             source: PACK_SOURCE,
             selections: SELECTIONS,
+            wholeKinds: WHOLE_KINDS,
             saveAs: SAVE_AS,
         },
     },
@@ -605,9 +621,9 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: false,
         description:
-            "Capture data from this project's Commerce store into a datapack: saves what is picked in selections " +
+            "Capture data from this project's Commerce store into a datapack: saves what is picked in selections, and every item of each data type in wholeKinds, " +
             "into the datapack library, with the project's pack when Demo Builder installed it; the same save as " +
-            'save_store_changes_to_pack (Save, or Save As New with saveAs), answering the same way. Send selections, ' +
+            'save_store_changes_to_pack (Save, or Save As New with saveAs), answering the same way. Send selections and/or wholeKinds, ' +
             "saveAs and confirm. Nothing goes into the Data Installer's shared catalog. aco:true (an Adobe Commerce Optimizer pack) is refused in this release: ACO " +
             'datapacks arrive with ACO support.',
         map: importHandlers,
@@ -622,6 +638,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
                 .optional()
                 .describe(`ACO kinds to capture; omit for all five${ACO_ONLY}`),
             selections: SELECTIONS,
+            wholeKinds: WHOLE_KINDS,
             saveAs: SAVE_AS,
             aco: z.boolean().optional().describe('Refused in this release: ACO datapacks arrive with ACO support'),
             storeViews: z

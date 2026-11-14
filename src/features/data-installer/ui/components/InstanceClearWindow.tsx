@@ -33,7 +33,6 @@ import {
     changesOf,
     nameProblems,
     namesOf,
-    ownPackNames,
 } from '../../saveAsName';
 import {
     CLEAR_INSTANCE,
@@ -92,9 +91,7 @@ function questionOf(check: ClearCheck, typed: SaveNames): SaveQuestion {
     const rows = saveRowsOf(check);
     const ownNames = check.instance?.ownNames ?? [];
     const names = namesOf(rows, ownNames, typed);
-    // The SC's own the setting saves unasked: no row, one line (step-07 D3).
-    const savedFirst = check.instance?.alwaysSave ? ownPackNames(check.instance.projects) : [];
-    return { rows, names, problems: nameProblems(rows, names, ownNames), savedFirst };
+    return { rows, names, problems: nameProblems(rows, names, ownNames) };
 }
 
 /** Step 1: the websites, ticked or not, each naming the projects using it. */

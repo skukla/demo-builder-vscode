@@ -25,6 +25,7 @@ import {
     progressReport,
 } from './projectResetService-answered.testUtils';
 import { removeProjectSampleDataOutcome } from '@/features/eds/services/reset/edsResetSampleData';
+import { REMOVAL_NO_TARGET } from '../../../helpers/datapackRemovalFixtures';
 import {
     FailedAfterDatapack,
     type AnsweredDatapack,
@@ -98,6 +99,17 @@ describe("the agent's headless reset with Uninstall Datapack", () => {
             success: true,
             meshRedeployed: false,
             datapackRemoval: { kept: 'Categories could not be removed.', partly: true },
+        });
+        expect(mockCloneAllComponents).toHaveBeenCalledTimes(1);
+    });
+
+    // step-07 (owner, 2026-11-14): nothing to remove; the agent's answer carries no datapack step.
+    it('goes on with no datapack step when no install target was ever recorded', async () => {
+        mockedRemove.mockResolvedValue(REMOVAL_NO_TARGET);
+
+        await expect(run(withPack(), { removeDatapack: true, changes: 'drop' }).outcome).resolves.toEqual({
+            success: true,
+            meshRedeployed: false,
         });
         expect(mockCloneAllComponents).toHaveBeenCalledTimes(1);
     });

@@ -27,7 +27,6 @@
 
 import { DialogContainer } from '@adobe/react-spectrum';
 import React from 'react';
-import type { StorePicks } from '../../../pickableKinds';
 import { ExportDatapackResult } from '../ExportDatapackResult';
 import { resultStatus } from '../importResult';
 import { NameField } from '../save/NameField';
@@ -37,6 +36,7 @@ import { PackNameStage } from './stages/PackNameStage';
 import { PackTypeStage } from './stages/PackTypeStage';
 import { StorePicksStage } from './stages/StorePicksStage';
 import { type CreateDatapackFlow, useCreateDatapackFlow } from './useCreateDatapackFlow';
+import type { StoreChoice } from './useStorePicks';
 import type { ActionButton, ModalWait } from '@/core/ui/components/ui/Modal';
 import { ResultWindow } from '@/core/ui/components/ui/ResultDialog';
 import { StepsWindow } from '@/core/ui/components/ui/StepsDialog';
@@ -47,8 +47,8 @@ export interface DatapackFlowDialogProps {
     /** The SC's own datapacks' names, which a new one may not take. Must be stable. */
     ownNames: readonly string[];
     onClose: () => void;
-    /** Start the save with these picks, and the new pack's name. */
-    onSave: (picks: StorePicks, name: string) => void;
+    /** Start the save with what was chosen, and the new pack's name. */
+    onSave: (choice: StoreChoice, name: string) => void;
 }
 
 /** The read of what the screen will show: the store's data to pick from, or ACO's catalog views. */

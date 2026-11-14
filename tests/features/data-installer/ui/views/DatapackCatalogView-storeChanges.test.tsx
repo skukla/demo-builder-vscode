@@ -16,6 +16,7 @@ import { change, press, settle } from '../../../../helpers/reactSettle';
 import { mockOnMessage } from '../../../../helpers/webviewClientMock';
 import '@testing-library/jest-dom';
 import { CATALOG, DatapackCatalogView, INVENTORY_COMPLETE, makeSummary, mockPost, mockRequest } from './DatapackCatalogView.testUtils';
+import { PICKABLE_KINDS } from '@/features/data-installer/pickableKinds';
 import { versionLabel } from '@/features/data-installer/packVersions';
 import type { DatapackSummary } from '@/features/data-installer/types';
 
@@ -237,8 +238,9 @@ describe('the header button', () => {
         await change(await screen.findByRole('textbox', { name: /Datapack Name/ }), 'Acme Test');
         await press((await inWindow('Create Datapack')).getByRole('button', { name: 'Create' }));
 
+        // Every kind ticked whole goes as a kind: the save lists it, nothing is read on Next (step-07 E2).
         expect(mockPost).toHaveBeenCalledWith('save-store-changes-to-pack', {
-            selections: { products: { sku: ['VR-Rack'] } },
+            wholeKinds: PICKABLE_KINDS,
             saveAs: { displayName: 'Acme Test' },
             confirm: true,
             id: 'datapack-save',

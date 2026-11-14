@@ -125,10 +125,10 @@ export async function saveToPack(
     try {
         // No `update`: the version saved is always new, so nothing in the library is written over.
         const at = new Date();
-        const { pack, source, picks } = opened;
+        const { pack, source, picks, wholeKinds } = opened;
         const plan = planSave(opened.project, pack, into, at);
         const saveAs = { id: plan.id, displayName: plan.displayName };
-        const target = { saveAs, picks, ...(pack ? { pack } : {}), ...(source ? { source } : {}) };
+        const target = { saveAs, picks, ...(wholeKinds.length > 0 ? { wholeKinds } : {}), ...(pack ? { pack } : {}), ...(source ? { source } : {}) };
         const result = await saveStoreChanges(opened.deps, target, (file) => writePackToStore(writer, file, { shared: into.shared === true }), report);
         // Nothing changed (walk F89): nothing was written and the demo keeps its version, so say so.
         if (result.unchanged) return unchangedAnswer(result);

@@ -118,22 +118,9 @@ export function changesOf(rows: readonly PackRow[], names: SaveNames, answer: 's
     return changes;
 }
 
-/**
- * The SC's own datapacks with changes among these rows, named once each: what the always-save
- * setting saves first without a row, which the save question names in one line (step-07 D3).
- */
-export function ownPackNames(rows: readonly PackRow[]): string[] {
-    const names = rows.filter(isOwn).map((row) => row.datapack?.name ?? '');
-    return names.filter((name, index) => name !== '' && names.findIndex((each) => sameName(each, name)) === index);
-}
-
-/**
- * The save question over the questions as answered: its rows, each row's name, why a name is
- * refused, and the SC's own datapacks the setting saves first without a row (`ownPackNames`).
- */
+/** The save question over the questions as answered: its rows, each row's name, and why a name is refused. */
 export interface SaveQuestion {
     rows: PackRow[];
     names: SaveNames;
     problems: Readonly<Record<string, string>>;
-    savedFirst: string[];
 }

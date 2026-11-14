@@ -172,6 +172,10 @@ function keepShared(choice: CloudCleanupChoice, shared: SharedOnline): { choice:
 /** What removing the data did: reported beside the delete, or why nothing was deleted. */
 type DataOutcome = { datapackData: { removed: boolean; note?: string } } | { stop: Record<string, unknown> };
 
+/** Nothing ran: no install record and no install target, so nothing of the pack was installed. */
+const NOTHING_INSTALLED =
+    "No website and store view were ever recorded for this project's datapack, so nothing of it was installed in Commerce and there was none to remove.";
+
 /** The project's datapack data, removed before anything else, as the button removes it. */
 async function removeDataFirst(ctx: HandlerContext, project: Project, args: DatapackAnswerArgs | undefined): Promise<DataOutcome> {
     if (!(await hasRemovableData(project))) {
@@ -185,9 +189,10 @@ async function removeDataFirst(ctx: HandlerContext, project: Project, args: Data
         return Promise.resolve(undefined);
     };
     const answer = changesAnswer(args);
-    const { stopped } = await removeDataBeforeDelete(ctx, project, (stage) => reportPhase(stage), answer === undefined ? askName : { given: answer });
+    const { stopped, nothingInstalled } = await removeDataBeforeDelete(ctx, project, (stage) => reportPhase(stage), answer === undefined ? askName : { given: answer });
     if (unanswered !== undefined) return { stop: changesNeedAnswer(unanswered, 'deleted') };
-    return stopped ? { stop: { error: stopped } } : { datapackData: { removed: true } };
+    if (stopped) return { stop: { error: stopped } };
+    return nothingInstalled ? { datapackData: { removed: false, note: NOTHING_INSTALLED } } : { datapackData: { removed: true } };
 }
 
 /** A checkbox argument: a boolean as given, anything else left for the setting to decide. */

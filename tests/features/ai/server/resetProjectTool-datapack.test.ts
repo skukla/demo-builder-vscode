@@ -52,6 +52,7 @@ import { FailedAfterDatapack } from '@/features/eds/services/reset/resetDatapack
 import { executeProjectReset } from '@/features/lifecycle/services/projectResetService';
 import type { Project } from '@/types/base';
 import { createMockProject } from '../../../helpers/projectFake';
+import { REMOVAL_NO_TARGET } from '../../../helpers/datapackRemovalFixtures';
 import { callResetProject, getCurrentProject } from './resetProjectTool.testUtils';
 
 const mockedHeadless = executeProjectReset as jest.MockedFunction<typeof executeProjectReset>;
@@ -218,6 +219,18 @@ describe('reset_project on a storefront, with removeData', () => {
             kind: 'storefront',
             datapack: 'Its datapack was uninstalled.',
         });
+    });
+
+    // step-07 (owner, 2026-11-14): no install target was ever recorded, so there was nothing to remove.
+    it('resets with no datapack line when no install target was ever recorded', async () => {
+        getCurrentProject.mockResolvedValue(storefront());
+        mockedRemove.mockResolvedValueOnce(REMOVAL_NO_TARGET);
+
+        const res = await call({ removeData: true, changes: 'drop' });
+
+        expect(res).toMatchObject({ reset: true, kind: 'storefront' });
+        expect(res).not.toHaveProperty('datapack');
+        expect(mockedEds).toHaveBeenCalledTimes(1);
     });
 
     it('refuses, resetting nothing, when the changes were not answered', async () => {

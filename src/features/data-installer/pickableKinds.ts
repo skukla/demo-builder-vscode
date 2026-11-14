@@ -30,8 +30,11 @@ export const PICK_FIELDS = {
 
 export type PickableKind = keyof typeof PICK_FIELDS;
 
-/** Every pickable kind, in the screen's order. */
-export const PICKABLE_KINDS: readonly PickableKind[] = [
+/**
+ * Every pickable kind, in the screen's order: a non-empty tuple, so a closed list of them (an agent
+ * tool's `z.enum`) takes it as it is.
+ */
+export const PICKABLE_KINDS = [
     'products',
     'giftcards',
     'categories',
@@ -42,7 +45,7 @@ export const PICKABLE_KINDS: readonly PickableKind[] = [
     'b2b_shared_catalogs',
     'product_attributes',
     'attribute_sets',
-];
+] as const satisfies readonly [PickableKind, ...PickableKind[]];
 
 /** Each kind as a sentence counts it: one, and more than one. */
 export const KIND_NOUNS: Readonly<Record<PickableKind, readonly [string, string]>> = {
@@ -151,6 +154,18 @@ export function picksOf(selections: unknown): { picks: StorePicks } | { error: s
         picks[kind] = ids.map(String);
     }
     return { picks };
+}
+
+/**
+ * `wholeKinds` read back (step-07 E2): the kinds ticked whole, each listed inside the save, or the
+ * sentence that says what is wrong with them. An agent sends it too, so every entry is checked.
+ */
+export function wholeKindsOf(wholeKinds: unknown): { kinds: PickableKind[] } | { error: string } {
+    if (wholeKinds === undefined) return { kinds: [] };
+    if (!Array.isArray(wholeKinds)) return { error: `wholeKinds is a list of data types: ${PICKABLE_KINDS.join(', ')}.` };
+    const unknown = wholeKinds.find((kind) => typeof kind !== 'string' || !isPickableKind(kind));
+    if (unknown !== undefined) return { error: `${String(unknown)} cannot be picked; these can: ${PICKABLE_KINDS.join(', ')}.` };
+    return { kinds: [...new Set(wholeKinds as PickableKind[])] };
 }
 
 /** How many items are picked, over every kind. */

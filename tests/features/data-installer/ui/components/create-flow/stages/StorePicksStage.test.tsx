@@ -194,16 +194,19 @@ describe('a count and a list', () => {
         expect(row('Products')).toHaveTextContent(NONE_NOTE);
     });
 
-    // Overview 7b: everything starts ticked, so a listed kind's row counts all of it at once.
-    it('says how many are selected on the row', async () => {
+    // Overview 7b: everything starts ticked, so a listed kind's row counts all of it at once, "N of M
+    // selected" as the projects list counts (step-07 Q3, S3-b); a kind ticked whole and unread says
+    // "All selected", since nothing was read to count.
+    it('says how many of how many are selected on a read row, and All Selected on an unread whole one', async () => {
         const TWO: StoreItemPage = { ...PRODUCTS, items: [...PRODUCTS.items, { id: 'Tray', displayName: 'Cable Tray', key: 'Tray' }], totalCount: 2 };
-        answer(counted({ products: 2 }), { products: TWO });
+        answer(counted({ products: 2, customers: 5 }), { products: TWO });
         await open();
-        expect(row('Products')).toHaveTextContent('2 selected');
+        expect(row('Products')).toHaveTextContent('2 of 2 selected');
+        expect(row('Customers')).toHaveTextContent('All selected');
 
         await press(screen.getByRole('checkbox', { name: /VR Rack/ }));
 
-        expect(row('Products')).toHaveTextContent('1 selected');
+        expect(row('Products')).toHaveTextContent('1 of 2 selected');
         expect(callsOf(COUNT)).toHaveLength(1);
     });
 });

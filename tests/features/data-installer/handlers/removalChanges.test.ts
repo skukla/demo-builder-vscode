@@ -10,6 +10,10 @@ jest.mock('@/features/data-installer/services/demoBuilderEngine/storeChanges', (
     ...jest.requireActual('@/features/data-installer/services/demoBuilderEngine/storeChanges'),
     previewChanges: jest.fn(),
 }));
+jest.mock('@/features/data-installer/services/demoBuilderEngine/demoAdditions', () => ({
+    ...jest.requireActual('@/features/data-installer/services/demoBuilderEngine/demoAdditions'),
+    addedSinceInstall: jest.fn(),
+}));
 jest.mock('@/features/data-installer/services/demoBuilderEngine/saveStore', () => ({
     ...jest.requireActual('@/features/data-installer/services/demoBuilderEngine/saveStore'),
     saveStoreChanges: jest.fn(),
@@ -55,6 +59,7 @@ import { buildDatapackEngine } from '@/features/data-installer/services/buildDat
 import { DataInstallerClient } from '@/features/data-installer/services/dataInstallerClient';
 import type { DatapackEngine } from '@/features/data-installer/services/datapackEngine';
 import type { ImportRequest } from '@/features/data-installer/services/importRequest';
+import { addedSinceInstall } from '@/features/data-installer/services/demoBuilderEngine/demoAdditions';
 import { type InstallRecord, readInstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import { type SaveResult, saveStoreChanges } from '@/features/data-installer/services/demoBuilderEngine/saveStore';
 import { StoreChangesError } from '@/features/data-installer/services/demoBuilderEngine/storeAccess';
@@ -67,6 +72,7 @@ const mockedGuard = orgGuard as jest.MockedFunction<typeof orgGuard>;
 const mockedAccess = resolveDataInstallerAccess as jest.MockedFunction<typeof resolveDataInstallerAccess>;
 const mockedPreview = previewChanges as jest.MockedFunction<typeof previewChanges>;
 const mockedSave = saveStoreChanges as jest.MockedFunction<typeof saveStoreChanges>;
+const mockedAdded = addedSinceInstall as jest.MockedFunction<typeof addedSinceInstall>;
 const mockedRecord = readInstallRecord as jest.MockedFunction<typeof readInstallRecord>;
 const mockedEngine = buildDatapackEngine as jest.MockedFunction<typeof buildDatapackEngine>;
 const mockedRun = runAndWatch as jest.MockedFunction<typeof runAndWatch>;
@@ -457,6 +463,23 @@ describe('get-datapack-removal-changes', () => {
                 alwaysSave: false,
             },
         });
+    });
+
+    // step-07 E1 (P4-Q3): Save Changes asks for what was added by hand too, from the store the project recorded.
+    it('answers what was added by hand since the install, by type, when asked', async () => {
+        mockedAdded.mockResolvedValue([{ kind: 'products', count: 1, names: ['Hand Tee'] }]);
+
+        const result = await read({ datapackName: 'bodea', version: 'main', added: true }, { ...PROJECT, datapack: { ...BODEA, store: 'library' } });
+
+        expect(mockedAdded).toHaveBeenCalledWith(expect.objectContaining({ projectPath: PROJECT.path }), BODEA, 'library');
+        expect(result).toMatchObject({ success: true, data: { count: 3, added: [{ kind: 'products', count: 1, names: ['Hand Tee'] }] } });
+    });
+
+    it('CONTROL: a removal\'s read asks nothing more, and answers no added', async () => {
+        const result = await read();
+
+        expect(mockedAdded).not.toHaveBeenCalled();
+        expect(result.data).not.toHaveProperty('added');
     });
 
     it("names no pack to save into when the demo's pack is not the SC's (Save As, its name typed)", async () => {

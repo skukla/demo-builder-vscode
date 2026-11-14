@@ -25,19 +25,25 @@ import { cn } from '@/core/ui/utils/classNames';
 
 const NO_PICKS: string[] = [];
 
-/** Why a row is greyed out, or how many are selected, or that its list did not answer, or nothing. */
-function noteOf(page: StoreItemPage | null | undefined, count: number | undefined, picked: number): string | undefined {
-    // A read that did not answer says so on its row, wherever the SC is (Select All Data reads kinds unopened).
+const digits = (n: number): string => n.toLocaleString('en-US');
+
+/**
+ * Why a row is greyed out, or how many of how many are selected once its list is read ("48 of 480
+ * selected", the projects list's words, `SelectionCount`), or "All selected" for a kind ticked whole
+ * and unread (step-07 Q3, S3-b), or that its list did not answer, or nothing.
+ */
+function noteOf(page: StoreItemPage | null | undefined, count: number | undefined, picked: number, whole: boolean): string | undefined {
     if (page === null) return "Couldn't be read";
     if (isKnownEmpty(page, count)) return 'None available';
-    return picked > 0 ? `${picked.toLocaleString('en-US')} selected` : undefined;
+    if (page === undefined) return whole ? 'All selected' : undefined;
+    return picked > 0 ? `${digits(picked)} of ${digits(page.items.length)} selected` : undefined;
 }
 
 function KindRow({ kind, store }: { kind: PickableKind; store: StorePicksState }): React.ReactElement {
     const picked = store.picks[kind]?.length ?? 0;
     const ticked = picked > 0 || store.whole.has(kind);
     const shown = kind === store.kind;
-    const note = noteOf(store.reads[kind], store.counts[kind], picked);
+    const note = noteOf(store.reads[kind], store.counts[kind], picked, store.whole.has(kind));
     return (
         <li>
             <button

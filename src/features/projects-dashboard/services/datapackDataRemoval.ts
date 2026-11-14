@@ -40,6 +40,8 @@ export async function hasRemovableData(project: Project): Promise<boolean> {
 export interface DeleteDataRemoval {
     stopped?: string;
     saved?: string;
+    /** Nothing ran: no install record and no website and store view, so nothing was installed. */
+    nothingInstalled?: true;
 }
 
 /**
@@ -50,12 +52,14 @@ export interface DeleteDataRemoval {
  * @returns `stopped`, why the data was not all removed, so the delete stops; `saved`, the line for a
  *   save into the SC's own pack first, for the batch row (owner, 2026-11-14). A removal that stopped
  *   partway says part of it came out (step-05 S7), never "was not uninstalled"; one that left part
- *   in Commerce on purpose names what, in the engine's note.
+ *   in Commerce on purpose names what, in the engine's note; `nothingInstalled` when nothing ran,
+ *   since nothing of the pack was ever installed (an agent must not read it as removed).
  */
 export async function removeDataBeforeDelete(context: HandlerContext, project: Project, report: ReportStage, askName?: SaveAsAnswering): Promise<DeleteDataRemoval> {
     const removal = await removeProjectSampleDataOutcome(project, context, report, askName);
     const stopped = stopOf(removal);
     if (stopped) return { stopped };
+    if (removal.noTarget) return { nothingInstalled: true };
     const saved = savedIntoLine(removal);
     return saved ? { saved } : {};
 }

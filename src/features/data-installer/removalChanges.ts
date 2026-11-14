@@ -30,6 +30,11 @@ export interface DatapackRemovalChanges {
     packName?: string;
     /** `demoBuilder.dataInstaller.changesOnRemoval` is `save`, so nobody needs asking. */
     alwaysSave: boolean;
+    /**
+     * What the SC added by hand since the install, by type: what a save would take that the pack does
+     * not hold (`addedSinceInstall`, step-07 E1). Only when asked for (`added: true`): Save Changes.
+     */
+    added?: ChangedKind[];
 }
 
 /** One data type on an install record, and how many things of it the record lists. */

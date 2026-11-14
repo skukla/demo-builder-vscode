@@ -200,7 +200,9 @@ user, then call again with one of:
 `save_store_changes_to_pack` saves the project's store into My Datapacks, as Save or
 Save As New: everything the demo uses, with nothing to pick. That is the pack Demo Builder installed
 here as the store holds it now, and whatever of the demo's the pack does not hold yet (what someone
-added in the Admin), never another demo's on a shared instance.
+added in the Admin), never another demo's on a shared instance. To tell the user beforehand what
+a Save takes, call `preview_datapack_changes` with `added: true`: `added` counts what was added by
+hand since the install, by data kind, beside `keep`, what was changed.
 
 - **Save** (no `saveAs`): the NEW latest save of the pack the project uses, only when that pack is
   the user's own. Two saves are kept: the save before it stays, for `undo_last_save`; older saves are deleted. When it is not (a Demo Builder datapack such as Bodea, or a colleague's), nothing is written and
@@ -211,15 +213,17 @@ added in the Admin), never another demo's on a shared instance.
 Either way the project then uses the new save: it installs from it and resets to it. With no
 pack named it saves only what is picked, which is how a store built by hand in the Admin becomes
 a pack (send `saveAs`; the screen's Create). `start_datapack_export` is the same save: send
-`selections`, `saveAs` and `confirm`. Every save goes into My Datapacks, never into the Data
+`selections` and/or `wholeKinds`, `saveAs` and `confirm`. Every save goes into My Datapacks, never into the Data
 Installer. A name the user already has for one of their own datapacks is refused: ask for
 another.
 
-- **From a pack, pick nothing**: the save takes everything the demo uses, and `selections` with
-  a pack is refused.
-- **With no pack, pick everything** with `list_datapack_export_items` (`dataType`: products,
-  giftcards, categories, cart_rules, customers, b2b_companies, customer_groups,
-  b2b_shared_catalogs, product_attributes, attribute_sets).
+- **From a pack, pick nothing**: the save takes everything the demo uses, and `selections` or
+  `wholeKinds` with a pack is refused.
+- **With no pack, a whole data type goes in `wholeKinds`** (products, giftcards, categories,
+  cart_rules, customers, b2b_companies, customer_groups, b2b_shared_catalogs, product_attributes,
+  attribute_sets): the save lists every item of it itself, so no ids are needed.
+- **For only some items of a type**, list them with `list_datapack_export_items` (`dataType`, as
+  above) and send their ids in `selections`.
 - Each item's `id` goes into `selections` as `{kind: {field: [ids]}}`: products and gift cards by
   `sku`, cart rules by `rule_id`, attributes by `attribute_code`, attribute sets by
   `attribute_set_id`, the rest by `id`.

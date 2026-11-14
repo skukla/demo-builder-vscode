@@ -26,7 +26,7 @@ import {
 import { z } from 'zod';
 import { cleanUpProjectCloud } from '@/features/ai/server/agentProjectCleanup';
 import { removeProjectSampleDataOutcome, type SaveAsAnswer, type SaveAsAnswering } from '@/features/eds/services/reset/edsResetSampleData';
-import { LEFT_NOTE, REMOVAL_LEFT_IN_STORE } from '../../../helpers/datapackRemovalFixtures';
+import { LEFT_NOTE, REMOVAL_LEFT_IN_STORE, REMOVAL_NO_TARGET } from '../../../helpers/datapackRemovalFixtures';
 import { hasRemovableData, removeDataBeforeDelete } from '@/features/projects-dashboard/services/datapackDataRemoval';
 import { deleteProjectFiles } from '@/features/projects-dashboard/services/projectFilesDeletion';
 import type { HandlerContext } from '@/types/handlers';
@@ -186,5 +186,27 @@ describe("delete_project and the datapack's data", () => {
         expect(mockedCloud).not.toHaveBeenCalled();
         expect(mockedFiles).not.toHaveBeenCalled();
         expect(answer).toEqual({ deleted: false, name: 'acme-demo', error: `Part of its datapack was left in Commerce, so the project was kept: ${LEFT_NOTE}` });
+    });
+
+    // step-07 (owner, 2026-11-14): no install record and no install target, so nothing was ever
+    // installed: nothing to remove. Never "removed: true" when nothing ran (review, 2026-11-14).
+    it('deletes when nothing was ever installed, saying there was none to remove', async () => {
+        const real = jest.requireActual<typeof import('@/features/projects-dashboard/services/datapackDataRemoval')>(
+            '@/features/projects-dashboard/services/datapackDataRemoval',
+        );
+        mockedRemove.mockImplementation(real.removeDataBeforeDelete);
+        (removeProjectSampleDataOutcome as jest.MockedFunction<typeof removeProjectSampleDataOutcome>).mockResolvedValue(REMOVAL_NO_TARGET);
+
+        const answer = await register().server.call({ ...CONFIRMED, removeData: true, changes: 'drop' });
+
+        expect(mockedFiles).toHaveBeenCalledTimes(1);
+        expect(answer).toEqual({
+            deleted: true,
+            name: 'acme-demo',
+            datapackData: {
+                removed: false,
+                note: "No website and store view were ever recorded for this project's datapack, so nothing of it was installed in Commerce and there was none to remove.",
+            },
+        });
     });
 });

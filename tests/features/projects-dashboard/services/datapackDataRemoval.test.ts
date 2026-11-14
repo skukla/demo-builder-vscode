@@ -8,7 +8,7 @@
 jest.mock('@/features/data-installer/services/buildDatapackEngine', () => ({ installedByDemoBuilder: jest.fn() }));
 jest.mock('@/features/eds/services/reset/edsResetSampleData', () => ({ removeProjectSampleDataOutcome: jest.fn() }));
 
-import { LEFT_NOTE, REMOVAL_LEFT_IN_STORE } from '../../../helpers/datapackRemovalFixtures';
+import { LEFT_NOTE, REMOVAL_LEFT_IN_STORE, REMOVAL_NO_TARGET } from '../../../helpers/datapackRemovalFixtures';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockProject } from '../../../helpers/projectFake';
 import { installedByDemoBuilder } from '@/features/data-installer/services/buildDatapackEngine';
@@ -87,6 +87,13 @@ describe('removing it before the delete', () => {
         await expect(removeDataBeforeDelete(createMockHandlerContext(), withPack(), jest.fn())).resolves.toStrictEqual({
             stopped: 'Part of its datapack was left in Commerce, so the project was kept.',
         });
+    });
+
+    // step-07 (owner, 2026-11-14): nothing was ever installed without a website and store view.
+    it('lets the delete go on, with no line, saying nothing was installed, when no install target was ever recorded', async () => {
+        mockedRemove.mockResolvedValue(REMOVAL_NO_TARGET);
+
+        await expect(removeDataBeforeDelete(createMockHandlerContext(), withPack(), jest.fn())).resolves.toStrictEqual({ nothingInstalled: true });
     });
 
     // Owner 2026-11-14 (item 5): the delete's row says where the changes went.

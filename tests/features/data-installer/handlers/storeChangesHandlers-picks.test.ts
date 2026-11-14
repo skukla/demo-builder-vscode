@@ -141,6 +141,48 @@ describe('save-store-changes-to-pack with picks', () => {
     });
 });
 
+// step-07 E2 (S3-a): a kind ticked whole is sent as wholeKinds and listed inside the save, never read
+// on Next. Unknown kinds are refused; a save from a datapack takes everything the demo uses already.
+describe('save-store-changes-to-pack with whole kinds', () => {
+    const save = (payload: Record<string, unknown>) =>
+        storeChangesHandlers['save-store-changes-to-pack'](makeImportHarness(project()).context, { saveAs: SAVE_AS, confirm: true, ...payload });
+
+    it('hands a save from nothing the whole kinds beside the picks', async () => {
+        await save({ selections: PICKS, wholeKinds: ['categories', 'customers'] });
+
+        expect(mockedSave.mock.calls[0][1]).toMatchObject({ picks: { products: ['VR-Rack'], cart_rules: ['7'] }, wholeKinds: ['categories', 'customers'] });
+    });
+
+    it('refuses a kind that cannot be picked, naming those that can, saving nothing', async () => {
+        const result = await save({ wholeKinds: ['orders'] });
+
+        expect(result).toMatchObject({ success: false, error: expect.stringMatching(/^orders cannot be picked/u) });
+        expect(mockedSave).not.toHaveBeenCalled();
+    });
+
+    it('refuses wholeKinds that is not a list of kinds', async () => {
+        const result = await save({ wholeKinds: 'products' });
+
+        expect(result).toMatchObject({ success: false, error: expect.stringMatching(/wholeKinds is a list/u) });
+        expect(mockedSave).not.toHaveBeenCalled();
+    });
+
+    it("refuses whole kinds with the project's own datapack, when Demo Builder installed it", async () => {
+        mockedRecord.mockResolvedValue(RECORD);
+
+        const result = await save({ wholeKinds: ['products'] });
+
+        expect(result).toMatchObject({ success: false, code: ErrorCode.INVALID_OPERATION });
+        expect(mockedSave).not.toHaveBeenCalled();
+    });
+
+    it('passes them through the export door too', async () => {
+        await exportHandlers['start-datapack-export'](makeImportHarness(project()).context, { wholeKinds: ['products'], saveAs: SAVE_AS, confirm: true });
+
+        expect(mockedSave.mock.calls[0][1]).toMatchObject({ wholeKinds: ['products'] });
+    });
+});
+
 // Decisions Phase 7b (J3-1): Save As New refuses a name the SC already has, on screen and here, so an
 // agent and a stale list are refused too. Only the SC's own count, as the screen counts them
 // (`ownedOf`): a colleague's may share the name.

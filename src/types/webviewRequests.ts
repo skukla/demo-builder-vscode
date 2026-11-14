@@ -35,7 +35,7 @@ import type {
 import type { ViewMode, ViewModeList } from './viewMode';
 import type { GitHubRepoItem } from './webview';
 import type { GitHubUser } from './webviewPayloads';
-import type { LeftOut, Selections } from '@/features/data-installer/pickableKinds';
+import type { LeftOut, PickableKind, Selections } from '@/features/data-installer/pickableKinds';
 
 /**
  * `undo-last-save` — go back to the save before the newest of the project's own datapack (Phase 2,
@@ -966,6 +966,11 @@ export interface SaveStoreChangesRequest {
     version?: string;
     /** Things the SC made by hand to save too, as `{<kind>: {<field>: [ids]}}` (`pickableKinds.ts`). */
     selections?: Selections;
+    /**
+     * Kinds ticked whole: the extension lists each inside the save, under Export from Commerce, so
+     * Create reads nothing on Next (step-07 E2). With no datapack only, as `selections`.
+     */
+    wholeKinds?: PickableKind[];
     /**
      * Save As: a new datapack of the SC's under this name, which the demo then uses. Absent: Save,
      * a new version of the demo's datapack, when it is the SC's (else the answer asks for a name).

@@ -1,9 +1,11 @@
 /**
  * Create Datapack's pick screen (datapack-engine step 14, `.rptc/plans/datapack-save-as/`): the kinds
  * on the left; clicking one shows its checklist on the right, its items asked of
- * `list-datapack-export-items`; selections kept across kinds and counted on each row; Next goes on to
- * the name, and Create hands both on. Create is two windows (step-04 S3; decisions Phase 7b, J3-2):
- * what it holds, everything ticked to start (overview 7b), then the name.
+ * `list-datapack-export-items`; selections kept across kinds and counted on each row ("1 of 2
+ * selected", "All selected" for a kind ticked whole and unread; step-07 S3-b); Next goes on to the
+ * name at once, reading nothing, and Create hands on the ids picked and the kinds ticked whole, which
+ * the save lists itself (step-07 E2, S3-a). Create is two windows (step-04 S3; decisions Phase 7b,
+ * J3-2): what it holds, everything ticked to start (overview 7b), then the name.
  *
  * Ported from `SaveFromStoreModal.test.tsx` (deleted in step-04 S2) for what is still true of
  * Create. A save from a datapack is no longer this dialog: Save Changes and Save As New are their own
@@ -14,13 +16,13 @@
 
 import '../../../../../helpers/webviewClientMock';
 import React from 'react';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { press, settle } from '../../../../../helpers/reactSettle';
 
 // Below the mock on purpose (webview-test-authoring §3).
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import { PICKABLE_KINDS, type StoreItemPage } from '@/features/data-installer/pickableKinds';
+import { PICKABLE_KINDS, type PickableKind, type StoreItemPage, type StorePicks } from '@/features/data-installer/pickableKinds';
 import { DatapackFlowDialog } from '@/features/data-installer/ui/components/create-flow/DatapackFlowDialog';
 import { dataTypeLabel } from '@/features/data-installer/ui/dataTypeLabel';
 
@@ -49,6 +51,9 @@ const row = (name: string) => screen.getByRole('button', { name: new RegExp(`^${
 const button = (name: string) => screen.getByRole('button', { name });
 const everything = () => screen.getByRole('checkbox', { name: 'Select All Data' });
 const NO_NAMES: readonly string[] = [];
+
+/** What Create hands on: the ids picked, and the kinds ticked whole. */
+const chose = (picks: StorePicks, wholeKinds: readonly PickableKind[] = []) => ({ picks, wholeKinds });
 
 async function open(props: Partial<React.ComponentProps<typeof DatapackFlowDialog>> = {}) {
     const onSave = jest.fn();
@@ -152,7 +157,7 @@ describe('selecting the items', () => {
         await openCleared();
         await press(screen.getByRole('checkbox', { name: /VR Rack/ }));
 
-        expect(row('Products')).toHaveTextContent('1 selected');
+        expect(row('Products')).toHaveTextContent('1 of 2 selected');
         expect(row('Categories')).not.toHaveTextContent('selected');
 
         await press(row('Cart Rules'));
@@ -171,7 +176,7 @@ describe('selecting the items', () => {
         await press(screen.getByRole('checkbox', { name: /Spring Sale/ }));
         await create();
 
-        expect(onSave).toHaveBeenCalledWith({ products: ['VR-Rack'], cart_rules: ['7'] }, 'Hand Built');
+        expect(onSave).toHaveBeenCalledWith(chose({ products: ['VR-Rack'], cart_rules: ['7'] }), 'Hand Built');
     });
 
     it('ticks every item the filter shows with Select All, showing a dash for some', async () => {
@@ -183,7 +188,7 @@ describe('selecting the items', () => {
         await press(screen.getByRole('checkbox', { name: 'Select All' }));
         await create();
 
-        expect(onSave).toHaveBeenCalledWith({ products: ['VR-Rack', 'Cable-Tray'] }, 'Hand Built');
+        expect(onSave).toHaveBeenCalledWith(chose({ products: ['VR-Rack', 'Cable-Tray'] }), 'Hand Built');
     });
 
     it('writes a large count with separators', async () => {
@@ -191,7 +196,7 @@ describe('selecting the items', () => {
         answer({ products: { items, totalCount: 1284, excludedCount: 0, inPackCount: 0 } });
         await open();
 
-        expect(row('Products')).toHaveTextContent('1,284 selected');
+        expect(row('Products')).toHaveTextContent('1,284 of 1,284 selected');
     });
 
     // Owner, 2026-11-08 (F79): the pane's bare spinner said nothing; it waits in the house rows.
@@ -347,7 +352,7 @@ describe('the name, second', () => {
 
         await create(' Hand Built ');
 
-        expect(onSave).toHaveBeenCalledWith({ products: ['VR-Rack'] }, 'Hand Built');
+        expect(onSave).toHaveBeenCalledWith(chose({ products: ['VR-Rack'] }), 'Hand Built');
     });
 
     // Save As New's rules (`nameProblem`), under the field.
@@ -366,18 +371,20 @@ describe('the name, second', () => {
 });
 
 describe('Select All Data (2026-11-03; ticked to start, overview 7b)', () => {
-    it('starts ticked, reads only the kind shown, and hands every item of every kind to Create', async () => {
+    // step-07 E2 (S3-a): a kind ticked whole is handed on as a kind, listed by the save itself.
+    it('starts ticked, reads only the kind shown, and hands every kind on whole to Create', async () => {
         answer({ products: PRODUCTS, cart_rules: RULES });
         const onSave = await open();
         expect(everything()).toBeChecked();
         expect(listCalls()).toEqual([{ dataType: 'products' }]);
-        expect(row('Products')).toHaveTextContent('2 selected');
+        expect(row('Products')).toHaveTextContent('2 of 2 selected');
+        expect(row('Cart Rules')).toHaveTextContent('All selected');
 
         await create();
 
-        // Every kind that may have something was asked for, once each, at Next.
-        expect(listCalls().map((call) => call.dataType)).toEqual(PICKABLE_KINDS);
-        expect(onSave).toHaveBeenCalledWith({ products: ['VR-Rack', 'Cable-Tray'], cart_rules: ['7'] }, 'Hand Built');
+        // Nothing more was read: the save lists each kind itself.
+        expect(listCalls()).toEqual([{ dataType: 'products' }]);
+        expect(onSave).toHaveBeenCalledWith(chose({}, PICKABLE_KINDS), 'Hand Built');
     });
 
     it('shows the dash when only some are ticked, and clears every kind when unticked', async () => {
@@ -406,48 +413,41 @@ describe('Select All Data (2026-11-03; ticked to start, overview 7b)', () => {
         expect(listCalls()).toHaveLength(reads);
     });
 
-    it('shows the spinner on Next while it reads the kinds not yet read, then goes on', async () => {
-        let answerCustomers: (value: unknown) => void = () => undefined;
-        mockRequest.mockImplementation((type: string, payload?: { dataType?: string }) => {
-            if (type !== 'list-datapack-export-items') return Promise.resolve({ success: true, data: null });
-            if (payload?.dataType === 'customers') return new Promise((resolve) => (answerCustomers = resolve));
-            return Promise.resolve({ success: true, data: payload?.dataType === 'products' ? PRODUCTS : NONE });
-        });
+    it('goes on to the name at once on Next, reading nothing and showing no spinner', async () => {
+        answer({ products: PRODUCTS, cart_rules: RULES });
         await open();
 
         await press(button('Next'));
 
-        expect(screen.getByRole('button', { name: /^Next/ })).toHaveAttribute('aria-busy', 'true');
-        await act(async () => answerCustomers({ success: true, data: RULES }));
-        await settle();
+        expect(listCalls()).toEqual([{ dataType: 'products' }]);
         expect(screen.getByRole('textbox', { name: /Datapack Name/ })).toBeInTheDocument();
     });
 
-    it('hands on what was read when one kind could not be read at Next', async () => {
+    it('hands on whole every kind ticked that may have something: only none available is left out', async () => {
         mockRequest.mockImplementation((type: string, payload?: { dataType?: string }) => {
             if (type !== 'list-datapack-export-items') return Promise.resolve({ success: true, data: null });
-            if (payload?.dataType === 'customers') return Promise.resolve({ success: false, error: 'No answer.' });
-            return Promise.resolve({ success: true, data: payload?.dataType === 'products' ? PRODUCTS : NONE });
+            if (payload?.dataType === 'giftcards') return Promise.resolve({ success: false, error: 'No answer.' });
+            if (payload?.dataType === 'categories') return Promise.resolve({ success: true, data: NONE });
+            return Promise.resolve({ success: true, data: payload?.dataType === 'products' ? PRODUCTS : RULES });
         });
         const onSave = await open();
+        await press(row('Gift Cards'));
+        await press(row('Categories'));
 
         await create();
-        expect(onSave).toHaveBeenCalledWith({ products: ['VR-Rack', 'Cable-Tray'] }, 'Hand Built');
+
+        // Gift cards' read failed but its row stays ticked, so it goes; the save decides (review, 2026-11-14).
+        const left = PICKABLE_KINDS.filter((kind) => kind !== 'categories');
+        expect(onSave).toHaveBeenCalledWith(chose({}, left), 'Hand Built');
     });
 
-    it("stays on the picks when Next finds nothing to hand on, saying so on the kind's row", async () => {
-        mockRequest.mockImplementation((type: string, payload?: { dataType?: string }) => {
-            if (type !== 'list-datapack-export-items') return Promise.resolve({ success: true, data: null });
-            if (payload?.dataType === 'customers') return Promise.resolve({ success: false, error: 'No answer.' });
-            return Promise.resolve({ success: true, data: payload?.dataType === 'products' ? PRODUCTS : NONE });
-        });
-        await open();
-        await press(row('Products'));
-        await press(screen.getByRole('checkbox', { name: 'Select All' }));
+    it('hands on a whole kind\'s ticks as ids once some are taken away', async () => {
+        answer({ products: PRODUCTS });
+        const onSave = await open();
+        await press(screen.getByRole('checkbox', { name: /Cable Tray/ }));
 
-        await press(button('Next'));
+        await create();
 
-        expect(screen.queryByRole('textbox', { name: /Datapack Name/ })).not.toBeInTheDocument();
-        expect(row('Customers')).toHaveTextContent("Couldn't be read");
+        expect(onSave).toHaveBeenCalledWith(chose({ products: ['VR-Rack'] }, PICKABLE_KINDS.filter((kind) => kind !== 'products')), 'Hand Built');
     });
 });

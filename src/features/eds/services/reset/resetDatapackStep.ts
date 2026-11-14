@@ -29,8 +29,9 @@ export interface AnsweredDatapack {
  * it, step-05 S7), `leftInStore` that it all ran but left part in the store on purpose (still on the
  * install record, so the project keeps naming the pack; Clear's result says it, step-06 C3), and
  * `note` the engine's line on what it left and why, which a delete that stops names (step-07 D1), and
- * `noTarget` that nothing was removed because no website and store view was ever recorded, so
- * nothing can have been installed (an Edit treats it as nothing to remove, owner 2026-11-14), and
+ * `noTarget` that nothing was removed because the pack has no install record and the project names
+ * no website and store view, so nothing can have been installed: nothing to remove, with no `kept`, so Delete, Reset and Edit all
+ * carry on with no stop and no line (owner, 2026-11-14), and
  * `savedInto` the SC's own pack the changes were saved into first, by its name, which the run's
  * row says (owner, 2026-11-14: with the setting on and no save window, nothing else does).
  */
@@ -50,7 +51,8 @@ export interface DatapackRemoval {
  * given, so nothing is dropped that was not answered for. Every reset door runs it, so the window
  * and the agent do the same work.
  *
- * @returns what the removal did, or undefined when there was none to do
+ * @returns what the removal did, or undefined when there was none to do: a project with no install
+ *   target recorded has nothing installed, so its row and the agent's answer say nothing of it
  */
 export async function removeAnsweredDatapack(
     project: Project,
@@ -59,7 +61,8 @@ export async function removeAnsweredDatapack(
     answered: AnsweredDatapack | undefined,
 ): Promise<DatapackRemoval | undefined> {
     if (answered?.removeDatapack !== true || (await beginSampleDataRemovalCheck(project)) !== true) return undefined;
-    return removeProjectSampleDataOutcome(project, context, report, { given: answered.changes });
+    const removal = await removeProjectSampleDataOutcome(project, context, report, { given: answered.changes });
+    return removal.noTarget ? undefined : removal;
 }
 
 /** A reset row's line for what its datapack step did to the store. */

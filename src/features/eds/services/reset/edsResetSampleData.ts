@@ -279,8 +279,11 @@ export async function removeProjectSampleDataOutcome(
             context.logger.warn(
                 `[EdsReset] Sample data was not removed: ${result.reason ?? 'no reason given'}`,
             );
-            const kept = result.reason ?? 'The datapack was not uninstalled.';
-            return result.noTarget ? { kept, noTarget: true, ...saved } : { kept, ...saved };
+            // No install record and no website and store view, so nothing can have been installed:
+            // nothing to remove, and no door stops or says a line for it (owner, 2026-11-14). A pack
+            // with a record is removed where the record says (`removeSampleData`).
+            if (result.noTarget) return { noTarget: true, ...saved };
+            return { kept: result.reason ?? 'The datapack was not uninstalled.', ...saved };
         }
         // Part left in the store on purpose: the record still describes what Commerce holds.
         if (result.leftInStore) return { leftInStore: true, ...(result.note ? { note: result.note } : {}), ...saved };

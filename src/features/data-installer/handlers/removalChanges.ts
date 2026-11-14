@@ -18,12 +18,13 @@
 
 import { type ChangesAnswer, type DatapackRemovalChanges, type DatapackRemovalScope, changesFromPreview, changesSentence } from '../removalChanges';
 import { changesOnRemoval } from '../services/dataInstallerConfig';
+import { addedSinceInstall } from '../services/demoBuilderEngine/demoAdditions';
 import { InstallRecordError, nodeRecordFiles, readInstallRecord } from '../services/demoBuilderEngine/installRecord';
 import { kindsOnRecord } from '../services/demoBuilderEngine/runPack';
 import { previewChanges } from '../services/demoBuilderEngine/storeChanges';
 import { packKindOf } from '../services/demoBuilderEngine/storeCopies';
 import { failure, saveIntoFor, saveToPack } from './packSave';
-import { openProjectStore, openSave, readPayload, type StoreChangesPayload } from './storeChangesHandlers';
+import { openProjectStore, openSave, readPayload, savedFrom, type StoreChangesPayload } from './storeChangesHandlers';
 import { reportPhase } from '@/core/utils/agentPhaseChannel';
 import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
@@ -59,16 +60,20 @@ const isSamePack = (a: DatapackId, b: DatapackId): boolean => a.name === b.name 
 
 /** The store to read the installed version from: the one named, else the one the project records. */
 function installedIn(project: Project, pack: DatapackId, named: DatapackStoreName | undefined): DatapackStoreName {
-    if (named) return named;
-    return project.datapack && isSamePack(project.datapack, pack) && project.datapack.store ? project.datapack.store : 'installer';
+    return savedFrom(project, pack, named) ?? 'installer';
 }
 
 /** Whether Demo Builder's engine installed this pack in this project: only then is anything known. */
 const hasRecord = async (project: Project, pack: DatapackId): Promise<boolean> =>
     (await readInstallRecord(nodeRecordFiles, project.path, pack)) !== undefined;
 
-/** What a removal of this pack would lose, or the response to answer instead. Writes nothing. */
-async function readChanges(context: HandlerContext, project: Project, pack: DatapackId, source: DatapackStoreName | undefined): Promise<DatapackRemovalChanges | { response: HandlerResponse }> {
+/**
+ * What a removal of this pack would lose, or the response to answer instead. Writes nothing.
+ *
+ * @param withAdded - also what was added by hand since the install: Save Changes counts it ("2
+ *   added"), a removal does not, since an uninstall leaves it in Commerce (step-07 E1)
+ */
+async function readChanges(context: HandlerContext, project: Project, pack: DatapackId, source: DatapackStoreName | undefined, withAdded = false): Promise<DatapackRemovalChanges | { response: HandlerResponse }> {
     const alwaysSave = changesOnRemoval() === 'save';
     if (!(await hasRecord(project, pack))) return { count: 0, kinds: [], alwaysSave };
     // The check reads Commerce itself and keeps it for the save and uninstall after it (walk F128).
@@ -76,8 +81,10 @@ async function readChanges(context: HandlerContext, project: Project, pack: Data
     if ('response' in store) return store;
     const answer = { alwaysSave, ...(await whereSaved(context, store)) };
     try {
-        const changes = changesFromPreview(await previewChanges(store.deps, pack, installedIn(project, pack, source)));
-        return { ...changes, ...(changes.count > 0 ? { sentence: changesSentence(changes.kinds) } : {}), ...answer };
+        const from = installedIn(project, pack, source);
+        const changes = changesFromPreview(await previewChanges(store.deps, pack, from));
+        const added = withAdded ? { added: await addedSinceInstall(store.deps, pack, savedFrom(project, pack, source)) } : {};
+        return { ...changes, ...(changes.count > 0 ? { sentence: changesSentence(changes.kinds) } : {}), ...answer, ...added };
     } catch (error) {
         return { response: failure(context, error, 'Commerce could not be read.') };
     }
@@ -253,7 +260,7 @@ export const removalChangesHandlers = defineHandlers({
         if ('error' in input) return { success: false, error: input.error };
         const project = await context.stateManager.getCurrentProject();
         if (!project) return { success: false, error: 'Open a project before uninstalling a datapack.' };
-        const changes = await readChanges(context, project, input.pack, input.source);
+        const changes = await readChanges(context, project, input.pack, input.source, payload?.added === true);
         return 'response' in changes ? changes.response : { success: true, data: changes };
     },
 });

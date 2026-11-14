@@ -51,6 +51,7 @@ import { removeProjectSampleDataOutcome } from '@/features/eds/services/reset/ed
 import { FailedAfterDatapack } from '@/features/eds/services/reset/resetDatapackStep';
 import { CONTENT_KEPT_LINE } from '@/features/eds/services/reset/demoSourceCheck';
 import { makeAddedDemo } from '../../../../helpers/demoPackageFixtures';
+import { REMOVAL_NO_TARGET } from '../../../../helpers/datapackRemovalFixtures';
 import { createMeshDepsFake } from '../../../../helpers/meshDepsFake';
 import { createMockStateManager } from '../../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../../helpers/loggerFake';
@@ -261,6 +262,23 @@ describe('resetEdsProjectWithUI — answered by a batch', () => {
         });
 
         expect(result).toStrictEqual({ success: true, filesReset: 3, datapackRemoval: { kept: 'Its changes could not be saved.' } });
+    });
+
+    // step-07 (owner, 2026-11-14): no install target was ever recorded, so there was nothing to remove.
+    it('carries no datapack step into the result when no install target was ever recorded', async () => {
+        mockedReset.mockResolvedValue({ success: true, filesReset: 3 });
+        (removeProjectSampleDataOutcome as jest.Mock).mockResolvedValue(REMOVAL_NO_TARGET);
+
+        const result = await resetEdsProjectWithUI({
+            githubAppService: fakeGitHubAppService,
+            meshDeps,
+            project: withPack(),
+            context: createContext(),
+            withinEdit: { report: jest.fn() },
+            answered: { removeDatapack: true, changes: 'drop' },
+        });
+
+        expect(result).toStrictEqual({ success: true, filesReset: 3 });
     });
 
     it('still says what the datapack step did when the reset throws after it', async () => {

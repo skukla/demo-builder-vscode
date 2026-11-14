@@ -52,7 +52,10 @@ export interface SampleDataResult {
     leftInStore?: boolean;
     /** What the engine kept and why, in one line (`ImportJobResult.note`): a delete names it. */
     note?: string;
-    /** Skipped for want of a website and store view: nothing can have been installed (an Edit reads it). */
+    /**
+     * Skipped for want of a website and store view, with no install record of the pack either:
+     * nothing can have been installed, so a removal has nothing to remove.
+     */
     noTarget?: true;
 }
 
@@ -152,6 +155,29 @@ export interface SampleDataDeps {
     }>;
     /** Live per-type progress, for the build's progress line. */
     onProgress?: (perType: Record<string, DataTypeStatus>) => void;
+    /**
+     * Demo Builder's install record of a pack in this project, when there is one: where it was
+     * installed. A removal reads it when the project names no website and store view now, since
+     * the owner's rule is "no target was EVER recorded" (review, 2026-11-14), not today's codes.
+     */
+    installRecordOf?: (pack: { name: string; version: string }) => Promise<{ target?: InstallTarget } | undefined>;
+}
+
+/** A removal whose project names no target now and whose record names none either: never guessed. */
+const NO_RECORDED_TARGET = 'No website and store view are set for this project, and its install record names none, so its datapack cannot be uninstalled.';
+
+/**
+ * Where a job writes, or why it does not. An install goes where the project says now. A removal
+ * goes there too, else where the install record says the pack went; only with no record at all
+ * is there nothing to remove (`noTarget`), since nothing can have been installed.
+ */
+async function targetOf(project: ProjectLike, deps: SampleDataDeps, mode: 'install' | 'remove', id: { name: string; version: string }): Promise<InstallTarget | SampleDataResult> {
+    const now = resolveInstallTarget(project);
+    if (now) return now;
+    const record = mode === 'remove' ? await deps.installRecordOf?.(id) : undefined;
+    if (record?.target) return record.target;
+    if (record) return { ran: false, skipped: true, reason: NO_RECORDED_TARGET };
+    return { ran: false, skipped: true, noTarget: true, reason: 'No website and store view were recorded for this project.' };
 }
 
 /**
@@ -193,15 +219,9 @@ async function runSampleDataJob(
         return { ran: false, skipped: true, reason: 'This project chose no sample data.' };
     }
 
-    const target = resolveInstallTarget(project);
-    if (!target) {
-        return {
-            ran: false,
-            skipped: true,
-            noTarget: true,
-            reason: 'No website and store view were recorded for this project.',
-        };
-    }
+    const id = { name: recorded.name, version: recorded.version };
+    const target = await targetOf(project, deps, mode, id);
+    if ('ran' in target) return target;
 
     // Shared with `get-datapack-import-target`, so the build and the modal
     // cannot resolve the same project to different instances.
@@ -214,9 +234,8 @@ async function runSampleDataJob(
         };
     }
 
-    // The identity alone, and the store beside it: the request's `id` is a pair, and a
-    // recorded pack may also name the pack it was made from, which is not the one to install.
-    const id = { name: recorded.name, version: recorded.version };
+    // The identity alone (`id`, above), and the store beside it: the request's `id` is a pair, and
+    // a recorded pack may also name the pack it was made from, which is not the one to install.
     const source = recorded.store;
     try {
         const stored = await deps.inventory({ ...id, ...(source ? { store: source } : {}) });

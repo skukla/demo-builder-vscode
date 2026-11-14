@@ -158,8 +158,9 @@ describe('AI_CONTEXT_VERSION', () => {
     // 60: a save from a pack takes everything the demo uses; import-datapack picks only what it does not use.
     // 61: importing another pack or version over the project's removes that one first.
     // 62: the datapack skills use the Datapacks screen's words, and offer no Data Installer copy (Phase 8).
-    it("is 62 (the datapack skills use the Datapacks screen's words, Phase 8)", () => {
-        expect(AI_CONTEXT_VERSION).toBe(62);
+    // 63: import-datapack sends wholeKinds for a whole data type and asks preview_datapack_changes for "added" (step-07 E1, E2).
+    it('is 63 (import-datapack sends whole data types and counts what was added, step-07)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(63);
     });
 });
 

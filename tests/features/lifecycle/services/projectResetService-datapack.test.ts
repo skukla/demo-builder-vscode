@@ -29,7 +29,7 @@ import {
 } from './projectResetService-answered.testUtils';
 import { removeProjectSampleDataOutcome } from '@/features/eds/services/reset/edsResetSampleData';
 import { FailedAfterDatapack } from '@/features/eds/services/reset/resetDatapackStep';
-import { LEFT_NOTE, REMOVAL_LEFT_IN_STORE } from '../../../helpers/datapackRemovalFixtures';
+import { LEFT_NOTE, REMOVAL_LEFT_IN_STORE, REMOVAL_NO_TARGET } from '../../../helpers/datapackRemovalFixtures';
 import type { Project } from '@/types/base';
 
 const mockedRemove = removeProjectSampleDataOutcome as jest.MockedFunction<typeof removeProjectSampleDataOutcome>;
@@ -133,6 +133,18 @@ describe('a headless reset whose removal left part in Commerce', () => {
         const { outcome } = run(withPack(), { removeDatapack: true, changes: 'drop' });
 
         await expect(outcome).resolves.toEqual({ success: true, warnings: [`Part of its datapack was left in Commerce: ${LEFT_NOTE}`] });
+    });
+});
+
+// step-07 (owner, 2026-11-14): no install target was ever recorded, so nothing can have been installed.
+describe('a headless reset of a project with no install target recorded', () => {
+    it('carries on with no line on the row', async () => {
+        mockedRemove.mockResolvedValue(REMOVAL_NO_TARGET);
+
+        const { outcome } = run(withPack(), { removeDatapack: true, changes: 'drop' });
+
+        await expect(outcome).resolves.toEqual({ success: true });
+        expect(mockCloneAllComponents).toHaveBeenCalledTimes(1);
     });
 });
 

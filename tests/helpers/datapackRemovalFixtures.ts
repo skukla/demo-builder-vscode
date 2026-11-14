@@ -36,3 +36,17 @@ export const RESULT_LEFT_IN_STORE: SampleDataResult = {
 
 /** What the reset's removal says of it (`removeProjectSampleDataOutcome`). */
 export const REMOVAL_LEFT_IN_STORE: DatapackRemoval = { leftInStore: true, note: LEFT_NOTE };
+
+/** The removal phase's result when no website and store view was ever recorded (`removeSampleData`). */
+export const RESULT_NO_TARGET: SampleDataResult = {
+    ran: false,
+    skipped: true,
+    noTarget: true,
+    reason: 'No website and store view were recorded for this project.',
+};
+
+/**
+ * What the reset's removal says of it: nothing to remove, since nothing can have been installed
+ * (step-07 noTarget, owner 2026-11-14). Every door carries on with no stop and no line.
+ */
+export const REMOVAL_NO_TARGET: DatapackRemoval = { noTarget: true };
