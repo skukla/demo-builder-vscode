@@ -16,7 +16,12 @@ import { treeOf, type TreeNode, type TypeOutcome } from './scenarioClear';
 /** The demo's datapack, and another. */
 export const DEMO_PACK = 'My Luma';
 export const OTHER_PACK = 'Bodea';
-export type PackName = typeof DEMO_PACK | typeof OTHER_PACK;
+/** J9's datapack: Demo Builder's Luma, which the demo uses there and which has a newer version. */
+export const LUMA_PACK = 'Luma';
+export type PackName = typeof DEMO_PACK | typeof OTHER_PACK | typeof LUMA_PACK;
+
+/** The datapacks J2 to J8 show; Luma is J9's alone. */
+export const BASE_PACKS: readonly PackName[] = [DEMO_PACK, OTHER_PACK];
 
 /** Which datapack the demo uses: none yet, or one of the two (the card with the blue check). */
 export type DemoUses = PackName | 'none';
@@ -92,6 +97,22 @@ export const PACKS: Record<PackName, Pack> = {
         ],
         categories: BODEA_CATEGORIES,
         examples: { products: ['Benchtop Centrifuge', 'Compound Microscope', 'Nitrile Gloves'], customers: ['Ava Chen', 'Marcus Reed'] },
+    },
+    // The newest version's date, as the library has it (J9: the owner updated Luma there).
+    [LUMA_PACK]: {
+        name: LUMA_PACK,
+        saved: 'Saved Nov 14, 8:30 AM',
+        types: [
+            { code: 'product_attributes', count: 46, change: '46' },
+            { code: 'attribute_sets', count: 9, change: '9' },
+            { code: 'categories', count: 40, change: '40' },
+            { code: 'customer_groups', count: 4, change: '4' },
+            { code: 'products', count: 2_058, change: '2,058' },
+            { code: 'customers', count: 10, change: '10' },
+            { code: 'cart_rules', count: 3, change: '3' },
+            { code: 'coupons', count: 6, change: '6' },
+            { code: 'source_items', count: 2_058, change: '2,058' },
+        ],
     },
 };
 

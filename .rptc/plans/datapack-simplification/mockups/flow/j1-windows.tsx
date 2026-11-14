@@ -26,6 +26,7 @@ import { INSTANCE_WEBSITES, PROJECT_CLEAR, instanceCheck, namesLine, type ClearC
 import { RecordsStep, TypeTable, reviewButton } from './TypeSummary';
 import type { RetryEnding } from './scenarioFailed';
 import type { J8View } from './j8-flyout';
+import type { J9State } from './scenarioUpdate';
 import { ClearRunWindow } from './ClearRunWindow';
 import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
 import { LeadText } from '@/core/ui/components/ui/LeadText';
@@ -75,6 +76,7 @@ declare global {
             retryEnds: () => RetryEnding;
             /** J8's panel select: a project's Datapacks or the Datapack Library. */
             j8Screen: () => J8View;
+            j9State: () => J9State;
             trace: (box: HTMLElement | null, label: string) => void;
             /** Drop the measurement in progress and the windows seen, before the self-check opens a step. */
             reset: () => void;

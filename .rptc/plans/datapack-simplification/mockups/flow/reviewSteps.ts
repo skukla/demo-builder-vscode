@@ -49,7 +49,15 @@ export type StepWindow =
     // J8: the Datapacks screen itself (j8-screen.tsx); each shows the screen, none opens a window.
     | 'header'
     | 'card-tags'
-    | 'flyout-menu';
+    | 'flyout-menu'
+    // J9: Update Luma on a Demo Builder datapack with a newer version (j9-screen.tsx, j9-windows.tsx).
+    | 'update-dot'
+    | 'update'
+    | 'update-run'
+    | 'update-same'
+    | 'update-restore'
+    | 'update-restore-own'
+    | 'update-restore-edits';
 
 export interface ReviewStep {
     id: string;
@@ -178,6 +186,21 @@ export const JOURNEYS: ReviewJourney[] = [
             { id: 'J8-1', decided: ['The header, in order of how often an SC does each: the save button (Save ▾ on your datapack, Save As New on someone else\'s, Create with none, opening "Create Datapack"), Install from File, then Clear, set apart by a divider.', 'Install from File opens the same install window as a card\'s Install, after VS Code\'s file dialog.', 'The Datapack Library has Add from File alone: it has no store, so no save button and no Clear.'], title: 'The Header', action: 'Look at the header. "Datapacks screen (J8)" in this panel switches to the Datapack Library.', question: 'The save button (Create with none), Install from File (or Add from File in the library), Clear. Right?', window: 'header' },
             { id: 'J8-2', decided: ['Each card\'s tag sits on the date\'s line, one word: Mine on your own datapack, Demo Builder on the extension\'s.', 'One date format, absolute: "Saved Nov 10, 9:15 AM".'], title: 'A Card', action: 'Look at a card.', question: 'One-line tag, "Mine", one date format. Right?', window: 'card-tags' },
             { id: 'J8-3', decided: ['The bar: Install (Switch to Bodea when another datapack is installed), or Restore My Luma on the datapack the demo uses, then More.', 'More\'s first section: Save as File, Undo Last Save (on the datapack the demo uses), Share (on your own).', 'Its own section: Uninstall (on the datapack the demo uses), Delete (on your own). Delete Store Configuration is gone.', '"Delete My Luma?": "Permanently deletes it." No version is named, and there is no Version History (D3).', 'A Demo Builder datapack has no Delete, whoever opens it: its More holds Save as File alone.', 'In the Datapack Library the bar is More alone, with the same rows less those that act on the demo.'], title: 'The Flyout', action: 'My Luma\'s flyout is open. Press More. Then try Bodea, and the Datapack Library.', question: 'Save as File, Share; Uninstall and Delete in their own section, bare verbs. Right?', window: 'flyout-menu' },
+        ],
+    },
+    {
+        id: 'J9',
+        name: 'Updating and Restoring',
+        summary: 'Applying what a newer version changed, keeping your edits; and Restore, which goes back',
+        plan: 'decisions.md "Back on track (owner, 2026-11-14)": Update Luma, its type choice and hover; and "Where \'back\' goes": one Restore with Last Saved and Original. Replaces J4-3',
+        steps: [
+            { id: 'J9-1', decided: ['While a newer version of the datapack the demo uses is in the library, its card shows the amber dot. Its hover: "Newer version available".', 'The flyout\'s main button is Update <pack> when the library copy is newer, otherwise Restore <pack>. "Update means apply what changed. Restore means go back to a previous state."', 'More holds Undo Last Save (only when there is a save before) and Uninstall.', 'To reach the datapack My Luma came from, Switch to Luma.'], title: 'Flyout States', action: 'The flyout of the datapack the demo uses is open. "Flyout state (J9)" in this panel switches between: Luma with a newer version in the library (hover the amber dot); Luma with your edits; My Luma with nothing unsaved; My Luma with unsaved edits. Open More in each. Also on screen from J8-3: Save as File, and on My Luma Share and Delete. While Update is the main button, Restore is in neither place.', question: 'Update Luma when newer, else Restore <pack>; Undo Last Save and Uninstall in More. Right?', window: 'update-dot' },
+            { id: 'J9-2', decided: ['Update writes only what the datapack changed and keeps your own edits.', 'A datapack is built out additively, so Update can apply some of the changed types (beta.153).'], title: 'What Changed', action: 'Update Luma: the check, then what changed, one row per changed type with a tick on each (all ticked), bare counts. Nothing says your edits are kept. Review Records opens the spot check: Products and Product Attributes carry the dot, and their Kept tab lists the records you edited, which the update leaves alone (Clear\'s pattern, J1-3b: Install\'s table has no kept records to copy). Try unticking a type: Update waits until one is ticked.', question: 'Only the changed types, a tick each, Cancel and Update. Is it clear what Update will write?', window: 'update' },
+            { id: 'J9-3', title: 'The Update Run', action: 'Update runs with every type chosen: Install\'s run window, one Update Luma step with a row per chosen type, then Verify Installation, titled "Updating Luma". Then the small result "Luma Updated", which closes itself. The dot is gone and the main button reads Restore Luma.', question: 'Run window with a row per type, then "Luma Updated", closing itself. Right?', window: 'update-run' },
+            { id: 'J9-4', title: 'Nothing Left to Apply', action: 'Update Luma when every change is already in Commerce ("Flyout state (J9)": newer version already applied).', question: 'The check, then "Luma Is Up to Date", closing itself, as Restore\'s check ends (J4-2). Right?', window: 'update-same' },
+            { id: 'J9-5', decided: ['On a Demo Builder datapack there is one point: "Restore Luma?" / "Commerce goes back to Luma as it ships."', 'Cancel, and Restore in the standard blue (rule 20).'], title: 'Restore Luma', action: 'Luma with your edits: Restore Luma. After the check, "Restore Luma?", one line, no choice. Then J4\'s run and "Luma Restored", which closes itself.', question: '"Restore Luma?" / "Commerce goes back to Luma as it ships.", Cancel / Restore. Right?', window: 'update-restore' },
+            { id: 'J9-6', decided: ['On your own datapack Restore offers "Last Saved" only when there are unsaved edits; with none, Original is the only point, so no choice is drawn.'], title: 'Restore My Luma', action: 'My Luma with nothing unsaved: Restore My Luma. After the check, "Restore My Luma?" with one line, PROPOSED: "Commerce goes back to My Luma\'s original from Nov 3, 2:40 PM." Then the run and "My Luma Restored".', question: 'One line naming the original, no choice. Are the words right?', window: 'update-restore-own' },
+            { id: 'J9-7', decided: ['With unsaved edits, "Restore My Luma?" offers "Last Saved, <date>" (throws the edits away) and "Original, <date>" (the datapack\'s first state).', '"Save Your Changes First?" comes only when Original is picked and there are unsaved edits; Last Saved goes straight to the run.', 'No separate Discard Changes: Restore\'s Last Saved is that job.'], title: 'Last Saved or Original', action: 'My Luma with unsaved edits: Restore My Luma. The choice, Last Saved first and picked. Restore with Last Saved: straight to the run. Reset Step and pick Original: "Save Your Changes First?" (Restore Without Saving, Cancel, Save and Restore), then the run with Save Your Changes first.', question: 'Last Saved / Original as a choice; the save question only for Original. Right?', window: 'update-restore-edits' },
         ],
     },
 ];

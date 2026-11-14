@@ -29,12 +29,15 @@ function byText(selector: string, text: string, prefix = false): HTMLElement | n
     }) ?? null;
 }
 
+/** A run's rows: the product's `StepRows` (`.step-rows`; the class was `.import-steps` before it moved to core). */
+const RUN_ROWS = '.step-rows';
+
 const inDialog = (selector: string): HTMLElement | null =>
     [...document.querySelectorAll<HTMLElement>(`[role=dialog] ${selector}`)].find(visible) ?? null;
 /** A window's title ending with `text`, in a window that shows no run (a small result). */
 const resultTitle = (text: string): HTMLElement | null =>
     [...document.querySelectorAll<HTMLElement>('.modal-title')].find(
-        (el) => visible(el) && (el.textContent ?? '').trim().endsWith(text) && !el.closest('[role=dialog]')?.querySelector('.import-steps'),
+        (el) => visible(el) && (el.textContent ?? '').trim().endsWith(text) && !el.closest('[role=dialog]')?.querySelector(RUN_ROWS),
     ) ?? null;
 /** The open window whose title matches `title`, whole. */
 const batchWindow = (title: RegExp): HTMLElement | null =>
@@ -83,7 +86,7 @@ const FIND: Record<TourTarget, () => HTMLElement | null> = {
         (resultTitle('Dry Run Passed') ?? resultTitle('Dry Run Found a Problem') ?? resultTitle('Dry Run Failed'))?.closest<HTMLElement>('.modal-dialog') ?? null,
     install: () => dialogButton('Install'),
     'save-and-replace': () => dialogButton('Save and Switch'),
-    'run-steps': () => inDialog('.import-steps'),
+    'run-steps': () => inDialog(RUN_ROWS),
     replace: () => dialogButton('Switch'),
     'save-menu': () => byText('.j1-screen button', 'Save'),
     'menu-save': () => byText('[role=menuitem]', 'Save'),
@@ -107,7 +110,7 @@ const FIND: Record<TourTarget, () => HTMLElement | null> = {
     // J4's small results: … Restored, … Is Up to Date.
     'restore-result': () =>
         [...document.querySelectorAll<HTMLElement>('.modal-title')].find(
-            (el) => visible(el) && /(Restored|Is Up to Date)$/u.test((el.textContent ?? '').trim()) && !el.closest('[role=dialog]')?.querySelector('.import-steps'),
+            (el) => visible(el) && /(Restored|Is Up to Date)$/u.test((el.textContent ?? '').trim()) && !el.closest('[role=dialog]')?.querySelector(RUN_ROWS),
         ) ?? null,
     'menu-uninstall': () => byText('[role=menuitem]', 'Uninstall'),
     'uninstall-question': () => resultTitle('Uninstall My Luma?')?.closest<HTMLElement>('.modal-dialog') ?? null,
@@ -141,10 +144,25 @@ const FIND: Record<TourTarget, () => HTMLElement | null> = {
     'menu-save-file': () => byText('[role=menuitem]', 'Save as File'),
     'add-from-file': () => byText('.j1-screen button', 'Add from File'),
     'dashboard-datapacks': () => document.querySelector<HTMLElement>('.j1-screen [data-action="dataInstaller"]'),
+    // J9: Update Luma on a Demo Builder datapack with a newer version.
+    'luma-card': () => card('Luma'),
+    'flyout-update': () => byText('.db-drawer.open button', 'Update Luma'),
+    'flyout-restore-pack': () => byText('.db-drawer.open button', 'Restore ', true),
+    'radio-original': () => byText('[role=dialog] label', 'Original', true),
+    'restore-choice': () => inDialog('[role=radiogroup]'),
+    'update-table': () => inDialog('.type-table'),
+    'tick-cart-rules': () => byText('[role=dialog] label', 'Cart Rules', true),
+    'rail-products': () => railButton('Products'),
+    update: () => dialogButton('Update'),
+    'update-result': () => resultTitle('Luma Updated') ?? resultTitle('Luma Is Up to Date'),
+    'restore-luma-question': () => resultTitle('Restore Luma?')?.closest<HTMLElement>('.modal-dialog') ?? null,
+    'restore-my-question': () => resultTitle('Restore My Luma?')?.closest<HTMLElement>('.modal-dialog') ?? null,
+    'save-and-restore': () => dialogButton('Save and Restore'),
+    'luma-restored': () => resultTitle(' Restored'),
     // J3's small results: Saved to …, Saved as …, Created …, Last Save Undone.
     'done-result': () =>
         [...document.querySelectorAll<HTMLElement>('.modal-title')].find(
-            (el) => visible(el) && /(Saved to|Saved as|Created|Last Save Undone)/u.test((el.textContent ?? '').trim()) && !el.closest('[role=dialog]')?.querySelector('.import-steps'),
+            (el) => visible(el) && /(Saved to|Saved as|Created|Last Save Undone)/u.test((el.textContent ?? '').trim()) && !el.closest('[role=dialog]')?.querySelector(RUN_ROWS),
         ) ?? null,
 };
 

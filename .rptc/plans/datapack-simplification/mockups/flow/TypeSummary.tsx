@@ -4,6 +4,7 @@
  * and replace windows needed the same table and records step, so there is one of each.
  */
 
+import { Checkbox } from '@adobe/react-spectrum';
 import React, { useState } from 'react';
 import { countOf, doneTab, recordsOf, spreadTypes, type KeptRecord, type TypeOutcome, type TypeSpread } from './scenarioClear';
 import { TreeList, treeRows } from './TreeList';
@@ -15,19 +16,35 @@ import { StepsWindow } from '@/core/ui/components/ui/StepsDialog';
 const digits = (n: number): string => n.toLocaleString('en-US');
 
 /**
+ * A tick on each row's type (J9: Update applies only the types ticked; a datapack is built out
+ * additively, so applying some of it is allowed, owner 2026-11-14). The house Spectrum checkbox in
+ * the type's own cell, so the table keeps its one layout (rule 8).
+ */
+export interface TypePicks {
+    ticked: ReadonlySet<string>;
+    onToggle: (type: string) => void;
+}
+
+/**
  * PROPOSED: the summary the SC decides on. One line per type: the type and what happens to it,
  * counted. No grey detail, names or kept sentence (owner, 2026-11-11, J1-2: "far too noisy";
  * J1-3: kept records are tagged in the spot check instead). The names are plain text: Review Records
  * is the one way into the spot check (owner, 2026-11-11, J1-4: linked names did the same job twice).
  * All of it arrives at once, so the window opens at its final height.
  */
-export function TypeTable({ rows, label = 'What happens to each type of data' }: { rows: TypeOutcome[]; label?: string }) {
+export function TypeTable({ rows, label = 'What happens to each type of data', picks }: { rows: TypeOutcome[]; label?: string; picks?: TypePicks }) {
     return (
-        <div className="type-table" role="table" aria-label={label}>
+        <div className={picks ? 'type-table type-table--picks' : 'type-table'} role="table" aria-label={label}>
             {rows.map((row) => (
                 <div className="type-row" role="row" key={row.type}>
                     <div className="type-name" role="rowheader">
-                        {row.type}
+                        {picks ? (
+                            <Checkbox isSelected={picks.ticked.has(row.type)} onChange={() => picks.onToggle(row.type)}>
+                                {row.type}
+                            </Checkbox>
+                        ) : (
+                            row.type
+                        )}
                     </div>
                     <div className="type-cell" role="cell">
                         <div className="type-line">
@@ -84,14 +101,14 @@ function RecordList({ row, view, query }: { row: TypeOutcome; view: RecordView; 
  * layout: the switch, the filter, the list. Any type can have kept records (`wipePlan.ts`'s table).
  * What happens to the type is the summary's to say, not repeated here.
  */
-function RecordPane({ row, tabs }: { row: TypeOutcome; tabs: boolean }) {
+function RecordPane({ row, tabs, firstTab }: { row: TypeOutcome; tabs: boolean; firstTab?: string }) {
     const [query, setQuery] = useState('');
     const [view, setView] = useState<RecordView>('removed');
     const noun = row.type.toLowerCase();
     const kept = row.keptRecords?.length ?? 0;
     // The Kept tab wears the dot its type wears in the left column, so the two read as one.
     const views = [
-        { id: 'removed', label: doneTab(row.type) },
+        { id: 'removed', label: firstTab ?? doneTab(row.type) },
         { id: 'kept', label: 'Kept', isDisabled: kept === 0, marker: kept > 0 ? <StatusDot variant="warning" /> : undefined },
     ];
     const total = view === 'kept' ? kept : countOf(row);
@@ -124,7 +141,7 @@ function RecordPane({ row, tabs }: { row: TypeOutcome; tabs: boolean }) {
  * The Save From Store layout (StorePicksStage), read-only. One height whatever is chosen; a long
  * type scrolls inside its pane.
  */
-function TypeRail({ rows, first, tabs }: { rows: TypeOutcome[]; first?: string; tabs: boolean }) {
+function TypeRail({ rows, first, tabs, firstTab }: { rows: TypeOutcome[]; first?: string; tabs: boolean; firstTab?: string }) {
     const [shown, setShown] = useState(first ?? rows[0]?.type);
     const row = rows.find((r) => r.type === shown) ?? rows[0];
     return (
@@ -150,7 +167,7 @@ function TypeRail({ rows, first, tabs }: { rows: TypeOutcome[]; first?: string; 
                     </li>
                 ))}
             </ul>
-            <div className="datapack-picks-pane">{row ? <RecordPane key={row.type} row={row} tabs={tabs} /> : null}</div>
+            <div className="datapack-picks-pane">{row ? <RecordPane key={row.type} row={row} tabs={tabs} {...(firstTab ? { firstTab } : {})} /> : null}</div>
         </div>
     );
 }
@@ -169,6 +186,8 @@ export interface RecordsStepProps {
      * check has none on any type: one layout across the window still (rule 10).
      */
     tabs?: boolean;
+    /** The first tab's name in place of Removed (J9's update: Changed). */
+    firstTab?: string;
     onBack: () => void;
     onClose: () => void;
 }
@@ -179,7 +198,7 @@ export interface RecordsStepProps {
  * box there can't be skipped (owner, 2026-11-12, J2-3; prototype-conventions.md rule 19). Escape
  * still closes the window.
  */
-export function RecordsStep({ title, rows, first, spread, tabs = true, onBack, onClose }: RecordsStepProps) {
+export function RecordsStep({ title, rows, first, spread, tabs = true, firstTab, onBack, onClose }: RecordsStepProps) {
     return (
         <StepsWindow
             key="records"
@@ -189,7 +208,7 @@ export function RecordsStep({ title, rows, first, spread, tabs = true, onBack, o
             hideClose
             actionButtons={[{ label: 'Back', variant: 'secondary', onPress: onBack }]}
         >
-            <TypeRail rows={spreadTypes(rows, spread ?? window.__J1__.spread())} first={first} tabs={tabs} />
+            <TypeRail rows={spreadTypes(rows, spread ?? window.__J1__.spread())} first={first} tabs={tabs} {...(firstTab ? { firstTab } : {})} />
         </StepsWindow>
     );
 }

@@ -12,6 +12,7 @@
 import type { BuiltStep, StepWindow } from './reviewSteps';
 import { undoEnd } from './scenarioSave';
 import { UNINSTALL_LONGEST } from './scenarioUninstall';
+import { UPDATE_LONGEST } from './scenarioUpdate';
 
 /** The panel's measurement of the window on screen (proto-j1.html). */
 interface Measure {
@@ -59,6 +60,7 @@ const RUN_UNITS: Partial<Record<StepWindow, number>> = {
     'uninstall-run': UNINSTALL_LONGEST,
     'background-success': UNINSTALL_LONGEST,
     'background-failure': UNINSTALL_LONGEST,
+    'update-run': UPDATE_LONGEST,
 };
 const GLANCE: Partial<Record<StepWindow, number>> = {
     'install-run': GLANCE_MS,
@@ -66,10 +68,12 @@ const GLANCE: Partial<Record<StepWindow, number>> = {
     'restore-run': GLANCE_MS,
     'uninstall-run': GLANCE_MS,
     'background-success': GLANCE_MS,
+    'update-run': GLANCE_MS,
+    'update-same': GLANCE_MS,
 };
 
-/** Steps that show the screen only, with no window to measure (J4-1: the amber dot on a card; J6's card, flyout and dashboard; J8's screen). */
-const NO_WINDOW: readonly StepWindow[] = ['none', 'restore-dot', 'failed-card', 'failed-flyout', 'failed-dashboard', 'header', 'card-tags', 'flyout-menu'];
+/** Steps that show the screen only, with no window to measure (J4-1: the amber dot on a card; J6's card, flyout and dashboard; J8's screen; J9-1: the dot and the flyout). */
+const NO_WINDOW: readonly StepWindow[] = ['none', 'restore-dot', 'failed-card', 'failed-flyout', 'failed-dashboard', 'header', 'card-tags', 'flyout-menu', 'update-dot'];
 
 /** How long a step takes to settle: its reads, its check, and a run's steps at the panel's pace. */
 function settleMs(step: BuiltStep, readMs: number, checkMs: number): number {

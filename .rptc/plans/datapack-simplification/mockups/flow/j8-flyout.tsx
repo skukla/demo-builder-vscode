@@ -14,7 +14,7 @@
 
 import { Button, Item, Section, Text } from '@adobe/react-spectrum';
 import React from 'react';
-import { DEMO_PACK, OTHER_PACK, type PackName } from './scenarioInstall';
+import { DEMO_PACK, LUMA_PACK, OTHER_PACK, type PackName } from './scenarioInstall';
 import { CardActionsMenu } from '@/core/ui/components/ui/CardActionsMenu';
 import { renderMenuIcon } from '@/core/ui/components/ui/menuIcons';
 
@@ -25,7 +25,7 @@ export type MenuKey = 'save-file' | 'undo' | 'share' | 'uninstall' | 'delete';
 export type J8View = 'project' | 'library';
 
 /** Where each datapack comes from: My Luma is the SC's own, Bodea the extension's. */
-export const TAGS: Record<PackName, string> = { [DEMO_PACK]: 'Mine', [OTHER_PACK]: 'Demo Builder' };
+export const TAGS: Record<PackName, string> = { [DEMO_PACK]: 'Mine', [OTHER_PACK]: 'Demo Builder', [LUMA_PACK]: 'Demo Builder' };
 
 /** The SC's own datapack: it has saves to look back over, and it can be shared and deleted. */
 const own = (pack: PackName): boolean => TAGS[pack] === 'Mine';

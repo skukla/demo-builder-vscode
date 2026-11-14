@@ -14,6 +14,7 @@ import type { UninstallEnding } from './scenarioUninstall';
 import type { RetryEnding } from './scenarioFailed';
 import type { J6View } from './j6-screen';
 import type { J8View } from './j8-flyout';
+import type { J9State } from './scenarioUpdate';
 
 /** Where in the product a stop points or waits for a press. Resolved to elements by Tour.tsx. */
 export type TourTarget =
@@ -110,7 +111,22 @@ export type TourTarget =
     | 'menu-delete-datapack'
     | 'delete-question'
     | 'menu-save-file'
-    | 'add-from-file';
+    | 'add-from-file'
+    // J9 (j9Tour.ts)
+    | 'luma-card'
+    | 'flyout-update'
+    | 'flyout-restore-pack'
+    | 'radio-original'
+    | 'restore-choice'
+    | 'restore-my-question'
+    | 'save-and-restore'
+    | 'luma-restored'
+    | 'update-table'
+    | 'tick-cart-rules'
+    | 'rail-products'
+    | 'update'
+    | 'update-result'
+    | 'restore-luma-question';
 
 export interface TourStop {
     /** What to look at: the highlight and the callout sit beside it. */
@@ -138,6 +154,8 @@ export interface TourStop {
     j6View?: J6View;
     /** Which J8 screen shows from this stop on: a project's Datapacks or the Datapack Library. */
     j8View?: J8View;
+    /** J9's flyout state from this stop on, set in the panel the same way. */
+    j9State?: J9State;
     /** What to do, in a few words: "Click Clear." */
     say: string;
     /** Lines of reviewSteps.ts steps' `decided` lists that this stop shows: [step id, line indexes]. */

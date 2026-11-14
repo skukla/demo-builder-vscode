@@ -11,7 +11,7 @@
 import { ActionButton, Badge, Button, Tooltip, TooltipTrigger } from '@adobe/react-spectrum';
 import Close from '@spectrum-icons/workflow/Close';
 import React from 'react';
-import { PACKS, type DemoUses, type Pack, type PackName } from './scenarioInstall';
+import { BASE_PACKS, PACKS, type DemoUses, type Pack, type PackName } from './scenarioInstall';
 import { dataTypeLabel } from '@/features/data-installer/ui/dataTypeLabel';
 import { Drawer } from '@/core/ui/components/ui/Drawer';
 import { Fact, FactList } from '@/core/ui/components/ui/FactList';
@@ -94,7 +94,7 @@ function Card({ pack, installed, newer, status, tag, onOpen }: CardProps): React
 export interface DatapackCardsProps {
     demo: DemoUses;
     onOpen: (pack: PackName) => void;
-    /** The datapacks a J3 step says exist (J3-2: none of the SC's yet); absent, every one. */
+    /** The datapacks a step says exist (J3-2: none of the SC's yet; J9: Luma); absent, My Luma and Bodea. */
     packs?: readonly PackName[];
     /** The amber dot's hover on the card of the datapack the demo uses (J4); absent, no dot. */
     newer?: string;
@@ -108,7 +108,7 @@ export interface DatapackCardsProps {
 export function DatapackCards({ demo, onOpen, packs, newer, statuses, tags }: DatapackCardsProps): React.ReactElement {
     return (
         <div className="datapack-grid j2-cards">
-            {Object.values(PACKS).filter((pack) => !packs || packs.includes(pack.name)).map((pack) => (
+            {Object.values(PACKS).filter((pack) => (packs ?? BASE_PACKS).includes(pack.name)).map((pack) => (
                 <Card
                     key={pack.name}
                     pack={pack}

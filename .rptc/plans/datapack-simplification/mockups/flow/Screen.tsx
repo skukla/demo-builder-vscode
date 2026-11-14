@@ -2,7 +2,7 @@
  * The prototype's page: a stand-in for the Datapacks screen behind the windows, the panel's step
  * switcher, the decisions panel and the guided tours. It routes a step's window to its journey: J1's
  * Clear windows (j1-windows.tsx), J2's install window (j2-screen.tsx) or J3's save, create and undo
- * windows (j3-screen.tsx), J4's Restore windows (j4-screen.tsx), or J5's Uninstall window (j5-screen.tsx). The bundle's entry
+ * windows (j3-screen.tsx), J4's Restore windows (j4-screen.tsx), J5's Uninstall window (j5-screen.tsx), and so on to J9's Update windows (j9-screen.tsx). The bundle's entry
  * (build-j1.js); split from j1-windows.tsx when J2 was added, so no file passes 500 lines.
  */
 
@@ -25,12 +25,14 @@ import { J5_TOUR } from './j5Tour';
 import { J6_TOUR } from './j6Tour';
 import { J7_TOUR } from './j7Tour';
 import { J8_TOUR } from './j8Tour';
+import { J9_TOUR } from './j9Tour';
 import { isJ3Window, useJ3Screen, type J3StepWindow } from './j3-screen';
 import { isJ4Window, useJ4Screen, type J4StepWindow } from './j4-screen';
 import { isJ5Window, useJ5Screen, type J5StepWindow } from './j5-screen';
 import { isJ6Window, useJ6Screen, type J6StepWindow } from './j6-screen';
 import { isJ7Window, useJ7Screen, type J7StepWindow } from './j7-screen';
 import { isJ8Window, useJ8Screen, type J8Screen, type J8StepWindow } from './j8-screen';
+import { isJ9Window, useJ9Screen, type J9StepWindow } from './j9-screen';
 import { isJ2Window, type J2Window } from './j2-windows';
 import { setSelect, useJ2Screen, type J2Screen } from './j2-screen';
 import type { TypeSpread } from './scenarioClear';
@@ -51,10 +53,10 @@ function ClearMenu({ onPick }: { onPick: (key: 'project' | 'instance') => void }
     );
 }
 
-type Open = Exclude<StepWindow, 'none' | J2Window | J3StepWindow | J4StepWindow | J5StepWindow | J6StepWindow | J7StepWindow | J8StepWindow> | null;
+type Open = Exclude<StepWindow, 'none' | J2Window | J3StepWindow | J4StepWindow | J5StepWindow | J6StepWindow | J7StepWindow | J8StepWindow | J9StepWindow> | null;
 
 /** The guided tours, by journey: one Start button each. */
-const TOURS: Record<string, TourStop[]> = { J1: J1_TOUR, J2: J2_TOUR, J3: J3_TOUR, J4: J4_TOUR, J5: J5_TOUR, J6: J6_TOUR, J7: J7_TOUR, J8: J8_TOUR };
+const TOURS: Record<string, TourStop[]> = { J1: J1_TOUR, J2: J2_TOUR, J3: J3_TOUR, J4: J4_TOUR, J5: J5_TOUR, J6: J6_TOUR, J7: J7_TOUR, J8: J8_TOUR, J9: J9_TOUR };
 
 const STEP_KEY = 'proto-j1-step';
 
@@ -62,7 +64,7 @@ const STEP_KEY = 'proto-j1-step';
 const setSpread = (spread: TypeSpread): void => setSelect('j1-types', spread);
 
 /** The panel selects whose change draws the open window again. */
-const REDRAW_SELECTS = ['j1-types', 'j2-ending', 'j2-dry', 'j4-commerce', 'j5-ends', 'j6-retry', 'j8-screen'];
+const REDRAW_SELECTS = ['j1-types', 'j2-ending', 'j2-dry', 'j4-commerce', 'j5-ends', 'j6-retry', 'j8-screen', 'j9-state'];
 
 /** The step a link names (#J2-1), else the one last open, else the first. */
 const stepById = (id: string | null): BuiltStep | undefined => STEPS.find((s) => s.id === id);
@@ -165,7 +167,7 @@ function Heading({ inView, clear, j3Header, j6Dashboard, j7Header, j8 }: Heading
     return (
         <>
             <h1>Datapacks</h1>
-            {['J2', 'J3', 'J4', 'J5', 'J6'].includes(inView) ? null : <p>Bodea</p>}
+            {['J2', 'J3', 'J4', 'J5', 'J6', 'J9'].includes(inView) ? null : <p>Bodea</p>}
             {inView === 'J3' ? j3Header : null}
             {clear}
         </>
@@ -184,7 +186,8 @@ function Screen() {
     const j6 = useJ6Screen(run);
     const j7 = useJ7Screen(run);
     const j8 = useJ8Screen(run);
-    const later = [j3, j4, j5, j6, j7, j8];
+    const j9 = useJ9Screen(run);
+    const later = [j3, j4, j5, j6, j7, j8, j9];
     const { touring, tourRun, startTour, endTour } = useTours(() => setOpen(null), j2, later);
     const show = (key: Open): void => {
         setRun((n) => n + 1);
@@ -218,6 +221,9 @@ function Screen() {
         } else if (isJ8Window(next.window)) {
             show(null);
             j8.openStep(next.window);
+        } else if (isJ9Window(next.window)) {
+            show(null);
+            j9.openStep(next.window);
         } else show(next.window === 'none' ? null : next.window);
     };
     // Which journey's screen shows: the tour's, else the chosen step's.
@@ -233,6 +239,7 @@ function Screen() {
         else if (journey === 'J6') j6.onTourStop(stop);
         else if (journey === 'J7') j7.onTourStop(stop);
         else if (journey === 'J8') j8.onTourStop(stop);
+        else if (journey === 'J9') j9.onTourStop(stop);
         else j2.onTourStop(stop);
     };
     // A link pasted into an open page: go to its step.
@@ -254,6 +261,7 @@ function Screen() {
             {inView === 'J6' ? j6.cards : null}
             {inView === 'J7' ? j7.cards : null}
             {inView === 'J8' ? j8.cards : null}
+            {inView === 'J9' ? j9.cards : null}
             {j2.window}
             {j3.window}
             <SaveTipHost />
@@ -262,6 +270,7 @@ function Screen() {
             {j6.window}
             {j7.window}
             {j8.window}
+            {j9.window}
             {touring ? null : <JourneyBar step={step} onStep={toStep} tours={Object.keys(TOURS)} onTour={startTour} />}
             <TourControls touring={touring} tourRun={tourRun} onStart={startTour} onExit={endTour} onStop={(stop) => tourStop(touring, stop)} />
             <J1Windows open={open} step={step} run={run} onClose={() => setOpen(null)} />

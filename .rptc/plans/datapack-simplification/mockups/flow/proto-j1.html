@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Datapack Journeys: Prototype</title>
 <!--
   The journeys' windows, built from the REAL house components: J1 Clear (j1-windows.tsx), J2 Install
-  (j2-windows.tsx), J3 Save, Create, Undo (j3-windows.tsx), J4 Restore (j4-windows.tsx), J5 Uninstall (j5-windows.tsx), J6 a failed install (j6-screen.tsx), J7 Reset and Delete (the product's batch window, j7-screen.tsx), J8 the Datapacks screen (j8-screen.tsx), on the screen stand-in in Screen.tsx. Build: node build-j1.js.
+  (j2-windows.tsx), J3 Save, Create, Undo (j3-windows.tsx), J4 Restore (j4-windows.tsx), J5 Uninstall (j5-windows.tsx), J6 a failed install (j6-screen.tsx), J7 Reset and Delete (the product's batch window, j7-screen.tsx), J8 the Datapacks screen (j8-screen.tsx), J9 Update Luma (j9-windows.tsx), on the screen stand-in in Screen.tsx. Build: node build-j1.js.
 -->
 <link rel="icon" href="data:,">
 <style>
@@ -62,6 +62,10 @@
   .type-table-headed { border-top:none; }
   .type-head-row { border-bottom:none; padding-bottom:0; }
   .type-cell { min-width:0; }
+  /* A type table with a tick on each type (J9's Update): the type column widened by the checkbox's width, so
+     "Product Attributes" keeps one line; under Select All, whose rule is the table's top rule. */
+  .type-table--picks { border-top:none; }
+  .type-table--picks .type-row { grid-template-columns:180px minmax(0, 1fr); align-items:center; }
   .type-line { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .type-examples { color:var(--vscode-descriptionForeground); margin-left:8px; }
   /* The step switcher in the prototype panel. */
@@ -202,6 +206,9 @@
     <label>Datapacks screen (J8)
       <select id="j8-screen"><option value="project">A project's Datapacks</option><option value="library">Datapack Library</option></select>
     </label>
+    <label>Flyout state (J9)
+      <select id="j9-state"><option value="luma-newer">Luma, newer version in the library</option><option value="luma-applied">Luma, newer version already applied</option><option value="luma-edits">Luma, with your edits</option><option value="my-clean">My Luma, nothing unsaved</option><option value="my-edits">My Luma, unsaved edits</option></select>
+    </label>
     <label>Retry ends (J6)
       <select id="j6-retry"><option value="fails">Stops again</option><option value="succeeds">Works</option></select>
     </label>
@@ -217,16 +224,16 @@
   const ty = document.getElementById('j1-types'), r = document.getElementById('j1-read'), c = document.getElementById('j1-check'), pa = document.getElementById('j1-pace');
   const de = document.getElementById('j2-demo'), co = document.getElementById('j2-commerce'), en = document.getElementById('j2-ending'), dr = document.getElementById('j2-dry');
   const sv = document.getElementById('j3-save'), rc = document.getElementById('j4-commerce'), ue = document.getElementById('j5-ends');
-  const rt = document.getElementById('j6-retry'), j8 = document.getElementById('j8-screen');
+  const rt = document.getElementById('j6-retry'), j8 = document.getElementById('j8-screen'), j9 = document.getElementById('j9-state');
   ty.value = saved.ty || 'data'; r.value = saved.r2 || '3000'; c.value = saved.c2 || '3000'; pa.value = saved.pa || '1000';
-  de.value = saved.de || 'none'; co.value = saved.co || 'clean'; en.value = saved.en || 'clean'; dr.value = saved.dr || 'passed'; sv.value = saved.sv || 'save'; rc.value = ['edits', 'newer', 'matches'].includes(saved.rc) ? saved.rc : 'edits'; ue.value = saved.ue || 'succeeds'; rt.value = saved.rt || 'fails'; j8.value = saved.j8 || 'project';
+  de.value = saved.de || 'none'; co.value = saved.co || 'clean'; en.value = saved.en || 'clean'; dr.value = saved.dr || 'passed'; sv.value = saved.sv || 'save'; rc.value = ['edits', 'newer', 'matches'].includes(saved.rc) ? saved.rc : 'edits'; ue.value = saved.ue || 'succeeds'; rt.value = saved.rt || 'fails'; j8.value = saved.j8 || 'project'; j9.value = saved.j9s || 'luma-newer';
   // A value saved by an older build that no option has any more falls back to the first option.
-  [ty, r, c, pa, de, co, en, dr, sv, rc, ue, rt, j8].forEach((sel) => { if (sel.selectedIndex < 0) sel.selectedIndex = 0; });
+  [ty, r, c, pa, de, co, en, dr, sv, rc, ue, rt, j8, j9].forEach((sel) => { if (sel.selectedIndex < 0) sel.selectedIndex = 0; });
   if (saved.collapsed) pill.classList.add('collapsed');
   const caret = () => { document.getElementById('proto-caret').textContent = pill.classList.contains('collapsed') ? 'Show' : 'Hide'; };
   caret();
-  const save = () => localStorage.setItem(KEY, JSON.stringify({ ty: ty.value, r2: r.value, c2: c.value, pa: pa.value, de: de.value, co: co.value, en: en.value, dr: dr.value, sv: sv.value, rc: rc.value, ue: ue.value, rt: rt.value, j8: j8.value, collapsed: pill.classList.contains('collapsed') }));
-  ty.onchange = r.onchange = c.onchange = pa.onchange = de.onchange = co.onchange = en.onchange = dr.onchange = sv.onchange = rc.onchange = ue.onchange = rt.onchange = j8.onchange = save;
+  const save = () => localStorage.setItem(KEY, JSON.stringify({ ty: ty.value, r2: r.value, c2: c.value, pa: pa.value, de: de.value, co: co.value, en: en.value, dr: dr.value, sv: sv.value, rc: rc.value, ue: ue.value, rt: rt.value, j8: j8.value, j9s: j9.value, collapsed: pill.classList.contains('collapsed') }));
+  ty.onchange = r.onchange = c.onchange = pa.onchange = de.onchange = co.onchange = en.onchange = dr.onchange = sv.onchange = rc.onchange = ue.onchange = rt.onchange = j8.onchange = j9.onchange = save;
   document.getElementById('proto-head').onclick = () => { pill.classList.toggle('collapsed'); caret(); save(); };
 
   // The measurement: every 50ms while a window is open. A height counts from the first frame the
@@ -260,7 +267,7 @@
   };
   window.__J1__ = {
     spread: () => ty.value, readMs: () => Number(r.value), checkMs: () => Number(c.value), paceMs: () => Number(pa.value),
-    demo: () => de.value, commerce: () => co.value, ending: () => en.value, dryRun: () => dr.value, saveVariant: () => sv.value, restore: () => rc.value, uninstallEnds: () => ue.value, retryEnds: () => rt.value, j8Screen: () => j8.value,
+    demo: () => de.value, commerce: () => co.value, ending: () => en.value, dryRun: () => dr.value, saveVariant: () => sv.value, restore: () => rc.value, uninstallEnds: () => ue.value, retryEnds: () => rt.value, j8Screen: () => j8.value, j9State: () => j9.value,
     // One measurement per window: a window opened again is a new element, so it starts afresh. The
     // windows it replaced are kept (`__J1_SEEN__`) so the self-check judges every window of a step.
     trace: (box, label) => {

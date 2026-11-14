@@ -36,13 +36,13 @@ type Phase = 'check' | 'question' | 'run' | 'restored' | 'up-to-date';
  * plan's label "Restoring My Luma". The plan names no done title; "My Luma Restored" is the
  * prototype's, in the form of "Bodea Installed".
  */
-function restoreRun(pack: PackName): JobRun {
-    const plan: RunPlan = { pack: PACKS[pack], replaces: pack, saves: false, ending: 'clean' };
+export function restoreRun(pack: PackName, saves = false): JobRun {
+    const plan: RunPlan = { pack: PACKS[pack], replaces: pack, saves, ending: 'clean' };
     return { running: `Restoring ${pack}`, done: `${pack} Restored`, last: endTick(plan), steps: (tick) => runSteps(plan, tick) };
 }
 
 /** The check before anything: J2's check window and its wait, under the button's own words. */
-function CheckWindow({ pack, onClose }: { pack: PackName; onClose: () => void }): React.ReactElement {
+export function CheckWindow({ pack, onClose }: { pack: PackName; onClose: () => void }): React.ReactElement {
     return <StepsWindow key="check" title={`Restore ${pack}`} waiting={WAIT_STAGES.checkingForChanges} closeLabel="Cancel" onClose={onClose} />;
 }
 
