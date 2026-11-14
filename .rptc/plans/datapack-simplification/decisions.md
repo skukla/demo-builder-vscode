@@ -433,6 +433,11 @@ An audit found five walk answers that contradicted earlier decisions. The owner'
   path is closed for agents (owner, 2026-11-14, "Close it").
 - When Demo Builder's datapack store can't be reached, the Datapacks screen opens on "Data Installer
   Datapacks" so the banner and the list agree (owner, 2026-11-14).
+- The wizard's Datapacks step stays clickable even without a website and store view, so the SC can always
+  change or remove the pick; only Continue waits (owner, 2026-11-14).
+- Unmarking a Demo Builder datapack is possible on the screen: "Remove Demo Builder Mark" in the More menu
+  of a Demo Builder datapack in the Datapack Library, behind a confirm; agents still cannot (owner,
+  2026-11-14; owner rule 1, reversibility).
 - Already on track: the reset's "Content kept" row is built amber; Q6 makes kept-on-purpose green
   (slice I3).
 
