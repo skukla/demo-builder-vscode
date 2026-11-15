@@ -140,6 +140,22 @@ describe('reset_project on a headless project, with removeData', () => {
         }
     );
 
+    // Live run 6 (2026-11-15): the reset saved the SC's edit into their own pack first, and the answer
+    // said only "Its datapack was uninstalled.", so the agent could not tell them it was saved.
+    it('says the changes were saved into the pack first, as the batch row does', async () => {
+        getCurrentProject.mockResolvedValue(project());
+        mockedHeadless.mockResolvedValueOnce({
+            success: true,
+            meshRedeployed: false,
+            datapackRemoval: { savedInto: 'My WeCafe' },
+        });
+
+        expect(await call({ removeData: true })).toMatchObject({
+            reset: true,
+            datapack: 'Saved to My WeCafe. Its datapack was uninstalled.',
+        });
+    });
+
     it("says what happened to the datapack, in the window row's words", async () => {
         getCurrentProject.mockResolvedValue(project());
         mockedHeadless.mockResolvedValueOnce({

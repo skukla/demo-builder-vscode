@@ -14,6 +14,7 @@ import {
 } from '@/features/eds/services/reset/edsResetSampleData';
 import {
     datapackStepLine,
+    savedIntoLine,
     type AnsweredDatapack,
     type DatapackRemoval,
 } from '@/features/eds/services/reset/resetDatapackStep';
@@ -130,7 +131,8 @@ export async function datapackAnswer(
     removal: DatapackRemoval | undefined,
 ): Promise<{ datapack?: string }> {
     if (!answered) return {};
-    if (removal) return { datapack: datapackStepLine(removal) };
+    // A save into the SC's own pack first leads, as the batch row says it (live run 6, 2026-11-15).
+    if (removal) return { datapack: [savedIntoLine(removal), datapackStepLine(removal)].filter(Boolean).join(' ') };
     return (await beginSampleDataRemovalCheck(project)) === true
         ? {}
         : { datapack: NONE_TO_UNINSTALL };
