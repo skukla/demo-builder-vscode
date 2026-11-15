@@ -1,8 +1,8 @@
 /**
  * The batch window's read (step-05 S3; rule 14, "A window never grows once on screen"): while
- * `prepare-projects-batch` reads, the questions' window is drawn but unseen and only its wait shows,
- * where it will open (the Steps layout's `ready`, as a datapack install's check waits). Once the
- * read answers, the window is seen for the first time, at the questions' height, and holds it. So
+ * `prepare-projects-batch` reads, the wait is a small window of its own (the Steps layout's `ready`,
+ * as a datapack install's check waits; owner, 2026-11-15). Once the read answers, it becomes the
+ * questions' window at their height, and holds it. So
  * Reset 3 Projects no longer opens at the wait's height and grows to the questions' (319px to
  * 446px, decisions Open, 2026-11-12). The run that follows is a window of its own, at its own size.
  *
@@ -124,3 +124,35 @@ describe.each(CASES)(
         });
     }
 );
+
+// One project is named, not counted (live run 6, 2026-11-15): Reset Scratch 1028 read "From each
+// selected project" and "Each project returns to how it was set up." The wait's way out is Cancel,
+// as the questions' is: nothing has started.
+describe('ProjectsBatchModal: one project, by name', () => {
+    it('names it in the wait, with Cancel, and in what a reset does', async () => {
+        await openOn('reset', null, PROJECTS.slice(0, 1));
+        act(() => {
+            jest.advanceTimersByTime(FRONTEND_TIMEOUTS.DIALOG_PENDING_DELAY);
+        });
+        const wait = screen.getByRole('dialog', { name: 'Reset A?' });
+        expect(within(wait).getByText('From A')).toBeInTheDocument();
+        expect(within(wait).queryByText('From each selected project')).toBeNull();
+        expect(within(wait).getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+    });
+
+    it('says what a reset does to that project', async () => {
+        await openOn('reset', answerFor('reset', 1), PROJECTS.slice(0, 1));
+
+        expect(
+            screen.getByText('A returns to how it was set up. Code changes are lost.')
+        ).toBeInTheDocument();
+    });
+
+    it('CONTROL: several are still "each"', async () => {
+        await openOn('reset', answerFor('reset', 3), PROJECTS.slice(0, 3));
+
+        expect(
+            screen.getByText('Each project returns to how it was set up. Code changes are lost.')
+        ).toBeInTheDocument();
+    });
+});

@@ -60,9 +60,10 @@ describe('ProjectsBatchModal: Delete Selected', () => {
         let answer: (envelope: PrepareEnvelope) => void = () => undefined;
         const { user } = await openOn('delete', null);
         mockRequest.mockImplementation(() => new Promise((resolve) => (answer = resolve)));
-        await user.click(screen.getByRole('button', { name: 'Close' }));
+        // The wait's way out is Cancel: nothing has started (live run 6, 2026-11-15).
+        await user.click(screen.getByRole('button', { name: 'Cancel' }));
         await user.click(screen.getByRole('button', { name: 'Open Window' }));
-        await user.click(screen.getByRole('button', { name: 'Close' }));
+        await user.click(screen.getByRole('button', { name: 'Cancel' }));
 
         await act(async () => answer(DELETE));
 

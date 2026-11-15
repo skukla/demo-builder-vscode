@@ -135,7 +135,8 @@ function statusOf(controls: ProjectsBatchControls): ModalStatus | undefined {
 /** The run's dismiss: into the background while it goes, Close once it has ended. */
 function closeLabelOf(controls: ProjectsBatchControls): 'Close' | 'Run in Background' | 'Cancel' {
     const { view, progress } = controls;
-    if (view.phase === 'asking' || askingOf(controls)) return 'Cancel';
+    // While reading too: nothing has started, and the questions that follow say Cancel.
+    if (view.phase === 'reading' || view.phase === 'asking' || askingOf(controls)) return 'Cancel';
     const going = view.phase === 'running' && progress?.state !== 'succeeded' && progress?.state !== 'failed';
     return going ? 'Run in Background' : 'Close';
 }
@@ -188,10 +189,12 @@ function RunBody({ controls, view }: { controls: ProjectsBatchControls; view: Ex
     );
 }
 
-/** The wait while the questions are read. */
+/** The wait while the questions are read; one project's demo data is read from it, by name. */
 function waitOf(view: BatchView): WaitLines | false {
     if (view.phase !== 'reading') return false;
-    return view.action === 'reset' ? WAIT_STAGES.readingProjectsDemoData : WAIT_STAGES.readingProjects;
+    if (view.action !== 'reset') return WAIT_STAGES.readingProjects;
+    const one = view.names.length === 1 ? view.names[0] : undefined;
+    return one ? { ...WAIT_STAGES.readingProjectsDemoData, detail: `From ${one}` } : WAIT_STAGES.readingProjectsDemoData;
 }
 
 /** "Save Your Changes First?", in the window's own container; the verb is the batch's. */

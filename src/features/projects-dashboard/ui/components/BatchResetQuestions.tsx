@@ -45,7 +45,8 @@ export function BatchResetQuestions({ rows, choices }: Props): React.ReactElemen
     const column = removeColumnState(rows, choices.removeTicks);
     return (
         <div className="batch-confirm">
-            <LeadText>Each project returns to how it was set up. Code changes are lost.</LeadText>
+            {/* One project by its name, as the title names it (live run 6, 2026-11-15). */}
+            <LeadText>{`${rows.length === 1 ? rows[0].name : 'Each project'} returns to how it was set up. Code changes are lost.`}</LeadText>
             <div className="batch-delete scroll-fade scroll-fade--capped">
                 <table className="batch-delete-table">
                     {column.offered && (
