@@ -84,7 +84,7 @@ const companyRows = z.array(
                     })
                     .passthrough(),
             }),
-            extension_attributes: z.record(z.unknown()).optional(),
+            extension_attributes: z.record(z.string(), z.unknown()).optional(),
             /** The company's status, as Commerce numbers it (0 pending, 1 active, 2 rejected, 3 blocked). */
             status: z.number().int().min(0).max(3).optional(),
         })

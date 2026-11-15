@@ -78,7 +78,7 @@ const SAVE_AS = z
     .describe("Save As: a new datapack of the user's under this name, which the project then uses. Needed when the project's pack is not theirs");
 
 const SELECTIONS = z
-    .record(z.record(z.array(z.union([z.string(), z.number()]))))
+    .record(z.string(), z.record(z.string(), z.array(z.union([z.string(), z.number()]))))
     .optional()
     .describe(
         `Things to pick from the store for a save with no datapack (refused with one), as {kind: {field: [ids]}} with ids from list_datapack_export_items: ${PICKABLE_KINDS.map((kind) => `${kind} by ${PICK_FIELDS[kind]}`).join(', ')}`,

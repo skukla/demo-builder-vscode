@@ -324,7 +324,7 @@ export function registerConfigureProjectTool(
                         ),
                     storeScope: storeScopeSchema.optional(),
                     env: z
-                        .record(z.record(z.union([z.string(), z.boolean(), z.number()])))
+                        .record(z.string(), z.record(z.string(), z.union([z.string(), z.boolean(), z.number()])))
                         .optional()
                         .describe(
                             'Non-secret env vars, keyed by component id then var name. See get_component_requirements',

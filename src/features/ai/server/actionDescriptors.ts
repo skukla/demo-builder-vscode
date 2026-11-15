@@ -902,7 +902,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             path: z
                 .string()
                 .describe('The ERP route, e.g. "orders/0000001003/confirm" or "partners/C21"'),
-            body: z.record(z.unknown()).optional().describe('The JSON body the route takes'),
+            body: z.record(z.string(), z.unknown()).optional().describe('The JSON body the route takes'),
         },
     },
     {
@@ -935,7 +935,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
                 .string()
                 .describe('The action, as <package>/<action>, e.g. "webhook/item-prices"'),
             payload: z
-                .record(z.unknown())
+                .record(z.string(), z.unknown())
                 .optional()
                 .describe("The action's parameters as a JSON object"),
         },

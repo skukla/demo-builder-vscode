@@ -157,7 +157,7 @@ describe('registerAuthTools', () => {
         const shape = server.schema('sign_in').inputSchema as Record<string, z.ZodTypeAny>;
         // The enum IS the contract: a provider missing from it is a sign-in the
         // agent cannot ask for, and the tool has no other route to one.
-        expect((shape.provider as z.ZodEnum<[string, ...string[]]>).options).toEqual([
+        expect((shape.provider as z.ZodEnum).options).toEqual([
             'adobe',
             'github',
             'dalive',

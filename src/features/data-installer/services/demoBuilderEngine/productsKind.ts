@@ -53,8 +53,8 @@ const productSchema = z
         attribute_set_id: z.union([z.string(), z.number()]),
         custom_attributes: z.array(z.object({ attribute_code: z.string(), value: z.unknown() })).optional(),
         /** Code → value, an export form the service turns into custom attributes (`additionalAsCustom`). */
-        additional_attributes: z.record(z.unknown()).optional(),
-        extension_attributes: z.record(z.unknown()).optional(),
+        additional_attributes: z.record(z.string(), z.unknown()).optional(),
+        extension_attributes: z.record(z.string(), z.unknown()).optional(),
         tier_prices: z
             .array(z.object({ customer_group_id: z.union([z.string(), z.number()]) }).passthrough())
             .optional(),

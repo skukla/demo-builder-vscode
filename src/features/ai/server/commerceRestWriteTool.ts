@@ -102,7 +102,7 @@ export function registerCommerceRestWriteTool(
                     .string()
                     .describe('The path under /V1, e.g. "companyCredits/12" or "customers/43"'),
                 body: z
-                    .union([z.record(z.unknown()), z.array(z.record(z.unknown()))])
+                    .union([z.record(z.string(), z.unknown()), z.array(z.record(z.string(), z.unknown()))])
                     .optional()
                     .describe(
                         'The JSON body, as the REST reference shows it; a DELETE usually takes none, ' +

@@ -34,6 +34,11 @@ function registered() {
     return server;
 }
 
+/** Each field as the agent receives it: the JSON schema zod 4 produces for tools/list. */
+function agentProperties(schema: z.ZodObject<z.ZodRawShape>): Record<string, { description?: string }> {
+    return (z.toJSONSchema(schema).properties ?? {}) as Record<string, { description?: string }>;
+}
+
 /** The zod SHAPE a tool declares, as a parseable object schema. */
 function schemaOf(def: McpToolSchema): z.ZodObject<z.ZodRawShape> {
     const input = def.inputSchema ?? {};
@@ -87,7 +92,7 @@ describe('registerAdobeTools — registered schemas', () => {
             skip: 2,
         });
         // A description on each field is what tells the agent paging exists.
-        for (const field of Object.values(schema.shape)) {
+        for (const field of Object.values(agentProperties(schema))) {
             expect((field.description ?? '').length).toBeGreaterThan(0);
         }
     });
@@ -103,6 +108,6 @@ describe('registerAdobeTools — registered schemas', () => {
         expect(schema.safeParse({}).success).toBe(false);
         expect(schema.safeParse({ [field]: 42 }).success).toBe(false);
         expect(schema.parse({ [field]: 'an-id' })).toEqual({ [field]: 'an-id' });
-        expect((schema.shape[field].description ?? '').length).toBeGreaterThan(0);
+        expect((agentProperties(schema)[field]?.description ?? '').length).toBeGreaterThan(0);
     });
 });

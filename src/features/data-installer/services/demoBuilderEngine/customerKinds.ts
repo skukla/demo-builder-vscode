@@ -56,7 +56,7 @@ const customerRows = z.array(
                     firstname: z.string().min(1),
                     lastname: z.string().min(1),
                     group_id: z.union([z.string(), z.number()]).optional(),
-                    addresses: z.array(z.record(z.unknown())).optional(),
+                    addresses: z.array(z.record(z.string(), z.unknown())).optional(),
                 })
                 .passthrough(),
             password: z.string().optional(),
