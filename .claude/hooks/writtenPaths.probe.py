@@ -16,6 +16,7 @@ flattens newlines out of the command, so a heredoc arrives as a single line and 
 line-anchored regex for a `p = '...'` assignment matched nothing. Everything else
 passed. A proof covering only the easy shapes reports clean on the one that matters.
 """
+import atexit
 import json
 import os
 import shutil
@@ -42,12 +43,21 @@ def fired(out):
     return '-' if not out.strip() else 'other'
 
 
+# An empty process list for the jest-concurrent rule (15), the seam router.test.ts uses too.
+# One case here is a jest command, and with the real list the rule fired on it whenever another
+# jest run was live: a second session's gate, or a worktree's (2026-11-15, the rollout's gate and
+# this repo's ran together and each failed the other). This proof is about written paths; whether
+# a second run is going is 15-jest-concurrent.proof.sh's question, not this file's.
+NO_JEST_RUNS = tempfile.NamedTemporaryFile(prefix='no-jest-ps-', suffix='.txt', delete=False).name
+atexit.register(lambda: os.path.exists(NO_JEST_RUNS) and os.remove(NO_JEST_RUNS))
+
+
 def run_bash(cmd):
     payload = {'tool_name': 'Bash', 'tool_input': {'command': cmd},
                'session_id': 'sw-' + os.urandom(4).hex()}
     r = subprocess.run(['bash', '.claude/hooks/router.sh'], input=json.dumps(payload),
                        capture_output=True, text=True,
-                       env={**os.environ, 'CLAUDE_PROJECT_DIR': ROOT})
+                       env={**os.environ, 'CLAUDE_PROJECT_DIR': ROOT, 'DBV_JEST_PS': NO_JEST_RUNS})
     return fired(r.stderr or '')
 
 
