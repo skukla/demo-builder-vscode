@@ -5,8 +5,8 @@
  * check as an install's (`RecordsWindow`), Back only. Cancel and Save; Save hands on to the run
  * (`useSaveStoreChanges`), which this does not draw.
  *
- * The summary is the install's own window (`JobSummaryWindow`), held unseen until both reads have
- * answered, so it opens at the table's height and never grows.
+ * The summary is the install's own window (`JobSummaryWindow`), held at the small wait window until both
+ * reads have answered, so it opens at the table's height and never grows.
  *
  * @module features/data-installer/ui/components/save/SaveChangesWindow
  */

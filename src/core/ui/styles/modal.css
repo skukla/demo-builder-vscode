@@ -231,6 +231,12 @@
     grid-template-columns: minmax(0, 1fr);
 }
 
+/* Mounted but not shown while the small wait window stands in for it (`StepsWindow`): the grid
+   above would otherwise beat the attribute's own display. */
+.modal-steps[hidden] {
+    display: none;
+}
+
 .modal-steps > * {
     grid-area: 1 / 1;
     min-width: 0;
@@ -251,22 +257,6 @@
 .modal-dialog.is-measuring,
 [class*="spectrum-Modal"]:has(> .modal-dialog.is-measuring) {
     visibility: hidden;
-}
-
-/* What shows while the window is unseen: a spinner near the top of where it will open. Taken out
-   of the grid, so it sets no height; shown through the hidden box. */
-.modal-dialog.is-measuring {
-    position: relative;
-}
-
-.modal-steps-pending {
-    position: absolute;
-    top: 96px;
-    left: 0;
-    right: 0;
-    display: flex;
-    justify-content: center;
-    visibility: visible;
 }
 
 /* The progress window's wait: room for its large spinner and all three lines, measured in Chromium

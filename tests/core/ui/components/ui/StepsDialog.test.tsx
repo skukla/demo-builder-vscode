@@ -98,18 +98,18 @@ describe('StepsDialog', () => {
         expect(holds).toHaveLength(1);
     });
 
-    it('draws the reserved steps hidden beside the shown one until the height is known, then drops them', () => {
-        const { rerender } = renderSteps({ ready: false });
+    it('measures with the reserved steps drawn hidden beside the shown one, then drops them', () => {
+        // What the hold measures, in the frame before the window is seen.
+        let ghostsWhenMeasured: Element[] = [];
+        animate.mockImplementationOnce(() => {
+            ghostsWhenMeasured = Array.from(document.querySelectorAll('.modal-steps-ghost'));
+            return { cancel: jest.fn() };
+        });
 
-        const ghosts = document.querySelectorAll('.modal-steps-ghost');
-        expect(ghosts).toHaveLength(2);
-        ghosts.forEach((ghost) => expect(ghost).toHaveAttribute('aria-hidden', 'true'));
-        expect(ghosts[0].parentElement).toBe(document.querySelector('.modal-steps'));
-        expect(dialog()).toHaveClass('is-measuring');
-        expect(animate).not.toHaveBeenCalled();
+        renderSteps();
 
-        rerender({ ready: true });
-
+        expect(ghostsWhenMeasured).toHaveLength(2);
+        ghostsWhenMeasured.forEach((ghost) => expect(ghost).toHaveAttribute('aria-hidden', 'true'));
         expect(document.querySelectorAll('.modal-steps-ghost')).toHaveLength(0);
         expect(dialog()).toHaveClass('is-locked');
         expect(screen.getByText('The form')).toBeInTheDocument();
@@ -122,24 +122,37 @@ describe('StepsDialog', () => {
             jest.advanceTimersByTime(FRONTEND_TIMEOUTS.DIALOG_MEASURE_LIMIT);
         });
 
-        expect(animate).toHaveBeenCalledTimes(1);
+        // The wait giving way to the steps fades the body too; only the hold names a maximum height.
+        const holds = animate.mock.calls.filter(([frames]) => frames[0]?.maxHeight);
+        expect(holds).toHaveLength(1);
         expect(document.querySelectorAll('.modal-steps-ghost')).toHaveLength(0);
     });
 
-    it('stays unseen while what it holds is unknown, and shows its wait, in words, where it will open', () => {
-        const { rerender } = renderSteps({ ready: false, waiting: WAIT });
+    // A wait drawn with no window round it, over the page, did not read as one (owner, 2026-11-15):
+    // while what the steps hold is read, the wait is a small window of its own, and the steps' window
+    // replaces it at its own height (rule 14: a new step may be a new window).
+    it('waits in a small window of its own, titled as the window will be, then becomes the steps window', () => {
+        const { rerender, onClose } = renderSteps({ ready: false, waiting: WAIT });
 
-        expect(document.querySelector('.modal-steps-pending')).toBeNull();
+        // Unseen for its first moment, so a quick read shows nothing at all.
+        expect(dialog()).toHaveClass('is-measuring');
         act(() => {
             jest.advanceTimersByTime(FRONTEND_TIMEOUTS.DIALOG_PENDING_DELAY);
         });
-        expect(document.querySelector('.modal-steps-pending')).toHaveTextContent('Installing My Luma');
-        expect(dialog()).toHaveClass('is-measuring');
+        expect(dialog()).not.toHaveClass('is-measuring');
+        expect(dialog()).toHaveAttribute('data-size', 'S');
+        expect(dialog()).toHaveTextContent('Install My Luma');
+        expect(dialog()).toHaveTextContent('Installing My Luma');
+        expect(screen.queryByText('The form')).toBeNull();
+        expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual(['Cancel']);
+        fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+        expect(onClose).toHaveBeenCalledTimes(1);
 
         rerender({ ready: true, waiting: false });
 
-        expect(document.querySelector('.modal-steps-pending')).toBeNull();
+        expect(dialog()).toHaveAttribute('data-size', 'L');
         expect(dialog()).toHaveClass('is-locked');
+        expect(screen.getByText('The form')).toBeInTheDocument();
     });
 
     it('names the window it is opening when the caller gave no wait words', () => {
@@ -149,17 +162,18 @@ describe('StepsDialog', () => {
             jest.advanceTimersByTime(FRONTEND_TIMEOUTS.DIALOG_PENDING_DELAY);
         });
 
-        expect(document.querySelector('.modal-steps-pending')).toHaveTextContent('Opening Install My Luma');
+        expect(dialog()).toHaveTextContent('Opening Install My Luma');
     });
 
-    it('CONTROL: a window ready at once never shows the spinner', () => {
+    it('CONTROL: a window ready at once opens as the steps window, never the small wait', () => {
         renderSteps();
 
         act(() => {
             jest.advanceTimersByTime(FRONTEND_TIMEOUTS.DIALOG_PENDING_DELAY);
         });
 
-        expect(document.querySelector('.modal-steps-pending')).toBeNull();
+        expect(dialog()).toHaveAttribute('data-size', 'L');
+        expect(screen.getByText('The form')).toBeInTheDocument();
     });
 
     it('shows only the wait and the way out while a step waits, in the same box', () => {

@@ -30,8 +30,8 @@ export const FRONTEND_TIMEOUTS = {
     DIALOG_MEASURE_LIMIT: 30000,
 
     /**
-     * How long a window with steps stays unseen before a spinner shows where it will open, so a
-     * quick read shows nothing at all and a slow one shows that something is happening.
+     * How long a window with steps stays unseen before its small wait window shows, so a quick
+     * read shows nothing at all and a slow one shows that something is happening.
      */
     DIALOG_PENDING_DELAY: 250,
 

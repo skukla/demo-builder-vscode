@@ -59,7 +59,7 @@ function renderRun(over: Partial<DatapackRunWindowProps> = {}) {
         />
     );
     const shown = document.querySelector(
-        '.modal-steps > div:not(.modal-steps-ghost):not(.modal-steps-pending)'
+        '.modal-steps > div:not(.modal-steps-ghost)'
     );
     if (!shown) throw new Error('no step on screen');
     return within(shown as HTMLElement);

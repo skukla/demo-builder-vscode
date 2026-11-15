@@ -14,8 +14,8 @@
  * `erp_owner` are named at the top with the fix, since their products cannot be written.
  *
  * Built on the Steps layout's window (`StepsWindow`, Phase 1b), wide for the table, in its own
- * DialogContainer, with Cancel beside its one accent action. While reading it stays unseen and
- * its wait shows, with nothing else on screen (dialog design rules, owner 2026-11-01); it opens at
+ * DialogContainer, with Cancel beside its one accent action. While reading it is the small wait
+ * window, with nothing else on screen (dialog design rules, owner 2026-11-01); it opens at
  * the table's height and keeps it (rule 14). A read that failed and nothing to assign are the
  * title's outcome, with what is left to know under it, in a small result window
  * (`ResultWindow`) with Close alone. No intro under the title (owner,

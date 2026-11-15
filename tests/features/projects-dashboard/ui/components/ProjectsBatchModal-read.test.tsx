@@ -70,21 +70,19 @@ describe.each(CASES)(
     ({ action, count, title, wait, button }) => {
         const projects = PROJECTS.slice(0, count);
 
-        it('keeps the window unseen while the read is out, showing only the wait where it will open', async () => {
+        // A wait with no window round it, drawn over the cards, did not read as one (owner,
+        // 2026-11-15): the read waits in a small window of its own.
+        it('waits for the read in a small window of its own, titled as the questions will be', async () => {
             await openOn(action, null, projects);
             act(() => {
                 jest.advanceTimersByTime(FRONTEND_TIMEOUTS.DIALOG_PENDING_DELAY);
             });
 
             const dialog = screen.getByRole('dialog', { name: title });
-            expect(dialog).toHaveAttribute('data-measuring', 'true');
-            expect(dialog).not.toHaveAttribute('data-locked');
-            // The wait the SC sees while the window is unseen: today's words, from `WAIT_STAGES`.
-            const shown = within(dialog)
-                .getAllByRole('status')
-                .find((status) => status.classList.contains('modal-steps-pending'));
-            expect(shown).toBeDefined();
-            expect(within(shown as HTMLElement).getByText(wait)).toBeInTheDocument();
+            expect(dialog).not.toHaveAttribute('data-measuring');
+            expect(dialog).toHaveAttribute('data-size', 'S');
+            // Today's words, from `WAIT_STAGES`.
+            expect(within(dialog).getByText(wait)).toBeInTheDocument();
             // A wait shows nothing else (modal-waits).
             expect(within(dialog).queryByRole('checkbox')).toBeNull();
             expect(within(dialog).queryByRole('button', { name: button })).toBeNull();

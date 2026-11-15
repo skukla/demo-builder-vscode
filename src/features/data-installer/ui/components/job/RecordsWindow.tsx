@@ -2,7 +2,7 @@
  * Review Records, its own wide window (step 03, S4; the prototype's `RecordsStep`): the data types
  * on the left, the chosen type's records on the right. It only looks: its one button is Back, on
  * the right, returning to the summary, the only place an action is taken (prototype-conventions
- * rule 19). The window stays unseen until the records are read, so it never grows. Clear's
+ * rule 19). It waits in the small wait window until the records are read, so it never grows. Clear's
  * window (step 06, C2b) hands in its kept records, trees and unread types, for the Removed and Kept
  * tabs.
  *

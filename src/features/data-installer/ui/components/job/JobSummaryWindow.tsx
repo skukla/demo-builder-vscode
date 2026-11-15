@@ -1,8 +1,8 @@
 /**
  * An install's summary window (step 03, S4; the prototype's `SummaryWindow`): the check's wait,
  * then the type table, what installing puts in Commerce, with Review Records, Dry Run and Install
- * (decisions Phase 5, J2-1). A Dry Run waits in the same window. The window stays unseen until the
- * check has answered (`ready`), so it opens at the table's height and never grows (rules 12, 14).
+ * (decisions Phase 5, J2-1). A Dry Run waits in the same window. It waits in the small wait window until
+ * the check has answered (`ready`), so it opens at the table's height and never grows (rules 12, 14).
  * No checkbox, no picker: the whole datapack goes to the project's own store.
  *
  * A switch asks over the same table (S6, decisions J2-3, J8-1): "Switch to Bodea?" with the warning

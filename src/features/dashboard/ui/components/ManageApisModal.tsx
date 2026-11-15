@@ -270,7 +270,7 @@ function useApply(componentId: string | undefined, list: ApiList, onClose: () =>
 
 /**
  * The open dialog: mounted per opening, so each starts on its wait. The Steps layout's window: it
- * stays unseen while the list is read, opens at the list's height and keeps it through the apply
+ * waits in the small wait window while the list is read, opens at the list's height and keeps it through the apply
  * and its failure (rule 14); filtering the list changes what is in it, never the window.
  */
 function ManageApisDialog({ componentName, componentId, onClose }: Omit<ManageApisModalProps, 'isOpen'>): React.ReactElement {

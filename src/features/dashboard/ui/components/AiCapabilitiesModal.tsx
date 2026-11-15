@@ -19,7 +19,7 @@
  * (dialog design rules). A regenerate that failed is the title's outcome, in red.
  *
  * Built on the Steps layout's window (`StepsWindow`, Phase 1b) in the dashboard's own dialog
- * container (`DashboardDialogs`): unseen until the inventory is read, then large at the height the
+ * container (`DashboardDialogs`): the small wait window until the inventory is read, then large at the height the
  * lists set, kept through a regenerate and its result (a window never changes height, rule 14).
  */
 

@@ -5,7 +5,7 @@
  * type starts ticked: the update applies everything unless the SC unticks some). Review Records,
  * Cancel and a blue Update (nothing is deleted), greyed while nothing is ticked. No line says the SC's
  * own edits are kept (rule 6): they are the spot check's Kept tab, a type with any wearing the notice
- * dot, as Clear's kept records do. The window stays unseen until the check has answered, so it opens
+ * dot, as Clear's kept records do. It waits in the small wait window until the check has answered, so it opens
  * at its final size (rules 12 to 14). Its run and result are any job's (`RunPhase`, `ResultPhase`).
  *
  * @module features/data-installer/ui/components/job/UpdateSummary

@@ -231,7 +231,7 @@ interface FlowWindowProps extends StageViewProps {
 }
 
 /**
- * One window, keyed by `WINDOW_OF`, so a much taller stage opens a new one. It stays unseen until
+ * One window, keyed by `WINDOW_OF`, so a much taller stage opens a new one. It is the small wait window until
  * what it shows is known (a destination list read, the API read), so it opens at that height and
  * holds it. `settled` waits one commit, so a stage's wait reported on mount counts before the
  * height is held.

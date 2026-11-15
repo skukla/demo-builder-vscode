@@ -4,10 +4,9 @@
  * window at a time (Steps, Progress, Result), the controls handed in (`useProjectsBatch`).
  *
  * Reading and the questions are one Steps window (`StepsWindow`, step-05 S3): while the read is out
- * it is unseen and only its wait shows, where it will open, "Reading demo data" for a reset and
- * "Reading projects" for a delete (`WAIT_STAGES`). It is first seen once the read answers, at the
- * questions' height, and keeps it (rule 14: it opened at the wait's height and grew, decisions
- * Open). The run and a failed read are windows of their own.
+ * it is the small wait window, "Reading demo data" for a reset and "Reading projects" for a
+ * delete (`WAIT_STAGES`); once the read answers it becomes the questions' window at their height,
+ * and keeps it (rule 14; a frameless wait over the cards did not read as one, owner 2026-11-15). The run and a failed read are windows of their own.
  * The questions: `BatchDeleteQuestions` or `BatchResetQuestions`, Cancel and the red button. When a
  * pack whose data goes has changes, the red button runs into "Save Your Changes First?" in the same
  * container (step-05 S1, decisions J7-2): the shared `SaveFirstWindow` over `BatchSaveTable`, Reset

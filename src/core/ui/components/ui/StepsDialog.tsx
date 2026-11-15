@@ -5,9 +5,10 @@
  *
  * A window never changes height once on screen. The caller passes the step it shows and, as
  * `reserve`, the steps it may show next; they are drawn hidden in the same grid cell, so the
- * tallest sets the box, which `useFixedHeight` then holds for every step. The window stays unseen
- * until that height is known (`ready`), so the SC never sees a height it will not keep. The
- * buttons stay at the bottom and only the middle scrolls.
+ * tallest sets the box, which `useFixedHeight` then holds for every step. Until what the steps hold
+ * is known (`ready`) the wait is a small window of its own, which the steps' window replaces at its
+ * own height, so the SC never sees a window grow. The buttons stay at the bottom and only the middle
+ * scrolls.
  *
  * While a step waits (`WAIT_STAGES`) only its wait and the way out appear, centred in the box it
  * keeps. The caller passes words, steps and actions, never a size or a class
@@ -93,33 +94,42 @@ export function StepsWindow({
     }, [ready]);
     const { ref, locked } = useFixedHeight(ready || late);
 
+    // While what the steps hold is read, the wait is a small window, titled as the window will be,
+    // with its way out: a window that appears and then grows is what the SC must never see (owner,
+    // 2026-11-12), and a wait drawn with no window at all over the page did not read as one (owner,
+    // 2026-11-15). Once it is known the window becomes the steps' window at its own height, a new
+    // window at a new step (rule 14). Unseen for its first moment, so a quick read shows nothing.
+    // The steps stay mounted, hidden, all along: some do the read themselves (a destination list).
+    // Only before the first height is held: a window already open keeps its size through a later read.
+    const reading = !ready && !late && !locked;
+
     return (
         <Modal
             title={title}
-            status={status}
-            size="L"
-            wide={wide}
+            status={reading ? undefined : status}
+            size={reading ? 'S' : 'L'}
+            wide={!reading && wide}
             lockHeight={locked}
-            measuring={!locked}
+            measuring={reading ? !pending : !locked}
             onClose={onClose}
             closeLabel={closeLabel}
             hideClose={hideClose}
-            startButtons={waiting ? [] : startButtons}
-            actionButtons={waiting ? [] : actionButtons}
+            startButtons={waiting || reading ? [] : startButtons}
+            actionButtons={waiting || reading ? [] : actionButtons}
         >
-            <div className="modal-steps" ref={ref}>
-                {/* While what the steps hold is read, the window stays unseen and only its wait shows,
-                    where it will open: a window that appears and then grows is what the SC must
-                    never see (owner, 2026-11-12). The wait says what it is doing (walk F72). */}
-                {!locked && pending && (
-                    <div className="modal-steps-pending" role="status">
-                        <StageWait lines={waiting || { label: `Opening ${title}` }} />
-                    </div>
-                )}
+            {reading && (
+                <div className="modal-wait">
+                    <StageWait lines={waiting || { label: `Opening ${title}` }} />
+                </div>
+            )}
+            <div className="modal-steps" ref={ref} hidden={reading}>
+                {/* A wait while reading is the small window's, said once above. */}
                 {waiting ? (
-                    <div className="modal-wait">
-                        <StageWait lines={waiting} />
-                    </div>
+                    !reading && (
+                        <div className="modal-wait">
+                            <StageWait lines={waiting} />
+                        </div>
+                    )
                 ) : (
                     <div>{children}</div>
                 )}
