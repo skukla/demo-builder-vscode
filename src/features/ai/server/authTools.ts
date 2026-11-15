@@ -295,17 +295,10 @@ export function registerAuthTools(server: McpToolServer, ctxFactory: () => Handl
                 `$(key) ${agentNotice('DA.live sign-in requested')} — complete the prompts in this window`,
                 TIMEOUTS.STATUS_BAR_SUCCESS,
             );
-            void showDaLiveAuthQuickPick(ctx).then(
-                (res) => {
-                    if (res.success) {
-                        vscode.window.setStatusBarMessage(
-                            `$(check) ${agentNotice('DA.live sign-in complete')}`,
-                            TIMEOUTS.STATUS_BAR_SUCCESS,
-                        );
-                    }
-                },
-                () => undefined,
-            );
+            // Success is announced by the flow itself, the green line the palette's
+            // Sign In shows too (`daLiveSignedInMessage`): a message of the tool's
+            // own, being newer, replaced it (owner, 2026-11-15).
+            void showDaLiveAuthQuickPick(ctx).catch(() => undefined);
             return asText({
                 provider,
                 started: true,
