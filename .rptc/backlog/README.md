@@ -249,7 +249,7 @@ each item's own file; what has already landed against an item is in its
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
 | `AB-28` | fix | [The republish inside an add, a deploy or a save asks for the DA.live sign-in, and says when the CDN did not take it](2026-09-24-inner-republish-asks-for-dalive-session.md) | — | high | built |
-| `EDS-1` | epic | [Multi-Locale Storefront — Implementation Plan (Phase 1)](2026-05-19-multisite-multilocale.md) | — | med | backlog |
+| `EDS-1` | epic | [Multi-site: storefront and backend data](2026-05-19-multisite-multilocale.md) | — | med | backlog |
 | `EDS-2` | epic | [Plan — Hybrid storefront (Tier 2) + B2B-ready prerequisite & detection](hybrid-storefront-model/overview.md) | _a live login check: an individual buyer vs a company buyer_ | low | gated |
 | `EDS-3` | feature | [EDS site-scraping capability for Demo Builder](2026-05-28-eds-site-scraping.md) | _Mod Agent access_ | med | gated |
 | `EDS-4` | feature | [Rebuild BuildRight on the thin-layer model](2026-06-10-buildright-eds-disposition.md) | — | low | backlog |
@@ -461,7 +461,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-86` | feature | [Bulk selection on the Integrations screen](2026-11-05-integrations-bulk-selection.md) | — | med | backlog |
 | `PL-24` | feature | [Component updates cannot follow an environment-variable rename](2026-08-30-env-var-rename-migration.md) | — | med | built |
 
-### data-installer  (15)
+### data-installer  (16)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -478,7 +478,8 @@ each item's own file; what has already landed against an item is in its
 | `DI-12` | feature | [Datapack sources as adapters, and one setting for either or both](2026-11-05-datapack-sources-as-adapters.md) | — | med | active |
 | `DI-13` | question | [The same pack in both stores, with different data: which one does an SC get?](2026-11-06-same-pack-in-both-stores.md) | — | med | open |
 | `DI-14` | feature | [A reinstall misreads a pack that holds one thing in two forms](2026-11-06-datapack-reinstall-both-product-forms.md) | — | med | backlog |
-| `DI-15` | feature | [Several datapacks per project](2026-11-12-several-datapacks-per-project.md) | — | med | backlog |
+| `DI-15` | feature | └ [Several datapacks per project](2026-11-12-several-datapacks-per-project.md) | — | med | backlog |
+| `DI-16` | question | └ [Will a multi-site datapack still install through the Data Installer service?](2026-11-15-multisite-datapacks-and-the-data-installer-service.md) | — | high | open |
 | `DI-3` | question | └ [Spike: export a pack to the service through the item APIs, end to end](2026-09-11-spike-export-a-pack-through-the-item-apis.md) | — | low | superseded |
 
 ### prerequisites  (4)
@@ -726,7 +727,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `AI-4a` [Engine-aware AI launch + detection + opt-in install (Claude wired, Codex placeholders)](claude-cli-detection-and-install/overview.md) — built
 - `DI-1` [Datapack authoring loop — export, modify, publish-your-own via project skills](2026-08-23-datapack-authoring-loop.md) — active
 - `DI-2` [Instance wipe option — remove as much data as the service allows](2026-08-22-instance-wipe-option.md) — backlog
-- `EDS-1` [Multi-Locale Storefront — Implementation Plan (Phase 1)](2026-05-19-multisite-multilocale.md) — backlog
+- `EDS-1` [Multi-site: storefront and backend data](2026-05-19-multisite-multilocale.md) — backlog
 - `EDS-2` [Plan — Hybrid storefront (Tier 2) + B2B-ready prerequisite & detection](hybrid-storefront-model/overview.md) — gated
 - `EDS-3` [EDS site-scraping capability for Demo Builder](2026-05-28-eds-site-scraping.md) — gated
 - `EDS-4` [Rebuild BuildRight on the thin-layer model](2026-06-10-buildright-eds-disposition.md) — backlog
@@ -742,7 +743,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — built
 
-*342 item(s) sit outside the A–G chain.*
+*343 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 

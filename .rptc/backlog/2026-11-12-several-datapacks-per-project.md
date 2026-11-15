@@ -5,6 +5,7 @@ area: data-installer
 needs: []
 value: med
 status: backlog
+parent: EDS-1
 ---
 
 # Several datapacks per project
@@ -13,6 +14,9 @@ Filed 2026-11-12, during the J8 prototype walk of the datapack-simplification pl
 decided it, and decided it comes AFTER beta.153: "Nope. We need to support multiple data packs."
 Then, on scope: beta.153 ships with one datapack per project ("Switch to Bodea?" when another is
 installed), and this is the first plan of the next release.
+
+Part of the multi-site fast follow ([[EDS-1]], owner 2026-11-15), with the storefront half and
+[[DI-16]], whether a multi-site pack still installs through the Data Installer service.
 
 ## The rule (owner, 2026-11-12)
 
