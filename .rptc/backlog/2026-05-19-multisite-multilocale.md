@@ -483,3 +483,7 @@ single-environment assumptions — see ADR-003 for the documented seam.
 Phase 2 (repoless multi-brand, separate DA.live site per locale) is
 out of scope for this cycle."
 ```
+
+## Shipped so far
+
+- 2026-11-15  docs(backlog): multi-site fast follow holds storefront and backend data (`8d048520c`)
