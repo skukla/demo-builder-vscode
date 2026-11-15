@@ -130,7 +130,8 @@ async function movedOn(project: Project, pack: DatapackId): Promise<HandlerRespo
 /** Save the store's copy now, reporting its stages; or the response saying why nothing was removed. */
 async function saveFirst(context: HandlerContext, request: RemovalChangesRequest, report: (stage: string) => void): Promise<{ saved: SavedFirst } | { response: HandlerResponse }> {
     const payload: StoreChangesPayload = { datapackName: request.pack.name, version: request.pack.version, ...(request.source ? { source: request.source } : {}) };
-    const opened = await openSave(context, payload);
+    // The removal's changes check just read Commerce, and the SC answered it: the save keeps that read (F128).
+    const opened = await openSave(context, payload, 'reuse');
     if ('response' in opened) return { response: notSaved(opened.response) };
     const into = await saveIntoFor(context, opened, request.saveAs);
     if ('response' in into) return { response: { ...into.response, code: ErrorCode.CHANGES_NEED_ANSWER } };

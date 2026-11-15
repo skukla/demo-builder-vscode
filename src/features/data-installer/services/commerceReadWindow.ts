@@ -14,8 +14,12 @@
  * - a read that failed is not kept.
  *
  * The check itself never reuses, so an edit the SC makes in the Admin is always seen by the next
- * check. What is not seen is an Admin edit in the minutes between the check and the save that
- * follows it: the save keeps what the check showed the SC, which is what they answered.
+ * check. What is not seen is an Admin edit in the minutes between the check and the job that
+ * follows it: the job keeps what the check showed the SC, which is what they answered.
+ *
+ * The plain Save Changes is not such a job and reads Commerce itself (`openSave`). It reused the
+ * window after any check, so an SC who opened the Datapacks screen, changed a price in the Admin and
+ * pressed Save got "No Changes to Save" with the price changed (live run 2, 2026-11-15).
  *
  * Kept in memory only: a window reload forgets it, and the next reader reads Commerce.
  *

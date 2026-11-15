@@ -195,14 +195,20 @@ export async function packToSave(project: Project, payload: StoreChangesPayload 
     return (await readInstallRecord(nodeRecordFiles, project.path, pack)) ? { pack, ...(held.store ? { source: held.store } : {}) } : {};
 }
 
-/** A save's store, its pack if it has one, and its picks; or the response to answer instead. */
-export async function openSave(context: HandlerContext, payload: StoreChangesPayload): Promise<SaveOpened | { response: HandlerResponse }> {
+/**
+ * A save's store, its pack if it has one, and its picks; or the response to answer instead.
+ *
+ * @param use - `reuse` only for a save inside a job whose changes check the SC just answered (a
+ *   removal's, walk F128). Omitted, the save reads Commerce itself: the plain Save reused any check
+ *   from the last five minutes, so an edit made in the Admin since was not saved and the window said
+ *   "No Changes to Save" (live run 2, 2026-11-15).
+ */
+export async function openSave(context: HandlerContext, payload: StoreChangesPayload, use?: ReadWindowUse): Promise<SaveOpened | { response: HandlerResponse }> {
     const read = picksOf(payload.selections);
     if ('error' in read) return { response: { success: false, error: read.error } };
     const whole = wholeKindsOf(payload.wholeKinds);
     if ('error' in whole) return { response: { success: false, error: whole.error } };
-    // A save reads what a changes check just read, when one did (walk F128).
-    const store = await openProjectStore(context, 'reuse');
+    const store = await openProjectStore(context, use);
     if ('response' in store) return store;
     const target = await packToSave(store.project, payload);
     if ('error' in target) return { response: { success: false, error: target.error } };
