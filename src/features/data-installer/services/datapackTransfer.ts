@@ -18,7 +18,10 @@ import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 
 /** A pack that cannot be saved as it stands, in words an SC can act on. */
 export class DatapackTransferError extends Error {
-    constructor(message: string) {
+    /**
+     * @param exists - the pack is already in the store: a caller that can offer Keep Both says so
+     */
+    constructor(message: string, readonly exists = false) {
         super(message);
         this.name = 'DatapackTransferError';
     }
@@ -135,6 +138,7 @@ export async function writePackToStore(
     if (created === 'exists' && !opts.update) {
         throw new DatapackTransferError(
             `${pack.id.name}@${pack.id.version} already exists in that store. Load it with update to replace the data types this file carries, or change the version.`,
+            true,
         );
     }
     const outcome: PackWriteOutcome = {

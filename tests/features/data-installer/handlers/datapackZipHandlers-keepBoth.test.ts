@@ -176,4 +176,17 @@ describe('load-datapack-zip with saveAs (Keep Both)', () => {
         expect(installer).toMatchObject({ success: false, error: KEEP_BOTH_LIBRARY_ONLY });
         expect(fetchMock).not.toHaveBeenCalled();
     });
+
+    // Live run 5 (2026-11-15): an agent adding a file it already had was told only "update" or
+    // "change the version", so the Keep Both the screen offers was not named to it.
+    it('answers a datapack already in My Datapacks with both choices, Replace and Keep Both', async () => {
+        fetchMock.mockResolvedValueOnce({ ok: false, status: 409, text: async () => '{"success":false}' });
+
+        const result = await load(context(), { path: fileWith(PACK) });
+
+        expect(result).toMatchObject({
+            success: false,
+            error: 'justrite@v1 is already in My Datapacks. Send update to replace the data types this file carries, or saveAs with a new name to keep both.',
+        });
+    });
 });

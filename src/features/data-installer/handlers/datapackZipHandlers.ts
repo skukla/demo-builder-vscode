@@ -346,6 +346,13 @@ export const datapackZipHandlers = defineHandlers({
             });
             const outcome = await writePackToStore(writer, pack, {
                 update: payload.update === true,
+            }).catch((error: unknown) => {
+                // My Datapacks also takes Keep Both, which the shared words cannot offer (live run 5).
+                if (target !== 'library' || !(error instanceof DatapackTransferError) || !error.exists) throw error;
+                throw new DatapackTransferError(
+                    `${pack.id.name}@${pack.id.version} is already in My Datapacks. Send update to replace the data types this file carries, or saveAs with a new name to keep both.`,
+                    true,
+                );
             });
             const label = `${pack.id.name}@${pack.id.version}`;
             context.logger.info(

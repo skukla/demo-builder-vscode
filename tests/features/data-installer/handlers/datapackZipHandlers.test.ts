@@ -391,7 +391,7 @@ describe('load-datapack-zip', () => {
 
         expect(result).toMatchObject({
             success: false,
-            error: expect.stringContaining('already exists'),
+            error: expect.stringContaining('already in My Datapacks'),
         });
         expect(sentRoutes()).toEqual(['create-datapack']);
     });
