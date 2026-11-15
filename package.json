@@ -682,7 +682,7 @@
         "@adobe/aio-lib-core-config": "^5.0.1",
         "@adobe/aio-lib-ims": "^7.0.2",
         "@adobe/react-spectrum": "^3.46.0",
-        "@modelcontextprotocol/sdk": "1.29.0",
+        "@modelcontextprotocol/sdk": "1.32.2",
         "@octokit/core": "^6.1.6",
         "@octokit/plugin-retry": "^7.2.1",
         "adm-zip": "^0.5.16",
