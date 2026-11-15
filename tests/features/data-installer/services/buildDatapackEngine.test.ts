@@ -124,6 +124,46 @@ describe('projectCommerce', () => {
     });
 });
 
+// A pack goes into one website (owner, 2026-11-15), so what is in the store is what that website
+// shows: a price the SC changed with the Admin's scope set to the website was read store-wide,
+// where the default still stood, so Save kept the old price. Reads go through the store view the
+// pack is installed to; writes stay store-wide, as the service writes (catalog spec §0).
+describe('projectCommerce reading what the pack\'s website shows', () => {
+    const authManager = {} as AuthenticationService;
+    const ACCS = 'adobe-commerce-accs';
+    const project = (store?: string) => createMockProject({
+        path: PROJECT,
+        datapack: PACK,
+        componentSelections: { backend: ACCS },
+        componentConfigs: store ? { [ACCS]: { ACCS_WEBSITE_CODE: 'acme', ACCS_STORE_VIEW_CODE: store } } : {},
+    });
+    /** Which scope answered a read and which a write: each client says the store view it was opened at. */
+    async function scopes(p: ReturnType<typeof project>, records = memoryFiles()) {
+        mockCommerceClientForProject.mockImplementation(async (...a: unknown[]) => ({
+            get: async () => a[4],
+            send: async () => a[4],
+        }));
+        const opened = await projectCommerce({ project: p, authManager, secrets: undefined, records })();
+        if ('refusal' in opened) throw new Error(opened.refusal);
+        return { read: await opened.get('products/x'), write: await opened.send('PUT', 'products/x', {}) };
+    }
+
+    it('reads through the store view the install record names, and writes store-wide', async () => {
+        const records = memoryFiles();
+        await (await openInstallRecord(records, PROJECT, PACK, NOW, { websiteCode: 'test_site', storeCode: 'test_view' })).record({ kind: 'categories', id: '40' });
+
+        await expect(scopes(project('project_view'), records)).resolves.toEqual({ read: 'test_view', write: 'all' });
+    });
+
+    it("reads through the project's store view when no install record names one", async () => {
+        await expect(scopes(project('project_view'))).resolves.toEqual({ read: 'project_view', write: 'all' });
+    });
+
+    it('reads store-wide when no store view is known', async () => {
+        await expect(scopes(project())).resolves.toEqual({ read: 'all', write: 'all' });
+    });
+});
+
 // Walk F128: a changes check keeps what it reads; the save and the run after it reuse it.
 describe('projectCommerce sharing one read of Commerce', () => {
     beforeEach(() => forgetReadWindows());
