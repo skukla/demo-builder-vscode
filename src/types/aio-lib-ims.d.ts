@@ -1,8 +1,12 @@
 /**
- * Minimal typings for `@adobe/aio-lib-ims` (ships no types).
+ * Minimal typings for `@adobe/aio-lib-ims`, which take precedence over the
+ * library's own.
  *
  * Only what the silent token refresh uses is declared
- * (`tokenManager.refreshStoredToken`).
+ * (`tokenManager.refreshStoredToken`). Since 8.1.0 the library ships types, but
+ * they return `any` almost everywhere and export `getToken`. This ambient
+ * declaration wins over them (checked 2026-11-14: importing `getToken` fails to
+ * compile), so the exclusion below stays enforced.
  *
  * **`getToken` is NOT declared here, on purpose.** It looked like the right
  * call — it is the one the `aio` CLI makes — but reading
@@ -19,7 +23,10 @@
  * escalating to a human. `context.set` persists the result the way the
  * library's own `_persistTokens` does, so the CLI sees the refreshed token.
  *
- * Verified against 7.0.2 (2026-08-27, extended 2026-09-02):
+ * Verified against 7.0.2 (2026-08-27, extended 2026-09-02), and against 8.1.2
+ * (2026-11-14): `getAccessToken`, `context.js` and `ConfigCliContext.js` are
+ * unchanged between the two; 8.0's breaking change is the Runtime-action
+ * context (`StateActionContext`), which the extension never runs in.
  * `context.get('cli')` resolves `{ name, data, local }` with
  * `data.access_token: { token, expiry }`; `getAccessToken` resolves
  * `{ access_token, refresh_token, payload }`.
