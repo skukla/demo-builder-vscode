@@ -17,6 +17,16 @@ const CHANGES_UNCHECKED = "Your changes couldn't be checked.";
 const PREVIEW_UNREAD = "What installing would change couldn't be read.";
 const RECORD_UNREAD = "What the datapack installed couldn't be read.";
 
+/**
+ * The Switch question's one line, over the table of what the new datapack adds (walk F146, owner
+ * 2026-11-16): the table's numbers alone left the SC unable to tell what they were, or that Switch
+ * also uninstalls the datapack the demo holds.
+ */
+export function switchLead(held: string, name: string, website?: string): string {
+    const from = website ? ` from ${website}` : '';
+    return `Uninstalls ${held}${from}, then installs ${name}. ${name} adds:`;
+}
+
 /** A question's title: without its question mark while the check reads. */
 const asked = (title: string, checking: boolean): string => (checking ? title : `${title}?`);
 
@@ -40,6 +50,8 @@ export function summaryFrame(job: DatapackJob, opened: Opened, checking: boolean
     }
     const uninstall = kind === 'uninstall';
     const title = verb === 'Switch' ? `Switch to ${name}` : `${verb} ${name}`;
+    const held = job.switching.heldTitle;
+    const lead = verb === 'Switch' && held ? switchLead(held, name, job.switching.changes.websiteName) : undefined;
     const unread = job.checkFailed ? (uninstall ? RECORD_UNREAD : PREVIEW_UNREAD) : undefined;
     return {
         title: asked(title, checking),
@@ -52,6 +64,7 @@ export function summaryFrame(job: DatapackJob, opened: Opened, checking: boolean
             },
         ],
         problem: job.switching.changes.readFailed ? CHANGES_UNCHECKED : unread,
+        ...(lead ? { lead } : {}),
         ...(uninstall ? {} : { onReview: job.review }),
     };
 }

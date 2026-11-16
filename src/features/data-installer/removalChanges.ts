@@ -35,6 +35,8 @@ export interface DatapackRemovalChanges {
      * not hold (`addedSinceInstall`, step-07 E1). Only when asked for (`added: true`): Save Changes.
      */
     added?: ChangedKind[];
+    /** The website the demo's pack is on, by its name in the store: the Switch question names it (walk F146). */
+    websiteName?: string;
 }
 
 /** One data type on an install record, and how many things of it the record lists. */

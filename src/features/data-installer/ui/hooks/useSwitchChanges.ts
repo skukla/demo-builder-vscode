@@ -59,6 +59,8 @@ export interface SwitchChanges {
     /** The changes, counted by type. */
     rows: TypeRow[];
     readFailed: boolean;
+    /** The website the demo's pack is on, by name, once read: the Switch question names it (walk F146). */
+    websiteName?: string;
     /** Where a save goes: the SC's own datapack under its own name, else a new one by this name. */
     saveAs: SaveAsField;
     /** The datapack a save goes into, by its real name: the SC's own as the library names it, else the new name. */
@@ -144,6 +146,7 @@ export function useSwitchChanges(
         settled: !active || (from !== null && (!held || read.settled)),
         rows,
         readFailed,
+        ...(changes?.websiteName ? { websiteName: changes.websiteName } : {}),
         saveAs: { name, ...(problem ? { problem } : {}), onName: setTyped },
         savesInto: savesIntoOf(row, names),
         onSwitch: () => {

@@ -25,11 +25,16 @@ import type { Project } from '@/types/base';
 // host initializes that at activation — which no handler test does. Without this
 // the detached watch dies in its own try/catch and simply never starts, showing
 // up as "watchImportJob was not called" rather than as a logger error.
-jest.mock('@/features/data-installer/services/buildDatapackEngine', () => ({
-    ...jest.requireActual('@/features/data-installer/services/buildDatapackEngine'),
-    buildDatapackEngine: jest.fn(),
-    installedByDemoBuilder: jest.fn(),
-}));
+jest.mock('@/features/data-installer/services/buildDatapackEngine', () => {
+    const actual = jest.requireActual('@/features/data-installer/services/buildDatapackEngine');
+    return {
+        ...actual,
+        buildDatapackEngine: jest.fn(),
+        installedByDemoBuilder: jest.fn(),
+        // The real connection, unless a test hands in its own store (walk F146's website name).
+        projectCommerce: jest.fn((...args: unknown[]) => actual.projectCommerce(...args)),
+    };
+});
 jest.mock('@/features/data-installer/services/importJobRunner', () => ({
     watchImportJob: jest.fn(),
     IMPORT_POLL: { maxAttempts: 120, timeout: 600_000 },

@@ -19,6 +19,8 @@ export interface JobSwitch {
     changes: SwitchChanges;
     /** The held datapack, as a switch's run's Uninstall row names it. */
     heldName?: string;
+    /** The held datapack by its name alone, for a sentence: the Switch question's line (walk F146). */
+    heldTitle?: string;
     /** The save's stage while the start waits on it. */
     savingStage?: string;
     /** Where the save made first went, once the SC chose to save: the run's Save Your Changes says it. */
@@ -66,9 +68,8 @@ export function useJobSwitch(
     const savingStage = useSavingStage(starts.savesFirst && starts.start.loading);
     const held = checks.target.value?.datapack;
     // As the run's Uninstall row names it: "Luma", or "Luma, eds-compatible" for a named version.
-    const heldName = held
-        ? replacedName(held, checks.target.value?.heldName ?? held.name)
-        : undefined;
+    const heldTitle = held ? (checks.target.value?.heldName ?? held.name) : undefined;
+    const heldName = held && heldTitle ? replacedName(held, heldTitle) : undefined;
     const savedTo = savedToOf(
         starts,
         changes,
@@ -77,6 +78,7 @@ export function useJobSwitch(
     return {
         changes,
         ...(heldName ? { heldName } : {}),
+        ...(heldTitle ? { heldTitle } : {}),
         ...(savingStage ? { savingStage } : {}),
         ...(savedTo ? { savedTo } : {}),
         press: () => {

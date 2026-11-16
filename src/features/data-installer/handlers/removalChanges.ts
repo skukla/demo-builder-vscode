@@ -33,6 +33,7 @@ import { packStage } from '@/core/utils/packStage';
 import { pushOperationProgress, startModalRun } from '@/core/vscode/operationProgress';
 import type { Project } from '@/types/base';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
+import { readWebsiteName } from '@/core/utils/commerceNames';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
 import type { SaveStoreChangesResult } from '@/types/webviewRequests';
@@ -86,7 +87,15 @@ async function readChanges(context: HandlerContext, project: Project, pack: Data
         const from = installedIn(project, pack, source);
         const changes = changesFromPreview(await previewChanges(store.deps, pack, from));
         const added = withAdded ? { added: await addedSinceInstall(store.deps, pack, savedFrom(project, pack, source)) } : {};
-        return { ...changes, ...(changes.count > 0 ? { sentence: changesSentence(changes.kinds) } : {}), ...answer, ...added };
+        const commerce = await store.deps.commerce();
+        const websiteName = 'get' in commerce ? await readWebsiteName(commerce.get, store.deps.target?.websiteCode) : undefined;
+        return {
+            ...changes,
+            ...(changes.count > 0 ? { sentence: changesSentence(changes.kinds) } : {}),
+            ...answer,
+            ...added,
+            ...(websiteName ? { websiteName } : {}),
+        };
     } catch (error) {
         return { response: failure(context, error, 'Commerce could not be read.') };
     }

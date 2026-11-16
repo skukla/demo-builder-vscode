@@ -1,8 +1,8 @@
 /**
  * A switch in the job window (step 03, S6; decisions J2-3, J8-1): the project holds another
  * datapack Demo Builder installed. The check reads the new datapack's preview and the held one's
- * changes together; "Switch to Bodea?" goes straight from its title to the type table, with a blue
- * Switch. With changes, "Save Your Changes First?" asks next: the changes counted by type, no names,
+ * changes together; "Switch to Bodea?" says in one line what Switch does, then the type table of what
+ * Bodea adds, with a blue Switch (walk F146, owner 2026-11-16). With changes, "Save Your Changes First?" asks next: the changes counted by type, no names,
  * no box, Switch Without Saving at the start, Cancel and Save and Switch at the end. Without
  * changes, Switch starts the run, titled "Switching to Bodea". Answering the save question asks the
  * extension for the one-time tip about the setting.
@@ -109,11 +109,13 @@ describe('the check', () => {
 });
 
 describe('the summary', () => {
-    it('asks "Switch to Bodea?" over the type table alone, with Review Records and a blue Switch', async () => {
+    it('asks "Switch to Bodea?" over one line and the type table, with Review Records and a blue Switch', async () => {
         holding(NOTHING);
         await openSwitch();
 
         expect(await heading('Switch to Bodea?')).toBeInTheDocument();
+        // No website read back (nothing recorded): the line names none.
+        expect(screen.getByText('Uninstalls Luma, then installs Bodea. Bodea adds:')).toBeInTheDocument();
         expect(document.querySelector('.modal-status-icon')).not.toBeNull();
         expect(within(screen.getByRole('table')).getByText('Categories')).toBeInTheDocument();
         expect(button('Review Records')).toBeInTheDocument();
@@ -121,6 +123,15 @@ describe('the summary', () => {
         expect(screen.queryByRole('button', { name: 'Install' })).not.toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Dry Run' })).not.toBeInTheDocument();
         expect(screen.queryByText(/Replaces/u)).not.toBeInTheDocument();
+    });
+
+    // Walk F146: Steve could not tell what the numbers were, or that Switch also uninstalls Luma.
+    it('names the website the datapacks change on, by its name', async () => {
+        holding({ ...NOTHING, websiteName: 'Tailspin Test' });
+        await openSwitch();
+
+        expect(await heading('Switch to Bodea?')).toBeInTheDocument();
+        expect(screen.getByText('Uninstalls Luma from Tailspin Test, then installs Bodea. Bodea adds:')).toBeInTheDocument();
     });
 
     it('says when the changes could not be checked, and still offers Switch', async () => {

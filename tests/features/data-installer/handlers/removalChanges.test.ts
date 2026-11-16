@@ -55,7 +55,7 @@ import { importHandlers } from '@/features/data-installer/handlers/importHandler
 import { runAndWatch } from '@/features/data-installer/handlers/importJobWatch';
 import { contextForProject, settleChangesBeforeRemoval } from '@/features/data-installer/handlers/removalChanges';
 import type { StoreChangesPayload } from '@/features/data-installer/handlers/storeChangesHandlers';
-import { buildDatapackEngine } from '@/features/data-installer/services/buildDatapackEngine';
+import { buildDatapackEngine, projectCommerce } from '@/features/data-installer/services/buildDatapackEngine';
 import { DataInstallerClient } from '@/features/data-installer/services/dataInstallerClient';
 import type { DatapackEngine } from '@/features/data-installer/services/datapackEngine';
 import type { ImportRequest } from '@/features/data-installer/services/importRequest';
@@ -463,6 +463,18 @@ describe('get-datapack-removal-changes', () => {
                 alwaysSave: false,
             },
         });
+    });
+
+    // Walk F146: the Switch question names the website the datapacks change on, by its name.
+    it("answers the website the demo's pack is on, by its name in the store", async () => {
+        const get = jest.fn(async (path: string) =>
+            path === 'store/websites' ? [{ id: 2, code: 'acme', name: 'Acme Website' }] : null,
+        );
+        jest.mocked(projectCommerce).mockReturnValueOnce(async () => ({ get, send: jest.fn() }));
+
+        const result = await read(undefined, { ...PROJECT, datapack: { ...BODEA, store: 'library' } });
+
+        expect(result).toMatchObject({ success: true, data: { websiteName: 'Acme Website' } });
     });
 
     // step-07 E1 (P4-Q3): Save Changes asks for what was added by hand too, from the store the project recorded.
