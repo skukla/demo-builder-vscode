@@ -58,6 +58,7 @@ export function ResultPhase({
             result={result}
             actionButtons={[...back, ...endButtons(job, result)]}
             onClose={onClose}
+            {...(result.keptRoot && kind === 'uninstall' ? { onCheck: job.retry } : {})}
             {...(job.fixProblem ? { problem: job.fixProblem } : {})}
         />
     );

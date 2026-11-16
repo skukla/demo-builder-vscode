@@ -41,6 +41,16 @@ describe('a removal that left the root a store uses', () => {
         expect(screen.getByText(/Tailspin Catalog, its root before the datapack/)).toBeInTheDocument();
     });
 
+    // Walk F153 (owner, 2026-11-16): Check finishes the uninstall once the root is changed.
+    it('offers Check, which hands back to run the uninstall again', () => {
+        const onCheck = jest.fn();
+        render(<JobResultWindow result={KEPT} onClose={jest.fn()} onCheck={onCheck} />);
+
+        fireEvent.click(screen.getByRole('button', { name: 'Check' }));
+
+        expect(onCheck).toHaveBeenCalledTimes(1);
+    });
+
     it('offers no Open Admin on a result with no Admin step', () => {
         render(<JobResultWindow result={{ variant: 'error', title: "Couldn't Uninstall Frescopa", message: 'Stopped.' }} onClose={jest.fn()} />);
 

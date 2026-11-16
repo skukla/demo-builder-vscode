@@ -206,6 +206,17 @@ describe('an uninstall', () => {
         expect(datapackJob(from, { type: 'dry-run' })).toBe(from);
     });
 
+    // Walk F153 (owner, 2026-11-16): "One Step Left to Uninstall" has Check, which runs the
+    // uninstall again once the store's root is changed. No other finished job starts again.
+    it('starts again from its finished result, for the Check on what it left', () => {
+        expect(datapackJob(un('done'), { type: 'start' })).toEqual({ ...un('run'), lastAction: 'reset' });
+    });
+
+    it('CONTROL: a finished install does not start again', () => {
+        const done: JobState = { kind: 'install', phase: 'done', lastAction: 'start' };
+        expect(datapackJob(done, { type: 'start' })).toBe(done);
+    });
+
     // Walk F151 (owner, 2026-11-16): the one step that deletes can be checked first.
     it('opens Review Records from its question, and Back returns to it', () => {
         expect(datapackJob(un('summary'), { type: 'review' })).toEqual(un('records'));

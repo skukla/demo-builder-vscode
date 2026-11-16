@@ -88,7 +88,8 @@ const FROM: Record<JobEvent['type'], readonly JobPhase[]> = {
     back: ['records', 'dry-result', 'ended'],
     'dry-run': ['summary', 'dry-result'],
     'dry-answered': ['dry-wait'],
-    start: ['summary', 'dry-result', 'save-first', 'question', 'ended'],
+    // From done only for an uninstall: its "One Step Left" Check runs it again (`kindTakes`).
+    start: ['summary', 'dry-result', 'save-first', 'question', 'ended', 'done'],
     'save-first': ['summary', 'question'],
     'needs-answer': ['run'],
     asks: ['check'],
@@ -146,6 +147,9 @@ function endsCheck(kind: JobKind, clean: boolean): boolean {
 /** Whether the job's kind takes the event: what is one kind's alone moves no other. */
 function kindTakes(state: JobState, event: JobEvent): boolean {
     const { kind, phase } = state;
+    // Walk F153 (owner, 2026-11-16): the uninstall that left a store's root can be run again from its
+    // result, once the root is changed; no other finished job starts again.
+    if (event.type === 'start' && phase === 'done' && kind !== 'uninstall') return false;
     if (kind === 'update' && NOT_UPDATE.includes(event.type)) return false;
     if (kind !== 'restore') {
         // An update's check may end on its result: nothing left to apply (J9-4); an install's only on

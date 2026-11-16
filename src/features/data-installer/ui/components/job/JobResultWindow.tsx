@@ -21,6 +21,11 @@ export interface JobResultWindowProps {
     onClose: () => void;
     /** Fix with AI had nothing to fix: the extension's refusal, on the problem line (step-07 P5). */
     problem?: string;
+    /**
+     * The Admin step's Check: runs the uninstall again, which takes the category out once the store
+     * no longer uses it, or ends on the same step (walk F153).
+     */
+    onCheck?: () => void;
 }
 
 /** A success with nothing to read or do: its title says it all. */
@@ -38,12 +43,16 @@ export function JobResultWindow({
     actionButtons,
     onClose,
     problem,
+    onCheck,
 }: JobResultWindowProps): React.ReactElement {
     useCloseWhenClean(titleAlone(result) && !actionButtons?.length, onClose);
     // The Admin step a removal left has its way to the Admin, as the install's step does (walk F153).
     const { opening, openAdmin } = useOpenAdmin();
     const admin: ActionButton[] = result.keptRoot
-        ? [{ label: 'Open Admin', variant: 'secondary', onPress: openAdmin, isPending: opening }]
+        ? [
+              { label: 'Open Admin', variant: 'secondary', onPress: openAdmin, isPending: opening },
+              ...(onCheck ? [{ label: 'Check', variant: 'accent' as const, onPress: onCheck }] : []),
+          ]
         : [];
     return (
         <ResultWindow
