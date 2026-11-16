@@ -82,6 +82,11 @@ export function isKnownEmpty(read: StoreItemPage | null | undefined, count: numb
 
 const NO_COUNTS: StoreKindCounts = {};
 
+/** Whether a ceiling kind's list the counts call for (above zero) has not answered yet. */
+function ceilingPending(counts: StoreKindCounts, reads: KindReads): boolean {
+    return CEILING_KINDS.some((kind) => (counts[kind] ?? 0) > 0 && reads[kind] === undefined);
+}
+
 /**
  * A ceiling kind's list, read as soon as its count is in and above zero, so its row says what the
  * website holds before the SC opens it (`CEILING_KINDS`).
@@ -202,7 +207,9 @@ export function useStorePicks(countsWanted: boolean): StorePicksState {
         whole,
         reads,
         counts: known,
-        ready: countsSettled,
+        // Open complete: the counts, and the ceiling kinds' lists they call for (owner walk, 2026-11-16:
+        // B2B Companies had no note for a second or two after the window opened).
+        ready: countsSettled && !ceilingPending(known, reads),
         open,
         setPicked,
         answered,

@@ -226,7 +226,9 @@ describe('a kind whose count is only a ceiling', () => {
         expect(row('B2B Companies')).not.toHaveTextContent('All selected');
     });
 
-    it('claims nothing while its list is still being read', async () => {
+    // Owner walk, 2026-11-16: the window opened, then the row filled in a second or two later. It
+    // waits for the list too, and opens complete.
+    it('keeps the window on its wait until that list has answered', async () => {
         mockRequest.mockImplementation(async (type: string, payload?: { dataType?: string }) => {
             if (type === COUNT) return counted({ products: 1, b2b_companies: 3 });
             if (type === LIST && payload?.dataType === 'b2b_companies') return new Promise(() => undefined);
@@ -234,8 +236,8 @@ describe('a kind whose count is only a ceiling', () => {
         });
         await open();
 
-        expect(row('B2B Companies')).not.toHaveTextContent('All selected');
-        expect(row('B2B Companies')).not.toHaveTextContent(NONE_NOTE);
+        expect(rows()).toHaveLength(0);
+        expect(screen.getByRole('progressbar')).toBeInTheDocument();
     });
 });
 
