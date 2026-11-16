@@ -1,7 +1,7 @@
 /**
  * The in-memory store's inventory (`memoryStore.testUtils.ts` is the one entry): sources, stocks, the
  * links between them and stock quantities, on the routes `stockKinds.ts`, `sourceItemsKind.ts`,
- * `warehouseFix.ts` (`readInventory`, `setSourceEnabled`) and `storeCopies.ts` read and write.
+ * `warehouseSetup.ts` (`readInventory`, `setSourceEnabled`) and `storeCopies.ts` read and write.
  *
  * A new store has the `default` source on the Default Stock (1), which sells to the one website,
  * `base`. As in Commerce a website sells from one stock, so a stock given `base` takes it from the

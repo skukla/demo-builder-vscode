@@ -25,7 +25,7 @@ import type { CreatedObject } from './installRecord';
 import type { KindContext } from './kindContext';
 import type { KeptThing } from './repeatInstall';
 import { installStoreConfig, packSettings, settingsLine } from './storeConfigKind';
-import { errorText } from '@/features/app-builder/services/storePreparation/fixContract';
+import { errorText } from '@/features/app-builder/services/storePreparation/setupContract';
 import type { DatapackId } from '@/types/datapack';
 
 /** How the engine asks for a pack's layer: undefined when there is none. */

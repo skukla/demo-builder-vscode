@@ -203,8 +203,8 @@
                   "card-payments-enabled"
                 ]
               },
-              "fix": {
-                "description": "What Demo Builder can do itself when the check finds the step undone, offered as a confirmed, previewed and reversible action (AB-74, AB-77): settings declared as data, or a named handler.",
+              "setup": {
+                "description": "What Demo Builder sets up itself when the check finds the step undone (the demo setup's Apply), offered as a confirmed, previewed and reversible action (AB-74, AB-77): settings declared as data, or a named handler.",
                 "oneOf": [
                   {
                     "type": "object",

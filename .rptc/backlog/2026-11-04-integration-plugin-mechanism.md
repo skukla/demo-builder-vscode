@@ -19,7 +19,7 @@ The ERP integration is an App Builder application in its own GitHub repository, 
 and 11,223 lines of extension code (dashboard handlers and dialogs, 18 MCP tools, fill and reset
 steps, setup fixes, wizard copy). An SC who writes their own integration, a PIM for example,
 can publish the application the same way. They cannot bring the extension-side part: it is
-wired in by imports (`dashboardHandlers.ts`, `actionDescriptors.ts`, `fixRegistry.ts`), not by
+wired in by imports (`dashboardHandlers.ts`, `actionDescriptors.ts`, `setupRegistry.ts`), not by
 anything a repository can declare.
 
 What contract would let the extension-side functionality travel with the integration?

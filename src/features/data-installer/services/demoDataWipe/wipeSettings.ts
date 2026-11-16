@@ -29,7 +29,7 @@
  * |---|---|---|
  * | a website's values | `GET system/config?scope=website&scopeCode=<code>`, `searchCriteria[pageSize]`, `[currentPage]`: `items[path,value,scope,scope_code]`, `total_count` | yes, 2026-11-02 (`SYSTEM_CONFIG_PAGE_TEST_WEBSITE`), pages too |
  * | the Default scope's | the same with `scope=default` | Adobe's page; not read from here |
- * | the write | `configFix`: `PUT system/config`, `{ items: [{ path, value, scope: "website", scope_code }] }`, read `errors` | yes for a default-scope value (2026-10-10); a website one from here **no** |
+ * | the write | `configSetup`: `PUT system/config`, `{ items: [{ path, value, scope: "website", scope_code }] }`, read `errors` | yes for a default-scope value (2026-10-10); a website one from here **no** |
  *
  * @module features/data-installer/services/demoDataWipe/wipeSettings
  */
@@ -38,7 +38,7 @@ import type { RemovalAccess } from '../demoBuilderEngine/removers';
 import { isOffLimitsSetting } from '../demoBuilderEngine/storeConfigKind';
 import type { WipeScope } from './wipeScope';
 import { absentAsEmpty, readAllPages } from '@/features/app-builder/services/erpFillReaders';
-import { configFix } from '@/features/app-builder/services/storePreparation/configFix';
+import { configSetup } from '@/features/app-builder/services/storePreparation/configSetup';
 import type { CommerceGet, CommerceSystemConfigRow } from '@/types/commerceWire';
 
 /** A value that is not the setting's: masked, or Commerce's encrypted form. Never copied anywhere. */
@@ -106,7 +106,7 @@ export interface SettingsOutcome {
     refused: string[];
 }
 
-/** "path for the website: 1 → 0: why", as `configFix` says it, without the values: a value can be a long list. */
+/** "path for the website: 1 → 0: why", as `configSetup` says it, without the values: a value can be a long list. */
 function refusalOf(text: string): string {
     const why = text.slice(text.lastIndexOf(' → ') + 1);
     return `${text.split(' ')[0]}: ${why.slice(why.indexOf(': ') + 2)}`;
@@ -125,7 +125,7 @@ export async function putBackSettings(commerce: RemovalAccess, settings: readonl
         for (let start = 0; start < mine.length; start += SETTINGS_PER_WRITE) {
             const items = mine.slice(start, start + SETTINGS_PER_WRITE).map((s) => ({ path: s.path, value: s.value, scope: 'website' as const }));
             try {
-                const applied = await configFix({ kind: 'config', items }).apply({ commerce, websiteCode, erpNames: [] });
+                const applied = await configSetup({ kind: 'config', items }).apply({ commerce, websiteCode, erpNames: [] });
                 outcome.count += applied.changes.length;
                 outcome.refused.push(...applied.rejected.map(refusalOf));
             } catch (error) {

@@ -14,7 +14,7 @@
 
 import type { MutableRefObject } from 'react';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import { preparesStoreOnAdd } from '@/features/app-builder/services/storePreparation/fixReach';
+import { preparesStoreOnAdd } from '@/features/app-builder/services/storePreparation/setupReach';
 import { copyForAdd } from '@/features/components/services/appBuilderComponentLinks';
 import type { UseProjectBuilderReturn } from '@/features/project-creation/ui/steps/useProjectBuilder';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';

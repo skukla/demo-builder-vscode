@@ -18,7 +18,7 @@
  */
 
 import { CommerceReadError, readAllPages } from '@/features/app-builder/services/erpFillReaders';
-import { readHeld } from '@/features/app-builder/services/storePreparation/sharedCatalogsFix';
+import { readHeld } from '@/features/app-builder/services/storePreparation/sharedCatalogsSetup';
 import type { CommerceCompanyRow, CommerceCustomer, CommerceCustomerGroup, CommerceGet, CommerceSharedCatalog } from '@/types/commerceWire';
 
 export { readHeld };

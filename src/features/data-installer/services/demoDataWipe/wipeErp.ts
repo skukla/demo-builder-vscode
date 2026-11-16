@@ -36,7 +36,7 @@ import { andList } from '@/core/utils/andList';
 import { DATAPACK_STAGES } from '@/core/utils/datapackStages';
 import type { ResolvedErpSettings } from '@/features/app-builder/services/erpFill';
 import type { ErpIntegrationClient } from '@/features/app-builder/services/erpIntegrationClient';
-import { errorText } from '@/features/app-builder/services/storePreparation/fixContract';
+import { errorText } from '@/features/app-builder/services/storePreparation/setupContract';
 import type { WipeErpPart } from '@/types/demoDataWipe';
 import type { ErpOrdersRemoved, ErpStoreCloseReport } from '@/types/erpIntegration';
 

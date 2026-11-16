@@ -13,7 +13,7 @@
  * @module types/webviewRequests
  */
 
-import type { ComponentSettings, SetupConfigFixItem } from './appBuilderComponents';
+import type { ComponentSettings, ConfigSetupItem } from './appBuilderComponents';
 import type { AdobeConfig } from './base';
 import type { CustomBlockLibrary } from './blockLibraries';
 import type { CommerceStoreStructure, StoreViewCodes, StoreViewProducts } from './commerceStore';
@@ -978,7 +978,7 @@ export interface UndoStorePreparationRequestPayload {
  * recorded on the project (`commerceConfigChange`), ignoring `items`.
  */
 export interface SetCommerceConfigRequestPayload {
-    items?: SetupConfigFixItem[];
+    items?: ConfigSetupItem[];
     confirm?: boolean;
     undo?: boolean;
 }

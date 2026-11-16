@@ -1,38 +1,38 @@
 /**
- * The contract every setup-step fix implements (AB-77), so the demo setup's Apply drives a fix
- * that is settings (`configFix`) and a fix that is code (`erpAttributesFix`,
- * `warehouseFix`, `sharedCatalogsFix`) the same way: PREVIEW reads Commerce and says what
+ * What each demo-setup step's Apply runs (AB-77), one contract so the Apply drives a step set up
+ * by settings (`configSetup`) and one set up by code (`erpAttributesSetup`,
+ * `warehouseSetup`, `sharedCatalogsSetup`) the same way: PREVIEW reads Commerce and says what
  * would change, APPLY writes and answers what it changed and what Commerce refused, with the
  * record the undo needs, and UNDO puts that record back.
  *
  * Pure over the Commerce client it is handed; nothing here fetches.
  *
- * @module features/app-builder/services/storePreparation/fixContract
+ * @module features/app-builder/services/storePreparation/setupContract
  */
 
 import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
 import type { StorePreparationStepRecord } from '@/types/storePreparation';
 
-/** What a fix is handed: the signed Commerce client and the project's store. */
-export interface FixDeps {
+/** What a setup is handed: the signed Commerce client and the project's store. */
+export interface SetupDeps {
     commerce: { get: CommerceGet; send: CommerceSend };
-    /** The project's Commerce website code; a website-scoped fix needs it. */
+    /** The project's Commerce website code; a website-scoped setup needs it. */
     websiteCode?: string;
-    /** The names of the ERPs the integration serves, for a fix that makes one thing per ERP. */
+    /** The names of the ERPs the integration serves, for a setup that makes one thing per ERP. */
     erpNames: readonly string[];
 }
 
-/** What a fix would change: one line per change, in an SC's words. */
-export interface FixPreview {
+/** What a setup would change: one line per change, in an SC's words. */
+export interface SetupPreview {
     changes: string[];
     /** One plain sentence naming what `changes` lists, when the step's title is too general. */
     summary?: string;
-    /** What stays by hand, whatever the fix writes. */
+    /** What stays by hand, whatever the setup writes. */
     manual?: string;
 }
 
-/** What a fix changed, what Commerce refused, and what the undo needs. */
-export interface FixApplied {
+/** What a setup changed, what Commerce refused, and what the undo needs. */
+export interface SetupApplied {
     changes: string[];
     rejected: string[];
     /** Absent when nothing was written, so nothing is recorded. */
@@ -41,11 +41,11 @@ export interface FixApplied {
 }
 
 /** What an undo put back, what Commerce refused, and what it kept. */
-export interface FixUndone {
+export interface SetupUndone {
     changes: string[];
     rejected: string[];
     /**
-     * One line naming what the undo left as it is because it changed since the fix (step 06,
+     * One line naming what the undo left as it is because it changed since the setup (step 06,
      * AB-83): a setting set again, a catalog or a stock holding someone else's things. Not a
      * refusal. Absent when nothing was kept.
      */
@@ -58,10 +58,10 @@ export interface FixUndone {
     remaining?: StorePreparationStepRecord;
 }
 
-export interface StepFix {
-    preview: (deps: FixDeps) => Promise<FixPreview>;
-    apply: (deps: FixDeps) => Promise<FixApplied>;
-    undo: (deps: FixDeps, record: StorePreparationStepRecord) => Promise<FixUndone>;
+export interface StepSetup {
+    preview: (deps: SetupDeps) => Promise<SetupPreview>;
+    apply: (deps: SetupDeps) => Promise<SetupApplied>;
+    undo: (deps: SetupDeps, record: StorePreparationStepRecord) => Promise<SetupUndone>;
 }
 
 /** An error's words. */

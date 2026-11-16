@@ -25,7 +25,7 @@ import { PRODUCT_EXPORT_KIND } from './productExportKind';
 import type { ProductLookups } from './productLookups';
 import { runInBatches } from '@/core/utils/promiseUtils';
 import { readAllPages } from '@/features/app-builder/services/erpFillReaders';
-import { type Inventory, readInventory } from '@/features/app-builder/services/storePreparation/warehouseFix';
+import { type Inventory, readInventory } from '@/features/app-builder/services/storePreparation/warehouseSetup';
 import type { CommerceProduct, CommerceSetAttribute } from '@/types/commerceWire';
 
 /**

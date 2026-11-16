@@ -22,7 +22,7 @@ import {
 } from './appBuilderComponentHandlers.testUtils';
 import type { SetupStep } from '@/types/appBuilderComponents';
 
-const FIX_STEP: SetupStep = { id: 'price-scope', title: 'Prices', why: 'w', where: 'Admin', fix: { kind: 'config', items: [] } };
+const FIX_STEP: SetupStep = { id: 'price-scope', title: 'Prices', why: 'w', where: 'Admin', setup: { kind: 'config', items: [] } };
 const PREPARING = { ...ERP_ENTRY, id: 'erp-integration', name: 'ERP Integration', fillsSystem: true, setupSteps: [FIX_STEP] };
 const PREVIEW = {
     steps: [{ id: 'price-scope', label: 'Price scope', title: 'Prices', state: 'applicable', changes: ['catalog/price/scope: 0 → 1'], rejected: [] }],

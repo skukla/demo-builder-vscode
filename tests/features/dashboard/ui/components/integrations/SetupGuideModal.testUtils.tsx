@@ -48,6 +48,6 @@ jest.mock('@/core/ui/components/ui/Modal', () => ({
 
 // Below the mocks on purpose: jest.mock hoists above this file's imports.
 export { SetupGuideModal } from '@/features/dashboard/ui/components/integrations/SetupGuideModal';
-export { FIX_COPY } from '@/features/dashboard/ui/components/integrations/setupGuideFooter';
+export { APPLY_COPY } from '@/features/dashboard/ui/components/integrations/setupGuideFooter';
 export { DONE_COPY, STATUS_COPY } from '@/core/ui/components/ui/SetupStepHeader';
 export { setupNextStep, useSetupGuide } from '@/features/dashboard/ui/components/integrations/useSetupGuide';

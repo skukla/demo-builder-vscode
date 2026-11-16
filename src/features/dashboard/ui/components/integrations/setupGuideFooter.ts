@@ -15,9 +15,9 @@ import { isLeftToDo } from '@/core/ui/components/integrations/setupLeftToDo';
 import type { ActionButton } from '@/core/ui/components/ui/Modal';
 import type { SetupChecklistItem } from '@/types/appBuilderComponents';
 
-/** The fix buttons' words, in one place. */
-export const FIX_COPY = {
-    fix: 'Apply This Step',
+/** The Apply and Undo buttons' words, in one place. */
+export const APPLY_COPY = {
+    apply: 'Apply This Step',
     undo: 'Undo This Step',
     all: (count: number) => `Apply All (${count})`,
 };
@@ -49,11 +49,11 @@ export interface FooterInput {
  * with no fix, a skipped step, or when the screen offers none.
  */
 function fixButtons(item: SetupChecklistItem, fix: FooterInput['fix'], busy: boolean): ActionButton[] {
-    if (!item.fix || !fix || item.state === 'dismissed') return [];
-    const apply: ActionButton = { label: FIX_COPY.fix, variant: 'secondary', onPress: () => fix('apply'), isDisabled: busy };
-    const undo: ActionButton = { label: FIX_COPY.undo, variant: 'secondary', onPress: () => fix('undo'), isDisabled: busy };
-    if (item.state === 'done') return item.fixApplied ? [undo] : [];
-    return item.fixApplied ? [apply, undo] : [apply];
+    if (!item.setup || !fix || item.state === 'dismissed') return [];
+    const apply: ActionButton = { label: APPLY_COPY.apply, variant: 'secondary', onPress: () => fix('apply'), isDisabled: busy };
+    const undo: ActionButton = { label: APPLY_COPY.undo, variant: 'secondary', onPress: () => fix('undo'), isDisabled: busy };
+    if (item.state === 'done') return item.setupApplied ? [undo] : [];
+    return item.setupApplied ? [apply, undo] : [apply];
 }
 
 /** The steps a check run covers, in list order: every checkable one not skipped. */
@@ -119,7 +119,7 @@ export function listActionButtons({ checkAll, applyAll, busy, waitsOnSignIn }: L
         });
     }
     if (applyAll) {
-        buttons.push({ label: FIX_COPY.all(applyAll.count), variant: 'secondary', onPress: applyAll.run, isDisabled: busy });
+        buttons.push({ label: APPLY_COPY.all(applyAll.count), variant: 'secondary', onPress: applyAll.run, isDisabled: busy });
     }
     return buttons;
 }

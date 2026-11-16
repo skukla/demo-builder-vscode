@@ -13,7 +13,7 @@ import { fingerprintRow } from '@/features/data-installer/services/demoBuilderEn
 import { installRecordPath, openInstallRecord, readInstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import { saveStoreChanges } from '@/features/data-installer/services/demoBuilderEngine/saveStore';
 import { previewChanges } from '@/features/data-installer/services/demoBuilderEngine/storeChanges';
-import { configListPath } from '@/features/app-builder/services/storePreparation/configFix';
+import { configListPath } from '@/features/app-builder/services/storePreparation/configSetup';
 import { filterBy } from '@/features/data-installer/services/demoBuilderEngine/b2bReads';
 import { COUPON10, NO_COUPONS_PAGE, NO_RULES_PAGE, TEN_PERCENT_COUPON, WIPER_FLUID } from '../../../../helpers/commerceSalesRuleFixtures';
 import { NOW, PACK, PROJECT, page } from './demoBuilderEngine.testUtils';

@@ -19,7 +19,7 @@ jest.mock('@/features/app-builder/services/setupChecks', () => ({
     runSetupCheck: (...a: unknown[]) => mockRunCheck(...a),
 }));
 
-import { preparesStoreOnAdd } from '@/features/app-builder/services/storePreparation/fixReach';
+import { preparesStoreOnAdd } from '@/features/app-builder/services/storePreparation/setupReach';
 import { prepareStoreOnAdd, previewStoreForAdd } from '@/features/project-creation/services/erpStorePreparation';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import type { AppBuilderComponentCatalogEntry, SetupStep } from '@/types/appBuilderComponents';
@@ -33,7 +33,7 @@ const PRICE_SCOPE: SetupStep = {
     why: 'A price the ERP grants for one website shows on that website only.',
     where: 'Stores > Configuration > Catalog > Price',
     check: 'price-scope-website',
-    fix: { kind: 'config', items: [{ path: 'catalog/price/scope', value: '1', scope: 'default' }] },
+    setup: { kind: 'config', items: [{ path: 'catalog/price/scope', value: '1', scope: 'default' }] },
 };
 const BY_HAND: SetupStep = { id: 'associate', title: 'Associate the app', label: 'Associate', why: 'w', where: 'Apps' };
 

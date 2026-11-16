@@ -30,8 +30,8 @@ import { splitPair } from './sharedCatalogKinds';
 import { LINK_KIND, SOURCE_KIND, STOCK_KIND } from './stockKinds';
 import { STORE_CONFIG_KIND } from './storeConfigKind';
 import { readAllPages } from '@/features/app-builder/services/erpFillReaders';
-import { readPrevious } from '@/features/app-builder/services/storePreparation/configFix';
-import { readInventory } from '@/features/app-builder/services/storePreparation/warehouseFix';
+import { readPrevious } from '@/features/app-builder/services/storePreparation/configSetup';
+import { readInventory } from '@/features/app-builder/services/storePreparation/warehouseSetup';
 import type { CommerceAttributeSetList, CommerceGet, CommerceSetAttribute } from '@/types/commerceWire';
 import type { CommerceConfigPrevious, SharedCatalogHeld } from '@/types/storePreparation';
 

@@ -3,7 +3,7 @@
  * with old and new value, writing nothing, as `preview_datapack_changes` answers it.
  */
 
-import { configListPath } from '@/features/app-builder/services/storePreparation/configFix';
+import { configListPath } from '@/features/app-builder/services/storePreparation/configSetup';
 import { StoreChangesError } from '@/features/data-installer/services/demoBuilderEngine/storeAccess';
 import { previewChanges } from '@/features/data-installer/services/demoBuilderEngine/storeChanges';
 import { GRID, LIST, foundLayer, settingRow } from '../../../../helpers/settingsLayerFixtures';

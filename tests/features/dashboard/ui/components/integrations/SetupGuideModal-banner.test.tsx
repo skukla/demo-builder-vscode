@@ -11,7 +11,7 @@ import React from 'react';
 import '@testing-library/jest-dom';
 
 import type { IntegrationCardModel } from '@/features/dashboard/ui/components/integrations/integrationCardModel';
-import { DONE_COPY, FIX_COPY, STATUS_COPY, SetupGuideModal } from './SetupGuideModal.testUtils';
+import { DONE_COPY, APPLY_COPY, STATUS_COPY, SetupGuideModal } from './SetupGuideModal.testUtils';
 import { applyAllIds } from '@/features/dashboard/ui/components/integrations/setupGuideFooter';
 import { statusOf } from '@/features/dashboard/ui/components/integrations/StepHeader';
 import type { GuideRun } from '@/features/dashboard/ui/components/integrations/useGuideRun';
@@ -42,7 +42,7 @@ const ended = (over: Partial<GuideRun>): GuideRun => ({
 
 describe('the step banner', () => {
     it('is green on a done step and says how it got done', () => {
-        expect(statusOf(step('a', { state: 'done', fixApplied: true, lastCheck: 'passed' }))).toEqual({
+        expect(statusOf(step('a', { state: 'done', setupApplied: true, lastCheck: 'passed' }))).toEqual({
             label: STATUS_COPY.done,
             tone: 'success',
             line: DONE_COPY.applied,
@@ -53,7 +53,7 @@ describe('the step banner', () => {
 
     it('says a refusal without the step name the run puts in front of it', () => {
         const run = ended({ problem: 'attributes: 11 products are assigned to Accuform ERP.' });
-        expect(statusOf(step('attributes', { state: 'done', fixApplied: true }), run)).toEqual({
+        expect(statusOf(step('attributes', { state: 'done', setupApplied: true }), run)).toEqual({
             label: STATUS_COPY.undoFailed,
             tone: 'warning',
             line: '11 products are assigned to Accuform ERP.',
@@ -75,7 +75,7 @@ describe('the step banner', () => {
 });
 
 describe('Apply all', () => {
-    const items = [step('warehouse', { fix: FIX, applicable: true }), step('done', { state: 'done', fix: FIX, applicable: true })];
+    const items = [step('warehouse', { setup: FIX, applicable: true }), step('done', { state: 'done', setup: FIX, applicable: true })];
 
     it('is not offered when the one step left is the one on view', () => {
         expect(applyAllIds(items, 'warehouse')).toStrictEqual([]);
@@ -90,9 +90,9 @@ describe('Apply all', () => {
         const model = { id: 'erp-integration', name: 'ERP Integration', setupChecklist: items } as IntegrationCardModel;
         render(<SetupGuideModal model={model} onClose={jest.fn()} onOpenAdmin={jest.fn()} onAsk={jest.fn()} />);
         await act(async () => {});
-        expect(screen.queryByRole('button', { name: FIX_COPY.all(1) })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: APPLY_COPY.all(1) })).not.toBeInTheDocument();
         // CONTROL: the step's own Apply and the list's check are there.
-        expect(screen.getByRole('button', { name: FIX_COPY.fix })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: APPLY_COPY.apply })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Check All Steps' })).toBeInTheDocument();
     });
 });

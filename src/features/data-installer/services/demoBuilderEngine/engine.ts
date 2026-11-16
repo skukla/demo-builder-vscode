@@ -44,7 +44,7 @@ import { type PackItems, PackRowsError, installPack, packRowProblems, refusedKin
 import { STORE_CONFIG_KIND, settingsWebsite } from './storeConfigKind';
 import { nameInStore } from './storeNames';
 import { checkAfterInstall } from './verifyInstall';
-import { errorText } from '@/features/app-builder/services/storePreparation/fixContract';
+import { errorText } from '@/features/app-builder/services/storePreparation/setupContract';
 import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 

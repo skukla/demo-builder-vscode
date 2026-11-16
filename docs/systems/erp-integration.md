@@ -455,13 +455,13 @@ so a datapack that already loaded the attributes, sources or shared catalogs is 
 and never relied on; and a refused item stops nothing else — what Commerce took stands and is
 recorded, what it refused is named by step and item in the result.
 
-A step says how it is applied in its catalog entry's `fix` (`app-builder-components.json`,
-schema beside it). A fix that is settings is DATA, with no code: `{ "kind": "config",
+A step says how it is applied in its catalog entry's `setup` (`app-builder-components.json`,
+schema beside it). A setup that is settings is DATA, with no code: `{ "kind": "config",
 "items": [{ "path": "payment/companycredit/active", "value": "1", "scope": "website" }] }`;
 `website` resolves to the project's website code when applied, and a `manual` sentence says
-what stays by hand. A fix that needs code names a handler (`{ "kind": "handler", "handler":
+what stays by hand. A setup that needs code names a handler (`{ "kind": "handler", "handler":
 "create-erp-attributes" }`); each handler implements the same preview / apply / undo contract
-(`fixContract.ts`), so the engine drives both alike. A second catalog entry declares config
+(`setupContract.ts`), so the engine drives both alike. A second catalog entry declares config
 fixes in JSON alone.
 
 | Step | Written | Undo | Still by hand |
@@ -484,7 +484,7 @@ does (`recordsAfterRun`), so Undo per step and the removal's teardown work uncha
 without a fix stays in the setup guide. Every way of adding it reaches this: the
 Integrations screen, `add_integration`, project creation and an Edit that adds it all run the
 runner's add. What it will change is confirmed first, because some steps change settings
-every website on a shared Commerce shares (`fixReach.ts`: a settings item at the default
+every website on a shared Commerce shares (`setupReach.ts`: a settings item at the default
 scope, the attributes, the shared catalogs; the warehouse is the project's website's only):
 the Integrations screen's add opens a confirm that reads the store
 (`PrepareOnAddConfirm.tsx`), `add_integration` for the ERP integration answers that preview

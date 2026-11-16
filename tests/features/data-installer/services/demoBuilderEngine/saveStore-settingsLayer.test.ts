@@ -7,7 +7,7 @@
 
 import { installRecordPath, openInstallRecord, readInstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import { saveStoreChanges } from '@/features/data-installer/services/demoBuilderEngine/saveStore';
-import { configListPath } from '@/features/app-builder/services/storePreparation/configFix';
+import { configListPath } from '@/features/app-builder/services/storePreparation/configSetup';
 import { GRID, LIST, foundLayer, settingRow } from '../../../../helpers/settingsLayerFixtures';
 import { NOW, PACK, PROJECT } from './demoBuilderEngine.testUtils';
 import { ITEMS, RACKS, SAVE_AS, deps } from './storeChanges.testUtils';

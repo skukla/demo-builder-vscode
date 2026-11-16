@@ -11,9 +11,9 @@
  * and the guide's opening view need is `setupChecklist.ts`'s, not this file's.
  *
  * - done → Done; on apply nothing is written (a datapack or the SC did it).
- * - not done, with a fix → Will apply.
- * - could not tell → with a fix, the fix reads for itself; without one, "could not check".
- * - no check → never Done here: Will apply with a fix, by hand without.
+ * - not done, with a setup → Will apply.
+ * - could not tell → with a setup, the setup reads for itself; without one, "could not check".
+ * - no check → never Done here: Will apply with a setup, by hand without.
  * - A refused item stops nothing else: what Commerce took stands and is recorded, what it
  *   refused is named by step and item.
  *
@@ -23,14 +23,14 @@
  */
 
 import type { SetupCheckResult } from '../setupChecks';
-import { errorText, type FixDeps } from './fixContract';
-import { fixFor } from './fixRegistry';
 import { mergedStepRecord } from './recordMerge';
+import { errorText, type SetupDeps } from './setupContract';
+import { setupFor } from './setupRegistry';
 import type { SetupCheck, SetupStep } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState } from '@/types/base';
 import type { PreparationStepReport, PreparationStepState, StorePreparationRecord } from '@/types/storePreparation';
 
-export interface PreparationDeps extends FixDeps {
+export interface PreparationDeps extends SetupDeps {
     /** Run a step's check against the store as it stands; called once per selected step that has one. */
     runCheck: (check: SetupCheck) => Promise<SetupCheckResult>;
     /** Where the apply or undo is, for the progress modal. */
@@ -60,7 +60,7 @@ async function freshCheck(step: SetupStep, deps: PreparationDeps): Promise<Setup
 /** Where a step stands NOW, from its fresh check (see the module's rules). */
 function standing(step: SetupStep, checked: SetupCheckResult | undefined, saved: Saved): PreparationStepState {
     if (checked?.done === true) return saved.storePreparation?.steps[step.id] ? 'applied' : 'done';
-    if (step.fix) return 'applicable';
+    if (step.setup) return 'applicable';
     return checked && checked.done === undefined ? 'unknown' : 'manual';
 }
 
@@ -98,7 +98,7 @@ export interface PreparationPreview {
 
 /**
  * Every selected step with where it stands now; the applicable ones with what they would
- * change. Reads the store (each step's check, concurrently, then each fix's own read) and
+ * change. Reads the store (each step's check, concurrently, then each setup's own read) and
  * writes nothing.
  */
 export async function previewPreparation(steps: SetupStep[], saved: Saved, deps: PreparationDeps, stepIds?: readonly string[]): Promise<PreparationPreview> {
@@ -111,15 +111,15 @@ export async function previewPreparation(steps: SetupStep[], saved: Saved, deps:
         if (checked) checks[step.id] = checked;
         const state = standing(step, checked, saved);
         const note = checked?.note;
-        if (state !== 'applicable' || !step.fix) {
+        if (state !== 'applicable' || !step.setup) {
             reports.push(report(step, state, { note }));
             continue;
         }
         try {
-            const preview = await fixFor(step.fix).preview(deps);
+            const preview = await setupFor(step.setup).preview(deps);
             reports.push(report(step, state, { changes: preview.changes, summary: preview.summary, manual: preview.manual, note }));
         } catch (error) {
-            // The fix cannot read either: "could not check", with why.
+            // The setup cannot read either: "could not check", with why.
             reports.push(report(step, 'unknown', { rejected: [`Could not read what would change: ${errorText(error)}`], note }));
         }
     }
@@ -136,7 +136,7 @@ export interface PreparationOutcome {
 
 /**
  * Apply the selected steps in order. Each is checked just before it is decided; a step the
- * store shows done is not written. What a fix wrote is recorded under its step id before the
+ * store shows done is not written. What a setup wrote is recorded under its step id before the
  * next step runs (added to an earlier record of the same step), so a step that throws loses
  * nothing already recorded.
  */
@@ -149,14 +149,14 @@ export async function applyPreparation(steps: SetupStep[], saved: Saved, deps: P
         const checked = await freshCheck(step, deps);
         if (checked) checks[step.id] = checked;
         const state = standing(step, checked, saved);
-        if (state !== 'applicable' || !step.fix) {
-            // Done with a fix it did not need: said as "already done", so the result lists it as skipped.
-            reports.push(report(step, state === 'done' && step.fix ? 'skipped' : state, { note: checked?.note }));
+        if (state !== 'applicable' || !step.setup) {
+            // Done with a setup it did not need: said as "already done", so the result lists it as skipped.
+            reports.push(report(step, state === 'done' && step.setup ? 'skipped' : state, { note: checked?.note }));
             continue;
         }
         deps.onProgress?.(step, 'Applying');
         try {
-            const applied = await fixFor(step.fix).apply(deps);
+            const applied = await setupFor(step.setup).apply(deps);
             if (applied.record) {
                 const entry = mergedStepRecord(record?.steps[step.id], applied.record);
                 record = { at: new Date().toISOString(), steps: { ...record?.steps, [step.id]: entry } };
@@ -173,8 +173,8 @@ export async function applyPreparation(steps: SetupStep[], saved: Saved, deps: P
 /**
  * Undo the recorded steps, newest first (the guide's order reversed), or one of them. A
  * step's entry leaves the record once its undo ran with nothing refused; the record itself
- * goes with the last entry. What a fix kept because it changed since (step 06) is not a
- * refusal: the report carries the fix's one line as `kept`, and the entry goes, except for a
+ * goes with the last entry. What a setup kept because it changed since (step 06) is not a
+ * refusal: the report carries the setup's one line as `kept`, and the entry goes, except for a
  * kept catalog or stock (`remaining`), which stays so a later undo can take it once empty.
  */
 export async function undoPreparation(steps: SetupStep[], record: StorePreparationRecord, deps: PreparationDeps, stepId?: string): Promise<PreparationOutcome> {
@@ -183,13 +183,13 @@ export async function undoPreparation(steps: SetupStep[], record: StorePreparati
     const order = [...steps].reverse().filter((step) => left[step.id] && (stepId === undefined || step.id === stepId));
     for (const step of order) {
         const entry = left[step.id];
-        if (!step.fix) {
-            reports.push(report(step, 'rejected', { rejected: ['The catalog no longer declares a fix for this step, so its record cannot be undone.'] }));
+        if (!step.setup) {
+            reports.push(report(step, 'rejected', { rejected: ['The catalog no longer declares a setup for this step, so its record cannot be undone.'] }));
             continue;
         }
         deps.onProgress?.(step, 'Putting it back');
         try {
-            const undone = await fixFor(step.fix).undo(deps, entry);
+            const undone = await setupFor(step.setup).undo(deps, entry);
             if (undone.rejected.length === 0) {
                 const { [step.id]: _done, ...rest } = left;
                 // A kept catalog or stock stays recorded, so a later undo takes it once it is empty.

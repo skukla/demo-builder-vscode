@@ -1114,7 +1114,7 @@
         "kind",
         "previous"
       ],
-      "description": "What a config fix recorded."
+      "description": "What a config setup recorded."
     },
     "CommerceConfigPrevious": {
       "type": "object",
@@ -1155,7 +1155,7 @@
         "stored",
         "effective"
       ],
-      "description": "One setting as it was before a config fix wrote it."
+      "description": "One setting as it was before a config setup wrote it."
     },
     "ErpAttributesStepRecord": {
       "type": "object",

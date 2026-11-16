@@ -26,7 +26,7 @@ the move to the service cheap (below).
 
 - **Install** reads each setting's current value and records it in the install record, then
   writes the new value through the writer the setup guide's config steps already use
-  (`configFix`; reuse, do not rebuild). Commerce answers 200 with refused items in `errors`, so
+  (`configSetup`; reuse, do not rebuild). Commerce answers 200 with refused items in `errors`, so
   every write reads `errors`; a refused setting is reported by path, never silently skipped.
 - **Remove** writes back the recorded values, newest first, and drops each from the record.
 - **Scope codes** in the rows name the pack's own website and store view; they are mapped to the
@@ -80,9 +80,9 @@ engine last, after every data kind (`runPack.ts`), and put back first on removal
 
 | What | How (reused, never rebuilt) |
 |---|---|
-| read what a setting holds | `configFix.readPrevious`: `GET /V1/system/config?scope=default` (or `scope=website&scopeCode=<install target's website>`), path filter `in`, field `items[].value` |
-| write | `configFix(...).apply`: one `PUT /V1/system/config`, each row naming its own `scope` and `scope_code` in the body; `errors` read, each refused setting named by path and the install stops after recording the saved ones |
-| "still as we left it?" | `decideOwnedChange` (step 04's rule) on the recorded `wrote`, the value now, and the pack's value; removal goes through `configFix(...).undo`, the same rule |
+| read what a setting holds | `configSetup.readPrevious`: `GET /V1/system/config?scope=default` (or `scope=website&scopeCode=<install target's website>`), path filter `in`, field `items[].value` |
+| write | `configSetup(...).apply`: one `PUT /V1/system/config`, each row naming its own `scope` and `scope_code` in the body; `errors` read, each refused setting named by path and the install stops after recording the saved ones |
+| "still as we left it?" | `decideOwnedChange` (step 04's rule) on the recorded `wrote`, the value now, and the pack's value; removal goes through `configSetup(...).undo`, the same rule |
 | the record | one object per setting, id and key `<path>@<scope>`, `previous` = the fix's own record row (`stored`, `effective`, `wrote`, `scopeCode`) |
 | Commerce access | `projectCommerce` (Store: `all`), as every kind; the body's scope decides what is written |
 
@@ -96,7 +96,7 @@ built 2026-11-02; Adobe's "System configuration API" page warns that copying bas
 credentials "can break the production store"); a path that holds no value at its scope
 or store-wide, because the fix's undo would then write Commerce's `"0"` rather than what it held
 (decision 4); a path that is not `section/group/field` (`SETTING_PATH`, now exported by
-`configFix.ts` and shared with `set_commerce_config`).
+`configSetup.ts` and shared with `set_commerce_config`).
 
 **Install again.** A setting this engine set and the SC has not touched is brought up to the pack,
 still remembering what it held before the first install. One the SC changed is kept and counted
@@ -166,7 +166,7 @@ box on the form, so "the whole pack" is what its flyout's "Also sets" promises.
 **What the SC sees.** Before Import, the pack's flyout has an "Also sets" row of path and value. After
 it, the note: "From bodea-settings@2: Set catalog/frontend/grid_per_page: 12 → 24." On removal: "Put
 back catalog/frontend/grid_per_page: 24 → 12." `preview_datapack_changes` answers `settings: { layer,
-changes, note }`, each change in the fix's own words (`configFix(...).preview`).
+changes, note }`, each change in the fix's own words (`configSetup(...).preview`).
 
 **The catalog.** `withoutLayerCards`, on the Data Installer screen and the wizard's Datapacks step: no
 card for a layer while its pack is listed. Hiding it would strand one an SC could otherwise not reach,
@@ -250,7 +250,7 @@ go.
 
 1. **How a pack finds its layer.** Decided and built 2026-11-02: as above.
 2. **Store-view settings.** Recommended: refuse, as built, until a pack needs one; then extend
-   `configFix`'s read to the store scope (store, then website, then default), not a second reader.
+   `configSetup`'s read to the store scope (store, then website, then default), not a second reader.
 3. **Which settings a pack may carry.** Decided and built 2026-11-02: an allowed list of sections
    (`catalog/`, `sales/`, `checkout/`, `customer/`, `btob/`, `cataloginventory/`), with `web/`,
    `admin/` and any path ending in password, secret, token or key refused whatever the list says.

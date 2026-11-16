@@ -1,5 +1,5 @@
 /**
- * Every setup step's `fix` in the bundled catalog validates against the schema's `fix`
+ * Every setup step's `setup` in the bundled catalog validates against the schema's `setup`
  * (AB-77): a settings fix as data, or a named handler. The schema is the only thing that
  * says what a config fix may carry, so a JSON-only fix on a second entry is checked here
  * before any code reads it. With a positive control: a malformed fix is refused.
@@ -8,19 +8,19 @@
 import Ajv from 'ajv';
 import * as fs from 'fs';
 import * as path from 'path';
-import type { SetupConfigFix, SetupFix } from '@/types/appBuilderComponents';
+import type { ConfigSetupSpec, SetupSpec } from '@/types/appBuilderComponents';
 
 const CONFIG_DIR = path.join(__dirname, '../../../../src/features/components/config');
 const schema = JSON.parse(fs.readFileSync(path.join(CONFIG_DIR, 'app-builder-components.schema.json'), 'utf-8'));
 const catalog = JSON.parse(fs.readFileSync(path.join(CONFIG_DIR, 'app-builder-components.json'), 'utf-8'));
 
-const fixSchema = schema.definitions.appBuilderComponent.properties.setupSteps.items.properties.fix;
-const validateFix = new Ajv({ strict: false }).compile(fixSchema);
+const setupSchema = schema.definitions.appBuilderComponent.properties.setupSteps.items.properties.setup;
+const validateSetup = new Ajv({ strict: false }).compile(setupSchema);
 const validateCatalog = new Ajv({ strict: false }).compile(schema);
 
 interface Step {
     id: string;
-    fix?: unknown;
+    setup?: unknown;
 }
 interface Entry {
     id: string;
@@ -28,7 +28,7 @@ interface Entry {
 }
 
 const stepsWithFix = (catalog.appBuilderComponents as Entry[]).flatMap((entry) =>
-    (entry.setupSteps ?? []).filter((step) => step.fix !== undefined).map((step) => [`${entry.id}/${step.id}`, step.fix] as const),
+    (entry.setupSteps ?? []).filter((step) => step.setup !== undefined).map((step) => [`${entry.id}/${step.id}`, step.setup] as const),
 );
 
 describe('setup step fixes in the bundled catalog', () => {
@@ -39,10 +39,10 @@ describe('setup step fixes in the bundled catalog', () => {
     it('every declared fix validates, and the ERP integration declares the nine-step set', () => {
         expect(stepsWithFix.length).toBeGreaterThan(0);
         for (const [where, fix] of stepsWithFix) {
-            expect({ where, errors: validateFix(fix) ? [] : validateFix.errors }).toEqual({ where, errors: [] });
+            expect({ where, errors: validateSetup(fix) ? [] : validateSetup.errors }).toEqual({ where, errors: [] });
         }
         const erp = (catalog.appBuilderComponents as Entry[]).find((entry) => entry.id === 'erp-integration');
-        const byId = Object.fromEntries((erp?.setupSteps ?? []).map((step) => [step.id, step.fix]));
+        const byId = Object.fromEntries((erp?.setupSteps ?? []).map((step) => [step.id, step.setup]));
         expect(byId).toEqual({
             'confirmed-status': undefined,
             'company-catalogs': { kind: 'handler', handler: 'company-shared-catalogs' },
@@ -75,7 +75,7 @@ describe('setup step fixes in the bundled catalog', () => {
     // and its value, so the SC reads "Payment Services for the website: No → Yes".
     it('every setting a step writes names its Admin field and the value it writes', () => {
         const items = stepsWithFix.flatMap(([where, fix]) =>
-            (fix as SetupFix).kind === 'config' ? (fix as SetupConfigFix).items.map((item) => [where, item] as const) : [],
+            (fix as SetupSpec).kind === 'config' ? (fix as ConfigSetupSpec).items.map((item) => [where, item] as const) : [],
         );
         expect(items.length).toBeGreaterThan(0);
         for (const [where, item] of items) {
@@ -84,9 +84,9 @@ describe('setup step fixes in the bundled catalog', () => {
     });
 
     it('CONTROL: a malformed fix is refused', () => {
-        expect(validateFix({ kind: 'config', items: [{ path: 'no-slashes', value: '1', scope: 'default' }] })).toBe(false);
-        expect(validateFix({ kind: 'config', items: [{ path: 'a/b/c', value: 1, scope: 'default' }] })).toBe(false);
-        expect(validateFix({ kind: 'handler', handler: 'add-erp-owner-to-attribute-sets' })).toBe(false);
-        expect(validateFix('add-erp-owner-to-attribute-sets')).toBe(false);
+        expect(validateSetup({ kind: 'config', items: [{ path: 'no-slashes', value: '1', scope: 'default' }] })).toBe(false);
+        expect(validateSetup({ kind: 'config', items: [{ path: 'a/b/c', value: 1, scope: 'default' }] })).toBe(false);
+        expect(validateSetup({ kind: 'handler', handler: 'add-erp-owner-to-attribute-sets' })).toBe(false);
+        expect(validateSetup('add-erp-owner-to-attribute-sets')).toBe(false);
     });
 });

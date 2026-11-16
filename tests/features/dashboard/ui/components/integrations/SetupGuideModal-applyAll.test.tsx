@@ -10,7 +10,7 @@ import React from 'react';
 import '@testing-library/jest-dom';
 
 import type { IntegrationCardModel } from '@/features/dashboard/ui/components/integrations/integrationCardModel';
-import { FIX_COPY, SetupGuideModal } from './SetupGuideModal.testUtils';
+import { APPLY_COPY, SetupGuideModal } from './SetupGuideModal.testUtils';
 import type { SetupChecklistItem } from '@/types/appBuilderComponents';
 
 const step = (id: string, over: Partial<SetupChecklistItem> = {}): SetupChecklistItem => ({
@@ -27,11 +27,11 @@ const step = (id: string, over: Partial<SetupChecklistItem> = {}): SetupChecklis
 const FIX = { kind: 'handler' as const, handler: 'create-erp-attributes' as const };
 /** Justrite's list, 2026-10-26: two Demo Builder can apply, one by hand, one optional, one done. */
 const ITEMS = [
-    step('done', { state: 'done', fix: FIX, applicable: true }),
-    step('warehouse', { fix: FIX, applicable: true }),
+    step('done', { state: 'done', setup: FIX, applicable: true }),
+    step('warehouse', { setup: FIX, applicable: true }),
     step('status', { checkable: false }),
-    step('attributes', { fix: FIX, applicable: true }),
-    step('card-payments', { fix: FIX, applicable: true, optional: true }),
+    step('attributes', { setup: FIX, applicable: true }),
+    step('card-payments', { setup: FIX, applicable: true, optional: true }),
     step('unread', { checkState: 'unknown' }),
 ];
 
@@ -54,7 +54,7 @@ beforeEach(() => {
 describe('Apply all', () => {
     it('counts the steps still to do that Demo Builder can apply, not an optional one, and applies them in the guide', async () => {
         const { onClose } = await renderGuide(ITEMS);
-        fireEvent.click(screen.getByRole('button', { name: FIX_COPY.all(2) }));
+        fireEvent.click(screen.getByRole('button', { name: APPLY_COPY.all(2) }));
         expect(onClose).not.toHaveBeenCalled();
         expect(mockPostMessage).toHaveBeenCalledWith('prepareCommerceStore', {
             id: 'erp-integration',

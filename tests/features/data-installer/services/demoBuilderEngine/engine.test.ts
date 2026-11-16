@@ -9,7 +9,7 @@ import { openInstallRecord, readInstallRecord } from '@/features/data-installer/
 import { demoBuilderEngine, type DemoBuilderEngineDeps } from '@/features/data-installer/services/demoBuilderEngine/engine';
 import type { DatapackEngine } from '@/features/data-installer/services/datapackEngine';
 import type { ImportRequest } from '@/features/data-installer/services/importRequest';
-import { configListPath } from '@/features/app-builder/services/storePreparation/configFix';
+import { configListPath } from '@/features/app-builder/services/storePreparation/configSetup';
 import { PACK, PROJECT, type SentCall, fakeContext, memoryFiles, noneUnder } from './demoBuilderEngine.testUtils';
 
 /** The store's three structure reads: website base, store view default, root category 2. */

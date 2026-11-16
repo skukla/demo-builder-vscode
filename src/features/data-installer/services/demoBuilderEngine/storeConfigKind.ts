@@ -3,7 +3,7 @@
  * setting, `{ path, value, scope, scope_code }`, stored and moved like every other kind.
  *
  * Nothing here writes a setting itself. Every read and write goes through the setup guide's
- * settings fix (`configFix`, AB-77): `GET /V1/system/config` at the row's scope (`scope=default`,
+ * settings fix (`configSetup`, AB-77): `GET /V1/system/config` at the row's scope (`scope=default`,
  * or `scope=website&scopeCode=<code>`), field `items[].value`, and one `PUT /V1/system/config`
  * whose body names each row's own `scope` and `scope_code`, so the store code in the address
  * decides nothing. Commerce answers 200 with refused rows in `errors`, which that fix reads. "Is it
@@ -39,9 +39,9 @@ import { skipRow } from './refusedRows';
 import { counted, startRowCount } from './rowCount';
 import { andList } from '@/core/utils/andList';
 import { decideOwnedChange } from '@/core/utils/ownedChange';
-import { SETTING_PATH, configFix, readPrevious } from '@/features/app-builder/services/storePreparation/configFix';
-import type { FixDeps } from '@/features/app-builder/services/storePreparation/fixContract';
-import type { SetupConfigFixItem } from '@/types/appBuilderComponents';
+import { SETTING_PATH, configSetup, readPrevious } from '@/features/app-builder/services/storePreparation/configSetup';
+import type { SetupDeps } from '@/features/app-builder/services/storePreparation/setupContract';
+import type { ConfigSetupItem } from '@/types/appBuilderComponents';
 import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
 import type { CommerceConfigPrevious } from '@/types/storePreparation';
 
@@ -74,10 +74,10 @@ const CREDENTIAL = /(password|secret|token|key)$/u;
 /** One pack setting, as the settings fix takes it, and the record's name for it. */
 interface PackSetting {
     key: string;
-    item: SetupConfigFixItem;
+    item: ConfigSetupItem;
 }
 
-const keyOf = (item: Pick<SetupConfigFixItem, 'path' | 'scope'>): string => `${item.path}@${item.scope}`;
+const keyOf = (item: Pick<ConfigSetupItem, 'path' | 'scope'>): string => `${item.path}@${item.scope}`;
 
 /** A setting nothing here writes, whoever asks: anything under `web/` or `admin/`, or a credential. */
 export function isOffLimitsSetting(path: string): boolean {
@@ -110,7 +110,7 @@ function settingsOf(rows: ReadonlyArray<z.infer<typeof rowsSchema>[number]>, web
     for (const row of rows) {
         const scope = row.scope === 'default' ? 'default' : 'website';
         if (scope === 'website' && !websiteCode) throw new Error('The install target names no website, and the datapack sets a website setting.');
-        const item: SetupConfigFixItem = { path: row.path, value: row.value, scope };
+        const item: ConfigSetupItem = { path: row.path, value: row.value, scope };
         settings.set(keyOf(item), { key: keyOf(item), item });
     }
     return [...settings.values()];
@@ -122,7 +122,7 @@ export type SettingOutcome = 'set' | 'update' | 'already' | 'unchanged' | 'kept'
 interface PlannedSetting {
     key: string;
     outcome: SettingOutcome;
-    item?: SetupConfigFixItem;
+    item?: ConfigSetupItem;
     object?: CreatedObject;
 }
 
@@ -155,7 +155,7 @@ function againstRecord(object: CreatedObject, current: string, wanted: string): 
  */
 async function readWhereRecorded(
     get: CommerceGet,
-    items: ReadonlyArray<Pick<SetupConfigFixItem, 'path' | 'scope'> & { scopeCode?: string }>,
+    items: ReadonlyArray<Pick<ConfigSetupItem, 'path' | 'scope'> & { scopeCode?: string }>,
     websiteCode: string | undefined,
 ): Promise<CommerceConfigPrevious[]> {
     const codeOf = (item: (typeof items)[number]) => (item.scope === 'website' ? (item.scopeCode ?? websiteCode) : undefined);
@@ -203,7 +203,7 @@ export function settingsWebsite(created: readonly CreatedObject[]): string | und
 
 const NONE = (): SettingsDone => ({ changes: [], notes: [], kept: [] });
 
-const fixDeps = (commerce: { get: CommerceGet; send: CommerceSend }, websiteCode: string | undefined): FixDeps => ({ commerce, websiteCode, erpNames: [] });
+const fixDeps = (commerce: { get: CommerceGet; send: CommerceSend }, websiteCode: string | undefined): SetupDeps => ({ commerce, websiteCode, erpNames: [] });
 
 /**
  * Each new setting as pending (step 14 item 1), with what its scope holds now and the value about to
@@ -233,7 +233,7 @@ async function writeSettings(ctx: KindContext, writing: readonly PlannedSetting[
             throw error;
         }
     };
-    const applied = await configFix({ kind: 'config', items }).apply(fixDeps({ get: ctx.get, send }, ctx.session.websiteCode));
+    const applied = await configSetup({ kind: 'config', items }).apply(fixDeps({ get: ctx.get, send }, ctx.session.websiteCode));
     if (lost !== undefined) throw lost;
     const saved = applied.record?.kind === 'config' ? applied.record.previous : [];
     done.changes.push(...applied.changes);
@@ -307,7 +307,7 @@ export async function putBackSettings(
 ): Promise<SettingsDone> {
     const done = NONE();
     const refused: string[] = [];
-    const fix = configFix({ kind: 'config', items: [] });
+    const fix = configSetup({ kind: 'config', items: [] });
     for (const object of objects.filter((o) => o.kind === STORE_CONFIG_KIND)) {
         const previous = recordedPrevious(object);
         if (!previous) {
@@ -345,7 +345,7 @@ export async function captureSettings(
     installed: Record<string, unknown>,
     websiteCode: string | undefined,
 ): Promise<Record<string, unknown>> {
-    const named = new Map<string, Pick<SetupConfigFixItem, 'path' | 'scope'> & { scopeCode?: string }>();
+    const named = new Map<string, Pick<ConfigSetupItem, 'path' | 'scope'> & { scopeCode?: string }>();
     for (const object of created) {
         const previous = object.kind === STORE_CONFIG_KIND ? recordedPrevious(object) : undefined;
         if (previous) named.set(keyOf(previous), { path: previous.path, scope: previous.scope, ...(previous.scopeCode ? { scopeCode: previous.scopeCode } : {}) });

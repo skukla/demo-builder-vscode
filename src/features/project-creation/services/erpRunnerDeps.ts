@@ -18,7 +18,7 @@ import type { AppManagementAuth } from '@/features/app-builder/services/appManag
 import { erpCredentialReader } from '@/features/app-builder/services/erpCredential';
 import { detachErpWrites } from '@/features/app-builder/services/erpDetach';
 import { erpEventsEnvResolver } from '@/features/app-builder/services/erpEventsDelivery';
-import { preparesStoreOnAdd } from '@/features/app-builder/services/storePreparation/fixReach';
+import { preparesStoreOnAdd } from '@/features/app-builder/services/storePreparation/setupReach';
 import { wipeSystemRecords } from '@/features/app-builder/services/systemRecordsWipe';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import {

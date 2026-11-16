@@ -7,7 +7,7 @@
  * @module types/storePreparation
  */
 
-/** One setting as it was before a config fix wrote it. */
+/** One setting as it was before a config setup wrote it. */
 export interface CommerceConfigPrevious {
     path: string;
     scope: 'default' | 'website';
@@ -28,7 +28,7 @@ export interface CommerceConfigPrevious {
     wrote?: string;
 }
 
-/** What a config fix recorded. */
+/** What a config setup recorded. */
 export interface ConfigStepRecord {
     kind: 'config';
     previous: CommerceConfigPrevious[];
@@ -116,12 +116,12 @@ export interface CommerceConfigChangeRecord {
 export type PreparationStepState =
     /** Its check, run fresh, found it done in the store: nothing to apply. Never from a saved answer. */
     | 'done'
-    /** It declares a fix and is not done: the apply will write it. */
+    /** It declares a setup and is not done: the apply will write it. */
     | 'applicable'
-    /** It declares no fix: the guide keeps its text. */
+    /** It declares no setup: the guide keeps its text. */
     | 'manual'
     /**
-     * Its check could not tell and it has no fix that could read for itself (or that read
+     * Its check could not tell and it has no setup that could read for itself (or that read
      * failed too): "could not check", with the reason in `note` or `rejected`. Never done,
      * and not applied.
      */
@@ -156,7 +156,7 @@ export interface PreparationStepReport {
     /** What the step's check found in the store just now, in its words: shown beside the state. */
     note?: string;
     /**
-     * An undo's one line about what it left as it is because it changed since the fix
+     * An undo's one line about what it left as it is because it changed since the setup
      * (datapack-engine step 06): "Kept the shared catalog Harbor Catalog: it holds 2 products
      * Demo Builder did not put there." Shown on the result screen under the step.
      */

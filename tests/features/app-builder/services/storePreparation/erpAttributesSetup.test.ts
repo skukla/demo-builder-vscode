@@ -1,5 +1,5 @@
 /**
- * erpAttributesFix — erp_owner and brand as Text Fields, then erp_owner into the attribute
+ * erpAttributesSetup — erp_owner and brand as Text Fields, then erp_owner into the attribute
  * sets (AB-77). Asserted on the Commerce fake: which attributes are POSTed with what body,
  * that a pre-existing attribute is never created or deleted, and what the undo refuses.
  */
@@ -7,7 +7,7 @@
 import { commerceFake, textAttribute } from '../../../../helpers/commercePreparationFixtures';
 import { GROUPS, productSetPage, SET_LIST, WITH_OWNER, WITHOUT_OWNER } from '../../../../helpers/commerceAssignFixtures';
 import { CommerceReadError } from '@/features/app-builder/services/erpFillReaders';
-import { erpAttributesFix, textAttributeBody } from '@/features/app-builder/services/storePreparation/erpAttributesFix';
+import { erpAttributesSetup, textAttributeBody } from '@/features/app-builder/services/storePreparation/erpAttributesSetup';
 
 const missing = (path: string): never => {
     throw new CommerceReadError(`Commerce answered 404 for ${path}`, 404);
@@ -35,21 +35,21 @@ const DEPS = { websiteCode: 'acme', erpNames: ['Justrite ERP'] };
 describe('preview', () => {
     it('names the missing attributes and the sets without erp_owner', async () => {
         const commerce = store({ erp_owner: false, brand: false });
-        expect(await erpAttributesFix.preview({ commerce, ...DEPS })).toEqual({
+        expect(await erpAttributesSetup.preview({ commerce, ...DEPS })).toEqual({
             changes: ['Create the erp_owner product attribute as a Text Field', 'Create the brand product attribute as a Text Field', 'Add erp_owner to the attribute set Default (1 products)'],
         });
     });
 
     it('lists nothing when both exist and every set has erp_owner', async () => {
         const commerce = store({ erp_owner: true, brand: true }, true);
-        expect((await erpAttributesFix.preview({ commerce, ...DEPS })).changes).toStrictEqual([]);
+        expect((await erpAttributesSetup.preview({ commerce, ...DEPS })).changes).toStrictEqual([]);
     });
 });
 
 describe('apply', () => {
     it('creates only the missing attribute as a Text Field, adds erp_owner to the set, and records both', async () => {
         const commerce = store({ erp_owner: true, brand: false });
-        const applied = await erpAttributesFix.apply({ commerce, ...DEPS });
+        const applied = await erpAttributesSetup.apply({ commerce, ...DEPS });
         expect(commerce.writes()).toEqual([
             ['POST', 'products/attributes', textAttributeBody('brand')],
             ['POST', 'products/attribute-sets/attributes', { attributeSetId: 4, attributeGroupId: 7, attributeCode: 'erp_owner', sortOrder: 900 }],
@@ -69,7 +69,7 @@ describe('apply', () => {
             if (path === 'products/attributes') throw new Error('Commerce answered 400 for products/attributes: bad');
             return null;
         });
-        const applied = await erpAttributesFix.apply({ commerce, ...DEPS });
+        const applied = await erpAttributesSetup.apply({ commerce, ...DEPS });
         expect(applied.rejected).toEqual([
             'Create the erp_owner product attribute as a Text Field: Commerce answered 400 for products/attributes: bad',
             'Add erp_owner to the attribute set Default (1 products): erp_owner was not created',
@@ -83,7 +83,7 @@ describe('undo', () => {
 
     it('takes erp_owner out of the recorded sets and deletes only the attribute this run created', async () => {
         const commerce = store({ erp_owner: true, brand: true }, true);
-        const undone = await erpAttributesFix.undo({ commerce, ...DEPS }, RECORD);
+        const undone = await erpAttributesSetup.undo({ commerce, ...DEPS }, RECORD);
         expect(commerce.writes()).toEqual([
             ['DELETE', 'products/attribute-sets/4/attributes/erp_owner', undefined],
             ['DELETE', 'products/attributes/brand', undefined],
@@ -95,7 +95,7 @@ describe('undo', () => {
         const commerce = store({ erp_owner: true, brand: true }, true, [
             { sku: 'A', attribute_set_id: 4, custom_attributes: [{ attribute_code: 'erp_owner', value: 'justrite' }] },
         ]);
-        const undone = await erpAttributesFix.undo({ commerce, ...DEPS }, RECORD);
+        const undone = await erpAttributesSetup.undo({ commerce, ...DEPS }, RECORD);
         expect(undone.rejected).toEqual([
             "1 product is assigned to Justrite ERP. Undo Justrite ERP's last product assignment first, or the undo would clear them.",
         ]);
@@ -105,7 +105,7 @@ describe('undo', () => {
     it('names each ERP holding products, with its count, and the value itself for one it cannot name', async () => {
         const tag = (sku: string, owner: string) => ({ sku, attribute_set_id: 4, custom_attributes: [{ attribute_code: 'erp_owner', value: owner }] });
         const commerce = store({ erp_owner: true, brand: true }, true, [tag('A', 'justrite'), tag('B', 'justrite'), tag('C', 'renamed')]);
-        const undone = await erpAttributesFix.undo({ commerce, ...DEPS }, RECORD);
+        const undone = await erpAttributesSetup.undo({ commerce, ...DEPS }, RECORD);
         expect(undone.rejected).toEqual([
             "3 products are assigned to Justrite ERP (2) and renamed (1). Undo each ERP's last product assignment first, or the undo would clear them.",
         ]);

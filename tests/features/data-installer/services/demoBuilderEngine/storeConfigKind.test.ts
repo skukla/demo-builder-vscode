@@ -1,6 +1,6 @@
 /**
  * The `store_config` kind (datapack-engine step 09): a pack's settings are written through the
- * setup guide's settings fix (`configFix`), store-wide or for the install target's website, each
+ * setup guide's settings fix (`configSetup`), store-wide or for the install target's website, each
  * recorded with what it held before, and put back on removal unless the SC changed it since.
  *
  * The store is a fake of `GET`/`PUT /V1/system/config` in the shapes Adobe's "System configuration
@@ -19,7 +19,7 @@ import {
     settingsLine,
     settingsWebsite,
 } from '@/features/data-installer/services/demoBuilderEngine/storeConfigKind';
-import { configListPath } from '@/features/app-builder/services/storePreparation/configFix';
+import { configListPath } from '@/features/app-builder/services/storePreparation/configSetup';
 import { GRID, LIST, PROJECT_WEBSITE, WEBSITE, configStore, row, storeContext } from './storeConfig.testUtils';
 
 describe('installing a pack’s store settings', () => {

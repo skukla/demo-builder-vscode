@@ -1,5 +1,5 @@
 /**
- * The `company-shared-catalogs` fix (AB-77): a custom shared catalog per company the
+ * The `company-shared-catalogs` setup (AB-77): a custom shared catalog per company the
  * `companies-have-own-catalogs` check finds without one of its own (a company in no catalog,
  * or sharing a custom catalog with another), created with `POST sharedCatalog` and assigned
  * with `POST sharedCatalog/<id>/assignCompanies` (the routes and bodies from the data
@@ -7,7 +7,7 @@
  * on the public catalog is left there: that is where a company without its own prices belongs.
  *
  * The undo unassigns the company (Commerce puts it back on the public catalog) and deletes
- * only a catalog this run created, and only while it holds nothing the fix did not put there
+ * only a catalog this run created, and only while it holds nothing the setup did not put there
  * (datapack-engine step 06, AB-83). The apply reads back what the new catalog holds (its
  * companies, products and categories) and records it; the undo reads the same three lists and
  * hands what is there beyond that to the one rule (`decideOwnedChange`). A catalog holding more
@@ -20,18 +20,18 @@
  *
  * **Its customer group goes with it** (live, 2026-10-30, scratch-1028, the datapack engine's
  * removal): deleting a shared catalog deletes the customer group it uses and moves that group's
- * customers to General. So the catalog is also kept while its group holds a customer the fix did
- * not put there: one not in the company the fix assigned (its `company_attributes.company_id`,
+ * customers to General. So the catalog is also kept while its group holds a customer the setup did
+ * not put there: one not in the company the setup assigned (its `company_attributes.company_id`,
  * read live 2026-10-30, `COMPANY_ADMIN_ATTRIBUTES_DB08`). The group is the catalog's own
  * `customer_group_id` from `GET sharedCatalog/{id}` (typed to the list item, which was captured;
  * this read itself was not), and its customers a `GET customers/search` on `group_id` (not
  * captured). Every read comes first, so a read that fails writes nothing. Each line names the
  * catalog as the store calls it now.
  *
- * @module features/app-builder/services/storePreparation/sharedCatalogsFix
+ * @module features/app-builder/services/storePreparation/sharedCatalogsSetup
  */
 
-import { errorText, type FixApplied, type FixDeps, type FixPreview, type FixUndone, type StepFix } from './fixContract';
+import { errorText, type SetupApplied, type SetupDeps, type SetupPreview, type SetupUndone, type StepSetup } from './setupContract';
 import { andList } from '@/core/utils/andList';
 import { decideOwnedChange } from '@/core/utils/ownedChange';
 import { readAllPages } from '@/features/app-builder/services/erpFillReaders';
@@ -79,12 +79,12 @@ async function readNeeding(get: CommerceGet): Promise<CommerceCompanyRow[]> {
 
 const catalogName = (company: CommerceCompanyRow): string => `${nameOf(company)} Catalog`;
 
-export const sharedCatalogsFix: StepFix = {
-    async preview(deps): Promise<FixPreview> {
+export const sharedCatalogsSetup: StepSetup = {
+    async preview(deps): Promise<SetupPreview> {
         const needing = await readNeeding(deps.commerce.get);
         return { changes: needing.map((company) => `Create the shared catalog ${catalogName(company)} and assign ${nameOf(company)} to it`) };
     },
-    async apply(deps): Promise<FixApplied> {
+    async apply(deps): Promise<SetupApplied> {
         const { get, send } = deps.commerce;
         const changes: string[] = [];
         const rejected: string[] = [];
@@ -107,13 +107,13 @@ export const sharedCatalogsFix: StepFix = {
                 changes.push(`Created the shared catalog ${name}`);
                 rejected.push(`Assign ${nameOf(company)} to ${name}: ${errorText(error)}`);
             }
-            // A failed read-back records no `held`: the undo then counts only the company as the fix's.
+            // A failed read-back records no `held`: the undo then counts only the company as the setup's.
             const held = await readHeld(get, id).catch(() => undefined);
             record.catalogs.push({ id, name, companyId: company.id, companyName: nameOf(company), ...(held ? { held } : {}) });
         }
         return { changes, rejected, ...(record.catalogs.length > 0 ? { record } : {}) };
     },
-    async undo(deps, record: StorePreparationStepRecord): Promise<FixUndone> {
+    async undo(deps, record: StorePreparationStepRecord): Promise<SetupUndone> {
         if (record.kind !== 'shared-catalogs') return { changes: [], rejected: [`The record is not a shared-catalog record (${record.kind}).`] };
         let present: Set<number | undefined>;
         try {
@@ -191,7 +191,7 @@ export async function readHeld(get: CommerceGet, id: number): Promise<SharedCata
     };
 }
 
-/** What a catalog holds beyond what the fix left in it. */
+/** What a catalog holds beyond what the setup left in it. */
 function beyond(now: SharedCatalogHeld, left: SharedCatalogHeld): SharedCatalogHeld {
     return {
         companies: now.companies.filter((id) => !left.companies.includes(id)),
@@ -208,7 +208,7 @@ function heldWords(extra: SharedCatalogHeld): string {
     return andList([...counted(extra.products.length, 'product', 'products'), ...counted(extra.categories.length, 'category', 'categories'), ...counted(extra.companies.length, 'company', 'companies')]);
 }
 
-/** Who is in a customer group, but the company the fix assigned: those it did not put there. */
+/** Who is in a customer group, but the company the setup assigned: those it did not put there. */
 async function othersInGroup(get: CommerceGet, groupId: number | undefined, companyId: number): Promise<number[]> {
     if (!groupId) return [];
     const criteria =
@@ -227,10 +227,10 @@ function keptWhy(extra: SharedCatalogHeld, others: number): string {
 
 /**
  * Take the company out of the catalog if it is still in it, then delete the catalog unless it, or
- * its customer group, holds what the fix did not put there (the shared rule, over what is there
+ * its customer group, holds what the setup did not put there (the shared rule, over what is there
  * beyond it). Every read comes before the first write.
  */
-async function undoCatalog(commerce: FixDeps['commerce'], catalog: RecordedCatalog): Promise<{ change?: string; kept?: string }> {
+async function undoCatalog(commerce: SetupDeps['commerce'], catalog: RecordedCatalog): Promise<{ change?: string; kept?: string }> {
     const store = (await commerce.get(`sharedCatalog/${catalog.id}`)) as CommerceSharedCatalog | null;
     const name = store?.name || catalog.name;
     const now = await readHeld(commerce.get, catalog.id);

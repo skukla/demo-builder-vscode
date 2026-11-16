@@ -92,7 +92,7 @@ What stays:
 ## Also in this item: re-applying the warehouse after an undo
 
 Commerce cannot delete a source, so undoing the warehouse step DISABLES the source it made
-(`warehouseFix.undo`). Applying the step again then finds that source by its code or name
+(`warehouseSetup.undo`). Applying the step again then finds that source by its code or name
 (`planFor`), treats it as existing, and links it without enabling it. The check now
 reports a disabled warehouse as not done ("Test Warehouse is disabled."), so the step
 stays at Will apply after every apply: the SC can never finish it from Demo Builder.
@@ -117,7 +117,7 @@ stocks rather than codes. Apply all lands on that view and needs nothing more fr
 
 **A new warehouse takes priority 1 beside the ERP that already has it.** The same apply
 linked `test_warehouse` to Justrite Stock at priority 1, which `justrite` already held
-(read back the same day: justrite 1, accuform 2, test_warehouse 1). `warehouseFix.apply`
+(read back the same day: justrite 1, accuform 2, test_warehouse 1). `warehouseSetup.apply`
 numbers the links it adds from 1 (`i + 1`); it should start after the stock's highest.
 
 ## Done when

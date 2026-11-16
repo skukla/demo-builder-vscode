@@ -143,9 +143,9 @@ export function setupChecklistOf(
             ...(lastCheck ? { lastCheck } : {}),
             checkState: lastCheck ?? 'unchecked',
             checkable: step.check !== undefined,
-            ...(step.fix ? { fix: step.fix } : {}),
-            applicable: step.fix !== undefined,
-            ...(state.storePreparation?.steps[step.id] ? { fixApplied: true } : {}),
+            ...(step.setup ? { setup: step.setup } : {}),
+            applicable: step.setup !== undefined,
+            ...(state.storePreparation?.steps[step.id] ? { setupApplied: true } : {}),
         };
     });
 }

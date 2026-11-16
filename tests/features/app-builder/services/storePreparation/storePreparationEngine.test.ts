@@ -2,7 +2,7 @@
  * storePreparationEngine — "Prepare this store" over a catalog entry's steps (AB-77): each
  * step's state, the preview, the apply in order with the datapack-already-did-it skip and
  * the per-step record, and the undo newest first. The fixes behind the steps are the real
- * `configFix` over a Commerce fake, so what reaches Commerce is asserted, not mocked.
+ * `configSetup` over a Commerce fake, so what reaches Commerce is asserted, not mocked.
  */
 
 import { commerceFake, configList, configSaved } from '../../../../helpers/commercePreparationFixtures';
@@ -25,7 +25,7 @@ const STEPS: SetupStep[] = [
         where: 'Admin',
         label: 'Price scope',
         check: 'price-scope-website',
-        fix: { kind: 'config', items: [{ path: 'catalog/price/scope', value: '1', scope: 'default' }] },
+        setup: { kind: 'config', items: [{ path: 'catalog/price/scope', value: '1', scope: 'default' }] },
     },
     {
         id: 'returns',
@@ -34,7 +34,7 @@ const STEPS: SetupStep[] = [
         where: 'Admin',
         label: 'Returns',
         check: 'storefront-returns-enabled',
-        fix: { kind: 'config', items: [{ path: 'sales/magento_rma/enabled', value: '1', scope: 'website' }] },
+        setup: { kind: 'config', items: [{ path: 'sales/magento_rma/enabled', value: '1', scope: 'website' }] },
     },
 ];
 
@@ -262,7 +262,7 @@ describe('undoPreparation', () => {
             'sharedCatalog/9/categories': [],
             'sharedCatalog/': { items: [{ id: 9, name: 'Harbor Catalog', customer_group_id: 6, type: 0 }] },
         });
-        const steps: SetupStep[] = [{ id: 'catalogs', title: 'Shared catalogs', why: 'w', where: 'Admin', fix: { kind: 'handler', handler: 'company-shared-catalogs' } }];
+        const steps: SetupStep[] = [{ id: 'catalogs', title: 'Shared catalogs', why: 'w', where: 'Admin', setup: { kind: 'handler', handler: 'company-shared-catalogs' } }];
         const record: StorePreparationRecord = { at: 't', steps: { catalogs: { kind: 'shared-catalogs', catalogs: [catalog] } } };
         const out = await undoPreparation(steps, record, { ...deps([]), commerce });
         expect(commerce.writes().map(([m, p]) => `${m} ${p}`)).toEqual(['POST sharedCatalog/9/unassignCompanies']);

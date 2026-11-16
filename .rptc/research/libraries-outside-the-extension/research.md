@@ -113,8 +113,8 @@ four type files. 54 non-ERP files import from ERP-named modules (`erpFillReaders
    `start_erp_downtime` :366, `load_erp_demo_data` :598, `add_erp` :630,
    `assign_erp_products` :677, `reset_erp_records` :858, `write_erp_rest` :880,
    `open_erp_screen` :944, and the rest); and `setupSteps` of `kind: "handler"` name a
-   fix that must exist in `src/features/app-builder/services/storePreparation/fixRegistry.ts:17-18`
-   and the closed union `SetupFixHandler` (`src/types/appBuilderComponents.ts:123`).
+   fix that must exist in `src/features/app-builder/services/storePreparation/setupRegistry.ts:17-18`
+   and the closed union `SetupHandler` (`src/types/appBuilderComponents.ts:123`).
 
 3. **Generic code that behaves as if every system were an ERP.** Several generic paths run the
    ERP's behaviour for ANY integration with a bound system, gated only by what is deployed:
@@ -146,7 +146,7 @@ tools. The generic integration tools
 (`docs/systems/erp-integration.md:602-648`).
 
 What a contributed integration would therefore need, if it were ERP-shaped: its handler
-maps registered, its descriptor rows added, its fixes in `fixRegistry`, its types, its
+maps registered, its descriptor rows added, its fixes in `setupRegistry`, its types, its
 dialogs in the dashboard bundle, and its reset and fill steps. None of that is reachable
 from a row.
 
@@ -243,7 +243,7 @@ shapes were checked against what the ERP needs today (§2) and against the archi
 **(a) Manifest-only.** The row describes everything; behaviour is generic code inside.
 - Already exists in part: `envSchema` → settings form and `get/set_integration_settings`;
   `screen` → open-screen; `wipe` → reset route; `fillsSystem`, `boundTo`, `setupSteps` whose
-  `kind: "handler"` resolves to a fix the extension ships (`fixRegistry.ts`). The
+  `kind: "handler"` resolves to a fix the extension ships (`setupRegistry.ts`). The
   `.rptc/research/component-specific-wizard-steps/research.md` groundwork (steps filtered by
   `requiredComponents`) is the same idea for wizard copy.
 - Covers: a starter-kit-shaped integration (deploy, undeploy, settings, APIs, a card with a

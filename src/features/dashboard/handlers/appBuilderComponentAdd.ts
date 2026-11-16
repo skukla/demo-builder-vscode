@@ -26,7 +26,7 @@ import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operatio
 import { addAppBuilderComponent } from '@/features/app-builder/services/appBuilderAddRun';
 import { resolveDeployInputs, resolveDisplayName } from '@/features/app-builder/services/deployInputs';
 import { pairNameInputs } from '@/features/app-builder/services/pairNames';
-import { preparesStoreOnAdd } from '@/features/app-builder/services/storePreparation/fixReach';
+import { preparesStoreOnAdd } from '@/features/app-builder/services/storePreparation/setupReach';
 import {
     buildCustomIntegrationEntry,
     entryFitsProjectAxes,

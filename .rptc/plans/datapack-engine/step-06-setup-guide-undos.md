@@ -6,12 +6,12 @@ every undo and what each can lose; the ERP's detach is its own PR in `commerce-e
 
 Decided by the owner, 2026-10-27, using step 04's rule:
 
-- **Settings** (`configFix.ts`): a setting whose current value is not the one the fix wrote is
+- **Settings** (`configSetup.ts`): a setting whose current value is not the one the fix wrote is
   kept.
-- **Shared catalogs** (`sharedCatalogsFix.ts`): a catalog holding anything the fix did not put
+- **Shared catalogs** (`sharedCatalogsSetup.ts`): a catalog holding anything the fix did not put
   there is kept, with the company still unassigned from it; one holding only the fix's is deleted
   as today.
-- **Warehouse** (`warehouseFix.ts`): a stock holding a source the fix did not link is kept, with
+- **Warehouse** (`warehouseSetup.ts`): a stock holding a source the fix did not link is kept, with
   the fix's own links taken out; sources are switched off only if still as the fix left them.
 - Each says in one line what it kept. No "undo anyway".
 
@@ -31,18 +31,18 @@ Everything above. Not yet run against a live store; the live test is at the end 
 
 **One rule, three undos.** Each undo hands what it reads to `decideOwnedChange`
 (`core/utils/ownedChange`); none writes a rule of its own. A thing that is kept is not a
-refusal: the step is `undone` and its report carries the one line as `kept` (`FixUndone.kept`,
+refusal: the step is `undone` and its report carries the one line as `kept` (`SetupUndone.kept`,
 `PreparationStepReport.kept`, `storePreparationEngine.ts`). There is no "undo anyway". A kept
 setting or source is the SC's now and leaves the record. **A kept catalog or stock stays on the
-record** (`FixUndone.remaining`; owner 2026-10-29, as step 05's container rule), its company
+record** (`SetupUndone.remaining`; owner 2026-10-29, as step 05's container rule), its company
 already taken out and its own links already gone, so undoing the step again deletes it once it
 is empty (rule 1).
 
 | Undo | Recorded at apply (new) | Read at undo | Kept when |
 |---|---|---|---|
-| Settings (`configFix.ts`) | `wrote` on each row: the value written | `GET system/config` at the row's scope (`scope=default`, or `scope=website&scopeCode=`), field `value` | the value now is not `wrote` (`leave-edited`), or nothing says what was written (`leave-not-ours`) |
-| Shared catalogs (`sharedCatalogsFix.ts`) | `held` on each catalog: its companies, products and categories, read back once made | the catalog list (`GET sharedCatalog/?…`, field `id`), then `GET sharedCatalog/{id}/companies`, `/products`, `/categories` | it holds anything beyond `held` (the rule over what is there beyond it). The company is taken out either way |
-| Warehouse (`warehouseFix.ts`) | `sourceFingerprints`: each created or switched-on source's row in the sources list, read after the writes, hashed with `fingerprintRow` | one read of `GET inventory/sources?…`, `inventory/stocks?…`, `inventory/stock-source-links?…` | a created stock: it holds a link to a source the fix did not link (the fix's own links still go). A source: its row no longer hashes the same, or no hash was recorded |
+| Settings (`configSetup.ts`) | `wrote` on each row: the value written | `GET system/config` at the row's scope (`scope=default`, or `scope=website&scopeCode=`), field `value` | the value now is not `wrote` (`leave-edited`), or nothing says what was written (`leave-not-ours`) |
+| Shared catalogs (`sharedCatalogsSetup.ts`) | `held` on each catalog: its companies, products and categories, read back once made | the catalog list (`GET sharedCatalog/?…`, field `id`), then `GET sharedCatalog/{id}/companies`, `/products`, `/categories` | it holds anything beyond `held` (the rule over what is there beyond it). The company is taken out either way |
+| Warehouse (`warehouseSetup.ts`) | `sourceFingerprints`: each created or switched-on source's row in the sources list, read after the writes, hashed with `fingerprintRow` | one read of `GET inventory/sources?…`, `inventory/stocks?…`, `inventory/stock-source-links?…` | a created stock: it holds a link to a source the fix did not link (the fix's own links still go). A source: its row no longer hashes the same, or no hash was recorded |
 
 Old records keep working: a settings row with no `wrote` is read by the step's own value (what
 the fix writes); a catalog with no `held` counts as holding only its company; a source with no
@@ -61,7 +61,7 @@ screen and in the setup guide (`changedSteps` in `storePreparationHandlers.ts`, 
 guide files by step), in the agent's answer (`steps[].kept`), and in removing the ERP integration
 (`erpSetupTeardown.ts`, which runs the same undo).
 
-**`set_commerce_config` too.** Its `undo: true` goes through the same `configFix` undo, so it
+**`set_commerce_config` too.** Its `undo: true` goes through the same `configSetup` undo, so it
 keeps a setting changed since; without `confirm` it now previews the undo as it would run
 (`previewUndo`) instead of previewing a write of the old values. Its undo is built with no items,
 so only `wrote` says what was written.

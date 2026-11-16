@@ -9,7 +9,7 @@ import { mockPostMessage } from '../../../../helpers/webviewClientMock';
 import { CATALOG, modalProps, renderAdapter, resetCaptured } from './AddIntegrationFlowAdapter.testUtils';
 import type { AppBuilderComponentCatalogEntry, SetupStep } from '@/types/appBuilderComponents';
 
-const FIX_STEP: SetupStep = { id: 'price-scope', title: 'Prices', why: 'w', where: 'Admin', fix: { kind: 'config', items: [] } };
+const FIX_STEP: SetupStep = { id: 'price-scope', title: 'Prices', why: 'w', where: 'Admin', setup: { kind: 'config', items: [] } };
 const ERP_INTEGRATION: AppBuilderComponentCatalogEntry = {
     id: 'erp-integration',
     name: 'ERP Integration',

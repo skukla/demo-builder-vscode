@@ -41,7 +41,7 @@ import { removeAttributeSet } from '../demoBuilderEngine/attributeSetsKind';
 import { readOrNull, segment } from '../demoBuilderEngine/kindContext';
 import { type RemovalAccess, productsWhere } from '../demoBuilderEngine/removers';
 import { readAllPages } from '@/features/app-builder/services/erpFillReaders';
-import { ERP_ATTRIBUTE_CODES } from '@/features/app-builder/services/storePreparation/erpAttributesFix';
+import { ERP_ATTRIBUTE_CODES } from '@/features/app-builder/services/storePreparation/erpAttributesSetup';
 import type { CommerceRuleCondition, CommerceSalesRule } from '@/types/commerceSalesRule';
 import type { CommerceAttributeSetList, CommerceGet, CommerceProduct, CommerceProductAttribute, CommerceSetAttribute } from '@/types/commerceWire';
 

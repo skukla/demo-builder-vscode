@@ -1,5 +1,5 @@
 /**
- * The `create-erp-attributes` fix (AB-77): `erp_owner` and `brand` created as Text Fields
+ * The `create-erp-attributes` setup (AB-77): `erp_owner` and `brand` created as Text Fields
  * (`POST products/attributes`, the body from Magento's ProductAttributeInterface and the data
  * installer's product_attributes schema), then `erp_owner` added to every attribute set the
  * store's products use that lacks it (AB-74's `addOwnerToSets`).
@@ -8,21 +8,21 @@
  * `erp_owner` out of only the sets this run added it to. It refuses while a product carries an
  * `erp_owner` value that the removal would lose.
  *
- * @module features/app-builder/services/storePreparation/erpAttributesFix
+ * @module features/app-builder/services/storePreparation/erpAttributesSetup
  */
 
 import { listAssignableProducts } from '../erpAssignSelection';
 import { CommerceReadError } from '../erpFillReaders';
 import { addOwnerToSets, OWNER_CODE, readProductSets, removeOwnerFromSets, setsWithoutOwner } from '../erpOwnerAttributeSets';
 import { taggedRefusal } from '../erpTaggedRefusal';
-import { errorText, type FixApplied, type FixPreview, type FixUndone, type StepFix } from './fixContract';
+import { errorText, type SetupApplied, type SetupPreview, type SetupUndone, type StepSetup } from './setupContract';
 import type { CommerceProductAttribute, CommerceGet } from '@/types/commerceWire';
 import type { AttributeSetWithoutOwner } from '@/types/erpAssign';
 import type { ErpAttributesStepRecord, StorePreparationStepRecord } from '@/types/storePreparation';
 
 const BRAND_CODE = 'brand';
 const CODES = [OWNER_CODE, BRAND_CODE] as const;
-/** The attributes this fix makes: an ERP integration's, whatever else uses them. */
+/** The attributes this setup makes: an ERP integration's, whatever else uses them. */
 export const ERP_ATTRIBUTE_CODES: readonly string[] = CODES;
 const LABELS: Record<(typeof CODES)[number], string> = { erp_owner: 'ERP Owner', brand: 'Brand' };
 const TEXT_FIELD = 'text';
@@ -60,7 +60,7 @@ interface Plan {
     sets: AttributeSetWithoutOwner[];
 }
 
-/** What the fix would do: which attributes to create, which sets to add `erp_owner` to. */
+/** What the setup would do: which attributes to create, which sets to add `erp_owner` to. */
 async function plan(get: CommerceGet): Promise<Plan> {
     const missing: string[] = [];
     let wrongType: string | undefined;
@@ -82,15 +82,15 @@ const setLine = (set: { name: string; products?: number }): string =>
 const createdLine = (code: string): string => `Created the ${code} product attribute as a Text Field`;
 const addedLine = (set: { name: string; products?: number }): string => setLine(set).replace(/^Add /, 'Added ');
 
-export const erpAttributesFix: StepFix = {
-    async preview(deps): Promise<FixPreview> {
+export const erpAttributesSetup: StepSetup = {
+    async preview(deps): Promise<SetupPreview> {
         const planned = await plan(deps.commerce.get);
         return {
             changes: [...planned.missing.map(createLine), ...planned.sets.map(setLine)],
             ...(planned.wrongType ? { manual: planned.wrongType } : {}),
         };
     },
-    async apply(deps): Promise<FixApplied> {
+    async apply(deps): Promise<SetupApplied> {
         const { get, send } = deps.commerce;
         const planned = await plan(get);
         const changes: string[] = [];
@@ -114,7 +114,7 @@ export const erpAttributesFix: StepFix = {
             created.length > 0 || added.changed.length > 0 ? { kind: 'erp-attributes', createdAttributes: created, sets: added.changed } : undefined;
         return { changes, rejected, ...(record ? { record } : {}), ...(planned.wrongType ? { manual: planned.wrongType } : {}) };
     },
-    async undo(deps, record: StorePreparationStepRecord): Promise<FixUndone> {
+    async undo(deps, record: StorePreparationStepRecord): Promise<SetupUndone> {
         if (record.kind !== 'erp-attributes') return { changes: [], rejected: [`The record is not an attributes record (${record.kind}).`] };
         const { get, send } = deps.commerce;
         const deletesOwner = record.createdAttributes.includes(OWNER_CODE);

@@ -171,7 +171,7 @@ Fixed:
   (`importJobWatch.ts`): outcome `success` and no `leftInStore` from the engine, and only for the
   project the reset was started from. A reset that stops, is still running, or keeps containers
   leaves it, so project reset still offers the removal and the next one takes what has emptied.
-- **The setup guide's catalog undo** (`sharedCatalogsFix.ts`) keeps the catalog while its customer
+- **The setup guide's catalog undo** (`sharedCatalogsSetup.ts`) keeps the catalog while its customer
   group (`customer_group_id` from `GET sharedCatalog/{id}`) holds customers outside the company it
   assigned (`GET customers/search` on `group_id`, read by `company_attributes.company_id`). All
   reads come first; every line uses the catalog's name now.

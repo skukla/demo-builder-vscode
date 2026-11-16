@@ -68,7 +68,7 @@ import { stepLine } from './wipeStepLine';
 import type { WipeUnfinished } from './wipeUnfinished';
 import { andList } from '@/core/utils/andList';
 import { DATAPACK_STAGES } from '@/core/utils/datapackStages';
-import { errorText } from '@/features/app-builder/services/storePreparation/fixContract';
+import { errorText } from '@/features/app-builder/services/storePreparation/setupContract';
 import type { ClearCheck } from '@/types/demoDataWipe';
 
 /** The store would now clear something the SC was not shown: nothing was written. */

@@ -16,7 +16,7 @@ import { capturePack } from '@/features/data-installer/services/demoBuilderEngin
 import type { CreatedObject } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import type { StoreAttribute, StoreCategory } from '@/features/data-installer/services/demoBuilderEngine/productLookups';
 import type { CommerceProduct, CommerceSetAttribute } from '@/types/commerceWire';
-import { configListPath } from '@/features/app-builder/services/storePreparation/configFix';
+import { configListPath } from '@/features/app-builder/services/storePreparation/configSetup';
 import { fakeContext, page } from './demoBuilderEngine.testUtils';
 
 const CAPTURED = JSON.parse(

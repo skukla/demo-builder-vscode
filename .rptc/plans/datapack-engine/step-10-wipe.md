@@ -58,7 +58,7 @@ Emptying a whole instance is not part of reset, and is not offered at all (owner
 - **What else a demo's part holds**, kind by kind (orders, invoices, cart rules, companies,
   shared catalogs), and whether Commerce deletes each over REST, only switches it off, or keeps
   it. Known so far, from the ERP work: an inventory source cannot be deleted, only switched off
-  (`warehouseFix.ts`); notes on orders cannot be deleted (`erpDetach.ts`). Orders and invoices
+  (`warehouseSetup.ts`); notes on orders cannot be deleted (`erpDetach.ts`). Orders and invoices
   are the likely "keeps"; none of this is verified yet.
 - **The order to delete in**: the reverse of the install order (catalog spec §0), so nothing is
   refused for still being in use.
@@ -148,7 +148,7 @@ captured there; reads outside it were not made (the owner's limit for this work)
 |---|---|---|
 | a website's settings, in pages | `GET system/config?scope=website&scopeCode=`, `searchCriteria[pageSize]`, `[currentPage]`: `items[path,value,scope,scope_code]`, `total_count` | yes, live 2026-11-02, pages 1, 200 and 471 |
 | the default's | the same with `scope=default` | Adobe's page; not read from here |
-| set a website setting | `configFix`, `PUT system/config` `{ items: [{ path, value, scope: "website", scope_code }] }`, read `errors` | Adobe's page's example; a default-scope value live 2026-10-10; a website value **no** |
+| set a website setting | `configSetup`, `PUT system/config` `{ items: [{ path, value, scope: "website", scope_code }] }`, read `errors` | Adobe's page's example; a default-scope value live 2026-10-10; a website value **no** |
 | a company | `GET company/{id}`: `super_user_id`, `customer_group_id`, `company_name` | yes, 2026-10-30 (`COMPANY_27_DB08`) |
 | who is in it | `GET hierarchy/{id}` | yes, 2026-10-30 (`HIERARCHY_28_DB08`) |
 | a customer's company and group | `GET customers/search`: `extension_attributes.company_attributes.company_id`, `group_id` | the first yes (2026-10-30); `group_id` in a search answer **no** (in `GET customers/{id}` yes) |

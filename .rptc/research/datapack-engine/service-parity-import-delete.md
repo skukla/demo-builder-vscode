@@ -178,7 +178,7 @@ and cart-rule conditions all find categories by url key (`eng/productLookups.ts:
 | Reads the new id | expects an object (L24-31); Commerce answers a bare number, so it is probably never read | reads the bare number (`eng/stockKinds.ts:87-88`) | OURS BETTER |
 | Remembers the stock the website sold from | no | yes (`eng/stockKinds.ts:83, 89`) | OURS BETTER |
 | **Remove:** which stocks | first search hit by name, the store's own included; no Default Stock guard (`proc/StocksDeleteProcessor.js` L235-299) | only stocks it made (`eng/removers.ts:56`) | OURS BETTER |
-| **Remove:** website taken off the stock before the delete | PUT empty `sales_channels`, "required before delete when channels are assigned" (L1-8, L106-118, L181-227) | DELETE directly (`eng/stockKinds.ts:118-119`); the setup guide's warehouse undo does the same (`src/features/app-builder/services/storePreparation/warehouseFix.ts:222-240`) | GAP, WORTH INHERITING (unproven: no live delete of a selling stock recorded) |
+| **Remove:** website taken off the stock before the delete | PUT empty `sales_channels`, "required before delete when channels are assigned" (L1-8, L106-118, L181-227) | DELETE directly (`eng/stockKinds.ts:118-119`); the setup guide's warehouse undo does the same (`src/features/app-builder/services/storePreparation/warehouseSetup.ts:222-240`) | GAP, WORTH INHERITING (unproven: no live delete of a selling stock recorded) |
 | **Remove:** the website's stock afterwards | none; the website is left with no stock | put back on its previous stock (`eng/stockKinds.ts:120-127`) | OURS BETTER |
 
 ## 7. sources
@@ -188,7 +188,7 @@ and cart-rule conditions all find categories by url key (`eng/productLookups.ts:
 | Existing source | POSTed again with the pack's row; an upsert that overwrites the store's source (INFERRED) (`proc/SourcesImportProcessor.js` L72-91) | left alone; only missing sources are made (`eng/stockKinds.ts:57-66`) | OURS BETTER |
 | Existing source switched off | overwritten with the pack's `enabled` | switched on and recorded, so removal switches it off again (`eng/stockKinds.ts:67-71`) | OURS BETTER |
 | **Remove:** cannot delete, so switch off | yes (`del.json` L85-96) | yes (`eng/stockKinds.ts:112-115`) | SAME |
-| **Remove:** body of the switch-off | the whole pack row plus `enabled: false`, overwriting store edits (`proc/SourcesDisableProcessor.js` L62-122, L167-205) | the store's own copy with `enabled` changed (`warehouseFix.ts:311-321`), and only for sources it made or switched on | OURS BETTER |
+| **Remove:** body of the switch-off | the whole pack row plus `enabled: false`, overwriting store edits (`proc/SourcesDisableProcessor.js` L62-122, L167-205) | the store's own copy with `enabled` changed (`warehouseSetup.ts:311-321`), and only for sources it made or switched on | OURS BETTER |
 
 ## 8. stock_source_links
 

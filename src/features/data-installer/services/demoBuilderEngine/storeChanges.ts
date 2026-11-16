@@ -33,8 +33,8 @@ import { STORE_CONFIG_KIND, type SettingOutcome, packSettings, planSettings } fr
 import { onceInventory, readProducts } from './storeCopies';
 import { clashLine, placedClashes } from './urlKeyClashes';
 import { andList } from '@/core/utils/andList';
-import { configFix } from '@/features/app-builder/services/storePreparation/configFix';
-import type { Inventory } from '@/features/app-builder/services/storePreparation/warehouseFix';
+import { configSetup } from '@/features/app-builder/services/storePreparation/configSetup';
+import type { Inventory } from '@/features/app-builder/services/storePreparation/warehouseSetup';
 import type { CommerceSetAttribute } from '@/types/commerceWire';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 
@@ -221,7 +221,7 @@ async function settingsChanges(ctx: KindContext, records: unknown, created: read
     const counts = { kind: STORE_CONFIG_KIND, update: keys('update'), add: keys('set', 'unknown-before'), inStore: keys('already'), remove: keys('remove'), keep: keys('kept') };
     // The fix's own preview words each one, as the install's note will.
     const writing = plan.flatMap((p) => (p.item && (p.outcome === 'set' || p.outcome === 'update') ? [p.item] : []));
-    const { changes } = writing.length > 0 ? await configFix({ kind: 'config', items: writing }).preview({ commerce: ctx, websiteCode: ctx.session.websiteCode, erpNames: [] }) : { changes: [] };
+    const { changes } = writing.length > 0 ? await configSetup({ kind: 'config', items: writing }).preview({ commerce: ctx, websiteCode: ctx.session.websiteCode, erpNames: [] }) : { changes: [] };
     const unknown = plan.filter((p) => p.outcome === 'unknown-before').map((p) => p.key);
     return { counts, preview: { changes, ...(unknown.length > 0 ? { note: `Demo Builder cannot read what ${andList(unknown)} holds now, so it would not set it.` } : {}) } };
 }

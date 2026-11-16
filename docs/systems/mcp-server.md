@@ -466,8 +466,8 @@ line per step (`steps[].kept`, datapack-engine step 06): a setting no longer hol
 written, a shared catalog holding what the run did not put there, a stock holding a source the
 run did not link, a source changed since. The third writes settings outside a catalog step and
 records the previous values on the project, which `undo: true` writes back. The setup
-checklist tools say which steps are applicable (`fix` on the item) and which were applied
-(`fixApplied`). `add_integration` for the ERP integration runs the same engine before its ERP
+checklist tools say which steps are applicable (`setup` on the item) and which were applied
+(`setupApplied`). `add_integration` for the ERP integration runs the same engine before its ERP
 is filled (owner, 2026-10-22), so it takes the same shape for that one entry: without
 `confirm` it answers what preparing the store will change (`data.preparation`) and adds
 nothing; with `confirm: true` it adds. Every other add is ungated, as above. Details:

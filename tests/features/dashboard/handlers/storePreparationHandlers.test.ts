@@ -48,14 +48,14 @@ jest.mock('@/features/app-builder/services/storePreparation/storePreparationEngi
     undoPreparation: (...a: unknown[]) => mockUndo(...a),
 }));
 const mockConfigFix = { preview: jest.fn(), apply: jest.fn(), undo: jest.fn(), previewUndo: jest.fn() };
-jest.mock('@/features/app-builder/services/storePreparation/configFix', () => ({
+jest.mock('@/features/app-builder/services/storePreparation/configSetup', () => ({
     // The path rule is the real one: the handler validates with it, and a pack's settings share it.
-    SETTING_PATH: jest.requireActual('@/features/app-builder/services/storePreparation/configFix').SETTING_PATH,
-    configFix: jest.fn(() => mockConfigFix),
+    SETTING_PATH: jest.requireActual('@/features/app-builder/services/storePreparation/configSetup').SETTING_PATH,
+    configSetup: jest.fn(() => mockConfigFix),
 }));
 
 // Imported after the mocks, which jest hoists above it.
-import { configFix } from '@/features/app-builder/services/storePreparation/configFix';
+import { configSetup } from '@/features/app-builder/services/storePreparation/configSetup';
 import {
     handlePrepareCommerceStore,
     handleSetCommerceConfig,
@@ -314,7 +314,7 @@ describe('setCommerceConfig', () => {
     it('without confirm, previews through the config fix built from the items', async () => {
         const { context, saved } = setup();
         const result = await handleSetCommerceConfig(context, { items: ITEMS });
-        expect(configFix).toHaveBeenCalledWith({ kind: 'config', items: ITEMS });
+        expect(configSetup).toHaveBeenCalledWith({ kind: 'config', items: ITEMS });
         expect(mockConfigFix.preview).toHaveBeenCalledWith({ commerce: COMMERCE, websiteCode: 'acme', erpNames: [] });
         expect(result).toStrictEqual({ success: true, data: { confirmed: false, changes: ['catalog/price/scope at the default scope: 0 → 1'] } });
         expect(saved()).toBeUndefined();
@@ -333,7 +333,7 @@ describe('setCommerceConfig', () => {
         const recorded = setup({}, { commerceConfigChange: { at: 't', previous: PREVIOUS } });
         const result = await handleSetCommerceConfig(recorded.context, { undo: true, confirm: true });
         // Built with no items: the record's `wrote`, not a guessed value, says what was written.
-        expect(configFix).toHaveBeenLastCalledWith({ kind: 'config', items: [] });
+        expect(configSetup).toHaveBeenLastCalledWith({ kind: 'config', items: [] });
         expect(mockConfigFix.undo).toHaveBeenCalledWith(expect.objectContaining({ commerce: COMMERCE }), { kind: 'config', previous: PREVIOUS });
         expect(recorded.saved()).not.toHaveProperty('commerceConfigChange');
         expect(result).toMatchObject({ success: true, data: { confirmed: true, undone: true } });

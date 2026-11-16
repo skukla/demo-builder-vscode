@@ -1,6 +1,6 @@
 /**
- * The fix that is settings (AB-77): the `path` = `value` rows a catalog step declares under
- * `fix: { kind: 'config' }`, written through `PUT /V1/system/config` (Adobe Commerce as a
+ * The setup that is settings (AB-77): the `path` = `value` rows a catalog step declares under
+ * `setup: { kind: 'config' }`, written through `PUT /V1/system/config` (Adobe Commerce as a
  * Cloud Service, since 2026-09-08).
  *
  * Reads first: a row whose value already stands is not written. Writes only the rest, in one
@@ -15,13 +15,13 @@
  * the step's own value is what it wrote. With neither (an older `set_commerce_config` record),
  * nothing says it is still ours, so it is kept too.
  *
- * @module features/app-builder/services/storePreparation/configFix
+ * @module features/app-builder/services/storePreparation/configSetup
  */
 
-import { errorText, type FixApplied, type FixDeps, type FixPreview, type FixUndone, type StepFix } from './fixContract';
+import { errorText, type SetupApplied, type SetupDeps, type SetupPreview, type SetupUndone, type StepSetup } from './setupContract';
 import { andList } from '@/core/utils/andList';
 import { decideOwnedChange } from '@/core/utils/ownedChange';
-import type { SetupConfigFix, SetupConfigFixItem } from '@/types/appBuilderComponents';
+import type { ConfigSetupSpec, ConfigSetupItem } from '@/types/appBuilderComponents';
 import type { CommerceSystemConfigList, CommerceSystemConfigPutAnswer, CommerceSystemConfigWrite, CommerceGet } from '@/types/commerceWire';
 import type { CommerceConfigPrevious, ConfigStepRecord, StorePreparationStepRecord } from '@/types/storePreparation';
 
@@ -51,7 +51,7 @@ async function storedAt(get: CommerceGet, paths: readonly string[], scope: 'defa
 /** Every item's previous state: what its scope stores, and what is in force there. */
 export async function readPrevious(
     get: CommerceGet,
-    items: ReadonlyArray<Pick<SetupConfigFixItem, 'path' | 'scope'>>,
+    items: ReadonlyArray<Pick<ConfigSetupItem, 'path' | 'scope'>>,
     websiteCode?: string,
 ): Promise<CommerceConfigPrevious[]> {
     const paths = [...new Set(items.map((item) => item.path))];
@@ -84,7 +84,7 @@ function writeRow(item: { path: string; scope: 'default' | 'website'; scopeCode?
 }
 
 /** How a step names a setting and its values; a bare path (the agent's `set_commerce_config`) names none. */
-type Named = Pick<SetupConfigFixItem, 'path' | 'scope' | 'field' | 'values'> & Partial<Pick<SetupConfigFixItem, 'value'>>;
+type Named = Pick<ConfigSetupItem, 'path' | 'scope' | 'field' | 'values'> & Partial<Pick<ConfigSetupItem, 'value'>>;
 
 /**
  * "Payment on Account for the website: No → Yes", in the Admin's words when the step gives
@@ -120,7 +120,7 @@ function refusals(answer: CommerceSystemConfigPutAnswer | null): Map<string, str
 
 /** Write some rows in one PUT and split them into saved and refused. */
 async function writeRows(
-    deps: FixDeps,
+    deps: SetupDeps,
     rows: Array<{ write: CommerceSystemConfigWrite; line: string; previous: CommerceConfigPrevious }>,
 ): Promise<{ changes: string[]; rejected: string[]; saved: CommerceConfigPrevious[] }> {
     if (rows.length === 0) return { changes: [], rejected: [], saved: [] };
@@ -145,34 +145,34 @@ async function writeRows(
     return { changes, rejected, saved };
 }
 
-/** A settings fix, which can also say what its undo would do. */
-export interface ConfigStepFix extends StepFix {
-    previewUndo: (deps: FixDeps, record: ConfigStepRecord) => Promise<Pick<FixUndone, 'changes' | 'kept'>>;
+/** A settings setup, which can also say what its undo would do. */
+export interface ConfigStepSetup extends StepSetup {
+    previewUndo: (deps: SetupDeps, record: ConfigStepRecord) => Promise<Pick<SetupUndone, 'changes' | 'kept'>>;
 }
 
-/** The fix for a step whose `fix` is settings. */
-export function configFix(fix: SetupConfigFix): ConfigStepFix {
-    const scoped = (deps: FixDeps): void => {
-        if (fix.items.some((item) => item.scope === 'website') && !deps.websiteCode) {
+/** The setup for a step whose `setup` is settings. */
+export function configSetup(spec: ConfigSetupSpec): ConfigStepSetup {
+    const scoped = (deps: SetupDeps): void => {
+        if (spec.items.some((item) => item.scope === 'website') && !deps.websiteCode) {
             throw new Error('The project names no Commerce website, and this step writes a website setting.');
         }
     };
     // A record holds the path and scope; the step's own item gives the Admin's words for it.
     const namedAs = (item: CommerceConfigPrevious): Named =>
-        fix.items.find((own) => own.path === item.path && own.scope === item.scope) ?? item;
+        spec.items.find((own) => own.path === item.path && own.scope === item.scope) ?? item;
     return {
-        async preview(deps): Promise<FixPreview> {
+        async preview(deps): Promise<SetupPreview> {
             scoped(deps);
-            const previous = await readPrevious(deps.commerce.get, fix.items, deps.websiteCode);
-            const changes = fix.items.flatMap((item, i) =>
+            const previous = await readPrevious(deps.commerce.get, spec.items, deps.websiteCode);
+            const changes = spec.items.flatMap((item, i) =>
                 previous[i].effective === item.value ? [] : [changeLine(item, previous[i].effective, item.value)],
             );
-            return { changes, ...(fix.manual ? { manual: fix.manual } : {}) };
+            return { changes, ...(spec.manual ? { manual: spec.manual } : {}) };
         },
-        async apply(deps): Promise<FixApplied> {
+        async apply(deps): Promise<SetupApplied> {
             scoped(deps);
-            const previous = await readPrevious(deps.commerce.get, fix.items, deps.websiteCode);
-            const rows = fix.items.flatMap((item, i) =>
+            const previous = await readPrevious(deps.commerce.get, spec.items, deps.websiteCode);
+            const rows = spec.items.flatMap((item, i) =>
                 previous[i].effective === item.value
                     ? []
                     : [{ write: writeRow(previous[i], item.value), line: changeLine(item, previous[i].effective, item.value), previous: { ...previous[i], wrote: item.value } }],
@@ -180,16 +180,16 @@ export function configFix(fix: SetupConfigFix): ConfigStepFix {
             const written = await writeRows(deps, rows);
             const record: StorePreparationStepRecord | undefined =
                 written.saved.length > 0 ? { kind: 'config', previous: written.saved } : undefined;
-            return { changes: written.changes, rejected: written.rejected, ...(record ? { record } : {}), ...(fix.manual ? { manual: fix.manual } : {}) };
+            return { changes: written.changes, rejected: written.rejected, ...(record ? { record } : {}), ...(spec.manual ? { manual: spec.manual } : {}) };
         },
-        async undo(deps, record): Promise<FixUndone> {
+        async undo(deps, record): Promise<SetupUndone> {
             if (record.kind !== 'config') return { changes: [], rejected: [`The record is not a settings record (${record.kind}).`] };
             const plan = await planUndo(deps, record.previous, namedAs);
             const written = await writeRows(deps, plan.rows);
             return { changes: written.changes, rejected: written.rejected, ...(plan.kept ? { kept: plan.kept } : {}) };
         },
         /** What the undo would put back and keep, writing nothing (`set_commerce_config`'s undo preview). */
-        async previewUndo(deps: FixDeps, record: ConfigStepRecord): Promise<Pick<FixUndone, 'changes' | 'kept'>> {
+        async previewUndo(deps: SetupDeps, record: ConfigStepRecord): Promise<Pick<SetupUndone, 'changes' | 'kept'>> {
             const plan = await planUndo(deps, record.previous, namedAs);
             return { changes: plan.rows.map((row) => row.line), ...(plan.kept ? { kept: plan.kept } : {}) };
         },
@@ -200,7 +200,7 @@ export function configFix(fix: SetupConfigFix): ConfigStepFix {
  * Which recorded settings the undo writes back, and which it keeps, by the shared rule: the
  * value now against the value written (`wrote`, else the step's own value) and the value before.
  */
-async function planUndo(deps: FixDeps, previous: CommerceConfigPrevious[], namedAs: (item: CommerceConfigPrevious) => Named) {
+async function planUndo(deps: SetupDeps, previous: CommerceConfigPrevious[], namedAs: (item: CommerceConfigPrevious) => Named) {
     const now = await readPrevious(deps.commerce.get, previous, deps.websiteCode);
     const rows: Array<{ write: CommerceSystemConfigWrite; line: string; previous: CommerceConfigPrevious }> = [];
     const edited: string[] = [];

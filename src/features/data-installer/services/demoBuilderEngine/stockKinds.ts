@@ -5,7 +5,7 @@
  * What the store already has is used and left alone. What this engine makes is recorded, and
  * removal takes it back:
  * - a source cannot be deleted in Commerce, so removal switches it off (the ERP warehouse step
- *   learned the same, `warehouseFix.ts`); a source the store had switched off and the pack
+ *   learned the same, `warehouseSetup.ts`); a source the store had switched off and the pack
  *   needs is switched on, and switched off again on removal;
  * - a new stock sells to the install target's website, which takes that website off the stock
  *   it sold from, so the record keeps that stock and removal puts the website back on it. The
@@ -25,7 +25,7 @@ import { MissingNameError, SOURCE_CODE, deleteIfPresent, type KindContext, parse
 import { createOne } from './pendingCreates';
 import { needsUnskipped, tryRow } from './refusedRows';
 import { counted } from './rowCount';
-import { readInventory, sellsTo, setSourceEnabled } from '@/features/app-builder/services/storePreparation/warehouseFix';
+import { readInventory, sellsTo, setSourceEnabled } from '@/features/app-builder/services/storePreparation/warehouseSetup';
 import type { CommerceGet, CommerceInventorySource, CommerceInventoryStock, CommerceSend } from '@/types/commerceWire';
 
 export const SOURCE_KIND = 'sources';

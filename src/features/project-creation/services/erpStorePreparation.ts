@@ -20,7 +20,7 @@
 
 import type { CredentialStore } from '@/features/ai/server/savedRestCredential';
 import { runSetupCheck } from '@/features/app-builder/services/setupChecks';
-import { reachesEveryWebsite } from '@/features/app-builder/services/storePreparation/fixReach';
+import { reachesEveryWebsite } from '@/features/app-builder/services/storePreparation/setupReach';
 import {
     applyPreparation,
     previewPreparation,
@@ -67,7 +67,7 @@ async function preparationDeps(
 function everyWebsiteOf(steps: readonly SetupStep[], reports: readonly PreparationStepReport[]): string[] {
     const applying = new Set(reports.filter((report) => report.state === 'applicable').map((report) => report.id));
     return steps
-        .filter((step) => step.fix && applying.has(step.id) && reachesEveryWebsite(step.fix))
+        .filter((step) => step.setup && applying.has(step.id) && reachesEveryWebsite(step.setup))
         .map((step) => step.label ?? step.title);
 }
 

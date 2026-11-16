@@ -1,5 +1,5 @@
 /**
- * The `erp-warehouse-in-website-stock` fix (AB-77): a source (warehouse) per ERP, a stock
+ * The `erp-warehouse-in-website-stock` setup (AB-77): a source (warehouse) per ERP, a stock
  * for the project's website with that website as its sales channel, and the sources linked
  * to it, through the inventory routes the check already reads (`POST inventory/sources`,
  * `POST inventory/stocks`, `POST inventory/stock-source-links`; the bodies from Magento's
@@ -12,16 +12,16 @@
  * The undo unlinks, deletes a stock this run created, and DISABLES a source this run created
  * or switched back on: Commerce cannot delete a source, and the result says so. It keeps what
  * changed since (datapack-engine step 06, AB-83), by the one rule (`decideOwnedChange`) over one
- * read of the inventory's three lists: a stock holding a source the fix did not link is kept,
- * with the fix's own links still taken out; a source is switched off only while its row in the
+ * read of the inventory's three lists: a stock holding a source the setup did not link is kept,
+ * with the setup's own links still taken out; a source is switched off only while its row in the
  * sources list hashes as the apply left it (`sourceFingerprints`). What it kept, it says in one
  * line; a kept stock stays on the step's record (`remaining`), so a later undo deletes it once it
  * holds no source. A read that fails stops the undo before it writes anything.
  *
- * @module features/app-builder/services/storePreparation/warehouseFix
+ * @module features/app-builder/services/storePreparation/warehouseSetup
  */
 
-import { errorText, type FixApplied, type FixDeps, type FixPreview, type FixUndone, type StepFix } from './fixContract';
+import { errorText, type SetupApplied, type SetupDeps, type SetupPreview, type SetupUndone, type StepSetup } from './setupContract';
 import { andList } from '@/core/utils/andList';
 import { readWebsiteName } from '@/core/utils/commerceNames';
 import { decideOwnedChange } from '@/core/utils/ownedChange';
@@ -84,8 +84,8 @@ interface Plan {
     toEnable: string[];
 }
 
-/** What the fix would do, against the inventory as it stands; a new stock named after the website's name (owner, 2026-11-15). */
-function planFor(inventory: Inventory, deps: FixDeps, websiteName?: string): Plan {
+/** What the setup would do, against the inventory as it stands; a new stock named after the website's name (owner, 2026-11-15). */
+function planFor(inventory: Inventory, deps: SetupDeps, websiteName?: string): Plan {
     const websiteCode = deps.websiteCode;
     if (!websiteCode) throw new Error('The project names no Commerce website, so no stock can sell to it.');
     const wanted = deps.erpNames.map(warehouseFor);
@@ -142,15 +142,15 @@ function summaryOf(plan: Plan, inventory: Inventory): string | undefined {
     return sentence.charAt(0).toUpperCase() + sentence.slice(1);
 }
 
-export const warehouseFix: StepFix = {
-    async preview(deps): Promise<FixPreview> {
+export const warehouseSetup: StepSetup = {
+    async preview(deps): Promise<SetupPreview> {
         if (deps.erpNames.length === 0) return { changes: [], manual: 'The integration has no ERP yet, so there is no warehouse to make.' };
         const inventory = await readInventory(deps.commerce.get);
         const plan = planFor(inventory, deps, await readWebsiteName(deps.commerce.get, deps.websiteCode));
         const summary = summaryOf(plan, inventory);
         return { changes: lines(plan, inventory), ...(summary ? { summary } : {}), manual: MOVE_STOCK_MANUAL };
     },
-    async apply(deps): Promise<FixApplied> {
+    async apply(deps): Promise<SetupApplied> {
         if (deps.erpNames.length === 0) return { changes: [], rejected: [], manual: 'The integration has no ERP yet, so there is no warehouse to make.' };
         const { get, send } = deps.commerce;
         const inventory = await readInventory(get);
@@ -177,7 +177,7 @@ export const warehouseFix: StepFix = {
             record.createdSources.length > 0 || record.createdStock || record.links.length > 0 || (record.enabledSources?.length ?? 0) > 0;
         return { changes, rejected, ...(wrote ? { record } : {}), manual: MOVE_STOCK_MANUAL };
     },
-    async undo(deps, record: StorePreparationStepRecord): Promise<FixUndone> {
+    async undo(deps, record: StorePreparationStepRecord): Promise<SetupUndone> {
         if (record.kind !== 'warehouse') return { changes: [], rejected: [`The record is not a warehouse record (${record.kind}).`] };
         let inventory: Inventory;
         try {
@@ -196,7 +196,7 @@ export const warehouseFix: StepFix = {
 
 /** One undo's state: what it read once, and the lines it is building. */
 interface UndoRun {
-    commerce: FixDeps['commerce'];
+    commerce: SetupDeps['commerce'];
     record: WarehouseStepRecord;
     inventory: Inventory;
     sourceName: (code: string) => string;
@@ -208,7 +208,7 @@ interface UndoRun {
     remaining?: WarehouseStepRecord;
 }
 
-/** Take out the links the fix made that are still there. */
+/** Take out the links the setup made that are still there. */
 async function unlinkOwn(undo: UndoRun): Promise<void> {
     const present = undo.record.links.filter((l) => undo.inventory.links.some((x) => x.stock_id === l.stockId && x.source_code === l.sourceCode));
     if (present.length === 0) return;
@@ -220,7 +220,7 @@ async function unlinkOwn(undo: UndoRun): Promise<void> {
     }
 }
 
-/** Delete the stock the fix made, unless it holds a source the fix did not link to it. */
+/** Delete the stock the setup made, unless it holds a source the setup did not link to it. */
 async function deleteStockUnlessHolding(undo: UndoRun): Promise<void> {
     const stock = undo.record.createdStock;
     if (!stock || !undo.inventory.stocks.some((s) => s.stock_id === stock.id)) return;
@@ -242,7 +242,7 @@ async function deleteStockUnlessHolding(undo: UndoRun): Promise<void> {
 }
 
 /**
- * Switch off each source the fix made or switched on, while its row still hashes as the apply
+ * Switch off each source the setup made or switched on, while its row still hashes as the apply
  * left it. One already off, or gone from the list, needs nothing.
  */
 async function switchOffUnchanged(undo: UndoRun): Promise<void> {
@@ -310,7 +310,7 @@ interface Outcome {
  * @returns the source's name, as the store has it
  */
 export async function setSourceEnabled(
-    commerce: { get: CommerceGet; send: FixDeps['commerce']['send'] },
+    commerce: { get: CommerceGet; send: SetupDeps['commerce']['send'] },
     code: string,
     enabled: boolean,
 ): Promise<string | undefined> {
@@ -322,7 +322,7 @@ export async function setSourceEnabled(
 }
 
 /** Switch back on the ERP warehouses an undo switched off, and record them so the undo can again. */
-async function enableSources(deps: FixDeps, plan: Plan, record: WarehouseStepRecord, outcome: Outcome): Promise<void> {
+async function enableSources(deps: SetupDeps, plan: Plan, record: WarehouseStepRecord, outcome: Outcome): Promise<void> {
     for (const code of plan.toEnable) {
         try {
             await setSourceEnabled(deps.commerce, code, true);
@@ -340,7 +340,7 @@ async function enableSources(deps: FixDeps, plan: Plan, record: WarehouseStepRec
  * (Justrite, 2026-10-26: test_warehouse went in at 1 next to justrite at 1).
  */
 async function linkSources(
-    deps: FixDeps,
+    deps: SetupDeps,
     target: { plan: Plan; inventory: Inventory; stockId: number },
     record: WarehouseStepRecord,
     outcome: Outcome,
@@ -368,7 +368,7 @@ function undoNamers(inventory: Inventory, record: WarehouseStepRecord): { source
 }
 
 /** The stock the links go to: the existing one, or the one created here. Undefined when creation failed. */
-async function ensureStock(deps: FixDeps, plan: Plan, record: WarehouseStepRecord, changes: string[], rejected: string[]): Promise<number | undefined> {
+async function ensureStock(deps: SetupDeps, plan: Plan, record: WarehouseStepRecord, changes: string[], rejected: string[]): Promise<number | undefined> {
     if ('existing' in plan.stock) return plan.stock.existing.stock_id;
     const body: { stock: CommerceInventoryStock } = {
         stock: { name: plan.stock.create, extension_attributes: { sales_channels: [{ type: 'website', code: deps.websiteCode ?? '' }] } },

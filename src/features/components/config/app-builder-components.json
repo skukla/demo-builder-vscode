@@ -135,7 +135,7 @@
           ],
           "then": "Assign the company under Assign Companies.",
           "check": "companies-have-own-catalogs",
-          "fix": {
+          "setup": {
             "kind": "handler",
             "handler": "company-shared-catalogs"
           }
@@ -159,7 +159,7 @@
             "Website"
           ],
           "then": "Save Config.",
-          "fix": {
+          "setup": {
             "kind": "config",
             "items": [
               {
@@ -189,7 +189,7 @@
           ],
           "then": "Add a stock for the website and assign the warehouses to it. Then move each product's quantity to them and save it.",
           "check": "erp-source-in-website-stock",
-          "fix": {
+          "setup": {
             "kind": "handler",
             "handler": "erp-warehouse-in-website-stock"
           }
@@ -212,7 +212,7 @@
           ],
           "then": "Make both Text Fields, and add erp_owner to every attribute set your products use, or Commerce drops it without an error. Then give each other ERP its products with Assign products on its card.",
           "check": "erp-attributes-exist",
-          "fix": {
+          "setup": {
             "kind": "handler",
             "handler": "create-erp-attributes"
           }
@@ -253,7 +253,7 @@
             "Enabled: Yes"
           ],
           "then": "At the website's scope, untick Use Default first, then Save Config.",
-          "fix": {
+          "setup": {
             "kind": "config",
             "items": [
               {
@@ -284,7 +284,7 @@
             "Enable RMA on Storefront: Yes"
           ],
           "then": "Leave Enable RMA on Product Level at Yes so every product can be returned, and Save Config.",
-          "fix": {
+          "setup": {
             "kind": "config",
             "items": [
               {
@@ -314,7 +314,7 @@
             "Enable: Yes"
           ],
           "then": "Finish Sandbox onboarding first, and keep Payment mode at Sandbox so no real card is charged.",
-          "fix": {
+          "setup": {
             "kind": "config",
             "items": [
               {
