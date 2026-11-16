@@ -1,32 +1,49 @@
 /**
- * What a failure says, and whether it offers settings. A refused sign-in points at the Data Installer's
- * address, unless the surface speaks for the one list (`unreachableTitle`): that failure is the datapack
- * store's, so advice about the Data Installer would send the SC to the wrong setting.
+ * What a failure says, and whether it offers settings. A failure whose message sends the SC to a
+ * setting carries that setting's id and gets an Open Settings button that opens it (owner rule,
+ * release test 1.4, 2026-11-16). The surface that speaks for the one list (`unreachableTitle`)
+ * names datapacks, never the Data Installer: that failure is the datapack store's.
  */
 
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { renderDataInstallerFailure } from '@/features/data-installer/ui/dataInstallerFailure';
 import { ErrorCode } from '@/types/errorCodes';
 
-const refused = (message: string) => ({ message, code: ErrorCode.AUTH_FORBIDDEN });
-const unconfigured = (message: string) => ({ message, code: ErrorCode.INVALID_OPERATION });
+jest.mock('@/core/ui/utils/WebviewClient', () => ({ webviewClient: { postMessage: jest.fn() } }));
+
+const ADDRESS = 'demoBuilder.dataInstaller.apiBaseUrl';
+const refused = (message: string, setting?: string) => ({ message, code: ErrorCode.AUTH_FORBIDDEN, ...(setting ? { setting } : {}) });
+const unconfigured = (message: string, setting?: string) => ({ message, code: ErrorCode.INVALID_OPERATION, ...(setting ? { setting } : {}) });
 const TITLE = "Datapacks Aren't Available";
 
-describe('renderDataInstallerFailure, a surface about the Data Installer', () => {
-    it('points a refused sign-in at the address', () => {
-        render(renderDataInstallerFailure(refused('find-datapacks: 401 Unauthorized'), jest.fn(), { onOpenSettings: jest.fn() }));
+describe('renderDataInstallerFailure, a surface about datapacks', () => {
+    beforeEach(() => jest.clearAllMocks());
 
-        expect(screen.getByText('Data Installer Sign-In Failed')).toBeInTheDocument();
-        expect(screen.getByText(/address in settings/)).toBeInTheDocument();
-        expect(screen.getByText('Open Settings')).toBeInTheDocument();
+    it('shows a refused sign-in in its own words, with Open Settings opening the setting it names', () => {
+        render(renderDataInstallerFailure(refused('Its address in Settings may be wrong.', ADDRESS), jest.fn()));
+
+        expect(screen.getByText('Sign-In Not Accepted')).toBeInTheDocument();
+        expect(screen.getByText('Its address in Settings may be wrong.')).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: 'Open Settings' }));
+        expect(webviewClient.postMessage).toHaveBeenCalledWith('open-setting', { setting: ADDRESS });
     });
 
-    it('says a missing address is set in Settings, with no raw setting key', () => {
-        render(renderDataInstallerFailure(unconfigured('No address.'), jest.fn(), { onOpenSettings: jest.fn() }));
+    it('offers no Open Settings for a refusal that names no setting, and no Data Installer advice', () => {
+        render(renderDataInstallerFailure(refused("The datapack library didn't accept your Adobe sign-in."), jest.fn()));
 
-        expect(screen.getByText('Data Installer Not Set Up')).toBeInTheDocument();
-        expect(screen.getByText("Set the Data Installer's address in Settings.")).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Open Settings' })).not.toBeInTheDocument();
+        expect(screen.queryByText(/Data Installer/)).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    });
+
+    it('opens the missing setting from a not-set-up failure', () => {
+        render(renderDataInstallerFailure(unconfigured('No Data Installer address is set. Set it in Settings.', ADDRESS), jest.fn()));
+
+        expect(screen.getByText('Datapacks Not Set Up')).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: 'Open Settings' }));
+        expect(webviewClient.postMessage).toHaveBeenCalledWith('open-setting', { setting: ADDRESS });
     });
 });
 

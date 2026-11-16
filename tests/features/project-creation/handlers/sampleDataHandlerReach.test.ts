@@ -35,7 +35,7 @@ describe('the wizard handler map', () => {
      * mode this file exists to prevent, in the one place a stuck user presses.
      */
     it('can open the Data Installer settings the sub-step points at', () => {
-        expect(projectCreationHandlers['open-data-installer-settings']).toBeInstanceOf(Function);
+        expect(projectCreationHandlers['open-setting']).toBeInstanceOf(Function);
     });
 
     /**

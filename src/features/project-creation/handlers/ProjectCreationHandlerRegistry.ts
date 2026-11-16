@@ -20,7 +20,7 @@ import * as lifecycle from './wizardLifecycleHandlers';
 import * as components from '@/features/components/handlers/componentHandlers';
 import { dataInstallerHandlers } from '@/features/data-installer/handlers/dataInstallerHandlers';
 import { recordedPackHandlers } from '@/features/data-installer/handlers/recordedPackHandlers';
-import { handleOpenDataInstallerSettings } from '@/features/data-installer/handlers/settingsHandlers';
+import { handleOpenSetting } from '@/features/data-installer/handlers/settingsHandlers';
 import { handleAddSharedDemo } from '@/features/eds/handlers/addSharedDemoHandler';
 import { handleChangeDemoSource } from '@/features/eds/handlers/changeDemoSourceHandler';
 import { handleCheckRepoReadiness } from '@/features/eds/handlers/checkRepoReadinessHandler';
@@ -96,7 +96,7 @@ export const projectCreationHandlers = defineHandlers({
     // The sub-step's recovery path. `apiBaseUrl` has no default, so a fresh
     // install reaches the catalog refusal before it reaches a catalog; naming the
     // setting without opening it leaves the user hunting through a settings tree.
-    'open-data-installer-settings': handleOpenDataInstallerSettings,
+    'open-setting': handleOpenSetting,
 
     // EDS handlers - GitHub
     'check-github-auth': handleCheckGitHubAuth,

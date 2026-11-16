@@ -39,6 +39,8 @@ export interface DataInstallerFailure {
      * may still have finished on the extension's side.
      */
     unanswered?: true;
+    /** The setting the message sends the SC to, which the failure offers to open (`open-setting`). */
+    setting?: string;
 }
 
 export interface DataInstallerRequest<T> {
@@ -86,6 +88,7 @@ export function useDataInstallerRequest<T>(
             return {
                 message: data.error ?? UNSTATED_FAILURE,
                 ...(typeof data.code === 'string' ? { code: data.code } : {}),
+                ...(typeof data.setting === 'string' ? { setting: data.setting } : {}),
             };
         }
         return null;

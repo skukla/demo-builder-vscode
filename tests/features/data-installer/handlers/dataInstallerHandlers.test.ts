@@ -199,7 +199,7 @@ describe('dataInstallerHandlers', () => {
             const DEMO_SYSTEM = { id: '285361', code: 'DEMO@AdobeOrg', name: 'Adobe Demo System' };
             const OTHER = { id: '999', code: 'OTHER@AdobeOrg', name: 'Somewhere Else' };
 
-            function signedInto(orgs: AdobeOrg[] | Error, cached?: AdobeOrg) {
+            function signedInto(orgs: AdobeOrg[] | Error | Array<AdobeOrg[] | undefined>, cached?: AdobeOrg) {
                 setupSettings({ apiBaseUrl: STAGE });
                 const context = makeAccessContext({
                     authManager: createMockAuthenticationService(
@@ -213,16 +213,23 @@ describe('dataInstallerHandlers', () => {
                             cache: { getCachedOrganization: jest.fn().mockReturnValue(cached) },
                             entities: {
                                 orgReads: {
-                                    getOrganizationsSdkOnly:
-                                        orgs instanceof Error
-                                            ? jest.fn().mockRejectedValue(orgs)
-                                            : jest.fn().mockResolvedValue(orgs),
+                                    getOrganizationsSdkOnly: listing(orgs),
                                 },
                             },
                         },
                     ),
                 });
                 return context;
+            }
+
+            /** One answer for every call, or (a list of answers) one per call, in order. */
+            function listing(orgs: AdobeOrg[] | Error | Array<AdobeOrg[] | undefined>): jest.Mock {
+                if (orgs instanceof Error) return jest.fn().mockRejectedValue(orgs);
+                const perCall = orgs.length > 0 && orgs.every((entry) => entry === undefined || Array.isArray(entry));
+                if (!perCall) return jest.fn().mockResolvedValue(orgs);
+                const mock = jest.fn();
+                for (const answer of orgs as Array<AdobeOrg[] | undefined>) mock.mockResolvedValueOnce(answer);
+                return mock;
             }
 
             it("names the org the service's address belongs to, found in the sign-in's orgs", async () => {
@@ -239,15 +246,36 @@ describe('dataInstallerHandlers', () => {
                 expect(!access.ok && access.response.code).toBe(ErrorCode.AUTH_FORBIDDEN);
                 expect(!access.ok && access.response.error).toBe(
                     "Your Adobe sign-in isn't in the Adobe org that runs the Data Installer (org 285361). " +
-                        'Sign in with an account in that org, or check the Data Installer address in settings.',
+                        'Sign in with an account in that org, or change its address in Settings.',
                 );
+                expect(!access.ok && access.response.setting).toBe('demoBuilder.dataInstaller.apiBaseUrl');
             });
 
-            it('still sends the request, naming no org, when Adobe cannot list the orgs', async () => {
+            /**
+             * Release test 1.4 (2026-11-16): after the Adobe CLI signed in again on its own, the
+             * Console client still held the old sign-in, Adobe refused the org list, and the request
+             * went without an org: the store answered "missing x-gw-ims-org-id header".
+             */
+            it('starts the Console client again and asks once more when Adobe does not list the orgs', async () => {
+                const context = signedInto([undefined, [DEMO_SYSTEM]]);
+
+                const access = await resolveDataInstallerAccess(context);
+
+                expect(context.authManager!.getSdkClient().clear).toHaveBeenCalledTimes(1);
+                expect(access.ok && access.orgCode).toBe('DEMO@AdobeOrg');
+            });
+
+            it('never sends a request without the org when Adobe still cannot list the orgs', async () => {
+                MockedClient.mockClear();
+
                 const access = await resolveDataInstallerAccess(signedInto(new Error('401')));
 
-                expect(access.ok).toBe(true);
-                expect(access.ok && access.orgCode).toBeUndefined();
+                expect(access.ok).toBe(false);
+                expect(!access.ok && access.response.code).toBe(ErrorCode.AUTH_FORBIDDEN);
+                expect(!access.ok && access.response.error).toBe(
+                    "Adobe didn't confirm your sign-in, so the request wasn't sent. Sign in to Adobe again, then retry.",
+                );
+                expect(MockedClient).not.toHaveBeenCalled();
             });
         });
 
@@ -411,10 +439,26 @@ describe('dataInstallerHandlers', () => {
             MockedClient.prototype.findDatapacks = jest
                 .fn()
                 .mockRejectedValue(new DataInstallerApiError('find-datapacks: cannot authorize request', status, 'find-datapacks'));
-            const res = await dataInstallerHandlers['find-datapacks'](makeAccessContext(), {});
-            expect(res).toEqual({
+            const res = await dataInstallerHandlers['find-datapacks'](makeAccessContext(), { store: 'installer' });
+            expect(res).toStrictEqual({
                 success: false,
-                error: "The Data Installer didn't accept your Adobe sign-in. find-datapacks: cannot authorize request",
+                error:
+                    "The Data Installer didn't accept your Adobe sign-in. Its address in Settings may point at a " +
+                    "deployment that doesn't take your sign-in.",
+                code: ErrorCode.AUTH_FORBIDDEN,
+                setting: 'demoBuilder.dataInstaller.apiBaseUrl',
+            });
+        });
+
+        // Release test 1.4: a library pack's refusal named the Data Installer and its address.
+        it('says the datapack library refused the sign-in in its own name, with no Data Installer advice', async () => {
+            MockedClient.prototype.findDatapacks = jest
+                .fn()
+                .mockRejectedValue(new DataInstallerApiError('find-datapacks: cannot authorize request', 401, 'find-datapacks'));
+            const res = await dataInstallerHandlers['find-datapacks'](makeAccessContext(), { store: 'library' });
+            expect(res).toStrictEqual({
+                success: false,
+                error: "The datapack library didn't accept your Adobe sign-in. Sign in to Adobe again, then retry.",
                 code: ErrorCode.AUTH_FORBIDDEN,
             });
         });

@@ -24,7 +24,7 @@ import { handleGetOperationProgress, handleOpenDebugLogs } from '@/core/vscode/o
 import { handleTakeClearRequest, requestClearWindow } from '@/features/data-installer/handlers/clearWindowRequest';
 import { dataInstallerHandlers } from '@/features/data-installer/handlers/dataInstallerHandlers';
 import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
-import { handleOpenDataInstallerSettings } from '@/features/data-installer/handlers/settingsHandlers';
+import { handleOpenSetting } from '@/features/data-installer/handlers/settingsHandlers';
 import { commerceBackendOf } from '@/features/data-installer/services/commerceBackend';
 import { affectsDatapackList } from '@/features/data-installer/services/dataInstallerConfig';
 import { onDatapacksChanged } from '@/features/data-installer/services/datapackChanges';
@@ -50,7 +50,7 @@ const LIBRARY_WEBVIEW_ID = 'demoBuilder.datapackLibrary';
  * answer.
  */
 const settingsHandlers: HandlerMap = {
-    'open-data-installer-settings': handleOpenDataInstallerSettings,
+    'open-setting': handleOpenSetting,
 };
 
 /**

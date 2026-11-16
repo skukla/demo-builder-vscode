@@ -22,13 +22,13 @@ import {
     resolveDatapackStoreBaseUrl,
 } from '../services/dataInstallerConfig';
 import { DataInstallerApiError, isDataInstallerAuthError } from '../services/dataInstallerErrors';
-import { orgNumberOf } from '../services/dataInstallerSignIn';
 import { packReadsVia } from '../services/recordedPack';
 import { layerForDetail } from '../services/settingsLayer';
 import { sharedInFileWarningFor } from '../services/sharedInFiles';
 import type { CatalogPage, DatapackSummary, OperationMode, Page } from '../types';
 import { INSTALLER_OFF, LIBRARY_LIST_FAILED, isListable, listLibrary, mergedCatalog, rememberingNames } from './catalogLibraryRows';
 import { activityFromBoth, installedFromBoth } from './engineHistoryReads';
+import { STORE_ADDRESS_SETTING, serviceOrgCode, signInRefused } from './serviceOrg';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 import { ErrorCode } from '@/types/errorCodes';
@@ -69,21 +69,27 @@ function refuse(
 }
 
 /** Why the Data Installer cannot be asked: the log line and the refusal, by reason. */
-const INSTALLER_REFUSALS: Record<'not-configured' | 'turned-off' | 'invalid-url', { log: string; message: string }> = {
+const INSTALLER_REFUSALS: Record<
+    'not-configured' | 'turned-off' | 'invalid-url',
+    { log: string; message: string; setting: string }
+> = {
     'not-configured': {
         // datapack-words: not on screen
         log: 'demoBuilder.dataInstaller.apiBaseUrl is not set. It has no default, so every SC sets their own.',
         message: 'No Data Installer address is set. Set it in Settings.',
+        setting: STORE_ADDRESS_SETTING.installer,
     },
     'turned-off': {
         // datapack-words: not on screen
         log: 'the Data Installer is turned off (demoBuilder.dataInstaller.enabled).',
         message: 'The Data Installer is turned off. Turn it on in Settings.',
+        setting: 'demoBuilder.dataInstaller.enabled',
     },
     'invalid-url': {
         // datapack-words: not on screen
         log: 'invalid demoBuilder.dataInstaller.apiBaseUrl',
-        message: 'The configured Data Installer API URL is not usable. It must be an https:// URL.',
+        message: 'The Data Installer address in Settings is not usable. It must be an https:// URL.',
+        setting: STORE_ADDRESS_SETTING.installer,
     },
 };
 
@@ -118,9 +124,10 @@ export async function resolveDataInstallerAccess(
             return refuse(
                 'The datapack library has no usable address. Set it in Settings to an https:// URL.',
                 ErrorCode.INVALID_OPERATION,
+                { setting: STORE_ADDRESS_SETTING.library },
             );
         }
-        return authorize(context, library.baseUrl);
+        return authorize(context, library.baseUrl, 'library');
     }
 
     const resolved = resolveDataInstallerBaseUrl();
@@ -128,9 +135,9 @@ export async function resolveDataInstallerAccess(
         const why = INSTALLER_REFUSALS[resolved.reason];
         // Fingerprint only: a rejected URL may carry a secret in its query string.
         context.logger.warn(`${LOG_PREFIX} Refused: ${why.log}${resolved.fingerprint ? ` (${resolved.fingerprint})` : ''}`);
-        return refuse(why.message, ErrorCode.INVALID_OPERATION);
+        return refuse(why.message, ErrorCode.INVALID_OPERATION, { setting: why.setting });
     }
-    return authorize(context, resolved.baseUrl);
+    return authorize(context, resolved.baseUrl, 'installer');
 }
 
 /**
@@ -143,7 +150,11 @@ export async function resolveDatapackAccess(context: HandlerContext): Promise<Da
 }
 
 /** The sign-in half of the guard, shared by both stores: both take the SC's own Adobe token. */
-async function authorize(context: HandlerContext, baseUrl: string): Promise<DataInstallerAccess> {
+async function authorize(
+    context: HandlerContext,
+    baseUrl: string,
+    store: DatapackStoreName,
+): Promise<DataInstallerAccess> {
     const authManager = context.authManager;
     if (!authManager) {
         return refuse('Adobe sign-in is required.', ErrorCode.AUTH_REQUIRED);
@@ -182,7 +193,7 @@ async function authorize(context: HandlerContext, baseUrl: string): Promise<Data
     const getToken = async (): Promise<string> =>
         (await authManager.getTokenManager().inspectToken()).token ?? '';
 
-    const org = await serviceOrgCode(authManager, baseUrl, context.logger);
+    const org = await serviceOrgCode(authManager, baseUrl, context.logger, store);
     if ('refusal' in org) return { ok: false, response: org.refusal };
     const { orgCode } = org;
 
@@ -204,62 +215,10 @@ async function authorize(context: HandlerContext, baseUrl: string): Promise<Data
     };
 }
 
-/**
- * The org the requests name, for the gateway's `x-gw-ims-org-id`: the org that RUNS the
- * service, read off its address and found in the sign-in's own orgs for its code. The
- * service refuses a request that names any other org, or none ("missing x-gw-ims-org-id
- * header", Stage, 2026-10-27).
- *
- * beta.150 sent the CACHED org, which is empty after a reload and after a fresh sign-in,
- * so its requests named none (fixed in beta.151). The cache is still read first, but only
- * counts when it IS that org. Adobe's org list is the quick one that never opens a browser.
- *
- * A sign-in that does not reach that org is refused here, saying why. When the address
- * names no org, or Adobe cannot list the orgs, the request goes without one.
- */
-async function serviceOrgCode(
-    authManager: NonNullable<HandlerContext['authManager']>,
-    baseUrl: string,
-    logger: HandlerContext['logger'],
-): Promise<{ orgCode?: string } | { refusal: HandlerResponse }> {
-    const orgNumber = orgNumberOf(baseUrl);
-    if (!orgNumber) return {};
-    const cached = authManager.getCacheManager().getCachedOrganization();
-    if (cached?.id === orgNumber) return { orgCode: cached.code };
-    let orgs;
-    try {
-        orgs = await (await authManager.getEntityServices()).orgReads.getOrganizationsSdkOnly();
-    } catch (error) {
-        logger.warn(`${LOG_PREFIX} Could not list Adobe orgs to name org ${orgNumber}: ${(error as Error).message}`);
-        return {};
-    }
-    if (!orgs) return {};
-    const org = orgs.find((candidate) => candidate.id === orgNumber);
-    if (org) return { orgCode: org.code };
-    return {
-        refusal: {
-            success: false,
-            error:
-                `Your Adobe sign-in isn't in the Adobe org that runs the Data Installer (org ${orgNumber}). ` +
-                'Sign in with an account in that org, or check the Data Installer address in settings.',
-            code: ErrorCode.AUTH_FORBIDDEN,
-        },
-    };
-}
-
 /** Turn a thrown error into a response the UI can act on. */
-function toFailure(error: unknown, fallback: string): HandlerResponse {
-    // Only reached past the guard, so the SC is signed in: the SERVICE turned the sign-in away,
-    // and signing in again would hand it the same one. Said as such, never as "sign in" — the
-    // Data Installer's Stage deployment refuses a sign-in its Production one takes, and the
-    // screen asked a signed-in owner to sign in (2026-10-27).
-    if (isDataInstallerAuthError(error)) {
-        return {
-            success: false,
-            error: `The Data Installer didn't accept your Adobe sign-in. ${(error as Error).message}`,
-            code: ErrorCode.AUTH_FORBIDDEN,
-        };
-    }
+function toFailure(error: unknown, fallback: string, store: DatapackStoreName): HandlerResponse {
+    // A 401 or 403: the store turned a signed-in SC away (`signInRefused` says why, per store).
+    if (isDataInstallerAuthError(error)) return signInRefused(store);
     // UNKNOWN is the enum's documented fallback "when no specific code applies",
     // and it maps to a Retry affordance — which is the right offer for a 5xx.
     if (error instanceof DataInstallerApiError) {
@@ -292,7 +251,7 @@ async function withClient(
         context.logger.error(
             `${LOG_PREFIX} ${fallback} ${error instanceof Error ? error.message : String(error)}`,
         );
-        return toFailure(error, fallback);
+        return toFailure(error, fallback, store);
     }
 }
 

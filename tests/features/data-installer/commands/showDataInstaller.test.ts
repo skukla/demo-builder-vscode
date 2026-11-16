@@ -28,7 +28,7 @@ import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
 import { dispatchHandler } from '@/core/handlers/dispatchHandler';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
-import { handleOpenDataInstallerSettings } from '@/features/data-installer/handlers/settingsHandlers';
+import { handleOpenSetting } from '@/features/data-installer/handlers/settingsHandlers';
 import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
 import { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
 import { dataInstallerHandlers } from '@/features/data-installer/handlers/dataInstallerHandlers';
@@ -129,7 +129,7 @@ describe('ShowDataInstallerCommand', () => {
             // descriptors mirror — writes are deliberately not agent-exposed — but
             // the panel needs every type, so the command registers the union.
             //
-            // Plus `open-data-installer-settings`, which is in NEITHER map on
+            // Plus `open-setting`, which is in NEITHER map on
             // purpose: it opens a VS Code pane, so it has no business in the read
             // map the MCP descriptors mirror. Named here rather than derived,
             // because being outside both maps is the whole point of it. The same goes
@@ -140,7 +140,7 @@ describe('ShowDataInstallerCommand', () => {
                 [
                     ...getRegisteredTypes(dataInstallerHandlers),
                     ...getRegisteredTypes(importHandlers),
-                    'open-data-installer-settings',
+                    'open-setting',
                     'getOperationProgress',
                     'openDebugLogs',
                     'takeClearRequest',
@@ -159,7 +159,7 @@ describe('ShowDataInstallerCommand', () => {
             makeCommand().initializeMessageHandlers(comm);
 
             const registered = comm.onStreaming.mock.calls.map((call) => call[0]);
-            expect(registered).toContain('open-data-installer-settings');
+            expect(registered).toContain('open-setting');
         });
 
         it('registers at least the six Stage 1 types', () => {
@@ -204,14 +204,14 @@ describe('ShowDataInstallerCommand', () => {
             makeCommand().initializeMessageHandlers(comm);
 
             const [, handler] = comm.onStreaming.mock.calls.find(
-                (c) => c[0] === 'open-data-installer-settings'
+                (c) => c[0] === 'open-setting'
             )!;
             await handler(undefined);
 
             expect(dispatchHandler).toHaveBeenCalledWith(
-                { 'open-data-installer-settings': handleOpenDataInstallerSettings },
+                { 'open-setting': handleOpenSetting },
                 { marker: 'panel-context' },
-                'open-data-installer-settings',
+                'open-setting',
                 undefined
             );
         });

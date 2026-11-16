@@ -945,6 +945,17 @@ check says so and names the file.
 > Enforced by `tests/sop/setting-enum-labels.test.ts`, which reads every setting and checks each
 > label with the same Title Case check as the UI labels.
 
+> **Convention.** A message that sends the SC to Settings gives a button that opens the setting:
+> `workbench.action.openSettings` with the setting's id. On a datapack screen the failure carries
+> the id (`setting`) and `renderDataInstallerFailure` shows Open Settings; a VS Code message offers
+> an Open Settings action. A website's own Settings page is not a VS Code setting.
+> *Why:* the owner, release test 1.4, 2026-11-16: the words alone leave the SC hunting for a key.
+> The datapack screens said "Set it in Settings" for months while their Open Settings button was
+> never shown, because no screen passed it in.
+> Enforced by `tests/sop/settings-message-opens-setting.test.ts`, which reads every string the
+> extension shows with the compiler and fails one that says "in Settings" with no way to open the
+> setting beside it, proving itself on planted messages.
+
 > **Convention.** A datapack has one set of words, and every screen takes them from
 > `features/data-installer/datapackWords.ts`: it is **installed** and **uninstalled**, never
 > imported or removed; the trial run is **Dry Run**; the settings it carries are its **Store
@@ -2003,11 +2014,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 22 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 70 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 71 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, agent coverage (import cycles moved to an enforcer suite on 2026-10-08)
 
-**This handbook states 144 conventions. 141 of them are enforced; 3 are not.**
+**This handbook states 145 conventions. 142 of them are enforced; 3 are not.**
 
 The last one to get there was "vendor CSS sits in the lowest cascade layer", and it was
 outstanding because it was **not yet true**: `@layer vendor` existed in no bundle, so a
