@@ -1,8 +1,8 @@
 /**
  * The flow's state, apart from the view: stages, Back and forward, picks kept, the gates, and which
  * route each pack type takes. The reads are driven through the real request hook and a
- * mocked client; a kind's read belongs to its screen (`StoreItemsStage`), so here its answer is
- * reported as that screen reports it.
+ * mocked client. Every list is read in the opening wait; a retried kind's read belongs to its screen
+ * (`StoreItemsStage`), so here its answer is reported as that screen reports it.
  */
 
 import '../../../../../helpers/webviewClientMock';
@@ -70,8 +70,9 @@ describe('the store route', () => {
         expect(result.current.store.kind).toBe('cart_rules');
     });
 
-    // Owner, 2026-11-05: only the counts hold the dialog; each kind's list loads in its own pane.
-    it('waits for the counts alone, and never for a kind\'s list', async () => {
+    // Owner, 2026-11-16: the counts, then the opening lists, hold the dialog; opening a kind after
+    // that never puts the wait back.
+    it('waits for the counts, and not again when a kind is opened', async () => {
         const counts = mockRequest.getMockImplementation();
         mockRequest.mockImplementation(async (type: string, payload?: unknown) =>
             type === 'count-datapack-export-items' ? new Promise(() => undefined) : counts?.(type, payload),
@@ -118,27 +119,29 @@ describe('the store route', () => {
         expect(result.current.main).toMatchObject({ label: 'Next', isDisabled: false });
     });
 
-    // Everything ticked is the kind-level "all": nothing is read for it, even on Next. The save lists
-    // each whole kind itself (step-07 E2, S3-a).
-    it('reads no kind for everything ticked, not even on Next, and hands every kind on whole', async () => {
+    // Everything ticked is the kind-level "all": every list is read once, in the opening wait (owner,
+    // 2026-11-16), and nothing more on Next. The save lists each whole kind itself (step-07 E2, S3-a).
+    it('reads each list once in the opening wait, nothing on Next, and hands on whole every kind with something', async () => {
         const answering = mockRequest.getMockImplementation();
         mockRequest.mockImplementation(async (type: string, payload?: { dataType?: string }) => {
             if (type !== 'list-datapack-export-items') return answering?.(type, payload);
-            return { success: true, data: payload?.dataType === 'products' ? PAGE : NONE };
+            return { success: true, data: payload?.dataType === 'giftcards' ? NONE : PAGE };
         });
         const { result, step, onSave } = await onThePicks();
         const lists = () => mockRequest.mock.calls.filter((call) => call[0] === 'list-datapack-export-items');
-        // Only the list the window opens on, read in its opening wait (owner walk, 2026-11-16).
-        expect(lists()).toHaveLength(1);
+        // No counts came, so no kind is ruled out: every kind's list, read in the opening wait.
+        expect(lists()).toHaveLength(PICKABLE_KINDS.length);
 
         await step(() => result.current.main.onPress());
         expect(result.current.stage).toBe('create-name');
         // Nothing more on Next: the save lists each whole kind itself.
-        expect(lists()).toHaveLength(1);
+        expect(lists()).toHaveLength(PICKABLE_KINDS.length);
 
         await step(() => result.current.setName('Everything'));
         await step(() => result.current.main.onPress());
-        expect(onSave).toHaveBeenCalledWith({ picks: {}, wholeKinds: PICKABLE_KINDS }, 'Everything');
+        // Gift cards' list left nothing, so it is not handed on.
+        const wholeKinds = PICKABLE_KINDS.filter((kind) => kind !== 'giftcards');
+        expect(onSave).toHaveBeenCalledWith({ picks: {}, wholeKinds }, 'Everything');
     });
 
     // step-07 E2 (review, 2026-11-14): a kind ticked whole whose pane read failed is still ticked,

@@ -33,8 +33,10 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CEILING_KINDS, PICKABLE_KINDS, type PickableKind, type StoreItemPage, type StoreKindCounts, type StorePicks, pickCount } from '../../../pickableKinds';
+import { PICKABLE_KINDS, type PickableKind, type StoreItemPage, type StoreKindCounts, type StorePicks, pickCount } from '../../../pickableKinds';
 import { useDataInstallerRequest } from '../../hooks/useDataInstallerRequest';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import type { HandlerResponse } from '@/types/handlers';
 
 /** One kind's answer: its page, or null when the read failed. Absent until a read answers. */
 export type KindReads = Partial<Record<PickableKind, StoreItemPage | null>>;
@@ -82,32 +84,40 @@ export function isKnownEmpty(read: StoreItemPage | null | undefined, count: numb
 
 const NO_COUNTS: StoreKindCounts = {};
 
-/** Whether the list the window opens on has answered; with no kind to show, there is none to wait for. */
-function firstShownRead(firstShown: PickableKind | undefined, shown: PickableKind | undefined, reads: KindReads): boolean {
-    if (firstShown === undefined) return shown === undefined;
-    return reads[firstShown] !== undefined;
+/**
+ * The kinds read in the opening wait: every kind the counts do not rule out (a count of none), so
+ * the window opens with every list in hand and each kind shows at once (owner walk, 2026-11-16:
+ * "can we preload all of the data that way during the loading phase?"). A ceiling kind's count says
+ * nothing (`CEILING_KINDS`), and a kind whose count failed is read too.
+ */
+function kindsToRead(counts: StoreKindCounts, kinds: readonly PickableKind[]): PickableKind[] {
+    return kinds.filter((kind) => counts[kind] !== 0);
 }
 
-/** Whether a ceiling kind's list the counts call for (above zero) has not answered yet. */
-function ceilingPending(counts: StoreKindCounts, reads: KindReads): boolean {
-    return CEILING_KINDS.some((kind) => (counts[kind] ?? 0) > 0 && reads[kind] === undefined);
+/** Every list the opening reads has answered, as a page or as a failure. */
+function allRead(wanted: readonly PickableKind[], reads: KindReads): boolean {
+    return wanted.every((kind) => reads[kind] !== undefined);
 }
 
 /**
- * A ceiling kind's list, read as soon as its count is in and above zero, so its row says what the
- * website holds before the SC opens it (`CEILING_KINDS`).
+ * The opening reads, all at once once the counts are in: one `list-datapack-export-items` per kind.
+ * A failure answers the kind with `null`, so its row says it could not be read and opening it reads
+ * again.
  */
-function useCeilingRead(kind: PickableKind | undefined, wanted: boolean, answered: (kind: PickableKind, page: StoreItemPage | null) => void): void {
-    const { load, value, settled } = useDataInstallerRequest<StoreItemPage>('list-datapack-export-items');
+function useOpeningReads(wanted: readonly PickableKind[] | null, answered: (kind: PickableKind, page: StoreItemPage | null) => void): void {
     const asked = useRef(false);
     useEffect(() => {
-        if (!wanted || !kind || asked.current) return;
+        if (!wanted || asked.current) return;
         asked.current = true;
-        load({ dataType: kind });
-    }, [wanted, load, kind]);
-    useEffect(() => {
-        if (asked.current && settled && kind) answered(kind, value);
-    }, [settled, value, kind, answered]);
+        for (const kind of wanted) {
+            webviewClient
+                .request<HandlerResponse>('list-datapack-export-items', { dataType: kind })
+                .then(
+                    (answer) => answered(kind, answer?.success ? ((answer.data ?? null) as StoreItemPage | null) : null),
+                    () => answered(kind, null),
+                );
+        }
+    }, [wanted, answered]);
 }
 
 /** The kinds that may have something to select, as far as is known. */
@@ -202,21 +212,12 @@ export function useStorePicks(countsWanted: boolean): StorePicksState {
         [kinds],
     );
     const choice = useMemo(() => choiceOf(listed, whole, reads, known), [listed, whole, reads, known]);
-    const [cartRules, companies] = CEILING_KINDS;
-    useCeilingRead(cartRules, countsSettled && (known[cartRules] ?? 0) > 0, answered);
-    useCeilingRead(companies, countsSettled && (known[companies] ?? 0) > 0, answered);
-    // The list the window opens on, read in the same wait, so it opens with it shown (owner walk,
-    // 2026-11-16: a second wait in the right-hand side after the window opened). Held from the first
-    // time the counts name it: opening another kind later reads that one as before.
-    const [firstShown, setFirstShown] = useState<PickableKind | undefined>(undefined);
-    useEffect(() => {
-        if (countsSettled && firstShown === undefined && kind) setFirstShown(kind);
-    }, [countsSettled, firstShown, kind]);
-    useCeilingRead(firstShown, countsSettled && firstShown !== undefined && !CEILING_KINDS.includes(firstShown), answered);
-
+    // Every list in the opening wait, so the window opens with them all (owner walk, 2026-11-16).
+    const wanted = useMemo(() => (countsSettled ? kindsToRead(known, kinds) : null), [countsSettled, known, kinds]);
+    useOpeningReads(wanted, answered);
     // Once ready, stays ready: a list read again later (a retry) never puts the opening wait back.
     const readyOnce = useRef(false);
-    if (countsSettled && !ceilingPending(known, reads) && firstShownRead(firstShown, kind, reads)) readyOnce.current = true;
+    if (wanted && allRead(wanted, reads)) readyOnce.current = true;
     const ready = readyOnce.current;
 
     return {

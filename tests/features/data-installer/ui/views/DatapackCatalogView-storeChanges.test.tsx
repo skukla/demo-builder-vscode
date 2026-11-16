@@ -253,7 +253,9 @@ describe('the header button', () => {
         const answering = mockRequest.getMockImplementation();
         mockRequest.mockImplementation((type: string, payload?: { dataType?: string }) => {
             if (type !== 'list-datapack-export-items') return answering?.(type, payload);
-            const items = payload?.dataType === 'products' ? [{ id: 'VR-Rack', displayName: 'VR Rack', key: 'VR-Rack' }] : [];
+            // One item of every kind, so every kind ticked whole has something to hand on.
+            const kind = payload?.dataType ?? '';
+            const items = [{ id: `${kind}-1`, displayName: `${kind} 1`, key: `${kind}-1` }];
             return Promise.resolve({ success: true, data: { items, totalCount: items.length, excludedCount: 0, inPackCount: 0 } });
         });
         await renderView();
@@ -261,7 +263,10 @@ describe('the header button', () => {
         await press(screen.getByRole('button', { name: 'Create' }));
         const picks = await inWindow('Create Datapack');
         expect(picks.getByRole('checkbox', { name: 'Select All Data' })).toBeChecked();
+        const lists = () => mockRequest.mock.calls.filter((call) => call[0] === 'list-datapack-export-items').length;
+        const opened = lists();
         await press(picks.getByRole('button', { name: 'Next' }));
+        expect(lists()).toBe(opened);
         await change(await screen.findByRole('textbox', { name: /Datapack Name/ }), 'Acme Test');
         await press((await inWindow('Create Datapack')).getByRole('button', { name: 'Create' }));
 

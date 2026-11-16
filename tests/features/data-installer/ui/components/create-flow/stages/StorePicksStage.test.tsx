@@ -61,16 +61,19 @@ describe('before both columns are ready', () => {
         expect(callsOf(LIST)).toHaveLength(0);
     });
 
-    // Owner, 2026-11-05: waiting the whole dialog for the first list too made the wait too long.
-    // Owner walk, 2026-11-16: the window opened, then its first list read in a second wait. The first
-    // list is read in the opening wait, and the window opens with it shown.
-    it('reads the first list in the opening wait, and shows no rows until it has answered', async () => {
-        mockRequest.mockImplementation((type: string) => (type === COUNT ? Promise.resolve(counted({ products: 2 })) : new Promise(() => undefined)));
+    // Owner, 2026-11-16: the window opens complete. In its opening wait it reads every kind the
+    // counts do not rule out, all at once, and opens only once every one of those has answered.
+    it('reads every list the counts do not rule out in the opening wait, and shows no rows until all have answered', async () => {
+        mockRequest.mockImplementation((type: string, payload?: { dataType?: string }) => {
+            if (type === COUNT) return Promise.resolve(counted({ products: 2, giftcards: 0 }));
+            return payload?.dataType === 'customers' ? new Promise(() => undefined) : Promise.resolve({ success: true, data: PRODUCTS });
+        });
         await open();
 
         expect(noRows()).toHaveLength(0);
         expect(screen.getByRole('progressbar')).toBeInTheDocument();
-        expect(callsOf(LIST).map((c) => c[1])).toEqual([{ dataType: 'products' }]);
+        const wanted = PICKABLE_KINDS.filter((kind) => kind !== 'giftcards').map((dataType) => ({ dataType }));
+        expect(callsOf(LIST).map((c) => c[1])).toEqual(wanted);
     });
 
     it('shows both columns together, every row in its final state', async () => {
@@ -83,17 +86,25 @@ describe('before both columns are ready', () => {
         expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
     });
 
-    it('never goes back to waiting the whole dialog when another kind is opened', async () => {
+    // A kind whose opening read failed says so on its row; opening it reads it again in its pane,
+    // and that read never puts the opening wait back.
+    it('never goes back to waiting the whole dialog when a failed kind is read again', async () => {
+        const customerReads = { count: 0 };
         mockRequest.mockImplementation((type: string, payload?: { dataType?: string }) => {
             if (type === COUNT) return Promise.resolve(counted({ products: 2 }));
-            return payload?.dataType === 'products' ? Promise.resolve({ success: true, data: PRODUCTS }) : new Promise(() => undefined);
+            if (payload?.dataType !== 'customers') return Promise.resolve({ success: true, data: PRODUCTS });
+            customerReads.count += 1;
+            return customerReads.count === 1 ? Promise.resolve({ success: false, error: 'No answer.' }) : new Promise(() => undefined);
         });
         await open();
+        expect(row('Customers')).toHaveTextContent("Couldn't be read");
 
         await press(row('Customers'));
 
         expect(rows()).toHaveLength(PICKABLE_KINDS.length);
+        expect(screen.queryByRole('progressbar', { name: 'Reading from Commerce' })).not.toBeInTheDocument();
         expect(screen.getByText('Reading customers')).toBeInTheDocument();
+        expect(callsOf(LIST).filter((c) => c[1].dataType === 'customers')).toHaveLength(2);
     });
 });
 
@@ -104,7 +115,8 @@ describe('a count of none', () => {
 
         expect(row('Gift Cards')).toBeDisabled();
         expect(row('Gift Cards')).toHaveTextContent(NONE_NOTE);
-        expect(callsOf(LIST).map((c) => c[1])).toEqual([{ dataType: 'products' }]);
+        expect(callsOf(LIST).map((c) => c[1].dataType)).not.toContain('giftcards');
+        expect(callsOf(LIST)).toHaveLength(PICKABLE_KINDS.length - 1);
     });
 
     it('leaves a row with some clickable, and says no number', async () => {
@@ -196,16 +208,17 @@ describe('a count and a list', () => {
         expect(row('Products')).toHaveTextContent(NONE_NOTE);
     });
 
-    // Overview 7b: everything starts ticked, so a listed kind's row counts all of it at once, "N of M
-    // selected" as the projects list counts (step-07 Q3, S3-b); a kind ticked whole and unread says
-    // "All selected", since nothing was read to count.
-    it('says how many of how many are selected, on a read row and on an unread whole one by its count', async () => {
+    // Overview 7b: everything starts ticked, and every list is read before the window opens, so every
+    // row counts all of its list from the first frame, "N of M selected" as the projects list counts
+    // (step-07 Q3, S3-b; owner, 2026-11-16).
+    it('says how many of how many are selected on every read row, from the first frame', async () => {
         const TWO: StoreItemPage = { ...PRODUCTS, items: [...PRODUCTS.items, { id: 'Tray', displayName: 'Cable Tray', key: 'Tray' }], totalCount: 2 };
-        answer(counted({ products: 2, customers: 5 }), { products: TWO });
+        const FIVE: StoreItemPage = { ...PRODUCTS, items: ['a', 'b', 'c', 'd', 'e'].map((id) => ({ id, displayName: id, key: id })), totalCount: 5 };
+        answer(counted({ products: 2, customers: 5 }), { products: TWO, customers: FIVE });
         await open();
         expect(row('Products')).toHaveTextContent('2 of 2 selected');
-        // Owner walk, 2026-11-16: its count, not "All selected".
         expect(row('Customers')).toHaveTextContent('5 of 5 selected');
+        expect(row('Customers')).not.toHaveTextContent('All selected');
 
         await press(screen.getByRole('checkbox', { name: /VR Rack/ }));
 

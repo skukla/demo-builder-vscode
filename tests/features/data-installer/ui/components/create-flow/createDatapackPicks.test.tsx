@@ -144,11 +144,12 @@ describe('the screen', () => {
 });
 
 describe('selecting the items', () => {
-    it('lists the first kind on opening, naming no datapack', async () => {
+    // Owner, 2026-11-16: the window opens complete, every kind's list read in its opening wait.
+    it('reads every kind\'s list on opening, naming no datapack', async () => {
         answer({ products: PRODUCTS });
         await open();
 
-        expect(listCalls()).toEqual([{ dataType: 'products' }]);
+        expect(listCalls()).toEqual(PICKABLE_KINDS.map((dataType) => ({ dataType })));
         expect(screen.getByRole('checkbox', { name: /VR Rack/ })).toBeInTheDocument();
     });
 
@@ -199,14 +200,20 @@ describe('selecting the items', () => {
         expect(row('Products')).toHaveTextContent('1,284 of 1,284 selected');
     });
 
-    // Owner, 2026-11-08 (F79): the pane's bare spinner said nothing; it waits in the house rows.
-    it('reads in its pane, saying what it reads, keeping the rows and Next, so a slow read costs nothing', async () => {
+    // Owner, 2026-11-08 (F79): the pane's bare spinner said nothing; it waits in the house rows. Every
+    // list is read before the window opens (owner, 2026-11-16), so the pane reads only a kind whose
+    // opening read failed, again, when it is opened.
+    it('reads a failed kind again in its pane, saying what it reads, keeping the rows and Next', async () => {
+        const ruleReads = { count: 0 };
         mockRequest.mockImplementation((type: string, payload?: { dataType?: string }) => {
             if (type !== 'list-datapack-export-items') return Promise.resolve({ success: true, data: {} });
-            return payload?.dataType === 'products' ? Promise.resolve({ success: true, data: PRODUCTS }) : new Promise(() => undefined);
+            if (payload?.dataType !== 'cart_rules') return Promise.resolve({ success: true, data: PRODUCTS });
+            ruleReads.count += 1;
+            return ruleReads.count === 1 ? Promise.resolve({ success: false, error: 'No answer.' }) : new Promise(() => undefined);
         });
         await openCleared();
         await press(screen.getByRole('checkbox', { name: /VR Rack/ }));
+        expect(row('Cart Rules')).toHaveTextContent("Couldn't be read");
 
         await press(row('Cart Rules'));
 
@@ -219,15 +226,24 @@ describe('selecting the items', () => {
         expect(screen.getByRole('checkbox', { name: /VR Rack/ })).toBeChecked();
     });
 
+    // Still true with the opening reads: a failed kind's retry belongs to its pane, so its answer
+    // arriving after the SC has moved on is not taken for the kind now shown.
     it("does not take a late answer for another kind's", async () => {
         const late: { resolve?: (value: unknown) => void } = {};
+        const giftReads = { count: 0 };
         mockRequest.mockImplementation((type: string, payload?: { dataType?: string }) => {
             if (type !== 'list-datapack-export-items') return Promise.resolve({ success: true, data: {} });
-            if (payload?.dataType === 'giftcards') return new Promise((resolve) => { late.resolve = resolve; });
+            if (payload?.dataType === 'giftcards') {
+                giftReads.count += 1;
+                if (giftReads.count === 1) return Promise.resolve({ success: false, error: 'No answer.' });
+                return new Promise((resolve) => { late.resolve = resolve; });
+            }
             return Promise.resolve({ success: true, data: payload?.dataType === 'products' ? PRODUCTS : RULES });
         });
         await open();
         await press(row('Gift Cards'));
+        // Ticked whole, with no count and no list while it reads again.
+        expect(row('Gift Cards')).toHaveTextContent('All selected');
         await press(row('Cart Rules'));
 
         late.resolve?.({ success: true, data: PRODUCTS });
@@ -239,16 +255,17 @@ describe('selecting the items', () => {
 });
 
 describe('a kind with nothing to select', () => {
-    it('keeps its row clickable until a read has answered, then greys it out and moves on', async () => {
-        answer({ products: PRODUCTS, customers: RULES });
+    // Every list is read before the window opens (owner, 2026-11-16), so a kind whose list left
+    // nothing is greyed out from the first frame, and the kind shown is the first with something.
+    it('is greyed out from the first frame, and the window opens on the first kind with something', async () => {
+        answer({ customers: RULES });
         await open();
-        expect(row('Gift Cards')).toBeEnabled();
-
-        await press(row('Gift Cards'));
 
         expect(row('Gift Cards')).toBeDisabled();
         expect(row('Gift Cards')).toHaveTextContent('None available');
-        expect(row('Categories')).not.toHaveAttribute('aria-current', 'false');
+        expect(row('Products')).toBeDisabled();
+        expect(row('Customers')).toHaveAttribute('aria-current', 'true');
+        expect(screen.getByRole('checkbox', { name: /Spring Sale/ })).toBeInTheDocument();
     });
 
     it('cannot be opened again once greyed out', async () => {
@@ -371,22 +388,23 @@ describe('the name, second', () => {
 });
 
 describe('Select All Data (2026-11-03; ticked to start, overview 7b)', () => {
-    // step-07 E2 (S3-a): a kind ticked whole is handed on as a kind, listed by the save itself.
-    it('starts ticked, reads only the kind shown, and hands every kind on whole to Create', async () => {
-        answer({ products: PRODUCTS, cart_rules: RULES });
+    // step-07 E2 (S3-a): a kind ticked whole is handed on as a kind, listed by the save itself. Every
+    // list is read in the opening wait (owner, 2026-11-16), so every row counts from the first frame.
+    it('starts ticked, reads every list in the opening wait, and hands on whole every kind with something', async () => {
+        answer({ products: PRODUCTS, cart_rules: RULES, customers: RULES });
         const onSave = await open();
         expect(everything()).toBeChecked();
-        expect(listCalls()).toEqual([{ dataType: 'products' }]);
+        expect(listCalls()).toEqual(PICKABLE_KINDS.map((dataType) => ({ dataType })));
         expect(row('Products')).toHaveTextContent('2 of 2 selected');
-        expect(row('Customers')).toHaveTextContent('All selected');
-        // A ceiling kind claims nothing unread (owner walk, 2026-11-16, `CEILING_KINDS`).
-        expect(row('Cart Rules')).not.toHaveTextContent('All selected');
+        expect(row('Customers')).toHaveTextContent('1 of 1 selected');
+        expect(row('Cart Rules')).toHaveTextContent('1 of 1 selected');
+        expect(row('Gift Cards')).toHaveTextContent('None available');
 
         await create();
 
         // Nothing more was read: the save lists each kind itself.
-        expect(listCalls()).toEqual([{ dataType: 'products' }]);
-        expect(onSave).toHaveBeenCalledWith(chose({}, PICKABLE_KINDS), 'Hand Built');
+        expect(listCalls()).toHaveLength(PICKABLE_KINDS.length);
+        expect(onSave).toHaveBeenCalledWith(chose({}, ['products', 'cart_rules', 'customers']), 'Hand Built');
     });
 
     it('shows the dash when only some are ticked, and clears every kind when unticked', async () => {
@@ -418,10 +436,12 @@ describe('Select All Data (2026-11-03; ticked to start, overview 7b)', () => {
     it('goes on to the name at once on Next, reading nothing and showing no spinner', async () => {
         answer({ products: PRODUCTS, cart_rules: RULES });
         await open();
+        const reads = listCalls().length;
 
         await press(button('Next'));
 
-        expect(listCalls()).toEqual([{ dataType: 'products' }]);
+        expect(reads).toBe(PICKABLE_KINDS.length);
+        expect(listCalls()).toHaveLength(reads);
         expect(screen.getByRole('textbox', { name: /Datapack Name/ })).toBeInTheDocument();
     });
 
@@ -444,12 +464,13 @@ describe('Select All Data (2026-11-03; ticked to start, overview 7b)', () => {
     });
 
     it('hands on a whole kind\'s ticks as ids once some are taken away', async () => {
-        answer({ products: PRODUCTS });
+        answer({ products: PRODUCTS, cart_rules: RULES });
         const onSave = await open();
         await press(screen.getByRole('checkbox', { name: /Cable Tray/ }));
 
         await create();
 
-        expect(onSave).toHaveBeenCalledWith(chose({ products: ['VR-Rack'] }, PICKABLE_KINDS.filter((kind) => kind !== 'products')), 'Hand Built');
+        // The other whole kind with something still goes as a kind; the kinds with none are left out.
+        expect(onSave).toHaveBeenCalledWith(chose({ products: ['VR-Rack'] }, ['cart_rules']), 'Hand Built');
     });
 });
