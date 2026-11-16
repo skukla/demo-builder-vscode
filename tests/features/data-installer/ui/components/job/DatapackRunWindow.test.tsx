@@ -313,7 +313,7 @@ describe('an uninstall', () => {
         });
 
         expect(rowOf(shown, 'Saved to My Luma')).toHaveTextContent('Save Your Changes');
-        expect(rowOf(shown, 'Uninstalling 12 of 40')).toHaveTextContent('Uninstall My Luma');
+        expect(rowOf(shown, 'Uninstalling Products, 12 of 40')).toHaveTextContent('Uninstall My Luma');
         expect(shown.queryByText(/^Install /u)).toBeNull();
     });
 

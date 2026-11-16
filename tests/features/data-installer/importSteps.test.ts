@@ -13,7 +13,7 @@ import {
     uninstallSteps,
 } from '@/features/data-installer/importSteps';
 import { versionLabel } from '@/features/data-installer/packVersions';
-import { FINISHING_STOP, type InstallCheck, LINKING_OPTIONS, REPLACE_STOP, SAVE_STOP } from '@/features/data-installer/types';
+import { FINISHING_STOP, type InstallCheck, LINKING_OPTIONS, READING_REMOVALS, REPLACE_STOP, SAVE_STOP } from '@/features/data-installer/types';
 
 const NONE_FOUND = { count: 0, examples: [] as string[] };
 
@@ -160,7 +160,7 @@ describe('Uninstall’s lines', () => {
 
         expect(remove(steps)).toMatchObject({
             status: 'checking',
-            line: 'Uninstalling 120 of 400 products',
+            line: 'Uninstalling Products, 120 of 400',
         });
         expect(install(steps).line).toBe('Waiting');
     });
@@ -467,9 +467,15 @@ describe("an uninstall's steps", () => {
         ]);
     });
 
-    it('says the count once the engine gives one', () => {
+    // Walk F161: the type it takes out now, and that type's count.
+    it('names the data type it is uninstalling and how far it has got', () => {
         const [row] = uninstallSteps({ ...LUMA, running: true, detail: '12 of 40 products' });
-        expect(row.line).toBe('Uninstalling 12 of 40');
+        expect(row.line).toBe('Uninstalling Products, 12 of 40');
+    });
+
+    it('says it is reading what to take back before it takes anything', () => {
+        const [row] = uninstallSteps({ ...LUMA, running: true, detail: READING_REMOVALS });
+        expect(row.line).toBe('Reading what to take back');
     });
 
     it('saves first: Save Your Changes spinning on its stage, the uninstall waiting', () => {

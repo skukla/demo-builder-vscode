@@ -273,6 +273,13 @@ export const ENGINE_PHASES = {
 export const LINKING_OPTIONS = ', linking product options';
 
 /**
+ * An uninstall's detail while it reads what each record still is in Commerce, before it takes
+ * anything back: the window shows it as it is (walk F161, owner 2026-11-16). After it, the detail
+ * is the type in hand with its count, "1,200 of 2,046 products".
+ */
+export const READING_REMOVALS = 'Reading what to take back';
+
+/**
  * Where Demo Builder's engine says a job stands beyond each data type's state: what the import
  * window draws, a row per data type (owner, 2026-11-07).
  */

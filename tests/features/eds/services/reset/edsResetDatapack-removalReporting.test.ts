@@ -142,6 +142,19 @@ describe('the removal narration', () => {
         relay({ done: 1, total: 3, processing: ['Products', 'Categories'] });
         expect(report).toHaveBeenLastCalledWith('Uninstalling the datapack', '1 of 3 data types: Products, Categories');
     });
+
+    // Walk F161 (owner, 2026-11-16): a project's row in a batch says what the uninstall does now and
+    // how far, as the one-project window does; it showed "0 of 4 data types" until the end.
+    it('relays what the uninstall is doing now, the type and its count', async () => {
+        await run();
+        const relay = mockedDeps.mock.calls[0][2] as (p: SampleDataProgress) => void;
+
+        relay({ done: 0, total: 4, processing: [], detail: 'Reading what to take back' });
+        expect(report).toHaveBeenLastCalledWith('Uninstalling the datapack', 'Reading what to take back');
+
+        relay({ done: 0, total: 4, processing: [], detail: '1,200 of 2,046 products' });
+        expect(report).toHaveBeenLastCalledWith('Uninstalling the datapack', 'Uninstalling Products, 1,200 of 2,046');
+    });
 });
 
 describe('the removal report', () => {

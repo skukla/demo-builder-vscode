@@ -111,7 +111,7 @@ export interface SampleDataDeps {
          * of what was running.
          */
         operation?: 'import' | 'reset';
-        onProgress?: (perType: Record<string, DataTypeStatus>) => void;
+        onProgress?: (perType: Record<string, DataTypeStatus>, detail?: string) => void;
     }) => Promise<{
         outcome: string;
         perType: Record<string, DataTypeStatus>;
@@ -119,8 +119,8 @@ export interface SampleDataDeps {
         leftInStore?: boolean;
         note?: string;
     }>;
-    /** Live per-type progress, for the build's progress line. */
-    onProgress?: (perType: Record<string, DataTypeStatus>) => void;
+    /** Live per-type progress, for the build's progress line, with the engine's detail ("1,200 of 2,046 products"). */
+    onProgress?: (perType: Record<string, DataTypeStatus>, detail?: string) => void;
     /**
      * Demo Builder's install record of a pack in this project, when there is one: where it was
      * installed. A removal goes there first, today's codes only when the record names none

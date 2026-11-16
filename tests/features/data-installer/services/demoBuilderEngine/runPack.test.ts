@@ -15,7 +15,8 @@ import {
     removePack,
 } from '@/features/data-installer/services/demoBuilderEngine/runPack';
 import { NOW, PACK, PROJECT, type SentCall, fakeContext, memoryFiles, page } from './demoBuilderEngine.testUtils';
-import { GRID, configStore, row, storeContext } from './storeConfig.testUtils';
+import { GRID, configStore, row, storeContext } from './storeConfig.testUtils';import { READING_REMOVALS } from '@/features/data-installer/types';
+
 
 describe('installPack', () => {
     it('runs the kinds the pack holds in the store\'s order, whatever order the pack lists them in', async () => {
@@ -136,8 +137,9 @@ describe('removePack', () => {
         expect(files.data.has(installRecordPath(PROJECT, PACK))).toBe(false);
     });
 
-    // Walk F131: a bare count, as every other line in the window reads; it said "took back 1 of 2 objects".
-    it('says how far it has got as a bare count', async () => {
+    // Walk F161 (owner, 2026-11-16): the uninstall says what it does now, and how far, by data type. It
+    // was one bare count over every type ("10 of 10"), and nothing at all while it read what to take back.
+    it('says it is reading what to take back, then each type with its own count', async () => {
         const files = memoryFiles();
         await recorded(files);
         const ctx = await fakeContext();
@@ -145,7 +147,7 @@ describe('removePack', () => {
 
         await removePack(ctx, files, { projectPath: PROJECT, pack: PACK, progress });
 
-        expect(progress.mock.calls.map(([line]) => line)).toEqual(['1 of 2', '2 of 2']);
+        expect(progress.mock.calls.map(([line]) => line)).toEqual([READING_REMOVALS, '1 of 1 products', '1 of 1 categories']);
     });
 
     it('leaves what Commerce refuses in the store and the record on disk, so removing again tries it again', async () => {

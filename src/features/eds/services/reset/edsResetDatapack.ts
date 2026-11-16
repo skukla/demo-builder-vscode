@@ -17,6 +17,7 @@ import { askForDetailsDuringOperation, modalIsAsking } from '@/core/vscode/opera
 import type { ReportStage } from '@/core/vscode/withOperationProgress';
 import { saveFirstLabel, withoutSavingLabel } from '@/features/data-installer/datapackWords';
 import { knownPackName } from '@/features/data-installer/handlers/libraryWriter';
+import { removalLine } from '@/features/data-installer/importSteps';
 import { commerceBackendOf } from '@/features/data-installer/services/commerceBackend';
 import { typesLine } from '@/features/data-installer/services/datapackTypesLine';
 import { dropStaleFailure } from '@/features/data-installer/services/installFailure';
@@ -194,8 +195,9 @@ export async function removeProjectSampleDataOutcome(
             buildSampleDataDeps(
                 context,
                 project,
-                // The count of types is the line under the step, never its position.
-                (sd) => report(step, typesLine(sd.done, sd.total, sd.processing)),
+                // The line under the step: what the uninstall does now and how far (walk F161), else
+                // the count of types, never its position.
+                (sd) => report(step, removalLine(sd.detail, typesLine(sd.done, sd.total, sd.processing))),
                 'remove',
             ),
             // Clear Demo Data's: the products its wipe deletes next count as going (step-06 C3 re-review).

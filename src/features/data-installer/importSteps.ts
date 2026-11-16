@@ -20,7 +20,8 @@ import { UNINSTALL } from './datapackWords';
 import { packLine } from './packVersions';
 import { REPLACING, SAVING, FINISHING, runRows, type RunSource } from './runRows';
 import { STORE_CONFIG_KIND } from './services/datapackCatalog';
-import { ENGINE_PHASES, FINISHING_STOP, type InstallCheck, type JobStanding, LINKING_OPTIONS, REPLACE_STOP, SAVE_STOP } from './types';
+import { ENGINE_PHASES, FINISHING_STOP, type InstallCheck, type JobStanding, LINKING_OPTIONS, READING_REMOVALS, REPLACE_STOP, SAVE_STOP } from './types';
+import { dataTypeLabel } from './ui/dataTypeLabel';
 import type { OperationRow } from '@/types/webviewPayloads';
 
 /** One step: a row, and Install's data types under it (`OperationRow.types`). */
@@ -101,7 +102,7 @@ function removeStep(source: StepSource): ImportStep[] {
                 ...row,
                 status: 'checking',
                 // The count alone once there is one: the step's title says what (kept short, review 2026-11-10).
-                line: source.detail ? `Uninstalling ${source.detail}` : `Uninstalling ${what}`,
+                line: removalLine(source.detail, `Uninstalling ${what}`),
             },
         ];
     if (source.running && source.phase === READING)
@@ -114,6 +115,19 @@ function removeStep(source: StepSource): ImportStep[] {
 
 /** The count at the head of the engine's detail: "1,200 of 2,046" of "1,200 of 2,046 products". */
 const countIn = (detail: string | undefined): string | undefined => detail?.match(/^[\d,]+ of [\d,]+/u)?.[0];
+
+/**
+ * An uninstall's working line (walk F161, owner 2026-11-16): what it does now, and how far. "Reading
+ * what to take back" first, then the type in hand and its count, "Uninstalling Products, 1,200 of
+ * 2,046"; before the engine says anything, `fallback`.
+ */
+export function removalLine(detail: string | undefined, fallback: string): string {
+    if (detail === READING_REMOVALS) return READING_REMOVALS;
+    const counted = detail?.match(/^([\d,]+ of [\d,]+) (\w+)$/u);
+    if (counted) return `Uninstalling ${dataTypeLabel(counted[2])}, ${counted[1]}`;
+    const count = countIn(detail);
+    return count ? `Uninstalling ${count}` : fallback;
+}
 
 /**
  * The working data type's second line, the word first and then the count (owner, 2026-11-10, walk
@@ -232,8 +246,7 @@ function uninstallState(source: UninstallSource): Pick<OperationRow, 'status' | 
     if (source.ended === 'done') return { status: 'success', line: 'Uninstalled' };
     // Saving first, before the job: the uninstall waits on the save.
     if (source.savingStage && !source.savedAs) return waiting(true);
-    const count = countIn(source.detail);
-    return { status: 'checking', line: count ? `Uninstalling ${count}` : 'Uninstalling from Commerce' };
+    return { status: 'checking', line: removalLine(source.detail, 'Uninstalling from Commerce') };
 }
 
 /**

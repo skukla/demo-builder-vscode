@@ -17,7 +17,7 @@
  * @module features/data-installer/services/demoBuilderEngine/runPack
  */
 
-import type { KeptRootStep } from '../../types';
+import { type KeptRootStep, READING_REMOVALS } from '../../types';
 import { installAssignments, installAttributeSets, parseAssignmentRows, parseAttributeSetRows } from './attributeSetsKind';
 import { INSTALLS_WITH, installAttributes, parseAttributeRows } from './attributesKind';
 import { ASSIGNMENT_KINDS, CATALOG_KIND, COMPANY_KIND, CUSTOMER_GROUP_KIND, CUSTOMER_KIND } from './b2bKeys';
@@ -45,6 +45,7 @@ import { PRODUCT_EXPORT_KIND, installProductExport, parseProductExport } from '.
 import { GIFT_CARD_KIND, PRODUCT_KINDS } from './productKinds';
 import { installProducts, parseProductRows } from './productsKind';
 import { recordFingerprints } from './recordFingerprints';
+import { removalCounter } from './removalProgress';
 import { type RefusedRemoval, takeBackAll } from './removalRuns';
 import { type KeptContainer, type RemovalAccess, decideRemovals } from './removers';
 import { type KeptThing, type KindPlan, applyRemovals, applyUpdates, keptOf, ownedFrom, planRepeat, rowsToCount } from './repeatInstall';
@@ -343,6 +344,8 @@ export async function removePack(
     if (!record) return { removed: 0, noRecord: true, kept: [], refused: [] };
     const recorder = await openInstallRecord(files, target.projectPath, target.pack, () => record.startedAt);
     const took = jobClock(target.log ?? (() => undefined), `Removal of ${target.pack.name}`);
+    // Walk F161: the first stretch reads Commerce, and says so, before anything is taken back.
+    target.progress?.(READING_REMOVALS);
     // Step 14 item 1: a create that landed unanswered is taken back too; one that never did costs nothing.
     await settlePending(commerce.get, recorder, () => undefined);
     took('settled what an earlier run left half made');
@@ -355,26 +358,13 @@ export async function removePack(
     took(`decided what to take back: ${take.length} objects, ${kept.length} kept`);
     // In the record's order, with as few calls as Commerce allows (`removalRuns.ts`).
     let taken = 0;
-    // Products deleted by the run in hand, counted as each call lands, before the run says them all.
-    let inRun = 0;
-    // How far it has got, for the status (2026-11-06: a removal showed every kind "pending" to its
-    // end): one bare count, as every other line reads (owner, 2026-11-10, walk F131).
-    let shown = -1;
-    const count = () => {
-        if (taken + inRun === shown) return;
-        shown = taken + inRun;
-        target.progress?.(`${shown.toLocaleString('en-US')} of ${take.length.toLocaleString('en-US')}`);
-    };
+    // How far it has got, by data type (walk F161): "1,200 of 2,046 products".
+    const counter = removalCounter(take, target.progress);
     const said = (objects: readonly CreatedObject[]) => {
         taken += objects.length;
-        inRun = 0;
-        count();
+        counter.said(objects);
     };
-    const deleted = (n: number) => {
-        inRun += n;
-        count();
-    };
-    const refused = await takeBackAll({ ...commerce, log: target.log, deleted }, recorder, take, said);
+    const refused = await takeBackAll({ ...commerce, log: target.log, deleted: counter.deleted }, recorder, take, said);
     took('took everything back');
     if (kept.length === 0 && refused.length === 0) await forgetInstallRecord(files, target.projectPath, target.pack);
     const keptRoot = await keptRootStep(commerce.get, kept, record.rootStep?.storeRootId);

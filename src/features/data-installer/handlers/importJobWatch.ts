@@ -14,6 +14,7 @@
  * @module features/data-installer/handlers/importJobWatch
  */
 
+import { removalLine } from '../importSteps';
 import { announceDatapacksChanged } from '../services/datapackChanges';
 import type { DatapackEngine } from '../services/datapackEngine';
 import { nodeRecordFiles } from '../services/demoBuilderEngine/installRecord';
@@ -55,7 +56,9 @@ function datapackStage(
 ): { stage: string; step: string; expectation?: string } {
     // Named for the pack when known, "Installing Frescopa" (owner, 2026-11-16).
     const stage = packStage(record.operation === 'reset' ? OPERATION_STAGES.removingDatapack : OPERATION_STAGES.installingDatapack, name);
-    const step = progressLabel(summarizeProgress(perType ?? {}, record.dataTypes), detail) ?? detailFor(stage) ?? '';
+    const fallback = progressLabel(summarizeProgress(perType ?? {}, record.dataTypes), detail) ?? detailFor(stage) ?? '';
+    // An uninstall says what it does now and how far, as its window does (walk F161).
+    const step = record.operation === 'reset' ? removalLine(detail, fallback) : fallback;
     return { stage, step, expectation: expectationFor(stage) };
 }
 
