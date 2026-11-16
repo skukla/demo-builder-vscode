@@ -155,8 +155,9 @@ describe('what changed', () => {
         ]);
         expect(await heading('Updating Luma')).toBeInTheDocument();
         const shown = shownStep();
-        expect(shown.getByText('Updating Products')).toBeInTheDocument();
-        expect(shown.getByText('24 of 48')).toBeInTheDocument();
+        // Line 1 the job, line 2 the type and its count (owner, 2026-11-16).
+        expect(shown.getByText('Updating in Commerce')).toBeInTheDocument();
+        expect(shown.getByText('Products, 24 of 48')).toBeInTheDocument();
         expect(shown.queryByText(/Installing/u)).toBeNull();
     });
 

@@ -1,109 +1,76 @@
 /**
- * runStage — what a single-project datapack run is doing now, as the centred lines say it (owner,
- * 2026-11-16: one project is the wizard's centred view, moving from step to step; several projects
- * are rows).
+ * runStage — what a run on one project is doing now, as the centred lines say it (owner, 2026-11-16:
+ * "one main message, and each data type a second line"): line 1 the step's job, line 2 the part under
+ * way and how far.
  */
 
-import { runStage } from '@/core/utils/runStage';
+import { runStage, type StepJob } from '@/core/utils/runStage';
 import type { OperationRow } from '@/types/webviewPayloads';
 
-const step = (over: Partial<OperationRow>): OperationRow => ({
-    kind: 'install',
-    label: 'Install Frescopa, main',
-    status: 'pending',
-    ...over,
-});
+const step = (over: Partial<OperationRow>): OperationRow => ({ kind: 'install', label: 'Install Frescopa, main', status: 'pending', ...over });
+
+/** The datapack window's jobs, by step. */
+const JOBS: StepJob = (s) =>
+    ({ install: 'Installing in Commerce', uninstall: 'Uninstalling from Commerce', replacing: 'Uninstalling from Commerce', finishing: 'Verifying Installation' } as Record<string, string>)[s.kind];
 
 describe('runStage', () => {
-    it('names the data type being installed and its count', () => {
+    it('says the job on line 1 and the data type under way with its count on line 2', () => {
         const steps = [
             step({
                 status: 'checking',
                 types: [
                     { kind: 'categories', label: 'Categories', status: 'success' },
-                    {
-                        kind: 'products',
-                        label: 'Products',
-                        status: 'checking',
-                        line: 'Installing 1,200 of 2,046',
-                    },
+                    { kind: 'products', label: 'Products', status: 'checking', line: 'Installing 1,200 of 2,046' },
                 ],
             }),
             step({ kind: 'finishing', label: 'Verify Installation', line: 'Waiting' }),
         ];
 
-        expect(runStage(steps)).toEqual({ label: 'Installing Products', detail: '1,200 of 2,046' });
+        expect(runStage(steps, JOBS)).toEqual({ label: 'Installing in Commerce', detail: 'Products, 1,200 of 2,046' });
     });
 
-    it('says the type alone before it gives a count, and an update says Updating', () => {
-        const types = [
-            {
-                kind: 'categories',
-                label: 'Categories',
-                status: 'checking' as const,
-                line: 'Updating',
-            },
-        ];
+    it('names the type alone before it has a count', () => {
+        const types = [{ kind: 'categories', label: 'Categories', status: 'checking' as const, line: 'Installing' }];
 
-        expect(runStage([step({ status: 'checking', types })])).toEqual({
-            label: 'Updating Categories',
+        expect(runStage([step({ status: 'checking', types })], JOBS)).toEqual({ label: 'Installing in Commerce', detail: 'Categories' });
+    });
+
+    it('keeps a phrase of the type\'s own after its name, as linking options does', () => {
+        const types = [{ kind: 'products', label: 'Products', status: 'checking' as const, line: 'Linking product options 2,044 of 2,046' }];
+
+        expect(runStage([step({ status: 'checking', types })], JOBS)).toEqual({
+            label: 'Installing in Commerce',
+            detail: 'Products: linking product options, 2,044 of 2,046',
         });
     });
 
-    it('keeps a phrase that names its own work, as linking options does', () => {
-        const types = [
-            {
-                kind: 'products',
-                label: 'Products',
-                status: 'checking' as const,
-                line: 'Linking product options 2,044 of 2,046',
-            },
-        ];
+    it('drops from line 2 the verb line 1 already says: an uninstall\'s type and count', () => {
+        const steps = [step({ kind: 'uninstall', label: 'Uninstall Frescopa', status: 'checking', line: 'Uninstalling Products, 12 of 25' })];
 
-        expect(runStage([step({ status: 'checking', types })])).toEqual({
-            label: 'Linking product options',
-            detail: '2,044 of 2,046',
-        });
+        expect(runStage(steps, JOBS)).toEqual({ label: 'Uninstalling from Commerce', detail: 'Products, 12 of 25' });
     });
 
-    it('moves on to the next step as one ends: an uninstall before the install, then verifying', () => {
-        const uninstalling = [
-            step({
-                kind: 'replacing',
-                label: 'Uninstall Luma',
-                status: 'checking',
-                line: 'Uninstalling Products, 40 of 2,046',
-            }),
-            step({ line: 'Waiting' }),
-        ];
-        const verifying = [
-            step({ status: 'success' }),
-            step({
-                kind: 'finishing',
-                label: 'Verify Installation',
-                status: 'checking',
-                line: 'Checking the products',
-            }),
-        ];
+    it('keeps a step line that says something else, under the same line 1', () => {
+        const preparing = [step({ kind: 'uninstall', label: 'Uninstall Frescopa', status: 'checking', line: 'Preparing to uninstall' })];
+        const verifying = [step({ status: 'success' }), step({ kind: 'finishing', label: 'Verify Installation', status: 'checking', line: 'Checking the products' })];
 
-        expect(runStage(uninstalling)).toEqual({
-            label: 'Uninstalling Products',
-            detail: '40 of 2,046',
-        });
-        expect(runStage(verifying)).toEqual({ label: 'Checking the products' });
+        expect(runStage(preparing, JOBS)).toEqual({ label: 'Uninstalling from Commerce', detail: 'Preparing to uninstall' });
+        expect(runStage(verifying, JOBS)).toEqual({ label: 'Verifying Installation', detail: 'Checking the products' });
     });
 
-    // A flat run's rows (a save's data types, Clear Demo Data's parts) often say only the verb or the
-    // count, the row's name saying what.
-    it('gives a line that is only a verb or a count, or no line, the row\'s name', () => {
-        const row = (line?: string): OperationRow => ({ kind: 'products', label: 'Products', status: 'checking', ...(line ? { line } : {}) });
+    it('uses the step\'s own label when the host names no job, and its line on line 2', () => {
+        const row: OperationRow = { kind: 'products', label: 'Products', status: 'checking', line: '40 of 120' };
 
-        expect(runStage([row('Exporting')])).toEqual({ label: 'Exporting Products' });
-        expect(runStage([row('40 of 120')])).toEqual({ label: 'Products', detail: '40 of 120' });
-        expect(runStage([row()])).toEqual({ label: 'Products' });
+        expect(runStage([row])).toEqual({ label: 'Products', detail: '40 of 120' });
+    });
+
+    it('keeps the verb when no name follows it: a save says where it is saving', () => {
+        const steps = [step({ kind: 'save', label: 'Save Your Changes', status: 'checking', line: 'Saving to the library' })];
+
+        expect(runStage(steps, () => 'Saving Your Changes')).toEqual({ label: 'Saving Your Changes', detail: 'Saving to the library' });
     });
 
     it('says Starting before any step is under way', () => {
-        expect(runStage([step({ line: 'Waiting' })])).toEqual({ label: 'Starting' });
+        expect(runStage([step({ line: 'Waiting' })], JOBS)).toEqual({ label: 'Starting' });
     });
 });

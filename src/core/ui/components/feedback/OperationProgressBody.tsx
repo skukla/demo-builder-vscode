@@ -14,7 +14,7 @@
 import React from 'react';
 import { OperationQuestion } from '@/core/ui/components/feedback/OperationQuestion';
 import { RunFoot } from '@/core/ui/components/feedback/RunFoot';
-import { StageRows } from '@/core/ui/components/feedback/StageWait';
+import { StageRows, type WaitLines } from '@/core/ui/components/feedback/StageWait';
 import { StepRows } from '@/core/ui/components/feedback/StepRows';
 import { WorkRow } from '@/core/ui/components/feedback/WorkRow';
 import { WorkRowColumns } from '@/core/ui/components/feedback/WorkRowColumns';
@@ -41,6 +41,17 @@ export interface OperationProgressBodyProps {
 }
 
 /** The one row that changes: a question, a failure, or where the work has got to. */
+/**
+ * The centred lines while a run goes: line 1 its stage (its job), line 2 the part under way, from
+ * its rows when it sends them (owner, 2026-11-16), else its step; line 3 how long it usually takes.
+ */
+function runningLines(progress: OperationProgressPayload | null | undefined): WaitLines {
+    const stage = progress?.stage ? stageLine(progress.stage, progress.position) : undefined;
+    if (progress?.rows?.length) return runStage(progress.rows, () => stage);
+    const label = stage ?? 'Starting';
+    return { label, detail: progress?.step, expectation: progress?.expectation };
+}
+
 export function OperationProgressBody({
     prompt,
     failed,
@@ -71,13 +82,7 @@ export function OperationProgressBody({
     // project's run is the wizard's view, never a checklist (owner, 2026-11-16). Its rows come back
     // only for how it ended (walk F91 asked for more than one line over a save's minutes of reading:
     // the part under way and its count are that line).
-    const lines = progress?.rows?.length
-        ? runStage(progress.rows)
-        : {
-              label: progress?.stage ? stageLine(progress.stage, progress.position) : 'Starting',
-              detail: progress?.step,
-              expectation: progress?.expectation,
-          };
+    const lines = runningLines(progress);
     // Size L, as every other progress display here: M left-aligns and shrinks
     // the text.
     // The room for all three lines is kept and what is there sits level in it, so the spinner does

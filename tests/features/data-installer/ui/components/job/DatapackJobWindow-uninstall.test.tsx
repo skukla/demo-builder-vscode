@@ -390,6 +390,7 @@ describe('Save Your Changes First?', () => {
         push(DATAPACK_OPERATION_ID, 'Saving to the library');
         push('something-else', 'Deploying the mesh');
 
+        expect(shownStep().getByText('Saving Your Changes')).toBeInTheDocument();
         expect(shownStep().getByText('Saving to the library')).toBeInTheDocument();
         expect(screen.queryByText('Deploying the mesh')).toBeNull();
     });

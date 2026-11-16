@@ -26,8 +26,10 @@ function keptRootItem(step: KeptRootStep): SetupChecklistItem {
         title: '',
         where: `Stores > All Stores > ${step.store}`,
         path: ['Stores', 'All Stores', step.store],
-        enter: [step.restore ? `Root Category: ${step.restore}, its root before the datapack` : 'Root Category: the one it had before the datapack'],
-        then: 'Save Store, then uninstall the datapack again.',
+        // The value alone in the pill (owner walk, 2026-11-16: "…, its root before the datapack" ran off the
+        // window's edge); Check is how the uninstall goes on from this window (walk F153).
+        enter: [step.restore ? `Root Category: ${step.restore}` : 'Root Category: the one it had before the datapack'],
+        then: 'Save Store, then click Check.',
         // The result's sentence already says why.
         why: '',
         state: 'open',

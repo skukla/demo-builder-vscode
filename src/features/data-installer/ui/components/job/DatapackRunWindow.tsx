@@ -15,6 +15,7 @@
 
 import React, { useState } from 'react';
 import { type ImportStep, type StepSource, uninstallSteps } from '../../../importSteps';
+import { FINISHING, REPLACING, SAVING } from '../../../runRows';
 import type { ImportJobRecord } from '../../../types';
 import { useImportProgress } from '../../hooks/useImportProgress';
 import type { ResultContent } from '../importResult';
@@ -166,6 +167,20 @@ function uninstallReserve(name: string, uninstalling: Uninstalling, columns: 1 |
     ];
 }
 
+/** Each step's job, line 1 of the centred lines (owner, 2026-11-16): the part under way is line 2. */
+const STEP_JOBS: Record<string, string> = {
+    [SAVING]: 'Saving Your Changes',
+    [REPLACING]: 'Uninstalling from Commerce',
+    uninstall: 'Uninstalling from Commerce',
+    [FINISHING]: 'Verifying Installation',
+};
+
+/** Line 1 for a step: its job; Install's says whether it installs or updates. */
+function stepJob(step: ImportStep): string | undefined {
+    if (step.kind === 'install') return step.label.startsWith('Update') ? 'Updating in Commerce' : 'Installing in Commerce';
+    return STEP_JOBS[step.kind];
+}
+
 /**
  * A run under way: the progress window's centred lines, what it is doing now, how far and the clock,
  * moving from step to step (`runStage`). One project's run is the wizard's centred view, never a
@@ -176,7 +191,7 @@ function Running({ steps, startedAt }: { steps: ImportStep[]; startedAt: number 
     const clock = useRunClock(startedAt);
     return (
         <div className="modal-wait modal-wait-progress">
-            <StageRows size="L" clock={clock} lines={runStage(steps)} />
+            <StageRows size="L" clock={clock} lines={runStage(steps, stepJob)} />
         </div>
     );
 }

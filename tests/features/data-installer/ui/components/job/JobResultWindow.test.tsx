@@ -35,10 +35,12 @@ describe('a removal that left the root a store uses', () => {
         expect(mockRequest).toHaveBeenCalledWith('openAdminPanel', {});
     });
 
-    it('names the root to set as the store\'s root before the datapack', () => {
+    // Owner walk, 2026-11-16: the pill holds the value alone; its explanation ran off the window's edge.
+    it('names the root to set, the store\'s root before the datapack, alone in its pill, then Check', () => {
         render(<JobResultWindow result={KEPT} onClose={jest.fn()} />);
 
-        expect(screen.getByText(/Tailspin Catalog, its root before the datapack/)).toBeInTheDocument();
+        expect(screen.getByText('Root Category: Tailspin Catalog')).toBeInTheDocument();
+        expect(screen.getByText('Save Store, then click Check.')).toBeInTheDocument();
     });
 
     // Walk F153 (owner, 2026-11-16): Check finishes the uninstall once the root is changed.
