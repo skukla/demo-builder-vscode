@@ -141,8 +141,12 @@ async function watchAndRecord(
         });
         await progressWritten;
         await named(result.replacing);
-        // What a repeat install kept goes with the success, for a notification to say too.
-        const kept = result.note ? { note: result.note } : {};
+        // What the SC must still know or do goes with the success, for a notification to say: the
+        // lines left to know when the run names them (an Admin step left), never the whole note, which
+        // the result window and Activity hold (owner walk, 2026-11-16: a notification that read like a
+        // report). Else the note, as before.
+        const toKnow = result.scLines?.length ? result.scLines.join(' ') : result.note;
+        const kept = toKnow ? { note: toKnow } : {};
         await pushOperationProgress(
             result.outcome === 'success'
                 ? { id: DATAPACK_OPERATION_ID, state: 'succeeded', ...kept }

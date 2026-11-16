@@ -299,6 +299,23 @@ describe('the shared progress channel', () => {
         });
     });
 
+    // Owner walk, 2026-11-16: the notice read like the whole report. It says what is left to do.
+    it('closes the notice with only the lines left to know when the run names them', async () => {
+        happyEngine();
+        mockedWatch.mockResolvedValue({
+            outcome: 'success',
+            perType: {},
+            note: 'One step is left in the Admin: set Root Category. Checked 25 products against the datapack: all match.',
+            scLines: ['One step is left in the Admin: set Root Category.'],
+        });
+        const { context } = makeImportHarness();
+
+        await importHandlers['start-datapack-import'](context, PAYLOAD);
+        await new Promise((r) => setTimeout(r, 25));
+
+        expect(pushes()).toContainEqual({ id: DATAPACK_OPERATION_ID, state: 'succeeded', note: 'One step is left in the Admin: set Root Category.' });
+    });
+
     it('closes the notice as failed with the runner reason', async () => {
         happyEngine();
         mockedWatch.mockResolvedValue({
