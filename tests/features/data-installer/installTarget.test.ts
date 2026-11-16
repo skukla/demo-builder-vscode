@@ -1,6 +1,6 @@
 /**
  * The install target: the website and store view a datapack is written into, read from the
- * project's backend config. One rule, read by the build's install (`sampleDataInstall.ts`) and by
+ * project's backend config. One rule, read by the build's install (`projectDatapackInstall.ts`) and by
  * the wizard's Continue gate (`datapackGate.ts`), so the two cannot disagree about whether a
  * creation install will run (step-07 W1).
  */

@@ -21,7 +21,7 @@ import { createMockExtensionContext } from '../../../helpers/extensionContextFak
 
 import { internals } from '../../../helpers/commandInternals';
 import { createMockProject } from '../../../helpers/projectFake';
-jest.mock('@/features/components/services/commerceSecretMigration', () => ({
+jest.mock('@/features/components/services/declaredSecretStore', () => ({
     loadDeclaredSecretFlags: jest.fn(async () => ({})),
     migrateDeclaredSecrets: jest.fn(),
     reKeyProjectSecrets: jest.fn(),

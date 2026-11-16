@@ -279,7 +279,7 @@ describe('spine choke-points', () => {
             'features/eds/services/helix/helixKeyStore.ts',
             'features/eds/services/github/githubTokenService.ts',
             'features/app-builder/services/componentSettingSecrets.ts',
-            'features/components/services/commerceSecretMigration.ts',
+            'features/components/services/declaredSecretStore.ts',
             'features/eds/services/daLive/daLiveTokenMigration.ts',
         ];
 

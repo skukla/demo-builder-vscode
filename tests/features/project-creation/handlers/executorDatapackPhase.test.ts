@@ -1,0 +1,441 @@
+/**
+ * RENAMED from `executor-sampleDataPhase.test.ts` on 2026-09-07 (PL-45): these tests
+ * exercise symbols defined in `executorDatapackPhase.ts`, and the old filename
+ * paired the suite with `executor.ts`, which only re-exports them —
+ * so every kill was credited to a module these tests never constrain.
+ * The import now names the declaring module directly.
+ * The suite's own description follows.
+ */
+
+/**
+ * The build's sample-data phase.
+ *
+ * The wizard records a pack (Sample Data) and a scope (Business Structure), and
+ * the Connection sub-step has already proven the instance is reachable. This
+ * phase is what turns those into an actual import instead of a note the
+ * dashboard reads later.
+ *
+ * What these pin is the phase's CONTRACT with the build, not the import itself —
+ * `projectDatapackInstall` owns that and has its own suite. Two rules matter here:
+ *
+ * 1. **It cannot fail the build.** Whatever the install reports, the phase
+ *    returns normally. A project is complete without a datapack, and by the
+ *    time an import goes wrong the instance is already partly written — failing
+ *    creation would mark a good project bad and leave the mess anyway.
+ * 2. **It reports what happened.** Silence would be worse than failure: the
+ *    user asked for a pack and has no other way to learn it did not land.
+ *
+ * Strict TDD: written BEFORE the phase exists.
+ */
+
+import { executeSampleDataPhase } from '@/features/project-creation/handlers/executorDatapackPhase';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { installSampleData } from '@/features/data-installer/services/projectDatapackInstall';
+import type { Project } from '@/types/base';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import {
+    createStatefulGlobalState,
+    createMockExtensionContext,
+} from '../../../helpers/extensionContextFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+
+import { createMockProject } from '../../../helpers/projectFake';
+jest.mock('@/features/data-installer/services/projectDatapackInstall', () => ({
+    ...jest.requireActual('@/features/data-installer/services/projectDatapackInstall'),
+    installSampleData: jest.fn(),
+}));
+jest.mock('@/features/data-installer/services/arrivingPack', () => ({ settleArrivingPack: jest.fn() }));
+import { settleArrivingPack } from '@/features/data-installer/services/arrivingPack';
+
+const mockedInstall = installSampleData as jest.MockedFunction<typeof installSampleData>;
+const mockedSettle = settleArrivingPack as jest.MockedFunction<typeof settleArrivingPack>;
+
+function makeContext() {
+    return createMockHandlerContext({
+        logger: createMockLogger(),
+        debugLogger: createMockLogger(),
+        sendMessage: jest.fn(),
+        stateManager: createMockStateManager({ saveProject: jest.fn() }),
+        context: createMockExtensionContext({
+            globalState: createStatefulGlobalState().globalState,
+            secrets: createMockSecretStorage().secrets,
+        }),
+    });
+}
+
+function makeProject(): Project {
+    return createMockProject({
+        name: 'demo-1',
+        datapack: { name: 'bodea', version: 'main' },
+        componentSelections: { backend: 'adobe-commerce-accs' },
+        componentConfigs: {
+            'adobe-commerce-accs': {
+                ACCS_WEBSITE_CODE: 'base',
+                ACCS_STORE_VIEW_CODE: 'default',
+            },
+        },
+    });
+}
+
+beforeEach(() => {
+    jest.clearAllMocks();
+    mockedInstall.mockResolvedValue({ ran: true, outcome: 'success', perType: {} });
+    mockedSettle.mockResolvedValue({ changed: false });
+});
+
+// Step 07: before installing, a pack that cannot be read is replaced by the pack it was made
+// from, or by none, and a colleague's own pack is copied in; the build says which and saves it.
+describe('executeSampleDataPhase — the recorded pack, settled first', () => {
+    it('installs the pack the settle step chose, saying why, and saves the project', async () => {
+        mockedSettle.mockImplementation(async (project) => {
+            project.datapack = { name: 'bodea', version: '1.0.0', store: 'installer' };
+            return { changed: true, note: 'The acme pack this project uses can\'t be read.' };
+        });
+        const context = makeContext();
+        const project = makeProject();
+        const progress = jest.fn();
+
+        await executeSampleDataPhase(context, project, progress);
+
+        expect(progress).toHaveBeenNthCalledWith(1, OPERATION_STAGES.installingDatapack.label, 92, 'The acme pack this project uses can\'t be read.');
+        expect(context.stateManager.saveProject).toHaveBeenCalledWith(expect.objectContaining({ datapack: { name: 'bodea', version: '1.0.0', store: 'installer' } }));
+        expect(mockedInstall).toHaveBeenCalledWith(expect.objectContaining({ datapack: { name: 'bodea', version: '1.0.0', store: 'installer' } }), expect.any(Object));
+    });
+
+    it('installs nothing when the settle step found nothing to install', async () => {
+        mockedSettle.mockImplementation(async (project) => {
+            project.datapack = undefined;
+            return { changed: true, note: 'Created without a datapack.' };
+        });
+        const progress = jest.fn();
+
+        await executeSampleDataPhase(makeContext(), makeProject(), progress);
+
+        expect(progress).toHaveBeenCalledWith(OPERATION_STAGES.installingDatapack.label, 92, 'Created without a datapack.');
+        expect(mockedInstall).not.toHaveBeenCalled();
+    });
+
+    it('carries on to the install when the settle step itself blows up', async () => {
+        mockedSettle.mockRejectedValue(new Error('unexpected'));
+
+        await executeSampleDataPhase(makeContext(), makeProject(), jest.fn());
+
+        expect(mockedInstall).toHaveBeenCalled();
+    });
+});
+
+describe('executeSampleDataPhase', () => {
+    it('installs the pack the wizard recorded', async () => {
+        const progress = jest.fn();
+
+        await executeSampleDataPhase(makeContext(), makeProject(), progress);
+
+        expect(mockedInstall).toHaveBeenCalled();
+    });
+
+    /**
+     * The opening line names the pack, because it is the only moment the user is
+     * told WHICH pack the minutes ahead are spent on. Pinned exactly — a phase
+     * that announced an empty label would look identical to one that never ran.
+     */
+    it('opens by naming the pack it is about to install', async () => {
+        const progress = jest.fn();
+
+        await executeSampleDataPhase(makeContext(), makeProject(), progress);
+
+        expect(progress).toHaveBeenNthCalledWith(
+            1,
+            OPERATION_STAGES.installingDatapack.label,
+            92,
+            'Installing bodea'
+        );
+    });
+
+    /** The pack, the scope and the credentials all travel in the project itself. */
+    it('hands the installer the project the build is creating', async () => {
+        const project = makeProject();
+
+        await executeSampleDataPhase(makeContext(), project, jest.fn());
+
+        expect(mockedInstall).toHaveBeenCalledWith(project, expect.any(Object));
+    });
+
+    /** Rule 1 — the whole reason this phase is separate from the ones that throw. */
+    it('does NOT throw when the install fails', async () => {
+        mockedInstall.mockResolvedValue({ ran: false, reason: 'the service refused' });
+
+        await expect(
+            executeSampleDataPhase(makeContext(), makeProject(), jest.fn())
+        ).resolves.toBeUndefined();
+    });
+
+    it('does NOT throw even when the install itself blows up', async () => {
+        mockedInstall.mockRejectedValue(new Error('unexpected'));
+
+        await expect(
+            executeSampleDataPhase(makeContext(), makeProject(), jest.fn())
+        ).resolves.toBeUndefined();
+    });
+
+    /**
+     * Not throwing is only half of it. Reaching this arm means the wiring broke,
+     * which is the case with no other symptom at all — swallowing it silently
+     * would leave the build claiming a pack it never attempted.
+     */
+    it('reports the broken wiring instead of swallowing it', async () => {
+        mockedInstall.mockRejectedValue(new Error('unexpected'));
+        const progress = jest.fn();
+
+        await executeSampleDataPhase(makeContext(), makeProject(), progress);
+
+        expect(progress).toHaveBeenLastCalledWith(
+            OPERATION_STAGES.installingDatapack.label,
+            96,
+            'Datapack could not be installed \u2014 unexpected'
+        );
+    });
+
+    it('reports a thrown non-Error as the value it was', async () => {
+        mockedInstall.mockRejectedValue('the module was not there');
+        const progress = jest.fn();
+
+        await executeSampleDataPhase(makeContext(), makeProject(), progress);
+
+        expect(progress).toHaveBeenLastCalledWith(
+            OPERATION_STAGES.installingDatapack.label,
+            96,
+            'Datapack could not be installed \u2014 the module was not there'
+        );
+    });
+
+    /** Rule 2 — a failure the user never sees is worse than the failure. */
+    it('says so when the import did not land', async () => {
+        mockedInstall.mockResolvedValue({ ran: false, reason: 'the service refused' });
+        const progress = jest.fn();
+
+        await executeSampleDataPhase(makeContext(), makeProject(), progress);
+
+        expect(progress).toHaveBeenLastCalledWith(
+            OPERATION_STAGES.installingDatapack.label,
+            96,
+            'Datapack could not be installed \u2014 the service refused'
+        );
+    });
+
+    /**
+     * The same line with the service silent about why. The fallback is the whole
+     * point: `undefined` in the sentence would read as a bug in us rather than a
+     * refusal by the service.
+     */
+    it('says the import did not start when the service gave no reason', async () => {
+        mockedInstall.mockResolvedValue({ ran: false });
+        const progress = jest.fn();
+
+        await executeSampleDataPhase(makeContext(), makeProject(), progress);
+
+        expect(progress).toHaveBeenLastCalledWith(
+            OPERATION_STAGES.installingDatapack.label,
+            96,
+            'Datapack could not be installed \u2014 the import did not start'
+        );
+    });
+
+    /**
+     * Skipped is not failed — nothing was wrong and nothing was written. Saying
+     * "could not be installed" for a pack that had nothing to install would send
+     * the user to the dashboard to retry a job that will skip again.
+     */
+    it('distinguishes a skipped pack from a failed one', async () => {
+        mockedInstall.mockResolvedValue({
+            ran: false,
+            skipped: true,
+            reason: 'this instance already holds every type',
+        });
+        const progress = jest.fn();
+
+        await executeSampleDataPhase(makeContext(), makeProject(), progress);
+
+        expect(progress).toHaveBeenLastCalledWith(
+            OPERATION_STAGES.installingDatapack.label,
+            96,
+            'Skipped datapack \u2014 this instance already holds every type'
+        );
+    });
+
+    it('says nothing to install when a skip carries no reason', async () => {
+        mockedInstall.mockResolvedValue({ ran: false, skipped: true });
+        const progress = jest.fn();
+
+        await executeSampleDataPhase(makeContext(), makeProject(), progress);
+
+        expect(progress).toHaveBeenLastCalledWith(
+            OPERATION_STAGES.installingDatapack.label,
+            96,
+            'Skipped datapack \u2014 nothing to install'
+        );
+    });
+
+    /** The clean outcome, named so the three failure lines above stay distinct. */
+    it('names the pack it installed when everything landed', async () => {
+        const progress = jest.fn();
+
+        await executeSampleDataPhase(makeContext(), makeProject(), progress);
+
+        expect(progress).toHaveBeenLastCalledWith(OPERATION_STAGES.installingDatapack.label, 96, 'Installed bodea');
+    });
+
+    it('says so when only some types landed', async () => {
+        mockedInstall.mockResolvedValue({
+            ran: true,
+            outcome: 'partial',
+            perType: { categories: 'success', products: 'error' },
+        });
+        const progress = jest.fn();
+
+        await executeSampleDataPhase(makeContext(), makeProject(), progress);
+
+        expect(progress).toHaveBeenLastCalledWith(
+            OPERATION_STAGES.installingDatapack.label,
+            96,
+            'bodea was partly installed. Install it again from the dashboard.'
+        );
+    });
+
+    /**
+     * The three-row contract, driven through the REAL `buildSampleDataDeps`.
+     *
+     * `installSampleData` is mocked, so nothing here calls the callback by
+     * itself — the deps object the installer was handed is taken back out of the
+     * mock and its `onProgress` invoked, which is the only way this callback is
+     * ever reached in production too. Asserting the arguments the progress line
+     * receives is the point: the count belongs in the title and the types being
+     * written belong in the detail row, and a callback that reported neither
+     * would leave the bar frozen at "Installing bodea" for the whole import.
+     */
+    describe('the live progress line', () => {
+        async function driveProgress(
+            perType: Record<string, 'pending' | 'processing' | 'success' | 'error'>
+        ): Promise<jest.Mock> {
+            const progress = jest.fn();
+            await executeSampleDataPhase(makeContext(), makeProject(), progress);
+            const deps = mockedInstall.mock.calls[0]?.[1];
+            deps?.onProgress?.(perType);
+            return progress;
+        }
+
+        // The step is the step; the count is how far it has got, on the line under it
+        // (progress vocabulary, owner 2026-10-16): never "(1/3)" in the step's place.
+        it('keeps the step and puts the count and the types in flight on the line under it', async () => {
+            const progress = await driveProgress({
+                categories: 'success',
+                products: 'processing',
+                attribute_sets: 'processing',
+            });
+
+            expect(progress).toHaveBeenCalledWith(
+                OPERATION_STAGES.installingDatapack.label,
+                94,
+                '1 of 3 data types: Products, Attribute Sets'
+            );
+        });
+
+        /**
+         * Between types nothing is processing: the count alone holds the line until
+         * the next type starts.
+         */
+        it('shows the count alone when no type is in flight', async () => {
+            const progress = await driveProgress({ categories: 'success', products: 'pending' });
+
+            expect(progress).toHaveBeenCalledWith(OPERATION_STAGES.installingDatapack.label, 94, '1 of 2 data types');
+        });
+
+        /** Errors are finished work too — a failed type must not stall the count. */
+        it('counts a failed type as done', async () => {
+            const progress = await driveProgress({ categories: 'error', products: 'processing' });
+
+            expect(progress).toHaveBeenCalledWith(
+                OPERATION_STAGES.installingDatapack.label,
+                94,
+                '1 of 2 data types: Products'
+            );
+        });
+    });
+
+    /**
+     * Step-04 S7: a creation install that did not end in success is recorded on the project, so
+     * the card can say "Install failed" instead of wearing the installed check. Asserted on the
+     * project the build SAVES, which is the only place the record reaches anyone.
+     */
+    describe('the failed install, recorded on the project', () => {
+        const recorded = (context: ReturnType<typeof makeContext>) =>
+            jest.mocked(context.stateManager.saveProject).mock.calls.map(([saved]) => saved.datapackInstallFailure);
+
+        it('records a run that never started, with its reason', async () => {
+            mockedInstall.mockResolvedValue({ ran: false, reason: 'the service refused' });
+            const context = makeContext();
+
+            await executeSampleDataPhase(context, makeProject(), jest.fn());
+
+            expect(recorded(context)).toStrictEqual([
+                { name: 'bodea', version: 'main', reason: 'the service refused', at: expect.any(String), retries: 0 },
+            ]);
+        });
+
+        // P4-Q11: partly installed counts as failed, with the run's reason.
+        it('records a partly installed run, with the run\'s reason', async () => {
+            mockedInstall.mockResolvedValue({ ran: true, outcome: 'partial', perType: {}, reason: 'Products refused.' });
+            const context = makeContext();
+
+            await executeSampleDataPhase(context, makeProject(), jest.fn());
+
+            expect(recorded(context)).toStrictEqual([
+                { name: 'bodea', version: 'main', reason: 'Products refused.', at: expect.any(String), retries: 0 },
+            ]);
+        });
+
+        it('records a run whose wiring blew up, with the error', async () => {
+            mockedInstall.mockRejectedValue(new Error('unexpected'));
+            const context = makeContext();
+
+            await executeSampleDataPhase(context, makeProject(), jest.fn());
+
+            expect(recorded(context)).toStrictEqual([
+                { name: 'bodea', version: 'main', reason: 'unexpected', at: expect.any(String), retries: 0 },
+            ]);
+        });
+
+        it('records nothing for a skipped run or a success', async () => {
+            const context = makeContext();
+            mockedInstall.mockResolvedValueOnce({ ran: false, skipped: true, reason: 'nothing stored' });
+
+            await executeSampleDataPhase(context, makeProject(), jest.fn());
+            await executeSampleDataPhase(context, makeProject(), jest.fn());
+
+            expect(context.stateManager.saveProject).not.toHaveBeenCalled();
+        });
+
+        // An Edit re-running the install over a failed one.
+        it('clears an earlier failure of the same datapack once it installs', async () => {
+            const context = makeContext();
+            const project = makeProject();
+            project.datapackInstallFailure = { name: 'bodea', version: 'main', reason: 'earlier', at: '2026-11-12T10:00:00.000Z', retries: 0 };
+
+            await executeSampleDataPhase(context, project, jest.fn());
+
+            expect(recorded(context)).toStrictEqual([undefined]);
+        });
+    });
+
+    /** A project with no pack must cost the build nothing at all. */
+    it('stays silent for a project that chose no sample data', async () => {
+        const progress = jest.fn();
+        const project: Project = { ...makeProject(), datapack: undefined };
+
+        await executeSampleDataPhase(makeContext(), project, progress);
+
+        expect(mockedInstall).not.toHaveBeenCalled();
+        expect(progress).not.toHaveBeenCalled();
+    });
+});

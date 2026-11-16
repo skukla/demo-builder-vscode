@@ -14,10 +14,10 @@ import { nodeRecordFiles, readInstallRecord } from '../services/demoBuilderEngin
 import { kindsOnRecord } from '../services/demoBuilderEngine/runPack';
 import type { ImportRequest, ImportTarget } from '../services/importRequest';
 import type { ImportJobRecord } from '../types';
+import { type Replacement, settleReplacement, withSavedNote } from './datapackSwitch';
 import { type DatapackWriteAccess, resolveDatapackWriteAccess } from './datapackWriteGate';
 import { waitForJob, waitMsOf } from './importJobWait';
 import { JOB_KEY, runAndWatch } from './importJobWatch';
-import { type Replacement, settleReplacement, withSavedNote } from './importReplacement';
 import { SERVICE_REMOVAL_UNAVAILABLE, libraryReads } from './libraryReads';
 import { TransientStateManager } from '@/core/state/transientStateManager';
 import { orgGuard } from '@/features/authentication/services/projectOrgGuard';

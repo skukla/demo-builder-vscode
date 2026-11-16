@@ -39,15 +39,15 @@ jest.mock('@/features/eds/services/reset/demoSourceCheck', () => ({
     checkDemoSource: jest.fn(async () => ({ reachable: true, checked: true, message: '', contentReachable: false })),
 }));
 // The datapack's removal is its own suite's (sampleDataRemovalChanges); here only what it is handed.
-jest.mock('@/features/eds/services/reset/edsResetSampleData', () => ({
-    ...jest.requireActual('@/features/eds/services/reset/edsResetSampleData'),
+jest.mock('@/features/eds/services/reset/edsResetDatapack', () => ({
+    ...jest.requireActual('@/features/eds/services/reset/edsResetDatapack'),
     removeProjectSampleDataOutcome: jest.fn(async () => ({})),
 }));
 const mockReport = jest.fn();
 
 import { runningWork } from '@/core/state/projectWorkRunning';
 import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
-import { removeProjectSampleDataOutcome } from '@/features/eds/services/reset/edsResetSampleData';
+import { removeProjectSampleDataOutcome } from '@/features/eds/services/reset/edsResetDatapack';
 import { FailedAfterDatapack } from '@/features/eds/services/reset/resetDatapackStep';
 import { CONTENT_KEPT_LINE } from '@/features/eds/services/reset/demoSourceCheck';
 import { makeAddedDemo } from '../../../../helpers/demoPackageFixtures';

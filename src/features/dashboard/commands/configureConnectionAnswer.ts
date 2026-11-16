@@ -25,7 +25,7 @@ import { heldDisplayName } from '@/features/data-installer/handlers/libraryWrite
 import {
     askSaveAsNameWith,
     removeProjectSampleDataOutcome,
-} from '@/features/eds/services/reset/edsResetSampleData';
+} from '@/features/eds/services/reset/edsResetDatapack';
 import type { DatapackRemoval } from '@/features/eds/services/reset/resetDatapackStep';
 import type { Project } from '@/types/base';
 import type { ProjectDatapack } from '@/types/datapack';

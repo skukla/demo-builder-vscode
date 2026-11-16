@@ -50,7 +50,7 @@ import { openCommerceAdmin } from '@/core/utils/commerceAdmin';
 import { DEMO_DATA_CLEAR_OPERATION_ID } from '@/core/utils/operationIds';
 import { narrateOutcomeToModal } from '@/core/vscode/operationProgress';
 import { orgGuard } from '@/features/authentication/services/projectOrgGuard';
-import { removeProjectSampleDataOutcome } from '@/features/eds/services/reset/edsResetSampleData';
+import { removeProjectSampleDataOutcome } from '@/features/eds/services/reset/edsResetDatapack';
 import type { ClearInstanceRequest, DemoDataRequest } from '@/types/demoDataWipe';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';

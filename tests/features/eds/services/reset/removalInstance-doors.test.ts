@@ -11,7 +11,7 @@
  * the screen's Uninstall and the agent's `uninstall_datapack` are `reset-datapack`.
  */
 
-jest.mock('@/features/data-installer/services/sampleDataInstallDeps', () => ({
+jest.mock('@/features/data-installer/services/projectDatapackInstallDeps', () => ({
     buildSampleDataDeps: jest.fn(),
 }));
 jest.mock('@/features/data-installer/services/buildDatapackEngine', () => ({
@@ -35,9 +35,9 @@ import {
     writeInstallRecord,
 } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import { PACK_NAMES_KEY } from '@/features/data-installer/services/packNames';
-import type { SampleDataDeps } from '@/features/data-installer/services/sampleDataInstall';
-import { buildSampleDataDeps } from '@/features/data-installer/services/sampleDataInstallDeps';
-import { removeProjectSampleDataOutcome } from '@/features/eds/services/reset/edsResetSampleData';
+import type { SampleDataDeps } from '@/features/data-installer/services/projectDatapackInstall';
+import { buildSampleDataDeps } from '@/features/data-installer/services/projectDatapackInstallDeps';
+import { removeProjectSampleDataOutcome } from '@/features/eds/services/reset/edsResetDatapack';
 import { removeAnsweredDatapack } from '@/features/eds/services/reset/resetDatapackStep';
 import { removeDataBeforeDelete } from '@/features/projects-dashboard/services/datapackDataRemoval';
 import type { Project } from '@/types/base';

@@ -14,8 +14,8 @@ jest.mock('@/features/lifecycle/services/projectResetService', () => ({
 jest.mock('@/features/eds/services/reset/edsResetService', () => ({
     executeEdsReset: jest.fn(),
 }));
-jest.mock('@/features/eds/services/reset/edsResetSampleData', () => ({
-    ...jest.requireActual('@/features/eds/services/reset/edsResetSampleData'),
+jest.mock('@/features/eds/services/reset/edsResetDatapack', () => ({
+    ...jest.requireActual('@/features/eds/services/reset/edsResetDatapack'),
     removeProjectSampleDataOutcome: jest.fn(),
 }));
 jest.mock('@/features/eds/services/reset/edsResetParams', () => ({
@@ -46,7 +46,7 @@ jest.mock('@/features/ai/server/adobeTargetStore', () => ({
 }));
 
 import { extractResetParams } from '@/features/eds/services/reset/edsResetParams';
-import { removeProjectSampleDataOutcome } from '@/features/eds/services/reset/edsResetSampleData';
+import { removeProjectSampleDataOutcome } from '@/features/eds/services/reset/edsResetDatapack';
 import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
 import { FailedAfterDatapack } from '@/features/eds/services/reset/resetDatapackStep';
 import { executeProjectReset } from '@/features/lifecycle/services/projectResetService';

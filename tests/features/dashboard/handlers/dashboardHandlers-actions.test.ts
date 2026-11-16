@@ -54,8 +54,8 @@ jest.mock(
     { virtual: true }
 );
 
-// Mock projectStateSync (detectFrontendChanges)
-jest.mock('@/core/state/projectStateSync');
+// Mock frontendEnvDrift (detectFrontendChanges)
+jest.mock('@/core/state/frontendEnvDrift');
 
 // Mock authentication
 

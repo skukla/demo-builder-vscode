@@ -10,11 +10,11 @@ jest.mock('@/features/data-installer/handlers/removalChanges', () => ({
     contextForProject: jest.fn((context: unknown) => context),
     settleChangesBeforeRemoval: jest.fn(),
 }));
-jest.mock('@/features/data-installer/services/sampleDataInstall', () => ({
-    ...jest.requireActual('@/features/data-installer/services/sampleDataInstall'),
+jest.mock('@/features/data-installer/services/projectDatapackInstall', () => ({
+    ...jest.requireActual('@/features/data-installer/services/projectDatapackInstall'),
     removeSampleData: jest.fn(),
 }));
-jest.mock('@/features/data-installer/services/sampleDataInstallDeps', () => ({
+jest.mock('@/features/data-installer/services/projectDatapackInstallDeps', () => ({
     buildSampleDataDeps: jest.fn(() => ({})),
 }));
 
@@ -25,7 +25,7 @@ import {
 } from '@/features/data-installer/handlers/demoDataHandlers';
 import { settleChangesBeforeRemoval } from '@/features/data-installer/handlers/removalChanges';
 import { installRecordPath } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
-import { removeSampleData } from '@/features/data-installer/services/sampleDataInstall';
+import { removeSampleData } from '@/features/data-installer/services/projectDatapackInstall';
 import type { ClearCheck } from '@/types/demoDataWipe';
 import type { HandlerContext } from '@/types/handlers';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';

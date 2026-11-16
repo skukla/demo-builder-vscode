@@ -107,7 +107,8 @@ export function mirroringSuites(modulePath) {
  *
  * The strict mirror is right for a same-named neighbour: twelve basenames under src/
  * name two different modules, and `tests/features/app-builder/services/
- * appBuilderComponentMigration.test.ts` tests the app-builder one, not core/state's.
+ * appBuilderComponentMigration.test.ts` tested the app-builder one, not core/state's
+ * (until the app-builder module was renamed on 2026-11-15).
  * It is wrong for a suite that simply lives in the wrong folder: the four
  * `useSelectionStep-*.test.tsx` under `tests/features/authentication/ui/hooks` test
  * `core/ui/hooks/useSelectionStep.ts` — there is no authentication module of that

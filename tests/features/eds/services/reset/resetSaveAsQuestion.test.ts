@@ -10,7 +10,7 @@ jest.mock('@/core/vscode/operationPrompt', () => ({
 }));
 
 import { askForDetailsDuringOperation, modalIsAsking } from '@/core/vscode/operationPrompt';
-import { askSaveAsNameWith } from '@/features/eds/services/reset/edsResetSampleData';
+import { askSaveAsNameWith } from '@/features/eds/services/reset/edsResetDatapack';
 
 const mockedAsk = askForDetailsDuringOperation as jest.MockedFunction<typeof askForDetailsDuringOperation>;
 const mockedInWindow = modalIsAsking as jest.MockedFunction<typeof modalIsAsking>;

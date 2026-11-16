@@ -7,7 +7,7 @@
  */
 
 const mockRemove = jest.fn();
-jest.mock('@/features/eds/services/reset/edsResetSampleData', () => ({
+jest.mock('@/features/eds/services/reset/edsResetDatapack', () => ({
     askSaveAsNameWith: jest.fn(() => jest.fn()),
     removeProjectSampleDataOutcome: (...args: unknown[]) => mockRemove(...args),
 }));

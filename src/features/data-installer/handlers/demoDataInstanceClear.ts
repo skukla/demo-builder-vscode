@@ -57,7 +57,7 @@ import { andList } from '@/core/utils/andList';
 import { DEMO_DATA_CLEAR_OPERATION_ID } from '@/core/utils/operationIds';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { withOperationProgress } from '@/core/vscode/withOperationProgress';
-import { forgetRemovedPack } from '@/features/eds/services/reset/edsResetSampleData';
+import { forgetRemovedPack } from '@/features/eds/services/reset/edsResetDatapack';
 import type { Project } from '@/types/base';
 import type { ClearInstanceRequest } from '@/types/demoDataWipe';
 import { ErrorCode } from '@/types/errorCodes';

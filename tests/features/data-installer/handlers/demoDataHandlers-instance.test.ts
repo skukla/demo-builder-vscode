@@ -24,7 +24,7 @@ import { shownClearFor } from '@/features/data-installer/services/demoDataWipe/s
 import {
     forgetRemovedPack,
     type SaveAsAnswer,
-} from '@/features/eds/services/reset/edsResetSampleData';
+} from '@/features/eds/services/reset/edsResetDatapack';
 import type { DatapackRemoval } from '@/features/eds/services/reset/resetDatapackStep';
 import type { Project } from '@/types/base';
 import type {

@@ -26,7 +26,7 @@ import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
 import { askDuringOperation, modalIsAsking } from '@/core/vscode/operationPrompt';
 import { withOperationProgress, type ReportStage } from '@/core/vscode/withOperationProgress';
-import { moveAppBuilderComponentsToDestination } from '@/features/app-builder/services/appBuilderComponentMigration';
+import { moveAppBuilderComponentsToDestination } from '@/features/app-builder/services/appBuilderComponentRelocation';
 import { ownWorkspaceGroups } from '@/features/app-builder/services/componentRelocation';
 import {
     sendAppBuilderComponentStatusUpdate,

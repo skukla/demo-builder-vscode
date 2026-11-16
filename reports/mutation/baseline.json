@@ -1044,7 +1044,7 @@
             "openGaps": 0,
             "recorded": "2026-10-09T22:54:40.069Z"
         },
-        "src/core/state/projectStateSync.ts": {
+        "src/core/state/frontendEnvDrift.ts": {
             "score": 100,
             "killed": 46,
             "survived": 0,
@@ -2929,7 +2929,7 @@
             "openGaps": 0,
             "recorded": "2026-10-10T20:50:56.232Z"
         },
-        "src/features/app-builder/services/appBuilderComponentMigration.ts": {
+        "src/features/app-builder/services/appBuilderComponentRelocation.ts": {
             "score": 94.57,
             "killed": 122,
             "survived": 7,
@@ -3706,7 +3706,7 @@
             "openGaps": 0,
             "recorded": "2026-10-10T01:31:37.447Z"
         },
-        "src/features/components/services/commerceSecretMigration.ts": {
+        "src/features/components/services/declaredSecretStore.ts": {
             "score": 91.84,
             "killed": 135,
             "survived": 9,
@@ -5068,23 +5068,6 @@
             "openGaps": 0,
             "recorded": "2026-10-10T21:48:43.903Z"
         },
-        "src/features/dashboard/ui/hooks/useFieldSyncWithBackend.ts": {
-            "score": 90.74,
-            "killed": 49,
-            "survived": 4,
-            "noCoverage": 1,
-            "timeout": 0,
-            "survivorCategories": {
-                "branch": 3,
-                "other": 1
-            },
-            "uncoveredCategories": {
-                "string": 1
-            },
-            "highValueSurvivors": 3,
-            "equivalent": 4,
-            "openGaps": 0
-        },
         "src/features/dashboard/ui/hooks/useInlineRename.ts": {
             "score": 92.86,
             "killed": 13,
@@ -5173,7 +5156,7 @@
             "openGaps": 0,
             "recorded": "2026-10-10T01:19:36.333Z"
         },
-        "src/features/data-installer/services/sampleDataInstall.ts": {
+        "src/features/data-installer/services/projectDatapackInstall.ts": {
             "score": 92.79,
             "killed": 103,
             "survived": 7,
@@ -5189,7 +5172,7 @@
             "equivalent": 0,
             "openGaps": 0
         },
-        "src/features/data-installer/services/sampleDataInstallDeps.ts": {
+        "src/features/data-installer/services/projectDatapackInstallDeps.ts": {
             "score": 94.29,
             "killed": 66,
             "survived": 3,
@@ -8534,7 +8517,7 @@
             "openGaps": 0,
             "recorded": "2026-10-09T23:15:07.545Z"
         },
-        "src/features/project-creation/ui/steps/SampleDataStep.tsx": {
+        "src/features/project-creation/ui/steps/DatapackStep.tsx": {
             "score": 95.87,
             "killed": 116,
             "survived": 3,
@@ -9380,7 +9363,7 @@
             "openGaps": 0,
             "recorded": "2026-10-10T01:45:21.848Z"
         },
-        "src/features/project-creation/handlers/executorSampleDataPhase.ts": {
+        "src/features/project-creation/handlers/executorDatapackPhase.ts": {
             "score": 97.3,
             "killed": 36,
             "survived": 1,
@@ -10089,7 +10072,7 @@
             "equivalent": 5,
             "openGaps": 0
         },
-        "src/features/eds/services/reset/edsResetSampleData.ts": {
+        "src/features/eds/services/reset/edsResetDatapack.ts": {
             "score": 90,
             "killed": 54,
             "survived": 6,

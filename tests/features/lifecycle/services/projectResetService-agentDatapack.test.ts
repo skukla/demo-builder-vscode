@@ -8,8 +8,8 @@
  * The removal is mocked at its module, so what it is HANDED is asserted.
  */
 
-jest.mock('@/features/eds/services/reset/edsResetSampleData', () => ({
-    ...jest.requireActual('@/features/eds/services/reset/edsResetSampleData'),
+jest.mock('@/features/eds/services/reset/edsResetDatapack', () => ({
+    ...jest.requireActual('@/features/eds/services/reset/edsResetDatapack'),
     removeProjectSampleDataOutcome: jest.fn(),
 }));
 
@@ -24,7 +24,7 @@ import {
     mockRm,
     progressReport,
 } from './projectResetService-answered.testUtils';
-import { removeProjectSampleDataOutcome } from '@/features/eds/services/reset/edsResetSampleData';
+import { removeProjectSampleDataOutcome } from '@/features/eds/services/reset/edsResetDatapack';
 import { REMOVAL_NO_TARGET } from '../../../helpers/datapackRemovalFixtures';
 import {
     FailedAfterDatapack,

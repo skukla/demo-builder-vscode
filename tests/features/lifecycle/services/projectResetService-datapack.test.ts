@@ -9,8 +9,8 @@
  * the reset saves (R1 clears its datapack on that object), and the batch's answer as given.
  */
 
-jest.mock('@/features/eds/services/reset/edsResetSampleData', () => ({
-    ...jest.requireActual('@/features/eds/services/reset/edsResetSampleData'),
+jest.mock('@/features/eds/services/reset/edsResetDatapack', () => ({
+    ...jest.requireActual('@/features/eds/services/reset/edsResetDatapack'),
     removeProjectSampleDataOutcome: jest.fn(),
 }));
 
@@ -27,7 +27,7 @@ import {
     progressReport,
     runProjectResetAnswered,
 } from './projectResetService-answered.testUtils';
-import { removeProjectSampleDataOutcome } from '@/features/eds/services/reset/edsResetSampleData';
+import { removeProjectSampleDataOutcome } from '@/features/eds/services/reset/edsResetDatapack';
 import { FailedAfterDatapack } from '@/features/eds/services/reset/resetDatapackStep';
 import { LEFT_NOTE, REMOVAL_LEFT_IN_STORE, REMOVAL_NO_TARGET } from '../../../helpers/datapackRemovalFixtures';
 import type { Project } from '@/types/base';

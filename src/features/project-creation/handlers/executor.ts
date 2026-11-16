@@ -9,7 +9,7 @@
  * - Phase 3 mesh — `executorMeshPhase`
  * - Phase 3b App Builder integrations — `executorAppBuilderPhase`
  * - EDS metadata / config sync / content — `executorEdsPhase`
- * - Phase 5c sample data — `executorSampleDataPhase`
+ * - Phase 5c sample data — `executorDatapackPhase`
  *
  * This file keeps `buildInitialProject` and `executeProjectCreation`, and
  * re-exports the phase modules' public functions so every existing
@@ -24,6 +24,7 @@ import {
     ensureWorkspaceRuntimeReady,
 } from './executorAppBuilderPhase';
 import { loadComponentDefinitions } from './executorComponentLoading';
+import { executeSampleDataPhase } from './executorDatapackPhase';
 import { finishEditWithoutRebuild } from './executorEditApply';
 import { settleConnectionBeforeRebuild } from './executorEditConnection';
 import {
@@ -41,15 +42,14 @@ import {
     cleanupOrphanedDirectory,
     refuseSecondErpIntegration,
 } from './executorPreflight';
-import { executeSampleDataPhase } from './executorSampleDataPhase';
 import { ProgressTracker } from './shared';
 import { COMPONENT_IDS } from '@/core/constants';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { whileRunning } from '@/core/state/projectWorkRunning';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
-import { migrateDeclaredSecrets } from '@/features/components/services/commerceSecretMigration';
 import { componentRegistryFrom } from '@/features/components/services/componentRegistryAccess';
+import { migrateDeclaredSecrets } from '@/features/components/services/declaredSecretStore';
 import { generateAIContextFiles } from '@/features/project-creation/services/aiBundle/aiBundleService';
 import { executeCatalogMenuPhase } from '@/features/project-creation/services/catalogMenuPhase';
 import { executeCatalogPrewarmPhase } from '@/features/project-creation/services/catalogPrewarmPhase';
@@ -495,4 +495,4 @@ async function createOrRebuild(
 // ============================================================================
 export { ensureMeshPreflightAuth, deployFreshMesh } from './executorMeshPhase';
 export { executeAppBuilderIntegrationsPhase } from './executorAppBuilderPhase';
-export { executeSampleDataPhase } from './executorSampleDataPhase';
+export { executeSampleDataPhase } from './executorDatapackPhase';

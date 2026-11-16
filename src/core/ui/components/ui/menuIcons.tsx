@@ -76,7 +76,7 @@ const MENU_ICONS: Record<string, React.ReactElement> = {
     downtime: <Clock size="S" />,
     /** Keep a copy as a file the SC chooses where to put (a datapack's Save as file). */
     saveFile: <SaveFloppy size="S" />,
-    /** Open a file the SC picks (a datapack's Load from file). */
+    /** Open a file the SC picks (a datapack's Add from File). */
     openFile: <FolderOpen size="S" />,
     /** Take what is in a store into something kept (Save store changes to this pack). */
     capture: <DataUpload size="S" />,

@@ -9,7 +9,7 @@ import { type CreatedObject, type InstallRecord, installRecordPath } from '@/fea
 import type { ClearCheck } from '@/types/demoDataWipe';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import type { ReportStage } from '@/core/vscode/withOperationProgress';
-import type { SaveAsAnswer } from '@/features/eds/services/reset/edsResetSampleData';
+import type { SaveAsAnswer } from '@/features/eds/services/reset/edsResetDatapack';
 import type { DatapackRemoval } from '@/features/eds/services/reset/resetDatapackStep';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';

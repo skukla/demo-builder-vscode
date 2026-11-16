@@ -6,7 +6,7 @@
  */
 
 import { type Dispatch, useEffect } from 'react';
-import { replacedName } from '../../replaceWords';
+import { replacedName } from '../../switchWords';
 import type { JobEvent } from '../components/job/datapackJob';
 import type { JobReadsArgs, useJobReads } from './useJobReads';
 import type { useJobStart } from './useJobStart';

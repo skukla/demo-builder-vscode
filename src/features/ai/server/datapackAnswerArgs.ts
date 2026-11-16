@@ -11,7 +11,7 @@
 import {
     beginSampleDataRemovalCheck,
     type SaveAsAnswer,
-} from '@/features/eds/services/reset/edsResetSampleData';
+} from '@/features/eds/services/reset/edsResetDatapack';
 import {
     datapackStepLine,
     savedIntoLine,

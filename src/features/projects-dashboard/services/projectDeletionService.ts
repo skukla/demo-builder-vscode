@@ -14,7 +14,7 @@ import { deleteProjectFiles } from './projectFilesDeletion';
 import { numberedSteps } from '@/core/utils/numberedSteps';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import type { ReportStage } from '@/core/vscode/withOperationProgress';
-import type { SaveAsAnswering } from '@/features/eds/services/reset/edsResetSampleData';
+import type { SaveAsAnswering } from '@/features/eds/services/reset/edsResetDatapack';
 import { extractEdsMetadata, type CleanupResultItem } from '@/features/eds/services/resourceCleanupHelpers';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';

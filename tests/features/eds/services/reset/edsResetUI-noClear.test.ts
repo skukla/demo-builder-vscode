@@ -33,11 +33,11 @@ jest.mock('@/features/eds/services/reset/edsResetParams', () => ({
             params: { repoOwner: 'test-owner', repoName: 'test-repo' },
         }),
 }));
-jest.mock('@/features/data-installer/services/sampleDataInstall', () => ({
-    ...jest.requireActual('@/features/data-installer/services/sampleDataInstall'),
+jest.mock('@/features/data-installer/services/projectDatapackInstall', () => ({
+    ...jest.requireActual('@/features/data-installer/services/projectDatapackInstall'),
     removeSampleData: jest.fn(),
 }));
-jest.mock('@/features/data-installer/services/sampleDataInstallDeps', () => ({
+jest.mock('@/features/data-installer/services/projectDatapackInstallDeps', () => ({
     buildSampleDataDeps: jest.fn(() => ({})),
 }));
 // The wipe's store access and reads: each answers as though the store held things to clear.
@@ -66,7 +66,7 @@ jest.mock('@/features/data-installer/services/demoDataWipe/wipeRun', () => ({
 }));
 
 import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
-import { removeSampleData } from '@/features/data-installer/services/sampleDataInstall';
+import { removeSampleData } from '@/features/data-installer/services/projectDatapackInstall';
 import { planWipe } from '@/features/data-installer/services/demoDataWipe/wipePlan';
 import { clearShown } from '@/features/data-installer/services/demoDataWipe/wipeRun';
 import { createMeshDepsFake } from '../../../../helpers/meshDepsFake';

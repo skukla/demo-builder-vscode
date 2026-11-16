@@ -4,8 +4,8 @@
  * Shapes from `datapackZipHandlers.ts` (`open-datapack-zip`, `load-datapack-zip`).
  */
 
-import type { LoadOutcome } from '@/features/data-installer/ui/components/LoadDatapackFileModal';
-import type { OpenedFile } from '@/features/data-installer/ui/components/LoadFileForm';
+import type { LoadOutcome } from '@/features/data-installer/ui/components/AddDatapackFileModal';
+import type { OpenedFile } from '@/features/data-installer/ui/components/AddFileForm';
 
 /** A file holding two data types. */
 export const OPENED_FILE: OpenedFile = {

@@ -77,7 +77,7 @@ jest.mock('@/features/project-creation/handlers/executorEditApply', () => ({
     finishEditWithoutRebuild: jest.fn().mockResolvedValue(false),
 }));
 
-jest.mock('@/features/components/services/commerceSecretMigration', () => ({
+jest.mock('@/features/components/services/declaredSecretStore', () => ({
     migrateDeclaredSecrets: jest
         .fn()
         .mockResolvedValue({ sanitizedConfigs: {}, retained: [] }),
@@ -125,7 +125,7 @@ import * as fsPromises from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import { reportPhase } from '@/core/utils/agentPhaseChannel';
-import { migrateDeclaredSecrets } from '@/features/components/services/commerceSecretMigration';
+import { migrateDeclaredSecrets } from '@/features/components/services/declaredSecretStore';
 import { syncEdsConfigToRemote } from '@/features/project-creation/handlers/executorEdsPhase';
 import { executeCatalogMenuPhase } from '@/features/project-creation/services/catalogMenuPhase';
 import { generateAIContextFiles } from '@/features/project-creation/services/aiBundle/aiBundleService';

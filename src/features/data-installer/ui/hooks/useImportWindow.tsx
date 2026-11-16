@@ -19,8 +19,8 @@
 
 import React, { useCallback, useState } from 'react';
 import type { DataItemInventory, DatapackDetail, DatapackSummary } from '../../types';
+import type { LoadedDatapack } from '../components/AddDatapackFileModal';
 import { DatapackJobWindow } from '../components/job/DatapackJobWindow';
-import type { LoadedDatapack } from '../components/LoadDatapackFileModal';
 import type { DatapackId, DatapackStoreName, ProjectDatapack } from '@/types/datapack';
 
 /** The datapack the project holds, and whether Demo Builder installed it (so can uninstall it). */
@@ -58,7 +58,7 @@ export type WindowRoute = 'install' | 'switch' | 'version' | 'uninstall' | 'rest
  * Which job the window opens on (step 03, S4, S6, S7). With no record of the held datapack there is
  * nothing to uninstall it by, so installing over it is an install. Another version of the held
  * datapack is a switch in Install's words (`version`). The same version again installs in place,
- * replacing nothing, as the handler does (`importReplacement.ts`). On screen it is reached when there
+ * replacing nothing, as the handler does (`datapackSwitch.ts`). On screen it is reached when there
  * is no record, since Restore stands in Install's place otherwise (`installedPackProps`), and after
  * Install from File with Replace on the version the project holds (step-07 F2), which installs that
  * version again in place over its own record.

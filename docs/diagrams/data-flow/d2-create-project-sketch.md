@@ -115,7 +115,7 @@ checklist.
 - Mesh: `src/features/project-creation/handlers/executorMeshPhase.ts`
 - App Builder: `src/features/project-creation/handlers/executorAppBuilderPhase.ts`
 - Config sync and publish: `src/features/project-creation/handlers/executorEdsPhase.ts`
-- Sample data: `src/features/project-creation/handlers/executorSampleDataPhase.ts`
+- Sample data: `src/features/project-creation/handlers/executorDatapackPhase.ts`
 - Catalog pre-warm: `src/features/project-creation/services/catalogPrewarmPhase.ts`
 
 ## Related artifacts

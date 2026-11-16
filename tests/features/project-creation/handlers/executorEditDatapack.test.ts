@@ -5,7 +5,7 @@
  * and could never clear one.
  */
 
-jest.mock('@/features/eds/services/reset/edsResetSampleData', () => ({
+jest.mock('@/features/eds/services/reset/edsResetDatapack', () => ({
     beginSampleDataRemovalCheck: jest.fn().mockReturnValue(Promise.resolve(true)),
     removeProjectSampleDataOutcome: jest.fn().mockResolvedValue({}),
     // The Save As question a removal asks when the demo's pack is not the SC's: never shown here.
@@ -14,7 +14,7 @@ jest.mock('@/features/eds/services/reset/edsResetSampleData', () => ({
 jest.mock('@/features/data-installer/services/buildDatapackEngine', () => ({
     installedByDemoBuilder: jest.fn().mockResolvedValue(true),
 }));
-jest.mock('@/features/project-creation/handlers/executorSampleDataPhase', () => ({
+jest.mock('@/features/project-creation/handlers/executorDatapackPhase', () => ({
     executeSampleDataPhase: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock('@/features/project-creation/services/catalogPrewarmPhase', () => ({
@@ -28,7 +28,7 @@ jest.mock('@/features/project-creation/services/catalogMenuPhase', () => ({
 import {
     beginSampleDataRemovalCheck,
     removeProjectSampleDataOutcome,
-} from '@/features/eds/services/reset/edsResetSampleData';
+} from '@/features/eds/services/reset/edsResetDatapack';
 import type { NameMemory } from '@/features/data-installer/services/packNames';
 import type { DatapackRemoval } from '@/features/eds/services/reset/resetDatapackStep';
 import * as vscode from 'vscode';
@@ -37,7 +37,7 @@ import {
     askSwitchInDialog,
     planDatapackChange,
 } from '@/features/project-creation/handlers/executorEditDatapack';
-import { executeSampleDataPhase } from '@/features/project-creation/handlers/executorSampleDataPhase';
+import { executeSampleDataPhase } from '@/features/project-creation/handlers/executorDatapackPhase';
 import {
     executeCatalogMenuPhase,
     rewriteCatalogMenuPhase,

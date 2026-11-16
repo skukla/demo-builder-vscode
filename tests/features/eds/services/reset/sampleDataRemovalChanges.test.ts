@@ -8,10 +8,10 @@ jest.mock('@/features/data-installer/handlers/removalChanges', () => ({
     contextForProject: jest.fn((context: unknown) => context),
     settleChangesBeforeRemoval: jest.fn(),
 }));
-jest.mock('@/features/data-installer/services/sampleDataInstall', () => ({
+jest.mock('@/features/data-installer/services/projectDatapackInstall', () => ({
     removeSampleData: jest.fn(),
 }));
-jest.mock('@/features/data-installer/services/sampleDataInstallDeps', () => ({
+jest.mock('@/features/data-installer/services/projectDatapackInstallDeps', () => ({
     buildSampleDataDeps: jest.fn(() => ({})),
 }));
 
@@ -21,8 +21,8 @@ import { createMockLogger } from '../../../../helpers/loggerFake';
 import { createMockProject } from '../../../../helpers/projectFake';
 import { createMockStateManager } from '../../../../helpers/stateManagerFake';
 import { contextForProject, settleChangesBeforeRemoval } from '@/features/data-installer/handlers/removalChanges';
-import { removeSampleData } from '@/features/data-installer/services/sampleDataInstall';
-import { removeProjectSampleDataOutcome } from '@/features/eds/services/reset/edsResetSampleData';
+import { removeSampleData } from '@/features/data-installer/services/projectDatapackInstall';
+import { removeProjectSampleDataOutcome } from '@/features/eds/services/reset/edsResetDatapack';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 

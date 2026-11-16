@@ -13,7 +13,7 @@ jest.mock('@/features/data-installer/handlers/removalChanges', () => ({
     contextForProject: jest.fn((context: unknown) => context),
     settleChangesBeforeRemoval: jest.fn(async () => ({})),
 }));
-jest.mock('@/features/data-installer/services/sampleDataInstallDeps', () => ({
+jest.mock('@/features/data-installer/services/projectDatapackInstallDeps', () => ({
     buildSampleDataDeps: jest.fn(),
 }));
 jest.mock('@/features/data-installer/services/buildDatapackEngine', () => ({
@@ -24,9 +24,9 @@ import { createMockHandlerContext } from '../../../../helpers/handlerContextTest
 import { createMockLogger } from '../../../../helpers/loggerFake';
 import { createMockProject } from '../../../../helpers/projectFake';
 import type { ImportRequest } from '@/features/data-installer/services/importRequest';
-import type { SampleDataDeps } from '@/features/data-installer/services/sampleDataInstall';
-import { buildSampleDataDeps } from '@/features/data-installer/services/sampleDataInstallDeps';
-import { removeProjectSampleDataOutcome } from '@/features/eds/services/reset/edsResetSampleData';
+import type { SampleDataDeps } from '@/features/data-installer/services/projectDatapackInstall';
+import { buildSampleDataDeps } from '@/features/data-installer/services/projectDatapackInstallDeps';
+import { removeProjectSampleDataOutcome } from '@/features/eds/services/reset/edsResetDatapack';
 import { removeAnsweredDatapack } from '@/features/eds/services/reset/resetDatapackStep';
 import { removeDataBeforeDelete } from '@/features/projects-dashboard/services/datapackDataRemoval';
 import type { Project } from '@/types/base';

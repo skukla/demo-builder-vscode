@@ -7,7 +7,7 @@
  * This is the one-time copy for an SC who signed in before it, so nobody has to
  * sign in again.
  *
- * The sequencing is the one `commerceSecretMigration` uses, for the same reason:
+ * The sequencing is the one `declaredSecretStore` uses, for the same reason:
  *
  *   **write → read back → only then remove the old copy.**
  *

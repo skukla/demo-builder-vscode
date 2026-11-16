@@ -134,7 +134,7 @@ describe("in a project's Datapacks", () => {
 
         await press(screen.getByRole('button', { name: 'Install from File' }));
         await settle();
-        await press(screen.getByRole('button', { name: 'Load' }));
+        await press(screen.getByRole('button', { name: 'Add' }));
         await settle();
 
         expect(onInstall).toHaveBeenCalledWith({ id: { name: 'justrite', version: 'v1' }, displayName: 'Justrite B2B' });
@@ -239,7 +239,7 @@ describe('in the Datapack Library', () => {
 
         await press(screen.getByRole('button', { name: 'Add from File' }));
         await settle();
-        await press(screen.getByRole('button', { name: 'Load' }));
+        await press(screen.getByRole('button', { name: 'Add' }));
         await settle();
 
         expect(onInstall).not.toHaveBeenCalled();

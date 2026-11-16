@@ -26,7 +26,7 @@ import {
  * - Handle missing previous state
  *
  * The updateMeshState tests live in meshDeployBaseline.test.ts and the frontend
- * change tests in tests/core/state/projectStateSync.test.ts.
+ * change tests in tests/core/state/frontendEnvDrift.test.ts.
  */
 
 

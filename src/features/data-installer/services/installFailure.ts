@@ -20,7 +20,7 @@
  * @module features/data-installer/services/installFailure
  */
 
-import type { SampleDataResult } from './sampleDataInstall';
+import type { SampleDataResult } from './projectDatapackInstall';
 import type { Project } from '@/types/base';
 import type { DatapackId, DatapackInstallFailed, DatapackInstallFailure } from '@/types/datapack';
 import type { StateManager } from '@/types/state';

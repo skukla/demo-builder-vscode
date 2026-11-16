@@ -18,13 +18,13 @@
 // The REAL migration still runs — this only records that it was called, so the
 // "does nothing at all" guard can be asserted as work not done rather than as an
 // outcome that happens to look the same.
-jest.mock('@/features/components/services/commerceSecretMigration', () => {
-    const actual = jest.requireActual('@/features/components/services/commerceSecretMigration');
+jest.mock('@/features/components/services/declaredSecretStore', () => {
+    const actual = jest.requireActual('@/features/components/services/declaredSecretStore');
     return { ...actual, migrateDeclaredSecrets: jest.fn(actual.migrateDeclaredSecrets) };
 });
 
 import { sweepCommerceSecrets } from '@/features/components/services/commerceSecretSweep';
-import { migrateDeclaredSecrets } from '@/features/components/services/commerceSecretMigration';
+import { migrateDeclaredSecrets } from '@/features/components/services/declaredSecretStore';
 
 const migrateMock = migrateDeclaredSecrets as jest.Mock;
 

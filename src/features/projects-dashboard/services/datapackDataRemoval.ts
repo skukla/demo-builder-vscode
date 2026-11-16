@@ -17,7 +17,7 @@
 import type { ReportStage } from '@/core/vscode/withOperationProgress';
 import { installedByDemoBuilder } from '@/features/data-installer/services/buildDatapackEngine';
 import { commerceBackendOf } from '@/features/data-installer/services/commerceBackend';
-import { removeProjectSampleDataOutcome, type SaveAsAnswering } from '@/features/eds/services/reset/edsResetSampleData';
+import { removeProjectSampleDataOutcome, type SaveAsAnswering } from '@/features/eds/services/reset/edsResetDatapack';
 import { savedIntoLine, type DatapackRemoval } from '@/features/eds/services/reset/resetDatapackStep';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';

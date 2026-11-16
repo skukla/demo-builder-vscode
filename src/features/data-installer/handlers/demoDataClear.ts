@@ -55,7 +55,7 @@ import { DEMO_DATA_CLEAR_OPERATION_ID } from '@/core/utils/operationIds';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { withOperationProgress } from '@/core/vscode/withOperationProgress';
 import { changesAnswer, changesNeedAnswer } from '@/features/ai/server/datapackAnswerArgs';
-import { forgetRemovedPack } from '@/features/eds/services/reset/edsResetSampleData';
+import { forgetRemovedPack } from '@/features/eds/services/reset/edsResetDatapack';
 import type { DemoDataRequest } from '@/types/demoDataWipe';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';

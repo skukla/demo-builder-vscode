@@ -130,7 +130,7 @@ which lists every object the install made. It never removes by name.
   its store can still be removed (`validateRemoval`); it refuses only a store other than the one on
   the record. With no record it is refused, and Clear Demo Data clears what that install left.
 - **Installing another pack over the project's is a Switch; another version of it is an Install
-  that does the same** (walk F97, 2026-11-09, `handlers/importReplacement.ts`). Both uninstall the
+  that does the same** (walk F97, 2026-11-09, `handlers/datapackSwitch.ts`). Both uninstall the
   held pack and install the new one. It used to run as a first install: products already in the store
   were left alone, the project named the new pack, and the old data had nothing pointing at it. Now,
   when Demo Builder installed the pack the project uses, the job window's check reads what installing
@@ -246,7 +246,7 @@ which lists every object the install made. It never removes by name.
   note, step-07 D1), the delete stops and the project is kept, since deleting it would leave the data
   with no record. Every removal (Delete, Reset, Edit, Clear Demo Data, Clear Commerce Instance) goes
   to the website and store view Configure names now, else to where the install record says the pack
-  went (`installRecordOf`, `sampleDataInstall.ts`): clearing the codes in Configure never strands the
+  went (`installRecordOf`, `projectDatapackInstall.ts`): clearing the codes in Configure never strands the
   data. Only with no install record and no codes is there nothing to remove (`noTarget`): every door
   carries on with no line, and `delete_project` answers `datapackData.removed: false` with a note. A
   record that names no target, with no codes now, keeps the data and stops a delete. Delete Selected asks the same per project, as Reset Selected does: when a pack whose data

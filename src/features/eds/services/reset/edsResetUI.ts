@@ -7,7 +7,7 @@
  * - the reset itself (executeEdsReset)
  *
  * The pieces live beside it: the pre-flight checks in `edsResetPreflight`, the
- * sample-data step in `edsResetSampleData` (EDS-8, 2026-10-08).
+ * sample-data step in `edsResetDatapack` (EDS-8, 2026-10-08).
  *
  * Callers: the projects batch run (`projectsBatchHandlers.ts`, answered, every screen's Reset)
  * and Edit (`executorEditPackage.ts`). Both asked their questions before anything ran and

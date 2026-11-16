@@ -1,7 +1,7 @@
 /**
  * The install target: the website and store view a datapack is written into.
  *
- * One rule with two readers. The build's install (`services/sampleDataInstall.ts`) skips a
+ * One rule with two readers. The build's install (`services/projectDatapackInstall.ts`) skips a
  * datapack with no target, and the wizard (`project-creation/ui/steps/datapackGate.ts`) will not
  * let Continue past a chosen datapack with no target, so a creation install can never be skipped
  * for want of codes (step-07 W1). Pure, with no extension-host imports, so a webview may import it.

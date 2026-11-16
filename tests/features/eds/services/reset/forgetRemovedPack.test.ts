@@ -5,7 +5,7 @@
  * only the pack cleared, so a copy loaded earlier cannot write back what it held.
  */
 
-import { forgetRemovedPack } from '@/features/eds/services/reset/edsResetSampleData';
+import { forgetRemovedPack } from '@/features/eds/services/reset/edsResetDatapack';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';

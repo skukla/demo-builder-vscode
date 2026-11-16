@@ -53,7 +53,7 @@ import { readMeshEnvVarsFromFile } from '@/features/mesh/services/meshEnvVars';
 import { calculateMeshSourceHash } from '@/features/mesh/services/meshSourceHash';
 import { regenerateComponentEnvFile } from '@/features/project-creation/helpers/envFileRegeneration';
 import { erpRunnerDeps } from '@/features/project-creation/services/erpRunnerDeps';
-import { refreshStorefront } from '@/features/project-creation/services/storefrontRefresh';
+import { refreshStorefront } from '@/features/project-creation/services/meshAddressRepublish';
 import { buildWorkspaceRegistryDeps } from '@/features/project-creation/services/workspaceRegistryDeps';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { Project } from '@/types/base';

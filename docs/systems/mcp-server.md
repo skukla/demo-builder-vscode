@@ -853,7 +853,7 @@ of **another pack** (a switch, the screen's Switch since step 03 S6, 2026-11-12)
 version** uninstalls it in the same job: the old pack is removed first, by its
 install record, through the same removal `uninstall_datapack` runs (`engineRemoval.ts`), then the new one
 installs. Before anything is removed the user's changes to the old pack are settled as
-a project reset settles them (`settleChangesBeforeRemoval`, in `importReplacement.ts`): with no
+a project reset settles them (`settleChangesBeforeRemoval`, in `datapackSwitch.ts`): with no
 answer they are saved into the user's own pack first; when the pack is not theirs the call answers
 `code: CHANGES_NEED_ANSWER` with the sentence, removing and installing nothing, until `changes` is
 `"keep"` with `saveAs` (a new pack of theirs) or `"drop"` (lost). A save moves the record onto the version it made, so that version is

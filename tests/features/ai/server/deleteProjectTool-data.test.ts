@@ -9,8 +9,8 @@
  */
 
 // The removal under the real `removeDataBeforeDelete`, for the door case that drives it through.
-jest.mock('@/features/eds/services/reset/edsResetSampleData', () => ({
-    ...jest.requireActual('@/features/eds/services/reset/edsResetSampleData'),
+jest.mock('@/features/eds/services/reset/edsResetDatapack', () => ({
+    ...jest.requireActual('@/features/eds/services/reset/edsResetDatapack'),
     removeProjectSampleDataOutcome: jest.fn(),
 }));
 
@@ -25,7 +25,7 @@ import {
 } from './deleteProjectTool.testUtils';
 import { z } from 'zod';
 import { cleanUpProjectCloud } from '@/features/ai/server/agentProjectCleanup';
-import { removeProjectSampleDataOutcome, type SaveAsAnswer, type SaveAsAnswering } from '@/features/eds/services/reset/edsResetSampleData';
+import { removeProjectSampleDataOutcome, type SaveAsAnswer, type SaveAsAnswering } from '@/features/eds/services/reset/edsResetDatapack';
 import { LEFT_NOTE, REMOVAL_LEFT_IN_STORE, REMOVAL_NO_TARGET } from '../../../helpers/datapackRemovalFixtures';
 import { hasRemovableData, removeDataBeforeDelete } from '@/features/projects-dashboard/services/datapackDataRemoval';
 import { deleteProjectFiles } from '@/features/projects-dashboard/services/projectFilesDeletion';

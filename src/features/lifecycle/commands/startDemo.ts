@@ -8,7 +8,7 @@ import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { fnmTerminalCommand } from '@/core/shell/nodeFolder';
 import { ProcessCleanup } from '@/core/shell/processCleanup';
-import { updateFrontendState } from '@/core/state/projectStateSync';
+import { updateFrontendState } from '@/core/state/frontendEnvDrift';
 import { ExecutionLock } from '@/core/utils/executionLock';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';

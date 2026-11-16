@@ -12,7 +12,7 @@
  */
 
 import * as vscode from 'vscode';
-import { executeSampleDataPhase } from './executorSampleDataPhase';
+import { executeSampleDataPhase } from './executorDatapackPhase';
 import type { ProgressTracker } from './shared';
 import { installedByDemoBuilder } from '@/features/data-installer/services/buildDatapackEngine';
 import { dropStaleFailure } from '@/features/data-installer/services/installFailure';
@@ -21,7 +21,7 @@ import {
     beginSampleDataRemovalCheck,
     askSaveAsNameWith,
     removeProjectSampleDataOutcome,
-} from '@/features/eds/services/reset/edsResetSampleData';
+} from '@/features/eds/services/reset/edsResetDatapack';
 import type { DatapackRemoval } from '@/features/eds/services/reset/resetDatapackStep';
 import {
     executeCatalogMenuPhase,

@@ -25,7 +25,7 @@ jest.mock('@/features/dashboard/commands/configureConnectionAnswer', () => ({
 jest.mock('@/commands/handlerContextFactory', () => ({
     createPanelHandlerContext: jest.fn(() => ({ stub: 'handler-context' })),
 }));
-jest.mock('@/features/components/services/commerceSecretMigration', () => ({
+jest.mock('@/features/components/services/declaredSecretStore', () => ({
     loadDeclaredSecretFlags: jest.fn(async () => ({})),
     migrateDeclaredSecrets: jest.fn(async (configs: unknown) => ({
         sanitizedConfigs: configs,

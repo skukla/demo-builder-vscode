@@ -31,8 +31,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import type { HeaderSave } from '../headerSave';
 import { useClearDemoData } from '../hooks/useClearDemoData';
 import type { RemovalAnswer } from '../hooks/useSwitchChanges';
+import { type LoadedDatapack, AddDatapackFileModal } from './AddDatapackFileModal';
 import { InstanceClearWindow } from './InstanceClearWindow';
-import { type LoadedDatapack, LoadDatapackFileModal } from './LoadDatapackFileModal';
 import { ProjectClearWindow } from './ProjectClearWindow';
 import { CardActionsMenu } from '@/core/ui/components/ui/CardActionsMenu';
 import { renderMenuIcon } from '@/core/ui/components/ui/menuIcons';
@@ -169,7 +169,7 @@ export function CatalogHeaderActions(props: CatalogHeaderActionsProps): React.JS
                     <ClearMenu onPick={setOpen} />
                 </>
             ) : null}
-            {open === 'load' ? <LoadDatapackFileModal onClose={closeLoad} {...loadProps} /> : null}
+            {open === 'load' ? <AddDatapackFileModal onClose={closeLoad} {...loadProps} /> : null}
             {open === 'clear' ? <ProjectClearWindow onClose={close} onClear={startClear} {...(ownNames ? { ownNames } : {})} /> : null}
             {open === 'instance' ? <InstanceClearWindow onClose={close} onClear={clearInstance} /> : null}
             {progressWindow}

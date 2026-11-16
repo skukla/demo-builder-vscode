@@ -322,6 +322,6 @@ describe('the file load and My Datapacks', () => {
         await press(screen.getByRole('button', { name: 'Add from File' }));
         await settle();
 
-        expect(screen.getByRole('button', { name: 'Load' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Add' })).toBeInTheDocument();
     });
 });

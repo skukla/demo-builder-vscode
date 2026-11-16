@@ -38,7 +38,7 @@ jest.mock('@/features/projects-dashboard/handlers/dashboardHandlers', () => ({
     handleRenameProject: jest.fn(async () => ({ success: true })),
 }));
 
-jest.mock('@/features/components/services/commerceSecretMigration', () => ({
+jest.mock('@/features/components/services/declaredSecretStore', () => ({
     loadDeclaredSecretFlags: jest.fn(async () => ({})),
     migrateDeclaredSecrets: jest.fn(async (configs: unknown) => ({
         sanitizedConfigs: configs,

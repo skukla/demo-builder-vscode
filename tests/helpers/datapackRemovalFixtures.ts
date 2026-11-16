@@ -8,7 +8,7 @@
 import type {
     SampleDataDeps,
     SampleDataResult,
-} from '@/features/data-installer/services/sampleDataInstall';
+} from '@/features/data-installer/services/projectDatapackInstall';
 import type { DatapackRemoval } from '@/features/eds/services/reset/resetDatapackStep';
 
 /** What the watcher hands back for a finished job (`SampleDataDeps.watch`). */

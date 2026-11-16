@@ -20,7 +20,7 @@ import { WipeScopeError, readWipeStructure } from '../services/demoDataWipe/wipe
 import { classifyTransience } from '@/core/errors';
 import type { AdminOpening } from '@/core/utils/commerceAdmin';
 import type { ReportStage } from '@/core/vscode/withOperationProgress';
-import type { SaveAsAnswer } from '@/features/eds/services/reset/edsResetSampleData';
+import type { SaveAsAnswer } from '@/features/eds/services/reset/edsResetDatapack';
 import type { DatapackRemoval } from '@/features/eds/services/reset/resetDatapackStep';
 import type { Project } from '@/types/base';
 import type { CommerceStoreStructure } from '@/types/commerceStore';

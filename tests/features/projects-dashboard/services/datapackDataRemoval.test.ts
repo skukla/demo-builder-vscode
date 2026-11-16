@@ -6,13 +6,13 @@
  */
 
 jest.mock('@/features/data-installer/services/buildDatapackEngine', () => ({ installedByDemoBuilder: jest.fn() }));
-jest.mock('@/features/eds/services/reset/edsResetSampleData', () => ({ removeProjectSampleDataOutcome: jest.fn() }));
+jest.mock('@/features/eds/services/reset/edsResetDatapack', () => ({ removeProjectSampleDataOutcome: jest.fn() }));
 
 import { LEFT_NOTE, REMOVAL_LEFT_IN_STORE, REMOVAL_NO_TARGET } from '../../../helpers/datapackRemovalFixtures';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockProject } from '../../../helpers/projectFake';
 import { installedByDemoBuilder } from '@/features/data-installer/services/buildDatapackEngine';
-import { removeProjectSampleDataOutcome } from '@/features/eds/services/reset/edsResetSampleData';
+import { removeProjectSampleDataOutcome } from '@/features/eds/services/reset/edsResetDatapack';
 import { hasRemovableData, removeDataBeforeDelete } from '@/features/projects-dashboard/services/datapackDataRemoval';
 import type { Project } from '@/types/base';
 

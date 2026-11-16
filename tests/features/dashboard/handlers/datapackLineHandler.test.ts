@@ -3,7 +3,7 @@
  * read without ever asking for a sign-in, and never an id.
  */
 
-// heldDisplayName moved here from importReplacement (step-07 D6): the mock carries every export the code reaches.
+// heldDisplayName moved here from datapackSwitch (step-07 D6): the mock carries every export the code reaches.
 jest.mock('@/features/data-installer/handlers/libraryWriter', () => ({
     libraryDisplayName: jest.fn(),
     heldDisplayName: jest.fn(async (_context: unknown, held: { name: string }) => held.name),

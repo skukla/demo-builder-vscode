@@ -7,7 +7,7 @@
 
 import { createDemoDataHandlers } from '@/features/data-installer/handlers/demoDataHandlers';
 import { type InstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
-import type { SaveAsAnswer } from '@/features/eds/services/reset/edsResetSampleData';
+import type { SaveAsAnswer } from '@/features/eds/services/reset/edsResetDatapack';
 import type { DatapackRemoval } from '@/features/eds/services/reset/resetDatapackStep';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';

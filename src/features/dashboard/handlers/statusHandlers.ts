@@ -17,7 +17,7 @@ import { AI_CONTEXT_VERSION } from '@/core/constants';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell/orgContextEnv';
 import { getMeshEndpoint } from '@/core/state/appBuilderComponentState';
-import { detectFrontendChanges } from '@/core/state/projectStateSync';
+import { detectFrontendChanges } from '@/core/state/frontendEnvDrift';
 import { verifyAiSetup } from '@/features/ai/aiSetupVerifier';
 import { agentCliStatus } from '@/features/ai/engine/activeEngine';
 import { detectMcpDrift } from '@/features/ai/mcpDriftDetector';

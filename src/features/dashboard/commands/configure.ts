@@ -13,9 +13,9 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell/orgContextEnv';
 import { resolveAdminExperience } from '@/core/utils/commerceAdmin';
-import { loadDeclaredSecretFlags } from '@/features/components/services/commerceSecretMigration';
 import { getComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';
 import { withEnvVarKeys } from '@/features/components/services/componentTransforms';
+import { loadDeclaredSecretFlags } from '@/features/components/services/declaredSecretStore';
 import {
     applyBlockLibrarySelection,
     buildBlockLibraryChoices,

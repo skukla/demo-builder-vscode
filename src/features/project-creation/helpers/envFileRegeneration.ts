@@ -10,7 +10,7 @@ import { generateComponentEnvFile } from './envFileGenerator';
 import type { EnvGenerationContext } from './envVarResolution';
 import type { SecretStorageLike } from '@/core/di/serviceLocator';
 import { getMeshEndpointUrl } from '@/core/state/appBuilderComponentState';
-import { hydrateDeclaredSecrets } from '@/features/components/services/commerceSecretMigration';
+import { hydrateDeclaredSecrets } from '@/features/components/services/declaredSecretStore';
 import type { ConfigMap } from '@/features/components/services/envVarHelpers';
 import type { Project } from '@/types/base';
 import type { ComponentRegistry, TransformedComponentDefinition } from '@/types/components';

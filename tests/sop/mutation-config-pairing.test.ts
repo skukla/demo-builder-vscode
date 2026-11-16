@@ -253,8 +253,9 @@ describe('every mutated module has a test selected to cover it', () => {
 
     it('CONTROL: sibling suites are found by MIRROR PATH, not by basename alone', () => {
         // Twelve basenames under src/ name two different modules
-        // (`appBuilderComponentMigration.ts` lives in core/state AND in
-        // features/app-builder/services). Matching on the name alone told the
+        // (`appBuilderComponentMigration.ts` lived in core/state AND in
+        // features/app-builder/services until the app-builder one was renamed
+        // `appBuilderComponentRelocation` on 2026-11-15; the fixture keeps the pair). Matching on the name alone told the
         // 2026-09-03 focus run that the feature module's suite belonged to the
         // core one, and the only way to satisfy it would have been to wire a
         // suite that never touches the mutated file.
@@ -266,7 +267,8 @@ describe('every mutated module has a test selected to cover it', () => {
             'tests/core/state/stateManager.disposal.test.ts',
             'tests/core/state/stateManagerFake.test.ts',
         ];
-        expect(siblingSuites('src/core/state/appBuilderComponentMigration.ts', onDisk)).toEqual([
+        const pairExists = (p: string) => p === 'src/features/app-builder/services/appBuilderComponentMigration.ts';
+        expect(siblingSuites('src/core/state/appBuilderComponentMigration.ts', onDisk, pairExists)).toEqual([
             'tests/core/state/appBuilderComponentMigration.test.ts',
         ]);
         // Positive control: both split separators are siblings; a longer stem is not.

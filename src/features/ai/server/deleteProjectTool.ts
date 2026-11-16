@@ -28,7 +28,7 @@ import { asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
 import { reportPhase } from '@/core/utils/agentPhaseChannel';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
-import type { AskSaveAsName } from '@/features/eds/services/reset/edsResetSampleData';
+import type { AskSaveAsName } from '@/features/eds/services/reset/edsResetDatapack';
 import { extractEdsMetadata } from '@/features/eds/services/resourceCleanupHelpers';
 import { type SharedOnline, sharedOnlineOf } from '@/features/eds/services/storefront/sharedRepoProjects';
 import { hasRemovableData, removeDataBeforeDelete } from '@/features/projects-dashboard/services/datapackDataRemoval';

@@ -3,12 +3,12 @@
  * what the removal did to the store, the row's line for it, and a reset that failed after it. A
  * storefront reset (`edsResetUI`) and a headless one (`projectResetService`) both run the step;
  * the batch row says what it did; the agent's `reset_project` runs it too (S7). Its own file so
- * `edsResetSampleData` keeps only the removal.
+ * `edsResetDatapack` keeps only the removal.
  *
  * @module features/eds/services/reset/resetDatapackStep
  */
 
-import { beginSampleDataRemovalCheck, removeProjectSampleDataOutcome, type SaveAsAnswer } from './edsResetSampleData';
+import { beginSampleDataRemovalCheck, removeProjectSampleDataOutcome, type SaveAsAnswer } from './edsResetDatapack';
 import type { ReportStage } from '@/core/vscode/withOperationProgress';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
