@@ -11,7 +11,7 @@
  * has to agree with it.
  */
 
-import '../../../../helpers/webviewClientMock';
+import { webviewClientHandlers } from '../../../../helpers/webviewClientMock';
 import React from 'react';
 import { act, render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
@@ -101,6 +101,20 @@ describe('DataInstallerTile', () => {
         });
 
         expect(screen.getByText('Venia, eds-compatible')).toBeInTheDocument();
+    });
+
+    // Release test 1.10 (2026-11-16): after Luma installed, the dashboard still read "None": coming
+    // back to the tab did not re-read the line. It follows the packs-changed signal now, as every
+    // Datapacks screen does, so an install or uninstall anywhere updates it.
+    it('reads the line again when the packs change, without waiting to be shown again', async () => {
+        await renderTile();
+        posted.request.mockResolvedValue({ success: true, data: { line: 'Luma' } });
+
+        await act(async () => {
+            webviewClientHandlers.get('datapack-list-changed')?.({});
+        });
+
+        expect(screen.getByText('Luma')).toBeInTheDocument();
     });
 
     it('wears no dot while the install has not failed', async () => {

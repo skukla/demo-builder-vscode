@@ -15,6 +15,8 @@ import { aiHandlers } from '@/features/dashboard/handlers/aiHandlers';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
 import { postStatusUpdate } from '@/features/dashboard/handlers/statusHandlers';
 import { armOnOpenChecks } from '@/features/dashboard/services/onOpenChecks/orchestrator';
+import { onDatapacksChanged } from '@/features/data-installer/services/datapackChanges';
+import { DATAPACK_LIST_CHANGED_MESSAGE } from '@/features/data-installer/types';
 import {
     getEwCanvasBranch,
     resolveProjectAuthoringExperience,
@@ -284,6 +286,11 @@ export class ProjectDashboardWebviewCommand extends BundledPanelCommand<Dashboar
                 return dispatchHandler(dashboardHandlers, context, messageType, data);
             });
         }
+
+        // The Datapacks card's line follows the packs, as every Datapacks screen does: an install
+        // or uninstall in the Datapacks tab, or by an agent, re-reads it (release test 1.10,
+        // 2026-11-16: the card kept "None" after Luma installed).
+        this.disposables.add(onDatapacksChanged(() => void this.sendMessage(DATAPACK_LIST_CHANGED_MESSAGE)));
 
         // Register the AI handlers as well so the dashboard hook can call
         // `verify-ai-setup` to populate the AI Ready badge state.

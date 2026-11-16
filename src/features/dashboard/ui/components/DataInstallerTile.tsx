@@ -7,7 +7,7 @@
  * the project's Datapacks, named for the project, where Import and Save Changes live. The line is
  * what tells the two apart, so it is the one Open card whose line says what the demo holds rather
  * than where the card leads. The extension reads it (`get-datapack-line`), and the card reads it
- * again each time the dashboard comes back into view: an import in the Datapacks tab changes it.
+ * again each time the dashboard comes back into view, and whenever the packs change.
  *
  * **Not a tab replacement, unlike Integrations.** `openIntegrations` disposes
  * the dashboard panel and opens in place, because that surface is scoped to the
@@ -28,6 +28,7 @@ import React, { useEffect, useState } from 'react';
 import { DashboardTile, type DashboardTileStatus } from './DashboardTile';
 import { getDatapackStatusDisplay, severityToDot } from '@/core/ui/utils/statusVocabulary';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { DATAPACK_LIST_CHANGED_MESSAGE } from '@/features/data-installer/types';
 import type { DatapackLine } from '@/types/datapack';
 
 /** The dot for a failed install, in the vocabulary's words; a vocabulary without them fails at load. */
@@ -57,9 +58,13 @@ function useDatapackLine(): DatapackLine | undefined {
         };
         read();
         document.addEventListener('visibilitychange', onShown);
+        // The packs changed (an install or uninstall here, in the Datapacks tab, or by an agent):
+        // coming back to the tab alone did not re-read it (release test 1.10, 2026-11-16).
+        const stopFollowing = webviewClient.onMessage(DATAPACK_LIST_CHANGED_MESSAGE, read);
         return () => {
             live = false;
             document.removeEventListener('visibilitychange', onShown);
+            stopFollowing();
         };
     }, []);
     return line;
