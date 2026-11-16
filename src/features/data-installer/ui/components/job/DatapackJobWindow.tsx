@@ -123,6 +123,12 @@ function saveFirstWindow(job: DatapackJob, opened: Opened, close: () => void): R
     );
 }
 
+/** An uninstall's Review Records has Removed and Kept tabs, as Clear's spot check does (walk F151). */
+function keptTabs(job: DatapackJob, opened: Opened): { kept?: Record<string, string[]> } {
+    if (opened.kind !== 'uninstall') return {};
+    return { kept: job.recordsKept ?? {} };
+}
+
 /** The windows that leave the summary and come back: Review Records, a Dry Run's answer, the save question. */
 function asideWindow(job: DatapackJob, opened: Opened, close: () => void): React.ReactElement | null {
     const { phase } = job.state;
@@ -131,7 +137,7 @@ function asideWindow(job: DatapackJob, opened: Opened, close: () => void): React
     if (phase === 'records') {
         const records = job.recordsReading ? NO_RECORDS : job.records;
         const { title } = summaryFrame(job, opened, false);
-        return <RecordsWindow title={title} rows={job.rows} records={records} reading={job.recordsReading} onBack={job.back} onClose={close} />;
+        return <RecordsWindow title={title} rows={job.rows} records={records} reading={job.recordsReading} onBack={job.back} onClose={close} {...keptTabs(job, opened)} />;
     }
     if (phase === 'dry-result' && job.result) {
         return (

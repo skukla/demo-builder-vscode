@@ -84,6 +84,8 @@ export interface StoreChangesPayload extends Partial<Omit<SaveStoreChangesReques
     source?: string;
     /** The kinds to look at; all the pack holds when absent. Preview only. */
     dataTypes?: string[];
+    /** Review Records for an uninstall: what it would take and keep (`removalRecords.ts`, walk F151). */
+    removal?: boolean;
     /**
      * Also count what was added by hand since the install (`addedSinceInstall`): what a save would
      * take that the pack does not hold, by type (step-07 E1). The preview's and the changes read's.

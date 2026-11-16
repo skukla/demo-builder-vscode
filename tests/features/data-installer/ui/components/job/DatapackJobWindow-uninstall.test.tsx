@@ -132,7 +132,7 @@ describe('the check', () => {
 });
 
 describe('the question', () => {
-    it('asks "Uninstall My Luma?" over what the record lists by type, naming no store, with a red Uninstall and Cancel', async () => {
+    it('asks "Uninstall My Luma?" over what the record lists by type, naming no store, with Review Records, a red Uninstall and Cancel', async () => {
         holding(NOTHING);
         await openUninstall();
 
@@ -144,9 +144,31 @@ describe('the question', () => {
         expect(rows).toStrictEqual(['Categories21', 'Products1,200']);
         expect(button('Uninstall')).toHaveClass('modal-button-negative');
         expect(button('Cancel')).toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: 'Review Records' })).toBeNull();
+        // Walk F151 (owner, 2026-11-16): the one step that deletes can be checked first.
+        expect(button('Review Records')).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Dry Run' })).toBeNull();
         expect(screen.queryByText(/Permanently deletes/u)).toBeNull();
+        expect(sends('reset-datapack')).toBe(0);
+    });
+
+    // Walk F151: what it would take and what it would keep, from the install record and the
+    // uninstall's own decision, before anything is deleted.
+    it('Review Records asks for what the uninstall would take and keep, and shows both', async () => {
+        holding(NOTHING, {
+            records: {
+                success: true,
+                data: { records: { categories: ['Gear'], products: ['24-MB01'] }, kept: { categories: ['Luma'] } },
+            },
+        });
+        await openUninstall();
+        await heading('Uninstall My Luma?');
+
+        await press(button('Review Records'));
+        await settle();
+
+        expect(sent('get-datapack-records')).toEqual({ datapackName: 'luma', version: 'v1', source: 'library', removal: true });
+        expect(screen.getByRole('button', { name: /^Removed/u })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /^Kept/u })).toBeInTheDocument();
         expect(sends('reset-datapack')).toBe(0);
     });
 

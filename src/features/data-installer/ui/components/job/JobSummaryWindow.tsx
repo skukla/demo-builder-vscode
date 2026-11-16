@@ -7,7 +7,7 @@
  *
  * A switch asks over the same table (S6, decisions J2-3, J8-1): "Switch to Bodea?" with the warning
  * icon and a blue Switch, no opening line; an uninstall asks "Uninstall My Luma?" over what its
- * record lists, a red Uninstall and no Review Records (S7, J5-1). The host hands in the frame's
+ * record lists, a red Uninstall, and Review Records with Removed and Kept (S7, J5-1; walk F151). The host hands in the frame's
  * buttons and problem line.
  *
  * Clear Demo Data asks over the same table (step 06, C2b; `j1-windows.tsx`): its lead names the
@@ -34,7 +34,7 @@ export interface JobSummaryWindowProps {
     /** The check has answered: the table is known. */
     ready: boolean;
     waiting: ModalWait | false;
-    /** Review Records; an uninstall's question has none. */
+    /** Review Records: what installing puts in, or what an uninstall takes and keeps. */
     onReview?: () => void;
     /** Back, before Review Records: Clear Commerce Instance's summary goes back to its websites (C4). */
     onBack?: () => void;

@@ -33,7 +33,7 @@ const asked = (title: string, checking: boolean): string => (checking ? title : 
 /**
  * The summary's frame: Install's; or a question, no opening line and the warning icon, over the same
  * table: a switch's blue Switch, another version's blue Install, an uninstall's red Uninstall (rule
- * 20), which has no Review Records.
+ * 20). Each has Review Records; an uninstall's has Removed and Kept tabs (walk F151).
  */
 export function summaryFrame(job: DatapackJob, opened: Opened, checking: boolean) {
     const { name, verb, kind } = opened;
@@ -65,7 +65,7 @@ export function summaryFrame(job: DatapackJob, opened: Opened, checking: boolean
         ],
         problem: job.switching.changes.readFailed ? CHANGES_UNCHECKED : unread,
         ...(lead ? { lead } : {}),
-        ...(uninstall ? {} : { onReview: job.review }),
+        onReview: job.review,
     };
 }
 

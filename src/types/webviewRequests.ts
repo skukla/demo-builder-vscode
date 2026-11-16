@@ -1096,12 +1096,19 @@ export interface DatapackRecordsRequest {
     version: string;
     /** Which store holds the pack; the Data Installer when absent. */
     source?: 'installer' | 'library';
+    /** An uninstall's Review Records: what it would take and keep, from the install record (walk F151). */
+    removal?: boolean;
 }
 
 /** What `get-datapack-records` answers on success. */
 export interface DatapackRecordsResult {
-    /** Each data type's records by the name the pack gives them (`keyOf`), in the pack's order. */
+    /**
+     * Each data type's records by the name the pack gives them (`keyOf`), in the pack's order. For an
+     * uninstall, what it would take out.
+     */
     records: Record<string, string[]>;
+    /** An uninstall's: what it would keep (a root a store uses, a category holding the SC's products). */
+    kept?: Record<string, string[]>;
 }
 
 /**

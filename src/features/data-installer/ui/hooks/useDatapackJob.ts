@@ -63,6 +63,8 @@ export interface DatapackJob {
     /** The type table's read failed: the summary says so. */
     checkFailed: boolean;
     records: DatapackRecordsResult['records'] | null;
+    /** An uninstall's Review Records: what it would keep, by type. */
+    recordsKept: DatapackRecordsResult['kept'] | null;
     recordsReading: boolean;
     result: ResultContent | null;
     /** The job watched, once its record is read. */
@@ -104,8 +106,9 @@ function jobPresses(
     return {
         review: () => {
             dispatch({ type: 'review' });
-            // An update's records came with its check.
-            if (send.kind !== 'update' && !records.settled && !records.loading) records.load(send.pack);
+            // An update's records came with its check; an uninstall's are what it would take and keep (walk F151).
+            const ask = send.kind === 'uninstall' ? { ...send.pack, removal: true } : send.pack;
+            if (send.kind !== 'update' && !records.settled && !records.loading) records.load(ask);
         },
         back: () => dispatch({ type: 'back' }),
         askSaveFirst: () => dispatch({ type: 'save-first' }),
@@ -152,6 +155,7 @@ export function useDatapackJob(args: DatapackJobArgs): DatapackJob {
         rows: table.rows,
         checkFailed: table.failed,
         records: records.value?.records ?? null,
+        recordsKept: records.value?.kept ?? null,
         recordsReading: !records.settled,
         result,
         record: watch.record,

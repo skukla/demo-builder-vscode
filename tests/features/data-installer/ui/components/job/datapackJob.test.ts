@@ -201,12 +201,15 @@ describe('an uninstall', () => {
         expect(datapackJob(from, event)).toEqual(to);
     });
 
-    it.each<[string, JobEvent]>([
-        ['Review Records: the question has none', { type: 'review' }],
-        ['Dry Run: an uninstall has none', { type: 'dry-run' }],
-    ])('moves nothing on %s', (_name, event) => {
+    it('moves nothing on Dry Run: an uninstall has none', () => {
         const from = un('summary');
-        expect(datapackJob(from, event)).toBe(from);
+        expect(datapackJob(from, { type: 'dry-run' })).toBe(from);
+    });
+
+    // Walk F151 (owner, 2026-11-16): the one step that deletes can be checked first.
+    it('opens Review Records from its question, and Back returns to it', () => {
+        expect(datapackJob(un('summary'), { type: 'review' })).toEqual(un('records'));
+        expect(datapackJob(un('records'), { type: 'back' })).toEqual(un('summary'));
     });
 });
 

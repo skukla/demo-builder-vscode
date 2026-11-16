@@ -129,7 +129,8 @@ function next(state: JobState, event: JobEvent): JobState {
  */
 const ASKS_SAVE: readonly JobKind[] = ['switch', 'uninstall', 'restore'];
 /** What an uninstall's question does not offer. */
-const NOT_UNINSTALL: ReadonlyArray<JobEvent['type']> = ['review', 'dry-run'];
+// An uninstall has Review Records (walk F151, owner 2026-11-16): what it takes and what it keeps.
+const NOT_UNINSTALL: ReadonlyArray<JobEvent['type']> = ['dry-run'];
 /** What an update's summary does not offer: it writes only what changed, so there is nothing to dry-run. */
 const NOT_UPDATE: ReadonlyArray<JobEvent['type']> = ['dry-run', 'save-first', 'needs-answer'];
 /** What only a restore's check and question move on. */
@@ -160,7 +161,7 @@ function kindTakes(state: JobState, event: JobEvent): boolean {
  * The job after `event`; the same object when the event does not belong to the phase on screen.
  * A job opened running has no summary behind it, so its Back moves nothing; only what uninstalls
  * the held datapack, or restores to the original over edits, asks the save question; an uninstall has
- * no Review Records and no Dry Run; an update no Dry Run; only a restore asks its question, a restore
+ * no Dry Run; an update no Dry Run; only a restore asks its question, a restore
  * or an update ends at its check, and a restore has no summary, Back or Retry.
  */
 export function datapackJob(state: JobState, event: JobEvent): JobState {

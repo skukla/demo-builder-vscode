@@ -15,6 +15,7 @@ import type { PackItems } from '../services/demoBuilderEngine/runPack';
 import { recordNames } from '../services/packRecords';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
 import { libraryReads } from './libraryReads';
+import { readRemovalRecords } from './removalRecords';
 import { failure } from './packSave';
 import { readPayload, type StoreChangesPayload } from './storeChangesHandlers';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
@@ -55,6 +56,7 @@ export async function readDatapackRecords(
 ): Promise<HandlerResponse> {
     const input = readPayload(payload);
     if ('error' in input) return { success: false, error: input.error };
+    if (payload?.removal === true) return readRemovalRecords(context, input.pack);
     try {
         const data: DatapackRecordsResult = {
             records: recordNames(await read(input.pack, input.source ?? 'installer')),
