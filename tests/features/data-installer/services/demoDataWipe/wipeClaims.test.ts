@@ -76,7 +76,7 @@ describe('readWipeClaims, project scope', () => {
 
         const answer = await claims(files, TESTER, [accsProject('other', 'justrite_test_website', 'justrite_test_view', 'Other Demo'), JUSTRITE]);
 
-        expect(answer.warning).toBe('The project Other Demo also uses the website justrite_test_website. Clearing it also removes what was added there by hand for that project.');
+        expect(answer.warning).toBe('The project Other Demo also uses the website JustRite Test. Clearing it also removes what was added there by hand for that project.');
         expect(answer.respects.records).toEqual(PROJECT_RECORDS);
         expect(read).toHaveBeenCalled();
     });
@@ -91,7 +91,7 @@ describe('readWipeClaims, project scope', () => {
         const answer = await claims(files, TESTER, [other, accsProject('copy', 'justrite_test_website', 'justrite_test_view', 'Copy')]);
 
         expect(answer.warning).toBe(
-            'The projects Bodea Demo and Copy also use the website justrite_test_website. Clearing it also removes what was added there by hand for those projects.',
+            'The projects Bodea Demo and Copy also use the website JustRite Test. Clearing it also removes what was added there by hand for those projects.',
         );
     });
 

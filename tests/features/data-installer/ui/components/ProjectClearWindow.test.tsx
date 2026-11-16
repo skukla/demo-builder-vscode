@@ -115,7 +115,7 @@ describe('the summary', () => {
 
         await press(button('Clear 8 Items'));
 
-        expect(onClear).toHaveBeenCalledWith('tok-1', ['bodea']);
+        expect(onClear).toHaveBeenCalledWith('tok-1', ['Bodea']);
         expect(sent('clear-demo-data')).toStrictEqual([]);
     });
 
@@ -216,7 +216,7 @@ describe('a type Commerce refused to read', () => {
         expect(sent('open-commerce-admin')).toHaveLength(1);
 
         await press(button('Clear 8 Items'));
-        expect(onClear).toHaveBeenCalledWith('tok-1', ['bodea']);
+        expect(onClear).toHaveBeenCalledWith('tok-1', ['Bodea']);
     });
 
     it("says why on the problem line when the Admin can't be opened", async () => {
@@ -248,7 +248,7 @@ describe('a type Commerce answered strangely', () => {
         expect(sent('fix-datapack-import-with-ai')).toEqual([{ from: 'clear-check' }]);
 
         await press(button('Clear 8 Items'));
-        expect(onClear).toHaveBeenCalledWith('tok-1', ['bodea']);
+        expect(onClear).toHaveBeenCalledWith('tok-1', ['Bodea']);
     });
 
     // Step-07 P5 (S8): the extension's refusal goes on the problem line, as the Admin's does.

@@ -212,7 +212,7 @@ describe("an update's checks read the installed version's record", () => {
         const verdict = await engine.validateImport(request({ id: NEWER, updates: OLDER, target: { websiteCode: 'elsewhere', storeCode: 'elsewhere_en' } }));
 
         expect(verdict.valid).toBe(false);
-        expect(verdict.reason).toContain('is installed on the website base');
+        expect(verdict.reason).toContain('is installed on the website Main Website');
     });
 
     it('CONTROL: the same request without updates finds no record, so nothing stops it there', async () => {

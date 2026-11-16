@@ -63,7 +63,7 @@ import type { ClearCheck } from '@/types/demoDataWipe';
 export interface InstanceClearWindowProps {
     onClose: () => void;
     /**
-     * Clear what the instance list with this token showed, on these websites (by code), with the
+     * Clear what the instance list with this token showed, on these websites (by name, for its title), with the
      * save question's answers by project path (none when nothing was asked). Resolves `true` when
      * the host refused for an answer about a project's changes: the window asks its question.
      */
@@ -159,7 +159,7 @@ function useInstancePress(check: ClearCheck | null, onClear: InstanceClearWindow
         setAsking(false);
         const sent = onClear(
             check.token,
-            check.websites.map((w) => w.code),
+            check.websites.map((w) => w.name || w.code),
             changes,
         );
         if (!sent) return;

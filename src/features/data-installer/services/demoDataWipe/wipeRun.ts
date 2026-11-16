@@ -242,10 +242,10 @@ function stepsOf(commerce: RemovalAccess, plan: WipePlan, day: string, onReturnC
 
 const counted = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 
-/** "the website justrite_test_website", "the websites bodea and justrite". */
+/** "the website Justrite Test", "the websites Bodea and Justrite": by name, as the Admin shows them (owner, 2026-11-15). */
 export function websitesInWords(check: Pick<ClearCheck, 'websites'>): string {
-    const codes = check.websites.map((w) => w.code);
-    return `${codes.length === 1 ? 'the website' : 'the websites'} ${andList(codes)}`;
+    const names = check.websites.map((w) => w.name || w.code);
+    return `${names.length === 1 ? 'the website' : 'the websites'} ${andList(names)}`;
 }
 
 /** " Canceled 1 order, refunded 2 and left 1 open with a note. Closed 1 return.", or nothing. */
@@ -284,7 +284,8 @@ function settingsSentence(count: number): string {
 function sentenceOf(check: Pick<ClearCheck, 'websites'>, removed: WipeCounts, orders: OrderCounts, failed: WipeOutcome['failed']): string {
     const where = websitesInWords(check);
     const parts = removedParts(removed);
-    const did = parts.length > 0 ? `Removed ${andList(parts)} from ${where}.` : `Removed nothing from ${where}.`;
+    // Nothing left after the datapack's uninstall took it all reads as it is, not as a clearing that did nothing (owner, 2026-11-15).
+    const did = parts.length > 0 ? `Removed ${andList(parts)} from ${where}.` : `Nothing was left to remove from ${where}.`;
     const off = removed.takenOff > 0 ? ` Took ${counted(removed.takenOff, 'product', 'products')} other websites also sell off the chosen websites.` : '';
     const rulesOff = removed.rulesTakenOff > 0 ? ` Took ${counted(removed.rulesTakenOff, 'cart rule', 'cart rules')} other websites also use off the chosen websites.` : '';
     const not = failed.map((f) => ` Could not ${f.what.replace('1', String(f.count))} (${f.first}).`).join('');
@@ -354,7 +355,7 @@ async function runStep(key: StepKey, step: WipeStep, tally: { removed: WipeCount
 async function runSettings(commerce: RemovalAccess, plan: WipePlan, report: (stage: string) => void, removed: WipeCounts, failed: WipeOutcome['failed']): Promise<void> {
     if (plan.settings.length === 0) return;
     report(DATAPACK_STAGES.resettingSettings.label);
-    const outcome = await putBackSettings(commerce, plan.settings);
+    const outcome = await putBackSettings(commerce, plan.settings, (code) => plan.check.websites.find((w) => w.code === code)?.name || code);
     removed.settings = outcome.count;
     if (outcome.refused.length > 0) failed.push({ what: 'set 1 of the website settings back', count: outcome.refused.length, first: outcome.refused[0], step: 'settings' });
 }

@@ -53,7 +53,7 @@ export const CLEAR_COPY = {
 export interface ProjectClearWindowProps {
     onClose: () => void;
     /**
-     * Clear what the list with this token showed, on these websites; the screen runs it in its
+     * Clear what the list with this token showed, on these websites (by name, for its title); the screen runs it in its
      * progress window. `answer` is the save question's, when the datapack the clearing uninstalls
      * first was asked about; absent when the check names no datapack, or nothing had changed (the
      * host then reads the changes again). Resolves `true` when the host refused for an answer about
@@ -151,7 +151,8 @@ function useClearPress(check: ClearCheck | null, ownNames: readonly string[], on
     const changes = useSwitchChanges(datapack !== undefined, from, ownNames);
     const go = (answer?: RemovalAnswer): void => {
         if (!check) return;
-        const websites = check.websites.map((w) => w.code);
+        // By name, for the run window's title: the clearing itself goes by the token (owner, 2026-11-15).
+        const websites = check.websites.map((w) => w.name || w.code);
         const sent = answer ? onClear(check.token, websites, answer) : onClear(check.token, websites);
         setAsking(false);
         if (!sent) return;

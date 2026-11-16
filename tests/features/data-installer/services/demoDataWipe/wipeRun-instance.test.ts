@@ -35,7 +35,7 @@ describe('runWipe, the B2B kinds', () => {
         expect(outcome.failed).toStrictEqual([]);
         expect(outcome.unfinished).toBeUndefined();
         expect(outcome.sentence).toBe(
-            'Removed 2 customers, 1 company and 1 shared catalog with its customer group from the website justrite_test_website.',
+            'Removed 2 customers, 1 company and 1 shared catalog with its customer group from the website JustRite Test.',
         );
     });
 

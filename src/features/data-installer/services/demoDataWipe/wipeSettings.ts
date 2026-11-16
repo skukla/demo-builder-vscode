@@ -112,8 +112,13 @@ function refusalOf(text: string): string {
     return `${text.split(' ')[0]}: ${why.slice(why.indexOf(': ') + 2)}`;
 }
 
-/** Set each setting to its value, through the setup guide's writer, which reads Commerce's `errors`. */
-export async function putBackSettings(commerce: RemovalAccess, settings: readonly WipeSetting[]): Promise<SettingsOutcome> {
+/**
+ * Set each setting to its value, through the setup guide's writer, which reads Commerce's `errors`.
+ *
+ * @param nameOf - a website's name for a code, so a refusal names the website as the Admin does
+ *   (owner, 2026-11-15); the code when not given
+ */
+export async function putBackSettings(commerce: RemovalAccess, settings: readonly WipeSetting[], nameOf: (code: string) => string = (code) => code): Promise<SettingsOutcome> {
     const outcome: SettingsOutcome = { count: 0, refused: [] };
     for (const websiteCode of new Set(settings.map((s) => s.websiteCode))) {
         const mine = settings.filter((s) => s.websiteCode === websiteCode);
@@ -124,7 +129,7 @@ export async function putBackSettings(commerce: RemovalAccess, settings: readonl
                 outcome.count += applied.changes.length;
                 outcome.refused.push(...applied.rejected.map(refusalOf));
             } catch (error) {
-                outcome.refused.push(`${websiteCode}: ${error instanceof Error ? error.message : String(error)}`);
+                outcome.refused.push(`${nameOf(websiteCode)}: ${error instanceof Error ? error.message : String(error)}`);
             }
         }
     }

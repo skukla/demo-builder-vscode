@@ -79,12 +79,12 @@ function storeOfView(structure: CommerceStoreStructure, websiteCode: string, vie
     return view ? structure.storeGroups.find((g) => String(g.id) === String(view.store_group_id)) : undefined;
 }
 
-/** Every other store showing the store's root: "the store justrite_store (website justrite)". */
+/** Every other store showing the store's root, by name: "the store Justrite Store (website Justrite)" (owner, 2026-11-15). */
 function othersShowing(structure: CommerceStoreStructure, group: CommerceStoreGroup): string[] {
-    const codeOf = new Map(structure.websites.map((w) => [String(w.id), w.code]));
+    const nameOf = new Map(structure.websites.map((w) => [String(w.id), w.name || w.code]));
     return structure.storeGroups
         .filter((g) => String(g.id) !== String(group.id) && String(g.root_category_id) === String(group.root_category_id))
-        .map((g) => `the store ${g.code} (website ${codeOf.get(String(g.website_id)) ?? g.website_id})`);
+        .map((g) => `the store ${g.name || g.code} (website ${nameOf.get(String(g.website_id)) ?? g.website_id})`);
 }
 
 /**

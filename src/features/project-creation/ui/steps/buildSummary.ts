@@ -16,6 +16,7 @@ import { isSetInConfigure } from './editLocks';
 import { STOREFRONT_SECTION_TITLES } from './storefrontSections';
 import { isAdobeSignedIn, meshComponentForStack } from './tileStatus';
 import { ACCS_STORE_VIEW_CODE, PAAS_STORE_VIEW_CODE } from '@/core/config/envVarKeys';
+import { storeViewNameIn } from '@/core/utils/commerceNames';
 import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import {
     getAlwaysIncludedBlockLibraries,
@@ -87,12 +88,18 @@ function editingRows(
     });
     const settings: SummaryRow[] = [
         { label: ROW_LABELS.connection, value: 'Connected', done: true },
-        { label: ROW_LABELS['business-structure'], value: storeViewCodeOf(state) ?? 'Selected', done: true },
+        { label: ROW_LABELS['business-structure'], value: storeViewOf(state) ?? 'Selected', done: true },
         { label: ROW_LABELS.catalog, value: 'Configured', done: true },
     ];
     // Before Datapacks, the last row, as in the strip they came from.
     rows.splice(rows.length - 1, 0, ...settings);
     return rows;
+}
+
+/** The store view the project records, by its name once discovery has read the store (owner, 2026-11-15), else its code. */
+function storeViewOf(state: WizardState): string | undefined {
+    const code = storeViewCodeOf(state);
+    return code === undefined ? undefined : storeViewNameIn(state.storeDiscoveryData, code);
 }
 
 /** The store view code the project records, under either backend's name for it. */

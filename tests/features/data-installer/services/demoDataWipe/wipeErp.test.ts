@@ -158,7 +158,7 @@ describe('clearing, with the ERP integration serving the store', () => {
         expect(outcome.failed).toStrictEqual([]);
         expect(outcome.erp).toEqual({ integration: 'JustRite', broughtInLine: true, removedFrom: ['Justrite ERP'], refreshed: true });
         expect(outcome.sentence).toBe(
-            'Removed nothing from the website justrite_test_website. Canceled 1 order and refunded 1 order. Closed 1 return. ' +
+            'Nothing was left to remove from the website JustRite Test. Canceled 1 order and refunded 1 order. Closed 1 return. ' +
                 "JustRite's ERP was brought in line with Commerce. These websites' orders were removed from Justrite ERP.",
         );
     });

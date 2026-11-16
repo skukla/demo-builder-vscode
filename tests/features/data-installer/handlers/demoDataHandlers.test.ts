@@ -63,7 +63,7 @@ describe('check-demo-data', () => {
 
         const check = checked((await handlers['check-demo-data'](context)).data);
 
-        expect(shownClearFor(check.token)).toEqual({ websites: ['justrite_test_website'], warning: check.warning, datapack: 'zz-test' });
+        expect(shownClearFor(check.token)).toEqual({ websites: ['JustRite Test'], warning: check.warning, datapack: 'zz-test' });
     });
 
     it('stops at an org mismatch before reading the store', async () => {
@@ -82,7 +82,7 @@ describe('check-demo-data', () => {
         const res = await handlers['check-demo-data'](context);
 
         const check = checked(res.data);
-        expect(check.warning).toBe('The project Neighbour Demo also uses the website justrite_test_website. Clearing it also removes what was added there by hand for that project.');
+        expect(check.warning).toBe('The project Neighbour Demo also uses the website JustRite Test. Clearing it also removes what was added there by hand for that project.');
         expect(check.total).toBe(7);
         expect(others).toHaveBeenCalledWith(context, PROJECT);
     });
@@ -201,7 +201,7 @@ describe('clear-demo-data', () => {
 
         const res = await handlers['clear-demo-data'](context, { token });
 
-        expect(res.error).toMatch(/everything on the website justrite_test_website/);
+        expect(res.error).toMatch(/everything on the website JustRite Test/);
         expect(res.error).toMatch(/companies, shared catalogs, customer groups, attribute sets and attributes/);
         expect(res.error).toMatch(/settings to the default's value/);
         expect(res.error).toMatch(/It cannot be undone/);
@@ -273,7 +273,7 @@ describe('clear-demo-data', () => {
         expect(res.success).toBe(true);
         expect(seen.writesBefore).toEqual([0]);
         expect((res.data as WipeOutcome).removed).toMatchObject({ customers: 1, products: 3, takenOff: 1, cartRules: 0, rulesTakenOff: 0, categories: 0 });
-        expect(res.note).toMatch(/^Uninstalled the datapack zz-test first\. Removed 3 products and 1 customer from the website justrite_test_website\./);
+        expect(res.note).toMatch(/^Uninstalled the datapack zz-test first\. Removed 3 products and 1 customer from the website JustRite Test\./);
         expect(res.note).not.toMatch(/left for its uninstall/);
         expect(store.sent).toHaveLength(5);
         expect((await handlers['clear-demo-data'](context, { token, confirm: true })).error).toMatch(/no longer known/);

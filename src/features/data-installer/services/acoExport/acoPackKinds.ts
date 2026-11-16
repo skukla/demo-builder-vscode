@@ -107,7 +107,7 @@ function currencyOf(
     const code = (configs.get(view) ?? '').trim().toUpperCase();
     if (/^[A-Z]{3}$/u.test(code)) return code;
     throw new Error(
-        `Could not tell the currency of website ${website.id} (${website.code}): its store view ${view} names none.`,
+        `Could not tell the currency of the website ${website.name || website.code}: its store view ${view} names none.`,
     );
 }
 

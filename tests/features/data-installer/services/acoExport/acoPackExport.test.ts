@@ -272,7 +272,7 @@ describe('exportAcoPack: what goes wrong', () => {
         const result = await h.run({ storeViews: ['default'] });
 
         expect(result.perType.find((t) => t.dataType === 'aco_price_books')?.reason).toBe(
-            'Could not tell the currency of website 1 (base): its store view default names none.'
+            'Could not tell the currency of the website Main Website: its store view default names none.'
         );
     });
 

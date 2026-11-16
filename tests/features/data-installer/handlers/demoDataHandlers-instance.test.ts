@@ -310,7 +310,7 @@ describe('clear-commerce-instance (step 06 C4)', () => {
         );
 
         const kept =
-            'Neighbour Demo keeps its datapack nb-pack, which is also on the website justrite, and its data on these websites.';
+            'Neighbour Demo keeps its datapack nb-pack, which is also on the website JustRite, and its data on these websites.';
         expect(check.instance?.projects.find((p) => p.path === NB.path)?.kept).toBe(kept);
         expect(made.seen.paths).toEqual([OPEN.path]);
         expect(writes(made)).not.toContain('products/ZZ-ONLY-HERE');
@@ -540,7 +540,7 @@ describe('clear_commerce_instance reaching clear-commerce-instance (step 06 C6)'
         const { token } = await shown(made);
 
         expect(shownClearFor(token)).toMatchObject({
-            websites: [SITE],
+            websites: ['JustRite Test'],
             projects: [
                 { path: OPEN.path, name: 'Zz Tester', datapack: 'zz-test' },
                 { path: NB.path, name: 'Neighbour Demo', datapack: 'nb-pack' },

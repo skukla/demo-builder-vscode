@@ -52,7 +52,7 @@ it('clears at once, sending no answer, when the datapack had no changes when rea
     await press(button('Clear 8 Items'));
 
     expect(screen.queryByRole('heading', { name: 'Save Your Changes First?' })).not.toBeInTheDocument();
-    expect(onClear).toHaveBeenCalledWith('tok-1', ['bodea']);
+    expect(onClear).toHaveBeenCalledWith('tok-1', ['Bodea']);
 });
 
 it('asks "Save Your Changes First?" over the changes read again when the host refuses for an answer, then clears with it', async () => {
@@ -67,7 +67,7 @@ it('asks "Save Your Changes First?" over the changes read again when the host re
     expect(screen.getByRole('heading', { name: 'Save Your Changes First?' })).toBeInTheDocument();
     expect(sent('get-datapack-removal-changes')).toHaveLength(1);
     await press(button('Save and Clear'));
-    expect(onClear).toHaveBeenLastCalledWith('tok-1', ['bodea'], { changes: 'keep', saveAs: { displayName: 'My Bodea B2B' } });
+    expect(onClear).toHaveBeenLastCalledWith('tok-1', ['Bodea'], { changes: 'keep', saveAs: { displayName: 'My Bodea B2B' } });
 });
 
 it('holds the red Clear while the clearing is being sent', async () => {
@@ -87,7 +87,7 @@ it('reads nothing and clears with no answer when the check names no datapack', a
     await press(button('Clear 8 Items'));
 
     expect(sent('get-datapack-removal-changes')).toStrictEqual([]);
-    expect(onClear).toHaveBeenCalledWith('tok-1', ['bodea']);
+    expect(onClear).toHaveBeenCalledWith('tok-1', ['Bodea']);
 });
 
 it('asks "Save Your Changes First?" in the verb Clear when there are changes, clearing nothing yet', async () => {
@@ -108,7 +108,7 @@ it("Save and Clear saves into the SC's own pack: the answer travels with the cle
 
     await press(button('Save and Clear'));
 
-    expect(onClear).toHaveBeenCalledWith('tok-1', ['bodea'], { changes: 'keep' });
+    expect(onClear).toHaveBeenCalledWith('tok-1', ['Bodea'], { changes: 'keep' });
 });
 
 // P5-Q7 (step-07 D4): the name box on the SC's own pack too; another name saves a new datapack.
@@ -122,7 +122,7 @@ it("Save and Clear on the SC's own pack under another name saves a new one by th
     await settle();
     await press(button('Save and Clear'));
 
-    expect(onClear).toHaveBeenCalledWith('tok-1', ['bodea'], { changes: 'keep', saveAs: { displayName: 'Bodea Fall' } });
+    expect(onClear).toHaveBeenCalledWith('tok-1', ['Bodea'], { changes: 'keep', saveAs: { displayName: 'Bodea Fall' } });
 });
 
 it("Save and Clear on a pack not the SC's saves a new one under the name in the field", async () => {
@@ -133,7 +133,7 @@ it("Save and Clear on a pack not the SC's saves a new one under the name in the 
     expect(screen.getByRole('textbox', { name: 'Save As' })).toHaveValue('My Bodea B2B 2');
     await press(button('Save and Clear'));
 
-    expect(onClear).toHaveBeenCalledWith('tok-1', ['bodea'], {
+    expect(onClear).toHaveBeenCalledWith('tok-1', ['Bodea'], {
         changes: 'keep',
         saveAs: { displayName: 'My Bodea B2B 2' },
     });
@@ -146,7 +146,7 @@ it('drops the changes only on Clear Without Saving', async () => {
 
     await press(button('Clear Without Saving'));
 
-    expect(onClear).toHaveBeenCalledWith('tok-1', ['bodea'], { changes: 'drop' });
+    expect(onClear).toHaveBeenCalledWith('tok-1', ['Bodea'], { changes: 'drop' });
 });
 
 it('Cancel clears nothing and closes', async () => {

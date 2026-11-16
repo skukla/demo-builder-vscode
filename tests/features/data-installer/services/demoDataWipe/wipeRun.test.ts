@@ -36,7 +36,7 @@ describe('runWipe', () => {
         expect(stages).toEqual(['Closing orders', 'Deleting customers', 'Deleting products', 'Removing products from websites']);
         // Kept records carry no reason any more (J1-3b), so the sentence no longer lists them.
         expect(outcome.sentence).toBe(
-            'Removed 3 products and 1 customer from the website justrite_test_website. Canceled 1 order and refunded 1 order. Closed 1 return. ' +
+            'Removed 3 products and 1 customer from the website JustRite Test. Canceled 1 order and refunded 1 order. Closed 1 return. ' +
                 'Took 1 product other websites also sell off the chosen websites.',
         );
         expect(outcome.leftOpen).toStrictEqual([]);

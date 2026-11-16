@@ -40,7 +40,7 @@ export interface ShownProject {
 
 /** What one shown check covers, as the consent dialog names it. */
 export interface ShownClear {
-    /** The websites, by code. */
+    /** The websites, by name, as the consent dialog names them. */
     websites: string[];
     /** Another local project uses one of them: the sentence naming it. */
     warning?: string;

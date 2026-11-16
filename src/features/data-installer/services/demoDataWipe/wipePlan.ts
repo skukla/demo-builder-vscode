@@ -265,6 +265,8 @@ type Ids = Omit<WipePlan, 'check' | 'websiteCodes' | 'scopeKey' | 'unreadDetails
 function plannedOf(decided: Decided, ids: Ids, scope: WipeScope): Record<string, ClearRecords> {
     const { products, customers, cartRules, companies, catalogs, attributes } = decided;
     const several = scope.websites.length > 1;
+    // Which website a setting is on, by name (owner, 2026-11-15).
+    const websiteNameOf = (code: string): string => scope.websites.find((w) => w.code === code)?.name || code;
     const going = categoryTree(decided.tree, decided.categories.remove);
     const removedCategories = decided.tree.filter((c) => ids.categoryIds.includes(String(c.id))).map(nameOf);
     const orders = ids.orders.filter((o) => o.action !== 'note');
@@ -278,7 +280,7 @@ function plannedOf(decided: Decided, ids: Ids, scope: WipeScope): Record<string,
         [CUSTOMER_GROUP_KIND]: { removed: ids.groups.map((g) => g.groupName), kept: catalogs.kept.map((g) => g.groupName) },
         [ATTRIBUTE_SET_KIND]: { removed: ids.attributeSets.map((s) => s.name), kept: attributes.setsKept },
         [ATTRIBUTE_KIND]: { removed: ids.attributes.map((a) => a.code), kept: attributes.attributesKept },
-        [WEBSITE_SETTINGS]: { removed: ids.settings.map((s) => (several ? `${s.path} (${s.websiteCode})` : s.path)), kept: [] },
+        [WEBSITE_SETTINGS]: { removed: ids.settings.map((s) => (several ? `${s.path} (${websiteNameOf(s.websiteCode)})` : s.path)), kept: [] },
         [ORDERS]: { removed: orders.map((o) => o.number), kept: [] },
         [RETURNS]: { removed: returnsOf(orders).map((r) => r.number), kept: [] },
     };

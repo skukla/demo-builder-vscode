@@ -42,6 +42,7 @@ import { containersLine } from './removers';
 import { keptLine, tookOutLine } from './repeatInstall';
 import { type PackItems, PackRowsError, installPack, packRowProblems, refusedKindsReason, unsupportedKinds } from './runPack';
 import { STORE_CONFIG_KIND, settingsWebsite } from './storeConfigKind';
+import { nameInStore } from './storeNames';
 import { checkAfterInstall } from './verifyInstall';
 import { errorText } from '@/features/app-builder/services/storePreparation/fixContract';
 import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
@@ -190,8 +191,7 @@ async function elsewhere(deps: DemoBuilderEngineDeps, request: ImportRequest, ta
     const moved = website !== undefined && website !== target.websiteCode;
     const otherView = record.target !== undefined && record.target.storeCode !== target.storeCode;
     if (!moved && !otherView) return undefined;
-    const where = moved ? `the website ${website}` : `the store view ${record.target?.storeCode}`;
-    return `${request.id.name}@${request.id.version} is installed on ${where}. ${ask}`;
+    return `${request.id.name}@${request.id.version} is installed on ${moved ? `the website ${await nameInStore(deps, 'store/websites', website)}` : `the store view ${await nameInStore(deps, 'store/storeViews', record.target?.storeCode ?? '')}`}. ${ask}`;
 }
 
 /** Every reason the pack's and its layer's rows cannot be installed, before the first write. */

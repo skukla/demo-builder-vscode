@@ -78,7 +78,8 @@ export function answerOf(
     const warning = claims.warning ? { warning: claims.warning } : {};
     const unread = unreadOf(plan);
     rememberShownClear(plan.check.token, {
-        websites: plan.websiteCodes,
+        // By name, for the consent dialog's Websites line (owner, 2026-11-15).
+        websites: plan.check.websites.map((w) => w.name || w.code),
         ...warning,
         ...(unread ? { unread } : {}),
         ...(removing ? { datapack: removing.name } : {}),

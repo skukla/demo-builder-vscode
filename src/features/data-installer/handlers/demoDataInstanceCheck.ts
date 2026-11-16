@@ -34,7 +34,9 @@ import {
     keep,
     openStore,
 } from './demoDataStore';
+import { websiteNameIn } from '@/core/utils/commerceNames';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
+import type { CommerceStoreStructure } from '@/types/commerceStore';
 import type { ProjectDatapack } from '@/types/datapack';
 import type { ClearInstancePart, ClearProject, InstanceChoices } from '@/types/demoDataWipe';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
@@ -79,19 +81,21 @@ function packNameOf(context: HandlerContext, pack: ProjectDatapack, saved?: stri
 }
 
 /** Why a project keeps its data on these websites, when it does. */
-function keptOf(context: HandlerContext, user: InstanceUser, name: string): string | undefined {
+function keptOf(context: HandlerContext, user: InstanceUser, name: string, structure: CommerceStoreStructure): string | undefined {
     const pack = user.project.datapack;
     const packName = pack ? packNameOf(context, pack) : '';
-    if (user.decision === 'elsewhere') return keptElsewhere(name, packName, user.elsewhere ?? []);
+    // The other websites by name, as the Admin shows them (owner, 2026-11-15).
+    const elsewhere = (user.elsewhere ?? []).map((code) => websiteNameIn(structure, code));
+    if (user.decision === 'elsewhere') return keptElsewhere(name, packName, elsewhere);
     if (user.decision === 'nowhere') return keptNowhere(name, packName);
     return user.decision === 'unmatched' ? keptUnmatched(name) : undefined;
 }
 
 /** A project on these websites: why it keeps its data, or its datapack (uninstalled first) with its changes as a batch reads them. */
-async function projectOf(deps: DemoDataDeps, context: HandlerContext, user: InstanceUser): Promise<ClearProject> {
+async function projectOf(deps: DemoDataDeps, context: HandlerContext, user: InstanceUser, structure: CommerceStoreStructure): Promise<ClearProject> {
     const name = getProjectDisplayName(user.project);
     const base: ClearProject = { path: user.project.path, name };
-    const kept = keptOf(context, user, name);
+    const kept = keptOf(context, user, name, structure);
     if (kept) return { ...base, kept };
     const pack = user.project.datapack;
     if (user.decision !== 'uninstall' || !pack) return base;
@@ -158,7 +162,7 @@ export async function checkInstance(
             check: { ...made.check, token: `${INSTANCE_TOKEN}${made.check.token}` },
             ...(claims.removing ? { setBack: claims.removing.setBack } : {}),
         };
-        const projects = await Promise.all(claims.users.map((user) => projectOf(deps, context, user)));
+        const projects = await Promise.all(claims.users.map((user) => projectOf(deps, context, user, opened.structure)));
         keep(plans, { plan, instance: packsOf(claims.users, projects) });
         const instance: ClearInstancePart = {
             projects,

@@ -95,7 +95,7 @@ function recordsOnWebsites(records: readonly InstallRecord[], other: Project, we
     });
 }
 
-/** "The project JustRite also uses the website justrite. Clearing it also removes …" */
+/** "The project JustRite also uses the website Justrite. Clearing it also removes …" */
 function warningOf(users: readonly Project[], websites: readonly string[]): string | undefined {
     if (users.length === 0) return undefined;
     const one = users.length === 1;
@@ -148,7 +148,9 @@ export async function readWipeClaims(files: RecordFiles, project: Project, other
     const settingsKept = new Set([...settingsKeptBy(project, own), ...theirs.settingsKept]);
     const respects = { records: [...own, ...theirs.records], everyRecord: [...own, ...theirs.everyRecord], settingsKept, ...unfinished };
     const shared = [...new Set(theirs.users.flatMap((u) => u.websites))].sort();
-    const warning = warningOf(theirs.users.map((u) => u.project), shared);
+    // By name, as the Admin shows them (owner, 2026-11-15).
+    const nameOf = (code: string): string => scope.websites.find((w) => w.code === code)?.name || code;
+    const warning = warningOf(theirs.users.map((u) => u.project), shared.map(nameOf));
     const removing = dropped.length > 0 ? { removing: { setBack: recordedSettings(project, dropped) } } : {};
     return { scope, respects, ...(warning ? { warning } : {}), ...removing };
 }

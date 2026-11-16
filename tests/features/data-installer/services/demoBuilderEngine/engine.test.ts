@@ -198,6 +198,20 @@ describe('demoBuilderEngine and the website a pack was installed to', () => {
     const ELSEWHERE = { websiteCode: 'justrite_test_website', storeCode: 'justrite_test_view' };
     const MOVED = `${PACK.name}@${PACK.version} is installed on the website justrite_test_website. Uninstall it first, or install it there.`;
 
+    // Names, not codes (owner, 2026-11-15): the website as the Admin shows it, the code only when
+    // the store no longer lists it (as the refusal below, whose store lists none).
+    it('names the website it is installed on by its name in the store', async () => {
+        const files = memoryFiles();
+        await (await openInstallRecord(files, PROJECT, PACK, () => 'then', ELSEWHERE)).record({ kind: 'categories', id: '40' });
+        const named = { ...READS, 'store/websites': [{ id: 6, code: 'justrite_test_website', name: 'Justrite Test' }] };
+        const { engine } = await engineWith(named, () => ({ id: 41 }), { files });
+
+        expect(await engine.validateImport(request())).toEqual({
+            valid: false,
+            reason: `${PACK.name}@${PACK.version} is installed on the website Justrite Test. Uninstall it first, or install it there.`,
+        });
+    });
+
     it('writes the website and store view it installs to on the record', async () => {
         const { engine, files } = await engineWith(READS, () => ({ id: 40 }));
 

@@ -379,7 +379,7 @@ describe('handleLoadErpDemoData — mapping', () => {
         });
 
         const warning =
-            'Demo data loaded; the mapping for website bodea was not saved: ERP erps answered 500: store unavailable. Fill ERPs from Commerce again to retry. ' +
+            'Demo data loaded; the mapping for the website Bodea was not saved: ERP erps answered 500: store unavailable. Fill ERPs from Commerce again to retry. ' +
             'Demo data loaded; prices were not published: ERP prices answered 500: down. Fill ERPs from Commerce again to retry.';
         expect(result).toMatchObject({ success: true, data: { warning } });
         expect(mockContext.sendMessage).toHaveBeenLastCalledWith('operationProgress', {

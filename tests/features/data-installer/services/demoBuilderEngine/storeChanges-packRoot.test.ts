@@ -38,7 +38,7 @@ describe('previewChanges and a pack root', () => {
 
         expect(answer.kinds).toEqual([expect.objectContaining({ kind: 'categories', add: { count: 3, names: ['(root)', 'Coffee', 'Coffee/Espresso'] } })]);
         expect(answer.root).toBe(
-            "The store JustRite Test Store shares its root category with the store justrite_store (website justrite), so Frescopa's categories would go in as a root of their own, and installing asks for one step in the Admin: Stores > All Stores > JustRite Test Store, Root Category: Frescopa.",
+            "The store JustRite Test Store shares its root category with the store JustRite Store (website JustRite), so Frescopa's categories would go in as a root of their own, and installing asks for one step in the Admin: Stores > All Stores > JustRite Test Store, Root Category: Frescopa.",
         );
     });
 });

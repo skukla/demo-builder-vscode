@@ -144,7 +144,7 @@ describe('the summary', () => {
 
         await press(button('Clear 1 Website'));
 
-        expect(onClear).toHaveBeenCalledWith('instance-tok-1', ['base'], {});
+        expect(onClear).toHaveBeenCalledWith('instance-tok-1', ['Main Website'], {});
     });
 });
 
@@ -188,7 +188,7 @@ describe('the batch save question (P6-Q4)', () => {
 
         await press(button('Save and Clear'));
 
-        expect(onClear).toHaveBeenCalledWith('instance-tok-1', ['base'], {
+        expect(onClear).toHaveBeenCalledWith('instance-tok-1', ['Main Website'], {
             '/p/kukla-luma': { saveAs: 'My Luma 2' },
         });
     });
@@ -198,7 +198,7 @@ describe('the batch save question (P6-Q4)', () => {
 
         await press(button('Clear Without Saving'));
 
-        expect(onClear).toHaveBeenCalledWith('instance-tok-1', ['base'], {
+        expect(onClear).toHaveBeenCalledWith('instance-tok-1', ['Main Website'], {
             '/p/kukla-luma': 'drop',
         });
     });

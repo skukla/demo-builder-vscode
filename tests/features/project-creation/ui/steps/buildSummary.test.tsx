@@ -231,6 +231,23 @@ describe('commerceSummaryGroup - Edit', () => {
         expect(group.rows.find((r) => r.label === 'Business')?.value).toBe('bodea_us');
     });
 
+    // Names, not codes (owner, 2026-11-15): the store view as the Admin shows it, once discovery has read it.
+    it('names the store view by its name when discovery has read the store', () => {
+        const group = commerceSummaryGroup(
+            editing({
+                selectedBackend: 'adobe-commerce-accs',
+                componentConfigs: { 'adobe-commerce-accs': { ACCS_STORE_VIEW_CODE: 'bodea_us' } },
+                storeDiscoveryData: {
+                    websites: [],
+                    storeGroups: [],
+                    storeViews: [{ id: 1, code: 'bodea_us', name: 'Bodea US', store_group_id: 1, website_id: 1, is_active: 1 }],
+                },
+            }),
+        );
+
+        expect(group.rows.find((r) => r.label === 'Business')?.value).toBe('Bodea US');
+    });
+
     it('goes back to the walk once the backend or package changed', () => {
         const group = commerceSummaryGroup(editing({ foundationChanged: true }));
 
