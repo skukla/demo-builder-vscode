@@ -224,17 +224,18 @@ describe('Uninstall with nothing changed', () => {
         expect(resets[1]).toMatchObject({ changes: 'keep', saveAs: { displayName: 'My My Luma' } });
     });
 
-    it('runs as steps, Uninstall My Luma, titled "Uninstalling My Luma", and hands over to a notification named for it', async () => {
+    // Walk F152: one step, so the centred lines rather than a list of one.
+    it('runs as one step, titled "Uninstalling My Luma", and hands over to a notification named for it', async () => {
         holding(NOTHING, { statusAfter: UNINSTALLING });
         const { onClose } = await openUninstall();
         await heading('Uninstall My Luma?');
         await press(button('Uninstall'));
 
         expect(await heading('Uninstalling My Luma')).toBeInTheDocument();
-        const run = screen.getByTestId('import-run');
-        expect(within(run).getByText('Uninstall My Luma')).toBeInTheDocument();
-        expect(within(run).queryByText('Save Your Changes')).toBeNull();
-        expect(within(run).queryByText(/^Install /u)).toBeNull();
+        const shown = document.querySelector('.modal-steps > div:not(.modal-steps-ghost)') as HTMLElement;
+        expect(within(shown).queryByTestId('import-run')).toBeNull();
+        expect(within(shown).getByText('Uninstalling from Commerce')).toBeInTheDocument();
+        expect(within(shown).queryByText('Save Your Changes')).toBeNull();
 
         await press(button('Run in Background'));
 

@@ -286,11 +286,12 @@ describe('an uninstall', () => {
         purpose: 'uninstall',
     };
 
-    it('starts as one step, Uninstall My Luma, working from the first frame', () => {
+    // Walk F152 (owner, 2026-11-16): a run of one step shows the centred lines, not a list of one.
+    it('with nothing to save, is one step: the centred lines, working from the first frame, no list', () => {
         const shown = renderRun({ ...UNINSTALL, uninstalling: { saves: false } });
 
-        expect(stepNames(shown)).toStrictEqual(['Uninstall My Luma']);
-        expect(rowOf(shown, 'Uninstalling from Commerce')).toHaveTextContent('Uninstall My Luma');
+        expect(shown.queryByTestId('import-run')).toBeNull();
+        expect(shown.getByText('Uninstalling from Commerce')).toBeInTheDocument();
     });
 
     it('saving first, draws Save Your Changes on its stage, then the uninstall waiting', () => {
