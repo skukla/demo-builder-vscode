@@ -165,7 +165,11 @@ describe('applyCatalogMenuStep', () => {
         expect(summary).toContain('Removed 1 category page Demo Builder wrote in DA.live');
     });
 
-    it('changes nothing and says why when the catalog has no menu categories yet', async () => {
+    // A store with no menu categories is not a failure (live run 6, 2026-11-15): a reset that
+    // uninstalled the datapack, or a demo with none, has no categories to page. It warned
+    // "Category pages were not published: Catalog Service returned no categories marked
+    // 'Include in Menu' …", amber, about an empty store the reset had just made on purpose.
+    it('changes nothing and warns of nothing when the store has no menu categories', async () => {
         const project = storefrontProject();
         const s = fakeStorefront({ '/nav': NAV });
 
@@ -173,10 +177,12 @@ describe('applyCatalogMenuStep', () => {
             project,
             site(s, fakeCategoryHelix(), { readCategories: jest.fn(async () => []) }),
         );
-        const summary = step?.summary;
 
         expect([...s.pages.keys()]).toEqual(['/nav']);
-        expect(summary).toMatch(/^Category pages were not published: .*Include in Menu.*Republish the storefront/);
+        expect(step).toStrictEqual({
+            ok: true,
+            summary: 'No category pages to publish: this store view has no menu categories.',
+        });
     });
 
     it('never throws: a failed check for the block is reported, and nothing is written', async () => {
@@ -318,7 +324,7 @@ describe('a category that already has a hand-built page at another address', () 
 
         expect(s.written).toStrictEqual([]);
         expect(helix.published).toStrictEqual([]);
-        expect(summary).toMatch(/^Category pages were not published: DA\.live 401\./);
+        expect(summary).toBe('Category pages not published (DA.live 401). Republish to try again.');
     });
 });
 

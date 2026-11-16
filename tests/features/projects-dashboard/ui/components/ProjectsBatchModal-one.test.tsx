@@ -94,3 +94,20 @@ describe('ProjectsBatchModal: one project running', () => {
         expect(document.querySelector('.modal-wait-progress')).toBeNull();
     });
 });
+
+// A finished row's warning ran into where its changes were saved, on the one line a problem gets,
+// so "Saved to My We.Cafe." was cut off behind the warning (live run 6, 2026-11-15).
+describe('ProjectsBatchModal: a finished row with a warning and a save', () => {
+    it('says where the changes were saved on a line of its own, under the warning', async () => {
+        await running(['A'], 'Reset');
+        const warning = 'Category pages not published (HTTP 503). Republish to try again.';
+
+        await push('projectsBatchRow', { path: '/p/a', state: 'done', warnings: [warning], message: 'Saved to My We.Cafe.' });
+        await push('operationProgress', { id: ID, state: 'succeeded' });
+
+        expect(screen.getByText(warning)).toHaveClass('work-row-problem');
+        const saved = screen.getByText('Saved to My We.Cafe.');
+        expect(saved).not.toHaveClass('work-row-problem');
+        expect(saved).not.toHaveClass('text-notice');
+    });
+});

@@ -77,10 +77,15 @@ function lineOf(state: UpdateRowState, message: string | undefined): string | un
 function problemOf(state: UpdateRowState, status: BatchRowStatuses[string]): { text: string; failed: boolean } | undefined {
     const warnings = status?.warnings ?? [];
     if (state === 'failed') return { text: [status?.message ?? 'Failed', ...warnings].join(' '), failed: true };
-    if (state === 'done' && warnings.length > 0) {
-        return { text: [...warnings, ...(status?.message ? [status.message] : [])].join(' '), failed: false };
-    }
+    // Where its changes were saved is its own line (`savedLineOf`): run into the warning, it was cut
+    // off behind it (live run 6, 2026-11-15).
+    if (state === 'done' && warnings.length > 0) return { text: warnings.join(' '), failed: false };
     return undefined;
+}
+
+/** A finished row with a warning: where its changes were saved, under it, in plain text. */
+function savedLineOf(state: UpdateRowState, status: BatchRowStatuses[string]): string | undefined {
+    return state === 'done' && (status?.warnings?.length ?? 0) > 0 ? status?.message : undefined;
 }
 
 function RunRow({ row, statuses, timing, asking, onTyped }: RowProps) {
@@ -90,6 +95,7 @@ function RunRow({ row, statuses, timing, asking, onTyped }: RowProps) {
     const clock = useRunClock(state === 'running' ? timing?.startedAt : undefined);
     const question = state === 'running' ? asking : undefined;
     const problem = problemOf(state, status);
+    const saved = savedLineOf(state, status);
     const detail = question || problem ? undefined : lineOf(state, status?.message);
     // A row left alone says why under its name, in place of a working line it never had.
     const note = state === 'skipped' ? status?.message : undefined;
@@ -106,6 +112,7 @@ function RunRow({ row, statuses, timing, asking, onTyped }: RowProps) {
             time={state === 'running' ? clock : spanValue(timing?.startedAt, timing?.endedAt)}
         >
             {question && <RunQuestion prompt={question} onTyped={onTyped} />}
+            {saved && <div className="work-row-note">{saved}</div>}
         </WorkRow>
     );
 }

@@ -252,7 +252,7 @@ describe('replaceStoreScopePages', () => {
         const result = await replaceStoreScopePages(p, deps);
 
         expect(result.sentence).toContain('30 old product pages removed.');
-        expect(result.sentence).toContain('Category pages were not published: Catalog Service returned HTTP 503.');
+        expect(result.sentence).toContain('Category pages not published (Catalog Service returned HTTP 503).');
         expect(result.sentence).toContain('Product pages were not published (Catalog Service timed out).');
     });
 
