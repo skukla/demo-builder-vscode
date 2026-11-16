@@ -211,6 +211,34 @@ describe('a count and a list', () => {
     });
 });
 
+// Owner walk, 2026-11-16: B2B Companies read "All selected", then "None available" once opened. Its
+// count is the instance's and its list the website's, so its list is read at once, and the row
+// claims nothing until it answers.
+describe('a kind whose count is only a ceiling', () => {
+    const NONE_HERE: StoreItemPage = { items: [], totalCount: 0, excludedCount: 0, inPackCount: 0 };
+
+    it('reads its list as soon as the counts are in, and says what the website holds without being opened', async () => {
+        answer(counted({ products: 1, b2b_companies: 3 }), { products: PRODUCTS, b2b_companies: NONE_HERE });
+        await open();
+
+        expect(callsOf(LIST).some((c) => (c[1] as { dataType?: string })?.dataType === 'b2b_companies')).toBe(true);
+        expect(row('B2B Companies')).toHaveTextContent(NONE_NOTE);
+        expect(row('B2B Companies')).not.toHaveTextContent('All selected');
+    });
+
+    it('claims nothing while its list is still being read', async () => {
+        mockRequest.mockImplementation(async (type: string, payload?: { dataType?: string }) => {
+            if (type === COUNT) return counted({ products: 1, b2b_companies: 3 });
+            if (type === LIST && payload?.dataType === 'b2b_companies') return new Promise(() => undefined);
+            return type === LIST ? { success: true, data: PRODUCTS } : { success: true, data: null };
+        });
+        await open();
+
+        expect(row('B2B Companies')).not.toHaveTextContent('All selected');
+        expect(row('B2B Companies')).not.toHaveTextContent(NONE_NOTE);
+    });
+});
+
 describe('what the count is asked of', () => {
     it('names no datapack', async () => {
         answer(counted({}));

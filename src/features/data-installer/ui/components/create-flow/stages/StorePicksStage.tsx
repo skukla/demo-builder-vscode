@@ -16,7 +16,7 @@
  */
 
 import React from 'react';
-import { type PickableKind, type StoreItemPage } from '../../../../pickableKinds';
+import { CEILING_KINDS, type PickableKind, type StoreItemPage } from '../../../../pickableKinds';
 import { dataTypeLabel } from '../../../dataTypeLabel';
 import { type StorePicksState, isKnownEmpty } from '../useStorePicks';
 import { StoreItemsStage } from './StoreItemsStage';
@@ -32,10 +32,11 @@ const digits = (n: number): string => n.toLocaleString('en-US');
  * selected", the projects list's words, `SelectionCount`), or "All selected" for a kind ticked whole
  * and unread (step-07 Q3, S3-b), or that its list did not answer, or nothing.
  */
-function noteOf(page: StoreItemPage | null | undefined, count: number | undefined, picked: number, whole: boolean): string | undefined {
+function noteOf(kind: PickableKind, page: StoreItemPage | null | undefined, count: number | undefined, picked: number, whole: boolean): string | undefined {
     if (page === null) return "Couldn't be read";
     if (isKnownEmpty(page, count)) return 'None available';
-    if (page === undefined) return whole ? 'All selected' : undefined;
+    // A ceiling kind's count says nothing until its list answers (`CEILING_KINDS`): no claim before.
+    if (page === undefined) return whole && !CEILING_KINDS.includes(kind) ? 'All selected' : undefined;
     return picked > 0 ? `${digits(picked)} of ${digits(page.items.length)} selected` : undefined;
 }
 
@@ -43,7 +44,7 @@ function KindRow({ kind, store }: { kind: PickableKind; store: StorePicksState }
     const picked = store.picks[kind]?.length ?? 0;
     const ticked = picked > 0 || store.whole.has(kind);
     const shown = kind === store.kind;
-    const note = noteOf(store.reads[kind], store.counts[kind], picked, store.whole.has(kind));
+    const note = noteOf(kind, store.reads[kind], store.counts[kind], picked, store.whole.has(kind));
     return (
         <li>
             <button

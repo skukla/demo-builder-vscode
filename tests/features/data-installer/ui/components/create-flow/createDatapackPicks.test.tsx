@@ -378,7 +378,9 @@ describe('Select All Data (2026-11-03; ticked to start, overview 7b)', () => {
         expect(everything()).toBeChecked();
         expect(listCalls()).toEqual([{ dataType: 'products' }]);
         expect(row('Products')).toHaveTextContent('2 of 2 selected');
-        expect(row('Cart Rules')).toHaveTextContent('All selected');
+        expect(row('Customers')).toHaveTextContent('All selected');
+        // A ceiling kind claims nothing unread (owner walk, 2026-11-16, `CEILING_KINDS`).
+        expect(row('Cart Rules')).not.toHaveTextContent('All selected');
 
         await create();
 

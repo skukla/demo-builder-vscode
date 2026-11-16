@@ -47,6 +47,14 @@ export const PICKABLE_KINDS = [
     'attribute_sets',
 ] as const satisfies readonly [PickableKind, ...PickableKind[]];
 
+/**
+ * The kinds whose count is only a ceiling: Commerce counts the whole instance's, while the list keeps
+ * the website's (`storeItems.ts`). Above zero, the count says nothing until the list answers, so the
+ * picks read their lists at once and claim nothing before (owner walk, 2026-11-16: B2B Companies
+ * read "All selected", then "None available").
+ */
+export const CEILING_KINDS: readonly PickableKind[] = ['cart_rules', 'b2b_companies'];
+
 /** Each kind as a sentence counts it: one, and more than one. */
 export const KIND_NOUNS: Readonly<Record<PickableKind, readonly [string, string]>> = {
     products: ['product', 'products'],

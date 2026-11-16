@@ -33,7 +33,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { PICKABLE_KINDS, type PickableKind, type StoreItemPage, type StoreKindCounts, type StorePicks, pickCount } from '../../../pickableKinds';
+import { CEILING_KINDS, PICKABLE_KINDS, type PickableKind, type StoreItemPage, type StoreKindCounts, type StorePicks, pickCount } from '../../../pickableKinds';
 import { useDataInstallerRequest } from '../../hooks/useDataInstallerRequest';
 
 /** One kind's answer: its page, or null when the read failed. Absent until a read answers. */
@@ -81,6 +81,23 @@ export function isKnownEmpty(read: StoreItemPage | null | undefined, count: numb
 }
 
 const NO_COUNTS: StoreKindCounts = {};
+
+/**
+ * A ceiling kind's list, read as soon as its count is in and above zero, so its row says what the
+ * website holds before the SC opens it (`CEILING_KINDS`).
+ */
+function useCeilingRead(kind: PickableKind, wanted: boolean, answered: (kind: PickableKind, page: StoreItemPage | null) => void): void {
+    const { load, value, settled } = useDataInstallerRequest<StoreItemPage>('list-datapack-export-items');
+    const asked = useRef(false);
+    useEffect(() => {
+        if (!wanted || asked.current) return;
+        asked.current = true;
+        load({ dataType: kind });
+    }, [wanted, load, kind]);
+    useEffect(() => {
+        if (asked.current && settled) answered(kind, value);
+    }, [settled, value, kind, answered]);
+}
 
 /** The kinds that may have something to select, as far as is known. */
 function openKinds(reads: KindReads, counts: StoreKindCounts, kinds: readonly PickableKind[]): PickableKind[] {
@@ -174,6 +191,9 @@ export function useStorePicks(countsWanted: boolean): StorePicksState {
         [kinds],
     );
     const choice = useMemo(() => choiceOf(listed, whole, reads, known), [listed, whole, reads, known]);
+    const [cartRules, companies] = CEILING_KINDS;
+    useCeilingRead(cartRules, countsSettled && (known[cartRules] ?? 0) > 0, answered);
+    useCeilingRead(companies, countsSettled && (known[companies] ?? 0) > 0, answered);
 
     return {
         kinds,

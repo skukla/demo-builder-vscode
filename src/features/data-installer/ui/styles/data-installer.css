@@ -354,7 +354,10 @@
    to show it did. */
 .datapack-picks {
     display: grid;
-    grid-template-columns: 248px minmax(0, 1fr);
+    /* Wide enough that a type's name and its note share one line, the shown row's bold name too
+       ("B2B Shared Catalogs  4 of 4 selected"): at 248px the note wrapped under the name (owner walk,
+       2026-11-16). */
+    grid-template-columns: 320px minmax(0, 1fr);
     /* Taller with the extra-wide step (owner, 2026-11-05: it felt cramped). */
     height: 480px;
 }

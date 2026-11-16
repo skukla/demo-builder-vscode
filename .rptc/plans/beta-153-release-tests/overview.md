@@ -205,6 +205,8 @@ Mark each test's **Result** line: `passed 2026-11-DD`, or `failed 2026-11-DD: wh
 | F175 | U1.2 step 4, repeated (2026-11-16) | The background install's end notification held the whole report (the Admin step, the product check, the search delay, the images note) | **Fixed** with a test: it says the result and only the lines left to know ("Frescopa Installed. One step is left in the Admin: …"); the report stays in the result window and Activity. **Owner must re-look** |
 | F176 | U1.2 step 7 (2026-11-16) | During the uninstall, "Products, 0 of 25" stayed at 0 for about 10 seconds, then the run moved on: products go in one bulk delete, counted only when it answers, so a short run's count never moves | Open, small: count bulk deletes as each batch lands (it does for large packs), or show the type without a count until the first batch answers. Not blocking |
 | F177 | U2.1 step 2 (2026-11-16) | **Create Datapack** opened full size and wide, the spinner alone in the middle, while it read from Commerce | **Fixed** with tests: the window is marked not ready while it reads, so it waits as the small window and opens at the picks' size; the restore check had the same gap. The steps window now stays the small wait past its 30-second limit while it waits on a read it names, which also fixes **F158** (the table cut off after a minute-long check). **Owner must re-look** |
+| F178 | U2.1 step 3 (2026-11-16) | Create Datapack's B2B Companies row read "All selected", then "None available" once opened: its count is the whole instance's, its list the website's | **Fixed** with tests: cart rules and companies, whose counts are only ceilings (`CEILING_KINDS`), have their lists read as soon as the counts are in, and their rows claim nothing until then. **Owner must re-look** |
+| F179 | U2.1 step 3 (2026-11-16) | In Create Datapack's left column, a type's note wrapped under its name ("B2B Shared Catalogs", "Product Attributes"), worst on the shown row in bold | **Fixed**: the column is 320px, room for a name and its note on one line (also the records window, which shares it). **Owner must re-look** |
 
 ## Questions raised
 
@@ -341,7 +343,7 @@ end).
    Installed**. Expect the header to read **Save**, and the dashboard's **Datapacks** card to read
    "Release Save Test".
 
-Reached: step 1 of 5 (2026-11-16). Step 1 passed: ZZ Customer Picks saved under Default Category.
+Reached: step 2 of 5 (2026-11-16). Step 1 passed: ZZ Customer Picks saved under Default Category. Step 2 passed on the fixed build (F177): Create Datapack, every type ticked, Select All Data at the top; categories in the shared tree.
 
 **Test U2.2: Save a later edit into it**
 1. In the Admin, rename ZZ Customer Picks to "ZZ Customer Picks 2". In the Datapacks header, click
