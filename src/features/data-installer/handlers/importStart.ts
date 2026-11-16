@@ -220,6 +220,7 @@ async function engineFor(
                 ...gate,
                 authManager: context.authManager,
                 secrets: context.context?.secrets,
+                memory: context.context?.globalState,
                 libraryCatalog: libraryReads(context),
             },
             (line) => context.debugLogger.debug(`[Data Installer] ${line}`),

@@ -40,8 +40,15 @@ describe('onAnotherInstance', () => {
     });
 });
 
-it("names the pack by its id in the engine's refusal", () => {
+// Run 8 (2026-11-15): the refusal read "wecafe@main"; the SC never manages versions.
+it("names the pack as the SC knows it in the engine's refusal", () => {
+    expect(installedOnAnotherInstanceLine({ name: 'wecafe', version: 'main' }, 'We.Cafe')).toBe(
+        'We.Cafe is installed on another Commerce instance. Uninstall it there first.'
+    );
+});
+
+it("CONTROL: names it by its id's name, with no version, when no name is known", () => {
     expect(installedOnAnotherInstanceLine({ name: 'luma', version: 'main' })).toBe(
-        'luma@main is installed on another Commerce instance. Uninstall it there first.'
+        'luma is installed on another Commerce instance. Uninstall it there first.'
     );
 });

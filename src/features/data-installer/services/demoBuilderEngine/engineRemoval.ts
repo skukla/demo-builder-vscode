@@ -54,11 +54,13 @@ export async function removeRecordedPack(
         alsoLeaving?: readonly string[];
         /** The Commerce instance the engine reaches: a record from another one is refused (step-07 D6). */
         instance?: string;
+        /** The pack's name as the SC knows it, for the refusal; absent, its id's name. */
+        name?: string;
     },
 ): Promise<RecordedRemoval> {
     // Its ids are another instance's: deleting them here would take unrelated objects (step-07 D6).
     const record = await readInstallRecord(files, target.projectPath, target.pack);
-    if (onAnotherInstance(record?.instance, target.instance)) throw new Error(installedOnAnotherInstanceLine(target.pack));
+    if (onAnotherInstance(record?.instance, target.instance)) throw new Error(installedOnAnotherInstanceLine(target.pack, target.name));
     const result = await removePack(commerce, files, target);
     if (result.noRecord) throw new Error(NO_RECORD);
     const lines = [
@@ -95,12 +97,12 @@ export async function removeReplacedPack(
     job: ReplacingJob,
     commerce: Parameters<typeof removePack>[0],
     files: RecordFiles,
-    target: { projectPath: string; pack: DatapackId; log: (line: string) => void; instance?: string },
+    target: { projectPath: string; pack: DatapackId; log: (line: string) => void; instance?: string; nameOf?: (id: DatapackId) => string },
 ): Promise<string | undefined> {
     job.phase = undefined;
     job.replacing = 'processing';
     const progress = (line: string): void => void (job.detail = line);
-    const removal = await removeRecordedPack(commerce, files, { projectPath: target.projectPath, pack: target.pack, log: target.log, progress, instance: target.instance });
+    const removal = await removeRecordedPack(commerce, files, { projectPath: target.projectPath, pack: target.pack, log: target.log, progress, instance: target.instance, name: target.nameOf?.(target.pack) });
     job.detail = undefined;
     if (removal.refused) throw new Error(`${removal.note ?? 'Commerce refused part of the uninstall.'} Nothing was installed.`);
     job.replacing = 'success';

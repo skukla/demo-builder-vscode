@@ -57,8 +57,17 @@ describe('checking a removal', () => {
 
         const verdict = await h.engine().validateRemoval(request(ALL, { websiteCode: 'other', storeCode: 'default' }));
 
-        expect(verdict).toEqual({ valid: false, reason: 'racks@1.0.0 is installed on the website Main Website. Choose that one to uninstall it.' });
+        expect(verdict).toEqual({ valid: false, reason: 'racks is installed on the website Main Website. Choose that one to uninstall it.' });
         expect(h.store.sent).toStrictEqual([]);
+    });
+
+    // Run 8 (2026-11-15): the refusal named "wecafe@main", the pack's id, not the name the SC knows.
+    it('names the pack as the SC knows it when its name is remembered', async () => {
+        await h.importTypes(ALL);
+
+        const verdict = await h.engine({ names: { racks: 'Justrite Racks' } }).validateRemoval(request(ALL, { websiteCode: 'other', storeCode: 'default' }));
+
+        expect(verdict).toEqual({ valid: false, reason: 'Justrite Racks is installed on the website Main Website. Choose that one to uninstall it.' });
     });
 });
 

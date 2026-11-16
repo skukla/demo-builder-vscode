@@ -164,6 +164,7 @@ async function engine(context: HandlerContext, project: Project, mode: SampleDat
             project,
             authManager: context.authManager,
             secrets: context.context?.secrets,
+            memory: context.context?.globalState,
         },
         (line) => context.debugLogger.debug(`[Data Installer] ${line}`),
     );

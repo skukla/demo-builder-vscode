@@ -16,6 +16,7 @@ import { createMockProject } from '../../../helpers/projectFake';
 import { type MemoryStore, memoryStore } from './demoBuilderEngine/memoryStore.testUtils';
 import { configStore } from './demoBuilderEngine/storeConfig.testUtils';
 import { buildDatapackEngine, type DatapackEngineAccess, layerFinder, projectCommerce, readPackItems } from '@/features/data-installer/services/buildDatapackEngine';
+import type { NameMemory } from '@/features/data-installer/services/packNames';
 import { forgetPackReads } from '@/features/data-installer/services/packReadCache';
 import type { DatapackEngine } from '@/features/data-installer/services/datapackEngine';
 import type { ImportRequest } from '@/features/data-installer/services/importRequest';
@@ -108,6 +109,8 @@ export interface PackStores {
     rows?: Record<string, unknown>;
     /** The rows of the pack's settings layer in the library; none means it has no layer. */
     layer?: unknown[];
+    /** The SC's remembered pack names (`packNames`), by pack id. */
+    names?: Record<string, string>;
 }
 
 /** One project, its store, and the real engine and preview over them. */
@@ -138,9 +141,10 @@ export function ticksHarness(): TicksHarness {
         },
     });
     // Each access is the stores as they are now: a read kept from the last one is not (`packReadCache`).
-    const access = ({ rows = ROWS, layer }: PackStores = {}): DatapackEngineAccess => {
+    const access = ({ rows = ROWS, layer, names }: PackStores = {}): DatapackEngineAccess => {
         forgetPackReads();
-        return accessOf(rows, layer);
+        const memory: NameMemory = { get: <T>() => names as T, update: async () => undefined };
+        return { ...accessOf(rows, layer), ...(names ? { memory } : {}) };
     };
     const accessOf = (rows: Record<string, unknown>, layer: PackStores["layer"]): DatapackEngineAccess => ({
         catalog: catalogOf(rows),

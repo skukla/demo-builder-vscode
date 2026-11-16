@@ -22,11 +22,11 @@ import * as crypto from 'crypto';
 import { type DataTypeStatus, ENGINE_PHASES, FINISHING_STOP, REPLACE_STOP, type ImportStart, type InstallCheck, type JobStatusSnapshot, type KeptRootStep, type ValidationResult } from '../../types';
 import type { DatapackEngine } from '../datapackEngine';
 import type { CredentialCheck, ImportRequest } from '../importRequest';
-import { installedOnAnotherInstanceLine, onAnotherInstance } from '../instanceKey';
 import { addedKindsLine, askedRows, missingKinds } from './askedKinds';
+import { elsewhere } from './engineElsewhere';
 import { removeRecordedPack, removeReplacedPack } from './engineRemoval';
 import { AFTER_PRODUCTS_LINES, type NoteLine, noteOf, rowNotesOf } from './installNote';
-import { type RecordFiles, type TargetCodes, nodeRecordFiles, openInstallRecord, readInstallRecord } from './installRecord';
+import { type RecordFiles, nodeRecordFiles, openInstallRecord } from './installRecord';
 import { carryInstallRecord } from './installRecordUpdate';
 import { resolveEngineTarget, sessionFor } from './installTarget';
 import { timed } from './jobClock';
@@ -41,8 +41,7 @@ import { refusedRemovalsLine } from './removalRuns';
 import { containersLine } from './removers';
 import { keptLine, tookOutLine } from './repeatInstall';
 import { type PackItems, PackRowsError, installPack, packRowProblems, refusedKindsReason, unsupportedKinds } from './runPack';
-import { STORE_CONFIG_KIND, settingsWebsite } from './storeConfigKind';
-import { nameInStore } from './storeNames';
+import { STORE_CONFIG_KIND } from './storeConfigKind';
 import { checkAfterInstall } from './verifyInstall';
 import { errorText } from '@/features/app-builder/services/storePreparation/setupContract';
 import type { CommerceGet, CommerceSend } from '@/types/commerceWire';
@@ -74,6 +73,8 @@ export interface DemoBuilderEngineDeps {
      * `commerceInstance`: this engine writes through the project's access, whatever a caller names.
      */
     instance?: string;
+    /** The pack's name as the SC knows it, for the engine's sentences; absent, its id's name. */
+    nameOf?: (id: DatapackId) => string;
 }
 
 /** How one job ended, for the activity log (`engineActivityLog.ts`). */
@@ -174,24 +175,6 @@ async function access(deps: DemoBuilderEngineDeps): Promise<{ get: CommerceGet; 
     const commerce = await deps.commerce();
     if ('refusal' in commerce) throw new Error(commerce.refusal);
     return commerce;
-}
-
-/**
- * Why the pack cannot be installed to this target, when the record says it is installed elsewhere:
- * a repeat install compares what it made where it made it, and one record spans one website. A
- * record made before the target was kept says it by the website its settings went to.
- */
-async function elsewhere(deps: DemoBuilderEngineDeps, request: ImportRequest, target: TargetCodes, ask = 'Uninstall it first, or install it there.'): Promise<string | undefined> {
-    const read = (pack: DatapackId) => readInstallRecord(deps.files ?? nodeRecordFiles, deps.projectPath, pack);
-    const record = (await read(request.id)) ?? (request.updates && (await read(request.updates))); // an update's (U1)
-    if (!record) return undefined;
-    // Its ids are another instance's: reused here they would be read and written on this one (step-07 D6).
-    if (onAnotherInstance(record.instance, deps.instance)) return installedOnAnotherInstanceLine(request.id);
-    const website = record.target?.websiteCode ?? settingsWebsite(record.created);
-    const moved = website !== undefined && website !== target.websiteCode;
-    const otherView = record.target !== undefined && record.target.storeCode !== target.storeCode;
-    if (!moved && !otherView) return undefined;
-    return `${request.id.name}@${request.id.version} is installed on ${moved ? `the website ${await nameInStore(deps, 'store/websites', website)}` : `the store view ${await nameInStore(deps, 'store/storeViews', record.target?.storeCode ?? '')}`}. ${ask}`;
 }
 
 /** Every reason the pack's and its layer's rows cannot be installed, before the first write. */
@@ -367,7 +350,7 @@ export function demoBuilderEngine(deps: DemoBuilderEngineDeps): DatapackEngine {
             start(deps, jobs, request, 'delete', async (job) => {
                 const progress = (line: string): void => void (job.detail = line);
                 const leaving = request.alsoLeaving ? { alsoLeaving: request.alsoLeaving } : {};
-                const result = await removeRecordedPack(await access(deps), deps.files ?? nodeRecordFiles, { projectPath: deps.projectPath, pack: request.id, log: deps.log, progress, instance: deps.instance, ...leaving });
+                const result = await removeRecordedPack(await access(deps), deps.files ?? nodeRecordFiles, { projectPath: deps.projectPath, pack: request.id, log: deps.log, progress, instance: deps.instance, name: deps.nameOf?.(request.id), ...leaving });
                 job.detail = undefined;
                 job.note = result.note;
                 if (result.leftInStore) job.leftInStore = true;

@@ -24,6 +24,7 @@ import { type RecordFiles, nodeRecordFiles, readInstallRecord } from './demoBuil
 import type { PackItems } from './demoBuilderEngine/runPack';
 import { nodeActivityFiles, recordJobEnd } from './engineActivityLog';
 import { deriveImportInstance } from './importInstance';
+import { type NameMemory, rememberedPackName } from './packNames';
 import { cachedPackRead } from './packReadCache';
 import { type LayerReads, findSettingsLayer } from './settingsLayer';
 import { openCommerceAdmin } from '@/core/utils/commerceAdmin';
@@ -44,6 +45,8 @@ export interface DatapackEngineAccess {
     libraryCatalog?: () => Promise<Pick<DataInstallerClient, 'getDatapackDetail' | 'getDataItem'> & LayerReads>;
     authManager: AuthenticationService | undefined;
     secrets: CredentialStore | undefined;
+    /** Where the SC's pack names are remembered, so the engine's sentences name a pack as they know it. */
+    memory?: NameMemory;
 }
 
 /**
@@ -114,6 +117,7 @@ export function buildDatapackEngine(access: DatapackEngineAccess, log: (line: st
         // Written on a new install record: a removal from another instance stops (step-07 D6).
         ...(instance ? { instance } : {}),
         log,
+        nameOf: (pack) => (access.memory ? rememberedPackName(access.memory, pack.name) : undefined) ?? pack.name,
         onJobEnd: (end) => void writeActivity(end),
         ...layerFinder(access),
         // Step 12: the one Admin step a pack can leave is asked where the SC is looking (PL-59).

@@ -196,7 +196,7 @@ describe('demoBuilderEngine install', () => {
 describe('demoBuilderEngine and the website a pack was installed to', () => {
     const READS = { [SETS_PAGE]: { items: [], total_count: 0 }, ...noneUnder(2, { Sale: 'sale' }) };
     const ELSEWHERE = { websiteCode: 'justrite_test_website', storeCode: 'justrite_test_view' };
-    const MOVED = `${PACK.name}@${PACK.version} is installed on the website justrite_test_website. Uninstall it first, or install it there.`;
+    const MOVED = `${PACK.name} is installed on the website justrite_test_website. Uninstall it first, or install it there.`;
 
     // Names, not codes (owner, 2026-11-15): the website as the Admin shows it, the code only when
     // the store no longer lists it (as the refusal below, whose store lists none).
@@ -208,7 +208,7 @@ describe('demoBuilderEngine and the website a pack was installed to', () => {
 
         expect(await engine.validateImport(request())).toEqual({
             valid: false,
-            reason: `${PACK.name}@${PACK.version} is installed on the website Justrite Test. Uninstall it first, or install it there.`,
+            reason: `${PACK.name} is installed on the website Justrite Test. Uninstall it first, or install it there.`,
         });
     });
 
@@ -261,7 +261,7 @@ describe('demoBuilderEngine and the website a pack was installed to', () => {
 // reinstall would read and write them on this one, and a removal would delete unrelated objects.
 describe('demoBuilderEngine and the Commerce instance a pack was installed to', () => {
     const READS = { [SETS_PAGE]: { items: [], total_count: 0 }, ...noneUnder(2, { Sale: 'sale' }) };
-    const OTHER = `${PACK.name}@${PACK.version} is installed on another Commerce instance. Uninstall it there first.`;
+    const OTHER = `${PACK.name} is installed on another Commerce instance. Uninstall it there first.`;
 
     async function recordedOn(instance: string) {
         const files = memoryFiles();
@@ -291,6 +291,18 @@ describe('demoBuilderEngine and the Commerce instance a pack was installed to', 
         expect((await engine.getJobFailureReason(activationId))?.error).toBe(OTHER);
         expect(ctx.sent).toStrictEqual([]);
         expect((await readInstallRecord(files, PROJECT, PACK))?.created).toHaveLength(1);
+    });
+
+    it('names the pack as the SC knows it, in both refusals', async () => {
+        const named = { files: await recordedOn('TenantA'), instance: 'TenantB', nameOf: () => 'Justrite Racks' };
+        const { engine } = await engineWith({}, () => true, named);
+        const said = 'Justrite Racks is installed on another Commerce instance. Uninstall it there first.';
+
+        const { activationId } = await engine.startDelete(request());
+        await settle(engine, activationId);
+
+        expect((await engine.getJobFailureReason(activationId))?.error).toBe(said);
+        expect(await engine.validateImport(request())).toEqual({ valid: false, reason: said });
     });
 
     it('CONTROL: removes it from the instance it was installed to', async () => {

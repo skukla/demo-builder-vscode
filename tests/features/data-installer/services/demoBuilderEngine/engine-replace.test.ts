@@ -117,7 +117,7 @@ describe('an import replacing a version installed on another Commerce instance',
 
         expect(ctx.sent).toStrictEqual([]);
         expect((await engine.getJobFailureReason(activationId))?.error).toBe(
-            `${OLD.name}@${OLD.version} is installed on another Commerce instance. Uninstall it there first.`
+            `${OLD.name} is installed on another Commerce instance. Uninstall it there first.`
         );
         expect((await readInstallRecord(files, PROJECT, OLD))?.created).toHaveLength(1);
     });

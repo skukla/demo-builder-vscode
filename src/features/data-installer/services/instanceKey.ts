@@ -33,7 +33,10 @@ export function onAnotherInstance(recorded: string | undefined, now: string | un
     return instanceKey(recorded) !== instanceKey(now);
 }
 
-/** The engine's refusal, by the pack's id: it has no display name to hand. */
-export function installedOnAnotherInstanceLine(id: DatapackId): string {
-    return `${id.name}@${id.version} is installed on another Commerce instance. Uninstall it there first.`;
+/**
+ * The engine's refusal, naming the pack as the SC knows it: its remembered name, else its id's
+ * name, never `name@version` (the SC never manages versions, owner 2026-11-12).
+ */
+export function installedOnAnotherInstanceLine(id: DatapackId, name?: string): string {
+    return `${name ?? id.name} is installed on another Commerce instance. Uninstall it there first.`;
 }
