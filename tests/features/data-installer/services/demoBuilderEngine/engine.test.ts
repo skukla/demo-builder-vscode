@@ -81,6 +81,20 @@ describe('demoBuilderEngine install', () => {
         expect((await readInstallRecord(files, PROJECT, PACK))?.created).toEqual([{ kind: 'categories', id: '40', key: 'Sale' }]);
     });
 
+    // Owner walk, 2026-11-16 (U2.2): a datapack saved from the store's own category, then installed,
+    // created nothing, so no record was written and the header kept offering Create, never Save.
+    it('keeps a record of an install that created nothing, so the project knows Demo Builder installed it', async () => {
+        const { engine, files } = await engineWith({ [SETS_PAGE]: { items: [], total_count: 0 } }, () => ({ id: 40 }));
+
+        const { activationId } = await engine.startImport(request({ dataTypes: ['attribute_sets'] }));
+        const status = await settle(engine, activationId);
+
+        expect(status.perType).toEqual({ attribute_sets: 'success' });
+        const record = await readInstallRecord(files, PROJECT, PACK);
+        expect(record?.created).toEqual([]);
+        expect(record?.startedAt).toBe('2026-10-27T18:00:00.000Z');
+    });
+
     it('says in one line what installing again kept, because the SC had changed it in the Admin', async () => {
         const files = memoryFiles();
         const recorder = await openInstallRecord(files, PROJECT, PACK, () => '2026-10-27T18:00:00.000Z');

@@ -144,6 +144,11 @@ export interface InstallRecorder {
     confirm(pending: readonly PendingObject[], objects: readonly CreatedObject[]): Promise<void>;
     /** Drop pending entries that certainly did not land. */
     forgetPending(pending: readonly PendingObject[]): Promise<void>;
+    /**
+     * Write the record as it stands, even with nothing on it: an install that created nothing (every
+     * row was already in the store) still installed the pack, and the project must know it did.
+     */
+    keep(): Promise<void>;
 }
 
 /** The record is missing a safe name, unreadable, or belongs to another pack. */
@@ -344,6 +349,9 @@ export async function openInstallRecord(
         async forgetPending(gone) {
             if (!gone.some((g) => pending.some(samePending(g)))) return;
             withoutPending(gone);
+            await save();
+        },
+        async keep() {
             await save();
         },
     };

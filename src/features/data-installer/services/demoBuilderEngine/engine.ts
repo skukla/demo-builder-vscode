@@ -231,6 +231,8 @@ async function runInstall(deps: DemoBuilderEngineDeps, request: ImportRequest, j
         job.perType[kind] = 'processing';
         job.detail = undefined;
     }, earlier);
+    // Walk U2.2: an install that created nothing still installed the pack, so it leaves a record.
+    await recorder.keep();
     job.detail = undefined;
     // The last kind stays in progress through the layer: the watcher ends when every kind asked for
     // has, and the note says what the layer did (step 09).

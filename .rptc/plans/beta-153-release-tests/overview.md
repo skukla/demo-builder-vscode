@@ -210,6 +210,7 @@ Mark each test's **Result** line: `passed 2026-11-DD`, or `failed 2026-11-DD: wh
 | F180 | U2.1 step 4 (2026-11-16) | The datapack save's run read "Reading from Commerce / Reading your selection", then "Starting" mid-run, then "Saving to My Datapacks" alone | **Fixed** with tests: line 1 is each step's job from its verb ("Exporting from Commerce", "Saving to My Datapacks"), line 2 the part under way ("Categories, 1 of 1", "Release Save Test"); a push between steps keeps the last lines (rowsLines, OperationProgressBody). **Owner must re-look** |
 | F181 | U2.1 step 4 (2026-11-16) | **Release Save Test Created** sat in the run window's full height for one sentence | **Fixed** with tests (owner, 2026-11-16: "a clean finish ends small", over the 2026-11-11 rule that kept the run's height): a clean finish with no rows to keep, no list of changes and no next step is the small result window, its title, its sentence and Close (SmallEnd); a finish with a problem stays in the run's window. **Owner must re-look** |
 | F182 | U2.1 step 5 (2026-11-16) | The install's run opened on "Starting" alone | **Fixed** with tests: before the first step reports, the window says the job ("Installing in Commerce") over the installer's words ("Preparing to install", "Preparing to update", "Preparing to save", else "Preparing"); "Starting" is gone from every run window. **Owner must re-look** |
+| F183 | U2.2 step 1 (2026-11-16) | After installing Release Save Test, the Datapacks header still read Create, so there was no Save | **Fixed** with a test: the install created nothing (the datapack's one category was already in the store, since it was saved from it), and the engine wrote its install record only when it created something. No record reads as "Demo Builder never installed it". An install that succeeds now always leaves its record, empty or not. Live check: install again, then the header reads Save |
 
 ## Questions raised
 
@@ -353,6 +354,8 @@ U2.1 notes (2026-11-16). Step 4 passed: Creating Release Save Test, then Release
 **Test U2.2: Save a later edit into it**
 1. In the Admin, rename ZZ Customer Picks to "ZZ Customer Picks 2". In the Datapacks header, click
    **Save**, then **Save** in the window. Expect "Saved to Release Save Test".
+
+U2.2 notes (2026-11-16). Reached step 1: the header still read Create after U2.1's install (finding F183, fixed). Steve installs Release Save Test again, then repeats step 1.
 
 **Test U2.3: Another demo picks up the newer save** (1.7 steps 3 to 6, 1.11 step 4)
 1. Create a project named "Scratch 1028 B" on the test website and the test store view, picking

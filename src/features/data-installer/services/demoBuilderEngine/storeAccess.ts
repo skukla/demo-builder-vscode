@@ -61,6 +61,7 @@ const NOTHING_RECORDED: InstallRecorder = {
     markPending: readsOnly,
     confirm: readsOnly,
     forgetPending: readsOnly,
+    keep: readsOnly,
 };
 
 /**
