@@ -17,7 +17,7 @@ export const BODEA_CHECK: ClearCheck = {
         { type: 'orders', label: 'Orders', count: 3, happens: '3 closed' },
     ],
     records: {
-        products: { removed: ['BD-RACK', 'BD-CHAIR'], kept: [] },
+        products: { removed: ['BD-RACK', 'BD-CHAIR'], kept: [], names: { 'BD-RACK': 'Server Rack', 'BD-CHAIR': 'Office Chair' } },
         categories: { removed: ['Racks', 'Server Racks'], kept: ['Cables'], tree: [{ name: 'Racks', id: '151', children: [{ name: 'Server Racks', id: '152' }] }] },
         customers: { removed: ['bd.store@example.com'], kept: ['bd.other@example.com'] },
         orders: { removed: ['000000701', '000000702', '000000703'], kept: [] },

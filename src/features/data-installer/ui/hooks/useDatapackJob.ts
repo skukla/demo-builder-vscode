@@ -65,6 +65,8 @@ export interface DatapackJob {
     records: DatapackRecordsResult['records'] | null;
     /** An uninstall's Review Records: what it would keep, by type. */
     recordsKept: DatapackRecordsResult['kept'] | null;
+    /** Review Records' products' names by SKU (walk F147). */
+    recordsProductNames: DatapackRecordsResult['productNames'] | null;
     recordsReading: boolean;
     result: ResultContent | null;
     /** The job watched, once its record is read. */
@@ -156,6 +158,7 @@ export function useDatapackJob(args: DatapackJobArgs): DatapackJob {
         checkFailed: table.failed,
         records: records.value?.records ?? null,
         recordsKept: records.value?.kept ?? null,
+        recordsProductNames: records.value?.productNames ?? null,
         recordsReading: !records.settled,
         result,
         record: watch.record,

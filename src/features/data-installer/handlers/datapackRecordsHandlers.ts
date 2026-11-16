@@ -12,7 +12,7 @@
 import { readPackItems } from '../services/buildDatapackEngine';
 import type { DataInstallerClient } from '../services/dataInstallerClient';
 import type { PackItems } from '../services/demoBuilderEngine/runPack';
-import { recordNames } from '../services/packRecords';
+import { productNamesOf, recordNames } from '../services/packRecords';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
 import { libraryReads } from './libraryReads';
 import { readRemovalRecords } from './removalRecords';
@@ -56,11 +56,11 @@ export async function readDatapackRecords(
 ): Promise<HandlerResponse> {
     const input = readPayload(payload);
     if ('error' in input) return { success: false, error: input.error };
-    if (payload?.removal === true) return readRemovalRecords(context, input.pack);
+    const source = input.source ?? 'installer';
+    if (payload?.removal === true) return readRemovalRecords(context, input.pack, () => read(input.pack, source));
     try {
-        const data: DatapackRecordsResult = {
-            records: recordNames(await read(input.pack, input.source ?? 'installer')),
-        };
+        const items = await read(input.pack, source);
+        const data: DatapackRecordsResult = { records: recordNames(items), productNames: productNamesOf(items) };
         return { success: true, data };
     } catch (error) {
         return failure(context, error, 'The records could not be read.');

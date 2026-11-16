@@ -126,6 +126,9 @@ export interface WipeInputs extends Pick<WipeRespects, 'records'>, Partial<Omit<
 }
 
 const skus = (products: readonly CommerceProduct[]) => products.map((p) => p.sku);
+/** Each product's name by its SKU, those with one: Review Records' Name column (walk F147). */
+const productNames = (products: readonly CommerceProduct[]): Record<string, string> =>
+    Object.fromEntries(products.flatMap((p) => (p.name ? [[p.sku, p.name]] : [])));
 const nameOf = (category: WipeCategory): string => category.name ?? String(category.id);
 const ruleName = (rule: CartRuleDecision['remove'][number]): string => rule.name ?? String(rule.rule_id);
 /** The shared catalogs of these groups, those that have one. */
@@ -271,7 +274,11 @@ function plannedOf(decided: Decided, ids: Ids, scope: WipeScope): Record<string,
     const removedCategories = decided.tree.filter((c) => ids.categoryIds.includes(String(c.id))).map(nameOf);
     const orders = ids.orders.filter((o) => o.action !== 'note');
     return {
-        [PRODUCT_KIND]: { removed: [...ids.deleteSkus, ...new Set(ids.takeOff.map((t) => t.sku))], kept: skus(products.kept) },
+        [PRODUCT_KIND]: {
+            removed: [...ids.deleteSkus, ...new Set(ids.takeOff.map((t) => t.sku))],
+            kept: skus(products.kept),
+            names: productNames([...products.remove, ...products.takeOff.map((t) => t.product), ...products.kept]),
+        },
         categories: { removed: removedCategories, kept: decided.categories.kept.map(nameOf), ...(going.length > 0 ? { tree: going } : {}) },
         [CUSTOMER_KIND]: { removed: customers.remove.map((c) => c.email), kept: [...customers.inCompany, ...customers.kept].map((c) => c.email) },
         [COMPANY_KIND]: { removed: companies.remove.map((c) => c.name), kept: companies.kept },

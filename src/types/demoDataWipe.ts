@@ -42,6 +42,8 @@ export interface ClearRecords {
     kept: string[];
     /** The removed records as a tree, for a type that nests (categories). */
     tree?: TreeListNode[];
+    /** Products' names by SKU, for the Name column beside the SKU (walk F147). */
+    names?: Record<string, string>;
 }
 
 /**

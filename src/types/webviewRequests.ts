@@ -1109,6 +1109,8 @@ export interface DatapackRecordsResult {
     records: Record<string, string[]>;
     /** An uninstall's: what it would keep (a root a store uses, a category holding the SC's products). */
     kept?: Record<string, string[]>;
+    /** Products' names by SKU, for the Name column beside the SKU (walk F147). */
+    productNames?: Record<string, string>;
 }
 
 /**

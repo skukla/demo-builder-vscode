@@ -21,6 +21,7 @@
 import React, { useState } from 'react';
 import type { TypeRow } from '../job/installRows';
 import { ViewSwitcher } from '../ViewSwitcher';
+import { isProductType, recordColumns } from './recordColumns';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import { TreeList, type TreeListNode, treeRows } from '@/core/ui/components/ui/TreeList';
@@ -47,6 +48,8 @@ export interface ClearRecordsShown {
     unread?: ReadonlySet<string>;
     /** The first tab's name in place of Removed: an update's is Changed (J9-2). */
     firstTab?: string;
+    /** Products' names by SKU, for the Name column beside the SKU (walk F147); absent, SKU alone. */
+    productNames?: Record<string, string>;
 }
 
 /** The first tab's name: orders and returns are closed, never deleted (decisions Phase 6, J1-5). */
@@ -62,13 +65,17 @@ function RecordTabs({ type, kept, view, onSelect, firstTab }: { type: string; ke
 }
 
 /** One type's records, filtered by name: a tree for a type that nests, else names. */
-function RecordPane({ row, names, kept, tree, firstTab }: { row: TypeRow; names: readonly string[]; kept?: readonly string[]; tree?: readonly TreeListNode[]; firstTab?: string }) {
+function RecordPane({ row, names, kept, tree, firstTab, productNames }: { row: TypeRow; names: readonly string[]; kept?: readonly string[]; tree?: readonly TreeListNode[]; firstTab?: string; productNames?: Record<string, string> }) {
     const [query, setQuery] = useState('');
     const [view, setView] = useState<RecordView>('removed');
     const noun = row.label.toLowerCase();
     const listed = view === 'kept' ? (kept ?? NONE) : names;
     const asTree = view === 'removed' && tree !== undefined;
-    const shown = listed.filter((name) => matches(name, query));
+    // A product's name is searched too: an SC remembers either.
+    const titled = productNames && isProductType(row.type) ? productNames : undefined;
+    const shown = listed.filter((name) => matches(name, query) || (titled?.[name] !== undefined && matches(titled[name], query)));
+    const columns = recordColumns(row.type, titled !== undefined);
+    const two = columns.length === 2;
     return (
         <div className="datapack-pick-list">
             {kept ? <RecordTabs type={row.type} kept={kept.length} view={view} onSelect={setView} {...(firstTab ? { firstTab } : {})} /> : null}
@@ -84,16 +91,27 @@ function RecordPane({ row, names, kept, tree, firstTab }: { row: TypeRow; names:
                 alwaysShowSearch
                 hideCount
             />
-            <div className="type-record-head" role="row">
-                <span role="columnheader">Name</span>
+            <div className={two ? 'type-record-head type-record--two' : 'type-record-head'} role="row">
+                {columns.map((column) => (
+                    <span role="columnheader" key={column}>
+                        {column}
+                    </span>
+                ))}
             </div>
             <div className="datapack-pick-rows">
                 {asTree ? (
                     <TreeList nodes={tree} query={query} />
                 ) : (
                     shown.map((name) => (
-                        <div className="type-record" key={name}>
-                            {name}
+                        <div className={two ? 'type-record type-record--two' : 'type-record'} key={name}>
+                            {titled ? (
+                                <>
+                                    <span>{name}</span>
+                                    <span>{titled[name] ?? ''}</span>
+                                </>
+                            ) : (
+                                name
+                            )}
                         </div>
                     ))
                 )}
@@ -131,7 +149,7 @@ export interface TypeRailProps extends ClearRecordsShown {
     records: Record<string, string[]> | null;
 }
 
-export function TypeRail({ rows, records, kept, trees, unread, firstTab }: TypeRailProps): React.ReactElement {
+export function TypeRail({ rows, records, kept, trees, unread, firstTab, productNames }: TypeRailProps): React.ReactElement {
     const [shown, setShown] = useState(rows[0]?.type);
     const row = rows.find((r) => r.type === shown) ?? rows[0];
     const unreadRow = row !== undefined && unread?.has(row.type) === true;
@@ -168,6 +186,7 @@ export function TypeRail({ rows, records, kept, trees, unread, firstTab }: TypeR
                         kept={keptOf(kept, row.type)}
                         {...(trees?.[row.type] ? { tree: trees[row.type] } : {})}
                         {...(firstTab ? { firstTab } : {})}
+                        {...(productNames ? { productNames } : {})}
                     />
                 ) : null}
             </div>

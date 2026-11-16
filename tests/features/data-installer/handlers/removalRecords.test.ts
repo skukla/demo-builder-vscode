@@ -67,6 +67,8 @@ describe('readRemovalRecords', () => {
             data: {
                 records: { store_config: ['general/locale/code'], products: ['csm5122'], categories: ['Coffee'] },
                 kept: { categories: ['Frescopa'] },
+                // No pack read handed in: no names.
+                productNames: {},
             },
         });
     });
@@ -77,6 +79,15 @@ describe('readRemovalRecords', () => {
         const handed = jest.mocked(decideRemovals).mock.calls[0][1].map((o) => o.kind);
         expect(handed).not.toContain('store_config');
         expect(handed).toEqual(expect.arrayContaining(['categories', 'products']));
+    });
+
+    // Walk F147: the products' names, from the datapack's own rows, for the Name column.
+    it("names the products from the datapack's rows", async () => {
+        const answer = await readRemovalRecords(context(), PACK, async () => ({
+            products: [{ product: { sku: 'csm5122', name: 'Morning Muse Light Roast Pod' } }],
+        }));
+
+        expect(answer).toMatchObject({ data: { productNames: { csm5122: 'Morning Muse Light Roast Pod' } } });
     });
 
     it('lists nothing when Demo Builder holds no record of installing it', async () => {

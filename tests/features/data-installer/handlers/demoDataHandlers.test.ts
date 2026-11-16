@@ -28,7 +28,11 @@ describe('check-demo-data', () => {
         const check = checked(res.data);
         expect(check.websites).toEqual([{ code: 'tailspin_test_website', name: 'Tailspin Test' }]);
         // The clearing uninstalls the datapack first, so what its record lists is counted as removed.
-        expect(check.records.products).toEqual({ removed: ['ZZ-ONLY-HERE', 'ZZ-JACKET', 'ZZ-JACKET-RED', 'ZZ-MADE-BY-DEMO-BUILDER', 'ZZ-SHARED-WITH-TAILSPIN'], kept: ['ZZ-LONE-VARIANT'] });
+        expect(check.records.products).toEqual({
+            removed: ['ZZ-ONLY-HERE', 'ZZ-JACKET', 'ZZ-JACKET-RED', 'ZZ-MADE-BY-DEMO-BUILDER', 'ZZ-SHARED-WITH-TAILSPIN'],
+            kept: ['ZZ-LONE-VARIANT'],
+            names: { 'ZZ-JACKET': 'ZZ-JACKET', 'ZZ-JACKET-RED': 'ZZ-JACKET-RED', 'ZZ-LONE-VARIANT': 'ZZ-LONE-VARIANT', 'ZZ-MADE-BY-DEMO-BUILDER': 'ZZ-MADE-BY-DEMO-BUILDER', 'ZZ-ONLY-HERE': 'ZZ-ONLY-HERE', 'ZZ-SHARED-WITH-TAILSPIN': 'ZZ-SHARED-WITH-TAILSPIN' },
+        });
         expect(check.records.customers).toEqual({ removed: ['zz.shopper@example.com', 'zz.made@example.com'], kept: ['zz.admin@example.com'] });
         expect(check.rows.map((r) => [r.label, r.happens])).toEqual([
             ['Products', '5 removed'],

@@ -13,7 +13,9 @@
 
 import { type CreatedObject, nodeRecordFiles, readInstallRecord, removalOrder } from '../services/demoBuilderEngine/installRecord';
 import { decideRemovals, keptObjects } from '../services/demoBuilderEngine/removers';
+import type { PackItems } from '../services/demoBuilderEngine/runPack';
 import { packKindOf } from '../services/demoBuilderEngine/storeCopies';
+import { productNamesOf } from '../services/packRecords';
 import { STORE_CONFIG_KIND } from '../services/demoBuilderEngine/storeConfigKind';
 import { failure } from './packSave';
 import { openProjectStore } from './storeChangesHandlers';
@@ -32,8 +34,13 @@ function namesByKind(objects: readonly CreatedObject[], named: (o: CreatedObject
  * What an uninstall of `pack` would take and keep, or why it could not be read.
  *
  * @param pack - the datapack the demo holds, as its install record names it
+ * @param readPack - its rows, for the products' names (walk F147); a failed read leaves them out
  */
-export async function readRemovalRecords(context: HandlerContext, pack: DatapackId): Promise<HandlerResponse> {
+export async function readRemovalRecords(
+    context: HandlerContext,
+    pack: DatapackId,
+    readPack?: () => Promise<PackItems>,
+): Promise<HandlerResponse> {
     const project = await context.stateManager.getCurrentProject();
     const record = project ? await readInstallRecord(nodeRecordFiles, project.path, pack) : undefined;
     if (!record) return { success: true, data: { records: {}, kept: {} } satisfies DatapackRecordsResult };
@@ -49,9 +56,11 @@ export async function readRemovalRecords(context: HandlerContext, pack: Datapack
         // A kept container by the name the store gives it; anything else by the pack's name for it.
         const keptNames = new Map(kept.map((k) => [k.object, k.name]));
         const named = (o: CreatedObject): string => keptNames.get(o) ?? o.key ?? o.id;
+        const productNames = readPack ? productNamesOf(await readPack().catch(() => ({}))) : {};
         const data: DatapackRecordsResult = {
             records: namesByKind([...settings, ...take], named),
             kept: namesByKind(keptObjects(kept), named),
+            productNames,
         };
         return { success: true, data };
     } catch (error) {

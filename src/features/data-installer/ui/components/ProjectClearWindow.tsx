@@ -187,10 +187,12 @@ export function recordsWindow(
     const removed: Record<string, string[]> = {};
     const kept: Record<string, string[]> = {};
     const trees: Record<string, TreeListNode[]> = {};
+    let productNames: Record<string, string> = {};
     for (const [type, records] of Object.entries(check.records)) {
         removed[type] = records.removed;
         kept[type] = records.kept;
         if (records.tree) trees[type] = records.tree;
+        if (records.names) productNames = { ...productNames, ...records.names };
     }
     return (
         <RecordsWindow
@@ -199,6 +201,7 @@ export function recordsWindow(
             records={removed}
             kept={kept}
             trees={trees}
+            productNames={productNames}
             unread={new Set(Object.keys(check.unread ?? {}))}
             reading={false}
             onBack={onBack}

@@ -563,6 +563,13 @@
     border-bottom: 1px solid var(--spectrum-global-color-gray-300);
 }
 
+/* A product's SKU and Name side by side (walk F147): the shared set every products grid shows. */
+.type-record--two {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    column-gap: 16px;
+}
+
 /* Clear's kept slot after a type's count (step 06, C2b; J1-3b): on every row, a dot's width, so the
    counts and the notice dots each line up down the column (rule 11). Its words are the hover text. */
 .type-rail-kept {

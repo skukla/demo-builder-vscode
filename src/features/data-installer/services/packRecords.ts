@@ -24,6 +24,24 @@ function rootName(records: unknown): string | undefined {
     return typeof name === 'string' && name !== '' ? name : undefined;
 }
 
+/** The kinds whose rows are products, named by SKU. */
+const PRODUCT_KINDS = ['products', 'giftcards'];
+
+/**
+ * Each product's name by its SKU, for Review Records' Name column beside the SKU (walk F147). Only
+ * products with a name; none when the pack holds no products.
+ */
+export function productNamesOf(items: PackItems): Record<string, string> {
+    const names: Record<string, string> = {};
+    for (const kind of PRODUCT_KINDS) {
+        for (const row of rowsByKey(kind, items[kind]).values()) {
+            const product = (row as { product?: { sku?: unknown; name?: unknown } }).product;
+            if (typeof product?.sku === 'string' && typeof product.name === 'string' && product.name !== '') names[product.sku] = product.name;
+        }
+    }
+    return names;
+}
+
 /** Each kind's record names, in the pack's order; kinds with no key or no rows are left out. */
 export function recordNames(items: PackItems): Record<string, string[]> {
     const named: Record<string, string[]> = {};

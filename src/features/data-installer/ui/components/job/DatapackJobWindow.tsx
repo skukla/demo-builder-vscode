@@ -123,10 +123,14 @@ function saveFirstWindow(job: DatapackJob, opened: Opened, close: () => void): R
     );
 }
 
-/** An uninstall's Review Records has Removed and Kept tabs, as Clear's spot check does (walk F151). */
-function keptTabs(job: DatapackJob, opened: Opened): { kept?: Record<string, string[]> } {
-    if (opened.kind !== 'uninstall') return {};
-    return { kept: job.recordsKept ?? {} };
+/**
+ * What Review Records shows beside the names: an uninstall's Kept tab, as Clear's spot check has
+ * (walk F151), and the products' names beside their SKUs (walk F147).
+ */
+function recordsExtras(job: DatapackJob, opened: Opened): { kept?: Record<string, string[]>; productNames?: Record<string, string> } {
+    const names = job.recordsProductNames ? { productNames: job.recordsProductNames } : {};
+    if (opened.kind !== 'uninstall') return names;
+    return { kept: job.recordsKept ?? {}, ...names };
 }
 
 /** The windows that leave the summary and come back: Review Records, a Dry Run's answer, the save question. */
@@ -137,7 +141,7 @@ function asideWindow(job: DatapackJob, opened: Opened, close: () => void): React
     if (phase === 'records') {
         const records = job.recordsReading ? NO_RECORDS : job.records;
         const { title } = summaryFrame(job, opened, false);
-        return <RecordsWindow title={title} rows={job.rows} records={records} reading={job.recordsReading} onBack={job.back} onClose={close} {...keptTabs(job, opened)} />;
+        return <RecordsWindow title={title} rows={job.rows} records={records} reading={job.recordsReading} onBack={job.back} onClose={close} {...recordsExtras(job, opened)} />;
     }
     if (phase === 'dry-result' && job.result) {
         return (

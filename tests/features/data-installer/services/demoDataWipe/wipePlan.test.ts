@@ -25,6 +25,8 @@ describe('planWipe on a website whose root another website shares (tailspin_test
         expect(plan.check.records.products).toEqual({
             removed: ['ZZ-ONLY-HERE', 'ZZ-JACKET', 'ZZ-JACKET-RED', 'ZZ-SHARED-WITH-TAILSPIN'],
             kept: ['ZZ-LONE-VARIANT', 'ZZ-MADE-BY-DEMO-BUILDER'],
+            // Each product's name by SKU (walk F147); the fixture's names are its SKUs.
+            names: { 'ZZ-JACKET': 'ZZ-JACKET', 'ZZ-JACKET-RED': 'ZZ-JACKET-RED', 'ZZ-LONE-VARIANT': 'ZZ-LONE-VARIANT', 'ZZ-MADE-BY-DEMO-BUILDER': 'ZZ-MADE-BY-DEMO-BUILDER', 'ZZ-ONLY-HERE': 'ZZ-ONLY-HERE', 'ZZ-SHARED-WITH-TAILSPIN': 'ZZ-SHARED-WITH-TAILSPIN' },
         });
     });
 
@@ -68,7 +70,7 @@ describe('planWipe on a website whose root another website shares (tailspin_test
         const plan = await planWipeFor(store.get, TEST_SITE, { records: [] });
 
         expect(plan.deleteSkus).toStrictEqual([]);
-        expect(plan.check.records.products).toEqual({ removed: [], kept: ['ZZ-NO-FIELDS'] });
+        expect(plan.check.records.products).toEqual({ removed: [], kept: ['ZZ-NO-FIELDS'], names: {} });
     });
 
     it('clears the shared root once every website using it is chosen', async () => {

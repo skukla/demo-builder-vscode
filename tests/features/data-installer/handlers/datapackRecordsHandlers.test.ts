@@ -67,6 +67,8 @@ describe('get-datapack-records', () => {
                     categories: ['Lab Equipment/Centrifuges'],
                     coupons: ['SAVE10'],
                 },
+                // Each product's name by SKU, for the Name column beside it (walk F147).
+                productNames: { 'BD-CENTRIFUGE': 'Benchtop Centrifuge', 'BD-GLOVES': 'Nitrile Gloves' },
             },
         });
     });

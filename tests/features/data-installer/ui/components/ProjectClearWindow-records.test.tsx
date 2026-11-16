@@ -39,7 +39,8 @@ it('lists the types on the left, each with its count once, and the first type’
 
     expect(railRow('Products')).toHaveTextContent(/^Products2$/);
     expect(railRow('Orders')).toHaveTextContent(/^Orders3$/);
-    expect(listed()).toEqual(['BD-RACK', 'BD-CHAIR']);
+    // Each product's SKU, then its name (walk F147).
+    expect(listed()).toEqual(['BD-RACKServer Rack', 'BD-CHAIROffice Chair']);
 });
 
 it('only looks: Back alone, and Back returns to the summary', async () => {
@@ -81,13 +82,23 @@ it('shows the kept records under Kept, the same rows as Removed, with the same c
     await openRecords();
     await press(railRow('Customers'));
     expect(listed()).toEqual(['bd.store@example.com']);
-    expect(screen.getByRole('columnheader', { name: 'Name' })).toBeInTheDocument();
+    // Walk F147: the header says what the column holds, a customer's email.
+    expect(screen.getByRole('columnheader', { name: 'Email' })).toBeInTheDocument();
 
     await press(tab('Kept'));
 
     expect(listed()).toEqual(['bd.other@example.com']);
     expect(document.querySelector('.type-record')).toHaveTextContent('bd.other@example.com');
+    expect(screen.getByRole('columnheader', { name: 'Email' })).toBeInTheDocument();
+});
+
+// Walk F147 (owner, 2026-11-16): every products grid shows SKU and Name.
+it('shows products under SKU and Name headers', async () => {
+    await openRecords();
+
+    expect(screen.getByRole('columnheader', { name: 'SKU' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Name' })).toBeInTheDocument();
+    expect(listed()).toEqual(['BD-RACKServer Rack', 'BD-CHAIROffice Chair']);
 });
 
 it('shows the categories going as a tree, each under its parent', async () => {
