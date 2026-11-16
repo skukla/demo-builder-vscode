@@ -4,6 +4,7 @@ import { AuthenticationErrorFormatter } from './authenticationErrorFormatter';
 import { getLogger } from '@/core/logging/debugLogger';
 import { SingleFlight } from '@/core/utils/singleFlight';
 import { formatMinutes } from '@/core/utils/timeFormatting';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 import { toError } from '@/types/typeGuards';
 
@@ -222,6 +223,13 @@ export class TokenManager {
         }
 
         const expiresIn = Math.floor((expiry - now) / 1000 / 60);
+        if (expiry <= now + TIMEOUTS.AUTH.CLI_MIN_TOKEN_LIFE) {
+            // The CLI would sign in through the browser for this token, unasked.
+            this.logger.debug(
+                `[Token] Token expires in ${formatMinutes(expiresIn)}, too soon for the Adobe CLI`,
+            );
+            return { valid: false, expiresIn, token };
+        }
         this.logger.debug(`[Token] Token valid, expires in ${formatMinutes(expiresIn)}`);
 
         // Caching is the caller's job (fetchTokenInspection), so this stays a

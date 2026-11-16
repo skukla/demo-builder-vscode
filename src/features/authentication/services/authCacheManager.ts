@@ -1,5 +1,5 @@
 import { getCacheTTLWithJitter } from '@/core/cache/cacheUtils';
-import { CACHE_TTL } from '@/core/utils/timeoutConfig';
+import { CACHE_TTL, TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type {
     AdobeOrg,
     AdobeProject,
@@ -255,9 +255,12 @@ export class AuthCacheManager {
     setCachedTokenInspection(result: { valid: boolean; expiresIn: number; token?: string }): void {
         const now = Date.now();
         const jitteredTTL = getCacheTTLWithJitter(CACHE_TTL.MEDIUM);
+        // Never past the point the Adobe CLI stops accepting the token: a "signed in" served
+        // from here after it would let an `aio` command open a browser sign-in unasked.
+        const usableFor = result.expiresIn * 60 * 1000 - TIMEOUTS.AUTH.CLI_MIN_TOKEN_LIFE;
         this.tokenInspectionCache = {
             data: result,
-            expiry: now + jitteredTTL,
+            expiry: now + Math.min(jitteredTTL, usableFor),
         };
     }
 

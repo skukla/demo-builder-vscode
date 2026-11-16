@@ -143,6 +143,14 @@ export const TIMEOUTS = {
 
         /** Full OAuth flow with callback (2 minutes) */
         OAUTH: 120000,
+
+        /**
+         * The least life a token must have left for the Adobe CLI to use it (10 minutes). Under
+         * that, aio-lib-ims `getTokenIfValid` (token-helper.js) treats the token as absent and
+         * any `aio` command signs in through the browser without asking. The extension calls a
+         * token valid only above this margin, so its own Sign In prompt asks first (2026-11-16).
+         */
+        CLI_MIN_TOKEN_LIFE: 600000,
     },
 
     // =========================================================================

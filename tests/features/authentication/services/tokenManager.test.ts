@@ -98,6 +98,32 @@ describe('TokenManager — inspectToken', () => {
         expect(result.valid).toBe(false);
     });
 
+    /**
+     * The Adobe CLI treats a token with under ten minutes left as no token, and any `aio` command
+     * then signs in through the browser with no question asked (aio-lib-ims `getTokenIfValid`).
+     * Found on 2026-11-16: Scratch 1028 opened with two minutes left, the dashboard's mesh check
+     * ran `aio api-mesh describe`, and a browser sign-in opened unasked. "Signed in" here has to
+     * mean what it means to the CLI, so the usual prompt asks first.
+     */
+    it('returns invalid for a token inside the Adobe CLI\'s ten-minute margin', async () => {
+        const result = await managerReading({
+            token: LONG_TOKEN,
+            expiry: Date.now() + 5 * 60 * 1000,
+        }).inspectToken();
+
+        expect(result.valid).toBe(false);
+        expect(result.token).toBe(LONG_TOKEN);
+    });
+
+    it('returns valid for a token with more than the CLI\'s ten minutes left', async () => {
+        const result = await managerReading({
+            token: LONG_TOKEN,
+            expiry: Date.now() + 11 * 60 * 1000,
+        }).inspectToken();
+
+        expect(result.valid).toBe(true);
+    });
+
     it('reports expiresIn in minutes', async () => {
         const result = await managerReading({
             token: LONG_TOKEN,
