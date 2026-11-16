@@ -313,9 +313,9 @@ export function DatapackCatalogView({ library = false, clearArrival }: { library
                     heldFailed={failed !== undefined}
                     updateBehind={updateBehind}
                     othersListed={groups.length > shown.length}
+                    library={library}
                 />
             </FullScreenSurface>
-
             <DatapackDetailPanel
                 selected={selected}
                 selectedName={nameOnCard(value, selected)}

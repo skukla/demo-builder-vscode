@@ -64,6 +64,12 @@ export interface DatapackCatalogGridProps {
     updateBehind?: boolean;
     /** The catalog holds packs this choice leaves out, so an empty Recommended is not an empty catalog. */
     othersListed?: boolean;
+    /**
+     * The Datapack Library, whose button is Add from File; a project's screen has Install from File
+     * and makes a datapack from the demo (release test 1.10, 2026-11-16: its empty list named the
+     * library's button).
+     */
+    library?: boolean;
 }
 
 /** An empty choice's title: Recommended with nothing anywhere is the empty catalog. */
@@ -72,12 +78,16 @@ function emptyTitle(show: CatalogShow, othersListed: boolean): string {
     return EMPTY_SHOW_TITLE[show] ?? 'No Datapacks Yet';
 }
 
-/** Where to look instead. Only your own, Recommended or the whole catalog can be filled from here. */
-function emptyDescription(show: CatalogShow, othersListed: boolean): string {
+/**
+ * Where to look instead. Only your own, Recommended or the whole catalog can be filled from here,
+ * by the screen's own button: the library adds from a file; a project installs from a file or
+ * makes one from the demo's data.
+ */
+function emptyDescription(show: CatalogShow, othersListed: boolean, library: boolean): string {
     if (show === 'team' || show === 'installer' || show === 'community') return 'Try All Datapacks';
     if (show === 'recommended' && othersListed) return 'Try All Datapacks';
-    if (show === 'yours') return 'Add one from a file.';
-    return "Add one from a file, or save this demo's.";
+    if (library) return 'Add one from a file.';
+    return "Make one from this demo's data, or install one from a file.";
 }
 
 /** Pick the one body state to show under the header. */
@@ -97,9 +107,10 @@ export function DatapackCatalogGrid({
     heldFailed = false,
     updateBehind = false,
     othersListed = false,
+    library = false,
 }: DatapackCatalogGridProps): React.JSX.Element {
     if (groups.length === 0) {
-        return <EmptyState title={emptyTitle(show, othersListed)} description={emptyDescription(show, othersListed)} />;
+        return <EmptyState title={emptyTitle(show, othersListed)} description={emptyDescription(show, othersListed, library)} />;
     }
 
     if (filtered.length === 0 && elsewhere) {
