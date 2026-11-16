@@ -193,8 +193,8 @@ Mark each test's **Result** line: `passed 2026-11-DD`, or `failed 2026-11-DD: wh
 | 3.1 to 3.5 | Smaller changes since the last walk | passed 2026-11-05 |
 | 4.1 | Merge demo-erp's order-removal branch into `main` | passed 2026-11-16 (checked: `main` holds `88546bc` and `0deea9f`) |
 | 4.2 | Merge commerce-erp-integration's reset-rule branch into `main` | passed 2026-11-16 (checked: `main` holds `18f28a9` to `d783ab2`) |
-| 4.3 | Point the live demo's four ERP folders back at `main` | passed in part 2026-11-16: all four on `main` with the merged commits; three demo-erp folders one commit behind `origin/main`, and `erp/status` not yet read live |
-| 4.4 | Share the datapacks as team packs | open (owner's go): team packs but `shared: false` |
+| 4.3 | Point the live demo's four ERP folders back at `main` | passed 2026-11-16: all four folders on `main` and current (the three demo-erp folders fast-forwarded to `e76b7b4`); `erp/status` read live answers `closesOrdersByStore: true` and `refundsOnReset: true`, all three ERPs reachable |
+| 4.4 | Share the datapacks as team packs | passed 2026-11-16: the 9 packs uploaded 2026-11-03 marked team and shared; each lists as `source: demo-builder` (its card's Demo Builder tag since step-04, never Yours or Community). Luma and Venia are team but not shared: owner to say |
 | 4.5a | The two lapsed quality passes (codebase-sweep, reflect) | passed 2026-11-16 (findings filed, 7 reflect proposals waiting for the owner) |
 | 4.5 | Merge into develop, then cut beta.153 | open |
 
@@ -202,8 +202,9 @@ Mark each test's **Result** line: `passed 2026-11-DD`, or `failed 2026-11-DD: wh
 
 ## 1. Datapacks
 
-Open the screen with the dashboard's **Datapacks** tile, or the Command Palette's
-**Demo Builder: Open Datapacks**.
+A project's Datapacks opens from its dashboard's **Datapacks** card. The Datapack Library opens from
+the sidebar's **Datapacks** (under **Utilities**) or the Command Palette's
+**Demo Builder: Open Datapack Library**.
 
 ### 1.2 Bodea pack (rest of live test 2)
 
@@ -241,26 +242,47 @@ shared with another store, on the pack's first install there.
 
 ### 1.5 The Datapacks screen by hand (live test 4)
 
-1. Open Datapacks. Expect tabs **Catalog** and **Activity**, and the buttons **Create Datapack**,
-   **Load from File** and **Clear Demo Data**.
-2. Click **Create Datapack**. Expect the dialog **Create Datapack** with an empty, required
-   **Datapack Name**. **Continue** stays greyed until you type a name.
-3. Type a name, click **Continue**.
-4. Tick **Select All Data**. Expect a small spinner in the checkbox's place while it reads, the
-   label not moving, then the box back and ticked.
-5. Untick it, open one kind, use that list's own **Select All**, then pick a few items by hand.
-6. Click **Create**. Expect a window **Creating <name>**, then **Datapack Created** and
-   "Saved to the <name> pack."
-7. Close. Expect a new card with the blue check where its **Mine** tag would be (this demo now uses it).
-8. Click the card. In the flyout expect Description, Owner "You", Visible To, Updated, Data.
-9. Change something in the Admin (one product's name), then click **Save Changes** in the flyout.
-   Expect the dialog **Save <name>**, the **Save** button enabled with nothing extra picked, then
-   **Datapack Saved**.
-10. In the flyout, **More**, then **Remove Datapack**. Expect "Removed." and the card gone.
-    Commerce is not touched.
+Proves every control on a project's Datapacks screen works by hand: Create, Install, Save, Delete,
+and the screen with no Data Installer address.
+
+Before you start: Scratch 1028's dashboard **Datapacks** card should read "None". If it names a
+pack, open it, choose **More**, then **Uninstall**, and confirm with **Uninstall** (on the owner's
+go: this writes to the test store). Write down which pack it was, because step 12 puts it back.
+
+1. In the Admin, add one category under the test store's root, named "ZZ Release Test".
+2. On the dashboard, click the **Datapacks** card. Expect a tab titled **Datapacks** with
+   "Scratch 1028" under the title, the tabs **Catalog** and **Activity**, and in the header
+   **Create**, **Install from File** and **Clear**. Open **Clear**: expect **Clear Demo Data** and
+   **Clear Commerce Instance**. Close the menu without picking either.
+3. Click **Create**. Expect the window **Create Datapack** with every kind already ticked and
+   **Select All Data** at the top.
+4. Untick **Select All Data**. Expect every kind unticked. Open the categories list, use that
+   list's own **Select All**, then untick everything except ZZ Release Test. Click **Next**.
+5. Expect the name window, with an empty **Datapack Name**. Click **Create** with the name empty.
+   Expect "Give it a name." under the field. Type "Release Test Pack" and click **Create**.
+6. Expect a window "Creating Release Test Pack", then "Release Test Pack Created". Close it.
+7. Expect a new card tagged **Mine** with the blue check (this project now uses it). The header
+   still reads **Create**, because nothing has installed the pack yet.
+8. Click the card. In the flyout, expect **Owner** "You", **Visible To** "Only you", **Updated**
+   and **Data Types**, and **Install** as the main button.
+9. Click **Install**. Expect the window "Install Release Test Pack" with **Dry Run** and
+   **Install**. Click **Install**. Expect "Installing Release Test Pack", then "Release Test Pack
+   Installed". Close it. The header now shows **Save**, and the flyout's main button reads
+   "Restore Release Test Pack".
+10. In the Admin, rename the category to "ZZ Release Test 2". In the header, open **Save** and
+    choose **Save**. Expect "Save Changes to Release Test Pack" listing the change, with **Save**
+    enabled and nothing to pick. Click **Save**. Expect "Saving Release Test Pack", then "Saved to
+    Release Test Pack".
 11. No Data Installer address: in Settings, empty `demoBuilder.dataInstaller.apiBaseUrl`. Reopen
-    Datapacks. Expect your packs, no banner, no **Data Installer Datapacks** choice in **Show**, and
-    no error. Put the address back.
+    Datapacks. Expect your packs, no banner, no **Data Installer Datapacks** choice in the **Show**
+    list, and no error. Put the address back.
+12. Back to zero: in the flyout, **More**, then **Uninstall**. Confirm "Uninstall Release Test
+    Pack?" with **Uninstall**. If **Save Your Changes First?** appears, choose "Uninstall Without
+    Saving". Expect "Release Test Pack Uninstalled", the check gone from the card, and the header
+    reading **Create**. Then **More**, **Delete**, and confirm "Delete Release Test Pack?" with
+    **Delete**. Expect "Deleted." and the card gone (Commerce is not touched). In the Admin, delete
+    any ZZ category still there. If Scratch 1028 held a pack before you started, open its card and
+    click **Install** to put it back.
 
 **Result:** open. Not walked as written. Phases 5 and 7 changed this screen (Load from File is
 now Add from File or Install from File, Remove Datapack is Delete, the save button is in the
@@ -269,9 +291,8 @@ header); Create Datapack and Save ran in live runs 2 and 4 (2026-11-15), and Add
 
 ### 1.6 A datapack travels with a project (live test 5)
 
-The file carries the pack by reference (name, version, store), not its data. Confirm these steps
-with the owner before the run: what "the GitHub and DA.live round trip" meant was never written
-down.
+The file carries the pack by reference (name, version, store), not its data. The owner accepted
+the steps below as "the GitHub and DA.live round trip" (2026-11-16).
 
 1. On a project that uses one of your own private packs, open the dashboard's **Share Demo**,
    choose **Send a File**, tick **Setup** and **Storefront**, click **Save**.
@@ -289,32 +310,55 @@ down.
 
 ### 1.7 Save Changes, Newer Version, reset and delete with a pack
 
-The save-as plan's walk (`.rptc/plans/datapack-save-as/overview.md` step 11), with the Save As
-button and "Reset to <pack>" removed by its own pivot. Uses the Bodea demo.
+Proves four things: a save goes into your own pack; a second project using that pack is told a
+newer version exists and can update to it; a reset handles the pack's changes (your own pack and
+someone else's); and deleting a project or a pack never strands data. Uses Scratch 1028 and a
+second throwaway project, both on the test website and the test store view (owner's go for every
+store write).
 
-1. Delete the old automatic Tailspin pack if it is still in the library.
-2. On the Bodea demo, change the store in the Admin, then **Create Datapack** named "Acme Bodea"
-   with your change picked.
-3. Change the store again, then **Save Changes** in the Acme Bodea flyout.
-4. Create a second demo using Acme Bodea.
-5. On the first demo, **Save Changes** once more.
-6. Open Datapacks with the second demo current. Expect an amber dot beside Acme Bodea's version
-   picker, reading "Newer version: <date>" on hover.
-7. On the second demo, change the store, then the dashboard's **Reset**, **Reset Project**.
-   Expect "Also remove the datapack this project imported …?" with **Remove Datapack** and
-   **Keep Data**. Choose **Remove Datapack**. Your own pack: changes saved into it, no question.
-8. Repeat 7 on a demo using a pack that is not yours. Expect a required, empty **Save Changes As**,
-   with **Save As New and Remove** and **Remove Without Saving**. A blank name says
-   "Datapack name is required".
-9. Delete the second demo. Expect **Delete Datapack** offered only if no other local project uses
-   the pack, and never ticked to start.
-10. Back to zero: delete both demos' packs and data.
+Rewritten to today's screens 2026-11-16. The old step 1 (delete the old automatic pack) was done on
+2026-11-08 and is dropped. The old step 9 is replaced: a project delete no longer deletes the pack,
+and the library's Delete refuses while a project uses it (step 9 below).
 
-Run 2026-11-08 on Scratch 1028 (Tailspin Test website), not Bodea: the Bodea demo writes to the
-Bodea website, and this walk's rules keep store writes to Tailspin Test (owner's go).
-
-- Step 1 done: the old automatic pack "Kukla Tailspin" (`kukla-tailspin-a80dca`) deleted from the
-  library; no project used it.
+1. On Scratch 1028, make your own installed test pack: walk 1.5 steps 1 to 9, naming the pack
+   "Release Save Test".
+2. In the Admin, rename the ZZ category. In the Datapacks header, **Save**, then **Save**. Expect
+   "Saved to Release Save Test".
+3. Create a second throwaway project, "Scratch 1028 B", on the test website and the test store view.
+   In the wizard's **Datapacks** step, pick Release Save Test. Expect it installed during creation.
+4. On Scratch 1028, rename the ZZ category again, then **Save**, **Save**. Expect "Saved to Release
+   Save Test".
+5. Open Scratch 1028 B's Datapacks. Expect an amber dot on the Release Save Test card, reading
+   "Newer version available" on hover and on focus. Open the card: the main button reads "Update
+   Release Save Test".
+6. Click it. Expect the window "Update Release Save Test" with **Review Records** and **Update**.
+   Click **Update**. Expect "Updating Release Save Test", then "Release Save Test Updated". The dot
+   is gone, and the main button reads "Restore Release Save Test".
+7. Reset with your own pack: on Scratch 1028 B, change the category in the Admin, then click the
+   dashboard's **Reset**. Expect "Reset Scratch 1028 B?", the line "Scratch 1028 B returns to how it
+   was set up. Code changes are lost.", an **Uninstall Datapack** box ticked and naming Release
+   Save Test, and a red **Reset**. Click **Reset**. With `demoBuilder.dataInstaller.changesOnRemoval`
+   at its default, expect **Save Your Changes First?** with the columns **Datapack** and **Save As**,
+   the name Release Save Test, and "Reset Without Saving" and "Save and Reset". Choose "Save and
+   Reset". Expect "Resetting Scratch 1028 B", then "Scratch 1028 B Reset". (With the setting at
+   `save`, there is no question: the changes go into your pack.)
+8. Reset with someone else's pack: on Scratch 1028 B, install a pack that is not tagged **Mine**
+   (a **Demo Builder** or **Community** one; pick a small one). Change something it installed, then
+   click **Reset**, then **Reset**. Expect **Save Your Changes First?** with a **Save As** name
+   starting "My" and the pack's name. Clear the name: expect "Give it a name." and "Save and Reset"
+   greyed. Choose "Reset Without Saving".
+9. Delete with a pack: on Scratch 1028's Datapacks, open Release Save Test, then **More**,
+   **Delete**, **Delete**. Expect "It could not be deleted: Scratch 1028 uses this datapack, so it
+   can't be deleted. Uninstall it there first."
+10. On Scratch 1028 B's dashboard, click **Delete**. Expect the projects list to open on "Delete
+    Scratch 1028 B?" with "Project files are removed from this machine. Datapacks stay installed in
+    Commerce unless you uninstall them.", and the columns **Delete Repository**, **Delete DA.live
+    Site** and **Uninstall Datapack**. **Uninstall Datapack** is never ticked to start. Tick all
+    three, click **Delete**. Expect "Deleting Scratch 1028 B", then "Scratch 1028 B Deleted".
+11. Back to zero: on Scratch 1028, **More**, **Uninstall**, **Uninstall** on Release Save Test, then
+    **More**, **Delete**, **Delete**. Expect "Deleted.". Delete any pack named "My …" that step 8
+    made. In the Admin, delete any ZZ category still there. If Scratch 1028 held a pack before 1.5's
+    setup, install it again.
 
 **Result:** open. Parts were exercised by the datapack-simplification live runs, not by walking
 these steps: Save into your own pack, Undo Last Save and Restore (run 2, 2026-11-15), and a reset that
@@ -363,24 +407,33 @@ are F57 and F58. Step 4 passed (nothing kept). All four steps passed: **passed 2
 ### 1.10 The Datapack Library and a project's Datapacks (added 2026-11-08)
 
 From F65 and F66 (owner, 2026-11-07): one Datapacks screen silently acted on the project opened
-last, and two open screens did not hear each other's changes. Have a project open whose pack is one
-of your own library packs (scratch-1028 holds Luma).
+last, and two open screens did not hear each other's changes. Proves the Datapack Library touches
+no store, a project's Datapacks acts only on its project, and each hears the other's changes. Have
+Scratch 1028 open, holding one of your own library packs. Rewritten to today's screens 2026-11-16.
 
-1. In the sidebar, under Utilities, expect **Datapacks** after Tools. Click it. Expect a tab titled
-   **Datapack Library**, the header "Datapack Library" and "Browse and manage datapacks", no
-   Catalog and Activity strip, and no card wearing the check.
-2. Expect only **Load from File** beside the count: no Create Datapack, no Clear Demo Data.
-3. Open your own pack's panel. Expect **Save as File** and **Share** as buttons, and **More**
-   holding only Remove Datapack. No Import, no Save Changes. A colleague's pack shows Save as
-   File alone.
-4. In the palette, run **Demo Builder: Open Datapack Library**. Expect the same tab, not a second.
-5. On the project's dashboard, expect the Datapacks card's line to name its pack ("Luma,
-   eds-compatible"). Click it. Expect a tab titled **Datapacks** with the project's name under the
-   title, the check on its pack, and Import, Save Changes and Create Datapack as before.
-6. With both tabs open, rename one of your own packs in the library. Expect the project's
-   Datapacks to show the new name without a Refresh. Rename it back.
-7. Switch to the dashboard after an import or a removal in the project's Datapacks. Expect the
-   card's line to follow ("No Datapack" after a removal).
+1. In the sidebar, under **Utilities**, expect **Datapacks** after **Tools**. Click it. Expect a tab
+   titled **Datapack Library**, the header "Datapack Library" and "Browse and manage datapacks", no
+   **Catalog** and **Activity** strip, and no card wearing the check.
+2. Expect only **Add from File** beside the **Show** list: no **Create**, no **Save**, no **Clear**.
+3. Open your own pack's flyout. Expect no main button, only **More**, holding **Save as File**,
+   **Share** (or **Stop Sharing**), **Mark as Demo Builder Datapack** (or **Remove Demo Builder
+   Mark**) and **Delete**. No Install, no **Uninstall**. A card tagged **Community** shows **Save
+   as File** alone. Your own pack tagged **Demo Builder** shows no **Delete**.
+4. Click **Add from File** and pick a file of a pack you already have. Expect the window **Add from
+   File** asking **Replace** or **Keep Both**. Click **Cancel**.
+5. In the palette, run **Demo Builder: Open Datapack Library**. Expect the same tab, not a second.
+6. On Scratch 1028's dashboard, expect the **Datapacks** card's line to name its pack. Click it.
+   Expect a tab titled **Datapacks** with "Scratch 1028" under the title, the check on its pack,
+   and in the header **Save** (or **Create** when nothing is installed), **Install from File** and
+   **Clear**.
+7. With both tabs open, rename one of your own packs in the library: click the flyout's title, type
+   a new name in **New Datapack Name**, and confirm. Expect the project's Datapacks to show the new
+   name without a Refresh. Rename it back.
+8. Use 1.5's test pack here, not a big pack. After an install, and again after an **Uninstall**, in
+   the project's Datapacks, switch to the dashboard. Expect the card's line to follow ("None" after
+   the uninstall).
+9. Back to zero: every pack keeps its original name, Scratch 1028 holds the pack it started with,
+   and the library holds no test packs.
 
 **Result:** open. Not walked as written. Seen 2026-11-16: the palette's Open Datapack Library
 opens the Datapack Library tab, and its Add from File asks Replace or Keep Both. Steps 3, 5, 6 and 7
@@ -389,16 +442,24 @@ were not walked, and steps 2 and 3 name buttons Phases 5 and 7 renamed.
 ### 1.11 The newer-version dot and the version list (added 2026-11-08)
 
 From F53 and F55 (owner, 2026-11-07): the dot said nothing on hover, and a named variant made later
-marked every older version as out of date.
+marked every older version as out of date. Proves the dot appears only when a newer save of the
+project's own pack exists, and says so on hover and on focus; and the version list reads cleanly.
 
-1. Open the version list on a card with several versions (Luma). Expect "Updated <day>" under each
-   version's name, and the closed box showing the name alone.
-2. Expect no amber dot on Luma's card: its `import-form` variant is deleted, and a named variant
-   never counts as newer now.
-3. On a pack whose installed version was updated since, or that has a later save, hover the amber
-   dot. Expect "Updated Nov 6" (the version installed changed) or "Newer version available" (a
-   later save is in the list). Tab to it: the same words show on focus. The card's line keeps its
-   height.
+Rewritten to today's screens 2026-11-16. The SC no longer manages saves (Phase 2): a pack's saves
+show as one choice, "Saved <date>", so the list holds its named versions plus that one save. The old
+"Updated Nov 6" dot (the version installed changed) is gone: the dot has one meaning now.
+
+1. On Scratch 1028's Datapacks, open the version list on a card with two or more versions (Luma, if
+   it still has them). Expect "Updated <date>" under each named version, any save shown as "Saved
+   <date>", and the closed box showing the version's name alone.
+2. Expect no amber dot on Luma's card: a named version never counts as newer.
+3. On a card with one version, expect no list: the line reads "Updated <date>" or "Saved <date>".
+4. Walk the rest inside 1.7, after its step 4 (Scratch 1028 has saved again, so Scratch 1028 B is a
+   save behind). On Scratch 1028 B's Datapacks, hover the amber dot on Release Save Test. Expect
+   "Newer version available". Tab to it: the same words show on focus. The card's line keeps its
+   height. Its flyout's main button reads "Update Release Save Test".
+5. After 1.7 step 6 (the update), expect the dot gone.
+6. Back to zero: nothing of its own; 1.7's Back to zero covers it.
 
 **Result:** open. Not walked. Phase 2 (the SC never manages versions) reworked the version list
 and the newer-version dot this test names; it needs rewriting to the beta.153 screen, or moving out
@@ -578,7 +639,7 @@ change to every SC with the ERP integration.
 
 Details for 4.1 to 4.3: `.rptc/plans/datapack-engine/overview.md`, "Before beta.153 ships".
 
-**Result:** 4.1 open, 4.2 open, 4.3 open, 4.4 open, 4.5 open. 4.5a ran 2026-11-16 while the owner
+**Result:** 4.1 and 4.2 passed 2026-11-16 (`main` holds every listed commit). 4.3 passed 2026-11-16: the three demo-erp folders fast-forwarded to `origin/main` (`e76b7b4`, which adds release docs; each keeps its local `app.config.yaml` package names), and `get_erp_status` answered `closesOrdersByStore: true` and `refundsOnReset: true` from the deployed integration (0.13.0). 4.4 passed 2026-11-16: Bodea, Carvello, CitiSignal, CitiSignal Original, Frescopa, Grocery, Health and Beauty, We.Cafe and WKND marked team (`mark_demo_builder_datapack`) and shared (`share_datapack`), one version each; `find_datapacks` lists each `team: true, shared: true, source: demo-builder`, which the card shows as the Demo Builder tag (step-04), not Yours or Community. Luma and Venia, added 2026-11-06 after this step was written, are team but not shared. 4.5 open. 4.5a ran 2026-11-16 while the owner
 slept: `npm run sweep` and the codebase-sweep triage (`.rptc/research/codebase-sweep-2026-11-16/sweep.md`,
 findings filed as PL-98, AI-79, PL-99 and a PL-70 log line), and reflect (`.rptc/dream/2026-11-16-reflect.md`,
 7 proposals waiting for the owner, none applied). Both `last:` dates set to 2026-11-16 [PL-95].
