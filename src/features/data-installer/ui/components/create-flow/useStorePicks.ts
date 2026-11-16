@@ -82,6 +82,12 @@ export function isKnownEmpty(read: StoreItemPage | null | undefined, count: numb
 
 const NO_COUNTS: StoreKindCounts = {};
 
+/** Whether the list the window opens on has answered; with no kind to show, there is none to wait for. */
+function firstShownRead(firstShown: PickableKind | undefined, shown: PickableKind | undefined, reads: KindReads): boolean {
+    if (firstShown === undefined) return shown === undefined;
+    return reads[firstShown] !== undefined;
+}
+
 /** Whether a ceiling kind's list the counts call for (above zero) has not answered yet. */
 function ceilingPending(counts: StoreKindCounts, reads: KindReads): boolean {
     return CEILING_KINDS.some((kind) => (counts[kind] ?? 0) > 0 && reads[kind] === undefined);
@@ -91,16 +97,16 @@ function ceilingPending(counts: StoreKindCounts, reads: KindReads): boolean {
  * A ceiling kind's list, read as soon as its count is in and above zero, so its row says what the
  * website holds before the SC opens it (`CEILING_KINDS`).
  */
-function useCeilingRead(kind: PickableKind, wanted: boolean, answered: (kind: PickableKind, page: StoreItemPage | null) => void): void {
+function useCeilingRead(kind: PickableKind | undefined, wanted: boolean, answered: (kind: PickableKind, page: StoreItemPage | null) => void): void {
     const { load, value, settled } = useDataInstallerRequest<StoreItemPage>('list-datapack-export-items');
     const asked = useRef(false);
     useEffect(() => {
-        if (!wanted || asked.current) return;
+        if (!wanted || !kind || asked.current) return;
         asked.current = true;
         load({ dataType: kind });
     }, [wanted, load, kind]);
     useEffect(() => {
-        if (asked.current && settled) answered(kind, value);
+        if (asked.current && settled && kind) answered(kind, value);
     }, [settled, value, kind, answered]);
 }
 
@@ -199,6 +205,19 @@ export function useStorePicks(countsWanted: boolean): StorePicksState {
     const [cartRules, companies] = CEILING_KINDS;
     useCeilingRead(cartRules, countsSettled && (known[cartRules] ?? 0) > 0, answered);
     useCeilingRead(companies, countsSettled && (known[companies] ?? 0) > 0, answered);
+    // The list the window opens on, read in the same wait, so it opens with it shown (owner walk,
+    // 2026-11-16: a second wait in the right-hand side after the window opened). Held from the first
+    // time the counts name it: opening another kind later reads that one as before.
+    const [firstShown, setFirstShown] = useState<PickableKind | undefined>(undefined);
+    useEffect(() => {
+        if (countsSettled && firstShown === undefined && kind) setFirstShown(kind);
+    }, [countsSettled, firstShown, kind]);
+    useCeilingRead(firstShown, countsSettled && firstShown !== undefined && !CEILING_KINDS.includes(firstShown), answered);
+
+    // Once ready, stays ready: a list read again later (a retry) never puts the opening wait back.
+    const readyOnce = useRef(false);
+    if (countsSettled && !ceilingPending(known, reads) && firstShownRead(firstShown, kind, reads)) readyOnce.current = true;
+    const ready = readyOnce.current;
 
     return {
         kinds,
@@ -209,7 +228,7 @@ export function useStorePicks(countsWanted: boolean): StorePicksState {
         counts: known,
         // Open complete: the counts, and the ceiling kinds' lists they call for (owner walk, 2026-11-16:
         // B2B Companies had no note for a second or two after the window opened).
-        ready: countsSettled && !ceilingPending(known, reads),
+        ready,
         open,
         setPicked,
         answered,

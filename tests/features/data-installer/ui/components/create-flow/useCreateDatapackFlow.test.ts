@@ -128,11 +128,13 @@ describe('the store route', () => {
         });
         const { result, step, onSave } = await onThePicks();
         const lists = () => mockRequest.mock.calls.filter((call) => call[0] === 'list-datapack-export-items');
-        expect(lists()).toHaveLength(0);
+        // Only the list the window opens on, read in its opening wait (owner walk, 2026-11-16).
+        expect(lists()).toHaveLength(1);
 
         await step(() => result.current.main.onPress());
         expect(result.current.stage).toBe('create-name');
-        expect(lists()).toHaveLength(0);
+        // Nothing more on Next: the save lists each whole kind itself.
+        expect(lists()).toHaveLength(1);
 
         await step(() => result.current.setName('Everything'));
         await step(() => result.current.main.onPress());
