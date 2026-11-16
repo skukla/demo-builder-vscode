@@ -10,7 +10,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import type { DatapackRemovalChanges, DatapackRemovalScope } from '../../../removalChanges';
+import type { DatapackRemovalChanges, DatapackRemovalScope, RecordedKind } from '../../../removalChanges';
 import { useDataInstallerRequest } from '../../hooks/useDataInstallerRequest';
 import type { TypeRow } from '../job/installRows';
 import type { PackBeingSaved } from './packBeingSaved';
@@ -55,6 +55,12 @@ function packFields(pack: PackBeingSaved): DatapackRecordsRequest {
     };
 }
 
+/** What the datapack holds, by type, counted from its records (`get-datapack-records`). */
+function kindsOfRecords(value: DatapackRecordsResult | null | undefined): RecordedKind[] | undefined {
+    if (!value) return undefined;
+    return Object.entries(value.records).map(([kind, names]) => ({ kind, count: names.length }));
+}
+
 /** The problem line: the record first, since the table stands on it. */
 function problemOf(scopeFailed: boolean, changesFailed: boolean): string | undefined {
     if (scopeFailed) return RECORD_UNREAD;
@@ -76,7 +82,14 @@ export function useSaveSummary(pack: PackBeingSaved): SaveSummary {
         loadScope({ datapackName: pack.id.name, version: pack.id.version });
         loadChanges({ ...packFields(pack), added: true });
     }, [loadScope, loadChanges, pack]);
-    const held = scope.value?.kinds;
+    // An install that created nothing leaves an empty record (walk F186): what the datapack holds
+    // then comes from its own records, read now rather than at Review Records.
+    const recordEmpty = scope.value?.kinds?.length === 0;
+    const loadRecords = records.load;
+    useEffect(() => {
+        if (recordEmpty) loadRecords(packFields(pack));
+    }, [recordEmpty, loadRecords, pack]);
+    const held = recordEmpty ? kindsOfRecords(records.value) : scope.value?.kinds;
     const changed = changes.value?.kinds;
     const added = changes.value?.added;
     const rows = useMemo(() => saveRows(held ?? [], changed ?? [], added ?? []), [held, changed, added]);
@@ -85,7 +98,7 @@ export function useSaveSummary(pack: PackBeingSaved): SaveSummary {
         changes.failure !== null,
     );
     return {
-        ready: scope.settled && changes.settled,
+        ready: scope.settled && changes.settled && (!recordEmpty || records.settled),
         rows,
         ...(problem ? { problem } : {}),
         reviewing,

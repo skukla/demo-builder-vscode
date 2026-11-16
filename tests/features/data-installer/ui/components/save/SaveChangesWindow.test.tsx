@@ -201,6 +201,24 @@ describe('the summary', () => {
         ]);
     });
 
+    // Owner walk, 2026-11-16 (U2.2): an install that created nothing (its rows were already in the
+    // store) leaves an empty record, and the window drew an empty table. What the datapack holds then
+    // comes from its own records.
+    it("lists what the datapack holds from its records when the install record lists nothing", async () => {
+        answer({ scope: { success: true, data: { kinds: [] } }, changes: { success: true, data: { ...CHANGES, count: 0, kinds: [] } } });
+        await open();
+
+        expect(rows()).toStrictEqual(['Categories2', 'Products2']);
+        expect(sends('get-datapack-records')).toBe(1);
+    });
+
+    it('CONTROL: reads no records to open when the install record lists what it holds', async () => {
+        answer();
+        await open();
+
+        expect(sends('get-datapack-records')).toBe(0);
+    });
+
     it('says when what the datapack holds could not be read, and still offers Save', async () => {
         answer({ scope: { success: false, error: 'The record could not be read.' } });
         await open();
