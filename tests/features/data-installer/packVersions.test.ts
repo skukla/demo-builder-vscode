@@ -90,12 +90,14 @@ describe('the one datapack date (step-04 S6, J8-2)', () => {
     });
 
     // P4-Q2 is open: the picker still shows; only its date words move to the one format.
-    it('says when a named version last changed, its update before its creation, in the one format', () => {
+    // Owner, 2026-11-16: the day alone on a card, so the line never wraps beside its tag.
+    it('says the day a named version last changed, its update before its creation', () => {
+        const day = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' });
         expect(versionChanged(listed('main', { createdAt: '2026-10-01T00:00:00Z', updatedAt: '2026-11-06T12:00:00Z' }))).toBe(
-            `Updated ${LOCAL.format(new Date('2026-11-06T12:00:00Z'))}`,
+            `Updated ${day.format(new Date('2026-11-06T12:00:00Z'))}`,
         );
         expect(versionChanged(listed('main', { createdAt: '2026-10-01T12:00:00Z' }))).toBe(
-            `Updated ${LOCAL.format(new Date('2026-10-01T12:00:00Z'))}`,
+            `Updated ${day.format(new Date('2026-10-01T12:00:00Z'))}`,
         );
     });
 

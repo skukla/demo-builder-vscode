@@ -52,6 +52,18 @@ const DATAPACK_DATE = new Intl.DateTimeFormat('en-US', {
 });
 
 /** The one datapack date, "Nov 10, 9:15 AM", in the SC's own time; nothing for a date it cannot read. */
+/**
+ * The day alone, "Nov 16": what a card's date line says, so it fits on one line beside its tag (owner,
+ * 2026-11-16: "Updated Nov 16, 6:47 AM" wrapped on a card); the flyout keeps the time.
+ */
+const DATAPACK_DAY = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' });
+
+/** A date as a card says it: the day alone, "Nov 16"; empty when it is not a date. */
+export function datapackDay(at: Date | string): string {
+    const when = typeof at === 'string' ? new Date(at) : at;
+    return Number.isNaN(when.getTime()) ? '' : DATAPACK_DAY.format(when);
+}
+
 export function datapackDate(at: Date | string): string {
     const when = typeof at === 'string' ? new Date(at) : at;
     return Number.isNaN(when.getTime()) ? '' : DATAPACK_DATE.format(when);
@@ -74,7 +86,7 @@ export function shownVersion(version: string): string {
 /** A named version's last change, under its name in the card's picker: "Updated Nov 6, 9:15 AM". */
 export function versionChanged(summary: DatapackSummary): string | undefined {
     const at = summary.updatedAt ?? summary.createdAt;
-    const when = at ? datapackDate(at) : '';
+    const when = at ? datapackDay(at) : '';
     return when ? `Updated ${when}` : undefined;
 }
 

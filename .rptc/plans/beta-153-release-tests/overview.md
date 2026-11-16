@@ -196,6 +196,7 @@ Mark each test's **Result** line: `passed 2026-11-DD`, or `failed 2026-11-DD: wh
 | F166 | U1.2 clean-up (2026-11-16) | The uninstall's window read "Uninstalling from Commerce", then "Preparing to uninstall", then "Uninstalling from Commerce" again, with no count (Frescopa's 10 categories went between two status reads) | **Fixed** with tests: the window starts at "Preparing to uninstall", moves to the first type at 0 as deleting starts ("Uninstalling Categories, 0 of 10"), counts each batch, and keeps the last count until **Frescopa Uninstalled** replaces it. **Owner must re-look** |
 | F167 | U1.2 step 2 (2026-11-16) | The Admin-step question in the run window drew **Skip for Now** beside **Cancel**, two buttons that both dismiss, under a warning icon for a routine step, and "I've done it" in sentence case | **Fixed** with tests: a question's dismiss answer is the close button and is not drawn twice, a routine step has no warning icon, in both windows that ask questions (`promptButtons.ts`); the button reads **I've Done It**. **Owner must re-look** |
 | F168 | U1.2 step 2 (2026-11-16) | A single datapack install ran in the row list (each step and data type a row, "0 of 4 data types") where the owner expected the wizard's centred view; the written rule (`dialog-design.md`) named a datapack's data types as a list | **Fixed** for the datapack run window with tests (owner, 2026-11-16: one project's run is the centred view, rows only for several projects): the large spinner says what it does now and how far, step to step (`runStage.ts`); the rule rewritten. Then, on the owner's word ("They should use it"), the shared progress window too: a datapack save, Clear Demo Data and one project's reset are centred (`runStage` moved to `core/utils`). The Updates run keeps its rows: it groups them under each project's heading, a run over several projects. **Owner must re-look** |
+| F169 | U1.2 step 3 (2026-11-16) | The datapack card's date, "Updated Nov 16, 6:47 AM", wrapped onto two lines beside the Demo Builder tag | **Fixed** with tests: the card says the day alone, "Updated Nov 16" (`datapackDay`); the flyout keeps the time. **Owner must re-look** |
 
 ## Questions raised
 
@@ -304,7 +305,7 @@ minute-long check), F161 (the run says nothing of what it is taking out).
 U1.2 notes (2026-11-16). Step 1 passed: the test store saved with the shared catalog as
 its root. Step 2 failed: the install hung with the question hidden (F162, fixed); repeat
 step 2 after a reload and an uninstall of the part-done Frescopa. Repeated with the fixed build: step 2 passed (the question appeared after
-the categories and stayed), with F167 (its buttons and icon). Reached: step 2 of 8.
+the categories and stayed), with F167 (its buttons and icon). Step 3: I've Done It ended the install as the step done (the test store's root read as Frescopa), not the question asked again; asking the owner how the root got there. Reached: step 3 of 8.
 
 **Result:** open
 

@@ -213,7 +213,8 @@ describe('DatapackCard', () => {
             const { card } = renderCard(makeGroup({ versions: [makeVersion({ updatedAt: '2026-11-06T09:15:00' })] }));
 
             expect(within(card).queryByTestId('spectrum-picker')).not.toBeInTheDocument();
-            expect(card).toHaveTextContent(/Updated Nov 6, 9:15\sAM/u);
+            expect(card).toHaveTextContent('Updated Nov 6');
+            expect(card).not.toHaveTextContent(/9:15/u);
         });
 
         it('names the version when it has no date', () => {
