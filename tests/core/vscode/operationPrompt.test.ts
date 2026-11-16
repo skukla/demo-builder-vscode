@@ -61,7 +61,7 @@ describe('an agent asks, with no modal up', () => {
             askDuringOperation(
                 { title: 'One step in the Admin', message: 'Set it, then Save.', tone: 'info', dismiss: 'Skip for now' },
                 'Open the Admin',
-                "I've done it",
+                "I've Done It",
                 'Skip for now',
             ),
         );
@@ -71,7 +71,7 @@ describe('an agent asks, with no modal up', () => {
             'One step in the Admin',
             { modal: true, detail: "Set it, then Save.\n\nDemo Builder's agent asked for this." },
             { title: 'Open the Admin' },
-            { title: "I've done it" },
+            { title: "I've Done It" },
             { title: 'Skip for now', isCloseAffordance: true },
         );
         expect(answer).toBe('Skip for now');
@@ -156,6 +156,25 @@ describe('a modal is hosting the operation', () => {
         await pushOperationProgress({ id: 'op-poll', state: 'running', stage: 'Products 0 of 25' });
 
         expect(send.mock.calls.at(-1)?.[1]).not.toHaveProperty('prompt');
+    });
+
+    // Owner walk, 2026-11-16: the window drew Skip for Now beside Cancel and a warning by a routine step,
+    // because the question's dismiss answer and tone never reached it.
+    it('hands the window the question\'s dismiss answer and its tone', async () => {
+        const send = jest.fn();
+        startModalRun('op-dismiss', send);
+
+        const asking = withModalAsking('op-dismiss', () =>
+            askDuringOperation({ title: 'One step', message: 'Set it.', tone: 'info', dismiss: 'Skip for Now' }, 'Open Admin', 'Skip for Now'),
+        );
+        await settle();
+
+        expect(send).toHaveBeenCalledWith(
+            'operationProgress',
+            expect.objectContaining({ prompt: expect.objectContaining({ tone: 'info', dismiss: 'Skip for Now' }) }),
+        );
+        answerOperationPrompt('op-dismiss', 'Skip for Now');
+        await expect(asking).resolves.toBe('Skip for Now');
     });
 
     it('hands the answer back, so the work carries on with it', async () => {

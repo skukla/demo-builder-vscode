@@ -41,6 +41,7 @@ import {
 import { ProgressDialog, type ProgressAction } from '@/core/ui/components/ui/ProgressDialog';
 import { useOperationProgress } from '@/core/ui/hooks/useOperationProgress';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { promptAnswerLabels, promptCloseLabel } from '@/core/ui/utils/promptButtons';
 import type { OperationOffer, OperationProgressPayload, OperationPrompt } from '@/types/webviewPayloads';
 import type { BackgroundOperationRequest } from '@/types/webviewRequests';
 
@@ -106,15 +107,13 @@ export interface OperationProgressModalProps {
     offerStep?: (offer: OperationOffer) => ProgressModalNextStep | undefined;
 }
 
-const CANCEL = 'Cancel';
-
 /**
  * The dismiss label. A question cannot be put in the background — nothing would be
  * left to answer it — so dismissing it IS the answer, and it says Cancel. An
  * operation that has ENDED, either way, has nothing left to narrate.
  */
-function closeLabelFor(ended: boolean, asking: boolean): 'Close' | 'Run in Background' | 'Cancel' {
-    if (asking) return CANCEL;
+function closeLabelFor(ended: boolean, prompt: OperationPrompt | undefined): string {
+    if (prompt) return promptCloseLabel(prompt);
     return ended ? 'Close' : 'Run in Background';
 }
 
@@ -126,7 +125,7 @@ function closeLabelFor(ended: boolean, asking: boolean): 'Close' | 'Run in Backg
  */
 function answerButtons(prompt: OperationPrompt, answer: (chosen: string) => void): ProgressAction[] {
     const main = prompt.destructive ? 'negative' : 'accent';
-    const buttons = prompt.actions.filter((label) => label !== CANCEL).map((label, index): ProgressAction => ({
+    const buttons = promptAnswerLabels(prompt).map((label, index): ProgressAction => ({
         label,
         variant: index === 0 ? main : 'secondary',
         onPress: () => answer(label),
@@ -241,7 +240,7 @@ export function OperationProgressModal({
 
     const close = useCallback((): void => {
         if (prompt) {
-            answer(undefined);
+            answer(prompt.dismiss);
         } else if (operation && !failed && !succeeded) {
             const request: BackgroundOperationRequest = {
                 id: operation.id,
@@ -274,7 +273,7 @@ export function OperationProgressModal({
             isOpen
             title={frame.title}
             status={frame.status}
-            closeLabel={closeLabelFor(failed || succeeded, Boolean(prompt))}
+            closeLabel={closeLabelFor(failed || succeeded, prompt)}
             holds={held}
             onClose={close}
             actions={

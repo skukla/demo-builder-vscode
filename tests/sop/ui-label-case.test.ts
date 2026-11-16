@@ -66,8 +66,11 @@ const LEDGER: Readonly<Record<string, Reason>> = {
  * 75 -> 77 on 2026-11-16 (walk F150): the datapack run window shows a question the job asks, as
  * the house progress window does, so its title and its answer buttons are the question's own
  * words from the extension (`DatapackRunWindow`, `question`), as the progress window's are.
+ * 77 -> 79 on 2026-11-16 (walk F167): both windows' close button, while a question is asked, is the
+ * question's dismiss answer ("Skip for Now", Title Case at the source, `packRootStep.ts`) or
+ * Cancel (`promptCloseLabel`), so the same button no longer draws twice beside Cancel.
  */
-const DYNAMIC_PIN = 77;
+const DYNAMIC_PIN = 79;
 
 /**
  * The six dialog layouts (the Steps layout joined 2026-11-11) hand their caller's words on to Modal (`title={title}`). Those words are

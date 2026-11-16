@@ -349,7 +349,7 @@ describe('a question the run is paused on', () => {
     const QUESTION = {
         title: "One Step in the Admin to Show Frescopa's Categories",
         message: 'In Stores > All Stores > Tailspin Test Store, set Root Category to Frescopa, then Save Store.',
-        actions: ['Open Admin', "I've done it", 'Skip for Now'],
+        actions: ['Open Admin', "I've Done It", 'Skip for Now'],
     };
 
     function renderAsked() {
@@ -378,16 +378,18 @@ describe('a question the run is paused on', () => {
         expect(screen.getByRole('heading', { name: QUESTION.title })).toBeInTheDocument();
         expect(screen.getByText(QUESTION.message)).toBeInTheDocument();
         const labels = screen.getAllByRole('button').map((b) => b.textContent);
-        expect(labels).toEqual(expect.arrayContaining(['Cancel', 'Skip for Now', "I've done it", 'Open Admin']));
+        expect(labels).toEqual(expect.arrayContaining(['Cancel', 'Skip for Now', "I've Done It", 'Open Admin']));
         expect(labels.indexOf('Open Admin')).toBeGreaterThan(labels.indexOf('Skip for Now'));
+        // A question with no tone is a problem to answer: the warning by its title (the control for the routine case).
+        expect(document.querySelector('.modal-status-icon')).not.toBeNull();
     });
 
     it('hands the answer chosen back to the run', () => {
         const { answer, onClose } = renderAsked();
 
-        fireEvent.click(screen.getByRole('button', { name: "I've done it" }));
+        fireEvent.click(screen.getByRole('button', { name: "I've Done It" }));
 
-        expect(answer).toHaveBeenCalledWith("I've done it");
+        expect(answer).toHaveBeenCalledWith("I've Done It");
         expect(onClose).not.toHaveBeenCalled();
     });
 
@@ -397,6 +399,36 @@ describe('a question the run is paused on', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
         expect(answer).toHaveBeenCalledWith(undefined);
+        expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    // Owner walk, 2026-11-16: Skip for Now drew beside Cancel, two buttons that both dismiss (rule of
+    // 2026-10-30), under a warning icon for a routine step.
+    it('a question with a dismiss answer makes it the close button, once, with no warning icon for a routine step', () => {
+        const answer = jest.fn();
+        const onClose = jest.fn();
+        render(
+            <DatapackRunWindow
+                title="Installing Frescopa"
+                record={RECORD}
+                ended={null}
+                types={['categories']}
+                installing={{ name: 'Frescopa', version: 'main' }}
+                columns={1}
+                opensRunning={false}
+                actionButtons={[]}
+                onClose={onClose}
+                question={{ prompt: { ...QUESTION, tone: 'info', dismiss: 'Skip for Now' }, answer }}
+            />
+        );
+
+        const labels = screen.getAllByRole('button').map((b) => b.textContent);
+        expect(labels.filter((l) => l === 'Skip for Now')).toHaveLength(1);
+        expect(labels).not.toContain('Cancel');
+        expect(document.querySelector('.modal-status-icon')).toBeNull();
+
+        fireEvent.click(screen.getByRole('button', { name: 'Skip for Now' }));
+        expect(answer).toHaveBeenCalledWith('Skip for Now');
         expect(onClose).toHaveBeenCalledTimes(1);
     });
 });

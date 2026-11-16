@@ -194,6 +194,7 @@ Mark each test's **Result** line: `passed 2026-11-DD`, or `failed 2026-11-DD: wh
 | F164 | U1.2 clean-up (2026-11-16) | Review Records on **Uninstall Frescopa?** opened a wait titled "Opening Uninstall Frescopa?" | **Fixed** with tests: Review Records waits with "Reading the records", and a window given no wait words says "Loading", never "Opening" and its title (`StepsDialog.tsx`). **Owner must re-look** |
 | F165 | U1.2 clean-up (2026-11-16) | An uninstall's Review Records listed categories as paths ("Coffee/Bagged Coffee"), where Install, Switch and Save draw the tree; the pack's root showed as its record key | **Fixed** with tests: the categories it would take are the same tree, under the root by its name (`categoryTreeOfKeys`, `removalRecords.ts`). **Owner must re-look** |
 | F166 | U1.2 clean-up (2026-11-16) | The uninstall's window read "Uninstalling from Commerce", then "Preparing to uninstall", then "Uninstalling from Commerce" again, with no count (Frescopa's 10 categories went between two status reads) | **Fixed** with tests: the window starts at "Preparing to uninstall", moves to the first type at 0 as deleting starts ("Uninstalling Categories, 0 of 10"), counts each batch, and keeps the last count until **Frescopa Uninstalled** replaces it. **Owner must re-look** |
+| F167 | U1.2 step 2 (2026-11-16) | The Admin-step question in the run window drew **Skip for Now** beside **Cancel**, two buttons that both dismiss, under a warning icon for a routine step, and "I've done it" in sentence case | **Fixed** with tests: a question's dismiss answer is the close button and is not drawn twice, a routine step has no warning icon, in both windows that ask questions (`promptButtons.ts`); the button reads **I've Done It**. **Owner must re-look** |
 
 ## Questions raised
 
@@ -282,8 +283,8 @@ minute-long check), F161 (the run says nothing of what it is taking out).
    catalog, then **Save Store**.
 2. Scratch 1028's Datapacks: open the **Frescopa** card, click **Install**, then **Install** in
    the window. Expect, inside the run window, **One Step in the Admin to Show Frescopa's
-   Categories** with **Open Admin**, **I've done it** and **Skip for Now**.
-3. Without changing anything, click **I've done it**. Expect the question again, starting "… still
+   Categories** with **Open Admin**, **I've Done It** and **Skip for Now**.
+3. Without changing anything, click **I've Done It**. Expect the question again, starting "… still
    uses the root category …".
 4. Click **Skip for Now**. Expect **Frescopa Installed** with "One step is left in the Admin: …".
 5. Open the Frescopa card. Expect **1 step left in the Admin** with **Show Step**. Click **Show
@@ -299,9 +300,10 @@ minute-long check), F161 (the run says nothing of what it is taking out).
    Store**. Back in the window, click **Check**. Expect the centred wait, then **Frescopa
    Uninstalled**: the store is clean again.
 
-Reached: step 1 of 8 (2026-11-16). Step 1 passed: the test store saved with the shared catalog as
+U1.2 notes (2026-11-16). Step 1 passed: the test store saved with the shared catalog as
 its root. Step 2 failed: the install hung with the question hidden (F162, fixed); repeat
-step 2 after a reload and an uninstall of the part-done Frescopa.
+step 2 after a reload and an uninstall of the part-done Frescopa. Repeated with the fixed build: step 2 passed (the question appeared after
+the categories and stayed), with F167 (its buttons and icon). Reached: step 2 of 8.
 
 **Result:** open
 
@@ -464,8 +466,8 @@ datapack installs onto a website, not a store view.
    Switch uninstalls We.Cafe from the test website first, then installs Frescopa there. If you
    changed anything We.Cafe installed, **Save Your Changes First?** comes next.
 4. Click **Switch**. Expect the question **One Step in the Admin to Show <root>'s Categories**,
-   with **Open Admin**, **I've done it** and **Skip for Now**.
-5. Click **I've done it** without changing anything. Expect it to ask again, starting
+   with **Open Admin**, **I've Done It** and **Skip for Now**.
+5. Click **I've Done It** without changing anything. Expect it to ask again, starting
    "<store> still uses the root category …".
 6. Click **Skip for Now**. Expect the run to finish with "One step is left in the Admin: …".
 7. Open the Frescopa card's flyout. Expect the line **1 step left in the Admin** with **Show Step**.
@@ -480,7 +482,7 @@ datapack installs onto a website, not a store view.
 **Result:** passed in part 2026-11-16 (owner), build 562deaefe, Scratch 1028 on the test store.
 Passed: with the test store's root on the shared root (119), **Switch to Frescopa** uninstalled
 We.Cafe and installed Frescopa; the Admin-step question appeared (as a corner notification, F150);
-after the owner set the root to Frescopa (1506), **I've done it** was accepted and the install
+after the owner set the root to Frescopa (1506), **I've Done It** was accepted and the install
 finished with the pack ticked. Uninstall then left Frescopa's root in place and said one step was
 left (F153: no Open Admin, and the owner opened the live store's page by mistake; he saved nothing
 there). After the owner set the test store's root to Default Category, a second uninstall
@@ -488,7 +490,7 @@ there). After the owner set the test store's root to Default Category, a second 
 root_category_id 2, Frescopa's root gone, the top-level categories only the five there before, no
 ZZ categories, the live store's root 119 and its children unchanged.
 
-Not walked, open until F150 and F153 are fixed: **I've done it** without the Admin change (asks
+Not walked, open until F150 and F153 are fixed: **I've Done It** without the Admin change (asks
 again), **Skip for Now**, the flyout's **1 step left in the Admin** with **Show Step**, and **Check**.
 Scratch 1028 now holds no datapack: the switch uninstalled We.Cafe and the uninstall Frescopa.
 

@@ -201,9 +201,11 @@ function EndView({ message, outcome, rows, tookMs, failed = false }: {
  * run's title; one with only buttons is its own sentence as the heading.
  */
 export function questionFrame(prompt: OperationPrompt, runTitle: string): ProgressFrame {
-    if (prompt.title) return { title: prompt.title, status: 'warning' };
+    // A routine step is no problem, so no warning by its title (owner walk, 2026-11-16).
+    const status: Pick<ProgressFrame, 'status'> = prompt.tone === 'info' ? {} : { status: 'warning' };
+    if (prompt.title) return { title: prompt.title, ...status };
     if (prompt.fields && prompt.fields.length > 0) return { title: runTitle };
-    return { title: prompt.message, status: 'warning' };
+    return { title: prompt.message, ...status };
 }
 
 /** The dialog around the body: its title and the title's status. */

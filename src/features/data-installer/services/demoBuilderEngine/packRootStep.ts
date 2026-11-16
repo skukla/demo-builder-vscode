@@ -6,7 +6,7 @@
  *
  * So the install asks, mid-way, through `askDuringOperation` (PL-59: the progress modal when one
  * hosts the install, a notification when none does, a VS Code modal under an agent): Open the
- * Admin, I've done it, Skip for now. "I've done it" runs the read-only check (`checkPackRoot`):
+ * Admin, I've Done It, Skip for now. "I've Done It" runs the read-only check (`checkPackRoot`):
  * set, the install carries on; not set, the question comes back saying what the store shows now.
  * "Skip for now" (or a dismissed question) finishes the install with the step left open on the
  * install record, in the setup guide's step format (`packRootGuideStep`), where its Check runs the
@@ -33,7 +33,7 @@ export interface RootStepAsker {
 
 /** The three answers, the first being the one that continues the work. */
 export const OPEN_ADMIN = 'Open Admin';
-export const DONE_IT = "I've done it";
+export const DONE_IT = "I've Done It";
 export const SKIP = 'Skip for Now';
 
 /** What the read-only check found. `done` undefined: it could not tell. */

@@ -141,7 +141,8 @@ export async function askDuringOperation(
             : vscode.window.showWarningMessage(message, ...actions);
     }
 
-    return (await askInModal(id, { title, message, actions })).action;
+    const { tone, dismiss } = question;
+    return (await askInModal(id, { title, message, actions, ...(tone ? { tone } : {}), ...(dismiss ? { dismiss } : {}) })).action;
 }
 
 /**

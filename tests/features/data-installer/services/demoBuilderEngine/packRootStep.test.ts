@@ -1,6 +1,6 @@
 /**
  * The one Admin step a pack can leave (datapack-engine step 12): checked read-only, asked mid-install
- * with Open the Admin / I've done it / Skip for now, and written down where it stands.
+ * with Open the Admin / I've Done It / Skip for now, and written down where it stands.
  */
 
 import type { Question } from '@/core/vscode/operationPrompt';
@@ -134,7 +134,7 @@ describe('settlePackRoot', () => {
         ]);
     });
 
-    it("I've done it, not done: asks again saying what the store shows; done: carries on", async () => {
+    it("I've Done It, not done: asks again saying what the store shows; done: carries on", async () => {
         const { store, ctx } = await settling();
         const run = scripted(DONE_IT, DONE_IT);
         const ask = run.asker.ask;

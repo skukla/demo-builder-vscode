@@ -34,6 +34,8 @@ import { LeadText } from '@/core/ui/components/ui/LeadText';
 import type { ActionButton, ModalStatus } from '@/core/ui/components/ui/Modal';
 import { StepsWindow } from '@/core/ui/components/ui/StepsDialog';
 import { useRunClock } from '@/core/ui/hooks/useRunClock';
+import { promptAnswerLabels, promptCloseLabel } from '@/core/ui/utils/promptButtons';
+import { questionFrame } from '@/core/ui/components/feedback/OperationProgressBody';
 import type { OperationPrompt } from '@/types/webviewPayloads';
 
 /** A question the run is paused on (walk F150), and how to answer it: undefined is dismissed. */
@@ -48,8 +50,7 @@ export interface RunQuestion {
  * close button says Cancel and answers the same way (`OperationProgressModal`).
  */
 function answerButtons({ prompt, answer }: RunQuestion): ActionButton[] {
-    return prompt.actions
-        .filter((label) => label !== 'Cancel')
+    return promptAnswerLabels(prompt)
         .map((label, index): ActionButton => ({
             label,
             variant: index === 0 ? 'accent' : 'secondary',
@@ -239,15 +240,18 @@ function RunBody(props: DatapackRunWindowProps & { pressedAt: number }): React.R
     return <Running steps={steps} columns={columns} startedAt={pressedAt} />;
 }
 
-/** The window's icon: a question's warning while asked, as the progress window's; else the run's. */
-function statusFor(status: ModalStatus | undefined, asking: boolean): { status?: ModalStatus } {
-    if (asking) return { status: 'warning' };
+/** The window's icon: a question's, as the progress window draws it (none for a routine step); else the run's. */
+function statusFor(status: ModalStatus | undefined, question: RunQuestion | undefined): { status?: ModalStatus } {
+    if (question) {
+        const asked = questionFrame(question.prompt, '').status;
+        return asked ? { status: asked } : {};
+    }
     return status ? { status } : {};
 }
 
-/** Cancel while asked (it answers dismissed); Close once ended; else Run in Background. */
-function closeLabelFor(ended: boolean, asking: boolean): string {
-    if (asking) return 'Cancel';
+/** The question's dismiss answer, or Cancel, while asked; Close once ended; else Run in Background. */
+function closeLabelFor(ended: boolean, question: RunQuestion | undefined): string {
+    if (question) return promptCloseLabel(question.prompt);
     return ended ? 'Close' : 'Run in Background';
 }
 
@@ -257,22 +261,22 @@ export function DatapackRunWindow(props: DatapackRunWindowProps): React.ReactEle
     const { uninstalling, question } = props;
     // When Install was pressed: one clock from the press to the end.
     const [pressedAt] = useState(() => Date.now());
-    // Closing while asked answers it dismissed (Skip), then the window goes as it would.
+    // Closing while asked answers it dismissed (Skip for Now), then the window goes as it would.
     const close = (): void => {
-        question?.answer(undefined);
+        question?.answer(question.prompt.dismiss);
         onClose();
     };
     return (
         <StepsWindow
             title={question?.prompt.title ?? title}
-            {...statusFor(status, Boolean(question))}
+            {...statusFor(status, question)}
             reserve={
                 uninstalling
                     ? uninstallReserve(installing.name, uninstalling, columns)
                     : runReserve(types, installing, columns, switching?.replaces)
             }
             // Run in Background while it runs: closing hands the job over, it stops nothing.
-            closeLabel={closeLabelFor(Boolean(ended), Boolean(question))}
+            closeLabel={closeLabelFor(Boolean(ended), question)}
             actionButtons={question ? answerButtons(question) : actionButtons}
             onClose={close}
         >

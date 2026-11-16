@@ -120,7 +120,7 @@ describe("a pack's root, the store's root shared", () => {
         expect(outcome.rootStep?.state).toBe('done');
     });
 
-    it("I've done it, after the SC set the root, carries the install on with the step done", async () => {
+    it("I've Done It, after the SC set the root, carries the install on with the step done", async () => {
         const { store, files, open } = await opened(SHARED_TARGET);
         const ctx = await open();
         ctx.asker = { ask: async () => (store.setRoot('tailspin_test_store', 300), DONE_IT), openAdmin: async () => undefined };

@@ -526,6 +526,10 @@ export interface OperationPrompt {
     actions: string[];
     /** The first answer deletes or replaces something, so its button is red (owner, 2026-11-05). */
     destructive?: boolean;
+    /** A routine step rather than a problem: no warning icon by the title (`Question.tone`). */
+    tone?: 'info';
+    /** The answer closing the window means ("Skip for Now"): the close button says it (`promptButtons.ts`). */
+    dismiss?: string;
     /**
      * What the SC has to type for the work to go on — a namespace, a pasted token.
      * The modal owns these rather than handing off to a VS Code input box, so one

@@ -56,10 +56,10 @@ export interface ProgressDialogProps {
     actions?: ActionButton[];
     /**
      * What dismissing says: Close by default; Run in Background while a streamed run works (it
-     * carries on in a notification, and the window holds its size while it does); Cancel while
-     * it asks (dismissing is the answer).
+     * carries on in a notification, and the window holds its size while it does); while it asks,
+     * the question's dismiss answer, or Cancel (`promptCloseLabel`: dismissing is the answer).
      */
-    closeLabel?: 'Close' | 'Run in Background' | 'Cancel';
+    closeLabel?: string;
     /**
      * Leave Close out while a row's question waits whose answers are every way on: dismissing
      * would only repeat one of them (the projects batch run and the Updates run, step-07 Win1).
