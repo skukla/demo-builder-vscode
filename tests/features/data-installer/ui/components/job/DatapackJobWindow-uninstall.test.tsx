@@ -234,7 +234,7 @@ describe('Uninstall with nothing changed', () => {
         expect(await heading('Uninstalling My Luma')).toBeInTheDocument();
         const shown = document.querySelector('.modal-steps > div:not(.modal-steps-ghost)') as HTMLElement;
         expect(within(shown).queryByTestId('import-run')).toBeNull();
-        expect(within(shown).getByText('Uninstalling from Commerce')).toBeInTheDocument();
+        expect(within(shown).getByText('Preparing to uninstall')).toBeInTheDocument();
         expect(within(shown).queryByText('Save Your Changes')).toBeNull();
 
         await press(button('Run in Background'));

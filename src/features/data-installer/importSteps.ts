@@ -246,7 +246,9 @@ function uninstallState(source: UninstallSource): Pick<OperationRow, 'status' | 
     if (source.ended === 'done') return { status: 'success', line: 'Uninstalled' };
     // Saving first, before the job: the uninstall waits on the save.
     if (source.savingStage && !source.savedAs) return waiting(true);
-    return { status: 'checking', line: removalLine(source.detail, 'Uninstalling from Commerce') };
+    // Before the engine says anything, what it does first (owner, 2026-11-16: the window said
+    // "Uninstalling from Commerce", then "Preparing to uninstall", then the first again).
+    return { status: 'checking', line: removalLine(source.detail, PREPARING_UNINSTALL) };
 }
 
 /**

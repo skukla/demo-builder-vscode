@@ -360,6 +360,7 @@ export async function removePack(
     let taken = 0;
     // How far it has got, by data type (walk F161): "1,200 of 2,046 products".
     const counter = removalCounter(take, target.progress);
+    counter.begin();
     const said = (objects: readonly CreatedObject[]) => {
         taken += objects.length;
         counter.said(objects);

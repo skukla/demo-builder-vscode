@@ -147,7 +147,7 @@ describe('removePack', () => {
 
         await removePack(ctx, files, { projectPath: PROJECT, pack: PACK, progress });
 
-        expect(progress.mock.calls.map(([line]) => line)).toEqual([PREPARING_UNINSTALL, '1 of 1 products', '1 of 1 categories']);
+        expect(progress.mock.calls.map(([line]) => line)).toEqual([PREPARING_UNINSTALL, '0 of 1 products', '1 of 1 products', '1 of 1 categories']);
     });
 
     it('leaves what Commerce refuses in the store and the record on disk, so removing again tries it again', async () => {

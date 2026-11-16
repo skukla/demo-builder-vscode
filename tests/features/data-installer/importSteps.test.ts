@@ -463,7 +463,7 @@ describe("an uninstall's steps", () => {
 
     it('is one row, Uninstall My Luma, working from the first frame when nothing is saved', () => {
         expect(uninstallSteps({ ...LUMA, running: true })).toEqual([
-            { kind: 'uninstall', label: 'Uninstall My Luma', status: 'checking', line: 'Uninstalling from Commerce' },
+            { kind: 'uninstall', label: 'Uninstall My Luma', status: 'checking', line: 'Preparing to uninstall' },
         ]);
     });
 
@@ -490,7 +490,7 @@ describe("an uninstall's steps", () => {
         const steps = uninstallSteps({ ...LUMA, running: true, savedAs: 'My Luma 2' });
 
         expect(steps[0]).toMatchObject({ status: 'success', line: 'Saved to My Luma 2' });
-        expect(steps[1]).toMatchObject({ status: 'checking', line: 'Uninstalling from Commerce' });
+        expect(steps[1]).toMatchObject({ status: 'checking', line: 'Preparing to uninstall' });
     });
 
     it('ends Uninstalled', () => {

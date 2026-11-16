@@ -291,7 +291,7 @@ describe('an uninstall', () => {
         const shown = renderRun({ ...UNINSTALL, uninstalling: { saves: false } });
 
         expect(shown.queryByTestId('import-run')).toBeNull();
-        expect(shown.getByText('Uninstalling from Commerce')).toBeInTheDocument();
+        expect(shown.getByText('Preparing to uninstall')).toBeInTheDocument();
     });
 
     it('saving first, draws Save Your Changes on its stage, then the uninstall waiting', () => {

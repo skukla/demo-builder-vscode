@@ -357,7 +357,8 @@ export function demoBuilderEngine(deps: DemoBuilderEngineDeps): DatapackEngine {
                 const progress = (line: string): void => void (job.detail = line);
                 const leaving = request.alsoLeaving ? { alsoLeaving: request.alsoLeaving } : {};
                 const result = await removeRecordedPack(await access(deps), deps.files ?? nodeRecordFiles, { projectPath: deps.projectPath, pack: request.id, log: deps.log, progress, instance: deps.instance, name: deps.nameOf?.(request.id), ...leaving });
-                job.detail = undefined;
+                // The last count stays until the result replaces it (owner, 2026-11-16): cleared, the
+                // window fell back to its first line for the moment before the end.
                 job.note = result.note;
                 if (result.leftInStore) job.leftInStore = true;
                 if (result.keptRoot) job.keptRoot = result.keptRoot;

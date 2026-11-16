@@ -35,7 +35,7 @@ function totalsOf(objects: readonly CreatedObject[]): Map<string, number> {
 export function removalCounter(
     take: readonly CreatedObject[],
     progress: ((line: string) => void) | undefined,
-): { said: (objects: readonly CreatedObject[]) => void; deleted: (n: number) => void } {
+): { begin: () => void; said: (objects: readonly CreatedObject[]) => void; deleted: (n: number) => void } {
     const totals = totalsOf(take);
     const done = new Map<string, number>();
     let inRun = 0;
@@ -54,6 +54,12 @@ export function removalCounter(
         progress?.(line);
     };
     return {
+        // The first type at 0 as deleting starts: the line moves on from "Preparing to uninstall" at
+        // once, rather than when the first batch lands.
+        begin: () => {
+            current = take[0] ? packKindOf(take[0].kind) : undefined;
+            send();
+        },
         said: (objects) => {
             for (const object of objects) {
                 const kind = packKindOf(object.kind);
