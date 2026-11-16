@@ -298,7 +298,7 @@ async function projectPathNow(context: HandlerContext): Promise<string> {
  * Record on the PROJECT which datapack its instance now holds.
  *
  * `project.datapack` was written only by the wizard's Sample Data step, so a pack
- * imported from this modal left no trace on the project. `confirmSampleDataRemoval`
+ * imported from this modal left no trace on the project. `beginSampleDataRemovalCheck`
  * gates on exactly that field, so reset silently never offered to remove data the
  * user had just imported. Found live 2026-08-16: an import succeeded, and the
  * following reset asked nothing.
@@ -351,7 +351,7 @@ function namedOnceReplaced(context: HandlerContext, replacement: ImportRequest |
  * The rule (live, 2026-10-30): the project stops naming the pack only when the removal ended in
  * success with nothing left in the store. It was cleared when the reset was ACCEPTED, so a removal
  * that then stopped half done left a project naming no pack over a store still holding most of it,
- * and project reset (`confirmSampleDataRemoval`, which gates on this field) no longer offered to
+ * and project reset (`beginSampleDataRemovalCheck`, which gates on this field) no longer offered to
  * finish the job. A removal that finishes but keeps containers holding the SC's things
  * (`leftInStore`) leaves it too: those stay on the install record, and the next removal is what
  * takes them once they are empty.

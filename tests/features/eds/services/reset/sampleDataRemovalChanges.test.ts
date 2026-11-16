@@ -14,9 +14,6 @@ jest.mock('@/features/data-installer/services/sampleDataInstall', () => ({
 jest.mock('@/features/data-installer/services/sampleDataInstallDeps', () => ({
     buildSampleDataDeps: jest.fn(() => ({})),
 }));
-jest.mock('@/features/data-installer/services/buildDatapackEngine', () => ({
-    installedByDemoBuilder: jest.fn(),
-}));
 
 import { REMOVAL_LEFT_IN_STORE, REMOVAL_NO_TARGET, RESULT_LEFT_IN_STORE, RESULT_NO_TARGET } from '../../../../helpers/datapackRemovalFixtures';
 import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
@@ -24,16 +21,13 @@ import { createMockLogger } from '../../../../helpers/loggerFake';
 import { createMockProject } from '../../../../helpers/projectFake';
 import { createMockStateManager } from '../../../../helpers/stateManagerFake';
 import { contextForProject, settleChangesBeforeRemoval } from '@/features/data-installer/handlers/removalChanges';
-import { installedByDemoBuilder } from '@/features/data-installer/services/buildDatapackEngine';
 import { removeSampleData } from '@/features/data-installer/services/sampleDataInstall';
-import type { NameMemory } from '@/features/data-installer/services/packNames';
-import { confirmSampleDataRemoval, removeProjectSampleDataOutcome } from '@/features/eds/services/reset/edsResetSampleData';
+import { removeProjectSampleDataOutcome } from '@/features/eds/services/reset/edsResetSampleData';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 
 const mockedSettle = settleChangesBeforeRemoval as jest.MockedFunction<typeof settleChangesBeforeRemoval>;
 const mockedRemove = removeSampleData as jest.MockedFunction<typeof removeSampleData>;
-const mockedOurs = installedByDemoBuilder as jest.MockedFunction<typeof installedByDemoBuilder>;
 
 /** Why the data was not all removed (the outcome's `kept`), or undefined when it was: what these cases read. */
 const keptReason = async (...args: Parameters<typeof removeProjectSampleDataOutcome>): Promise<string | undefined> =>
@@ -321,49 +315,5 @@ describe('the project record after the removal', () => {
         await expect(keptReason(held(), context, jest.fn())).resolves.toBeUndefined();
 
         expect(logger.warn).toHaveBeenCalledTimes(1);
-    });
-});
-
-describe('the question these doors ask', () => {
-    const vscodeStub = (answer: unknown) => ({ window: { showWarningMessage: jest.fn().mockResolvedValue(answer) } }) as unknown as typeof import('vscode');
-
-    it('says where changes go, for a pack Demo Builder installed', async () => {
-        mockedOurs.mockResolvedValue(true);
-        const vscode = vscodeStub(undefined);
-
-        const names = { [project().datapack?.name ?? '']: 'My Luma' };
-        const memory: NameMemory = { get: <T,>() => names as T, update: jest.fn().mockResolvedValue(undefined) };
-        await confirmSampleDataRemoval(project(), vscode, Promise.resolve(true), { memory });
-
-        expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
-            'Uninstall My Luma Too?',
-            { modal: true, detail: 'Deletes what it installed in Commerce. Your changes are saved first. Can take several minutes.' },
-            expect.anything(),
-            expect.anything(),
-        );
-    });
-
-    it('never names the pack by its id: one never read here is "the Datapack"', async () => {
-        mockedOurs.mockResolvedValue(true);
-        const vscode = vscodeStub(undefined);
-
-        await confirmSampleDataRemoval(project(), vscode, Promise.resolve(true));
-
-        const [title] = jest.mocked(vscode.window.showWarningMessage).mock.calls[0] ?? [];
-        expect(title).toBe('Uninstall the Datapack Too?');
-    });
-
-    it('says nothing of it for a pack the service installed, which has no record of changes', async () => {
-        mockedOurs.mockResolvedValue(false);
-        const vscode = vscodeStub(undefined);
-
-        await confirmSampleDataRemoval(project(), vscode, Promise.resolve(true));
-
-        expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
-            expect.any(String),
-            { modal: true, detail: 'Deletes what it installed in Commerce. Can take several minutes.' },
-            expect.anything(),
-            expect.anything(),
-        );
     });
 });

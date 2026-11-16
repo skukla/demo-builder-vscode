@@ -167,19 +167,28 @@ function resolveDisplayName(title?: string, name?: string): string | undefined {
     return title && title.length > 0 ? title : name;
 }
 
+/** The chosen datapack as its card named it, the library name until read; none when none is chosen. */
+function datapackNameOf(state: WizardState): string | undefined {
+    return state.datapack ? (state.datapackDisplayName ?? state.datapack.name) : undefined;
+}
+
 /** Project configuration section (package + architecture) */
 function ProjectConfigSection({
     packageName,
     stackName,
+    datapackName,
 }: {
     packageName?: string;
     stackName?: string;
+    /** The datapack the project gets, as its card named it (owner, 2026-11-16). */
+    datapackName?: string;
 }) {
-    if (!packageName && !stackName) return <View />;
+    if (!packageName && !stackName && !datapackName) return <View />;
     return (
         <Section title="Project Configuration">
             {packageName && <LabelValue label="Package" value={packageName} />}
             {stackName && <LabelValue label="Architecture" value={stackName} />}
+            {datapackName && <LabelValue label="Datapack" value={datapackName} />}
         </Section>
     );
 }
@@ -390,7 +399,7 @@ export function ReviewStep({
                 <div data-span-columns={
                     !adobeOrgName && !adobeProjectName && !adobeWorkspaceName ? 'true' : undefined
                 }>
-                    <ProjectConfigSection packageName={packageName} stackName={stackName} />
+                    <ProjectConfigSection packageName={packageName} stackName={stackName} datapackName={datapackNameOf(state)} />
                 </div>
                 {(adobeOrgName || adobeProjectName || adobeWorkspaceName) && (
                     <AdobeIOSection

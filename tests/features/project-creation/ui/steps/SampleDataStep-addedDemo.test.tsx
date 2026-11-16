@@ -38,14 +38,14 @@ describe('SampleDataStep — a demo that asks for a pack', () => {
         const { updateState } = renderStep({ demo: demo({ name: 'bodea', version: 'hold' }) });
 
         expect(mockExecute).toHaveBeenCalledWith({ includeCommunity: true });
-        await waitFor(() => expect(updateState).toHaveBeenCalledWith({ datapack: { name: 'bodea', version: 'hold', store: 'library' } }));
+        await waitFor(() => expect(updateState).toHaveBeenCalledWith({ datapack: { name: 'bodea', version: 'hold', store: 'library' }, datapackDisplayName: 'Bodea' }));
         expect(screen.getByTestId('demo-datapack-note')).toHaveTextContent('This demo asks for Bodea.');
     });
 
     it('falls back to the default version when the asked one is gone, and says so', async () => {
         const { updateState } = renderStep({ demo: demo({ name: 'bodea', version: 'vanished' }) });
 
-        await waitFor(() => expect(updateState).toHaveBeenCalledWith({ datapack: { name: 'bodea', version: 'main', store: 'library' } }));
+        await waitFor(() => expect(updateState).toHaveBeenCalledWith({ datapack: { name: 'bodea', version: 'main', store: 'library' }, datapackDisplayName: 'Bodea' }));
         expect(screen.getByTestId('demo-datapack-note')).toHaveTextContent(/That version is gone, so the default is selected/);
     });
 
@@ -85,7 +85,7 @@ describe('SampleDataStep — a demo that asks for a pack', () => {
         );
 
         await waitFor(() =>
-            expect(view.updateState).toHaveBeenCalledWith({ datapack: { name: 'bodea', version: 'hold', store: 'library' } })
+            expect(view.updateState).toHaveBeenCalledWith({ datapack: { name: 'bodea', version: 'hold', store: 'library' }, datapackDisplayName: 'Bodea' })
         );
         expect(screen.getByTestId('demo-datapack-note')).toHaveTextContent('This demo asks for Bodea.');
     });

@@ -4,7 +4,7 @@
  *
  * `project.datapack` was written only by the wizard's Sample Data step. A pack
  * imported from the Data Installer modal left the project unchanged — and
- * `confirmSampleDataRemoval` gates on exactly that field, so reset silently never
+ * `beginSampleDataRemovalCheck` gates on exactly that field, so reset silently never
  * offered to remove data the user had just imported. Observed live 2026-08-16:
  * an import finished successfully, and the reset that followed asked nothing.
  *

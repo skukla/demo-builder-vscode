@@ -62,7 +62,9 @@ export function ConfirmActionWindow({
         <Modal
             title={title}
             status="warning"
-            size="S"
+            // Large with a second way on: three buttons do not fit the small window in one row
+            // (Configure's connection question wrapped Uninstall First under Cancel, owner 2026-11-16).
+            size={otherAction ? 'L' : 'S'}
             fitContent
             onClose={onClose}
             closeLabel="Cancel"

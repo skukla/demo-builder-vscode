@@ -28,7 +28,8 @@ import { integrationProgress, selectedEntry } from './executorAppBuilderPhase';
 import {
     applyDatapackChange,
     planDatapackChange,
-    type AskRemoveOldDatapack,
+    type AskSwitchDatapack,
+    askSwitchInDialog,
 } from './executorEditDatapack';
 import {
     applyDestinationChange,
@@ -50,7 +51,7 @@ import { runGuards } from '@/features/dashboard/handlers/appBuilderComponentGuar
 import type { GuardableResult } from '@/features/dashboard/handlers/appBuilderComponentOperation';
 import { removeWithCleanup } from '@/features/dashboard/handlers/appBuilderComponentRemove';
 import { confirmLeavingAdobeProject } from '@/features/dashboard/handlers/destinationHandlers';
-import { confirmSampleDataRemoval } from '@/features/eds/services/reset/edsResetSampleData';
+import type { NameMemory } from '@/features/data-installer/services/packNames';
 import {
     appliesInPlace,
     selectionDelta,
@@ -69,7 +70,7 @@ export type ConfirmRemoval = (names: string[]) => Promise<boolean>;
 export interface EditQuestions {
     removeIntegrations: ConfirmRemoval;
     leaveAdobeProject: AskLeaveAdobeProject;
-    removeOldDatapack: AskRemoveOldDatapack;
+    switchDatapack: (project: Project, next: string | undefined, memory?: NameMemory) => Promise<boolean>;
     resetStorefront: AskResetStorefront;
 }
 
@@ -78,11 +79,7 @@ const ASK_THE_SC: EditQuestions = {
     removeIntegrations: (names) => confirmRemovalModal(names),
     leaveAdobeProject: confirmLeavingAdobeProject,
     resetStorefront: () => confirmStorefrontReset(),
-    removeOldDatapack: (project, canRemove, memory) =>
-        confirmSampleDataRemoval(project, vscode, canRemove, {
-            ...(memory ? { memory } : {}),
-            closing: 'Keep Datapack adds the new pack alongside.',
-        }),
+    switchDatapack: askSwitchInDialog,
 };
 
 /**
@@ -139,9 +136,8 @@ async function applyInPlace(
         delta.removed,
         ask.leaveAdobeProject,
     );
-    const datapack = await planDatapackChange(project, changes, (held, canRemove) =>
-        ask.removeOldDatapack(held, canRemove, context.context.globalState),
-    );
+    const switchTo: AskSwitchDatapack = (held, next) => ask.switchDatapack(held, next, context.context.globalState);
+    const datapack = await planDatapackChange(project, changes, switchTo, config.datapack?.name);
     const packageChange = await planPackageChange(project, changes, ask.resetStorefront);
     if (delta.added.length + delta.removed.length > 0 || destination.moves) {
         const refused = await runGuards(context, project);

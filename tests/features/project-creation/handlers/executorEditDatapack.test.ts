@@ -11,6 +11,9 @@ jest.mock('@/features/eds/services/reset/edsResetSampleData', () => ({
     // The Save As question a removal asks when the demo's pack is not the SC's: never shown here.
     askSaveAsNameWith: jest.fn(() => jest.fn()),
 }));
+jest.mock('@/features/data-installer/services/buildDatapackEngine', () => ({
+    installedByDemoBuilder: jest.fn().mockResolvedValue(true),
+}));
 jest.mock('@/features/project-creation/handlers/executorSampleDataPhase', () => ({
     executeSampleDataPhase: jest.fn().mockResolvedValue(undefined),
 }));
@@ -26,9 +29,12 @@ import {
     beginSampleDataRemovalCheck,
     removeProjectSampleDataOutcome,
 } from '@/features/eds/services/reset/edsResetSampleData';
+import type { NameMemory } from '@/features/data-installer/services/packNames';
 import type { DatapackRemoval } from '@/features/eds/services/reset/resetDatapackStep';
+import * as vscode from 'vscode';
 import {
     applyDatapackChange,
+    askSwitchInDialog,
     planDatapackChange,
 } from '@/features/project-creation/handlers/executorEditDatapack';
 import { executeSampleDataPhase } from '@/features/project-creation/handlers/executorSampleDataPhase';
@@ -89,15 +95,64 @@ describe('planDatapackChange — asked before anything runs', () => {
         expect(ask).not.toHaveBeenCalled();
     });
 
-    it("asks Reset's question about the old pack, with the removal check already started", async () => {
+    // One datapack per project in beta.153 (decisions J8-1): another pack is a Switch, and Cancel
+    // changes nothing. "Keep Datapack adds the new pack alongside" left the old pack's data in
+    // Commerce with the project naming only the new one (live run 8, owner 2026-11-16).
+    it('asks to switch to the new pack, naming it, once the old one can be uninstalled', async () => {
         const { project } = setup();
         const ask = jest.fn().mockResolvedValue(true);
 
-        const plan = await planDatapackChange(project, ['datapack'], ask);
+        const plan = await planDatapackChange(project, ['datapack'], ask, 'bodea');
 
         expect(beginSampleDataRemovalCheck).toHaveBeenCalledWith(project);
-        expect(ask).toHaveBeenCalledWith(project, expect.any(Promise));
+        expect(ask).toHaveBeenCalledWith(project, 'bodea');
         expect(plan).toStrictEqual({ changes: true, removeOld: true });
+    });
+
+    it('stops the Edit, changing nothing, when the SC cancels the switch', async () => {
+        const { project } = setup();
+        const ask = jest.fn().mockResolvedValue(false);
+
+        await expect(planDatapackChange(project, ['datapack'], ask, 'bodea')).rejects.toThrow('Nothing was changed.');
+    });
+
+    it('asks nothing when the old pack has nothing to uninstall', async () => {
+        const { project } = setup();
+        (beginSampleDataRemovalCheck as jest.Mock).mockReturnValueOnce(Promise.resolve(false));
+        const ask = jest.fn();
+
+        expect(await planDatapackChange(project, ['datapack'], ask, 'bodea')).toStrictEqual({ changes: true, removeOld: false });
+        expect(ask).not.toHaveBeenCalled();
+    });
+});
+
+describe('askSwitchInDialog — the Switch question, as the Datapacks screen asks it', () => {
+    const warning = vscode.window.showWarningMessage as unknown as jest.Mock;
+
+    it('asks "Switch to <new>?" with Switch, naming both packs as the SC knows them', async () => {
+        const { project } = setup();
+        warning.mockResolvedValueOnce({ title: 'Switch' });
+        const remembered = { citisignal: 'CitiSignal', bodea: 'Bodea' };
+        const memory: NameMemory = { get: <T>() => remembered as T, update: async () => undefined };
+
+        expect(await askSwitchInDialog(project, 'bodea', memory)).toBe(true);
+        expect(warning).toHaveBeenCalledWith(
+            'Switch to Bodea?',
+            { modal: true, detail: 'Uninstalls CitiSignal first, then installs Bodea. Your changes are saved first. Can take several minutes.' },
+            { title: 'Switch' },
+        );
+    });
+
+    it('asks "Uninstall <old>?" when the Edit chose no datapack, and Cancel answers no', async () => {
+        const { project } = setup();
+        warning.mockResolvedValueOnce(undefined);
+
+        expect(await askSwitchInDialog(project, undefined)).toBe(false);
+        expect(warning).toHaveBeenCalledWith(
+            'Uninstall citisignal?',
+            { modal: true, detail: 'Deletes what it installed in Commerce. Your changes are saved first. Can take several minutes.' },
+            { title: 'Uninstall' },
+        );
     });
 });
 

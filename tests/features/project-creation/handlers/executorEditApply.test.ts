@@ -82,10 +82,10 @@ function setup(project: Project = savedProject()) {
     const context = createMockHandlerContext({ stateManager });
     const progress = jest.fn();
     const confirm = jest.fn().mockResolvedValue(true);
-    const removeOldDatapack = jest.fn().mockResolvedValue(false);
+    const switchDatapack = jest.fn().mockResolvedValue(true);
     const leaveAdobeProject = jest.fn().mockResolvedValue(true);
     const resetStorefront = jest.fn().mockResolvedValue(true);
-    const ask = { removeIntegrations: confirm, leaveAdobeProject, removeOldDatapack, resetStorefront };
+    const ask = { removeIntegrations: confirm, leaveAdobeProject, switchDatapack, resetStorefront };
     return { context, stateManager, progress, confirm, ask, project };
 }
 
@@ -297,11 +297,11 @@ describe('finishEditWithoutRebuild — the datapack changed', () => {
 
         expect(await finishEditWithoutRebuild(context, NEW_PACK, progress, ask)).toBe(true);
 
-        expect(planDatapackChange).toHaveBeenCalledWith(project, ['datapack'], expect.any(Function));
+        expect(planDatapackChange).toHaveBeenCalledWith(project, ['datapack'], expect.any(Function), 'bodea');
         // The question it hands on asks with the remembered pack names, so it names the pack.
         const asked = (planDatapackChange as jest.Mock).mock.calls[0][2] as (p: unknown, c: unknown) => unknown;
         void asked(project, undefined);
-        expect(ask.removeOldDatapack).toHaveBeenCalledWith(project, undefined, context.context.globalState);
+        expect(ask.switchDatapack).toHaveBeenCalledWith(project, undefined, context.context.globalState);
         expect(applyDatapackChange).toHaveBeenCalledWith(context, project, NEW_PACK, plan, progress, false);
         // Nothing of Adobe's is touched for a datapack: no sign-in check, no add.
         expect(runGuards).not.toHaveBeenCalled();

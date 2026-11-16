@@ -100,4 +100,20 @@ describe('ConfirmActionDialog', () => {
         expect(action).toHaveClass('modal-button-primary');
         expect(action).not.toHaveClass('modal-button-negative');
     });
+
+    // Three buttons do not fit the small window in one row: Uninstall First wrapped under Cancel on
+    // Configure's connection question (owner, 2026-11-16). With a second way on, the window is large,
+    // as "Save Your Changes First?" is with its three.
+    it('opens large when it offers a second way on, so its three buttons sit in one row', () => {
+        renderConfirm({ otherAction: { label: 'Change Anyway', onPress: jest.fn() } });
+
+        expect(screen.getByRole('dialog')).toHaveAttribute('data-size', 'L');
+        expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual(['Change Anyway', 'Cancel', 'Remove']);
+    });
+
+    it('CONTROL: a plain confirm stays small', () => {
+        renderConfirm();
+
+        expect(screen.getByRole('dialog')).toHaveAttribute('data-size', 'S');
+    });
 });

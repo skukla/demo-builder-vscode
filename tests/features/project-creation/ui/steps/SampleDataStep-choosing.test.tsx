@@ -178,6 +178,7 @@ describe('SampleDataStep — the version on show', () => {
         await waitFor(() =>
             expect(updateState).toHaveBeenCalledWith({
                 datapack: { name: 'bodea', version: 'hold', store: 'library' },
+                datapackDisplayName: 'Bodea',
             })
         );
     });
@@ -193,6 +194,7 @@ describe('SampleDataStep — the version on show', () => {
         await waitFor(() =>
             expect(updateState).toHaveBeenCalledWith({
                 datapack: { name: 'bodea', version: 'hold', store: 'library' },
+                datapackDisplayName: 'Bodea',
             })
         );
     });
@@ -259,7 +261,7 @@ describe('SampleDataStep — writing through the CURRENT updater', () => {
         fireEvent.click(cardFor('Bodea'));
 
         await waitFor(() =>
-            expect(next).toHaveBeenCalledWith({ datapack: { name: 'bodea', version: 'main', store: 'library' } })
+            expect(next).toHaveBeenCalledWith({ datapack: { name: 'bodea', version: 'main', store: 'library' }, datapackDisplayName: 'Bodea' })
         );
         expect(view.updateState).not.toHaveBeenCalled();
     });
@@ -273,7 +275,7 @@ describe('SampleDataStep — writing through the CURRENT updater', () => {
         fireEvent.change(versionSelect('Bodea'), { target: { value: 'hold' } });
 
         await waitFor(() =>
-            expect(next).toHaveBeenCalledWith({ datapack: { name: 'bodea', version: 'hold', store: 'library' } })
+            expect(next).toHaveBeenCalledWith({ datapack: { name: 'bodea', version: 'hold', store: 'library' }, datapackDisplayName: 'Bodea' })
         );
         expect(view.updateState).not.toHaveBeenCalled();
     });

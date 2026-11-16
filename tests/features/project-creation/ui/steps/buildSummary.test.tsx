@@ -220,6 +220,20 @@ describe('commerceSummaryGroup - Edit', () => {
         ]);
     });
 
+    // The datapack by the name its card showed, not its library name (live run 8, owner 2026-11-16).
+    it('names the chosen datapack as its card did', () => {
+        const group = commerceSummaryGroup(
+            editing({
+                selectedBackend: 'adobe-commerce-accs',
+                componentConfigs: { 'adobe-commerce-accs': { ACCS_WEBSITE_CODE: 'acme', ACCS_STORE_VIEW_CODE: 'acme_us' } },
+                datapack: { name: 'frescopa', version: 'main' },
+                datapackDisplayName: 'Frescopa',
+            }),
+        );
+
+        expect(group.rows.find((r) => r.label === 'Datapacks')?.value).toBe('Frescopa');
+    });
+
     it('reads the ACCS store view code on an ACCS project', () => {
         const group = commerceSummaryGroup(
             editing({

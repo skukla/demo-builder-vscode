@@ -14,12 +14,10 @@ import { createNonSwitchingStateManager } from '@/core/state/workingProjectState
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { askForDetailsDuringOperation, modalIsAsking } from '@/core/vscode/operationPrompt';
 import type { ReportStage } from '@/core/vscode/withOperationProgress';
-import { saveFirstLabel, UNINSTALL_DATAPACK, withoutSavingLabel } from '@/features/data-installer/datapackWords';
-import { installedByDemoBuilder } from '@/features/data-installer/services/buildDatapackEngine';
+import { saveFirstLabel, withoutSavingLabel } from '@/features/data-installer/datapackWords';
 import { commerceBackendOf } from '@/features/data-installer/services/commerceBackend';
 import { typesLine } from '@/features/data-installer/services/datapackTypesLine';
 import { dropStaleFailure } from '@/features/data-installer/services/installFailure';
-import { rememberedPackName, type NameMemory } from '@/features/data-installer/services/packNames';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext } from '@/types/handlers';
@@ -45,74 +43,6 @@ export function beginSampleDataRemovalCheck(project: Project): Promise<boolean> 
         return undefined;
     }
     return Promise.resolve(commerceBackendOf(project) !== undefined);
-}
-
-/**
- * Ask whether to remove the imported sample data, when there is any to remove.
- *
- * ONE question with one action. A restore (remove, then import the same pack
- * again) was offered here for part of a day and taken out before release: it
- * roughly tripled the tail of an already three-minute operation, and it made
- * "reset" mean two different things depending on a button. Reset means what it
- * has always meant — put the storefront back, and optionally clear the data.
- *
- * Opt IN: anything other than the explicit button keeps the data. Someone
- * resetting code must not lose a catalog by pressing Escape, which is why the
- * dismissal path and the "keep" path are the same path.
- *
- * The duration is in the prompt because it is the surprising part — a six-type
- * removal was measured at 470 seconds, so a modal that says "this is quick" by
- * omission would be lying.
- *
- * Reset asks it, and so does an Edit that changes the datapack (PL-75), which adds what Keep
- * Datapack does there. The question names the pack as the SC knows it, never its id, and the body
- * holds only the sentences true for this pack (review, 2026-11-10: it showed
- * "my-luma@20261109-141504" in one long sentence).
- *
- * @param words.memory - where the library's pack names are remembered (`packNames`)
- * @param words.closing - a last sentence for this door
- */
-export async function confirmSampleDataRemoval(
-    project: Project,
-    vscode: typeof import('vscode'),
-    canRemove: Promise<boolean> | undefined,
-    words: { memory?: NameMemory; closing?: string } = {},
-): Promise<boolean> {
-    // One condition, not a guard and then an await: `canRemove` is undefined
-    // exactly when `datapack` is (the check above gates on the same field), so a
-    // separate `!canRemove` test could never be the deciding one.
-    const { datapack } = project;
-    if (!datapack || !(await canRemove)) {
-        return false;
-    }
-
-    const removeButton: import('vscode').MessageItem = { title: UNINSTALL_DATAPACK };
-    // `isCloseAffordance` REPLACES the modal's automatic "Cancel" button.
-    // "Cancel" here read as "abort the whole reset" when it actually meant
-    // "keep the data and continue" (user-reported 2026-08-23) — this question
-    // is a yes/no about the datapack only, and its buttons now say so. Esc
-    // maps to Keep Datapack: dismissal takes the safe branch.
-    const keepButton: import('vscode').MessageItem = { title: 'Keep Datapack', isCloseAffordance: true };
-    // "anything you added by hand stays": pack-scoped removal confirmed by the
-    // Data Installer service owner 2026-08-22 — a removal takes only what the
-    // pack imported, so the reassurance is a fact, not a guess (backlog item
-    // 2026-08-17-what-does-a-datapack-removal-actually-delete, now archived).
-    // Only a pack Demo Builder installed has a record of what changed, so only it can say the next part.
-    const ours = await installedByDemoBuilder(project.path, { name: datapack.name, version: datapack.version });
-    const name = words.memory ? rememberedPackName(words.memory, datapack.name) : undefined;
-    const detail = [
-        'Deletes what it installed in Commerce.',
-        ours ? 'Your changes are saved first.' : undefined,
-        'Can take several minutes.',
-        words.closing,
-    ].filter(Boolean).join(' ');
-    const answer = await vscode.window.showWarningMessage(
-        `Uninstall ${name ?? 'the Datapack'} Too?`,
-        { modal: true, detail },
-        removeButton,
-        keepButton,
-    );
-    return answer?.title === removeButton.title;
 }
 
 /**

@@ -2265,7 +2265,7 @@
             "anchors": [
                 "if (!orgName && !projectName && !workspaceName) return <View />;"
             ],
-            "line": 197,
+            "line": 206,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard false makes AdobeIOSection render its card with no rows \u2014 but the component is only mounted inside the (orgName || projectName || workspaceName) test at line 385, so it is never called with all three absent. There is no wizard state that reaches this line with the condition true, which is why only the false direction survives.",
@@ -2278,7 +2278,7 @@
             "anchors": [
                 "...(stack.dependencies || []),"
             ],
-            "line": 301,
+            "line": 310,
             "mutants": 2,
             "category": "other",
             "reason": "Every stack in stacks.json declares dependencies as an empty array, and an empty array is truthy \u2014 so the || never falls through, and swapping it for && yields the mutant's own empty array instead, spreading to nothing either way. The uncovered array-literal mutant is the same fact from the other side: the fallback is unreachable while no stack omits the field.",
@@ -2291,7 +2291,7 @@
             "anchors": [
                 "...(state.selectedAppBuilderComponents || []).filter(isMeshComponentId),"
             ],
-            "line": 302,
+            "line": 311,
             "mutants": 1,
             "category": "other",
             "reason": "This fallback fires only when no App Builder components are selected, and whatever it produces goes straight through filter(isMeshComponentId). Stryker's placeholder string is not a mesh id, so it is filtered out and the dependencies list is empty either way. The .filter call itself is NOT equivalent \u2014 a test with a non-mesh selection kills that one.",
@@ -2304,7 +2304,7 @@
             "anchors": [
                 "() => resolveReviewIntegrationNames(state, packages ?? [], stacks ?? []),"
             ],
-            "line": 319,
+            "line": 328,
             "mutants": 2,
             "category": "other",
             "reason": "Both fallbacks fire only when the catalog prop is absent, and each is handed to resolveReviewIntegrationNames, which uses them for one thing: stacks.find(s => s.id === state.selectedStack) and the package lookup behind meshComponentForStack. A list holding Stryker's placeholder string matches no stack or package id, so the resolved names are identical to the empty-list case.",
@@ -2317,7 +2317,7 @@
             "anchors": [
                 "{(adobeOrgName || adobeProjectName || adobeWorkspaceName) && ("
             ],
-            "line": 395,
+            "line": 404,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this true always mounts AdobeIOSection, which opens with its own guard returning an empty View when all three names are absent \u2014 so the rendered output is the same empty element the falsy branch produces. The two guards are deliberately redundant, and that redundancy is exactly what makes this mutant unobservable.",
@@ -3955,7 +3955,7 @@
         {
             "module": "src/features/project-creation/ui/steps/SampleDataStep.tsx",
             "anchors": [
-                "updateState(version ? { datapack: { name: group.name, version, store: group.store } } : { datapack: undefined });"
+                "updateState(version ? { datapack: { name: group.name, version, store: group.store }, datapackDisplayName: group.displayName } : { datapack: undefined, datapackDisplayName: undefined });"
             ],
             "mutants": 1,
             "category": "other",
@@ -14438,7 +14438,7 @@
         {
             "module": "src/features/project-creation/ui/steps/SampleDataStep.tsx",
             "anchors": [
-                "if (version) updateState({ datapack: { name: askedGroup.name, version, store: askedGroup.store } });"
+                "if (version) updateState({ datapack: { name: askedGroup.name, version, store: askedGroup.store }, datapackDisplayName: askedGroup.displayName });"
             ],
             "mutants": 1,
             "category": "branch",

@@ -2,10 +2,9 @@
  * RENAMED from `edsResetUI-removalReporting.test.ts` on 2026-10-08 (EDS-8 split by job):
  * the sample-data step moved to `edsResetSampleData.ts`.
  * A suite is paired with the module it is named for. The removal is driven through the
- * reset a batch runs (`answered.removeDatapack`), the question through
- * `confirmSampleDataRemoval` as Edit asks it (step-05 S5).
+ * reset a batch runs (`answered.removeDatapack`) (step-05 S5).
  *
- * How the datapack removal is asked for, narrated and reported.
+ * How the datapack removal is narrated and reported.
  *
  * The sibling suite (`edsResetSampleData.test.ts`) pins WHEN the question is
  * asked and that a refusal cannot fail the reset. This one pins the rest, which
@@ -25,7 +24,6 @@ import {
     vscode,
     fakeGitHubAppService,
 } from './edsResetUI.testUtils';
-import { confirmSampleDataRemoval } from '@/features/eds/services/reset/edsResetSampleData';
 import { resetCaveats } from '@/features/eds/services/reset/edsResetParams';
 import { LEFT_NOTE, RESULT_LEFT_IN_STORE } from '../../../../helpers/datapackRemovalFixtures';
 import type { SampleDataProgress } from '@/features/data-installer/services/sampleDataInstallDeps';
@@ -65,7 +63,6 @@ const mockedRemove = removeSampleData as jest.MockedFunction<typeof removeSample
 const mockedDeps = buildSampleDataDeps as jest.MockedFunction<typeof buildSampleDataDeps>;
 const meshDeps = createMeshDepsFake();
 const REMOVE = { title: 'Uninstall Datapack' };
-const KEEP = { title: 'Keep Datapack', isCloseAffordance: true };
 
 function createProject(): Project {
     return createMockProject({
@@ -122,19 +119,6 @@ beforeEach(() => {
     mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: true });
     mockEnsureProjectOrgContext.mockResolvedValue({ reachable: true });
     mockedRemove.mockResolvedValue({ ran: true, outcome: 'success' });
-});
-
-describe('the datapack prompt', () => {
-    it('is modal, names the pack, and makes Keep Data the close affordance', async () => {
-        await confirmSampleDataRemoval(createProject(), vscode, Promise.resolve(true));
-
-        expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
-            expect.stringMatching(/^Uninstall .+ Too\?$/u),
-            { modal: true, detail: expect.stringContaining('Deletes what it installed in Commerce.') },
-            REMOVE,
-            KEEP,
-        );
-    });
 });
 
 describe('the removal narration', () => {

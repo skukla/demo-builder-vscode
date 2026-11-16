@@ -54,6 +54,8 @@ const WIZARD_FIELDS: Record<keyof WizardState, Kind> = {
     storefrontRepoValid: 'screen',
     activeBuildArea: 'screen',
     datapack: 'choice',
+    // The chosen pack's name for the summary and Review: follows `datapack`, never a change of its own.
+    datapackDisplayName: 'screen',
     activeCommerceStep: 'screen',
     committedCommerceSteps: 'screen',
     activeStorefrontStep: 'screen',

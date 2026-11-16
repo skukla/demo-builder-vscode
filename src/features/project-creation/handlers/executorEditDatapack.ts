@@ -3,8 +3,7 @@
  *
  * The rebuild re-imported the new pack on top of the old one, and could never
  * clear one: an Edit that chose "no datapack" kept the old choice. Now Finish asks
- * Reset's own question about the old pack's data (remove it, or keep it beside the
- * new one), then records the new choice and runs creation's own steps after it:
+ * the Switch question (one datapack per project: switch, or change nothing), then records the new choice and runs creation's own steps after it:
  * the import, catalog pre-warming and, on an Edge Delivery storefront, the
  * category pages for the categories the new pack brings. When the old data was
  * removed, the pages Demo Builder wrote for it go first, as in Reset.
@@ -15,6 +14,7 @@
 import * as vscode from 'vscode';
 import { executeSampleDataPhase } from './executorSampleDataPhase';
 import type { ProgressTracker } from './shared';
+import { installedByDemoBuilder } from '@/features/data-installer/services/buildDatapackEngine';
 import { dropStaleFailure } from '@/features/data-installer/services/installFailure';
 import { type NameMemory, rememberedPackName } from '@/features/data-installer/services/packNames';
 import {
@@ -33,13 +33,42 @@ import type { HandlerContext } from '@/types/handlers';
 import { isEdsProject } from '@/types/typeGuards';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
 
-/** Asks whether to remove the old pack's data first. True to remove it. */
-export type AskRemoveOldDatapack = (
-    project: Project,
-    canRemove: Promise<boolean> | undefined,
-    /** Where the library's pack names are remembered, so the question names the pack. */
-    memory?: NameMemory,
-) => Promise<boolean>;
+/**
+ * Asks to switch the project from its pack to `next` (by library name), or to uninstall it when
+ * `next` is undefined. True to go ahead; false changes nothing.
+ */
+export type AskSwitchDatapack = (project: Project, next: string | undefined) => Promise<boolean>;
+
+/** Said when the SC cancels: the Edit stops before anything runs. */
+const CANCELLED = 'Saving changes was cancelled by user. Nothing was changed.';
+
+/**
+ * The Switch question, in a VS Code dialog, in the Datapacks screen's words (decisions J8-1): one
+ * datapack per project in beta.153, so another pack is "Switch to Bodea?" with Switch, and no pack
+ * is "Uninstall Bodea?" with Uninstall. VS Code adds Cancel, which changes nothing. It replaced
+ * Reset's "Uninstall … Too?" with "Keep Datapack adds the new pack alongside", which left the old
+ * pack's data in Commerce with the project naming only the new one (live run 8, owner 2026-11-16).
+ *
+ * @param memory - where the library's pack names are remembered, so both are named as the SC knows them
+ * @returns true to go ahead
+ */
+export async function askSwitchInDialog(project: Project, next: string | undefined, memory?: NameMemory): Promise<boolean> {
+    const held = project.datapack;
+    if (!held) return true;
+    const nameOf = (name: string): string => (memory ? rememberedPackName(memory, name) : undefined) ?? name;
+    const old = nameOf(held.name);
+    // Only a pack Demo Builder installed has a record of what changed, so only it can save them first.
+    const ours = await installedByDemoBuilder(project.path, { name: held.name, version: held.version });
+    const verb = next ? 'Switch' : 'Uninstall';
+    const detail = [
+        next ? `Uninstalls ${old} first, then installs ${nameOf(next)}.` : 'Deletes what it installed in Commerce.',
+        ours ? 'Your changes are saved first.' : undefined,
+        'Can take several minutes.',
+    ].filter(Boolean).join(' ');
+    const title = next ? `Switch to ${nameOf(next)}?` : `Uninstall ${old}?`;
+    const answer = await vscode.window.showWarningMessage(title, { modal: true, detail }, { title: verb });
+    return answer?.title === verb;
+}
 
 /** What the SC decided about the datapack, asked before anything runs. */
 export interface DatapackPlan {
@@ -55,17 +84,23 @@ export interface DatapackPlan {
  *
  * @param project - the project as it was before the Edit
  * @param changes - the changed choices (`editChanges`)
- * @param ask - the question (Reset's own, in production)
+ * @param ask - the Switch question (`askSwitchInDialog`, in production)
+ * @param next - the pack the Edit chose, by library name; undefined for none
  * @returns the plan
+ * @throws when the SC cancels: nothing has run
  */
 export async function planDatapackChange(
     project: Project,
     changes: readonly string[],
-    ask: AskRemoveOldDatapack,
+    ask: AskSwitchDatapack,
+    next?: string,
 ): Promise<DatapackPlan> {
     if (!changes.includes('datapack')) return { changes: false, removeOld: false };
     if (!project.datapack) return { changes: true, removeOld: false };
-    return { changes: true, removeOld: await ask(project, beginSampleDataRemovalCheck(project)) };
+    // Nothing of the old pack to uninstall (never installed here): the new choice is just recorded.
+    if (!(await beginSampleDataRemovalCheck(project))) return { changes: true, removeOld: false };
+    if (!(await ask(project, next))) throw new Error(CANCELLED);
+    return { changes: true, removeOld: true };
 }
 
 /**

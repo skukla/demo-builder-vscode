@@ -252,7 +252,8 @@ export function commerceSectionStates(
  * body says why Continue is held (owner, 2026-11-14).
  */
 function sampleDataSection(state: WizardState): CommerceSectionState {
-    const value = state.datapack?.name ?? 'None';
+    // By the name its card showed (owner, 2026-11-16); the library name until the step has read it.
+    const value = state.datapack ? (state.datapackDisplayName ?? state.datapack.name) : 'None';
     const status = datapackLacksTarget(state) ? 'upcoming' : 'done';
     return { id: 'sample-data', status, value };
 }

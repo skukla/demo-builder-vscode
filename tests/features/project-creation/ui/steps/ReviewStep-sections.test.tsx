@@ -375,3 +375,20 @@ describe('the project configuration card', () => {
         expect(screen.queryByText('Project Configuration')).not.toBeInTheDocument();
     });
 });
+
+// The datapack the project gets, by the name the SC picked it by (live run 8, owner 2026-11-16:
+// Final Review said nothing of an Edit that switched it).
+describe('the Datapack row', () => {
+    it('names the chosen datapack as the card did', () => {
+        renderReview({ datapack: { name: 'frescopa', version: 'main' }, datapackDisplayName: 'Frescopa' });
+
+        expect(screen.getByText('Datapack')).toBeInTheDocument();
+        expect(screen.getByText('Frescopa')).toBeInTheDocument();
+    });
+
+    it('CONTROL: shows no row when no datapack is chosen', () => {
+        renderReview({});
+
+        expect(screen.queryByText('Datapack')).toBeNull();
+    });
+});

@@ -106,7 +106,7 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
             askedVersion && askedGroup.versions.some((v) => v.id.version === askedVersion)
                 ? askedVersion
                 : pickDefaultVersion(askedGroup);
-        if (version) updateState({ datapack: { name: askedGroup.name, version, store: askedGroup.store } });
+        if (version) updateState({ datapack: { name: askedGroup.name, version, store: askedGroup.store }, datapackDisplayName: askedGroup.displayName });
     }, [editing, settled, askedGroup, askedName, askedVersion, chosenName, updateState]);
 
     const isChosen = useCallback((group: DatapackGroup): boolean => isPack(group, chosen), [chosen]);
@@ -138,7 +138,7 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
     const chooseGroup = useCallback(
         (group: DatapackGroup): void => {
             const version = versionShown(group);
-            updateState(version ? { datapack: { name: group.name, version, store: group.store } } : { datapack: undefined });
+            updateState(version ? { datapack: { name: group.name, version, store: group.store }, datapackDisplayName: group.displayName } : { datapack: undefined, datapackDisplayName: undefined });
         },
         [updateState, versionShown],
     );
@@ -149,14 +149,14 @@ export function SampleDataStep({ state, updateState }: BaseStepProps): React.JSX
             // Re-record when this pack is the chosen one, so the recorded version
             // is always the one on show rather than the one chosen first.
             if (isChosen(group)) {
-                updateState({ datapack: { name: group.name, version, store: group.store } });
+                updateState({ datapack: { name: group.name, version, store: group.store }, datapackDisplayName: group.displayName });
             }
         },
         [isChosen, updateState],
     );
-    const useInstead = useCallback((pack: ProjectDatapack): void => updateState({ datapack: pack }), [updateState]);
+    const useInstead = useCallback((pack: ProjectDatapack): void => updateState({ datapack: pack, datapackDisplayName: undefined }), [updateState]);
 
-    const clear = useCallback((): void => updateState({ datapack: undefined }), [updateState]);
+    const clear = useCallback((): void => updateState({ datapack: undefined, datapackDisplayName: undefined }), [updateState]);
     const heldReason = datapackHeldReason(state);
 
     return (

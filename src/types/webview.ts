@@ -140,6 +140,7 @@ export interface WizardState {
      * itself never imports. Optional throughout.
      */
     datapack?: ProjectDatapack;
+    datapackDisplayName?: string; // Transient: the chosen datapack as its card names it, for the summary and Review (owner, 2026-11-16)
     activeCommerceStep?: CommerceSectionId; // Active Commerce sub-step within the build step (footer Continue/Back walks sub-steps → areas → wizard steps)
     committedCommerceSteps?: CommerceSectionId[]; // Commerce sub-steps the user has pressed Continue past — gates the summary ✓ (a valid form alone does NOT mark a row done)
     activeStorefrontStep?: StorefrontSectionId; // Active Storefront sub-step within the build step (same footer-driven walk as Commerce)
