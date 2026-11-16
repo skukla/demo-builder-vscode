@@ -376,7 +376,7 @@ describe('Save Your Changes First?', () => {
         expect(sent('reset-datapack')).not.toHaveProperty('saveAs');
         expect(await heading('Uninstalling My Luma')).toBeInTheDocument();
         expect(shownStep().queryByTestId('import-run')).toBeNull();
-        expect(shownStep().getByText('Starting')).toBeInTheDocument();
+        expect(shownStep().getByText('Preparing to save')).toBeInTheDocument();
     });
 
     it("says each stage of the save, and ignores another operation's progress", async () => {
@@ -402,7 +402,7 @@ describe('Save Your Changes First?', () => {
         await settle();
 
         expect(shownStep().getByText('Preparing to uninstall')).toBeInTheDocument();
-        expect(shownStep().queryByText('Starting')).toBeNull();
+        expect(shownStep().queryByText('Preparing to save')).toBeNull();
     });
 
     // Review 2026-11-14 (item 9): its own name typed in another case still names the real datapack.

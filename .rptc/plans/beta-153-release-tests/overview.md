@@ -209,6 +209,7 @@ Mark each test's **Result** line: `passed 2026-11-DD`, or `failed 2026-11-DD: wh
 | F179 | U2.1 step 3 (2026-11-16) | In Create Datapack's left column, a type's note wrapped under its name ("B2B Shared Catalogs", "Product Attributes"), worst on the shown row in bold | **Fixed**: the column is 320px, room for a name and its note on one line (also the records window, which shares it). **Owner must re-look** |
 | F180 | U2.1 step 4 (2026-11-16) | The datapack save's run read "Reading from Commerce / Reading your selection", then "Starting" mid-run, then "Saving to My Datapacks" alone | **Fixed** with tests: line 1 is each step's job from its verb ("Exporting from Commerce", "Saving to My Datapacks"), line 2 the part under way ("Categories, 1 of 1", "Release Save Test"); a push between steps keeps the last lines (rowsLines, OperationProgressBody). **Owner must re-look** |
 | F181 | U2.1 step 4 (2026-11-16) | **Release Save Test Created** sat in the run window's full height for one sentence | **Fixed** with tests (owner, 2026-11-16: "a clean finish ends small", over the 2026-11-11 rule that kept the run's height): a clean finish with no rows to keep, no list of changes and no next step is the small result window, its title, its sentence and Close (SmallEnd); a finish with a problem stays in the run's window. **Owner must re-look** |
+| F182 | U2.1 step 5 (2026-11-16) | The install's run opened on "Starting" alone | **Fixed** with tests: before the first step reports, the window says the job ("Installing in Commerce") over the installer's words ("Preparing to install", "Preparing to update", "Preparing to save", else "Preparing"); "Starting" is gone from every run window. **Owner must re-look** |
 
 ## Questions raised
 
@@ -343,9 +344,11 @@ end).
    blue check.
 5. Open the card and click **Install**, then **Install** in the window. Expect **Release Save Test
    Installed**. Expect the header to read **Save**, and the dashboard's **Datapacks** card to read
-   "Release Save Test".
+   "Release Save Test". (Creating from the demo writes no install record, so until this install the
+   header says Create: no install record, no Save, decisions.md. A rewrite that skipped this step was
+   wrong and is undone, 2026-11-16.)
 
-Reached: step 3 of 5 (2026-11-16). Step 3 passed: window opened complete (every list read in the opening wait, F178/F179), ZZ Customer Picks alone ticked, Next to Datapack Name with Back, Cancel, Create. Step 1 passed: ZZ Customer Picks saved under Default Category. Step 2 passed on the fixed build (F177): Create Datapack, every type ticked, Select All Data at the top; categories in the shared tree.
+U2.1 notes (2026-11-16). Step 4 passed: Creating Release Save Test, then Release Save Test Created ("Scratch 1028 now uses Release Save Test."), the card tagged Mine with the check; findings F180, F181. Step 5 passed (Steve: "Successful"): Release Save Test installed; finding F182. All 5 steps walked; result awaiting Steve's word. Step 3 passed: window opened complete (every list read in the opening wait, F178/F179), ZZ Customer Picks alone ticked, Next to Datapack Name with Back, Cancel, Create. Step 1 passed: ZZ Customer Picks saved under Default Category. Step 2 passed on the fixed build (F177): Create Datapack, every type ticked, Select All Data at the top; categories in the shared tree.
 
 **Test U2.2: Save a later edit into it**
 1. In the Admin, rename ZZ Customer Picks to "ZZ Customer Picks 2". In the Datapacks header, click

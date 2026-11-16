@@ -20,6 +20,7 @@ import { RunFoot, type RunFootProps } from '@/core/ui/components/feedback/RunFoo
 import { StageRows } from '@/core/ui/components/feedback/StageWait';
 import { WorkRow } from '@/core/ui/components/feedback/WorkRow';
 import { spanValue, useRunClock } from '@/core/ui/hooks/useRunClock';
+import { PREPARING } from '@/core/utils/runStage';
 import type { UpdateRowState } from '@/types/pendingUpdates';
 import type { OperationProgressPayload, OperationPrompt } from '@/types/webviewPayloads';
 
@@ -63,7 +64,7 @@ interface RowProps {
  */
 function lineOf(state: UpdateRowState, message: string | undefined): string | undefined {
     if (state === 'waiting') return 'Waiting';
-    if (state === 'running') return message ?? 'Starting';
+    if (state === 'running') return message ?? PREPARING;
     if (state === 'done') return message ?? 'Finished';
     return undefined;
 }
@@ -156,7 +157,7 @@ function OneRunning({ status, timing }: { status: BatchRowStatuses[string] | und
                 size="L"
                 clock={clock}
                 lines={{
-                    label: (running && status?.message) || 'Starting',
+                    label: (running && status?.message) || PREPARING,
                     ...(running && status?.step ? { detail: status.step } : {}),
                     ...(running && status?.expectation ? { expectation: status.expectation } : {}),
                 }}

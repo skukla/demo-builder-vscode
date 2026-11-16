@@ -66,7 +66,7 @@ describe('ProjectsBatchModal: one project running', () => {
         await push('projectsBatchRow', { path: '/p/a', state: 'waiting' });
 
         const dialog = screen.getByRole('dialog', { name: 'Resetting A' });
-        expect(within(dialog).getByText('Starting')).toBeInTheDocument();
+        expect(within(dialog).getByText('Preparing')).toBeInTheDocument();
         expect(dialog.querySelector('.work-row')).toBeNull();
     });
 

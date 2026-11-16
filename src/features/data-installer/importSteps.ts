@@ -152,9 +152,12 @@ function typeRows(source: StepSource): OperationRow[] {
 
 const isDone = (row: OperationRow): boolean => row.status === 'success' || row.status === 'warning';
 
-/** Where the engine is before the first data type, as a step's line; "Starting" before it says. */
-function phaseWords(phase: string | undefined): string {
-    if (!phase) return 'Starting';
+/**
+ * Where the engine is before the first data type, as a step's line; before it says, the words an
+ * installer uses (owner walk, 2026-11-16: "Starting" alone read oddly).
+ */
+function phaseWords(phase: string | undefined, updating = false): string {
+    if (!phase) return updating ? 'Preparing to update' : 'Preparing to install';
     return STEP_LINES[phase] ?? phase;
 }
 
@@ -175,7 +178,7 @@ function installStep(source: StepSource, types: OperationRow[]): ImportStep {
     // Install is the step in hand once nothing comes before it: a first install from the first frame
     // (it spun as Preparing Import's "Starting" before steps), a replace once the old data is out.
     if (source.running && replaced) {
-        const phaseLine = begun ? undefined : phaseWords(source.phase);
+        const phaseLine = begun ? undefined : phaseWords(source.phase, source.installing.updating);
         return {
             ...row,
             status: 'checking',

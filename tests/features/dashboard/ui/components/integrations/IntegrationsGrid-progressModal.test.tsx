@@ -58,7 +58,7 @@ describe('the progress modal', () => {
 
         const modal = await startDeploy(user);
 
-        expect(within(modal).getByText('Starting')).toBeInTheDocument();
+        expect(within(modal).getByText('Preparing')).toBeInTheDocument();
         expect(within(modal).queryByText('Not deployed')).not.toBeInTheDocument();
     });
 
@@ -264,7 +264,7 @@ describe('the progress modal', () => {
         });
         const again = screen.getByRole('dialog', { name: 'Deploying custom-app' });
         expect(within(again).queryByText('Adobe refused this.')).not.toBeInTheDocument();
-        expect(within(again).getByText('Starting')).toBeInTheDocument();
+        expect(within(again).getByText('Preparing')).toBeInTheDocument();
     });
 
     it('a new run never asks for the last run\'s state; a reopened one does', async () => {

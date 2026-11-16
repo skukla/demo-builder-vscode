@@ -102,10 +102,10 @@ function savedOf(uninstalling: Uninstalling): Pick<UninstallSource, 'savedAs'> {
     return { savedAs: uninstalling.savedTo };
 }
 
-/** An uninstall before its job is recorded: the save on its stage ("Starting" from the press), or the uninstall at work. */
+/** An uninstall before its job is recorded: the save on its stage ("Preparing to save" from the press), or the uninstall at work. */
 export function uninstallStartingSteps(name: string, uninstalling: Uninstalling): ImportStep[] {
     if (!uninstalling.saves) return uninstallSteps({ name, running: true });
-    return uninstallSteps({ name, running: true, savingStage: uninstalling.savingStage ?? 'Starting' });
+    return uninstallSteps({ name, running: true, savingStage: uninstalling.savingStage ?? 'Preparing to save' });
 }
 
 /** An uninstall while its job runs, how far it has got from the live poll, else the record. */

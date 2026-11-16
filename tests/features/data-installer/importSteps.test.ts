@@ -62,7 +62,7 @@ describe('which steps show', () => {
 
         expect(labels(steps)).toStrictEqual(['Install Luma, main', 'Verify Installation']);
         expect(steps.map((step) => [step.status, step.line])).toStrictEqual([
-            ['checking', 'Starting'],
+            ['checking', 'Preparing to install'],
             ['pending', 'Waiting'],
         ]);
     });

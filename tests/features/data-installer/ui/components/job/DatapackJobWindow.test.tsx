@@ -205,7 +205,7 @@ describe('Install', () => {
 
         expect(await heading('Installing Bodea')).toBeInTheDocument();
         expect(shownStep().queryByTestId('import-run')).toBeNull();
-        expect(shownStep().getByText('Starting')).toBeInTheDocument();
+        expect(shownStep().getByText('Preparing to install')).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Close' })).not.toBeInTheDocument();
         await press(button('Run in Background'));
         expect(mockPostMessage.mock.calls).toStrictEqual([
@@ -391,7 +391,7 @@ describe('a window opened on a running job', () => {
         await settle();
 
         expect(await heading('Restoring My Luma')).toBeInTheDocument();
-        expect(shownStep().getByText('Starting')).toBeInTheDocument();
+        expect(shownStep().getByText('Preparing to install')).toBeInTheDocument();
         expect(sends('preview-datapack-changes')).toBe(0);
         expect(button('Run in Background')).toBeInTheDocument();
     });

@@ -29,7 +29,7 @@ describe('OperationProgressBody, running', () => {
     it('holds rows 2 and 3 under "Starting", before any word from the run, so nothing shifts', () => {
         const { container } = renderRunning();
 
-        expect(screen.getByText('Starting')).toBeInTheDocument();
+        expect(screen.getByText('Preparing')).toBeInTheDocument();
         expect(container.querySelectorAll('.loading-display-row')).toHaveLength(3);
     });
 

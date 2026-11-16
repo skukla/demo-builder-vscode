@@ -287,7 +287,7 @@ describe('Save Your Changes First?', () => {
         });
         expect(sent('start-datapack-import')).not.toHaveProperty('saveAs');
         expect(await heading('Switching to Bodea')).toBeInTheDocument();
-        expect(shownStep().getByText('Starting')).toBeInTheDocument();
+        expect(shownStep().getByText('Preparing to save')).toBeInTheDocument();
         expect(tipCalls()).toStrictEqual([[TIP]]);
     });
 
@@ -534,6 +534,6 @@ describe('another version of the held datapack', () => {
 
         expect(sent('start-datapack-import')).toMatchObject({ changes: 'keep' });
         expect(await heading('Installing Bodea, eds-compatible')).toBeInTheDocument();
-        expect(shownStep().getByText('Starting')).toBeInTheDocument();
+        expect(shownStep().getByText('Preparing to save')).toBeInTheDocument();
     });
 });

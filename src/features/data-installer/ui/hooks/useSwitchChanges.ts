@@ -178,5 +178,5 @@ export function useSavingStage(saving: boolean): string | undefined {
         });
     }, [saving]);
     if (!saving) return undefined;
-    return stage ?? 'Starting';
+    return stage ?? 'Preparing to save';
 }

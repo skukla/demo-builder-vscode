@@ -13,6 +13,9 @@
 
 import type { OperationRow } from '@/types/webviewPayloads';
 
+/** What a run says before anything names its first step: the word installers use, never "Starting". */
+export const PREPARING = 'Preparing';
+
 /** The centred lines: the job, and the part under way when there is one. */
 export interface RunStageLines {
     label: string;
@@ -62,6 +65,12 @@ function stepLine(step: OperationRow, label: string): string | undefined {
     return said && said !== label ? said : undefined;
 }
 
+/** The job of the first step still to come, or "Starting" when there is none to name. */
+function firstJob(steps: readonly OperationRow[], job: StepJob | undefined): string {
+    const next = steps.find((s) => s.status === 'pending');
+    return (next && job?.(next)) ?? PREPARING;
+}
+
 /**
  * The run's lines now: the job of the step under way, and in it the data type under way or the
  * step's own line; "Starting" before any step is.
@@ -70,7 +79,9 @@ function stepLine(step: OperationRow, label: string): string | undefined {
  */
 export function runStage(steps: readonly OperationRow[], job?: StepJob): RunStageLines {
     const working = steps.find((s) => s.status === 'checking');
-    if (!working) return { label: 'Starting' };
+    // Before any step is under way, the job of the first one to come: "Installing in Commerce" from the
+    // first frame, not "Starting" (owner walk, 2026-11-16).
+    if (!working) return { label: firstJob(steps, job) };
     const label = job?.(working) ?? working.label;
     const type = working.types?.find((t) => t.status === 'checking');
     const detail = type ? typeLine(type) : stepLine(working, label);
@@ -109,7 +120,7 @@ export function gerundJob(label: string): string | undefined {
  */
 export function rowsLines(rows: readonly OperationRow[], stage: string | undefined): RunStageLines {
     const working = rows.find((row) => row.status === 'checking');
-    if (!working) return { label: stage ?? 'Starting' };
+    if (!working) return { label: stage ?? PREPARING };
     const job = gerundJob(working.label);
     const verb = job?.split(' ')[0];
     const typeWorking = working.types?.some((t) => t.status === 'checking');

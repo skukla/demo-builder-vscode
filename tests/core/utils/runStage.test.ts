@@ -70,8 +70,10 @@ describe('runStage', () => {
         expect(runStage(steps, () => 'Saving Your Changes')).toEqual({ label: 'Saving Your Changes', detail: 'Saving to the library' });
     });
 
-    it('says Starting before any step is under way', () => {
-        expect(runStage([step({ line: 'Waiting' })], JOBS)).toEqual({ label: 'Starting' });
+    // Owner walk, 2026-11-16: "Starting" alone read oddly; the job comes first from the first frame.
+    it('says the first step\'s job before any step is under way, and Starting only with no job to name', () => {
+        expect(runStage([step({ line: 'Waiting' })], JOBS)).toEqual({ label: 'Installing in Commerce' });
+        expect(runStage([step({ line: 'Waiting' })])).toEqual({ label: 'Preparing' });
     });
 });
 

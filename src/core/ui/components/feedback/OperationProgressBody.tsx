@@ -23,7 +23,7 @@ import type { ModalStatus } from '@/core/ui/components/ui/Modal';
 import { useRunClock } from '@/core/ui/hooks/useRunClock';
 import { cn } from '@/core/ui/utils/classNames';
 import { endStatus, endsSmall, type RunEnding } from '@/core/ui/utils/runEnding';
-import { rowsLines } from '@/core/utils/runStage';
+import { PREPARING, rowsLines } from '@/core/utils/runStage';
 import { stageLine } from '@/core/utils/stageLine';
 import type { OperationChange, OperationPrompt, OperationProgressPayload, OperationRow } from '@/types/webviewPayloads';
 
@@ -48,7 +48,7 @@ export interface OperationProgressBodyProps {
 function runningLines(progress: OperationProgressPayload | null | undefined): WaitLines {
     const stage = progress?.stage ? stageLine(progress.stage, progress.position) : undefined;
     if (progress?.rows?.length) return rowsLines(progress.rows, stage);
-    const label = stage ?? 'Starting';
+    const label = stage ?? PREPARING;
     return { label, detail: progress?.step, expectation: progress?.expectation };
 }
 
@@ -86,7 +86,7 @@ export function OperationProgressBody({
     // only for how it ended (walk F91 asked for more than one line over a save's minutes of reading:
     // the part under way and its count are that line).
     const now = runningLines(progress);
-    const lines = now.label === 'Starting' && lastLines.current ? lastLines.current : now;
+    const lines = now.label === PREPARING && lastLines.current ? lastLines.current : now;
     lastLines.current = lines;
     // Size L, as every other progress display here: M left-aligns and shrinks
     // the text.

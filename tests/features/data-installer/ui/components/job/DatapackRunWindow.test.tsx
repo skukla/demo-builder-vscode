@@ -76,7 +76,7 @@ describe('an install while it runs', () => {
         const shown = renderRun({ record: RECORD });
 
         expect(shown.queryByTestId('import-run')).toBeNull();
-        expect(shown.getByText('Starting')).toBeInTheDocument();
+        expect(shown.getByText('Preparing to install')).toBeInTheDocument();
     });
 
     it('says the comparison before the first type, in the step’s words', () => {
@@ -116,7 +116,7 @@ describe('an install while it runs', () => {
         const shown = renderRun();
 
         expect(shown.queryByTestId('import-run')).toBeNull();
-        expect(shown.getByText('Starting')).toBeInTheDocument();
+        expect(shown.getByText('Preparing to install')).toBeInTheDocument();
         act(() => {
             jest.advanceTimersByTime(1000);
         });
