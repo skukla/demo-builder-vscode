@@ -27,15 +27,21 @@ export interface WaitLines {
     expectation?: string;
 }
 
-/** The three rows. Row 3 only when there is an expectation or a clock to show. */
+/**
+ * The three rows. Row 3 only when there is an expectation or a clock to show; with `hold`, rows 2 and
+ * 3 keep their room while empty, so a run's lines do not shift when its count or its first second
+ * arrives (owner walk, 2026-11-16).
+ */
 export function StageRows({
     lines,
     clock,
     size = 'M',
+    hold = false,
 }: {
     lines: WaitLines;
     clock?: string;
     size?: 'M' | 'L';
+    hold?: boolean;
 }): React.ReactElement {
     const hasRowThree = Boolean(lines.expectation || clock);
     return (
@@ -43,7 +49,7 @@ export function StageRows({
             size={size}
             centered
             steady
-            noBlankRows
+            noBlankRows={!hold}
             message={lines.label}
             subMessage={lines.detail}
             helperText={hasRowThree ? expectationLine(lines.expectation, clock) : undefined}

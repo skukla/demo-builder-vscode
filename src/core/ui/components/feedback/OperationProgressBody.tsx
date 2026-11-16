@@ -92,11 +92,7 @@ export function OperationProgressBody({
     return (
         <div className={cn('modal-wait', 'modal-wait-progress', subject && 'modal-wait-progress-subject')}>
             {subject && <div className="modal-progress-subject">{subject}</div>}
-            <StageRows
-                size="L"
-                clock={total}
-                lines={lines}
-            />
+            <StageRows size="L" clock={total} lines={lines} />
         </div>
     );
 }

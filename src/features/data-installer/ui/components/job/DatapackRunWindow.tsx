@@ -14,7 +14,7 @@
  */
 
 import React, { useState } from 'react';
-import { type ImportStep, type StepSource, uninstallSteps } from '../../../importSteps';
+import { type ImportStep, type StepSource } from '../../../importSteps';
 import { FINISHING, REPLACING, SAVING } from '../../../runRows';
 import type { ImportJobRecord } from '../../../types';
 import { useImportProgress } from '../../hooks/useImportProgress';
@@ -90,82 +90,16 @@ export interface DatapackRunWindowProps {
     question?: RunQuestion;
 }
 
-/** A record shaped for the reserve: no job, only the steps' tallest states. */
-function reserveRecord(
-    types: string[],
-    version: string,
-    over: Partial<ImportJobRecord>,
-): ImportJobRecord {
-    return {
-        activationId: '',
-        datapackName: '',
-        version,
-        commerceInstance: '',
-        startedAt: '',
-        outcome: 'error',
-        dataTypes: types,
-        perType: {},
-        ...over,
-    };
-}
-
-/** The run's tallest states, drawn hidden so the window opens at their height: mid-run, and stopped. */
-function runReserve(
-    types: string[],
-    installing: Installing,
-    columns: 1 | 2,
-    replaces?: string,
-): React.ReactNode[] {
-    const first = types[0] ?? '';
-    const last = types[types.length - 1] ?? '';
-    // A switch's rows above Install: saved, and the datapack it uninstalls.
-    const switched = replaces ? { replaces, savedAs: replaces, replacing: 'success' as const } : {};
-    const mid = reserveRecord(types, installing.version, {
-        ...switched,
-        outcome: 'watching',
-        perType: { [first]: 'processing' },
-        detail: '1,000 of 1,000',
-    });
-    const stopped = reserveRecord(types, installing.version, {
-        ...switched,
-        perType: Object.fromEntries(types.map((t) => [t, 'error' as const])),
-        stoppedAt: last,
-        reason: 'Stopped',
-    });
-    return [
-        <ImportRunView
-            key="mid"
-            steps={liveSteps(mid, null, installing.name)}
-            columns={columns}
-            running={{ startedAt: 0 }}
-        />,
-        <ImportRunView
-            key="stopped"
-            steps={endedSteps(stopped, installing.name)}
-            columns={columns}
-            end={{ lines: [], tookMs: 0 }}
-        />,
-    ];
-}
-
-/** An uninstall's tallest states: mid-way, and stopped, the save above when it saves first. */
-function uninstallReserve(name: string, uninstalling: Uninstalling, columns: 1 | 2): React.ReactNode[] {
-    const saved = uninstalling.saves ? { savedAs: name } : {};
-    return [
-        <ImportRunView
-            key="mid"
-            steps={uninstallSteps({ name, running: true, detail: '1,000 of 1,000', ...saved })}
-            columns={columns}
-            running={{ startedAt: 0 }}
-        />,
-        <ImportRunView
-            key="stopped"
-            steps={uninstallSteps({ name, running: false, ended: 'stopped', reason: 'Stopped', ...saved })}
-            columns={columns}
-            end={{ lines: [], tookMs: 0 }}
-        />,
-    ];
-}
+/**
+ * The window's height: the centred lines, all three held (owner walk, 2026-11-16: the window kept the
+ * height of the old list of rows, so the centred view and a question floated in a tall box). A run
+ * that stops shows its rows, a new step at its own height.
+ */
+const RUN_RESERVE: React.ReactNode[] = [
+    <div key="run" className="modal-wait modal-wait-progress">
+        <StageRows size="L" hold clock="1 minute, 30 seconds" lines={{ label: 'Uninstalling from Commerce', detail: 'Products, 1,000 of 1,000' }} />
+    </div>,
+];
 
 /** Each step's job, line 1 of the centred lines (owner, 2026-11-16): the part under way is line 2. */
 const STEP_JOBS: Record<string, string> = {
@@ -191,7 +125,7 @@ function Running({ steps, startedAt }: { steps: ImportStep[]; startedAt: number 
     const clock = useRunClock(startedAt);
     return (
         <div className="modal-wait modal-wait-progress">
-            <StageRows size="L" clock={clock} lines={runStage(steps, stepJob)} />
+            <StageRows size="L" hold clock={clock} lines={runStage(steps, stepJob)} />
         </div>
     );
 }
@@ -264,9 +198,7 @@ function closeLabelFor(ended: boolean, question: RunQuestion | undefined): strin
 }
 
 export function DatapackRunWindow(props: DatapackRunWindowProps): React.ReactElement {
-    const { title, status, ended, types, installing, columns, actionButtons, onClose, switching } =
-        props;
-    const { uninstalling, question } = props;
+    const { title, status, ended, actionButtons, onClose, question } = props;
     // When Install was pressed: one clock from the press to the end.
     const [pressedAt] = useState(() => Date.now());
     // Closing while asked answers it dismissed (Skip for Now), then the window goes as it would.
@@ -278,11 +210,7 @@ export function DatapackRunWindow(props: DatapackRunWindowProps): React.ReactEle
         <StepsWindow
             title={question?.prompt.title ?? title}
             {...statusFor(status, question)}
-            reserve={
-                uninstalling
-                    ? uninstallReserve(installing.name, uninstalling, columns)
-                    : runReserve(types, installing, columns, switching?.replaces)
-            }
+            reserve={RUN_RESERVE}
             // Run in Background while it runs: closing hands the job over, it stops nothing.
             closeLabel={closeLabelFor(Boolean(ended), question)}
             actionButtons={question ? answerButtons(question) : actionButtons}
