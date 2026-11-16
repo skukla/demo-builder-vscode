@@ -51,7 +51,7 @@ export interface SampleDataProgress {
     total: number;
     /** Friendly labels of the types processing RIGHT NOW (often one). */
     processing: string[];
-    /** The engine's detail: an uninstall's "Reading what to take back" or "1,200 of 2,046 products" (walk F161). */
+    /** The engine's detail: an uninstall's "Preparing to uninstall" or "1,200 of 2,046 products" (walk F161). */
     detail?: string;
 }
 

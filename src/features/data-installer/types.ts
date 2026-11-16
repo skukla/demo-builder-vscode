@@ -277,7 +277,7 @@ export const LINKING_OPTIONS = ', linking product options';
  * anything back: the window shows it as it is (walk F161, owner 2026-11-16). After it, the detail
  * is the type in hand with its count, "1,200 of 2,046 products".
  */
-export const READING_REMOVALS = 'Reading what to take back';
+export const PREPARING_UNINSTALL = 'Preparing to uninstall';
 
 /**
  * Where Demo Builder's engine says a job stands beyond each data type's state: what the import

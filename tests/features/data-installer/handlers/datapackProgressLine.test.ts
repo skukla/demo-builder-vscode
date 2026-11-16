@@ -21,9 +21,9 @@ const UNINSTALL: ImportJobRecord = {
 };
 
 describe('datapackProgressLine, for an uninstall', () => {
-    it('says it is reading what to take back', () => {
-        expect(datapackProgressLine({ ...UNINSTALL, detail: 'Reading what to take back' })).toBe(
-            'Uninstalling the datapack: Reading what to take back'
+    it('says it is preparing to uninstall', () => {
+        expect(datapackProgressLine({ ...UNINSTALL, detail: 'Preparing to uninstall' })).toBe(
+            'Uninstalling the datapack: Preparing to uninstall'
         );
     });
 

@@ -17,7 +17,7 @@
  * @module features/data-installer/services/demoBuilderEngine/runPack
  */
 
-import { type KeptRootStep, READING_REMOVALS } from '../../types';
+import { type KeptRootStep, PREPARING_UNINSTALL } from '../../types';
 import { installAssignments, installAttributeSets, parseAssignmentRows, parseAttributeSetRows } from './attributeSetsKind';
 import { INSTALLS_WITH, installAttributes, parseAttributeRows } from './attributesKind';
 import { ASSIGNMENT_KINDS, CATALOG_KIND, COMPANY_KIND, CUSTOMER_GROUP_KIND, CUSTOMER_KIND } from './b2bKeys';
@@ -345,7 +345,7 @@ export async function removePack(
     const recorder = await openInstallRecord(files, target.projectPath, target.pack, () => record.startedAt);
     const took = jobClock(target.log ?? (() => undefined), `Removal of ${target.pack.name}`);
     // Walk F161: the first stretch reads Commerce, and says so, before anything is taken back.
-    target.progress?.(READING_REMOVALS);
+    target.progress?.(PREPARING_UNINSTALL);
     // Step 14 item 1: a create that landed unanswered is taken back too; one that never did costs nothing.
     await settlePending(commerce.get, recorder, () => undefined);
     took('settled what an earlier run left half made');

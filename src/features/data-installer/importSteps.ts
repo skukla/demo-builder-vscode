@@ -20,7 +20,7 @@ import { UNINSTALL } from './datapackWords';
 import { packLine } from './packVersions';
 import { REPLACING, SAVING, FINISHING, runRows, type RunSource } from './runRows';
 import { STORE_CONFIG_KIND } from './services/datapackCatalog';
-import { ENGINE_PHASES, FINISHING_STOP, type InstallCheck, type JobStanding, LINKING_OPTIONS, READING_REMOVALS, REPLACE_STOP, SAVE_STOP } from './types';
+import { ENGINE_PHASES, FINISHING_STOP, type InstallCheck, type JobStanding, LINKING_OPTIONS, PREPARING_UNINSTALL, REPLACE_STOP, SAVE_STOP } from './types';
 import { dataTypeLabel } from './ui/dataTypeLabel';
 import type { OperationRow } from '@/types/webviewPayloads';
 
@@ -117,12 +117,12 @@ function removeStep(source: StepSource): ImportStep[] {
 const countIn = (detail: string | undefined): string | undefined => detail?.match(/^[\d,]+ of [\d,]+/u)?.[0];
 
 /**
- * An uninstall's working line (walk F161, owner 2026-11-16): what it does now, and how far. "Reading
- * what to take back" first, then the type in hand and its count, "Uninstalling Products, 1,200 of
+ * An uninstall's working line (walk F161, owner 2026-11-16): what it does now, and how far.
+ * "Preparing to uninstall" first (owner 2026-11-16: words real software uses), then the type in hand and its count, "Uninstalling Products, 1,200 of
  * 2,046"; before the engine says anything, `fallback`.
  */
 export function removalLine(detail: string | undefined, fallback: string): string {
-    if (detail === READING_REMOVALS) return READING_REMOVALS;
+    if (detail === PREPARING_UNINSTALL) return PREPARING_UNINSTALL;
     const counted = detail?.match(/^([\d,]+ of [\d,]+) (\w+)$/u);
     if (counted) return `Uninstalling ${dataTypeLabel(counted[2])}, ${counted[1]}`;
     const count = countIn(detail);

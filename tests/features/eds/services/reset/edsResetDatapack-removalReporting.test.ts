@@ -149,8 +149,8 @@ describe('the removal narration', () => {
         await run();
         const relay = mockedDeps.mock.calls[0][2] as (p: SampleDataProgress) => void;
 
-        relay({ done: 0, total: 4, processing: [], detail: 'Reading what to take back' });
-        expect(report).toHaveBeenLastCalledWith('Uninstalling the datapack', 'Reading what to take back');
+        relay({ done: 0, total: 4, processing: [], detail: 'Preparing to uninstall' });
+        expect(report).toHaveBeenLastCalledWith('Uninstalling the datapack', 'Preparing to uninstall');
 
         relay({ done: 0, total: 4, processing: [], detail: '1,200 of 2,046 products' });
         expect(report).toHaveBeenLastCalledWith('Uninstalling the datapack', 'Uninstalling Products, 1,200 of 2,046');
