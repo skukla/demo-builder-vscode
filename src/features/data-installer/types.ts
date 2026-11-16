@@ -440,6 +440,11 @@ export interface ImportJobRecord extends JobStanding {
     commerceInstance: string;
     dataTypes: string[];
     startedAt: string;
+    /**
+     * The process of the extension host running the job: the job dies with it (`readJobRecord`,
+     * walk F163). Absent on records written before it was named.
+     */
+    hostPid?: number;
     outcome:
         | 'watching'
         | 'success'

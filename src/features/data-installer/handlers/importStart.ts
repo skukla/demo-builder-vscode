@@ -13,11 +13,11 @@ import type { DatapackEngine } from '../services/datapackEngine';
 import { nodeRecordFiles, readInstallRecord } from '../services/demoBuilderEngine/installRecord';
 import { kindsOnRecord } from '../services/demoBuilderEngine/runPack';
 import type { ImportRequest, ImportTarget } from '../services/importRequest';
-import type { ImportJobRecord } from '../types';
 import { type Replacement, settleReplacement, withSavedNote } from './datapackSwitch';
 import { type DatapackWriteAccess, resolveDatapackWriteAccess } from './datapackWriteGate';
 import { waitForJob, waitMsOf } from './importJobWait';
-import { JOB_KEY, runAndWatch } from './importJobWatch';
+import { runAndWatch } from './importJobWatch';
+import { readJobRecord } from './jobRecordRead';
 import { SERVICE_REMOVAL_UNAVAILABLE, libraryReads } from './libraryReads';
 import { TransientStateManager } from '@/core/state/transientStateManager';
 import { orgGuard } from '@/features/authentication/services/projectOrgGuard';
@@ -61,7 +61,7 @@ export async function afterWait(context: HandlerContext, response: HandlerRespon
     const waitMs = waitMsOf(waitSeconds);
     if (!response.success || waitMs === 0) return response;
     const transient = new TransientStateManager(context.context);
-    const job = await waitForJob(() => transient.get<ImportJobRecord | null>(JOB_KEY, null), waitMs);
+    const job = await waitForJob(() => readJobRecord(transient), waitMs);
     return { ...response, data: { ...(response.data as object), job } };
 }
 

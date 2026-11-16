@@ -30,7 +30,7 @@ import { type ShownUnread, latestShownClear } from '../services/demoDataWipe/sho
 import { installFailedOf } from '../services/installFailure';
 import { FINISHING_STOP, type ImportJobRecord } from '../types';
 import { dataTypeLabel } from '../ui/dataTypeLabel';
-import { JOB_KEY } from './importJobWatch';
+import { readJobRecord } from './jobRecordRead';
 import { TransientStateManager } from '@/core/state/transientStateManager';
 import type { Project } from '@/types/base';
 import type { DatapackId, DatapackInstallFailed } from '@/types/datapack';
@@ -200,7 +200,7 @@ async function promptFor(
             refusal: 'The last Dry Run found no problem to fix.',
         };
     }
-    const record = await state.get<ImportJobRecord | null>(JOB_KEY, null);
+    const record = await readJobRecord(state);
     return {
         prompt: record ? fixImportPrompt(record, project?.name) : undefined,
         pack: `${record?.datapackName}@${record?.version}`,

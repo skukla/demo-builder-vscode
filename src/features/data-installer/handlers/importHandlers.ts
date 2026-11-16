@@ -26,7 +26,7 @@ import { announcingChanges } from '../services/datapackChanges';
 import type { DatapackEngine } from '../services/datapackEngine';
 import type { ImportRequest } from '../services/importRequest';
 import { rememberedPackName } from '../services/packNames';
-import type { ImportJobRecord, ValidationResult } from '../types';
+import type { ValidationResult } from '../types';
 import { datapackLibraryHandlers } from './datapackLibraryHandlers';
 import { datapackRecordsHandlers } from './datapackRecordsHandlers';
 import { withSavedNote } from './datapackSwitch';
@@ -36,9 +36,10 @@ import { exportHandlers } from './exportHandlers';
 import { exportPackHandlers } from './exportPackHandlers';
 import { importFixWithAiHandlers, recordDryRun } from './importFixHandlers';
 import { skippedPage, waitForJob, waitMsOf } from './importJobWait';
-import { JOB_KEY, runAndWatch } from './importJobWatch';
+import { runAndWatch } from './importJobWatch';
 import { type StartImportPayload, afterWait, prepareImport, readInput, startDatapackImport } from './importStart';
 import { importTargetHandlers } from './importTargetHandlers';
+import { readJobRecord } from './jobRecordRead';
 import { startingRemovalStage, type SavedFirst, removalChangesHandlers, removalStageReporter, settleChangesBeforeRemoval } from './removalChanges';
 import { restoreDatapackHandlers } from './restoreDatapack';
 import { saveQuestionTipHandlers } from './saveQuestionTip';
@@ -214,7 +215,7 @@ export const importHandlers = announcingChanges(announcingChanges(defineHandlers
         payload?: { waitSeconds?: number; skippedFrom?: number },
     ): Promise<HandlerResponse> => {
         const transient = new TransientStateManager(context.context);
-        const read = () => transient.get<ImportJobRecord | null>(JOB_KEY, null);
+        const read = () => readJobRecord(transient);
         const record = await waitForJob(read, waitMsOf(payload?.waitSeconds));
         return { success: true, data: record ? skippedPage(record, payload?.skippedFrom) : record };
     },

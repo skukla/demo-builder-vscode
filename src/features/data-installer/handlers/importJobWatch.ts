@@ -265,6 +265,8 @@ export async function runAndWatch(
             commerceInstance: request.commerceInstance,
             dataTypes: request.dataTypes,
             startedAt: new Date().toISOString(),
+            // The job runs in this host and dies with it (walk F163): readers end it when this is gone.
+            hostPid: process.pid,
             outcome: 'watching',
             perType: {},
             ...(spec.replaces ? { replaces: spec.replaces, replacing: 'pending' as const } : {}),

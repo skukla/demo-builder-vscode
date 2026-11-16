@@ -7619,7 +7619,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 334,
+            "line": 336,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is one debugLogger.debug. That the catch EXISTS is tested \u2014 a project write that throws must still report the import as started, because the service has already accepted it \u2014 and emptying the body changes only which line reaches Debug Logs. Moved with recordDatapackOnProject to importJobWatch.ts (2026-10-08). Re-anchored 2026-10-31 (247 -> 248): unchanged code; the kept root step was carried onto the record above it. Re-anchored 2026-11-05 (251 -> 272): unchanged code; the progress push above it carries the engine's count. Re-anchored 2026-11-06 (272 -> 274): unchanged code; the job record carries timings and skips above it. Re-anchored again 2026-11-06 (274 -> 275): unchanged code; the job record carries the install check above it. Re-anchored 2026-11-08 (281 -> 284): unchanged code; the pack-change announcement was added above it. Re-anchored 2026-11-09 (295 -> 298): unchanged code; walk F105's save label was carried onto the job record above it. Re-anchored 2026-11-09 (298 -> 301): unchanged code; the import window's steps redesign (walk F107 to F118) moved lines above it. Re-anchored 2026-11-12 (301 -> 318): unchanged code; runAndWatch's afterSuccess was added above it. Re-anchored 2026-11-12 (318 -> 321): unchanged code; runAndWatch's spec gained the job's purpose and the record carries it above it (step 03, S2). Re-anchored 2026-11-12 (321 -> 326): unchanged code; runAndWatch reads the project the job started from for every job, and the watch settles a failed install's record above it (step-04 S7). Re-anchored 2026-11-14 (326 -> 328): unchanged code; two imports for the update's note (step-07 U1) were added above it.",
@@ -7632,7 +7632,7 @@
             "anchors": [
                 "if (!project) {"
             ],
-            "line": 325,
+            "line": 327,
             "mutants": 2,
             "category": "branch",
             "reason": "Both mutants are absorbed by the catch two lines below. Removing the guard lets 'project.datapack = ...' throw on a null project; the catch swallows it, logs, and the handler still reports the import as started \u2014 which is exactly what the guard produces. The only difference is a debug line. Moved with recordDatapackOnProject to importJobWatch.ts (2026-10-08). Re-anchored 2026-10-31 (240 -> 241): unchanged code; the kept root step was carried onto the record above it. Re-anchored 2026-11-05 (244 -> 265): unchanged code; the progress push carries the engine's count. Re-anchored 2026-11-06 (265 -> 267): unchanged code; the job record carries timings and skips above it. Re-anchored again 2026-11-06 (267 -> 268): unchanged code; the job record carries the install check above it. Re-anchored 2026-11-08 (274 -> 277): unchanged code; the pack-change announcement was added above it. Re-anchored 2026-11-09 (288 -> 291): unchanged code; walk F105's save label was carried onto the job record above it. Re-anchored 2026-11-09 (291 -> 294): unchanged code; the import window's steps redesign (walk F107 to F118) moved lines above it. Re-anchored 2026-11-12 (294 -> 311): unchanged code; runAndWatch's afterSuccess was added above it. Re-anchored 2026-11-12 (311 -> 314): unchanged code; runAndWatch's spec gained the job's purpose and the record carries it above it (step 03, S2). Re-anchored 2026-11-12 (314 -> 317): unchanged code; runAndWatch reads the project the job started from for every job, and the watch settles a failed install's record above it (step-04 S7). Re-anchored 2026-11-14 (317 -> 319): unchanged code; two imports for the update's note (step-07 U1) were added above it.",
@@ -9482,7 +9482,7 @@
             "anchors": [
                 "if (resolved) { return; }"
             ],
-            "line": 183,
+            "line": 181,
             "mutants": 2,
             "category": "branch",
             "reason": "Both survivors (the condition forced false, and the guarded return deleted) let finish() run its body a second time, and every statement in that body is idempotent: clearInterval and clearTimeout on an already-cleared handle do nothing, and a second resolve() on a settled promise is a no-op. The guard also cannot be re-entered in practice, because the first call clears the polling interval that is the only repeating caller, so no test can arrange a second entry whose effect differs.",
@@ -9495,7 +9495,7 @@
             "anchors": [
                 "resolved = true;"
             ],
-            "line": 184,
+            "line": 182,
             "mutants": 1,
             "category": "other",
             "reason": "Setting the latch to false instead of true makes every later finish() fall through its guard, which is the same state as having no guard at all \u2014 and that costs nothing observable, because the body only clears two timer handles that are already cleared and calls resolve() on a promise that has already settled. The interval that is the sole repeating caller is stopped by the first pass, so there is no second pass to distinguish.",
@@ -9508,7 +9508,7 @@
             "anchors": [
                 "if (pollInterval) { clearInterval(pollInterval); }"
             ],
-            "line": 185,
+            "line": 183,
             "mutants": 1,
             "category": "branch",
             "reason": "The surviving mutant forces the guard true, so clearInterval runs with pollInterval still undefined on the one path that reaches finish() before any interval is started \u2014 tree-kill answering ESRCH in its own callback. Node's clearInterval(undefined) is a defined no-op, so the mutant adds one call that changes no timer, no signal sent to any pid, and no promise state.",
@@ -9521,7 +9521,7 @@
             "anchors": [
                 "if (forceKillTimeout) { clearTimeout(forceKillTimeout); }"
             ],
-            "line": 186,
+            "line": 184,
             "mutants": 1,
             "category": "branch",
             "reason": "Only the forced-true mutant survives here; forcing it false is killed by the test that proves a graceful exit cancels the force-kill deadline. Forced true, clearTimeout runs with forceKillTimeout still undefined on the path that finishes before the deadline is scheduled, and clearTimeout(undefined) is a defined no-op in Node \u2014 no timer is cancelled that was not already absent, and nothing else in the call changes.",
@@ -9534,7 +9534,7 @@
             "anchors": [
                 "if (pollInterval) {"
             ],
-            "line": 257,
+            "line": 255,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard false, and emptying its block, are both killed by the test that lets the process die mid-poll and then proves no further existence probes are made. What survives is the forced-true mutant, which calls clearInterval(undefined) and assigns undefined over undefined on the paths where cleanup() runs before any interval exists \u2014 the initial-signal failure and the immediate-exit shortcut. Neither call changes a timer or a value anything reads.",
@@ -9547,7 +9547,7 @@
             "anchors": [
                 "if (forceKillTimeout) {"
             ],
-            "line": 261,
+            "line": 259,
             "mutants": 1,
             "category": "branch",
             "reason": "As with its sibling guard over the polling handle, only the forced-true mutant survives: forcing it false is killed by the test that advances twenty seconds past a graceful exit and finds no SIGKILL. Forced true, clearTimeout(undefined) runs on the paths where cleanup() happens before any deadline was scheduled, which Node defines as a no-op, so no timer is cancelled and no signal is sent that would not have been.",
@@ -9560,7 +9560,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 154,
+            "line": 152,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying this catch arm can only be observed by making require.resolve('tree-kill') throw, and no test can arrange that. tree-kill is a real installed dependency, and jest resolves it through its own resolver rather than Node's, so neither a module-factory mock nor a Module._resolveFilename spy makes the resolution fail \u2014 the mock replaces what is returned, not whether it resolves. The behaviour BEHIND a false answer is covered: every fallback test spies isTreeKillAvailable to false and drives killWithTimeout for real.",
@@ -9573,7 +9573,7 @@
             "anchors": [
                 "return false;"
             ],
-            "line": 155,
+            "line": 153,
             "mutants": 1,
             "category": "branch",
             "reason": "Flipping this to return true is only reachable when require.resolve('tree-kill') throws, and jest's resolver always resolves the package: it is a real dependency of this repo and the suites mock what it RETURNS, not whether it can be found. So no test can enter this arm to observe the flip. The consequence of a true answer \u2014 taking the tree-kill path \u2014 is covered directly by every test that asserts tree-kill received the pid and signal.",
@@ -9586,7 +9586,7 @@
             "anchors": [
                 "} catch (killError: unknown) {"
             ],
-            "line": 225,
+            "line": 223,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying this catch body leaves the catch itself in place, so a force-kill that throws is still swallowed and the poll still continues to resolution \u2014 which is the documented behaviour, since SIGKILL is not ignorable and the process will go either way. The only statement inside the body is a guarded logger.error, so the sole difference the mutant makes is whether a line prints, and pinning that would mean asserting a logger call's arguments.",
@@ -9599,7 +9599,7 @@
             "anchors": [
                 "if (getErrorCode(killError) !== 'ESRCH') {"
             ],
-            "line": 226,
+            "line": 224,
             "mutants": 4,
             "category": "branch",
             "reason": "Every behavioural mutant on this guard \u2014 the condition forced either way, the equality inverted, and the block emptied \u2014 changes only whether an error line is written. Both arms return to the same place: the catch swallows the failure and the polling interval continues until the process is observed gone, so no signal is sent or withheld, no promise settles differently, and no state changes. Distinguishing the arms would require asserting the logger's arguments, which pins wording rather than behaviour.",
