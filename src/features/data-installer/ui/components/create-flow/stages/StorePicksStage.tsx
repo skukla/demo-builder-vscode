@@ -35,9 +35,17 @@ const digits = (n: number): string => n.toLocaleString('en-US');
 function noteOf(kind: PickableKind, page: StoreItemPage | null | undefined, count: number | undefined, picked: number, whole: boolean): string | undefined {
     if (page === null) return "Couldn't be read";
     if (isKnownEmpty(page, count)) return 'None available';
-    // A ceiling kind's count says nothing until its list answers (`CEILING_KINDS`): no claim before.
-    if (page === undefined) return whole && !CEILING_KINDS.includes(kind) ? 'All selected' : undefined;
+    // Ticked whole and unread: its count, "12 of 12 selected", the same words as a read row (owner walk,
+    // 2026-11-16). A ceiling kind's count says nothing (`CEILING_KINDS`), and "All selected" stands
+    // only where no count came.
+    if (page === undefined) return whole ? wholeNote(kind, count) : undefined;
     return picked > 0 ? `${digits(picked)} of ${digits(page.items.length)} selected` : undefined;
+}
+
+/** A kind ticked whole, unread: its count of its count, or "All selected" with no count to give. */
+function wholeNote(kind: PickableKind, count: number | undefined): string | undefined {
+    if (CEILING_KINDS.includes(kind)) return undefined;
+    return count === undefined ? 'All selected' : `${digits(count)} of ${digits(count)} selected`;
 }
 
 function KindRow({ kind, store }: { kind: PickableKind; store: StorePicksState }): React.ReactElement {
