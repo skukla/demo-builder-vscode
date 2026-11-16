@@ -77,6 +77,14 @@ export function openBackgroundNotice(
     );
 }
 
+/**
+ * Whether the operation runs in the background now: its window was closed and a notification
+ * narrates it. A question it asks then has no window to show in (`askDuringOperation`).
+ */
+export function isInBackground(id: string): boolean {
+    return notices.has(id);
+}
+
 /** Close the notification without a word: the modal has taken the operation back. */
 export function closeBackgroundNotice(id: string): void {
     notices.get(id)?.end();

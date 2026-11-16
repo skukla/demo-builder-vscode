@@ -63,8 +63,11 @@ const LEDGER: Readonly<Record<string, Reason>> = {
  * `Modal.title` and still counted, now on their Steps windows; and one new site, the projects batch
  * window's small clean result ("Kukla Luma Reset", a project name), split from the run's one
  * `Modal.title`. The batch's failed-read title was written out as a literal (`UNREAD_TITLE`).
+ * 75 -> 77 on 2026-11-16 (walk F150): the datapack run window shows a question the job asks, as
+ * the house progress window does, so its title and its answer buttons are the question's own
+ * words from the extension (`DatapackRunWindow`, `question`), as the progress window's are.
  */
-const DYNAMIC_PIN = 75;
+const DYNAMIC_PIN = 77;
 
 /**
  * The six dialog layouts (the Steps layout joined 2026-11-11) hand their caller's words on to Modal (`title={title}`). Those words are

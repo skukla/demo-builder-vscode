@@ -29,8 +29,32 @@ import {
     uninstallLiveSteps,
     uninstallStartingSteps,
 } from './runSteps';
+import { LeadText } from '@/core/ui/components/ui/LeadText';
 import type { ActionButton, ModalStatus } from '@/core/ui/components/ui/Modal';
 import { StepsWindow } from '@/core/ui/components/ui/StepsDialog';
+import type { OperationPrompt } from '@/types/webviewPayloads';
+
+/** A question the run is paused on (walk F150), and how to answer it: undefined is dismissed. */
+export interface RunQuestion {
+    prompt: OperationPrompt;
+    answer: (chosen?: string) => void;
+}
+
+/**
+ * The answers, as the house progress window draws them: the one that continues the work first in
+ * the list and drawn last, as every main button is; a "Cancel" among them left out, since the
+ * close button says Cancel and answers the same way (`OperationProgressModal`).
+ */
+function answerButtons({ prompt, answer }: RunQuestion): ActionButton[] {
+    return prompt.actions
+        .filter((label) => label !== 'Cancel')
+        .map((label, index): ActionButton => ({
+            label,
+            variant: index === 0 ? 'accent' : 'secondary',
+            onPress: () => answer(label),
+        }))
+        .reverse();
+}
 
 export interface DatapackRunWindowProps {
     title: string;
@@ -53,6 +77,12 @@ export interface DatapackRunWindowProps {
     onClose: () => void;
     /** Fix with AI had nothing to fix: the extension's refusal, on the problem line (step-07 P5). */
     problem?: string;
+    /**
+     * A question the run is paused on: it takes the window over, its title the window's, its
+     * sentence the body and its answers the buttons, as in the house progress window. It used to be an
+     * untitled notification in the corner, closing itself (walk F150).
+     */
+    question?: RunQuestion;
 }
 
 /** A record shaped for the reserve: no job, only the steps' tallest states. */
@@ -193,27 +223,44 @@ function RunBody(props: DatapackRunWindowProps & { pressedAt: number }): React.R
     );
 }
 
+/** The window's icon: a question's warning while asked, as the progress window's; else the run's. */
+function statusFor(status: ModalStatus | undefined, asking: boolean): { status?: ModalStatus } {
+    if (asking) return { status: 'warning' };
+    return status ? { status } : {};
+}
+
+/** Cancel while asked (it answers dismissed); Close once ended; else Run in Background. */
+function closeLabelFor(ended: boolean, asking: boolean): string {
+    if (asking) return 'Cancel';
+    return ended ? 'Close' : 'Run in Background';
+}
+
 export function DatapackRunWindow(props: DatapackRunWindowProps): React.ReactElement {
     const { title, status, ended, types, installing, columns, actionButtons, onClose, switching } =
         props;
-    const { uninstalling } = props;
+    const { uninstalling, question } = props;
     // When Install was pressed: one clock from the press to the end.
     const [pressedAt] = useState(() => Date.now());
+    // Closing while asked answers it dismissed (Skip), then the window goes as it would.
+    const close = (): void => {
+        question?.answer(undefined);
+        onClose();
+    };
     return (
         <StepsWindow
-            title={title}
-            {...(status ? { status } : {})}
+            title={question?.prompt.title ?? title}
+            {...statusFor(status, Boolean(question))}
             reserve={
                 uninstalling
                     ? uninstallReserve(installing.name, uninstalling, columns)
                     : runReserve(types, installing, columns, switching?.replaces)
             }
             // Run in Background while it runs: closing hands the job over, it stops nothing.
-            closeLabel={ended ? 'Close' : 'Run in Background'}
-            actionButtons={actionButtons}
-            onClose={onClose}
+            closeLabel={closeLabelFor(Boolean(ended), Boolean(question))}
+            actionButtons={question ? answerButtons(question) : actionButtons}
+            onClose={close}
         >
-            <RunBody {...props} pressedAt={pressedAt} />
+            {question ? <LeadText>{question.prompt.message}</LeadText> : <RunBody {...props} pressedAt={pressedAt} />}
             {props.problem ? <p className="dialog-problem text-notice">{props.problem}</p> : null}
         </StepsWindow>
     );

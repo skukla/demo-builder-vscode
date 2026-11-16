@@ -35,6 +35,7 @@
 
 import { AsyncLocalStorage } from 'async_hooks';
 import * as vscode from 'vscode';
+import { isInBackground } from './operationBackgroundNotice';
 import { heldProgress, pushOperationProgress } from './operationProgress';
 import { currentCallTag } from '@/core/logging/callTagContext';
 import { hasActivePhaseSinks, reportPhase } from '@/core/utils/agentPhaseChannel';
@@ -122,7 +123,10 @@ export async function askDuringOperation(
     ...actions: string[]
 ): Promise<string | undefined> {
     const { title, message } = question;
-    const id = hosting.getStore();
+    const hosted = hosting.getStore();
+    // A run sent to the background has no window to ask in: the notification narrating it shows
+    // no question, so it is asked the way an unhosted one is, and never waits on nobody.
+    const id = hosted && !isInBackground(hosted) ? hosted : undefined;
 
     if (!id) {
         // Under an agent, say what the run is waiting for — otherwise its narration

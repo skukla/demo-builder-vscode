@@ -65,6 +65,11 @@ export interface DemoBuilderEngineDeps {
     asker?: RootStepAsker;
     /** Told once when a job ends, however it ends: the activity log's writer (step 14). */
     onJobEnd?: (end: JobEnd) => void;
+    /**
+     * Runs each job where its questions are shown: the window that started it, when one did
+     * (walk F150). Absent, a job runs as it is and asks as `asker` does on its own.
+     */
+    hostRun?: (work: () => Promise<void>) => Promise<void>;
     /** The pack's settings layer from the library (step 09). Absent, a pack has none. */
     findLayer?: FindLayer;
     /**
@@ -283,7 +288,8 @@ function start(deps: DemoBuilderEngineDeps, jobs: Map<string, Job>, request: Imp
     const activationId = `demo-builder-${crypto.randomUUID()}`;
     const job: Job = { perType: Object.fromEntries(request.dataTypes.map((kind) => [kind, 'pending' as DataTypeStatus])), timings: {}, startedAt: Date.now() };
     jobs.set(activationId, job);
-    void work(job)
+    const run = (): Promise<void> => work(job);
+    void (deps.hostRun ? deps.hostRun(run) : run())
         .catch((error: unknown) => {
             deps.log(`[Data Installer] Demo Builder engine: ${request.id.name}@${request.id.version} stopped: ${errorText(error)}`);
             failRest(job, error);

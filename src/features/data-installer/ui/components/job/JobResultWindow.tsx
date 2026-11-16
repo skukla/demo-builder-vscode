@@ -10,6 +10,7 @@
 import React from 'react';
 import { DatapackResultBody } from '../DatapackResultBody';
 import { type ResultContent, resultStatus } from '../importResult';
+import { useOpenAdmin } from '../../hooks/useOpenAdmin';
 import type { ActionButton } from '@/core/ui/components/ui/Modal';
 import { ResultWindow } from '@/core/ui/components/ui/ResultDialog';
 import { useCloseWhenClean } from '@/core/ui/hooks/useCloseWhenClean';
@@ -39,12 +40,17 @@ export function JobResultWindow({
     problem,
 }: JobResultWindowProps): React.ReactElement {
     useCloseWhenClean(titleAlone(result) && !actionButtons?.length, onClose);
+    // The Admin step a removal left has its way to the Admin, as the install's step does (walk F153).
+    const { opening, openAdmin } = useOpenAdmin();
+    const admin: ActionButton[] = result.keptRoot
+        ? [{ label: 'Open Admin', variant: 'secondary', onPress: openAdmin, isPending: opening }]
+        : [];
     return (
         <ResultWindow
             title={result.title}
             status={resultStatus(result)}
             holdsAdminPath={Boolean(result.keptRoot)}
-            actionButtons={actionButtons}
+            actionButtons={[...admin, ...(actionButtons ?? [])]}
             onClose={onClose}
         >
             <DatapackResultBody result={result} />

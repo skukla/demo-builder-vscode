@@ -224,6 +224,8 @@ async function engineFor(
                 libraryCatalog: libraryReads(context),
             },
             (line) => context.debugLogger.debug(`[Data Installer] ${line}`),
+            // Only a window shows the job's questions; an agent's are asked as a VS Code dialog.
+            context.panel ? context.sendMessage : undefined,
         ),
     };
 }

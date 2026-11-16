@@ -11,7 +11,7 @@
 
 import { mockPostMessage } from '../../../../../helpers/webviewClientMock';
 import React from 'react';
-import { render, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import type { ImportJobRecord, InstallCheck } from '@/features/data-installer/types';
 import type { ResultContent } from '@/features/data-installer/ui/components/importResult';
@@ -341,3 +341,62 @@ describe('an uninstall', () => {
         expect(shown.getByText('Took 1 minute, 1 second')).toBeInTheDocument();
     });
 });
+
+// Walk F150 (2026-11-16): the one Admin step a pack can leave was asked in an untitled notification
+// in the corner mid-install. It takes the run window over, as the house progress window's do.
+describe('a question the run is paused on', () => {
+    const QUESTION = {
+        title: "One Step in the Admin to Show Frescopa's Categories",
+        message: 'In Stores > All Stores > Tailspin Test Store, set Root Category to Frescopa, then Save Store.',
+        actions: ['Open Admin', "I've done it", 'Skip for Now'],
+    };
+
+    function renderAsked() {
+        const answer = jest.fn();
+        const onClose = jest.fn();
+        render(
+            <DatapackRunWindow
+                title="Switching to Frescopa"
+                record={RECORD}
+                ended={null}
+                types={['products', 'categories']}
+                installing={{ name: 'Frescopa', version: 'main' }}
+                columns={2}
+                opensRunning={false}
+                actionButtons={[]}
+                onClose={onClose}
+                question={{ prompt: QUESTION, answer }}
+            />
+        );
+        return { answer, onClose };
+    }
+
+    it('takes the title, says the step, and offers each answer, the one that carries on last', () => {
+        renderAsked();
+
+        expect(screen.getByRole('heading', { name: QUESTION.title })).toBeInTheDocument();
+        expect(screen.getByText(QUESTION.message)).toBeInTheDocument();
+        const labels = screen.getAllByRole('button').map((b) => b.textContent);
+        expect(labels).toEqual(expect.arrayContaining(['Cancel', 'Skip for Now', "I've done it", 'Open Admin']));
+        expect(labels.indexOf('Open Admin')).toBeGreaterThan(labels.indexOf('Skip for Now'));
+    });
+
+    it('hands the answer chosen back to the run', () => {
+        const { answer, onClose } = renderAsked();
+
+        fireEvent.click(screen.getByRole('button', { name: "I've done it" }));
+
+        expect(answer).toHaveBeenCalledWith("I've done it");
+        expect(onClose).not.toHaveBeenCalled();
+    });
+
+    it('answers it dismissed when closed, then closes', () => {
+        const { answer, onClose } = renderAsked();
+
+        fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+        expect(answer).toHaveBeenCalledWith(undefined);
+        expect(onClose).toHaveBeenCalledTimes(1);
+    });
+});
+

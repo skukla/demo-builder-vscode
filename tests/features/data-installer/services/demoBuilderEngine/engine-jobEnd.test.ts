@@ -81,3 +81,31 @@ describe('demoBuilderEngine onJobEnd', () => {
         expect(ended[0]).toMatchObject({ perType: { categories: 'error' }, reason: 'Choose the website and store view to install into first.' });
     });
 });
+
+// Walk F150 (2026-11-16): the window that started a job hosts its questions, so the engine runs
+// each job inside what it is handed.
+describe('demoBuilderEngine hostRun', () => {
+    it('runs the job inside the host it is given, to its end', async () => {
+        const ctx = await fakeContext(STORE, () => true);
+        const hosted: string[] = [];
+        const engine = demoBuilderEngine({
+            commerce: async () => ({ get: ctx.get, send: ctx.send }),
+            readPack: async () => ({ categories: { categories: [] } }),
+            projectPath: PROJECT,
+            log: () => undefined,
+            files: memoryFiles(),
+            hostRun: async (work) => {
+                hosted.push('start');
+                await work();
+                hosted.push('end');
+            },
+        });
+
+        const { activationId } = await engine.startImport(REQUEST);
+        await settle(engine, activationId);
+
+        expect(hosted).toStrictEqual(['start', 'end']);
+        expect((await engine.getJobStatus(activationId)).perType).toStrictEqual({ categories: 'success' });
+    });
+});
+

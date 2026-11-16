@@ -28,13 +28,16 @@ import { type NameMemory, rememberedPackName } from './packNames';
 import { cachedPackRead } from './packReadCache';
 import { type LayerReads, findSettingsLayer } from './settingsLayer';
 import { openCommerceAdmin } from '@/core/utils/commerceAdmin';
-import { askDuringOperation } from '@/core/vscode/operationPrompt';
+import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
+import { startModalRun } from '@/core/vscode/operationProgress';
+import { askDuringOperation, withModalAsking } from '@/core/vscode/operationPrompt';
 import type { CredentialStore } from '@/features/ai/server/savedRestCredential';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { resolveInstallTarget } from '@/features/data-installer/installTarget';
 import { commerceClientForProject } from '@/features/project-creation/services/erpFillForProject';
 import type { Project } from '@/types/base';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
+import type { HandlerContext } from '@/types/handlers';
 
 /** What the engine needs: the project it writes into, and where a pack's rows are read from. */
 export interface DatapackEngineAccess {
@@ -94,13 +97,33 @@ export function layerFinder(access: Pick<DatapackEngineAccess, 'libraryCatalog'>
     return libraryCatalog ? { findLayer: async (pack) => findSettingsLayer(await libraryCatalog(), pack.name) } : {};
 }
 
+type SendToScreen = HandlerContext['sendMessage'];
+
+/**
+ * Run a job as the operation the datapack window shows (`DATAPACK_OPERATION_ID`), so a question
+ * it asks, the one Admin step a pack can leave, appears in that window with its title and
+ * buttons (PL-59). Without this the window's run had no host, and the question fell back to an
+ * untitled notification in the corner mid-install (walk F150, release test 1.4).
+ */
+function hostedIn(screen: SendToScreen): (work: () => Promise<void>) => Promise<void> {
+    return (work) => {
+        startModalRun(DATAPACK_OPERATION_ID, screen);
+        return withModalAsking(DATAPACK_OPERATION_ID, work);
+    };
+}
+
 /**
  * The engine, built for one project.
  *
  * @param access - the project and the stores a pack is read from
  * @param log - one line per call, for Debug Logs
+ * @param screen - the window that started the job, which shows its questions (walk F150)
  */
-export function buildDatapackEngine(access: DatapackEngineAccess, log: (line: string) => void): DatapackEngine {
+export function buildDatapackEngine(
+    access: DatapackEngineAccess,
+    log: (line: string) => void,
+    screen?: SendToScreen,
+): DatapackEngine {
     // Each finished job goes in the project's activity log (step 14): the service logs its own runs.
     const instance = deriveImportInstance(access.project.componentConfigs);
     const writeActivity = recordJobEnd({
@@ -119,6 +142,7 @@ export function buildDatapackEngine(access: DatapackEngineAccess, log: (line: st
         log,
         nameOf: (pack) => (access.memory ? rememberedPackName(access.memory, pack.name) : undefined) ?? pack.name,
         onJobEnd: (end) => void writeActivity(end),
+        ...(screen ? { hostRun: hostedIn(screen) } : {}),
         ...layerFinder(access),
         // Step 12: the one Admin step a pack can leave is asked where the SC is looking (PL-59).
         asker: {

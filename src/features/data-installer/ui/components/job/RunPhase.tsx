@@ -6,7 +6,7 @@
  * @module features/data-installer/ui/components/job/RunPhase
  */
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { jobWords } from '../../../datapackWords';
 import type { DatapackJob } from '../../hooks/useDatapackJob';
 import { resultStatus } from '../importResult';
@@ -14,6 +14,9 @@ import { DatapackRunWindow } from './DatapackRunWindow';
 import { type Opened, runningPurpose } from './jobOpened';
 import { endButtons } from './ResultPhase';
 import type { Uninstalling } from './runSteps';
+import { useOperationProgress } from '@/core/ui/hooks/useOperationProgress';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
 
 /** What the run window draws: the pack's steps' name and version, its types, its columns. */
 export interface RunShape {
@@ -62,6 +65,12 @@ export function RunPhase({
     onClose: () => void;
 }): React.ReactElement {
     const ended = job.state.phase === 'ended' ? job.result : null;
+    // The question the job is paused on, pushed on the datapack channel (walk F150).
+    const progress = useOperationProgress(DATAPACK_OPERATION_ID, job.retries, job.state.kind === 'watch');
+    const prompt = !ended && progress?.state === 'running' ? progress.prompt : undefined;
+    const answer = useCallback((chosen?: string): void => {
+        webviewClient.postMessage('answerOperationPrompt', { id: DATAPACK_OPERATION_ID, answer: chosen, values: {} });
+    }, []);
     const switching = switchRows(job);
     const uninstalling = uninstallRows(job);
     return (
@@ -80,6 +89,7 @@ export function RunPhase({
             actionButtons={ended ? endButtons(job, ended) : []}
             onClose={onClose}
             {...(job.fixProblem ? { problem: job.fixProblem } : {})}
+            {...(prompt ? { question: { prompt, answer } } : {})}
         />
     );
 }

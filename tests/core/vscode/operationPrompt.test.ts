@@ -11,6 +11,7 @@
 
 import * as vscode from 'vscode';
 import { withPhaseSinks } from '@/core/utils/agentPhaseChannel';
+import { closeBackgroundNotice, openBackgroundNotice } from '@/core/vscode/operationBackgroundNotice';
 import { heldProgress, pushOperationProgress, startModalRun } from '@/core/vscode/operationProgress';
 import {
     answerOperationPrompt,
@@ -222,6 +223,27 @@ describe('a modal is hosting the operation', () => {
         });
 
         expect(isAwaitingAnswer('op-5')).toBe(false);
+    });
+});
+
+// Walk F150 (2026-11-16): a run whose window was closed is narrated by a notification, which shows
+// no question. Asked there through the closed window, it would wait on nobody.
+describe('a hosted operation sent to the background', () => {
+    it('asks in a notification, since no window is left to ask in', async () => {
+        const send = jest.fn();
+        startModalRun('op-bg', send);
+        openBackgroundNotice('Installing Frescopa', { doneTitle: 'Frescopa Installed', failedTitle: "Couldn't Install Frescopa" }, { id: 'op-bg', state: 'running' }, () => true);
+        await settle();
+        showInfo.mockResolvedValueOnce('Skip for Now');
+
+        const answer = await withModalAsking('op-bg', () =>
+            askDuringOperation({ title: 'One Step in the Admin', message: 'Set the root.', tone: 'info' }, 'Open Admin', 'Skip for Now'),
+        );
+
+        expect(answer).toBe('Skip for Now');
+        expect(showInfo).toHaveBeenCalledWith('Set the root.', 'Open Admin', 'Skip for Now');
+        expect(send).not.toHaveBeenCalledWith('operationProgress', expect.objectContaining({ prompt: expect.anything() }));
+        closeBackgroundNotice('op-bg');
     });
 });
 

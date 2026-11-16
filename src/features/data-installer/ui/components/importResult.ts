@@ -305,7 +305,9 @@ function successResult(record: ImportJobRecord, name: string, words: OperationWo
         return {
             variant: 'warning',
             title: `One Step Left to Uninstall ${name}`,
-            message: `${record.keptRoot.store} still uses the datapack's root category, ${record.keptRoot.category}, so it stayed.`,
+            // Plain words (walk F153): which store, that it is the store's root, what stayed, and
+            // that the rest went.
+            message: `${record.keptRoot.store} still uses the category ${record.keptRoot.category} as its root category, so Demo Builder couldn't delete that category. Everything else is uninstalled.`,
             keptRoot: record.keptRoot,
         };
     }

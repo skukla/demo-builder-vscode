@@ -303,7 +303,7 @@ describe('a removal', () => {
             variant: 'warning',
             title: `One Step Left to Uninstall ${PACK_NAME}`,
             message:
-                "Tailspin Test Store still uses the datapack's root category, ZZ Root DB12, so it stayed.",
+                "Tailspin Test Store still uses the category ZZ Root DB12 as its root category, so Demo Builder couldn't delete that category. Everything else is uninstalled.",
             keptRoot,
             finished: true,
         });
