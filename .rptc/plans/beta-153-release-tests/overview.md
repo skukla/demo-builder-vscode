@@ -195,7 +195,7 @@ Mark each test's **Result** line: `passed 2026-11-DD`, or `failed 2026-11-DD: wh
 | 1.1 | Throwaway pack with every kind of data (live test 1) | passed 2026-11-03 |
 | 1.2 | Real packs: `wknd` and Bodea (live test 2) | `wknd` passed 2026-11-03; Bodea moved out 2026-11-05 (no second sandbox) |
 | 1.3 | Settings layer beside a pack | passed 2026-11-03 |
-| 1.4 | Shared root: the one Admin step (live test 3) | open |
+| 1.4 | Shared root: the one Admin step (live test 3) | passed in part 2026-11-16 (ask-again, Skip for Now, Show Step and Check still open, after F150 and F153) |
 | 1.5 | The Datapacks screen by hand (live test 4) | open |
 | 1.6 | A datapack travels with a project (live test 5) | open |
 | 1.7 | Save Changes, Newer Version, reset and delete with a pack | open |
@@ -264,7 +264,20 @@ datapack installs onto a website, not a store view.
     Admin, set the store's Root Category back to Default Category (id 2) and **Save Store**.
     Expect no Frescopa categories left on the test website.
 
-**Result:** open
+**Result:** passed in part 2026-11-16 (owner), build 562deaefe, Scratch 1028 on the test store.
+Passed: with the test store's root on the shared root (119), **Switch to Frescopa** uninstalled
+We.Cafe and installed Frescopa; the Admin-step question appeared (as a corner notification, F150);
+after the owner set the root to Frescopa (1506), **I've done it** was accepted and the install
+finished with the pack ticked. Uninstall then left Frescopa's root in place and said one step was
+left (F153: no Open Admin, and the owner opened the live store's page by mistake; he saved nothing
+there). After the owner set the test store's root to Default Category, a second uninstall
+(Categories 1) ended on the success window. Back to zero, read afterwards: the test store's
+root_category_id 2, Frescopa's root gone, the top-level categories only the five there before, no
+ZZ categories, the live store's root 119 and its children unchanged.
+
+Not walked, open until F150 and F153 are fixed: **I've done it** without the Admin change (asks
+again), **Skip for Now**, the flyout's **1 step left in the Admin** with **Show Step**, and **Check**.
+Scratch 1028 now holds no datapack: the switch uninstalled We.Cafe and the uninstall Frescopa.
 
 ### 1.5 The Datapacks screen by hand (live test 4)
 
@@ -404,7 +417,7 @@ on the instance shares.
 
 1. Before you start, on the test store: in the Admin, **Stores > Attributes > Product**, search
    `luma_color`. Expect none. Open `color` and note it ("Color", no options: F141 restored it).
-2. In Scratch 1028's Datapacks, install **Luma** onto the test store view.
+2. In Scratch 1028's Datapacks, open the **Luma** card and click **Install** (the test website).
 3. Open `luma_color`. Expect **Catalog Input Type for Store Owner** "Visual Swatch", and the
    swatches Black `#000000`, Blue `#1857f7` and Brown `#945454` with their colours, each labelled.
    Open `color`: unchanged from step 1.
