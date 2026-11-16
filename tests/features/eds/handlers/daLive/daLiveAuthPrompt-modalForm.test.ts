@@ -35,6 +35,8 @@ jest.mock('@/core/vscode/operationProgress', () => ({
     heldProgress: () => ({ id: 'op', state: 'running', stage: 'Checking requirements' }),
     pushOperationProgress: jest.fn(),
     startModalRun: jest.fn(),
+    holdPrompt: jest.fn(),
+    releasePrompt: jest.fn(),
 }));
 
 import { showDaLiveAuthQuickPick } from '@/features/eds/handlers/daLive/daLiveAuthPrompt';

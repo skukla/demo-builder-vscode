@@ -32,7 +32,7 @@ import {
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse, MessageHandler } from '@/types/handlers';
 import { toError } from '@/types/typeGuards';
-import type { OperationProgressPayload } from '@/types/webviewPayloads';
+import type { OperationProgressPayload, OperationPrompt } from '@/types/webviewPayloads';
 import type { BackgroundOperationRequest } from '@/types/webviewRequests';
 
 /** How to reach the screen showing an operation's modal. */
@@ -42,6 +42,30 @@ const latest = new Map<string, OperationProgressPayload>();
 const screens = new Map<string, SendToScreen>();
 /** When each running operation began: its first `running` push after the last end. */
 const startedAt = new Map<string, number>();
+/**
+ * The question each operation waits on. A stage pushed while it waits carries it, so the screen
+ * keeps showing it: the datapack job's status poller pushes every few seconds, and its first push
+ * after the question took the question off the screen, leaving the install waiting on nobody
+ * (walk F162, 2026-11-16).
+ */
+const openPrompts = new Map<string, OperationPrompt>();
+
+/** The operation is waiting on this question until `releasePrompt`. */
+export function holdPrompt(id: string, prompt: OperationPrompt): void {
+    openPrompts.set(id, prompt);
+}
+
+/** The operation's question was answered or withdrawn: stage pushes no longer carry it. */
+export function releasePrompt(id: string): void {
+    openPrompts.delete(id);
+}
+
+/** A running stage with the open question on it, when one is open and the stage has none. */
+function withOpenPrompt(payload: OperationProgressPayload): OperationProgressPayload {
+    const prompt = openPrompts.get(payload.id);
+    if (!prompt || payload.state !== 'running' || payload.prompt) return payload;
+    return { ...payload, prompt };
+}
 
 /**
  * The payload with its run's timing: when it began on every push, and how long it
@@ -89,7 +113,7 @@ export function heldProgress(id: string): OperationProgressPayload | undefined {
 export async function pushOperationProgress(
     reported: OperationProgressPayload,
 ): Promise<void> {
-    const payload = withTiming(reported);
+    const payload = withOpenPrompt(withTiming(reported));
     if (payload.state === 'succeeded') {
         latest.delete(payload.id);
     } else {

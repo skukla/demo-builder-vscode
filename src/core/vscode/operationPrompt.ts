@@ -36,11 +36,11 @@
 import { AsyncLocalStorage } from 'async_hooks';
 import * as vscode from 'vscode';
 import { isInBackground } from './operationBackgroundNotice';
-import { heldProgress, pushOperationProgress } from './operationProgress';
+import { heldProgress, holdPrompt, pushOperationProgress, releasePrompt } from './operationProgress';
 import { currentCallTag } from '@/core/logging/callTagContext';
 import { hasActivePhaseSinks, reportPhase } from '@/core/utils/agentPhaseChannel';
 import type { MessageHandler } from '@/types/handlers';
-import type { OperationPrompt, OperationPromptField } from '@/types/webviewPayloads';
+import type { OperationProgressPayload, OperationPrompt, OperationPromptField } from '@/types/webviewPayloads';
 
 /** The operation whose modal is on screen, for anything running inside it. */
 const hosting = new AsyncLocalStorage<string>();
@@ -223,6 +223,12 @@ function askInModal(id: string, prompt: OperationPrompt): Promise<PromptAnswer> 
     return mine;
 }
 
+/** The stage alone, without the question it carried while one was open. */
+function withoutPrompt(payload: OperationProgressPayload): OperationProgressPayload {
+    const { prompt: _answered, ...stage } = payload;
+    return stage;
+}
+
 /** Put the question up, wait for the answer, then put the stage back. */
 async function askNow(id: string, prompt: OperationPrompt, run: AskingRun | undefined): Promise<PromptAnswer> {
     // Its run ended while it waited its turn: nobody is left to read the answer.
@@ -230,6 +236,7 @@ async function askNow(id: string, prompt: OperationPrompt, run: AskingRun | unde
     const before = heldProgress(id);
     const answer = await new Promise<PromptAnswer>((resolve) => {
         waiting.set(id, { resolve, run });
+        holdPrompt(id, prompt);
         void pushOperationProgress({
             ...(before ?? { id, state: 'running' }),
             id,
@@ -238,10 +245,11 @@ async function askNow(id: string, prompt: OperationPrompt, run: AskingRun | unde
         });
     });
     waiting.delete(id);
+    releasePrompt(id);
 
-    // Back to the stage it paused on, so the modal resumes rather than holding the
-    // question after it has been answered.
-    if (before) await pushOperationProgress(before);
+    // Back to the stage it is on now (pushes while it waited moved it on), so the modal
+    // resumes rather than holding the question after it has been answered.
+    if (before) await pushOperationProgress(withoutPrompt(heldProgress(id) ?? before));
     return answer;
 }
 

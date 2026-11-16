@@ -134,6 +134,30 @@ describe('a modal is hosting the operation', () => {
         await expect(asking).resolves.toBe('Sign In');
     });
 
+    // Walk F162 (2026-11-16): the datapack job's status poller pushes its stage every few seconds on
+    // the same id, and the first push after the question took it off the screen, so the install
+    // waited on an answer nobody could give.
+    it('keeps the question on screen through the stage pushes made while it waits, and drops it once answered', async () => {
+        const send = jest.fn();
+        startModalRun('op-poll', send);
+        const prompt = { title: 'One step', message: 'Set it, then Save.', actions: ['Done'] };
+
+        const asking = withModalAsking('op-poll', () => askDuringOperation({ title: prompt.title, message: prompt.message }, 'Done'));
+        await settle();
+        await pushOperationProgress({ id: 'op-poll', state: 'running', stage: 'Categories 10 of 10' });
+
+        expect(send).toHaveBeenLastCalledWith(
+            'operationProgress',
+            expect.objectContaining({ stage: 'Categories 10 of 10', prompt }),
+        );
+
+        answerOperationPrompt('op-poll', 'Done');
+        await expect(asking).resolves.toBe('Done');
+        await pushOperationProgress({ id: 'op-poll', state: 'running', stage: 'Products 0 of 25' });
+
+        expect(send.mock.calls.at(-1)?.[1]).not.toHaveProperty('prompt');
+    });
+
     it('hands the answer back, so the work carries on with it', async () => {
         startModalRun('op-2', jest.fn());
         const steps: string[] = [];
