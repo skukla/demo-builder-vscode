@@ -16,7 +16,9 @@ import {
 } from './dataInstallerHandlers.testUtils';
 import { NO_ACCESS_DISMISSED_KEY } from '@/features/data-installer/handlers/dataInstallerHandlers';
 import { DataInstallerApiError } from '@/features/data-installer/services/dataInstallerErrors';
+import { rememberedPackName } from '@/features/data-installer/services/packNames';
 import { SHARED_IN_FILES_KEY } from '@/features/data-installer/services/sharedInFiles';
+import { createMockExtensionContext, createStatefulGlobalState } from '../../../helpers/extensionContextFake';
 import { ErrorCode } from '@/types/errorCodes';
 
 beforeEach(() => {
@@ -117,6 +119,22 @@ describe('the library store', () => {
             success: true,
             data: { items: [{ id: { name: 'mine', version: 'v1' }, mine: true, store: 'library' }], count: 1 },
         });
+    });
+
+    // Owner, 2026-11-16: a pack the SC had only seen listed had no name kept, so its install read
+    // "Installing the datapack". Every list keeps the names it shows.
+    it('find-datapacks keeps the name of every pack it lists', async () => {
+        setupLibrary(LIBRARY);
+        MockedClient.prototype.findDatapacks = jest.fn().mockResolvedValue({
+            items: [{ id: { name: 'frescopa', version: 'main' }, displayName: 'Frescopa', mine: true }],
+            count: 1,
+        });
+        const { globalState } = createStatefulGlobalState();
+        const context = makeHeadlessContext({ context: createMockExtensionContext({ globalState }) });
+
+        await dataInstallerHandlers['find-datapacks'](context, { store: 'library' });
+
+        expect(rememberedPackName(globalState, 'frescopa')).toBe('Frescopa');
     });
 
     it('get-datapack-detail reads the library when told, and says so on the detail', async () => {

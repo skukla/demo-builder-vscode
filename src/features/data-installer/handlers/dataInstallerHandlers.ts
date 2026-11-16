@@ -27,7 +27,7 @@ import { packReadsVia } from '../services/recordedPack';
 import { layerForDetail } from '../services/settingsLayer';
 import { sharedInFileWarningFor } from '../services/sharedInFiles';
 import type { CatalogPage, DatapackSummary, OperationMode, Page } from '../types';
-import { INSTALLER_OFF, LIBRARY_LIST_FAILED, isListable, listLibrary, mergedCatalog } from './catalogLibraryRows';
+import { INSTALLER_OFF, LIBRARY_LIST_FAILED, isListable, listLibrary, mergedCatalog, rememberingNames } from './catalogLibraryRows';
 import { activityFromBoth, installedFromBoth } from './engineHistoryReads';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
@@ -376,12 +376,13 @@ export const dataInstallerHandlers = defineHandlers({
                     ...paging,
                 }),
             );
-        if (payload?.store === 'library') return onlyListable(await askLibrary());
-        if (payload?.store === 'installer') return onlyListable(await askInstaller());
+        const memory = context.context?.globalState;
+        if (payload?.store === 'library') return rememberingNames(memory, onlyListable(await askLibrary()));
+        if (payload?.store === 'installer') return rememberingNames(memory, onlyListable(await askInstaller()));
         // One after the other: either may prompt for the one Adobe sign-in they share.
         const library = await askLibrary();
         const installer = payload?.includeInstaller === false ? INSTALLER_OFF : await askInstaller();
-        return withNoAccessDismissal(context, mergedCatalog(library, installer, payload?.includeCommunity === true));
+        return rememberingNames(memory, await withNoAccessDismissal(context, mergedCatalog(library, installer, payload?.includeCommunity === true)));
     },
 
     /** The SC closed the "no access" banner: remember it on this machine (2026-11-03). */

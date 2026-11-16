@@ -13,6 +13,7 @@
 
 import type { DataInstallerClient } from '../services/dataInstallerClient';
 import { resolveDataInstallerBaseUrl } from '../services/dataInstallerConfig';
+import { type NameMemory, rememberPackNames } from '../services/packNames';
 import type { CatalogPage, DatapackSummary, Page } from '../types';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerResponse } from '@/types/handlers';
@@ -57,6 +58,20 @@ function whyMissing(installer: HandlerResponse): NonNullable<CatalogPage['instal
 
 /** The Data Installer's part when the SC switched it off: not asked, so nothing to report. */
 export const INSTALLER_OFF = 'off';
+
+/**
+ * Keep the names of every pack a list answered with, then hand the answer on. The wizard's Datapacks
+ * step, the Datapacks screen and the agent's `find_datapacks` all list through here, so a pack the SC
+ * has seen is named everywhere after (owner, 2026-11-16). Never throws: a name is not worth a list.
+ */
+export async function rememberingNames(memory: NameMemory | undefined, response: HandlerResponse): Promise<HandlerResponse> {
+    try {
+        if (memory && response.success) await rememberPackNames(memory, (response.data as Page<DatapackSummary>).items);
+    } catch {
+        // The list still answers; the names are kept next time.
+    }
+    return response;
+}
 
 /**
  * The two answers as one list. Fails only when neither store answered, with the store's reason,

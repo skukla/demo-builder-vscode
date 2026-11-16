@@ -368,7 +368,9 @@ describe('a start', () => {
                 replaces: { name: 'luma', version: 'eds-compatible' },
             })
         );
-        expect(mockLibrary).not.toHaveBeenCalled();
+        // Never the library: the pack is read through the write access. (Its name may be read from the
+        // Data Installer, owner 2026-11-16, which is not the library.)
+        expect(mockLibrary).not.toHaveBeenCalledWith(expect.anything(), 'library');
     });
 
     // Step 03, S2: the job's record says it is a restore, for the window and agents.

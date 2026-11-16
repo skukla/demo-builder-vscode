@@ -16,10 +16,10 @@ import { packStage } from '@/core/utils/packStage';
 import { askForDetailsDuringOperation, modalIsAsking } from '@/core/vscode/operationPrompt';
 import type { ReportStage } from '@/core/vscode/withOperationProgress';
 import { saveFirstLabel, withoutSavingLabel } from '@/features/data-installer/datapackWords';
+import { knownPackName } from '@/features/data-installer/handlers/libraryWriter';
 import { commerceBackendOf } from '@/features/data-installer/services/commerceBackend';
 import { typesLine } from '@/features/data-installer/services/datapackTypesLine';
 import { dropStaleFailure } from '@/features/data-installer/services/installFailure';
-import { rememberedPackName } from '@/features/data-installer/services/packNames';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext } from '@/types/handlers';
@@ -177,9 +177,7 @@ export async function removeProjectSampleDataOutcome(
         const saved = settled.savedInto ? { savedInto: settled.savedInto } : {};
 
         // Named for the pack, "Uninstalling We.Cafe" (owner, 2026-11-16); "the datapack" when unknown.
-        // The name remembered when the dashboard showed the pack: a removal reads nothing more.
-        const memory = context.context?.globalState;
-        const step = packStage(OPERATION_STAGES.removingDatapack, memory && project.datapack ? rememberedPackName(memory, project.datapack.name) : undefined);
+        const step = packStage(OPERATION_STAGES.removingDatapack, project.datapack && (await knownPackName(context, project.datapack)));
         report(step);
 
         const { removeSampleData } = await import(

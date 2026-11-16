@@ -10,10 +10,12 @@
 
 import { versionChoices } from '../packVersions';
 import type { DataInstallerClient } from '../services/dataInstallerClient';
+import { resolveDataInstallerBaseUrl, resolveDatapackStoreBaseUrl } from '../services/dataInstallerConfig';
 import { DatapackStoreWriter } from '../services/datapackStoreWriter';
 import { rememberPackChoices, rememberPackName, rememberedPackName } from '../services/packNames';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
 import type { Project } from '@/types/base';
+import { storeOf } from '@/types/datapack';
 import type { HandlerContext } from '@/types/handlers';
 
 /** The library's reads and writes, or why it cannot be opened. */
@@ -79,21 +81,36 @@ export async function heldDisplayName(
 }
 
 /**
- * The pack's name as the SC knows it, or undefined when neither memory nor the library has it: a
- * progress step then keeps the table's "the datapack" rather than showing an id (owner, 2026-11-16).
+ * The pack's name as the SC knows it: remembered (every list keeps the names it shows), else read
+ * from the store that holds it without a sign-in prompt, else undefined, and a progress step keeps
+ * the table's "the datapack" rather than showing an id (owner, 2026-11-16). A store with no address
+ * set is not asked: a name lookup is not worth its configuration warning.
  */
 export async function knownPackName(
     context: HandlerContext,
     held: NonNullable<Project['datapack']>,
 ): Promise<string | undefined> {
     try {
-        const known =
-            held.store === 'library'
-                ? rememberedPackName(context.context.globalState, held.name)
-                : undefined;
-        return known ?? (await libraryDisplayName({ ...context, panel: undefined }, held));
+        const memory = context.context?.globalState;
+        const known = memory ? rememberedPackName(memory, held.name) : undefined;
+        if (known) return known;
+        const quiet = { ...context, panel: undefined };
+        if (storeOf(held) === 'library') {
+            return resolveDatapackStoreBaseUrl().ok ? await libraryDisplayName(quiet, held) : undefined;
+        }
+        return resolveDataInstallerBaseUrl().ok ? await installerDisplayName(quiet, held) : undefined;
     } catch {
         // A name is not worth stopping for: the step still says what it does.
         return undefined;
     }
+}
+
+/** A Data Installer pack's name, read from its detail and remembered. Undefined when it does not answer. */
+async function installerDisplayName(context: HandlerContext, held: NonNullable<Project['datapack']>): Promise<string | undefined> {
+    const access = await resolveDataInstallerAccess(context);
+    if (!access.ok) return undefined;
+    const name = (await access.client.getDatapackDetail({ name: held.name, version: held.version })).displayName;
+    if (!name) return undefined;
+    await rememberPackName(context.context.globalState, held.name, name);
+    return name;
 }

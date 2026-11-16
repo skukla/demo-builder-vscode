@@ -7,6 +7,7 @@ import {
     PACK_NAMES_KEY,
     rememberPackChoices,
     rememberPackName,
+    rememberPackNames,
     rememberedPackChoices,
     rememberedPackName,
     type NameMemory,
@@ -40,6 +41,22 @@ describe('pack names', () => {
         const kept = memory({ luma: 'Luma' });
 
         await rememberPackName(kept, 'luma', 'Luma');
+
+        expect(kept.update).not.toHaveBeenCalled();
+    });
+    it('keeps every listed name in one write, beside the ones kept', async () => {
+        const kept = memory({ bodea: 'Bodea' });
+
+        await rememberPackNames(kept, [{ id: { name: 'frescopa' }, displayName: 'Frescopa' }, { id: { name: 'wecafe' }, displayName: 'We.Cafe' }]);
+
+        expect(kept.update).toHaveBeenCalledTimes(1);
+        expect(['bodea', 'frescopa', 'wecafe'].map((name) => rememberedPackName(kept, name))).toEqual(['Bodea', 'Frescopa', 'We.Cafe']);
+    });
+
+    it('CONTROL: writes nothing when every listed name is already kept, or has none', async () => {
+        const kept = memory({ luma: 'Luma' });
+
+        await rememberPackNames(kept, [{ id: { name: 'luma' }, displayName: 'Luma' }, { id: { name: 'bare' } }]);
 
         expect(kept.update).not.toHaveBeenCalled();
     });

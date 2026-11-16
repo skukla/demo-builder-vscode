@@ -42,6 +42,22 @@ export async function rememberPackName(
     await memory.update(PACK_NAMES_KEY, { ...known, [packName]: displayName });
 }
 
+/**
+ * Keep every listed pack's name in one write (owner, 2026-11-16): the steps and sentences that name
+ * a pack ("Installing Frescopa") read it here, and a pack the SC had only seen listed had no name
+ * kept. Writes only when something changed.
+ */
+export async function rememberPackNames(
+    memory: NameMemory,
+    listed: ReadonlyArray<{ id: { name: string }; displayName?: string }>,
+): Promise<void> {
+    const known = names(memory);
+    const fresh = listed.filter((item) => item.displayName && known[item.id.name] !== item.displayName);
+    if (fresh.length === 0) return;
+    const added = Object.fromEntries(fresh.map((item) => [item.id.name, item.displayName as string]));
+    await memory.update(PACK_NAMES_KEY, { ...known, ...added });
+}
+
 /** The global state key holding pack id to how many versions it offers (step-07 P4). */
 export const PACK_CHOICES_KEY = 'demoBuilder.datapackVersionChoices';
 
