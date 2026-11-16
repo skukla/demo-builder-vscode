@@ -13,6 +13,7 @@ import React from 'react';
 import { type ClearRecordsShown, TypeRail } from '../typeSummary/TypeRail';
 import type { TypeRow } from './installRows';
 import { StepsWindow } from '@/core/ui/components/ui/StepsDialog';
+import { WAIT_STAGES } from '@/core/utils/waitStages';
 
 export interface RecordsWindowProps extends ClearRecordsShown {
     title: string;
@@ -37,6 +38,7 @@ export function RecordsWindow({
             title={title}
             wide
             ready={!reading}
+            waiting={reading ? WAIT_STAGES.readingRecords : false}
             hideClose
             actionButtons={[{ label: 'Back', variant: 'secondary', onPress: onBack }]}
             onClose={onClose}

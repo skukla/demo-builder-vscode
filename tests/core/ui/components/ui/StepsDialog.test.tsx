@@ -155,14 +155,16 @@ describe('StepsDialog', () => {
         expect(screen.getByText('The form')).toBeInTheDocument();
     });
 
-    it('names the window it is opening when the caller gave no wait words', () => {
+    // Owner, 2026-11-16: "Opening <title>" read "Opening Uninstall Frescopa?" under a question title.
+    it('says Loading when the caller gave no wait words, never "Opening" and the title', () => {
         renderSteps({ ready: false });
 
         act(() => {
             jest.advanceTimersByTime(FRONTEND_TIMEOUTS.DIALOG_PENDING_DELAY);
         });
 
-        expect(dialog()).toHaveTextContent('Opening Install My Luma');
+        expect(dialog()).toHaveTextContent('Loading');
+        expect(dialog()).not.toHaveTextContent('Opening');
     });
 
     it('CONTROL: a window ready at once opens as the steps window, never the small wait', () => {

@@ -67,6 +67,12 @@ export interface StepsDialogProps {
  * of another in that host's own container (`tests/sop/modal-hosting.test.ts`). Inside the
  * container, so it measures only while it is on screen.
  */
+/**
+ * The small window's words when the caller gave none. Its title names the window; "Opening" over
+ * it read "Opening Uninstall Frescopa?" when the title is a question (owner, 2026-11-16).
+ */
+const LOADING = { label: 'Loading' };
+
 export function StepsWindow({
     title,
     status,
@@ -119,7 +125,7 @@ export function StepsWindow({
         >
             {reading && (
                 <div className="modal-wait">
-                    <StageWait lines={waiting || { label: `Opening ${title}` }} />
+                    <StageWait lines={waiting || LOADING} />
                 </div>
             )}
             <div className="modal-steps" ref={ref} hidden={reading}>

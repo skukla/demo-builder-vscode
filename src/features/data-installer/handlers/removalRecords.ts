@@ -15,13 +15,17 @@ import { type CreatedObject, nodeRecordFiles, readInstallRecord, removalOrder } 
 import { decideRemovals, keptObjects } from '../services/demoBuilderEngine/removers';
 import type { PackItems } from '../services/demoBuilderEngine/runPack';
 import { packKindOf } from '../services/demoBuilderEngine/storeCopies';
-import { productNamesOf } from '../services/packRecords';
+import { categoryTreeOfKeys, packRootName, productNamesOf } from '../services/packRecords';
+import { ROOT_KEY } from '../services/demoBuilderEngine/packForm';
 import { STORE_CONFIG_KIND } from '../services/demoBuilderEngine/storeConfigKind';
 import { failure } from './packSave';
 import { openProjectStore } from './storeChangesHandlers';
 import type { DatapackId } from '@/types/datapack';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 import type { DatapackRecordsResult } from '@/types/webviewRequests';
+
+/** A root category the datapack does not name, as Commerce's Admin labels the field. */
+const ROOT_CATEGORY = 'Root Category';
 
 /** Each object's name by its data type, as the uninstall's table counts them (`packKindOf`). */
 function namesByKind(objects: readonly CreatedObject[], named: (o: CreatedObject) => string): Record<string, string[]> {
@@ -55,12 +59,18 @@ export async function readRemovalRecords(
         const { take, kept } = await decideRemovals(commerce.get, objects.filter((o) => o.kind !== STORE_CONFIG_KIND));
         // A kept container by the name the store gives it; anything else by the pack's name for it.
         const keptNames = new Map(kept.map((k) => [k.object, k.name]));
-        const named = (o: CreatedObject): string => keptNames.get(o) ?? o.key ?? o.id;
-        const productNames = readPack ? productNamesOf(await readPack().catch(() => ({}))) : {};
+        const items: PackItems = readPack ? await readPack().catch(() => ({})) : {};
+        // The pack's root by its name, never its record key "(root)" (owner, 2026-11-16).
+        const rootLabel = packRootName(items) ?? ROOT_CATEGORY;
+        const named = (o: CreatedObject): string => keptNames.get(o) ?? (o.key === ROOT_KEY ? rootLabel : (o.key ?? o.id));
+        const records = namesByKind([...settings, ...take], named);
+        // The categories as a tree, as Install, Switch and Save show them (owner, 2026-11-16).
+        const categoryKeys = take.filter((o) => o.kind === 'categories').map((o) => o.key ?? o.id);
         const data: DatapackRecordsResult = {
-            records: namesByKind([...settings, ...take], named),
+            records,
             kept: namesByKind(keptObjects(kept), named),
-            productNames,
+            productNames: productNamesOf(items),
+            ...(categoryKeys.length > 0 ? { trees: { categories: categoryTreeOfKeys(categoryKeys, rootLabel) } } : {}),
         };
         return { success: true, data };
     } catch (error) {

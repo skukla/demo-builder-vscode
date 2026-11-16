@@ -69,6 +69,33 @@ describe('readRemovalRecords', () => {
                 kept: { categories: ['Frescopa'] },
                 // No pack read handed in: no names.
                 productNames: {},
+                trees: { categories: [{ name: 'Coffee', id: 'Coffee' }] },
+            },
+        });
+    });
+
+    // Owner, 2026-11-16: the categories as the tree Install, Switch and Save draw, under the pack's
+    // root by its name, never a list of paths and never the record key "(root)".
+    it('draws the categories it would take as a tree under the root, named from the datapack', async () => {
+        const bagged: CreatedObject = { kind: 'categories', id: '1508', key: 'Coffee/Bagged Coffee' };
+        jest.mocked(decideRemovals).mockResolvedValue({ take: [bagged, COFFEE, ROOT], kept: [] });
+
+        const answer = await readRemovalRecords(context(), PACK, async () => ({
+            categories: { root_category: { name: 'Frescopa' }, categories: [] },
+        }));
+
+        expect(answer).toMatchObject({
+            data: {
+                records: { categories: ['Coffee/Bagged Coffee', 'Coffee', 'Frescopa'] },
+                trees: {
+                    categories: [
+                        {
+                            name: 'Frescopa',
+                            id: '(root)',
+                            children: [{ name: 'Coffee', id: 'Coffee', children: [{ name: 'Bagged Coffee', id: 'Coffee/Bagged Coffee' }] }],
+                        },
+                    ],
+                },
             },
         });
     });

@@ -75,6 +75,9 @@ export const WAIT_STAGES = {
     },
     // The datapack flyout: its own load, then each menu row's work.
     readingPack: { label: 'Reading the datapack', expectation: FEW_SECONDS },
+    // Review Records, while it reads what an install, a switch or an uninstall would put in or take
+    // out (owner, 2026-11-16: it said "Opening Uninstall Frescopa?").
+    readingRecords: { label: 'Reading the records', expectation: FEW_SECONDS },
     savingPackFile: { label: 'Saving to a file', expectation: FEW_SECONDS },
     // Share and Stop Sharing: the label alone (owner, 2026-11-08). Each changes every version.
     sharingPack: { label: 'Sharing the datapack', expectation: FEW_SECONDS },

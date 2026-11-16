@@ -73,6 +73,33 @@ export function categoryTreeOf(items: PackItems): TreeListNode[] {
     return top;
 }
 
+/** The pack's root category by its name, when it has one: what an SC calls the `(root)` record. */
+export function packRootName(items: PackItems): string | undefined {
+    return rootName(items.categories);
+}
+
+/**
+ * Category records named by key ("Coffee/Bagged Coffee", the place under the pack's root) as a
+ * tree, for an uninstall's Review Records (owner, 2026-11-16: the same tree Install, Switch and
+ * Save draw). The root record (`(root)`) heads it, named `rootLabel`; a key whose parent is not
+ * among them (kept, or the store's own root) is at the top.
+ */
+export function categoryTreeOfKeys(keys: readonly string[], rootLabel: string): TreeListNode[] {
+    const root: TreeListNode | undefined = keys.includes(ROOT_KEY) ? { name: rootLabel, id: ROOT_KEY } : undefined;
+    const nodes = new Map<string, TreeListNode>();
+    const top: TreeListNode[] = [];
+    const depth = (key: string): number => key.split('/').length;
+    for (const key of keys.filter((k) => k !== ROOT_KEY).sort((a, b) => depth(a) - depth(b))) {
+        const cut = key.lastIndexOf('/');
+        const node: TreeListNode = { name: key.slice(cut + 1), id: key };
+        nodes.set(key, node);
+        const above = cut < 0 ? root : nodes.get(key.slice(0, cut));
+        if (above) (above.children ??= []).push(node);
+        else top.push(node);
+    }
+    return root ? [root, ...top] : top;
+}
+
 /** Each kind's record names, in the pack's order; kinds with no key or no rows are left out. */
 export function recordNames(items: PackItems): Record<string, string[]> {
     const named: Record<string, string[]> = {};
