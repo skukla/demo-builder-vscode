@@ -13,11 +13,11 @@
 
 import React from 'react';
 import { WorkRow } from '@/core/ui/components/feedback/WorkRow';
-import { WorkRowColumns } from '@/core/ui/components/feedback/WorkRowColumns';
+import { WorkRowColumns, stillWorking } from '@/core/ui/components/feedback/WorkRowColumns';
 import type { OperationRow } from '@/types/webviewPayloads';
 
 /** One step: its row, its problem in place of its line (`WorkRow` `problem`), and its nested rows. */
-function Step({ step, columns }: { step: OperationRow; columns: 1 | 2 }): React.ReactElement {
+function Step({ step, columns, ended }: { step: OperationRow; columns: 1 | 2; ended: boolean }): React.ReactElement {
     return (
         <WorkRow
             status={step.status}
@@ -25,10 +25,11 @@ function Step({ step, columns }: { step: OperationRow; columns: 1 | 2 }): React.
             {...(step.line ? { detail: step.line } : {})}
             state={step.status === 'success' ? 'done' : step.status}
             {...(step.problem ? { problem: step.problem } : {})}
+            whole={ended}
         >
             {step.types && step.types.length > 0 ? (
                 <div className="step-rows-nested">
-                    <WorkRowColumns rows={step.types} columns={columns} dense />
+                    <WorkRowColumns rows={step.types} columns={columns} dense ended={ended} />
                 </div>
             ) : null}
         </WorkRow>
@@ -42,10 +43,12 @@ export interface StepRowsProps {
 }
 
 export function StepRows({ steps, columns }: StepRowsProps): React.ReactElement {
+    // Nothing working: the run has ended, so a reason shows whole (owner walk, 2026-11-16).
+    const ended = !stillWorking(steps);
     return (
         <div className="step-rows">
             {steps.map((step) => (
-                <Step key={step.kind} step={step} columns={columns} />
+                <Step key={step.kind} step={step} columns={columns} ended={ended} />
             ))}
         </div>
     );

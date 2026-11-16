@@ -121,6 +121,19 @@ describe("a work row's problem", () => {
         expect(declares(dense, 'white-space')).toBe(false);
     });
 
+    // Owner walk, 2026-11-16 (U2.2): a failed install's reason was cut short and could not be read.
+    // Once the run has ended nothing more can grow the window, so the reason shows whole.
+    it('shows whole, wrapping, once the run has ended', () => {
+        render(<WorkRow status="error" label="A" whole problem={{ text: 'A long reason.', failed: true }} />);
+
+        const line = screen.getByText('A long reason.');
+        expect(line).toHaveClass('work-row-problem', 'work-row-problem--whole');
+        expect(line).not.toHaveAttribute('title');
+        const rule = ruleFor('.work-row .work-row-problem.work-row-problem--whole');
+        expect(rule).toMatch(/white-space:\s*normal/);
+        expect(rule).toMatch(/overflow:\s*visible/);
+    });
+
     it('CONTROL: a row without a problem keeps its progress line', () => {
         render(<WorkRow status="checking" label="Products" detail="Removing 1,026 of 2,052" />);
 

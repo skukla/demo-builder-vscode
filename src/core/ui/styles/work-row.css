@@ -95,6 +95,13 @@
         text-overflow: ellipsis;
     }
 
+    /* Once the run has ended, whole: nothing can grow the window after the end, and the reason is
+       what the SC has to read (owner walk, 2026-11-16, finding F184). */
+    .work-row .work-row-problem.work-row-problem--whole {
+        white-space: normal;
+        overflow: visible;
+    }
+
     /* A list of rows, without the browser's bullets and indent. */
     .work-row-list {
         list-style: none;

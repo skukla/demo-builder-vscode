@@ -126,6 +126,18 @@ describe('ProjectsBatchModal: what a row ends with takes its working line', () =
         expect(a.querySelector('.work-row-problem')).toHaveTextContent('git clone failed Its datapack was uninstalled.');
     });
 
+    // Owner walk, 2026-11-16: once the run has ended, a reason shows whole; while it goes, one line.
+    it('shows a failed project\'s reason whole once the run has ended', async () => {
+        await running();
+        await push('projectsBatchRow', { path: '/p/a', state: 'failed', message: 'git clone failed' });
+        expect(rowOf('A').querySelector('.work-row-problem')).not.toHaveClass('work-row-problem--whole');
+
+        await push('projectsBatchRow', { path: '/p/b', state: 'done' });
+        await push('operationProgress', { id: ID, state: 'failed', error: 'git clone failed' });
+
+        expect(rowOf('A').querySelector('.work-row-problem')).toHaveClass('work-row-problem--whole');
+    });
+
     // "Took 2 minutes" arrives at the end of a long run: its line is held while the run goes, as the
     // shared foot holds it (`RunFoot`'s held line, walk F116).
     it('holds the Took line\'s room under the rows while the run goes', async () => {

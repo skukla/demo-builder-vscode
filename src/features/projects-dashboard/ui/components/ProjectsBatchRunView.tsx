@@ -56,6 +56,8 @@ interface RowProps {
     timing?: BatchRowTimings[string];
     asking?: OperationPrompt;
     onTyped: RunViewProps['onTyped'];
+    /** The run has ended, so a problem shows whole. */
+    ended: boolean;
 }
 
 /**
@@ -89,7 +91,7 @@ function savedLineOf(state: UpdateRowState, status: BatchRowStatuses[string]): s
     return state === 'done' && (status?.warnings?.length ?? 0) > 0 ? status?.message : undefined;
 }
 
-function RunRow({ row, statuses, timing, asking, onTyped }: RowProps) {
+function RunRow({ row, statuses, timing, asking, onTyped, ended }: RowProps) {
     const status = statuses[row.path];
     const state = status?.state ?? 'waiting';
     // The single progress window's clock, per row (owner, 2026-11-04).
@@ -109,6 +111,7 @@ function RunRow({ row, statuses, timing, asking, onTyped }: RowProps) {
             detail={detail}
             note={note}
             {...(problem ? { problem } : {})}
+            whole={ended}
             state={state}
             time={state === 'running' ? clock : spanValue(timing?.startedAt, timing?.endedAt)}
         >
@@ -201,6 +204,7 @@ export function ProjectsBatchRunView({ rows, order, statuses, timings, progress,
                         timing={timings[item.row.path]}
                         asking={underRow ? question : undefined}
                         onTyped={onTyped}
+                        ended={ended}
                     />
                 ),
             )}

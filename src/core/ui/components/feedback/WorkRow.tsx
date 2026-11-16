@@ -49,6 +49,11 @@ export interface WorkRowProps {
      * fits one line, its whole text on hover (decisions Phase 1b, J1-3d growth, owner 2026-11-11).
      */
     problem?: { text: string; failed: boolean };
+    /**
+     * The run has ended, so the problem shows whole, wrapping: nothing can grow the window after the
+     * end (owner walk, 2026-11-16: a failed install's reason was cut short and could not be read).
+     */
+    whole?: boolean;
 }
 
 /** A row's note: red when it failed, the house's orange warning line on a warning row, else grey. */
@@ -63,12 +68,13 @@ function Note({ note, status, why }: { note: string; status: StepStatus; why?: b
 }
 
 /** The second line: the problem when there is one, in the slot the detail held; else the detail. */
-function SecondLine({ detail, dense, problem }: Pick<WorkRowProps, 'detail' | 'dense' | 'problem'>): React.ReactElement | null {
+function SecondLine({ detail, dense, problem, whole }: Pick<WorkRowProps, 'detail' | 'dense' | 'problem' | 'whole'>): React.ReactElement | null {
     if (problem) {
+        const tone = problem.failed ? 'text-negative' : 'text-notice';
         return (
             <p
-                className={problem.failed ? 'dialog-problem text-negative work-row-problem' : 'dialog-problem text-notice work-row-problem'}
-                title={problem.text}
+                className={cn('dialog-problem', tone, 'work-row-problem', whole && 'work-row-problem--whole')}
+                {...(whole ? {} : { title: problem.text })}
             >
                 {problem.text}
             </p>
@@ -79,7 +85,7 @@ function SecondLine({ detail, dense, problem }: Pick<WorkRowProps, 'detail' | 'd
 }
 
 /** One row: icon and name, then the detail and what to read under it. */
-export function WorkRow({ status, label, detail, note, why, state, children, time, dense = false, problem }: WorkRowProps): React.ReactElement {
+export function WorkRow({ status, label, detail, note, why, state, children, time, dense = false, problem, whole }: WorkRowProps): React.ReactElement {
     return (
         <div className={dense ? 'work-row work-row--dense' : 'work-row'} data-state={state}>
             <span className="work-row-icon">
@@ -88,7 +94,7 @@ export function WorkRow({ status, label, detail, note, why, state, children, tim
             <div className="work-row-text">
                 <span className="checkbox-row-label">{label}</span>
                 {time && <span className="work-row-time">{time}</span>}
-                <SecondLine detail={detail} dense={dense} problem={problem} />
+                <SecondLine detail={detail} dense={dense} problem={problem} whole={whole} />
                 {note && <Note note={note} status={status} why={why} />}
                 {children}
             </div>

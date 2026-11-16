@@ -73,4 +73,17 @@ describe('StepRows', () => {
 
         expect(screen.getByText('Some skipped.')).toHaveClass('dialog-problem', 'text-notice');
     });
+
+    // Owner walk, 2026-11-16 (U2.2): once no step is working, a reason shows whole.
+    it('shows a problem whole once no step is working', () => {
+        render(<StepRows steps={[FAILED_STEP, { ...STEP_WITH_TYPES, status: 'pending', types: [] }]} columns={1} />);
+
+        expect(screen.getByText('Commerce did not answer.')).toHaveClass('work-row-problem--whole');
+    });
+
+    it('CONTROL: keeps it to one line while a step, or a row under one, is still working', () => {
+        render(<StepRows steps={[FAILED_STEP, STEP_WITH_TYPES]} columns={1} />);
+
+        expect(screen.getByText('Commerce did not answer.')).not.toHaveClass('work-row-problem--whole');
+    });
 });

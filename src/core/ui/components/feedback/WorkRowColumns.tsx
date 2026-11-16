@@ -20,7 +20,12 @@ function inColumns(rows: readonly OperationRow[], columns: number): OperationRow
     );
 }
 
-function Row({ row, dense }: { row: OperationRow; dense: boolean }): React.ReactElement {
+/** A row, or one under it, is still working: the run has not ended. */
+export function stillWorking(rows: readonly OperationRow[]): boolean {
+    return rows.some((row) => row.status === 'checking' || stillWorking(row.types ?? []));
+}
+
+function Row({ row, dense, ended }: { row: OperationRow; dense: boolean; ended: boolean }): React.ReactElement {
     // A dense row's only line under its name is the working row's: the icon says the rest.
     const detail = dense && row.status !== 'checking' ? undefined : row.line;
     return (
@@ -31,6 +36,7 @@ function Row({ row, dense }: { row: OperationRow; dense: boolean }): React.React
             state={row.status === 'success' ? 'done' : row.status}
             dense={dense}
             {...(row.problem ? { problem: row.problem } : {})}
+            whole={ended}
         />
     );
 }
@@ -48,6 +54,7 @@ export function WorkRowColumns({
     rows,
     columns,
     dense = false,
+    ended,
 }: {
     rows: readonly OperationRow[];
     columns: number;
@@ -56,7 +63,10 @@ export function WorkRowColumns({
      * row's second line, and room held for it in every column.
      */
     dense?: boolean;
+    /** The run has ended, so a problem shows whole; worked out from the rows when not given. */
+    ended?: boolean;
 }): React.ReactElement {
+    const over = ended ?? !stillWorking(rows);
     return (
         <div className={dense ? 'work-row-columns work-row-columns--dense' : 'work-row-columns'}>
             {inColumns(rows, columns).map((column) => (
@@ -65,7 +75,7 @@ export function WorkRowColumns({
                     className={hasWorkingRow(column) ? 'work-row-column work-row-column--working' : 'work-row-column'}
                 >
                     {column.map((row) => (
-                        <Row key={row.kind} row={row} dense={dense} />
+                        <Row key={row.kind} row={row} dense={dense} ended={over} />
                     ))}
                 </div>
             ))}
