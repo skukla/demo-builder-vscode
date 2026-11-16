@@ -11,7 +11,7 @@
  * @module core/ui/components/feedback/OperationProgressBody
  */
 
-import React from 'react';
+import React, { useRef } from 'react';
 import { OperationQuestion } from '@/core/ui/components/feedback/OperationQuestion';
 import { RunFoot } from '@/core/ui/components/feedback/RunFoot';
 import { StageRows, type WaitLines } from '@/core/ui/components/feedback/StageWait';
@@ -23,7 +23,7 @@ import type { ModalStatus } from '@/core/ui/components/ui/Modal';
 import { useRunClock } from '@/core/ui/hooks/useRunClock';
 import { cn } from '@/core/ui/utils/classNames';
 import { endStatus, endsSmall, type RunEnding } from '@/core/ui/utils/runEnding';
-import { runStage } from '@/core/utils/runStage';
+import { rowsLines } from '@/core/utils/runStage';
 import { stageLine } from '@/core/utils/stageLine';
 import type { OperationChange, OperationPrompt, OperationProgressPayload, OperationRow } from '@/types/webviewPayloads';
 
@@ -47,7 +47,7 @@ export interface OperationProgressBodyProps {
  */
 function runningLines(progress: OperationProgressPayload | null | undefined): WaitLines {
     const stage = progress?.stage ? stageLine(progress.stage, progress.position) : undefined;
-    if (progress?.rows?.length) return runStage(progress.rows, () => stage);
+    if (progress?.rows?.length) return rowsLines(progress.rows, stage);
     const label = stage ?? 'Starting';
     return { label, detail: progress?.step, expectation: progress?.expectation };
 }
@@ -64,6 +64,9 @@ export function OperationProgressBody({
     // The whole run, from the start the extension stamped on every push. The only
     // thing that moves while a step waits on Adobe.
     const total = useRunClock(progress?.state === 'running' ? progress.startedAt : undefined);
+    // The last lines shown: a push between two steps, with none under way, keeps them rather than
+    // going back to "Starting" mid-run (owner walk, 2026-11-16).
+    const lastLines = useRef<WaitLines | null>(null);
     if (prompt?.fields?.length || prompt?.steps?.length) {
         // The question and what it needs typed, together: the modal owns the form
         // rather than handing off to a VS Code input box (owner, 2026-09-20).
@@ -82,7 +85,9 @@ export function OperationProgressBody({
     // project's run is the wizard's view, never a checklist (owner, 2026-11-16). Its rows come back
     // only for how it ended (walk F91 asked for more than one line over a save's minutes of reading:
     // the part under way and its count are that line).
-    const lines = runningLines(progress);
+    const now = runningLines(progress);
+    const lines = now.label === 'Starting' && lastLines.current ? lastLines.current : now;
+    lastLines.current = lines;
     // Size L, as every other progress display here: M left-aligns and shrinks
     // the text.
     // The room for all three lines is kept and what is there sits level in it, so the spinner does

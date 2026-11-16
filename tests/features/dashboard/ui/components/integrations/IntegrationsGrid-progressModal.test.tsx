@@ -157,18 +157,20 @@ describe('the progress modal', () => {
     it('shows a success\'s warning under the result, and stays until closed', async () => {
         const user = setupUser();
         renderGrid({ appBuilderComponents: NOT_DEPLOYED });
-        const modal = await startDeploy(user);
+        await startDeploy(user);
 
         push({ id: 'custom-app', state: 'succeeded', warning: 'Prices were not published.' });
 
         expect(screen.getByRole('dialog', { name: 'custom-app Deployed' })).toHaveAttribute('data-status', 'warning');
-        expect(within(modal).getByTestId('operation-end')).toHaveTextContent('Prices were not published.');
+        // A clean finish ends small (owner, 2026-11-16): the result is its own small window.
+        const result = (): HTMLElement => screen.getByRole('dialog', { name: 'custom-app Deployed' });
+        expect(within(result()).getByTestId('operation-end')).toHaveTextContent('Prices were not published.');
 
         await act(async () => {
             jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 2);
         });
-        expect(screen.getByRole('dialog', { name: 'custom-app Deployed' })).toBeInTheDocument();
-        await user.click(within(modal).getByRole('button', { name: 'Close' }));
+        expect(result()).toBeInTheDocument();
+        await user.click(within(result()).getByRole('button', { name: 'Close' }));
         expect(
             screen.queryByRole('dialog', { name: 'custom-app Deployed' }),
         ).not.toBeInTheDocument();
@@ -179,7 +181,7 @@ describe('the progress modal', () => {
     it("shows a success's note under the result as a plain success, and stays until closed", async () => {
         const user = setupUser();
         renderGrid({ appBuilderComponents: NOT_DEPLOYED });
-        const modal = await startDeploy(user);
+        await startDeploy(user);
 
         push({
             id: 'custom-app',
@@ -187,16 +189,17 @@ describe('the progress modal', () => {
             note: 'Demo data loaded. Prices are still being published and will finish by themselves in a few minutes.',
         });
 
-        expect(screen.getByRole('dialog', { name: 'custom-app Deployed' })).toHaveAttribute('data-status', 'success');
-        expect(within(modal).getByTestId('operation-end')).toHaveTextContent(
+        const result = (): HTMLElement => screen.getByRole('dialog', { name: 'custom-app Deployed' });
+        expect(result()).toHaveAttribute('data-status', 'success');
+        expect(within(result()).getByTestId('operation-end')).toHaveTextContent(
             'Demo data loaded. Prices are still being published and will finish by themselves in a few minutes.',
         );
 
         await act(async () => {
             jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 2);
         });
-        expect(screen.getByRole('dialog', { name: 'custom-app Deployed' })).toBeInTheDocument();
-        await user.click(within(modal).getByRole('button', { name: 'Close' }));
+        expect(result()).toBeInTheDocument();
+        await user.click(within(result()).getByRole('button', { name: 'Close' }));
         expect(
             screen.queryByRole('dialog', { name: 'custom-app Deployed' }),
         ).not.toBeInTheDocument();

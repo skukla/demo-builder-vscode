@@ -69,8 +69,10 @@ const LEDGER: Readonly<Record<string, Reason>> = {
  * 77 -> 79 on 2026-11-16 (walk F167): both windows' close button, while a question is asked, is the
  * question's dismiss answer ("Skip for Now", Title Case at the source, `packRootStep.ts`) or
  * Cancel (`promptCloseLabel`), so the same button no longer draws twice beside Cancel.
+ * 79 -> 80 on 2026-11-16 (a clean finish ends small, owner): the progress window's small result
+ * (`SmallEnd`) takes the run's result title, the same words the streamed window already showed.
  */
-const DYNAMIC_PIN = 79;
+const DYNAMIC_PIN = 80;
 
 /**
  * The six dialog layouts (the Steps layout joined 2026-11-11) hand their caller's words on to Modal (`title={title}`). Those words are

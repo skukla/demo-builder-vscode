@@ -76,3 +76,46 @@ export function runStage(steps: readonly OperationRow[], job?: StepJob): RunStag
     const detail = type ? typeLine(type) : stepLine(working, label);
     return detail ? { label, detail } : { label };
 }
+
+/** A step's verb as its job: "Export from Commerce" is done as "Exporting from Commerce". */
+const GERUNDS: Readonly<Record<string, string>> = {
+    Export: 'Exporting',
+    Save: 'Saving',
+    Install: 'Installing',
+    Uninstall: 'Uninstalling',
+    Update: 'Updating',
+    Verify: 'Verifying',
+    Restore: 'Restoring',
+    Clear: 'Clearing',
+    Remove: 'Removing',
+    Delete: 'Deleting',
+};
+
+/** A step's label as its job, when it starts with a verb the table knows; else none. */
+export function gerundJob(label: string): string | undefined {
+    const [verb, ...rest] = label.split(' ');
+    const doing = GERUNDS[verb];
+    if (!doing) return undefined;
+    return [doing, ...rest].join(' ');
+}
+
+/**
+ * A run's lines from the rows it sends, for the shared progress window (owner, 2026-11-16): line 1
+ * the step's job, line 2 the part under way. A step whose line already says its job ("Saving to My
+ * Datapacks" on "Save Release Save Test") puts that line first and the thing it acts on under it;
+ * a step with no verb the table knows takes the run's stage.
+ *
+ * @param stage - the run's stage, for a step that names no job, and for no step under way
+ */
+export function rowsLines(rows: readonly OperationRow[], stage: string | undefined): RunStageLines {
+    const working = rows.find((row) => row.status === 'checking');
+    if (!working) return { label: stage ?? 'Starting' };
+    const job = gerundJob(working.label);
+    const verb = job?.split(' ')[0];
+    const typeWorking = working.types?.some((t) => t.status === 'checking');
+    if (verb && !typeWorking && working.line?.startsWith(`${verb} `)) {
+        const acted = working.label.slice(working.label.indexOf(' ') + 1);
+        return { label: working.line, detail: acted };
+    }
+    return runStage(rows, (row) => gerundJob(row.label) ?? stage);
+}

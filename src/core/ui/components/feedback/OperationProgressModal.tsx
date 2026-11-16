@@ -38,10 +38,11 @@ import {
     progressEnding,
     progressFrame,
 } from '@/core/ui/components/feedback/OperationProgressBody';
+import type { ModalStatus } from '@/core/ui/components/ui/Modal';
 import { ProgressDialog, type ProgressAction } from '@/core/ui/components/ui/ProgressDialog';
 import { useOperationProgress } from '@/core/ui/hooks/useOperationProgress';
-import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { promptAnswerLabels, promptCloseLabel } from '@/core/ui/utils/promptButtons';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { OperationOffer, OperationProgressPayload, OperationPrompt } from '@/types/webviewPayloads';
 import type { BackgroundOperationRequest } from '@/types/webviewRequests';
 
@@ -49,6 +50,24 @@ import type { BackgroundOperationRequest } from '@/types/webviewRequests';
  * A success that says something beyond its title (a warning, a note, what it changed, rows it keeps
  * because one has a problem) waits to be read.
  */
+/** Whether a success ends in the small result window: no rows kept, no list of changes, no next step. */
+function endsSmallHere(succeeded: boolean, progress: OperationProgressPayload | null | undefined, offering: ProgressModalNextStep | undefined): boolean {
+    if (!succeeded || offering || keepsRows(progress)) return false;
+    return !(progress?.details?.length || progress?.changes?.length);
+}
+
+/** A clean finish, small: its title, the sentence left to read when there is one, and Close. */
+function SmallEnd({ title, status, sentences, onClose }: { title: string; status?: ModalStatus; sentences: ReadonlyArray<string | undefined>; onClose: () => void }): React.ReactElement {
+    const sentence = sentences.filter(Boolean).join(' ');
+    return (
+        <ProgressDialog isOpen title={title} {...(status ? { status } : {})} onClose={onClose}>
+            {/* A line of the result: the window sets each line in its own paragraph. */}
+            {sentence ? <span data-testid="operation-end">{sentence}</span> : null}
+        </ProgressDialog>
+    );
+}
+
+/** Whether the result holds the window open: something to read. */
 function holdsResult(progress: OperationProgressPayload | null | undefined): boolean {
     const says = Boolean(progress?.warning || progress?.note || progress?.details?.length || progress?.changes?.length);
     return says || keepsRows(progress);
@@ -269,6 +288,13 @@ export function OperationProgressModal({
         succeeded,
         ending: progressEnding(progress),
     });
+
+    // A clean finish ends small (owner, 2026-11-16, over the 2026-11-11 rule that kept the run's
+    // height): the title, the one sentence left to read when there is one, and Close. A finish that
+    // keeps its rows, lists what it changed, or offers a next step stays in the run's window.
+    if (endsSmallHere(succeeded, progress, offering)) {
+        return <SmallEnd title={frame.title} status={frame.status} sentences={[warning, note]} onClose={onClose} />;
+    }
 
     return (
         <ProgressDialog

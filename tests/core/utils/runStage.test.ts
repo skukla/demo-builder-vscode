@@ -4,7 +4,7 @@
  * way and how far.
  */
 
-import { runStage, type StepJob } from '@/core/utils/runStage';
+import { gerundJob, rowsLines, runStage, type StepJob } from '@/core/utils/runStage';
 import type { OperationRow } from '@/types/webviewPayloads';
 
 const step = (over: Partial<OperationRow>): OperationRow => ({ kind: 'install', label: 'Install Frescopa, main', status: 'pending', ...over });
@@ -72,5 +72,38 @@ describe('runStage', () => {
 
     it('says Starting before any step is under way', () => {
         expect(runStage([step({ line: 'Waiting' })], JOBS)).toEqual({ label: 'Starting' });
+    });
+});
+
+// Owner walk, 2026-11-16: a datapack save read "Reading from Commerce / Reading your selection", then
+// "Starting", then "Saving to My Datapacks" with nothing under it. The shared progress window's lines
+// come from the steps' own verbs.
+describe('rowsLines, the shared progress window', () => {
+    const exporting = (types: OperationRow[], line = '0 of 1 data type'): OperationRow => ({ kind: 'export', label: 'Export from Commerce', status: 'checking', line, types });
+    const save = (over: Partial<OperationRow> = {}): OperationRow => ({ kind: 'save', label: 'Save Release Save Test', status: 'pending', line: 'Waiting', ...over });
+
+    it('says the export as its job, and the data type under way with its count on line 2', () => {
+        const rows = [exporting([{ kind: 'categories', label: 'Categories', status: 'checking', line: '1 of 1' }]), save()];
+
+        expect(rowsLines(rows, 'Reading from Commerce')).toEqual({ label: 'Exporting from Commerce', detail: 'Categories, 1 of 1' });
+    });
+
+    it('puts a step line that already says its job first, and what it acts on under it', () => {
+        const rows = [{ ...exporting([]), status: 'success' as const, line: 'Exported' }, save({ status: 'checking', line: 'Saving to My Datapacks' })];
+
+        expect(rowsLines(rows, 'Saving the datapack')).toEqual({ label: 'Saving to My Datapacks', detail: 'Release Save Test' });
+    });
+
+    it('takes the run\'s stage for a step whose label has no verb it knows, and when no step is under way', () => {
+        const unknown: OperationRow = { kind: 'products', label: 'Products', status: 'checking', line: '40 of 120' };
+
+        expect(rowsLines([unknown], 'Clearing demo data')).toEqual({ label: 'Clearing demo data', detail: '40 of 120' });
+        expect(rowsLines([save()], 'Saving the datapack')).toEqual({ label: 'Saving the datapack' });
+    });
+
+    it('says a step\'s job from its verb: Export, Save, Uninstall', () => {
+        expect(gerundJob('Export from Commerce')).toBe('Exporting from Commerce');
+        expect(gerundJob('Uninstall My Luma')).toBe('Uninstalling My Luma');
+        expect(gerundJob('Products')).toBeUndefined();
     });
 });
