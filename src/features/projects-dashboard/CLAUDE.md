@@ -39,7 +39,8 @@ has no setting to hide it on a short list (owner, 2026-11-02).
 Select Projects puts the list in selection mode (`useProjectSelection`); the batch window
 (`useProjectsBatch`, `ProjectsBatchModal`) asks once and then runs the projects, a row each, the
 Updates window's shape: deletes one at a time, resets side by side within an IMS org, up to three
-at once (owner, 2026-11-04). A card's or row's Reset or Delete opens the same window on that one
+at once (owner, 2026-11-04). One project's run shows the progress window's three rows, centred,
+instead of a list of one (`OneRunning`, owner 2026-11-15). A card's or row's Reset or Delete opens the same window on that one
 project (`useListBatch`), its words naming it: "Reset Kukla Luma?", the button "Reset", "Resetting
 Kukla Luma", "Kukla Luma Reset" (`ui/batchWords.ts`; decisions J7-1, step-05 S2). The list sends no
 `resetProject` or `deleteProject` any more, and neither does the project dashboard (step-05 S4,

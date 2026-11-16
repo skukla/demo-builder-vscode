@@ -7,6 +7,9 @@
  * something, its whole text on hover; a question the run is paused on is asked under the running
  * row, or above the list before any row runs.
  *
+ * One project under way with nothing asked is the progress window's three rows instead, centred
+ * (`OneRunning`, owner 2026-11-15); its ending is its row, as the run of several ends.
+ *
  * @module features/projects-dashboard/ui/components/ProjectsBatchRunView
  */
 
@@ -14,6 +17,7 @@ import React from 'react';
 import type { BatchRowStatuses, BatchRowTimings, BatchRunRow } from '../hooks/useProjectsBatch';
 import { ICON_OF, RunQuestion } from './runWindowParts';
 import { RunFoot, type RunFootProps } from '@/core/ui/components/feedback/RunFoot';
+import { StageRows } from '@/core/ui/components/feedback/StageWait';
 import { WorkRow } from '@/core/ui/components/feedback/WorkRow';
 import { spanValue, useRunClock } from '@/core/ui/hooks/useRunClock';
 import type { UpdateRowState } from '@/types/pendingUpdates';
@@ -131,10 +135,43 @@ function withOrgHeadings(rows: BatchRunRow[]): Array<{ heading: string } | { row
     });
 }
 
+/**
+ * One project's run as the progress window shows a single operation (owner, 2026-11-15): the three
+ * rows, centred and large, what it is doing, what on, and how long that usually takes with its
+ * clock. A list of one row read as a run of several with one in it.
+ */
+function OneRunning({ status, timing }: { status: BatchRowStatuses[string] | undefined; timing?: BatchRowTimings[string] }) {
+    const clock = useRunClock(timing?.startedAt);
+    const running = status?.state === 'running';
+    return (
+        <div className="modal-wait modal-wait-progress">
+            <StageRows
+                size="L"
+                clock={clock}
+                lines={{
+                    label: (running && status?.message) || 'Starting',
+                    ...(running && status?.step ? { detail: status.step } : {}),
+                    ...(running && status?.expectation ? { expectation: status.expectation } : {}),
+                }}
+            />
+        </div>
+    );
+}
+
+/** Whether the run is one project still under way with nothing asked: the centred view. */
+function oneUnderWay(rows: BatchRunRow[], statuses: BatchRowStatuses, ended: boolean, question: OperationPrompt | undefined): boolean {
+    if (rows.length !== 1 || ended || question) return false;
+    const state = statuses[rows[0].path]?.state ?? 'waiting';
+    return state === 'waiting' || state === 'running';
+}
+
 /** Every project of the run and where it is. */
 export function ProjectsBatchRunView({ rows, order, statuses, timings, progress, onTyped }: RunViewProps): React.ReactElement {
     const ended = progress?.state === 'failed' || progress?.state === 'succeeded';
     const question = ended ? undefined : progress?.prompt;
+    if (oneUnderWay(rows, statuses, ended, question)) {
+        return <OneRunning status={statuses[rows[0].path]} timing={timings[rows[0].path]} />;
+    }
     const shown = inRunOrder(rows, order);
     // Under the running row only when one is running; with several side by side it is about no
     // one row we can tell, so it is asked once, above the list (owner, 2026-11-04).

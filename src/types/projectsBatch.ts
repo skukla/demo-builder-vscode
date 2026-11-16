@@ -123,6 +123,12 @@ export interface ProjectsBatchRowStatus {
     /** Running: the step it is on. Failed or skipped: why. */
     message?: string;
     /**
+     * Running: what the step is doing now, and how long the step usually takes, as the single
+     * progress window words them: one project's run shows its three rows (owner, 2026-11-15).
+     */
+    step?: string;
+    expectation?: string;
+    /**
      * Done: what a reset finished around (the code not published, pages left undone, the mesh not
      * redeployed, a datapack that did not all come out). Failed: what its datapack step did to the
      * store first. In the reset's own words, each an orange note.

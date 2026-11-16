@@ -290,7 +290,14 @@ describe('runDeleteBatch', () => {
             { path: b.path, state: 'waiting' },
             { path: c.path, state: 'waiting' },
             { path: a.path, state: 'running' },
-            { path: a.path, state: 'running', message: 'Deleting the repository' },
+            // With the stage table's detail and expectation, for one project's three rows.
+            {
+                path: a.path,
+                state: 'running',
+                message: 'Deleting the repository',
+                step: "The storefront's GitHub repository",
+                expectation: 'Usually a few seconds',
+            },
             { path: a.path, state: 'done' },
             { path: b.path, state: 'running' },
             { path: b.path, state: 'failed', message: 'Pages are still live.' },
@@ -527,7 +534,29 @@ describe('a running row', () => {
 
         await runResetBatch(contextWith(one), [{ path: one.path, removeDatapack: false }], { tell: (s) => told.push(s), report: jest.fn(), runReset });
 
-        expect(told).toContainEqual({ path: one.path, state: 'running', message: 'Warming product pages (9 of 11)' });
+        expect(told).toContainEqual(expect.objectContaining({ path: one.path, state: 'running', message: 'Warming product pages (9 of 11)' }));
+    });
+
+    // One project's run shows the progress window's three rows (owner, 2026-11-15): what it is doing,
+    // what on, how long that usually takes. The row carries the second and third, as the single
+    // progress window builds them, so the window has them to show.
+    it('carries what the step is doing now and how long the step usually takes', async () => {
+        const one = storefront('one');
+        const told: ProjectsBatchRowStatus[] = [];
+        const runReset = jest.fn(async (_c, _p, _a, report) => {
+            report('Copying the content', 'Copying the content: 40 of 112 files');
+            return { success: true };
+        });
+
+        await runResetBatch(contextWith(one), [{ path: one.path, removeDatapack: false }], { tell: (s) => told.push(s), report: jest.fn(), runReset });
+
+        expect(told).toContainEqual({
+            path: one.path,
+            state: 'running',
+            message: 'Copying the content',
+            step: '40 of 112 files',
+            expectation: 'Usually under a minute',
+        });
     });
 });
 

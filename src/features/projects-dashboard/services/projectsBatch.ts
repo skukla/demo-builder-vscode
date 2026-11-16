@@ -25,8 +25,9 @@
 import * as vscode from 'vscode';
 import { hasRemovableData } from './datapackDataRemoval';
 import { runProjectDelete } from './projectDeletionService';
+import { detailFor, expectationFor } from '@/core/utils/operationStages';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
-import { stageLine } from '@/core/utils/stageLine';
+import { stageLine, stepUnder } from '@/core/utils/stageLine';
 import type { ReportStage } from '@/core/vscode/withOperationProgress';
 import { libraryDisplayName } from '@/features/data-installer/handlers/libraryWriter';
 import { ownNames } from '@/features/data-installer/handlers/ownDatapackNames';
@@ -160,8 +161,11 @@ async function runRow(path: string, tell: TellRow, outer: ReportStage, work: (re
     tell({ path, state: 'running' });
     try {
         const outcome = await work((stage, step, position) => {
-            // The stage and how far through it, as the notification says it (owner, 2026-11-04).
-            tell({ path, state: 'running', message: stageLine(stage, position) });
+            // The stage and how far through it, as the notification says it (owner, 2026-11-04);
+            // what it is doing and how long it usually takes, as the progress window says them.
+            const now = stepUnder(stage, step) ?? detailFor(stage);
+            const expectation = expectationFor(stage);
+            tell({ path, state: 'running', message: stageLine(stage, position), ...(now ? { step: now } : {}), ...(expectation ? { expectation } : {}) });
             outer(stage, step, position);
         });
         // Under the row, orange: what a reset finished around, or what a failed one did to the store
