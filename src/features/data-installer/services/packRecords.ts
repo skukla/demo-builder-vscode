@@ -15,6 +15,7 @@
  */
 
 import { ROOT_KEY } from './demoBuilderEngine/packForm';
+import type { TreeListNode } from '@/core/ui/components/ui/TreeList';
 import type { PackItems } from './demoBuilderEngine/runPack';
 import { rowsByKey } from './demoBuilderEngine/storeCopies';
 
@@ -40,6 +41,36 @@ export function productNamesOf(items: PackItems): Record<string, string> {
         }
     }
     return names;
+}
+
+type CategoryRow = { name?: unknown; path?: unknown };
+
+/** The category rows, the pack's root first, each with its place: its parents' names, joined by '/'. */
+function categoryRows(records: unknown): CategoryRow[] {
+    const holder = (records ?? {}) as { root_category?: CategoryRow; categories?: Array<{ category?: CategoryRow }> };
+    const root = holder.root_category ? [{ ...holder.root_category, path: '' }] : [];
+    return [...root, ...(holder.categories ?? []).map((row) => row.category ?? {})];
+}
+
+/**
+ * The pack's categories as a tree, each under its parent, for Review Records (owner yes,
+ * 2026-11-16: Steve expected the tree, and Clear's spot check draws one). A category whose parent
+ * the pack does not hold (the store's own root) is at the top.
+ */
+export function categoryTreeOf(items: PackItems): TreeListNode[] {
+    const nodes = new Map<string, TreeListNode>();
+    const top: TreeListNode[] = [];
+    for (const row of categoryRows(items.categories)) {
+        if (typeof row.name !== 'string' || row.name === '') continue;
+        const parent = typeof row.path === 'string' ? row.path : '';
+        const place = parent ? `${parent}/${row.name}` : row.name;
+        const node: TreeListNode = { name: row.name, id: place };
+        nodes.set(place, node);
+        const above = nodes.get(parent);
+        if (above) (above.children ??= []).push(node);
+        else top.push(node);
+    }
+    return top;
 }
 
 /** Each kind's record names, in the pack's order; kinds with no key or no rows are left out. */

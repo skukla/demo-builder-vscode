@@ -69,6 +69,8 @@ describe('get-datapack-records', () => {
                 },
                 // Each product's name by SKU, for the Name column beside it (walk F147).
                 productNames: { 'BD-CENTRIFUGE': 'Benchtop Centrifuge', 'BD-GLOVES': 'Nitrile Gloves' },
+                // Its categories as a tree; one whose parent the pack does not hold is at the top.
+                trees: { categories: [{ name: 'Centrifuges', id: 'Bodea Catalog/Lab Equipment/Centrifuges' }] },
             },
         });
     });

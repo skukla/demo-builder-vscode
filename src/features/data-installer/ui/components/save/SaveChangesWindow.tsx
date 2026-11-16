@@ -42,6 +42,7 @@ export function SaveChangesWindow({
                     title={title}
                     rows={summary.rows}
                     records={summary.records}
+                    {...summary.recordsShown}
                     reading={summary.recordsReading}
                     onBack={summary.back}
                     onClose={onClose}

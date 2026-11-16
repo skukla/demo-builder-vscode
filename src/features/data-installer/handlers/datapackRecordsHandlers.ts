@@ -12,7 +12,7 @@
 import { readPackItems } from '../services/buildDatapackEngine';
 import type { DataInstallerClient } from '../services/dataInstallerClient';
 import type { PackItems } from '../services/demoBuilderEngine/runPack';
-import { productNamesOf, recordNames } from '../services/packRecords';
+import { categoryTreeOf, productNamesOf, recordNames } from '../services/packRecords';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
 import { libraryReads } from './libraryReads';
 import { readRemovalRecords } from './removalRecords';
@@ -60,7 +60,12 @@ export async function readDatapackRecords(
     if (payload?.removal === true) return readRemovalRecords(context, input.pack, () => read(input.pack, source));
     try {
         const items = await read(input.pack, source);
-        const data: DatapackRecordsResult = { records: recordNames(items), productNames: productNamesOf(items) };
+        const tree = categoryTreeOf(items);
+        const data: DatapackRecordsResult = {
+            records: recordNames(items),
+            productNames: productNamesOf(items),
+            ...(tree.length > 0 ? { trees: { categories: tree } } : {}),
+        };
         return { success: true, data };
     } catch (error) {
         return failure(context, error, 'The records could not be read.');

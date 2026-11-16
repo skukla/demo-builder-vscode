@@ -31,9 +31,19 @@ export interface SaveSummary {
     /** Review Records is open. */
     reviewing: boolean;
     records: Record<string, string[]> | null;
+    /** The tree of a type that nests, and the products' names, for Review Records. */
+    recordsShown: Pick<DatapackRecordsResult, 'trees' | 'productNames'>;
     recordsReading: boolean;
     review: () => void;
     back: () => void;
+}
+
+/** What Review Records draws beside the names: the category tree and the products' names. */
+export function shownOf(value: DatapackRecordsResult | null | undefined): Pick<DatapackRecordsResult, 'trees' | 'productNames'> {
+    return {
+        ...(value?.trees ? { trees: value.trees } : {}),
+        ...(value?.productNames ? { productNames: value.productNames } : {}),
+    };
 }
 
 /** The datapack as the reads name it: its store only when it is the library. */
@@ -80,6 +90,7 @@ export function useSaveSummary(pack: PackBeingSaved): SaveSummary {
         ...(problem ? { problem } : {}),
         reviewing,
         records: records.value?.records ?? null,
+        recordsShown: shownOf(records.value),
         recordsReading: !records.settled,
         review: () => {
             setReviewing(true);

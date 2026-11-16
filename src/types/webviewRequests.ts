@@ -13,6 +13,7 @@
  * @module types/webviewRequests
  */
 
+import type { TreeListNode } from '@/core/ui/components/ui/TreeList';
 import type { ComponentSettings, ConfigSetupItem } from './appBuilderComponents';
 import type { AdobeConfig } from './base';
 import type { CustomBlockLibrary } from './blockLibraries';
@@ -1111,6 +1112,8 @@ export interface DatapackRecordsResult {
     kept?: Record<string, string[]>;
     /** Products' names by SKU, for the Name column beside the SKU (walk F147). */
     productNames?: Record<string, string>;
+    /** A type's records as a tree, for a type that nests: the pack's categories. */
+    trees?: Record<string, TreeListNode[]>;
 }
 
 /**

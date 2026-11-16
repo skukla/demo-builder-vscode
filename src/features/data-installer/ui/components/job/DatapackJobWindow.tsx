@@ -45,6 +45,7 @@ import { useDatapackJob, type DatapackJob } from '../../hooks/useDatapackJob';
 import { useRunColumns } from '../../hooks/useRunColumns';
 import { useVersionTypes } from '../../hooks/useVersionTypes';
 import type { ResultContent } from '../importResult';
+import type { ClearRecordsShown } from '../typeSummary/TypeRail';
 import { DryRunWindow } from './DryRunWindow';
 import { type Opened, runningPurpose } from './jobOpened';
 import { JobResultWindow } from './JobResultWindow';
@@ -125,10 +126,13 @@ function saveFirstWindow(job: DatapackJob, opened: Opened, close: () => void): R
 
 /**
  * What Review Records shows beside the names: an uninstall's Kept tab, as Clear's spot check has
- * (walk F151), and the products' names beside their SKUs (walk F147).
+ * (walk F151), the products' names beside their SKUs (walk F147), and the categories as a tree.
  */
-function recordsExtras(job: DatapackJob, opened: Opened): { kept?: Record<string, string[]>; productNames?: Record<string, string> } {
-    const names = job.recordsProductNames ? { productNames: job.recordsProductNames } : {};
+function recordsExtras(job: DatapackJob, opened: Opened): Omit<ClearRecordsShown, 'unread' | 'firstTab'> {
+    const names = {
+        ...(job.recordsProductNames ? { productNames: job.recordsProductNames } : {}),
+        ...(job.recordsTrees ? { trees: job.recordsTrees } : {}),
+    };
     if (opened.kind !== 'uninstall') return names;
     return { kept: job.recordsKept ?? {}, ...names };
 }
