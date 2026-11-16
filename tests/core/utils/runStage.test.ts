@@ -4,10 +4,10 @@
  * are rows).
  */
 
-import type { ImportStep } from '@/features/data-installer/importSteps';
-import { runStage } from '@/features/data-installer/runStage';
+import { runStage } from '@/core/utils/runStage';
+import type { OperationRow } from '@/types/webviewPayloads';
 
-const step = (over: Partial<ImportStep>): ImportStep => ({
+const step = (over: Partial<OperationRow>): OperationRow => ({
     kind: 'install',
     label: 'Install Frescopa, main',
     status: 'pending',
@@ -91,6 +91,16 @@ describe('runStage', () => {
             detail: '40 of 2,046',
         });
         expect(runStage(verifying)).toEqual({ label: 'Checking the products' });
+    });
+
+    // A flat run's rows (a save's data types, Clear Demo Data's parts) often say only the verb or the
+    // count, the row's name saying what.
+    it('gives a line that is only a verb or a count, or no line, the row\'s name', () => {
+        const row = (line?: string): OperationRow => ({ kind: 'products', label: 'Products', status: 'checking', ...(line ? { line } : {}) });
+
+        expect(runStage([row('Exporting')])).toEqual({ label: 'Exporting Products' });
+        expect(runStage([row('40 of 120')])).toEqual({ label: 'Products', detail: '40 of 120' });
+        expect(runStage([row()])).toEqual({ label: 'Products' });
     });
 
     it('says Starting before any step is under way', () => {

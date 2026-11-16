@@ -58,20 +58,22 @@ describe('OperationProgressBody, running', () => {
     });
 });
 
-// Walk F91: a run that sends its parts as rows (a datapack save) shows the import window's rows.
+// Walk F91 asked for more than one line over a save's minutes of reading; since 2026-11-16 (owner:
+// one project's run is the centred view) the part under way and its count are those lines, and the
+// rows come back only for how the run ended.
 describe('OperationProgressBody, a run with rows', () => {
     const ROWS: OperationRow[] = [
         { kind: 'categories', label: 'Categories', status: 'success', line: 'Done' },
         { kind: 'products', label: 'Products', status: 'checking', line: 'Reading' },
     ];
 
-    it('shows the rows in place of the one spinner while it runs', () => {
-        renderRunning({ progress: { id: 'x', state: 'running', stage: 'Reading from Commerce', step: '0 of 1 data type', rows: ROWS } });
+    it('says the part under way, centred, in place of a list of rows while it runs', () => {
+        const { container } = renderRunning({ progress: { id: 'x', state: 'running', stage: 'Reading from Commerce', step: '0 of 1 data type', rows: ROWS } });
 
-        expect(screen.getByTestId('operation-rows')).toBeInTheDocument();
-        expect(screen.getByText('Products')).toBeInTheDocument();
-        expect(screen.getByText('Reading')).toBeInTheDocument();
-        expect(screen.queryByText('0 of 1 data type')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('operation-rows')).not.toBeInTheDocument();
+        expect(container.querySelector('.modal-wait-progress')).toHaveTextContent('Reading');
+        // The row done is not listed while it runs.
+        expect(screen.queryByText('Categories')).not.toBeInTheDocument();
     });
 
     // Review, 2026-11-10: a clean run ends small, its sentence alone, no rows and no "Took …".
@@ -140,14 +142,12 @@ describe('OperationProgressBody, a run with rows', () => {
 // Phase 7b (decisions.md): the save is two steps, the data types nested under Export from Commerce,
 // drawn as the import's window draws its steps (`StepRows`).
 describe('OperationProgressBody, a run whose rows are steps with rows under them', () => {
-    it('draws each step with its nested rows under it while it runs', () => {
+    it('says the step under way, centred, while it runs: no list of steps or their data types', () => {
         const { container } = renderRunning({ progress: { id: 'x', state: 'running', rows: SAVE_WRITING } });
 
-        expect(screen.getByText('Export from Commerce')).toBeInTheDocument();
-        expect(screen.getByText('Save My Luma')).toBeInTheDocument();
-        expect(screen.getByText('Saving to My Datapacks')).toBeInTheDocument();
-        expect(container.querySelector('.step-rows-nested')?.textContent).toContain('Categories');
-        expect(container.querySelector('[data-testid="operation-rows"] > .work-row-columns')).toBeNull();
+        expect(container.querySelector('.modal-wait-progress')).toHaveTextContent('Saving to My Datapacks');
+        expect(screen.queryByText('Export from Commerce')).not.toBeInTheDocument();
+        expect(container.querySelector('.step-rows-nested')).toBeNull();
     });
 
     // Decisions Phase 1b (J1-3d growth): the reason was a sentence under the steps, a line nothing

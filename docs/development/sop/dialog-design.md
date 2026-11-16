@@ -53,7 +53,7 @@ form, confirm, progress, result) shows one at a time.
 
 ## Rules
 
-**One project's run is the centred view; rows are for several projects** (owner, 2026-11-16). While a run on one project is under way, the window shows the large spinner with what it is doing now and how far, moving from step to step, never a checklist of its steps or data types (`runStage`, the datapack run window; `OneRunning`, the projects window's one project). A run over several projects shows a row per project. How a run ends is the next rule's. Still drawn as rows on one project, to be moved: a datapack save, Clear Demo Data, a single project's reset, and the Updates run.
+**One project's run is the centred view; rows are for several projects** (owner, 2026-11-16). While a run on one project is under way, the window shows the large spinner with what it is doing now and how far, moving from step to step, never a checklist of its steps or data types (`runStage` in `core/utils`, used by the datapack run window and the progress window, so a datapack save, Clear Demo Data and a project's reset follow it too; `OneRunning`, the projects window's one project). A run over several projects shows a row per project: the projects batch, and the Updates run, whose rows sit under each project's heading. How a run ends is the next rule's.
 
 **A wait shows nothing else, and says what it is waiting for.** While a dialog waits for what it
 will show, only the title, the wait and the way out (Close or Cancel) appear: no fields and no action

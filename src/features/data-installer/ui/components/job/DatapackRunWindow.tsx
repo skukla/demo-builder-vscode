@@ -15,7 +15,6 @@
 
 import React, { useState } from 'react';
 import { type ImportStep, type StepSource, uninstallSteps } from '../../../importSteps';
-import { runStage } from '../../../runStage';
 import type { ImportJobRecord } from '../../../types';
 import { useImportProgress } from '../../hooks/useImportProgress';
 import type { ResultContent } from '../importResult';
@@ -37,6 +36,7 @@ import type { ActionButton, ModalStatus } from '@/core/ui/components/ui/Modal';
 import { StepsWindow } from '@/core/ui/components/ui/StepsDialog';
 import { useRunClock } from '@/core/ui/hooks/useRunClock';
 import { promptAnswerLabels, promptCloseLabel } from '@/core/ui/utils/promptButtons';
+import { runStage } from '@/core/utils/runStage';
 import type { OperationPrompt } from '@/types/webviewPayloads';
 
 /** A question the run is paused on (walk F150), and how to answer it: undefined is dismissed. */

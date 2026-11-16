@@ -23,6 +23,7 @@ import type { ModalStatus } from '@/core/ui/components/ui/Modal';
 import { useRunClock } from '@/core/ui/hooks/useRunClock';
 import { cn } from '@/core/ui/utils/classNames';
 import { endStatus, endsSmall, type RunEnding } from '@/core/ui/utils/runEnding';
+import { runStage } from '@/core/utils/runStage';
 import { stageLine } from '@/core/utils/stageLine';
 import type { OperationChange, OperationPrompt, OperationProgressPayload, OperationRow } from '@/types/webviewPayloads';
 
@@ -66,9 +67,17 @@ export function OperationProgressBody({
         return <EndView message={progress?.error} rows={progress?.rows} tookMs={progress?.tookMs} failed />;
     }
     if (succeeded) return <SuccessEnd message={successMessage} progress={progress} />;
-    // A run that sends its parts as rows shows them in place of the one spinner, the import's
-    // window's rows (walk F91: a save's minutes of reading said one line).
-    if (progress?.rows?.length) return <RunningRows rows={progress.rows} startedAt={progress.startedAt} />;
+    // A run that sends its parts as rows says the one under way, centred, step to step: one
+    // project's run is the wizard's view, never a checklist (owner, 2026-11-16). Its rows come back
+    // only for how it ended (walk F91 asked for more than one line over a save's minutes of reading:
+    // the part under way and its count are that line).
+    const lines = progress?.rows?.length
+        ? runStage(progress.rows)
+        : {
+              label: progress?.stage ? stageLine(progress.stage, progress.position) : 'Starting',
+              detail: progress?.step,
+              expectation: progress?.expectation,
+          };
     // Size L, as every other progress display here: M left-aligns and shrinks
     // the text.
     // The room for all three lines is kept and what is there sits level in it, so the spinner does
@@ -81,11 +90,7 @@ export function OperationProgressBody({
             <StageRows
                 size="L"
                 clock={total}
-                lines={{
-                    label: progress?.stage ? stageLine(progress.stage, progress.position) : 'Starting',
-                    detail: progress?.step,
-                    expectation: progress?.expectation,
-                }}
+                lines={lines}
             />
         </div>
     );
@@ -98,16 +103,6 @@ export function OperationProgressBody({
 function RunRows({ rows }: { rows: readonly OperationRow[] }): React.ReactElement {
     if (rows.some((row) => row.types && row.types.length > 0)) return <StepRows steps={rows} columns={2} />;
     return <WorkRowColumns rows={rows} columns={2} />;
-}
-
-/** A run's rows while it goes, the clock under them. */
-function RunningRows({ rows, startedAt }: { rows: OperationRow[]; startedAt?: number }): React.ReactElement {
-    return (
-        <div className="dialog-stack" data-testid="operation-rows">
-            <RunRows rows={rows} />
-            <RunFoot running={{ startedAt }} />
-        </div>
-    );
 }
 
 /**
