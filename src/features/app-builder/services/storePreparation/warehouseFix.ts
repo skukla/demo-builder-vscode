@@ -23,6 +23,7 @@
 
 import { errorText, type FixApplied, type FixDeps, type FixPreview, type FixUndone, type StepFix } from './fixContract';
 import { andList } from '@/core/utils/andList';
+import { readWebsiteName } from '@/core/utils/commerceNames';
 import { decideOwnedChange } from '@/core/utils/ownedChange';
 import { fingerprintRow } from '@/features/data-installer/services/demoBuilderEngine/fingerprint';
 import type {
@@ -83,8 +84,8 @@ interface Plan {
     toEnable: string[];
 }
 
-/** What the fix would do, against the inventory as it stands. */
-function planFor(inventory: Inventory, deps: FixDeps): Plan {
+/** What the fix would do, against the inventory as it stands; a new stock named after the website's name (owner, 2026-11-15). */
+function planFor(inventory: Inventory, deps: FixDeps, websiteName?: string): Plan {
     const websiteCode = deps.websiteCode;
     if (!websiteCode) throw new Error('The project names no Commerce website, so no stock can sell to it.');
     const wanted = deps.erpNames.map(warehouseFor);
@@ -96,7 +97,7 @@ function planFor(inventory: Inventory, deps: FixDeps): Plan {
         return source?.enabled === false ? [source.source_code] : [];
     });
     const existing = inventory.stocks.find((stock) => stock.stock_id !== DEFAULT_STOCK_ID && sellsTo(stock, websiteCode));
-    const stock = existing ? { existing } : { create: `${websiteCode} Stock` };
+    const stock = existing ? { existing } : { create: `${websiteName ?? websiteCode} Stock` };
     const linked = new Set(
         existing ? inventory.links.filter((link) => link.stock_id === existing.stock_id).map((link) => link.source_code) : [],
     );
@@ -145,7 +146,7 @@ export const warehouseFix: StepFix = {
     async preview(deps): Promise<FixPreview> {
         if (deps.erpNames.length === 0) return { changes: [], manual: 'The integration has no ERP yet, so there is no warehouse to make.' };
         const inventory = await readInventory(deps.commerce.get);
-        const plan = planFor(inventory, deps);
+        const plan = planFor(inventory, deps, await readWebsiteName(deps.commerce.get, deps.websiteCode));
         const summary = summaryOf(plan, inventory);
         return { changes: lines(plan, inventory), ...(summary ? { summary } : {}), manual: MOVE_STOCK_MANUAL };
     },
@@ -153,7 +154,7 @@ export const warehouseFix: StepFix = {
         if (deps.erpNames.length === 0) return { changes: [], rejected: [], manual: 'The integration has no ERP yet, so there is no warehouse to make.' };
         const { get, send } = deps.commerce;
         const inventory = await readInventory(get);
-        const plan = planFor(inventory, deps);
+        const plan = planFor(inventory, deps, await readWebsiteName(get, deps.websiteCode));
         const nameOf = sourceNamer(inventory.sources, plan.newSources);
         const changes: string[] = [];
         const rejected: string[] = [];

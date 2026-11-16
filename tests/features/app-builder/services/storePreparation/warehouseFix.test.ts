@@ -30,6 +30,32 @@ describe('warehouseFor', () => {
     });
 });
 
+// A new stock is named after the website as the Admin shows it, not its code (owner, 2026-11-15);
+// the code only when the store's website list cannot be read (as every other case here).
+describe('the stock a website sells from, by name', () => {
+    it("names a new stock after the website's name", async () => {
+        const commerce = commerceFake(
+            {
+                'inventory/sources?': SOURCES_DEFAULT_ONLY,
+                'inventory/stocks?': STOCKS_DEFAULT_ONLY,
+                'inventory/stock-source-links?': LINKS_DEFAULT_ONLY,
+                'store/websites': [{ id: 2, code: 'acme', name: 'Acme Demo' }],
+            },
+            (_m, path) => (path === 'inventory/stocks' ? 7 : null),
+        );
+
+        const preview = await warehouseFix.preview({ commerce, ...DEPS });
+        await warehouseFix.apply({ commerce, ...DEPS });
+
+        expect(preview.changes).toContain('Create Acme Demo Stock, a stock the website sells from');
+        expect(commerce.writes()).toContainEqual([
+            'POST',
+            'inventory/stocks',
+            { stock: { name: 'Acme Demo Stock', extension_attributes: { sales_channels: [{ type: 'website', code: 'acme' }] } } },
+        ]);
+    });
+});
+
 describe('preview', () => {
     it('plans a source per ERP, a stock for the website and the links, and says stock moves stay by hand', async () => {
         const commerce = store();

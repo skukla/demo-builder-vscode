@@ -8,6 +8,7 @@
  */
 
 import type { CommerceStoreStructure } from '@/types/commerceStore';
+import type { CommerceGet } from '@/types/commerceWire';
 
 type Named = { code: string; name?: string };
 
@@ -39,4 +40,18 @@ export function storeViewNameIn(
     code: string,
 ): string {
     return nameIn(structure?.storeViews, code);
+}
+
+/**
+ * A website's name, read from the store: for a sentence or a thing named after it where no
+ * structure is at hand. The code when the list cannot be read, or has no such website.
+ */
+export async function readWebsiteName(get: CommerceGet, code: string | undefined): Promise<string | undefined> {
+    if (!code) return undefined;
+    try {
+        const websites = (await get('store/websites')) as CommerceStoreStructure['websites'] | null;
+        return websiteNameIn({ websites: websites ?? [] }, code);
+    } catch {
+        return code;
+    }
 }

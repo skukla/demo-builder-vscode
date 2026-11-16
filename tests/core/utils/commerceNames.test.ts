@@ -2,7 +2,7 @@
  * A website, store or store view as the SC knows it: its name, not its code (owner, 2026-11-15).
  */
 
-import { storeNameIn, storeViewNameIn, websiteNameIn } from '@/core/utils/commerceNames';
+import { readWebsiteName, storeNameIn, storeViewNameIn, websiteNameIn } from '@/core/utils/commerceNames';
 
 const STRUCTURE = {
     websites: [
@@ -42,5 +42,19 @@ describe('commerceNames', () => {
         expect(websiteNameIn(STRUCTURE, 'gone_website')).toBe('gone_website');
         expect(storeViewNameIn(STRUCTURE, 'blank_name')).toBe('blank_name');
         expect(websiteNameIn(undefined, 'base')).toBe('base');
+    });
+});
+
+describe('readWebsiteName', () => {
+    it("reads the website's name from the store, and the code when the store cannot answer", async () => {
+        const answering = jest.fn(async () => STRUCTURE.websites);
+        const failing = jest.fn(async () => {
+            throw new Error('HTTP 503');
+        });
+
+        await expect(readWebsiteName(answering, 'justrite_test_website')).resolves.toBe('Justrite Test');
+        expect(answering).toHaveBeenCalledWith('store/websites');
+        await expect(readWebsiteName(failing, 'justrite_test_website')).resolves.toBe('justrite_test_website');
+        await expect(readWebsiteName(answering, undefined)).resolves.toBeUndefined();
     });
 });
