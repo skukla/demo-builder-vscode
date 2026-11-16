@@ -24,18 +24,20 @@ describe('OperationProgressBody, running', () => {
         jest.setSystemTime(STARTED);
     });
 
-    it('holds no blank row under "Starting", with no word from the run yet', () => {
+    // Owner, 2026-11-16: "It shouldn't shift." Rows 2 and 3 hold their room before their words come,
+    // over the 2026-11-01 rule that kept no blank row under "Starting".
+    it('holds rows 2 and 3 under "Starting", before any word from the run, so nothing shifts', () => {
         const { container } = renderRunning();
 
         expect(screen.getByText('Starting')).toBeInTheDocument();
-        expect(container.querySelector('.text-xs')).toBeNull();
+        expect(container.querySelectorAll('.loading-display-row')).toHaveLength(3);
     });
 
-    it('holds no blank row under a step that has no expectation or clock yet', () => {
+    it('holds the time row under a step before its first second', () => {
         const { container } = renderRunning({ progress: { id: 'x', state: 'running', stage: 'Clearing products', step: '240 of 1,284' } });
 
         expect(screen.getByText('240 of 1,284')).toBeInTheDocument();
-        expect(container.querySelector('.text-xs')).toBeNull();
+        expect(container.querySelector('.text-xs')).not.toBeNull();
     });
 
     it('CONTROL: draws the third row once it has words', () => {

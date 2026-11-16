@@ -92,7 +92,10 @@ export function OperationProgressBody({
     return (
         <div className={cn('modal-wait', 'modal-wait-progress', subject && 'modal-wait-progress-subject')}>
             {subject && <div className="modal-progress-subject">{subject}</div>}
-            <StageRows size="L" clock={total} lines={lines} />
+            {/* Rows 2 and 3 hold their room from the first frame, so nothing shifts when a count or the
+                first second arrives (owner, 2026-11-16: "It shouldn't shift", over the 2026-11-01 rule
+                of no blank rows under "Starting"). */}
+            <StageRows size="L" hold clock={total} lines={lines} />
         </div>
     );
 }
