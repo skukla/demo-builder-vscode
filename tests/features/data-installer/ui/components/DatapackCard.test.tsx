@@ -438,6 +438,20 @@ describe('DatapackCard — the is-selected border', () => {
     it('is present when the pack is installed, with no choosing going on', () => {
         expect(renderWith({ isInstalled: true })).toHaveClass('is-selected');
     });
+
+    // Owner, 2026-11-16: the wizard's chosen datapack had the border and no check, where every
+    // other wizard card (package, backend, block library, integration) shows the blue check.
+    it('shows the blue check on the chosen card', () => {
+        renderWith({ selected: true });
+
+        expect(screen.getByTestId('datapack-card-selected-check')).toBeInTheDocument();
+    });
+
+    it('CONTROL: shows no check on a card not chosen', () => {
+        renderWith({ selected: false });
+
+        expect(screen.queryByTestId('datapack-card-selected-check')).not.toBeInTheDocument();
+    });
 });
 
 describe('DatapackCard — as a choice', () => {

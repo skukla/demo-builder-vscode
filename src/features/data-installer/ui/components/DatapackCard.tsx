@@ -161,6 +161,9 @@ export function DatapackCard({
                         The tags live on the version line (owner, 2026-11-05): beside a
                         name that wrapped, they moved with it. */}
                     {isInstalled ? <SelectionCheck testId="datapack-card-project-check" /> : null}
+                    {/* The wizard's chosen card wears it too, as every other wizard choice card does
+                        (owner, 2026-11-16). One check when a card is both. */}
+                    {selected && !isInstalled ? <SelectionCheck testId="datapack-card-selected-check" /> : null}
                 </div>
                 {installFailed ? <InstallFailedLine /> : null}
                 <div className="datapack-card-version-row">
