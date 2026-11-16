@@ -389,11 +389,12 @@ and the library's Delete refuses while a project uses it (step 9 below).
 9. Delete with a pack: on Scratch 1028's Datapacks, open Release Save Test, then **More**,
    **Delete**, **Delete**. Expect "It could not be deleted: Scratch 1028 uses this datapack, so it
    can't be deleted. Uninstall it there first."
-10. On Scratch 1028 B's dashboard, click **Delete**. Expect the projects list to open on "Delete
-    Scratch 1028 B?" with "Project files are removed from this machine. Datapacks stay installed in
-    Commerce unless you uninstall them.", and the columns **Delete Repository**, **Delete DA.live
+10. On Scratch 1028 B's dashboard, click **Delete**. Expect "Delete Scratch 1028 B?" on the
+    dashboard itself (F139), with "Project files are removed from this machine. Datapacks stay
+    installed in Commerce unless you uninstall them.", and **Delete Repository**, **Delete DA.live
     Site** and **Uninstall Datapack**. **Uninstall Datapack** is never ticked to start. Tick all
-    three, click **Delete**. Expect "Deleting Scratch 1028 B", then "Scratch 1028 B Deleted".
+    three, click **Delete**. Expect "Deleting Scratch 1028 B", then "Scratch 1028 B Deleted", and
+    only then the projects list.
 11. Back to zero: on Scratch 1028, **More**, **Uninstall**, **Uninstall** on Release Save Test, then
     **More**, **Delete**, **Delete**. Expect "Deleted.". Delete any pack named "My …" that step 8
     made. In the Admin, delete any ZZ category still there. If Scratch 1028 held a pack before 1.5's
