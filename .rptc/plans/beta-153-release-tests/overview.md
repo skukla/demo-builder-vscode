@@ -167,6 +167,9 @@ Mark each test's **Result** line: `passed 2026-11-DD`, or `failed 2026-11-DD: wh
 | F137 | 2.7 (2026-11-16) | Owner: the Cleanup Behavior setting's description told the SC to tick "Delete Datapack"; the box is "Uninstall Datapack", and the 2.6 and 2.7 test steps named the old box too | The setting's description names **Uninstall Datapack** and says the datapack is never touched by the setting (`40dc2ec7c`); 2.6 and 2.7 name the current box. No source, test or doc names "Delete Datapack" any more (only dated research and history) |
 | F138 | 2.7 (2026-11-16) | Owner: deleting one project waited on "Reading projects" | One project waits on "Reading the project" with its name under it; several keep "Reading projects" (`WAIT_STAGES.readingProject`, `ProjectsBatchModal` `waitOf`; `ProjectsBatchModal-read.test.tsx`) |
 | F139 | 2.7 (2026-11-16) | Owner: the dashboard's Delete moved to the projects list before the dialog, so Cancel left the SC on the list | The dashboard's Delete opens the batch window on the dashboard, as Reset does; closing it moves to the projects list only when the project's row ended deleted, and Cancel or a failed delete leaves the SC on the dashboard (`useDashboardResetDelete`, `useProjectsBatch`'s close reports which rows finished). The hand-over it replaced (`deleteFromProjectsList`, `takeDeleteRequest`, `openDeleteWindow`) is removed. Both paths tested (`useDashboardResetDelete.test.tsx`) |
+| F140 | 1.8 (2026-11-16) | No real pack carries a colour swatch, and the engine would not write one if it did. Luma's `color` (the usual swatch attribute) is exported as a plain `select` with `is_user_defined: true` and its colours as option values (Black `#000000`, Blue `#1857f7`, …, 12 options): the swatch type lives in Commerce's `additional_data`, which the pack does not carry. The engine never sends Commerce's swatch fields (`swatch_input_type`, `additional_data`, swatch values): on an attribute that already exists, as `color` always does, it only adds missing options and drops their `value` (`attributesKind.ts:93`, `:162`), so the colours never reach the store. Saving a store back to a pack also flattens every option to `{label, value: label}` (`packForm.ts:160-169`), losing a swatch's colour. The engine's swatch tests assert the calls sent with a fake context; none reads a stored swatch back | Not built: owner decision first. `color` is shared by every website and brand on the instance, so turning it into a visual swatch on install changes it for every demo there, and uninstall would have to put its input type back. Options: (a) the pack carries the swatch type and colours, and the engine sets them only on an attribute it created, giving a pack its own swatch attribute rather than editing `color`; (b) the engine also converts an existing `color`, recording its prior type so removal restores it; (c) swatches stay out of scope and 1.8 moves out. Recommended: (a), with Luma's `color` renamed in the pack. Either way, capture must keep a swatch's colour, and a live read-back test must prove it |
+| F141 | 1.8 (2026-11-16) | The test store's `color` is not Commerce's own. The built-in `color` sits at attribute_id 93 on a stock Commerce; here id 93 is gone (every neighbouring built-in id from 91 to 154 is present) and `color` is id 316, created after CitiSignal's `cs_color` (185). It is user-defined, has no store labels, and holds one option labelled " " (value 271): exactly Venia's `color` row (`venia` eds-compatible: `frontend_labels: []`, one option `{label: " ", value: " "}`). Demo Builder's engine never deletes or re-creates an existing attribute (it adds missing options), while the Data Installer service deletes and re-creates them, so the likeliest source is a Data Installer service install of Venia. Not confirmed: the service's own request log (`get_datapack_activity`) needs a working sign-in (F142) | Two parts, both open. Venia's pack data: its `color` row carries a blank option and should carry none, or its real colours; fix it in the pack, never by hand in the store. The store: restoring a built-in attribute is a store write, so it waits for the owner's go; the engine's tests should also pin that it never deletes or re-creates a system attribute |
+| F142 | 1.8 (2026-11-16) | From 07:24 every datapack library read failed with "missing x-gw-ims-org-id header", and Steve's own Datapacks screen hit it opening Frescopa. Cause: Adobe's Console API rejects the stored token ("Oauth token is not valid", 401013) while `get_auth_status` still reports Adobe signed in (it checks only the expiry). The org lookup then fails, `serviceOrgCode` (`dataInstallerHandlers.ts:220`) goes on with no org, and the library refuses with a header message that names neither the sign-in nor what to do | Open. Steve signs in again to clear it now. The fix: when the org list cannot be read because the sign-in is refused, say "Your Adobe sign-in is no longer valid. Sign in again." instead of sending a request without an org; and the sign-in check should treat a token Adobe refuses as signed out |
 
 ## Questions raised
 
@@ -185,7 +188,7 @@ Mark each test's **Result** line: `passed 2026-11-DD`, or `failed 2026-11-DD: wh
 | 1.5 | The Datapacks screen by hand (live test 4) | open |
 | 1.6 | A datapack travels with a project (live test 5) | open |
 | 1.7 | Save Changes, Newer Version, reset and delete with a pack | open |
-| 1.8 | Colour swatches | open |
+| 1.8 | Colour swatches | failed 2026-11-16 (F140, F141); rewritten to Luma's `color` for a re-walk after their fix |
 | 1.9 | Demo Builder installs every pack, and checks it (2026-11-06) | passed 2026-11-07 |
 | 1.10 | The Datapack Library, a project's Datapacks, and the two staying in step (2026-11-08) | open |
 | 1.11 | The newer-version dot and the version list (2026-11-08) | open |
@@ -373,12 +376,29 @@ manages versions), so the steps need rewriting to the beta.153 screen before the
 
 ### 1.8 Colour swatches
 
-1. Install a pack whose Product Attributes include a colour swatch attribute.
-2. In the Admin: **Stores > Attributes > Product**, open that attribute.
-3. Expect the colour swatches with their colours (for example Black #1d1d1d, Blue #286785).
-4. Back to zero: remove the pack's data.
+Proves a pack's colour swatches reach the store with their colours. Rewritten 2026-11-16 after the
+first walk failed (F140, F141): the real pack is **Luma** (`luma`, eds-compatible), whose `color`
+attribute carries 12 colours as option values (Black `#000000`, Blue `#1857f7`, Brown `#945454`, …).
+The old example colours (Black #1d1d1d, Blue #286785) were the made-up `zz_g2_color` of the engine's
+live plan (datapack-engine step 14), not a real pack's. Walk it again only once F140 and F141 are
+built: today no pack declares a swatch, and the engine does not write one.
 
-**Result:** open
+1. Before you start, on the test store: in the Admin, **Stores > Attributes > Product**, open
+   `color`. Write down its **Catalog Input Type for Store Owner** and its options (F141: on the test
+   store it is a re-created `color` with one blank option).
+2. In Scratch 1028's Datapacks, install **Luma** onto the test store view.
+3. Open `color` again. Expect **Catalog Input Type for Store Owner** "Visual Swatch", and the
+   swatches Black `#000000`, Blue `#1857f7` and Brown `#945454` with their colours, each labelled.
+4. On the storefront, open a Luma configurable product. Expect colour swatches, not a list.
+5. Back to zero: uninstall Luma. Expect `color` back as step 1 found it: Luma's 12 options gone,
+   and its input type as it was (F140 decides whether an install may change a shared attribute's
+   type at all).
+
+**Result:** failed 2026-11-16 (owner). On the test store no product attribute uses visual swatches.
+`color` (attribute_id 316, select) has a single option whose label is blank (value 271), so the
+Admin shows one empty row. `cs_color` (185) is a plain select with named colours. Investigated the
+same day: F140 (no pack carries a swatch, and the engine would not write one), F141 (the store's
+`color` is not Commerce's own), F142 (the sign-in failure that blocked the library reads).
 
 The Data Installer refused the owner's sign-in (`ERR1201`, missing product profile) from 2026-11-03.
 It answers again as of 2026-11-05: its packs list on the Datapacks screen. The store's own packs do
