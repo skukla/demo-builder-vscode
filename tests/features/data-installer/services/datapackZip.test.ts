@@ -16,8 +16,8 @@ import { BODEA_CUSTOMER_ROWS, TEST_PASSWORD } from '../../../helpers/commerceB2b
 import { GRID, fileLayer, settingRow } from '../../../helpers/settingsLayerFixtures';
 
 const PACK: DatapackFile = {
-    id: { name: 'justrite', version: 'v1' },
-    displayName: 'Justrite B2B',
+    id: { name: 'tailspin', version: 'v1' },
+    displayName: 'Tailspin B2B',
     description: 'Signs, cabinets, two companies',
     source: 'installer',
     exportedAt: '2026-10-01T12:00:00.000Z',
@@ -55,9 +55,9 @@ describe('buildDatapackZip', () => {
         expect(JSON.parse(files['datapack.json'])).toEqual({
             format: 'demo-builder-datapack',
             formatVersion: 1,
-            datapack_name: 'justrite',
+            datapack_name: 'tailspin',
             version: 'v1',
-            display_name: 'Justrite B2B',
+            display_name: 'Tailspin B2B',
             description: 'Signs, cabinets, two companies',
             data_types: ['categories', 'customer_groups'],
             source: 'installer',
@@ -88,7 +88,7 @@ describe('readDatapackZip', () => {
     it('reads a file whose contents sit under one root folder, as macOS Compress makes', () => {
         const built = entries(buildDatapackZip(PACK));
         const nested = zipOf(
-            Object.fromEntries(Object.entries(built).map(([k, v]) => [`justrite-v1/${k}`, v]))
+            Object.fromEntries(Object.entries(built).map(([k, v]) => [`tailspin-v1/${k}`, v]))
         );
 
         expect(readDatapackZip(nested)).toEqual(PACK);
@@ -189,8 +189,8 @@ describe('readDatapackZip', () => {
 
 describe('datapackZipName', () => {
     it('names the file after the pack, with anything unsafe for a filename replaced', () => {
-        expect(datapackZipName({ name: 'justrite', version: 'v1' })).toBe(
-            'justrite-v1.datapack.zip'
+        expect(datapackZipName({ name: 'tailspin', version: 'v1' })).toBe(
+            'tailspin-v1.datapack.zip'
         );
         expect(datapackZipName({ name: 'a/b c', version: '1:2' })).toBe('a_b_c-1_2.datapack.zip');
     });
@@ -211,7 +211,7 @@ describe('a pack file with its settings layer (datapack-engine step 09)', () => 
 
         expect(manifest.formatVersion).toBe(1);
         expect(manifest.data_types).toEqual(['categories', 'customer_groups']);
-        expect(manifest.settings_layer).toEqual({ datapack_name: 'justrite-settings', version: '3', display_name: 'Justrite settings' });
+        expect(manifest.settings_layer).toEqual({ datapack_name: 'tailspin-settings', version: '3', display_name: 'Tailspin settings' });
     });
 
     it('reads back the same pack and the same layer', () => {
@@ -223,7 +223,7 @@ describe('a pack file with its settings layer (datapack-engine step 09)', () => 
 
     it('reads a section inside one root folder, as macOS Compress leaves it', () => {
         const files = entries(buildDatapackZip(LAYERED));
-        const nested = zipOf(Object.fromEntries(Object.entries(files).map(([name, text]) => [`justrite/${name}`, text])));
+        const nested = zipOf(Object.fromEntries(Object.entries(files).map(([name, text]) => [`tailspin/${name}`, text])));
 
         expect(readDatapackZip(nested).settingsLayer).toEqual(fileLayer());
     });
@@ -237,7 +237,7 @@ describe('a pack file with its settings layer (datapack-engine step 09)', () => 
 
     it('reads an older file, written before the section existed, as it always did', () => {
         const older = zipOf({
-            'datapack.json': JSON.stringify({ format: 'demo-builder-datapack', formatVersion: 1, datapack_name: 'justrite', version: 'v1', data_types: ['categories'] }),
+            'datapack.json': JSON.stringify({ format: 'demo-builder-datapack', formatVersion: 1, datapack_name: 'tailspin', version: 'v1', data_types: ['categories'] }),
             'data/categories.json': '[{"category":{"name":"Signs"}}]',
         });
 
@@ -248,19 +248,19 @@ describe('a pack file with its settings layer (datapack-engine step 09)', () => 
     });
 
     const manifestWith = (settings_layer: unknown) =>
-        JSON.stringify({ format: 'demo-builder-datapack', formatVersion: 1, datapack_name: 'justrite', version: 'v1', data_types: [], settings_layer });
+        JSON.stringify({ format: 'demo-builder-datapack', formatVersion: 1, datapack_name: 'tailspin', version: 'v1', data_types: [], settings_layer });
 
     it("refuses a section naming another pack's layer", () => {
         const file = zipOf({ 'datapack.json': manifestWith({ datapack_name: 'evil', version: '1' }), 'settings/store_config.json': '[]' });
 
         expect(() => readDatapackZip(file)).toThrow(DatapackZipError);
-        expect(() => readDatapackZip(file)).toThrow('justrite-settings');
+        expect(() => readDatapackZip(file)).toThrow('tailspin-settings');
     });
 
     it('refuses a section that names no version, or whose rows are missing or not JSON', () => {
-        const named = { datapack_name: 'justrite-settings', version: '1' };
+        const named = { datapack_name: 'tailspin-settings', version: '1' };
 
-        expect(() => readDatapackZip(zipOf({ 'datapack.json': manifestWith({ datapack_name: 'justrite-settings' }), 'settings/store_config.json': '[]' }))).toThrow(DatapackZipError);
+        expect(() => readDatapackZip(zipOf({ 'datapack.json': manifestWith({ datapack_name: 'tailspin-settings' }), 'settings/store_config.json': '[]' }))).toThrow(DatapackZipError);
         expect(() => readDatapackZip(zipOf({ 'datapack.json': manifestWith(named) }))).toThrow('store configuration');
         expect(() => readDatapackZip(zipOf({ 'datapack.json': manifestWith(named), 'settings/store_config.json': '{' }))).toThrow('store configuration');
     });

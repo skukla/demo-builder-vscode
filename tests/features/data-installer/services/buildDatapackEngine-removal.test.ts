@@ -65,9 +65,9 @@ describe('checking a removal', () => {
     it('names the pack as the SC knows it when its name is remembered', async () => {
         await h.importTypes(ALL);
 
-        const verdict = await h.engine({ names: { racks: 'Justrite Racks' } }).validateRemoval(request(ALL, { websiteCode: 'other', storeCode: 'default' }));
+        const verdict = await h.engine({ names: { racks: 'Tailspin Racks' } }).validateRemoval(request(ALL, { websiteCode: 'other', storeCode: 'default' }));
 
-        expect(verdict).toEqual({ valid: false, reason: 'Justrite Racks is installed on the website Main Website. Choose that one to uninstall it.' });
+        expect(verdict).toEqual({ valid: false, reason: 'Tailspin Racks is installed on the website Main Website. Choose that one to uninstall it.' });
     });
 });
 

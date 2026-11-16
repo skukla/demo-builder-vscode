@@ -27,12 +27,12 @@ const project = createMockProject({
 });
 
 const moving: ProjectCreationConfig = {
-    projectName: 'justrite',
+    projectName: 'tailspin',
     adobe: {
         organization: 'org-1',
         projectId: 'proj-2',
-        projectName: 'KuklaJustrite',
-        projectTitle: 'Kukla Justrite',
+        projectName: 'KuklaTailspin',
+        projectTitle: 'Kukla Tailspin',
         workspace: 'ws-2',
         workspaceName: 'Stage',
         workspaceTitle: 'Stage',
@@ -54,7 +54,7 @@ describe('planDestinationChange — asked before anything runs', () => {
 
         const plan = await planDestinationChange(project, moving, ['adobeProject', 'adobeWorkspace'], ['erp'], ask);
 
-        const next = { id: 'proj-2', name: 'KuklaJustrite', title: 'Kukla Justrite' };
+        const next = { id: 'proj-2', name: 'KuklaTailspin', title: 'Kukla Tailspin' };
         expect(ask).toHaveBeenCalledWith(
             expect.objectContaining({ appBuilderComponents: { kit: project.appBuilderComponents!.kit } }),
             next,
@@ -63,7 +63,7 @@ describe('planDestinationChange — asked before anything runs', () => {
             moves: true,
             project: next,
             workspace: { id: 'ws-2', name: 'Stage', title: 'Stage' },
-            target: 'Kukla Justrite, workspace Stage',
+            target: 'Kukla Tailspin, workspace Stage',
         });
     });
 
@@ -85,9 +85,9 @@ describe('planDestinationChange — asked before anything runs', () => {
 describe('applyDestinationChange', () => {
     const plan = {
         moves: true as const,
-        project: { id: 'proj-2', name: 'KuklaJustrite', title: 'Kukla Justrite' },
+        project: { id: 'proj-2', name: 'KuklaTailspin', title: 'Kukla Tailspin' },
         workspace: { id: 'ws-2', name: 'Stage', title: 'Stage' },
-        target: 'Kukla Justrite, workspace Stage',
+        target: 'Kukla Tailspin, workspace Stage',
     };
 
     it("runs the screen's own move, its question already answered", async () => {

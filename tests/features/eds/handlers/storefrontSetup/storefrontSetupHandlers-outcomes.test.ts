@@ -267,8 +267,8 @@ describe('handleStartStorefrontSetup — package settings are restored before an
         const demo = {
             kind: 'demo',
             version: 1,
-            name: 'Isle5 by Jen',
-            source: { owner: 'jen', repo: 'isle5-demo' },
+            name: 'Isle5 by Robin',
+            source: { owner: 'robin', repo: 'isle5-demo' },
             storefrontKind: 'eds',
         } as const;
         const context = createContext();
@@ -421,8 +421,8 @@ describe('handleStartStorefrontSetup — the two outcomes', () => {
         const demo = {
             kind: 'demo',
             version: 1,
-            name: 'Isle5 by Jen',
-            source: { owner: 'jen', repo: 'isle5-demo' },
+            name: 'Isle5 by Robin',
+            source: { owner: 'robin', repo: 'isle5-demo' },
             storefrontKind: 'eds',
         } as const;
         await handleStartStorefrontSetup(createContext(), payload({ demo }));

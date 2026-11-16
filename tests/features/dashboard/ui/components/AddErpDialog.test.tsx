@@ -29,13 +29,13 @@ const TARGET = { id: 'erp-integration', name: 'Acme ERP Integration' };
 const STORE: ErpOwnershipOptions = {
     websites: [
         { code: 'base', name: 'Main Website' },
-        { code: 'justrite', name: 'Justrite' },
+        { code: 'tailspin', name: 'Tailspin' },
         { code: 'evo', name: 'Evo' },
     ],
     products: [
         { sku: 'A', websiteCodes: ['base'], attributes: {} },
-        { sku: 'B', websiteCodes: ['justrite'], attributes: { erp_owner: 'brand-b' } },
-        { sku: 'C', websiteCodes: ['justrite', 'evo'], attributes: {} },
+        { sku: 'B', websiteCodes: ['tailspin'], attributes: { erp_owner: 'brand-b' } },
+        { sku: 'C', websiteCodes: ['tailspin', 'evo'], attributes: {} },
     ],
     erps: [{ erp: 'acme', name: 'Acme ERP', owns: { mode: 'all' } }],
     takenListIds: ['acme'],
@@ -182,16 +182,16 @@ describe('AddErpDialog — After adding', () => {
 
         fireEvent.click(websitesRadio());
         expect(addDisabled()).toBe(true);
-        fireEvent.click(screen.getByRole('checkbox', { name: /^Justrite/ }));
+        fireEvent.click(screen.getByRole('checkbox', { name: /^Tailspin/ }));
 
-        // C is sold on justrite AND evo, so the narrowed catch-all and the new ERP both claim it.
+        // C is sold on tailspin AND evo, so the narrowed catch-all and the new ERP both claim it.
         expect(rows()).toStrictEqual([
             'Acme ERP | 2 products | Products sold on Main Website, Evo (changes when this ERP is added)',
-            'Brand B ERP | 2 products | Products sold on Justrite',
+            'Brand B ERP | 2 products | Products sold on Tailspin',
             'Two ERPs | 1 product | Their orders are refused until a rule changes',
         ]);
         fireEvent.click(addButton());
-        expect(onAdd).toHaveBeenCalledWith('Brand B ERP', { mode: 'websites', websites: ['justrite'] });
+        expect(onAdd).toHaveBeenCalledWith('Brand B ERP', { mode: 'websites', websites: ['tailspin'] });
     });
 
     it('says what nobody owns and what two ERPs both claim', async () => {

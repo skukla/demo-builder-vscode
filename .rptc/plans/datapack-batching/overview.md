@@ -9,7 +9,7 @@ Owner, 2026-11-06: "make sure that we're batching everything we can possibly bat
 everything… keep in mind that our data pack shape needs to be aligned with the data installer
 service so that data packs are usable anywhere."
 
-## What Commerce offers (verified on the Justrite ACCS sandbox, 2026-11-06)
+## What Commerce offers (verified on the Tailspin ACCS sandbox, 2026-11-06)
 
 | Route | Takes | Proven |
 |---|---|---|

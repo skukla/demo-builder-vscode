@@ -46,7 +46,7 @@ function deps(defaults: Array<[string, string | null]>, checks: Partial<Record<s
     return {
         commerce,
         websiteCode: 'acme',
-        erpNames: ['Justrite ERP'],
+        erpNames: ['Tailspin ERP'],
         runCheck: jest.fn(async (check) => ({ done: checks[check] ?? false, note: `${check}: ${checks[check] ? 'done' : 'not yet'}` })),
     };
 }

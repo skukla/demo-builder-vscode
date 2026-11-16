@@ -275,21 +275,21 @@ describe('commerceSummaryGroup - Edit', () => {
 
 describe('storefrontSummaryGroup', () => {
     it('names an added demo first, and says when its site will start empty', () => {
-        const demo = { kind: 'demo' as const, version: 1, name: 'Isle5 by Jen', source: { owner: 'jen', repo: 'isle5-demo' }, storefrontKind: 'eds' as const };
+        const demo = { kind: 'demo' as const, version: 1, name: 'Isle5 by Robin', source: { owner: 'robin', repo: 'isle5-demo' }, storefrontKind: 'eds' as const };
         expect(storefrontSummaryGroup(state({ demo })).rows[0]).toEqual({
             label: 'Demo',
-            value: 'Isle5 by Jen, Edge Delivery (no published pages yet: the site starts empty)',
+            value: 'Isle5 by Robin, Edge Delivery (no published pages yet: the site starts empty)',
             done: true,
         });
-        const withPages = { ...demo, contentSource: { org: 'jen', site: 'isle5-demo', indexPath: '/full-index.json' } };
-        expect(storefrontSummaryGroup(state({ demo: withPages })).rows[0].value).toBe('Isle5 by Jen, Edge Delivery');
+        const withPages = { ...demo, contentSource: { org: 'robin', site: 'isle5-demo', indexPath: '/full-index.json' } };
+        expect(storefrontSummaryGroup(state({ demo: withPages })).rows[0].value).toBe('Isle5 by Robin, Edge Delivery');
         expect(storefrontSummaryGroup(state({})).rows[0].label).not.toBe('Demo');
     });
 
     it('calls a headless demo Headless, and never says its site starts empty', () => {
         // No content source on purpose: the empty-site note is about Edge Delivery pages,
         // so a headless demo without one must still read as the bare name and kind.
-        const demo = { kind: 'demo' as const, version: 1, name: 'Bodea', source: { owner: 'jen', repo: 'bodea-demo' }, storefrontKind: 'headless' as const };
+        const demo = { kind: 'demo' as const, version: 1, name: 'Bodea', source: { owner: 'robin', repo: 'bodea-demo' }, storefrontKind: 'headless' as const };
         expect(storefrontSummaryGroup(state({ demo })).rows[0]).toEqual({
             label: 'Demo',
             value: 'Bodea, Headless',

@@ -116,7 +116,7 @@ Owner, 2026-11-03:
 2. Delete offers the pack only when it is yours. The review's tighter rule, "and no other local
    demo uses it", is adopted.
 3. Old automatic packs are deleted:
-   - The one made in today's walk (JustRite) is deleted, as a confirmed cloud step.
+   - The one made in today's walk (Tailspin) is deleted, as a confirmed cloud step.
    - `ownDatapack` is dropped from the project type. An old manifest still loads, and the field
      is ignored.
    - A project whose `datapack` already points at its old automatic pack keeps it as an ordinary
@@ -189,7 +189,7 @@ Each step is TDD: test first, then the change, then that step's suites.
     - `docs/systems/data-installer.md`, `mcp-server.md` and `mcp-tools.md` are updated, with a
       CHANGELOG entry.
 11. **Live**, on the owner's go:
-    1. Delete today's automatic JustRite pack.
+    1. Delete today's automatic Tailspin pack.
     2. Walk the flow:
        - Bodea demo: change the store, then **Save As** "Acme Bodea";
        - **Save** again;

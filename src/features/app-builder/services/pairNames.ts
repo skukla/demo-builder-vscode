@@ -2,10 +2,10 @@
  * pairNames — the names a paired integration and the system it brings get when the
  * pair is added, and the one rule every door applies.
  *
- * The SC names the SYSTEM; the integration keeps its catalog name. "Justrite" →
- * the ERP "Justrite ERP" beside "ERP Integration". One integration serves several
+ * The SC names the SYSTEM; the integration keeps its catalog name. "Tailspin" →
+ * the ERP "Tailspin ERP" beside "ERP Integration". One integration serves several
  * ERPs (Add another ERP), so naming it after the first one stopped being true at
- * the second (owner, 2026-10-06; it used to give "Justrite Integration"). A
+ * the second (owner, 2026-10-06; it used to give "Tailspin Integration"). A
  * trailing "ERP" or "Integration" on what was typed is dropped first, and nothing
  * typed gives "Acme ERP". The integration is renamed on its own afterwards.
  *

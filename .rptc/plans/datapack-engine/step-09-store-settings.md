@@ -130,7 +130,7 @@ No response ceiling re-measured: the note grows by one short line per setting.
 
 | Read | Endpoint and field | Captured? |
 |---|---|---|
-| a setting's value at a scope | `GET /V1/system/config`, `items[].path`, `items[].value` | **no**: Adobe's page gives the shape; the round trip ran live 2026-10-10 (Justrite, `sales/totals_sort/tax`) but no answer is recorded in this repo |
+| a setting's value at a scope | `GET /V1/system/config`, `items[].path`, `items[].value` | **no**: Adobe's page gives the shape; the round trip ran live 2026-10-10 (Tailspin, `sales/totals_sort/tax`) but no answer is recorded in this repo |
 | what a write refused | `PUT /V1/system/config`, `errors[].path`, `errors[].scope`, `errors[].message` | **no**: Adobe's page only |
 | whether a path with nothing stored answers its `config.xml` default or `null` | the same `GET` | **no**: the page says "a path that exists in system.xml but has no stored value returns null", and its own example answers `sales/totals_sort/tax` `"40"`, which is that path's default. Live test step 0 settles it |
 
@@ -215,7 +215,7 @@ no layer, the note), `settingsLayer.test.ts`, `saveStore-settingsLayer.test.ts`,
 `datapackCatalog.test.ts`, `DatapackCatalogView-layers.test.tsx`, over the fakes in
 `storeConfig.testUtils.ts`; shapes typed in `tests/helpers/settingsLayerFixtures.ts`.
 
-### Live test of the layer (owner's call; project `scratch-1028`, website `justrite_test_website`)
+### Live test of the layer (owner's call; project `scratch-1028`, website `tailspin_test_website`)
 
 Zero first, zero last. One pack and one layer, both named for this test.
 
@@ -264,9 +264,9 @@ go.
 
 ### Fixed after the first live run (2026-10-30, scratch-1028)
 
-scratch-1028's own website is JustRite's (`justrite` / `justrite_us`); the settings pack went to
-`justrite_test_website`. Right after the install, `preview_datapack_changes` answered keep 1
-(`catalog/frontend/list_per_page@website`): it read the setting at JustRite's website (10), not the
+scratch-1028's own website is Tailspin's (`tailspin` / `tailspin_us`); the settings pack went to
+`tailspin_test_website`. Right after the install, `preview_datapack_changes` answered keep 1
+(`catalog/frontend/list_per_page@website`): it read the setting at Tailspin's website (10), not the
 test website's (15). Removal was right, since it reads each setting at its record's `scopeCode`.
 
 - **The install record keeps its target** (`target: {websiteCode, storeCode}`, `installRecord.ts`),
@@ -278,37 +278,37 @@ test website's (15). Removal was right, since it reads each setting at its recor
   website the caller is pointed at (`planSettings`, `captureSettings`), so scratch-1028's existing
   record is read right too.
 - **Installing again into another website is refused**, before anything is written, by the install
-  and `validate_datapack_import`: "<pack> is installed on the website justrite_test_website. Remove
+  and `validate_datapack_import`: "<pack> is installed on the website tailspin_test_website. Remove
   it first, or install it there." A record without `target` says where by its settings' website.
 - Tests: `storeConfigKind.test.ts` (4), `storeChanges.test.ts` (3), `engine.test.ts` (3),
   `installRecord.test.ts` (3), each asserting the read addresses. A control that put the old read back
   turned the live-case tests red.
 
-### Live test of the kind (owner's call; project `scratch-1028`, website `justrite_test_website`, never JustRite's own)
+### Live test of the kind (owner's call; project `scratch-1028`, website `tailspin_test_website`, never Tailspin's own)
 
 One setting is written **store-wide**: `catalog/frontend/grid_per_page` (Products per Page on Grid
 Default Value), which changes how many products a category page shows on every website of the
-instance, JustRite's included unless it has its own value. Harmless and visible; put back at the end.
+instance, Tailspin's included unless it has its own value. Harmless and visible; put back at the end.
 The other is for the test website only.
 
 0. Read-only, before anything: `run_commerce_rest` `GET system/config?scope=default&` with a path
    filter `in` `catalog/frontend/grid_per_page,catalog/frontend/list_per_page`, then the same with
-   `scope=website&scopeCode=justrite_test_website`. Write down all four values, and record the
+   `scope=website&scopeCode=tailspin_test_website`. Write down all four values, and record the
    answers as typed fixtures. If `grid_per_page` answers `null` at the default scope, stop: the
    install will refuse it (decision 4).
 1. Make a zip pack `zz-test-settings-db09` holding one kind, `store_config`:
    `[{"path":"catalog/frontend/grid_per_page","value":"24","scope":"default"},
    {"path":"catalog/frontend/list_per_page","value":"15","scope":"websites","scope_code":"base"}]`
-   (the second names another website on purpose: it must land on `justrite_test_website`).
+   (the second names another website on purpose: it must land on `tailspin_test_website`).
    `load_datapack_zip` into the library.
 2. `preview_datapack_changes` for it: `store_config` add 2.
 3. `validate_datapack_import`, then `start_datapack_import` (data type `store_config`, website
-   `justrite_test_website`). `get_datapack_import_status`'s note: "Set
+   `tailspin_test_website`). `get_datapack_import_status`'s note: "Set
    catalog/frontend/grid_per_page: <before> → 24 and catalog/frontend/list_per_page for the website:
    <before> → 15." Read the record under `.demo-builder/datapacks/`: two `store_config` objects,
    each `previous` with `stored`, `effective`, `wrote`, the website one with
-   `scopeCode: justrite_test_website`.
-4. Repeat step 0's reads: default `grid_per_page` 24; website `list_per_page` 15; JustRite's own
+   `scopeCode: tailspin_test_website`.
+4. Repeat step 0's reads: default `grid_per_page` 24; website `list_per_page` 15; Tailspin's own
    website's `list_per_page` unchanged.
 5. Install again at once: no `PUT` in Debug Logs, no note.
 6. In the Admin (scope: the test website), set List Products per Page to 20.

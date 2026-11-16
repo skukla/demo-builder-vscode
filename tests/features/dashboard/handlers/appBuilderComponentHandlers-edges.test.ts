@@ -560,7 +560,7 @@ describe('a system left behind by a failed integration add', () => {
                 'demo-erp': {
                     kind: 'system',
                     status: 'deployed',
-                    name: 'Justrite ERP',
+                    name: 'Tailspin ERP',
                     source: { owner: 'skukla', repo: 'demo-erp' },
                 },
             },
@@ -575,7 +575,7 @@ describe('a system left behind by a failed integration add', () => {
 
         expect(result).toEqual({
             success: false,
-            error: 'Justrite ERP came with ERP Integration, which is not in this project. Add ERP Integration to finish — it reuses Justrite ERP.',
+            error: 'Tailspin ERP came with ERP Integration, which is not in this project. Add ERP Integration to finish — it reuses Tailspin ERP.',
         });
         expect(mockDeployAppBuilderComponent).not.toHaveBeenCalled();
     });

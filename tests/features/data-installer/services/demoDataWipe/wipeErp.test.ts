@@ -15,10 +15,10 @@ import { RESET_RULE_CASES } from '../../../../helpers/resetRuleOrders';
 import { fakeErp } from './wipeErp.testUtils';
 import { sandbox, writesOf } from './wipe.testUtils';
 
-const TEST_STORE = ['justrite_test_website'];
+const TEST_STORE = ['tailspin_test_website'];
 const [PENDING, , , WITH_RETURN] = RESET_RULE_CASES;
 const UPDATE_FIRST =
-    'it must be updated first. Open the project justrite and update erp-integration ' +
+    'it must be updated first. Open the project tailspin and update erp-integration ' +
     '(Update on its card, or update_integration), then check again';
 
 /** The test store holding two orders (one with a return), and nothing else. */
@@ -32,18 +32,18 @@ describe('which websites the ERP integration routes', () => {
     it('asks its status and its settings for the chosen websites, and routes the ones that send orders', async () => {
         const { erp, client } = fakeErp();
 
-        const route = await erp.route(['justrite_test_website', 'bodea']);
+        const route = await erp.route(['tailspin_test_website', 'bodea']);
 
         expect(client.status).toHaveBeenCalledWith();
-        expect(client.resolvedSettings).toHaveBeenCalledWith(['justrite_test_website', 'bodea']);
-        expect(route).toEqual({ name: 'JustRite', websites: ['justrite_test_website'] });
+        expect(client.resolvedSettings).toHaveBeenCalledWith(['tailspin_test_website', 'bodea']);
+        expect(route).toEqual({ name: 'Tailspin', websites: ['tailspin_test_website'] });
         expect(await erp.route(['bodea'])).toBeUndefined();
     });
 
     it('holds the ERP step, naming the update, when the deployment cannot close by store', async () => {
         const { erp } = fakeErp({ status: STATUS_BEFORE });
 
-        expect(await erp.route(['justrite_test_website'])).toEqual({ name: 'JustRite', websites: ['justrite_test_website'], held: UPDATE_FIRST });
+        expect(await erp.route(['tailspin_test_website'])).toEqual({ name: 'Tailspin', websites: ['tailspin_test_website'], held: UPDATE_FIRST });
     });
 
     it('holds the ERP step for every chosen website when it cannot be asked', async () => {
@@ -51,7 +51,7 @@ describe('which websites the ERP integration routes', () => {
         const failing = fakeErp();
         failing.client.status.mockRejectedValue(new Error('ERP status answered 500: down'));
 
-        expect(await unsigned.erp.route(['bodea'])).toEqual({ name: 'JustRite', websites: ['bodea'], held: 'it could not be asked (Adobe sign-in required)' });
+        expect(await unsigned.erp.route(['bodea'])).toEqual({ name: 'Tailspin', websites: ['bodea'], held: 'it could not be asked (Adobe sign-in required)' });
         expect((await failing.erp.route(['bodea']))?.held).toBe('it could not be asked (ERP status answered 500: down)');
     });
 });
@@ -64,11 +64,11 @@ describe('the plan, with the ERP integration serving the store', () => {
 
         expect(plan.orders.map((o) => o.id)).toStrictEqual(['701', '704']);
         expect(plan.check.records.returns).toEqual({ removed: ['R40'], kept: [] });
-        expect(plan.erp).toEqual({ route: { name: 'JustRite', websites: ['justrite_test_website'] }, stores: ['justrite_test_store'] });
+        expect(plan.erp).toEqual({ route: { name: 'Tailspin', websites: ['tailspin_test_website'] }, stores: ['tailspin_test_store'] });
         expect(plan.check.erp).toEqual({
-            integration: 'JustRite',
-            websites: ['justrite_test_website'],
-            line: 'The ERP integration (JustRite) serves these websites: its ERP is brought in line with Commerce after the clearing.',
+            integration: 'Tailspin',
+            websites: ['tailspin_test_website'],
+            line: 'The ERP integration (Tailspin) serves these websites: its ERP is brought in line with Commerce after the clearing.',
         });
         expect(plan.check.total).toBe(3);
     });
@@ -80,7 +80,7 @@ describe('the plan, with the ERP integration serving the store', () => {
         const plan = await planWipeFor(store.get, [...TEST_STORE, 'bodea'], { records: [], erp });
 
         expect(plan.orders.map((o) => o.id).sort()).toStrictEqual(['600', '701']);
-        expect(plan.erp?.stores).toStrictEqual(['justrite_test_store']);
+        expect(plan.erp?.stores).toStrictEqual(['tailspin_test_store']);
     });
 
     it('still closes the orders when the integration must be updated, and says its ERP will not be brought in line', async () => {
@@ -91,7 +91,7 @@ describe('the plan, with the ERP integration serving the store', () => {
         expect(orders.map((o) => o.id)).toStrictEqual(['701', '704']);
         expect(check.total).toBe(3);
         expect(check.erp?.held).toBe(UPDATE_FIRST);
-        expect(check.erp?.line).toBe(`The ERP integration (JustRite) serves these websites, but ${UPDATE_FIRST}. Its ERP will not be brought in line.`);
+        expect(check.erp?.line).toBe(`The ERP integration (Tailspin) serves these websites, but ${UPDATE_FIRST}. Its ERP will not be brought in line.`);
     });
 });
 
@@ -110,7 +110,7 @@ describe('the ERP step, when the orders could not be read', () => {
 
         expect(plan.orders).toStrictEqual([]);
         expect(plan.erp?.route.held).toBe('the orders could not be read');
-        expect(plan.check.erp?.line).toBe('The ERP integration (JustRite) serves these websites, but the orders could not be read. Its ERP will not be brought in line.');
+        expect(plan.check.erp?.line).toBe('The ERP integration (Tailspin) serves these websites, but the orders could not be read. Its ERP will not be brought in line.');
     });
 
     it('never asks the integration to close orders or refill its ERPs', async () => {
@@ -122,7 +122,7 @@ describe('the ERP step, when the orders could not be read', () => {
 
         expect(client.closeOrders).not.toHaveBeenCalled();
         expect(refill).not.toHaveBeenCalled();
-        expect(outcome.sentence).toContain("JustRite's ERP was not brought in line with Commerce: the orders could not be read.");
+        expect(outcome.sentence).toContain("Tailspin's ERP was not brought in line with Commerce: the orders could not be read.");
     });
 });
 
@@ -151,15 +151,15 @@ describe('clearing, with the ERP integration serving the store', () => {
             { method: 'POST', path: 'orders/701/cancel' },
         ]);
         expect(writes).toContainEqual({ method: 'POST', path: 'order/704/refund' });
-        expect(client.closeOrders).toHaveBeenCalledWith(['justrite_test_store'], expect.any(Function));
+        expect(client.closeOrders).toHaveBeenCalledWith(['tailspin_test_store'], expect.any(Function));
         expect(at).toEqual({ close: store.sent.length, refill: store.sent.length });
         expect([...new Set(stages)]).toEqual(['Closing orders', 'Updating the ERP', 'Refreshing the ERP']);
         expect(outcome.orders).toEqual({ cancelled: 1, refunded: 1, commented: 0, alreadyClosed: 0, returnsClosed: 1, failed: 0 });
         expect(outcome.failed).toStrictEqual([]);
-        expect(outcome.erp).toEqual({ integration: 'JustRite', broughtInLine: true, removedFrom: ['Justrite ERP'], refreshed: true });
+        expect(outcome.erp).toEqual({ integration: 'Tailspin', broughtInLine: true, removedFrom: ['Tailspin ERP'], refreshed: true });
         expect(outcome.sentence).toBe(
-            'Nothing was left to remove from the website JustRite Test. Canceled 1 order and refunded 1 order. Closed 1 return. ' +
-                "JustRite's ERP was brought in line with Commerce. These websites' orders were removed from Justrite ERP.",
+            'Nothing was left to remove from the website Tailspin Test. Canceled 1 order and refunded 1 order. Closed 1 return. ' +
+                "Tailspin's ERP was brought in line with Commerce. These websites' orders were removed from Tailspin ERP.",
         );
     });
 
@@ -176,7 +176,7 @@ describe('clearing, with the ERP integration serving the store', () => {
 
         await clearShown(store, shown, { records: [], erp });
 
-        expect(client.closeOrders).toHaveBeenCalledWith(['justrite_test_store'], expect.any(Function));
+        expect(client.closeOrders).toHaveBeenCalledWith(['tailspin_test_store'], expect.any(Function));
         expect(at.close).toBe(store.sent.length);
         expect(orderWrites(store.sent)).toEqual(
             expect.arrayContaining([
@@ -196,13 +196,13 @@ describe('clearing, with the ERP integration serving the store', () => {
         expect(outcome.orders).toEqual({ cancelled: 1, refunded: 1, commented: 0, alreadyClosed: 0, returnsClosed: 1, failed: 0 });
         expect(outcome.failed).toStrictEqual([]);
         expect(outcome.erp).toEqual({
-            integration: 'JustRite',
+            integration: 'Tailspin',
             broughtInLine: false,
             problem: 'it could not be asked to (ERP detach answered 500: Commerce timed out)',
             removedFrom: [],
             refreshed: true,
         });
-        expect(outcome.sentence).toContain("JustRite's ERP was not brought in line with Commerce: it could not be asked to (ERP detach answered 500: Commerce timed out).");
+        expect(outcome.sentence).toContain("Tailspin's ERP was not brought in line with Commerce: it could not be asked to (ERP detach answered 500: Commerce timed out).");
         expect(outcome.sentence).not.toContain('Could not close');
         expect(refill).toHaveBeenCalled();
     });
@@ -211,7 +211,7 @@ describe('clearing, with the ERP integration serving the store', () => {
         const close = async () => ({
             ...STORE_CLOSE,
             closed: { ...STORE_CLOSE.closed, alreadyClosed: 1, failed: [{ orderId: '000000701', error: 'order 000000701: the ERP number clear failed: Commerce answered 400' }] },
-            erpRemoved: { justrite: 'unsupported' as const, accuform: { failed: 'the ERP answered 503' } },
+            erpRemoved: { tailspin: 'unsupported' as const, accuform: { failed: 'the ERP answered 503' } },
         });
         const store = twoOrders();
         const { erp } = fakeErp({ close });
@@ -221,9 +221,9 @@ describe('clearing, with the ERP integration serving the store', () => {
         expect(outcome.failed).toStrictEqual([]);
         expect(outcome.orders.failed).toBe(0);
         expect(outcome.sentence).toContain(
-            "JustRite's ERP was not brought in line with Commerce: it could not finish 1 of the orders (order 000000701: the ERP number clear failed: Commerce answered 400).",
+            "Tailspin's ERP was not brought in line with Commerce: it could not finish 1 of the orders (order 000000701: the ERP number clear failed: Commerce answered 400).",
         );
-        expect(outcome.sentence).toContain('Justrite ERP keeps its copies of them: it must be updated to remove orders.');
+        expect(outcome.sentence).toContain('Tailspin ERP keeps its copies of them: it must be updated to remove orders.');
         expect(outcome.sentence).toContain('Accuform ERP could not remove them (the ERP answered 503).');
     });
 
@@ -234,7 +234,7 @@ describe('clearing, with the ERP integration serving the store', () => {
 
         await clearShown(store, await planWipeFor(store.get, TEST_STORE, { records: [], erp }), { records: [], erp });
 
-        expect(client.closeOrders).toHaveBeenCalledWith(['justrite_test_store'], expect.any(Function));
+        expect(client.closeOrders).toHaveBeenCalledWith(['tailspin_test_store'], expect.any(Function));
         expect(orderWrites(store.sent)).toStrictEqual([]);
     });
 
@@ -248,7 +248,7 @@ describe('clearing, with the ERP integration serving the store', () => {
         expect(outcome.erp?.broughtInLine).toBe(false);
         expect(outcome.orders.refunded).toBe(1);
         expect(outcome.sentence).toContain(
-            "JustRite's ERP was not brought in line with Commerce: it was not filled again from Commerce (Demo ERP: Commerce did not answer products).",
+            "Tailspin's ERP was not brought in line with Commerce: it was not filled again from Commerce (Demo ERP: Commerce did not answer products).",
         );
     });
 
@@ -262,8 +262,8 @@ describe('clearing, with the ERP integration serving the store', () => {
         expect(refill).not.toHaveBeenCalled();
         expect(orderWrites(store.sent)).toContainEqual({ method: 'POST', path: 'orders/701/cancel' });
         expect(outcome.orders).toEqual({ cancelled: 1, refunded: 1, commented: 0, alreadyClosed: 0, returnsClosed: 1, failed: 0 });
-        expect(outcome.erp).toEqual({ integration: 'JustRite', broughtInLine: false, problem: UPDATE_FIRST, removedFrom: [], refreshed: false });
-        expect(outcome.sentence).toContain(`JustRite's ERP was not brought in line with Commerce: ${UPDATE_FIRST}.`);
+        expect(outcome.erp).toEqual({ integration: 'Tailspin', broughtInLine: false, problem: UPDATE_FIRST, removedFrom: [], refreshed: false });
+        expect(outcome.sentence).toContain(`Tailspin's ERP was not brought in line with Commerce: ${UPDATE_FIRST}.`);
     });
 
     it('writes nothing when the integration could now be asked though the list said its ERP would not be brought in line', async () => {

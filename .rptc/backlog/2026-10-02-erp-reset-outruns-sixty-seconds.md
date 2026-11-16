@@ -10,7 +10,7 @@ parent: AB-26
 
 # Reset ERPs stops when the integration's undo takes longer than 60 seconds
 
-Found 2026-10-02 on Justrite, three resets in a row: "The ERP reset did not finish: ERP detach
+Found 2026-10-02 on Tailspin, three resets in a row: "The ERP reset did not finish: ERP detach
 answered 504: Response not yet ready." Both ERPs kept their orders; nothing was wiped.
 
 ## What happens (measured)
@@ -41,7 +41,7 @@ answered 504: Response not yet ready." Both ERPs kept their orders; nothing was 
   runs, follows the run to its end, then goes on with the wipe and fill (`erpActionRun.ts`,
   named `erpDetachRun.ts` until the price publish took the same follower on 2026-10-09).
 
-Proved live on Justrite: the reset went through in about two minutes (109 prices undone, 9
+Proved live on Tailspin: the reset went through in about two minutes (109 prices undone, 9
 orders closed, both ERPs wiped and filled). Not yet seen live: the follow path itself, because
 with six at a time the undo answered inside the 60 seconds.
 

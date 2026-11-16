@@ -13,17 +13,17 @@ import type { CommerceGet, CommerceOrder } from '@/types/commerceWire';
 import { ADMIN_64, BUYER_65, CATALOG_20, GROUP_30, LONE_SHOPPER, WIPER_1, attributeInstance, b2bInstance, settingsInstance } from '../../../../helpers/commerceWipeInstanceFixtures';
 import { PROJECT_RECORDS, sandbox } from './wipe.testUtils';
 
-/** The test website: one store, `justrite_test_store`, whose root 119 JustRite's store also shows. */
-const TEST_SITE = ['justrite_test_website'];
+/** The test website: one store, `tailspin_test_store`, whose root 119 Tailspin's store also shows. */
+const TEST_SITE = ['tailspin_test_website'];
 
-describe('planWipe on a website whose root another website shares (justrite_test_website)', () => {
+describe('planWipe on a website whose root another website shares (tailspin_test_website)', () => {
     it('removes products sold only there, takes shared ones off it, and keeps a lone variant and what a record lists', async () => {
         const plan = await planWipeFor(sandbox().get, TEST_SITE, { records: PROJECT_RECORDS });
 
         expect(plan.deleteSkus).toEqual(['ZZ-ONLY-HERE', 'ZZ-JACKET', 'ZZ-JACKET-RED']);
-        expect(plan.takeOff).toEqual([{ sku: 'ZZ-SHARED-WITH-JUSTRITE', websiteId: 5 }]);
+        expect(plan.takeOff).toEqual([{ sku: 'ZZ-SHARED-WITH-TAILSPIN', websiteId: 5 }]);
         expect(plan.check.records.products).toEqual({
-            removed: ['ZZ-ONLY-HERE', 'ZZ-JACKET', 'ZZ-JACKET-RED', 'ZZ-SHARED-WITH-JUSTRITE'],
+            removed: ['ZZ-ONLY-HERE', 'ZZ-JACKET', 'ZZ-JACKET-RED', 'ZZ-SHARED-WITH-TAILSPIN'],
             kept: ['ZZ-LONE-VARIANT', 'ZZ-MADE-BY-DEMO-BUILDER'],
         });
     });
@@ -51,7 +51,7 @@ describe('planWipe on a website whose root another website shares (justrite_test
         expect(store.reads.some((p) => p.startsWith('products?') && p.includes(filterBy('website_id', 5)))).toBe(true);
         expect(store.reads.some((p) => p.startsWith('customers/search?') && p.includes(filterBy('website_id', 5)))).toBe(true);
         expect(store.reads.some((p) => p.startsWith('orders?') && p.includes(filterIn('store_id', [6])))).toBe(true);
-        expect(check.websites).toEqual([{ code: 'justrite_test_website', name: 'JustRite Test' }]);
+        expect(check.websites).toEqual([{ code: 'tailspin_test_website', name: 'Tailspin Test' }]);
         expect(check.rows).toEqual([
             { type: 'products', label: 'Products', count: 4, happens: '4 removed' },
             { type: 'categories', label: 'Categories', count: 0, happens: '0 removed' },
@@ -72,7 +72,7 @@ describe('planWipe on a website whose root another website shares (justrite_test
     });
 
     it('clears the shared root once every website using it is chosen', async () => {
-        const plan = await planWipeFor(sandbox({ products: [], customers: [] }).get, [...TEST_SITE, 'justrite'], { records: [] });
+        const plan = await planWipeFor(sandbox({ products: [], customers: [] }).get, [...TEST_SITE, 'tailspin'], { records: [] });
 
         expect(plan.categoryIds).toEqual(['120']);
     });
@@ -96,7 +96,7 @@ describe('planWipe on a website with roots of its own (bodea)', () => {
 describe('planWipe keeps a category a cart rule that stays names (F3)', () => {
     const naming = (value: string): CommerceSalesRule => ({
         rule_id: 9,
-        name: 'JustRite Racks',
+        name: 'Tailspin Racks',
         website_ids: [2],
         condition: { condition_type: 'all', conditions: [{ condition_type: 'found', conditions: [{ condition_type: 'product', attribute_name: 'category_ids', operator: '==', value }] }] },
     });
@@ -256,9 +256,9 @@ describe('withinPlan', () => {
     it("lets through a website setting the datapack's removal set back, though the list did not show it (C3)", async () => {
         // Shown with the pack's value in place, the same as the default: nothing to set back then.
         const packWrote = settingsInstance();
-        const setting = packWrote.settings?.websites.justrite_test_website.find((r) => r.path === 'sales/totals_sort/tax');
+        const setting = packWrote.settings?.websites.tailspin_test_website.find((r) => r.path === 'sales/totals_sort/tax');
         if (setting) setting.value = '40';
-        const shown = { ...(await planWipeFor(sandbox({ customers: [], products: [], instance: packWrote }).get, TEST_SITE, { records: [] })), setBack: ['justrite_test_website/sales/totals_sort/tax'] };
+        const shown = { ...(await planWipeFor(sandbox({ customers: [], products: [], instance: packWrote }).get, TEST_SITE, { records: [] })), setBack: ['tailspin_test_website/sales/totals_sort/tax'] };
         // The removal put back what the website held before the pack (41), which differs from the default.
         const now = await planWipeFor(sandbox({ customers: [], products: [], instance: settingsInstance() }).get, TEST_SITE, { records: [] });
 

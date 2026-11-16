@@ -30,7 +30,7 @@ const OPTIONS: ErpOwnershipOptions = {
 let paths = 0;
 function project(): Project {
     paths += 1;
-    return createMockProject({ name: 'justrite', path: `/projects/justrite-${paths}` });
+    return createMockProject({ name: 'tailspin', path: `/projects/tailspin-${paths}` });
 }
 
 /** A read that answers when told to, counting how often it was started. */

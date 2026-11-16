@@ -45,9 +45,9 @@ describe('OperationProgressBody, running', () => {
     });
 
     it('draws what the run acts on inside the wait, so the spinner levels around it', () => {
-        const { container } = renderRunning({ subject: 'Justrite Test Store US' });
+        const { container } = renderRunning({ subject: 'Tailspin Test Store US' });
 
-        expect(container.querySelector('.modal-wait-progress-subject > .modal-progress-subject')).toHaveTextContent('Justrite Test Store US');
+        expect(container.querySelector('.modal-wait-progress-subject > .modal-progress-subject')).toHaveTextContent('Tailspin Test Store US');
     });
 
     it('CONTROL: without a subject the wait is the plain one', () => {

@@ -141,7 +141,7 @@ const UNSAID: Record<BulkRowState, string> = {
 
 /**
  * Each request's end, by its index in the call. An operation's `id` is that index: a live status
- * from the Justrite ACCS store (2026-10-09) numbers a three-product call 0, 1, 2
+ * from the Tailspin ACCS store (2026-10-09) numbers a three-product call 0, 1, 2
  * (tests/fixtures/commerce-rest/bulk-status-products.json). A request not listed yet is open.
  *
  * @param get - the signed Commerce GET

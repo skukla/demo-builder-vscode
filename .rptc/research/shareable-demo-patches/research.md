@@ -66,7 +66,7 @@ own three-state check reproduced on the ledger and the repos' `main`):
 | Repository | Origin | Result for the five load-bearing + two universal patches |
 |---|---|---|
 | `skukla/demo-builder-test` (ours, boilerplate 6.0.0) | Demo Builder | 5 already applied; `product-teaser-sku-encoding` and `pdp-empty-data-redirect` FIT and are not applied (added to the ledger after this repo was built) |
-| `sayurihanki/aistore` (Jen's, boilerplate 4.0.1) | generated from `adobe-commerce/boilerplate-b2b-template` | 5 FIT cleanly (both SKU-encoding patches, AEM Assets, header guard, sidebar race); `product-teaser-sku-encoding` and `pdp-empty-data-redirect` miss: those files diverged |
+| `org-j/aistore` (Robin's, boilerplate 4.0.1) | generated from `adobe-commerce/boilerplate-b2b-template` | 5 FIT cleanly (both SKU-encoding patches, AEM Assets, header guard, sidebar race); `product-teaser-sku-encoding` and `pdp-empty-data-redirect` miss: those files diverged |
 
 So a shipped-template storefront that is not reset stays behind the ledger, and a colleague's
 storefront two boilerplate versions back still takes five of seven patches exactly.
@@ -76,7 +76,7 @@ storefront two boilerplate versions back still takes five of seven patches exact
 Three signals, all available today, none used for this yet:
 
 1. **GitHub's `template_repository`** on the repository record names the template a repo was
-   generated from. `sayurihanki/aistore` → `adobe-commerce/boilerplate-b2b-template`. The
+   generated from. `org-j/aistore` → `adobe-commerce/boilerplate-b2b-template`. The
    extension already reads `is_template` and `parent` (fork) in `githubRepoOperations.ts`, not
    this field. Absent for a repository created empty and reset onto a source (our own
    `demo-builder-test` reports none) and for any fresh push, so it is a positive signal, not a
@@ -127,7 +127,7 @@ or the boilerplate package name) and one or more load-bearing or universal patch
 completion card offers "Apply N Demo Builder fixes to this storefront" with the patches named
 by consequence, default off, written as one commit, and repeatable on reset with the same
 offer. Patches that miss stay caveats. The offer never appears for a repository that shows no
-lineage. Evidence it would help today: five of seven fit on Jen's storefront.
+lineage. Evidence it would help today: five of seven fit on Robin's storefront.
 
 **C. Fingerprint zips the same way.** A zip has no GitHub record; the boilerplate package name
 and version plus the fit test give the same answer. The engine already runs on a file map, so

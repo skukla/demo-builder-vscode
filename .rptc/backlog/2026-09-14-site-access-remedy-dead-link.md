@@ -53,7 +53,7 @@ re-added it. Both halves of the question came back, and they point opposite ways
 with the site left blank, answered:
 
 ```
-403  GET https://admin.hlx.page/config/kmanns.json   [admin] not authorized
+403  GET https://admin.hlx.page/config/org-e.json   [admin] not authorized
 ```
 
 That is the SAME gate as the config read — `configServiceAccess.ts` says so at the

@@ -190,14 +190,14 @@ describe('checkForUpdates — an added demo on a branch', () => {
         const checker = new TemplateUpdateChecker(mockSecrets, mockLogger);
 
         await checker.checkForUpdates(makeProject({
-            templateOwner: 'jen',
+            templateOwner: 'robin',
             templateRepo: 'isle5-demo',
             templateBranch: 'demo-2026',
             lastSyncedCommit: OLD_SHA,
         }));
 
         expect(mockGetLatestBranchCommit).toHaveBeenCalledWith(
-            mockSecrets, 'jen', 'isle5-demo', 'demo-2026',
+            mockSecrets, 'robin', 'isle5-demo', 'demo-2026',
         );
     });
 
@@ -206,16 +206,16 @@ describe('checkForUpdates — an added demo on a branch', () => {
         const checker = new TemplateUpdateChecker(mockSecrets, mockLogger);
 
         await checker.checkForUpdates(makeProject({
-            templateOwner: 'jen',
+            templateOwner: 'robin',
             templateRepo: 'isle5-demo',
             templateBranch: 7,
             lastSyncedCommit: OLD_SHA,
         }));
 
-        expect(mockGetLatestBranchCommit).toHaveBeenCalledWith(mockSecrets, 'jen', 'isle5-demo', 'main');
+        expect(mockGetLatestBranchCommit).toHaveBeenCalledWith(mockSecrets, 'robin', 'isle5-demo', 'main');
     });
 
-    // A colleague reset their demo three times in a day, and JustRite was offered all of it as one
+    // A colleague reset their demo three times in a day, and Tailspin was offered all of it as one
     // ticked update to the live site (owner, 2026-11-03).
     it('says when the source was reset to its template since it was last taken', async () => {
         mockGetLatestBranchCommit.mockResolvedValue(NEW_SHA);
@@ -229,7 +229,7 @@ describe('checkForUpdates — an added demo on a branch', () => {
         });
         const checker = new TemplateUpdateChecker(mockSecrets, mockLogger);
 
-        const result = await checker.checkForUpdates(makeProject({ templateOwner: 'jen', templateRepo: 'isle5-demo', lastSyncedCommit: OLD_SHA }));
+        const result = await checker.checkForUpdates(makeProject({ templateOwner: 'robin', templateRepo: 'isle5-demo', lastSyncedCommit: OLD_SHA }));
 
         expect(result).toMatchObject({ hasUpdates: true, commitsBehind: 3, sourceReset: true });
     });
@@ -242,7 +242,7 @@ describe('checkForUpdates — an added demo on a branch', () => {
         });
         const checker = new TemplateUpdateChecker(mockSecrets, mockLogger);
 
-        const result = await checker.checkForUpdates(makeProject({ templateOwner: 'jen', templateRepo: 'isle5-demo', lastSyncedCommit: OLD_SHA }));
+        const result = await checker.checkForUpdates(makeProject({ templateOwner: 'robin', templateRepo: 'isle5-demo', lastSyncedCommit: OLD_SHA }));
 
         expect(result).toMatchObject({ hasUpdates: true, commitsBehind: 1 });
         expect(result).not.toHaveProperty('sourceReset');

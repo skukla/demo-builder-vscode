@@ -72,7 +72,7 @@ read-only check) before anything below is built.
 - **If it cannot:**
   - when the demo's store has a root of its own, install puts the pack's categories under that
     root instead of a new one, and removal takes them out: no store change at all;
-  - when the root is shared with another store (`justrite_test_website` shares Justrite's,
+  - when the root is shared with another store (`tailspin_test_website` shares Tailspin's,
     root 119), the pack keeps its own root and the SC is shown the one Admin step, with values
     to copy, as the demo setup guide shows its manual steps: "Stores > All Stores > (the store)
     > Root Category: Frescopa".
@@ -83,7 +83,7 @@ No storefront setting changes: a storefront points at a store view, and the stor
 decides its categories. Two things have to happen after the switch:
 
 1. **Catalog Service has to show the new categories.** The storefront reads categories and
-   products from it, not from the store, and it can lag (Justrite's Accuform products read out
+   products from it, not from the store, and it can lag (Tailspin's Accuform products read out
    of stock until the Data Feed was resynced in the Admin). How it takes a root change is
    untested; the first try says.
 2. **Demo Builder's category pages and catalog menu are rebuilt** for an Edge Delivery
@@ -134,11 +134,11 @@ the pack kept its own root: a read-only check (`GET store/storeGroups`, the stor
 `askDuringOperation` (passed in by `buildDatapackEngine`, so the engine and its tests need no VS
 Code): **Open the Admin** (the dashboard's own opening, now shared as `core/utils/commerceAdmin.ts`,
 then asked again), **I've done it** (the check again: set, the install carries on; not set, asked
-again saying "The store JustRite Test Store still shows the root category Justrite (id 119), not
+again saying "The store Tailspin Test Store still shows the root category Tailspin (id 119), not
 Frescopa (id 300)."), **Skip for now** or a dismissed question (the install finishes). Where the
 step stands is written on the install record (`rootStep`: state, store, pack root, the root the
 store showed at the first install, what the last check found), and the note says it: "One step is
-left in the Admin: Stores > All Stores > JustRite Test Store, Root Category: Frescopa, then Save
+left in the Admin: Stores > All Stores > Tailspin Test Store, Root Category: Frescopa, then Save
 Store. Until then the storefront does not show Frescopa's categories."
 
 **Both ways back work.** (1) A reinstall (step 05's repeat install, nothing unchanged rewritten)
@@ -153,7 +153,7 @@ done with no reinstall and no Commerce write. Both tested (`runPack-packRoot.tes
 - Removal takes out only what the pack made, as before: under the store's root, its categories by
   id, never the store's root. A pack root a store shows as its root is kept (`removers.ts`, through
   `decideRemovals`, so removal, reinstall and the preview agree): "Kept the category Frescopa: the
-  store JustRite Test Store shows it as its root category. In the Admin, … set Root Category back to
+  store Tailspin Test Store shows it as its root category. In the Admin, … set Root Category back to
   the one it had and Save Store, then remove the pack again." It stays on the record; the next
   removal takes it once the store is pointed back. Tested back to zero.
 - Capture (`capture.ts`) writes the pack's root back whenever the installed version has one: the
@@ -236,30 +236,30 @@ own goes under the store's root every time, so it is checked too.
 - `webview-visual-baseline` for the CSS move (rules moved unchanged, same layer, unique class names).
 - The live test below.
 
-### Live test (owner's call; project `scratch-1028`, website `justrite_test_website`, never JustRite's own)
+### Live test (owner's call; project `scratch-1028`, website `tailspin_test_website`, never Tailspin's own)
 
-`justrite_test_store` shows JustRite's root 119, so this is the prompt path.
+`tailspin_test_store` shows Tailspin's root 119, so this is the prompt path.
 
-0. Read-only: `run_commerce_rest GET store/storeGroups`; write down `justrite_test_store`'s
+0. Read-only: `run_commerce_rest GET store/storeGroups`; write down `tailspin_test_store`'s
    `root_category_id` (119 expected) and record the answer as a typed fixture.
 1. A throwaway zip pack `zz-test-root-db12`: `root_category` "ZZ Root DB12", categories "ZZ Coffee
    DB12" (path "ZZ Root DB12") and "ZZ Espresso DB12" (path "ZZ Root DB12/ZZ Coffee DB12").
    `load_datapack_zip`, then `preview_datapack_changes`: `root` names the shared root and the step;
    categories add 3.
-2. `start_datapack_import` (categories, `justrite_test_website` / its store view). The question
+2. `start_datapack_import` (categories, `tailspin_test_website` / its store view). The question
    appears (a VS Code modal under the agent, a notification from the screen). Choose Skip for now.
-   `get_datapack_import_status` note: "One step is left in the Admin: Stores > All Stores > JustRite
+   `get_datapack_import_status` note: "One step is left in the Admin: Stores > All Stores > Tailspin
    Test Store, Root Category: ZZ Root DB12, then Save Store. …". The record has `rootStep.state` open.
-3. The pack's flyout shows the step; press Check: still open, the note names Justrite (id 119).
+3. The pack's flyout shows the step; press Check: still open, the note names Tailspin (id 119).
 4. Install again: asked again; choose I've done it without doing it: asked again, saying the store
    still shows 119. Choose Skip.
-5. In the Admin, Stores > All Stores > JustRite Test Store, Root Category: ZZ Root DB12, Save Store.
+5. In the Admin, Stores > All Stores > Tailspin Test Store, Root Category: ZZ Root DB12, Save Store.
    Press Check in the flyout: done, no reinstall. Read `GET store/storeGroups`: the root is the new id.
 6. Storefront: does the test store view's catalog show ZZ Coffee DB12 (Catalog Service lag: note how
    long)?
-7. Remove the pack: kept "the category ZZ Root DB12: the store JustRite Test Store shows it as its
+7. Remove the pack: kept "the category ZZ Root DB12: the store Tailspin Test Store shows it as its
    root category …"; the two children gone.
-8. **Back to zero:** Admin, set the test store's Root Category back to Justrite (119), Save Store.
+8. **Back to zero:** Admin, set the test store's Root Category back to Tailspin (119), Save Store.
    Remove again: the root goes and the record file goes. `GET store/storeGroups` reads as at step 0;
    no `DB12` category in `categories/list`; delete `zz-test-root-db12` from the library.
 9. Separately, if a store with a root of its own is free to use: install the same pack there and

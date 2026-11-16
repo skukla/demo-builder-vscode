@@ -113,12 +113,12 @@ describe('saveErpOwnership', () => {
         const { client, patched } = integration({});
 
         await saveErpOwnership(client, [
-            { erp: 'brand-b', owns: { mode: 'websites', websites: ['justrite', 'evo'] } },
+            { erp: 'brand-b', owns: { mode: 'websites', websites: ['tailspin', 'evo'] } },
             { erp: 'acme', owns: { mode: 'attribute', attribute: 'erp_owner=acme' } },
         ]);
 
         expect(patched).toStrictEqual([
-            { id: 'brand-b', values: { structure_owns: 'websites', structure_owns_websites: 'justrite,evo' } },
+            { id: 'brand-b', values: { structure_owns: 'websites', structure_owns_websites: 'tailspin,evo' } },
             { id: 'acme', values: { structure_owns: 'attribute', structure_owns_attribute: 'erp_owner=acme' } },
         ]);
     });

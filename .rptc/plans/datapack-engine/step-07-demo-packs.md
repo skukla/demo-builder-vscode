@@ -170,7 +170,7 @@ on `actions/find-datapacks/index.js:62`, so the catalog still lists only shared 
 caller's own. No extension change is needed: the extension already reads by exact name and
 version.
 
-### Live test (owner's call; project `scratch-1028`, website `justrite_test_website`, never JustRite's own)
+### Live test (owner's call; project `scratch-1028`, website `tailspin_test_website`, never Tailspin's own)
 
 See the report of this run; the steps return the library and the store to zero.
 

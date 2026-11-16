@@ -76,7 +76,7 @@ const ROWS: PendingUpdateRow[] = [
     {
         id: 'blockLibrary:0',
         kind: 'blockLibrary',
-        group: { key: '/p/justrite', title: 'JustRite', detail: 'kmanns/justrite' },
+        group: { key: '/p/tailspin', title: 'Tailspin', detail: 'org-e/tailspin' },
         label: 'Demo Builder Blocks',
         detail: 'Newer version',
         ticked: true,
@@ -84,8 +84,8 @@ const ROWS: PendingUpdateRow[] = [
     {
         id: 'integration:0',
         kind: 'integration',
-        group: { key: '/p/justrite', title: 'JustRite', detail: 'kmanns/justrite' },
-        label: 'ERP Integration and Justrite ERP',
+        group: { key: '/p/tailspin', title: 'Tailspin', detail: 'org-e/tailspin' },
+        label: 'ERP Integration and Tailspin ERP',
         detail: 'update available',
         ticked: false,
         lockedReason: 'This project uses a different Adobe organization',
@@ -145,8 +145,8 @@ describe('UpdatesModal', () => {
         render(<UpdatesModal controls={controls({ phase: 'list', rows: ROWS }, ['extension', 'blockLibrary:0'])} />);
 
         expect(screen.getByText('Demo Builder')).toBeInTheDocument();
-        expect(screen.getByText('JustRite')).toBeInTheDocument();
-        // The Apply header (every open row ticked), then each row: Demo Builder's, JustRite's two.
+        expect(screen.getByText('Tailspin')).toBeInTheDocument();
+        // The Apply header (every open row ticked), then each row: Demo Builder's, Tailspin's two.
         const boxes = screen.getAllByRole('checkbox', { hidden: true });
         expect(boxes.map((b) => (b as HTMLInputElement).checked)).toEqual([true, true, true, false]);
         expect(boxes.map((b) => (b as HTMLInputElement).disabled)).toEqual([false, false, false, true]);
@@ -158,7 +158,7 @@ describe('UpdatesModal', () => {
         const c = controls({ phase: 'list', rows: MANY }, ['extension', 'blockLibrary:0']);
         render(<UpdatesModal controls={c} />);
 
-        // The Apply header, then the rows: Demo Builder's, then JustRite's first.
+        // The Apply header, then the rows: Demo Builder's, then Tailspin's first.
         await user().click(screen.getAllByRole('checkbox')[2]);
         await user().click(screen.getByRole('button', { name: 'Apply 2 Updates' }));
 
@@ -186,13 +186,13 @@ describe('UpdatesModal', () => {
     it('shows the run row by row: no checkboxes, the running row saying what it is doing', () => {
         const c = running(
             { extension: { id: 'extension', state: 'done' }, 'blockLibrary:0': { id: 'blockLibrary:0', state: 'running' } },
-            { stage: 'Updating add-ons', step: 'Demo Builder Blocks in JustRite' },
+            { stage: 'Updating add-ons', step: 'Demo Builder Blocks in Tailspin' },
         );
         const { container } = render(<UpdatesModal controls={c} />);
 
         expect(screen.getByRole('dialog', { name: 'Applying Updates' })).not.toHaveAttribute('data-status');
         expect(screen.queryByRole('checkbox')).toBeNull();
-        expect(screen.getByText('Demo Builder Blocks in JustRite')).toBeInTheDocument();
+        expect(screen.getByText('Demo Builder Blocks in Tailspin')).toBeInTheDocument();
         expect(screen.getByText('1.0.0 → 1.1.0')).toBeInTheDocument();
         expect(Array.from(container.querySelectorAll('.work-row')).map((r) => r.getAttribute('data-state'))).toEqual([
             'done',
@@ -353,25 +353,25 @@ describe('UpdatesModal', () => {
     it("shows the local copy as a step in its project's panel, the project running until it ends", () => {
         const c = running({
             'blockLibrary:0': { id: 'blockLibrary:0', state: 'done' },
-            'localCopy:/p/justrite': { id: 'localCopy:/p/justrite', state: 'running' },
+            'localCopy:/p/tailspin': { id: 'localCopy:/p/tailspin', state: 'running' },
         });
         const { container } = render(<UpdatesModal controls={c} />);
 
-        const justrite = Array.from(container.querySelectorAll('.updates-group')).find((p) =>
-            p.textContent?.includes('JustRite'),
+        const tailspin = Array.from(container.querySelectorAll('.updates-group')).find((p) =>
+            p.textContent?.includes('Tailspin'),
         ) as HTMLElement;
-        const step = Array.from(justrite.querySelectorAll('.work-row')).at(-1) as HTMLElement;
+        const step = Array.from(tailspin.querySelectorAll('.work-row')).at(-1) as HTMLElement;
         expect(step).toHaveTextContent('Your Local Copy');
         expect(step).toHaveTextContent('Bringing it up to GitHub');
-        expect(justrite.querySelector('.updates-run-header [role="progressbar"]')).not.toBeNull();
+        expect(tailspin.querySelector('.updates-run-header [role="progressbar"]')).not.toBeNull();
     });
 
     it('keeps the local copy step once it ends, with why when it was left as it is', () => {
         const c = running(
             {
                 'blockLibrary:0': { id: 'blockLibrary:0', state: 'done' },
-                'localCopy:/p/justrite': {
-                    id: 'localCopy:/p/justrite',
+                'localCopy:/p/tailspin': {
+                    id: 'localCopy:/p/tailspin',
                     state: 'skipped',
                     message: 'Left as it is — it has commits GitHub does not have.',
                 },
@@ -400,11 +400,11 @@ describe('UpdatesModal', () => {
     it("draws each project as Reset Selected does: its name as written, its repository under it", () => {
         render(<UpdatesModal controls={controls({ phase: 'list', rows: ROWS }, ['extension', 'blockLibrary:0'])} />);
 
-        const name = screen.getByText('JustRite');
+        const name = screen.getByText('Tailspin');
         expect(name).toHaveClass('checkbox-row-label');
-        expect(name.closest('th')).toHaveTextContent('kmanns/justrite');
+        expect(name.closest('th')).toHaveTextContent('org-e/tailspin');
         expect(screen.getByText('Project')).toHaveClass('batch-project-head');
-        expect(screen.getByText('Demo Builder Blocks').closest('td')).toHaveTextContent('ERP Integration and Justrite ERP');
+        expect(screen.getByText('Demo Builder Blocks').closest('td')).toHaveTextContent('ERP Integration and Tailspin ERP');
     });
 
     // The column header ticks every update that can be applied, locked ones never.
@@ -428,7 +428,7 @@ describe('UpdatesModal', () => {
         render(<UpdatesModal controls={controls({ phase: 'list', rows: MANY }, ['extension', 'blockLibrary:0'])} />);
 
         for (const row of MANY) expect(screen.getByText(row.label)).toBeVisible();
-        expect(screen.queryByRole('button', { name: /JustRite/ })).toBeNull();
+        expect(screen.queryByRole('button', { name: /Tailspin/ })).toBeNull();
     });
 
     // A row waiting for the SC shows itself, unticked, so no group says how many wait.
@@ -437,7 +437,7 @@ describe('UpdatesModal', () => {
         render(<UpdatesModal controls={controls({ phase: 'list', rows: [...ROWS, redeploy] }, ['extension'])} />);
 
         expect(screen.queryByText(/needs? attention/)).not.toBeInTheDocument();
-        expect(screen.getAllByText('ERP Integration and Justrite ERP')).toHaveLength(2);
+        expect(screen.getAllByText('ERP Integration and Tailspin ERP')).toHaveLength(2);
     });
 
     // It was on every such row (owner, 2026-11-05): the window says it once, and only then.

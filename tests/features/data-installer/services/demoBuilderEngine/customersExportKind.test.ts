@@ -25,8 +25,8 @@ async function store() {
         (call) => (call.path === 'customers' ? { id: next++, website_id: 6 } : {}),
     );
     ctx.session.websiteId = 6;
-    ctx.session.websiteCode = 'justrite_test_website';
-    ctx.session.storeCode = 'justrite_test_store_us';
+    ctx.session.websiteCode = 'tailspin_test_website';
+    ctx.session.storeCode = 'tailspin_test_store_us';
     return ctx;
 }
 
@@ -39,7 +39,7 @@ describe('installCustomersExport', () => {
 
         const sent = (ctx.imports[0] as { source: { entity: string; items: Array<Record<string, string>> } }).source;
         expect(sent.entity).toBe('customer_composite');
-        expect(sent.items).toEqual([{ email: 'vip@thelumastory.com', _website: 'justrite_test_website', _store: 'justrite_test_store_us', firstname: 'Sharon', lastname: 'Reynolds', group_id: '40' }]);
+        expect(sent.items).toEqual([{ email: 'vip@thelumastory.com', _website: 'tailspin_test_website', _store: 'tailspin_test_store_us', firstname: 'Sharon', lastname: 'Reynolds', group_id: '40' }]);
         expect(ctx.recorder.created).toEqual([{ kind: 'customers', id: '90', key: 'vip@thelumastory.com' }]);
     });
 

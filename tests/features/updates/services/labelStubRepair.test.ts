@@ -4,7 +4,7 @@
  * Storefronts made before the creation fix hold our one-row stub at
  * `placeholders/checkout.json`, where the B2B template ships the two labels its checkout
  * block reads with no fallback; their heading and Edit link read "undefined" (measured on
- * JustRite). An update puts the template's rows back, read at the commit the update brings
+ * Tailspin). An update puts the template's rows back, read at the commit the update brings
  * the storefront to. A label file that is not our stub is the SC's or a colleague's, and is
  * never touched.
  */

@@ -50,7 +50,7 @@ export interface TemplateUpdateResult {
      * The source was reset to its template in the range (Demo Builder's reset commit is there).
      * Its "changes" are the source being rebuilt, not edits made to it, so the update waits for the
      * SC rather than being offered ticked (owner, 2026-11-03: a colleague reset their demo three
-     * times in a day, and JustRite was offered all of it as one ticked update to the live site).
+     * times in a day, and Tailspin was offered all of it as one ticked update to the live site).
      */
     sourceReset?: true;
 }

@@ -22,7 +22,7 @@
  * the value written, and keeps it, saying so, when the SC has changed it since; either way it
  * leaves the record (a kept setting is the SC's now, as in the setup guide).
  *
- * Read live: the `GET`/`PUT` round trip ran against Justrite on 2026-10-10 (memory
+ * Read live: the `GET`/`PUT` round trip ran against Tailspin on 2026-10-10 (memory
  * `reference_accs_system_config_api`), but no response is recorded in this repo; the shapes are
  * Adobe's "System configuration API" page (`CommerceSystemConfigList`, `CommerceSystemConfigPutAnswer`).
  *

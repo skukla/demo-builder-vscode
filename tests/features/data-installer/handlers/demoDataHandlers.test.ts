@@ -16,7 +16,7 @@ import { PROJECT_RECORDS, sandbox } from '../services/demoDataWipe/wipe.testUtil
 import { fakeErp } from '../services/demoDataWipe/wipeErp.testUtils';
 import { RESET_RULE_CASES } from '../../../helpers/resetRuleOrders';
 import { ADMIN_64, BUYER_65, CATALOG_20, COMPANY_28, b2bInstance } from '../../../helpers/commerceWipeInstanceFixtures';
-import { PROJECT, setUp, NEIGHBOUR, JUSTRITE_ELSEWHERE, checked } from './demoDataHandlers.testUtils';
+import { PROJECT, setUp, NEIGHBOUR, TAILSPIN_ELSEWHERE, checked } from './demoDataHandlers.testUtils';
 
 describe('check-demo-data', () => {
     it("answers what clearing the project's websites would do, type by type, as if its datapack were already uninstalled, writing nothing (C3)", async () => {
@@ -26,9 +26,9 @@ describe('check-demo-data', () => {
 
         expect(res.success).toBe(true);
         const check = checked(res.data);
-        expect(check.websites).toEqual([{ code: 'justrite_test_website', name: 'JustRite Test' }]);
+        expect(check.websites).toEqual([{ code: 'tailspin_test_website', name: 'Tailspin Test' }]);
         // The clearing uninstalls the datapack first, so what its record lists is counted as removed.
-        expect(check.records.products).toEqual({ removed: ['ZZ-ONLY-HERE', 'ZZ-JACKET', 'ZZ-JACKET-RED', 'ZZ-MADE-BY-DEMO-BUILDER', 'ZZ-SHARED-WITH-JUSTRITE'], kept: ['ZZ-LONE-VARIANT'] });
+        expect(check.records.products).toEqual({ removed: ['ZZ-ONLY-HERE', 'ZZ-JACKET', 'ZZ-JACKET-RED', 'ZZ-MADE-BY-DEMO-BUILDER', 'ZZ-SHARED-WITH-TAILSPIN'], kept: ['ZZ-LONE-VARIANT'] });
         expect(check.records.customers).toEqual({ removed: ['zz.shopper@example.com', 'zz.made@example.com'], kept: ['zz.admin@example.com'] });
         expect(check.rows.map((r) => [r.label, r.happens])).toEqual([
             ['Products', '5 removed'],
@@ -63,7 +63,7 @@ describe('check-demo-data', () => {
 
         const check = checked((await handlers['check-demo-data'](context)).data);
 
-        expect(shownClearFor(check.token)).toEqual({ websites: ['JustRite Test'], warning: check.warning, datapack: 'zz-test' });
+        expect(shownClearFor(check.token)).toEqual({ websites: ['Tailspin Test'], warning: check.warning, datapack: 'zz-test' });
     });
 
     it('stops at an org mismatch before reading the store', async () => {
@@ -82,7 +82,7 @@ describe('check-demo-data', () => {
         const res = await handlers['check-demo-data'](context);
 
         const check = checked(res.data);
-        expect(check.warning).toBe('The project Neighbour Demo also uses the website JustRite Test. Clearing it also removes what was added there by hand for that project.');
+        expect(check.warning).toBe('The project Neighbour Demo also uses the website Tailspin Test. Clearing it also removes what was added there by hand for that project.');
         expect(check.total).toBe(7);
         expect(others).toHaveBeenCalledWith(context, PROJECT);
     });
@@ -115,13 +115,13 @@ describe('check-demo-data', () => {
         const { erp, client } = fakeErp();
         const find = jest.fn().mockReturnValue(erp);
         const store = sandbox({ orders: [RESET_RULE_CASES[0].order] });
-        const { handlers, context } = setUp({ erp: find, others: async () => [JUSTRITE_ELSEWHERE] }, store);
+        const { handlers, context } = setUp({ erp: find, others: async () => [TAILSPIN_ELSEWHERE] }, store);
 
         const check = checked((await handlers['check-demo-data'](context)).data);
 
-        expect(find).toHaveBeenCalledWith(context, PROJECT, [JUSTRITE_ELSEWHERE]);
-        expect(client.resolvedSettings).toHaveBeenCalledWith(['justrite_test_website']);
-        expect(check.erp?.line).toBe('The ERP integration (JustRite) serves these websites: its ERP is brought in line with Commerce after the clearing.');
+        expect(find).toHaveBeenCalledWith(context, PROJECT, [TAILSPIN_ELSEWHERE]);
+        expect(client.resolvedSettings).toHaveBeenCalledWith(['tailspin_test_website']);
+        expect(check.erp?.line).toBe('The ERP integration (Tailspin) serves these websites: its ERP is brought in line with Commerce after the clearing.');
         expect(check.records.orders.removed).toEqual(['000000701']);
     });
 
@@ -201,7 +201,7 @@ describe('clear-demo-data', () => {
 
         const res = await handlers['clear-demo-data'](context, { token });
 
-        expect(res.error).toMatch(/everything on the website JustRite Test/);
+        expect(res.error).toMatch(/everything on the website Tailspin Test/);
         expect(res.error).toMatch(/companies, shared catalogs, customer groups, attribute sets and attributes/);
         expect(res.error).toMatch(/settings to the default's value/);
         expect(res.error).toMatch(/It cannot be undone/);
@@ -245,8 +245,8 @@ describe('clear-demo-data', () => {
     it("keeps a company another project's record lists, whatever website that record is for", async () => {
         const store = sandbox({ products: [], orders: [], customers: [ADMIN_64, BUYER_65], instance: b2bInstance() });
         const theirs: InstallRecord = { format: 1, pack: { name: 'theirs', version: '1' }, engine: 'demo-builder', startedAt: '2026-10-30T10:00:00.000Z', target: { websiteCode: 'bodea', storeCode: 'bodea_en' }, created: [{ kind: 'b2b_companies', id: '28' }] };
-        const files = memoryFiles({ [installRecordPath(JUSTRITE_ELSEWHERE.path, theirs.pack)]: JSON.stringify(theirs) });
-        const { handlers, context } = setUp({ files, others: async () => [JUSTRITE_ELSEWHERE] }, store);
+        const files = memoryFiles({ [installRecordPath(TAILSPIN_ELSEWHERE.path, theirs.pack)]: JSON.stringify(theirs) });
+        const { handlers, context } = setUp({ files, others: async () => [TAILSPIN_ELSEWHERE] }, store);
 
         const check = checked((await handlers['check-demo-data'](context)).data);
 
@@ -273,7 +273,7 @@ describe('clear-demo-data', () => {
         expect(res.success).toBe(true);
         expect(seen.writesBefore).toEqual([0]);
         expect((res.data as WipeOutcome).removed).toMatchObject({ customers: 1, products: 3, takenOff: 1, cartRules: 0, rulesTakenOff: 0, categories: 0 });
-        expect(res.note).toMatch(/^Uninstalled the datapack zz-test first\. Removed 3 products and 1 customer from the website JustRite Test\./);
+        expect(res.note).toMatch(/^Uninstalled the datapack zz-test first\. Removed 3 products and 1 customer from the website Tailspin Test\./);
         expect(res.note).not.toMatch(/left for its uninstall/);
         expect(store.sent).toHaveLength(5);
         expect((await handlers['clear-demo-data'](context, { token, confirm: true })).error).toMatch(/no longer known/);
@@ -312,11 +312,11 @@ describe('clear-demo-data', () => {
         const res = await handlers['clear-demo-data'](context, { token, confirm: true });
 
         expect(res.success).toBe(true);
-        expect(client.closeOrders).toHaveBeenCalledWith(['justrite_test_store'], expect.any(Function));
+        expect(client.closeOrders).toHaveBeenCalledWith(['tailspin_test_store'], expect.any(Function));
         expect(refill).toHaveBeenCalledTimes(1);
         expect(store.sent.map((w) => w.path)).toContain('orders/701/cancel');
         expect(res.note).toContain(' Canceled 1 order.');
-        expect(res.note).toContain(" JustRite's ERP was brought in line with Commerce. These websites' orders were removed from Justrite ERP.");
+        expect(res.note).toContain(" Tailspin's ERP was brought in line with Commerce. These websites' orders were removed from Tailspin ERP.");
     });
 
     it('writes nothing and offers the new list when the store would now clear more', async () => {

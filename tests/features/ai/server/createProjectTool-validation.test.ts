@@ -168,7 +168,7 @@ describe('create_project — registered schema', () => {
         expect(schema.safeParse({ projectName: 'p', package: 'k' }).success).toBe(false);
         // `package` is optional at the schema level because `link` can stand in;
         // the handler is what insists on one of the two.
-        expect(schema.safeParse({ projectName: 'p', link: 'https://github.com/jen/demo', stack: 's' }).success).toBe(true);
+        expect(schema.safeParse({ projectName: 'p', link: 'https://github.com/robin/demo', stack: 's' }).success).toBe(true);
         expect(schema.safeParse({ projectName: 1, package: 'k', stack: 's' }).success).toBe(false);
         expect(
             schema.safeParse({ projectName: 'p', package: 'k', stack: 's', confirm: 'yes' }).success,

@@ -2,7 +2,7 @@
  * Which ERP integration a wipe calls ("One action, ERP included", owner 2026-10-30): the deployed
  * ERP integration of ANY local project on the same Commerce instance, this one included, called at
  * the URLs its deploy answered with the signed-in identity. The project shapes copy the real
- * JustRite manifest (`~/.demo-builder/projects/justrite/.demo-builder.json`, read 2026-10-30): an
+ * Tailspin manifest (`~/.demo-builder/projects/tailspin/.demo-builder.json`, read 2026-10-30): an
  * `erp-integration` integration and a `demo-erp` system, keyed by id, with `runtime/erp/<action>`
  * URLs. The catalog is the bundled one.
  */
@@ -10,7 +10,7 @@
 import { findWipeErp } from '@/features/data-installer/services/demoDataWipe/wipeErpDeps';
 import type { AppBuilderComponentState, Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
-import { JUSTRITE_SETTINGS, STATUS_BY_STORE } from '../../../../helpers/erpWipeFixtures';
+import { TAILSPIN_SETTINGS, STATUS_BY_STORE } from '../../../../helpers/erpWipeFixtures';
 import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
 import { createMockProject } from '../../../../helpers/projectFake';
 
@@ -34,7 +34,7 @@ function onInstance(name: string, endpoint: string, components: Record<string, A
 }
 
 const PAIR = { 'erp-integration': state('integration', { deployedUrls: URLS }), 'demo-erp': state('system', { usedBy: 'erp-integration' }) };
-const JUSTRITE = onInstance('justrite', INSTANCE, PAIR, 'JustRite');
+const TAILSPIN = onInstance('tailspin', INSTANCE, PAIR, 'Tailspin');
 const SCRATCH = onInstance('scratch-1028', INSTANCE);
 
 /** A signed-in identity whose org is the projects' (`createMockProject`'s 285361). */
@@ -48,7 +48,7 @@ function signedIn(valid = true): HandlerContext {
 
 function answering(): jest.MockedFunction<typeof fetch> {
     return jest.fn(async (url: string | URL | Request) => {
-        const body = String(url).includes('/erp/status') ? STATUS_BY_STORE : JUSTRITE_SETTINGS;
+        const body = String(url).includes('/erp/status') ? STATUS_BY_STORE : TAILSPIN_SETTINGS;
         return { ok: true, status: 200, text: async () => JSON.stringify(body) };
     }) as unknown as jest.MockedFunction<typeof fetch>;
 }
@@ -63,17 +63,17 @@ describe('findWipeErp', () => {
         const fetchImpl = answering();
         globalThis.fetch = fetchImpl;
 
-        const erp = findWipeErp(signedIn(), SCRATCH, [JUSTRITE]);
-        const route = await erp?.route(['justrite_test_website']);
+        const erp = findWipeErp(signedIn(), SCRATCH, [TAILSPIN]);
+        const route = await erp?.route(['tailspin_test_website']);
 
-        expect(erp?.name).toBe('JustRite');
-        expect(route).toEqual({ name: 'JustRite', websites: ['justrite_test_website'] });
-        expect(fetchImpl.mock.calls.map(([url]) => String(url)).sort()).toEqual([`${WEB}/erp/settings?websites=justrite_test_website`, `${WEB}/erp/status`]);
+        expect(erp?.name).toBe('Tailspin');
+        expect(route).toEqual({ name: 'Tailspin', websites: ['tailspin_test_website'] });
+        expect(fetchImpl.mock.calls.map(([url]) => String(url)).sort()).toEqual([`${WEB}/erp/settings?websites=tailspin_test_website`, `${WEB}/erp/status`]);
         expect((fetchImpl.mock.calls[0][1] as RequestInit).headers).toMatchObject({ Authorization: 'Bearer fake-test-pw-not-a-secret', 'x-gw-ims-org-id': 'ABC@AdobeOrg' });
     });
 
     it('finds the integration in the project itself', () => {
-        expect(findWipeErp(signedIn(), JUSTRITE, [])?.name).toBe('JustRite');
+        expect(findWipeErp(signedIn(), TAILSPIN, [])?.name).toBe('Tailspin');
     });
 
     it('finds none on another instance, nor one not deployed', () => {
@@ -88,7 +88,7 @@ describe('findWipeErp', () => {
         const fetchImpl = answering();
         globalThis.fetch = fetchImpl;
 
-        const route = await findWipeErp(signedIn(false), SCRATCH, [JUSTRITE])?.route(['justrite_test_website']);
+        const route = await findWipeErp(signedIn(false), SCRATCH, [TAILSPIN])?.route(['tailspin_test_website']);
 
         expect(route?.held).toBe('it could not be asked (Adobe sign-in required)');
         expect(fetchImpl).not.toHaveBeenCalled();

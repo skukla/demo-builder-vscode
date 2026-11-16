@@ -27,12 +27,12 @@ const FOUNDRY: ErpAppearance = { palette: 'bronze', logo: 'monogram', nav: 'top'
 const MERIDIAN: ErpAppearance = { palette: 'indigo', logo: 'orbit', nav: 'top' };
 const HARBOUR: ErpAppearance = { palette: 'teal', logo: 'cube', nav: 'rail' };
 
-/** Justrite's pair: the integration's own ERP, and the one just added beside it. */
+/** Tailspin's pair: the integration's own ERP, and the one just added beside it. */
 function project(): Partial<Project> {
     return {
         appBuilderComponents: {
             'erp-integration': { ...INTEGRATION, systems: ['demo-erp', 'demo-erp-2'] },
-            'demo-erp': { ...ERP, name: 'Justrite', deployedUrls: FIRST_URLS },
+            'demo-erp': { ...ERP, name: 'Tailspin', deployedUrls: FIRST_URLS },
             'demo-erp-2': {
                 ...ERP,
                 name: 'Accuform',

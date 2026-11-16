@@ -246,7 +246,7 @@ describe('executeEdsReset - error mapping', () => {
 
 describe('executeEdsReset - keeping or replacing the content', () => {
     it('keeps the current content when asked: the pipeline neither clears nor copies pages', async () => {
-        await runReset({ keepContent: true, contentSource: { org: 'jen', site: 'isle5-content' } });
+        await runReset({ keepContent: true, contentSource: { org: 'robin', site: 'isle5-content' } });
 
         expect(mockExecuteEdsPipeline).toHaveBeenCalledWith(
             expect.objectContaining({ clearExistingContent: false, skipContent: true }),
@@ -256,7 +256,7 @@ describe('executeEdsReset - keeping or replacing the content', () => {
     });
 
     it('clears and copies content by default', async () => {
-        await runReset({ contentSource: { org: 'jen', site: 'isle5-content' } });
+        await runReset({ contentSource: { org: 'robin', site: 'isle5-content' } });
 
         expect(mockExecuteEdsPipeline).toHaveBeenCalledWith(
             expect.objectContaining({ clearExistingContent: true, skipContent: false }),

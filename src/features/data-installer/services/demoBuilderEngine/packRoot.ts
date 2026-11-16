@@ -10,7 +10,7 @@
  *   and its categories go straight under the store's root. That is what the storefront would
  *   show had the store's root been switched to the pack's, with nothing to do in the Admin, and
  *   removal takes them back with no store change.
- * - **the root is shared** with another store (`justrite_test_website` shows JustRite's root 119):
+ * - **the root is shared** with another store (`tailspin_test_website` shows Tailspin's root 119):
  *   the pack keeps its own root, and the SC is asked for the one Admin step (`packRootStep.ts`).
  *
  * The choice is made once, at the first install, and a repeat install follows what the record
@@ -43,7 +43,7 @@ export interface StoreRoot {
     storeName: string;
     /** `root_category_id` of that store, from `GET store/storeGroups`. */
     rootId: number;
-    /** The other stores showing the same root: "the store justrite_store (website justrite)". */
+    /** The other stores showing the same root: "the store tailspin_store (website tailspin)". */
     sharedWith: string[];
 }
 
@@ -79,7 +79,7 @@ function storeOfView(structure: CommerceStoreStructure, websiteCode: string, vie
     return view ? structure.storeGroups.find((g) => String(g.id) === String(view.store_group_id)) : undefined;
 }
 
-/** Every other store showing the store's root, by name: "the store Justrite Store (website Justrite)" (owner, 2026-11-15). */
+/** Every other store showing the store's root, by name: "the store Tailspin Store (website Tailspin)" (owner, 2026-11-15). */
 function othersShowing(structure: CommerceStoreStructure, group: CommerceStoreGroup): string[] {
     const nameOf = new Map(structure.websites.map((w) => [String(w.id), w.name || w.code]));
     return structure.storeGroups

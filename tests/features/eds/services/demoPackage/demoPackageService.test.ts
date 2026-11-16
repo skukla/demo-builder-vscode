@@ -74,9 +74,9 @@ describe('ownStorefrontOf', () => {
 describe('packageDraftFor', () => {
     it("prefills from the brand, from the added demo's row, and from the project's own title for a Starter build", () => {
         expect(packageDraftFor(edsProject(), CATALOG)).toEqual({ name: 'Bodea', description: 'Bodea-branded B2B demo' });
-        expect(packageDraftFor(edsProject({ demo: makeAddedDemo({ description: 'Jen wrote this' }) }), CATALOG)).toEqual({
-            name: 'Isle5 by Jen',
-            description: 'Jen wrote this',
+        expect(packageDraftFor(edsProject({ demo: makeAddedDemo({ description: 'Robin wrote this' }) }), CATALOG)).toEqual({
+            name: 'Isle5 by Robin',
+            description: 'Robin wrote this',
         });
         expect(packageDraftFor(edsProject({ selectedPackage: 'starter', title: 'My Summit Demo' }), CATALOG)).toEqual({
             name: 'My Summit Demo',
@@ -92,7 +92,7 @@ describe('describeProject', () => {
             selectedBlockLibraries: ['isle5', ''],
             appBuilderComponents: {
                 'app-builder-shell': { kind: 'integration', status: 'deployed', source: { owner: 'adobe', repo: 'app-builder-shell' } },
-                'erp-sync': { kind: 'integration', status: 'deployed', name: 'ERP Sync', source: { owner: 'jen', repo: 'erp-sync', branch: 'main' } },
+                'erp-sync': { kind: 'integration', status: 'deployed', name: 'ERP Sync', source: { owner: 'robin', repo: 'erp-sync', branch: 'main' } },
                 'eds-commerce-mesh': { kind: 'mesh', status: 'deployed', source: { owner: 'adobe', repo: 'mesh' } },
             },
         });
@@ -119,7 +119,7 @@ describe('describeProject', () => {
             requiresMesh: 'optional',
             // Whole: the store and the pack it was made from travel to the colleague.
             datapack: { name: 'bodea', version: '2026.09', store: 'library', origin: { name: 'bodea', version: 'main' } },
-            integrations: { catalog: ['app-builder-shell'], custom: { 'erp-sync': { owner: 'jen', repo: 'erp-sync', branch: 'main', name: 'ERP Sync' } } },
+            integrations: { catalog: ['app-builder-shell'], custom: { 'erp-sync': { owner: 'robin', repo: 'erp-sync', branch: 'main', name: 'ERP Sync' } } },
             blockLibraries: ['isle5'],
             contentSource: CONTENT,
             builtWith: { package: 'bodea', extension: '1.0.0-beta.150' },
@@ -238,7 +238,7 @@ describe('describeProject — builtWith (EDS-13f step 02)', () => {
     // colleague should start from where this code actually is.
     it.each([
         ['a record carried from its package', makeAddedDemo({ builtWith: { template: B2B, lkg: LKG, extension: '1.0.0-beta.149' } })],
-        ['no record at all (JustRite)', makeAddedDemo()],
+        ['no record at all (Tailspin)', makeAddedDemo()],
     ])("writes a colleague's storefront's recorded Adobe base over %s", (_label, demo) => {
         const MOVED = '48bed04d072fff094b49a46709b351bd719b287a';
         const project = edsProject({ demo });
@@ -304,12 +304,12 @@ describe('packageChecks', () => {
     it('warns for a private repository, a site with no index (offering Republish), a missing datapack, and a private custom app', async () => {
         const repoOps = {
             getRepository: jest.fn(async (owner: string, name: string) =>
-                name === 'erp-sync' ? repo('jen/erp-sync', true) : repo(`${owner}/${name}`, true, 'develop'),
+                name === 'erp-sync' ? repo('robin/erp-sync', true) : repo(`${owner}/${name}`, true, 'develop'),
             ),
         };
         const project = edsProject({
             datapack: { name: 'bodea', version: 'main' },
-            appBuilderComponents: { 'erp-sync': { kind: 'integration', status: 'deployed', source: { owner: 'jen', repo: 'erp-sync' } } },
+            appBuilderComponents: { 'erp-sync': { kind: 'integration', status: 'deployed', source: { owner: 'robin', repo: 'erp-sync' } } },
         });
 
         const checks = await packageChecks(project, OWN, { indexFound: false }, { repoOps, datapackAvailability: async () => 'missing', logger });
@@ -318,7 +318,7 @@ describe('packageChecks', () => {
             { id: 'repository', ok: false, message: "This storefront's code is private. Colleagues will need access to it, or make it public." },
             { id: 'index', ok: false, message: 'Colleagues would start with an empty site.', action: 'republish' },
             { id: 'datapack', ok: false, message: "The sample data this demo uses (bodea) isn't available to colleagues yet." },
-            { id: 'custom-app', ok: false, message: "The erp-sync integration's code is private. Colleagues will need access to it.", repository: 'jen/erp-sync' },
+            { id: 'custom-app', ok: false, message: "The erp-sync integration's code is private. Colleagues will need access to it.", repository: 'robin/erp-sync' },
         ]);
     });
 

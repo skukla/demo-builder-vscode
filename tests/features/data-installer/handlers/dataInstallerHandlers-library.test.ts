@@ -224,7 +224,7 @@ describe('the library store', () => {
 
     describe('the one list every surface shows', () => {
         const INSTALLER_ROW = { id: { name: 'bodea', version: 'main' }, shared: true };
-        const LIBRARY_ROW = { id: { name: 'justrite', version: 'v1' }, shared: false, mine: true };
+        const LIBRARY_ROW = { id: { name: 'tailspin', version: 'v1' }, shared: false, mine: true };
 
         /** One fake client per address, so each store answers for itself. Each `findDatapacks`, in the order asked. */
         function storesAnswer(

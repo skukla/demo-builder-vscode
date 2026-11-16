@@ -577,7 +577,7 @@ One contradiction inside the standard: it says Import throughout (F1) against de
 | 4 | Install steps at 12px against the save's rows at 8px (F13) | Both runs mid-way, side by side |
 | 5 | Save's result at 480 against install's at 400 (F4) | Both clean results |
 | 6 | Can "No Changes to Save" be read in 1.5 seconds? | A screen recording of Save Changes with nothing changed |
-| 7 | Uninstall's confirm at medium with a long store name in the title | A store named like "Justrite Test Store US (Justrite Test)" |
+| 7 | Uninstall's confirm at medium with a long store name in the title | A store named like "Tailspin Test Store US (Tailspin Test)" |
 | 8 | Uninstall's two consequence lines 16 apart against Delete's 8 (F7) | Both confirms |
 | 9 | Red "Uninstall Without Saving" at the start with blue "Save and Uninstall" at the end (F6) | Uninstall with changes, the SC's own datapack and a team one |
 | 10 | Reset's changes question in the progress window (F6) | Reset a project whose team datapack has changes |

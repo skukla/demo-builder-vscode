@@ -210,7 +210,7 @@ Admin and keeps it (only scratch-1028's test pack; no SC has one yet).
 Tests: `companiesKind.test.ts` asserts the `status` in the `POST company` body for both cases, and
 that capture keeps the store's status outside the GraphQL input.
 
-### Live test (owner's call; project `scratch-1028`, website `justrite_test_website`, never JustRite's own)
+### Live test (owner's call; project `scratch-1028`, website `tailspin_test_website`, never Tailspin's own)
 
 A test pack, built from Bodea's shape with names no one could take for real ones: one group
 `ZZ Test Buyers DB08`, two customers `db08.buyer1@example.com` and `db08.admin@example.com`, one
@@ -219,7 +219,7 @@ catalog `ZZ Test Catalog DB08` on that group, one company `ZZ Test Company DB08`
 existing test-website category and one test product assigned to the catalog.
 
 1. Load the pack into the library (`load_datapack_zip`), then `validate_datapack_import` and
-   `start_datapack_import` on `justrite_test_website`. Read the record under
+   `start_datapack_import` on `tailspin_test_website`. Read the record under
    `.demo-builder/datapacks/`: every object has `key`, `fingerprint`, `wrote`; no password anywhere.
 2. In the Admin: the company, its admin, the catalog with the company, category and product in it;
    sign in on the storefront as `db08.buyer1@example.com` with the pack's password.

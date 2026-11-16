@@ -63,7 +63,7 @@ function setup(overrides: Partial<Project> = {}) {
     return { project, stateManager, context, progress: jest.fn() };
 }
 
-const toNew: ProjectCreationConfig = { projectName: 'justrite', datapack: NEW };
+const toNew: ProjectCreationConfig = { projectName: 'tailspin', datapack: NEW };
 /** The library's pack names as remembered in global state (`packNames.ts`). */
 function remembering(context: ReturnType<typeof setup>['context'], names: Record<string, string>): void {
     (context.context.globalState.get as jest.Mock).mockImplementation((key: string) => (key === PACK_NAMES_KEY ? names : undefined));
@@ -217,7 +217,7 @@ describe('applyDatapackChange', () => {
             saved = p.datapackInstallFailure;
         });
 
-        await applyDatapackChange(context, project, { projectName: 'justrite' }, { changes: true, removeOld: false }, progress);
+        await applyDatapackChange(context, project, { projectName: 'tailspin' }, { changes: true, removeOld: false }, progress);
 
         expect(saved).toBeUndefined();
     });
@@ -260,7 +260,7 @@ describe('applyDatapackChange', () => {
         await applyDatapackChange(
             context,
             project,
-            { projectName: 'justrite' },
+            { projectName: 'tailspin' },
             { changes: true, removeOld: true },
             progress,
         );

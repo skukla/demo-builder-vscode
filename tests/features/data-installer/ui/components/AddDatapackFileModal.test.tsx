@@ -17,7 +17,7 @@ it('opens the picker first, then shows what is in the file before anything is wr
     await openModal();
 
     expect(mockRequest.mock.calls[0][0]).toBe('open-datapack-zip');
-    expect(screen.getByText('Justrite B2B, v1. It holds Categories, Customer Groups.')).toBeInTheDocument();
+    expect(screen.getByText('Tailspin B2B, v1. It holds Categories, Customer Groups.')).toBeInTheDocument();
     expect(loadCall()).toBeUndefined();
 });
 
@@ -26,7 +26,7 @@ it('names a saved version by when it was saved, never its id', async () => {
 
     await openModal();
 
-    expect(screen.getByText(/^Justrite B2B, saved Nov 9, .+\. It holds/)).toBeInTheDocument();
+    expect(screen.getByText(/^Tailspin B2B, saved Nov 9, .+\. It holds/)).toBeInTheDocument();
     expect(screen.queryByText(/20261109-141504/)).not.toBeInTheDocument();
 });
 
@@ -51,7 +51,7 @@ it('draws its opening line as the house lead, and the settings line as the house
 
     await openModal();
 
-    expect(screen.getByText(/^Justrite B2B, v1\. It holds/)).toHaveClass('lead-text');
+    expect(screen.getByText(/^Tailspin B2B, v1\. It holds/)).toHaveClass('lead-text');
     expect(screen.getByText(/^Its store configuration/)).toHaveClass('dialog-note');
 });
 
@@ -71,7 +71,7 @@ it('loads into the library by default, private, without replacing anything', asy
     await settle();
 
     expect(loadCall()).toEqual({ path: OPENED.path, target: 'library', update: false });
-    const heading = screen.getByRole('heading', { name: 'Justrite B2B Loaded' });
+    const heading = screen.getByRole('heading', { name: 'Tailspin B2B Loaded' });
     expect(heading.querySelector('.text-positive')).not.toBeNull();
     expect(screen.getByText('Added to My Datapacks.')).toBeInTheDocument();
 });
@@ -93,7 +93,7 @@ it('makes the outcome the title, and offers one way out rather than Close and Do
 // Replace or Keep Both since step-07 F1: `AddDatapackFileModal-keepBoth.test.tsx`.
 describe('the replace question', () => {
     it('is not asked about a version My Datapacks does not hold', async () => {
-        await openModal({ mySaves: [{ name: 'justrite', version: 'v0' }] });
+        await openModal({ mySaves: [{ name: 'tailspin', version: 'v0' }] });
 
         expect(screen.queryByRole('radio')).not.toBeInTheDocument();
         expect(screen.queryByText(/already in My Datapacks/)).not.toBeInTheDocument();
@@ -107,7 +107,7 @@ it('into the Data Installer: warns it is shared, and sends the pack name back as
         'load-datapack-zip': {
             success: true,
             data: {
-                datapackName: 'justrite',
+                datapackName: 'tailspin',
                 version: 'v1',
                 target: 'installer',
                 pack: 'created',
@@ -121,7 +121,7 @@ it('into the Data Installer: warns it is shared, and sends the pack name back as
     await press(screen.getByRole('radio', { name: /Data Installer/ }));
 
     expect(
-        screen.getByText(/Other teams will see justrite in the shared catalog/)
+        screen.getByText(/Other teams will see tailspin in the shared catalog/)
     ).toBeInTheDocument();
     expect(screen.queryByRole('checkbox', { name: /Replace Existing Version/ })).not.toBeInTheDocument();
     await press(screen.getByRole('button', { name: 'Add' }));
@@ -130,7 +130,7 @@ it('into the Data Installer: warns it is shared, and sends the pack name back as
         path: OPENED.path,
         target: 'installer',
         update: false,
-        confirmName: 'justrite',
+        confirmName: 'tailspin',
     });
 });
 
@@ -139,7 +139,7 @@ it('lists each refused type with its reason when only part of the file landed', 
         'load-datapack-zip': {
             success: true,
             data: {
-                datapackName: 'justrite',
+                datapackName: 'tailspin',
                 version: 'v1',
                 target: 'library',
                 pack: 'created',
@@ -158,7 +158,7 @@ it('lists each refused type with its reason when only part of the file landed', 
     await press(screen.getByRole('button', { name: 'Add' }));
     await settle();
 
-    const heading = screen.getByRole('heading', { name: 'Justrite B2B Partly Loaded' });
+    const heading = screen.getByRole('heading', { name: 'Tailspin B2B Partly Loaded' });
     expect(heading.querySelector('.text-notice')).not.toBeNull();
     expect(screen.getByText('Loaded 1 of 2 data types. Added to My Datapacks.')).toBeInTheDocument();
     expect(screen.getByText(/too large to send in one request/)).toBeInTheDocument();
@@ -171,7 +171,7 @@ it('titles a load the service refused, with its reason in the body', async () =>
     await press(screen.getByRole('button', { name: 'Add' }));
     await settle();
 
-    const heading = screen.getByRole('heading', { name: "Couldn't Add Justrite B2B" });
+    const heading = screen.getByRole('heading', { name: "Couldn't Add Tailspin B2B" });
     expect(heading.querySelector('.text-negative')).not.toBeNull();
     expect(screen.getByText('The library is not reachable.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
@@ -205,7 +205,7 @@ it('offers the one Delete after a load that created a library pack, and removes 
     await press(screen.getByRole('button', { name: 'Delete' }));
     await settle();
 
-    expect(deleteCalls()).toEqual([{ datapackName: 'justrite', version: 'v1', keepSettingsLayer: true, confirm: true }]);
+    expect(deleteCalls()).toEqual([{ datapackName: 'tailspin', version: 'v1', keepSettingsLayer: true, confirm: true }]);
     expect(screen.getByText('Deleted.')).toBeInTheDocument();
 });
 
@@ -241,7 +241,7 @@ describe('a file that carries a settings layer (datapack-engine step 09)', () =>
     });
 
     it('offers one row and one Delete that removes the datapack and the layer the load created', async () => {
-        withService({ 'open-datapack-zip': opened, 'load-datapack-zip': loaded({ datapackName: 'justrite-settings', version: 'v1', outcome: 'created' }) });
+        withService({ 'open-datapack-zip': opened, 'load-datapack-zip': loaded({ datapackName: 'tailspin-settings', version: 'v1', outcome: 'created' }) });
         await openModal();
 
         await press(screen.getByRole('button', { name: 'Add' }));
@@ -252,8 +252,8 @@ describe('a file that carries a settings layer (datapack-engine step 09)', () =>
         await settle();
 
         expect(deleteCalls()).toEqual([
-            { datapackName: 'justrite', version: 'v1', keepSettingsLayer: true, confirm: true },
-            { datapackName: 'justrite-settings', version: 'v1', keepSettingsLayer: true, confirm: true },
+            { datapackName: 'tailspin', version: 'v1', keepSettingsLayer: true, confirm: true },
+            { datapackName: 'tailspin-settings', version: 'v1', keepSettingsLayer: true, confirm: true },
         ]);
     });
 
@@ -262,23 +262,23 @@ describe('a file that carries a settings layer (datapack-engine step 09)', () =>
         ['the same version', 'v1'],
         ['another version', '3'],
     ])('never removes a layer that was there before the load, at %s', async (_what, version) => {
-        const left = { datapackName: 'justrite-settings', version, outcome: 'left' as const, reason: `My Datapacks already holds justrite-settings@${version}, so it was left as it is.` };
+        const left = { datapackName: 'tailspin-settings', version, outcome: 'left' as const, reason: `My Datapacks already holds tailspin-settings@${version}, so it was left as it is.` };
         withService({ 'open-datapack-zip': opened, 'load-datapack-zip': loaded(left) });
         await openModal();
 
         await press(screen.getByRole('button', { name: 'Add' }));
         // A line of its own (layout variant 6): the part, then the reason under it.
         expect(screen.getByText('Store Configuration')).toBeInTheDocument();
-        expect(screen.getByText(/already holds justrite-settings@/)).toBeInTheDocument();
-        expect(screen.getByRole('heading', { name: 'Justrite B2B Loaded' })).toBeInTheDocument();
+        expect(screen.getByText(/already holds tailspin-settings@/)).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Tailspin B2B Loaded' })).toBeInTheDocument();
         await press(screen.getByRole('button', { name: 'Delete' }));
         await settle();
 
-        expect(deleteCalls()).toEqual([{ datapackName: 'justrite', version: 'v1', keepSettingsLayer: true, confirm: true }]);
+        expect(deleteCalls()).toEqual([{ datapackName: 'tailspin', version: 'v1', keepSettingsLayer: true, confirm: true }]);
     });
 
     it('offers the layer as the one row when the data went to the Data Installer', async () => {
-        withService({ 'open-datapack-zip': opened, 'load-datapack-zip': loaded({ datapackName: 'justrite-settings', version: '3', outcome: 'created' }, { target: 'installer' }) });
+        withService({ 'open-datapack-zip': opened, 'load-datapack-zip': loaded({ datapackName: 'tailspin-settings', version: '3', outcome: 'created' }, { target: 'installer' }) });
         await openModal({ offersInstaller: true });
         await press(screen.getByRole('radio', { name: /Data Installer/ }));
 
@@ -287,6 +287,6 @@ describe('a file that carries a settings layer (datapack-engine step 09)', () =>
         await press(screen.getByRole('button', { name: 'Delete' }));
         await settle();
 
-        expect(deleteCalls()).toEqual([{ datapackName: 'justrite-settings', version: '3', keepSettingsLayer: true, confirm: true }]);
+        expect(deleteCalls()).toEqual([{ datapackName: 'tailspin-settings', version: '3', keepSettingsLayer: true, confirm: true }]);
     });
 });

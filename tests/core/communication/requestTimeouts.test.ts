@@ -51,7 +51,7 @@ describe('REQUEST_TIMEOUTS', () => {
     });
 
     // Add another ERP's store read: a credential plus every product in the store. On
-    // Justrite it outran 30s, and the dialog said the store could not be read while the
+    // Tailspin it outran 30s, and the dialog said the store could not be read while the
     // extension was still reading it (2026-10-18).
     it('budgets the Add another ERP store read getErpOwnershipOptions', () => {
         expect([...budgetedTypes()]).toContain('getErpOwnershipOptions');

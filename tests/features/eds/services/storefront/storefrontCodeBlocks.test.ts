@@ -25,7 +25,7 @@ import { createMockLogger } from '../../../../helpers/loggerFake';
 const TARGET = { owner: 'me', repo: 'store' };
 const HEAD = '<meta charset="UTF-8">\n<script nonce="aem" src="/scripts/aem.js" type="module"></script>\n';
 const DELAYED = '// add delayed functionality here\n';
-const OLD_404 = buildSmart404Snippet('https://old.example/prepublish-pdp', 'kmanns', 'justrite');
+const OLD_404 = buildSmart404Snippet('https://old.example/prepublish-pdp', 'org-e', 'tailspin');
 
 /** A repository whose files read as `files`, each read in turn from its list when given one. */
 function github(files: Record<string, string | Array<string | null> | null>): GithubFake {
@@ -130,10 +130,10 @@ describe('writeHeadBlocks', () => {
 });
 
 describe('cleanDelayedJs', () => {
-    const JUSTRITE = DELAYED + INSPECTOR_DELAYED_SNIPPET + OLD_404;
+    const TAILSPIN = DELAYED + INSPECTOR_DELAYED_SNIPPET + OLD_404;
 
     it('takes both old copies out in one write, leaving the rest of the file as it was', async () => {
-        const gh = github({ 'scripts/delayed.js': JUSTRITE });
+        const gh = github({ 'scripts/delayed.js': TAILSPIN });
 
         expect(await cleanDelayedJs(gh, TARGET, { smart404: true, inspector: true }, createMockLogger())).toBe(true);
 
@@ -143,7 +143,7 @@ describe('cleanDelayedJs', () => {
     });
 
     it('takes out only what has a replacement in place', async () => {
-        const gh = github({ 'scripts/delayed.js': JUSTRITE });
+        const gh = github({ 'scripts/delayed.js': TAILSPIN });
 
         await cleanDelayedJs(gh, TARGET, { smart404: false, inspector: true }, createMockLogger());
 
@@ -167,14 +167,14 @@ describe('cleanDelayedJs', () => {
     });
 
     it('does not even read delayed.js when nothing has a replacement in place', async () => {
-        const gh = github({ 'scripts/delayed.js': JUSTRITE });
+        const gh = github({ 'scripts/delayed.js': TAILSPIN });
 
         expect(await cleanDelayedJs(gh, TARGET, { smart404: false, inspector: false }, createMockLogger())).toBe(true);
         expect(gh.getFileContent).not.toHaveBeenCalled();
     });
 
     it('answers false, never throws, when the write is refused or the file cannot be read', async () => {
-        const refused = github({ 'scripts/delayed.js': JUSTRITE });
+        const refused = github({ 'scripts/delayed.js': TAILSPIN });
         refused.createOrUpdateFile.mockRejectedValue(new Error('Resource not accessible by integration'));
         expect(await cleanDelayedJs(refused, TARGET, { smart404: true, inspector: true }, createMockLogger())).toBe(false);
         expect(writesTo(refused, 'scripts/delayed.js')).toHaveLength(1);
@@ -190,7 +190,7 @@ describe('cleanDelayedJs', () => {
      */
     it('re-reads and retries once on a stale SHA, from the file it just read', async () => {
         const fresh = `${DELAYED}import './later.js';\n${INSPECTOR_DELAYED_SNIPPET}${OLD_404}`;
-        const gh = github({ 'scripts/delayed.js': [JUSTRITE, fresh] });
+        const gh = github({ 'scripts/delayed.js': [TAILSPIN, fresh] });
         gh.createOrUpdateFile
             .mockRejectedValueOnce(new Error('scripts/delayed.js does not match 15be5fb9e97773471ea4124c259d6d1e2eeb2626'))
             .mockResolvedValue({});
@@ -203,7 +203,7 @@ describe('cleanDelayedJs', () => {
     });
 
     it('retries only once: a second stale rejection answers false', async () => {
-        const gh = github({ 'scripts/delayed.js': [JUSTRITE, JUSTRITE] });
+        const gh = github({ 'scripts/delayed.js': [TAILSPIN, TAILSPIN] });
         gh.createOrUpdateFile.mockRejectedValue(new Error('scripts/delayed.js does not match abc'));
 
         expect(await cleanDelayedJs(gh, TARGET, { smart404: true, inspector: true }, createMockLogger())).toBe(false);

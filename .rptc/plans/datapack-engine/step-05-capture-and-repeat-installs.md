@@ -265,7 +265,7 @@ stands.
 reads "2 products" where the design said "2 product prices". Objects recorded before hashes were kept
 do not count as changed.
 
-**Live test** (owner's call; `justrite_test_website`, never JustRite's own site): install a small pack
+**Live test** (owner's call; `tailspin_test_website`, never Tailspin's own site): install a small pack
 with Demo Builder's engine; change one product's price and rename one category it made. Remove data:
 expect the sentence and both boxes. Cancel: nothing changes. Remove with the box ticked: expect a new
 version of the demo's own pack in the library, the old pack untouched, the store's copies gone, the
@@ -288,7 +288,7 @@ pack with `changes:"drop"`, delete the saved versions from the library, and set 
   product search's configurable fields, `GET customerGroups/{id}`, `GET products/attributes`
   searched by `attribute_id`. Typed to Magento's interfaces; the live test below reads them.
 
-### Live test (owner's call; on `justrite_test_website`, never JustRite's own site)
+### Live test (owner's call; on `tailspin_test_website`, never Tailspin's own site)
 
 1. Install a small library pack with the Demo Builder engine; confirm the record file under
    `.demo-builder/datapacks/` has `key`, `fingerprint` and `wrote` on every object.

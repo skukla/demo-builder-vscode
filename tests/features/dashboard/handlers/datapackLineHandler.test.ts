@@ -69,11 +69,11 @@ describe('get-datapack-line', () => {
     });
 
     it('leaves out a save’s dated version', async () => {
-        mockName.mockResolvedValue('Datapack for Khalil');
+        mockName.mockResolvedValue('Datapack for PersonB');
 
-        const answer = await handleGetDatapackLine(contextHolding({ name: 'datapack-for-khalil-d4e87b', version: '20261105-194818', store: 'library' }));
+        const answer = await handleGetDatapackLine(contextHolding({ name: 'datapack-for-person-b-d4e87b', version: '20261105-194818', store: 'library' }));
 
-        expect(answer.data).toStrictEqual({ line: 'Datapack for Khalil' });
+        expect(answer.data).toStrictEqual({ line: 'Datapack for PersonB' });
     });
 
     it('says None for a demo that holds none, asking nothing (step-04 S9)', async () => {

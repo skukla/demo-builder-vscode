@@ -40,18 +40,18 @@ const PROJECT: Partial<Project> = {
     name: 'scratch',
     path: '/nonexistent/projects/scratch',
     componentSelections: { backend: 'adobe-commerce-accs' },
-    componentConfigs: { 'adobe-commerce-accs': { ACCS_WEBSITE_CODE: 'justrite_test_website', ACCS_STORE_VIEW_CODE: 'justrite_test_view' } },
+    componentConfigs: { 'adobe-commerce-accs': { ACCS_WEBSITE_CODE: 'tailspin_test_website', ACCS_STORE_VIEW_CODE: 'tailspin_test_view' } },
     datapack: { name: 'frescopa', version: 'main' },
 };
 const ID = { datapackName: 'frescopa', version: 'main' };
 const STEP: PackRootStep = {
     state: 'open',
-    storeCode: 'justrite_test_store',
-    storeName: 'JustRite Test Store',
+    storeCode: 'tailspin_test_store',
+    storeName: 'Tailspin Test Store',
     rootId: 300,
     rootName: 'Frescopa',
     storeRootId: 119,
-    sharedWith: 'the store justrite_store (website justrite)',
+    sharedWith: 'the store tailspin_store (website tailspin)',
 };
 
 const INSTALLER = 'https://example-namespace.adobeioruntime.net/api/v1/web/data-installer-api';
@@ -97,7 +97,7 @@ describe('get-datapack-setup-step', () => {
 
 describe('check-datapack-setup-step', () => {
     it("checks the step for the open project's pack and answers it as it now stands", async () => {
-        mockedCheck.mockResolvedValue({ ...STEP, state: 'done', note: "JustRite Test Store now shows the categories under Frescopa." });
+        mockedCheck.mockResolvedValue({ ...STEP, state: 'done', note: "Tailspin Test Store now shows the categories under Frescopa." });
 
         const result = await storeChangesHandlers['check-datapack-setup-step'](harness(), ID);
 

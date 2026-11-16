@@ -45,11 +45,11 @@ Steps 1 to 5 write nothing to a real store. Step 6 writes to the test store and 
   list said it was held still writes nothing (the token covers the asked stores).
 - Step 3 skipped (owner, 2026-11-11: "Skip it."). The two copies of the order cases stay identical
   by hand; each file's header says so.
-- Step 6 passed live, 2026-11-11, on `justrite_test_store` only, with the integration at `d17e9f7`
-  deployed to JustRite (owner: "Yes"). Two orders placed there: one shipped, not invoiced; one with 1
-  of 2 items invoiced. Both reached Justrite ERP. Clear then: invoiced the rest, refunded in full,
+- Step 6 passed live, 2026-11-11, on `tailspin_test_store` only, with the integration at `d17e9f7`
+  deployed to Tailspin (owner: "Yes"). Two orders placed there: one shipped, not invoiced; one with 1
+  of 2 items invoiced. Both reached Tailspin ERP. Clear then: invoiced the rest, refunded in full,
   both read Closed, each with "Refunded and closed by the demo reset on 2026-11-11." written before
-  its invoice; both sales orders gone from Justrite ERP; no integration failure recorded after Clear
+  its invoice; both sales orders gone from Tailspin ERP; no integration failure recorded after Clear
   started (a forwarded invoice would have been refused by the ERP and recorded). A second Clear wrote
   nothing to either order. Confirmed: `POST order/{id}/invoice` with `{ capture: false, notify: false }`
   and no items invoices every remaining line.

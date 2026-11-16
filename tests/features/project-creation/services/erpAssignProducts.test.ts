@@ -14,11 +14,11 @@ import type { AssignProductRow } from '@/features/app-builder/services/erpAssign
 
 const mockRules = jest.fn();
 jest.mock('@/features/project-creation/services/erpRules', () => ({
-    listedErpNames: () => [{ listId: 'justrite', name: 'Justrite ERP' }, { listId: 'accuform', name: 'Accuform ERP' }],
+    listedErpNames: () => [{ listId: 'tailspin', name: 'Tailspin ERP' }, { listId: 'accuform', name: 'Accuform ERP' }],
     readErpRules: (...a: unknown[]) => mockRules(...a),
 }));
 jest.mock('@/features/app-builder/services/erpList', () => ({
-    erpListIdOf: (_p: unknown, id: string) => (id === 'demo-erp-2' ? 'accuform' : 'justrite'),
+    erpListIdOf: (_p: unknown, id: string) => (id === 'demo-erp-2' ? 'accuform' : 'tailspin'),
 }));
 
 // Imported after the mocks, which jest hoists above it.
@@ -84,7 +84,7 @@ const TARGET = { project, integrationId: 'erp-integration', erpId: 'demo-erp-2' 
 
 beforeEach(() => {
     mockRules.mockResolvedValue([
-        { erp: 'justrite', name: 'Justrite ERP', owns: { mode: 'all' } },
+        { erp: 'tailspin', name: 'Tailspin ERP', owns: { mode: 'all' } },
         { erp: 'accuform', name: 'Accuform ERP', owns: { mode: 'attribute', attribute: 'erp_owner=accuform' } },
     ]);
 });
@@ -94,26 +94,26 @@ describe('planErpAssignment', () => {
         const plan = await planErpAssignment(TARGET, { auth: AUTH, commerce: commerce({}) }, { by: 'skuPrefix', prefix: 'essentials' });
         expect(plan).toMatchObject({
             value: 'accuform',
-            preview: { matched: 1, toWrite: 1, examples: ['essentials-plan'], movedFrom: [{ name: 'Justrite ERP', count: 1 }] },
+            preview: { matched: 1, toWrite: 1, examples: ['essentials-plan'], movedFrom: [{ name: 'Tailspin ERP', count: 1 }] },
         });
     });
 
     // The catch-all owns the untagged products, so a product moves to it by losing its tag
     // (owner, 2026-10-19: products move between ERPs both ways).
     it('clears the tag for the ERP on every product no other ERP claims, and says where they come from', async () => {
-        const withJustrite = createMockProject({
+        const withTailspin = createMockProject({
             appBuilderComponents: {
                 ...project.appBuilderComponents,
-                'demo-erp': { kind: 'system', status: 'deployed', name: 'Justrite ERP', source: { owner: 's', repo: 'demo-erp' } },
+                'demo-erp': { kind: 'system', status: 'deployed', name: 'Tailspin ERP', source: { owner: 's', repo: 'demo-erp' } },
             },
         });
-        const target = { project: withJustrite, integrationId: 'erp-integration', erpId: 'demo-erp' };
+        const target = { project: withTailspin, integrationId: 'erp-integration', erpId: 'demo-erp' };
         const deps = { auth: AUTH, commerce: commerce({ DigiWristQuantum: 'accuform' }) };
 
         const plan = await planErpAssignment(target, deps, { by: 'skus', skus: ['essentials-plan', 'DigiWristQuantum'] });
         expect(plan).toMatchObject({
             value: '',
-            // essentials-plan has no tag: it is Justrite ERP's already.
+            // essentials-plan has no tag: it is Tailspin ERP's already.
             preview: { matched: 2, toWrite: 1, alreadyTagged: 1, examples: ['DigiWristQuantum'], movedFrom: [{ name: 'Accuform ERP', count: 1 }] },
         });
         expect((await readErpAssignOptions(target, deps)).ownerValue).toBe('');
@@ -121,7 +121,7 @@ describe('planErpAssignment', () => {
 
     it('refuses an ERP whose rule is not erp_owner, in words', async () => {
         mockRules.mockResolvedValue([
-            { erp: 'justrite', name: 'Justrite ERP', owns: { mode: 'all' } },
+            { erp: 'tailspin', name: 'Tailspin ERP', owns: { mode: 'all' } },
             { erp: 'accuform', name: 'Accuform ERP', owns: { mode: 'websites', websites: ['bodea'] } },
         ]);
         const plan = await planErpAssignment(TARGET, { auth: AUTH, commerce: commerce({}) }, { by: 'skuPrefix', prefix: 'e' });
@@ -140,8 +140,8 @@ describe('readErpAssignOptions', () => {
             ownerValue: 'accuform',
             categories: expect.arrayContaining([{ value: '7', label: 'Plans' }]),
             setsWithoutOwner: [],
-            owners: { 'essentials-plan': ['justrite'], DigiWristQuantum: ['accuform'] },
-            names: { justrite: 'Justrite ERP', accuform: 'Accuform ERP' },
+            owners: { 'essentials-plan': ['tailspin'], DigiWristQuantum: ['accuform'] },
+            names: { tailspin: 'Tailspin ERP', accuform: 'Accuform ERP' },
         });
         expect(options.products).toEqual([
             { sku: 'essentials-plan', name: 'Essentials Plan', attributeSetId: 15, categoryIds: ['7'], owner: '' },
@@ -158,7 +158,7 @@ describe('readErpAssignOptions in the project\'s own store', () => {
         const base = commerce(owners);
         const get = jest.fn(async (requested: string) => {
             if (requested === 'store/websites') {
-                return [{ id: 2, code: 'bodea', name: 'Bodea Website', default_group_id: 2 }, { id: 5, code: 'justrite', name: 'Justrite Website', default_group_id: 5 }];
+                return [{ id: 2, code: 'bodea', name: 'Bodea Website', default_group_id: 2 }, { id: 5, code: 'tailspin', name: 'Tailspin Website', default_group_id: 5 }];
             }
             if (requested === 'store/storeGroups') return [{ id: 2, root_category_id: 3 }, { id: 5, root_category_id: 119 }];
             if (requested.startsWith('categories/list')) {
@@ -177,7 +177,7 @@ describe('readErpAssignOptions in the project\'s own store', () => {
     }
     const scoped = (website: string) => ({
         ...TARGET,
-        // As a real ACCS project has it (Justrite's manifest): the backend, and its website code.
+        // As a real ACCS project has it (Tailspin's manifest): the backend, and its website code.
         project: {
             ...project,
             componentSelections: { backend: 'adobe-commerce-accs' },
@@ -195,7 +195,7 @@ describe('readErpAssignOptions in the project\'s own store', () => {
 
     it("leaves out another website's products", async () => {
         const commerce = store({});
-        const options = await readErpAssignOptions(scoped('justrite'), { auth: AUTH, commerce });
+        const options = await readErpAssignOptions(scoped('tailspin'), { auth: AUTH, commerce });
         // Commerce is asked for website 5's products only, in the fields the rows read.
         const read = commerce.get.mock.calls.map(([requested]) => requested).find((requested) => requested.startsWith('products?'));
         expect(read).toContain('[field]=website_id&searchCriteria[filter_groups][1][filters][0][value]=5');
@@ -235,10 +235,10 @@ describe('the write, the record and the undo', () => {
 
     it("records each product's value before, the empty string for none", () => {
         const row = (sku: string, owner: string): AssignProductRow => ({ sku, owner, attributeSetId: 4, categoryIds: [], websiteIds: [], attributes: {} });
-        expect(assignmentRecord([row('A', 'justrite'), row('B', '')], 'accuform', 'now')).toEqual({
+        expect(assignmentRecord([row('A', 'tailspin'), row('B', '')], 'accuform', 'now')).toEqual({
             at: 'now',
             value: 'accuform',
-            previous: [{ sku: 'A', value: 'justrite' }, { sku: 'B', value: '' }],
+            previous: [{ sku: 'A', value: 'tailspin' }, { sku: 'B', value: '' }],
         });
     });
 
@@ -247,7 +247,7 @@ describe('the write, the record and the undo', () => {
         const plan = await planUndo(client, {
             at: 'now',
             value: 'accuform',
-            previous: [{ sku: 'essentials-plan', value: '' }, { sku: 'DigiWristQuantum', value: 'justrite' }],
+            previous: [{ sku: 'essentials-plan', value: '' }, { sku: 'DigiWristQuantum', value: 'tailspin' }],
         });
         expect(plan).toEqual({ restore: [{ sku: 'essentials-plan', value: '' }], changedSince: ['DigiWristQuantum'] });
         // Only the products the assignment wrote are read (owner, 2026-10-19).

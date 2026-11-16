@@ -329,7 +329,7 @@ function naming(keys: string[], phrase: (...values: string[]) => string): NamedF
 }
 
 /**
- * "Adding Accuform ERP to JustRite": the ERP as the add will name it, and the project it goes
+ * "Adding Accuform ERP to Tailspin": the ERP as the add will name it, and the project it goes
  * into when one is open. "Agent: Adding another ERP" ran for fifteen minutes beside an action
  * the SC started, and nothing said which was which (live release test, 2026-10-22).
  */

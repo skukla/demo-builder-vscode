@@ -35,7 +35,7 @@ the `demoBuilder.blockLibraries.custom` setting), and nothing more is needed for
 | `block-libraries.json` | Inside (5 bundled) plus `demoBuilder.blockLibraries.custom` (`package.json:321`) | Data | Yes, per SC, through the setting | As is. It is the precedent for "bundled rows merged with an external list" |
 
 Commands: `node -e` over the three JSON files for counts and fields;
-`grep -rn -E "'(citisignal|bodea|justrite|carvelo|carvello|frescopa|wknd|luma|venia)'" src --include='*.ts' --include='*.tsx' | grep -v '/config/'`
+`grep -rn -E "'(citisignal|bodea|tailspin|carvelo|carvello|frescopa|wknd|luma|venia)'" src --include='*.ts' --include='*.tsx' | grep -v '/config/'`
 (10 hits: 9 are `e.g.` comments, 1 is a legacy id alias `'citisignal-b2b': 'citisignal'` at
 `src/core/state/projectFileLoader.ts:42`);
 `grep -rn -E "'(eds-paas|eds-accs|headless-paas|headless-accs)'" …` (10 hits, all comments);

@@ -114,7 +114,7 @@ describe('the home git-sync hook, run against real repositories', () => {
     });
 
     // An update's clash kept for fixing leaves the whole half-applied update in the copy;
-    // the first edit to the clashed file pushed all of it (2026-10-21, JustRite).
+    // the first edit to the clashed file pushed all of it (2026-10-21, Tailspin).
     it("pushes nothing while a storefront update's clash is kept in the copy", () => {
         const storefront = path.join(project, 'storefront');
         const origin = repoWithOrigin(root, storefront);

@@ -6,7 +6,7 @@
  *
  * Why here and first: the undo of each lived on the integration's card, and the record of the
  * old values on its project entry, so removing the integration took both with it and left the
- * store with changes nothing could put back (Justrite, 2026-10-19: 139 tagged products, the
+ * store with changes nothing could put back (Tailspin, 2026-10-19: 139 tagged products, the
  * attribute on 12 sets and the preparation, all orphaned). It runs before the removal, while
  * the integration's Commerce access still stands. Reuses the undo each card action runs.
  *

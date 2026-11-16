@@ -144,7 +144,7 @@ export function whenItGoesLiveSentence(aiAsksFirst: boolean): string {
 
 /**
  * Whose edits a clash ran into, in a few words and no file names (owner, 2026-10-24: the AI is
- * handed those): "an edit that came with kmanns/justrite", or "an edit made in this storefront".
+ * handed those): "an edit that came with org-e/tailspin", or "an edit made in this storefront".
  */
 function whoseEditsLine(clash: ClashReport): string {
     const edits = clash.edits ?? [];

@@ -1014,7 +1014,7 @@ export interface AddAppBuilderComponentRequestPayload {
      * The Adobe project and workspace the SC chose in the add's own destination steps,
      * sent only when the project had none. Saved before anything is made: an add that
      * left it on screen ran with no project, and its workspace was made in the project
-     * cached from earlier (Justrite's, 2026-10-15).
+     * cached from earlier (Tailspin's, 2026-10-15).
      */
     destination?: { project: DestinationRef; workspace: DestinationRef };
     /**

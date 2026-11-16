@@ -9,7 +9,7 @@ status: built
 
 # An agent cannot name the first ERP when it adds the ERP integration
 
-Filed 2026-10-04, found re-adding the Justrite pair through the agent surface.
+Filed 2026-10-04, found re-adding the Tailspin pair through the agent surface.
 
 `add_integration` takes `id`, `source`, `name`, `instanceId`, `apis` and
 `refreshCli` — nothing for the integration's text settings. The ERP integration's
@@ -32,7 +32,7 @@ which arrives with the integration, has no way in.
 ## The fix
 
 Let `add_integration` take the entry's text settings at add time (e.g. `settings:
-{ ERP_DISPLAY_NAME: "Justrite ERP" }`), validated against the catalog entry's
+{ ERP_DISPLAY_NAME: "Tailspin ERP" }`), validated against the catalog entry's
 `envSchema` the same way the add dialog validates them, and say in its description
 that the ERP's name is fixed once added. Human and agent surface then agree.
 

@@ -2,10 +2,10 @@
 
 ## Summary
 
-Loaded a colleague's real Justrite product catalog into the live Bodea Commerce
+Loaded a colleague's real Tailspin product catalog into the live Bodea Commerce
 instance — 43 products, zero failures — after finding and fixing three silent
 Commerce quirks that had made the first attempt fail. One 2-minute Admin step is
-left for you (point the Justrite store at the new catalog). Then built the ERP side
+left for you (point the Tailspin store at the new catalog). Then built the ERP side
 of the live credit check (AB-20): the mock ERP now answers, at checkout, whether a
 customer can carry an order — 389/389 tests. The rest of the remaining ERP items
 need a cloud deploy to finish, which the overnight loop does not do, so they are
@@ -13,10 +13,10 @@ handed off rather than built.
 
 ## Shipped
 
-**Justrite catalog loaded live on Bodea.** A colleague (Khalil) supplied a 43-row
-product spreadsheet for the Justrite brand. All of it is now in Commerce:
+**Tailspin catalog loaded live on Bodea.** A colleague (Person B) supplied a 43-row
+product spreadsheet for the Tailspin brand. All of it is now in Commerce:
 
-- 37 simple products + 6 configurable products, on the Justrite website, zero failures.
+- 37 simple products + 6 configurable products, on the Tailspin website, zero failures.
 - 15 categories (already created earlier) — every product assigned to its category path.
 - All 6 configurables have their 3 size/format variants attached and linked.
 - The "Format" variant attribute is set on all 29 variant products.
@@ -68,8 +68,8 @@ and a deploy.
 
 ## Your decisions
 
-1. **Justrite store root category (2 min, Admin).** Change "Justrite Store" root
-   category from *Default Category* to *Justrite Catalog*. You set it to Default
+1. **Tailspin store root category (2 min, Admin).** Change "Tailspin Store" root
+   category from *Default Category* to *Tailspin Catalog*. You set it to Default
    earlier only so you could create the store; the catalog (id 119) now exists. This
    is a store edit, not a category add, so it won't hit the dev-mode block you saw.
    Without it, the products are loaded but won't appear in the storefront's category
@@ -82,5 +82,5 @@ and a deploy.
 
 - The Commerce Admin category *add* (root or sub) is blocked by a PHP deprecation
   surfaced as a hard error in the sandbox's developer mode. REST bypasses it — that
-  is how the Justrite Catalog and its 15 categories were created. Store *edits* are a
+  is how the Tailspin Catalog and its 15 categories were created. Store *edits* are a
   different code path and work in Admin.

@@ -12,12 +12,12 @@ import { NOW, PACK, PROJECT, memoryFiles } from './demoBuilderEngine.testUtils';
 
 const STEP: PackRootStep = {
     state: 'open',
-    storeCode: 'justrite_test_store',
-    storeName: 'JustRite Test Store',
+    storeCode: 'tailspin_test_store',
+    storeName: 'Tailspin Test Store',
     rootId: 300,
     rootName: 'Frescopa',
     storeRootId: 119,
-    sharedWith: 'the store justrite_store (website justrite)',
+    sharedWith: 'the store tailspin_store (website tailspin)',
 };
 
 async function recorded(step: PackRootStep) {
@@ -28,7 +28,7 @@ async function recorded(step: PackRootStep) {
 
 /** A store whose stores answer as given, and whose categories are named by id. */
 function store(groups: () => unknown): CommerceGet {
-    return async (path: string) => (path === 'store/storeGroups' ? groups() : { name: 'Justrite Catalog' });
+    return async (path: string) => (path === 'store/storeGroups' ? groups() : { name: 'Tailspin Catalog' });
 }
 
 it('records that a check could not tell, and the step then reads as not checked, never as not done', async () => {
@@ -47,7 +47,7 @@ it('records that a check could not tell, and the step then reads as not checked,
 it('records a check that found the step not done, then done', async () => {
     const files = await recorded(STEP);
     let root = 119;
-    const deps = { commerce: async () => ({ get: store(() => [{ code: 'justrite_test_store', root_category_id: root }]) }), projectPath: PROJECT, files };
+    const deps = { commerce: async () => ({ get: store(() => [{ code: 'tailspin_test_store', root_category_id: root }]) }), projectPath: PROJECT, files };
 
     const open = await checkRecordedRootStep(deps, PACK);
     expect(rootStepItem(open as PackRootStep)).toMatchObject({ state: 'open', lastCheck: 'failed', checkState: 'failed' });

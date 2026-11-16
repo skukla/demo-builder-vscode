@@ -95,7 +95,7 @@ async function unreadableReason(
  * The refusal when the repository cannot be read. An SC who pasted a site address
  * can see the site in a browser and will not know which half is the problem, so
  * when the site answers the sentence names both halves (found live 2026-09-13:
- * `main--razer--sayurihanki.aem.live` is up; its repository is private).
+ * `main--razer--org-j.aem.live` is up; its repository is private).
  */
 async function cannotReadReason(owner: string, repo: string, fetchImpl: typeof fetch, logger: Logger): Promise<string> {
     const site = `main--${repo}--${owner}.aem.live`;

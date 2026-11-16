@@ -7,7 +7,7 @@ with an IMS token minted from the injected S2S credential (decision 12).
 
 ## What it declares (app.commerce.config.ts)
 
-- **Webhooks** (Nishant Kapoor's design, generalised): `observer.sales_order_place_before` → `POST
+- **Webhooks** (Person A's design, generalised): `observer.sales_order_place_before` → `POST
   /orders` on the ERP, writes the ERP number to `ext_order_id`; the two totals-collector
   webhooks (item prices from contract pricing; the max-discount ceiling). All `required:
   false`, one-second soft timeout: when the ERP is unavailable, Commerce keeps its own prices
@@ -75,7 +75,7 @@ mirror,drain,webhook}.js`; actions `erp/{status,mirror,reset,drain,set-offline}`
 - Webhooks (all `required: false`, `requireAdobeAuth: true` as the kit does; Bodea, a
   Cloud Service instance, lists all three hooks in `/V1/webhooks/supportedList`):
   `observer.sales_order_place_before` → `POST orders` on the ERP → `replace
-  data/order/ext_order_id` (the path root Nishant Kapoor's four lost orders established);
+  data/order/ext_order_id` (the path root Person A's four lost orders established);
   totals-collector `item_prices` → ERP quote → `replace result/price_updates` with
   `{item_id, base_price}`; totals-collector `execute` → ceiling clawback as a negative
   `base_discount` on `result`. Buyer hints sent to the ERP: customer group, email,

@@ -4,7 +4,7 @@
  * A bulk call runs each request through the fake's own single route straight away, as Commerce's
  * queue does once its consumer picks the call up, so a suite's assertions on the single writes
  * still hold. The status read lists each request by its index in the call, in the shape of a live
- * answer from the Justrite ACCS store (tests/fixtures/commerce-rest/bulk-status-products.json):
+ * answer from the Tailspin ACCS store (tests/fixtures/commerce-rest/bulk-status-products.json):
  * status 1 for a request the single route took, 3 with Commerce's words for one it refused (a
  * 4xx), and 2 for one that failed some other way, which Commerce marks as worth trying again.
  * Not signed in (401, 403) and too many calls (429) refuse the whole call, as Commerce checks them

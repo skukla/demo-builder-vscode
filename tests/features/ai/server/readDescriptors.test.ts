@@ -374,7 +374,7 @@ describe('list_console_apis search', () => {
 
 describe('probe_shared_demo', () => {
     it("answers the probe's result itself, not the {result} wrapper the dialog reads", () => {
-        const result = { outcome: 'read', fullName: 'jen/isle5-demo', kind: 'eds' };
+        const result = { outcome: 'read', fullName: 'robin/isle5-demo', kind: 'eds' };
         expect(shaped('probe_shared_demo', { success: true, result })).toEqual(result);
     });
 

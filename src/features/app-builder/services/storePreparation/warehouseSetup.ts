@@ -46,7 +46,7 @@ const SOURCE_ADDRESS = { country_id: 'US', postcode: '00000' };
 export const MOVE_STOCK_MANUAL =
     "Moving each product's quantities to the new warehouse is a separate step: Catalog > Products, or a datapack's source items.";
 
-/** "Justrite ERP" → `justrite_warehouse` / "Justrite Warehouse". */
+/** "Tailspin ERP" → `tailspin_warehouse` / "Tailspin Warehouse". */
 export function warehouseFor(erpName: string): { code: string; name: string } {
     const short = erpName.replace(/\s+ERP$/iu, '').trim() || erpName;
     const slug = short.toLowerCase().replace(/[^a-z0-9]+/gu, '_').replace(/^_+|_+$/gu, '') || 'erp';
@@ -79,7 +79,7 @@ interface Plan {
     /**
      * ERP warehouses that exist but are switched off, by code: what an undo leaves, since
      * Commerce cannot delete a source. The check counts a switched-off warehouse as not
-     * done, so applying again must switch it back on (AB-82, Justrite 2026-10-26).
+     * done, so applying again must switch it back on (AB-82, Tailspin 2026-10-26).
      */
     toEnable: string[];
 }
@@ -126,9 +126,9 @@ function lines(plan: Plan, inventory: Inventory): string[] {
 }
 
 /**
- * The plan in one sentence: "Add Test Warehouse to Justrite Stock", "Switch Test Warehouse
+ * The plan in one sentence: "Add Test Warehouse to Tailspin Stock", "Switch Test Warehouse
  * back on", or both. The step's title says "each ERP", which reads as all of them when one
- * is missing (Justrite, 2026-10-26).
+ * is missing (Tailspin, 2026-10-26).
  */
 function summaryOf(plan: Plan, inventory: Inventory): string | undefined {
     const nameOf = sourceNamer(inventory.sources, plan.newSources);
@@ -337,7 +337,7 @@ async function enableSources(deps: SetupDeps, plan: Plan, record: WarehouseStepR
 /**
  * Add the ERP warehouses to the stock, after the ones already there: each new link takes the
  * next priority past the stock's highest, never 1 beside a warehouse that already has it
- * (Justrite, 2026-10-26: test_warehouse went in at 1 next to justrite at 1).
+ * (Tailspin, 2026-10-26: test_warehouse went in at 1 next to tailspin at 1).
  */
 async function linkSources(
     deps: SetupDeps,

@@ -13,7 +13,7 @@ Filed 2026-10-20 by the owner, after an add aimed at the wrong project. Follows 
 
 ## What happened
 
-An agent following the person's open project called `add_integration` for Justrite. The
+An agent following the person's open project called `add_integration` for Tailspin. The
 open project had become `patch-canary-b2b` in the meantime, so the add ran against that
 project instead. It stopped only because that project had no Adobe project to deploy into.
 (The running build predated AI-15, but AI-15 would not have stopped it either.)

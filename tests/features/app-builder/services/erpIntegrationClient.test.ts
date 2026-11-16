@@ -116,12 +116,12 @@ describe('ErpIntegrationClient', () => {
         // The answer's shape is the integration's own box test's (test/box/close-store-orders.test.js, 1f6de21).
         const fetchImpl = answering(200, STORE_CLOSE);
 
-        const report = await new ErpIntegrationClient(URLS, AUTH, fetchImpl).closeOrders(['justrite_test_store']);
+        const report = await new ErpIntegrationClient(URLS, AUTH, fetchImpl).closeOrders(['tailspin_test_store']);
 
         expect(fetchImpl.mock.calls[0][0]).toBe(URLS['runtime/erp/close-orders']);
         const init = fetchImpl.mock.calls[0][1] as RequestInit;
         expect(init.method).toBe('POST');
-        expect(JSON.parse(String(init.body))).toEqual({ run: expect.stringMatching(RUN_ID), stores: ['justrite_test_store'] });
+        expect(JSON.parse(String(init.body))).toEqual({ run: expect.stringMatching(RUN_ID), stores: ['tailspin_test_store'] });
         expect(report).toEqual(STORE_CLOSE);
     });
 
@@ -468,7 +468,7 @@ describe('ErpIntegrationClient.detach, when the answer is cut off at 60 seconds 
         const CLOSE = URLS['runtime/erp/close-orders'];
         const fetchImpl = cutOffThen({ status: 200, body: { ...LIVE, closesOrdersByStore: true } }, [record('done', { result: STORE_CLOSE })]);
 
-        const report = await new ErpIntegrationClient(URLS, AUTH, fetchImpl, noWait()).closeOrders(['justrite_test_store']);
+        const report = await new ErpIntegrationClient(URLS, AUTH, fetchImpl, noWait()).closeOrders(['tailspin_test_store']);
 
         expect(report).toEqual(STORE_CLOSE);
         expect(fetchImpl.mock.calls.map(([url, init]) => `${init?.method} ${String(url)}`)).toContain(`GET ${CLOSE}?run=${sentRun(fetchImpl)}`);

@@ -22,7 +22,7 @@
  *
  * | Read or call | Endpoint and field | Confirmed? |
  * |---|---|---|
- * | which websites send orders | `GET erp/settings?websites=`, `websites.<code>.orders_send` (else `default.orders_send`) | the route and field yes (the integration's `order-sync.js` `readyToSend`; JustRite answered `true` for every website, 2026-10-30) |
+ * | which websites send orders | `GET erp/settings?websites=`, `websites.<code>.orders_send` (else `default.orders_send`) | the route and field yes (the integration's `order-sync.js` `readyToSend`; Tailspin answered `true` for every website, 2026-10-30) |
  * | whether it closes by store | `GET erp/status`, `closesOrdersByStore` | from the integration's code (`actions/erp/status`, a2556c2); not yet from a deployment |
  * | bringing the ERP in line | `POST erp/close-orders` `{ run, stores }` (store group codes), `GET erp/close-orders?run=`; answer `ErpStoreCloseReport` | from the integration's code and box test (`test/box/close-store-orders.test.js`, 1f6de21); that an order already closed gets no state write: its `src/lib/close-orders.js` `closeOne` (`plan === "done"`), branch `one-reset-rule`; not yet from a deployment |
  *
@@ -45,10 +45,10 @@ export type WipeErpClient = Pick<ErpIntegrationClient, 'status' | 'resolvedSetti
 
 /** The ERP integration serving the instance, as found among the local projects. */
 export interface WipeErpLink {
-    /** Its project: as the SC knows it ("JustRite"), and its folder name. */
+    /** Its project: as the SC knows it ("Tailspin"), and its folder name. */
     project: { displayName: string; name: string };
     integrationId: string;
-    /** Its ERPs' names by their list id ("justrite" → "Justrite ERP"): what `erpRemoved` is keyed by. */
+    /** Its ERPs' names by their list id ("tailspin" → "Tailspin ERP"): what `erpRemoved` is keyed by. */
     erpNames: Record<string, string>;
     /** Its client, signed in; or why there is none. */
     client: () => Promise<WipeErpClient | { refusal: string }>;
@@ -238,7 +238,7 @@ export function erpProblemOf(plan: WipeErpPlan, closed: ErpClosed | undefined, r
     return why.length > 0 ? andList(why) : undefined;
 }
 
-/** " These websites' orders were removed from Justrite ERP. Accuform ERP could not remove them (...).", or nothing. */
+/** " These websites' orders were removed from Tailspin ERP. Accuform ERP could not remove them (...).", or nothing. */
 function removalSentence(closed: ErpClosed | undefined): string {
     if (!closed) return '';
     const from = closed.removedFrom.length > 0 ? ` These websites' orders were removed from ${andList(closed.removedFrom)}.` : '';

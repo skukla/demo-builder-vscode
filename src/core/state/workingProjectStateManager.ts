@@ -4,7 +4,7 @@
  *
  * There is one current project, and a person's click and an agent's task both move it.
  * On 2026-10-09 an agent's create made a scratch project current while the Integrations
- * screen still showed JustRite, and the screen's next "Add another ERP" ran against the
+ * screen still showed Tailspin, and the screen's next "Add another ERP" ran against the
  * scratch project. Every handler asks `getCurrentProject()`; this view answers it with the
  * surface's own project, so the 149 call sites need no change.
  *

@@ -76,10 +76,10 @@ function makeCtx() {
 
 function pair(overrides: Partial<IntegrationPairUpdate> = {}): IntegrationPairUpdate {
     return {
-        project: pairProject('Justrite', { updateAvailable: NEWER }),
+        project: pairProject('Tailspin', { updateAvailable: NEWER }),
         componentId: 'demo-erp',
         members: ['demo-erp'],
-        label: 'ERP Integration and Justrite ERP',
+        label: 'ERP Integration and Tailspin ERP',
         otherOrg: false,
         ...overrides,
     };
@@ -97,7 +97,7 @@ describe('findIntegrationPairUpdates', () => {
     });
 
     it('one row per pair, named integration first, asked for the member with newer code', async () => {
-        const project = pairProject('Justrite', { updateAvailable: NEWER });
+        const project = pairProject('Tailspin', { updateAvailable: NEWER });
 
         const found = await findIntegrationPairUpdates([project], probe().p);
 
@@ -106,14 +106,14 @@ describe('findIntegrationPairUpdates', () => {
                 project,
                 componentId: 'demo-erp',
                 members: ['demo-erp'],
-                label: 'ERP Integration and Justrite ERP',
+                label: 'ERP Integration and Tailspin ERP',
                 otherOrg: false,
             },
         ]);
     });
 
     it('asks for the integration when it has newer code, so its ERP with newer code goes first', async () => {
-        const project = pairProject('Justrite', { updateAvailable: NEWER }, { updateAvailable: NEWER });
+        const project = pairProject('Tailspin', { updateAvailable: NEWER }, { updateAvailable: NEWER });
 
         const [found] = await findIntegrationPairUpdates([project], probe().p);
 
@@ -122,20 +122,20 @@ describe('findIntegrationPairUpdates', () => {
     });
 
     it('lists every project, in order, and leaves a current pair out', async () => {
-        const justrite = pairProject('Justrite', { updateAvailable: NEWER });
+        const tailspin = pairProject('Tailspin', { updateAvailable: NEWER });
         const bodea = pairProject('Bodea');
         const acme = pairProject('Acme', {}, { updateAvailable: NEWER });
 
-        const found = await findIntegrationPairUpdates([justrite, bodea, acme], probe().p);
+        const found = await findIntegrationPairUpdates([tailspin, bodea, acme], probe().p);
 
         expect(found.map((f) => [f.project.name, f.componentId])).toEqual([
-            ['Justrite', 'demo-erp'],
+            ['Tailspin', 'demo-erp'],
             ['Acme', 'erp-integration'],
         ]);
     });
 
     it("marks a pair whose project's Adobe org the token does not reach, asking the chain's org step once per project", async () => {
-        const project = pairProject('Justrite', { updateAvailable: NEWER });
+        const project = pairProject('Tailspin', { updateAvailable: NEWER });
         const { p, inOtherOrg } = probe();
         inOtherOrg.mockResolvedValue(true);
 
@@ -159,7 +159,7 @@ describe('findIntegrationPairUpdates', () => {
         const { p, check } = probe();
         check.mockResolvedValue(undefined);
 
-        const found = await findIntegrationPairUpdates([pairProject('Justrite', { updateAvailable: NEWER })], p);
+        const found = await findIntegrationPairUpdates([pairProject('Tailspin', { updateAvailable: NEWER })], p);
 
         expect(found).toStrictEqual([]);
     });
@@ -167,9 +167,9 @@ describe('findIntegrationPairUpdates', () => {
 
 describe('describeIntegrationUpdate', () => {
     it('is the pair, with the other-org note when the project must be opened', () => {
-        expect(describeIntegrationUpdate(pair())).toBe('ERP Integration and Justrite ERP');
+        expect(describeIntegrationUpdate(pair())).toBe('ERP Integration and Tailspin ERP');
         expect(describeIntegrationUpdate(pair({ otherOrg: true }))).toBe(
-            `ERP Integration and Justrite ERP (${OTHER_ORG_NOTE})`,
+            `ERP Integration and Tailspin ERP (${OTHER_ORG_NOTE})`,
         );
     });
 });
@@ -190,9 +190,9 @@ describe('applyIntegrationUpdates', () => {
         expect(ctx.updateIntegrationPair).toHaveBeenCalledWith(item.project, 'demo-erp', expect.any(Function));
         // The step from the stage table on line 1; which pair, and its own step, under it.
         expect(onProgress.mock.calls).toEqual([
-            [S.updatingIntegrations.label, 'ERP Integration and Justrite ERP in Justrite'],
-            [S.updatingIntegrations.label, 'ERP Integration and Justrite ERP in Justrite: Fetching the update'],
-            [S.updatingIntegrations.label, 'ERP Integration and Justrite ERP in Justrite: Running aio app deploy'],
+            [S.updatingIntegrations.label, 'ERP Integration and Tailspin ERP in Tailspin'],
+            [S.updatingIntegrations.label, 'ERP Integration and Tailspin ERP in Tailspin: Fetching the update'],
+            [S.updatingIntegrations.label, 'ERP Integration and Tailspin ERP in Tailspin: Running aio app deploy'],
         ]);
         expect(result).toEqual({ successCount: 1, failCount: 0, errors: [], applied: ['Updated from a to b.'] });
     });
@@ -211,7 +211,7 @@ describe('applyIntegrationUpdates', () => {
         expect(result).toEqual({
             successCount: 1,
             failCount: 1,
-            errors: ['ERP Integration and Justrite ERP in Justrite did not update: The folder has changes of its own (a.js).'],
+            errors: ['ERP Integration and Tailspin ERP in Tailspin did not update: The folder has changes of its own (a.js).'],
         });
         expect(ctx.updateIntegrationPair).toHaveBeenCalledTimes(2);
     });
@@ -226,7 +226,7 @@ describe('applyIntegrationUpdates', () => {
             successCount: 0,
             failCount: 0,
             errors: [],
-            deferred: [`ERP Integration and Justrite ERP in Justrite ${OTHER_ORG_NOTE}.`],
+            deferred: [`ERP Integration and Tailspin ERP in Tailspin ${OTHER_ORG_NOTE}.`],
         });
     });
 
@@ -238,7 +238,7 @@ describe('applyIntegrationUpdates', () => {
         expect(result).toEqual({
             successCount: 0,
             failCount: 1,
-            errors: ['ERP Integration and Justrite ERP in Justrite did not update: Updating integrations is not available here.'],
+            errors: ['ERP Integration and Tailspin ERP in Tailspin did not update: Updating integrations is not available here.'],
         });
     });
 
@@ -259,7 +259,7 @@ describe('the versions a pair moves to', () => {
 
     it('names each release, by member', async () => {
         const project = pairProject(
-            'Justrite',
+            'Tailspin',
             { updateAvailable: { ...NEWER, release: '0.3.0' } },
             { updateAvailable: { ...NEWER, release: '0.2.0' } },
         );
@@ -272,13 +272,13 @@ describe('the versions a pair moves to', () => {
         expect(pair.releases).toEqual(
             expect.arrayContaining([
                 { name: 'ERP Integration', version: '0.2.0' },
-                { name: 'Justrite ERP', version: '0.3.0' },
+                { name: 'Tailspin ERP', version: '0.3.0' },
             ]),
         );
     });
 
     it('names none for code that has no release', async () => {
-        const project = pairProject('Justrite', {}, { updateAvailable: NEWER });
+        const project = pairProject('Tailspin', {}, { updateAvailable: NEWER });
 
         const [pair] = await findIntegrationPairUpdates([project], probeFor(['erp-integration']));
 

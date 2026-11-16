@@ -35,7 +35,7 @@ describe('WorkRow', () => {
     });
 
     it('puts a failure on the line under the name, in its own colour', () => {
-        render(<WorkRow status="error" label="justrite" note="The sign-in was cancelled." why />);
+        render(<WorkRow status="error" label="tailspin" note="The sign-in was cancelled." why />);
 
         expect(screen.getByText('The sign-in was cancelled.')).toHaveClass('work-row-why');
     });

@@ -1,6 +1,6 @@
 /**
  * codeServed — after a code publish, the live site serves the code the repository has,
- * or the run says it does not (2026-10-23: JustRite's reset left three fixes off the
+ * or the run says it does not (2026-10-23: Tailspin's reset left three fixes off the
  * site while its card said the storefront was current).
  */
 
@@ -72,7 +72,7 @@ describe('confirmCodeServed', () => {
         expect(publishes).toStrictEqual([]);
     });
 
-    // What AEM serves for an HTML file, from JustRite's live 404.html (2026-10-23): the CSP
+    // What AEM serves for an HTML file, from Tailspin's live 404.html (2026-10-23): the CSP
     // meta moved to a header, every nonce replaced. An exact comparison called the new page
     // "not served" for good.
     const COMMITTED_HTML = [
@@ -128,7 +128,7 @@ describe('codeNotServedSentence', () => {
 });
 
 describe('confirmStorefrontCodeServed', () => {
-    const SITE = { owner: 'skukla', repo: 'kukla-justrite' };
+    const SITE = { owner: 'skukla', repo: 'kukla-tailspin' };
     const originalFetch = global.fetch;
 
     function github(overrides: Record<string, jest.Mock> = {}) {
@@ -169,8 +169,8 @@ describe('confirmStorefrontCodeServed', () => {
         const said = await confirmStorefrontCodeServed(files, { previewCode: jest.fn() }, SITE, 'reset', createMockLogger());
 
         expect(said).toBeUndefined();
-        expect(files.treeCommits.filesChangedSince).toHaveBeenCalledWith('skukla', 'kukla-justrite', 'reset');
-        expect(files.getFileContent).toHaveBeenCalledWith('skukla', 'kukla-justrite', 'scripts/commerce.js', 'head');
+        expect(files.treeCommits.filesChangedSince).toHaveBeenCalledWith('skukla', 'kukla-tailspin', 'reset');
+        expect(files.getFileContent).toHaveBeenCalledWith('skukla', 'kukla-tailspin', 'scripts/commerce.js', 'head');
         expect(files.treeCommits.earliestRecentCommitSha).not.toHaveBeenCalled();
     });
 
@@ -192,7 +192,7 @@ describe('confirmStorefrontCodeServed', () => {
 
         expect(said).toBeUndefined();
         expect(previewCode).not.toHaveBeenCalled();
-        expect(files.getFileContent).toHaveBeenCalledWith('skukla', 'kukla-justrite', '.hlxignore', 'head');
+        expect(files.getFileContent).toHaveBeenCalledWith('skukla', 'kukla-tailspin', '.hlxignore', 'head');
         const fetched = (global.fetch as jest.Mock).mock.calls.map(([url]) => new URL(url).pathname);
         expect(fetched).not.toContain('/blocks/hero-3/_hero-3.json');
     });
@@ -217,7 +217,7 @@ describe('confirmStorefrontCodeServed', () => {
 
         await confirmStorefrontCodeServed(files, { previewCode: jest.fn() }, SITE, undefined, createMockLogger());
 
-        expect(files.treeCommits.filesChangedSince).toHaveBeenCalledWith('skukla', 'kukla-justrite', 'template');
+        expect(files.treeCommits.filesChangedSince).toHaveBeenCalledWith('skukla', 'kukla-tailspin', 'template');
     });
 
     it('publishes the stale file on its own and says so when the site never catches up', async () => {
@@ -226,7 +226,7 @@ describe('confirmStorefrontCodeServed', () => {
 
         const said = await confirmStorefrontCodeServed(github(), { previewCode }, SITE, 'reset', createMockLogger());
 
-        expect(previewCode).toHaveBeenCalledWith('skukla', 'kukla-justrite', '/scripts/commerce.js');
+        expect(previewCode).toHaveBeenCalledWith('skukla', 'kukla-tailspin', '/scripts/commerce.js');
         expect(said).toContain('1 code file did not reach the live site (scripts/commerce.js)');
     });
 
@@ -245,7 +245,7 @@ describe('confirmStorefrontCodeServed', () => {
         const said = await confirmStorefrontCodeServed(github(), { previewCode }, SITE, undefined, createMockLogger());
 
         expect(previewCode).toHaveBeenCalledTimes(1);
-        expect(previewCode).toHaveBeenCalledWith('skukla', 'kukla-justrite', '/*');
+        expect(previewCode).toHaveBeenCalledWith('skukla', 'kukla-tailspin', '/*');
         expect(said).toBeUndefined();
     });
 

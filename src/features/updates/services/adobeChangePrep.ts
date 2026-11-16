@@ -9,7 +9,7 @@
  * prepare identically or a clash kept in one is "not the clash" in the other.
  *
  * Nothing here touches GitHub. The repairs used to run against GitHub before the update knew
- * it would apply, and a stopped update left their commits there (JustRite, 2026-10-30).
+ * it would apply, and a stopped update left their commits there (Tailspin, 2026-10-30).
  *
  * @module features/updates/services/adobeChangePrep
  */

@@ -60,13 +60,13 @@ describe('resolveStorefrontForProject', () => {
 
     it('prefers the project row over the catalog, whatever selectedPackage says', () => {
         const demo = makeAddedDemo({
-            name: 'Isle5 by Jen',
+            name: 'Isle5 by Robin',
             configFlags: { 'commerce-b2b-enabled': true },
             configDefaults: { ACCS_WEBSITE_CODE: 'isle5' },
             requiresMesh: 'optional',
             datapack: { name: 'isle5' },
-            contentSource: { org: 'jen', site: 'isle5-demo', indexPath: '/full-index.json' },
-            source: { owner: 'jen', repo: 'isle5-demo', branch: 'demo' },
+            contentSource: { org: 'robin', site: 'isle5-demo', indexPath: '/full-index.json' },
+            source: { owner: 'robin', repo: 'isle5-demo', branch: 'demo' },
         });
         const result = resolveStorefrontForProject(
             { selectedPackage: 'citisignal', selectedStack: 'eds-accs', demo },
@@ -74,8 +74,8 @@ describe('resolveStorefrontForProject', () => {
         );
         expect(result?.source).toBe('project');
         expect(result?.package).toEqual({
-            id: `${ADDED_DEMO_ID_PREFIX}jen/isle5-demo`,
-            name: 'Isle5 by Jen',
+            id: `${ADDED_DEMO_ID_PREFIX}robin/isle5-demo`,
+            name: 'Isle5 by Robin',
             description: '',
             configDefaults: { ACCS_WEBSITE_CODE: 'isle5' },
             configFlags: { 'commerce-b2b-enabled': true },
@@ -85,16 +85,16 @@ describe('resolveStorefrontForProject', () => {
             storefronts: { 'eds-accs': result?.storefront },
         });
         expect(result?.storefront).toEqual({
-            name: 'Isle5 by Jen',
+            name: 'Isle5 by Robin',
             description: '',
             source: {
                 type: 'git',
-                url: 'https://github.com/jen/isle5-demo',
+                url: 'https://github.com/robin/isle5-demo',
                 branch: 'demo',
                 gitOptions: { shallow: true },
             },
-            contentSource: { org: 'jen', site: 'isle5-demo', indexPath: '/full-index.json' },
-            templateOwner: 'jen',
+            contentSource: { org: 'robin', site: 'isle5-demo', indexPath: '/full-index.json' },
+            templateOwner: 'robin',
             templateRepo: 'isle5-demo',
         });
     });

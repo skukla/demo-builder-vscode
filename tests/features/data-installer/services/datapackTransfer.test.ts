@@ -13,10 +13,10 @@ import type { DatapackFile } from '@/features/data-installer/services/datapackZi
 import { BODEA_CUSTOMER_ROWS, TEST_PASSWORD } from '../../../helpers/commerceB2bFixtures';
 import type { DataItem, DatapackDetail } from '@/features/data-installer/types';
 
-const ID = { name: 'justrite', version: 'v1' };
+const ID = { name: 'tailspin', version: 'v1' };
 const DETAIL: DatapackDetail = {
     id: ID,
-    displayName: 'Justrite B2B',
+    displayName: 'Tailspin B2B',
     description: 'Signs',
     shared: true,
     dataTypes: ['categories', 'customer_groups'],
@@ -52,7 +52,7 @@ describe('readPackFromStore', () => {
         ]);
         expect(pack).toEqual({
             id: ID,
-            displayName: 'Justrite B2B',
+            displayName: 'Tailspin B2B',
             description: 'Signs',
             items: [
                 { dataType: 'categories', records: ROWS.categories },
@@ -106,7 +106,7 @@ describe('readPackFromStore', () => {
 describe('writePackToStore', () => {
     const PACK: DatapackFile = {
         id: ID,
-        displayName: 'Justrite B2B',
+        displayName: 'Tailspin B2B',
         description: 'Signs',
         items: [
             { dataType: 'categories', records: ROWS.categories },
@@ -149,7 +149,7 @@ describe('writePackToStore', () => {
 
         expect(w.createDatapack).toHaveBeenCalledWith({
             id: ID,
-            displayName: 'Justrite B2B',
+            displayName: 'Tailspin B2B',
             description: 'Signs',
         });
         expect(w.addDataItem.mock.calls).toEqual([

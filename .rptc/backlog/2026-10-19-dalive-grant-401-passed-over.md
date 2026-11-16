@@ -9,7 +9,7 @@ status: built
 
 # An expired DA.live sign-in during the access grant is logged and passed over
 
-Filed 2026-10-19, split from EDS-29 by the unattended loop. EDS-29's run on Justrite
+Filed 2026-10-19, split from EDS-29 by the unattended loop. EDS-29's run on Tailspin
 (2026-10-05) logged this line before the publish failed:
 
 ```

@@ -9,7 +9,7 @@ status: active
 
 # The agent's `republish` does what the dashboard's Republish does
 
-Filed 2026-10-23, from the JustRite reset walk.
+Filed 2026-10-23, from the Tailspin reset walk.
 
 ## What was wrong
 
@@ -21,7 +21,7 @@ Three names, two jobs:
 | Agent tool | `republish` | `republishStorefrontConfig` only: config.json to GitHub and the CDN |
 | Agent tool | `sync_content` | `republishStorefrontContent`: the button's job |
 
-Found when JustRite's reset left its site on old code and the fix was "Republish".
+Found when Tailspin's reset left its site on old code and the fix was "Republish".
 The agent tool by that name would have republished the settings file and nothing
 else, while reporting success. The button's job was reachable by an agent only under
 another name.

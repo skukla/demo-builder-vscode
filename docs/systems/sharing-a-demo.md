@@ -80,7 +80,7 @@ A complete example:
 {
   "kind": "demo",
   "version": 2,
-  "name": "Isle5 by Jen",
+  "name": "Isle5 by Robin",
   "description": "A B2B outdoor-equipment demo with company accounts and quotes",
   "configDefaults": {
     "ADOBE_COMMERCE_WEBSITE_CODE": "isle5",
@@ -142,7 +142,7 @@ The writes go to the SC's copy; your repository is never touched. If a patch lis
 downloaded, what was read still goes in, and the project shows Needs reset until a reset reads
 them all.
 
-Measured on JustRite, 2026-10-23: of the six fixes, two were already in its code and the other
+Measured on Tailspin, 2026-10-23: of the six fixes, two were already in its code and the other
 four fit (the AEM Assets image name, and the product teaser's link, import and image address).
 
 ## Boilerplate versions

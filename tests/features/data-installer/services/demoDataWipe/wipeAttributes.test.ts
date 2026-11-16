@@ -7,11 +7,11 @@ import { planWipeFor } from '@/features/data-installer/services/demoDataWipe/wip
 import { removeEmptySet } from '@/features/data-installer/services/demoDataWipe/wipeAttributes';
 import type { InstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import type { CommerceSalesRule } from '@/types/commerceSalesRule';
-import { DEFAULT_SET_PRODUCT, JUSTRITE_CAN, JUSTRITE_WIPER, OWNED_PRODUCT, WIPER_1, WIPER_2, attributeInstance } from '../../../../helpers/commerceWipeInstanceFixtures';
+import { DEFAULT_SET_PRODUCT, TAILSPIN_CAN, TAILSPIN_WIPER, OWNED_PRODUCT, WIPER_1, WIPER_2, attributeInstance } from '../../../../helpers/commerceWipeInstanceFixtures';
 import { sandbox } from './wipe.testUtils';
 import { decideRemovals } from '@/features/data-installer/services/demoBuilderEngine/removers';
 
-const TEST_STORE = ['justrite_test_website'];
+const TEST_STORE = ['tailspin_test_website'];
 const NOTHING = { customers: [], orders: [] };
 const ALL = [WIPER_1, WIPER_2];
 
@@ -31,7 +31,7 @@ describe('decideAttributes, through the plan', () => {
     });
 
     it('keeps a set a product on another website is in, and the attribute that set holds, listing both', async () => {
-        const store = sandbox({ ...NOTHING, products: [...ALL, JUSTRITE_WIPER], instance: attributeInstance() });
+        const store = sandbox({ ...NOTHING, products: [...ALL, TAILSPIN_WIPER], instance: attributeInstance() });
 
         const plan = await planWipeFor(store.get, TEST_STORE, { records: [] });
 
@@ -104,7 +104,7 @@ describe('decideAttributes, through the plan', () => {
     });
 
     it('keeps an attribute a product elsewhere still carries, though no set that stays holds it', async () => {
-        const stray = { ...JUSTRITE_CAN, attribute_set_id: 41, custom_attributes: [{ attribute_code: 'wiper_size', value: '9' }] };
+        const stray = { ...TAILSPIN_CAN, attribute_set_id: 41, custom_attributes: [{ attribute_code: 'wiper_size', value: '9' }] };
         const store = sandbox({ ...NOTHING, products: [...ALL, stray], instance: attributeInstance() });
 
         const plan = await planWipeFor(store.get, TEST_STORE, { records: [] });
@@ -155,7 +155,7 @@ describe('decideAttributes, through the plan', () => {
     });
 
     it('looks at no set when no product is going', async () => {
-        const store = sandbox({ ...NOTHING, products: [JUSTRITE_WIPER], instance: attributeInstance() });
+        const store = sandbox({ ...NOTHING, products: [TAILSPIN_WIPER], instance: attributeInstance() });
 
         const plan = await planWipeFor(store.get, TEST_STORE, { records: [] });
 
@@ -184,7 +184,7 @@ describe('removeEmptySet', () => {
     });
 
     it('writes nothing while a product is in it: deleting the set would delete the product', async () => {
-        const store = sandbox({ products: [JUSTRITE_WIPER], instance: attributeInstance() });
+        const store = sandbox({ products: [TAILSPIN_WIPER], instance: attributeInstance() });
 
         await expect(removeEmptySet(store, { id: 40, name: 'Wipers', needs: [] })).rejects.toThrow('removing it would delete them');
         expect(store.sent).toStrictEqual([]);
@@ -193,11 +193,11 @@ describe('removeEmptySet', () => {
 
 /**
  * C3 review (2026-11-13), two projects: project A's datapack made `wiper_size`; a product of another
- * demo, on JustRite's website, carries it. Clear's check (as if A's datapack were gone) keeps it, and
+ * demo, on Tailspin's website, carries it. Clear's check (as if A's datapack were gone) keeps it, and
  * A's uninstall, which Clear runs first, keeps it too: the same read decides both (`carriersOf`).
  */
 describe("an attribute another demo's product carries, the check and the removal agree", () => {
-    const theirs = { ...JUSTRITE_CAN, sku: 'JR-CAN-2', custom_attributes: [{ attribute_code: 'wiper_size', value: '1' }] };
+    const theirs = { ...TAILSPIN_CAN, sku: 'JR-CAN-2', custom_attributes: [{ attribute_code: 'wiper_size', value: '1' }] };
 
     it("is kept by Clear's check and by the datapack's removal", async () => {
         const store = sandbox({ ...NOTHING, products: [WIPER_1, theirs], instance: attributeInstance() });

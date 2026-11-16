@@ -9,7 +9,7 @@ import { WipeChangedError, clearShown, runWipe } from '@/features/data-installer
 import { RESET_RULE_CASES } from '../../../../helpers/resetRuleOrders';
 import { PROJECT_RECORDS, sandbox, writesOf } from './wipe.testUtils';
 
-const TEST_STORE = ['justrite_test_website'];
+const TEST_STORE = ['tailspin_test_website'];
 
 describe('runWipe', () => {
     it('closes orders, each with its returns, deletes customers, then products, takes shared products off the website, then categories', async () => {
@@ -31,12 +31,12 @@ describe('runWipe', () => {
             { method: 'DELETE', path: 'products/ZZ-ONLY-HERE' },
             { method: 'DELETE', path: 'products/ZZ-JACKET' },
             { method: 'DELETE', path: 'products/ZZ-JACKET-RED' },
-            { method: 'DELETE', path: 'products/ZZ-SHARED-WITH-JUSTRITE/websites/5' },
+            { method: 'DELETE', path: 'products/ZZ-SHARED-WITH-TAILSPIN/websites/5' },
         ]);
         expect(stages).toEqual(['Closing orders', 'Deleting customers', 'Deleting products', 'Removing products from websites']);
         // Kept records carry no reason any more (J1-3b), so the sentence no longer lists them.
         expect(outcome.sentence).toBe(
-            'Removed 3 products and 1 customer from the website JustRite Test. Canceled 1 order and refunded 1 order. Closed 1 return. ' +
+            'Removed 3 products and 1 customer from the website Tailspin Test. Canceled 1 order and refunded 1 order. Closed 1 return. ' +
                 'Took 1 product other websites also sell off the chosen websites.',
         );
         expect(outcome.leftOpen).toStrictEqual([]);

@@ -29,7 +29,7 @@ const REVIEW_BASE = {
 
 describe('buildProjectConfig — the added demo row', () => {
     it('carries the row to the create request, and nothing when there is none', () => {
-        const demo = { kind: 'demo' as const, version: 1, name: 'Isle5 by Jen', source: { owner: 'jen', repo: 'isle5-demo' }, storefrontKind: 'eds' as const };
+        const demo = { kind: 'demo' as const, version: 1, name: 'Isle5 by Robin', source: { owner: 'robin', repo: 'isle5-demo' }, storefrontKind: 'eds' as const };
         expect(buildProjectConfig({ ...REVIEW_BASE, demo } as WizardState).demo).toEqual(demo);
         expect(buildProjectConfig({ ...REVIEW_BASE } as WizardState).demo).toBeUndefined();
     });

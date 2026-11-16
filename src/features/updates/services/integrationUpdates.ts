@@ -39,7 +39,7 @@ export interface IntegrationPairUpdate {
     componentId: string;
     /** The members the update covers, in the order they update. */
     members: string[];
-    /** The pair by name, integration first: "ERP Integration and Justrite ERP". */
+    /** The pair by name, integration first: "ERP Integration and Tailspin ERP". */
     label: string;
     /** The releases this update moves to. Absent for code that has none. */
     releases?: Array<{ name: string; version: string }>;

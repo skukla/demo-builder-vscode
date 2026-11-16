@@ -56,7 +56,7 @@ export async function checkGitHubAppForExistingRepo(
         awaitRegistration: options.afterReset === true,
     });
 
-    // An inner 400 says nothing either way (EDS-23): skukla/kukla-justrite read
+    // An inner 400 says nothing either way (EDS-23): skukla/kukla-tailspin read
     // 400 before the App covered it and after. Phase 3 asks the code endpoint,
     // whose x-error does say, so this gate hands the question on instead of
     // failing a setup that may be fine.

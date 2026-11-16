@@ -18,8 +18,8 @@ entries are the starter-kit seed and the blank shell); this is its first tile.
 Use the Commerce integration starter kit to create an integration with an ERP modeled on
 SAP. It ships two things: the ERP clone and the App Builder integration to it, so the SC can
 demonstrate both the SAP side and the Commerce integration. Bidirectional. Works whatever
-data the Commerce instance holds. Every ERP record resettable. Nishant Kapoor's private
-`agilent-erp-mock` is the reference.
+data the Commerce instance holds. Every ERP record resettable. Person A's private
+`client-a-erp-mock` is the reference.
 
 ## The shape (plan: `.rptc/plans/erp-integration/`, thirteen-plus decisions in its ledger)
 
@@ -43,7 +43,7 @@ the flyout, the agent tools · 06 live acceptance on Bodea and docs.
 ## Rules the owner set
 
 - Build both apps with our tooling to Adobe's standards (the starter-kit skills, the App
-  Builder patterns); Nishant Kapoor's code is used where it meets that bar, assessed rather than trusted.
+  Builder patterns); Person A's code is used where it meets that bar, assessed rather than trusted.
 - The scratch workspace for the spike is created and deleted by the agent through the
   proven SDK path; no owner action needed.
 - The ERP's display name is an input of the integration's configuration, default "Acme ERP".

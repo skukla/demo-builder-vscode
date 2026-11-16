@@ -95,7 +95,7 @@ function recordsOnWebsites(records: readonly InstallRecord[], other: Project, we
     });
 }
 
-/** "The project JustRite also uses the website Justrite. Clearing it also removes …" */
+/** "The project Tailspin also uses the website Tailspin. Clearing it also removes …" */
 function warningOf(users: readonly Project[], websites: readonly string[]): string | undefined {
     if (users.length === 0) return undefined;
     const one = users.length === 1;

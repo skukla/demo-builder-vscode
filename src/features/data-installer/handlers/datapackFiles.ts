@@ -88,7 +88,7 @@ export async function projectPath(
 /**
  * "There is none", naming the project whose folder was looked in: an agent's relative path is
  * read inside the CURRENT project, and when that is not the one the agent meant, the project's
- * name is what says so (live, 2026-10-30: a path meant for scratch-1028 was looked for in JustRite's).
+ * name is what says so (live, 2026-10-30: a path meant for scratch-1028 was looked for in Tailspin's).
  */
 function noFileAt(projectName: string, given: string): string {
     return `The project ${projectName} has no datapack file at ${given}.`;

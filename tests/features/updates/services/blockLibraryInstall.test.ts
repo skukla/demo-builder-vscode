@@ -382,14 +382,14 @@ describe('applyBlockLibraryInstall', () => {
 describe('the wording both surfaces share', () => {
     it('reads as an install before, and as one short sentence after', () => {
         expect(describePendingInstall(LIBRARY)).toBe('Demo Builder Blocks: install');
-        expect(describeInstallOutcome({ name: 'Demo Builder Blocks', blockIds: ['commerce-nav'] }, 'justrite')).toBe(
-            'Added 1 block from Demo Builder Blocks to justrite.',
+        expect(describeInstallOutcome({ name: 'Demo Builder Blocks', blockIds: ['commerce-nav'] }, 'tailspin')).toBe(
+            'Added 1 block from Demo Builder Blocks to tailspin.',
         );
-        expect(describeInstallOutcome({ name: 'Demo Builder Blocks', blockIds: ['a', 'b'] }, 'justrite')).toBe(
-            'Added 2 blocks from Demo Builder Blocks to justrite.',
+        expect(describeInstallOutcome({ name: 'Demo Builder Blocks', blockIds: ['a', 'b'] }, 'tailspin')).toBe(
+            'Added 2 blocks from Demo Builder Blocks to tailspin.',
         );
-        expect(describeInstallOutcome({ name: 'Demo Builder Blocks', blockIds: [] }, 'justrite')).toBe(
-            'Demo Builder Blocks is already in justrite.',
+        expect(describeInstallOutcome({ name: 'Demo Builder Blocks', blockIds: [] }, 'tailspin')).toBe(
+            'Demo Builder Blocks is already in tailspin.',
         );
     });
 });

@@ -102,7 +102,7 @@ describe('Storefront Setup Phases - Block Library Install Tracking', () => {
             libraryVersions: LIBRARY_VERSIONS,
         });
         // The project open before the wizard: NOT the one this storefront is for.
-        const openProject = createMockProject({ name: 'justrite' });
+        const openProject = createMockProject({ name: 'tailspin' });
         const context = createSetupContext(openProject);
         const customLibs: CustomBlockLibrary[] = [
             { name: 'Partner Blocks', source: { owner: 'partner', repo: 'blocks', branch: 'v2' } },
@@ -168,7 +168,7 @@ describe('Storefront Setup Phases - Block Library Install Tracking', () => {
             blockIds: [],
             error: 'Network error',
         });
-        const openProject = createMockProject({ name: 'justrite' });
+        const openProject = createMockProject({ name: 'tailspin' });
         const context = createSetupContext(openProject);
 
         const result = await executeStorefrontSetupPhases(

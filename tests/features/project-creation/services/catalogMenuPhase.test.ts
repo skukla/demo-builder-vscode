@@ -26,7 +26,7 @@ import { createMockProject } from '../../../helpers/projectFake';
 
 const NAV = '<body><header></header><main><div><ul><li>Home</li></ul></div></main><footer></footer></body>';
 
-function storefront(githubRepo = 'skukla/kukla-justrite', extra: Record<string, unknown> = {}): Project {
+function storefront(githubRepo = 'skukla/kukla-tailspin', extra: Record<string, unknown> = {}): Project {
     return createMockProject({
         selectedStack: 'eds-accs',
         componentSelections: { frontend: COMPONENT_IDS.EDS_STOREFRONT },
@@ -66,7 +66,7 @@ describe('executeCatalogMenuPhase', () => {
         await executeCatalogMenuPhase(createMockHandlerContext(), project, progress, undefined, makeSite);
 
         expect(makeSite).toHaveBeenCalledWith(
-            expect.objectContaining({ repoOwner: 'skukla', repoName: 'kukla-justrite', daLiveSite: 'kukla-justrite' }),
+            expect.objectContaining({ repoOwner: 'skukla', repoName: 'kukla-tailspin', daLiveSite: 'kukla-tailspin' }),
         );
         expect(helix.published).toEqual(['/signs']);
         expect(s.pages.has('/categories/default')).toBe(true);
@@ -193,7 +193,7 @@ describe('rewriteCatalogMenuPhase — after an Edit removed the old datapack (PL
 
     it('never removes a page the SC edited since', async () => {
         const old = '<body><main><div><h1>Signs</h1></div></main></body>';
-        const project = storefront('skukla/kukla-justrite', {
+        const project = storefront('skukla/kukla-tailspin', {
             catalogMenu: { pages: [{ path: '/signs', hash: hashOf(old) }], links: [], navSwitch: true },
         });
         const s = fakeSite({ '/nav': NAV, '/signs': `${old}<p>Edited by hand</p>` });

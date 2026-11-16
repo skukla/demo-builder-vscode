@@ -53,7 +53,7 @@ export interface DemoSourceCheck {
     renamedTo?: string;
 }
 
-/** "Jen's demo" for a demo named "Isle5 by Jen": the owner's login is the person. */
+/** "Robin's demo" for a demo named "Isle5 by Robin": the owner's login is the person. */
 /**
  * The demo, by its demo package name: always known, where the repository's
  * GitHub owner is an account or an organization rather than the author's name
@@ -93,7 +93,7 @@ export async function checkDemoSource(
         context.logger.warn(`[DemoSource] ${demo.source.owner}/${demo.source.repo}: ${(error as Error).message}`);
         // Only GitHub saying the repository does not exist is "can't be reached". A failed read
         // told the SC their demo's source might be gone when the network had dropped (owner,
-        // 2026-11-05: the JustRite notice one night, gone the next morning).
+        // 2026-11-05: the Tailspin notice one night, gone the next morning).
         if ((error as { status?: number }).status === 404) {
             return { reachable: false, checked: true, message: unreachable, contentReachable: false };
         }

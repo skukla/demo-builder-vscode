@@ -28,7 +28,7 @@ opened the Integrations screen was never told, other projects were never checked
 **What was built.**
 
 - The startup check and Check for Updates list every deployed pair with newer code, across
-  all projects, one row per pair ("Justrite: ERP Integration and Justrite ERP"), using the
+  all projects, one row per pair ("Tailspin: ERP Integration and Tailspin ERP"), using the
   Integrations screen's own rule (`checkIntegrationUpdates`, with AB-71's deployed-commit
   rule) and recording `updateAvailable` where the card badge reads it. The check runs
   alongside the other project checks, so the extension's own update notice does not wait on

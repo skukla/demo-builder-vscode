@@ -2,19 +2,19 @@
 
 Site: DA.live org `skukla`, site `bodea-source` (matches the block-source repo name).
 
-Bodea = B2B network enclosures / data-center racks. Jen's repo also holds a separate Marine
-Corps (MCCS) demo — none of that content travels.
+Bodea = B2B network enclosures / data-center racks. Robin's repo also holds a separate Marine
+Corps (ORG C) demo — none of that content travels.
 
-1. Curated copy from `sayurihanki/jenhankib2bbodea`:
+1. Curated copy from `org-j/org-k`:
    - PRUNE pages for every dropped block (2026-08-14 curation, commit 079522f):
-     medal-rack-configurator, product-technical-details, promo-popup, razer-*, ALL mccs
+     medal-rack-configurator, product-technical-details, promo-popup, razer-*, ALL org-c
      content (forms/quiz/uniform), uniform-configurator, age-gate, age-verification,
      store-locator, quiz-router, live-block, live-block-premium, vip-member-block-real-v2,
-     vip-hero, product-configurator-luxe — plus Jen's `/customer/*` pages (account chrome
+     vip-hero, product-configurator-luxe — plus Robin's `/customer/*` pages (account chrome
      arrives via the boilerplate-b2b overlay at creation).
    - The 28 shipping blocks are the allowlist: any page referencing anything else is pruned
      or rewritten. Closure check in step 5 enforces this.
-   - REWRITE hardcoded hosts (`*--jenhankib2bbodea--sayurihanki.aem.live`) to relative links.
+   - REWRITE hardcoded hosts (`*--org-k--org-j.aem.live`) to relative links.
 2. `/vip-config.json` sheet: VIP group-hash allowlist (+ optional Maps key) — read by the
    customer-group module and store-locator with safe empty defaults.
 3. Authored configurator PDP pages (per step 03 Wave 3 routing decision).

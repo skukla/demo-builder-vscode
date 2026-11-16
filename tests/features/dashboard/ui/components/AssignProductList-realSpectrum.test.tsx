@@ -32,8 +32,8 @@ const STORE: ErpAssignOptions = {
         { sku: 'ACC-3', name: 'Floor sign', attributeSetId: 4, categoryIds: ['7'], owner: 'accuform' },
         { sku: 'ACC-9', name: 'Gear tag', attributeSetId: 9, categoryIds: ['7'], owner: '' },
     ],
-    owners: { 'ACC-1': ['justrite'], 'ACC-3': ['accuform'], 'ACC-9': ['justrite'] },
-    names: { justrite: 'Justrite ERP', accuform: 'Accuform ERP' },
+    owners: { 'ACC-1': ['tailspin'], 'ACC-3': ['accuform'], 'ACC-9': ['tailspin'] },
+    names: { tailspin: 'Tailspin ERP', accuform: 'Accuform ERP' },
 };
 
 it('renders its table, headings and rows, through the real Spectrum package', () => {

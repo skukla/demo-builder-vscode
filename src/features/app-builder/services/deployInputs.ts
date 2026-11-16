@@ -77,7 +77,7 @@ function textInputValue(
  * projects keep their names). A bound system reads its integration's value first, so
  * this is reached only when that value is gone — as when adding the integration failed
  * and its unsaved settings were dropped, and a redeploy of the ERP it had already put up
- * renamed "Justrite ERP" to the default "Acme ERP" (2026-10-05).
+ * renamed "Tailspin ERP" to the default "Acme ERP" (2026-10-05).
  */
 function fallbackFor(
     project: Project,

@@ -78,7 +78,7 @@ describe('handleSetProjectDestination', () => {
     describe('a project that has no org yet', () => {
         // Creation from a package that deploys no mesh records no Adobe context, so
         // the first destination write is where the org has to be filled in. Left
-        // empty (2026-09-30, project `justrite`), the destination read as complete
+        // empty (2026-09-30, project `tailspin`), the destination read as complete
         // while every credential read refused it.
         const { organization: _o, organizationName: _n, ...NO_ORG } = EXISTING_ADOBE;
         const SIGNED_IN = { id: '285361', name: 'Adobe Demo System' };

@@ -6,7 +6,7 @@
  * string `value` and has no delete; only "Use Default Value" in the Admin clears a website's own row
  * (Adobe's "System configuration API" page; step 09's decision 5). **And it cannot list which settings
  * a website set itself:** with no path filter, `GET /V1/system/config` answers every path with the
- * value in force there (live on `justrite_test_website`, 2026-11-02: 943 rows, among them
+ * value in force there (live on `tailspin_test_website`, 2026-11-02: 943 rows, among them
  * `login_as_customer/general/shopping_assistance_checkbox_title`, a value no website sets).
  *
  * So what can be proved is: **a value that differs from the Default scope's was set on the website**,

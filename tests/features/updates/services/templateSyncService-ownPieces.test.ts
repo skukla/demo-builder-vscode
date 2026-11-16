@@ -1,9 +1,9 @@
 /**
  * An update never clashes with Demo Builder's OWN additions, and a stop pushes nothing (real git).
  *
- * JustRite in miniature (2026-10-30). Adobe's tested boilerplate changed three lines our pieces
+ * Tailspin in miniature (2026-10-30). Adobe's tested boilerplate changed three lines our pieces
  * sit beside or inside: the `loadHeader` line under the Quick Edit Sidekick listener, the one-line
- * AEM Assets dropin our SKU patch edits, and a header line Khalil had edited himself. The update
+ * AEM Assets dropin our SKU patch edits, and a header line PersonB had edited himself. The update
  * stopped on all three. Only the last is somebody's edit and must still stop it (CLAUDE.md, rule 2).
  *
  * The colleague's track had its own: the colleague's repository gained an OLDER copy of the
@@ -38,9 +38,9 @@ jest.mock('@/features/eds/services/patches/shippedPatchLedger', () => ({
 }));
 
 const REAL_GIT_TIMEOUT_MS = 60_000;
-const SC_REPO = 'skukla/kukla-justrite';
+const SC_REPO = 'skukla/kukla-tailspin';
 const ADOBE = { owner: 'adobe-commerce', repo: 'boilerplate-b2b-template' };
-const COLLEAGUE = { owner: 'kmanns', repo: 'justrite' };
+const COLLEAGUE = { owner: 'org-e', repo: 'tailspin' };
 
 const ASSETS = ASSETS_SKU_SANITIZATION.target;
 const ASSETS_1 = `export function x(e){${ASSETS_SKU_SANITIZATION.precondition};return o}\n`;
@@ -54,7 +54,7 @@ const SCRIPTS_2 = CANONICAL_SCRIPTS_JS.replace(LOAD_HEADER, "  loadHeader(doc.qu
 
 const HEADER_1 = "const navTools = 1;\nconst quote = 'Request a Quote';\nconst end = 1;\n";
 const HEADER_2 = "const navTools = 1;\nconst quote = 'Request a Quote';\nconst end = 'aria';\n";
-const HEADER_KHALIL = "const navTools = 1;\nconst quote = 'nav-quote';\nconst end = 1;\n";
+const HEADER_PERSON_B = "const navTools = 1;\nconst quote = 'nav-quote';\nconst end = 1;\n";
 
 const CATALOG = 'blocks/catalog-menu/catalog-menu.js';
 
@@ -107,7 +107,7 @@ function storefront(extra: Record<string, string> = {}, scripts = buildQuickEdit
 
 function project(metadata: Record<string, unknown>, libraries: InstalledBlockLibrary[] = []): Project {
     return createMockProject({
-        name: 'justrite',
+        name: 'tailspin',
         installedBlockLibraries: libraries,
         componentInstances: {
             'eds-storefront': { id: 'eds-storefront', name: 'EDS Storefront', status: 'ready', metadata: { githubRepo: SC_REPO, ...metadata } },
@@ -167,9 +167,9 @@ describe("Adobe's boilerplate update with Demo Builder's pieces set aside", () =
 
     it("still stops on somebody's own edit, names it as theirs, and pushes nothing", async () => {
         const { b1, b2 } = adobeTemplate();
-        // Khalil's edit reached the storefront with his demo: the same file is in his repository.
-        const [k1] = repoOf(`${COLLEAGUE.owner}/${COLLEAGUE.repo}`, [{ 'blocks/header/header.js': HEADER_KHALIL }]);
-        storefront({ 'blocks/header/header.js': HEADER_KHALIL });
+        // PersonB's edit reached the storefront with his demo: the same file is in his repository.
+        const [k1] = repoOf(`${COLLEAGUE.owner}/${COLLEAGUE.repo}`, [{ 'blocks/header/header.js': HEADER_PERSON_B }]);
+        storefront({ 'blocks/header/header.js': HEADER_PERSON_B });
         const before = originHead();
         const { svc } = service();
         const copied = { templateOwner: COLLEAGUE.owner, templateRepo: COLLEAGUE.repo, lastSyncedCommit: k1 };
@@ -178,8 +178,8 @@ describe("Adobe's boilerplate update with Demo Builder's pieces set aside", () =
 
         expect(result.success).toBe(false);
         expect(result.conflicts).toEqual(['blocks/header/header.js']);
-        expect(result.edits).toEqual([{ file: 'blocks/header/header.js', whose: 'copied-demo', from: 'kmanns/justrite' }]);
-        expect(result.error).toContain('an edit that came with kmanns/justrite');
+        expect(result.edits).toEqual([{ file: 'blocks/header/header.js', whose: 'copied-demo', from: 'org-e/tailspin' }]);
+        expect(result.error).toContain('an edit that came with org-e/tailspin');
         expect(result.clash).toMatchObject({ ownPiecesAside: true });
         expect(originHead()).toBe(before);
     }, REAL_GIT_TIMEOUT_MS);
@@ -223,10 +223,10 @@ describe("a colleague's template update leaves a block library's folders to the 
     /** The colleague gains an older copy of the block; the storefront already has the library's newer one. */
     function setUp(): { c1: string } {
         const [c1] = repoOf(`${COLLEAGUE.owner}/${COLLEAGUE.repo}`, [
-            { 'README.md': 'justrite\n' },
-            { 'README.md': 'justrite\n', [CATALOG]: 'catalog menu, version 1\n', 'other.js': 'colleague change\n' },
+            { 'README.md': 'tailspin\n' },
+            { 'README.md': 'tailspin\n', [CATALOG]: 'catalog menu, version 1\n', 'other.js': 'colleague change\n' },
         ]);
-        repoOf(SC_REPO, [{ 'README.md': 'justrite\n' }, { [CATALOG]: 'catalog menu, version 2\n' }]);
+        repoOf(SC_REPO, [{ 'README.md': 'tailspin\n' }, { [CATALOG]: 'catalog menu, version 2\n' }]);
         return { c1 };
     }
     const colleagueTrack = (c1: string) => ({ templateOwner: COLLEAGUE.owner, templateRepo: COLLEAGUE.repo, lastSyncedCommit: c1 });

@@ -1,6 +1,6 @@
 # Step 06 — Acceptance and docs
 
-1. Add Jen's storefront by link: the card says boilerplate 4.0.1 vs 6.0.0 and "5 of Demo
+1. Add Robin's storefront by link: the card says boilerplate 4.0.1 vs 6.0.0 and "5 of Demo
    Builder's fixes fit"; the completion offers them; accepting writes one commit with five
    patches; the caveats for the two that miss remain; reset offers again and finds them
    already present.

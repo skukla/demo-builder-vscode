@@ -3,7 +3,7 @@
  *
  * The GitHub reads are a fake handed in; the decisions and the catalog are real. The
  * first-commit case is shaped on the measurement that motivated it (2026-10-20): GitHub
- * says kmanns/justrite was made from adobe-commerce/boilerplate-b2b-template, and its
+ * says org-e/tailspin was made from adobe-commerce/boilerplate-b2b-template, and its
  * first commit had every file of 71a67e027 except Adobe's CI workflows.
  */
 
@@ -21,7 +21,7 @@ import { createMockProject } from '../../../helpers/projectFake';
 
 const B2B = { owner: 'adobe-commerce', repo: 'boilerplate-b2b-template' };
 const B2B_LKG = { owner: 'skukla', repo: 'eds-demo-patches', lkgFile: 'b2b/last-known-good' };
-const JUSTRITE = { owner: 'kmanns', repo: 'justrite' };
+const TAILSPIN = { owner: 'org-e', repo: 'tailspin' };
 const BASE_SHA = '71a67e027b4b288a67f5cda1fc106d2df9a34805';
 const SAVED_SHA = '48bed04d072fff094b49a46709b351bd719b287a';
 
@@ -29,15 +29,15 @@ function colleagueProject(builtWith?: SharedDemoBuiltWith, metadata: Record<stri
     const demo: AddedDemo = {
         kind: 'demo',
         version: builtWith ? 2 : 1,
-        name: 'Justrite',
-        contentSource: { org: 'kmanns', site: 'justrite', indexPath: '/sitemap.json' },
-        source: { ...JUSTRITE, branch: 'main' },
+        name: 'Tailspin',
+        contentSource: { org: 'org-e', site: 'tailspin', indexPath: '/sitemap.json' },
+        source: { ...TAILSPIN, branch: 'main' },
         storefrontKind: 'eds',
         ...(builtWith ? { builtWith } : {}),
     };
     return createMockProject({
-        name: 'justrite',
-        path: '/p/justrite',
+        name: 'tailspin',
+        path: '/p/tailspin',
         demo,
         componentInstances: {
             [COMPONENT_IDS.EDS_STOREFRONT]: {
@@ -45,7 +45,7 @@ function colleagueProject(builtWith?: SharedDemoBuiltWith, metadata: Record<stri
                 name: 'EDS Storefront',
                 type: 'frontend',
                 status: 'ready',
-                metadata: { templateOwner: 'kmanns', templateRepo: 'justrite', githubRepo: 'skukla/kukla-justrite', ...metadata },
+                metadata: { templateOwner: 'org-e', templateRepo: 'tailspin', githubRepo: 'skukla/kukla-tailspin', ...metadata },
             },
         },
     });
@@ -118,7 +118,7 @@ describe('resolveBoilerplateBase', () => {
         ['a package saved from a template we do not test', colleagueProject({ template: { owner: 'someone', repo: 'own' }, lkg: SAVED_SHA, extension: '1' }), github(), /someone\/own is not a template Demo Builder tests/],
         ['a repository not made from one of our templates', colleagueProject(), github({ repository: async () => ({ createdAt: '2026-09-23T00:00:00Z' }) }), /was not made from a template Demo Builder tests/],
         ['a first commit that matches nothing', colleagueProject(), github({ commitsBefore: async () => [{ sha: 'a'.repeat(40), tree: 'newer' }] }), /matches no commit of adobe-commerce\/boilerplate-b2b-template/],
-        ['GitHub that cannot be read', colleagueProject(), github({ repository: async () => undefined }), /GitHub could not be read for kmanns\/justrite/],
+        ['GitHub that cannot be read', colleagueProject(), github({ repository: async () => undefined }), /GitHub could not be read for org-e\/tailspin/],
     ])('has no base for %s, and says why', async (_label, project, gh, reason) => {
         const found = await resolveBoilerplateBase(project, { github: gh, logger });
 
@@ -143,7 +143,7 @@ describe('the recorded base', () => {
         writeBoilerplateBase(project, base);
         expect(readBoilerplateBase(project)).toEqual(base);
         expect(project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata).toMatchObject({
-            templateOwner: 'kmanns',
+            templateOwner: 'org-e',
             boilerplateBase: base,
         });
 

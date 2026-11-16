@@ -7,7 +7,7 @@
 import { type WipeErpLink, wipeErpOf } from '@/features/data-installer/services/demoDataWipe/wipeErp';
 import type { ResolvedErpSettings } from '@/features/app-builder/services/erpFill';
 import type { ErpIntegrationStatus, ErpStoreCloseReport } from '@/types/erpIntegration';
-import { JUSTRITE_SETTINGS, STATUS_BY_STORE, STORE_CLOSE } from '../../../../helpers/erpWipeFixtures';
+import { TAILSPIN_SETTINGS, STATUS_BY_STORE, STORE_CLOSE } from '../../../../helpers/erpWipeFixtures';
 
 export interface FakeErpOptions {
     status?: ErpIntegrationStatus;
@@ -21,15 +21,15 @@ export interface FakeErpOptions {
 export function fakeErp(options: FakeErpOptions = {}) {
     const client = {
         status: jest.fn(async () => options.status ?? STATUS_BY_STORE),
-        resolvedSettings: jest.fn(async (_codes: string[]) => options.settings ?? JUSTRITE_SETTINGS),
+        resolvedSettings: jest.fn(async (_codes: string[]) => options.settings ?? TAILSPIN_SETTINGS),
         closeOrders: jest.fn(options.close ?? (async () => STORE_CLOSE)),
     };
     const refill = jest.fn(options.refill ?? (async () => ({})));
     const refusal = options.refusal;
     const link: WipeErpLink = {
-        project: { displayName: 'JustRite', name: 'justrite' },
+        project: { displayName: 'Tailspin', name: 'tailspin' },
         integrationId: 'erp-integration',
-        erpNames: { justrite: 'Justrite ERP', accuform: 'Accuform ERP' },
+        erpNames: { tailspin: 'Tailspin ERP', accuform: 'Accuform ERP' },
         client: async () => (refusal ? { refusal } : client),
         refill,
     };

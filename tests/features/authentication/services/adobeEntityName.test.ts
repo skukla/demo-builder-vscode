@@ -144,7 +144,7 @@ describe('toAdobeTitle', () => {
     });
 
     it('leaves a title the schema already accepts alone', () => {
-        expect(toAdobeTitle('Kukla Justrite')).toBe('Kukla Justrite');
+        expect(toAdobeTitle('Kukla Tailspin')).toBe('Kukla Tailspin');
     });
 
     it('keeps it to 45 characters, with no trailing space', () => {

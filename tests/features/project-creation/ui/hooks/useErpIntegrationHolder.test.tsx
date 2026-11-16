@@ -20,7 +20,7 @@ import {
 import type { WizardState } from '@/types/webview';
 import type { CheckErpIntegrationHolderResponse } from '@/types/webviewRequests';
 
-const MESSAGE = 'justrite already has an ERP integration on this Commerce instance. Add your ERP there instead.';
+const MESSAGE = 'tailspin already has an ERP integration on this Commerce instance. Add your ERP there instead.';
 const CONFIGS = {
     'adobe-commerce-accs': { ACCS_GRAPHQL_ENDPOINT: 'https://na1.api.commerce.adobe.com/tenant-x/graphql' },
 };
@@ -36,7 +36,7 @@ function wizard(overrides: Partial<WizardState> = {}): WizardState {
 }
 
 function held(): CheckErpIntegrationHolderResponse {
-    return { success: true, data: { holder: 'justrite', message: MESSAGE } };
+    return { success: true, data: { holder: 'tailspin', message: MESSAGE } };
 }
 
 beforeEach(() => {

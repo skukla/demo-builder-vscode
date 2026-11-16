@@ -95,13 +95,13 @@ describe('resolveTemplateCommitSha', () => {
         const { github, getLatestCommitSha } = githubWithHead(async () => HEAD_SHA);
 
         const sha = await resolveTemplateCommitSha(
-            { templateOwner: 'jen', templateRepo: 'isle5-demo', templateBranch: 'demo-2026' },
+            { templateOwner: 'robin', templateRepo: 'isle5-demo', templateBranch: 'demo-2026' },
             github,
             createMockLogger(),
         );
 
         expect(sha).toBe(HEAD_SHA);
-        expect(getLatestCommitSha).toHaveBeenCalledWith('jen', 'isle5-demo', 'demo-2026');
+        expect(getLatestCommitSha).toHaveBeenCalledWith('robin', 'isle5-demo', 'demo-2026');
     });
 
     it('answers nothing when the template branch does not exist', async () => {

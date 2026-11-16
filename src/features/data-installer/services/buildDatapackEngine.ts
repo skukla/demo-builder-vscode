@@ -144,7 +144,7 @@ const STORE_WIDE = 'all';
  *
  * It WRITES store-wide, never through a store view: a pack lands on the website and store view the
  * install names, which need not be the project's. Through the project's, a reinstall's price change
- * landed on JustRite's store view while the test website kept the old price (live, 2026-10-29).
+ * landed on Tailspin's store view while the test website kept the old price (live, 2026-10-29).
  *
  * It READS through the store view the pack is installed to (`readScope`): a pack goes into one
  * website, so what is in the store is what that website shows. Read store-wide, a price the SC set

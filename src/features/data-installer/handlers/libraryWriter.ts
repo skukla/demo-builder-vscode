@@ -43,7 +43,7 @@ export async function openLibraryWriter(context: HandlerContext): Promise<Opened
 
 /**
  * A library pack's display name, as the Datapacks screen shows it (F17: the reset confirm showed its
- * id, "kukla-justrite-a80dca"). Undefined for a pack outside the library, or a library that does not
+ * id, "kukla-tailspin-a80dca"). Undefined for a pack outside the library, or a library that does not
  * answer: the caller falls back. Read by the Reset Selected confirm and the dashboard's Datapacks
  * card (owner, 2026-11-07). Every name read is remembered (`packNames`), so the card can show it at
  * once next time, with how many versions the pack offers (step-07 P4).

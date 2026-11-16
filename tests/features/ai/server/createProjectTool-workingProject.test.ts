@@ -17,7 +17,7 @@ import { createMockProject } from '../../../helpers/projectFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 const MADE = creationPath({ projectName: HEADLESS.projectName });
-const OPEN = createMockProject({ name: 'justrite', path: '/projects/justrite' });
+const OPEN = createMockProject({ name: 'tailspin', path: '/projects/tailspin' });
 
 function connection(working: AgentWorkingProject, built: boolean) {
     const stateManager = createMockStateManager({

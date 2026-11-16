@@ -9,15 +9,15 @@ parent: AB-16
 superseded-by: AB-53
 ---
 
-# Bodea's demo data reflects the JustRite picture: two brands, two ERPs, one cart
+# Bodea's demo data reflects the Tailspin picture: two brands, two ERPs, one cart
 
 <!-- Do NOT template this body. Items vary because the work varies; the
      provenance, the measurements and the caveats are what make an item useful
      months later. The frontmatter carries the structure so the prose need not. -->
 
 Filed 2026-09-30. Owner: "What I want is to reflect the use cases that we have diagram
-specifically for justrite." The deck is `Justrite — Commerce and Multi-ERP.pptx` in the
-client folder; the tech case names the pair itself: "a customer can buy a Justrite cabinet
+specifically for tailspin." The deck is `Tailspin — Commerce and Multi-ERP.pptx` in the
+client folder; the tech case names the pair itself: "a customer can buy a Tailspin cabinet
 and the AccuformNMC signs for it in one checkout" (`deliverables/analysis/topics/commercial-topology.md`).
 
 ## The picture (deck slides 24, 26, 27, 38)
@@ -31,8 +31,8 @@ and the AccuformNMC signs for it in one checkout" (`deliverables/analysis/topics
 
 ## Bodea today (read live 2026-09-30)
 
-- 229 products; `erp_owner` on 6 (3 tech products each). Justrite's 43 products (loaded
-  2026-09-30 from Khalil's spreadsheet) carry neither `brand` nor `erp_owner`; 49 SKUs are
+- 229 products; `erp_owner` on 6 (3 tech products each). Tailspin's 43 products (loaded
+  2026-09-30 from Person B's spreadsheet) carry neither `brand` nor `erp_owner`; 49 SKUs are
   stocked in the Northwind Warehouse source.
 - `brand` is a select holding Bodea's phone brands only.
 - Two ERPs: Northwind (`erp`), Contoso (`demo-erp-2`) — see AB-51 for the ids.
@@ -44,19 +44,19 @@ and the AccuformNMC signs for it in one checkout" (`deliverables/analysis/topics
 ## Plan
 
 1. AB-51 lands (named ERP ids).
-2. `brand` options: Justrite, AccuformNMC. Justrite's 43 products: `brand=Justrite`,
+2. `brand` options: Tailspin, AccuformNMC. Tailspin's 43 products: `brand=Tailspin`,
    `erp_owner=<cabinet ERP id>`, stock in that ERP's source.
 3. AccuformNMC signs: ~24 products in 4 categories (Danger, Caution, Notice, Labels & Tags),
-   3 formats each as configurable variants (Aluminum, Plastic, Adhesive Vinyl), on the Justrite
+   3 formats each as configurable variants (Aluminum, Plastic, Adhesive Vinyl), on the Tailspin
    website, `brand=AccuformNMC`, `erp_owner=<signage ERP id>`, stocked in that ERP's source.
    Images generated (a sign is text on a colour), uploaded to Commerce media.
 4. Reset the ERPs, redeploy (new ids), load demo data; contract prices in the two companies'
    shared catalogs so the fill seeds price groups.
 5. Walk the cart: one cart, cabinet + sign → two ERP orders; the deck's journey slides 29–34.
 
-Open: should the ERPs be renamed for the brands ("Justrite ERP", "Accuform ERP") before their
-ids are recorded? Recommended yes — the ids then read `justrite` / `accuform`, as the deck's
+Open: should the ERPs be renamed for the brands ("Tailspin ERP", "Accuform ERP") before their
+ids are recorded? Recommended yes — the ids then read `tailspin` / `accuform`, as the deck's
 "Cabinet ERP / Signage ERP" do. Northwind/Contoso stay available for a generic demo.
 
 ## Shipped so far
-- 2026-10-01  Steps 1-4 done live on the justrite project 2026-09-30/10-01 (see AB-53): brand options Justrite/AccuformNMC, 43 Justrite products tagged, 96 AccuformNMC products (24 configurables x 3 formats) on the Justrite website stocked in source accuform, ERPs renamed and refilled, contract prices in shared catalogs 15/16. Not done: images (the gallery API is closed by the AEM Assets integration; owner decision) and step 5, the walk (AB-16f). 2026-10-01: the 24 Accuform configurable parents read out of stock in Catalog Service because their own stock flag was false; set true in one bulk call.
+- 2026-10-01  Steps 1-4 done live on the tailspin project 2026-09-30/10-01 (see AB-53): brand options Tailspin/AccuformNMC, 43 Tailspin products tagged, 96 AccuformNMC products (24 configurables x 3 formats) on the Tailspin website stocked in source accuform, ERPs renamed and refilled, contract prices in shared catalogs 15/16. Not done: images (the gallery API is closed by the AEM Assets integration; owner decision) and step 5, the walk (AB-16f). 2026-10-01: the 24 Accuform configurable parents read out of stock in Catalog Service because their own stock flag was false; set true in one bulk call.

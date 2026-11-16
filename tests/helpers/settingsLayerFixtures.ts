@@ -38,8 +38,8 @@ export const foundLayer = (records: unknown = [settingRow(GRID, '24')], override
 
 /** The second section of a pack's file. */
 export const fileLayer = (records: unknown = [settingRow(GRID, '24')], overrides: Partial<PackSettingsLayer> = {}): PackSettingsLayer => ({
-    id: { name: 'justrite-settings', version: '3' },
-    displayName: 'Justrite settings',
+    id: { name: 'tailspin-settings', version: '3' },
+    displayName: 'Tailspin settings',
     records,
     ...overrides,
 });

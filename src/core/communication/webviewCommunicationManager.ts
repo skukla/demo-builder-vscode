@@ -57,7 +57,7 @@ const REQUEST_TIMEOUTS: Record<string, number> = {
     checkSetupSteps: TIMEOUTS.LONG, // 180s - credential read + up to three Commerce reads
     prepareSetupChecks: TIMEOUTS.LONG, // 180s - the same credential read, done ahead of a check
     // Add another ERP's store read: the same credential, then every product in the store.
-    // On Justrite it outran the 30s default and the dialog gave up while the read went on
+    // On Tailspin it outran the 30s default and the dialog gave up while the read went on
     // (2026-10-18).
     getErpOwnershipOptions: TIMEOUTS.LONG, // 180s - credential + the whole product list
 

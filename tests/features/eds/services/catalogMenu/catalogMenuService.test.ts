@@ -88,7 +88,7 @@ describe('applyCatalogMenu', () => {
         expect(helix.events.slice(1).every((e) => e.startsWith('publish '))).toBe(true);
     });
 
-    it("lists a hand-built page at a category's address, as JustRite's /apparel", async () => {
+    it("lists a hand-built page at a category's address, as Tailspin's /apparel", async () => {
         const site = fakeStorefront({ '/nav': NAV, '/safety-signs': '<body><h1>Workplace safety</h1></body>' });
         const helix = fakeCategoryHelix();
 

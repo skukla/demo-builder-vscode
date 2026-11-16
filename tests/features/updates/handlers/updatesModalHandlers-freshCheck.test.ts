@@ -1,7 +1,7 @@
 /**
  * updatesModalHandlers — Apply when the extension no longer holds the list (2026-10-24).
  *
- * The window kept showing JustRite's list after the extension restarted, and Apply
+ * The window kept showing Tailspin's list after the extension restarted, and Apply
  * answered "This list of updates is out of date. Check for updates again." Now it checks
  * again itself and applies the ticked rows the fresh check lists as the SC saw them. A
  * row with a newer version says so; one already applied says that, as done.
@@ -14,7 +14,7 @@ import {
     bodea,
     found,
     handlers,
-    justrite,
+    tailspin,
     mockApplyUpdatesHeadless,
     mockFindAllUpdates,
     resetModalMocks,
@@ -28,7 +28,7 @@ import { createMockHandlerContext } from '../../../helpers/handlerContextTestHel
 beforeEach(resetModalMocks);
 
 const mcp = (latestVersion: string): UpdateSelections['adobeMcp'][number] => ({
-    project: justrite,
+    project: tailspin,
     packageName: '@adobe/mcp',
     currentVersion: '1.0.0',
     latestVersion,
@@ -44,7 +44,7 @@ const withRows = (rows: PendingUpdateRow[]): ApplyUpdatesRequest => ({ ids: rows
 describe('applyUpdates after the extension lost the list', () => {
     it('checks again and applies the ticked rows, told by the ids the window knows', async () => {
         const shown = shownBeforeRestart();
-        const justriteBlocks = shown.filter((r) => r.group.key === '/p/justrite');
+        const tailspinBlocks = shown.filter((r) => r.group.key === '/p/tailspin');
         // The fresh check lists the libraries in the other order, so the ids differ.
         const reordered = { ...selections(), blockLibrary: [...selections().blockLibrary].reverse() };
         mockFindAllUpdates.mockResolvedValue(found({ selections: reordered }));
@@ -54,12 +54,12 @@ describe('applyUpdates after the extension lost the list', () => {
         });
         const ctx = createMockHandlerContext();
 
-        const answer = await apply(handlers())(ctx, withRows(justriteBlocks));
+        const answer = await apply(handlers())(ctx, withRows(tailspinBlocks));
 
         const picked = mockApplyUpdatesHeadless.mock.calls[0][0] as UpdateSelections;
-        expect(picked.blockLibrary.map((b) => b.project)).toEqual([justrite]);
+        expect(picked.blockLibrary.map((b) => b.project)).toEqual([tailspin]);
         expect(picked.template).toStrictEqual([]);
-        expect(statusesSent(ctx)).toEqual([{ id: justriteBlocks[0].id, state: 'done' }]);
+        expect(statusesSent(ctx)).toEqual([{ id: tailspinBlocks[0].id, state: 'done' }]);
         expect(answer).toMatchObject({ success: true });
         expect(answer).not.toHaveProperty('warning');
     });

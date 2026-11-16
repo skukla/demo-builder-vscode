@@ -56,7 +56,7 @@ function pairProject(name: string, erpName: string, adobeProjectId = 'adobe-1'):
     return createMockProject({
         name,
         path: `/projects/${name}`,
-        adobe: { projectId: adobeProjectId, organization: 'org', projectTitle: 'KuklaJustrite' },
+        adobe: { projectId: adobeProjectId, organization: 'org', projectTitle: 'KuklaTailspin' },
         appBuilderComponents: {
             'erp-integration': state('integration', 'ERP Integration', { systems: ['demo-erp'] }),
             'demo-erp': state('system', erpName, { usedBy: 'erp-integration' }),
@@ -65,11 +65,11 @@ function pairProject(name: string, erpName: string, adobeProjectId = 'adobe-1'):
 }
 
 /** The project adding the pair, its ERP to be named `erpName`. */
-function adding(erpName = 'Justrite ERP'): Project {
+function adding(erpName = 'Tailspin ERP'): Project {
     return createMockProject({
-        name: 'justrite-copy',
-        path: '/projects/justrite-copy',
-        adobe: { projectId: 'adobe-1', organization: 'org', projectTitle: 'KuklaJustrite' },
+        name: 'tailspin-copy',
+        path: '/projects/tailspin-copy',
+        adobe: { projectId: 'adobe-1', organization: 'org', projectTitle: 'KuklaTailspin' },
         componentConfigs: { 'demo-erp': { ERP_DISPLAY_NAME: erpName } },
     });
 }
@@ -93,7 +93,7 @@ beforeEach(() => {
 
 describe('replaceDeployedElsewhere', () => {
     it('removes the other project\'s integration, with that project\'s deps, before answering clear', async () => {
-        const other = pairProject('justrite', 'Justrite ERP');
+        const other = pairProject('tailspin', 'Tailspin ERP');
         const { context, stateManager } = contextWith(other);
         const report = jest.fn();
 
@@ -102,7 +102,7 @@ describe('replaceDeployedElsewhere', () => {
         expect(result).toBeUndefined();
         // Loaded without moving the current-project pointer; itself never loaded.
         expect(stateManager.loadProjectFromPath).toHaveBeenCalledTimes(1);
-        expect(stateManager.loadProjectFromPath).toHaveBeenCalledWith('/projects/justrite', undefined, { persistAfterLoad: false });
+        expect(stateManager.loadProjectFromPath).toHaveBeenCalledWith('/projects/tailspin', undefined, { persistAfterLoad: false });
         // The OTHER project's deps, from the services the handler resolved.
         expect(mockBuildRunnerDepsContext).toHaveBeenCalledWith(context, other, SERVICES);
         expect(mockBuildDefaultRunnerDeps).toHaveBeenCalledWith(
@@ -111,11 +111,11 @@ describe('replaceDeployedElsewhere', () => {
         );
         // Not forced: a removal that stops, stops the add.
         expect(mockRemove).toHaveBeenCalledWith(other, 'erp-integration', { _deps: true });
-        expect(report).toHaveBeenCalledWith('Undeploying the app', "Replacing justrite's Justrite ERP in KuklaJustrite");
+        expect(report).toHaveBeenCalledWith('Undeploying the app', "Replacing tailspin's Tailspin ERP in KuklaTailspin");
     });
 
     it("saves the other project's record in place, never as the current project", async () => {
-        const other = pairProject('justrite', 'Justrite ERP');
+        const other = pairProject('tailspin', 'Tailspin ERP');
         const { context, stateManager } = contextWith(other);
 
         await replaceDeployedElsewhere(context, adding(), INTEGRATION, SERVICES, jest.fn());
@@ -127,7 +127,7 @@ describe('replaceDeployedElsewhere', () => {
     });
 
     it('stops the add, with the reason, when the other project\'s removal did not finish', async () => {
-        const other = pairProject('justrite', 'Justrite ERP');
+        const other = pairProject('tailspin', 'Tailspin ERP');
         const { context } = contextWith(other);
         mockRemove.mockResolvedValue({ success: false, error: 'Nothing was removed. Commerce still has it.' });
 
@@ -135,7 +135,7 @@ describe('replaceDeployedElsewhere', () => {
 
         expect(result).toEqual({
             error:
-                "justrite's Justrite ERP is still deployed in KuklaJustrite, so ERP Integration was not added. " +
+                "tailspin's Tailspin ERP is still deployed in KuklaTailspin, so ERP Integration was not added. " +
                 'Nothing was removed. Commerce still has it.',
         });
     });
@@ -150,7 +150,7 @@ describe('replaceDeployedElsewhere', () => {
     });
 
     it('leaves a same-named ERP in a different Adobe project alone', async () => {
-        const { context } = contextWith(pairProject('justrite', 'Justrite ERP', 'adobe-2'));
+        const { context } = contextWith(pairProject('tailspin', 'Tailspin ERP', 'adobe-2'));
 
         await replaceDeployedElsewhere(context, adding(), INTEGRATION, SERVICES, jest.fn());
 
@@ -158,7 +158,7 @@ describe('replaceDeployedElsewhere', () => {
     });
 
     it('replaces nothing when this project has no Adobe project', async () => {
-        const { context } = contextWith(pairProject('justrite', 'Justrite ERP'));
+        const { context } = contextWith(pairProject('tailspin', 'Tailspin ERP'));
 
         const result = await replaceDeployedElsewhere(context, createMockProject({ adobe: undefined }), INTEGRATION, SERVICES, jest.fn());
 
@@ -200,19 +200,19 @@ describe('replaceDeployedElsewhere — one ERP integration per Commerce instance
     }
 
     it('refuses, naming the project that holds the instance, and removes nothing', async () => {
-        const { context } = contextWith(onInstance('justrite', 'Justrite ERP', 'adobe-1'));
+        const { context } = contextWith(onInstance('tailspin', 'Tailspin ERP', 'adobe-1'));
 
         const result = await replaceDeployedElsewhere(context, scratch(), INTEGRATION, SERVICES, jest.fn());
 
         expect(result).toEqual({
-            error: 'justrite already has an ERP integration on this Commerce instance. Add your ERP there instead.',
+            error: 'tailspin already has an ERP integration on this Commerce instance. Add your ERP there instead.',
             blocked: true,
         });
         expect(mockRemove).not.toHaveBeenCalled();
     });
 
     it('refuses even with no Adobe project chosen yet', async () => {
-        const { context } = contextWith(onInstance('justrite', 'Justrite ERP'));
+        const { context } = contextWith(onInstance('tailspin', 'Tailspin ERP'));
 
         const result = await replaceDeployedElsewhere(
             context,
@@ -226,7 +226,7 @@ describe('replaceDeployedElsewhere — one ERP integration per Commerce instance
     });
 
     it('still replaces a copy, which then no longer holds the instance', async () => {
-        const original = onInstance('justrite', 'Justrite ERP');
+        const original = onInstance('tailspin', 'Tailspin ERP');
         const { context } = contextWith(original);
 
         const result = await replaceDeployedElsewhere(context, copyOnInstance(), INTEGRATION, SERVICES, jest.fn());
@@ -236,7 +236,7 @@ describe('replaceDeployedElsewhere — one ERP integration per Commerce instance
     });
 
     it('refuses before replacing when a third project also runs one there', async () => {
-        const { context } = contextWith(onInstance('justrite', 'Justrite ERP'), onInstance('acme', 'Acme ERP', 'adobe-2'));
+        const { context } = contextWith(onInstance('tailspin', 'Tailspin ERP'), onInstance('acme', 'Acme ERP', 'adobe-2'));
 
         const result = await replaceDeployedElsewhere(context, copyOnInstance(), INTEGRATION, SERVICES, jest.fn());
 

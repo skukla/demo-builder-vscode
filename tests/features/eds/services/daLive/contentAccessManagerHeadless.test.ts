@@ -36,7 +36,7 @@ import {
 import { createMockExtensionContext } from '../../../../helpers/extensionContextFake';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
-const TARGET = { org: 'kmanns', site: 'justrite' };
+const TARGET = { org: 'org-e', site: 'tailspin' };
 const READER = 'colleague@example.test';
 const context = createMockExtensionContext();
 const logger = createMockLogger();
@@ -54,11 +54,11 @@ describe('listContentReaders', () => {
     it('answers the readers with the target named', async () => {
         await expect(listContentReaders(TARGET, context, logger)).resolves.toEqual({
             status: 'ok',
-            org: 'kmanns',
-            site: 'justrite',
+            org: 'org-e',
+            site: 'tailspin',
             readers: [{ email: 'owner@example.test', actions: 'write' }],
         });
-        expect(mockList).toHaveBeenCalledWith('kmanns', 'justrite');
+        expect(mockList).toHaveBeenCalledWith('org-e', 'tailspin');
     });
 
     it('says no_credential, not refused, when there is no DA.live sign-in', async () => {
@@ -87,11 +87,11 @@ describe('addContentReader', () => {
 
         const out = await addContentReader(TARGET, ` ${READER} `, context, logger);
 
-        expect(mockGrant).toHaveBeenCalledWith('kmanns', 'justrite', READER, 'owner@example.test');
+        expect(mockGrant).toHaveBeenCalledWith('org-e', 'tailspin', READER, 'owner@example.test');
         expect(out).toEqual({
             status: 'ok',
-            org: 'kmanns',
-            site: 'justrite',
+            org: 'org-e',
+            site: 'tailspin',
             readers: [{ email: 'owner@example.test', actions: 'write' }, { email: READER, actions: 'read' }],
             verified: true,
         });
@@ -122,7 +122,7 @@ describe('removeContentReader', () => {
 
         const out = await removeContentReader(TARGET, READER, context, logger);
 
-        expect(mockRevoke).toHaveBeenCalledWith('kmanns', 'justrite', READER);
+        expect(mockRevoke).toHaveBeenCalledWith('org-e', 'tailspin', READER);
         expect(out).toMatchObject({ status: 'ok', verified: true });
     });
 

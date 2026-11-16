@@ -15,7 +15,7 @@ import {
 import { FRESCOPA, OWN_TARGET, SHARED_TARGET, categoryStore } from './categoryStore.testUtils';
 import { memoryFiles } from './demoBuilderEngine.testUtils';
 
-const SHARED: StoreRoot = { storeCode: 'justrite_test_store', storeName: 'JustRite Test Store', rootId: 119, sharedWith: ['the store JustRite Store (website JustRite)'] };
+const SHARED: StoreRoot = { storeCode: 'tailspin_test_store', storeName: 'Tailspin Test Store', rootId: 119, sharedWith: ['the store Tailspin Store (website Tailspin)'] };
 const OWN: StoreRoot = { storeCode: 'bodea_store', storeName: 'Bodea Store', rootId: 150, sharedWith: [] };
 const NO_ROOT = { categories: FRESCOPA.categories };
 

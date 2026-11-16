@@ -30,7 +30,7 @@ function store(attributes: Record<string, boolean>, setHasOwner = false, product
     );
 }
 
-const DEPS = { websiteCode: 'acme', erpNames: ['Justrite ERP'] };
+const DEPS = { websiteCode: 'acme', erpNames: ['Tailspin ERP'] };
 
 describe('preview', () => {
     it('names the missing attributes and the sets without erp_owner', async () => {
@@ -93,21 +93,21 @@ describe('undo', () => {
 
     it('refuses while a product in those sets carries an erp_owner value', async () => {
         const commerce = store({ erp_owner: true, brand: true }, true, [
-            { sku: 'A', attribute_set_id: 4, custom_attributes: [{ attribute_code: 'erp_owner', value: 'justrite' }] },
+            { sku: 'A', attribute_set_id: 4, custom_attributes: [{ attribute_code: 'erp_owner', value: 'tailspin' }] },
         ]);
         const undone = await erpAttributesSetup.undo({ commerce, ...DEPS }, RECORD);
         expect(undone.rejected).toEqual([
-            "1 product is assigned to Justrite ERP. Undo Justrite ERP's last product assignment first, or the undo would clear them.",
+            "1 product is assigned to Tailspin ERP. Undo Tailspin ERP's last product assignment first, or the undo would clear them.",
         ]);
         expect(commerce.send).not.toHaveBeenCalled();
     });
 
     it('names each ERP holding products, with its count, and the value itself for one it cannot name', async () => {
         const tag = (sku: string, owner: string) => ({ sku, attribute_set_id: 4, custom_attributes: [{ attribute_code: 'erp_owner', value: owner }] });
-        const commerce = store({ erp_owner: true, brand: true }, true, [tag('A', 'justrite'), tag('B', 'justrite'), tag('C', 'renamed')]);
+        const commerce = store({ erp_owner: true, brand: true }, true, [tag('A', 'tailspin'), tag('B', 'tailspin'), tag('C', 'renamed')]);
         const undone = await erpAttributesSetup.undo({ commerce, ...DEPS }, RECORD);
         expect(undone.rejected).toEqual([
-            "3 products are assigned to Justrite ERP (2) and renamed (1). Undo each ERP's last product assignment first, or the undo would clear them.",
+            "3 products are assigned to Tailspin ERP (2) and renamed (1). Undo each ERP's last product assignment first, or the undo would clear them.",
         ]);
     });
 });

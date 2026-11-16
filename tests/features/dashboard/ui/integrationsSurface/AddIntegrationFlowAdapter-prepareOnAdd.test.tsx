@@ -31,14 +31,14 @@ describe('AddIntegrationFlowAdapter — the add that prepares the store', () => 
         const onConfirmAdd = jest.fn();
         renderAdapter({ catalog: [...CATALOG, ERP_INTEGRATION], onAddStarted, onConfirmAdd });
 
-        modalProps().builder.onAppBuilderComponentToggle('erp-integration', true, 'Justrite ERP');
+        modalProps().builder.onAppBuilderComponentToggle('erp-integration', true, 'Tailspin ERP');
 
         expect(mockPostMessage).not.toHaveBeenCalled();
         expect(onAddStarted).not.toHaveBeenCalled();
         expect(onConfirmAdd).toHaveBeenCalledWith({
             id: 'erp-integration',
-            name: 'Justrite ERP',
-            payload: { id: 'erp-integration', apis: undefined, name: 'Justrite ERP' },
+            name: 'Tailspin ERP',
+            payload: { id: 'erp-integration', apis: undefined, name: 'Tailspin ERP' },
         });
     });
 

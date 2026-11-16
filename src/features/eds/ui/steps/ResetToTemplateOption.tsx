@@ -41,7 +41,7 @@ export function ResetToTemplateOption({
      * is the only thing asking for attention.
      */
     unusable?: boolean;
-    /** What the reset goes back to, when it is an added demo ("Reset to Isle5 by Jen"). */
+    /** What the reset goes back to, when it is an added demo ("Reset to Isle5 by Robin"). */
     templateName?: string;
 }): React.ReactElement {
     const { checked, locked, tone, message } = describeResetOption(

@@ -52,7 +52,7 @@ jest.mock('@/features/ai/server/headlessHandlerContext', () => ({ createHeadless
 
 const PROJECTS_ROOT = path.join(os.homedir(), '.demo-builder', 'projects');
 const OPEN_PROJECT = createMockProject({ name: 'scratch-1028', path: path.join(PROJECTS_ROOT, 'scratch-1028') });
-const OTHER_PROJECT = createMockProject({ name: 'justrite', path: path.join(PROJECTS_ROOT, 'justrite') });
+const OTHER_PROJECT = createMockProject({ name: 'tailspin', path: path.join(PROJECTS_ROOT, 'tailspin') });
 
 /** Two updates, both for the project that is NOT open. */
 const FOUND: FoundUpdates = {

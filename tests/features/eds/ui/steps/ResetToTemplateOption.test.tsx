@@ -30,10 +30,10 @@ describe('ResetToTemplateOption — the label', () => {
             <ResetToTemplateOption
                 resetToTemplate={false}
                 onResetToTemplateChange={jest.fn()}
-                templateName="Isle5 by Jen"
+                templateName="Isle5 by Robin"
             />,
         );
-        expect(screen.getByText('Reset to Isle5 by Jen (Replaces All Content)')).toBeInTheDocument();
+        expect(screen.getByText('Reset to Isle5 by Robin (Replaces All Content)')).toBeInTheDocument();
     });
 });
 

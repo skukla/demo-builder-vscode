@@ -56,7 +56,7 @@ export function packRootGuideStep(step: PackRootStep): Omit<SetupStep, 'check'> 
     };
 }
 
-/** "In Stores > All Stores > JustRite Test Store, set Root Category to Frescopa, then Save Store." */
+/** "In Stores > All Stores > Tailspin Test Store, set Root Category to Frescopa, then Save Store." */
 function instruction(step: PackRootStep): string {
     return `In ${packRootGuideStep(step).where}, set Root Category to ${step.rootName}, then Save Store.`;
 }

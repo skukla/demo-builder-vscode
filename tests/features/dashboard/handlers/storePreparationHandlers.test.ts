@@ -36,7 +36,7 @@ jest.mock('@/features/app-builder/services/setupChecks', () => ({
     runSetupCheck: (...a: unknown[]) => mockRunCheck(...a),
 }));
 jest.mock('@/features/dashboard/services/setupCheckReader', () => ({
-    erpNamesOf: () => ['Justrite ERP'],
+    erpNamesOf: () => ['Tailspin ERP'],
     setupCheckReader: async () => ({ read: jest.fn(), scope: { websiteCode: 'acme' } }),
 }));
 const mockPreview = jest.fn();
@@ -105,7 +105,7 @@ describe('prepareCommerceStore', () => {
         await deps.runCheck('payment-on-account-enabled');
         expect(mockRunCheck).toHaveBeenCalledWith('payment-on-account-enabled', expect.any(Function), {
             websiteCode: 'acme',
-            erpNames: ['Justrite ERP'],
+            erpNames: ['Tailspin ERP'],
         });
     });
 
@@ -147,7 +147,7 @@ describe('prepareCommerceStore', () => {
         const [steps, state, deps, stepIds] = mockPreview.mock.calls[0];
         expect(steps.map((s: { id: string }) => s.id)).toContain('price-scope-website');
         expect(state).toMatchObject({ kind: 'integration' });
-        expect(deps).toMatchObject({ commerce: COMMERCE, websiteCode: 'acme', erpNames: ['Justrite ERP'] });
+        expect(deps).toMatchObject({ commerce: COMMERCE, websiteCode: 'acme', erpNames: ['Tailspin ERP'] });
         expect(stepIds).toEqual(['price-scope-website']);
         expect(mockApply).not.toHaveBeenCalled();
         expect(COMMERCE.send).not.toHaveBeenCalled();
@@ -281,13 +281,13 @@ describe('undoCommerceStorePreparation', () => {
     it('without confirm, leaves the hashes out of what it answers is recorded', async () => {
         const warehouse: StorePreparationRecord = {
             at: 't',
-            steps: { 'erp-warehouse': { kind: 'warehouse', createdSources: ['justrite_warehouse'], links: [], sourceFingerprints: { justrite_warehouse: 'a'.repeat(64) } } },
+            steps: { 'erp-warehouse': { kind: 'warehouse', createdSources: ['tailspin_warehouse'], links: [], sourceFingerprints: { tailspin_warehouse: 'a'.repeat(64) } } },
         };
         const { context } = setup({ storePreparation: warehouse });
         const result = await handleUndoCommerceStorePreparation(context, { id: 'erp-integration' });
         expect(result).toStrictEqual({
             success: true,
-            data: { confirmed: false, at: 't', steps: [{ id: 'erp-warehouse', recorded: { kind: 'warehouse', createdSources: ['justrite_warehouse'], links: [] } }] },
+            data: { confirmed: false, at: 't', steps: [{ id: 'erp-warehouse', recorded: { kind: 'warehouse', createdSources: ['tailspin_warehouse'], links: [] } }] },
         });
     });
 });

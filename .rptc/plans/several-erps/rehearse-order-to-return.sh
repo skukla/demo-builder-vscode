@@ -1,5 +1,5 @@
 #!/bin/bash
-# The order-to-return flow on Justrite, end to end, through Demo Builder's MCP tools.
+# The order-to-return flow on Tailspin, end to end, through Demo Builder's MCP tools.
 # Usage: bash flow.sh   (run from the demo-builder-vscode worktree)
 set -u
 P=.claude/skills/mcp-live-probe/probe.mjs
@@ -11,7 +11,7 @@ wait_for() { # $1 path, $2 regex, $3 label
   echo "  TIMEOUT: $3 -> $out"; return 1; }
 step() { echo; echo "== $1 ($(date -u +%H:%M:%SZ))"; }
 
-step "1. Dana (Northgate) orders 1 Justrite shadow board + 2 Accuform signs, on account"
+step "1. Dana (Northgate) orders 1 Tailspin shadow board + 2 Accuform signs, on account"
 C=$(W '{"confirm":true,"method":"POST","path":"customers/49/carts","body":{}}' | tr -d '"')
 W "{\"confirm\":true,\"method\":\"POST\",\"path\":\"carts/$C/items\",\"body\":{\"cartItem\":{\"quote_id\":\"$C\",\"sku\":\"51BSCB\",\"qty\":1,\"product_option\":{\"extension_attributes\":{\"configurable_item_options\":[{\"option_id\":\"313\",\"option_value\":252}]}}}}}" > /dev/null
 W "{\"confirm\":true,\"method\":\"POST\",\"path\":\"carts/$C/items\",\"body\":{\"cartItem\":{\"quote_id\":\"$C\",\"sku\":\"ACC-MDAN\",\"qty\":2,\"product_option\":{\"extension_attributes\":{\"configurable_item_options\":[{\"option_id\":\"313\",\"option_value\":267}]}}}}}" > /dev/null
@@ -25,7 +25,7 @@ step "2. Both ERPs receive their part"
 for i in $(seq 1 30); do T=$(node $P call get_erp_order_trace "{\"id\":\"erp-integration\",\"orderNumber\":\"$INC\"}" --full 2>&1); n=$(echo "$T" | grep -oE '"part":"sent"' | wc -l | tr -d ' '); [ "$n" -ge 2 ] && break; sleep 10; done
 echo "$T" | grep -oE '"name":"[A-Za-z ]+ ERP","number":"[0-9]+","part":"[a-z]+"'
 # Each ERP numbers its own sales order: after a reset the two counters need not agree.
-NO_demo_erp=$(echo "$T" | grep -oE '"name":"Justrite ERP","number":"[0-9]+"' | grep -oE '[0-9]{10}')
+NO_demo_erp=$(echo "$T" | grep -oE '"name":"Tailspin ERP","number":"[0-9]+"' | grep -oE '[0-9]{10}')
 NO_demo_erp_2=$(echo "$T" | grep -oE '"name":"Accuform ERP","number":"[0-9]+"' | grep -oE '[0-9]{10}')
 
 step "3. Each ERP confirms, ships and posts its part"
@@ -47,7 +47,7 @@ echo "  return entity $RET"
 wait_for "returns/$RET?fields=status" '"status":"authorized"' "return Authorized (each ERP took its line)"
 RNO=$(node $P call run_erp_rest '{"id":"erp-integration","path":"returns"}' --full 2>&1 | grep -oE '"number":"6[0-9]{9}"' | head -1 | grep -oE '[0-9]{10}')
 RNO2=$(node $P call run_erp_rest '{"id":"erp-integration","erp":"demo-erp-2","path":"returns"}' --full 2>&1 | grep -oE '"number":"6[0-9]{9}"' | head -1 | grep -oE '[0-9]{10}')
-echo "  Justrite return order $RNO, Accuform return order $RNO2"
+echo "  Tailspin return order $RNO, Accuform return order $RNO2"
 
 step "5. Goods back: each ERP receives its return"
 E demo-erp "returns/$RNO/receive" '{}' | grep -oE '"status":"received"' | head -1
@@ -65,4 +65,4 @@ R "creditmemos?searchCriteria[filterGroups][0][filters][0][field]=order_id&searc
 echo "  Northgate balance before credits: $BAL0"
 echo "  after: $(R 'companyCredits?searchCriteria[filterGroups][0][filters][0][field]=company_id&searchCriteria[filterGroups][0][filters][0][value]=22&searchCriteria[pageSize]=2&fields=items[balance]')"
 node $P call run_commerce_rest "{\"path\":\"returns/$RET/comments\"}" 2>&1 | sed -n 2p | grep -oE '"comment":"[^"]+"'
-echo; echo "ORDER=$INC RETURN_ENTITY=$RET JUSTRITE_RETURN=$RNO ACCUFORM_RETURN=$RNO2"
+echo; echo "ORDER=$INC RETURN_ENTITY=$RET TAILSPIN_RETURN=$RNO ACCUFORM_RETURN=$RNO2"

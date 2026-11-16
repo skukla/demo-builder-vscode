@@ -246,7 +246,7 @@ export class TemplateSyncService {
      * When the change is Adobe's tested boilerplate, Demo Builder's repairs are written into
      * this clone first and its own pieces are set aside (`adobeChangePrep.ts`), then put back
      * after the apply: a clash is then somebody's edit, never ours, and a stopped update has
-     * pushed nothing at all (JustRite, 2026-10-30). Block folders an installed library owns
+     * pushed nothing at all (Tailspin, 2026-10-30). Block folders an installed library owns
      * are left out of every template change; the library's update keeps them current.
      *
      * A conflict means someone edited the same region the template changed. The

@@ -263,7 +263,7 @@ describe('IntegrationDetailPanel', () => {
         it("puts an ERP's screen first in the actions, by the ERP's name, and no Screen row", () => {
             const model = makeModel({
                 id: 'demo-erp',
-                name: 'Justrite ERP',
+                name: 'Tailspin ERP',
                 isSystem: true,
                 url: 'https://erp.example.com/screen',
                 urlLabel: 'Screen',
@@ -274,12 +274,12 @@ describe('IntegrationDetailPanel', () => {
 
             const rows = Array.from(panel.querySelectorAll('.integration-panel-action'));
             expect(rows.map((row) => row.textContent)).toStrictEqual([
-                'Open Justrite ERP',
+                'Open Tailspin ERP',
                 'Fill from Commerce',
                 'Redeploy',
                 'Remove',
             ]);
-            fireEvent.click(screen.getByRole('button', { name: 'Open Justrite ERP' }));
+            fireEvent.click(screen.getByRole('button', { name: 'Open Tailspin ERP' }));
 
             expect(onAction).toHaveBeenCalledWith(model, 'open');
             expect(screen.queryByText('Screen')).not.toBeInTheDocument();

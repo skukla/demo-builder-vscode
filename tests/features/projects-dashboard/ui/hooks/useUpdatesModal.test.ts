@@ -24,7 +24,7 @@ import type { OperationProgressPayload } from '@/types/webviewPayloads';
 const row = (id: string, overrides: Partial<PendingUpdateRow> = {}): PendingUpdateRow => ({
     id,
     kind: 'blockLibrary',
-    group: { key: '/p/justrite', title: 'JustRite' },
+    group: { key: '/p/tailspin', title: 'Tailspin' },
     label: 'Demo Builder Blocks',
     detail: 'Newer version',
     ticked: true,

@@ -58,9 +58,9 @@ added are removed by reset like any other page Demo Builder wrote.
 ## Shipped so far
 
 - 2026-10-05  feat(eds): new Commerce categories get their pages without a Republish (EDS-27) (`4879c9dff`)
-- 2026-10-05  2026-10-05 Live, read-only: the setting reads false; check_category_pages on Justrite answers no missing pages. The offer and the add are not yet seen live (needs a new Commerce category).
-- 2026-10-05  2026-10-05 Agent path proven live on Justrite: a new Commerce category (Floor Marking, id 147) reached Catalog Service about two minutes after it was created; check_category_pages then listed it; add_category_pages without confirm refused and named the page; with confirm it wrote and published /floor-marking (200, heading and list block); the check then answered none missing. Not yet seen live: the offer notice, and the automatic add with the setting on.
-- 2026-10-05  docs(backlog): EDS-27 agent path proven live on Justrite (`269099807`)
+- 2026-10-05  2026-10-05 Live, read-only: the setting reads false; check_category_pages on Tailspin answers no missing pages. The offer and the add are not yet seen live (needs a new Commerce category).
+- 2026-10-05  2026-10-05 Agent path proven live on Tailspin: a new Commerce category (Floor Marking, id 147) reached Catalog Service about two minutes after it was created; check_category_pages then listed it; add_category_pages without confirm refused and named the page; with confirm it wrote and published /floor-marking (200, heading and list block); the check then answered none missing. Not yet seen live: the offer notice, and the automatic add with the setting on.
+- 2026-10-05  docs(backlog): EDS-27 agent path proven live on Tailspin (`269099807`)
 - 2026-10-15  fix(eds): the category check says it checked again after a sign-in (`1bbabceef`)
 - 2026-10-15  fix(eds): Add pages shows progress while the pages publish (`a5920f7a3`)
 - 2026-10-15  test(eds): the no-project case hands the watcher its progress seam too (`0d7b9ad92`)

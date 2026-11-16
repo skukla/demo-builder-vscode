@@ -53,7 +53,7 @@ const STOREFRONT = {
     'scripts/scripts.js': 'export {};',
     'scripts/delayed.js': 'export {};',
     'head.html': '<meta>',
-    'fstab.yaml': 'mountpoints:\n  /: https://content.da.live/jen/summit/\n',
+    'fstab.yaml': 'mountpoints:\n  /: https://content.da.live/robin/summit/\n',
     '.gitignore': GITIGNORE,
     'fonts/roboto.woff2': PNG,
 };

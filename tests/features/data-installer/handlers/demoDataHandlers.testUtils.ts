@@ -24,7 +24,7 @@ export const PROJECT = createMockProject({
     name: 'zz-tester',
     path: '/nonexistent/projects/zz-tester',
     componentSelections: { backend: 'adobe-commerce-accs' },
-    componentConfigs: { 'adobe-commerce-accs': { ACCS_WEBSITE_CODE: 'justrite_test_website', ACCS_STORE_VIEW_CODE: 'justrite_test_view' } },
+    componentConfigs: { 'adobe-commerce-accs': { ACCS_WEBSITE_CODE: 'tailspin_test_website', ACCS_STORE_VIEW_CODE: 'tailspin_test_view' } },
     datapack: { name: 'zz-test', version: '1' },
 });
 
@@ -110,9 +110,9 @@ export const NEIGHBOUR = createMockProject({
     title: 'Neighbour Demo',
     path: '/nonexistent/projects/neighbour',
     componentSelections: { backend: 'adobe-commerce-accs' },
-    componentConfigs: { 'adobe-commerce-accs': { ACCS_WEBSITE_CODE: 'justrite_test_website', ACCS_STORE_VIEW_CODE: 'justrite_test_view' } },
+    componentConfigs: { 'adobe-commerce-accs': { ACCS_WEBSITE_CODE: 'tailspin_test_website', ACCS_STORE_VIEW_CODE: 'tailspin_test_view' } },
 });
-/** JustRite's project elsewhere on the machine, on no website the tests clear. */
-export const JUSTRITE_ELSEWHERE = createMockProject({ name: 'justrite', path: '/nonexistent/projects/justrite', componentConfigs: {} });
+/** Tailspin's project elsewhere on the machine, on no website the tests clear. */
+export const TAILSPIN_ELSEWHERE = createMockProject({ name: 'tailspin', path: '/nonexistent/projects/tailspin', componentConfigs: {} });
 
 export const checked = (data: unknown) => data as ClearCheck;

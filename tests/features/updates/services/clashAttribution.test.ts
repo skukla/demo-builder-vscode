@@ -10,7 +10,7 @@ import type { GitStep } from '@/features/updates/services/templateMergeBase';
 
 const SHA = 'a'.repeat(40);
 const BLOB = 'b'.repeat(40);
-const demo = { owner: 'kmanns', repo: 'justrite', commit: SHA, url: 'https://github.com/kmanns/justrite.git' };
+const demo = { owner: 'org-e', repo: 'tailspin', commit: SHA, url: 'https://github.com/org-e/tailspin.git' };
 
 /** A git that answers each command by the first pattern it matches; anything else succeeds silently. */
 function scriptedGit(answers: Array<[RegExp, { code: number; stdout: string }]>): jest.MockedFunction<GitStep> {
@@ -25,7 +25,7 @@ describe('whoseEdits', () => {
         const git = scriptedGit([[/^git rev-parse /, { code: 0, stdout: `${BLOB}\n` }]]);
 
         await expect(whoseEdits(git, ['blocks/header/header.js'], demo)).resolves.toEqual([
-            { file: 'blocks/header/header.js', whose: 'copied-demo', from: 'kmanns/justrite' },
+            { file: 'blocks/header/header.js', whose: 'copied-demo', from: 'org-e/tailspin' },
         ]);
     });
 
@@ -61,12 +61,12 @@ describe('whoseEdits', () => {
 
 describe('copiedDemoOf', () => {
     it("reads the colleague's repository and the commit the storefront last matched", () => {
-        expect(copiedDemoOf({ templateOwner: 'kmanns', templateRepo: 'justrite', lastSyncedCommit: SHA })).toEqual({
-            owner: 'kmanns',
-            repo: 'justrite',
+        expect(copiedDemoOf({ templateOwner: 'org-e', templateRepo: 'tailspin', lastSyncedCommit: SHA })).toEqual({
+            owner: 'org-e',
+            repo: 'tailspin',
             commit: SHA,
         });
-        expect(copiedDemoOf({ templateOwner: 'kmanns' })).toBeUndefined();
+        expect(copiedDemoOf({ templateOwner: 'org-e' })).toBeUndefined();
         expect(copiedDemoOf(undefined)).toBeUndefined();
     });
 });

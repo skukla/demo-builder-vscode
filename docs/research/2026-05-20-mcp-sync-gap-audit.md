@@ -8,7 +8,7 @@
 
 ## Context
 
-The AI Layer Pivot plan promises a "30-minute storefront" experience matching the user's `te-eds-mock` example: open Claude Code in a generated project, AI edits a block, user sees the result. This audit asked two questions:
+The AI Layer Pivot plan promises a "30-minute storefront" experience matching the user's `org-l` example: open Claude Code in a generated project, AI edits a block, user sees the result. This audit asked two questions:
 
 1. Does the Demo Builder MCP give Claude correct local-project context?
 2. Where are the sync gaps between local storefront, custom block libraries, and their GitHub remotes?
@@ -204,7 +204,7 @@ After Steps 6e–6h land, the AI Layer Pivot's promised experience actually work
 5. **User sees the change on the `.aem.page` preview URL** → seconds later, not minutes (manual Republish no longer required)
 6. **User asks Claude to install a block library update** → files actually update in the storefront (no state lie)
 
-The `te-eds-mock` 30-minute experience the user keeps citing becomes reproducible in Demo Builder projects.
+The `org-l` 30-minute experience the user keeps citing becomes reproducible in Demo Builder projects.
 
 ---
 

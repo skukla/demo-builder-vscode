@@ -197,7 +197,7 @@ describe('the signed write (args pinned)', () => {
     });
 
     // Commerce's DELETE /V1/returns/{id} refuses a bare delete: '"rmaDataObject" is required'
-    // (measured on the Justrite sandbox 2026-10-02). A body the caller gives is sent.
+    // (measured on the Tailspin sandbox 2026-10-02). A body the caller gives is sent.
     it('DELETE sends the body the caller gives, for a route that requires one', async () => {
         fetchMock = answering(200, 'true');
         await serve().raw({

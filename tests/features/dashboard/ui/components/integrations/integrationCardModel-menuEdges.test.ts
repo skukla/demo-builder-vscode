@@ -87,7 +87,7 @@ describe("the integration's own ERP verbs", () => {
 // The order an SC reaches for them (owners, 2026-10-18 and 2026-10-19): an open setup step
 // first, then the demo, back to the start (the reset, then the preparation's undo),
 // configuration, the repairs and the developer's link, and Remove last.
-describe('the installed ERP integration, as Justrite has it', () => {
+describe('the installed ERP integration, as Tailspin has it', () => {
     it('lists its verbs in use order', () => {
         const card = deriveIntegrationCard(
             integration({

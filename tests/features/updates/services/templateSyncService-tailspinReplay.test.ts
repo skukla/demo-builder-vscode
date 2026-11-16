@@ -1,26 +1,26 @@
 /**
- * ACCEPTANCE REPLAY: JustRite's two stopped updates, run through the extension's own
+ * ACCEPTANCE REPLAY: Tailspin's two stopped updates, run through the extension's own
  * `syncBoilerplate` and `syncWithTemplate` against local copies of the three real repositories.
- * Off unless `JUSTRITE_REPLAY_DIR` names a folder holding them; it needs ~200 MB of clones and
+ * Off unless `TAILSPIN_REPLAY_DIR` names a folder holding them; it needs ~200 MB of clones and
  * a network read of the patch ledgers, so it is not part of the normal run.
  *
  * Measured 2026-10-30 before the fix: the Adobe boilerplate update (71a67e0 → d538506) stopped
- * on 3 files and the colleague's update (kmanns/justrite 5ac7b52 → 9e2b4d2) on 2. After it:
- * exactly one, `blocks/header/header.js` (Khalil's own edit), and none.
+ * on 3 files and the colleague's update (org-e/tailspin 5ac7b52 → 9e2b4d2) on 2. After it:
+ * exactly one, `blocks/header/header.js` (PersonB's own edit), and none.
  *
  * Set up the folder once (read-only clones of public repositories; the two Adobe commits are
  * fetched by full sha because Adobe's nightly rewrite force-pushes them off `main`):
  *
  *   D=/tmp/g6-replay
- *   git clone -q https://github.com/skukla/kukla-justrite.git $D/skukla_kukla-justrite
- *   git clone -q https://github.com/kmanns/justrite.git $D/kmanns_justrite
+ *   git clone -q https://github.com/skukla/kukla-tailspin.git $D/skukla_kukla-tailspin
+ *   git clone -q https://github.com/org-e/tailspin.git $D/org_e_tailspin
  *   git init -q --bare $D/b2b && cd $D/b2b \
  *     && git fetch -q https://github.com/adobe-commerce/boilerplate-b2b-template.git \
  *        71a67e027b4b288a67f5cda1fc106d2df9a34805 d53850699f2db66976791921dd5b0e482919efc2 main \
  *     && git update-ref refs/heads/main FETCH_HEAD   # then point main at Adobe's real main
  *
- * Run: JUSTRITE_REPLAY_DIR=$D JUSTRITE_REPLAY_OUT=/tmp/replay.json npx jest <this file>
- * `JUSTRITE_REPLAY_EXPECT=without-fix` asserts the clashes measured before the fix, for running
+ * Run: TAILSPIN_REPLAY_DIR=$D TAILSPIN_REPLAY_OUT=/tmp/replay.json npx jest <this file>
+ * `TAILSPIN_REPLAY_EXPECT=without-fix` asserts the clashes measured before the fix, for running
  * this same file against the code before it (the positive control).
  *
  * SAFETY. Every push lands in a throwaway bare copy under a temp folder (`realGitExecutor`
@@ -40,8 +40,8 @@ import { createMockProject } from '../../../helpers/projectFake';
 import { realGitExecutor, runGit } from '../../../helpers/realGit';
 import { createMockSecretStorage, githubTokenSecret } from '../../../helpers/secretStorageFake';
 
-const SOURCE = process.env.JUSTRITE_REPLAY_DIR;
-const WITHOUT_FIX = process.env.JUSTRITE_REPLAY_EXPECT === 'without-fix';
+const SOURCE = process.env.TAILSPIN_REPLAY_DIR;
+const WITHOUT_FIX = process.env.TAILSPIN_REPLAY_EXPECT === 'without-fix';
 const REPLAY_TIMEOUT_MS = 300_000;
 
 const ADOBE_BASE = '71a67e027b4b288a67f5cda1fc106d2df9a34805';
@@ -49,13 +49,13 @@ const ADOBE_TESTED = 'd53850699f2db66976791921dd5b0e482919efc2';
 const COLLEAGUE_SYNCED = '5ac7b52a52a5af2fa71137a591c8a6e5e3826a9b';
 
 /**
- * JustRite's project, with the fields the two updates read, as its manifest recorded them
- * (`~/.demo-builder/projects/justrite/.demo-builder.json`, read 2026-10-30).
+ * Tailspin's project, with the fields the two updates read, as its manifest recorded them
+ * (`~/.demo-builder/projects/tailspin/.demo-builder.json`, read 2026-10-30).
  */
-function justrite(): Project {
+function tailspin(): Project {
     return createMockProject({
-        name: 'justrite',
-        selectedPackage: 'added:kmanns/justrite',
+        name: 'tailspin',
+        selectedPackage: 'added:org-e/tailspin',
         selectedStack: 'eds-accs',
         installedBlockLibraries: [{
             name: 'Demo Builder Blocks',
@@ -70,10 +70,10 @@ function justrite(): Project {
                 name: 'EDS Storefront',
                 status: 'ready',
                 metadata: {
-                    githubRepo: 'skukla/kukla-justrite',
+                    githubRepo: 'skukla/kukla-tailspin',
                     daLiveOrg: 'skukla',
-                    templateOwner: 'kmanns',
-                    templateRepo: 'justrite',
+                    templateOwner: 'org-e',
+                    templateRepo: 'tailspin',
                     templateBranch: 'main',
                     lastSyncedCommit: COLLEAGUE_SYNCED,
                     boilerplateBase: {
@@ -111,24 +111,24 @@ function service(): TemplateSyncService {
     );
 }
 
-const pushedHead = () => runGit(home, path.join(root, 'github', 'skukla/kukla-justrite.git'), 'rev-parse', 'main');
+const pushedHead = () => runGit(home, path.join(root, 'github', 'skukla/kukla-tailspin.git'), 'rev-parse', 'main');
 
 function record(name: string, result: TemplateSyncResult): void {
-    const out = process.env.JUSTRITE_REPLAY_OUT;
+    const out = process.env.TAILSPIN_REPLAY_OUT;
     if (!out) return;
     const previous = fs.existsSync(out) ? JSON.parse(fs.readFileSync(out, 'utf8')) : {};
     const { success, conflicts, edits, error, notes } = result;
     fs.writeFileSync(out, JSON.stringify({ ...previous, [name]: { success, conflicts, edits, error, notes } }, null, 2));
 }
 
-(SOURCE ? describe : describe.skip)('JustRite replay (needs JUSTRITE_REPLAY_DIR)', () => {
+(SOURCE ? describe : describe.skip)('Tailspin replay (needs TAILSPIN_REPLAY_DIR)', () => {
     beforeEach(() => {
-        root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'justrite-replay-')));
+        root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'tailspin-replay-')));
         home = path.join(root, 'home');
         fs.mkdirSync(home);
         const dir = SOURCE as string;
-        bareCopy(path.join(dir, 'skukla_kukla-justrite'), 'skukla/kukla-justrite');
-        bareCopy(path.join(dir, 'kmanns_justrite'), 'kmanns/justrite');
+        bareCopy(path.join(dir, 'skukla_kukla-tailspin'), 'skukla/kukla-tailspin');
+        bareCopy(path.join(dir, 'org_e_tailspin'), 'org-e/tailspin');
         bareCopy(path.join(dir, 'b2b'), 'adobe-commerce/boilerplate-b2b-template');
     });
     afterEach(() => {
@@ -136,7 +136,7 @@ function record(name: string, result: TemplateSyncResult): void {
     });
 
     it("Adobe's boilerplate update 71a67e0 → d538506", async () => {
-        const project = justrite();
+        const project = tailspin();
         // Read the way the update check reads it, so the replay starts where the real one did.
         const base = readBoilerplateBase(project);
         if (!base) throw new Error('the recorded Adobe base did not read back');
@@ -154,8 +154,8 @@ function record(name: string, result: TemplateSyncResult): void {
         expect(pushedHead()).toBe(before);
     }, REPLAY_TIMEOUT_MS);
 
-    it("the colleague's update kmanns/justrite 5ac7b52 → 9e2b4d2", async () => {
-        const result = await service().syncWithTemplate(justrite(), { strategy: 'merge' });
+    it("the colleague's update org-e/tailspin 5ac7b52 → 9e2b4d2", async () => {
+        const result = await service().syncWithTemplate(tailspin(), { strategy: 'merge' });
         record('template', result);
 
         const expected = WITHOUT_FIX

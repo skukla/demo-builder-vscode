@@ -46,14 +46,14 @@ function filesWith(entries: Array<[Project, InstallRecord]>) {
 const claims = (files: ReturnType<typeof memoryFiles>, project: Project, others: Project[]) => readWipeClaims(files, project, others, STRUCTURE);
 
 /** A project on the test website, as PROJECT_RECORDS' target says. */
-const TESTER = accsProject('tester', 'justrite_test_website', 'justrite_test_view', 'Tester');
-const JUSTRITE = accsProject('JustRite', 'justrite', 'justrite_us');
+const TESTER = accsProject('tester', 'tailspin_test_website', 'tailspin_test_view', 'Tester');
+const TAILSPIN = accsProject('Tailspin', 'tailspin', 'tailspin_us');
 
 describe('projectWebsites', () => {
     it("names the project's own website and every website its records were installed to, each once, sorted", () => {
-        const records = [record('a', 'bodea', 'A'), record('b', 'justrite_test_website', 'B'), record('c', undefined, 'C')];
+        const records = [record('a', 'bodea', 'A'), record('b', 'tailspin_test_website', 'B'), record('c', undefined, 'C')];
 
-        expect(projectWebsites(JUSTRITE, records)).toEqual(['bodea', 'justrite', 'justrite_test_website']);
+        expect(projectWebsites(TAILSPIN, records)).toEqual(['bodea', 'tailspin', 'tailspin_test_website']);
     });
 
     it('names none for a project with no website and no record', () => {
@@ -63,20 +63,20 @@ describe('projectWebsites', () => {
 
 describe('readWipeClaims, project scope', () => {
     it("covers every website the project uses: its own and its records'", async () => {
-        const files = filesWith([[JUSTRITE, PROJECT_RECORDS[0]]]);
+        const files = filesWith([[TAILSPIN, PROJECT_RECORDS[0]]]);
 
-        const answer = await claims(files, JUSTRITE, []);
+        const answer = await claims(files, TAILSPIN, []);
 
-        expect(answer.scope.key).toBe('justrite,justrite_test_website');
+        expect(answer.scope.key).toBe('tailspin,tailspin_test_website');
     });
 
     it('warns, naming the project, when another project uses one of these websites, and still answers what to respect', async () => {
         const files = filesWith([[TESTER, PROJECT_RECORDS[0]]]);
         const read = jest.spyOn(files, 'read');
 
-        const answer = await claims(files, TESTER, [accsProject('other', 'justrite_test_website', 'justrite_test_view', 'Other Demo'), JUSTRITE]);
+        const answer = await claims(files, TESTER, [accsProject('other', 'tailspin_test_website', 'tailspin_test_view', 'Other Demo'), TAILSPIN]);
 
-        expect(answer.warning).toBe('The project Other Demo also uses the website JustRite Test. Clearing it also removes what was added there by hand for that project.');
+        expect(answer.warning).toBe('The project Other Demo also uses the website Tailspin Test. Clearing it also removes what was added there by hand for that project.');
         expect(answer.respects.records).toEqual(PROJECT_RECORDS);
         expect(read).toHaveBeenCalled();
     });
@@ -85,26 +85,26 @@ describe('readWipeClaims, project scope', () => {
         const other = accsProject('bodea-demo', 'bodea', 'bodea_en', 'Bodea Demo');
         const files = filesWith([
             [TESTER, PROJECT_RECORDS[0]],
-            [other, record('theirs', 'justrite_test_website', 'THEIRS')],
+            [other, record('theirs', 'tailspin_test_website', 'THEIRS')],
         ]);
 
-        const answer = await claims(files, TESTER, [other, accsProject('copy', 'justrite_test_website', 'justrite_test_view', 'Copy')]);
+        const answer = await claims(files, TESTER, [other, accsProject('copy', 'tailspin_test_website', 'tailspin_test_view', 'Copy')]);
 
         expect(answer.warning).toBe(
-            'The projects Bodea Demo and Copy also use the website JustRite Test. Clearing it also removes what was added there by hand for those projects.',
+            'The projects Bodea Demo and Copy also use the website Tailspin Test. Clearing it also removes what was added there by hand for those projects.',
         );
     });
 
     it('warns of nothing when no other project uses these websites, and skips the project itself if listed', async () => {
         const files = filesWith([[TESTER, PROJECT_RECORDS[0]]]);
 
-        expect((await claims(files, TESTER, [TESTER, JUSTRITE])).warning).toBeUndefined();
+        expect((await claims(files, TESTER, [TESTER, TAILSPIN])).warning).toBeUndefined();
     });
 
     it("respects this project's own records and the settings they wrote, as well as every other project's", async () => {
-        const own = record('own-pack', 'justrite_test_website', 'OWN');
+        const own = record('own-pack', 'tailspin_test_website', 'OWN');
         const other = accsProject('other-demo', 'bodea', 'bodea_en');
-        const theirs = record('their-pack', 'justrite_test_website', 'THEIRS-ON-TEST');
+        const theirs = record('their-pack', 'tailspin_test_website', 'THEIRS-ON-TEST');
         const files = filesWith([
             [TESTER, own],
             [other, theirs],
@@ -117,15 +117,15 @@ describe('readWipeClaims, project scope', () => {
 
     it("drops the record of the datapack the clearing uninstalls first, and its website settings, keeping the rest (C3)", async () => {
         const layer: InstallRecord = {
-            ...record('own-pack', 'justrite_test_website', 'OWN'),
+            ...record('own-pack', 'tailspin_test_website', 'OWN'),
             created: [
                 { kind: 'products', id: 'OWN' },
                 { kind: 'store_config', id: 'catalog/frontend/grid_per_page@website', key: 'catalog/frontend/grid_per_page@website' },
             ],
         };
-        const leftover = record('old-pack', 'justrite_test_website', 'OLD');
+        const leftover = record('old-pack', 'tailspin_test_website', 'OLD');
         const other = accsProject('other-demo', 'bodea', 'bodea_en');
-        const theirs = record('their-pack', 'justrite_test_website', 'OWN');
+        const theirs = record('their-pack', 'tailspin_test_website', 'OWN');
         const files = filesWith([
             [TESTER, layer],
             [TESTER, leftover],
@@ -137,7 +137,7 @@ describe('readWipeClaims, project scope', () => {
         expect(answer.respects.records).toEqual([leftover, theirs]);
         expect(answer.respects.everyRecord).toEqual([leftover, theirs]);
         expect([...answer.respects.settingsKept]).toStrictEqual([]);
-        expect(answer.removing).toEqual({ setBack: ['justrite_test_website/catalog/frontend/grid_per_page'] });
+        expect(answer.removing).toEqual({ setBack: ['tailspin_test_website/catalog/frontend/grid_per_page'] });
     });
 
     it('drops nothing, and names no removal, when the datapack named has no record here (a pack the service installed)', async () => {
@@ -172,7 +172,7 @@ describe('readWipeClaims, project scope', () => {
         const storePreparation: StorePreparationRecord = {
             at: '2026-10-30',
             steps: {
-                pay: { kind: 'config', previous: [{ path: 'payment/companycredit/active', scope: 'website', scopeCode: 'justrite_test_website', stored: null, effective: '0' }] },
+                pay: { kind: 'config', previous: [{ path: 'payment/companycredit/active', scope: 'website', scopeCode: 'tailspin_test_website', stored: null, effective: '0' }] },
                 both: { kind: 'config', previous: [{ path: 'catalog/price/scope', scope: 'default', stored: '0', effective: '0' }] },
             },
         };
@@ -194,8 +194,8 @@ describe('readWipeClaims, project scope', () => {
 
         expect([...answer.respects.settingsKept].sort()).toEqual([
             'bodea/sales/totals_sort/tax',
-            'justrite_test_website/catalog/frontend/grid_per_page',
-            'justrite_test_website/payment/companycredit/active',
+            'tailspin_test_website/catalog/frontend/grid_per_page',
+            'tailspin_test_website/payment/companycredit/active',
         ]);
     });
 

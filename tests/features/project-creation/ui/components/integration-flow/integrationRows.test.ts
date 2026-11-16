@@ -212,15 +212,15 @@ describe('resolveIntegrationRows — catalog rows', () => {
             state({
                 selectedAppBuilderComponents: ['erp-sync'],
                 componentConfigs: {
-                    'erp-sync': { INTEGRATION_DISPLAY_NAME: 'Justrite Integration', ERP_DISPLAY_NAME: 'Justrite ERP' },
+                    'erp-sync': { INTEGRATION_DISPLAY_NAME: 'Tailspin Integration', ERP_DISPLAY_NAME: 'Tailspin ERP' },
                 },
             }),
             MESH_ENTRY,
             catalog
         );
         expect(named[0]).toMatchObject({
-            name: 'Justrite Integration',
-            companion: 'Justrite ERP',
+            name: 'Tailspin Integration',
+            companion: 'Tailspin ERP',
             renamable: true,
             companionRenamable: true,
         });

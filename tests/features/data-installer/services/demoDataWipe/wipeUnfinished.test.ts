@@ -12,7 +12,7 @@ import { memoryFiles } from '../demoBuilderEngine/demoBuilderEngine.testUtils';
 import { sandbox } from './wipe.testUtils';
 
 const PATH = '/nonexistent/projects/zz';
-const NOTE = { scopeKey: 'justrite_test_website', groups: [25], sets: [40], attributes: ['wiper_size'] };
+const NOTE = { scopeKey: 'tailspin_test_website', groups: [25], sets: [40], attributes: ['wiper_size'] };
 
 describe('the unfinished note', () => {
     it('reads back what was written, beside the project and outside the datapacks folder', async () => {
@@ -45,7 +45,7 @@ describe('the unfinished note', () => {
         const structure = await readWipeStructure(sandbox().get);
         const project = createMockProject({ name: 'zz', path: PATH, componentConfigs: {} });
 
-        const same = await readInstanceClaims(files, project, [], resolveWipeScope(structure, ['justrite_test_website']), { matched: new Set([PATH]) });
+        const same = await readInstanceClaims(files, project, [], resolveWipeScope(structure, ['tailspin_test_website']), { matched: new Set([PATH]) });
         const other = await readInstanceClaims(files, project, [], resolveWipeScope(structure, ['bodea']), { matched: new Set([PATH]) });
 
         expect(same.respects).toMatchObject({ unfinished: NOTE });
@@ -54,11 +54,11 @@ describe('the unfinished note', () => {
 
     it('ignores a note left by a clearing of stores, before Clear took whole websites', async () => {
         const files = memoryFiles();
-        await rememberWipeUnfinished(files, PATH, { ...NOTE, scopeKey: 'justrite_test_website/justrite_test_store' });
+        await rememberWipeUnfinished(files, PATH, { ...NOTE, scopeKey: 'tailspin_test_website/tailspin_test_store' });
         const structure = await readWipeStructure(sandbox().get);
         const project = createMockProject({ name: 'zz', path: PATH, componentConfigs: {} });
 
-        const claims = await readInstanceClaims(files, project, [], resolveWipeScope(structure, ['justrite_test_website']), { matched: new Set([PATH]) });
+        const claims = await readInstanceClaims(files, project, [], resolveWipeScope(structure, ['tailspin_test_website']), { matched: new Set([PATH]) });
 
         expect('unfinished' in claims.respects).toBe(false);
     });

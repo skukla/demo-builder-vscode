@@ -109,7 +109,7 @@ describe('refreshLocalStorefront', () => {
         await expect(refreshLocalStorefront(runInLocal, request())).resolves.toEqual({ kind: 'current' });
     }, REAL_GIT_TIMEOUT_MS);
 
-    it("drops a local change GitHub already holds (JustRite's config.json), then fast-forwards", async () => {
+    it("drops a local change GitHub already holds (Tailspin's config.json), then fast-forwards", async () => {
         const to = commitOnGitHub({ 'config.json': '{"v":2}\n' }, 'chore: sync config.json');
         // The extension wrote the same config locally and through GitHub.
         write(fx.local, 'config.json', '{"v":2}\n');

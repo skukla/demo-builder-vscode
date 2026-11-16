@@ -119,7 +119,7 @@ export interface AgentAlertCopy {
  * interrupting, because a prompt on a cheap mutation trains people to click
  * Allow without reading, which costs more than it saves.
  */
-/** "Websites: Bodea, Justrite" (by name), the datapack uninstalled first, and the shared-website warning, for the check the token names; nothing for one no check answered. */
+/** "Websites: Bodea, Tailspin" (by name), the datapack uninstalled first, and the shared-website warning, for the check the token names; nothing for one no check answered. */
 function clearedWebsitesLines(args: unknown): string | undefined {
     const shown = shownClearFor((args as { token?: unknown } | null | undefined)?.token);
     if (!shown) return undefined;

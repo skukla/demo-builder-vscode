@@ -24,11 +24,11 @@ jest.mock('@/features/dashboard/ui/components/share/ShareModal', () => ({
     ShareModal: () => <div role="dialog" aria-label="Share Demo" />,
 }));
 
-const DEMO = { name: 'Isle5 by Jen', source: { owner: 'jen', repo: 'isle5-demo' }, storefrontKind: 'eds' as const };
-const PAGES = "The Isle5 by Jen demo's pages can't be reached right now.";
+const DEMO = { name: 'Isle5 by Robin', source: { owner: 'robin', repo: 'isle5-demo' }, storefrontKind: 'eds' as const };
+const PAGES = "The Isle5 by Robin demo's pages can't be reached right now.";
 const GUIDANCE = "If it moved, change the source. If it's gone for good, keep this project as your own demo.";
 const KEEP = 'Keep as My Own Demo';
-const UNREACHABLE = "The Isle5 by Jen demo's repository can't be reached. Reset and updates are unavailable until it is.";
+const UNREACHABLE = "The Isle5 by Robin demo's repository can't be reached. Reset and updates are unavailable until it is.";
 
 describe('ProjectDashboardScreen - added demo source', () => {
     let ctx: TestContext;
@@ -43,7 +43,7 @@ describe('ProjectDashboardScreen - added demo source', () => {
             checkId: 'demo-source',
             status: 'warning',
             message: UNREACHABLE,
-            data: { demoName: 'Isle5 by Jen', unreachable: true, contentUnreachable: true },
+            data: { demoName: 'Isle5 by Robin', unreachable: true, contentUnreachable: true },
         });
 
     it('shows nothing until the check warns, then the sentence with a Change Source button', async () => {
@@ -87,7 +87,7 @@ describe('ProjectDashboardScreen - added demo source', () => {
             checkId: 'demo-source',
             status: 'warning',
             message: PAGES,
-            data: { demoName: 'Isle5 by Jen', unreachable: false, contentUnreachable: true },
+            data: { demoName: 'Isle5 by Robin', unreachable: false, contentUnreachable: true },
         });
 
         const banner = await screen.findByTestId('demo-source-banner');

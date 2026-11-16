@@ -118,7 +118,7 @@ Pins that moved, each because the contract did: the install order and the "canno
 - `security-review`, `ai-coverage-scan` and a response-ceiling re-measure (`check_demo_data`'s answer
   gained two small fields). No new tool and no new button: both surfaces reach the same handlers.
 
-### Live test (owner's call; project `scratch-1028`, website `justrite_test_website` only)
+### Live test (owner's call; project `scratch-1028`, website `tailspin_test_website` only)
 
 A throwaway pack: one rule `ZZ Test Ten Off DB11` (specific coupon, groups `General`, one
 `category_ids` condition on a test-website category), its code `ZZTEN-DB11`, one rule `ZZ Test Cart
@@ -135,6 +135,6 @@ DB11` (no coupon), and gift card `zz-giftcard-db11` (two amounts, in the test we
 4. Add a code `ZZMINE-DB11` to the rule in the Admin; remove the pack: "Kept the cart rule ZZ Test Ten
    Off DB11: it holds 1 coupon you added."; delete your code, remove again: the record goes, and the
    Admin shows no `DB11` rule, code or gift card (back to zero).
-5. Wipe: make `ZZ Wipe DB11` by hand on `justrite_test_website` only; `check_demo_data` on
-   `justrite_test_store` lists it under cart rules; `clear_demo_data` deletes it. (A rule also on
-   JustRite's website is not to be made: the take-off path stays unexercised live.)
+5. Wipe: make `ZZ Wipe DB11` by hand on `tailspin_test_website` only; `check_demo_data` on
+   `tailspin_test_store` lists it under cart rules; `clear_demo_data` deletes it. (A rule also on
+   Tailspin's website is not to be made: the take-off path stays unexercised live.)

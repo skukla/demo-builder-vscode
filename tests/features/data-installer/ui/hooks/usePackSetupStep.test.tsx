@@ -29,15 +29,15 @@ const mockRequest = webviewClient.request as jest.Mock;
 const ID: DatapackId = { name: 'zz-test-root-db12', version: 'v1' };
 const STEP: PackRootStep = {
     state: 'open',
-    storeCode: 'justrite_test_store',
-    storeName: 'Justrite Test Store',
+    storeCode: 'tailspin_test_store',
+    storeName: 'Tailspin Test Store',
     rootId: 215,
     rootName: 'ZZ Root DB12',
     storeRootId: 119,
-    sharedWith: 'the store justrite_store (website justrite)',
+    sharedWith: 'the store tailspin_store (website tailspin)',
 };
-const NOTE = 'Justrite Test Store still uses the root category Justrite Catalog, not ZZ Root DB12.';
-const DONE: PackRootStep = { ...STEP, state: 'done', note: "Justrite Test Store now shows the categories under ZZ Root DB12.", lastCheck: 'passed' };
+const NOTE = 'Tailspin Test Store still uses the root category Tailspin Catalog, not ZZ Root DB12.';
+const DONE: PackRootStep = { ...STEP, state: 'done', note: "Tailspin Test Store now shows the categories under ZZ Root DB12.", lastCheck: 'passed' };
 
 /** The handler's envelope, as `setupStepAnswer` builds it. */
 function answer(step: PackRootStep | null, pack: DatapackId = ID): HandlerResponse {
@@ -115,7 +115,7 @@ it('puts one quiet line in the panel, and the step itself in the dialog Show Ste
     // The step's title IS the dialog's title, once: no "One step in the Admin" over a second heading.
     expect(within(dialog()).getAllByText("Show ZZ Root DB12's Categories on the Storefront")).toHaveLength(1);
     expect(within(dialog()).queryByText('One step in the Admin')).not.toBeInTheDocument();
-    expect(within(dialog()).getByLabelText('Stores > All Stores > Justrite Test Store')).toBeInTheDocument();
+    expect(within(dialog()).getByLabelText('Stores > All Stores > Tailspin Test Store')).toBeInTheDocument();
     expect(within(dialog()).getByText('Root Category: ZZ Root DB12')).toBeInTheDocument();
     expect(within(dialog()).getByText(/shares its root category with another store/)).toBeInTheDocument();
     expect(banner()).toHaveTextContent('Not set up');
@@ -184,7 +184,7 @@ it('a Check that finds it done says so in the dialog, offers no Check, and leave
 
     expect(banner()).toHaveTextContent('Done');
     // What the Check found, as the panel says it, not the guide's "Already set up in the store."
-    expect(banner()).toHaveTextContent("Justrite Test Store now shows the categories under ZZ Root DB12.");
+    expect(banner()).toHaveTextContent("Tailspin Test Store now shows the categories under ZZ Root DB12.");
     expect(banner()).not.toHaveTextContent('Already set up');
     expect(screen.queryByRole('button', { name: 'Check' })).not.toBeInTheDocument();
     // Nothing in the panel once done: the dialog already said so (owner, 2026-10-31).

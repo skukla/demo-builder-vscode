@@ -50,7 +50,7 @@ import { PACKAGES, STACKS, baseState } from './IntegrationsStep.testUtils';
 /** The window on screen now: a taller stage opens a new one (step-07 Win3); never hold an old one. */
 const currentDialog = (): HTMLElement => screen.getByRole('dialog');
 
-const MESSAGE = 'JustRite already has an ERP integration on this Commerce instance. Add your ERP there instead.';
+const MESSAGE = 'Tailspin already has an ERP integration on this Commerce instance. Add your ERP there instead.';
 const UNAVAILABLE: UnavailableEntries = { message: MESSAGE, ids: ['erp-integration'] };
 
 async function renderStep(state: WizardState, unavailable?: UnavailableEntries, notice?: React.ReactNode): Promise<void> {

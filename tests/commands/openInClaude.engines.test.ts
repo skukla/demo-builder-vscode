@@ -34,7 +34,7 @@ const PROJECTS_ROOT = '/projects';
 function makeCommand(probe: CommandProbe): OpenInClaudeCommand {
     return new OpenInClaudeCommand(
         makeOpenInClaudeContext(makeGlobalState()),
-        makeStateManager(makeOpenInClaudeProject({ name: 'justrite' })),
+        makeStateManager(makeOpenInClaudeProject({ name: 'tailspin' })),
         makeLogger(),
         probe,
     );
@@ -90,7 +90,7 @@ describe('OpenInClaudeCommand — per engine', () => {
                 expect.objectContaining({
                     mode: 'agent',
                     isPartialQuery: false,
-                    query: expect.stringMatching(/justrite[\s\S]*hi$/),
+                    query: expect.stringMatching(/tailspin[\s\S]*hi$/),
                 }),
             );
             expect(mocks.createTerminalMock).not.toHaveBeenCalled();
@@ -99,13 +99,13 @@ describe('OpenInClaudeCommand — per engine', () => {
         it('attaches the files it is handed to the chat (EDS-57: a kept update clash)', async () => {
             setupVscodeMocks({ engine: 'copilot-vscode' });
 
-            await makeCommand(only()).execute({ prompt: 'fix it', attachFiles: ['/p/justrite/components/eds-storefront/blocks/header/header.js'] });
+            await makeCommand(only()).execute({ prompt: 'fix it', attachFiles: ['/p/tailspin/components/eds-storefront/blocks/header/header.js'] });
 
             expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
                 'workbench.action.chat.open',
                 expect.objectContaining({
                     mode: 'agent',
-                    attachFiles: [expect.objectContaining({ fsPath: '/p/justrite/components/eds-storefront/blocks/header/header.js' })],
+                    attachFiles: [expect.objectContaining({ fsPath: '/p/tailspin/components/eds-storefront/blocks/header/header.js' })],
                 }),
             );
         });

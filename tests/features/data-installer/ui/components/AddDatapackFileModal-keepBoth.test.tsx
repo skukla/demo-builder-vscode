@@ -16,7 +16,7 @@ import { loadedFile } from '../../../../helpers/datapackFileFixtures';
 import { loadCall, OPENED, openModal, withService } from './AddDatapackFileModal.testUtils';
 
 const SAVE = { ...OPENED, displayName: 'My Luma' };
-const HELD = [{ name: 'justrite', version: 'v1' }];
+const HELD = [{ name: 'tailspin', version: 'v1' }];
 
 describe('Replace or Keep Both (F1)', () => {
     beforeEach(() => withService({ 'open-datapack-zip': { success: true, data: SAVE } }));
@@ -102,11 +102,11 @@ describe('Install from File: add, then install (F2)', () => {
 
         expect(onInstall).toHaveBeenCalledTimes(1);
         expect(onInstall).toHaveBeenCalledWith({
-            id: { name: 'justrite', version: 'v1' },
-            displayName: 'Justrite B2B',
+            id: { name: 'tailspin', version: 'v1' },
+            displayName: 'Tailspin B2B',
         });
         expect(
-            screen.queryByRole('heading', { name: 'Justrite B2B Loaded' })
+            screen.queryByRole('heading', { name: 'Tailspin B2B Loaded' })
         ).not.toBeInTheDocument();
         expect(onClose).not.toHaveBeenCalled();
     });
@@ -124,7 +124,7 @@ describe('Install from File: add, then install (F2)', () => {
         await settle();
 
         expect(loadCall()).toMatchObject({ update: true });
-        expect(onInstall).toHaveBeenCalledWith({ id: { name: 'justrite', version: 'v1' }, displayName: 'My Luma' });
+        expect(onInstall).toHaveBeenCalledWith({ id: { name: 'tailspin', version: 'v1' }, displayName: 'My Luma' });
         expect(onInstall.mock.calls[0][0]).not.toHaveProperty('types');
     });
 
@@ -174,7 +174,7 @@ describe('Install from File: add, then install (F2)', () => {
 
         expect(onInstall).not.toHaveBeenCalled();
         expect(
-            screen.getByRole('heading', { name: 'Justrite B2B Partly Loaded' })
+            screen.getByRole('heading', { name: 'Tailspin B2B Partly Loaded' })
         ).toBeInTheDocument();
     });
 
@@ -190,7 +190,7 @@ describe('Install from File: add, then install (F2)', () => {
 
         expect(onInstall).not.toHaveBeenCalled();
         expect(
-            screen.getByRole('heading', { name: "Couldn't Add Justrite B2B" })
+            screen.getByRole('heading', { name: "Couldn't Add Tailspin B2B" })
         ).toBeInTheDocument();
     });
 });

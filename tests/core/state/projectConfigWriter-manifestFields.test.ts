@@ -43,7 +43,7 @@ describe('ProjectConfigWriter manifest fields', () => {
     }
 
     describe('the added-demo row', () => {
-        const demo = { kind: 'demo' as const, version: 1, name: 'Isle5 by Jen', source: { owner: 'jen', repo: 'isle5-demo' }, storefrontKind: 'eds' as const };
+        const demo = { kind: 'demo' as const, version: 1, name: 'Isle5 by Robin', source: { owner: 'robin', repo: 'isle5-demo' }, storefrontKind: 'eds' as const };
 
         it('writes the row verbatim when the project has one', async () => {
             expect((await save({ demo })).demo).toEqual(demo);

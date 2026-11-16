@@ -6,7 +6,7 @@
 import { act, fireEvent, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import {
-    JEN,
+    ROBIN,
     READ,
     button,
     click,
@@ -40,9 +40,9 @@ describe('AddDemoModal', () => {
     });
 
     it('does not list the demos already added: they are cards on the Welcome step behind it', () => {
-        renderModal({ addedDemos: [JEN] });
+        renderModal({ addedDemos: [ROBIN] });
         expect(screen.queryByText('Demos you have added')).not.toBeInTheDocument();
-        expect(screen.queryByText(/Isle5 by Jen/)).not.toBeInTheDocument();
+        expect(screen.queryByText(/Isle5 by Robin/)).not.toBeInTheDocument();
     });
 
     it('offers the zip way in add mode only; picked, the footer opens the picker, public unless the box is cleared', async () => {
@@ -105,8 +105,8 @@ describe('AddDemoModal', () => {
     });
 
     it('says when a link is already added, whatever its case', () => {
-        renderModal({ addedDemos: [JEN] });
-        typeLink('https://github.com/Jen/ISLE5-demo');
+        renderModal({ addedDemos: [ROBIN] });
+        typeLink('https://github.com/Robin/ISLE5-demo');
         expect(screen.getByTestId('spectrum-textfield-error')).toHaveTextContent("You've already added this demo.");
         expect(button('Continue')).toHaveAttribute('aria-disabled', 'true');
     });
@@ -135,14 +135,14 @@ describe('AddDemoModal', () => {
         const description = screen.getByTestId('demo-description');
         fireEvent.change(description.querySelector('textarea') ?? description, { target: { value: 'Luxury B2C demo' } });
 
-        mockRequest.mockResolvedValueOnce({ success: true, result: { demo: JEN } });
+        mockRequest.mockResolvedValueOnce({ success: true, result: { demo: ROBIN } });
         await click('Add Demo Package');
 
         expect(mockRequest).toHaveBeenLastCalledWith('add-shared-demo', {
-            demo: expect.objectContaining({ description: 'Luxury B2C demo', source: { owner: 'jen', repo: 'isle5-demo', branch: 'main' } }),
+            demo: expect.objectContaining({ description: 'Luxury B2C demo', source: { owner: 'robin', repo: 'isle5-demo', branch: 'main' } }),
         });
         expect(mockRequest.mock.calls.at(-1)?.[1].demo).not.toHaveProperty('createdFromZip');
-        expect(props.onDemoAdded).toHaveBeenCalledWith(JEN);
+        expect(props.onDemoAdded).toHaveBeenCalledWith(ROBIN);
         expect(props.onClose).toHaveBeenCalled();
     });
 
@@ -217,7 +217,7 @@ describe('AddDemoModal', () => {
         await probeWith({ success: false, error: 'GitHub did not answer.' });
         await click('Back');
         expect(title('Add a Demo Package')).toBeInTheDocument();
-        expect(linkInput()).toHaveValue('https://github.com/jen/isle5-demo');
+        expect(linkInput()).toHaveValue('https://github.com/robin/isle5-demo');
     });
 
     it('lists a warning about the demo as a note under what was found, not as bullets', async () => {
@@ -257,7 +257,7 @@ describe('AddDemoModal', () => {
         renderModal();
         await chooseWay('zip');
         const setup = { version: 1, settings: {} };
-        mockRequest.mockResolvedValueOnce({ success: true, result: { owner: 'jen', repo: 'isle5-demo', setup } });
+        mockRequest.mockResolvedValueOnce({ success: true, result: { owner: 'robin', repo: 'isle5-demo', setup } });
         mockRequest.mockResolvedValueOnce({ success: true, result: READ });
         await click('Choose a Zip File');
 
@@ -283,10 +283,10 @@ describe('AddDemoModal', () => {
     it("takes a demo's site address and probes the repository it names", async () => {
         renderModal();
         mockRequest.mockResolvedValueOnce({ success: true, result: READ });
-        typeLink('https://main--isle5-demo--jen.aem.live');
+        typeLink('https://main--isle5-demo--robin.aem.live');
         await click('Continue');
-        expect(mockRequest).toHaveBeenCalledWith('probe-shared-demo', { owner: 'jen', repo: 'isle5-demo' });
-        expect(screen.getByTestId('found-Code')).toHaveTextContent('github.com/jen/isle5-demo');
+        expect(mockRequest).toHaveBeenCalledWith('probe-shared-demo', { owner: 'robin', repo: 'isle5-demo' });
+        expect(screen.getByTestId('found-Code')).toHaveTextContent('github.com/robin/isle5-demo');
     });
 
     it('mounts nothing while closed', () => {
@@ -303,13 +303,13 @@ describe('AddDemoModal — while reading', () => {
         let release: (value: unknown) => void = () => {};
         mockRequest.mockImplementationOnce(() => new Promise((resolve) => { release = resolve; }));
         renderModal();
-        typeLink('https://github.com/jen/isle5-demo');
+        typeLink('https://github.com/robin/isle5-demo');
         await click('Continue');
 
         expect(title('Add a Demo Package')).toBeInTheDocument();
         expect(screen.getByRole('dialog').querySelector('.modal-wait')).not.toBeNull();
         expect(screen.queryByText('Reading the storefront')).not.toBeInTheDocument();
-        expect(screen.queryByText('jen/isle5-demo')).not.toBeInTheDocument();
+        expect(screen.queryByText('robin/isle5-demo')).not.toBeInTheDocument();
         expect(screen.queryByText(/what kind of storefront it is/)).not.toBeInTheDocument();
         expect(footerButtons()).toEqual(['Cancel']);
 
@@ -331,7 +331,7 @@ describe('AddDemoModal — while reading', () => {
         expect(screen.queryByTestId('demo-description')).not.toBeInTheDocument();
 
         await act(async () => {
-            release({ success: true, result: { demo: JEN } });
+            release({ success: true, result: { demo: ROBIN } });
         });
     });
 

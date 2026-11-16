@@ -87,7 +87,7 @@ function brandOf(value: string | undefined, labels: ReadonlyMap<string, string>)
 
 /**
  * Only the fields `RawProduct` reads. A full product carries stock, media and links besides:
- * on Justrite a page of 100 was 477 KB and 6.4 s in full, 275 KB and 2.2 s trimmed
+ * on Tailspin a page of 100 was 477 KB and 6.4 s in full, 275 KB and 2.2 s trimmed
  * (measured 2026-10-19). `total_count` stays, as the paging reads it.
  */
 const PRODUCT_FIELDS =
@@ -132,7 +132,7 @@ async function readProducts(get: CommerceGet, scope: ProductScope): Promise<RawP
 /**
  * Enabled products (status 1), the ones the ERPs are filled with, in the fields an assignment
  * reads; with a website id, only the products on that website (Commerce filters on
- * `website_id`: Justrite's 139 of the sandbox's 321, 2026-10-19); with SKUs, only those.
+ * `website_id`: Tailspin's 139 of the sandbox's 321, 2026-10-19); with SKUs, only those.
  */
 export async function listAssignableProducts(get: CommerceGet, scope: ProductScope = {}): Promise<AssignProductRow[]> {
     const [items, labels] = await Promise.all([readProducts(get, scope), brandLabels(get)]);

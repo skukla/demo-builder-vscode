@@ -6,7 +6,7 @@
 
 import { screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { JEN, READ, button, click, footerButtons, mockRequest, probeWith, renderModal, resetModalMocks, title } from './AddDemoModal.testUtils';
+import { ROBIN, READ, button, click, footerButtons, mockRequest, probeWith, renderModal, resetModalMocks, title } from './AddDemoModal.testUtils';
 
 /** A change dialog for a project whose Welcome step has the Bodea demo package, unless `withPackage` is false. */
 function renderChange(currentKind: 'eds' | 'headless' = 'eds', withPackage = true) {
@@ -33,15 +33,15 @@ describe('AddDemoModal — change mode', () => {
 
         mockRequest.mockResolvedValueOnce({
             success: true,
-            result: { demo: JEN, previous: { owner: 'old', repo: 'demo' } },
+            result: { demo: ROBIN, previous: { owner: 'old', repo: 'demo' } },
         });
         await click('Change Source');
 
         expect(mockRequest).toHaveBeenLastCalledWith('change-demo-source', {
-            demo: expect.objectContaining({ source: { owner: 'jen', repo: 'isle5-demo', branch: 'main' } }),
+            demo: expect.objectContaining({ source: { owner: 'robin', repo: 'isle5-demo', branch: 'main' } }),
             updateDemoPackage: true,
         });
-        expect(props.onDemoAdded).toHaveBeenCalledWith(JEN);
+        expect(props.onDemoAdded).toHaveBeenCalledWith(ROBIN);
         expect(props.onClose).toHaveBeenCalled();
     });
 
@@ -50,7 +50,7 @@ describe('AddDemoModal — change mode', () => {
         await probeWith({ success: true, result: READ });
 
         expect(screen.queryByTestId('update-demo-package')).not.toBeInTheDocument();
-        mockRequest.mockResolvedValueOnce({ success: true, result: { demo: JEN, previous: { owner: 'old', repo: 'demo' } } });
+        mockRequest.mockResolvedValueOnce({ success: true, result: { demo: ROBIN, previous: { owner: 'old', repo: 'demo' } } });
         await click('Change Source');
 
         expect(mockRequest).toHaveBeenLastCalledWith('change-demo-source', expect.objectContaining({ updateDemoPackage: false }));

@@ -514,8 +514,8 @@ index cd520b995..27153ce6b 100644
 -        expect(confirm).toMatchObject({ title: 'Save Your Changes First?', size: 'M' });
 +        expect(confirm).toMatchObject({ title: 'Save Your Changes First?' });
          // CONTROL: a removal's confirm names the store, at the same width (F104, F111).
--        expect(viewFrame({ ...base, view: 'confirm-reset' })).toMatchObject({ title: 'Uninstall Frescopa from Justrite Test Store US (Justrite Test)?', size: 'M' });
-+        expect(viewFrame({ ...base, view: 'confirm-reset' })).toMatchObject({ title: 'Uninstall Frescopa from Justrite Test Store US (Justrite Test)?' });
+-        expect(viewFrame({ ...base, view: 'confirm-reset' })).toMatchObject({ title: 'Uninstall Frescopa from Tailspin Test Store US (Tailspin Test)?', size: 'M' });
++        expect(viewFrame({ ...base, view: 'confirm-reset' })).toMatchObject({ title: 'Uninstall Frescopa from Tailspin Test Store US (Tailspin Test)?' });
      });
  
      // Walk F108: while it checks, the title names the work, not a question nothing has asked yet.
@@ -570,7 +570,7 @@ index cd520b995..27153ce6b 100644
  
 -    it('gives the removal that kept a root the medium width, so its Admin path reads as one line', () => {
 +    it('gives the removal that kept a root its amber outcome (`ResultWindow` widens it for the Admin path)', () => {
-         const keptRoot = { store: 'Justrite Test Store', category: 'ZZ Root DB12', restore: 'Justrite Catalog' };
+         const keptRoot = { store: 'Tailspin Test Store', category: 'ZZ Root DB12', restore: 'Tailspin Catalog' };
          const result = { variant: 'warning' as const, title: 'One step left to remove Frescopa', keptRoot };
  
 -        expect(viewFrame({ ...base, view: 'result', result })).toMatchObject({ size: 'M', status: 'warning' });
@@ -637,7 +637,7 @@ index cd520b995..27153ce6b 100644
  
      it('asks the removal as the title, naming the store, amber, with Close hidden for Cancel', () => {
          expect(viewFrame({ ...base, view: 'confirm-reset' })).toEqual({
-             title: 'Uninstall Frescopa from Justrite Test Store US (Justrite Test)?',
+             title: 'Uninstall Frescopa from Tailspin Test Store US (Tailspin Test)?',
              status: 'warning',
 -            size: 'M',
              wide: false,

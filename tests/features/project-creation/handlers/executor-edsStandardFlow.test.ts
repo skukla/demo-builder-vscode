@@ -397,8 +397,8 @@ describe('Executor - EDS Standard Flow', () => {
                 demo: {
                     kind: 'demo' as const,
                     version: 1 as const,
-                    name: 'Isle5 by Jen',
-                    source: { owner: 'jen', repo: 'isle5-demo', branch: 'demo-2026' },
+                    name: 'Isle5 by Robin',
+                    source: { owner: 'robin', repo: 'isle5-demo', branch: 'demo-2026' },
                     storefrontKind: 'eds' as const,
                 },
                 edsConfig: {
@@ -410,7 +410,7 @@ describe('Executor - EDS Standard Flow', () => {
                     daLiveOrg: 'test-org',
                     daLiveSite: 'test-site',
                     githubOwner: 'testuser',
-                    templateOwner: 'jen',
+                    templateOwner: 'robin',
                     templateRepo: 'isle5-demo',
                 },
                 components: { frontend: 'eds-storefront', dependencies: [] },
@@ -437,7 +437,7 @@ describe('Executor - EDS Standard Flow', () => {
                 (p) => p.componentInstances?.['eds-storefront']?.metadata?.githubRepo
             );
             expect(withMetadata?.componentInstances?.['eds-storefront']?.metadata).toMatchObject({
-                templateOwner: 'jen',
+                templateOwner: 'robin',
                 templateRepo: 'isle5-demo',
                 templateBranch: 'demo-2026',
             });

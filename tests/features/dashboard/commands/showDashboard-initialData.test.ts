@@ -62,11 +62,11 @@ describe('ProjectDashboardWebviewCommand - getInitialData - the added demo', () 
     });
 
     it("names the demo, its source and its kind for a project built on an added demo, and nothing otherwise", async () => {
-        const demo = makeAddedDemo({ source: { owner: 'jen', repo: 'isle5-demo', branch: 'main' } });
+        const demo = makeAddedDemo({ source: { owner: 'robin', repo: 'isle5-demo', branch: 'main' } });
         const data = await initialData(createMockProject({ demo }));
         expect(data.demo).toEqual({
-            name: 'Isle5 by Jen',
-            source: { owner: 'jen', repo: 'isle5-demo', branch: 'main' },
+            name: 'Isle5 by Robin',
+            source: { owner: 'robin', repo: 'isle5-demo', branch: 'main' },
             storefrontKind: 'eds',
         });
 
@@ -74,8 +74,8 @@ describe('ProjectDashboardWebviewCommand - getInitialData - the added demo', () 
     });
 
     it("names the demo package on the Welcome step that reads from the same repository, by the card's own name, so Change source can offer to update it", async () => {
-        const demo = makeAddedDemo({ source: { owner: 'jen', repo: 'isle5-demo', branch: 'main' } });
-        (readAddedDemos as jest.Mock).mockReturnValue([{ ...demo, name: 'Isle5 (renamed on the card)', source: { owner: 'Jen', repo: 'ISLE5-demo' } }]);
+        const demo = makeAddedDemo({ source: { owner: 'robin', repo: 'isle5-demo', branch: 'main' } });
+        (readAddedDemos as jest.Mock).mockReturnValue([{ ...demo, name: 'Isle5 (renamed on the card)', source: { owner: 'Robin', repo: 'ISLE5-demo' } }]);
 
         const data = await initialData(createMockProject({ demo }));
 
@@ -83,7 +83,7 @@ describe('ProjectDashboardWebviewCommand - getInitialData - the added demo', () 
     });
 
     it('picks the card from the SAME repository among several, and names none when no card reads from it', async () => {
-        const demo = makeAddedDemo({ source: { owner: 'jen', repo: 'isle5-demo', branch: 'main' } });
+        const demo = makeAddedDemo({ source: { owner: 'robin', repo: 'isle5-demo', branch: 'main' } });
         const other = makeAddedDemo({ name: 'Another demo', source: { owner: 'sam', repo: 'other-demo' } });
         (readAddedDemos as jest.Mock).mockReturnValue([other, { ...demo, name: 'Isle5 card' }]);
 

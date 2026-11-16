@@ -9,7 +9,7 @@ import { MOVE_STOCK_MANUAL, warehouseSetup, warehouseFor } from '@/features/app-
 import { fingerprintRow } from '@/features/data-installer/services/demoBuilderEngine/fingerprint';
 import type { CommerceInventorySource, CommerceInventorySourceList, CommerceInventoryStockList, CommerceStockSourceLinkList } from '@/types/commerceWire';
 
-const DEPS = { websiteCode: 'acme', erpNames: ['Justrite ERP', 'Accuform ERP'] };
+const DEPS = { websiteCode: 'acme', erpNames: ['Tailspin ERP', 'Accuform ERP'] };
 
 function store(sources: CommerceInventorySourceList = SOURCES_DEFAULT_ONLY, stocks: CommerceInventoryStockList = STOCKS_DEFAULT_ONLY, links: CommerceStockSourceLinkList = LINKS_DEFAULT_ONLY) {
     return commerceFake(
@@ -17,7 +17,7 @@ function store(sources: CommerceInventorySourceList = SOURCES_DEFAULT_ONLY, stoc
             'inventory/sources?': sources,
             'inventory/stocks?': stocks,
             'inventory/stock-source-links?': links,
-            'inventory/sources/': (p: string) => ({ source_code: p.split('/').pop(), name: 'Justrite Warehouse', enabled: true, country_id: 'US', postcode: '00000' }),
+            'inventory/sources/': (p: string) => ({ source_code: p.split('/').pop(), name: 'Tailspin Warehouse', enabled: true, country_id: 'US', postcode: '00000' }),
         },
         (_m, path) => (path === 'inventory/stocks' ? 7 : null),
     );
@@ -25,7 +25,7 @@ function store(sources: CommerceInventorySourceList = SOURCES_DEFAULT_ONLY, stoc
 
 describe('warehouseFor', () => {
     it('names the warehouse after the ERP without the word ERP', () => {
-        expect(warehouseFor('Justrite ERP')).toEqual({ code: 'justrite_warehouse', name: 'Justrite Warehouse' });
+        expect(warehouseFor('Tailspin ERP')).toEqual({ code: 'tailspin_warehouse', name: 'Tailspin Warehouse' });
         expect(warehouseFor('Bodea & Co')).toEqual({ code: 'bodea_co_warehouse', name: 'Bodea & Co Warehouse' });
     });
 });
@@ -61,23 +61,23 @@ describe('preview', () => {
         const commerce = store();
         expect(await warehouseSetup.preview({ commerce, ...DEPS })).toEqual({
             changes: [
-                'Create Justrite Warehouse',
+                'Create Tailspin Warehouse',
                 'Create Accuform Warehouse',
                 'Create acme Stock, a stock the website sells from',
-                'Add Justrite Warehouse to acme Stock',
+                'Add Tailspin Warehouse to acme Stock',
                 'Add Accuform Warehouse to acme Stock',
             ],
             // The preview's one plain sentence: the screen shows it, not the lines above.
-            summary: 'Add Justrite Warehouse and Accuform Warehouse to a new stock, acme Stock',
+            summary: 'Add Tailspin Warehouse and Accuform Warehouse to a new stock, acme Stock',
             manual: MOVE_STOCK_MANUAL,
         });
     });
 
     it('reuses an existing source and a stock that already sells to the website', async () => {
         const commerce = store(
-            { items: [...(SOURCES_DEFAULT_ONLY.items ?? []), { source_code: 'justrite_warehouse', name: 'Justrite Warehouse', enabled: true }] },
+            { items: [...(SOURCES_DEFAULT_ONLY.items ?? []), { source_code: 'tailspin_warehouse', name: 'Tailspin Warehouse', enabled: true }] },
             { items: [...(STOCKS_DEFAULT_ONLY.items ?? []), { stock_id: 3, name: 'Acme Stock', extension_attributes: { sales_channels: [{ type: 'website', code: 'acme' }] } }] },
-            { items: [...(LINKS_DEFAULT_ONLY.items ?? []), { stock_id: 3, source_code: 'justrite_warehouse', priority: 1 }] },
+            { items: [...(LINKS_DEFAULT_ONLY.items ?? []), { stock_id: 3, source_code: 'tailspin_warehouse', priority: 1 }] },
         );
         expect((await warehouseSetup.preview({ commerce, ...DEPS })).changes).toEqual([
             'Create Accuform Warehouse',
@@ -88,24 +88,24 @@ describe('preview', () => {
     it('has nothing to make without an ERP, and refuses without a website', async () => {
         const commerce = store();
         expect((await warehouseSetup.preview({ commerce, websiteCode: 'acme', erpNames: [] })).changes).toStrictEqual([]);
-        await expect(warehouseSetup.preview({ commerce, erpNames: ['Justrite ERP'] })).rejects.toThrow('names no Commerce website');
+        await expect(warehouseSetup.preview({ commerce, erpNames: ['Tailspin ERP'] })).rejects.toThrow('names no Commerce website');
     });
 });
 
 describe('apply', () => {
     it('POSTs the source, the stock with the website as its sales channel, and the links, and records them', async () => {
         const commerce = store();
-        const applied = await warehouseSetup.apply({ commerce, websiteCode: 'acme', erpNames: ['Justrite ERP'] });
+        const applied = await warehouseSetup.apply({ commerce, websiteCode: 'acme', erpNames: ['Tailspin ERP'] });
         expect(commerce.writes()).toEqual([
-            ['POST', 'inventory/sources', { source: { source_code: 'justrite_warehouse', name: 'Justrite Warehouse', enabled: true, country_id: 'US', postcode: '00000' } }],
+            ['POST', 'inventory/sources', { source: { source_code: 'tailspin_warehouse', name: 'Tailspin Warehouse', enabled: true, country_id: 'US', postcode: '00000' } }],
             ['POST', 'inventory/stocks', { stock: { name: 'acme Stock', extension_attributes: { sales_channels: [{ type: 'website', code: 'acme' }] } } }],
-            ['POST', 'inventory/stock-source-links', { links: [{ stock_id: 7, source_code: 'justrite_warehouse', priority: 1 }] }],
+            ['POST', 'inventory/stock-source-links', { links: [{ stock_id: 7, source_code: 'tailspin_warehouse', priority: 1 }] }],
         ]);
         expect(applied.record).toEqual({
             kind: 'warehouse',
-            createdSources: ['justrite_warehouse'],
+            createdSources: ['tailspin_warehouse'],
             createdStock: { id: 7, name: 'acme Stock' },
-            links: [{ stockId: 7, sourceCode: 'justrite_warehouse' }],
+            links: [{ stockId: 7, sourceCode: 'tailspin_warehouse' }],
         });
         expect(applied.manual).toBe(MOVE_STOCK_MANUAL);
     });
@@ -116,42 +116,42 @@ describe('apply', () => {
             if (path === 'inventory/stocks') throw new Error('Commerce answered 400 for inventory/stocks: no');
             return null;
         });
-        const applied = await warehouseSetup.apply({ commerce, websiteCode: 'acme', erpNames: ['Justrite ERP'] });
+        const applied = await warehouseSetup.apply({ commerce, websiteCode: 'acme', erpNames: ['Tailspin ERP'] });
         expect(applied.rejected).toEqual(['Create acme Stock: Commerce answered 400 for inventory/stocks: no']);
-        expect(applied.record).toEqual({ kind: 'warehouse', createdSources: ['justrite_warehouse'], links: [] });
+        expect(applied.record).toEqual({ kind: 'warehouse', createdSources: ['tailspin_warehouse'], links: [] });
     });
 });
 
-// Justrite, 2026-10-26: undo switched Test Warehouse off (Commerce cannot delete a source),
+// Tailspin, 2026-10-26: undo switched Test Warehouse off (Commerce cannot delete a source),
 // and applying again linked it without switching it on, so the step could never read Done.
-// The same apply put it at priority 1 beside justrite, which already held 1.
+// The same apply put it at priority 1 beside tailspin, which already held 1.
 describe('applying again after an undo (AB-82)', () => {
-    const JUSTRITE_STOCK = { stock_id: 3, name: 'Justrite Stock', extension_attributes: { sales_channels: [{ type: 'website' as const, code: 'acme' }] } };
+    const TAILSPIN_STOCK = { stock_id: 3, name: 'Tailspin Stock', extension_attributes: { sales_channels: [{ type: 'website' as const, code: 'acme' }] } };
     const afterUndo = () =>
         store(
             {
                 items: [
                     ...(SOURCES_DEFAULT_ONLY.items ?? []),
-                    { source_code: 'justrite_warehouse', name: 'Justrite Warehouse', enabled: true },
+                    { source_code: 'tailspin_warehouse', name: 'Tailspin Warehouse', enabled: true },
                     { source_code: 'test_warehouse', name: 'Test Warehouse', enabled: false },
                 ],
             },
-            { items: [...(STOCKS_DEFAULT_ONLY.items ?? []), JUSTRITE_STOCK] },
-            { items: [...(LINKS_DEFAULT_ONLY.items ?? []), { stock_id: 3, source_code: 'justrite_warehouse', priority: 1 }] },
+            { items: [...(STOCKS_DEFAULT_ONLY.items ?? []), TAILSPIN_STOCK] },
+            { items: [...(LINKS_DEFAULT_ONLY.items ?? []), { stock_id: 3, source_code: 'tailspin_warehouse', priority: 1 }] },
         );
-    const DEPS_TEST = { websiteCode: 'acme', erpNames: ['Justrite ERP', 'Test ERP'] };
+    const DEPS_TEST = { websiteCode: 'acme', erpNames: ['Tailspin ERP', 'Test ERP'] };
 
     it('says it will switch the warehouse back on, in the plain sentence and the lines', async () => {
         const preview = await warehouseSetup.preview({ commerce: afterUndo(), ...DEPS_TEST });
-        expect(preview.summary).toBe('Add Test Warehouse to Justrite Stock, and switch Test Warehouse back on');
-        expect(preview.changes).toEqual(['Switch Test Warehouse back on', 'Add Test Warehouse to Justrite Stock']);
+        expect(preview.summary).toBe('Add Test Warehouse to Tailspin Stock, and switch Test Warehouse back on');
+        expect(preview.changes).toEqual(['Switch Test Warehouse back on', 'Add Test Warehouse to Tailspin Stock']);
     });
 
     it('switches it on, links it after the stock\'s highest priority, and records both', async () => {
         const commerce = afterUndo();
         const applied = await warehouseSetup.apply({ commerce, ...DEPS_TEST });
         expect(commerce.writes()).toEqual([
-            ['PUT', 'inventory/sources/test_warehouse', { source: { source_code: 'test_warehouse', name: 'Justrite Warehouse', enabled: true, country_id: 'US', postcode: '00000' } }],
+            ['PUT', 'inventory/sources/test_warehouse', { source: { source_code: 'test_warehouse', name: 'Tailspin Warehouse', enabled: true, country_id: 'US', postcode: '00000' } }],
             ['POST', 'inventory/stock-source-links', { links: [{ stock_id: 3, source_code: 'test_warehouse', priority: 2 }] }],
         ]);
         expect(applied.record).toEqual({
@@ -162,7 +162,7 @@ describe('applying again after an undo (AB-82)', () => {
             // The fake's list does not move; what is hashed is the list's row, read after the writes.
             sourceFingerprints: { test_warehouse: expect.any(String) },
         });
-        expect(applied.changes).toEqual(['Switched Test Warehouse back on', 'Added Test Warehouse to Justrite Stock']);
+        expect(applied.changes).toEqual(['Switched Test Warehouse back on', 'Added Test Warehouse to Tailspin Stock']);
     });
 
     it('switches off again, on undo, a warehouse it switched back on', async () => {
@@ -179,21 +179,21 @@ describe('applying again after an undo (AB-82)', () => {
 });
 
 /** The warehouse the apply made, as the sources list answers it once made. */
-const MADE: CommerceInventorySource = { source_code: 'justrite_warehouse', name: 'Justrite Warehouse', enabled: true, country_id: 'US', postcode: '00000' };
+const MADE: CommerceInventorySource = { source_code: 'tailspin_warehouse', name: 'Tailspin Warehouse', enabled: true, country_id: 'US', postcode: '00000' };
 const ACME_STOCK = { stock_id: 7, name: 'acme Stock', extension_attributes: { sales_channels: [{ type: 'website' as const, code: 'acme' }] } };
 const MADE_RECORD = {
     kind: 'warehouse' as const,
-    createdSources: ['justrite_warehouse'],
+    createdSources: ['tailspin_warehouse'],
     createdStock: { id: 7, name: 'acme Stock' },
-    links: [{ stockId: 7, sourceCode: 'justrite_warehouse' }],
-    sourceFingerprints: { justrite_warehouse: fingerprintRow(MADE) },
+    links: [{ stockId: 7, sourceCode: 'tailspin_warehouse' }],
+    sourceFingerprints: { tailspin_warehouse: fingerprintRow(MADE) },
 };
 /** The store as the apply left it, plus whatever a test adds since. */
 const asLeft = (more: { sources?: CommerceInventorySource[]; links?: Array<{ stock_id: number; source_code: string; priority: number }> } = {}) =>
     store(
         { items: [...(SOURCES_DEFAULT_ONLY.items ?? []), ...(more.sources ?? [MADE])] },
         { items: [...(STOCKS_DEFAULT_ONLY.items ?? []), ACME_STOCK] },
-        { items: [...(LINKS_DEFAULT_ONLY.items ?? []), { stock_id: 7, source_code: 'justrite_warehouse', priority: 1 }, ...(more.links ?? [])] },
+        { items: [...(LINKS_DEFAULT_ONLY.items ?? []), { stock_id: 7, source_code: 'tailspin_warehouse', priority: 1 }, ...(more.links ?? [])] },
     );
 
 describe('apply records each source as it left it', () => {
@@ -208,7 +208,7 @@ describe('apply records each source as it left it', () => {
             },
             (_m, path) => (path === 'inventory/stocks' ? 7 : null),
         );
-        const applied = await warehouseSetup.apply({ commerce, websiteCode: 'acme', erpNames: ['Justrite ERP'] });
+        const applied = await warehouseSetup.apply({ commerce, websiteCode: 'acme', erpNames: ['Tailspin ERP'] });
         expect(applied.record).toEqual(MADE_RECORD);
         expect(commerce.get).toHaveBeenLastCalledWith('inventory/sources?searchCriteria[pageSize]=200');
     });
@@ -219,20 +219,20 @@ describe('undo', () => {
         const commerce = asLeft();
         const undone = await warehouseSetup.undo({ commerce, ...DEPS }, MADE_RECORD);
         expect(commerce.writes()).toEqual([
-            ['POST', 'inventory/stock-source-links-delete', { links: [{ stock_id: 7, source_code: 'justrite_warehouse' }] }],
+            ['POST', 'inventory/stock-source-links-delete', { links: [{ stock_id: 7, source_code: 'tailspin_warehouse' }] }],
             ['DELETE', 'inventory/stocks/7', undefined],
-            ['PUT', 'inventory/sources/justrite_warehouse', { source: { source_code: 'justrite_warehouse', name: 'Justrite Warehouse', enabled: false, country_id: 'US', postcode: '00000' } }],
+            ['PUT', 'inventory/sources/tailspin_warehouse', { source: { source_code: 'tailspin_warehouse', name: 'Tailspin Warehouse', enabled: false, country_id: 'US', postcode: '00000' } }],
         ]);
         // By name, never by code (owner, release test row 4.19, 2026-10-26).
         expect(undone).toEqual({
-            changes: ['Took Justrite Warehouse out of acme Stock', 'Deleted acme Stock', "Switched off Justrite Warehouse (Commerce can't delete a warehouse)"],
+            changes: ['Took Tailspin Warehouse out of acme Stock', 'Deleted acme Stock', "Switched off Tailspin Warehouse (Commerce can't delete a warehouse)"],
             rejected: [],
         });
     });
 
     it('leaves a reused stock and a pre-existing source alone', async () => {
-        const commerce = store(undefined, undefined, { items: [...(LINKS_DEFAULT_ONLY.items ?? []), { stock_id: 3, source_code: 'justrite_warehouse', priority: 1 }] });
-        await warehouseSetup.undo({ commerce, ...DEPS }, { kind: 'warehouse', createdSources: [], links: [{ stockId: 3, sourceCode: 'justrite_warehouse' }] });
+        const commerce = store(undefined, undefined, { items: [...(LINKS_DEFAULT_ONLY.items ?? []), { stock_id: 3, source_code: 'tailspin_warehouse', priority: 1 }] });
+        await warehouseSetup.undo({ commerce, ...DEPS }, { kind: 'warehouse', createdSources: [], links: [{ stockId: 3, sourceCode: 'tailspin_warehouse' }] });
         expect(commerce.writes().map(([m, p]) => `${m} ${p}`)).toEqual(['POST inventory/stock-source-links-delete']);
     });
 
@@ -241,7 +241,7 @@ describe('undo', () => {
     it('keeps a stock holding a source the fix did not link, taking out only the fix\'s own link', async () => {
         const commerce = asLeft({ links: [{ stock_id: 7, source_code: 'default', priority: 2 }] });
         const undone = await warehouseSetup.undo({ commerce, ...DEPS }, MADE_RECORD);
-        expect(commerce.writes().map(([m, p]) => `${m} ${p}`)).toEqual(['POST inventory/stock-source-links-delete', 'PUT inventory/sources/justrite_warehouse']);
+        expect(commerce.writes().map(([m, p]) => `${m} ${p}`)).toEqual(['POST inventory/stock-source-links-delete', 'PUT inventory/sources/tailspin_warehouse']);
         expect(undone.kept).toBe('Kept acme Stock: it holds Default Source, which Demo Builder did not add to it.');
         // Owner 2026-10-29: the kept stock stays recorded, its own links and sources gone from the record.
         expect(undone.remaining).toEqual({ kind: 'warehouse', createdSources: [], links: [], createdStock: { id: 7, name: 'acme Stock' } });
@@ -255,16 +255,16 @@ describe('undo', () => {
     });
 
     it('keeps nothing on the record for a source it left on: that source is the SC\'s now', async () => {
-        const commerce = asLeft({ sources: [{ ...MADE, name: 'Justrite Main DC' }] });
+        const commerce = asLeft({ sources: [{ ...MADE, name: 'Tailspin Main DC' }] });
         const undone = await warehouseSetup.undo({ commerce, ...DEPS }, MADE_RECORD);
         expect(undone.remaining).toBeUndefined();
     });
 
     it('keeps a source switched on that was changed since the fix left it', async () => {
-        const commerce = asLeft({ sources: [{ ...MADE, name: 'Justrite Main DC' }] });
+        const commerce = asLeft({ sources: [{ ...MADE, name: 'Tailspin Main DC' }] });
         const undone = await warehouseSetup.undo({ commerce, ...DEPS }, MADE_RECORD);
         expect(commerce.writes().map(([m, p]) => `${m} ${p}`)).toEqual(['POST inventory/stock-source-links-delete', 'DELETE inventory/stocks/7']);
-        expect(undone.kept).toBe('Kept Justrite Main DC switched on: it was changed after Demo Builder set it up.');
+        expect(undone.kept).toBe('Kept Tailspin Main DC switched on: it was changed after Demo Builder set it up.');
     });
 
     it('keeps a source on, saying why, when the record holds no hash of it (written before 2026-10-29)', async () => {
@@ -272,7 +272,7 @@ describe('undo', () => {
         const { sourceFingerprints: _hashes, ...old } = MADE_RECORD;
         const undone = await warehouseSetup.undo({ commerce, ...DEPS }, old);
         expect(commerce.writes().map(([m, p]) => `${m} ${p}`)).toEqual(['POST inventory/stock-source-links-delete', 'DELETE inventory/stocks/7']);
-        expect(undone.kept).toBe('Kept Justrite Warehouse switched on: Demo Builder cannot tell it is still as it left it.');
+        expect(undone.kept).toBe('Kept Tailspin Warehouse switched on: Demo Builder cannot tell it is still as it left it.');
     });
 
     it('writes nothing for a source already off or a link already gone', async () => {

@@ -21,15 +21,15 @@ function savedState(): SavedState & { values: Map<string, unknown> } {
 describe('DeletedWorkspaceNames', () => {
     it('keeps names across a reload, through the saved state', async () => {
         const state = savedState();
-        await new DeletedWorkspaceNames(state, () => 0).remember('proj-1', 'JustriteERP');
+        await new DeletedWorkspaceNames(state, () => 0).remember('proj-1', 'TailspinERP');
 
-        expect(new DeletedWorkspaceNames(state, () => 60_000).resting('proj-1')).toEqual(['JustriteERP']);
+        expect(new DeletedWorkspaceNames(state, () => 60_000).resting('proj-1')).toEqual(['TailspinERP']);
     });
 
     it('lets a name go once it has rested', async () => {
         let now = 0;
         const names = new DeletedWorkspaceNames(savedState(), () => now);
-        await names.remember('proj-1', 'JustriteERP');
+        await names.remember('proj-1', 'TailspinERP');
 
         now = NAME_REST_MS;
 
@@ -53,12 +53,12 @@ describe('DeletedWorkspaceNames', () => {
     it('holds a name deleted twice once, restarting its rest', async () => {
         let now = 0;
         const names = new DeletedWorkspaceNames(savedState(), () => now);
-        await names.remember('proj-1', 'JustriteERP');
+        await names.remember('proj-1', 'TailspinERP');
         now = NAME_REST_MS - 1;
-        await names.remember('proj-1', 'justriteerp');
+        await names.remember('proj-1', 'tailspinerp');
         now = NAME_REST_MS + 1;
 
-        expect(names.resting('proj-1')).toEqual(['justriteerp']);
+        expect(names.resting('proj-1')).toEqual(['tailspinerp']);
     });
 
     it('reads nothing from a saved value of the wrong shape', () => {
@@ -71,6 +71,6 @@ describe('DeletedWorkspaceNames', () => {
     it('does not throw when the save fails', async () => {
         const state = { get: () => undefined, update: () => Promise.reject(new Error('disk')) };
 
-        await expect(new DeletedWorkspaceNames(state).remember('proj-1', 'JustriteERP')).resolves.toBeUndefined();
+        await expect(new DeletedWorkspaceNames(state).remember('proj-1', 'TailspinERP')).resolves.toBeUndefined();
     });
 });

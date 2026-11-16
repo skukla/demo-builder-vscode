@@ -25,7 +25,7 @@ const step = (id: string, over: Partial<SetupChecklistItem> = {}): SetupChecklis
 });
 
 const FIX = { kind: 'handler' as const, handler: 'create-erp-attributes' as const };
-/** Justrite's list, 2026-10-26: two Demo Builder can apply, one by hand, one optional, one done. */
+/** Tailspin's list, 2026-10-26: two Demo Builder can apply, one by hand, one optional, one done. */
 const ITEMS = [
     step('done', { state: 'done', setup: FIX, applicable: true }),
     step('warehouse', { setup: FIX, applicable: true }),

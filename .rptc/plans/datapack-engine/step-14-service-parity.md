@@ -54,7 +54,7 @@ Each group is built on its own branch off `loop/2026-10-05-release-candidate`, t
 9. A product's `additional_attributes` become custom attributes (`ProductImportProcessor.js` L97-114).
    **Built** (`85fe6315e`). No pack on this machine or in the library audit is known to carry it.
 
-#### G2 live test (owner; `scratch-1028`, website `justrite_test_website` only; ends at zero)
+#### G2 live test (owner; `scratch-1028`, website `tailspin_test_website` only; ends at zero)
 
 A test pack `zz-g2-parity`, loaded from a file into the library. No sources (Commerce cannot delete
 one, so a source would never get back to zero).
@@ -70,10 +70,10 @@ one, so a source would never get back to zero).
 
 1. Read only: `GET directory/countries/US` (expect `available_regions[]` with `id`, `code`, `name`;
    anything else, stop: item 7's read is wrong). `GET sharedCatalog` (note the public catalog's id
-   and group). `GET inventory/stocks` (note which stock sells to `justrite_test_website`).
+   and group). `GET inventory/stocks` (note which stock sells to `tailspin_test_website`).
 2. Preview the install (`validate_datapack_import`), then install it (`start_datapack_import`).
    Expect in Debug Logs: the attribute made, then two option writes; `ZZ G2 Stock` selling to
-   `justrite_test_website`; `ZZ-G2-1` made; the company made; "used shared catalog <the public
+   `tailspin_test_website`; `ZZ-G2-1` made; the company made; "used shared catalog <the public
    catalog's name> for ZZ G2 Catalog: its customer group already has that catalog". Then either
    "assigned 1 to shared catalog ZZ G2 Catalog", or no assignment line at all if Commerce put the
    new product in the public catalog itself (the trimmed SKU then matched; untrimmed, it would not).
@@ -84,7 +84,7 @@ one, so a source would never get back to zero).
 4. Remove the pack (`reset_datapack`, confirm). Expect a PUT then a DELETE on `ZZ G2 Stock`, and the
    website back on the stock from step 1. If the DELETE is refused, note Commerce's words.
 5. Back at zero: `GET inventory/stocks` has no `ZZ G2 Stock`, and step 1's stock sells to
-   `justrite_test_website` again; `GET products/ZZ-G2-1` and `GET products/attributes/zz_g2_color`
+   `tailspin_test_website` again; `GET products/ZZ-G2-1` and `GET products/attributes/zz_g2_color`
    answer 404; no `ZZ G2 Company`; no customer `zz.g2.admin@example.com`; the public catalog no
    longer holds `ZZ-G2-1` and still exists; `list_installed_datapacks` shows no `zz-g2-parity`.
    Then remove `zz-g2-parity` from the library (`delete_library_datapack`).
@@ -153,4 +153,4 @@ No live calls (no Commerce, no Data Installer, no cloud). TDD. `gate` before the
 Commits on the group's branch carry `Backlog:`; no AI trailers. Do not bump
 `AI_CONTEXT_VERSION`: say which skill templates changed and it is bumped once at the merge. Each
 group ends with a live-test script for the owner, run on `scratch-1028` /
-`justrite_test_website` only, back to zero.
+`tailspin_test_website` only, back to zero.

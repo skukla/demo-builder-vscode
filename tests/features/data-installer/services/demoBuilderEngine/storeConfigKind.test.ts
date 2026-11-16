@@ -197,8 +197,8 @@ describe('putting settings back', () => {
 });
 
 /**
- * Live, scratch-1028, 2026-10-30: the pack went to `justrite_test_website`, the project's own
- * website is JustRite's, and the preview read the setting at JustRite's (10, not the 15 written)
+ * Live, scratch-1028, 2026-10-30: the pack went to `tailspin_test_website`, the project's own
+ * website is Tailspin's, and the preview read the setting at Tailspin's (10, not the 15 written)
  * and called it "changed in the Admin". A recorded setting is read where the record says it was
  * written, whatever website the caller is pointed at.
  */

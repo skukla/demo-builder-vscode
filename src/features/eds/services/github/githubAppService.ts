@@ -271,7 +271,7 @@ export class GitHubAppService {
         // inside an HTTP 200 body, so the outer classification never sees it.
         //
         // 400 is NOT an answer. It used to be read as "installed, initializing".
-        // Measured on skukla/kukla-justrite (EDS-23): 400 on 2026-09-30 while the
+        // Measured on skukla/kukla-tailspin (EDS-23): 400 on 2026-09-30 while the
         // App did not cover the repository — the code endpoint said `[admin] github
         // bot not installed on repository.` — and STILL 400 after the owner added
         // the repository and its code served 200. So it tells you neither state.

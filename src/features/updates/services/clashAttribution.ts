@@ -3,7 +3,7 @@
  *
  * Demo Builder's own pieces are set aside before Adobe's change (`setAsidePieces.ts`), so a file
  * that still clashes holds somebody's edit. On a storefront copied from a colleague's demo it is
- * often the colleague's, brought along at copy time: JustRite's header.js carries Khalil's
+ * often the colleague's, brought along at copy time: Tailspin's header.js carries PersonB's
  * "Request a Quote" change (2026-10-30). That is told apart by one comparison: when the file in
  * the storefront is byte-for-byte the colleague's version at the commit the storefront last
  * matched, the edit came with the demo. Anything else, or anything that cannot be read, is

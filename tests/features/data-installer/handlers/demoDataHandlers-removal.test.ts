@@ -45,8 +45,8 @@ const PROJECT = createMockProject({
     componentSelections: { backend: 'adobe-commerce-accs' },
     componentConfigs: {
         'adobe-commerce-accs': {
-            ACCS_WEBSITE_CODE: 'justrite_test_website',
-            ACCS_STORE_VIEW_CODE: 'justrite_test_view',
+            ACCS_WEBSITE_CODE: 'tailspin_test_website',
+            ACCS_STORE_VIEW_CODE: 'tailspin_test_view',
         },
     },
     datapack: { name: 'zz-test', version: '1' },
@@ -174,7 +174,7 @@ describe('Clear Commerce Instance through the real removal (step 06 C4)', () => 
             return { ran: true, outcome: 'success' };
         });
         const handlers = createDemoDataHandlers(deps);
-        const token = ((await handlers['check-demo-data'](context, { websites: ['justrite_test_website'] })).data as ClearCheck).token;
+        const token = ((await handlers['check-demo-data'](context, { websites: ['tailspin_test_website'] })).data as ClearCheck).token;
 
         const res = await handlers['clear-commerce-instance'](context, { token, confirm: true, understood: true });
 

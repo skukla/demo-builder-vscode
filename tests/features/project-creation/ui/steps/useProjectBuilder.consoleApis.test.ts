@@ -196,13 +196,13 @@ describe('useProjectBuilder — naming the ERP pair', () => {
     it('records the typed name as the ERP\'s and the catalog name as the integration\'s', () => {
         const { result, updateState } = setup({ componentConfigs: { 'erp-integration': { ERP_BASE_URL: 'x' } } });
         act(() => {
-            result.current.onAppBuilderComponentToggle('erp-integration', true, 'JustRite ERP Integration');
+            result.current.onAppBuilderComponentToggle('erp-integration', true, 'Tailspin ERP Integration');
         });
         expect(updateState.mock.calls[0][0].componentConfigs).toEqual({
             'erp-integration': {
                 ERP_BASE_URL: 'x',
                 INTEGRATION_DISPLAY_NAME: 'ERP Integration',
-                ERP_DISPLAY_NAME: 'JustRite ERP',
+                ERP_DISPLAY_NAME: 'Tailspin ERP',
             },
         });
     });
@@ -248,14 +248,14 @@ describe('useProjectBuilder — naming the ERP pair', () => {
     it('Settings renames the ERP alone, by the rule the add used', () => {
         const { result, updateState } = setup(NAMED);
         act(() => {
-            result.current.onRenamePairedSystem('erp-integration', 'Justrite');
+            result.current.onRenamePairedSystem('erp-integration', 'Tailspin');
         });
         expect(updateState).toHaveBeenCalledWith({
             componentConfigs: {
                 'erp-integration': {
                     ERP_BASE_URL: 'x',
                     INTEGRATION_DISPLAY_NAME: 'ERP Integration',
-                    ERP_DISPLAY_NAME: 'Justrite ERP',
+                    ERP_DISPLAY_NAME: 'Tailspin ERP',
                 },
             },
         });

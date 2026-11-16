@@ -23,13 +23,13 @@ jest.mock('@/features/data-installer/handlers/dataInstallerHandlers', () => ({
 
 const mockAccess = resolveDataInstallerAccess as jest.Mock;
 
-const ID = { name: 'justrite', version: 'v1' };
-const DETAIL: DatapackDetail = { id: ID, displayName: 'Justrite B2B', shared: true, dataTypes: ['categories'], art: {} };
+const ID = { name: 'tailspin', version: 'v1' };
+const DETAIL: DatapackDetail = { id: ID, displayName: 'Tailspin B2B', shared: true, dataTypes: ['categories'], art: {} };
 const ROWS = [{ category: { name: 'Signs' } }];
 const INSTALLER = 'https://installer.example.test/api/v1/web/data-installer';
 const LIBRARY = 'https://library.example.test/api/v1/web/datapack-store';
 
-const PACK: DatapackFile = { id: ID, displayName: 'Justrite B2B', items: [{ dataType: 'categories', records: ROWS }] };
+const PACK: DatapackFile = { id: ID, displayName: 'Tailspin B2B', items: [{ dataType: 'categories', records: ROWS }] };
 
 const library = { getDatapackDetail: jest.fn(), getDataItem: jest.fn(), findDatapacks: jest.fn() };
 const installer = { getDatapackDetail: jest.fn(), getDataItem: jest.fn(), findDatapacks: jest.fn() };
@@ -80,18 +80,18 @@ afterEach(() => fs.rmSync(dir, { recursive: true, force: true }));
 
 describe('save-datapack-zip', () => {
     const save = datapackZipHandlers['save-datapack-zip'];
-    const body = { datapackName: 'justrite', version: 'v1', path: 'out.zip' };
+    const body = { datapackName: 'tailspin', version: 'v1', path: 'out.zip' };
 
     it('carries the newest layer from the library as the second section, and says so', async () => {
-        library.findDatapacks.mockResolvedValue({ items: [libraryRow('justrite-settings', '3', { displayName: 'Justrite settings' })], count: 1 });
+        library.findDatapacks.mockResolvedValue({ items: [libraryRow('tailspin-settings', '3', { displayName: 'Tailspin settings' })], count: 1 });
 
         const result = await save(context(), body);
 
-        expect(library.findDatapacks).toHaveBeenCalledWith({ datapackName: 'justrite-settings' });
-        expect(result).toMatchObject({ success: true, data: { dataTypes: ['categories'], settingsLayer: { datapackName: 'justrite-settings', version: '3', settings: 1 } } });
+        expect(library.findDatapacks).toHaveBeenCalledWith({ datapackName: 'tailspin-settings' });
+        expect(result).toMatchObject({ success: true, data: { dataTypes: ['categories'], settingsLayer: { datapackName: 'tailspin-settings', version: '3', settings: 1 } } });
         expect(readDatapackZip(fs.readFileSync(path.join(dir, 'out.zip'))).settingsLayer).toEqual({
-            id: { name: 'justrite-settings', version: '3' },
-            displayName: 'Justrite settings',
+            id: { name: 'tailspin-settings', version: '3' },
+            displayName: 'Tailspin settings',
             records: [settingRow(GRID, '24')],
         });
     });
@@ -107,7 +107,7 @@ describe('save-datapack-zip', () => {
     });
 
     it('writes no file a load would refuse, naming the path', async () => {
-        library.findDatapacks.mockResolvedValue({ items: [libraryRow('justrite-settings', '3')], count: 1 });
+        library.findDatapacks.mockResolvedValue({ items: [libraryRow('tailspin-settings', '3')], count: 1 });
         library.getDataItem.mockResolvedValue({ dataType: 'store_config', records: [settingRow('web/secure/base_url', 'x')] });
 
         const result = await save(context(), body);
@@ -141,7 +141,7 @@ describe('open-datapack-zip', () => {
 
         expect(result).toMatchObject({
             success: true,
-            data: { dataTypes: ['categories'], settingsLayer: { datapackName: 'justrite-settings', version: '3', settings: 1, paths: [GRID] } },
+            data: { dataTypes: ['categories'], settingsLayer: { datapackName: 'tailspin-settings', version: '3', settings: 1, paths: [GRID] } },
         });
         expect(fetchMock).not.toHaveBeenCalled();
     });
@@ -166,22 +166,22 @@ describe('load-datapack-zip', () => {
         const result = await load(context(), { path: fileWith({ ...PACK, settingsLayer: fileLayer() }) });
 
         expect(writes()).toEqual([
-            'library create-datapack justrite@v1',
-            'library add-data-item justrite@v1 categories',
-            'library create-datapack justrite-settings@3',
-            'library add-data-item justrite-settings@3 store_config',
+            'library create-datapack tailspin@v1',
+            'library add-data-item tailspin@v1 categories',
+            'library create-datapack tailspin-settings@3',
+            'library add-data-item tailspin-settings@3 store_config',
         ]);
-        expect(result).toMatchObject({ success: true, data: { target: 'library', pack: 'created', settingsLayer: { datapackName: 'justrite-settings', version: '3', outcome: 'created' } } });
+        expect(result).toMatchObject({ success: true, data: { target: 'library', pack: 'created', settingsLayer: { datapackName: 'tailspin-settings', version: '3', outcome: 'created' } } });
     });
 
     it('with the data going to the Data Installer, still puts the layer in the library', async () => {
-        const result = await load(context(), { path: fileWith({ ...PACK, settingsLayer: fileLayer() }), target: 'installer', confirmName: 'justrite' });
+        const result = await load(context(), { path: fileWith({ ...PACK, settingsLayer: fileLayer() }), target: 'installer', confirmName: 'tailspin' });
 
         expect(writes()).toEqual([
-            'installer create-datapack justrite@v1',
-            'installer add-data-item justrite@v1 categories',
-            'library create-datapack justrite-settings@3',
-            'library add-data-item justrite-settings@3 store_config',
+            'installer create-datapack tailspin@v1',
+            'installer add-data-item tailspin@v1 categories',
+            'library create-datapack tailspin-settings@3',
+            'library add-data-item tailspin-settings@3 store_config',
         ]);
         expect(result).toMatchObject({ success: true, data: { target: 'installer', settingsLayer: { outcome: 'created' } } });
     });
@@ -189,7 +189,7 @@ describe('load-datapack-zip', () => {
     it('loads an older file with no section exactly as before: one store, two writes', async () => {
         const result = await load(context(), { path: fileWith(PACK) });
 
-        expect(writes()).toEqual(['library create-datapack justrite@v1', 'library add-data-item justrite@v1 categories']);
+        expect(writes()).toEqual(['library create-datapack tailspin@v1', 'library add-data-item tailspin@v1 categories']);
         expect(result.data).not.toHaveProperty('settingsLayer');
     });
 
@@ -208,7 +208,7 @@ describe('load-datapack-zip', () => {
 
         const result = await load(context(), { path: fileWith({ ...PACK, settingsLayer: fileLayer() }) });
 
-        expect(writes()).not.toContain('library add-data-item justrite-settings@3 store_config');
+        expect(writes()).not.toContain('library add-data-item tailspin-settings@3 store_config');
         expect(result).toMatchObject({ success: true, data: { pack: 'created', settingsLayer: { outcome: 'left', reason: expect.stringContaining('already') } } });
     });
 
@@ -217,13 +217,13 @@ describe('load-datapack-zip', () => {
 
         const result = await load(context(), { path: fileWith({ ...PACK, settingsLayer: fileLayer() }), update: true });
 
-        expect(writes()).toContain('library add-data-item justrite-settings@3 store_config');
+        expect(writes()).toContain('library add-data-item tailspin-settings@3 store_config');
         expect(result).toMatchObject({ data: { pack: 'updated', settingsLayer: { outcome: 'updated' } } });
     });
 
     it('keeps the data and says why when the library refuses the layer', async () => {
         fetchMock.mockImplementation(async (url: string, init: RequestInit) => {
-            const refused = String(init.body).includes('justrite-settings');
+            const refused = String(init.body).includes('tailspin-settings');
             return refused ? { ok: false, status: 403, text: async () => '{"error":"not yours"}' } : { ok: true, status: 201, text: async () => '{}' };
         });
 
@@ -237,9 +237,9 @@ describe('load-datapack-zip', () => {
             store === 'library' ? { ok: false, response: { success: false, error: 'The datapack library is not set up.' } } : { ok: true, client: installer, baseUrl: INSTALLER, getToken: async () => 'tok' },
         );
 
-        const result = await load(context(), { path: fileWith({ ...PACK, settingsLayer: fileLayer() }), target: 'installer', confirmName: 'justrite' });
+        const result = await load(context(), { path: fileWith({ ...PACK, settingsLayer: fileLayer() }), target: 'installer', confirmName: 'tailspin' });
 
-        expect(writes()).toEqual(['installer create-datapack justrite@v1', 'installer add-data-item justrite@v1 categories']);
+        expect(writes()).toEqual(['installer create-datapack tailspin@v1', 'installer add-data-item tailspin@v1 categories']);
         expect(result).toMatchObject({ success: true, data: { settingsLayer: { outcome: 'failed', reason: 'The datapack library is not set up.' } } });
     });
 });

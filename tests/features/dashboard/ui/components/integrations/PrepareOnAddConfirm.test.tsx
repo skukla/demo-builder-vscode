@@ -23,7 +23,7 @@ import {
 } from '@/features/dashboard/ui/components/integrations/PrepareOnAddConfirm';
 import type { PreparationStepReport } from '@/types/storePreparation';
 
-const PAYLOAD = { id: 'erp-integration', name: 'Justrite ERP', apis: [] };
+const PAYLOAD = { id: 'erp-integration', name: 'Tailspin ERP', apis: [] };
 const TARGET = { id: 'erp-integration', name: 'ERP Integration', payload: PAYLOAD };
 const STEPS: PreparationStepReport[] = [
     { id: 'price-scope', label: 'Price scope', title: 'Set the catalog price scope to Website', state: 'applicable', changes: ['catalog/price/scope at the default scope: 0 → 1'], rejected: [] },

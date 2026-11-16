@@ -287,9 +287,9 @@ describe('a removal', () => {
     // Step 12: the store's root kept for it, with the Admin step that frees it.
     it('says a removal kept the root for a store, amber, and hands over its Admin step', () => {
         const keptRoot = {
-            store: 'Justrite Test Store',
+            store: 'Tailspin Test Store',
             category: 'ZZ Root DB12',
-            restore: 'Justrite Catalog',
+            restore: 'Tailspin Catalog',
         };
 
         expect(
@@ -303,7 +303,7 @@ describe('a removal', () => {
             variant: 'warning',
             title: `One Step Left to Uninstall ${PACK_NAME}`,
             message:
-                "Justrite Test Store still uses the datapack's root category, ZZ Root DB12, so it stayed.",
+                "Tailspin Test Store still uses the datapack's root category, ZZ Root DB12, so it stayed.",
             keptRoot,
             finished: true,
         });

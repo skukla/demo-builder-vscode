@@ -133,7 +133,7 @@ export async function republishCodeIfMissed(
  * Confirm the site serves everything the reset committed after its own commit (the
  * build step's fixes, the blocks, the smart 404 handler), publishing again any file it
  * does not (`codeServed.ts`). The publish before it reads AEM's copy of the repository,
- * which can lag the last few commits: on 2026-10-23 JustRite's reset left the site on
+ * which can lag the last few commits: on 2026-10-23 Tailspin's reset left the site on
  * the old code for all three of its fixes.
  *
  * @param params - reset parameters (the repository)

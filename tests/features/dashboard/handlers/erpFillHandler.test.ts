@@ -108,16 +108,16 @@ describe('handleLoadErpDemoData', () => {
         expect(mockResolvedSettings).toHaveBeenCalledWith(['bodea'], 'northwind');
     });
 
-    // Justrite, 2026-10-22: the ERP's default sales organisation is the project's website's.
+    // Tailspin, 2026-10-22: the ERP's default sales organisation is the project's website's.
     it("hands the fill the project's own website, from its store scope", async () => {
         const { mockContext } = setup({
             ...pairProject(),
             componentSelections: { backend: 'adobe-commerce-accs' },
-            componentConfigs: { 'adobe-commerce-accs': { ACCS_WEBSITE_CODE: 'justrite' } },
+            componentConfigs: { 'adobe-commerce-accs': { ACCS_WEBSITE_CODE: 'tailspin' } },
         });
         await handleLoadErpDemoData(mockContext, { id: 'erp-integration' });
 
-        expect(handedDeps().homeWebsite).toBe('justrite');
+        expect(handedDeps().homeWebsite).toBe('tailspin');
     });
 
     it('hands the fill a Commerce read that carries the status when Commerce refuses', async () => {

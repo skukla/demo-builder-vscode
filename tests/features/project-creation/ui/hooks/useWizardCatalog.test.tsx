@@ -155,7 +155,7 @@ describe('useWizardCatalog', () => {
 });
 
 describe('usePackageCards — the cards the grid shows', () => {
-    const JEN = makeAddedDemo();
+    const ROBIN = makeAddedDemo();
     const CATALOG: DemoPackage[] = [{ id: 'test-package', name: 'Test Package' } as DemoPackage];
     const setPackages = jest.fn();
     const loaded = { packages: CATALOG, setPackages, packagesLoaded: true };
@@ -181,10 +181,10 @@ describe('usePackageCards — the cards the grid shows', () => {
 
     it('appends one card per added demo after the catalog', () => {
         const state = stateOn('test-package');
-        const added = [JEN];
+        const added = [ROBIN];
         const { result } = renderHook(() => usePackageCards({ catalog: loaded, addedDemos: added, state }));
 
-        expect(result.current.map((p) => p.id)).toEqual(['test-package', addedDemoId(JEN)]);
+        expect(result.current.map((p) => p.id)).toEqual(['test-package', addedDemoId(ROBIN)]);
     });
 
     it('shows a demo added mid-session as a card on the next render', () => {
@@ -196,14 +196,14 @@ describe('usePackageCards — the cards the grid shows', () => {
         );
         expect(result.current).toBe(CATALOG);
 
-        rerender({ addedDemos: [JEN] });
+        rerender({ addedDemos: [ROBIN] });
 
-        expect(result.current.map((p) => p.id)).toEqual(['test-package', addedDemoId(JEN)]);
+        expect(result.current.map((p) => p.id)).toEqual(['test-package', addedDemoId(ROBIN)]);
     });
 
     it("never looks an added demo's id up in the catalog", async () => {
-        const state = stateOn(addedDemoId(JEN));
-        renderHook(() => usePackageCards({ catalog: loaded, addedDemos: [JEN], state }));
+        const state = stateOn(addedDemoId(ROBIN));
+        renderHook(() => usePackageCards({ catalog: loaded, addedDemos: [ROBIN], state }));
 
         await waitFor(() => {
             expect(document.querySelector('body')).toBeTruthy();

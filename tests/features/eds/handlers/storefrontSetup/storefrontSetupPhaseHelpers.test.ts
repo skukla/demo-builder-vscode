@@ -475,7 +475,7 @@ describe('checkGitHubAppForExistingRepo', () => {
  * installing the App cannot supply a credential.
  */
 /**
- * EDS-23. `/status` answered an inner 400 for skukla/kukla-justrite both before the
+ * EDS-23. `/status` answered an inner 400 for skukla/kukla-tailspin both before the
  * App covered the repository and after. It cannot decide this gate, and failing
  * setup on it would block every repository stuck at 400 — working ones included.
  * Phase 3 decides by the code endpoint's x-error, which does say.
@@ -506,7 +506,7 @@ describe('checkGitHubAppForExistingRepo — an inner 400 that says nothing', () 
 
     /**
      * The hand-on is for an UNDETERMINED inner 400 only. An installed App whose
-     * code status reads 400 is a verdict (kukla-justrite read exactly that once
+     * code status reads 400 is a verdict (kukla-tailspin read exactly that once
      * the App covered it), so the gate passes with nothing more to say; and a
      * definitive "not installed" beside a 400 still earns the dialog.
      */

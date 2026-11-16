@@ -4,7 +4,7 @@
  * install record it respects lists, decided from reads alone. Writes nothing; `wipeRun.ts` carries
  * the plan out, and `clearCheck.ts` answers it as the check's rows and record lists.
  *
- * The sandbox holds several demos at once (JustRite's live demo, Bodea, BJU, CitiSignal), so what the
+ * The sandbox holds several demos at once (Tailspin's live demo, Bodea, CLIENT_C, CitiSignal), so what the
  * websites own is judged against the whole chosen set (`wipeScope.ts`):
  *
  * | Kind | Done | Kept |

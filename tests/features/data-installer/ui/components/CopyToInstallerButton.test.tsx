@@ -14,7 +14,7 @@ import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { CopyToInstallerButton } from '@/features/data-installer/ui/components/CopyToInstallerButton';
 
 const mockRequest = webviewClient.request as jest.Mock;
-const ID = { name: 'justrite', version: 'v1' };
+const ID = { name: 'tailspin', version: 'v1' };
 
 function answer(response: unknown): void {
     mockRequest.mockReset();
@@ -31,7 +31,7 @@ it('says the copy is shared and permanent before anything is sent', () => {
     answer({ success: true, data: { stored: [], failed: [] } });
     render(<CopyToInstallerButton id={ID} />);
 
-    expect(screen.getByText(/Other teams will see justrite/)).toBeInTheDocument();
+    expect(screen.getByText(/Other teams will see tailspin/)).toBeInTheDocument();
     expect(screen.getByText(/cannot be removed from here/)).toBeInTheDocument();
     expect(mockRequest).not.toHaveBeenCalled();
 });
@@ -43,7 +43,7 @@ it('sends the pack with its name back, then says it landed', async () => {
 
     expect(mockRequest.mock.calls[0].slice(0, 2)).toEqual([
         'copy-library-datapack-to-installer',
-        { datapackName: 'justrite', version: 'v1', confirmName: 'justrite' },
+        { datapackName: 'tailspin', version: 'v1', confirmName: 'tailspin' },
     ]);
     expect(screen.getByText('Copied into the Data Installer.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Import' })).not.toBeInTheDocument();
@@ -68,12 +68,12 @@ it('names what did not land, and why, when part of the pack did not', async () =
 });
 
 it('shows a refusal in the handler words and keeps the button', async () => {
-    answer({ success: false, error: 'justrite@v1 already exists in that store.' });
+    answer({ success: false, error: 'tailspin@v1 already exists in that store.' });
 
     await copyIt();
 
     expect(
-        screen.getByText('It was not copied: justrite@v1 already exists in that store.')
+        screen.getByText('It was not copied: tailspin@v1 already exists in that store.')
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Copy to the Data Installer' })).toBeInTheDocument();
 });

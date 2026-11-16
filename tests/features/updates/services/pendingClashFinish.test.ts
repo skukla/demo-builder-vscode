@@ -2,14 +2,14 @@
  * finishClash and leaveClash — the one place a clash fixed with AI is pushed, and every
  * check before it (EDS-57 step 5), run against real git.
  *
- * Each case keeps JustRite's header clash first (keepClash, the real path), then plays the
+ * Each case keeps Tailspin's header clash first (keepClash, the real path), then plays the
  * AI's part by writing the file, then finishes. "GitHub" is local bare repositories.
  */
 
 // FIRST: this module owns the jest.mock calls the imports below must see.
 import {
     HEADER_ADOBE,
-    HEADER_KHALIL,
+    HEADER_PERSON_B,
     REAL_GIT_TIMEOUT_MS,
     TEMPLATE,
     finishClash,
@@ -95,7 +95,7 @@ describe('finishClash', () => {
         expect(deps.ctx.stateManager.saveProject).toHaveBeenCalledWith(project);
     }, REAL_GIT_TIMEOUT_MS);
 
-    // The git-sync hook committed and pushed JustRite's whole update at the AI's first
+    // The git-sync hook committed and pushed Tailspin's whole update at the AI's first
     // edit (2026-10-21); finishing then refused it as changing files beyond the clash.
     it('finishes an update the git-sync hook already committed and pushed, with no second commit', async () => {
         const { project, deps } = await keptProject();
@@ -124,7 +124,7 @@ describe('finishClash', () => {
         expect(readBoilerplateBase(project)?.commit).toBe(fx.t2);
     }, REAL_GIT_TIMEOUT_MS);
 
-    // Git shortens a file's id to as many characters as it needs that day: JustRite's record
+    // Git shortens a file's id to as many characters as it needs that day: Tailspin's record
     // held 9, and git said 8 at finishing, so an untouched .gitattributes read as changed
     // (2026-10-24). A record written with short ids still matches the same files.
     it('finishes when the record holds file ids shortened to a different length than git uses now', async () => {
@@ -148,7 +148,7 @@ describe('finishClash', () => {
     }, REAL_GIT_TIMEOUT_MS);
 
     // Storefronts made before 2026-10-22 hold our stub where Adobe's checkout labels belong,
-    // and read "undefined" (JustRite). Finishing is an update's push too, so it repairs them.
+    // and read "undefined" (Tailspin). Finishing is an update's push too, so it repairs them.
     it("puts Adobe's checkout labels back over our stub in the same commit, and says so", async () => {
         const { project, deps } = await keptProject(() => {
             write(fx.local, 'placeholders/checkout.json', OLD_SINGLE_SHEET_STUB_JSON);
@@ -243,7 +243,7 @@ describe('finishClash', () => {
 
         expect(pushedHead()).toBe(before);
         expect(git(fx.local, 'status', '--porcelain')).toBe('');
-        expect(read('blocks/header/header.js')).toBe(HEADER_KHALIL);
+        expect(read('blocks/header/header.js')).toBe(HEADER_PERSON_B);
         expect(readPendingClash(project)).toBeUndefined();
         expect(readBoilerplateBase(project)?.commit).toBe(fx.t1);
     }, REAL_GIT_TIMEOUT_MS);
@@ -326,7 +326,7 @@ describe('leaveClash', () => {
         await leaveClash(project, deps.ctx);
 
         expect(git(fx.local, 'status', '--porcelain')).toBe('');
-        expect(read('blocks/header/header.js')).toBe(HEADER_KHALIL);
+        expect(read('blocks/header/header.js')).toBe(HEADER_PERSON_B);
         expect(read('blocks/header/header.js')).not.toBe(HEADER_ADOBE);
         await expect(hasKeptClash(fx.local)).resolves.toBe(false);
         expect(readPendingClash(project)).toBeUndefined();

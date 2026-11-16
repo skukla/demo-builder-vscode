@@ -6,7 +6,7 @@
  * reset door can never disagree about where the demo is.
  *
  * `unknown` when the read failed for a reason other than "not found": no notice.
- * `warning` carries the sentence the notice shows ("Jen's demo can't be
+ * `warning` carries the sentence the notice shows ("Robin's demo can't be
  * reached. Reset and updates are unavailable until it is.", or the content
  * site's own line). `ok` for a project with no added demo, so the notice never
  * appears for a shipped brand. Re-runnable: "Change source" re-requests status

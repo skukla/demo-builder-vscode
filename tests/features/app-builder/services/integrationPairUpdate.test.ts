@@ -37,11 +37,11 @@ function pairProject(
     erp: Partial<AppBuilderComponentState> = {},
 ): Project {
     return createMockProject({
-        name: 'Justrite',
-        path: '/p/justrite',
+        name: 'Tailspin',
+        path: '/p/tailspin',
         appBuilderComponents: {
             'erp-integration': deployed({ systems: ['demo-erp'], ...integration }),
-            'demo-erp': deployed({ kind: 'system', name: 'Justrite ERP', usedBy: 'erp-integration', ...erp }),
+            'demo-erp': deployed({ kind: 'system', name: 'Tailspin ERP', usedBy: 'erp-integration', ...erp }),
         },
     });
 }
@@ -93,7 +93,7 @@ describe('pairUpdateOrder', () => {
 describe('componentNameOf', () => {
     it('is the recorded name, else the id', () => {
         const project = pairProject();
-        expect(componentNameOf(project, 'demo-erp')).toBe('Justrite ERP');
+        expect(componentNameOf(project, 'demo-erp')).toBe('Tailspin ERP');
         expect(componentNameOf(project, 'nope')).toBe('nope');
     });
 });
@@ -108,7 +108,7 @@ describe('updateIntegrationPair', () => {
         expect(result).toEqual({ success: true, detail: 'Updated from a to b.' });
         expect(mockUpdate.mock.calls.map((call) => call[1])).toEqual(['demo-erp', 'erp-integration']);
         expect(runnerDepsFor.mock.calls.map(([position]) => position)).toEqual([
-            { index: 1, total: 2, name: 'Justrite ERP' },
+            { index: 1, total: 2, name: 'Tailspin ERP' },
             { index: 2, total: 2, name: 'ERP Integration' },
         ]);
         // The runner gets the deps built for that member, not another's.
@@ -146,14 +146,14 @@ describe('updateIntegrationPair', () => {
 
         expect(result).toEqual({
             success: false,
-            error: 'Justrite ERP did not update, so ERP Integration was left as it is: npm ERR! ERESOLVE',
+            error: 'Tailspin ERP did not update, so ERP Integration was left as it is: npm ERR! ERESOLVE',
         });
         expect(mockUpdate).toHaveBeenCalledTimes(1);
         expect(rows).toHaveBeenCalledWith('demo-erp', 'error', 'npm ERR! ERESOLVE');
         expect(rows).toHaveBeenLastCalledWith(
             'erp-integration',
             'deployed',
-            'Left as it is: Justrite ERP did not update.',
+            'Left as it is: Tailspin ERP did not update.',
         );
     });
 

@@ -41,7 +41,7 @@ beforeEach(() => {
     mockDaLiveAuthQuickPick.mockReset().mockResolvedValue({ success: true });
     mockRegisterGlobalMcp.mockReset().mockResolvedValue('/home/sc/.claude.json');
     mockValidateGitHubToken.mockReset().mockResolvedValue({ valid: false, reason: 'no-token' });
-    mockSignInToGitHub.mockReset().mockResolvedValue({ login: 'sayurihanki' });
+    mockSignInToGitHub.mockReset().mockResolvedValue({ login: 'org-j' });
     mockAccess.mockReset().mockResolvedValue(undefined);
 });
 

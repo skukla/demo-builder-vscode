@@ -3,7 +3,7 @@
 Date: 2026-10-22. Research. **Built the same day** (owner: "I do want the merged share
 dialog"): the dashboard's Share Demo dialog in `src/features/dashboard/ui/components/share/`.
 The paths below under `export/` and `demo-package/` describe the code as it was before that.
-Asked by the owner while reviewing the JustRite project's dashboard.
+Asked by the owner while reviewing the Tailspin project's dashboard.
 
 ## The short answer
 

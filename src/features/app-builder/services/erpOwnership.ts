@@ -21,7 +21,7 @@
  * names; when none is left it is left alone, the new ERP owns nothing, and the pass says so.
  *
  * Until 2026-10-09 the add narrowed an ERP on everything to its own attribute as well, which
- * left every untagged product with nobody (182 of 321 on Justrite) and depended on a store
+ * left every untagged product with nobody (182 of 321 on Tailspin) and depended on a store
  * read the Add button did not wait for.
  *
  * Pure, and imported by the dialog as well as the handler, so it imports nothing but the
@@ -150,7 +150,7 @@ export function overlapsIn(owners: ReadonlyMap<string, readonly string[]>): Owne
     return [...bySet.values()];
 }
 
-/** The rule in the fill's words ("products sold on justrite"). */
+/** The rule in the fill's words ("products sold on tailspin"). */
 export function describeOwns(rule: ErpOwnsRule): string {
     return filterOf(rule).describe;
 }

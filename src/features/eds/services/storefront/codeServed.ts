@@ -3,7 +3,7 @@
  * publish again any file it does not.
  *
  * A code publish (`previewCode('/*')`) is a job AEM runs from its own copy of the
- * repository, and that copy lags a push by seconds. On 2026-10-23 a reset of JustRite
+ * repository, and that copy lags a push by seconds. On 2026-10-23 a reset of Tailspin
  * committed three fixes in the last five seconds before its publish; the publish
  * reported success, the site kept the files from before the fixes, and the product
  * links stayed broken while the card said the storefront was current. Nothing had
@@ -66,7 +66,7 @@ export interface CodeServedDeps {
  * An HTML file as AEM serves it: AEM moves a `<meta … move-to-http-header="true">` into a
  * response header and gives every `nonce="aem"` a fresh value per request, so the served
  * copy never equals the committed one byte for byte. Both are undone, and whitespace
- * folded, before comparing. Measured 2026-10-23 on JustRite's 404.html and head.html.
+ * folded, before comparing. Measured 2026-10-23 on Tailspin's 404.html and head.html.
  */
 function asServedHtml(text: string): string {
     return text

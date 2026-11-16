@@ -86,7 +86,7 @@ describe('CheckUpdatesCommand', () => {
         // The check records what it learns on each project; none may become the open one.
         it('checks with a state view that never makes a checked project the open one', async () => {
             const stateManager = createMockStateManager();
-            (stateManager.getCurrentProject as jest.Mock).mockResolvedValue(createMockProject({ name: 'justrite', path: '/p/justrite' }));
+            (stateManager.getCurrentProject as jest.Mock).mockResolvedValue(createMockProject({ name: 'tailspin', path: '/p/tailspin' }));
             const running = new CheckUpdatesCommand(createMockExtensionContext(), stateManager, createMockLogger()).execute();
             await jest.runAllTimersAsync();
             await running;

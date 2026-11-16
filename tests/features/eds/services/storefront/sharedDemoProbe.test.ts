@@ -121,11 +121,11 @@ describe('probeSharedDemo', () => {
     it('records what the storefront was built on and the template it was generated from (EDS-13f)', async () => {
         const aistore: FakeRepo = {
             ...BODEA,
-            repo: 'sayurihanki/aistore',
+            repo: 'org-j/aistore',
             files: { ...BODEA.files, 'package.json': AISTORE_PACKAGE_JSON },
         };
 
-        const result = await probeSharedDemo(deps(aistore), 'sayurihanki', 'aistore', logger);
+        const result = await probeSharedDemo(deps(aistore), 'org-j', 'aistore', logger);
 
         assertOutcome(result, 'read');
         expect(result.boilerplate).toEqual({ name: '@adobe/aem-boilerplate-commerce', version: '4.0.1' });
@@ -278,13 +278,13 @@ describe('probeSharedDemo', () => {
 
     it('names both halves when the site answers but the repository does not', async () => {
         const d = deps({ files: {}, index: { ok: true } });
-        const result = await probeSharedDemo(d, 'sayurihanki', 'razer', logger);
+        const result = await probeSharedDemo(d, 'org-j', 'razer', logger);
 
         expect(result).toEqual({
             outcome: 'unreadable',
-            reason: "The site main--razer--sayurihanki.aem.live is up, but its repository sayurihanki/razer couldn't be found, or you don't have access to it. Ask its owner to make it public or give you access.",
+            reason: "The site main--razer--org-j.aem.live is up, but its repository org-j/razer couldn't be found, or you don't have access to it. Ask its owner to make it public or give you access.",
         });
-        expect(d.fetchImpl).toHaveBeenCalledWith('https://main--razer--sayurihanki.aem.live/', expect.objectContaining({ method: 'HEAD' }));
+        expect(d.fetchImpl).toHaveBeenCalledWith('https://main--razer--org-j.aem.live/', expect.objectContaining({ method: 'HEAD' }));
     });
 
     it('says the SIGN-IN expired when GitHub rejects the credential, and never blames the repository', async () => {
@@ -295,7 +295,7 @@ describe('probeSharedDemo', () => {
             throw Object.assign(new Error('Bad credentials'), { status: 401 });
         });
 
-        const result = await probeSharedDemo(d, 'sayurihanki', 'aistore', logger);
+        const result = await probeSharedDemo(d, 'org-j', 'aistore', logger);
 
         expect(result).toEqual({
             outcome: 'unreadable',
@@ -324,7 +324,7 @@ describe('probeSharedDemo', () => {
             throw Object.assign(new Error('API rate limit exceeded'), { status: 403 });
         });
 
-        const result = await probeSharedDemo(d, 'jen', 'isle5-demo', logger);
+        const result = await probeSharedDemo(d, 'robin', 'isle5-demo', logger);
 
         expect(result).toEqual({
             outcome: 'unreadable',

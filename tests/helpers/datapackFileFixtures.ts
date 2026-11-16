@@ -9,16 +9,16 @@ import type { OpenedFile } from '@/features/data-installer/ui/components/AddFile
 
 /** A file holding two data types. */
 export const OPENED_FILE: OpenedFile = {
-    path: '/Users/sc/justrite-v1.datapack.zip',
-    datapackName: 'justrite',
+    path: '/Users/sc/tailspin-v1.datapack.zip',
+    datapackName: 'tailspin',
     version: 'v1',
-    displayName: 'Justrite B2B',
+    displayName: 'Tailspin B2B',
     dataTypes: ['categories', 'customer_groups'],
 };
 
 /** A clean load of that file into My Datapacks that created the datapack; `over` changes any field. */
 export const loadedFile = (over: Partial<LoadOutcome> = {}): LoadOutcome => ({
-    datapackName: 'justrite',
+    datapackName: 'tailspin',
     version: 'v1',
     target: 'library',
     pack: 'created',

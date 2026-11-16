@@ -232,7 +232,7 @@ describe('an install that ended with a problem, on its steps', () => {
             variant: 'warning',
             title: 'Luma Installed',
             run,
-            lead: 'Luma is in Justrite Test Store.',
+            lead: 'Luma is in Tailspin Test Store.',
         });
 
         expect(shown.getByText('Commerce refused 3 rows.')).toHaveClass(
@@ -241,7 +241,7 @@ describe('an install that ended with a problem, on its steps', () => {
         );
         expect(rowOf(shown, 'Installed')).toHaveTextContent('Install ZZ Test Root DB12, 1');
         expect(rowOf(shown, 'Done')).toHaveTextContent('Verify Installation');
-        expect(shown.getByText('Luma is in Justrite Test Store.')).toBeInTheDocument();
+        expect(shown.getByText('Luma is in Tailspin Test Store.')).toBeInTheDocument();
         expect(shown.getByText('Kept 2 things you had changed in the Admin.')).toBeInTheDocument();
     });
 

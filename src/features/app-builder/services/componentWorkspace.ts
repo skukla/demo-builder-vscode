@@ -188,7 +188,7 @@ export async function ensureComponentWorkspace(
     if (existing) return undefined;
     // A storefront-only project records the org alone. Without its own project there is
     // nowhere to make a workspace: one was made in the project cached from earlier
-    // (Justrite's, 2026-10-15). Say where to choose one instead.
+    // (Tailspin's, 2026-10-15). Say where to choose one instead.
     if (!project.adobe?.organization || !project.adobe?.projectId) {
         return { error: NO_ADOBE_PROJECT };
     }

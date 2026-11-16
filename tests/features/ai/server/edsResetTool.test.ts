@@ -558,7 +558,7 @@ describe('reset_project on an Edge Delivery project', () => {
 
     // Owner 2026-11-14 (item 4): the agent's reset checks an added demo's source as the screen's does.
     describe('on a project built on an added demo', () => {
-        const UNREACHABLE = "The Isle5 by Jen demo's repository can't be reached. Reset and updates are unavailable until it is.";
+        const UNREACHABLE = "The Isle5 by Robin demo's repository can't be reached. Reset and updates are unavailable until it is.";
         const withDemo = { ...PROJECT, demo: makeAddedDemo() };
 
         beforeEach(() => {

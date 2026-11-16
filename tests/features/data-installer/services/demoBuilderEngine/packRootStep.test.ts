@@ -24,14 +24,14 @@ import { NOW, PACK, PROJECT, memoryFiles } from './demoBuilderEngine.testUtils';
 
 const STEP: PackRootStep = {
     state: 'open',
-    storeCode: 'justrite_test_store',
-    storeName: 'JustRite Test Store',
+    storeCode: 'tailspin_test_store',
+    storeName: 'Tailspin Test Store',
     rootId: 300,
     rootName: 'Frescopa',
     storeRootId: 119,
-    sharedWith: 'the store justrite_store (website justrite)',
+    sharedWith: 'the store tailspin_store (website tailspin)',
 };
-const STORE_ROOT = { storeCode: 'justrite_test_store', storeName: 'JustRite Test Store', rootId: 119, sharedWith: ['the store justrite_store (website justrite)'] };
+const STORE_ROOT = { storeCode: 'tailspin_test_store', storeName: 'Tailspin Test Store', rootId: 119, sharedWith: ['the store tailspin_store (website tailspin)'] };
 
 /** An asker that answers in turn, and remembers each question and each Admin opening. */
 function scripted(...answers: Array<string | undefined>) {
@@ -56,7 +56,7 @@ async function settling() {
     const store = categoryStore();
     store.categories.set(300, { id: 300, name: 'Frescopa', parent_id: 1, path: '1/300', children: '' });
     const files = memoryFiles();
-    const ctx = await store.ctx(files, { websiteCode: 'justrite_test_website', storeCode: 'justrite_test_view' });
+    const ctx = await store.ctx(files, { websiteCode: 'tailspin_test_website', storeCode: 'tailspin_test_view' });
     ctx.session.packRoot = { id: 300, name: 'Frescopa' };
     return { store, ctx, files };
 }
@@ -68,8 +68,8 @@ describe('packRootGuideStep', () => {
         expect(step).toMatchObject({
             id: 'pack-root-category',
             title: "Show Frescopa's Categories on the Storefront",
-            where: 'Stores > All Stores > JustRite Test Store',
-            path: ['Stores', 'All Stores', 'JustRite Test Store'],
+            where: 'Stores > All Stores > Tailspin Test Store',
+            path: ['Stores', 'All Stores', 'Tailspin Test Store'],
             enter: ['Root Category: Frescopa'],
             then: 'Save Store.',
         });
@@ -79,9 +79,9 @@ describe('packRootGuideStep', () => {
 describe('checkPackRoot', () => {
     it("reads the store's root_category_id and answers done when it is the pack's root", async () => {
         const { store, ctx } = await settling();
-        store.setRoot('justrite_test_store', 300);
+        store.setRoot('tailspin_test_store', 300);
 
-        await expect(checkPackRoot(ctx.get, STEP)).resolves.toEqual({ done: true, note: "JustRite Test Store now shows the categories under Frescopa." });
+        await expect(checkPackRoot(ctx.get, STEP)).resolves.toEqual({ done: true, note: "Tailspin Test Store now shows the categories under Frescopa." });
         expect(store.sent).toStrictEqual([]);
     });
 
@@ -90,14 +90,14 @@ describe('checkPackRoot', () => {
 
         await expect(checkPackRoot(ctx.get, STEP)).resolves.toEqual({
             done: false,
-            note: 'JustRite Test Store still uses the root category Justrite, not Frescopa.',
+            note: 'Tailspin Test Store still uses the root category Tailspin, not Frescopa.',
         });
     });
 
     it('cannot tell when the store is gone or the stores cannot be read', async () => {
         const { ctx } = await settling();
 
-        await expect(checkPackRoot(ctx.get, { ...STEP, storeCode: 'gone' })).resolves.toEqual({ note: 'JustRite Test Store is not in Commerce any more.' });
+        await expect(checkPackRoot(ctx.get, { ...STEP, storeCode: 'gone' })).resolves.toEqual({ note: 'Tailspin Test Store is not in Commerce any more.' });
         await expect(checkPackRoot(async () => Promise.reject(new Error('Commerce answered 500')), STEP)).resolves.toEqual({ note: 'Could not read the stores: Commerce answered 500' });
     });
 });
@@ -105,7 +105,7 @@ describe('checkPackRoot', () => {
 describe('settlePackRoot', () => {
     it('asks nothing when the store already shows the root, and records it done', async () => {
         const { store, ctx, files } = await settling();
-        store.setRoot('justrite_test_store', 300);
+        store.setRoot('tailspin_test_store', 300);
         const run = scripted();
 
         const step = await settlePackRoot(ctx, STORE_ROOT, run.asker);
@@ -127,7 +127,7 @@ describe('settlePackRoot', () => {
         expect(run.asked).toEqual([
             {
                 title: "One Step in the Admin to Show Frescopa's Categories",
-                message: "In Stores > All Stores > JustRite Test Store, set Root Category to Frescopa, then Save Store. Demo Builder can't make this change for you.",
+                message: "In Stores > All Stores > Tailspin Test Store, set Root Category to Frescopa, then Save Store. Demo Builder can't make this change for you.",
                 tone: 'info',
                 dismiss: SKIP,
             },
@@ -141,16 +141,16 @@ describe('settlePackRoot', () => {
         run.asker.ask = async (question, ...actions) => {
             const answer = await ask(question, ...actions);
             // The SC sets it in the Admin between the first answer and the second.
-            if (run.asked.length === 2) store.setRoot('justrite_test_store', 300);
+            if (run.asked.length === 2) store.setRoot('tailspin_test_store', 300);
             return answer;
         };
 
         const step = await settlePackRoot(ctx, STORE_ROOT, run.asker);
 
         expect(run.asked).toHaveLength(2);
-        expect(run.asked[1].message).toMatch(/^JustRite Test Store still uses the root category Justrite, not Frescopa\. In Stores > All Stores/u);
-        expect(run.asked[1].message).not.toMatch(/id \d|justrite_store/u);
-        expect(step).toMatchObject({ state: 'done', note: "JustRite Test Store now shows the categories under Frescopa." });
+        expect(run.asked[1].message).toMatch(/^Tailspin Test Store still uses the root category Tailspin, not Frescopa\. In Stores > All Stores/u);
+        expect(run.asked[1].message).not.toMatch(/id \d|tailspin_store/u);
+        expect(step).toMatchObject({ state: 'done', note: "Tailspin Test Store now shows the categories under Frescopa." });
         expect(store.sent).toStrictEqual([]);
     });
 
@@ -176,7 +176,7 @@ describe('settlePackRoot', () => {
     it('keeps the root the store showed at the first install, for putting it back before a removal', async () => {
         const { store, ctx } = await settling();
         await ctx.recorder.setRootStep({ ...STEP, storeRootId: 119 });
-        store.setRoot('justrite_test_store', 2);
+        store.setRoot('tailspin_test_store', 2);
 
         const step = await settlePackRoot(ctx, { ...STORE_ROOT, rootId: 2 }, undefined);
 
@@ -189,10 +189,10 @@ describe('storeShowingRoot', () => {
         const { store, ctx } = await settling();
 
         await expect(storeShowingRoot(ctx.get, '300')).resolves.toBeUndefined();
-        store.setRoot('justrite_test_store', 300);
+        store.setRoot('tailspin_test_store', 300);
         await expect(storeShowingRoot(ctx.get, '300')).resolves.toEqual({
-            store: 'JustRite Test Store',
-            reason: 'the store JustRite Test Store shows it as its root category. In the Admin, Stores > All Stores > JustRite Test Store, set Root Category back to the one it had and Save Store, then uninstall the datapack again',
+            store: 'Tailspin Test Store',
+            reason: 'the store Tailspin Test Store shows it as its root category. In the Admin, Stores > All Stores > Tailspin Test Store, set Root Category back to the one it had and Save Store, then uninstall the datapack again',
         });
     });
 });
@@ -209,20 +209,20 @@ describe('keptRootStep', () => {
     };
 
     it('names the store, the kept category, and the root to put back', async () => {
-        const kept = [{ name: 'Some category' }, { name: 'ZZ Root DB12', rootOfStore: 'Justrite Test Store' }];
+        const kept = [{ name: 'Some category' }, { name: 'ZZ Root DB12', rootOfStore: 'Tailspin Test Store' }];
 
-        await expect(keptRootStep(get({ '119': 'Justrite Catalog' }), kept, 119)).resolves.toEqual({
-            store: 'Justrite Test Store',
+        await expect(keptRootStep(get({ '119': 'Tailspin Catalog' }), kept, 119)).resolves.toEqual({
+            store: 'Tailspin Test Store',
             category: 'ZZ Root DB12',
-            restore: 'Justrite Catalog',
+            restore: 'Tailspin Catalog',
         });
     });
 
     it('leaves the root to put back out when it cannot be read, or the record had none', async () => {
-        const kept = [{ name: 'ZZ Root DB12', rootOfStore: 'Justrite Test Store' }];
+        const kept = [{ name: 'ZZ Root DB12', rootOfStore: 'Tailspin Test Store' }];
 
-        await expect(keptRootStep(get({}), kept, 119)).resolves.toEqual({ store: 'Justrite Test Store', category: 'ZZ Root DB12' });
-        await expect(keptRootStep(get({}), kept, undefined)).resolves.toEqual({ store: 'Justrite Test Store', category: 'ZZ Root DB12' });
+        await expect(keptRootStep(get({}), kept, 119)).resolves.toEqual({ store: 'Tailspin Test Store', category: 'ZZ Root DB12' });
+        await expect(keptRootStep(get({}), kept, undefined)).resolves.toEqual({ store: 'Tailspin Test Store', category: 'ZZ Root DB12' });
     });
 
     it('is nothing when no store kept the root', async () => {
@@ -233,9 +233,9 @@ describe('keptRootStep', () => {
 describe('the lines', () => {
     it('rootStepLine says what is left, or that it is done', () => {
         expect(rootStepLine(STEP)).toBe(
-            "One step is left in the Admin: Stores > All Stores > JustRite Test Store, Root Category: Frescopa, then Save Store. Until then the storefront does not show Frescopa's categories.",
+            "One step is left in the Admin: Stores > All Stores > Tailspin Test Store, Root Category: Frescopa, then Save Store. Until then the storefront does not show Frescopa's categories.",
         );
-        expect(rootStepLine({ ...STEP, state: 'done' })).toBe("JustRite Test Store now shows the categories under Frescopa.");
+        expect(rootStepLine({ ...STEP, state: 'done' })).toBe("Tailspin Test Store now shows the categories under Frescopa.");
         expect(rootStepLine(undefined)).toBeUndefined();
     });
 
@@ -243,9 +243,9 @@ describe('the lines', () => {
         const categories = { root_category: { name: 'Frescopa' }, categories: [] };
 
         expect(rootPreview('store', categories, { ...STORE_ROOT, sharedWith: [] }, undefined)).toBe(
-            "Frescopa's categories would go under the root category of the store JustRite Test Store, so its storefront shows them.",
+            "Frescopa's categories would go under the root category of the store Tailspin Test Store, so its storefront shows them.",
         );
-        expect(rootPreview('own', categories, STORE_ROOT, undefined)).toMatch(/^The store JustRite Test Store shares its root category with the store justrite_store \(website justrite\)/u);
+        expect(rootPreview('own', categories, STORE_ROOT, undefined)).toMatch(/^The store Tailspin Test Store shares its root category with the store tailspin_store \(website tailspin\)/u);
         expect(rootPreview('own', categories, STORE_ROOT, STEP)).toBe(rootStepLine(STEP));
         expect(rootPreview(undefined, { categories: [] }, STORE_ROOT, undefined)).toBeUndefined();
     });

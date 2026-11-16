@@ -48,32 +48,32 @@ function stateWith(projects: Project[]) {
 describe('otherProjectsPublishingTo', () => {
     it('names the other projects on the repository, and never the one being acted on', async () => {
         const { stateManager } = stateWith([
-            storefront('justrite', 'skukla/kukla-justrite'),
-            storefront('justrite-b2b', 'skukla/kukla-justrite'),
+            storefront('tailspin', 'skukla/kukla-tailspin'),
+            storefront('tailspin-b2b', 'skukla/kukla-tailspin'),
             storefront('bodea', 'skukla/kukla-bodea'),
             createMockProject({ name: 'headless', path: '/projects/headless' }),
         ]);
 
-        expect(await otherProjectsPublishingTo(stateManager, 'skukla/kukla-justrite', '/projects/justrite')).toStrictEqual([
-            'justrite-b2b',
+        expect(await otherProjectsPublishingTo(stateManager, 'skukla/kukla-tailspin', '/projects/tailspin')).toStrictEqual([
+            'tailspin-b2b',
         ]);
     });
 
     it('answers none when the repository is the project\'s alone', async () => {
         const { stateManager } = stateWith([
-            storefront('justrite', 'skukla/kukla-justrite'),
+            storefront('tailspin', 'skukla/kukla-tailspin'),
             storefront('bodea', 'skukla/kukla-bodea'),
         ]);
 
-        expect(await otherProjectsPublishingTo(stateManager, 'skukla/kukla-justrite', '/projects/justrite')).toStrictEqual(
+        expect(await otherProjectsPublishingTo(stateManager, 'skukla/kukla-tailspin', '/projects/tailspin')).toStrictEqual(
             [],
         );
     });
 
     it('compares the repository whatever its casing', async () => {
-        const { stateManager } = stateWith([storefront('other', 'SKukla/Kukla-Justrite')]);
+        const { stateManager } = stateWith([storefront('other', 'SKukla/Kukla-Tailspin')]);
 
-        expect(await otherProjectsPublishingTo(stateManager, 'skukla/kukla-justrite', '/projects/justrite')).toStrictEqual([
+        expect(await otherProjectsPublishingTo(stateManager, 'skukla/kukla-tailspin', '/projects/tailspin')).toStrictEqual([
             'other',
         ]);
     });

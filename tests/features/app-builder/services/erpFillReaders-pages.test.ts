@@ -1,6 +1,6 @@
 /**
  * readAllPages: the first page says how many there are, then the rest are read together.
- * Commerce took 7.7 s for Justrite's four pages in turn and 2.6 s at once (2026-10-18), and
+ * Commerce took 7.7 s for Tailspin's four pages in turn and 2.6 s at once (2026-10-18), and
  * Add another ERP waited on every one of them.
  */
 

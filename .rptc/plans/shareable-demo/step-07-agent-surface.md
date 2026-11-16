@@ -171,19 +171,19 @@ workflows are the template author's, and some SCs may want them. **Decided and f
 `createFromTemplate` and `createEmptyRepository`; the workflow files are kept.
 
 **Two more colleague storefronts, read live (owner-requested, 2026-09-13; owner away, so
-reads and the copy-free add only).** `sayurihanki/aistore`, by repository link and by site
+reads and the copy-free add only).** `org-j/aistore`, by repository link and by site
 address: Edge Delivery, public, `main`, no description file, 91 pages under `/sitemap.json`,
 B2B on from `config.json`, codes adobe / aistore / usaistore, no warnings; added to the list
-without a copy as "Aistore" and listed beside the shipped cards. `main--razer--sayurihanki.aem.live`:
+without a copy as "Aistore" and listed beside the shipped cards. `main--razer--org-j.aem.live`:
 the site is live (200 on `/` and `/sitemap.json`) but the repository the address names,
-`sayurihanki/razer`, answers 404 to the owner's GitHub account too, so the probe refused it
+`org-j/razer`, answers 404 to the owner's GitHub account too, so the probe refused it
 ("We couldn't find this repository, or you don't have access to it") — the right answer; a
 private repository needs access granted or made public before "Add a demo" can read it.
 The refusal now names both halves when the site answers but the repository does not
 (`cannotReadReason` in the probe, one HEAD to the site's address, owner-requested the same
-day): "The site main--razer--sayurihanki.aem.live is up, but its repository sayurihanki/razer
+day): "The site main--razer--org-j.aem.live is up, but its repository org-j/razer
 couldn't be found, or you don't have access to it. Ask its owner to make it public or give
-you access." Jen's 53 public repositories carry no razer or razr; the repository is private. `create_project` from
+you access." Robin's 53 public repositories carry no razer or razr; the repository is private. `create_project` from
 Aistore was not run: it raises the consent dialog and nobody was at the computer. A stale
 row, `added:skukla/citisignal-b2b-summit`, is still on the list from the summit test (its
 repository was deleted); forgetting it needs the consent dialog too.

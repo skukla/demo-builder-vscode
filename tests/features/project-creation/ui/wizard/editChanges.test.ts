@@ -23,33 +23,33 @@ import type { WizardState } from '@/types/webview';
 function opened(overrides: Partial<WizardState> = {}): WizardState {
     const state: WizardState = {
         currentStep: 'welcome',
-        projectName: 'justrite',
-        projectTitle: 'Justrite',
+        projectName: 'tailspin',
+        projectTitle: 'Tailspin',
         wizardMode: 'edit',
-        editOriginalName: 'justrite',
-        editOriginalTitle: 'Justrite',
+        editOriginalName: 'tailspin',
+        editOriginalTitle: 'Tailspin',
         adobeAuth: { isAuthenticated: true, isChecking: false },
-        selectedPackage: 'justrite',
+        selectedPackage: 'tailspin',
         selectedStack: 'eds-accs',
         selectedBackend: 'adobe-commerce-accs',
         selectedAppBuilderComponents: ['erp-integration'],
         selectedBlockLibraries: ['demo-builder-blocks'],
-        datapack: { name: 'justrite', version: '1.0.0' },
+        datapack: { name: 'tailspin', version: '1.0.0' },
         adobeOrg: { id: 'org-1', code: '', name: 'Acme' },
-        adobeProject: { id: 'proj-1', name: 'Kukla Justrite' },
+        adobeProject: { id: 'proj-1', name: 'Kukla Tailspin' },
         adobeWorkspace: { id: 'ws-1', name: 'Stage' },
         componentConfigs: { 'adobe-commerce-accs': { ACCS_STORE_VIEW_CODE: 'default' } },
         edsConfig: {
-            repoName: 'kukla-justrite',
+            repoName: 'kukla-tailspin',
             repoMode: 'existing',
             selectedRepo: {
-                id: 'me/kukla-justrite',
-                name: 'kukla-justrite',
-                fullName: 'me/kukla-justrite',
-                htmlUrl: 'https://github.com/me/kukla-justrite',
+                id: 'me/kukla-tailspin',
+                name: 'kukla-tailspin',
+                fullName: 'me/kukla-tailspin',
+                htmlUrl: 'https://github.com/me/kukla-tailspin',
             },
             daLiveOrg: 'me',
-            daLiveSite: 'kukla-justrite',
+            daLiveSite: 'kukla-tailspin',
         },
         ...overrides,
     };
@@ -68,7 +68,7 @@ describe('isEditUnchanged — nothing the SC chose has changed', () => {
             currentStep: 'review',
             activeBuildArea: 'integrations',
             commerceConnectValid: true,
-            projectsCache: [{ id: 'proj-1', name: 'Kukla Justrite' }],
+            projectsCache: [{ id: 'proj-1', name: 'Kukla Tailspin' }],
             apiMesh: { isChecking: false, apiEnabled: true, meshExists: true },
             edsConfig: {
                 ...state.edsConfig!,
@@ -89,10 +89,10 @@ describe('isEditUnchanged — nothing the SC chose has changed', () => {
             edsConfig: {
                 ...state.edsConfig!,
                 selectedRepo: {
-                    id: 'me/kukla-justrite',
-                    name: 'kukla-justrite',
-                    fullName: 'me/kukla-justrite',
-                    htmlUrl: 'https://github.com/me/kukla-justrite',
+                    id: 'me/kukla-tailspin',
+                    name: 'kukla-tailspin',
+                    fullName: 'me/kukla-tailspin',
+                    htmlUrl: 'https://github.com/me/kukla-tailspin',
                     description: 'Refetched by the picker',
                     updatedAt: '2026-10-13T00:00:00Z',
                 },
@@ -159,11 +159,11 @@ describe('renaming in Edit', () => {
     const renamed = (title: string) => ({ ...opened(), projectTitle: title, projectName: 'whatever-slug' });
 
     it('is not a rebuild choice: a rename alone leaves the Edit unchanged', () => {
-        expect(isEditUnchanged(renamed('Justrite West'))).toBe(true);
+        expect(isEditUnchanged(renamed('Tailspin West'))).toBe(true);
     });
 
     it('asks for the new name, trimmed', () => {
-        expect(editRenameTo(renamed('  Justrite West  '))).toBe('Justrite West');
+        expect(editRenameTo(renamed('  Tailspin West  '))).toBe('Tailspin West');
     });
 
     it('asks for nothing when the name is as it opened', () => {
@@ -175,12 +175,12 @@ describe('renaming in Edit', () => {
     });
 
     it('sends the original name with the Edit, and the new one as a rename to make after it', () => {
-        const config = buildProjectConfig(renamed('Justrite West'));
+        const config = buildProjectConfig(renamed('Tailspin West'));
 
         expect(config).toMatchObject({
-            projectName: 'justrite',
-            projectTitle: 'Justrite',
-            editRenameTo: 'Justrite West',
+            projectName: 'tailspin',
+            projectTitle: 'Tailspin',
+            editRenameTo: 'Tailspin West',
             editChanges: [],
         });
     });

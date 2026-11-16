@@ -2,7 +2,7 @@
  * Demo Builder's own pieces, set aside while Adobe's boilerplate change is applied and put back
  * after it, so the update never clashes with Demo Builder's own additions.
  *
- * Measured on JustRite (2026-10-30, local replay): Adobe's 71a67e0 → d538506 change stopped on
+ * Measured on Tailspin (2026-10-30, local replay): Adobe's 71a67e0 → d538506 change stopped on
  * three files, and two of them were only ours: the `aem-assets-sku-sanitization` code patch in
  * the AEM Assets dropin, and the Quick Edit Sidekick listener above the `loadHeader` line Adobe
  * changed. The third was a colleague's own edit, which must still stop the update (CLAUDE.md,
@@ -18,7 +18,7 @@
  *
  * Also here: the block folders an installed block library owns. Those are left out of every
  * template change: the library's own update keeps them current, and a colleague's older copy of
- * the same block (JustRite's catalog-menu, 2026-10-30) only clashes with it.
+ * the same block (Tailspin's catalog-menu, 2026-10-30) only clashes with it.
  *
  * @module features/updates/services/setAsidePieces
  */

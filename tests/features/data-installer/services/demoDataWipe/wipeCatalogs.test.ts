@@ -11,12 +11,12 @@ import type { CommerceCustomer } from '@/types/commerceWire';
 import { ADMIN_64, BUYER_65, CATALOG_20, COMPANY_28, GROUP_25, GROUP_30, LONE_SHOPPER, PUBLIC_CATALOG, STRANGER_IN_GROUP, b2bInstance } from '../../../../helpers/commerceWipeInstanceFixtures';
 import { sandbox } from './wipe.testUtils';
 
-const TEST_STORE = ['justrite_test_website'];
+const TEST_STORE = ['tailspin_test_website'];
 const NOTHING = { products: [], orders: [] };
 const GOING = [ADMIN_64, BUYER_65];
 
 const recordOf = (kind: string, id: string): InstallRecord => ({ format: 1, pack: { name: 'zz', version: '1' }, engine: 'demo-builder', startedAt: '2026-10-30T10:00:00.000Z', created: [{ kind, id }] });
-const ruleNaming = (groupIds: number[]): CommerceSalesRule => ({ rule_id: 9, name: 'JustRite Ten', website_ids: [2], customer_group_ids: groupIds } as CommerceSalesRule);
+const ruleNaming = (groupIds: number[]): CommerceSalesRule => ({ rule_id: 9, name: 'Tailspin Ten', website_ids: [2], customer_group_ids: groupIds } as CommerceSalesRule);
 
 describe('decideCatalogs, through the plan', () => {
     it('takes a catalog and its group as one, with what the customers and company going need gone first', async () => {

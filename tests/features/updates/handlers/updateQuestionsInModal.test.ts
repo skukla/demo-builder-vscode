@@ -14,7 +14,7 @@ jest.mock('@/core/utils/sleep', () => ({ sleep: jest.fn().mockResolvedValue(unde
 
 const ask = askDuringOperation as jest.Mock;
 
-const running = createMockProject({ name: 'justrite', title: 'JustRite', path: '/p/justrite', status: 'running' });
+const running = createMockProject({ name: 'tailspin', title: 'Tailspin', path: '/p/tailspin', status: 'running' });
 const stopped = createMockProject({ name: 'bodea', title: 'Bodea', path: '/p/bodea', status: 'stopped' });
 
 function selections(): UpdateSelections {
@@ -173,11 +173,11 @@ describe('stopRunningDemos', () => {
         ask.mockResolvedValue('Stop and Update');
         const stopDemo = jest.fn().mockResolvedValue(undefined);
 
-        const out = await stopRunningDemos(selections(), '/p/justrite', stopDemo);
+        const out = await stopRunningDemos(selections(), '/p/tailspin', stopDemo);
 
         expect(ask).toHaveBeenCalledTimes(1);
         expect(ask).toHaveBeenCalledWith(
-            { title: 'Stop the Demo to Update It?', message: 'JustRite is running. Stop it to update it?' },
+            { title: 'Stop the Demo to Update It?', message: 'Tailspin is running. Stop it to update it?' },
             'Stop and Update',
             'Skip',
         );
@@ -189,19 +189,19 @@ describe('stopRunningDemos', () => {
         ask.mockResolvedValue('Skip');
         const stopDemo = jest.fn();
 
-        const out = await stopRunningDemos(selections(), '/p/justrite', stopDemo);
+        const out = await stopRunningDemos(selections(), '/p/tailspin', stopDemo);
 
         expect(stopDemo).not.toHaveBeenCalled();
         expect(out.selections.template.map((t) => t.project.path)).toEqual(['/p/bodea']);
         expect(out.selections.component).toStrictEqual([]);
         expect(out.selections.forkSync).toHaveLength(1);
-        expect(out.skipped).toEqual(['JustRite: not updated, because its demo is running.']);
+        expect(out.skipped).toEqual(['Tailspin: not updated, because its demo is running.']);
     });
 
     it('asks nothing when no project is running', async () => {
         const quiet = { ...selections(), template: [{ project: stopped }], component: [] };
 
-        const out = await stopRunningDemos(quiet, '/p/justrite', jest.fn());
+        const out = await stopRunningDemos(quiet, '/p/tailspin', jest.fn());
 
         expect(ask).not.toHaveBeenCalled();
         expect(out.selections).toBe(quiet);

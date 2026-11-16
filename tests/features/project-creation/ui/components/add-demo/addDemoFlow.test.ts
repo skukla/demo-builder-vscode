@@ -18,11 +18,11 @@ import type { SharedDemoRead } from '@/types/webviewRequests';
 
 const READ: SharedDemoRead = {
     outcome: 'read',
-    fullName: 'jen/isle5-demo',
+    fullName: 'robin/isle5-demo',
     defaultBranch: 'main',
     isTemplate: false,
     kind: 'eds',
-    contentSource: { org: 'jen', site: 'isle5-demo', indexPath: '/full-index.json' },
+    contentSource: { org: 'robin', site: 'isle5-demo', indexPath: '/full-index.json' },
     contentPublished: { indexFound: true, pageCount: 12 },
     storeCodes: { websiteCode: 'isle5', storeCode: 'isle5_store', storeViewCode: 'isle5_us' },
     b2b: 'on',
@@ -34,8 +34,8 @@ const READ: SharedDemoRead = {
 describe('defaultDemoName', () => {
     it("prefers the description file's name, else spells the repository for people", () => {
         expect(defaultDemoName(READ)).toBe('Isle5 Demo');
-        expect(defaultDemoName({ ...READ, description: { kind: 'demo', version: 1, name: 'Isle5 by Jen' } })).toBe(
-            'Isle5 by Jen',
+        expect(defaultDemoName({ ...READ, description: { kind: 'demo', version: 1, name: 'Isle5 by Robin' } })).toBe(
+            'Isle5 by Robin',
         );
     });
 });
@@ -54,7 +54,7 @@ describe('isBuildable', () => {
 describe('foundRows', () => {
     it('names the kind, the pages, the codes and the B2B answer when known', () => {
         expect(foundRows(READ)).toEqual([
-            { label: 'Code', value: 'github.com/jen/isle5-demo', done: true },
+            { label: 'Code', value: 'github.com/robin/isle5-demo', done: true },
             { label: 'Type', value: 'Edge Delivery', done: true },
             { label: 'Pages', value: '12 published', done: true },
             { label: 'Website', value: 'isle5', done: true },
@@ -120,8 +120,8 @@ describe('buildAddedDemo', () => {
                 ACCS_STORE_VIEW_CODE: 'isle5_us',
             },
             configFlags: { 'commerce-b2b-enabled': true, 'commerce-companies-enabled': true },
-            contentSource: { org: 'jen', site: 'isle5-demo', indexPath: '/full-index.json' },
-            source: { owner: 'jen', repo: 'isle5-demo', branch: 'main' },
+            contentSource: { org: 'robin', site: 'isle5-demo', indexPath: '/full-index.json' },
+            source: { owner: 'robin', repo: 'isle5-demo', branch: 'main' },
             storefrontKind: 'eds',
         });
     });
@@ -129,9 +129,9 @@ describe('buildAddedDemo', () => {
     it("takes the SC's switch when the probe could not tell, and the typed name", () => {
         const unknown: SharedDemoRead = { ...READ, b2b: 'unknown', b2bSource: undefined };
         expect(buildAddedDemo(unknown, INITIAL_DRAFT)).not.toHaveProperty('configFlags');
-        const row = buildAddedDemo(unknown, { ...INITIAL_DRAFT, b2bOn: true, name: '  Isle5 by Jen  ' });
+        const row = buildAddedDemo(unknown, { ...INITIAL_DRAFT, b2bOn: true, name: '  Isle5 by Robin  ' });
         expect(row.configFlags).toEqual({ 'commerce-b2b-enabled': true, 'commerce-companies-enabled': true });
-        expect(row.name).toBe('Isle5 by Jen');
+        expect(row.name).toBe('Isle5 by Robin');
     });
 
     it('takes the typed description, trimmed, over the file; a blank one leaves the file\'s or none', () => {
@@ -141,7 +141,7 @@ describe('buildAddedDemo', () => {
         expect(buildAddedDemo(READ, { ...INITIAL_DRAFT, description: '   ' })).not.toHaveProperty('description');
         const withFile: SharedDemoRead = {
             ...READ,
-            description: { kind: 'demo', version: 1, name: 'Isle5 by Jen', description: 'From the file' },
+            description: { kind: 'demo', version: 1, name: 'Isle5 by Robin', description: 'From the file' },
         };
         expect(buildAddedDemo(withFile, INITIAL_DRAFT).description).toBe('From the file');
         expect(buildAddedDemo(withFile, { ...INITIAL_DRAFT, description: 'Typed' }).description).toBe('Typed');
@@ -153,7 +153,7 @@ describe('buildAddedDemo', () => {
             description: {
                 kind: 'demo',
                 version: 1,
-                name: 'Isle5 by Jen',
+                name: 'Isle5 by Robin',
                 description: 'B2B with custom blocks',
                 configDefaults: { ACCS_WEBSITE_CODE: 'other' },
                 requiresMesh: 'optional',
@@ -165,7 +165,7 @@ describe('buildAddedDemo', () => {
         const row = buildAddedDemo(withFile, INITIAL_DRAFT);
         expect(row).toEqual(
             expect.objectContaining({
-                name: 'Isle5 by Jen',
+                name: 'Isle5 by Robin',
                 description: 'B2B with custom blocks',
                 configDefaults: { ACCS_WEBSITE_CODE: 'other' },
                 requiresMesh: 'optional',

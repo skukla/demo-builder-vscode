@@ -25,7 +25,7 @@ import type { BatchDatapack, BatchSaveNames } from '@/types/projectsBatch';
  * line (`held`) when the integration must be updated first, or could not be asked.
  */
 export interface WipeErpPart {
-    /** The project the integration is in, as the SC knows it: "JustRite". */
+    /** The project the integration is in, as the SC knows it: "Tailspin". */
     integration: string;
     /** The chosen websites whose orders it sends to an ERP. */
     websites: string[];

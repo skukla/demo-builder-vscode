@@ -72,7 +72,7 @@ function commerce(putAnswer: unknown = { errors: [] }) {
 
 beforeEach(() => {
     jest.clearAllMocks();
-    mockReader.mockResolvedValue({ read: jest.fn(), scope: { websiteCode: 'justrite' } });
+    mockReader.mockResolvedValue({ read: jest.fn(), scope: { websiteCode: 'tailspin' } });
     mockRunCheck.mockResolvedValue({ done: false, note: 'Prices are global' });
 });
 
@@ -94,7 +94,7 @@ describe('previewStoreForAdd', () => {
         expect(store.send).not.toHaveBeenCalled();
         // The check is told the ERPs, as the fix is: the warehouse step is made once per ERP.
         expect(mockRunCheck).toHaveBeenCalledWith('price-scope-website', expect.any(Function), {
-            websiteCode: 'justrite',
+            websiteCode: 'tailspin',
             erpNames: expect.any(Array),
         });
         expect(preview).toStrictEqual({

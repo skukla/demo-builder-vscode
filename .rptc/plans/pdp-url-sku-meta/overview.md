@@ -5,7 +5,7 @@ Supersedes: ADR-007's `_HH` SKU encoding.
 
 ## The defect
 
-Measured 2026-10-06 on `main--kukla-justrite--skukla.aem.live`, read-only:
+Measured 2026-10-06 on `main--kukla-tailspin--skukla.aem.live`, read-only:
 every product whose SKU has only letters, digits and hyphens has a live page (39
 of 39); every product whose SKU has anything else 404s (10 of 10, all with `_`).
 
@@ -52,16 +52,16 @@ the same way.
 
 Pages published under the old scheme sit at wrong paths. Reset already removes
 generated product pages (EDS-26) and re-warms; Republish picks up the new
-patches. JustRite: one product-page reset after the deploy.
+patches. Tailspin: one product-page reset after the deploy.
 
 ## Cloud writes (each needs the owner's go)
 
 - Redeploy `accs-discovery` actions (render-pdp, prepublish-pdp).
 - Push `eds-demo-patches`.
-- Republish / product-page reset on JustRite to verify.
+- Republish / product-page reset on Tailspin to verify.
 
 ## Verify
 
-Live, after deploy: all 49 JustRite products answer 200 at their link path, and
+Live, after deploy: all 49 Tailspin products answer 200 at their link path, and
 each page's `meta[name=sku]` equals the Commerce SKU; the 10 underscore SKUs
 render product data, not the template.

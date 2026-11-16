@@ -13,7 +13,7 @@
  * nothing else says the name is still busy.
  *
  * A name is held for {@link NAME_REST_MS}; until then the new workspace is
- * numbered (`JustriteERP1`) as for any taken name.
+ * numbered (`TailspinERP1`) as for any taken name.
  *
  * @module features/authentication/services/deletedWorkspaceNames
  */

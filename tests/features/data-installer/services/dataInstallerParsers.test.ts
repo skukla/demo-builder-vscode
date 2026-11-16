@@ -383,7 +383,7 @@ describe('team — an official team pack', () => {
  * literally true, so a row that does not say is never offered as the caller's.
  */
 describe('mine — whether the signed-in SC owns the pack', () => {
-    const row = { datapack_name: 'justrite', version: 'v1' };
+    const row = { datapack_name: 'tailspin', version: 'v1' };
 
     it('is carried when the library says true, on a list row and on a detail', () => {
         expect(parseDatapackList({ datapacks: [{ ...row, mine: true }] }).items[0].mine).toBe(true);

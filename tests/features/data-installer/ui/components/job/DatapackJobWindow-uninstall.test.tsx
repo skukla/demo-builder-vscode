@@ -285,9 +285,9 @@ describe('Uninstall with nothing changed', () => {
 
     it('keeps the Admin step open when the store kept the root', async () => {
         const keptRoot = {
-            store: 'Justrite Test Store',
+            store: 'Tailspin Test Store',
             category: 'ZZ Root',
-            restore: 'Justrite Catalog',
+            restore: 'Tailspin Catalog',
         };
         holding(NOTHING, { statusAfter: { ...UNINSTALLING, outcome: 'success', keptRoot } });
         const { onClose } = await openUninstall();

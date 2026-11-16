@@ -5,7 +5,7 @@
  * the bug this pins was a gap between two readers of that catalog, and a hand-built
  * registry would agree with whatever this module assumes.
  *
- * REGRESSION (JustRite, 2026-10-06): an agent created the project through
+ * REGRESSION (Tailspin, 2026-10-06): an agent created the project through
  * create_project, which never mounts the wizard's settings screen — the only place
  * defaults were filled. "Product Images from AEM Assets" (default Enabled) was never
  * saved, the storefront published `commerce-assets-enabled: false`, and every
@@ -45,7 +45,7 @@ function creation(
 }
 
 describe('fillCreationDefaults', () => {
-    it('saves AEM Assets as enabled on an agent-made EDS project — the JustRite case', () => {
+    it('saves AEM Assets as enabled on an agent-made EDS project — the Tailspin case', () => {
         const filled = fillCreationDefaults(creation('eds-accs'), registry, {});
 
         expect(filled['eds-storefront']?.AEM_ASSETS_ENABLED).toBe('true');
@@ -74,9 +74,9 @@ describe('fillCreationDefaults', () => {
     it('never overrides a store scope the caller chose', () => {
         const stated: ComponentConfigs = {
             'adobe-commerce-accs': {
-                ACCS_WEBSITE_CODE: 'justrite',
-                ACCS_STORE_CODE: 'justrite_store',
-                ACCS_STORE_VIEW_CODE: 'justrite_us',
+                ACCS_WEBSITE_CODE: 'tailspin',
+                ACCS_STORE_CODE: 'tailspin_store',
+                ACCS_STORE_VIEW_CODE: 'tailspin_us',
             },
         };
 

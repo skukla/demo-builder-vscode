@@ -52,7 +52,7 @@ const FIELDS: { [K in keyof Required<Project>]: Decision<Project[K]> } = {
     componentConfigs: { ownSuite: 'an entry the selections no longer name is dropped (projectFileLoader-orphanConfigs)' },
     commerceStoreStructure: { ownSuite: 'projectConfigWriter-storeStructure' },
     selectedPackage: { roundTrips: 'citisignal' },
-    demo: { roundTrips: { kind: 'demo', version: 1, name: 'Isle5', source: { owner: 'jen', repo: 'isle5' }, storefrontKind: 'eds' } },
+    demo: { roundTrips: { kind: 'demo', version: 1, name: 'Isle5', source: { owner: 'robin', repo: 'isle5' }, storefrontKind: 'eds' } },
     datapack: {
         roundTrips: {
             name: 'acme-demo-1a2b3c',

@@ -57,8 +57,8 @@ async function store(existing: string[] = [], bareConfigurables: string[] = []) 
         if (call.path === 'categories') return { id: nextCategory++ };
         return {};
     });
-    ctx.session.websiteCode = 'justrite_test_website';
-    ctx.session.storeCode = 'justrite_test_store_us';
+    ctx.session.websiteCode = 'tailspin_test_website';
+    ctx.session.storeCode = 'tailspin_test_store_us';
     ctx.session.rootCategory = { id: 2, name: 'Default Category' };
     const takes = (row: Row) =>
         !String(row.additional_attributes ?? '').includes(BAD) &&
@@ -127,7 +127,7 @@ describe('installProductExport', () => {
             ['MH01'],
         ]);
         expect(imports[0].items[0]).toMatchObject({
-            product_websites: 'justrite_test_website',
+            product_websites: 'tailspin_test_website',
             // Every path's root, not only the first's (the service replaces the first alone).
             categories: 'Default Category/Men/Tops,Default Category/Collections/Eco Friendly',
         });
@@ -234,7 +234,7 @@ describe('installProductExport', () => {
         expect(imports.map((call) => call.items.length)).toEqual([100, 2, PARENTS_PER_IMPORT, 10]);
         expect(imports[1].items.map((r) => [r.sku, r.store_view_code ?? ''])).toEqual([
             ['K100', ''],
-            ['K100', 'justrite_test_store_us'],
+            ['K100', 'tailspin_test_store_us'],
         ]);
     });
 

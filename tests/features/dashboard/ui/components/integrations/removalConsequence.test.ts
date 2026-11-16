@@ -24,7 +24,7 @@ describe('removalConsequence — the mesh', () => {
 // Removal undoes the ERP integration's store setup first, and says so before the click
 // (2026-10-19: removing it had left 139 tags, the attribute on 12 sets and the preparation).
 describe('removalConsequence — the ERP integration and its ERPs', () => {
-    const link = { id: 'demo-erp', name: 'Justrite ERP', status: 'deployed', statusLabel: 'Deployed', dotVariant: 'success' } as const;
+    const link = { id: 'demo-erp', name: 'Tailspin ERP', status: 'deployed', statusLabel: 'Deployed', dotVariant: 'success' } as const;
     const base = { ...meshCard, isMesh: false, linked: { cards: [link] } };
 
     it('says the integration undoes its store setup in Commerce first', () => {
@@ -40,7 +40,7 @@ describe('removalConsequence — the ERP integration and its ERPs', () => {
     it('says each consequence as a short line of its own', () => {
         const lines = removalConsequence({ ...base, installation: { label: 'Installed', failed: false } }) ?? [];
         expect(lines).toEqual([
-            'It also removes Justrite ERP, with its records.',
+            'It also removes Tailspin ERP, with its records.',
             'It first undoes its store setup in Commerce: the ERP tags on products and what the demo setup applied.',
             'That includes erp_owner on the attribute sets Demo Builder added it to.',
             'It does not clear a listing under Apps > App Management in Commerce Admin. If you associated it there, unassociate it first.',

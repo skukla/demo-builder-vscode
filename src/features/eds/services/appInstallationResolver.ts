@@ -91,7 +91,7 @@ export type AppInstallationOutcome =
 /**
  * The reason the code endpoint (`POST admin.hlx.page/code/...`) gives in its
  * `x-error` when the AEM Code Sync App does not cover the repository. Read from a
- * live 400 on skukla/kukla-justrite, 2026-09-30 (EDS-23): the full header is
+ * live 400 on skukla/kukla-tailspin, 2026-09-30 (EDS-23): the full header is
  * `[admin] github bot not installed on repository.` — matched without the prefix
  * and the full stop so a re-worded wrapper around it still counts.
  */

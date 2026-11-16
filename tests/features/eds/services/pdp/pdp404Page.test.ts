@@ -107,7 +107,7 @@ describe('withoutDelayedJsHandler', () => {
     });
 
     it('finds the block by its own markers', () => {
-        // The markers are what a storefront carries today (JustRite's delayed.js, read 2026-10-29).
+        // The markers are what a storefront carries today (Tailspin's delayed.js, read 2026-10-29).
         expect(SMART_404_MARKER_START).toBe('// === Smart 404 PDP rebuild (Demo Builder) ===');
         expect(SMART_404_MARKER_END).toBe('// === end Smart 404 PDP rebuild ===');
     });

@@ -162,7 +162,7 @@ function includedLibraryCount(state: WizardState): number {
     return ids.size + (state.customBlockLibraries?.length ?? 0);
 }
 
-/** "Demo — Isle5 by Jen · Edge Delivery", with a note when it has no pages to copy. */
+/** "Demo — Isle5 by Robin · Edge Delivery", with a note when it has no pages to copy. */
 function demoRow(demo: AddedDemo): SummaryRow {
     const kind = demo.storefrontKind === 'headless' ? 'Headless' : 'Edge Delivery';
     const pages = demo.storefrontKind === 'eds' && !demo.contentSource ? ' (no published pages yet: the site starts empty)' : '';

@@ -137,10 +137,10 @@ describe("in a project's Datapacks", () => {
         await press(screen.getByRole('button', { name: 'Add' }));
         await settle();
 
-        expect(onInstall).toHaveBeenCalledWith({ id: { name: 'justrite', version: 'v1' }, displayName: 'Justrite B2B' });
+        expect(onInstall).toHaveBeenCalledWith({ id: { name: 'tailspin', version: 'v1' }, displayName: 'Tailspin B2B' });
         expect(onCatalogChanged).toHaveBeenCalled();
         expect(screen.queryByRole('heading', { name: 'Add from File' })).not.toBeInTheDocument();
-        expect(screen.queryByRole('heading', { name: 'Justrite B2B Loaded' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('heading', { name: 'Tailspin B2B Loaded' })).not.toBeInTheDocument();
     });
 
     // 7b: a button's words never change while it is on screen. The first words drawn are the last.
@@ -243,6 +243,6 @@ describe('in the Datapack Library', () => {
         await settle();
 
         expect(onInstall).not.toHaveBeenCalled();
-        expect(screen.getByRole('heading', { name: 'Justrite B2B Loaded' })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Tailspin B2B Loaded' })).toBeInTheDocument();
     });
 });

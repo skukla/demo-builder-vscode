@@ -11,7 +11,7 @@ import { ADMIN_64, BUYER_65, CATALOG_20, COMPANY_28, LONE_SHOPPER, WIPER_1, WIPE
 import { DELETE_COMPANY_ADMIN_REFUSED_DB08 } from '../../../../helpers/commerceB2bFixtures';
 import { REFUSED_SETTING, sandbox, writesOf } from './wipe.testUtils';
 
-const TEST_STORE = ['justrite_test_website'];
+const TEST_STORE = ['tailspin_test_website'];
 const B2B = { products: [], orders: [], customers: [ADMIN_64, BUYER_65] };
 
 describe('runWipe, the B2B kinds', () => {
@@ -35,7 +35,7 @@ describe('runWipe, the B2B kinds', () => {
         expect(outcome.failed).toStrictEqual([]);
         expect(outcome.unfinished).toBeUndefined();
         expect(outcome.sentence).toBe(
-            'Removed 2 customers, 1 company and 1 shared catalog with its customer group from the website JustRite Test.',
+            'Removed 2 customers, 1 company and 1 shared catalog with its customer group from the website Tailspin Test.',
         );
     });
 
@@ -69,7 +69,7 @@ describe('runWipe, the B2B kinds', () => {
         ]);
         expect(store.data.instance?.movedToGeneral).toStrictEqual([]);
         expect(outcome.removed).toMatchObject({ companies: 1, customers: 1, catalogs: 0 });
-        expect(outcome.unfinished).toEqual({ scopeKey: 'justrite_test_website', groups: [25], sets: [], attributes: [] });
+        expect(outcome.unfinished).toEqual({ scopeKey: 'tailspin_test_website', groups: [25], sets: [], attributes: [] });
     });
 
     it('has the admin refused, as Commerce did live, only if the company were still there: the order is what avoids it', async () => {
@@ -205,7 +205,7 @@ describe('what is said afterwards', () => {
     it("names the list settings no write can put back, for the result's Admin step", async () => {
         const instance = settingsInstance();
         instance.settings?.default.push({ path: 'sales/cancellation/reasons', value: ['A', 'B'], scope: 'default' });
-        instance.settings?.websites.justrite_test_website.push({ path: 'sales/cancellation/reasons', value: ['A'], scope: 'website', scope_code: 'justrite_test_website' });
+        instance.settings?.websites.tailspin_test_website.push({ path: 'sales/cancellation/reasons', value: ['A'], scope: 'website', scope_code: 'tailspin_test_website' });
         const store = sandbox({ customers: [], orders: [], products: [], instance });
 
         const outcome = await runWipe(store, await planWipeFor(store.get, TEST_STORE, { records: [] }));

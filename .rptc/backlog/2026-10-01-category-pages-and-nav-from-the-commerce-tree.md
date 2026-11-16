@@ -5,7 +5,7 @@ area: eds
 needs: []
 value: high
 status: built
-waiting-on: the owner watching the first real run on Justrite
+waiting-on: the owner watching the first real run on Tailspin
 ---
 
 # Category pages and the nav are generated from the Commerce category tree
@@ -14,7 +14,7 @@ waiting-on: the owner watching the first real run on Justrite
      provenance, the measurements and the caveats are what make an item useful
      months later. The frontmatter carries the structure so the prose need not. -->
 
-Filed 2026-10-01 from the AB-53 rebuild (`skukla/kukla-justrite`), when the owner asked how
+Filed 2026-10-01 from the AB-53 rebuild (`skukla/kukla-tailspin`), when the owner asked how
 the storefront's nav could reach the actual products: "our North American site is a catchall
 site with several brands — not just the signage one. So how could we easily get to the
 specific categories for cabinets and signs and so forth?"
@@ -41,9 +41,9 @@ for free. There is no folder mapping and no route: a category without a page is 
 - The nav document: **26 links, every one of them `/`.** The home page's five "Shop by
   Category" cards: all `/`. The design is a brand mock-up whose links were never pointed
   anywhere. `/safety-signs`, `/categories/safety-signs`, `/products/safety-signs` all 404.
-- Commerce (and Catalog Service) already hold a five-branch tree under the Justrite root with
+- Commerce (and Catalog Service) already hold a five-branch tree under the Tailspin root with
   correct `url_path`s: Safety Signs (24 Accuform configurables, by sign type) and four
-  use-case branches holding the 25 visible Justrite-brand signs. Counts by
+  use-case branches holding the 25 visible Tailspin-brand signs. Counts by
   `categories/{id}/products`, 2026-10-01.
 
 So the data side is done and the content side is empty, and nothing connects them. Every SC
@@ -71,7 +71,7 @@ storefront zone):
 
 Report in plain English: pages written, pages skipped as hand-edited, nav columns, and the
 one caveat that matters — **a category page shows nothing until Live Search has indexed the
-store view.** On 2026-10-01 the exact query the block sends returned 0 for `justrite_us`
+store view.** On 2026-10-01 the exact query the block sends returned 0 for `tailspin_us`
 while Catalog Service returned the products; the pages would have been correct and empty.
 
 ## The nav: a catalog menu the SC switches on with one line (owner, 2026-10-01)
@@ -112,7 +112,7 @@ place. No header change is needed.
    library block does — copied into the storefront repository at creation — so it reaches
    packages and shared demos alike. The catalog menu is its first block, not its only reason.
    A code patch was considered and rejected: patches rewrite a canonical file against an
-   exact-match precondition, and header code differs per storefront (Khalil's is custom), so
+   exact-match precondition, and header code differs per storefront (Person B's is custom), so
    the patch would fail silently on exactly the sites that need it.
 2. **The switch is content**: the block's one-cell table at the end of the nav document plus
    the line(s) above. The builder writes both when the SC asks for a catalog menu (wizard
@@ -127,10 +127,10 @@ can see for the shopper's group, or a guest gets menu entries whose pages are em
 
 ## A category is invisible until a shared catalog grants it (B2B), measured 2026-10-01
 
-The empty Live Search index on `justrite_us` was never an index problem. Adobe's answer
+The empty Live Search index on `tailspin_us` was never an index problem. Adobe's answer
 (owner relayed it, 2026-10-01): "there is an issue with sync if B2B is enabled. By default, the
 permission takes as deny and does not sync products." Measured the same hour, `productSearch`
-on the Justrite store view, one call per `Magento-Customer-Group` header (SHA-1 of the group id):
+on the Tailspin store view, one call per `Magento-Customer-Group` header (SHA-1 of the group id):
 
 | Group | `total_count` |
 |---|---|
@@ -141,7 +141,7 @@ on the Justrite store view, one call per `Magento-Customer-Group` header (SHA-1 
 | 21 Harbor (shared catalog 16) | 49 |
 
 `sharedCatalog/1/categories` (the public catalog: guests and General) granted Bodea's tree and
-none of Justrite's; catalogs 15 and 16 granted the Justrite sub-categories but not Safety Signs
+none of Tailspin's; catalogs 15 and 16 granted the Tailspin sub-categories but not Safety Signs
 itself. Catalog Service `products(skus:)` returned the products for every group, because only
 the search applies category permissions. That split is the diagnostic: **products by SKU but
 zero from search, on a B2B website, means permissions before it means indexing.**
@@ -182,16 +182,16 @@ before anyone can see it.
 - 2026-10-03  2026-10-04 category-pages plan step 6 built on loop/2026-10-04-catalog-menu (staged, not committed): one handler pair (dashboard catalogMenuHandlers buildCatalogMenu/removeCatalogMenu, Pattern B) behind both a Catalog Menu tile in the dashboard storefront zone (dialog with Build / Remove, Remove confirms) and the agent tools build_catalog_menu (declared as write_page) and remove_catalog_menu (confirm + consent dialog). Categories from Catalog Service with run_commerce_query's own request (resolveCommerceRequest extracted), falling back to a subtree walk from the store's root category when the tree read is empty (subtree numbers unverified). Pages through one DA.live+Helix adapter (ai/server/storefrontPages.ts, which now also owns the storefront target helpers moved out of contentAuthoringTools). Record kept on componentInstances['eds-storefront'].metadata.catalogMenu. Build refuses and changes nothing when blocks/catalog-menu/catalog-menu.js is not in the storefront repo. Wizard checkbox NOT built (creation path needs a new phase after the storefront exists); next step. No live run.
 - 2026-10-03  Correction to the step 6 entry (coordinator, property 5): build_catalog_menu is now confirm:true-gated with consent copy (destructiveHint true), not declared as write_page; its refusal reads the tree first (previewCatalogMenu) and names the site and the page count. The dashboard Build asks first, like Remove. write_page itself unchanged — same property-5 exposure, an open owner question.
 - 2026-10-03  feat(eds): the catalog menu from the dashboard and for agents; building asks first (EDS-24 step 6) (`f7b196e3c`)
-- 2026-10-04  Tabled 2026-10-04 (owner): the first real run, the decision to make it automatic at creation (with the category grants so a B2B menu is never empty), and folding rebuild/remove into the storefront's actions all wait until the owner can watch the Justrite run.
+- 2026-10-04  Tabled 2026-10-04 (owner): the first real run, the decision to make it automatic at creation (with the category grants so a B2B menu is never empty), and folding rebuild/remove into the storefront's actions all wait until the owner can watch the Tailspin run.
 - 2026-10-04  2026-10-04 night3-a (staged, not committed): the open owner question is closed as answered ('Yes, write_page should ask') - write_page (every write, publish or not) and publish_page now refuse without confirm:true, the refusal naming the storefront org/site, the page and whether it publishes, and both raise the consent dialog (agentAlertCopy; page plus the publish flag shown; no session grant); delete_page was already gated; tier-2 battery prompts t2-write-page and t2-publish-page added and both tools left the unprompted floor; no generated AI file teaches either tool, so no AI_CONTEXT_VERSION bump.
 - 2026-10-05  2026-10-05 Redesigned with the owner: no button. The live catalog-menu block stays (it removes typing the category structure into the nav); storefront setup switches it on and writes editable category pages at setup and reset, never touching pages someone else made; a fallback link to filtered search for categories added later if verified. Built for every EDS project from the boilerplate, and for added colleague storefronts. Web research: 4 of 4 brands hand-author per-category pages and nav; Adobe's prerender category support is 6 weeks old and shadows authored pages. Plan: .rptc/plans/dynamic-commerce-pages/overview.md
-- 2026-10-05  2026-10-05 built the redesign on loop/2026-10-04-day-a (staged, not committed): no button. One step (catalogMenuStep.ts) writes category pages + the nav switch when the storefront repo has blocks/catalog-menu/, keeps the record on metadata.catalogMenu, and names pages it did not write (clash report); creation runs it after the datapack phase (carries the record across edit mode), reset removes by record before the content pipeline and re-applies after, republish re-applies; reset_project and sync_content return it as categoryPages. Deleted the tile, CatalogMenuModal, useCatalogMenu, catalogMenuHandlers, build_catalog_menu/remove_catalog_menu and their narration, consent copy, ledger row, request types, timeouts, ceilings, battery prompts, tests (tools 158 -> 156, handlers 86 -> 84). Step 0: categoryPath in == eq on Catalog Service (45/45, 7/7, control 0/0), so the block library now links a category with no page to /search?filter=categoryPath:<urlPath> (HEAD probe; staged in demo-builder-block-library, 20 node tests). Justrite has no category pages from a dev run. AI bundle v37, docs/systems/category-pages.md, spine pin. Library still off by default (owner decides after the first live run). Gate green: 1815 suites / 31475 tests.
+- 2026-10-05  2026-10-05 built the redesign on loop/2026-10-04-day-a (staged, not committed): no button. One step (catalogMenuStep.ts) writes category pages + the nav switch when the storefront repo has blocks/catalog-menu/, keeps the record on metadata.catalogMenu, and names pages it did not write (clash report); creation runs it after the datapack phase (carries the record across edit mode), reset removes by record before the content pipeline and re-applies after, republish re-applies; reset_project and sync_content return it as categoryPages. Deleted the tile, CatalogMenuModal, useCatalogMenu, catalogMenuHandlers, build_catalog_menu/remove_catalog_menu and their narration, consent copy, ledger row, request types, timeouts, ceilings, battery prompts, tests (tools 158 -> 156, handlers 86 -> 84). Step 0: categoryPath in == eq on Catalog Service (45/45, 7/7, control 0/0), so the block library now links a category with no page to /search?filter=categoryPath:<urlPath> (HEAD probe; staged in demo-builder-block-library, 20 node tests). Tailspin has no category pages from a dev run. AI bundle v37, docs/systems/category-pages.md, spine pin. Library still off by default (owner decides after the first live run). Gate green: 1815 suites / 31475 tests.
 - 2026-10-05  Hand-built category pages at any address are honored (built, staged, not yet run live): setup reads the storefront's pages for a product-list-page block naming each category, writes no second page, removes its own earlier unedited one, and links the menu through category | page rows in the nav's catalog-menu table (ours told from the SC's by the record). Summary says 'Signs uses your page at /safety-signage.' Block library reads the rows.
 - 2026-10-05  feat(eds): category pages and the catalog menu come from storefront setup, not a button (EDS-24) (`89401edec`)
 - 2026-10-05  docs(eds): category menu and pages without a button; brand research; EDS-25 asks about prerender for product pages (`50205331c`)
-- 2026-10-05  2026-10-05 First live run on Justrite (an added colleague storefront) passed: Republish wrote and published 12 category pages and added the menu to the nav (nothing removed from the nav, compared before/after); the hand-made pages untouched; the guest menu lists the Signs tree, Lockout and 5S from Commerce; the owner confirmed in Chrome that /signs/danger-signs lists its 7 products. Still to prove on a scratch project: an edited page surviving Republish, the reset round trip, the search fallback for a new category, and a fresh boilerplate project.
-- 2026-10-05  docs(backlog): EDS-24 and EDS-28 proven live on Justrite (`f65144bf7`)
-- 2026-10-05  2026-10-05 Reset round trip proven live on Justrite: reset removed the 12 category pages and took the menu out of the nav, re-copied the storefront (block library re-installed), then wrote the 12 pages and the menu again; nav, category pages and the three hand-made pages all answer 200.
+- 2026-10-05  2026-10-05 First live run on Tailspin (an added colleague storefront) passed: Republish wrote and published 12 category pages and added the menu to the nav (nothing removed from the nav, compared before/after); the hand-made pages untouched; the guest menu lists the Signs tree, Lockout and 5S from Commerce; the owner confirmed in Chrome that /signs/danger-signs lists its 7 products. Still to prove on a scratch project: an edited page surviving Republish, the reset round trip, the search fallback for a new category, and a fresh boilerplate project.
+- 2026-10-05  docs(backlog): EDS-24 and EDS-28 proven live on Tailspin (`f65144bf7`)
+- 2026-10-05  2026-10-05 Reset round trip proven live on Tailspin: reset removed the 12 category pages and took the menu out of the nav, re-copied the storefront (block library re-installed), then wrote the 12 pages and the menu again; nav, category pages and the three hand-made pages all answer 200.
 - 2026-10-19  fix(catalog-menu): a category's own page is not taken over by a copy elsewhere (`33fb14289`)
 - 2026-10-22  2026-10-22 (EDS-61, uncommitted): category pages moved to the product page overlay at /categories/{url path}, filled from an authored /categories/default (starter written by setup). No DA.live page per category any more; pages the old model wrote are removed at the next reset or republish when unedited, kept and linked by a nav row when edited. The menu block links /categories/ directly (no HEAD check, no search fallback). Needs the accs-discovery-service deploy first.
 - 2026-10-22  2026-10-22 revised (owner, uncommitted): category pages at each category's own address (/signs), not /categories/; authored pages there kept by /authored-category-pages.json, published before any category path; menu links /{cleaned url path}. S0 measured on scratch-1022-b: the overlay wins on preview.

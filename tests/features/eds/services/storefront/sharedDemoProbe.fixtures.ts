@@ -44,13 +44,13 @@ export const REPOS: Record<string, GitHubRepo> = {
     },
     // EDS-13f: NOT captured live tonight (no cloud reads in the unattended run).
     // The lineage and version are the ones the 2026-09-14 research read off
-    // `sayurihanki/aistore`; re-capture when the live acceptance runs.
-    'sayurihanki/aistore': {
+    // `org-j/aistore`; re-capture when the live acceptance runs.
+    'org-j/aistore': {
         id: 4,
         name: 'aistore',
-        fullName: 'sayurihanki/aistore',
-        htmlUrl: 'https://github.com/sayurihanki/aistore',
-        cloneUrl: 'https://github.com/sayurihanki/aistore.git',
+        fullName: 'org-j/aistore',
+        htmlUrl: 'https://github.com/org-j/aistore',
+        cloneUrl: 'https://github.com/org-j/aistore.git',
         defaultBranch: 'main',
         isTemplate: false,
         templateRepository: { owner: 'adobe-commerce', repo: 'boilerplate-b2b-template' },

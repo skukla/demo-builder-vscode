@@ -15,7 +15,7 @@ import {
     bodea,
     found,
     handlers,
-    justrite,
+    tailspin,
     mockApplyUpdatesHeadless,
     mockExecuteCommand,
     mockFindAllUpdates,
@@ -43,7 +43,7 @@ describe('presentUpdates', () => {
         const rows = h.presentUpdates(found());
 
         expect(rows.map((r) => [r.group.title, r.label])).toEqual([
-            ['JustRite', 'Demo Builder Blocks'],
+            ['Tailspin', 'Demo Builder Blocks'],
             ['Bodea', 'EDS template'],
             ['Bodea', 'Demo Builder Blocks'],
         ]);
@@ -80,7 +80,7 @@ describe('applyUpdates', () => {
         });
         const h = handlers();
         const ctx = createMockHandlerContext();
-        (ctx.stateManager.getCurrentProject as jest.Mock).mockResolvedValue(createMockProject({ name: 'justrite', path: '/p/justrite' }));
+        (ctx.stateManager.getCurrentProject as jest.Mock).mockResolvedValue(createMockProject({ name: 'tailspin', path: '/p/tailspin' }));
         const rows = h.presentUpdates(found());
 
         await apply(h)(ctx, modal(rows.map((r) => r.id)));
@@ -105,7 +105,7 @@ describe('applyUpdates', () => {
         );
         expect(options.onItem).toEqual(expect.any(Function));
         // One project at a time, in the order the SC sees them: the open project first.
-        expect(options.projectOrder.filter((key: string) => key.startsWith('/p/'))).toEqual(['/p/justrite', '/p/bodea']);
+        expect(options.projectOrder.filter((key: string) => key.startsWith('/p/'))).toEqual(['/p/tailspin', '/p/bodea']);
         expect(answer).toEqual({ success: true });
     });
 
@@ -283,10 +283,10 @@ describe('applyUpdates', () => {
 // a fresh check: the run has just changed storefronts, so the list it started from is stale.
 describe('applyUpdates: what the SC left unticked', () => {
     const otherOrgPair = {
-        project: justrite,
+        project: tailspin,
         componentId: 'erp-integration',
         members: ['erp-integration'],
-        label: 'ERP Integration and Justrite ERP',
+        label: 'ERP Integration and Tailspin ERP',
         otherOrg: true,
     };
 

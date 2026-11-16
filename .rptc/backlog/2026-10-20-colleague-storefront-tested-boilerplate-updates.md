@@ -26,7 +26,7 @@ tested version, never to Adobe's untested main (`templateUpdateChecker.ts`
 A storefront added from a colleague's repository does not. Its project records the
 colleague's repository as its template and no LKG source, so its updates follow that
 repository's main (`checkForkedUpdates`) and the daily gate never reaches it. Seen on
-2026-10-20 with JustRite (`kmanns/justrite`, boilerplate 6.0.0, no LKG source) beside
+2026-10-20 with Tailspin (`org-e/tailspin`, boilerplate 6.0.0, no LKG source) beside
 Bodea and patch-canary-b2b, which follow the pointer.
 
 ## Why it is possible
@@ -48,7 +48,7 @@ Bodea and patch-canary-b2b, which follow the pointer.
 3. Its own edits do not collide with Adobe's change. Checked when Apply runs; a collision
    stops the update and names the files, never overwrites.
 
-JustRite does not qualify today: it records the boilerplate version, not the commit.
+Tailspin does not qualify today: it records the boilerplate version, not the commit.
 
 ## Recommendation (owner-approved for planning, 2026-10-20)
 

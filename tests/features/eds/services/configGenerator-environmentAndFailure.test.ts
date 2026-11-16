@@ -232,7 +232,7 @@ describe('configGenerator — environment fork and failure reporting', () => {
             expect(params.aemAssetsEnabled).toBe(false);
         });
 
-        // REGRESSION (JustRite, 2026-10-06): the catalog default became "true" in
+        // REGRESSION (Tailspin, 2026-10-06): the catalog default became "true" in
         // a578893d6 and the .env honoured it, but this read only saved values, so
         // a project that never touched the setting published
         // `commerce-assets-enabled: false`. The storefront then appended

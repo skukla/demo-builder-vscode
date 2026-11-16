@@ -307,7 +307,7 @@ describe('dashboardHandlers - handleRequestStatus', () => {
     it('starts the slow reads when the dashboard opens', async () => {
         // Developer Console loads its API list the moment it opens, so the list is
         // ready before anyone looks; a cold load takes Adobe about a minute. The
-        // Commerce sign-in took two on Justrite (2026-10-18).
+        // Commerce sign-in took two on Tailspin (2026-10-18).
         const { mockContext } = setupMocks({ meshStatusSummary: 'deployed' });
 
         await handleRequestStatus(mockContext);

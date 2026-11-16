@@ -88,7 +88,7 @@ async function currentProjectName(): Promise<string | undefined> {
  * somehow shipped without one. The tool NAME is the honest fallback here: it is
  * visibly a fallback rather than prose pretending to be authored, and
  * `toolNarration.test.ts` makes the case unreachable. The project goes to a named
- * form that says where it acts ("Adding Accuform ERP to JustRite").
+ * form that says where it acts ("Adding Accuform ERP to Tailspin").
  */
 function label(toolName: string, args?: Record<string, unknown>, project?: string): string {
     return narrationForCall(toolName, args, project) ?? toolName;

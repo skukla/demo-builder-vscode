@@ -259,12 +259,12 @@ describe('groupDatapacks across two stores', () => {
 
     it('marks a library group yours when any version is, and reads an untagged row as the Data Installer', () => {
         const groups = groupDatapacks([
-            row('justrite', 'v1', { store: 'library' }),
-            row('justrite', 'v2', { store: 'library', mine: true }),
+            row('tailspin', 'v1', { store: 'library' }),
+            row('tailspin', 'v2', { store: 'library', mine: true }),
             row('citisignal', 'main'),
         ]);
 
-        expect(groups.find((g) => g.name === 'justrite')).toMatchObject({ store: 'library', mine: true });
+        expect(groups.find((g) => g.name === 'tailspin')).toMatchObject({ store: 'library', mine: true });
         expect(groups.find((g) => g.name === 'citisignal')).toMatchObject({ store: 'installer', mine: false });
     });
 });

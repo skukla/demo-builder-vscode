@@ -9,7 +9,7 @@ status: active
 
 # One place for store setup
 
-Filed 2026-10-26, from release test row 4.19 on Justrite.
+Filed 2026-10-26, from release test row 4.19 on Tailspin.
 
 ## What is wrong
 
@@ -58,7 +58,7 @@ The setup guide becomes the one place.
 
 ### Doors and names
 
-Measured on Justrite (2026-10-26): four ways in, three names, two destinations.
+Measured on Tailspin (2026-10-26): four ways in, three names, two destinations.
 
 | Door | Where | Opens |
 |---|---|---|
@@ -100,12 +100,12 @@ stays at Will apply after every apply: the SC can never finish it from Demo Buil
 The fix: when the warehouse an ERP needs exists but is disabled, the apply enables it
 (`PUT inventory/sources/{code}` with `enabled: true`), the preview says so ("Switch Test
 Warehouse back on"), and the record notes it was re-enabled, so the undo disables it
-again rather than leaving it on. Walked on Justrite as part of row 4.19: undo, then apply
+again rather than leaving it on. Walked on Tailspin as part of row 4.19: undo, then apply
 again, then the step reads Done.
 
 ## Also in this item: the result, and a link priority
 
-**The result read as centred paragraphs (fixed the same day).** After Apply on Justrite
+**The result read as centred paragraphs (fixed the same day).** After Apply on Tailspin
 (2026-10-26) the progress modal's success view listed "ERP warehouse:", its raw lines, "By
 hand: …", then "Card payments:" and `payment/payment_services/active at the website scope:
 0 → 1`, every line centred and the last cut off. The owner: it "looks awful and does not
@@ -116,8 +116,8 @@ Yes", from each config item's `field` and `values`), and warehouse lines name wa
 stocks rather than codes. Apply all lands on that view and needs nothing more from it.
 
 **A new warehouse takes priority 1 beside the ERP that already has it.** The same apply
-linked `test_warehouse` to Justrite Stock at priority 1, which `justrite` already held
-(read back the same day: justrite 1, accuform 2, test_warehouse 1). `warehouseSetup.apply`
+linked `test_warehouse` to Tailspin Stock at priority 1, which `tailspin` already held
+(read back the same day: tailspin 1, accuform 2, test_warehouse 1). `warehouseSetup.apply`
 numbers the links it adds from 1 (`i + 1`); it should start after the stock's highest.
 
 ## Done when

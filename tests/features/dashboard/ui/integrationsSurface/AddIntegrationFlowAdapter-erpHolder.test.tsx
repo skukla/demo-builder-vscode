@@ -21,7 +21,7 @@ describe('AddIntegrationFlowAdapter — an instance that already has an ERP inte
     it('asks about the open project while the add journey is open, and greys out the ERP integration', async () => {
         mockRequest.mockResolvedValue({
             success: true,
-            data: { holder: 'justrite', message: 'held' },
+            data: { holder: 'tailspin', message: 'held' },
         });
 
         renderAdapter({ isOpen: true, mode: 'add' });

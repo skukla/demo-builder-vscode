@@ -411,7 +411,7 @@ describe('BuildYourProjectStep — body receives a NO-OP setCanProceed', () => {
 
 describe('BuildYourProjectStep — one ERP integration per Commerce instance (AB-78)', () => {
     const HELD: ErpIntegrationHolder = {
-        message: 'justrite already has an ERP integration on this Commerce instance. Add your ERP there instead.',
+        message: 'tailspin already has an ERP integration on this Commerce instance. Add your ERP there instead.',
         ids: ['erp-integration'],
     };
     const ON_INTEGRATIONS = {

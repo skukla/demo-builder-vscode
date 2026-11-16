@@ -74,7 +74,7 @@ function storefrontProject(metadata: Record<string, unknown> = {}): Project {
                 name: 'EDS Storefront',
                 type: 'frontend',
                 status: 'ready',
-                metadata: { githubRepo: 'skukla/kukla-justrite', ...metadata },
+                metadata: { githubRepo: 'skukla/kukla-tailspin', ...metadata },
             },
         },
     });

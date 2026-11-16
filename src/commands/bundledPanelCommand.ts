@@ -44,7 +44,7 @@ export abstract class BundledPanelCommand<TInitialData> extends BaseWebviewComma
      * For a screen shown FOR one project: it acts on the project current NOW, and keeps
      * acting on it after the current project moves (AI-15). Call it first in `execute`:
      * from then on `this.stateManager`, and every handler context built from it, answers
-     * for this project. On 2026-10-09 the Integrations screen showed JustRite while an
+     * for this project. On 2026-10-09 the Integrations screen showed Tailspin while an
      * agent's create made a scratch project current, and its next add ran on the scratch.
      *
      * @param projectPath - the project to open for, when a screen named one (another

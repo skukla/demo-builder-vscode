@@ -2,9 +2,9 @@
 
 Written 2026-10-01 at the owner's request ("read the docs to try to figure out how to
 research the propagation of products. After the backend indexes, products should show"),
-while 96 AccuformNMC products created over REST sat invisible to the Justrite storefront
+while 96 AccuformNMC products created over REST sat invisible to the Tailspin storefront
 two hours after their stock rows landed. Facts are tagged by source; measurements are
-from the shared ACCS sandbox (tenant `UoGYsHrcxMyeoVd2zUktZi`, website `justrite`).
+from the shared ACCS sandbox (tenant `UoGYsHrcxMyeoVd2zUktZi`, website `tailspin`).
 
 ## The pipeline (per Adobe's docs)
 
@@ -52,16 +52,16 @@ Catalog Sync dashboard's model.
 
 | Check | Result |
 |---|---|
-| `products(skus:["ACC-MDAN","51BSCB"])` with the Justrite headers | both returned; the Accuform sign with its three formats |
-| `products(skus:["ACC-MDAN"]) { inStock }` | **false**, two hours after stock rows; Justrite's `51BSCB`, `NFPA_PRINTED_1200`: true |
-| `productSearch(phrase:"")` on `justrite_us` | **0** (bodea_us 30, citisignal_us 39, base: "No index was found") |
-| REST `inventory/get-product-salable-quantity/ACC-MDAN-AL/3` (Justrite Stock) | 100 |
-| REST `inventory/export-stock-salable-qty/website/justrite` | all 72 Accuform variants qty 100; the 24 configurables 0 (expected for a parent) |
+| `products(skus:["ACC-MDAN","51BSCB"])` with the Tailspin headers | both returned; the Accuform sign with its three formats |
+| `products(skus:["ACC-MDAN"]) { inStock }` | **false**, two hours after stock rows; Tailspin's `51BSCB`, `NFPA_PRINTED_1200`: true |
+| `productSearch(phrase:"")` on `tailspin_us` | **0** (bodea_us 30, citisignal_us 39, base: "No index was found") |
+| REST `inventory/get-product-salable-quantity/ACC-MDAN-AL/3` (Tailspin Stock) | 100 |
+| REST `inventory/export-stock-salable-qty/website/tailspin` | all 72 Accuform variants qty 100; the 24 configurables 0 (expected for a parent) |
 | REST `stockStatuses/ACC-MDAN-AL` (legacy, Default Stock) | qty 100, status 1 |
-| REST `stockStatuses/ACC-MDAN` (the configurable) | qty 0, **status 0**; Justrite's `NFPA_PRINTED_1200`: status 1 |
+| REST `stockStatuses/ACC-MDAN` (the configurable) | qty 0, **status 0**; Tailspin's `NFPA_PRINTED_1200`: status 1 |
 | Bodea control `stockStatuses/accesspoint` | status 0 while Catalog Service says in stock → Catalog Service does NOT read the legacy status |
 
-So Commerce's own inventory views all say the Accuform variants are salable on the Justrite
+So Commerce's own inventory views all say the Accuform variants are salable on the Tailspin
 website, and Catalog Service still holds the configurables as out of stock. The one thing
 that changed for these products after creation is stock (rows added afterwards, a zero
 Default Source row deleted, then a bulk re-save of all 96). Everything points at the FEED

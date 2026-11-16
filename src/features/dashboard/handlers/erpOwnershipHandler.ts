@@ -24,7 +24,7 @@ export const handleGetErpOwnershipOptions: MessageHandler<ErpCallPayload> = asyn
     payload,
 ): Promise<HandlerResponse> => {
     // Timed in two parts, sign-in then store, because it outran the dialog's wait on
-    // Justrite and nothing said which part was slow (2026-10-18).
+    // Tailspin and nothing said which part was slow (2026-10-18).
     const started = Date.now();
     const call = await openErpCall(context, payload, 'read what the ERPs own');
     if ('error' in call) return call.error;

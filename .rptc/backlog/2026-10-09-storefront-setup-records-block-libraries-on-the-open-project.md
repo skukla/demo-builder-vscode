@@ -21,9 +21,9 @@ Two consequences, both measured on 2026-10-08 from logs and project files:
 1. **The new project had no record.** Its next startup update check
    (`findUninstalledBlockLibraries`) offered "<Library>: install" for every selected
    library, and applying it answered "<Library> is already in <project>." Seen for
-   `justrite-copy` and `my-commerce-demo`.
+   `tailspin-copy` and `my-commerce-demo`.
 2. **The open project's record was replaced.** The write was `=`, not an append, so
-   Justrite ended up carrying a "Demo Team Block Collection" record it never
+   Tailspin ended up carrying a "Demo Team Block Collection" record it never
    selected, with both records stamped with my-commerce-demo's setup time. Repaired
    by hand on 2026-10-09 with the owner's OK.
 

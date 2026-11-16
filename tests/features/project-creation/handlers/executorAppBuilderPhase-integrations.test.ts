@@ -292,7 +292,7 @@ describe('executeAppBuilderIntegrationsPhase', () => {
                 runnerReport()(OPERATION_STAGES.installingIntoCommerce.label, 'Registering webhooks', {
                     index: 2,
                     total: 2,
-                    name: 'Justrite ERP',
+                    name: 'Tailspin ERP',
                 });
                 return { success: true };
             });
@@ -302,7 +302,7 @@ describe('executeAppBuilderIntegrationsPhase', () => {
             expect(progressTracker).toHaveBeenLastCalledWith(
                 OPERATION_STAGES.deployingIntegrations.label,
                 expect.any(Number),
-                'Justrite ERP: Registering webhooks',
+                'Tailspin ERP: Registering webhooks',
             );
         });
 
@@ -389,8 +389,8 @@ describe('executeAppBuilderIntegrationsPhase', () => {
     describe('a same-named deployment another local project put into the same Adobe project', () => {
         function other(name: string, adobeProjectId = project.adobe?.projectId): Project {
             return createMockProject({
-                name: 'justrite',
-                path: '/projects/justrite',
+                name: 'tailspin',
+                path: '/projects/tailspin',
                 adobe: { projectId: adobeProjectId, organization: 'org' },
                 appBuilderComponents: {
                     'erp-sync': { kind: 'integration', status: 'deployed', name, source: { owner: 'acme', repo: 'erp-sync' } },
@@ -428,7 +428,7 @@ describe('executeAppBuilderIntegrationsPhase', () => {
 
             await expect(
                 executeAppBuilderIntegrationsPhase(contextWith(other('ERP Sync')), project, config({ selectedAppBuilderComponents: ['erp-sync'] }), progressTracker),
-            ).rejects.toThrow("justrite's ERP Sync is still deployed");
+            ).rejects.toThrow("tailspin's ERP Sync is still deployed");
             expect(mockAddAppBuilderComponent).not.toHaveBeenCalled();
         });
 

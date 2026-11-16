@@ -242,7 +242,7 @@ function stepsOf(commerce: RemovalAccess, plan: WipePlan, day: string, onReturnC
 
 const counted = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 
-/** "the website Justrite Test", "the websites Bodea and Justrite": by name, as the Admin shows them (owner, 2026-11-15). */
+/** "the website Tailspin Test", "the websites Bodea and Tailspin": by name, as the Admin shows them (owner, 2026-11-15). */
 export function websitesInWords(check: Pick<ClearCheck, 'websites'>): string {
     const names = check.websites.map((w) => w.name || w.code);
     return `${names.length === 1 ? 'the website' : 'the websites'} ${andList(names)}`;

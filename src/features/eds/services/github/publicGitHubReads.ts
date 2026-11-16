@@ -7,7 +7,7 @@
  * signed in to GitHub, and being signed in with a token GitHub no longer
  * accepts. Both were reported as "its repository couldn't be found, or you
  * don't have access to it" (found live 2026-09-17: the token behind the window
- * had expired; `sayurihanki/aistore` is public and answers 200 unauthenticated).
+ * had expired; `org-j/aistore` is public and answers 200 unauthenticated).
  *
  * These readers satisfy the two interfaces the probe asks for, so it cannot
  * tell which one it was handed. They are deliberately read-only: there is no

@@ -23,22 +23,22 @@ describe('resolveWipeScope', () => {
     });
 
     it('does not clear a root a store of a website not chosen also uses', () => {
-        const scope = resolveWipeScope(STRUCTURE, ['justrite_test_website']);
+        const scope = resolveWipeScope(STRUCTURE, ['tailspin_test_website']);
 
         expect([...scope.clearedRoots]).toStrictEqual([]);
         expect([...scope.sharedRoots]).toEqual(['119']);
     });
 
     it('clears a shared root once every website using it is chosen', () => {
-        const scope = resolveWipeScope(STRUCTURE, ['justrite_test_website', 'justrite']);
+        const scope = resolveWipeScope(STRUCTURE, ['tailspin_test_website', 'tailspin']);
 
         expect([...scope.clearedRoots]).toEqual(['119']);
         expect(scope.sharedRoots.size).toBe(0);
     });
 
     it('keeps one key for the same websites, whichever order they were named in', () => {
-        expect(resolveWipeScope(STRUCTURE, ['justrite', 'bodea']).key).toBe(resolveWipeScope(STRUCTURE, ['bodea', 'justrite', 'bodea']).key);
-        expect(resolveWipeScope(STRUCTURE, ['bodea', 'justrite']).key).toBe('bodea,justrite');
+        expect(resolveWipeScope(STRUCTURE, ['tailspin', 'bodea']).key).toBe(resolveWipeScope(STRUCTURE, ['bodea', 'tailspin', 'bodea']).key);
+        expect(resolveWipeScope(STRUCTURE, ['bodea', 'tailspin']).key).toBe('bodea,tailspin');
     });
 
     it.each([

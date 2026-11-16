@@ -111,13 +111,13 @@ describe('clear-demo-data, the datapack uninstalled first (step 06 C3)', () => {
     it('clears after a removal that put a website setting back to a value the list saw as the default (withinPlan)', async () => {
         // The pack wrote the default's value (40) over the website's own (41); its removal puts 41 back.
         const instance = settingsInstance();
-        const tax = instance.settings?.websites.justrite_test_website.find((r) => r.path === 'sales/totals_sort/tax');
+        const tax = instance.settings?.websites.tailspin_test_website.find((r) => r.path === 'sales/totals_sort/tax');
         if (tax) tax.value = '40';
         const layer: InstallRecord = { ...PROJECT_RECORDS[0], created: [...PROJECT_RECORDS[0].created, { kind: 'store_config', id: 'sales/totals_sort/tax@website', key: 'sales/totals_sort/tax@website' }] };
         const store = sandbox({ instance });
         const made = setUp({}, store, PROJECT, layer);
         const putBack = (s: Store): void => {
-            const row = s.data.instance?.settings?.websites.justrite_test_website.find((r) => r.path === 'sales/totals_sort/tax');
+            const row = s.data.instance?.settings?.websites.tailspin_test_website.find((r) => r.path === 'sales/totals_sort/tax');
             if (row) row.value = '41';
         };
         made.deps.remove = packRemoval(store, made.files, made.seen, { settings: putBack });

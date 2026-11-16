@@ -5,7 +5,7 @@
  * Where they come from (said per fixture too):
  * - system/config: the fields on Adobe's `saas-integrations/system-config` reference page
  *   (`path`, `value`, `scope`, `scope_code`; the PUT answer's `items` and `errors`). The round
- *   trip was run LIVE on Justrite on 2026-10-10 (`sales/totals_sort/tax` 40 -> 41 -> 40, and a
+ *   trip was run LIVE on Tailspin on 2026-10-10 (`sales/totals_sort/tax` 40 -> 41 -> 40, and a
  *   refused path answered in `errors` under HTTP 200), which is what the `errors` handling
  *   here rests on. The literal JSON of those answers is not recorded in the repo.
  * - product attributes, sources, stocks, links, companies, shared catalogs: Magento's service
@@ -29,7 +29,7 @@ export function configSaved(items: CommerceSystemConfigRow[]): CommerceSystemCon
     return { items, errors: [] };
 }
 
-/** A PUT answer refusing one path, under HTTP 200, as Justrite did on 2026-10-10. */
+/** A PUT answer refusing one path, under HTTP 200, as Tailspin did on 2026-10-10. */
 export function configRefused(saved: CommerceSystemConfigRow[], path: string, scope: string, message: string): CommerceSystemConfigPutAnswer {
     return { items: saved, errors: [{ path, scope, message }] };
 }

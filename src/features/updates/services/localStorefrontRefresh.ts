@@ -3,13 +3,13 @@
  *
  * Every EDS project has a git clone of its storefront at the eds-storefront instance's
  * `path`, and the generated AGENTS.md tells agents to edit there. Updates commit through
- * a throwaway clone or GitHub's API and never touch it, so it falls behind: JustRite's
+ * a throwaway clone or GitHub's API and never touch it, so it falls behind: Tailspin's
  * was 11 commits behind on 2026-10-20. An agent then edits an old copy, and EDS-57's
  * clash fix would start from one.
  *
  * The rule is that nothing local is ever lost. A local change whose content already
  * equals GitHub's copy is dropped, because GitHub holds it: the extension writes
- * `config.json` both locally and through the API, which is what JustRite's uncommitted
+ * `config.json` both locally and through the API, which is what Tailspin's uncommitted
  * change was (measured: byte-for-byte GitHub's). Any other local change, or a local
  * commit GitHub does not have, leaves the copy exactly as it is, with the reason.
  *

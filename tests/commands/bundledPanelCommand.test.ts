@@ -130,7 +130,7 @@ describe('createHandlerContext', () => {
 
 // AI-15: a screen shown for one project keeps acting on it after the current project moves.
 describe('openForCurrentProject', () => {
-    const A = createMockProject({ name: 'justrite', path: '/projects/justrite' });
+    const A = createMockProject({ name: 'tailspin', path: '/projects/tailspin' });
     const B = createMockProject({ name: 'scratch', path: '/projects/scratch' });
 
     function screenOver(real: ReturnType<typeof createMockStateManager>): PlainPanel {

@@ -16,7 +16,7 @@ Filed 2026-10-09 (owner approved building it the same day).
 An ERP whose rule is `erp_owner=<id>` owns the Commerce products tagged with that value
 (`erpOwnership.ts`, `ownersAcross`, AB-72). Tagging was done by hand in the Commerce Admin, or
 by an agent through `write_commerce_rest`, one product per call. ACCS saves a product in
-13–23 s, so tagging Accuform's 96 products and Justrite's 43 took about 35 minutes (AI-10's
+13–23 s, so tagging Accuform's 96 products and Tailspin's 43 took about 35 minutes (AI-10's
 log). The ownership pass then said "<ERP> owns no products yet: tag products with
 erp_owner=<id> in Commerce, then Load demo data", which pointed the SC at the Admin.
 
@@ -60,7 +60,7 @@ with and without the project's Store header), and confirm the bulk status's oper
 ## Shipped so far
 
 - 2026-10-09  feat(erp): assign products to an ERP, and put erp_owner in every attribute set (`d48056b5c`)
-- 2026-10-10  Live check on Justrite 2026-10-09 (owner OK), build c8b1c16dc: preview refused 3 products in attribute set Watches (16), which lacks erp_owner (the silent-drop trap, caught before a write). Assigned vrrack, rackerbladeserver, bladeservermodelxz (Default set) to Accuform: bulk PUT async/bulk/products/bySku, 3 of 3 complete, 97 s including the ownership pass (Justrite 222, Accuform 99). Read back erp_owner=accuform with the project's Store header AND with storeView all. Real bulk status answer: operations_list[{id,status:1,result_message,error_code:null}], bulk_id, operation_count, start_time, user_type, user_id. Undo restored all 3 to untagged in 80 s (225 / 96), dropped the undo record; control ACC-MADC-AL still accuform. Open: replace the invented bulk-status fixture with this real shape.
+- 2026-10-10  Live check on Tailspin 2026-10-09 (owner OK), build c8b1c16dc: preview refused 3 products in attribute set Watches (16), which lacks erp_owner (the silent-drop trap, caught before a write). Assigned vrrack, rackerbladeserver, bladeservermodelxz (Default set) to Accuform: bulk PUT async/bulk/products/bySku, 3 of 3 complete, 97 s including the ownership pass (Tailspin 222, Accuform 99). Read back erp_owner=accuform with the project's Store header AND with storeView all. Real bulk status answer: operations_list[{id,status:1,result_message,error_code:null}], bulk_id, operation_count, start_time, user_type, user_id. Undo restored all 3 to untagged in 80 s (225 / 96), dropped the undo record; control ACC-MADC-AL still accuform. Open: replace the invented bulk-status fixture with this real shape.
 - 2026-10-09  test(erp): the bulk status fixture is the answer Commerce really gave (`bada30d65`)
 - 2026-10-19  docs(release-plan): record the 2026-10-19 ERP walk and follow the new Assign products (`52ae1714b`)
 - 2026-10-19  perf(erp): a move reads and sends only the products that moved (`394160647`)

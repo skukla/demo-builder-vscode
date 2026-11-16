@@ -23,10 +23,10 @@ import { createMockProject } from '../../../helpers/projectFake';
 import { fileLayer, libraryRow } from '../../../helpers/settingsLayerFixtures';
 
 const LIBRARY = 'https://library.example.test/api/v1/web/datapack-store';
-const ID = { name: 'justrite', version: 'v1' };
+const ID = { name: 'tailspin', version: 'v1' };
 const PACK: DatapackFile = {
     id: ID,
-    displayName: 'My Justrite',
+    displayName: 'My Tailspin',
     items: [{ dataType: 'categories', records: [{ category: { name: 'Signs' } }] }],
 };
 
@@ -62,7 +62,7 @@ beforeEach(() => {
     dir = tempProject('datapack-keep-both-');
     library.findDatapacks.mockResolvedValue({
         items: [
-            libraryRow('justrite', 'v1', { displayName: 'My Justrite', dataTypes: ['categories'] }),
+            libraryRow('tailspin', 'v1', { displayName: 'My Tailspin', dataTypes: ['categories'] }),
         ],
         count: 1,
     });
@@ -79,20 +79,20 @@ afterEach(() => fs.rmSync(dir, { recursive: true, force: true }));
 
 describe('load-datapack-zip with saveAs (Keep Both)', () => {
     it('adds the file as a new datapack under the new name, never writing the one already there', async () => {
-        const result = await load(context(), { path: fileWith(PACK), saveAs: ' My Justrite 2 ' });
+        const result = await load(context(), { path: fileWith(PACK), saveAs: ' My Tailspin 2 ' });
 
         const sent = writes();
         expect(sent.map((w) => w.route)).toEqual(['create-datapack', 'add-data-item']);
-        expect(sent[0]).toMatchObject({ displayName: 'My Justrite 2', version: 'v1' });
-        expect(sent[0].name).toMatch(/^my-justrite-2-/);
+        expect(sent[0]).toMatchObject({ displayName: 'My Tailspin 2', version: 'v1' });
+        expect(sent[0].name).toMatch(/^my-tailspin-2-/);
         expect(sent.every((w) => w.name === sent[0].name)).toBe(true);
-        expect(sent.some((w) => w.name === 'justrite')).toBe(false);
+        expect(sent.some((w) => w.name === 'tailspin')).toBe(false);
         expect(result).toMatchObject({
             success: true,
             data: {
                 datapackName: sent[0].name,
                 version: 'v1',
-                displayName: 'My Justrite 2',
+                displayName: 'My Tailspin 2',
                 pack: 'created',
                 stored: ['categories'],
             },
@@ -102,12 +102,12 @@ describe('load-datapack-zip with saveAs (Keep Both)', () => {
     it("puts the file's settings layer under the new datapack's name, leaving the original's", async () => {
         const result = await load(context(), {
             path: fileWith({ ...PACK, settingsLayer: fileLayer() }),
-            saveAs: 'My Justrite 2',
+            saveAs: 'My Tailspin 2',
         });
 
         const sent = writes();
         const newName = sent[0].name;
-        expect(newName).toMatch(/^my-justrite-2-/);
+        expect(newName).toMatch(/^my-tailspin-2-/);
         expect(sent.map((w) => `${w.route} ${w.name}@${w.version}`)).toEqual([
             `create-datapack ${newName}@v1`,
             `add-data-item ${newName}@v1`,
@@ -124,17 +124,17 @@ describe('load-datapack-zip with saveAs (Keep Both)', () => {
             },
         });
         // Named for the new datapack, as a save names the layer it writes (`layerWords`).
-        expect(sent[2].displayName).toBe('My Justrite 2 settings');
+        expect(sent[2].displayName).toBe('My Tailspin 2 settings');
         const layerBody = JSON.parse(String((fetchMock.mock.calls[2] as [string, RequestInit])[1].body)) as { description?: string };
-        expect(layerBody.description).toBe('Store configuration for My Justrite 2, applied after its data when Demo Builder installs it.');
+        expect(layerBody.description).toBe('Store configuration for My Tailspin 2, applied after its data when Demo Builder installs it.');
     });
 
     it('refuses a name the SC already has, whatever its capitals, before anything is written', async () => {
-        const result = await load(context(), { path: fileWith(PACK), saveAs: 'my justrite' });
+        const result = await load(context(), { path: fileWith(PACK), saveAs: 'my tailspin' });
 
         expect(result).toMatchObject({
             success: false,
-            error: 'You already have a datapack named my justrite.',
+            error: 'You already have a datapack named my tailspin.',
         });
         expect(fetchMock).not.toHaveBeenCalled();
     });
@@ -143,7 +143,7 @@ describe('load-datapack-zip with saveAs (Keep Both)', () => {
     it('refuses, writing nothing, when My Datapacks cannot be read to check the name', async () => {
         library.findDatapacks.mockRejectedValue(new Error('unreachable'));
 
-        const result = await load(context(), { path: fileWith(PACK), saveAs: 'My Justrite 2' });
+        const result = await load(context(), { path: fileWith(PACK), saveAs: 'My Tailspin 2' });
 
         expect(result).toMatchObject({ success: false, error: KEEP_BOTH_NAMES_UNREAD });
         expect(fetchMock).not.toHaveBeenCalled();
@@ -159,14 +159,14 @@ describe('load-datapack-zip with saveAs (Keep Both)', () => {
     it('refuses Replace and Keep Both at once, and Keep Both into the Data Installer', async () => {
         const both = await load(context(), {
             path: fileWith(PACK),
-            saveAs: 'My Justrite 2',
+            saveAs: 'My Tailspin 2',
             update: true,
         });
         const installer = await load(context(), {
             path: fileWith(PACK),
-            saveAs: 'My Justrite 2',
+            saveAs: 'My Tailspin 2',
             target: 'installer',
-            confirmName: 'justrite',
+            confirmName: 'tailspin',
         });
 
         expect(both).toMatchObject({
@@ -186,7 +186,7 @@ describe('load-datapack-zip with saveAs (Keep Both)', () => {
 
         expect(result).toMatchObject({
             success: false,
-            error: 'justrite@v1 is already in My Datapacks. Send update to replace the data types this file carries, or saveAs with a new name to keep both.',
+            error: 'tailspin@v1 is already in My Datapacks. Send update to replace the data types this file carries, or saveAs with a new name to keep both.',
         });
     });
 });

@@ -270,8 +270,8 @@ describe("the datapack tools narrate in the screen's words", () => {
 // fifteen minutes beside an action the SC ran, and nothing said which was which.
 describe('a call that acts in the open project can name it', () => {
     it('names the ERP being added and the project it goes into', () => {
-        expect(narrationForCall('add_erp', { id: 'erp-integration', name: 'Accuform ERP' }, 'JustRite')).toBe(
-            'Adding Accuform ERP to JustRite'
+        expect(narrationForCall('add_erp', { id: 'erp-integration', name: 'Accuform ERP' }, 'Tailspin')).toBe(
+            'Adding Accuform ERP to Tailspin'
         );
     });
 
@@ -280,11 +280,11 @@ describe('a call that acts in the open project can name it', () => {
     });
 
     it('keeps the tool phrase when the ERP has no name, whatever the project', () => {
-        expect(narrationForCall('add_erp', { id: 'erp-integration' }, 'JustRite')).toBe(narrationFor('add_erp'));
+        expect(narrationForCall('add_erp', { id: 'erp-integration' }, 'Tailspin')).toBe(narrationFor('add_erp'));
     });
 
     it('does not add the project to a tool whose named form does not use it', () => {
-        expect(narrationForCall('delete_page', { path: '/x' }, 'JustRite')).toBe('Deleting /x');
+        expect(narrationForCall('delete_page', { path: '/x' }, 'Tailspin')).toBe('Deleting /x');
     });
 });
 

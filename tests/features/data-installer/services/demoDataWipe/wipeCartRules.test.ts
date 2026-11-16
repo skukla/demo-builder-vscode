@@ -13,10 +13,10 @@ import type { InstallRecord } from '@/features/data-installer/services/demoBuild
 import { planWipeFor, withinPlan } from '@/features/data-installer/services/demoDataWipe/wipePlan';
 import { clearShown, runWipe } from '@/features/data-installer/services/demoDataWipe/wipeRun';
 import type { CommerceCoupon, CommerceSalesRule } from '@/types/commerceSalesRule';
-import { BODEA_ID, JUSTRITE_ID, TEST_SITE_ID } from '../../../../helpers/commerceWipeFixtures';
+import { BODEA_ID, TAILSPIN_ID, TEST_SITE_ID } from '../../../../helpers/commerceWipeFixtures';
 import { PROJECT_RECORDS, sandbox, writesOf } from './wipe.testUtils';
 
-const TEST_STORE = ['justrite_test_website'];
+const TEST_STORE = ['tailspin_test_website'];
 
 const rule = (rule_id: number, name: string, website_ids: number[]): CommerceSalesRule => ({
     rule_id,
@@ -31,8 +31,8 @@ const rule = (rule_id: number, name: string, website_ids: number[]): CommerceSal
 
 const RULES = [
     rule(101, 'ZZ Test Only', [TEST_SITE_ID]),
-    rule(102, 'ZZ Test And JustRite', [TEST_SITE_ID, JUSTRITE_ID]),
-    rule(103, 'JustRite Only', [JUSTRITE_ID]),
+    rule(102, 'ZZ Test And Tailspin', [TEST_SITE_ID, TAILSPIN_ID]),
+    rule(103, 'Tailspin Only', [TAILSPIN_ID]),
     rule(104, 'ZZ Installed', [TEST_SITE_ID]),
     rule(105, 'ZZ Holds An Installed Code', [TEST_SITE_ID]),
     rule(106, 'Bodea Spring', [BODEA_ID]),
@@ -53,8 +53,8 @@ describe('planWipe with cart rules', () => {
         const plan = await planWipeFor(withRules().get, TEST_STORE, { records: RECORDS });
 
         expect(plan.ruleIds).toEqual(['101']);
-        expect(plan.ruleTakeOff).toEqual([{ id: '102', websiteIds: [JUSTRITE_ID] }]);
-        expect(plan.check.records.cart_rules.removed).toEqual(['ZZ Test Only', 'ZZ Test And JustRite']);
+        expect(plan.ruleTakeOff).toEqual([{ id: '102', websiteIds: [TAILSPIN_ID] }]);
+        expect(plan.check.records.cart_rules.removed).toEqual(['ZZ Test Only', 'ZZ Test And Tailspin']);
     });
 
     it("keeps what an install record lists, and a rule holding a code one lists, never touching another website's", async () => {
@@ -98,7 +98,7 @@ describe('runWipe with cart rules', () => {
         const writes = writesOf(store.sent);
         expect(writes).toContainEqual({ method: 'DELETE', path: 'salesRules/101' });
         expect(writes).toContainEqual({ method: 'PUT', path: 'salesRules/102' });
-        expect(store.sent.find((c) => c.path === 'salesRules/102')?.body).toEqual({ rule: { ...RULES[1], website_ids: [JUSTRITE_ID] } });
+        expect(store.sent.find((c) => c.path === 'salesRules/102')?.body).toEqual({ rule: { ...RULES[1], website_ids: [TAILSPIN_ID] } });
         expect(store.data.rules?.map((r) => r.rule_id)).toEqual([102, 103, 104, 105, 106]);
         expect(store.data.coupons?.map((c) => c.code)).toEqual(['ZZINSTALLED']);
         expect(outcome.removed).toMatchObject({ cartRules: 1, rulesTakenOff: 1 });

@@ -40,7 +40,7 @@ So a pass above means something. Each ran against the same clones.
 
 Each repository published `99.0.0-alpha.1` through `component-release --publish` (`eds-accs-mesh` also `-alpha.2`). All have been
 removed again, confirmed by reading each repository's tags and releases, with a control that the `stable` tag survived. Run on a dev
-build, on the early-access channel, against `scratch-1028`, and for the ERP pair against JustRite.
+build, on the early-access channel, against `scratch-1028`, and for the ERP pair against Tailspin.
 
 | Repository | Published | Offered by the check | Fresh install | Applied | What was not proved |
 |---|---|---|---|---|---|
@@ -48,8 +48,8 @@ build, on the early-access channel, against `scratch-1028`, and for the ERP pair
 | `eds-demo-patches` | Its own v1.1.5 | Yes, a fixes-only release | Yes, new repo built from v1.1.5 | Yes: a fix taken out was put back in one commit, v1.1.5 recorded | A release that also moves the tested commit, live: real-git suites cover it |
 | `demo-builder-block-library` | Yes | Yes, by version | Tag and alpha were the same commit, so a fresh build cannot show which it read | Yes, add-only: version and commit recorded. With no release it offers nothing | |
 | `app-builder-shell` | Yes | Not run | Yes: cloned at the tag, deployed, answered 200, removed | Not run | Update of an installed shell: same code as the mesh |
-| `demo-erp` | Yes | Yes, on JustRite | Not run | Yes, all three of JustRite's ERPs: deployed, shipped commit recorded, then read as up to date, screens answer 200 | A fresh install |
-| `commerce-erp-integration` | Yes | Yes, on JustRite | Not run | Yes, on JustRite, owner's go: deployed, shipped commit recorded, Commerce install skipped because its app version did not change | A fresh install, and an update that changes the app version in Commerce |
+| `demo-erp` | Yes | Yes, on Tailspin | Not run | Yes, all three of Tailspin's ERPs: deployed, shipped commit recorded, then read as up to date, screens answer 200 | A fresh install |
+| `commerce-erp-integration` | Yes | Yes, on Tailspin | Not run | Yes, on Tailspin, owner's go: deployed, shipped commit recorded, Commerce install skipped because its app version did not change | A fresh install, and an update that changes the app version in Commerce |
 | `bodea-source` | Yes | Read at its tag: up to date, correctly | Tag and a brand file read | Not run | A Bodea storefront build: the throwaway stopped at Code Sync |
 | `demo-inspector-sdk` | Yes | No row, by decision | 5 files vendored during the throwaway's build. Tag and `main` were the same commit, so it cannot show which it read | Arrives on reset | |
 | `citisignal-nextjs` | Yes | Not run | Not run | Update's git steps only, on a clone | No Headless project: it needs a PaaS backend |
@@ -60,15 +60,15 @@ build, on the early-access channel, against `scratch-1028`, and for the ERP pair
 ## What the live test found
 
 - A mesh deploy never recorded the commit it shipped, so a mesh was offered the same update forever. Fixed.
-- Removing a component left its version record behind. Fixed for new removals. JustRite still holds one from before, for a mesh it no longer has: harmless.
+- Removing a component left its version record behind. Fixed for new removals. Tailspin still holds one from before, for a mesh it no longer has: harmless.
 - A mesh update waits for a DA.live sign-in, because it republishes the storefront's config. If nobody answers, the offer stays on though the mesh is live. Left as it is.
 - A brand-new repository waits up to about 100 minutes for the AEM Code Sync app. That is the existing design. The throwaway's repository and DA.live site are gone. Its Config Service record could not be read back (401).
 
 ## How the test left things
 
-`scratch-1028`: the mesh is on `eds-accs-mesh` `main` at c0aa9f4, the same commit as before the test. Its repository has two extra commits that cancel out. It now records patches `v1.1.5`, which is true. Test version records were restored by hand, as were JustRite's offers from the test, and the update channel setting.
+`scratch-1028`: the mesh is on `eds-accs-mesh` `main` at c0aa9f4, the same commit as before the test. Its repository has two extra commits that cancel out. It now records patches `v1.1.5`, which is true. Test version records were restored by hand, as were Tailspin's offers from the test, and the update channel setting.
 
-`justrite`: its three ERPs and its integration are on `main` of their repositories, one test-only commit newer than before, deployed on the owner's go. Its version records were restored to 0.1.5 and 0.1.0.
+`tailspin`: its three ERPs and its integration are on `main` of their repositories, one test-only commit newer than before, deployed on the owner's go. Its version records were restored to 0.1.5 and 0.1.0.
 
 ## The `stable` tags
 

@@ -126,7 +126,7 @@ ids as they are, custom apps by link under the by-link id), on the first pick on
 Data step fetches the community half when a demo asks for a pack, pre-selects it at the asked
 version (the default version when that one is gone, and says so), and says when the pack is
 not published. The Storefront summary's first row names the demo and its kind, and says when
-the site will start empty. The reset tick reads "Reset to Isle5 by Jen (replaces all
+the site will start empty. The reset tick reads "Reset to Isle5 by Robin (replaces all
 content)". The demo's content site joins the library content sources (D20).
 
 **One list (the plan's own ask).** `STOREFRONT_DERIVED_FIELDS` in `edsConfigFromStorefront.ts`

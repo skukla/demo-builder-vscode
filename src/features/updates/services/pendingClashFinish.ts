@@ -9,7 +9,7 @@
  * 2. Only the clash changed: compared with what the update applied when the clash was
  *    kept (`KeptClashRecord.applied`), the copy may differ only in the clashing files.
  *    It is measured from the commit the clash was kept on, so a commit made since still
- *    counts: the git-sync hook committed and pushed JustRite's whole update at the AI's
+ *    counts: the git-sync hook committed and pushed Tailspin's whole update at the AI's
  *    first edit (2026-10-21), and finishing then refused what was already on GitHub.
  * 3. Fixed: no conflict marker is left in those files, and each JavaScript or JSON one
  *    parses. A merge that parses can still be wrong; this catches broken code, not that.
@@ -121,7 +121,7 @@ async function checkJavaScript(file: string, text: string, ctx: UpdateContext): 
 /**
  * The same file content: equal ids, or one a shortened form of the other. Records kept
  * before ids were read in full hold git's short form, whose length git picks per repo
- * and per day (JustRite's held 9 characters and git said 8 at finishing, 2026-10-24).
+ * and per day (Tailspin's held 9 characters and git said 8 at finishing, 2026-10-24).
  */
 function sameObject(a: string | null | undefined, b: string | null | undefined): boolean {
     if (!a || !b) return a === b;

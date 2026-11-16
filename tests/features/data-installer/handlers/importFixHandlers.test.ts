@@ -44,11 +44,11 @@ describe('fixImportPrompt', () => {
     it('names the pack, the project, each row’s problem, and the tools that fix it', () => {
         const prompt = fixImportPrompt(
             { ...RECORD, rowNotes: { products: 'Commerce refused 3 rows.' } },
-            'Justrite Demo'
+            'Tailspin Demo'
         );
 
         expect(prompt).toContain('luma@eds-compatible');
-        expect(prompt).toContain('Justrite Demo');
+        expect(prompt).toContain('Tailspin Demo');
         expect(prompt).toContain('- Products: Commerce refused 3 rows.');
         for (const tool of [
             'get_datapack_import_status',
@@ -68,7 +68,7 @@ describe('fixImportPrompt', () => {
                 stoppedAt: 'products',
                 reason: 'Commerce answered 403',
             },
-            'Justrite Demo'
+            'Tailspin Demo'
         );
 
         expect(prompt).toContain('- It stopped at Products: Commerce answered 403');
@@ -77,7 +77,7 @@ describe('fixImportPrompt', () => {
     it('says the import stopped after every data type was in, never naming a data type', () => {
         const prompt = fixImportPrompt(
             { ...RECORD, outcome: 'partial', stoppedAt: 'finishing', reason: 'Commerce answered 503' },
-            'Justrite Demo'
+            'Tailspin Demo'
         );
 
         expect(prompt).toContain('- It stopped after every data type was in, while finishing the install: Commerce answered 503');
@@ -85,7 +85,7 @@ describe('fixImportPrompt', () => {
     });
 
     it('CONTROL: has nothing to say about an import with no problem', () => {
-        expect(fixImportPrompt(RECORD, 'Justrite Demo')).toBeUndefined();
+        expect(fixImportPrompt(RECORD, 'Tailspin Demo')).toBeUndefined();
     });
 });
 
@@ -97,7 +97,7 @@ describe('fix-datapack-import-with-ai', () => {
             logger: createMockLogger(),
             context: createMockExtensionContext({ globalState }),
             stateManager: createMockStateManager({
-                getCurrentProject: jest.fn().mockResolvedValue({ name: 'Justrite Demo' }),
+                getCurrentProject: jest.fn().mockResolvedValue({ name: 'Tailspin Demo' }),
             }),
         });
     }
@@ -140,15 +140,15 @@ const DRY_RUN: DryRunRecord = {
 
 describe('fixDryRunPrompt', () => {
     it('names the pack, the project and the dry run’s reason', () => {
-        const prompt = fixDryRunPrompt(DRY_RUN, 'Justrite Demo')!;
+        const prompt = fixDryRunPrompt(DRY_RUN, 'Tailspin Demo')!;
 
         expect(prompt).toContain('luma@eds-compatible');
-        expect(prompt).toContain('Justrite Demo');
+        expect(prompt).toContain('Tailspin Demo');
         expect(prompt).toContain(`- ${DRY_RUN.reason}`);
     });
 
     it('asks for the datapack fixed, the dry run run again, and a report', () => {
-        const prompt = fixDryRunPrompt(DRY_RUN, 'Justrite Demo')!;
+        const prompt = fixDryRunPrompt(DRY_RUN, 'Tailspin Demo')!;
 
         expect(prompt).toContain('save_datapack_zip, correct the rows, add_datapack_from_file');
         expect(prompt).toContain('validate_datapack_import again');
@@ -156,7 +156,7 @@ describe('fixDryRunPrompt', () => {
     });
 
     it('never installs without asking', () => {
-        const prompt = fixDryRunPrompt(DRY_RUN, 'Justrite Demo')!;
+        const prompt = fixDryRunPrompt(DRY_RUN, 'Tailspin Demo')!;
 
         expect(prompt).toContain('Do not install the datapack until I ask you to.');
     });
@@ -175,7 +175,7 @@ describe('fix-datapack-import-with-ai from the dry run', () => {
             logger: createMockLogger(),
             context: createMockExtensionContext({ globalState }),
             stateManager: createMockStateManager({
-                getCurrentProject: jest.fn().mockResolvedValue({ name: 'Justrite Demo' }),
+                getCurrentProject: jest.fn().mockResolvedValue({ name: 'Tailspin Demo' }),
             }),
         });
     }
@@ -199,7 +199,7 @@ describe('fix-datapack-import-with-ai from the dry run', () => {
         expect(result).toEqual({ success: true });
         expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
             'demoBuilder.openInClaude',
-            { prompt: fixDryRunPrompt(DRY_RUN, 'Justrite Demo'), fresh: true }
+            { prompt: fixDryRunPrompt(DRY_RUN, 'Tailspin Demo'), fresh: true }
         );
     });
 
@@ -262,7 +262,7 @@ describe('fix-datapack-import-with-ai from a failed install', () => {
             logger: createMockLogger(),
             context: createMockExtensionContext({ globalState }),
             stateManager: createMockStateManager({
-                getCurrentProject: jest.fn().mockResolvedValue(createMockProject({ name: 'Justrite Demo', ...project })),
+                getCurrentProject: jest.fn().mockResolvedValue(createMockProject({ name: 'Tailspin Demo', ...project })),
             }),
         });
     }
@@ -283,7 +283,7 @@ describe('fix-datapack-import-with-ai from a failed install', () => {
         expect(result).toEqual({ success: true });
         const prompt = sentPrompt();
         expect(prompt).toContain('bodea@1.0.0');
-        expect(prompt).toContain('Justrite Demo');
+        expect(prompt).toContain('Tailspin Demo');
         expect(prompt).toContain(`- ${FAILED.reason}`);
         expect(prompt).toContain('2 retries');
         expect(prompt).toContain('install_datapack');

@@ -39,7 +39,7 @@ Two structural defects:
 ## Decisions needed from the owner
 
 1. **Decided 2026-11-04: the remove confirm's header becomes "Remove Datapack?"**, and the store
-   view and website it removes from ("From Justrite Store View (Justrite Website)") is the FIRST
+   view and website it removes from ("From Tailspin Store View (Tailspin Website)") is the FIRST
    line of the details. The 2026-10-31 reason (a removal nearly went to the real website) is kept by
    that line coming first; the header follows the rule.
 2. **Decided 2026-11-04: agent notifications keep naming their target**, as part of the convention

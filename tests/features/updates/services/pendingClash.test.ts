@@ -13,7 +13,7 @@
 
 // FIRST: this module owns the jest.mock calls the imports below must see.
 import {
-    HEADER_KHALIL,
+    HEADER_PERSON_B,
     REAL_GIT_TIMEOUT_MS,
     TEMPLATE,
     fx,
@@ -76,7 +76,7 @@ describe('keepClash', () => {
     }, REAL_GIT_TIMEOUT_MS);
 
     it('brings a stale copy up to GitHub first, so the clash is kept against the real storefront', async () => {
-        // The copy was made before Khalil's edit reached it.
+        // The copy was made before PersonB's edit reached it.
         git(fx.local, 'reset', '-q', '--hard', 'HEAD~1');
         const project = storefrontProject();
 
@@ -95,7 +95,7 @@ describe('keepClash', () => {
         });
 
         expect(read('notes.txt')).toBe('only here\n');
-        expect(read('blocks/header/header.js')).toBe(HEADER_KHALIL);
+        expect(read('blocks/header/header.js')).toBe(HEADER_PERSON_B);
         expect(readPendingClash(project)).toBeUndefined();
         await expect(hasKeptClash(fx.local)).resolves.toBe(false);
     }, REAL_GIT_TIMEOUT_MS);
@@ -125,7 +125,7 @@ describe('keepClash', () => {
 describe('readPendingClash', () => {
     const clash: PendingClash = {
         track: 'template',
-        source: { owner: 'kmanns', repo: 'justrite' },
+        source: { owner: 'org-e', repo: 'tailspin' },
         base: 'a'.repeat(40),
         target: 'b'.repeat(40),
         files: ['blocks/header/header.js'],

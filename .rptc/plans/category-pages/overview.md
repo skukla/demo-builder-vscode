@@ -85,7 +85,7 @@ yet: the DA.live library doc page for the block is a follow-up.
 ### 4. The live B2B read (the item's "prove before building")
 
 Not run tonight: no Demo Builder window was answering the probe socket (`mcp-live-probe
-info` → `ECONNREFUSED`). Run it with the Justrite project open, through the read tool:
+info` → `ECONNREFUSED`). Run it with the Tailspin project open, through the read tool:
 
 ```
 node .claude/skills/mcp-live-probe/probe.mjs call run_commerce_query \
@@ -99,17 +99,17 @@ table). Read it two ways:
   `ids` as optional but every example passes one. If it returns `[]`, the block and the
   reader must walk from the store's root id with `subtree: {startLevel, depth}` instead
   (one `ids` entry). The block's query is one constant, `CATEGORIES_QUERY`.
-- **Does it honour grants?** If groups 0 and 1 get Justrite's categories back (the item
+- **Does it honour grants?** If groups 0 and 1 get Tailspin's categories back (the item
   measured `productSearch` = 0 for them), `categories` ignores B2B permissions and the
   block's product-search filter (`FILTER_BY_VISIBLE_PRODUCTS = true`, built in) is
   needed. If they come back without them, the filter can be switched off.
 
-### 5. First real run on Justrite
+### 5. First real run on Tailspin
 
 Needs: steps 1–4, plus the wiring in step 6 (or a one-off script calling
 `applyCatalogMenu` with a DA.live/Helix page adapter). Then look at:
 
-1. `https://main--kukla-justrite--skukla.aem.live/nav.plain.html` has the line and the
+1. `https://main--kukla-tailspin--skukla.aem.live/nav.plain.html` has the line and the
    block; `/safety-signs.plain.html` has the `<h1>` and the `product-list-page` row.
 2. The header as a guest and as a Northgate buyer: menus differ the way the
    2026-10-01 table says they should (guest sees fewer, or none).
@@ -118,10 +118,10 @@ Needs: steps 1–4, plus the wiring in step 6 (or a one-off script calling
 4. Browser console: no `catalog-menu:` errors; a mistyped `Shop the catalog: X` names X.
 5. Undo, then the nav reads exactly as before and the category pages 404.
 
-Not yet verified against the Justrite code itself: tonight's read of the header and
+Not yet verified against the Tailspin code itself: tonight's read of the header and
 fragment code was the commerce boilerplate cloned locally (`isle5`), which loads the
 nav through `loadFragment` → `decorateMain` → `await loadSections` and exports
-`CS_FETCH_GRAPHQL` from `scripts/commerce.js`. Justrite is the ACO boilerplate; confirm
+`CS_FETCH_GRAPHQL` from `scripts/commerce.js`. Tailspin is the ACO boilerplate; confirm
 both on its `scripts/commerce.js` and `blocks/fragment/fragment.js` before step 5.
 
 ### 6. Surfaces (not built — each needs a decision)

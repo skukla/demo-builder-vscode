@@ -4,7 +4,7 @@
  * interfaces so a shape the wipe reads cannot be invented here.
  *
  * Where each shape comes from:
- * - `GET system/config` at a website: **captured** 2026-11-02 on `justrite_test_website`
+ * - `GET system/config` at a website: **captured** 2026-11-02 on `tailspin_test_website`
  *   (`SYSTEM_CONFIG_PAGE_TEST_WEBSITE`, with `general/country/allow`'s long list cut).
  * - A company, its hierarchy, the group renamed by its catalog: **captured** 2026-10-30, reused from
  *   `commerceB2bFixtures.ts` (`COMPANY_28_DB08`, `HIERARCHY_28_DB08`).
@@ -14,16 +14,16 @@
  */
 
 import { COMPANY_28_DB08, HIERARCHY_28_DB08 } from './commerceB2bFixtures';
-import { BODEA_ID, JUSTRITE_ID, TEST_SITE_ID } from './commerceWipeFixtures';
+import { BODEA_ID, TAILSPIN_ID, TEST_SITE_ID } from './commerceWipeFixtures';
 import type { CommerceCompany, CommerceCompanyHierarchyNode, CommerceCustomer, CommerceCustomerGroup, CommerceProduct, CommerceProductAttribute, CommerceSharedCatalog, CommerceSetAttribute, CommerceSystemConfigList, CommerceSystemConfigRow } from '@/types/commerceWire';
 
-/** `GET system/config?scope=website&scopeCode=justrite_test_website&searchCriteria[pageSize]=5`, 2026-11-02. */
+/** `GET system/config?scope=website&scopeCode=tailspin_test_website&searchCriteria[pageSize]=5`, 2026-11-02. */
 export const SYSTEM_CONFIG_PAGE_TEST_WEBSITE: CommerceSystemConfigList = {
     items: [
-        { path: 'login_as_customer/general/shopping_assistance_checkbox_title', value: 'Allow remote shopping assistance', scope: 'website', scope_code: 'justrite_test_website' },
-        { path: 'general/country/default', value: 'US', scope: 'website', scope_code: 'justrite_test_website' },
-        { path: 'general/country/allow', value: 'AF,AL,DZ', scope: 'website', scope_code: 'justrite_test_website' },
-        { path: 'general/country/destinations', value: null, scope: 'website', scope_code: 'justrite_test_website' },
+        { path: 'login_as_customer/general/shopping_assistance_checkbox_title', value: 'Allow remote shopping assistance', scope: 'website', scope_code: 'tailspin_test_website' },
+        { path: 'general/country/default', value: 'US', scope: 'website', scope_code: 'tailspin_test_website' },
+        { path: 'general/country/allow', value: 'AF,AL,DZ', scope: 'website', scope_code: 'tailspin_test_website' },
+        { path: 'general/country/destinations', value: null, scope: 'website', scope_code: 'tailspin_test_website' },
     ],
     search_criteria: { filter_groups: [], page_size: 5, current_page: 1 },
     total_count: 943,
@@ -64,12 +64,12 @@ const member = (id: number, email: string, websiteId: number, company = 28, grou
 export const ADMIN_64 = member(64, 'db08.admin@example.com', TEST_SITE_ID);
 export const BUYER_65 = member(65, 'db08.buyer@example.com', TEST_SITE_ID);
 /** The same company's customer on a website not chosen: the company stays. */
-export const BUYER_ON_JUSTRITE = member(65, 'db08.buyer@example.com', JUSTRITE_ID);
+export const BUYER_ON_TAILSPIN = member(65, 'db08.buyer@example.com', TAILSPIN_ID);
 /** The same company's customer on a website only partly chosen when one of Bodea's stores is. */
 export const ADMIN_ON_BODEA = member(64, 'db08.admin@example.com', BODEA_ID);
 export const BUYER_ON_BODEA = member(65, 'db08.buyer@example.com', BODEA_ID);
 /** Someone with no company on the going group, on another website: the catalog stays. */
-export const STRANGER_IN_GROUP: CommerceCustomer = { id: 80, email: 'justrite.buyer@example.com', firstname: 'Jr', lastname: 'Buyer', website_id: JUSTRITE_ID, group_id: 25 };
+export const STRANGER_IN_GROUP: CommerceCustomer = { id: 80, email: 'tailspin.buyer@example.com', firstname: 'Jr', lastname: 'Buyer', website_id: TAILSPIN_ID, group_id: 25 };
 /** Someone with no company on a group no catalog uses, on the test website. */
 export const LONE_SHOPPER: CommerceCustomer = { id: 70, email: 'zz.shopper@example.com', firstname: 'Zz', lastname: 'Shopper', website_id: TEST_SITE_ID, group_id: 30 };
 export const GROUP_30: CommerceCustomerGroup = { id: 30, code: 'ZZ Loose Group' };
@@ -90,10 +90,10 @@ export function b2bInstance(overrides: Partial<InstanceState> = {}): InstanceSta
     };
 }
 
-/** Commerce's Default set, a set only the test website's products use, and one JustRite's do. */
+/** Commerce's Default set, a set only the test website's products use, and one Tailspin's do. */
 export const DEFAULT_SET = { attribute_set_id: 4, attribute_set_name: 'Default' };
 export const WIPERS_SET = { attribute_set_id: 40, attribute_set_name: 'Wipers' };
-export const JUSTRITE_SET = { attribute_set_id: 41, attribute_set_name: 'Cans' };
+export const TAILSPIN_SET = { attribute_set_id: 41, attribute_set_name: 'Cans' };
 
 const carrying = (sku: string, setId: number, codes: string[], websites: number[] = [TEST_SITE_ID]): CommerceProduct => ({
     id: Number(sku.replace(/\D/gu, '')) || 1,
@@ -108,10 +108,10 @@ const carrying = (sku: string, setId: number, codes: string[], websites: number[
 
 export const WIPER_1 = carrying('ZZ-WIPER-1', 40, ['wiper_size', 'description']);
 export const WIPER_2 = carrying('ZZ-WIPER-2', 40, ['wiper_size']);
-/** On JustRite's website, in the going set: the set stays. */
-export const JUSTRITE_WIPER = carrying('JR-WIPER', 40, ['wiper_size'], [JUSTRITE_ID]);
-/** On JustRite's website, in its own set, carrying an attribute the going set also holds. */
-export const JUSTRITE_CAN = carrying('JR-CAN', 41, ['can_size'], [JUSTRITE_ID]);
+/** On Tailspin's website, in the going set: the set stays. */
+export const TAILSPIN_WIPER = carrying('JR-WIPER', 40, ['wiper_size'], [TAILSPIN_ID]);
+/** On Tailspin's website, in its own set, carrying an attribute the going set also holds. */
+export const TAILSPIN_CAN = carrying('JR-CAN', 41, ['can_size'], [TAILSPIN_ID]);
 /** On the test website, in the Default set, carrying an attribute the Default set holds. */
 export const DEFAULT_SET_PRODUCT = carrying('ZZ-PLAIN', 4, ['cs_format']);
 /** On the test website, carrying an ERP integration's attribute. */
@@ -127,7 +127,7 @@ export function attributeInstance(overrides: Partial<InstanceState> = {}): Insta
         hierarchies: {},
         catalogs: [],
         groups: [],
-        sets: [DEFAULT_SET, WIPERS_SET, JUSTRITE_SET],
+        sets: [DEFAULT_SET, WIPERS_SET, TAILSPIN_SET],
         setAttributes: {
             4: [{ attribute_code: 'description' }, { attribute_code: 'cs_format' }],
             40: [{ attribute_code: 'wiper_size' }, { attribute_code: 'description' }],
@@ -142,7 +142,7 @@ const row = (path: string, value: string | null, scope: 'default' | 'website', c
 
 /** A website's values against the Default scope's: one the same, one set on the website, a base URL, a credential, one with no default. */
 export function settingsInstance(overrides: Partial<InstanceState> = {}): InstanceState {
-    const code = 'justrite_test_website';
+    const code = 'tailspin_test_website';
     return b2bInstance({
         companies: [],
         hierarchies: {},
@@ -168,7 +168,7 @@ export function settingsInstance(overrides: Partial<InstanceState> = {}): Instan
                     row('general/country/destinations', null, 'website', code),
                 ],
                 bodea: [row('sales/totals_sort/tax', '50', 'website', 'bodea')],
-                justrite: [row('sales/totals_sort/tax', '60', 'website', 'justrite')],
+                tailspin: [row('sales/totals_sort/tax', '60', 'website', 'tailspin')],
             },
         },
         ...overrides,

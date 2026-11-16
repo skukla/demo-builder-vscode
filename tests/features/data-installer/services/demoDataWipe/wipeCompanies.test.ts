@@ -8,10 +8,10 @@
 import { planWipeFor } from '@/features/data-installer/services/demoDataWipe/wipePlan';
 import type { InstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import type { CommerceOrder } from '@/types/commerceWire';
-import { ADMIN_64, BUYER_65, BUYER_ON_JUSTRITE, COMPANY_28, b2bInstance } from '../../../../helpers/commerceWipeInstanceFixtures';
+import { ADMIN_64, BUYER_65, BUYER_ON_TAILSPIN, COMPANY_28, b2bInstance } from '../../../../helpers/commerceWipeInstanceFixtures';
 import { sandbox } from './wipe.testUtils';
 
-const TEST_STORE = ['justrite_test_website'];
+const TEST_STORE = ['tailspin_test_website'];
 const NOTHING = { products: [], orders: [] };
 const nameOfCompany = COMPANY_28.company_name;
 
@@ -20,7 +20,7 @@ const recordOf = (kind: string, id: string): InstallRecord => ({
     pack: { name: 'zz-pack', version: '1' },
     engine: 'demo-builder',
     startedAt: '2026-10-30T10:00:00.000Z',
-    target: { websiteCode: 'justrite', storeCode: 'justrite_us' },
+    target: { websiteCode: 'tailspin', storeCode: 'tailspin_us' },
     created: [{ kind, id }],
 });
 
@@ -41,7 +41,7 @@ describe('decideCompanies, through the plan', () => {
     });
 
     it('keeps a company with a customer on a website not chosen, names it, and keeps everyone in it', async () => {
-        const store = sandbox({ ...NOTHING, customers: [ADMIN_64, BUYER_ON_JUSTRITE], instance: b2bInstance() });
+        const store = sandbox({ ...NOTHING, customers: [ADMIN_64, BUYER_ON_TAILSPIN], instance: b2bInstance() });
 
         const plan = await planWipeFor(store.get, TEST_STORE, { records: [] });
 
@@ -52,7 +52,7 @@ describe('decideCompanies, through the plan', () => {
     });
 
     it('keeps a company with a customer who has an order in a store not chosen, reading where each ordered', async () => {
-        // View 2 is JustRite US, a store not chosen.
+        // View 2 is Tailspin US, a store not chosen.
         const store = sandbox({ products: [], orders: [orderIn(65, 2)], customers: [ADMIN_64, BUYER_65], instance: b2bInstance() });
 
         const plan = await planWipeFor(store.get, TEST_STORE, { records: [] });

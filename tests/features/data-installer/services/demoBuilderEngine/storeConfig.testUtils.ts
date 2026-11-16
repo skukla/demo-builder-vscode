@@ -14,9 +14,9 @@ import { type SentCall, fakeContext } from './demoBuilderEngine.testUtils';
 
 export const GRID = 'catalog/frontend/grid_per_page';
 export const LIST = 'catalog/frontend/list_per_page';
-export const WEBSITE = 'justrite_test_website';
+export const WEBSITE = 'tailspin_test_website';
 /** The project's own website on scratch-1028, which is not where its settings pack went (live, 2026-10-30). */
-export const PROJECT_WEBSITE = 'justrite';
+export const PROJECT_WEBSITE = 'tailspin';
 const FILTER_VALUE = 'searchCriteria[filterGroups][0][filters][0][value]';
 
 type Scoped = Record<string, string | null>;

@@ -168,7 +168,7 @@ const websitesOf = (stock: StockRow): string[] =>
  * same day), so a website sells from the ERP's warehouse only through a stock of its own.
  *
  * Told the project's ERPs, EACH needs its own, which is what the fix makes (`warehouseSetup`).
- * Without them it asks only whether any warehouse is sold: on Justrite (2026-10-26) that
+ * Without them it asks only whether any warehouse is sold: on Tailspin (2026-10-26) that
  * answered Done with Test ERP just added and no warehouse of its own, so the fix that would
  * make one was never offered.
  */

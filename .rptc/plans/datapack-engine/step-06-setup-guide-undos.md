@@ -55,7 +55,7 @@ apply (it dropped `enabledSources` before; new `recordMerge.test.ts`).
 **The one line.** Settings: "Kept Payment on Account for the website as it is: it was changed
 after Demo Builder set it." Catalogs: "Kept the shared catalog Harbor Catalog: it holds 2
 products, 1 category and 1 company Demo Builder did not put there." Warehouse: "Kept acme Stock:
-it holds Default Source, which Demo Builder did not add to it." and "Kept Justrite Warehouse
+it holds Default Source, which Demo Builder did not add to it." and "Kept Tailspin Warehouse
 switched on: it was changed after Demo Builder set it up." It shows under its step on the result
 screen and in the setup guide (`changedSteps` in `storePreparationHandlers.ts`, the same rows the
 guide files by step), in the agent's answer (`steps[].kept`), and in removing the ERP integration
@@ -100,7 +100,7 @@ what is written. That last point is Magento's REST design, not something measure
 - **The rule for packs (step 09).** "A pack's removal leaves a setting the guide changed since"
   waits for step 09's `store_config` kind.
 
-### Live test (owner's call; on `justrite_test_website` via project `scratch-1028`, never JustRite's own site)
+### Live test (owner's call; on `tailspin_test_website` via project `scratch-1028`, never Tailspin's own site)
 
 1. Apply the price-scope step and the warehouse step from the setup guide. Read the project's
    `storePreparation` record: settings rows carry `wrote`, the warehouse record carries

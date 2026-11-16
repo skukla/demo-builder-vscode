@@ -63,11 +63,11 @@ const PAYLOADS: Record<string, HandlerResponse> = {
         success: true,
         result: {
             outcome: 'read',
-            fullName: 'jen/isle5-demo',
+            fullName: 'robin/isle5-demo',
             defaultBranch: 'main',
             isTemplate: false,
             kind: 'eds',
-            contentSource: { org: 'jen', site: 'isle5-demo' },
+            contentSource: { org: 'robin', site: 'isle5-demo' },
             contentPublished: { indexFound: true, pageCount: 42 },
             storeCodes: {
                 websiteCode: 'isle5',
@@ -79,7 +79,7 @@ const PAYLOADS: Record<string, HandlerResponse> = {
             description: {
                 kind: 'demo',
                 version: 1,
-                name: 'Isle5 by Jen',
+                name: 'Isle5 by Robin',
                 description: 'x'.repeat(300),
                 configDefaults: Object.fromEntries(
                     Array.from({ length: 12 }, (_, i) => [`KEY_${i}`, `value-${i}`])

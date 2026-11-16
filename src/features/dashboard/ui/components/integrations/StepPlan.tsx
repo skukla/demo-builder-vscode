@@ -27,7 +27,7 @@ const clauseOf = (line: string): string => (line.includes(' → ') ? `set ${line
 
 /**
  * What Apply will do, in one sentence: the step's own summary when it has one ("Apply will
- * add Test Warehouse to Justrite Stock, and switch Test Warehouse back on."), else its first
+ * add Test Warehouse to Tailspin Stock, and switch Test Warehouse back on."), else its first
  * two changes and how many more.
  */
 function willDo(step: PreparationStepReport): string {

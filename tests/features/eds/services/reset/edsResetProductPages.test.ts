@@ -36,7 +36,7 @@ function storefront(name: string, githubRepo: string): Project {
     });
 }
 
-const THIS = storefront('justrite', 'skukla/kukla-justrite');
+const THIS = storefront('tailspin', 'skukla/kukla-tailspin');
 
 function setUp(localProjects: Project[] = [THIS]) {
     const helix = {
@@ -73,7 +73,7 @@ function setUp(localProjects: Project[] = [THIS]) {
     const params = {
         project: THIS,
         repoOwner: 'skukla',
-        repoName: 'kukla-justrite',
+        repoName: 'kukla-tailspin',
         daLiveOrg: 'da-org',
         daLiveSite: 'da-site',
     } as EdsResetParams;
@@ -90,15 +90,15 @@ describe('takeOutProductPages', () => {
 
         const sentence = await run();
 
-        expect(helix.listPublishedPaths).toHaveBeenCalledWith('skukla', 'kukla-justrite', 'main', '/products/*');
+        expect(helix.listPublishedPaths).toHaveBeenCalledWith('skukla', 'kukla-tailspin', 'main', '/products/*');
         // The authored pages are read from the DA.live site, folder by folder.
         expect(listDirectory).toHaveBeenCalledWith('da-org', 'da-site', '/products');
         expect(listDirectory).toHaveBeenCalledWith('da-org', 'da-site', '/products/guides');
-        expect(helix.unpublishPages).toHaveBeenCalledWith('skukla', 'kukla-justrite', 'main', [
+        expect(helix.unpublishPages).toHaveBeenCalledWith('skukla', 'kukla-tailspin', 'main', [
             '/products/drum/dc-100',
         ]);
         expect(sentence).toStrictEqual({
-            sentence: 'Removed 1 product page from skukla/kukla-justrite, live and preview.',
+            sentence: 'Removed 1 product page from skukla/kukla-tailspin, live and preview.',
             problem: false,
         });
     });
@@ -112,19 +112,19 @@ describe('takeOutProductPages', () => {
             [RESET_STEP.clearingOldContent, 'Unpublishing the old product pages'],
             [
                 RESET_STEP.clearingOldContent,
-                'Removed 1 product page from skukla/kukla-justrite, live and preview.',
+                'Removed 1 product page from skukla/kukla-tailspin, live and preview.',
             ],
         ]);
     });
 
     it('refuses when another local project publishes to the same repository, and this project does not count', async () => {
-        const { helix, run } = setUp([THIS, storefront('justrite-b2b', 'skukla/kukla-justrite')]);
+        const { helix, run } = setUp([THIS, storefront('tailspin-b2b', 'skukla/kukla-tailspin')]);
 
         const sentence = await run();
 
         expect(helix.listPublishedPaths).not.toHaveBeenCalled();
         expect(helix.unpublishPages).not.toHaveBeenCalled();
-        expect(sentence?.sentence).toContain('the project "justrite-b2b" also publishes to skukla/kukla-justrite');
+        expect(sentence?.sentence).toContain('the project "tailspin-b2b" also publishes to skukla/kukla-tailspin');
         // Nothing was removed, so the old pages are still live: the SC is warned.
         expect(sentence?.problem).toBe(true);
     });

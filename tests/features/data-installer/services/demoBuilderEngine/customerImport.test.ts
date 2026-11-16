@@ -17,8 +17,8 @@ const ADDRESS = { firstname: 'Sharon', lastname: 'Reynolds', street: ['4346 Park
 async function store(answer: () => unknown = () => ({ id: 85, website_id: 6 })) {
     const ctx = await fakeContext(NOBODY, (call) => (call.path === 'customers' ? answer() : {}));
     ctx.session.websiteId = 6;
-    ctx.session.websiteCode = 'justrite_test_website';
-    ctx.session.storeCode = 'justrite_test_store_us';
+    ctx.session.websiteCode = 'tailspin_test_website';
+    ctx.session.storeCode = 'tailspin_test_store_us';
     return ctx;
 }
 
@@ -31,8 +31,8 @@ describe('customerImportRows', () => {
 
         expect(rows[0]).toEqual({
             email: 'vip@thelumastory.com',
-            _website: 'justrite_test_website',
-            _store: 'justrite_test_store_us',
+            _website: 'tailspin_test_website',
+            _store: 'tailspin_test_store_us',
             firstname: 'Sharon',
             lastname: 'Reynolds',
             group_id: '40',
@@ -47,7 +47,7 @@ describe('customerImportRows', () => {
             _address_default_billing_: '1',
             _address_default_shipping_: '1',
         });
-        expect(rows[1]).toMatchObject({ email: 'vip@thelumastory.com', _website: 'justrite_test_website', _address_street: '1 Other Road' });
+        expect(rows[1]).toMatchObject({ email: 'vip@thelumastory.com', _website: 'tailspin_test_website', _address_street: '1 Other Road' });
         expect(rows[1]).not.toHaveProperty('firstname');
     });
 });

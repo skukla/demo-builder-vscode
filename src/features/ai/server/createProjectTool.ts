@@ -97,7 +97,7 @@ function projectsDir(): string {
  * Until 2026-09-30 `accsEndpoint` reached only the storefront's `config.json`,
  * so an agent-created project had a Commerce store scope and no Commerce
  * endpoint — the REST tools, the mesh env and the admin link all read the
- * backend's config and found nothing (AB-53, project `justrite`).
+ * backend's config and found nothing (AB-53, project `tailspin`).
  */
 function backendEndpointConfig(
     stackId: string,

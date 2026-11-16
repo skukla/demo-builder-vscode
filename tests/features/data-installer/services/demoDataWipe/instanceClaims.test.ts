@@ -27,7 +27,7 @@ const STRUCTURE: CommerceStoreStructure = {
     storeGroups: SANDBOX_GROUPS,
     storeViews: SANDBOX_VIEWS,
 };
-const SITE = 'justrite_test_website';
+const SITE = 'tailspin_test_website';
 
 function project(name: string, websiteCode: string | undefined, pack?: string): Project {
     return createMockProject({
@@ -80,9 +80,9 @@ const claims = (
     });
 
 it("covers the websites named and warns of nothing: its window names each website's projects", async () => {
-    const answer = await claims(memoryFiles(), [], ['justrite', 'bodea']);
+    const answer = await claims(memoryFiles(), [], ['tailspin', 'bodea']);
 
-    expect(answer.scope.key).toBe('bodea,justrite');
+    expect(answer.scope.key).toBe('bodea,tailspin');
     expect(answer.warning).toBeUndefined();
 });
 
@@ -108,16 +108,16 @@ it('uninstalls a pack whose records are all on chosen websites, and stops respec
 
 it('keeps a pack also installed on a website not chosen, and every record of its project respected', async () => {
     const nb = project('nb', SITE, 'nb-pack');
-    const onJustrite = record('nb-pack', 'justrite', 'NB-ON-JUSTRITE');
-    const files = filesWith([[nb, onJustrite]]);
+    const onTailspin = record('nb-pack', 'tailspin', 'NB-ON-TAILSPIN');
+    const files = filesWith([[nb, onTailspin]]);
 
     const answer = await claims(files, [nb], [SITE]);
 
     expect(answer.users.find((u) => u.project.path === nb.path)).toMatchObject({
         decision: 'elsewhere',
-        elsewhere: ['justrite'],
+        elsewhere: ['tailspin'],
     });
-    expect(answer.respects.everyRecord).toEqual([onJustrite]);
+    expect(answer.respects.everyRecord).toEqual([onTailspin]);
 });
 
 it('keeps a pack whose record names no website its project names either', async () => {
@@ -201,7 +201,7 @@ it('sets back what the dropped records wrote, and keeps only the settings writte
     const answer = await claims(files, [other], [SITE]);
 
     expect(answer.removing).toEqual({
-        setBack: ['justrite_test_website/catalog/frontend/grid_per_page'],
+        setBack: ['tailspin_test_website/catalog/frontend/grid_per_page'],
     });
     expect([...answer.respects.settingsKept]).toEqual(['bodea/catalog/frontend/list_mode']);
 });

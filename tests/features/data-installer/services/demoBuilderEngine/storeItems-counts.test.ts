@@ -26,7 +26,7 @@ const COMPANIES: CommerceCompanyRow[] = [
 ];
 const RULES: CommerceSalesRule[] = [
     { rule_id: 7, name: 'Spring Sale', website_ids: [TEST_SITE_ID] },
-    { rule_id: 8, name: 'JustRite only', website_ids: [2] },
+    { rule_id: 8, name: 'Tailspin only', website_ids: [2] },
 ];
 const GROUPS: CommerceCustomerGroup[] = [
     { id: 0, code: 'NOT LOGGED IN' },

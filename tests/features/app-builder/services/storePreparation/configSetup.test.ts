@@ -23,7 +23,7 @@ function store(defaults: Array<[string, string | null]>, website: Array<[string,
     return commerceFake(
         {
             'system/config?scope=default': configList(defaults),
-            'system/config?scope=website': configList(website, 'website', 'justrite'),
+            'system/config?scope=website': configList(website, 'website', 'tailspin'),
         },
         (_m, _p, body) => configSaved(((body as { items: CommerceSystemConfigPutAnswer['items'] }).items ?? []).map((row) => ({ ...row, value: row.value ?? null }))),
     );
@@ -34,14 +34,14 @@ describe('configListPath', () => {
         expect(configListPath(['a/b/c', 'd/e/f'], 'default')).toBe(
             'system/config?scope=default&searchCriteria[filterGroups][0][filters][0][field]=path&searchCriteria[filterGroups][0][filters][0][value]=a%2Fb%2Fc%2Cd%2Fe%2Ff&searchCriteria[filterGroups][0][filters][0][conditionType]=in',
         );
-        expect(configListPath(['a/b/c'], 'website', 'justrite')).toContain('scope=website&scopeCode=justrite&');
+        expect(configListPath(['a/b/c'], 'website', 'tailspin')).toContain('scope=website&scopeCode=tailspin&');
     });
 });
 
 describe('preview', () => {
     it('reads current values and lists only the rows that differ, with the manual part', async () => {
         const commerce = store([['catalog/price/scope', '0']]);
-        const preview = await configSetup(FIX).preview({ commerce, websiteCode: 'justrite', erpNames: [] });
+        const preview = await configSetup(FIX).preview({ commerce, websiteCode: 'tailspin', erpNames: [] });
         expect(preview).toEqual({
             changes: ['Catalog Price Scope: Global → Website', 'Payment on Account for the website: No → Yes'],
             manual: 'Connect PayPal by hand.',
@@ -51,7 +51,7 @@ describe('preview', () => {
 
     it('lists nothing for a value already in force (inherited from the default counts)', async () => {
         const commerce = store([['catalog/price/scope', '1'], ['payment/companycredit/active', '1']]);
-        const preview = await configSetup(FIX).preview({ commerce, websiteCode: 'justrite', erpNames: [] });
+        const preview = await configSetup(FIX).preview({ commerce, websiteCode: 'tailspin', erpNames: [] });
         expect(preview.changes).toStrictEqual([]);
     });
 
@@ -64,32 +64,32 @@ describe('preview', () => {
 describe('apply', () => {
     it('writes only the differing rows in one PUT, scoped, and records what each held before', async () => {
         const commerce = store([['catalog/price/scope', '1']]);
-        const applied = await configSetup(FIX).apply({ commerce, websiteCode: 'justrite', erpNames: [] });
+        const applied = await configSetup(FIX).apply({ commerce, websiteCode: 'tailspin', erpNames: [] });
         expect(commerce.writes()).toEqual([
-            ['PUT', 'system/config', { items: [{ path: 'payment/companycredit/active', value: '1', scope: 'website', scope_code: 'justrite' }] }],
+            ['PUT', 'system/config', { items: [{ path: 'payment/companycredit/active', value: '1', scope: 'website', scope_code: 'tailspin' }] }],
         ]);
         expect(applied).toEqual({
             changes: ['Payment on Account for the website: No → Yes'],
             rejected: [],
             // `wrote` is what the undo compares the store with (step 06): kept when it moved since.
-            record: { kind: 'config', previous: [{ path: 'payment/companycredit/active', scope: 'website', scopeCode: 'justrite', stored: null, effective: '0', wrote: '1' }] },
+            record: { kind: 'config', previous: [{ path: 'payment/companycredit/active', scope: 'website', scopeCode: 'tailspin', stored: null, effective: '0', wrote: '1' }] },
             manual: 'Connect PayPal by hand.',
         });
     });
 
     it('writes nothing and records nothing when every value stands', async () => {
         const commerce = store([['catalog/price/scope', '1'], ['payment/companycredit/active', '1']]);
-        const applied = await configSetup(FIX).apply({ commerce, websiteCode: 'justrite', erpNames: [] });
+        const applied = await configSetup(FIX).apply({ commerce, websiteCode: 'tailspin', erpNames: [] });
         expect(commerce.send).not.toHaveBeenCalled();
         expect(applied.record).toBeUndefined();
     });
 
     it('names a row the answer refused (under HTTP 200), records the others, and keeps going', async () => {
         const commerce = commerceFake(
-            { 'system/config?scope=default': configList([['catalog/price/scope', '0']]), 'system/config?scope=website': configList([], 'website', 'justrite') },
+            { 'system/config?scope=default': configList([['catalog/price/scope', '0']]), 'system/config?scope=website': configList([], 'website', 'tailspin') },
             () => configRefused([{ path: 'catalog/price/scope', value: '1', scope: 'default' }], 'payment/companycredit/active', 'website', 'The path is not allowed'),
         );
-        const applied = await configSetup(FIX).apply({ commerce, websiteCode: 'justrite', erpNames: [] });
+        const applied = await configSetup(FIX).apply({ commerce, websiteCode: 'tailspin', erpNames: [] });
         expect(applied.changes).toEqual(['Catalog Price Scope: Global → Website']);
         expect(applied.rejected).toEqual(['Payment on Account for the website: No → Yes: The path is not allowed']);
         expect(applied.record).toEqual({ kind: 'config', previous: [{ path: 'catalog/price/scope', scope: 'default', stored: '0', effective: '0', wrote: '1' }] });
@@ -97,12 +97,12 @@ describe('apply', () => {
 
     it('a PUT that throws rejects every row it carried and records nothing', async () => {
         const commerce = commerceFake(
-            { 'system/config?scope=default': configList([['catalog/price/scope', '0']]), 'system/config?scope=website': configList([], 'website', 'justrite') },
+            { 'system/config?scope=default': configList([['catalog/price/scope', '0']]), 'system/config?scope=website': configList([], 'website', 'tailspin') },
             () => {
                 throw new Error('Commerce answered 500 for system/config');
             },
         );
-        const applied = await configSetup(FIX).apply({ commerce, websiteCode: 'justrite', erpNames: [] });
+        const applied = await configSetup(FIX).apply({ commerce, websiteCode: 'tailspin', erpNames: [] });
         expect(applied.rejected).toHaveLength(2);
         expect(applied.record).toBeUndefined();
     });
@@ -114,7 +114,7 @@ describe('a setting with no Admin name', () => {
     it('says its path and stored values', async () => {
         const commerce = store([['catalog/price/scope', '0']]);
         const bare: ConfigSetupSpec = { kind: 'config', items: [{ path: 'catalog/price/scope', value: '1', scope: 'default' }] };
-        const preview = await configSetup(bare).preview({ commerce, websiteCode: 'justrite', erpNames: [] });
+        const preview = await configSetup(bare).preview({ commerce, websiteCode: 'tailspin', erpNames: [] });
         expect(preview.changes).toEqual(['catalog/price/scope: 0 → 1']);
     });
 });
@@ -123,12 +123,12 @@ describe('undo', () => {
     it('writes each recorded row back to the value in force before, in the Admin\'s words', async () => {
         const commerce = store([['catalog/price/scope', '1']], [['payment/companycredit/active', '1']]);
         const undone = await configSetup(FIX).undo(
-            { commerce, websiteCode: 'justrite', erpNames: [] },
+            { commerce, websiteCode: 'tailspin', erpNames: [] },
             {
                 kind: 'config',
                 previous: [
                     { path: 'catalog/price/scope', scope: 'default', stored: '0', effective: '0', wrote: '1' },
-                    { path: 'payment/companycredit/active', scope: 'website', scopeCode: 'justrite', stored: null, effective: '0', wrote: '1' },
+                    { path: 'payment/companycredit/active', scope: 'website', scopeCode: 'tailspin', stored: null, effective: '0', wrote: '1' },
                 ],
             },
         );
@@ -139,7 +139,7 @@ describe('undo', () => {
                 {
                     items: [
                         { path: 'catalog/price/scope', value: '0', scope: 'default' },
-                        { path: 'payment/companycredit/active', value: '0', scope: 'website', scope_code: 'justrite' },
+                        { path: 'payment/companycredit/active', value: '0', scope: 'website', scope_code: 'tailspin' },
                     ],
                 },
             ],
@@ -158,13 +158,13 @@ describe('undo', () => {
     it('keeps a setting changed since the fix wrote it, writing back only the one still as it left it', async () => {
         const commerce = store([['catalog/price/scope', '1']], [['payment/companycredit/active', '2']]);
         const undone = await configSetup(FIX).undo(
-            { commerce, websiteCode: 'justrite', erpNames: [] },
+            { commerce, websiteCode: 'tailspin', erpNames: [] },
             {
                 kind: 'config',
                 previous: [
                     { path: 'catalog/price/scope', scope: 'default', stored: '0', effective: '0', wrote: '1' },
                     // Written 1 over an inherited 0, and set to something else (2) since.
-                    { path: 'payment/companycredit/active', scope: 'website', scopeCode: 'justrite', stored: null, effective: '0', wrote: '1' },
+                    { path: 'payment/companycredit/active', scope: 'website', scopeCode: 'tailspin', stored: null, effective: '0', wrote: '1' },
                 ],
             },
         );
@@ -179,7 +179,7 @@ describe('undo', () => {
     it('reads a record written before `wrote` was kept by the value the step writes', async () => {
         const commerce = store([['catalog/price/scope', '1']]);
         const undone = await configSetup(FIX).undo(
-            { commerce, websiteCode: 'justrite', erpNames: [] },
+            { commerce, websiteCode: 'tailspin', erpNames: [] },
             { kind: 'config', previous: [{ path: 'catalog/price/scope', scope: 'default', stored: '0', effective: '0' }] },
         );
         // The step writes 1 and the store holds 1: still as the fix left it, so it goes back.
@@ -190,7 +190,7 @@ describe('undo', () => {
     it('keeps, and says why, a setting whose written value nothing records (an old set_commerce_config record)', async () => {
         const commerce = store([['catalog/price/scope', '1'], ['sales/totals_sort/tax', '41']]);
         const undone = await configSetup({ kind: 'config', items: [] }).undo(
-            { commerce, websiteCode: 'justrite', erpNames: [] },
+            { commerce, websiteCode: 'tailspin', erpNames: [] },
             {
                 kind: 'config',
                 previous: [
@@ -206,7 +206,7 @@ describe('undo', () => {
     it('says nothing about a setting already back at the value it had before', async () => {
         const commerce = store([['catalog/price/scope', '0']]);
         const undone = await configSetup(FIX).undo(
-            { commerce, websiteCode: 'justrite', erpNames: [] },
+            { commerce, websiteCode: 'tailspin', erpNames: [] },
             { kind: 'config', previous: [{ path: 'catalog/price/scope', scope: 'default', stored: '0', effective: '0', wrote: '1' }] },
         );
         expect(undone).toEqual({ changes: [], rejected: [] });
@@ -215,12 +215,12 @@ describe('undo', () => {
     it('previews an undo the way it would run, writing nothing', async () => {
         const commerce = store([['catalog/price/scope', '1']], [['payment/companycredit/active', '2']]);
         const preview = await configSetup(FIX).previewUndo(
-            { commerce, websiteCode: 'justrite', erpNames: [] },
+            { commerce, websiteCode: 'tailspin', erpNames: [] },
             {
                 kind: 'config',
                 previous: [
                     { path: 'catalog/price/scope', scope: 'default', stored: '0', effective: '0', wrote: '1' },
-                    { path: 'payment/companycredit/active', scope: 'website', scopeCode: 'justrite', stored: null, effective: '0', wrote: '1' },
+                    { path: 'payment/companycredit/active', scope: 'website', scopeCode: 'tailspin', stored: null, effective: '0', wrote: '1' },
                 ],
             },
         );

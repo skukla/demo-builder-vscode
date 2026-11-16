@@ -36,8 +36,8 @@ const COMMERCE = 'scripts/commerce.js';
 const OVERLAY = 'https://x.test/api/v1/web/accs-discovery/render-pdp';
 const HANDLER = buildSmart404Snippet('https://x.test/api/v1/web/accs-discovery/prepublish-pdp', 'org', 'site');
 const DELAYED = '// add delayed functionality here\n';
-const OLD_404 = buildSmart404Snippet('https://old.test/prepublish-pdp', 'kmanns', 'justrite');
-/** JustRite's delayed.js on 2026-10-29: both old copies. */
+const OLD_404 = buildSmart404Snippet('https://old.test/prepublish-pdp', 'org-e', 'tailspin');
+/** Tailspin's delayed.js on 2026-10-29: both old copies. */
 const OLD_DELAYED = DELAYED + INSPECTOR_DELAYED_SNIPPET + OLD_404;
 const INIT = 'scripts/demo-inspector-init.js';
 const TARGET = { owner: 'me', repo: 'store' };
@@ -225,7 +225,7 @@ describe('bringStorefrontUpToDate', () => {
         mockReadShipped.mockResolvedValue({ live: KNOWN_PATCHES, retired: [], complete: true });
         const gh = github({ [HEADER_NAV_TOOLS.target]: HEADER_JS, 'blocks/product-teaser/product-teaser.js': TEASER_JS });
 
-        const result = await bringStorefrontUpToDate(gh, 'kmanns', 'justrite', undefined, createMockLogger(), 'o', 's');
+        const result = await bringStorefrontUpToDate(gh, 'org-e', 'tailspin', undefined, createMockLogger(), 'o', 's');
 
         expect(writes(gh).map(([path, content, message, sha]) => [path, content.includes('rootLink'), message, sha])).toStrictEqual([
             [HEADER_NAV_TOOLS.target, false, STOREFRONT_REPAIR_COMMIT, `${HEADER_NAV_TOOLS.target}-sha`],

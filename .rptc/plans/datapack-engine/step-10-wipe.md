@@ -36,11 +36,11 @@ An SC resets a demo to put new data in. The cases:
    With nothing else there, the box does not appear.
 3. **It only ever clears this demo's part of the store** (widened 2026-10-30 from one website to a
    chosen set of STORES, see "Decisions recorded"). The owner's one ACCS instance holds several
-   demos (Justrite, Bodea and others), so emptying the instance would empty theirs:
+   demos (Tailspin, Bodea and others), so emptying the instance would empty theirs:
    - **products** tied to the chosen stores; one other websites also sell is only taken off the
      chosen websites;
    - **categories** under a root every store using it is chosen. If that root is shared with a
-     store not chosen (as `justrite_test_store`'s is with `justrite_store`'s, root 119),
+     store not chosen (as `tailspin_test_store`'s is with `tailspin_store`'s, root 119),
      categories are left and the screen says why;
    - **customers** of a wholly chosen website, or made in a chosen store;
    - **orders** placed in a chosen store: closed off, never deleted (the one reset rule below);
@@ -126,7 +126,7 @@ only widens what the next clearing of the same stores looks at; every rule still
 ### What Commerce's settings API cannot do
 
 Measured and read 2026-11-02 ([Adobe's page](https://developer.adobe.com/commerce/webapi/rest/saas-integrations/system-config/);
-`GET system/config?scope=website&scopeCode=justrite_test_website` live):
+`GET system/config?scope=website&scopeCode=tailspin_test_website` live):
 
 - **It cannot put a value back to inherited.** `PUT` needs a string `value` and there is no delete.
   So a value set back reads the same as the default but stays the website's own row: a later change to
@@ -173,7 +173,7 @@ refused with the captured message while the company stands, and a catalog's dele
 and moving everyone in it to group 1, counted in `movedToGeneral`, which every test leaves empty.
 Fixtures: `tests/helpers/commerceWipeInstanceFixtures.ts`.
 
-### Live proof (owner's call; `scratch-1028`, `justrite_test_website` / `justrite_test_store` ONLY)
+### Live proof (owner's call; `scratch-1028`, `tailspin_test_website` / `tailspin_test_store` ONLY)
 
 Nothing here can be undone, so the clearing only ever meets things the test made itself. Every step
 reads first; stop if `check_demo_data` lists anything the test did not make.
@@ -195,7 +195,7 @@ reads first; stop if `check_demo_data` lists anything the test did not make.
    company, customers, product, catalog, group, set, attribute, setting. Read `GET customers/{buyer}` as it
    runs if possible: its group must never read 1 before it is deleted.
 6. **Back to zero:** `check_demo_data` answers `total` 0 with the same `left` as step 1 (settings included).
-   Every other demo reads as before: `GET products` and `customers/search` with Justrite's, Bodea's, BJU's and
+   Every other demo reads as before: `GET products` and `customers/search` with Tailspin's, Bodea's, CLIENT C's and
    CitiSignal's `website_id`, the same `total_count` as at step 1. What does not return: the setting stays
    the website's own row, holding the default's value, until "Use Default Value" in the Admin.
 7. **A failed write:** not provable live without breaking something; covered by tests.
@@ -270,9 +270,9 @@ same: `tests/helpers/resetRuleOrders.ts` here, `test/lib/reset-rule-orders.js` t
 > especially when the ERP is expected to be transient and can be easily populated from absolutely
 > nothing."
 
-Measured live the same day: on this instance JustRite's ERP integration (project `justrite`,
+Measured live the same day: on this instance Tailspin's ERP integration (project `tailspin`,
 `erp-integration`) answers `structure_owns: "all"` and `orders_send: true` for every website,
-`justrite_test_website` included. So the test store's orders go to JustRite's ERP, and the wipe's
+`tailspin_test_website` included. So the test store's orders go to Tailspin's ERP, and the wipe's
 own cancel or refund would be passed on to it by the integration's order handlers (it stays silent
 only for orders it marked closed itself, `lib/order-parts.js markClosedByReset`).
 
@@ -284,7 +284,7 @@ only for orders it marked closed itself, `lib/order-parts.js markClosedByReset`)
 > has its ERPs remove them), then the refill. Held (must be updated, could not be asked): the orders
 > are closed anyway and the ERP step is skipped. A held, failed or partial ERP step is an ERP problem
 > (`outcome.erp.broughtInLine` false, `problem` why), never orders that failed to close; the
-> integration's counts are not merged. Plan line: "The ERP integration (JustRite) serves these
+> integration's counts are not merged. Plan line: "The ERP integration (Tailspin) serves these
 > stores: its ERP is brought in line with Commerce after the clearing." Stage "Updating the ERP"
 > runs after the clearing. The live test below still describes the old flow.
 
@@ -299,7 +299,7 @@ reset's second question):
    `orders_send`) and whether its deployment closes by store (`GET erp/status`,
    `closesOrdersByStore`). The orders of those websites' chosen stores, and their returns, are not
    the wipe's own: the list carries one line for them, counted and named ("2 orders are handled by
-   the ERP integration (JustRite): they will be closed there, removed from its ERP, and the ERP
+   the ERP integration (Tailspin): they will be closed there, removed from its ERP, and the ERP
    refreshed.").
 3. **Clearing: the integration closes EVERY order of those stores first** (`POST erp/close-orders`
    with their store codes, followed by its run id when the answer is cut off; commerce-erp-integration
@@ -309,12 +309,12 @@ reset's second question):
    stores; it does its other writes as before, then **the integration's ERPs are filled again from
    Commerce** (`fillEveryErp`, what the ERP reset runs after its wipe). The note merges the
    integration's counts with the wipe's and names the ERPs: "Removed nothing from the store
-   justrite_test_store. Canceled 1 order and refunded 1 order. Closed 1 return. 2 of the orders were
-   closed through the ERP integration (JustRite), and removed from Justrite ERP. JustRite's ERP was
+   tailspin_test_store. Canceled 1 order and refunded 1 order. Closed 1 return. 2 of the orders were
+   closed through the ERP integration (Tailspin), and removed from Tailspin ERP. Tailspin's ERP was
    refreshed from Commerce." An ERP that kept its copies is named with why.
 4. **A deployment that cannot close by store, or cannot be asked, is never called**: those orders
    are left open, uncounted, and the line says why with the update to run ("... are left open: it
-   must be updated before a wipe can close them: open the project justrite and update
+   must be updated before a wipe can close them: open the project tailspin and update
    erp-integration (Update on its card, or update_integration), then check again."). The rest of the
    wipe goes ahead. One that cannot be asked holds every chosen website's orders (the safe way).
 5. **Never the Admin website**: Commerce answers its own Admin scope (website `admin`, id 0, store
@@ -343,7 +343,7 @@ list did not (it was held, or was the wipe's own) writes nothing and offers the 
 
 | Read or call | Endpoint and field | Confirmed? |
 |---|---|---|
-| which websites send orders | `GET erp/settings?websites=`, `websites.<code>.orders_send` (else `default`) | yes: JustRite answered `true` for every website (`get_erp_settings`, 2026-10-30); the field is what the integration's `order-sync.js readyToSend` reads |
+| which websites send orders | `GET erp/settings?websites=`, `websites.<code>.orders_send` (else `default`) | yes: Tailspin answered `true` for every website (`get_erp_settings`, 2026-10-30); the field is what the integration's `order-sync.js readyToSend` reads |
 | whether it closes by store | `GET erp/status`, `closesOrdersByStore` | from the integration's code (`actions/erp/status`, a2556c2); **not yet from a deployment** |
 | the close | `POST erp/close-orders` `{ run, stores: [<store group code>] }`, `GET erp/close-orders?run=` | from the integration's action and README (a2556c2); **not yet from a deployment** |
 | its answer | `{ scope, closed { cancelled, refunded, commented, alreadyClosed, returnsClosed, partsRemoved, failed[{ orderId, error }] }, touched[{ orderId, outcome }], orders, holds, erpRemoved { <listId>: { removed, notFound } \| "unsupported" \| { failed } } }` | the shape the integration's box test pins (`test/box/close-store-orders.test.js`, 1f6de21), copied into `erpWipeFixtures.ts`; **not yet from a deployment** |
@@ -360,7 +360,7 @@ list did not (it was held, or was the wipe's own) writes nothing and offers the 
    with no orders at all closes nothing.
 3. **The refresh is a fill, not a wipe and a fill.** The close already took the stores' orders out
    of the ERP; a fill adds and updates. An `admin/wipe` first would also remove other websites'
-   live orders (JustRite's). Confirmed right by the integration's author, 2026-10-30.
+   live orders (Tailspin's). Confirmed right by the integration's author, 2026-10-30.
 4. **A close the integration could not make does not stop the wipe's own writes** (the ERP reset
    stops before its wipe instead). Recommended: keep. The wipe's Commerce deletes do not depend on
    those orders, the failed ones are named, and a second wipe closes them (run twice is safe).
@@ -423,7 +423,7 @@ now names the store and its orders.
 `stores: [{ websiteCode, storeCode? }]` in place of `websiteCode` (removed, not kept alongside).
 The check answers `{ choices, preview? , refused? }`; `stores: []` answers the choices alone. The
 consent names the stores and says orders are canceled or refunded; narration "Clearing
-justrite_test_store". Battery prompt `reset-demo-leave-store-empty` reworded to the test store.
+tailspin_test_store". Battery prompt `reset-demo-leave-store-empty` reworded to the test store.
 
 ### Reuse
 
@@ -501,15 +501,15 @@ examples by name first), `wipeRun.test.ts` (5), `wipeClaims.test.ts` (11), `demo
 (2), `consentText.test.ts` (2), over typed fixtures (`commerceWipeFixtures.ts`, with Bodea given a
 second store, invented, to have a website only partly chosen; `resetRuleOrders.ts`).
 
-### Live test (owner's call; `scratch-1028`, `justrite_test_website` / `justrite_test_store` ONLY)
+### Live test (owner's call; `scratch-1028`, `tailspin_test_website` / `tailspin_test_store` ONLY)
 
 Nothing here can be undone, so the clearing only ever meets things the test made itself.
 
 0. **Read-only, for the owner to review before anything is written.** `check_demo_data` with
-   `stores: [{ websiteCode: justrite_test_website, storeCode: justrite_test_store }]`. Expected:
-   `choices` lists `justrite_store` with `claimedBy` naming JustRite (if that project is on this
-   machine); every category under root 119 in `left` ("which the store justrite_store (website
-   justrite) also shows"); `takenOff` naming any product JustRite also sells; `orders` counting the
+   `stores: [{ websiteCode: tailspin_test_website, storeCode: tailspin_test_store }]`. Expected:
+   `choices` lists `tailspin_store` with `claimedBy` naming Tailspin (if that project is on this
+   machine); every category under root 119 in `left` ("which the store tailspin_store (website
+   tailspin) also shows"); `takenOff` naming any product Tailspin also sells; `orders` counting the
    test view's orders. Then confirm the unconfirmed fields, read-only, and record the answers as
    typed fixtures: `run_commerce_rest GET` `products` (the test website's `website_id`, page size 5,
    `fields=items[sku,visibility,extension_attributes[website_ids,configurable_product_links,category_links]]`);
@@ -526,38 +526,38 @@ Nothing here can be undone, so the clearing only ever meets things the test made
 2. Make one more customer, `db10.late@example.com`, then `clear_demo_data` with the step 1 token:
    refused, "The store changed since the list was made", nothing written.
 3. `check_demo_data` again, then `clear_demo_data` with the new token. Expected note: "Removed 1
-   product and 2 customers from the store justrite_test_store. Canceled 1 order and refunded 1
+   product and 2 customers from the store tailspin_test_store. Canceled 1 order and refunded 1
    order." In the Admin: the
    pending order Canceled, the invoiced one Closed with a credit memo, each with its note.
 4. **Back to zero:** `check_demo_data` answers `total` 0 with the same `left` as step 0: the two
-   orders now carry a reset's note, so they count as handled. JustRite's website reads as before
-   (`GET products` with JustRite's `website_id`, the same `total_count` as at step 0). What does not
+   orders now carry a reset's note, so they count as handled. Tailspin's website reads as before
+   (`GET products` with Tailspin's `website_id`, the same `total_count` as at step 0). What does not
    return: the two orders and the credit memo stay as history, closed (Commerce cannot delete them).
 5. Not run live: taking a shared product off a website, a return, a website only partly chosen, and
-   the reset question (scratch-1028's own store is JustRite's).
+   the reset question (scratch-1028's own store is Tailspin's).
 
-### Live test, ERP included (owner's call; same store only; JustRite's integration deployed from `feature/one-reset-rule` at 1f6de21 or later)
+### Live test, ERP included (owner's call; same store only; Tailspin's integration deployed from `feature/one-reset-rule` at 1f6de21 or later)
 
-Precondition: that integration, and JustRite's demo-erp at contract 23 (`admin/remove-orders`), are
-deployed to JustRite (owner's go: a deploy to a live demo). Until then the wipe answers the held
+Precondition: that integration, and Tailspin's demo-erp at contract 23 (`admin/remove-orders`), are
+deployed to Tailspin (owner's go: a deploy to a live demo). Until then the wipe answers the held
 line and leaves the test store's orders open, which is itself step 1's check.
 
-1. **Before the deploy, read-only.** `check_demo_data` for `justrite_test_store`: `preview.erp.held`
+1. **Before the deploy, read-only.** `check_demo_data` for `tailspin_test_store`: `preview.erp.held`
    names the update, `preview.erp.orders` counts the test store's open orders, and none of them is in
    `preview.orders`. The store list has no `admin` website.
 2. **After the deploy**: `get_erp_status` (or `GET erp/status`) answers `closesOrdersByStore: true`.
    Place two orders on the test store (one left pending, one invoiced), then `check_demo_data`:
-   `preview.erp.line` is "2 orders are handled by the ERP integration (JustRite): they will be closed
+   `preview.erp.line` is "2 orders are handled by the ERP integration (Tailspin): they will be closed
    there, removed from its ERP, and the ERP refreshed."; `preview.orders` counts none.
 3. `clear_demo_data` with that token. Expected: the progress window shows "Closing orders in the ERP"
    first and "Refreshing the ERP" last; the note says "Canceled 1 order and refunded 1 order ... 2 of
-   the orders were closed through the ERP integration (JustRite), and removed from Justrite ERP.
-   JustRite's ERP was refreshed from Commerce." In the Admin: the pending order Canceled, the invoiced one Closed with a credit memo,
+   the orders were closed through the ERP integration (Tailspin), and removed from Tailspin ERP.
+   Tailspin's ERP was refreshed from Commerce." In the Admin: the pending order Canceled, the invoiced one Closed with a credit memo,
    each with the reset's note. `get_erp_order_trace` for each: the ERP was not told to cancel or
    refund (the integration marked them closed first).
 4. **Back to zero:** `check_demo_data` answers `total` 0 and `preview.erp.orders.count` 0 (both
-   orders carry a reset's note). JustRite's website reads as before (`GET products` with its
-   `website_id`, the same `total_count`), and its ERP holds JustRite's records (`get_erp_status`).
-   Justrite ERP no longer lists the two orders (`run_erp_rest GET orders`). What does not return:
+   orders carry a reset's note). Tailspin's website reads as before (`GET products` with its
+   `website_id`, the same `total_count`), and its ERP holds Tailspin's records (`get_erp_status`).
+   Tailspin ERP no longer lists the two orders (`run_erp_rest GET orders`). What does not return:
    the two orders and the credit memo stay as history, closed, in Commerce; Commerce cannot delete
    an order.

@@ -512,14 +512,14 @@ describe('IntegrationsStep — the ERP pair before creation', () => {
 
         await pickMenuItem(row('ERP Integration'), /Settings/i);
         await screen.findByRole('dialog');
-        await change(within(currentDialog()).getByLabelText(/^ERP Name/), 'Justrite');
+        await change(within(currentDialog()).getByLabelText(/^ERP Name/), 'Tailspin');
         await press(within(currentDialog()).getByRole('button', { name: /^Save$/ }));
 
         expect(updateState).toHaveBeenCalledWith({
             componentConfigs: {
                 'erp-integration': {
                     INTEGRATION_DISPLAY_NAME: 'ERP Integration',
-                    ERP_DISPLAY_NAME: 'Justrite ERP',
+                    ERP_DISPLAY_NAME: 'Tailspin ERP',
                 },
             },
         });

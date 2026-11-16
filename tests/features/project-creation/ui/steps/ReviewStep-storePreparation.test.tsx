@@ -14,7 +14,7 @@ import type { WizardState } from '@/types/webview';
 
 const BASE: Partial<WizardState> = {
     currentStep: 'review',
-    projectName: 'justrite',
+    projectName: 'tailspin',
     selectedStack: 'headless-paas',
     adobeAuth: { isAuthenticated: true, isChecking: false },
     componentConfigs: {},

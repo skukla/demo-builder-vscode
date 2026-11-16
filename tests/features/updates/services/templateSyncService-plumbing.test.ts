@@ -390,7 +390,7 @@ describe('reset strategy — the exact git conversation', () => {
             {
                 repoOwner: 'skukla',
                 repoName: 'demo-storefront',
-                templateOwner: 'jen',
+                templateOwner: 'robin',
                 templateRepo: 'isle5-demo',
                 repoBranch: 'trunk',
                 templateBranch: 'demo-2026',

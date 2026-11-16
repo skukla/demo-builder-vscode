@@ -1,7 +1,7 @@
 /**
  * An agent following the person's current project is told when the person moved it
- * (AI-15). On 2026-10-12 an SC opened JustRite while an agent worked on a project it had
- * just made; the agent's next tools answered for JustRite and nothing said so, until it
+ * (AI-15). On 2026-10-12 an SC opened Tailspin while an agent worked on a project it had
+ * just made; the agent's next tools answered for Tailspin and nothing said so, until it
  * noticed and picked its project again twelve minutes later.
  *
  * Only while FOLLOWING: once the agent creates or picks a project it has its own

@@ -26,8 +26,8 @@ const BASE: BoilerplateBase = {
 
 function colleagueProject(): Project {
     const project = createMockProject({
-        name: 'justrite',
-        demo: makeAddedDemo({ source: { owner: 'kmanns', repo: 'justrite', branch: 'main' } }),
+        name: 'tailspin',
+        demo: makeAddedDemo({ source: { owner: 'org-e', repo: 'tailspin', branch: 'main' } }),
         componentInstances: {
             [COMPONENT_IDS.EDS_STOREFRONT]: { id: COMPONENT_IDS.EDS_STOREFRONT, name: 'EDS Storefront', type: 'frontend', status: 'ready', metadata: {} },
         },
@@ -40,8 +40,8 @@ function descriptionFile(builtWith: SharedDemoDescription['builtWith']): string 
     const file: SharedDemoDescription = {
         kind: 'demo',
         version: SHARED_DEMO_FILE_VERSION,
-        name: 'Justrite',
-        contentSource: { org: 'kmanns', site: 'justrite', indexPath: '/sitemap.json' },
+        name: 'Tailspin',
+        contentSource: { org: 'org-e', site: 'tailspin', indexPath: '/sitemap.json' },
         ...(builtWith ? { builtWith } : {}),
     };
     return JSON.stringify(file);
@@ -62,7 +62,7 @@ describe('refreshBaseFromColleague', () => {
         await expect(refreshBaseFromColleague(project, d)).resolves.toBe(true);
 
         expect(readBoilerplateBase(project)).toEqual({ ...BASE, commit: THEIRS, found: 'built-with' });
-        expect(d.readFile).toHaveBeenCalledWith('kmanns', 'justrite', 'demo.demo-builder.json', 'main');
+        expect(d.readFile).toHaveBeenCalledWith('org-e', 'tailspin', 'demo.demo-builder.json', 'main');
         expect(d.compare).toHaveBeenCalledWith('adobe-commerce', 'boilerplate-b2b-template', OURS, THEIRS);
     });
 

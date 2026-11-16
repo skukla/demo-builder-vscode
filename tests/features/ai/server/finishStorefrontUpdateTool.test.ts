@@ -32,7 +32,7 @@ const leaveMock = leaveClash as jest.Mock;
 const previewMock = previewClash as jest.Mock;
 const tellMock = tellFixEnded as jest.Mock;
 
-const JUSTRITE = { name: 'justrite', path: '/p/justrite' };
+const TAILSPIN = { name: 'tailspin', path: '/p/tailspin' };
 const PREVIEW = { track: 'boilerplate', files: ['blocks/header/header.js'], markersLeft: [], diff: '-old\n+new\n' };
 
 function fakeServer() {
@@ -68,28 +68,28 @@ function server() {
 beforeEach(() => {
     jest.clearAllMocks();
     ServiceLocator.setCommandExecutor(createMockCommandExecutor());
-    getAllProjects.mockResolvedValue([{ ...JUSTRITE, lastModified: new Date() }, { name: 'bodea', path: '/p/bodea', lastModified: new Date() }]);
+    getAllProjects.mockResolvedValue([{ ...TAILSPIN, lastModified: new Date() }, { name: 'bodea', path: '/p/bodea', lastModified: new Date() }]);
     loadProjectFromPath.mockImplementation(async (p: string) => ({ name: p.split('/').pop(), path: p }));
     previewMock.mockResolvedValue(PREVIEW);
 });
 
 describe('finish_storefront_update', () => {
     it('raises the consent dialog only when told to finish or leave', () => {
-        expect(callRequestsConsent('finish_storefront_update', { project: 'justrite', confirm: true })).toBe(true);
-        expect(callRequestsConsent('finish_storefront_update', { project: 'justrite' })).toBe(false);
+        expect(callRequestsConsent('finish_storefront_update', { project: 'tailspin', confirm: true })).toBe(true);
+        expect(callRequestsConsent('finish_storefront_update', { project: 'tailspin' })).toBe(false);
     });
 
     it('finds the project by name, not the open one, and loads it without saving', async () => {
-        await server().call({ project: 'justrite' });
+        await server().call({ project: 'tailspin' });
 
-        expect(loadProjectFromPath).toHaveBeenCalledWith('/p/justrite', undefined, { persistAfterLoad: false });
-        expect(previewMock).toHaveBeenCalledWith(expect.objectContaining({ name: 'justrite' }), expect.anything());
+        expect(loadProjectFromPath).toHaveBeenCalledWith('/p/tailspin', undefined, { persistAfterLoad: false });
+        expect(previewMock).toHaveBeenCalledWith(expect.objectContaining({ name: 'tailspin' }), expect.anything());
     });
 
     it('without confirm, previews and changes nothing', async () => {
-        const out = await server().call({ project: 'justrite' });
+        const out = await server().call({ project: 'tailspin' });
 
-        expect(out).toMatchObject({ project: 'justrite', ...PREVIEW });
+        expect(out).toMatchObject({ project: 'tailspin', ...PREVIEW });
         expect(out.message).toMatch(/confirm:true; it pushes to the storefront/);
         expect(finishMock).not.toHaveBeenCalled();
         expect(leaveMock).not.toHaveBeenCalled();
@@ -98,7 +98,7 @@ describe('finish_storefront_update', () => {
     it('says which files still have markers', async () => {
         previewMock.mockResolvedValue({ ...PREVIEW, markersLeft: ['blocks/header/header.js'] });
 
-        const out = await server().call({ project: 'justrite' });
+        const out = await server().call({ project: 'tailspin' });
 
         expect(out.message).toBe('Fix blocks/header/header.js first: conflict markers are still there.');
     });
@@ -106,13 +106,13 @@ describe('finish_storefront_update', () => {
     it('finishes through the one finishing path, with the deps built for it', async () => {
         finishMock.mockResolvedValue({ kind: 'finished', commit: 'c'.repeat(40), files: PREVIEW.files, notes: [], localCopyClean: true });
 
-        const out = await server().call({ project: 'justrite', confirm: true });
+        const out = await server().call({ project: 'tailspin', confirm: true });
 
         expect(finishMock).toHaveBeenCalledWith(
-            expect.objectContaining({ name: 'justrite' }),
+            expect.objectContaining({ name: 'tailspin' }),
             { builtFrom: expect.objectContaining({ extensionPath: '/ext' }) },
         );
-        expect(out).toMatchObject({ project: 'justrite', kind: 'finished' });
+        expect(out).toMatchObject({ project: 'tailspin', kind: 'finished' });
     });
 
     // Owner, 2026-10-30: the AI finished and the SC was never told. The agent is told the SC
@@ -120,18 +120,18 @@ describe('finish_storefront_update', () => {
     it('tells the SC a finished update is live, and tells the agent it did', async () => {
         finishMock.mockResolvedValue({ kind: 'finished', commit: 'c'.repeat(40), files: PREVIEW.files, notes: [], localCopyClean: true });
 
-        const out = await server().call({ project: 'justrite', confirm: true });
+        const out = await server().call({ project: 'tailspin', confirm: true });
 
-        expect(tellMock).toHaveBeenCalledWith(expect.objectContaining({ name: 'justrite' }), 'boilerplate', 'finished', true);
+        expect(tellMock).toHaveBeenCalledWith(expect.objectContaining({ name: 'tailspin' }), 'boilerplate', 'finished', true);
         expect(out.scNotified).toBe('what the SC was shown');
     });
 
     it('tells the SC when the fix was dropped for a newer version', async () => {
         finishMock.mockResolvedValue({ kind: 'moved-on' });
 
-        const out = await server().call({ project: 'justrite', confirm: true });
+        const out = await server().call({ project: 'tailspin', confirm: true });
 
-        expect(tellMock).toHaveBeenCalledWith(expect.objectContaining({ name: 'justrite' }), 'boilerplate', 'moved-on');
+        expect(tellMock).toHaveBeenCalledWith(expect.objectContaining({ name: 'tailspin' }), 'boilerplate', 'moved-on');
         expect(out).toMatchObject({ kind: 'moved-on', scNotified: 'what the SC was shown' });
     });
 
@@ -141,23 +141,23 @@ describe('finish_storefront_update', () => {
     ])('tells the SC nothing while the fix is %s: the AI is still on it', async (_label, outcome) => {
         finishMock.mockResolvedValue(outcome);
 
-        const out = await server().call({ project: 'justrite', confirm: true });
+        const out = await server().call({ project: 'tailspin', confirm: true });
 
         expect(tellMock).not.toHaveBeenCalled();
         expect(out).not.toHaveProperty('scNotified');
     });
 
     it('drops the fix on leave, never finishes, and tells the SC', async () => {
-        const out = await server().call({ project: 'justrite', confirm: true, leave: true });
+        const out = await server().call({ project: 'tailspin', confirm: true, leave: true });
 
-        expect(leaveMock).toHaveBeenCalledWith(expect.objectContaining({ name: 'justrite' }), expect.anything());
+        expect(leaveMock).toHaveBeenCalledWith(expect.objectContaining({ name: 'tailspin' }), expect.anything());
         expect(finishMock).not.toHaveBeenCalled();
-        expect(tellMock).toHaveBeenCalledWith(expect.objectContaining({ name: 'justrite' }), 'boilerplate', 'left');
+        expect(tellMock).toHaveBeenCalledWith(expect.objectContaining({ name: 'tailspin' }), 'boilerplate', 'left');
         expect(out).toMatchObject({ left: true, scNotified: 'what the SC was shown' });
     });
 
     it('tells the SC nothing on a preview', async () => {
-        await server().call({ project: 'justrite' });
+        await server().call({ project: 'tailspin' });
 
         expect(tellMock).not.toHaveBeenCalled();
     });

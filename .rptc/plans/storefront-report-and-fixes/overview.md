@@ -1,12 +1,12 @@
 # Storefront Report: readable, and its fixes honest (EDS-64)
 
-Written 2026-10-23 from the JustRite walk. Two read-only investigations (code, the
-reset's Debug Logs, the patches repo, JustRite's live site and repository) plus a
+Written 2026-10-23 from the Tailspin walk. Two read-only investigations (code, the
+reset's Debug Logs, the patches repo, Tailspin's live site and repository) plus a
 design pass. Claims marked *inferred* were read from code, not run.
 
 ## What the owner saw
 
-Opening the Storefront Report on JustRite: a raw markdown editor tab, then a modal
+Opening the Storefront Report on Tailspin: a raw markdown editor tab, then a modal
 "Apply 2 of Demo Builder's fixes to this storefront? They fix: product links; AEM Assets
 images." The reset an hour earlier had said nothing about fixes.
 
@@ -17,7 +17,7 @@ images." The reset an hour earlier had said nothing about fixes.
 1. **The reset never offers fixes to a project made before 2026-10-03.** The fix pass
    (`demoFixPass.ts:80`) reads the storefront's template lineage only from the saved
    `demo` row (`lineage`, `boilerplate`), which projects older than `0ee47ed3b` do not
-   have. JustRite (created 2026-09-30) has neither, so the pass took the "not our
+   have. Tailspin (created 2026-09-30) has neither, so the pass took the "not our
    template" branch. The report reads lineage live from GitHub (`storefrontReport.ts:175`),
    matches `adobe-commerce/boilerplate-b2b-template`, and offers. The two disagree.
 2. **Apply would have written nothing, and said the wrong reason.** The report's Apply
@@ -27,7 +27,7 @@ images." The reset an hour earlier had said nothing about fixes.
 3. **Had it written, the product-links fix would have broken the block.** The offered list
    (`STOREFRONT_FIX_IDS`, `loadBearingPatches.ts:74`) has `product-teaser-sku-encoding`,
    which calls `getProductLink`, but not its pair `product-teaser-getproductlink-import`.
-   JustRite's `blocks/product-teaser/product-teaser.js` imports only `rootLink`
+   Tailspin's `blocks/product-teaser/product-teaser.js` imports only `rootLink`
    (verified), so the block would throw.
 
 Smaller, same area:
@@ -42,7 +42,7 @@ Smaller, same area:
 **The reset hides some of its own warnings.**
 
 6. `catalogMenu` and `productPages` never reach the reset's modal or notifications
-   (`edsResetNotifications.ts:32-58`). JustRite's "13 category pages couldn't be published;
+   (`edsResetNotifications.ts:32-58`). Tailspin's "13 category pages couldn't be published;
    republish the storefront to try again" was in the log and nowhere on screen. The modal has
    a `note` slot for plain notes (`withOperationProgress.ts:92`) that reset never fills.
 7. When the mesh redeploy fails, `edsResetFinalize.ts:94` returns early and drops the fix
@@ -52,14 +52,14 @@ Smaller, same area:
 
 ## What the fixes are (all four repair Demo Builder features; none changes a design)
 
-| Fix | File | Without it | On JustRite |
+| Fix | File | Without it | On Tailspin |
 |---|---|---|---|
 | Product links (+ its import, missing today) | `blocks/product-teaser/product-teaser.js` | The teaser's Details link keeps the SKU's capitals and misses the page | No published page uses the block: nothing visible |
 | AEM Assets images | `scripts/__dropins__/tools/lib/aem/assets.js` | No image for a SKU containing "/" | None of 49 SKUs has one: nothing visible |
 | Empty product pages | `scripts/initializers/pdp.js` | Blank page for a SKU that is gone | Already present |
 | Header robustness | `blocks/header/header.js` | Header crashes when DA.live drops an empty div | Already present |
 
-Only JustRite is an added demo on this machine; the added-demos setting is empty and the
+Only Tailspin is an added demo on this machine; the added-demos setting is empty and the
 catalog lists shipped brands only.
 
 ## The report, redesigned
@@ -68,7 +68,7 @@ A modal over the project dashboard (no new webview bundle), fed by a new returni
 `getStorefrontReport`. Nothing changes unless a button inside it is pressed.
 
 ```
-Storefront report: JustRite                                    [Close]
+Storefront report: Tailspin                                    [Close]
 NEEDS YOUR ATTENTION
  (!) Needs reset            This storefront is behind ...        [Reset…]
  (i) 2 Demo Builder fixes fit this code   They fix: ...       [Apply fixes]
@@ -77,7 +77,7 @@ NEEDS YOUR ATTENTION
      /checkout/cart on /footer (Edit in DA.live)
      /fr on /store-switcher (Edit in DA.live)
 ABOUT THIS STOREFRONT
- Comes from   Khalil's kmanns/justrite, made from Adobe's B2B template
+ Comes from   Person B's org-e/tailspin, made from Adobe's B2B template
  Built on     Boilerplate <version> (Demo Builder's current is <version>)
  Fixes        On the code: empty product pages, header robustness
  > Details    (Adobe commit, files Demo Builder wrote)
@@ -112,7 +112,7 @@ ABOUT THIS STOREFRONT
 storefront used by the builder." So no SECOND list, and no offer: creation and reset apply
 every live patch in the shipped ledgers to every storefront, wherever the code it fixes is
 there exactly once, the patches on one file together or none (`knownPatches.ts`, a repair in
-`storefrontUpToDate.ts`'s build step). Dry run on JustRite's real files: 2 of 6 already in, the
+`storefrontUpToDate.ts`'s build step). Dry run on Tailspin's real files: 2 of 6 already in, the
 other 4 fit.
 
 ## Decided again (owner, 2026-10-23, later the same day)

@@ -41,9 +41,9 @@ const BASE: BoilerplateBase = {
     found: 'first-commit',
 };
 
-/** A storefront built from kmanns/justrite: its template fields name the colleague. */
+/** A storefront built from org-e/tailspin: its template fields name the colleague. */
 const colleagueStorefront = () =>
-    edsProject({ templateOwner: 'kmanns', templateRepo: 'justrite', lastSyncedCommit: '5ac7b52a52a5af2fa71137a591c8a6e5e3826a9b' });
+    edsProject({ templateOwner: 'org-e', templateRepo: 'tailspin', lastSyncedCommit: '5ac7b52a52a5af2fa71137a591c8a6e5e3826a9b' });
 
 /** How many git commands had run when Demo Builder's scripts were moved; -1 if never. */
 let gitCallsAtMove = -1;
@@ -59,7 +59,7 @@ beforeEach(() => {
 
 describe("syncBoilerplate: Demo Builder's repairs run in the update's clone, before the change", () => {
     // Adobe's tested boilerplate deletes scripts/delayed.js, and git cannot delete a file our
-    // blocks still sit in: JustRite's update stopped on "patch failed: scripts/delayed.js:1"
+    // blocks still sit in: Tailspin's update stopped on "patch failed: scripts/delayed.js:1"
     // and was offered again every time (2026-10-29). The repairs that take them out ran
     // against GitHub until 2026-10-30, so a stopped update had already pushed them.
     const indexOf = (pattern: RegExp) => gitCalls().findIndex((c) => pattern.test(c));
@@ -72,7 +72,7 @@ describe("syncBoilerplate: Demo Builder's repairs run in the update's clone, bef
         await service(undefined, resolveOverlay).syncBoilerplate(project, { base: BASE, tested: TESTED_SHA });
 
         // With the overlay the caller resolves, as a reset does: without it the first-visit
-        // script never reached 404.html, so its old copy stayed in delayed.js (JustRite, 2026-10-30).
+        // script never reached 404.html, so its old copy stayed in delayed.js (Tailspin, 2026-10-30).
         expect(mockRestorePieces).toHaveBeenCalledWith(project, expect.anything(), expect.anything(), resolveOverlay);
         expect(mockRestorePieces.mock.calls[0][1]).not.toBeInstanceOf(GitHubFileOperations);
         expect(gitCallsAtMove).toBeGreaterThan(indexOf(/^git clone /));
@@ -124,7 +124,7 @@ describe("syncBoilerplate: a colleague's storefront to Adobe's tested boilerplat
         const calls = gitCalls();
         // Adobe's template is the source, never the colleague's repository.
         expect(calls).toContainEqual(expect.stringContaining('https://github.com/adobe-commerce/boilerplate-b2b-template.git'));
-        expect(calls.join('\n')).not.toContain('github.com/kmanns/justrite');
+        expect(calls.join('\n')).not.toContain('github.com/org-e/tailspin');
         expect(calls).toContainEqual(
             expect.stringMatching(new RegExp(`^git diff-tree -r --name-only ${BASE_SHA} ${TESTED_SHA} -- \\. ":\\(exclude\\)\\.github" `)),
         );
@@ -133,7 +133,7 @@ describe("syncBoilerplate: a colleague's storefront to Adobe's tested boilerplat
         expect(result).toEqual({ success: true, strategy: 'merge', syncedCommit: TESTED_SHA });
         // The colleague's track is not this update's to move.
         expect(project.componentInstances?.['eds-storefront']?.metadata).toMatchObject({
-            templateOwner: 'kmanns',
+            templateOwner: 'org-e',
             lastSyncedCommit: '5ac7b52a52a5af2fa71137a591c8a6e5e3826a9b',
         });
     });

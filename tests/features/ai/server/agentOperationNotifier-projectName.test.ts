@@ -47,10 +47,10 @@ beforeEach(() => {
 });
 
 it('names the ERP being added and the open project, in the card and in how it lands', async () => {
-    mockGetStateManager.mockReturnValue(makeStateManager(createMockProject({ name: 'JustRite' })));
+    mockGetStateManager.mockReturnValue(makeStateManager(createMockProject({ name: 'Tailspin' })));
     await createAgentOperationNotifier(logger)('add_erp', async () => ({ ok: true }), { id: 'erp-integration', name: 'Accuform' });
-    expect(titles()).toStrictEqual(['Agent: Adding Accuform ERP to JustRite']);
-    expect(mockSetStatusBarMessage).toHaveBeenCalledWith(expect.stringContaining('Adding Accuform ERP to JustRite — done'), expect.any(Number));
+    expect(titles()).toStrictEqual(['Agent: Adding Accuform ERP to Tailspin']);
+    expect(mockSetStatusBarMessage).toHaveBeenCalledWith(expect.stringContaining('Adding Accuform ERP to Tailspin — done'), expect.any(Number));
 });
 
 it('names the ERP alone when no project can be read', async () => {

@@ -18,12 +18,12 @@ class ProbeCommand extends BaseCommand {
 }
 
 describe('BaseCommand.stateFor', () => {
-    const JUSTRITE = createMockProject({ name: 'justrite', path: '/projects/justrite' });
+    const TAILSPIN = createMockProject({ name: 'tailspin', path: '/projects/tailspin' });
 
     function probe() {
         const real = createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(createMockProject({ name: 'scratch', path: '/projects/scratch' })),
-            loadProjectFromPath: jest.fn().mockResolvedValue(JUSTRITE),
+            loadProjectFromPath: jest.fn().mockResolvedValue(TAILSPIN),
         });
         const command = new ProbeCommand(createMockExtensionContext(), real as unknown as StateManager, createMockLogger());
         return { real, command };
@@ -32,10 +32,10 @@ describe('BaseCommand.stateFor', () => {
     it('acts on the named project, not the current one', async () => {
         const { real, command } = probe();
 
-        const state = await command.execute('/projects/justrite');
+        const state = await command.execute('/projects/tailspin');
 
-        expect(await state.getCurrentProject()).toBe(JUSTRITE);
-        expect(real.loadProjectFromPath).toHaveBeenCalledWith('/projects/justrite', undefined, { persistAfterLoad: false });
+        expect(await state.getCurrentProject()).toBe(TAILSPIN);
+        expect(real.loadProjectFromPath).toHaveBeenCalledWith('/projects/tailspin', undefined, { persistAfterLoad: false });
     });
 
     it.each([[undefined], [{ label: 'tree item' }], ['']])('means the current project for %p', async (arg) => {

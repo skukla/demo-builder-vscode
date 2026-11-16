@@ -94,7 +94,7 @@ describe('loadProjectsForList', () => {
         const stateManager = createMockStateManager();
         const listed = [
             { name: 'scratch-1028', pinned: false },
-            { name: 'JustRite', pinned: false },
+            { name: 'Tailspin', pinned: false },
             { name: 'patch-canary-b2b', pinned: false },
             { name: 'Bodea', pinned: true },
         ];
@@ -108,6 +108,6 @@ describe('loadProjectsForList', () => {
 
         const projects = await loadProjectsForList(stateManager);
 
-        expect(projects.map((p: Project) => p.name)).toEqual(['Bodea', 'JustRite', 'patch-canary-b2b', 'scratch-1028']);
+        expect(projects.map((p: Project) => p.name)).toEqual(['Bodea', 'patch-canary-b2b', 'scratch-1028', 'Tailspin']);
     });
 });

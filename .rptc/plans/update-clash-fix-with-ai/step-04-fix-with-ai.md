@@ -32,4 +32,4 @@ names one (`agentEngine.ts` rule).
 
 ## Done when
 
-On JustRite, Fix with AI opens the SC's engine with the header clash in front of it.
+On Tailspin, Fix with AI opens the SC's engine with the header clash in front of it.

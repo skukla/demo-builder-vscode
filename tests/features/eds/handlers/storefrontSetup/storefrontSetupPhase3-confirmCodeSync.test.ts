@@ -486,7 +486,7 @@ describe('the App-required payload', () => {
 /**
  * EDS-23 — the code endpoint decides, because `/status` cannot.
  *
- * On skukla/kukla-justrite `/status` answered an inner 400 while the App did NOT
+ * On skukla/kukla-tailspin `/status` answered an inner 400 while the App did NOT
  * cover the repository, and again after it did. The code POST this phase already
  * makes said which: `x-error: [admin] github bot not installed on repository.`
  * That answer earns the same pause as an inner 404 (EDS-20), and the pause ends

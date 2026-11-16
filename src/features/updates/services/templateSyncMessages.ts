@@ -9,7 +9,7 @@ import { PLACEHOLDER_STUB_PATHS } from '@/features/eds/services/placeholderStubs
 import { TemplateSyncStepError } from '@/features/updates/services/templateSyncStepError';
 import type { ClashEdit, TemplateSyncResult, TemplateSyncTarget } from '@/features/updates/services/templateSyncTypes';
 
-/** One clashing file in plain words: "blocks/header/header.js, an edit that came with kmanns/justrite". */
+/** One clashing file in plain words: "blocks/header/header.js, an edit that came with org-e/tailspin". */
 export function describeEdit(edit: ClashEdit): string {
     if (edit.whose === 'copied-demo' && edit.from) return `${edit.file}, an edit that came with ${edit.from}`;
     return `${edit.file}, an edit made in this storefront`;

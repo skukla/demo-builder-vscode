@@ -75,8 +75,8 @@ describe('CatalogStage', () => {
         const erpIntegration = getAppBuilderComponentCatalog().find((e) => e.id === 'erp-integration')!;
 
         it('names the ERP, not the integration, and says only that it is fixed once deployed', () => {
-            renderStage({ catalog: [erpIntegration], selectedId: 'erp-integration', label: 'JustRite' });
-            expect(screen.getByLabelText(/^ERP Name \(Optional\)/)).toHaveValue('JustRite');
+            renderStage({ catalog: [erpIntegration], selectedId: 'erp-integration', label: 'Tailspin' });
+            expect(screen.getByLabelText(/^ERP Name \(Optional\)/)).toHaveValue('Tailspin');
             expect(screen.getByText(NAME_IS_FIXED)).toBeInTheDocument();
             expect(screen.queryByText(/Adds “/)).not.toBeInTheDocument();
         });
@@ -267,7 +267,7 @@ describe('node-version disclosure', () => {
 // a project has its mesh, the tile stays in the gallery, greyed out. The words go in an
 // amber note above the gallery, never on the tile, where they would be missed (owner).
 describe('an entry that cannot be added here', () => {
-    const MESSAGE = 'JustRite already has an ERP integration on this Commerce instance. Add your ERP there instead.';
+    const MESSAGE = 'Tailspin already has an ERP integration on this Commerce instance. Add your ERP there instead.';
 
     it('greys its tile out, and leaves the others alone', () => {
         renderStage({ unavailable: { message: MESSAGE, ids: ['acme-a'] } });

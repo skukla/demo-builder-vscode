@@ -462,13 +462,13 @@ describe('IntegrationCard', () => {
             const { container } = renderCard(
                 makeModel({
                     linked: {
-                        cards: [link('a', 'Justrite ERP', 'ERP'), link('b', 'Accuform ERP', 'ERP')],
+                        cards: [link('a', 'Tailspin ERP', 'ERP'), link('b', 'Accuform ERP', 'ERP')],
                     },
                 })
             );
 
             expect(shown(container)).toBe('2 ERPs');
-            expect(screen.getByTitle('Connected to Justrite ERP, Accuform ERP')).toBeInTheDocument();
+            expect(screen.getByTitle('Connected to Tailspin ERP, Accuform ERP')).toBeInTheDocument();
         });
 
         it('shows no linked line on a card that is linked to nothing', () => {

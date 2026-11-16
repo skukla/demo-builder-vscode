@@ -4,7 +4,7 @@
  * Commerce is a hand-held fake here, not the queue stand-in the other suites use, so each test says
  * how every row ends. The bulk call's ARGUMENTS are asserted (route, batch sizes), since a fake
  * answers the same whatever it is handed. Status answers come from `bulkStatus`, the builder of the
- * live Justrite answer's shape (tests/fixtures/commerce-rest/bulk-status-products.json).
+ * live Tailspin answer's shape (tests/fixtures/commerce-rest/bulk-status-products.json).
  */
 
 import { bulkAccepted, bulkStatus } from '../../../../helpers/commerceAssignFixtures';

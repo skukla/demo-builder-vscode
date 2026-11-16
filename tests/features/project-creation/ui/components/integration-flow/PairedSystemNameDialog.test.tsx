@@ -48,9 +48,9 @@ describe('PairedSystemNameDialog', () => {
 
     it('saves the typed name by the add\'s rule, then closes', () => {
         const { onSave, onClose } = renderDialog();
-        fireEvent.change(field(), { target: { value: 'Justrite' } });
+        fireEvent.change(field(), { target: { value: 'Tailspin' } });
         fireEvent.click(save());
-        expect(onSave).toHaveBeenCalledWith('erp-integration', 'Justrite ERP');
+        expect(onSave).toHaveBeenCalledWith('erp-integration', 'Tailspin ERP');
         expect(onClose).toHaveBeenCalled();
     });
 

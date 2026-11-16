@@ -52,7 +52,7 @@ export interface ErpFillForProjectDeps {
     /**
      * Where the workspace credential is kept across reloads (VS Code SecretStorage). Required,
      * so no caller can skip it: without it every reload read the credential from Adobe
-     * Console again, about two minutes on Justrite (2026-10-18).
+     * Console again, about two minutes on Tailspin (2026-10-18).
      */
     credentials: CredentialStore | undefined;
     /** The signed-in identity the integration's and the ERP's actions take. */

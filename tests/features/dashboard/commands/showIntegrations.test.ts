@@ -391,7 +391,7 @@ describe('execute', () => {
     });
 
     // Both doors (the dashboard tile and the projects list's Integrations) run this command,
-    // so the slow reads start here: the Commerce sign-in took two minutes on Justrite and Add
+    // so the slow reads start here: the Commerce sign-in took two minutes on Tailspin and Add
     // another ERP waited on all of it (2026-10-18).
     it('starts the slow reads with the panel\'s own handler context', async () => {
         const { command } = commandFor(null);

@@ -35,7 +35,7 @@ describe('check_demo_data, three scopes', () => {
     it('takes no websites (the project), an empty list (the choices) or website codes (the instance check)', () => {
         expect(websites().parse(undefined)).toBeUndefined();
         expect(websites().parse([])).toStrictEqual([]);
-        expect(websites().parse(['bodea', 'justrite'])).toEqual(['bodea', 'justrite']);
+        expect(websites().parse(['bodea', 'tailspin'])).toEqual(['bodea', 'tailspin']);
     });
 
     it('refuses a code that is empty, and a single code not in a list', () => {

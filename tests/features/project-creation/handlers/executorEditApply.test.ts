@@ -55,12 +55,12 @@ import { createMockHandlerContext } from '../../../helpers/handlerContextTestHel
 import { createMockProject } from '../../../helpers/projectFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
-const EDIT_PATH = '/p/justrite';
+const EDIT_PATH = '/p/tailspin';
 
 /** A project with the starter kit deployed, as Edit opens it. */
 function savedProject(): Project {
     return createMockProject({
-        name: 'justrite',
+        name: 'tailspin',
         path: EDIT_PATH,
         componentSelections: { appBuilder: ['starter-kit'], dependencies: [] },
         appBuilderComponents: {
@@ -91,7 +91,7 @@ function setup(project: Project = savedProject()) {
 
 function config(overrides: Partial<ProjectCreationConfig> = {}): ProjectCreationConfig {
     return {
-        projectName: 'justrite',
+        projectName: 'tailspin',
         editProjectPath: EDIT_PATH,
         selectedAppBuilderComponents: ['starter-kit'],
         editChanges: [],

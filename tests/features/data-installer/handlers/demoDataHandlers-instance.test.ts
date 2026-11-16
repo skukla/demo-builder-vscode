@@ -43,7 +43,7 @@ import { PROJECT_RECORDS } from '../services/demoDataWipe/wipe.testUtils';
 import { NEIGHBOUR, PROJECT, type Files, type Store, cleanStore, setUp } from './demoDataHandlers.testUtils';
 
 const TENANT = 'https://na1-sandbox.api.commerce.adobe.com/ZzTenantOne/graphql';
-const SITE = 'justrite_test_website';
+const SITE = 'tailspin_test_website';
 
 /** A project on this instance (or the tenant given), its install target on the website given. */
 function on(project: Project, websiteCode = SITE, endpoint = TENANT): Project {
@@ -77,7 +77,7 @@ const OPEN = on({ ...PROJECT, title: 'Zz Tester' });
 const NB = on({ ...NEIGHBOUR, datapack: { name: 'nb-pack', version: '1' } });
 const NB_RECORD = recordOf('nb-pack', SITE, ['ZZ-ONLY-HERE']);
 /** On this instance, on a website not chosen, with no datapack. */
-const ELSEWHERE = on(named('elsewhere', 'Elsewhere'), 'justrite');
+const ELSEWHERE = on(named('elsewhere', 'Elsewhere'), 'tailspin');
 /** The same website code, on ANOTHER tenant: it may be this store's website or not. */
 const FAR = on(
     named('far', 'Far Away', 'far-pack'),
@@ -207,9 +207,9 @@ describe('check-demo-data, the instance (step 06 C4)', () => {
         expect(res.data as InstanceChoices).toEqual({
             websites: [
                 { code: 'base', name: 'Main Website', projects: [] },
-                { code: 'justrite', name: 'JustRite', projects: ['Elsewhere'] },
+                { code: 'tailspin', name: 'Tailspin', projects: ['Elsewhere'] },
                 { code: 'bodea', name: 'Bodea', projects: [] },
-                { code: SITE, name: 'JustRite Test', projects: ['Zz Tester', 'Neighbour Demo'] },
+                { code: SITE, name: 'Tailspin Test', projects: ['Zz Tester', 'Neighbour Demo'] },
             ],
         });
     });
@@ -294,7 +294,7 @@ describe('clear-commerce-instance (step 06 C4)', () => {
     });
 
     it('never uninstalls a pack also on a website not chosen, and keeps its data on the chosen one too (review 1)', async () => {
-        const wide = recordOf('nb-pack', 'justrite', ['ZZ-SHARED-WITH-JUSTRITE']);
+        const wide = recordOf('nb-pack', 'tailspin', ['ZZ-SHARED-WITH-TAILSPIN']);
         const onSite = recordOf('nb-older', SITE, ['ZZ-ONLY-HERE']);
         const made = instanceSetUp({
             records: [
@@ -310,12 +310,12 @@ describe('clear-commerce-instance (step 06 C4)', () => {
         );
 
         const kept =
-            'Neighbour Demo keeps its datapack nb-pack, which is also on the website JustRite, and its data on these websites.';
+            'Neighbour Demo keeps its datapack nb-pack, which is also on the website Tailspin, and its data on these websites.';
         expect(check.instance?.projects.find((p) => p.path === NB.path)?.kept).toBe(kept);
         expect(made.seen.paths).toEqual([OPEN.path]);
         expect(writes(made)).not.toContain('products/ZZ-ONLY-HERE');
         expect(made.store.data.products.map((p) => p.sku)).toEqual(
-            expect.arrayContaining(['ZZ-ONLY-HERE', 'ZZ-SHARED-WITH-JUSTRITE'])
+            expect.arrayContaining(['ZZ-ONLY-HERE', 'ZZ-SHARED-WITH-TAILSPIN'])
         );
         expect(made.disk.get(NB.path)?.datapack).toEqual({ name: 'nb-pack', version: '1' });
         expect(res.note).toContain(kept);
@@ -359,14 +359,14 @@ describe('clear-commerce-instance (step 06 C4)', () => {
 
     it('keeps the service pack named when the clearing only took a product off the website, as Clear Demo Data does (re-review 1)', async () => {
         const service = on(named('service', 'Service Demo', 'service-pack'));
-        // ZZ-SHARED-WITH-JUSTRITE is also on JustRite: it is taken off this website, not deleted.
+        // ZZ-SHARED-WITH-TAILSPIN is also on Tailspin: it is taken off this website, not deleted.
         const made = instanceSetUp({ others: [NB, service], records: [[NB, NB_RECORD]] });
         const { token } = await shown(made);
 
         const res = await made.handlers['clear-commerce-instance'](made.context, consent(token));
 
         expect(res.success).toBe(true);
-        expect(writes(made)).toContain('products/ZZ-SHARED-WITH-JUSTRITE/websites/5');
+        expect(writes(made)).toContain('products/ZZ-SHARED-WITH-TAILSPIN/websites/5');
         expect(made.disk.get(service.path)?.datapack).toEqual({ name: 'service-pack', version: '1' });
         expect(res.note).not.toContain('no longer names a datapack');
     });
@@ -389,7 +389,7 @@ describe('clear-commerce-instance (step 06 C4)', () => {
         const made = instanceSetUp();
         const { token } = await shown(made);
         // Since the list was made, the neighbour's pack was installed to a website not chosen.
-        made.files.data.set(installRecordPath(NB.path, NB_RECORD.pack), JSON.stringify(recordOf('nb-pack', 'justrite', ['ZZ-ONLY-HERE'])));
+        made.files.data.set(installRecordPath(NB.path, NB_RECORD.pack), JSON.stringify(recordOf('nb-pack', 'tailspin', ['ZZ-ONLY-HERE'])));
 
         const res = await made.handlers['clear-commerce-instance'](made.context, consent(token));
 
@@ -540,7 +540,7 @@ describe('clear_commerce_instance reaching clear-commerce-instance (step 06 C6)'
         const { token } = await shown(made);
 
         expect(shownClearFor(token)).toMatchObject({
-            websites: ['JustRite Test'],
+            websites: ['Tailspin Test'],
             projects: [
                 { path: OPEN.path, name: 'Zz Tester', datapack: 'zz-test' },
                 { path: NB.path, name: 'Neighbour Demo', datapack: 'nb-pack' },

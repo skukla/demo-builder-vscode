@@ -183,7 +183,7 @@ describe('apply_updates', () => {
             adobeMcp: [{ packageName: '@adobe/aem-mcp', latestVersion: '3.1.0' }],
             blockLibrary: [{ library: { name: 'Bodea blocks' } }],
             blockLibraryInstall: [{ library: { name: 'Demo Builder Blocks' } }],
-            integration: [{ label: 'ERP Integration and Justrite ERP', otherOrg: false }],
+            integration: [{ label: 'ERP Integration and Tailspin ERP', otherOrg: false }],
         });
         countMock.mockReturnValueOnce(8);
         const s = fakeServer();
@@ -205,7 +205,7 @@ describe('apply_updates', () => {
             // Reads as an INSTALL, not an update (EDS-28).
             blockLibraryInstall: ['Demo Builder Blocks: install'],
             // The pair by name (AB-73); an other-org pair carries the open-the-project note.
-            integration: ['ERP Integration and Justrite ERP'],
+            integration: ['ERP Integration and Tailspin ERP'],
         });
     });
 
@@ -254,19 +254,19 @@ describe('apply_updates', () => {
         expect(applyMock.mock.calls.at(-1)[0].template).toHaveLength(applied);
     });
 
-    // JustRite, 2026-10-30: the boilerplate update stopped on a clash, the answer led with
+    // Tailspin, 2026-10-30: the boilerplate update stopped on a clash, the answer led with
     // counts, and the agent calling it read the run as done.
     it('puts a stopped update FIRST, with the files, whose edit each holds, and that nothing was pushed', async () => {
         const boilerplate = {
             successCount: 0,
             failCount: 1,
-            errors: ['Justrite (Adobe boilerplate): The update stopped on 1 file that was edited (…).'],
+            errors: ['Tailspin (Adobe boilerplate): The update stopped on 1 file that was edited (…).'],
             clashes: [{
-                project: 'Justrite',
-                projectName: 'justrite',
+                project: 'Tailspin',
+                projectName: 'tailspin',
                 track: 'boilerplate' as const,
                 files: ['blocks/header/header.js'],
-                edits: [{ file: 'blocks/header/header.js', whose: 'copied-demo' as const, from: 'kmanns/justrite' }],
+                edits: [{ file: 'blocks/header/header.js', whose: 'copied-demo' as const, from: 'org-e/tailspin' }],
             }],
         };
         applyMock.mockResolvedValueOnce(applyResult({ boilerplate, totalFailed: 1 }));
@@ -277,16 +277,16 @@ describe('apply_updates', () => {
 
         expect(Object.keys(res).slice(0, 2)).toEqual(['stopped', 'message']);
         expect(res.stopped).toStrictEqual([{
-            project: 'Justrite',
-            projectName: 'justrite',
+            project: 'Tailspin',
+            projectName: 'tailspin',
             update: 'Adobe boilerplate',
             files: ['blocks/header/header.js'],
-            edits: [{ file: 'blocks/header/header.js', whose: 'copied-demo', from: 'kmanns/justrite' }],
+            edits: [{ file: 'blocks/header/header.js', whose: 'copied-demo', from: 'org-e/tailspin' }],
             pushed: false,
         }]);
         expect(res.message).toBe(
-            '1 storefront update did NOT apply and changed nothing on GitHub. Justrite (Adobe boilerplate) stopped on '
-                + 'blocks/header/header.js, an edit that came with kmanns/justrite.',
+            '1 storefront update did NOT apply and changed nothing on GitHub. Tailspin (Adobe boilerplate) stopped on '
+                + 'blocks/header/header.js, an edit that came with org-e/tailspin.',
         );
         expect(s.definition().description).toMatch(/top-level stopped/);
     });
@@ -422,10 +422,10 @@ describe('apply_updates — integrations', () => {
     });
 
     const pair = (otherOrg: boolean) => ({
-        project: { name: 'Justrite', path: '/p' },
+        project: { name: 'Tailspin', path: '/p' },
         componentId: 'demo-erp',
         members: ['demo-erp'],
-        label: 'ERP Integration and Justrite ERP',
+        label: 'ERP Integration and Tailspin ERP',
         otherOrg,
     });
 
@@ -445,8 +445,8 @@ describe('apply_updates — integrations', () => {
         const res = await s.call({});
 
         expect(res.summary.integration).toStrictEqual([
-            'ERP Integration and Justrite ERP',
-            'ERP Integration and Justrite ERP (uses a different Adobe organization: open that project and update it from its Integrations screen)',
+            'ERP Integration and Tailspin ERP',
+            'ERP Integration and Tailspin ERP (uses a different Adobe organization: open that project and update it from its Integrations screen)',
         ]);
         expect(applyMock).not.toHaveBeenCalled();
         // The boundary binds the probe (the check and the guard chain's org step);
@@ -484,7 +484,7 @@ describe('apply_updates — integrations', () => {
         const handed = applyMock.mock.calls[0][1] as {
             updateIntegrationPair: (project: unknown, id: string, report: unknown) => Promise<unknown>;
         };
-        const project = { name: 'Justrite', path: '/p' };
+        const project = { name: 'Tailspin', path: '/p' };
         const report = jest.fn();
 
         const result = await handed.updateIntegrationPair(project, 'demo-erp', report);

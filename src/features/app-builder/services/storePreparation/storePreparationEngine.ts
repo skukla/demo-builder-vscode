@@ -6,7 +6,7 @@
  *
  * The preview and the apply are statements about the store NOW. Every selected step that has
  * a check is checked FRESH, and the fresh answer decides; the saved checklist is never
- * consulted (Justrite 2026-10-10: two settings switched off after their checks had passed
+ * consulted (Tailspin 2026-10-10: two settings switched off after their checks had passed
  * previewed as Done and were skipped). The no-network answer the card's "n of m done" line
  * and the guide's opening view need is `setupChecklist.ts`'s, not this file's.
  *

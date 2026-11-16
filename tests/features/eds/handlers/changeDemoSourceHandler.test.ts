@@ -28,7 +28,7 @@ jest.mock('@/features/project-creation/services/addedDemoSettings', () => ({
     renameAddedDemoSource: jest.fn(async () => true),
 }));
 
-const OLD = makeAddedDemo({ source: { owner: 'jen', repo: 'isle5-demo', branch: 'main' } });
+const OLD = makeAddedDemo({ source: { owner: 'robin', repo: 'isle5-demo', branch: 'main' } });
 const NEW = makeAddedDemo({ name: 'Isle5 (my copy)', source: { owner: 'steve', repo: 'isle5-copy', branch: 'demo' } });
 
 function project(overrides: Partial<Project> = {}): Project {
@@ -39,7 +39,7 @@ function project(overrides: Partial<Project> = {}): Project {
         componentInstances: {
             [COMPONENT_IDS.EDS_STOREFRONT]: {
                 ...eds,
-                metadata: { ...eds.metadata, templateOwner: 'jen', templateRepo: 'isle5-demo', templateBranch: 'main', lastSyncedCommit: 'abc' },
+                metadata: { ...eds.metadata, templateOwner: 'robin', templateRepo: 'isle5-demo', templateBranch: 'main', lastSyncedCommit: 'abc' },
             },
         },
         ...overrides,
@@ -70,7 +70,7 @@ describe('handleChangeDemoSource', () => {
 
         expect(result).toEqual({
             success: true,
-            result: { demo: NEW, previous: { owner: 'jen', repo: 'isle5-demo' } },
+            result: { demo: NEW, previous: { owner: 'robin', repo: 'isle5-demo' } },
         });
         expect(p.demo).toEqual(NEW);
         expect(p.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata).toMatchObject({
@@ -113,7 +113,7 @@ describe('handleChangeDemoSource', () => {
     it('updates the demo package on the Welcome step too, only when asked', async () => {
         await handleChangeDemoSource(ctx(project()), { demo: NEW, updateDemoPackage: true });
 
-        expect(renameAddedDemoSource).toHaveBeenCalledWith({ owner: 'jen', repo: 'isle5-demo' }, NEW.source);
+        expect(renameAddedDemoSource).toHaveBeenCalledWith({ owner: 'robin', repo: 'isle5-demo' }, NEW.source);
         expect(rememberAddedDemo).toHaveBeenCalledWith(NEW);
     });
 

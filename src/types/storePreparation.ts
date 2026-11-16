@@ -145,7 +145,7 @@ export interface PreparationStepReport {
     changes: string[];
     /**
      * A preview's one plain sentence of what the step will do, naming what `changes` lists
-     * exactly ("Add Test Warehouse to Justrite Stock"), for a person reading the preview.
+     * exactly ("Add Test Warehouse to Tailspin Stock"), for a person reading the preview.
      * Absent when the step's title says it already.
      */
     summary?: string;

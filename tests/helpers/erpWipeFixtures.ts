@@ -2,7 +2,7 @@
  * The ERP integration's answers a wipe reads ("One action, ERP included", datapack-engine step 10),
  * typed to the extension's own types so a shape cannot be invented here.
  *
- * - `JUSTRITE_SETTINGS`: `GET erp/settings?websites=` as JustRite's integration answered it on
+ * - `TAILSPIN_SETTINGS`: `GET erp/settings?websites=` as Tailspin's integration answered it on
  *   scratch-1028's instance (2026-10-30, read through `get_erp_settings`): `orders_send: true` and
  *   `structure_owns: "all"` for every website. Only those two fields are copied; the website keys
  *   are the sandbox's (`commerceWipeFixtures.ts`).
@@ -10,7 +10,7 @@
  *   (the integration's `actions/erp/status`, a2556c2); the rest is the type's minimum.
  * - `STORE_CLOSE`: what `POST erp/close-orders` answers, in the shape the integration's own box test
  *   pins (`test/box/close-store-orders.test.js`, 1f6de21): `touched[].orderId` is the order NUMBER,
- *   `erpRemoved` keyed by the ERP's list id (`justrite`, as JustRite's manifest lists its ERP). The
+ *   `erpRemoved` keyed by the ERP's list id (`tailspin`, as Tailspin's manifest lists its ERP). The
  *   counts are for the test store's two orders AFTER the wipe closed them in Commerce (erp-order-close
  *   step 5): both already closed, so it writes nothing to their state and only forgets them
  *   (`src/lib/close-orders.js` `closeOne`, `plan === "done"`). No deployment has answered it yet.
@@ -21,9 +21,9 @@ import type { ErpIntegrationStatus, ErpStoreCloseReport } from '@/types/erpInteg
 
 const SENDS = { orders_send: true, structure_owns: 'all' };
 
-export const JUSTRITE_SETTINGS: ResolvedErpSettings = {
+export const TAILSPIN_SETTINGS: ResolvedErpSettings = {
     default: SENDS,
-    websites: { base: SENDS, justrite: SENDS, bodea: { ...SENDS, orders_send: false }, justrite_test_website: SENDS },
+    websites: { base: SENDS, tailspin: SENDS, bodea: { ...SENDS, orders_send: false }, tailspin_test_website: SENDS },
 };
 
 const STATUS: ErpIntegrationStatus = {
@@ -43,7 +43,7 @@ export const STATUS_BEFORE: ErpIntegrationStatus = STATUS;
 
 /** The integration's close of the test store's two orders, both already closed by the wipe. */
 export const STORE_CLOSE: ErpStoreCloseReport = {
-    scope: { stores: ['justrite_test_store'], websites: [], storeViewIds: [6] },
+    scope: { stores: ['tailspin_test_store'], websites: [], storeViewIds: [6] },
     closed: { cancelled: 0, refunded: 0, commented: 0, alreadyClosed: 2, returnsClosed: 0, partsRemoved: 2, failed: [] },
     touched: [
         { orderId: '000000701', outcome: 'alreadyClosed' },
@@ -52,7 +52,7 @@ export const STORE_CLOSE: ErpStoreCloseReport = {
     orders: { cleared: 2, failed: [] },
     holds: { released: 0, failed: [] },
     erpRemoved: {
-        justrite: {
+        tailspin: {
             notFound: [],
             removed: { creditMemos: 0, events: 4, invoices: 1, payments: 0, returnOrders: 0, salesOrders: 2, shipments: 1 },
         },

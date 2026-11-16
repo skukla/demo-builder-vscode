@@ -332,9 +332,9 @@ describe('DatapackDetailPanel', () => {
          */
         // Owner, 2026-11-05: the title showed the pack's id while it loaded, then jumped to its name.
         it("names the pack as its card does while the detail loads, not by its id", () => {
-            renderPanel({ loading: true, detail: null, selectedName: 'Data Pack for Khalil' });
+            renderPanel({ loading: true, detail: null, selectedName: 'Data Pack for PersonB' });
 
-            expect(screen.getByText('Data Pack for Khalil')).toBeInTheDocument();
+            expect(screen.getByText('Data Pack for PersonB')).toBeInTheDocument();
             expect(screen.queryByText('bodea')).not.toBeInTheDocument();
         });
 

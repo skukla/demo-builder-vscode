@@ -14,7 +14,7 @@ import { RESET_RULE_CASES, type ResetRuleCase } from '../../../../helpers/resetR
 import { sandbox } from './wipe.testUtils';
 
 const DAY = '2026-10-30';
-const TEST_STORE = ['justrite_test_website'];
+const TEST_STORE = ['tailspin_test_website'];
 const CANCELED = `Canceled by the demo reset on ${DAY}.`;
 const REFUNDED = `Refunded and closed by the demo reset on ${DAY}.`;
 const PARTLY = `Refunded the invoiced items by the demo reset on ${DAY}.`;

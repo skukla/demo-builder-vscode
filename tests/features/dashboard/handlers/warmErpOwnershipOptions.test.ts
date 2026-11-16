@@ -38,7 +38,7 @@ const mockGetTokenStatus = jest.fn();
 const ERP_ACTIONS = { 'erp/status': 'https://ns.adobeio-static.net/api/v1/web/erp/status' };
 
 const WITH_ERPS = createMockProject({
-    name: 'justrite',
+    name: 'tailspin',
     path: '/p',
     appBuilderComponents: {
         'erp-integration': {

@@ -1,7 +1,7 @@
 /**
  * GitHub ruleset rejections — naming the file that was blocked.
  *
- * A real report (2026-08-11, jogosset/brookshires-bgc): Storefront Setup died with
+ * A real report (2026-08-11, org-f/org-i-bgc): Storefront Setup died with
  *
  *     [Storefront Setup] Failed: Repository rule violations found
  *     Secret detected in content

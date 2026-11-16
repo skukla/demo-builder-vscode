@@ -126,9 +126,9 @@ project's catalog view shows. Recommendation: build it after the live check.
 
 ## Walkthrough queue
 
-1. Look at the Import dialog on screen (Justrite Test / Justrite Test Store US), then say
+1. Look at the Import dialog on screen (Tailspin Test / Tailspin Test Store US), then say
    merge or change.
-2. Live test step 7: set Justrite Test Store's root back to Justrite Catalog, then remove the
+2. Live test step 7: set Tailspin Test Store's root back to Tailspin Catalog, then remove the
    pack again so the store is back to zero.
 3. The ERP branch merges before the cut (your go).
 4. Read the shared-demo plan and answer its eight decisions.

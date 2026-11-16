@@ -327,7 +327,7 @@ describe('the two cloud choices', () => {
 
     it('reports what the cloud step did alongside the local delete', async () => {
         cleanUpProjectCloudMock.mockResolvedValue({
-            githubRepo: { name: 'jen/alpha', deleted: true },
+            githubRepo: { name: 'robin/alpha', deleted: true },
         });
         const s = fakeServer();
         registerDeleteProjectTool(s, ctxFactory);
@@ -335,13 +335,13 @@ describe('the two cloud choices', () => {
         expect(await s.call({ ...CONFIRMED, deleteGithubRepo: true })).toEqual({
             deleted: true,
             name: 'alpha',
-            githubRepo: { name: 'jen/alpha', deleted: true },
+            githubRepo: { name: 'robin/alpha', deleted: true },
         });
     });
 
     it('still reports what the cloud step did when the local delete then fails', async () => {
         cleanUpProjectCloudMock.mockResolvedValue({
-            githubRepo: { name: 'jen/alpha', deleted: true },
+            githubRepo: { name: 'robin/alpha', deleted: true },
         });
         deleteProjectFilesMock.mockRejectedValueOnce('EBUSY');
         const s = fakeServer();
@@ -350,7 +350,7 @@ describe('the two cloud choices', () => {
         expect(await s.call({ ...CONFIRMED, deleteGithubRepo: true })).toEqual({
             deleted: false,
             name: 'alpha',
-            githubRepo: { name: 'jen/alpha', deleted: true },
+            githubRepo: { name: 'robin/alpha', deleted: true },
             error: 'EBUSY',
         });
     });
@@ -358,7 +358,7 @@ describe('the two cloud choices', () => {
     // EDS-65: the project is how a second try finds the pages that are still live.
     it('keeps the project, and says why, when the cloud step stopped with pages still live', async () => {
         const stopped = 'The pages could not be taken off the live site, so nothing else was deleted.';
-        const daLiveSite = { name: 'jen/alpha', contentDeleted: false, stillPublished: true, publishSummary: '', error: stopped };
+        const daLiveSite = { name: 'robin/alpha', contentDeleted: false, stillPublished: true, publishSummary: '', error: stopped };
         cleanUpProjectCloudMock.mockResolvedValue({ stopped, daLiveSite });
         const s = fakeServer();
         registerDeleteProjectTool(s, ctxFactory);

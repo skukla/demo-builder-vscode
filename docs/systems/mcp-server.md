@@ -933,7 +933,7 @@ records installs in about 6.5 minutes this way, against about 7.5 by the bulk qu
 
 Customers are made through the Import API too (`customerImport.ts`, `customer_composite`): a pack's
 `customers`, the service's `customers_export` kind (its substitutions: website, store view, group by
-code), and a company's admin. On the Justrite ACCS sandbox every `POST customers`, the bulk route
+code), and a company's admin. On the Tailspin ACCS sandbox every `POST customers`, the bulk route
 included, is refused before anything is saved ("… company_id … The "%company_id%" value's type is
 invalid"), whatever the body, while the same customer imports with its group and address
 (2026-11-06); the cause is on the store's side and was not found. Each customer is pending first,
@@ -953,11 +953,11 @@ catalog/frontend/grid_per_page as it is: it was changed after Demo Builder set i
 
 The install record now keeps the website and store view the pack went to (`target`), and the
 preview and "save store changes" read the store there, not at the project's website: a pack
-installed to `justrite_test_website` on a project whose website is JustRite's was being read at
-JustRite's and called "changed in the Admin" (live, 2026-10-30). A record from before this has no
+installed to `tailspin_test_website` on a project whose website is Tailspin's was being read at
+Tailspin's and called "changed in the Admin" (live, 2026-10-30). A record from before this has no
 `target`; its settings are still read at the website each one names (`scopeCode`). Installing a
 pack again into another website than its record names is refused ("… is installed on the website
-justrite_test_website. Remove it first, or install it there."), by `validate_datapack_import` too.
+tailspin_test_website. Remove it first, or install it there."), by `validate_datapack_import` too.
 
 ### A pack's settings layer (datapack-engine step 09, 2026-11-02)
 
@@ -982,7 +982,7 @@ No new tool. A store shows only the categories under its root, and no API can ch
 root (`POST/PUT /V1/store/storeGroups` answer 404 on ACCS). So `install_datapack`, for a pack
 with a `root_category` of its own: when no other store shows the install target's store root, it
 leaves the pack's root out and puts its categories under the store's root, and the outcome's `note`
-says so. When another store shares that root (`justrite_test_website` shows JustRite's root 119), it
+says so. When another store shares that root (`tailspin_test_website` shows Tailspin's root 119), it
 makes the pack's root and asks the user, mid-install, through `askDuringOperation` (a VS Code modal
 under an agent): Open the Admin, I've done it, Skip for now. "I've done it" re-reads
 `GET store/storeGroups`; "Skip for now" finishes with the step left open on the install record and
@@ -1077,8 +1077,8 @@ response ceiling is set until a live store is measured.
 
 Every door (both tools and the Data Installer) reads every other project on this machine
 (`readWipeClaims`, over `loadOtherProjects`). Another project using one of these websites is never a
-refusal (P6-Q2, owner 2026-11-13): `data.warning` names it ("The project JustRite also uses the website
-justrite. Clearing it also removes what was added there by hand for that project."), and the SC or the
+refusal (P6-Q2, owner 2026-11-13): `data.warning` names it ("The project Tailspin also uses the website
+tailspin. Clearing it also removes what was added there by hand for that project."), and the SC or the
 agent's user may still clear. What another project's install records list on these websites is left.
 
 **One action, ERP included** (owner, 2026-10-30). Every door also finds the ERP integration
@@ -1087,7 +1087,7 @@ project on the same Commerce instance, as the one-per-instance add refusal match
 chosen websites it sends to an ERP (`GET erp/settings?websites=`, `orders_send`) are
 still the wipe's own: Commerce is the source system (owner, 2026-11-11), so `clear_demo_data`
 closes them by the one reset rule like any other. `data.erp` carries one line ("The ERP
-integration (JustRite) serves these websites: its ERP is brought in line with Commerce after the
+integration (Tailspin) serves these websites: its ERP is brought in line with Commerce after the
 clearing."). After every Commerce write, the clearing asks the integration to bring its ERP in line
 (`POST erp/close-orders` with the routed store codes, followed by its run id: with every order
 already closed it writes nothing to their state, forgets them, and each ERP that held one removes

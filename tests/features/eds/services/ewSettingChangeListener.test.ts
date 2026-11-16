@@ -493,7 +493,7 @@ describe('registerEwSettingChangeListener', () => {
         (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Republish');
         registerEwSettingChangeListener({
             context: mockContext,
-            stateManager: buildStateManager([{ name: 'justrite', eds: true }]),
+            stateManager: buildStateManager([{ name: 'tailspin', eds: true }]),
             logger: mockLogger,
             githubTokenService: {} as GitHubTokenService,
             onReapplied: jest.fn().mockRejectedValue(new Error('panel gone')),
@@ -502,7 +502,7 @@ describe('registerEwSettingChangeListener', () => {
         fireChange('demoBuilder.daLive.authoringExperience');
         await flushDebounce();
 
-        expect(lastStatusBarLine()).toBe('✅ Re-applied Experience Workspace config to justrite');
+        expect(lastStatusBarLine()).toBe('✅ Re-applied Experience Workspace config to tailspin');
     });
 
     it('re-applies cleanly when no host callback is registered, reporting no failure', async () => {

@@ -19,7 +19,7 @@ const EMPTY = { fullName: 'steve/new-demo', defaultBranch: 'main' };
 function repoOps(isTemplate: boolean, defaultBranch = 'main') {
     return {
         repoOps: {
-            getRepository: jest.fn().mockResolvedValue({ isTemplate, defaultBranch, fullName: 'jen/isle5-demo' }),
+            getRepository: jest.fn().mockResolvedValue({ isTemplate, defaultBranch, fullName: 'robin/isle5-demo' }),
         },
         repoLifecycle: {
             createFromTemplate: jest.fn().mockResolvedValue(GENERATED),
@@ -46,23 +46,23 @@ describe('createRepoFromSource', () => {
     it("generates from an added demo's source when GitHub flags it as a template", async () => {
         const ops = repoOps(true);
         const sync = templateSync();
-        await createRepoFromSource({ ...ops, templateSync: sync }, { newRepoName: 'new-demo', isPrivate: true, fromAddedDemo: true }, 'jen', 'isle5-demo', createMockLogger());
-        expect(ops.repoOps.getRepository).toHaveBeenCalledWith('jen', 'isle5-demo');
-        expect(ops.repoLifecycle.createFromTemplate).toHaveBeenCalledWith('jen', 'isle5-demo', 'new-demo', true, undefined);
+        await createRepoFromSource({ ...ops, templateSync: sync }, { newRepoName: 'new-demo', isPrivate: true, fromAddedDemo: true }, 'robin', 'isle5-demo', createMockLogger());
+        expect(ops.repoOps.getRepository).toHaveBeenCalledWith('robin', 'isle5-demo');
+        expect(ops.repoLifecycle.createFromTemplate).toHaveBeenCalledWith('robin', 'isle5-demo', 'new-demo', true, undefined);
         expect(sync.resetRepository).not.toHaveBeenCalled();
     });
 
     it('creates an empty repository and resets it onto the source, on its branch, when it is not a template', async () => {
         const ops = repoOps(false, 'demo');
         const sync = templateSync();
-        const created = await createRepoFromSource({ ...ops, templateSync: sync }, { newRepoName: 'new-demo', isPrivate: false, namespace: 'steve', fromAddedDemo: true }, 'jen', 'isle5-demo', createMockLogger());
+        const created = await createRepoFromSource({ ...ops, templateSync: sync }, { newRepoName: 'new-demo', isPrivate: false, namespace: 'steve', fromAddedDemo: true }, 'robin', 'isle5-demo', createMockLogger());
         expect(ops.repoLifecycle.createFromTemplate).not.toHaveBeenCalled();
         expect(ops.repoLifecycle.createEmptyRepository).toHaveBeenCalledWith('new-demo', false, 'steve');
         expect(sync.resetRepository).toHaveBeenCalledWith(
             {
                 repoOwner: 'steve',
                 repoName: 'new-demo',
-                templateOwner: 'jen',
+                templateOwner: 'robin',
                 templateRepo: 'isle5-demo',
                 repoBranch: 'main',
                 templateBranch: 'demo',
@@ -76,7 +76,7 @@ describe('createRepoFromSource', () => {
     it("stops with the reset's own message when resetting the new repository fails", async () => {
         const sync = templateSync({ success: false, error: 'Could not push the update to GitHub. See Debug Logs for details.' });
         await expect(
-            createRepoFromSource({ ...repoOps(false), templateSync: sync }, { newRepoName: 'new-demo', isPrivate: false, fromAddedDemo: true }, 'jen', 'isle5-demo', createMockLogger()),
+            createRepoFromSource({ ...repoOps(false), templateSync: sync }, { newRepoName: 'new-demo', isPrivate: false, fromAddedDemo: true }, 'robin', 'isle5-demo', createMockLogger()),
         ).rejects.toThrow('Could not push the update to GitHub. See Debug Logs for details.');
     });
 });

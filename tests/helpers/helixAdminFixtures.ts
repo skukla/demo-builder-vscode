@@ -9,7 +9,7 @@
  * The `x-error` header on `POST admin.hlx.page/code/{owner}/{repo}/main/config.json`
  * → 400, when the AEM Code Sync App does not cover the repository.
  *
- * Captured 2026-09-30 on skukla/kukla-justrite (EDS-23), on every attempt across
+ * Captured 2026-09-30 on skukla/kukla-tailspin (EDS-23), on every attempt across
  * two republishes, while `/status` answered an uninformative inner `code.status: 400`.
  */
 export const CODE_ENDPOINT_APP_NOT_ON_REPO_X_ERROR =

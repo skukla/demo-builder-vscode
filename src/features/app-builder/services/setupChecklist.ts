@@ -34,7 +34,7 @@ function lastCheckOf(saved: SetupStepRecord | undefined): SetupCheckOutcome | un
 
 /**
  * Whether a step reads as done: marked done, and its last check did not come back unable to
- * tell. A check that could not tell must never read as done (Justrite 2026-10-10: a step
+ * tell. A check that could not tell must never read as done (Tailspin 2026-10-10: a step
  * saved done, then checked "could not", previewed as done and would have skipped seven
  * attribute sets without `erp_owner`).
  *
@@ -56,7 +56,7 @@ const ERP_NAME = '<ERP name>';
 
 /**
  * A step's values with each ERP's own name filled in: one value per ERP for a value naming
- * the placeholder ("<ERP name> Warehouse" -> "Justrite Warehouse", "Accuform Warehouse"),
+ * the placeholder ("<ERP name> Warehouse" -> "Tailspin Warehouse", "Accuform Warehouse"),
  * the trailing "ERP" dropped as the ERP's list id drops it. The placeholder stays when the
  * integration has no ERP yet, which is still the instruction (owner, 2026-10-01).
  */

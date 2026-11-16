@@ -5,7 +5,7 @@
  * from the user's `demoBuilder.byom.*` settings (`resolveByomOverlayConfig`). The update path
  * skipped that step, so it always saw the overlay as off: it never wrote the first-visit
  * script into 404.html, and so never took Demo Builder's old copy out of delayed.js. Live on
- * JustRite (2026-10-30): "BYOM disabled (no overlayUrl) — skipping smart 404 install", then
+ * Tailspin (2026-10-30): "BYOM disabled (no overlayUrl) — skipping smart 404 install", then
  * the Adobe boilerplate update failed again on "patch failed: scripts/delayed.js:1".
  */
 
@@ -24,15 +24,15 @@ jest.mock('@/features/eds/services/reset/edsResetParams', () => ({
     extractResetParams: (...a: unknown[]) => mockExtract(...a),
 }));
 
-const project = createMockProject({ name: 'justrite' });
+const project = createMockProject({ name: 'tailspin' });
 const fileOps = {} as Parameters<typeof restoreDemoBuilderPieces>[1];
-const OVERLAY = 'https://overlay.test/render-pdp?org=kukla&site=kukla-justrite';
+const OVERLAY = 'https://overlay.test/render-pdp?org=kukla&site=kukla-tailspin';
 
 beforeEach(() => {
     jest.clearAllMocks();
     mockExtract.mockReturnValue({
         success: true,
-        params: { repoOwner: 'skukla', repoName: 'kukla-justrite', daLiveOrg: 'kukla', daLiveSite: 'kukla-justrite' },
+        params: { repoOwner: 'skukla', repoName: 'kukla-tailspin', daLiveOrg: 'kukla', daLiveSite: 'kukla-tailspin' },
     });
     mockBringUpToDate.mockResolvedValue({ smart404: { installed: true }, current: true });
 });
@@ -43,13 +43,13 @@ describe('restoreDemoBuilderPieces', () => {
 
         await restoreDemoBuilderPieces(project, fileOps, createMockLogger(), resolve);
 
-        expect(resolve).toHaveBeenCalledWith(undefined, 'kukla', 'kukla-justrite');
-        expect(mockBringUpToDate).toHaveBeenCalledWith(fileOps, 'skukla', 'kukla-justrite', OVERLAY, expect.anything(), 'kukla', 'kukla-justrite');
+        expect(resolve).toHaveBeenCalledWith(undefined, 'kukla', 'kukla-tailspin');
+        expect(mockBringUpToDate).toHaveBeenCalledWith(fileOps, 'skukla', 'kukla-tailspin', OVERLAY, expect.anything(), 'kukla', 'kukla-tailspin');
     });
 
     it('with no resolver, uses what the project row names (outside VS Code, as the patch canary runs)', async () => {
         await restoreDemoBuilderPieces(project, fileOps, createMockLogger());
 
-        expect(mockBringUpToDate).toHaveBeenCalledWith(fileOps, 'skukla', 'kukla-justrite', undefined, expect.anything(), 'kukla', 'kukla-justrite');
+        expect(mockBringUpToDate).toHaveBeenCalledWith(fileOps, 'skukla', 'kukla-tailspin', undefined, expect.anything(), 'kukla', 'kukla-tailspin');
     });
 });

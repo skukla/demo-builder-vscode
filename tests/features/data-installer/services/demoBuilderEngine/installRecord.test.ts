@@ -107,7 +107,7 @@ describe('openInstallRecord', () => {
 });
 
 describe('the website and store view the pack was installed to', () => {
-    const TARGET = { websiteCode: 'justrite_test_website', storeCode: 'justrite_test_view' };
+    const TARGET = { websiteCode: 'tailspin_test_website', storeCode: 'tailspin_test_view' };
 
     it('is written on a new record, so every later read opens the store where the pack went', async () => {
         const files = memoryFiles();

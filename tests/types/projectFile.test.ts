@@ -35,7 +35,7 @@ describe('SharedDemoDescription — the storefront slice a colleague may commit'
         const demo: SharedDemoDescription = {
             kind: 'demo',
             version: 1,
-            name: 'Isle5 by Jen',
+            name: 'Isle5 by Robin',
             description: 'Isle5-branded B2B demo with custom blocks',
             configDefaults: { ACCS_WEBSITE_CODE: 'isle5' },
             configFlags: { 'commerce-b2b-enabled': true },
@@ -44,9 +44,9 @@ describe('SharedDemoDescription — the storefront slice a colleague may commit'
             datapack: { name: 'isle5', version: 'main' },
             integrations: {
                 catalog: ['eds-accs-mesh'],
-                custom: { 'jen-pricing': { owner: 'jen', repo: 'pricing-app' } },
+                custom: { 'robin-pricing': { owner: 'robin', repo: 'pricing-app' } },
             },
-            contentSource: { org: 'jen', site: 'isle5', indexPath: '/sitemap.json' },
+            contentSource: { org: 'robin', site: 'isle5', indexPath: '/sitemap.json' },
         };
         expect(demo.kind).toBe('demo');
         // The minimal file is the kind, the version and a name.

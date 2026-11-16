@@ -66,7 +66,7 @@ Each step has tests and an undo. No cloud write until the live checks.
 - The search page's list block with `?filter=categoryPath:<urlPath>`: does Catalog Service
   accept it (`search-url.js` turns it into `in`, not `eq`)? Decides the decision-4 fallback.
 - How reset clears pages setup published, so category pages follow the same path.
-- Whether Justrite holds category pages from a dev run of the old button.
+- Whether Tailspin holds category pages from a dev run of the old button.
 
 **1. Setup writes the pages and the switch.** Call `applyCatalogMenu` from the storefront
 setup pipeline (after content copy and publish), only when the storefront's own copy has
@@ -105,7 +105,7 @@ pages are written at setup (AI_CONTEXT_VERSION bump).
 ## Live checks for the owner (watched; they write to live sites)
 
 Run twice: first a fresh project from a shipped package (the boilerplate), then an added
-colleague storefront (Justrite).
+colleague storefront (Tailspin).
 
 1. After setup: the nav shows the catalog menu with no typing; each top-level category
    opens its page with products.
@@ -120,13 +120,13 @@ colleague storefront (Justrite).
 ## Step 0 findings (2026-10-05, reads only)
 
 1. **The fallback works.** The search page's list block (`blocks/product-list-page/`,
-   Justrite and the boilerplate) reads `?filter=` through its own `search-url.js`, which
+   Tailspin and the boilerplate) reads `?filter=` through its own `search-url.js`, which
    turns `categoryPath:<urlPath>` into `{attribute: 'categoryPath', in: [<urlPath>]}`. A
-   category page sends `eq`. Catalog Service, Justrite store view, via `run_commerce_query`:
+   category page sends `eq`. Catalog Service, Tailspin store view, via `run_commerce_query`:
    `signs` 45 / 45 (`eq` / `in`), `signs/danger-signs` 7 / 7, `no-such-category` 0 / 0 (the
    control), for the guest and for group 20 alike. Two url-path shapes `search-url.js` would
    misread: a hyphen between two numbers (read as a price range) and a comma (split into
-   values). The block gives those no fallback. `/search` exists on Justrite and on the ACO
+   values). The block gives those no fallback. `/search` exists on Tailspin and on the ACO
    boilerplate (200).
 2. **How reset clears pages.** The EDS pipeline's `clear-content` step
    (`edsPipeline.ts`, `pipelineClearContent`) deletes ALL DA.live content
@@ -135,14 +135,14 @@ colleague storefront (Justrite).
    republish the `leftover-pages` step unpublishes what Helix lists that was not republished.) So on a normal reset the category pages go with everything else; only a
    keep-content reset (an added demo whose content site is gone) leaves them. Reset now
    removes by the record first either way, so both cases end the same.
-3. **Justrite holds no category pages from a dev run.** Every current category path
+3. **Tailspin holds no category pages from a dev run.** Every current category path
    (`/signs`, `/signs/danger-signs`, `/safety-cabinets`, `/lockout-tagout`,
    `/5s-visual-workplace`) and the old `/safety-signs` is 404 on both aem.live and aem.page;
    `/nav` has no `catalog-menu` block or "Shop the catalog" line. The DA.live listing could
-   not be read (`list_content` needs a DA.live sign-in, which is the user's). Justrite's own
+   not be read (`list_content` needs a DA.live sign-in, which is the user's). Tailspin's own
    hand-made pages `/apparel`, `/hazard-communication`, `/workplace-safety` are live (200);
    none is at a current category path, so the first run should report no clash unless the
-   tree changes. Justrite's tree (Catalog Service, 2026-10-05): root "Justrite Catalog"
+   tree changes. Tailspin's tree (Catalog Service, 2026-10-05): root "Tailspin Catalog"
    (119) with Signs and Labels (8 sub-categories), Lockout and Tagout, 5S and Visual
    Workplace, Safety Cabinets; plus "Default Category" (2). Both roots have an empty
    `urlPath`, so they get no page.

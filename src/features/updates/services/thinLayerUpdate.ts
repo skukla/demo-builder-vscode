@@ -133,7 +133,7 @@ const ROW_OVERLAY: OverlayResolver = (fromConfig) => fromConfig;
  *
  * The overlay goes through `resolveOverlay`, as a reset's does. Without it every update saw the
  * overlay as off: no first-visit script in 404.html, so Demo Builder's old copy stayed in
- * delayed.js and the Adobe boilerplate update failed on it (JustRite, 2026-10-30).
+ * delayed.js and the Adobe boilerplate update failed on it (Tailspin, 2026-10-30).
  *
  * @returns one plain line per piece that could not be put back
  */

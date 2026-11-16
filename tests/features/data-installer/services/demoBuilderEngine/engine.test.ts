@@ -195,20 +195,20 @@ describe('demoBuilderEngine install', () => {
 
 describe('demoBuilderEngine and the website a pack was installed to', () => {
     const READS = { [SETS_PAGE]: { items: [], total_count: 0 }, ...noneUnder(2, { Sale: 'sale' }) };
-    const ELSEWHERE = { websiteCode: 'justrite_test_website', storeCode: 'justrite_test_view' };
-    const MOVED = `${PACK.name} is installed on the website justrite_test_website. Uninstall it first, or install it there.`;
+    const ELSEWHERE = { websiteCode: 'tailspin_test_website', storeCode: 'tailspin_test_view' };
+    const MOVED = `${PACK.name} is installed on the website tailspin_test_website. Uninstall it first, or install it there.`;
 
     // Names, not codes (owner, 2026-11-15): the website as the Admin shows it, the code only when
     // the store no longer lists it (as the refusal below, whose store lists none).
     it('names the website it is installed on by its name in the store', async () => {
         const files = memoryFiles();
         await (await openInstallRecord(files, PROJECT, PACK, () => 'then', ELSEWHERE)).record({ kind: 'categories', id: '40' });
-        const named = { ...READS, 'store/websites': [{ id: 6, code: 'justrite_test_website', name: 'Justrite Test' }] };
+        const named = { ...READS, 'store/websites': [{ id: 6, code: 'tailspin_test_website', name: 'Tailspin Test' }] };
         const { engine } = await engineWith(named, () => ({ id: 41 }), { files });
 
         expect(await engine.validateImport(request())).toEqual({
             valid: false,
-            reason: `${PACK.name} is installed on the website Justrite Test. Uninstall it first, or install it there.`,
+            reason: `${PACK.name} is installed on the website Tailspin Test. Uninstall it first, or install it there.`,
         });
     });
 
@@ -245,7 +245,7 @@ describe('demoBuilderEngine and the website a pack was installed to', () => {
 
     it('refuses the same for a record made before targets were kept, by the website its settings went to', async () => {
         const files = memoryFiles();
-        const previous = { path: 'catalog/frontend/list_per_page', scope: 'website', scopeCode: 'justrite_test_website', stored: '10', effective: '10', wrote: '15' };
+        const previous = { path: 'catalog/frontend/list_per_page', scope: 'website', scopeCode: 'tailspin_test_website', stored: '10', effective: '10', wrote: '15' };
         await (await openInstallRecord(files, PROJECT, PACK, () => 'then')).record({ kind: 'store_config', id: 'x@website', key: 'x@website', previous });
         const { engine, ctx } = await engineWith(READS, () => ({ id: 41 }), { files });
 
@@ -294,9 +294,9 @@ describe('demoBuilderEngine and the Commerce instance a pack was installed to', 
     });
 
     it('names the pack as the SC knows it, in both refusals', async () => {
-        const named = { files: await recordedOn('TenantA'), instance: 'TenantB', nameOf: () => 'Justrite Racks' };
+        const named = { files: await recordedOn('TenantA'), instance: 'TenantB', nameOf: () => 'Tailspin Racks' };
         const { engine } = await engineWith({}, () => true, named);
-        const said = 'Justrite Racks is installed on another Commerce instance. Uninstall it there first.';
+        const said = 'Tailspin Racks is installed on another Commerce instance. Uninstall it there first.';
 
         const { activationId } = await engine.startDelete(request());
         await settle(engine, activationId);

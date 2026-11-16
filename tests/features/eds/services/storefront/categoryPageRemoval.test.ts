@@ -14,7 +14,7 @@ import {
 } from '@/features/eds/services/storefront/productPageRemoval';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
-const TARGET = { repoOwner: 'skukla', repoName: 'kukla-justrite' };
+const TARGET = { repoOwner: 'skukla', repoName: 'kukla-tailspin' };
 
 function setUp(overrides: Partial<CategoryPageRemovalDeps> = {}) {
     const unpublishPages = jest.fn(async (_o: string, _r: string, _b: string, paths: string[]) => ({
@@ -37,9 +37,9 @@ describe('removeCategoryPages', () => {
 
         const result = await removeCategoryPages(TARGET, deps, ['/gloves', '/gloves/winter']);
 
-        expect(unpublishPages).toHaveBeenCalledWith('skukla', 'kukla-justrite', 'main', ['/gloves', '/gloves/winter']);
+        expect(unpublishPages).toHaveBeenCalledWith('skukla', 'kukla-tailspin', 'main', ['/gloves', '/gloves/winter']);
         expect(deps.helix.listPublishedPaths).not.toHaveBeenCalled();
-        expect(result.summary).toBe('Removed 2 category pages from skukla/kukla-justrite, live and preview.');
+        expect(result.summary).toBe('Removed 2 category pages from skukla/kukla-tailspin, live and preview.');
     });
 
     it('never hands over the template', async () => {
@@ -67,7 +67,7 @@ describe('removeCategoryPages', () => {
         expect(unpublishPages).not.toHaveBeenCalled();
         expect(result.status).toBe('refused');
         expect(result.summary).toBe(
-            'Category pages were left published: the project "Acme" also publishes to skukla/kukla-justrite, ' +
+            'Category pages were left published: the project "Acme" also publishes to skukla/kukla-tailspin, ' +
                 'and removing them would take its category pages down too.',
         );
     });

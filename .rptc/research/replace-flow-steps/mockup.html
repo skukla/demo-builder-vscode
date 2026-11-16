@@ -73,7 +73,7 @@ function historyView(){
 function form(){
  const lead=S.case==='first'?'':`<div class="lead">Replaces this demo's data with the version from ${S.chosen||version()}.</div>`;
  const all=true;
- return `<div class="title">Import My Luma</div>${lead}<div class="grid2"><div><div class="lbl">Website</div><div class="pick">Justrite Test <span>&#9662;</span></div></div><div><div class="lbl">Store View</div><div class="pick">Justrite Test Store US <span>&#9662;</span></div></div></div><div class="lbl">Data</div><div class="types">`+
+ return `<div class="title">Import My Luma</div>${lead}<div class="grid2"><div><div class="lbl">Website</div><div class="pick">Tailspin Test <span>&#9662;</span></div></div><div><div class="lbl">Store View</div><div class="pick">Tailspin Test Store US <span>&#9662;</span></div></div></div><div class="lbl">Data</div><div class="types">`+
  TYPES.map(t=>`<div class="cb"><span class="box ${all?'on':''}"></span>${t}</div>`).join('')+`</div>`+
  btns(B('Remove Data','')+B('Dry Run',''),B('Cancel','start()')+B('Import',S.case==='first'?"startRun(false)":"go('checking');setTimeout(()=>{if(S.view==='checking'){S.case==='changes'?go('question'):startRun(false)}},2600)",true));
 }
@@ -98,7 +98,7 @@ function run(){
  const fin=el>=end;
  const at=k=>{const s=get(k);return s?Math.min(1,Math.max(0,(el-s[1])/(s[2]-s[1]))):0};
  let h=`<div class="title">${fin?'<span class="ok">&#10003;</span>My Luma Imported':'Import My Luma'}</div>`;
- if(fin){h+=`<div class="lead">${S.case==='first'?'My Luma is in Justrite Test Store US.':`This demo now uses My Luma from ${S.chosen||version()}.`}${S.save?' Your changes are saved as Nov 9, 3:39 PM.':''} Products can take up to 20 minutes to appear in storefront search.</div>`;}
+ if(fin){h+=`<div class="lead">${S.case==='first'?'My Luma is in Tailspin Test Store US.':`This demo now uses My Luma from ${S.chosen||version()}.`}${S.save?' Your changes are saved as Nov 9, 3:39 PM.':''} Products can take up to 20 minutes to appear in storefront search.</div>`;}
  const row=(k,label,lineW,lineRun,lineDone,extra='')=>{const st=stateOf(get(k),el);if(!st)return'';const line=st==='w'?lineW:st==='spin'?lineRun(at(k)):lineDone;return `<div class="step"><span class="ic ${st}"></span><div style="flex:1"><div class="sl">${label}</div><div class="line">${line}</div>${extra}</div></div>`};
  const n=(f,tot)=>Math.round(f*tot).toLocaleString('en-US');
  h+=row('save','Save Your Changes','Waiting',f=>`Saving, ${Math.min(9,1+Math.floor(f*9))} of 9 data types`,'Saved as Nov 9, 3:39 PM');

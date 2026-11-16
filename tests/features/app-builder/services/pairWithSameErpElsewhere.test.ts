@@ -1,7 +1,7 @@
 /**
  * One Adobe project holds one ERP of a given name (owner, 2026-10-08).
  *
- * `justrite` and its copy both deployed the ERP pair into one Adobe project, and
+ * `tailspin` and its copy both deployed the ERP pair into one Adobe project, and
  * Commerce showed the integration's columns twice. The unit of uniqueness is the pair's
  * ERP SYSTEM's name: same ERP name in the same Adobe project replaces the whole pair
  * (through its integration); a different ERP name is a second pair beside the first,
@@ -61,8 +61,8 @@ function pairProject(name: string, erpName: string, adobeProjectId = ADOBE_PROJE
 /** The project about to deploy the pair, its ERP named `erpName` through the recorded input. */
 function adding(erpName: string): Project {
     return createMockProject({
-        name: 'justrite-copy',
-        path: '/projects/justrite-copy',
+        name: 'tailspin-copy',
+        path: '/projects/tailspin-copy',
         adobe: { projectId: ADOBE_PROJECT, organization: 'org' },
         componentConfigs: { 'demo-erp': { ERP_DISPLAY_NAME: erpName } },
     });
@@ -70,54 +70,54 @@ function adding(erpName: string): Project {
 
 describe('pairWithSameErpElsewhere', () => {
     it('finds the other project whose ERP has the same name, and names its integration to remove', () => {
-        const other = pairProject('justrite', 'Justrite ERP');
+        const other = pairProject('tailspin', 'Tailspin ERP');
 
-        const hit = pairWithSameErpElsewhere(adding('Justrite ERP'), INTEGRATION, CATALOG, [other]);
+        const hit = pairWithSameErpElsewhere(adding('Tailspin ERP'), INTEGRATION, CATALOG, [other]);
 
-        expect(hit).toEqual({ project: other, componentId: 'erp-integration', name: 'Justrite ERP' });
+        expect(hit).toEqual({ project: other, componentId: 'erp-integration', name: 'Tailspin ERP' });
     });
 
     it('compares the ERP name trimmed and case-insensitive', () => {
-        const other = pairProject('justrite', 'Justrite ERP');
+        const other = pairProject('tailspin', 'Tailspin ERP');
 
-        expect(pairWithSameErpElsewhere(adding('  justrite erp '), INTEGRATION, CATALOG, [other])).toBeDefined();
+        expect(pairWithSameErpElsewhere(adding('  tailspin erp '), INTEGRATION, CATALOG, [other])).toBeDefined();
     });
 
     it('leaves a pair with a different ERP name alone, even with the same default integration name', () => {
         const other = pairProject('acme', 'Acme ERP');
 
-        expect(pairWithSameErpElsewhere(adding('Justrite ERP'), INTEGRATION, CATALOG, [other])).toBeUndefined();
+        expect(pairWithSameErpElsewhere(adding('Tailspin ERP'), INTEGRATION, CATALOG, [other])).toBeUndefined();
     });
 
     it('leaves a same-named ERP in a DIFFERENT Adobe project alone', () => {
-        const other = pairProject('justrite', 'Justrite ERP', 'adobe-proj-2');
+        const other = pairProject('tailspin', 'Tailspin ERP', 'adobe-proj-2');
 
-        expect(pairWithSameErpElsewhere(adding('Justrite ERP'), INTEGRATION, CATALOG, [other])).toBeUndefined();
+        expect(pairWithSameErpElsewhere(adding('Tailspin ERP'), INTEGRATION, CATALOG, [other])).toBeUndefined();
     });
 
     it('ignores itself and a pair that is not deployed', () => {
-        const self = adding('Justrite ERP');
-        const notDeployed = pairProject('justrite', 'Justrite ERP');
+        const self = adding('Tailspin ERP');
+        const notDeployed = pairProject('tailspin', 'Tailspin ERP');
         notDeployed.appBuilderComponents!['demo-erp'].status = 'not-deployed';
 
         expect(pairWithSameErpElsewhere(self, INTEGRATION, CATALOG, [self, notDeployed])).toBeUndefined();
     });
 
     it('counts an ERP installed into Commerce as deployed, whatever its Runtime status says', () => {
-        const other = pairProject('justrite', 'Justrite ERP');
+        const other = pairProject('tailspin', 'Tailspin ERP');
         other.appBuilderComponents!['demo-erp'].status = 'stale';
         other.appBuilderComponents!['demo-erp'].installation = { status: 'installed' };
 
-        expect(pairWithSameErpElsewhere(adding('Justrite ERP'), INTEGRATION, CATALOG, [other])).toBeDefined();
+        expect(pairWithSameErpElsewhere(adding('Tailspin ERP'), INTEGRATION, CATALOG, [other])).toBeDefined();
     });
 
     it('matches an ERP added on its own, by the ERP entry, and names that ERP to remove', () => {
-        const other = pairProject('justrite', 'Justrite ERP');
+        const other = pairProject('tailspin', 'Tailspin ERP');
         other.appBuilderComponents!['demo-erp-2'] = state('system', 'Brand B ERP', { usedBy: 'erp-integration', catalogId: 'demo-erp' });
         const secondErp: AppBuilderComponentCatalogEntry = { ...SYSTEM, id: 'demo-erp-2', catalogId: 'demo-erp' };
         const project = createMockProject({
-            name: 'justrite-copy',
-            path: '/projects/justrite-copy',
+            name: 'tailspin-copy',
+            path: '/projects/tailspin-copy',
             adobe: { projectId: ADOBE_PROJECT, organization: 'org' },
             componentConfigs: { 'demo-erp-2': { ERP_DISPLAY_NAME: 'Brand B ERP' } },
         });
@@ -128,17 +128,17 @@ describe('pairWithSameErpElsewhere', () => {
     });
 
     it('falls back to the recorded name on the other project when it recorded none', () => {
-        const other = pairProject('justrite', 'Justrite ERP');
+        const other = pairProject('tailspin', 'Tailspin ERP');
         delete other.appBuilderComponents!['demo-erp'].name;
-        other.componentConfigs = { 'demo-erp': { ERP_DISPLAY_NAME: 'Justrite ERP' } };
+        other.componentConfigs = { 'demo-erp': { ERP_DISPLAY_NAME: 'Tailspin ERP' } };
 
-        expect(pairWithSameErpElsewhere(adding('Justrite ERP'), INTEGRATION, CATALOG, [other])).toBeDefined();
+        expect(pairWithSameErpElsewhere(adding('Tailspin ERP'), INTEGRATION, CATALOG, [other])).toBeDefined();
     });
 
     it('is unique by its own name for an integration that brings no system', () => {
         const other = createMockProject({
-            name: 'justrite',
-            path: '/projects/justrite',
+            name: 'tailspin',
+            path: '/projects/tailspin',
             adobe: { projectId: ADOBE_PROJECT, organization: 'org' },
             appBuilderComponents: { [SOLO.id]: state('integration', 'Starter Kit') },
         });
@@ -151,6 +151,6 @@ describe('pairWithSameErpElsewhere', () => {
     it('answers nothing when this project has no Adobe project', () => {
         const project = createMockProject({ adobe: undefined });
 
-        expect(pairWithSameErpElsewhere(project, INTEGRATION, CATALOG, [pairProject('justrite', 'Acme ERP')])).toBeUndefined();
+        expect(pairWithSameErpElsewhere(project, INTEGRATION, CATALOG, [pairProject('tailspin', 'Acme ERP')])).toBeUndefined();
     });
 });

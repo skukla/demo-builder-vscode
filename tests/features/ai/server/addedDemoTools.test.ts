@@ -76,7 +76,7 @@ const mockImport = handleImportStorefrontZip as jest.Mock;
 const mockRefusal = refusalFor as jest.Mock;
 const mockReadZip = readStorefrontZip as jest.Mock;
 
-const JEN = makeAddedDemo();
+const ROBIN = makeAddedDemo();
 const OWN: RememberedDemo = { ...makeAddedDemo({ name: 'Summit', source: { owner: 'steve', repo: 'isle5-demo', branch: 'main' } }), createdFromZip: true };
 const READ: SharedDemoRead = {
     outcome: 'read',
@@ -113,7 +113,7 @@ const ctx = createMockHandlerContext({
 beforeEach(() => {
     jest.clearAllMocks();
     mockRequireGitHub.mockResolvedValue(undefined);
-    mockRead.mockReturnValue([JEN, OWN]);
+    mockRead.mockReturnValue([ROBIN, OWN]);
     mockDeletable.mockImplementation(async (_c: unknown, source: { owner: string }) => source.owner === 'steve');
     mockStorefrontOf.mockResolvedValue(undefined);
     mockCount.mockResolvedValue(2);
@@ -125,9 +125,9 @@ describe('forget_added_demo', () => {
         const s = fakeServer();
         registerAddedDemoTools(s, () => ctx);
 
-        const res = await s.call('forget_added_demo', { owner: 'JEN', repo: 'isle5-demo' });
+        const res = await s.call('forget_added_demo', { owner: 'ROBIN', repo: 'isle5-demo' });
 
-        expect(res).toMatchObject({ demo: 'Isle5 by Jen', projectsBuiltOn: 2, destructive: true });
+        expect(res).toMatchObject({ demo: 'Isle5 by Robin', projectsBuiltOn: 2, destructive: true });
         expect(res.error).toContain('2 projects on this computer were built on it');
         expect(res.error).not.toContain('Deleting');
         expect(mockForget).not.toHaveBeenCalled();
@@ -137,20 +137,20 @@ describe('forget_added_demo', () => {
         const s = fakeServer();
         registerAddedDemoTools(s, () => ctx);
 
-        const res = await s.call('forget_added_demo', { owner: 'jen', repo: 'isle5-demo', confirm: true });
+        const res = await s.call('forget_added_demo', { owner: 'robin', repo: 'isle5-demo', confirm: true });
 
-        expect(mockForget).toHaveBeenCalledWith(ctx, JEN.source, false);
-        expect(res).toEqual({ demo: 'Isle5 by Jen', source: JEN.source, projectsBuiltOn: 2, forgotten: true });
+        expect(mockForget).toHaveBeenCalledWith(ctx, ROBIN.source, false);
+        expect(res).toEqual({ demo: 'Isle5 by Robin', source: ROBIN.source, projectsBuiltOn: 2, forgotten: true });
     });
 
     it('refuses deleteRepository for a demo whose repository Demo Builder did not make from a zip, in one sentence', async () => {
         const s = fakeServer();
         registerAddedDemoTools(s, () => ctx);
 
-        const res = await s.call('forget_added_demo', { owner: 'jen', repo: 'isle5-demo', deleteRepository: true, confirm: true });
+        const res = await s.call('forget_added_demo', { owner: 'robin', repo: 'isle5-demo', deleteRepository: true, confirm: true });
 
-        expect(mockDeletable).toHaveBeenCalledWith(ctx, JEN.source);
-        expect(res.error).toContain('jen/isle5-demo was not made from a zip file by Demo Builder in your account');
+        expect(mockDeletable).toHaveBeenCalledWith(ctx, ROBIN.source);
+        expect(res.error).toContain('robin/isle5-demo was not made from a zip file by Demo Builder in your account');
         expect(mockForget).not.toHaveBeenCalled();
     });
 
@@ -185,7 +185,7 @@ describe('forget_added_demo', () => {
         expect((await s.call('forget_added_demo', { owner: 'nobody', repo: 'x', confirm: true })).error).toContain('No added demo at nobody/x');
 
         mockRequireGitHub.mockResolvedValueOnce({ needsAuth: 'github', message: 'sign in' });
-        expect(await s.call('forget_added_demo', { owner: 'jen', repo: 'isle5-demo', confirm: true })).toEqual({
+        expect(await s.call('forget_added_demo', { owner: 'robin', repo: 'isle5-demo', confirm: true })).toEqual({
             needsAuth: 'github',
             message: 'sign in',
         });
@@ -199,8 +199,8 @@ describe('change_demo_source', () => {
         mockChange.mockResolvedValue({
             success: true,
             result: {
-                demo: { ...JEN, name: 'Mine', source: { owner: 'steve', repo: 'isle5-copy', branch: 'main' } },
-                previous: { owner: 'jen', repo: 'isle5-demo' },
+                demo: { ...ROBIN, name: 'Mine', source: { owner: 'steve', repo: 'isle5-copy', branch: 'main' } },
+                previous: { owner: 'robin', repo: 'isle5-demo' },
             },
         });
         const s = fakeServer();
@@ -222,7 +222,7 @@ describe('change_demo_source', () => {
             changed: true,
             demo: 'Mine',
             source: { owner: 'steve', repo: 'isle5-copy', branch: 'main' },
-            previous: { owner: 'jen', repo: 'isle5-demo' },
+            previous: { owner: 'robin', repo: 'isle5-demo' },
             warnings: [
                 'No description file.',
                 'Whether this demo uses company (B2B) features could not be read; it is treated as off.',
@@ -232,7 +232,7 @@ describe('change_demo_source', () => {
 
     it("keeps the project's demo name across a source change unless a new one is given", async () => {
         mockProbe.mockResolvedValue({ success: true, result: READ });
-        mockChange.mockResolvedValue({ success: true, result: { demo: OWN, previous: { owner: 'jen', repo: 'isle5-demo' } } });
+        mockChange.mockResolvedValue({ success: true, result: { demo: OWN, previous: { owner: 'robin', repo: 'isle5-demo' } } });
         const s = fakeServer();
         registerAddedDemoTools(s, () => ctx);
 
@@ -278,21 +278,21 @@ describe('change_demo_source', () => {
 });
 
 describe('add_shared_demo', () => {
-    const NOT_MINE: SharedDemoRead = { ...READ, fullName: 'jen/isle5-demo' };
+    const NOT_MINE: SharedDemoRead = { ...READ, fullName: 'robin/isle5-demo' };
 
     beforeEach(() => {
-        mockAdd.mockResolvedValue({ success: true, result: { demo: JEN } });
+        mockAdd.mockResolvedValue({ success: true, result: { demo: ROBIN } });
     });
 
     it('adds from a link with no confirm and nothing created on GitHub, answering the id create_project takes', async () => {
         mockProbe.mockResolvedValue({ success: true, result: NOT_MINE });
-        mockAdd.mockResolvedValue({ success: true, result: { demo: JEN } });
+        mockAdd.mockResolvedValue({ success: true, result: { demo: ROBIN } });
         const s = fakeServer();
         registerAddedDemoTools(s, () => ctx);
 
-        const res = await s.call('add_shared_demo', { link: 'https://github.com/jen/isle5-demo', description: 'Luxury B2C demo' });
+        const res = await s.call('add_shared_demo', { link: 'https://github.com/robin/isle5-demo', description: 'Luxury B2C demo' });
 
-        expect(mockProbe).toHaveBeenCalledWith(ctx, { owner: undefined, repo: undefined, link: 'https://github.com/jen/isle5-demo' });
+        expect(mockProbe).toHaveBeenCalledWith(ctx, { owner: undefined, repo: undefined, link: 'https://github.com/robin/isle5-demo' });
         // No description file in the read: the name is the repository's, spelled for people.
         // The agent can give the card a description, as the dialog's field does.
         expect(mockAdd).toHaveBeenCalledWith(ctx, {
@@ -300,7 +300,7 @@ describe('add_shared_demo', () => {
         });
         expect(mockAdd.mock.calls[0][1].demo).not.toHaveProperty('createdFromZip');
         expect(mockImport).not.toHaveBeenCalled();
-        expect(res).toMatchObject({ added: true, id: 'added:jen/isle5-demo', source: JEN.source, storefrontKind: 'eds' });
+        expect(res).toMatchObject({ added: true, id: 'added:robin/isle5-demo', source: ROBIN.source, storefrontKind: 'eds' });
     });
 
     it('points a shipped template at its package id instead of adding it', async () => {
@@ -324,7 +324,7 @@ describe('add_shared_demo from a zip file', () => {
         mockRefusal.mockResolvedValue(undefined);
         mockImport.mockResolvedValue({ success: true, result: { owner: 'steve', repo: 'summit', fullName: 'steve/summit', fileCount: 1, dropped: 4, isPrivate: true } });
         mockProbe.mockResolvedValue({ success: true, result: MINE });
-        mockAdd.mockResolvedValue({ success: true, result: { demo: { ...JEN, source: { owner: 'steve', repo: 'summit', branch: 'main' } } } });
+        mockAdd.mockResolvedValue({ success: true, result: { demo: { ...ROBIN, source: { owner: 'steve', repo: 'summit', branch: 'main' } } } });
     });
 
     it('refuses without confirm, naming the repository it would create, the account and the file counts, and creates nothing', async () => {
@@ -379,23 +379,23 @@ describe('edit_added_demo', () => {
     it('renames and re-describes the card on the same handler the Welcome step uses, with no confirm', async () => {
         const s = fakeServer();
         registerAddedDemoTools(s, () => ctx);
-        mockEditDemo.mockResolvedValue({ ...JEN, name: 'Isle5 luxury', description: 'New words' });
+        mockEditDemo.mockResolvedValue({ ...ROBIN, name: 'Isle5 luxury', description: 'New words' });
 
-        const res = await s.call('edit_added_demo', { owner: 'jen', repo: 'isle5-demo', name: 'Isle5 luxury', description: 'New words' });
+        const res = await s.call('edit_added_demo', { owner: 'robin', repo: 'isle5-demo', name: 'Isle5 luxury', description: 'New words' });
 
-        expect(mockEditDemo).toHaveBeenCalledWith({ owner: 'jen', repo: 'isle5-demo' }, { name: 'Isle5 luxury', description: 'New words' });
-        expect(res).toStrictEqual({ edited: true, id: 'added:jen/isle5-demo', name: 'Isle5 luxury', description: 'New words' });
+        expect(mockEditDemo).toHaveBeenCalledWith({ owner: 'robin', repo: 'isle5-demo' }, { name: 'Isle5 luxury', description: 'New words' });
+        expect(res).toStrictEqual({ edited: true, id: 'added:robin/isle5-demo', name: 'Isle5 luxury', description: 'New words' });
     });
 
     it('keeps what is not given: an omitted name or description stays as it was', async () => {
         const s = fakeServer();
         registerAddedDemoTools(s, () => ctx);
-        mockRead.mockReturnValue([{ ...JEN, description: 'Kept words' }]);
-        mockEditDemo.mockResolvedValue({ ...JEN, name: 'Renamed', description: 'Kept words' });
+        mockRead.mockReturnValue([{ ...ROBIN, description: 'Kept words' }]);
+        mockEditDemo.mockResolvedValue({ ...ROBIN, name: 'Renamed', description: 'Kept words' });
 
-        await s.call('edit_added_demo', { owner: 'jen', repo: 'isle5-demo', name: 'Renamed' });
+        await s.call('edit_added_demo', { owner: 'robin', repo: 'isle5-demo', name: 'Renamed' });
 
-        expect(mockEditDemo).toHaveBeenCalledWith({ owner: 'jen', repo: 'isle5-demo' }, { name: 'Renamed', description: 'Kept words' });
+        expect(mockEditDemo).toHaveBeenCalledWith({ owner: 'robin', repo: 'isle5-demo' }, { name: 'Renamed', description: 'Kept words' });
     });
 
     it('answers the refusal when the demo is not on the Welcome step', async () => {

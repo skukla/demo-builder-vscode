@@ -25,8 +25,8 @@ function storefront(
     published: Project['edsStorefrontStatusSummary'] = 'published',
 ): Project {
     return createProjectsDashboardProject({
-        name: 'justrite',
-        // JustRite's own stack, read from its manifest: the row's status depends on it.
+        name: 'tailspin',
+        // Tailspin's own stack, read from its manifest: the row's status depends on it.
         selectedStack: 'eds-accs',
         status,
         created,
@@ -69,7 +69,7 @@ describe.each(TILES)('the project %s', (name, Tile) => {
         expect(screen.getByText('Needs reset')).toBeInTheDocument();
         expect(screen.queryByText(ALL_WELL[name])).not.toBeInTheDocument();
         expect(screen.getByText('Needs reset').closest('[title]')).toHaveAttribute('title', LINE);
-        expect(screen.getByRole('button', { name: /justrite.*Needs reset/ })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /tailspin.*Needs reset/ })).toBeInTheDocument();
     });
 
     it('says all is well, and nothing about a reset, for a current storefront', () => {

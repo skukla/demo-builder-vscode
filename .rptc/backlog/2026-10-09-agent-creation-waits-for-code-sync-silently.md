@@ -10,7 +10,7 @@ status: built
 # Agent-run project creation waited for the AEM Code Sync App and told nobody
 
 **What happened (2026-10-08, 23:21 to 23:49 local).** The owner asked an agent to create
-a project (`bodea-jen`, EDS stack) through the MCP server. The repository was created and
+a project (`bodea-robin`, EDS stack) through the MCP server. The repository was created and
 pushed, the site registered, and the code publish answered `[admin] github bot not
 installed on repository`, which is the one step only the repository's owner can do:
 install the AEM Code Sync GitHub App. The storefront setup did what it does in the
@@ -20,7 +20,7 @@ wizard that event opens the install dialog. On the agent path it went into the p
 capture's buffer and to a no-op. The VS Code card read "Agent · Creating the project"
 with no phase for 27 minutes, the agent sat inside its blocking tool call ("Are you still
 working?"), and the User Logs filled with the retry's warning. The owner pressed F5,
-which ended the run; the repository `skukla/bodea-jen` was left behind with no project on
+which ended the run; the repository `skukla/bodea-robin` was left behind with no project on
 disk.
 
 Two gaps, both on the agent surface only:

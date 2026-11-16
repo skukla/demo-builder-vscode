@@ -2,7 +2,7 @@
  * Customers made through Commerce's Import API (`customer_composite`), for every path that makes one:
  * a pack's customers, the service's `customers_export` kind, and a company's admin.
  *
- * Why not `POST customers`: on the Justrite ACCS sandbox every customer create through REST, the bulk
+ * Why not `POST customers`: on the Tailspin ACCS sandbox every customer create through REST, the bulk
  * route included, is refused before anything is saved, whatever its body ("… company_id … The
  * "%company_id%" value's type is invalid. The "int" type was expected"), while the same customer imports
  * with its group and address (2026-11-06). The cause is on the store's side and was not found; ACCS's

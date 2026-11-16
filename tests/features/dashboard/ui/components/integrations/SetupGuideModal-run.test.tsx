@@ -16,7 +16,7 @@ import { DONE_COPY, APPLY_COPY, STATUS_COPY, SetupGuideModal } from './SetupGuid
 import type { SetupChecklistItem } from '@/types/appBuilderComponents';
 import type { OperationProgressPayload } from '@/types/webviewPayloads';
 
-/** Justrite's warehouse step after an undo, 2026-10-26. */
+/** Tailspin's warehouse step after an undo, 2026-10-26. */
 const WAREHOUSE: SetupChecklistItem = {
     id: 'second-source',
     label: 'ERP warehouse',
@@ -41,7 +41,7 @@ const PREVIEW = {
                 label: 'ERP warehouse',
                 title: WAREHOUSE.title,
                 state: 'applicable',
-                changes: ['Switch Test Warehouse back on', 'Add Test Warehouse to Justrite Stock'],
+                changes: ['Switch Test Warehouse back on', 'Add Test Warehouse to Tailspin Stock'],
                 rejected: [],
             },
         ],
@@ -82,7 +82,7 @@ describe('the step pane says what Apply will do', () => {
     it('reads the step from the store and says it in one sentence, before anything is pressed', async () => {
         await renderGuide();
         expect(mockRequest).toHaveBeenCalledWith('prepareCommerceStore', { id: 'erp-integration', stepIds: ['second-source'] });
-        expect(says()).toBe(`${STATUS_COPY.notSetUp}Apply will switch Test Warehouse back on and add Test Warehouse to Justrite Stock.`);
+        expect(says()).toBe(`${STATUS_COPY.notSetUp}Apply will switch Test Warehouse back on and add Test Warehouse to Tailspin Stock.`);
         expect(banner()).not.toHaveClass('inline-notice--info');
         expect(mockPostMessage).not.toHaveBeenCalled();
     });
@@ -103,7 +103,7 @@ describe('Apply runs in the guide', () => {
             changes: [
                 {
                     label: 'ERP warehouse',
-                    lines: ['Switched Test Warehouse back on', 'Added Test Warehouse to Justrite Stock', 'By hand: Move the quantities.'],
+                    lines: ['Switched Test Warehouse back on', 'Added Test Warehouse to Tailspin Stock', 'By hand: Move the quantities.'],
                 },
             ],
         });

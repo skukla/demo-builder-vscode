@@ -442,7 +442,7 @@ function buildOwnStorefrontGuard(quotedRoot: string, nodePath: string): string {
  *   7. KEPT-CLASH guard: no commit while the copy holds a storefront update's clash kept
  *      for fixing (`keptClashMark`). The copy then holds the whole half-applied update,
  *      and an agent's first edit to the clashed file committed and pushed all of it,
- *      past `finish_storefront_update`'s check (2026-10-21, JustRite).
+ *      past `finish_storefront_update`'s check (2026-10-21, Tailspin).
  *   8. Commit + push the resolved repo top.
  *
  * The root is double-quoted everywhere it is interpolated. The metachar guard

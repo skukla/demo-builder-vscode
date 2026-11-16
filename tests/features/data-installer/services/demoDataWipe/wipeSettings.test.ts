@@ -12,7 +12,7 @@ import { readWipeStructure } from '@/features/data-installer/services/demoDataWi
 import { SYSTEM_CONFIG_PAGE_TEST_WEBSITE, settingsInstance } from '../../../../helpers/commerceWipeInstanceFixtures';
 import { REFUSED_SETTING, sandbox } from './wipe.testUtils';
 
-const TEST = 'justrite_test_website';
+const TEST = 'tailspin_test_website';
 const TEST_STORE = [TEST];
 const NOTHING = { customers: [], products: [], orders: [] };
 
@@ -118,7 +118,7 @@ describe('decideSettings, through the plan', () => {
         const plan = await planWipeFor(store.get, ['bodea'], { records: [] });
 
         expect(plan.settings).toEqual([{ websiteCode: 'bodea', path: 'sales/totals_sort/tax', value: '40' }]);
-        expect(store.reads.some((path) => path.includes('scopeCode=justrite'))).toBe(false);
+        expect(store.reads.some((path) => path.includes('scopeCode=tailspin'))).toBe(false);
     });
 
     it('leaves every setting alone, marked not read, when a website\'s settings cannot be read', async () => {

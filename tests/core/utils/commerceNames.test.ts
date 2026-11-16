@@ -6,13 +6,13 @@ import { readWebsiteName, storeNameIn, storeViewNameIn, websiteNameIn } from '@/
 
 const STRUCTURE = {
     websites: [
-        { id: 6, code: 'justrite_test_website', name: 'Justrite Test', default_group_id: 6 },
+        { id: 6, code: 'tailspin_test_website', name: 'Tailspin Test', default_group_id: 6 },
     ],
     storeGroups: [
         {
             id: 6,
-            code: 'justrite_test_store',
-            name: 'Justrite Test Store',
+            code: 'tailspin_test_store',
+            name: 'Tailspin Test Store',
             website_id: 6,
             root_category_id: 2,
             default_store_id: 6,
@@ -21,7 +21,7 @@ const STRUCTURE = {
     storeViews: [
         {
             id: 6,
-            code: 'justrite_test_store_us',
+            code: 'tailspin_test_store_us',
             name: 'US English',
             store_group_id: 6,
             website_id: 6,
@@ -33,9 +33,9 @@ const STRUCTURE = {
 
 describe('commerceNames', () => {
     it('names each entity by its name in the store', () => {
-        expect(websiteNameIn(STRUCTURE, 'justrite_test_website')).toBe('Justrite Test');
-        expect(storeNameIn(STRUCTURE, 'justrite_test_store')).toBe('Justrite Test Store');
-        expect(storeViewNameIn(STRUCTURE, 'justrite_test_store_us')).toBe('US English');
+        expect(websiteNameIn(STRUCTURE, 'tailspin_test_website')).toBe('Tailspin Test');
+        expect(storeNameIn(STRUCTURE, 'tailspin_test_store')).toBe('Tailspin Test Store');
+        expect(storeViewNameIn(STRUCTURE, 'tailspin_test_store_us')).toBe('US English');
     });
 
     it('falls back to the code when the store has no such entity, or its name is blank', () => {
@@ -52,9 +52,9 @@ describe('readWebsiteName', () => {
             throw new Error('HTTP 503');
         });
 
-        await expect(readWebsiteName(answering, 'justrite_test_website')).resolves.toBe('Justrite Test');
+        await expect(readWebsiteName(answering, 'tailspin_test_website')).resolves.toBe('Tailspin Test');
         expect(answering).toHaveBeenCalledWith('store/websites');
-        await expect(readWebsiteName(failing, 'justrite_test_website')).resolves.toBe('justrite_test_website');
+        await expect(readWebsiteName(failing, 'tailspin_test_website')).resolves.toBe('tailspin_test_website');
         await expect(readWebsiteName(answering, undefined)).resolves.toBeUndefined();
     });
 });

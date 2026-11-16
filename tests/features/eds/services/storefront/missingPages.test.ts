@@ -16,8 +16,8 @@ import { installSiteFetch, restoreFetch } from '../../../../helpers/siteFetchFak
 const SITE = { owner: 'me', repo: 'shop' };
 const LIVE = 'https://main--shop--me.aem.live';
 // The content site the copy read from.
-const SOURCE = { org: 'jen', site: 'demo' };
-const SOURCE_LIVE = 'https://main--demo--jen.aem.live';
+const SOURCE = { org: 'robin', site: 'demo' };
+const SOURCE_LIVE = 'https://main--demo--robin.aem.live';
 
 /** Only the code's paths, as the check was first written. */
 const fromCode = (paths: string[]) => ({ fromCode: paths, carried: [] });
@@ -183,7 +183,7 @@ describe('carriedWebPaths', () => {
     });
 
     // The publish skips `metadata`, `redirects` and the other configuration names. A
-    // source with them as documents made every reset of JustRite report them
+    // source with them as documents made every reset of Tailspin report them
     // "missing" (2026-10-23).
     it('leaves out pages the publish never publishes by name, at any depth', () => {
         expect(carriedWebPaths(['/metadata', '/redirects', '/fr/metadata', '/about'], [])).toEqual(['/about']);

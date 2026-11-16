@@ -56,7 +56,7 @@ function setup(overrides: Partial<Project> = {}) {
 }
 
 const toBodea: ProjectCreationConfig = {
-    projectName: 'justrite',
+    projectName: 'tailspin',
     selectedStack: 'eds-accs',
     selectedPackage: 'bodea',
     selectedAddons: ['live-search'],

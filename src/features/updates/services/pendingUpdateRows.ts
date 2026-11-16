@@ -134,7 +134,7 @@ function colleagueSource(project: Project): string | undefined {
 
 /**
  * A storefront update named in a sentence, as its row names it: "Adobe boilerplate update",
- * "EDS template update", "update with changes from kmanns/justrite". For what is said after
+ * "EDS template update", "update with changes from org-e/tailspin". For what is said after
  * the row has gone, such as the notification when the SC's AI finishes a fix (EDS-56).
  *
  * @param project - the project the update is for

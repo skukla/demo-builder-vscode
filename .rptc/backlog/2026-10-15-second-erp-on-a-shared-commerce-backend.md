@@ -15,11 +15,11 @@ Filed 2026-10-15, from the release-candidate test walk.
 
 The SC created a new Demo Builder project, with its own new Adobe I/O project, and
 pointed it at the Commerce backend that another project already uses. That other
-project (Justrite) has the ERP integration installed, with its own companion ERPs.
+project (Tailspin) has the ERP integration installed, with its own companion ERPs.
 The SC then added an ERP integration to the new project.
 
 The add failed for a different reason (fixed in `4abfcf1d7`: the add ran in the
-cached Adobe project, Justrite's, instead of the one the SC had just chosen). That
+cached Adobe project, Tailspin's, instead of the one the SC had just chosen). That
 failure hid the real question this item asks.
 
 ## The question

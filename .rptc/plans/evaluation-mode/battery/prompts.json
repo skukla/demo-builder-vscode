@@ -1021,7 +1021,7 @@
     },
     {
         "id": "probe-shared-demo",
-        "prompt": "A colleague sent me https://main--isle5-demo--jen.aem.live and says it's a demo I can build on. Before I add it, tell me what kind of storefront it is, its store codes, and whether its pages are published.",
+        "prompt": "A colleague sent me https://main--isle5-demo--robin.aem.live and says it's a demo I can build on. Before I add it, tell me what kind of storefront it is, its store codes, and whether its pages are published.",
         "expect": [
             "probe_shared_demo"
         ],
@@ -1280,7 +1280,7 @@
     },
     {
         "id": "copy-project",
-        "prompt": "Make a copy of my justrite project called justrite-trade-show, with its own storefront repository.",
+        "prompt": "Make a copy of my tailspin project called tailspin-trade-show, with its own storefront repository.",
         "expect": [
             "copy_project"
         ],
@@ -1410,7 +1410,7 @@
     },
     {
         "id": "finish-clash-fixed-with-ai",
-        "prompt": "I fixed the header file the Adobe update clashed on in justrite. Get that update finished and live.",
+        "prompt": "I fixed the header file the Adobe update clashed on in tailspin. Get that update finished and live.",
         "expect": [
             "finish_storefront_update"
         ],
@@ -1439,7 +1439,7 @@
     },
     {
         "id": "t3-no-copy-to-installer",
-        "prompt": "Our datapack library has my justrite pack, version v1. Make it installable by copying it into the Data Installer.",
+        "prompt": "Our datapack library has my tailspin pack, version v1. Make it installable by copying it into the Data Installer.",
         "expect": [],
         "expectSkill": [
             "datapacks"
@@ -1557,7 +1557,7 @@
     },
     {
         "id": "clear-commerce-instance-websites",
-        "prompt": "Wipe the justrite_test_website website on this Commerce instance back to empty, whichever project put data there. Show me what goes first.",
+        "prompt": "Wipe the test website on this Commerce instance back to empty, whichever project put data there. Show me what goes first.",
         "expect": [
             "check_demo_data",
             "clear_commerce_instance"

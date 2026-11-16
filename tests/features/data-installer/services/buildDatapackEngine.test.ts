@@ -111,7 +111,7 @@ describe('buildDatapackEngine activity log', () => {
 describe('projectCommerce', () => {
     // A pack lands on the website and store view the install names, which need not be the
     // project's own. Writing through the project's store view put a reinstall's price change on
-    // JustRite's store view while the test website kept the old one (live, 2026-10-29). The
+    // Tailspin's store view while the test website kept the old one (live, 2026-10-29). The
     // service writes store-wide too (catalog spec §0).
     it("writes store-wide, never through the project's own store view", async () => {
         mockCommerceClientForProject.mockResolvedValue({ get: jest.fn(), send: jest.fn() });

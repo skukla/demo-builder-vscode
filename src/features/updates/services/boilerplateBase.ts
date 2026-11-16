@@ -14,7 +14,7 @@
  *    patched templates, and its first commit has the same files as one of that template's
  *    commits. GitHub's "use this template" copies the template's files into one first commit;
  *    the B2B template's own `cleanup-on-create` workflow then deletes Adobe's CI workflows,
- *    so `.github` is left out of the comparison. Measured 2026-10-20 on kmanns/justrite:
+ *    so `.github` is left out of the comparison. Measured 2026-10-20 on org-e/tailspin:
  *    every other file matched adobe-commerce/boilerplate-b2b-template 71a67e027 exactly,
  *    the 39th commit back from the day the repository was made.
  *

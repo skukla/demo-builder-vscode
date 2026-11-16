@@ -3,7 +3,7 @@
  *
  * 2026-10-15: on a storefront-only project (no Adobe project recorded) the SC created
  * "Kukla Commerce Demo" in the add's destination steps. The add ran without it: its
- * workspace was made in the project cached from earlier — Justrite's — and the next
+ * workspace was made in the project cached from earlier — Tailspin's — and the next
  * step failed for want of a project id. The add now records the chosen destination
  * before anything is made, and only when the project had none.
  */

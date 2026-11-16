@@ -54,7 +54,7 @@ import { makeAddedDemo } from '../../../../helpers/demoPackageFixtures';
 const mockedReset = executeEdsReset as jest.MockedFunction<typeof executeEdsReset>;
 const mockedCheck = checkDemoSource as jest.MockedFunction<typeof checkDemoSource>;
 const meshDeps = createMeshDepsFake();
-const UNREACHABLE = "The Isle5 by Jen demo's repository can't be reached. Reset and updates are unavailable until it is.";
+const UNREACHABLE = "The Isle5 by Robin demo's repository can't be reached. Reset and updates are unavailable until it is.";
 /** The row's line for the kept content (step-07 D5; the owner's words, 2026-11-14). */
 const CONTENT_KEPT = "Content kept: the demo's pages can't be reached.";
 const REACHABLE: DemoSourceCheck = { reachable: true, checked: true, message: '', contentReachable: true };
@@ -62,7 +62,7 @@ const CONTENT_GONE: DemoSourceCheck = {
     reachable: true, checked: true,
     message: '',
     contentReachable: false,
-    contentMessage: "The Isle5 by Jen demo's pages can't be reached right now.",
+    contentMessage: "The Isle5 by Robin demo's pages can't be reached right now.",
 };
 
 function createProject(): Project {

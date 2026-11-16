@@ -27,7 +27,7 @@ Dashboard action "Share this demo" (the More menu, beside Export and Republish,
    demo uses isle5, which is not in the datapack service." — a warning only until the
    service can export rows, see [[DI-3]]; then "Publish it now?" behind the existing
    `start-datapack-export` door in `exportHandlers.ts`); each custom-app link is a repository others can
-   read (else: "jen-adobe/pricing-app is private. Make it public?", a confirmed GitHub
+   read (else: "robin-adobe/pricing-app is private. Make it public?", a confirmed GitHub
    settings write, undone the same way). Curation is never touched. **Not a dependency (owner, 2026-09-11):** [[DI-3]] found the service cannot
    export rows today; Share ships with the warning and gains the offer when it can.
 4. Hands the SC the link to send.
@@ -142,7 +142,7 @@ open.
   "Not yet" rows for datapack, content and integrations are gone. A dialog is not a roadmap.
 - The template tick box is gone, with `markTemplate`, `templateFlagSet` and
   `templateFlagUnset`. It served only the by-hand "Use this template" path, and a copy made
-  from a template has no upstream, so "Jen has updated this demo" could never work for it.
+  from a template has no upstream, so "Robin has updated this demo" could never work for it.
 
 ## Open
 

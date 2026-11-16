@@ -42,8 +42,8 @@ describe('createDatapack', () => {
         const fetchImpl = jest.fn().mockResolvedValue(reply(201, { success: true }));
 
         const result = await writer(fetchImpl).createDatapack({
-            id: { name: 'justrite', version: 'v1' },
-            displayName: 'Justrite B2B',
+            id: { name: 'tailspin', version: 'v1' },
+            displayName: 'Tailspin B2B',
             description: 'Signs',
         });
 
@@ -56,9 +56,9 @@ describe('createDatapack', () => {
             'Content-Type': 'application/json',
         });
         expect(body).toEqual({
-            datapack_name: 'justrite',
+            datapack_name: 'tailspin',
             version: 'v1',
-            display_name: 'Justrite B2B',
+            display_name: 'Tailspin B2B',
             description: 'Signs',
             shared: false,
         });
@@ -67,7 +67,7 @@ describe('createDatapack', () => {
     it('creates it shared when the pack it saves into is shared (Phase 2, step-02 slice 1)', async () => {
         const fetchImpl = jest.fn().mockResolvedValue(reply(201, { success: true }));
 
-        await writer(fetchImpl).createDatapack({ id: { name: 'justrite', version: '20261112-090000' }, displayName: 'Justrite B2B', shared: true });
+        await writer(fetchImpl).createDatapack({ id: { name: 'tailspin', version: '20261112-090000' }, displayName: 'Tailspin B2B', shared: true });
 
         expect(sent(fetchImpl).body).toMatchObject({ shared: true });
     });
@@ -79,7 +79,7 @@ describe('createDatapack', () => {
 
         await expect(
             writer(fetchImpl).createDatapack({
-                id: { name: 'justrite', version: 'v1' },
+                id: { name: 'tailspin', version: 'v1' },
                 displayName: 'J',
             })
         ).resolves.toBe('exists');
@@ -92,7 +92,7 @@ describe('createDatapack', () => {
 
         await expect(
             writer(fetchImpl).createDatapack({
-                id: { name: 'justrite', version: 'v1' },
+                id: { name: 'tailspin', version: 'v1' },
                 displayName: 'J',
             })
         ).rejects.toThrow('Invalid version');
@@ -106,7 +106,7 @@ describe('addDataItem', () => {
         const rows = [{ category: { name: 'Signs' } }];
 
         await writer(fetchImpl, log).addDataItem(
-            { name: 'justrite', version: 'v1' },
+            { name: 'tailspin', version: 'v1' },
             'categories',
             rows
         );
@@ -114,7 +114,7 @@ describe('addDataItem', () => {
         const { url, body } = sent(fetchImpl);
         expect(url).toBe(`${BASE}/add-data-item`);
         expect(body).toEqual({
-            datapack_name: 'justrite',
+            datapack_name: 'tailspin',
             version: 'v1',
             data_type: 'categories',
             data: JSON.stringify(rows),
@@ -155,11 +155,11 @@ describe('deleteDatapack', () => {
     it('sends DELETE delete-datapack with the identity in the query, under the caller token', async () => {
         const fetchImpl = jest.fn().mockResolvedValue(reply(200, { success: true }));
 
-        const result = await writer(fetchImpl).deleteDatapack({ name: 'justrite', version: 'v1' });
+        const result = await writer(fetchImpl).deleteDatapack({ name: 'tailspin', version: 'v1' });
 
         expect(result).toBe('deleted');
         const [url, init] = fetchImpl.mock.calls[0] as [string, RequestInit];
-        expect(url).toBe(`${BASE}/delete-datapack?datapack_name=justrite&version=v1`);
+        expect(url).toBe(`${BASE}/delete-datapack?datapack_name=tailspin&version=v1`);
         expect(init.method).toBe('DELETE');
         expect(init.headers).toEqual({ Authorization: 'Bearer sc-token' });
         expect(init.body).toBeUndefined();
@@ -286,7 +286,7 @@ describe('the org a write names', () => {
             fetchImpl: fetchImpl as unknown as typeof fetch,
         });
 
-        await signed.deleteDatapack({ name: 'justrite', version: 'v1' });
+        await signed.deleteDatapack({ name: 'tailspin', version: 'v1' });
 
         const [, init] = fetchImpl.mock.calls[0] as [string, RequestInit];
         expect(init.headers).toEqual({ Authorization: 'Bearer sc-token', 'x-gw-ims-org-id': 'ORG@AdobeOrg' });

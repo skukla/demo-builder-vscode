@@ -266,7 +266,7 @@ export const PROJECT_RECORDS: InstallRecord[] = [
         pack: { name: 'zz-test', version: '1' },
         engine: 'demo-builder',
         startedAt: '2026-10-30T10:00:00.000Z',
-        target: { websiteCode: 'justrite_test_website', storeCode: 'justrite_test_view' },
+        target: { websiteCode: 'tailspin_test_website', storeCode: 'tailspin_test_view' },
         created: [
             { kind: 'products', id: 'ZZ-MADE-BY-DEMO-BUILDER' },
             { kind: 'customers', id: '72' },
