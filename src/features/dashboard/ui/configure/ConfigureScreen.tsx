@@ -265,7 +265,7 @@ export function ConfigureScreen({
                 onConfirm={() => void answerConnectionQuestion('uninstall')}
                 onClose={() => void answerConnectionQuestion()}
             >
-                {`${connectionQuestion ?? ''} is installed in the current Commerce instance. Uninstall it first, or it stays there.`}
+                {`${connectionQuestion ?? ''} can't be uninstalled after the change.`}
             </ConfirmActionDialog>
         </div>
     );

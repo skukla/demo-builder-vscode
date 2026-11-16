@@ -25,7 +25,7 @@ const VALID = {
     'catalog-service': { ADOBE_CATALOG_API_KEY: 'test-key-123' },
 };
 const LINE =
-    'Luma is installed in the current Commerce instance. Uninstall it first, or it stays there.';
+    "Luma can't be uninstalled after the change.";
 
 /** Render, press Save, and wait for the confirm the extension's question opens. */
 async function saveAndAsk() {

@@ -39,7 +39,7 @@ async function askInDialog(displayName: string): Promise<InstalledDatapackAnswer
         'Change the Commerce Connection?',
         {
             modal: true,
-            detail: `${displayName} is installed in the current Commerce instance. Uninstall it first, or it stays there.`,
+            detail: `${displayName} can't be uninstalled after the change.`,
         },
         CHANGE_ANYWAY,
         UNINSTALL_FIRST,
