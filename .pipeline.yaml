@@ -24,3 +24,6 @@ neighbours:
 tools:
   compile: { run: npm run compile, about: "Build the extension and its webview bundles (the esbuild production build)" }
   ledger: { run: python3 scripts/ledger.py, about: "List, check, add, remove or move rows of the mutation, errors and progress ledgers, keeping each file's format; --dry-run previews" }
+# Paused by the owner 2026-11-16: since 11-09 automatic reflect put 258 proposals on the ledger
+# (about 32 a day, many duplicates), more than anyone can answer. By-hand reflect is unaffected.
+auto_reflect: { enabled: false }
