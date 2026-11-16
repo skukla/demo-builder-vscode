@@ -199,19 +199,19 @@ Mark each test's **Result** line: `passed 2026-11-DD`, or `failed 2026-11-DD: wh
 | 1.1 | Throwaway pack with every kind of data (live test 1) | passed 2026-11-03 |
 | 1.2 | Real packs: `wknd` and Bodea (live test 2) | `wknd` passed 2026-11-03; Bodea moved out 2026-11-05 (no second sandbox) |
 | 1.3 | Settings layer beside a pack | passed 2026-11-03 |
-| 1.4 | Shared root: the one Admin step (live test 3) | passed in part 2026-11-16 (ask-again, Skip for Now, Show Step and Check still open, after F150 and F153) |
-| 1.5 | The Datapacks screen by hand (live test 4) | open |
-| 1.6 | A datapack travels with a project (live test 5) | open |
-| 1.7 | Save Changes, Newer Version, reset and delete with a pack | open |
-| 1.8 | Colour swatches | failed 2026-11-16 (F140, F141); both fixed, rewritten to Luma's own `luma_color` for a re-walk |
+| 1.4 | Shared root: the one Admin step (live test 3) | passed in part 2026-11-16 (ask-again, Skip for Now, Show Step and Check still open, after F150 and F153); the open branches walked as U1.2 |
+| 1.5 | The Datapacks screen by hand (live test 4) | open: walked as U2.1 and U2.2 |
+| 1.6 | A datapack travels with a project (live test 5) | open: walked as U3.1 |
+| 1.7 | Save Changes, Newer Version, reset and delete with a pack | open: walked as U2.3, U4.1, U5.1 and U5.2 (step 8 dropped) |
+| 1.8 | Colour swatches | failed 2026-11-16 (F140, F141); both fixed, rewritten to Luma's own `luma_color` for a re-walk; re-walk steps 1 to 4 passed 2026-11-16, step 5 walked as U1.1 |
 | 1.9 | Demo Builder installs every pack, and checks it (2026-11-06) | passed 2026-11-07 |
-| 1.10 | The Datapack Library, a project's Datapacks, and the two staying in step (2026-11-08) | open |
-| 1.11 | The newer-version dot and the version list (2026-11-08) | open |
+| 1.10 | The Datapack Library, a project's Datapacks, and the two staying in step (2026-11-08) | open: steps 1, 2 and 4 passed 2026-11-16; step 7 walked as U2.4, step 5 moved to automated tests |
+| 1.11 | The newer-version dot and the version list (2026-11-08) | open: step 4 walked in U2.3, steps 1 to 3 moved to automated tests |
 | 2.1 to 2.4 | Projects list: select, reset several, failures, the open project | passed 2026-11-04 |
-| 2.5 | A datapack in a reset batch | passed in part 2026-11-04 and 2026-11-15 (Save Changes As branch still open) |
-| 2.6 | Delete Selected | open |
-| 2.7 | Single delete | passed 2026-11-16 (re-look owed after F137 to F139) |
-| 2.8 | Agent delete | open |
+| 2.5 | A datapack in a reset batch | passed in part 2026-11-04 and 2026-11-15 (Save Changes As branch still open); walked as U4.2 |
+| 2.6 | Delete Selected | moved out 2026-11-16 (owner accepted the cut: each row runs the single delete U5.2 proves) |
+| 2.7 | Single delete | passed 2026-11-16 (re-look owed after F137 to F139); the re-look walked in U5.2, its label checks moved to automated tests |
+| 2.8 | Agent delete | open: walked as U5.2 |
 | 3.1 to 3.5 | Smaller changes since the last walk | passed 2026-11-05 |
 | 4.1 | Merge demo-erp's order-removal branch into `main` | passed 2026-11-16 (checked: `main` holds `88546bc` and `0deea9f`) |
 | 4.2 | Merge commerce-erp-integration's reset-rule branch into `main` | passed 2026-11-16 (checked: `main` holds `18f28a9` to `d783ab2`) |
@@ -221,6 +221,197 @@ Mark each test's **Result** line: `passed 2026-11-DD`, or `failed 2026-11-DD: wh
 | 4.5 | Merge into develop, then cut beta.153 | open |
 
 ---
+
+## 0. The beta.153 walk, by use case (2026-11-16)
+
+Rewritten per the `guided-walk` skill (dev-pipeline `2e37faf`; owner, 2026-11-16: "every test is
+rooted in realistic use cases"). The person is the **SC** (Solution Consultant), who builds,
+resets and re-runs customer demos. The owner accepted these use cases on 2026-11-16, with two
+cuts. The scenarios are in walking order: each starts from the state the last one left. They
+replace the open steps of 1.4, 1.5, 1.6, 1.7, 1.8, 1.10, 1.11, 2.5, 2.6, 2.7 and 2.8; those
+sections keep their history, and their table rows pass when the scenario that holds them passes.
+
+Moved to automated tests rather than walked (each already pinned): 1.5 step 11, no Data Installer
+address (`tests/features/data-installer/ui/views/DatapackCatalogView*.test.tsx`, the installer-off
+cases, and `useCatalogShow.test.tsx`); 1.10 step 5, the palette opens no second tab (`tests/features/data-installer/commands/showDataInstaller*.test.ts`);
+1.11 steps 1 to 3, the version list (`tests/features/data-installer/packVersions.test.ts`, "Saved"/"Updated" labels, and `DatapackCard.test.tsx`);
+2.7's setting labels (`tests/sop/setting-enum-labels.test.ts`) and "Reading the project"
+(`ProjectsBatchModal-read.test.tsx`). Dropped: 1.7 step 8 (2.5 asks the same question in a batch)
+and 2.6 (each row runs the single delete U5 proves).
+
+Rules for the walk: one step per message; Steve sends a screenshot and what he saw; each result is
+recorded here as it comes (`Reached: step N of M` for a test part done); only Steve passes a test.
+Store writes go to the test website and test store only.
+
+### U1. An SC puts a brand's data into a demo store and takes it out again
+
+**Use case:** An SC installs a brand's sample data before a customer demo and uninstalls it after,
+because the next demo needs a clean store, and a store that shares its category root with another
+store needs one step in the Admin the SC must be led through.
+
+**Starting state:** Scratch 1028 holds Luma (installed in test 1.8's re-walk). The test store's
+Root Category is Default Category. Build: `fix/release-walk-fixes` at its newest commit, window
+reloaded.
+
+**Test U1.1: Uninstall a brand's data** (1.8 step 5)
+1. Scratch 1028's dashboard, the **Datapacks** card. Open the **Luma** card, then **More**, then
+   **Uninstall**. Expect **Uninstall Luma?** over a type table, with **Review Records**, **Cancel**
+   and a red **Uninstall**.
+2. Click **Review Records**. Expect **Removed** and **Kept** tabs, and Products under **SKU** and
+   **Name**. Click **Back**.
+3. Click **Uninstall**. Expect the centred wait ("Uninstalling from Commerce" and a clock), then
+   **Luma Uninstalled**.
+4. In the Admin, **Stores > Attributes > Product**: search `luma_color`, then open `color`. Expect
+   no `luma_color`, and `color` as before ("Color", no options). The store is back to how it was.
+
+**Test U1.2: A store that shares its category root** (1.4's open branches)
+1. In the Admin, **Stores > All Stores**, open the test store. Set **Root Category** to the shared
+   catalog, then **Save Store**.
+2. Scratch 1028's Datapacks: open the **Frescopa** card, click **Install**, then **Install** in
+   the window. Expect, inside the run window, **One Step in the Admin to Show Frescopa's
+   Categories** with **Open Admin**, **I've done it** and **Skip for Now**.
+3. Without changing anything, click **I've done it**. Expect the question again, starting "… still
+   uses the root category …".
+4. Click **Skip for Now**. Expect **Frescopa Installed** with "One step is left in the Admin: …".
+5. Open the Frescopa card. Expect **1 step left in the Admin** with **Show Step**. Click **Show
+   Step**, then **Open Admin**. Expect the Admin to open.
+6. In the Admin, set the test store's **Root Category** to Frescopa's root, then **Save Store**.
+   Back in the step, click **Check**. Expect "… now shows the categories under Frescopa." and the
+   flyout's line gone.
+7. Frescopa's **More**, then **Uninstall**, then **Uninstall**. Expect **One Step Left to Uninstall
+   Frescopa**, "… still uses the category Frescopa as its root category … Everything else is
+   uninstalled.", with **Open Admin** and **Check**.
+8. Click **Open Admin**. Set the test store's **Root Category** to **Default Category**, then **Save
+   Store**. Back in the window, click **Check**. Expect the centred wait, then **Frescopa
+   Uninstalled**: the store is clean again.
+
+**Result:** open
+
+### U2. An SC keeps a customer's changes as their own datapack
+
+**Use case:** An SC adds something a customer asked for (here, a category), keeps it as their own
+datapack so the next demo can start from it, saves later edits into it, and sees another demo
+pick up the newer save, because rebuilding customer-specific data by hand before every demo wastes
+the hours before the meeting.
+
+**Starting state:** Scratch 1028 holds no datapack; the test store's root is Default Category (U1's
+end).
+
+**Test U2.1: Make a datapack from the demo**
+1. In the Admin, **Catalog > Categories**: add a category under the test store's root named "ZZ
+   Customer Picks", enabled, and save it.
+2. Scratch 1028's Datapacks: click **Create**. Expect **Create Datapack** with every data type
+   ticked and **Select All Data** at the top.
+3. Untick **Select All Data**. Open **Categories**, use its own **Select All**, then untick every
+   category but ZZ Customer Picks. Click **Next**.
+4. Type "Release Save Test" as the **Datapack Name** and click **Create**. Expect "Creating Release
+   Save Test", then **Release Save Test Created**. Close it. Expect a card tagged **Mine** with the
+   blue check.
+5. Open the card and click **Install**, then **Install** in the window. Expect **Release Save Test
+   Installed**. Expect the header to read **Save**, and the dashboard's **Datapacks** card to read
+   "Release Save Test".
+
+**Test U2.2: Save a later edit into it**
+1. In the Admin, rename ZZ Customer Picks to "ZZ Customer Picks 2". In the Datapacks header, click
+   **Save**, then **Save** in the window. Expect "Saved to Release Save Test".
+
+**Test U2.3: Another demo picks up the newer save** (1.7 steps 3 to 6, 1.11 step 4)
+1. Create a project named "Scratch 1028 B" on the test website and the test store view, picking
+   Release Save Test in the wizard's **Datapacks** step. Expect it installed during creation.
+2. Back on Scratch 1028: rename the category to "ZZ Customer Picks 3", then **Save**, **Save**.
+   Expect "Saved to Release Save Test".
+3. Open Scratch 1028 B's Datapacks. Expect an amber dot on the Release Save Test card, reading
+   "Newer version available" on hover. The card's main button reads **Update Release Save Test**.
+4. Click it, then **Update**. Expect **Release Save Test Updated**, the dot gone, and the category
+   on Scratch 1028 B's store named "ZZ Customer Picks 3".
+
+**Test U2.4: The library and the demo stay in step** (1.10 step 7)
+1. Open the **Datapack Library** (sidebar, **Datapacks**) beside Scratch 1028's Datapacks. In the
+   library, open Release Save Test, click its title, type "Release Save Test Renamed" and confirm.
+   Expect Scratch 1028's Datapacks to show the new name without a Refresh. Rename it back.
+
+**Result:** open
+
+### U3. An SC hands a demo to a colleague as a file
+
+**Use case:** An SC sends a finished demo to a colleague as one file, and the colleague builds the
+same demo from it, with the datapack's data, because building the same demo twice by hand takes a
+day.
+
+**Starting state:** Scratch 1028 holds Release Save Test, the SC's own private pack (U2's end).
+
+**Test U3.1: Send it and build from it** (1.6)
+1. Scratch 1028's dashboard, **Share Demo**, then **Send a File**. Tick **Setup** and
+   **Storefront**, click **Save**. Expect "Your teammates can't use this pack's data. Share it?"
+   Choose **Share**.
+2. On the projects list, the new-project menu, **Import from File**, pick that file. Expect the
+   wizard titled **Import Project** with Release Save Test already chosen in **Datapacks**.
+3. Create it with a new repository name and a new DA.live site. Expect "Installing Release Save
+   Test" during creation, and the new demo's store holding ZZ Customer Picks 3.
+4. Back to zero: delete the new project, ticking **Delete Repository**, **Delete DA.live Site** and
+   **Uninstall Datapack**. Expect "<name> Deleted".
+
+**Result:** open
+
+### U4. An SC resets a demo without losing their edits
+
+**Use case:** After a meeting an SC resets the demo to how it was set up, keeping the edits they
+made in the datapack where they belong, because the next meeting starts from the setup and the
+edits are work they want to keep.
+
+**Starting state:** Scratch 1028 B holds Release Save Test (U2's end); Scratch 1028 holds it too.
+
+**Test U4.1: Reset with your own pack** (1.7 step 7)
+1. In the Admin, rename the category to "ZZ Customer Picks 4". On Scratch 1028 B's dashboard, click
+   **Reset**. Expect **Reset Scratch 1028 B?** with **Uninstall Datapack** ticked and naming
+   Release Save Test, and a red **Reset**.
+2. Click **Reset**. Expect **Save Your Changes First?** with the columns **Datapack** and **Save
+   As**. Choose **Save and Reset**. Expect "Resetting Scratch 1028 B", then **Scratch 1028 B Reset**.
+
+**Test U4.2: Reset in a batch, with a Demo Builder pack** (2.5)
+1. On Scratch 1028 B's Datapacks, install **We.Cafe**. In the Admin, change one product it put in
+   (its name).
+2. On the projects list, **Select Projects**, tick Scratch 1028 B, then **Reset Selected**. Tick
+   **Uninstall Datapack** on its row. Expect **Save Your Changes First?** offering a **Save As**
+   name, with the run held until a name is given or the changes are dropped.
+3. Choose to reset without saving, and run it. Expect Scratch 1028 B reset, We.Cafe uninstalled,
+   and nothing else in the store touched.
+
+**Result:** open
+
+### U5. An SC cleans out demos without breaking another
+
+**Use case:** An SC deletes demos they no longer need, and nothing another demo still uses is
+destroyed, because demos share datapacks and repositories, and a careless delete would break a
+colleague's or their own next demo.
+
+**Starting state:** Scratch 1028 holds Release Save Test; Scratch 1028 B holds no datapack (U4's
+end).
+
+**Test U5.1: A datapack another demo uses** (1.7 step 9)
+1. In the **Datapack Library**, open Release Save Test, then **More**, **Delete**, **Delete**.
+   Expect "It could not be deleted: Scratch 1028 uses this datapack, so it can't be deleted.
+   Uninstall it there first."
+
+**Test U5.2: Two demos on one repository** (2.7 steps 3 to 5, 2.8, 1.7 step 10)
+1. Create a project named "Scratch 1028 C", choosing Scratch 1028 B's repository in the wizard's
+   storefront area instead of **New**.
+2. On Scratch 1028 C's dashboard, click **Delete**. Expect **Delete Scratch 1028 C?** with no
+   **Delete Repository** box (Scratch 1028 B uses it). Click **Cancel**. Expect to stay on the
+   dashboard.
+3. On the projects list, **Select Projects**, tick both, **Delete Selected**. Expect the **Delete
+   Repository** box back, because both are going. Click **Cancel**.
+4. Ask an agent to delete Scratch 1028 C, with its repository. Expect it deleted, and the answer
+   "Kept the GitHub repository: Scratch 1028 B also uses it."
+5. On Scratch 1028 B's dashboard, click **Delete**, tick **Delete Repository** and **Delete DA.live
+   Site**, then **Delete**. Expect "Deleting Scratch 1028 B", then **Scratch 1028 B Deleted**, and
+   only then the projects list.
+
+**Test U5.3: Back to zero**
+1. On Scratch 1028's Datapacks, Release Save Test, **More**, **Uninstall**, **Uninstall**; then
+   **More**, **Delete**, **Delete**. Expect "Deleted.". In the Admin, delete any ZZ category left.
+
+**Result:** open
 
 ## 1. Datapacks
 
