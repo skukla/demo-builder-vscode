@@ -186,7 +186,7 @@ each item's own file; what has already landed against an item is in its
 
 <!-- BEGIN GENERATED registry -->
 
-### ai  (53)
+### ai  (54)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -241,6 +241,7 @@ each item's own file; what has already landed against an item is in its
 | `AI-76` | fix | [An agent's write stops when the open project moved under it](2026-10-20-agent-write-stops-when-project-moved.md) | — | high | built |
 | `AI-77` | fix | [The "ask" permission setting may not make Claude Code ask](2026-10-21-claude-ask-permission-may-not-ask.md) | — | med | backlog |
 | `AI-78` | question | [Can long jobs use MCP tasks, so the agent's client waits instead of the AI?](2026-11-06-mcp-tasks-for-long-jobs.md) | — | med | backlog |
+| `AI-79` | chore | [Triage untriaged agent coverage handlers](2026-11-16-triage-untriaged-agent-coverage-handlers.md) | — | med | backlog |
 | `EDS-33` | fix | [A storefront teardown leaves its pages live when the DA.live content is already gone](2026-10-09-teardown-unpublish-lists-from-deleted-content.md) | — | high | built |
 | `EDS-63` | fix | [The agent's `republish` does what the dashboard's Republish does](2026-10-23-agent-republish-matches-the-button.md) | — | med | active |
 
@@ -491,7 +492,7 @@ each item's own file; what has already landed against an item is in its
 | `PR-1` | epic | [Reframe prerequisites: extension-wide tools vs project-shape requirements (Path A)](2026-06-11-prereqs-architecture-reframe.md) | — | low | backlog |
 | `PR-1a` | feature | └ [Node versions in one place: one register, one resolver, one runner](2026-10-07-node-versions-in-one-place.md) | — | med | active |
 
-### platform  (101)
+### platform  (103)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -596,6 +597,8 @@ each item's own file; what has already landed against an item is in its
 | `PL-95` | chore | [Before the next release cut: the two lapsed quality passes](2026-11-07-pre-cut-quality-passes.md) | _the next release cut (beta.153) — run just before `cut-release`, after the walk's last fix_ | high | gated |
 | `PL-96` | chore | [Dependabot's open alerts on the lockfile](2026-11-09-dependabot-vulnerabilities.md) | — | med | backlog |
 | `PL-97` | chore | [Real store codes from local settings](2026-11-16-real-store-codes-from-local-settings.md) | — | low | backlog |
+| `PL-98` | chore | [Batch question table shell](2026-11-16-batch-question-table-shell.md) | — | low | backlog |
+| `PL-99` | chore | [Finished items still naming work](2026-11-16-finished-items-still-naming-work.md) | — | low | backlog |
 
 <!-- END GENERATED registry -->
 
@@ -744,7 +747,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — built
 
-*344 item(s) sit outside the A–G chain.*
+*347 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 

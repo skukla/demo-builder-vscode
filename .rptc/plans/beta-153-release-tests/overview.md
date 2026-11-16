@@ -182,11 +182,11 @@ Mark each test's **Result** line: `passed 2026-11-DD`, or `failed 2026-11-DD: wh
 | 1.6 | A datapack travels with a project (live test 5) | open |
 | 1.7 | Save Changes, Newer Version, reset and delete with a pack | open |
 | 1.8 | Colour swatches | open |
-| 1.9 | Demo Builder installs every pack, and checks it (2026-11-06) | open |
+| 1.9 | Demo Builder installs every pack, and checks it (2026-11-06) | passed 2026-11-07 |
 | 1.10 | The Datapack Library, a project's Datapacks, and the two staying in step (2026-11-08) | open |
 | 1.11 | The newer-version dot and the version list (2026-11-08) | open |
 | 2.1 to 2.4 | Projects list: select, reset several, failures, the open project | passed 2026-11-04 |
-| 2.5 | A datapack in a reset batch | passed in part 2026-11-04 |
+| 2.5 | A datapack in a reset batch | passed in part 2026-11-04 and 2026-11-15 (Save Changes As branch still open) |
 | 2.6 | Delete Selected | open |
 | 2.7 | Single delete | passed in part 2026-11-05 |
 | 2.8 | Agent delete | open |
@@ -257,7 +257,10 @@ shared with another store, on the pack's first install there.
     Datapacks. Expect your packs, no banner, no **Data Installer Datapacks** choice in **Show**, and
     no error. Put the address back.
 
-**Result:** open
+**Result:** open. Not walked as written. Phases 5 and 7 changed this screen (Load from File is
+now Add from File or Install from File, Remove Datapack is Delete, the save button is in the
+header); Create Datapack and Save ran in live runs 2 and 4 (2026-11-15), and Add from File was seen
+2026-11-16, but the steps here were not followed.
 
 ### 1.6 A datapack travels with a project (live test 5)
 
@@ -308,7 +311,12 @@ Bodea website, and this walk's rules keep store writes to Tailspin Test (owner's
 - Step 1 done: the old automatic pack "Kukla Tailspin" (`kukla-tailspin-a80dca`) deleted from the
   library; no project used it.
 
-**Result:** open
+**Result:** open. Parts were exercised by the datapack-simplification live runs, not by walking
+these steps: Save into your own pack, Undo Last Save and Restore (run 2, 2026-11-15), and a reset that
+saves your own pack's changes first with no question (run 6, 2026-11-15). Steps 2 to 6 (the second
+demo and the newer-version dot), 8 (Save Changes As) and 9 (delete with a pack) were not walked. The
+newer-version dot and the version picker this walk names were reworked by Phase 2 (the SC no longer
+manages versions), so the steps need rewriting to the beta.153 screen before they are walked.
 
 ### 1.8 Colour swatches
 
@@ -345,7 +353,7 @@ Step 2 passed (Luma's flyout: Save Changes, Import, More, no Copy to the Data In
 Datapacks asked for an Adobe sign-in (found F52) and showed the newer-version dot (F53, F54). Step 3
 passed in substance 2026-11-07: the reinstall took 1 minute 24 seconds and ended "Checked 2,048
 products against the datapack: all match", with no "Took out" or "Kept" line; its wait and its end
-are F57 and F58. Step 4 passed (nothing kept).
+are F57 and F58. Step 4 passed (nothing kept). All four steps passed: **passed 2026-11-07**.
 
 ### 1.10 The Datapack Library and a project's Datapacks (added 2026-11-08)
 
@@ -369,7 +377,9 @@ of your own library packs (scratch-1028 holds Luma).
 7. Switch to the dashboard after an import or a removal in the project's Datapacks. Expect the
    card's line to follow ("No Datapack" after a removal).
 
-**Result:** open.
+**Result:** open. Not walked as written. Seen 2026-11-16: the palette's Open Datapack Library
+opens the Datapack Library tab, and its Add from File asks Replace or Keep Both. Steps 3, 5, 6 and 7
+were not walked, and steps 2 and 3 name buttons Phases 5 and 7 renamed.
 
 ### 1.11 The newer-version dot and the version list (added 2026-11-08)
 
@@ -385,7 +395,9 @@ marked every older version as out of date.
    later save is in the list). Tab to it: the same words show on focus. The card's line keeps its
    height.
 
-**Result:** open.
+**Result:** open. Not walked. Phase 2 (the SC never manages versions) reworked the version list
+and the newer-version dot this test names; it needs rewriting to the beta.153 screen, or moving out
+by the owner, before it is walked.
 
 ---
 
@@ -445,6 +457,11 @@ a dashboard's **All Projects**. Have at least three projects, two of them in dif
 5. Run it. Expect no other store data cleared.
 
 **Result:** passed in part 2026-11-04: Remove Datapack offered only when a picked project has a pack (Bodea has none, Tailspin has one), ticked, nothing to save with no changes since install. The save branches (Saving to your library, Save Changes As) not seen live: Tailspin's store had no changes. Found F17
+
+Live run 6, 2026-11-15 (Scratch 1028): the save branch for a pack of your own passed. Reset with an
+edit on My We.Cafe saved the edit into it, uninstalled it and reset the project. An agent reset on a
+Demo Builder pack with changes was refused, uninstalling nothing. Still open: the screen's
+**Save Changes As** question for a pack that is not yours.
 
 ### 2.6 Delete Selected
 
@@ -556,4 +573,7 @@ change to every SC with the ERP integration.
 
 Details for 4.1 to 4.3: `.rptc/plans/datapack-engine/overview.md`, "Before beta.153 ships".
 
-**Result:** 4.1 open, 4.2 open, 4.3 open, 4.4 open, 4.5a open, 4.5 open
+**Result:** 4.1 open, 4.2 open, 4.3 open, 4.4 open, 4.5 open. 4.5a ran 2026-11-16 while the owner
+slept: `npm run sweep` and the codebase-sweep triage (`.rptc/research/codebase-sweep-2026-11-16/sweep.md`,
+findings filed as PL-98, AI-79, PL-99 and a PL-70 log line), and reflect (`.rptc/dream/2026-11-16-reflect.md`,
+7 proposals waiting for the owner, none applied). Both `last:` dates set to 2026-11-16 [PL-95].
