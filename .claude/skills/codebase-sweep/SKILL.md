@@ -5,7 +5,7 @@ description: Out-of-band periodic pass over the CODEBASE — run the duplication
 
 # codebase-sweep — second-order curation of the code
 
-`dream` audits the INSTRUCTIONS given to the agent. This does the same job for the
+`/dev-pipeline:reflect` (which replaced `dream`) audits the INSTRUCTIONS given to the agent. This does the same job for the
 CODE, and exists for the same reason: a session doing the work splits its budget
 between the task and noticing, and it can only see what it touched. Cross-cutting
 duplication is invisible from inside a feature.
@@ -30,7 +30,7 @@ schedules.
 
 ## When NOT to use
 - A single feature you are actively building — that is `reuse-first` at write time.
-- Instructions, memory, CLAUDE.md staleness — that is `dream`.
+- Instructions, memory, CLAUDE.md staleness — that is `/dev-pipeline:reflect`.
 - "Can I delete this symbol?" — that is `dead-code-scan` directly.
 
 ## Procedure

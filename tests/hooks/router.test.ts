@@ -145,67 +145,6 @@ describe('jest-pipe rule — blocks EVERY time, no session marker', () => {
     });
 });
 
-describe('commit-backtick rule — the shell eats a backticked word', () => {
-    // Inside DOUBLE quotes bash treats a backtick pair as command substitution,
-    // so a commit body written with markdown code spans runs the word and
-    // DELETES it from the message. The commit SUCCEEDS, so nothing fails and the
-    // damage shows up only on re-reading. Hit repeatedly; on 2026-08-24 it lost a
-    // word from a commit already pushed to develop, where the fix would cost a
-    // force-push.
-    //
-    // Built from a char code so this file does not contain the pattern it
-    // guards — the rule fires on any Bash call carrying all three tokens, so a
-    // test written with literal backticks blocks its own edit (observed twice
-    // while writing this).
-    const BT = String.fromCharCode(96);
-
-    it('blocks a backtick inside a double-quoted -m', () => {
-        const r = run(bash(`git commit -m "the ${BT}why${BT} field states the basis"`), fresh());
-        expect(r.code).toBe(2);
-        // Match within one line: the message wraps, so a two-word phrase can
-        // land either side of a newline.
-        expect(r.stderr).toMatch(/DELETES it from the message/i);
-        // The refusal must route somewhere, not just say no.
-        expect(r.stderr).toMatch(/heredoc/i);
-    });
-
-    it('blocks it in a later -m and inside a command chain', () => {
-        expect(
-            run(bash(`git commit -q -m "subject" -m "body ${BT}code${BT} span"`), fresh()).code
-        ).toBe(2);
-        expect(
-            run(bash(`git add -A && git commit -m "wires ${BT}foo${BT} in" && git push`), fresh())
-                .code
-        ).toBe(2);
-    });
-
-    it('blocks AGAIN in the same session — a mechanical mistake is not spendable', () => {
-        const s = fresh();
-        expect(run(bash(`git commit -m "a ${BT}b${BT}"`), s).code).toBe(2);
-        expect(run(bash(`git commit -m "a ${BT}b${BT}"`), s).code).toBe(2);
-    });
-
-    it('allows the forms that are actually safe', () => {
-        // Quoted heredoc — the fix the message recommends. No expansion at all.
-        expect(
-            run(bash(`git commit -F - <<'MSG'\nbody with ${BT}backticks${BT}\nMSG`), fresh()).code
-        ).toBe(0);
-        // Single quotes do not expand.
-        expect(
-            run(bash(`git commit -m 'single quoted ${BT}backticks${BT} are safe'`), fresh()).code
-        ).toBe(0);
-        expect(run(bash('git commit -m "plain message"'), fresh()).code).toBe(0);
-    });
-
-    it('does not fire on backticks outside a commit message', () => {
-        expect(run(bash(`echo "has ${BT}backticks${BT} but is not a commit"`), fresh()).code).toBe(
-            0
-        );
-        // git + backtick but no -m: nothing to damage.
-        expect(run(bash(`git log --format="%s" | grep ${BT}foo${BT}`), fresh()).code).toBe(0);
-    });
-});
-
 describe('jest-concurrent rule — blocks a run while another is in flight', () => {
     // Measured 2026-08-13: two overlapping full suites failed 4-6 suites on every
     // one of 6 trials; a solo run failed none in 10. The rule exists so a gate
@@ -339,65 +278,6 @@ describe('adobe-docs rule — matches on TOOL NAME, not on any payload field', (
     });
 });
 
-describe('unquoted-glob rule', () => {
-    /**
-     * zsh expands a glob BEFORE the command runs. With no match in the CWD it
-     * aborts with `no matches found` and the tool never executes — so the result
-     * is "never searched", which reads identically to "found nothing". Three
-     * incidents on 2026-08-13; one printed five clean zeros and was caught only
-     * by a positive control.
-     *
-     * These tests live here rather than in a shell script for a reason worth
-     * keeping: a shell harness that feeds `--include=*.ts` to the router trips
-     * this very rule on its own command line. The guard cannot tell a fixture
-     * from real usage, so the fixture has to reach it through a child process.
-     */
-    const GLOB = /quote that glob/;
-
-    it.each([
-        ['grep --include', 'grep -rn foo src/ --include=*.ts'],
-        ['grep --exclude', 'grep -rn foo . --exclude=*.min.js'],
-        ['grep --exclude-dir with a star', 'grep -rl x . --exclude-dir=*modules'],
-        ['find -name', 'find tests -name *.test.ts'],
-        ['find -iname', 'find . -iname *.MD'],
-        ['find -path', 'find . -path */dist/*'],
-    ])('blocks %s', (_label, command) => {
-        expect(run(bash(command), fresh()).stderr).toMatch(GLOB);
-    });
-
-    it.each([
-        ['single-quoted', "grep -rn foo src/ --include='*.ts'"],
-        ['double-quoted', 'grep -rn foo src/ --include="*.ts"'],
-        ['quoted -name', "find tests -name '*.test.ts'"],
-        ['no glob at all', 'grep -rn foo src/ --include=index.ts'],
-    ])('allows %s', (_label, command) => {
-        expect(run(bash(command), fresh()).stderr).not.toMatch(GLOB);
-    });
-
-    it.each([
-        ['ls', 'ls *.ts'],
-        ['cat a path glob', 'cat src/*.json'],
-        ['a for-loop over a glob', 'for f in src/*.ts; do echo "$f"; done'],
-    ])('does not fire on %s — there the expansion IS the point', (_label, command) => {
-        expect(run(bash(command), fresh()).stderr).not.toMatch(GLOB);
-    });
-
-    it('is a hard stop, not once-per-session', () => {
-        // Same session twice. A spendable guard against a mechanical mistake is
-        // no guard: the second occurrence is exactly as silent as the first.
-        const session = fresh();
-        expect(run(bash('grep -rn a . --include=*.ts'), session).stderr).toMatch(GLOB);
-        expect(run(bash('grep -rn b . --include=*.tsx'), session).stderr).toMatch(GLOB);
-    });
-
-    it('reaches the rule at all — the router pre-filter admits these commands', () => {
-        // The dispatcher has a cheap substring gate before it parses JSON. A rule
-        // whose tokens are missing from that gate can never fire, and would look
-        // exactly like a rule that works and never matches.
-        expect(run(bash('find . -name *.ts'), fresh()).code).toBe(2);
-    });
-});
-
 describe('rules do not bleed into each other', () => {
     // Each rule must fire ONLY for its own trigger. With five rules in one
     // dispatcher, a loose pattern silently steals another rule's calls.
@@ -521,9 +401,6 @@ describe('every rule is reachable through the pre-filter', () => {
     const PROBES: Record<string, () => Result> = {
         'jest-pipe': () => run(bash(`npx jest --no-coverage ${PIPE_TAIL}`), fresh()),
         'jest-redirect': () => run(bash(`npx jest --no-coverage ${BAD_ORDER}`), fresh()),
-        'unquoted-glob': () => run(bash('grep -rn x --include=*.css src/'), fresh()),
-        'piped-exit-code': () => run(bash('ls src | wc -l || echo none'), fresh()),
-        'commit-backtick': () => run(bash('git commit -m "fix `thing` today"'), fresh()),
         'jest-concurrent': () =>
             run(bash('npx jest --no-coverage > out.txt 2>&1'), fresh(), {
                 DBV_JEST_PS: psSnapshot([LIVE_JEST]),
@@ -538,12 +415,6 @@ describe('every rule is reachable through the pre-filter', () => {
             run(write(path.join(REPO2, 'tests/sop/brand-new-enforcer.test.ts')), fresh()),
         'webview-test-skill': () =>
             run(edit(path.join(REPO2, 'tests/features/x/ui/Thing.test.tsx')), fresh()),
-        // The list-valued variable passed bare. This rule's own proof failed 3 of
-        // its 4 blocking cases on the day it was written, because its pre-filter
-        // token was missing — the exact gate failure the docblock above describes,
-        // for the third time. The fourth case "passed" only because its payload
-        // happened to contain another rule's token.
-        'unsplit-var': () => run(bash('F=$(cat list.txt)\nnpx eslint --fix $F'), fresh()),
         'adobe-docs': () => run(mcp('mcp__adobe-exl__search_experience_league'), fresh()),
         // The six added 2026-09-10. Each needed a NEW pre-filter token, and until
         // those landed every one of these payloads exited at the gate — which is

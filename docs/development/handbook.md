@@ -1986,7 +1986,7 @@ it is, and the count of unenforced rules is stated rather than hidden.
 
 Conventions decay unless something checks them. Four layers do:
 
-- **Hooks** stop a bad action as it happens — 25 rules in `.claude/hooks/rules/`
+- **Hooks** stop a bad action as it happens — 21 rules in `.claude/hooks/rules/`
 - **Enforcer suites** fail the build when code drifts — 69 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, agent coverage (import cycles moved to an enforcer suite on 2026-10-08)
@@ -2108,7 +2108,7 @@ not.
 > **Convention.** Capture an exit code in a variable. Never read one through a pipe.
 > *Why:* `head`, `tail`, `grep` and `wc` all exit 0 on empty input, so the pipe reports its
 > own success and hides the failure underneath.
-> Enforced by `.claude/hooks/rules/13-piped-exit-code.rule`, which blocks branching on
+> Enforced by the dev-pipeline plugin's shell guard (on through `.pipeline.yaml`), which blocks branching on
 > a pipe into `head`, `tail` or `wc` — those exit 0 whatever they were fed, so a failure
 > and an empty result are indistinguishable. `grep` is deliberately not blocked:
 > `cmd | grep -q x && …` is correct, because there grep's own exit code is the answer.
@@ -2124,7 +2124,7 @@ not.
 > an `eslint --fix` over 18 files that fixed none, where the unchanged recount was read
 > as "these warnings are not auto-fixable" — a wrong conclusion drawn from a command
 > that never ran. Through `xargs` it fixed all 18 and went five below the baseline.
-> Enforced by `.claude/hooks/rules/16-unsplit-var.rule`, which fires only when the
+> Enforced by the dev-pipeline plugin's shell guard (on through `.pipeline.yaml`), which fires only when the
 > variable was assigned from `$(...)` AND is passed bare to a command that takes a list
 > of files. `[ $n -gt 0 ]` does not fire; `echo $VAR` does not fire; a quoted `"$VAR"`
 > never fires. This rule was in prose here since August and was broken a third time by
@@ -2135,7 +2135,8 @@ not.
 > into separate arguments.
 > *Why:* both fail in ways that look like a clean result rather than an error — with no
 > match, zsh aborts and the command never runs at all.
-> Enforced by `.claude/hooks/rules/12-unquoted-glob.rule`.
+> Enforced by the dev-pipeline plugin's shell guard (on through `.pipeline.yaml`), which
+> also refuses a glob that matches nothing.
 
 > **Convention.** Anything claiming to be an instrument is in the registry, and the
 > registry and the disk must agree in both directions. A count written in prose has
@@ -2165,7 +2166,7 @@ not.
 > once is public forever — deleting it later does not help.
 
 > **Convention.** Commit to `develop`. Reach `master` only through a release.
-> [cut-release](../../.claude/skills/cut-release/SKILL.md) · enforced by `.githooks/commit-msg`.
+> [cut-release](../../.claude/skills/cut-release/SKILL.md).
 > *Why:* master is what ships to beta users automatically.
 
 > **Convention.** No backticks inside a double-quoted `git commit -m`. Write the message
@@ -2173,7 +2174,7 @@ not.
 > *Why:* bash treats `` `x` `` inside double quotes as command substitution, so naming a
 > file in backticks — the natural way to write it — silently executes the word and drops
 > it from the message.
-> Enforced by `.claude/hooks/rules/14-commit-backtick.rule`.
+> Enforced by the dev-pipeline plugin's shell guard (on through `.pipeline.yaml`).
 
 > **Convention.** A new React + Spectrum webview test starts from the webview-test skill.
 > *Why:* the suite runs on fake timers, and a test that does not know it hangs or resolves

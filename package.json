@@ -594,7 +594,7 @@
         "mesh:delete": "aio api-mesh delete --autoConfirmAction",
         "mesh:status": "aio api-mesh get --active",
         "hooks": "node scripts/hooks.js",
-        "hooks:git": "git config core.hooksPath .githooks && echo \"git hooks on (.githooks) — turn off: git config --unset core.hooksPath\"",
+        "hooks:git": "if git config --get dev-pipeline.root >/dev/null; then echo \"git hooks are the dev-pipeline plugin's (they run .githooks after their own) — left as they are\"; else git config core.hooksPath .githooks && echo \"git hooks on (.githooks) — turn off: git config --unset core.hooksPath\"; fi",
         "docs:check": "node scripts/hooks.js coverage",
         "data-installer:drift": "node scripts/dataInstallerDrift.js",
         "eds:drift": "node scripts/edsDrift.js",

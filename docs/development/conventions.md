@@ -207,14 +207,14 @@ it means the rule rests on somebody noticing.
 | Every scan declares a control: something it is known to find. A detector that has silently stopped detecting reports "all clear" in exactly the same words as one that verified. |  |  | `every-scan-declares-a-control.test.ts`<br>`rule-proofs.test.ts`<br>`eslint-type-aware.test.ts`<br>`codemod-harness.test.ts`<br>`eslint.config.mjs` |
 | Every top-level directory is classified: it ships in the VSIX, or `.vscodeignore` excludes it by name. Being in `.gitignore` counts for nothing. |  |  | `vsix-contents.test.ts` |
 | Never publish an identifier you have not read from the source. Setting keys, env vars, command ids, file paths and function names are cheap to grep and expensive to get wrong in something a user reads. |  |  | `cited-identifiers.test.ts`<br>`doc-module-refs.test.ts` |
-| Capture an exit code in a variable. Never read one through a pipe. |  |  | `13-piped-exit-code.rule` |
-| A list of paths reaches a command through `xargs`, never as a bare `$VAR`. Quote the variable when one argument is what you meant. |  |  | `16-unsplit-var.rule`<br>`eslint.config.mjs` |
-| Quote glob arguments passed to `grep` or `find`. In zsh an unquoted pattern is expanded before the command sees it, and an unquoted variable is not split into separate arguments. |  |  | `12-unquoted-glob.rule` |
+| Capture an exit code in a variable. Never read one through a pipe. |  |  | *named in prose* |
+| A list of paths reaches a command through `xargs`, never as a bare `$VAR`. Quote the variable when one argument is what you meant. |  |  | `eslint.config.mjs` |
+| Quote glob arguments passed to `grep` or `find`. In zsh an unquoted pattern is expanded before the command sees it, and an unquoted variable is not split into separate arguments. |  |  | *named in prose* |
 | Anything claiming to be an instrument is in the registry, and the registry and the disk must agree in both directions. A count written in prose has something checking it. |  |  | `tooling-registry.test.ts` |
 | A module path named in a document resolves. A citation must reach a file or directory; an `import` in a code example must reach something importable. |  |  | `doc-module-refs.test.ts` |
 | Delete obsolete code. No deprecated stubs, no accepted-but-ignored options. Enforced by measurement — `.claude/skills/dead-code-scan`. |  | [procedure](../../.claude/skills/dead-code-scan/SKILL.md) | *named in prose* |
 | Secrets live in VS Code settings, never in code. This repository is public. Enforced by `.claude/hooks/rules/20-secret-files.rule`, which blocks a write of any `.env` file or secret-shaped content headed for the repo tree; GitGuardian scans every push as the second line. |  |  | `20-secret-files.rule`<br>`GitGuardian` |
-| Commit to `develop`. Reach `master` only through a release. enforced by `.githooks/commit-msg`. |  | [procedure](../../.claude/skills/cut-release/SKILL.md) | `.githooks/` |
-| No backticks inside a double-quoted `git commit -m`. Write the message to a file and use `git commit -F`. |  |  | `14-commit-backtick.rule` |
+| Commit to `develop`. Reach `master` only through a release. . |  | [procedure](../../.claude/skills/cut-release/SKILL.md) | *named in prose* |
+| No backticks inside a double-quoted `git commit -m`. Write the message to a file and use `git commit -F`. |  |  | *named in prose* |
 | A new React + Spectrum webview test starts from the webview-test skill. |  | [procedure](../../.claude/skills/webview-test-authoring/SKILL.md) | `40-webview-test.rule` |
 | An Adobe documentation lookup goes through the routing skill before the first search. |  | [procedure](../../.claude/skills/adobe-docs-lookup/SKILL.md) | `50-adobe-docs.rule` |

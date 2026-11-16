@@ -320,14 +320,6 @@ const JUDGEMENT: readonly Instrument[] = [
         runs: null,
         unwiredReason: 'orchestrates the others; npm run sweep is its scripted half',
     },
-    {
-        id: 'dream',
-        kind: 'skill',
-        cadence: 'periodic',
-        what: 'staleness in memory, skills and CLAUDE.md, mined from recent transcripts',
-        runs: null,
-        unwiredReason: 'reads transcripts outside the repo; proposes, never applies',
-    },
 ];
 
 /**
@@ -538,7 +530,6 @@ const AUTHORING: readonly Instrument[] = (
         ['debug-log-triage', 'parse a pasted Debug Logs dump'],
         ['adobe-docs-lookup', 'route an Adobe docs question to the source that has it'],
         ['decompose-god-file', 'split an oversized file without breaking its public API'],
-        ['backlog-item', 'read and write the backlog through one CLI'],
         ['unattended-loop', 'the owner-away working mode'],
         ['reuse-first', 'find the house component before building a new one'],
         [

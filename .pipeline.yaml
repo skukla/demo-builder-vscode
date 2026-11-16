@@ -9,3 +9,15 @@ standards: [CLAUDE.md#what-this-extension-never-compromises-on, CLAUDE.md#words-
 periodic:
   reflect:        { budget: 3 releases or 30 days, last: 2026-11-16 }
   codebase-sweep: { budget: 3 releases, last: 2026-11-16 }
+repo_hooks: .githooks
+backlog:
+  commit_trailer: required
+  areas: [ai, eds, app-builder, data-installer, prerequisites, platform]
+  layers: [A, B, C, D, E, F, G]
+  record_dirs: [.rptc/plans, .rptc/complete]
+  record_check: "bash .claude/skills/rptc-hygiene-scan/scan.sh | grep -E '^\s+(DEAD|UNINDEXED)' || true"
+  claim_files: ["src/*.ts", "src/*.tsx", "src/*/templates/*.md"]
+neighbours:
+  message: { key: "\b(?:request|postMessage|sendMessage|send|onMessage|invoke)(?:<[^()]*?>)?\(\s*'([a-z][A-Za-z0-9]*(?:-[a-z0-9]+)*)(?=')", from: "src/**/*.ts*", in: "src/**", min: 150 }
+  component-id: { json: "src/features/components/config/components.json#frontends,backends,mesh,integrations,addons,tools,services", in: "src/**", min: 10 }
+  ai-gate: { key: "export function (\w+)", from: "src/features/project-creation/services/aiBundle/aiToolingGate.ts", in: "src/**", min: 4 }

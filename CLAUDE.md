@@ -176,11 +176,11 @@ red, and so is a registry entry for something deleted.
 
 | Cadence | What runs | Who triggers it |
 |---|---|---|
-| per-tool-call | 25 hook rules in `.claude/hooks/rules/` | automatic |
+| per-tool-call | 21 hook rules in `.claude/hooks/rules/` | automatic |
 | per-jest-run | 69 enforcer suites in `tests/sop/` | automatic |
 | per-push | lint, both typecheckers, 2 validators | CI |
 | per-push (local) | the CSS baseline check — `.githooks/pre-push` only, never CI | the git hook |
-| periodic | 15 scripted checks + 10 guided reviews | **`npm run sweep`** |
+| periodic | 15 scripted checks + 9 guided reviews | **`npm run sweep`** |
 | overnight | 2 Stryker runs — the stale-row re-measure (`npm run test:mutation:sweep -- --stale --minutes 480`) and the pilot. Never inside the sweep | a person, when no other test run needs the machine |
 
 The sweep REPORTS and never starts Stryker: it lists stale mutation rows, and the
@@ -215,7 +215,7 @@ without producing a signal.
 - `mcp-live-probe` — call the RUNNING MCP server over its socket: which BUILD is serving, a tool's real response and token cost, destructive calls refused by default. The counterpart to `mcp-tool-authoring` — that one says how to write a tool, this one proves it works against reality instead of against its own fixtures
 - `spectrum-webview-ui` — load-bearing Spectrum/webview UI gotchas (dimension-token scale, Menu sections/submenus, Flex-450px, box-sizing, dashboard notices)
 - `webview-test-authoring` — write/fix a React/Spectrum webview test: mock preamble, `advanceTimers` contract, hoist-safe `.testUtils` extraction, div-role card queries, mocked-vs-bundled-JSON trap (test-side counterpart to `spectrum-webview-ui`)
-- `dream` — out-of-band curation pass over memory/skills/CLAUDE.md: mine transcripts for recurring failures + staleness, propose evidence-backed changes (runs at release cuts; proposes, never applies)
+- `dream` was retired at the dev-pipeline rollout (2026-11-16): `/dev-pipeline:reflect` does its job — mine past sessions for repeated mistakes and manual steps, record proposals, apply only what the owner accepts (runs at release cuts; records in `.rptc/dream/`)
 - `codebase-sweep` — dream's sibling for the CODE: runs the four scans together, triages against measured baselines, proposes cleanups (runs at release cuts; proposes, never applies). Duplication is the one defect class with no automatic hook, because deciding whether two things SHOULD be one needs judgment — this is where that judgment gets scheduled.
 - `debug-log-triage` — parse a pasted Debug Logs dump: the structured stdout/stderr block above a blank error carries the truth; benign-noise catalog; channel→feature map
 - `adobe-docs-lookup` — route an Adobe docs question to the source that has it (App Builder concepts live on developer.adobe.com, which NO doc MCP indexes) + recover from `-32002` / 401 MCP session failures
@@ -239,7 +239,7 @@ without producing a signal.
   shared setup in 11 split-suite families, **79 mocks were dead**. Probe the SET — twice, a mock
   and the line using it were both dead while each kept the other alive
 - `dead-code-scan` — find unused exports (ts-prune) + abandonment markers; serves "no soft deprecation"
-- `backlog-item` — READ and WRITE the backlog through one CLI (`backlog.mjs`): `list`/`next`/`show` (all take `--json`, the agent-facing form), `new`/`set`/`log` for mutations that validate BEFORE touching disk, `check`, and `sync` to regenerate the README's spans. Carries the frontmatter contract (kind/area/layer/parent/needs/value/status), the five kinds and why a `question` is not an epic. Everything hand-maintained here has rotted: the index (three items invisible for months, a reverted correction, an epic with no file) and then the second, prose copy of the list that survived it and drifted to 25 items against 32. Test any change with `dogfood.sh`, which runs the real content through the real CLI inside a temp copy
+- `dev-pipeline:backlog` (the plugin's skill, on through `.pipeline.yaml`) — READ and WRITE the backlog: `list`/`next`/`show`, mutations that validate before touching disk, `check`, and `sync`; the same items and frontmatter contract the retired `backlog-item` CLI used
 - `tool-verdicts` — per-tool verdict on the agent surface (keep/fix/investigate/find-out), from real transcript usage AND battery outcomes together. Exists because "85 tools are unused so nobody needs them" was measured and found unsupportable: 78 of 107 had been judged by nothing at all. Refuses to conclude anything about a tool no prompt has ever asked for
 - `rptc-hygiene-scan` — the same idea aimed at the RECORD rather than the code: backlog index rot in BOTH directions, plans that shipped and never moved, and file:line citations pointing at deleted files (runs at release cuts; proposes, never applies)
 - `circular-dependency-scan` — find import cycles (madge) and how to break them
