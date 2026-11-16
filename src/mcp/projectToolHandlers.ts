@@ -96,28 +96,6 @@ export function paginate<T>(items: T[], offset?: number, limit?: number): T[] {
     return items.slice(start, end);
 }
 
-/**
- * The persisted current-project pointer, or undefined when it cannot be read.
- *
- * `state.json` lives BESIDE the projects directory (`~/.demo-builder/`), which
- * is why `dirname(projectsDir)` needs no new plumbing. The StateManager writes
- * it atomically (temp + rename) precisely so file-based readers like this one
- * never see a torn write; absence and parse failure both answer undefined,
- * because "no marker" is an honest listing and a thrown listing is not.
- */
-async function readCurrentProjectPath(projectsDir: string): Promise<string | undefined> {
-    try {
-        const raw = await fsPromises.readFile(
-            path.join(path.dirname(projectsDir), 'state.json'),
-            'utf-8',
-        );
-        const state = JSON.parse(raw);
-        return typeof state.currentProjectPath === 'string' ? state.currentProjectPath : undefined;
-    } catch {
-        return undefined;
-    }
-}
-
 /** The project-file tool handlers (spread into `toolHandlers` in mcp-server). */
 export const projectToolHandlers = {
     async listProjects(
@@ -142,9 +120,11 @@ export const projectToolHandlers = {
         // agent nothing and inviting the follow-up read. Deleted outright rather
         // than kept as noise; run-state lives on `get_current_project` /
         // `get_project_status`, which compute it.
-        const currentPath = await readCurrentProjectPath(projectsDir);
-        const projects: Array<{ name: string; path: string; current?: boolean; pinned?: boolean }> =
-            [];
+        // NO `current` MARKER, deliberately (owner, 2026-11-16). It marked the window's
+        // project while get_current_project reports the project the agent's tools act on, so
+        // after set_current_project the two named different projects. One question, one
+        // tool: get_current_project answers which project, and says why.
+        const projects: Array<{ name: string; path: string; pinned?: boolean }> = [];
         for (const entry of entries) {
             if (!entry.isDirectory()) continue;
             const dirPath = path.join(projectsDir, entry.name);
@@ -156,11 +136,6 @@ export const projectToolHandlers = {
                 projects.push({
                     name: manifest.name ?? entry.name,
                     path: dirPath,
-                    // The marker `agent-gap-scan` said was missing: half of
-                    // list_projects' chained follow-ups were get_current_project,
-                    // asking a question this listing could have answered. Omitted
-                    // when false — same convention as `pinned` below.
-                    ...(currentPath === dirPath ? { current: true } : {}),
                     // Only when SET. `set_project_pinned` was a write nothing could
                     // confirm — no read reported pinned state anywhere — and a write
                     // with no read is a write an agent has to take on faith. Omitted

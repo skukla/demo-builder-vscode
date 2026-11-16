@@ -237,57 +237,29 @@ describe('toolHandlers.listProjects — pinned', () => {
     });
 });
 
-// ─── toolHandlers.listProjects — the current marker ─────────────────────────
+// ─── toolHandlers.listProjects — no current marker ──────────────────────────
 //
-// `agent-gap-scan` measured half of list_projects' chained follow-ups as
-// get_current_project — the agent listing projects and then asking which one
-// is active, a question the listing could have answered. The pointer lives in
-// `state.json` beside the projects dir, atomically written for exactly this
-// kind of file-based reader.
-describe('toolHandlers.listProjects — current marker', () => {
+// list_projects marked the window's project `current` while get_current_project reports the
+// project the agent's tools act on, so after set_current_project the two named different
+// projects (2026-11-16). The owner chose one tool for the one question: the listing carries no
+// marker, and get_current_project says which project and why.
+describe('toolHandlers.listProjects — no current marker', () => {
     beforeEach(() => {
         jest.clearAllMocks();
     });
 
-    it('marks the project state.json points at, and only that one', async () => {
+    it('marks no project current, even the one the window has open', async () => {
         withManifests([{ name: 'alpha' }, { name: 'beta' }], {
             currentProjectPath: path.join(PROJECTS_DIR, 'beta'),
         });
 
         const parsed = JSON.parse(await toolHandlers.listProjects(PROJECTS_DIR));
 
-        expect(parsed[1]).toMatchObject({ name: 'beta', current: true });
-        expect(parsed[0]).not.toHaveProperty('current');
-    });
-
-    it('lists with no marker when state.json does not exist', async () => {
-        withManifests([{ name: 'alpha' }]);
-
-        const parsed = JSON.parse(await toolHandlers.listProjects(PROJECTS_DIR));
-
-        // Absence degrades to "no marker", never to a failed listing.
-        expect(parsed).toHaveLength(1);
-        expect(parsed[0]).not.toHaveProperty('current');
-    });
-
-    it('lists with no marker when state.json is torn or invalid', async () => {
-        withManifests([{ name: 'alpha' }], 'unreadable');
-
-        const parsed = JSON.parse(await toolHandlers.listProjects(PROJECTS_DIR));
-
-        expect(parsed).toHaveLength(1);
-        expect(parsed[0]).not.toHaveProperty('current');
-    });
-
-    it('ignores a pointer at a project that is not in the listing', async () => {
-        // A stale pointer (deleted project) must not invent a marker.
-        withManifests([{ name: 'alpha' }], {
-            currentProjectPath: path.join(PROJECTS_DIR, 'deleted-long-ago'),
-        });
-
-        const parsed = JSON.parse(await toolHandlers.listProjects(PROJECTS_DIR));
-
-        expect(parsed[0]).not.toHaveProperty('current');
+        // Control: both rows built, so the absence is about the field.
+        expect(parsed).toStrictEqual([
+            { name: 'alpha', path: path.join(PROJECTS_DIR, 'alpha') },
+            { name: 'beta', path: path.join(PROJECTS_DIR, 'beta') },
+        ]);
     });
 });
 
