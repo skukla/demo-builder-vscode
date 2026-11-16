@@ -90,8 +90,9 @@ describe('dashboardHandlers', () => {
             expect(dashboardHandlers.runProjectsBatch).toBe(projectsListHandlers.runProjectsBatch);
         });
 
-        it("hands Delete over to the projects list, and no longer answers the dialogs' messages", () => {
-            expect(hasHandler(dashboardHandlers, 'deleteFromProjectsList')).toBe(true);
+        // Delete runs in the same window, on the dashboard (owner, release test 2.7, 2026-11-16).
+        it("no longer hands Delete over, nor answers the dialogs' messages", () => {
+            expect(hasHandler(dashboardHandlers, 'deleteFromProjectsList')).toBe(false);
             expect(hasHandler(dashboardHandlers, 'deleteProject')).toBe(false);
             expect(hasHandler(dashboardHandlers, 'resetProject')).toBe(false);
         });
@@ -318,7 +319,9 @@ describe('dashboardHandlers', () => {
             // deleteFromProjectsList in (95 → 96, step-05 S4, 2026-11-13): Reset opens the projects
             // list's batch window here; Delete opens the list on its one-row Delete window. The
             // table's "1 delete" and "1 reset" rows above are those two retired messages.
-            expect(types).toHaveLength(96);
+            // deleteFromProjectsList out (96 → 95, 2026-11-16, release test 2.7): Delete runs in
+            // the batch window here too, and the dashboard leaves only once the project is gone.
+            expect(types).toHaveLength(95);
         });
 
         it('should have handlers as functions', () => {

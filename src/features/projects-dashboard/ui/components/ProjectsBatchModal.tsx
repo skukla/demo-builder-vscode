@@ -5,7 +5,7 @@
  *
  * Reading and the questions are one Steps window (`StepsWindow`, step-05 S3): while the read is out
  * it is the small wait window, "Reading demo data" for a reset and "Reading projects" for a
- * delete (`WAIT_STAGES`); once the read answers it becomes the questions' window at their height,
+ * delete, "Reading the project" when there is one (`WAIT_STAGES`); once the read answers it becomes the questions' window at their height,
  * and keeps it (rule 14; a frameless wait over the cards did not read as one, owner 2026-11-15). The run and a failed read are windows of their own.
  * The questions: `BatchDeleteQuestions` or `BatchResetQuestions`, Cancel and the red button. When a
  * pack whose data goes has changes, the red button runs into "Save Your Changes First?" in the same
@@ -189,11 +189,11 @@ function RunBody({ controls, view }: { controls: ProjectsBatchControls; view: Ex
     );
 }
 
-/** The wait while the questions are read; one project's demo data is read from it, by name. */
+/** The wait while the questions are read; one project is read as one, by name. */
 function waitOf(view: BatchView): WaitLines | false {
     if (view.phase !== 'reading') return false;
-    if (view.action !== 'reset') return WAIT_STAGES.readingProjects;
     const one = view.names.length === 1 ? view.names[0] : undefined;
+    if (view.action !== 'reset') return one ? { ...WAIT_STAGES.readingProject, detail: one } : WAIT_STAGES.readingProjects;
     return one ? { ...WAIT_STAGES.readingProjectsDemoData, detail: `From ${one}` } : WAIT_STAGES.readingProjectsDemoData;
 }
 

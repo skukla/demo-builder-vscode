@@ -159,17 +159,20 @@ describe('ProjectDashboardScreen - Action Buttons', () => {
             expect(ctx.mockPostMessage).toHaveBeenCalledWith('openBrowser');
         });
 
-        // Delete opens the projects list on its one-row Delete window (owner, 2026-11-13, P5-Q2):
-        // the dashboard closes when its project is deleted, so the window cannot live here.
-        it('hands Delete over to the projects list, and asks nothing here', async () => {
+        // Delete opens the batch window here, as Reset does (owner, release test 2.7, 2026-11-16):
+        // the dashboard stays while it is open and leaves only once the project is deleted.
+        it('opens the Delete window on the dashboard, on its own project', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            renderDashboard();
+            renderDashboard({ project: { name: asDisplayName('Test Project'), path: '/test/path' } });
 
             await user.click(screen.getByText('Delete'));
 
-            expect(ctx.mockPostMessage).toHaveBeenCalledWith('deleteFromProjectsList');
+            expect(ctx.mockRequest).toHaveBeenCalledWith('prepareProjectsBatch', {
+                action: 'delete',
+                projectPaths: ['/test/path'],
+            });
             expect(ctx.mockRequest).not.toHaveBeenCalledWith('deleteProject', expect.anything());
-            expect(screen.queryByRole('dialog', { name: 'Batch window' })).toBeNull();
+            expect(screen.getByRole('dialog', { name: 'Batch window' })).toBeInTheDocument();
         });
 
         it('should send editProject message when Edit clicked', async () => {

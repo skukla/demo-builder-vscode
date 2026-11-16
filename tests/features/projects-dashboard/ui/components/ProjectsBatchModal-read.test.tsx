@@ -58,7 +58,8 @@ const CASES: Array<{
         wait: 'Reading projects',
         button: 'Delete 3 Projects',
     },
-    { action: 'delete', count: 1, title: 'Delete A?', wait: 'Reading projects', button: 'Delete' },
+    // One project is read as one, not "projects" (owner, release test 2.7, 2026-11-16: F138).
+    { action: 'delete', count: 1, title: 'Delete A?', wait: 'Reading the project', button: 'Delete' },
 ];
 
 beforeEach(() => {

@@ -5,8 +5,9 @@
  * project: the same window, the same words ("Reset Kukla Luma?", "Reset", "Resetting Kukla Luma",
  * "Kukla Luma Reset"), and after the run the dashboard stays and asks for its status again.
  *
- * Delete hands over to the projects list, which opens its one-row Delete window there: the
- * dashboard closes when its project is deleted, so the window cannot live on it.
+ * Delete opens the same window on the dashboard too (owner, release test 2.7, 2026-11-16). The
+ * dashboard stays while it is open; only once its project is actually deleted does closing the
+ * window move to the projects list. Cancel, or a failed delete, leaves the SC where they started.
  *
  * Neither sends the old one-project messages, and nothing runs before the window's press.
  */
@@ -23,7 +24,7 @@ import {
 } from '../../../projects-dashboard/ui/components/ProjectsBatchModal.testUtils';
 import { render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
-import { resetQuestions } from '../../../../helpers/projectsBatchFixtures';
+import { deleteQuestions, resetQuestions } from '../../../../helpers/projectsBatchFixtures';
 import { ProjectsBatchModal } from '@/features/projects-dashboard/ui/components/ProjectsBatchModal';
 import { useDashboardResetDelete } from '@/features/dashboard/ui/hooks/useDashboardResetDelete';
 import { asDisplayName } from '@/core/utils/projectDisplayName';
@@ -133,7 +134,7 @@ describe("the dashboard's Reset", () => {
 
         await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
         expect(mockPostMessage).toHaveBeenCalledWith('requestStatus');
-        expect(sentTypes()).not.toContain('deleteFromProjectsList');
+        expect(mockPostMessage).not.toHaveBeenCalledWith('navigateBack');
     });
 
     it('cancelled at the question, it asks for nothing more', async () => {
@@ -150,15 +151,67 @@ describe("the dashboard's Reset", () => {
 });
 
 describe("the dashboard's Delete", () => {
-    it('hands over to the projects list, opening no window here and asking VS Code nothing', async () => {
+    const DELETE_QUESTIONS: PrepareEnvelope = { success: true, data: deleteQuestions([ONE_ROW]) };
+
+    /** The dashboard's Delete, through to the window's red Delete. */
+    async function deleteThroughWindow(user: ReturnType<typeof setupUser>): Promise<void> {
+        await user.click(screen.getByRole('button', { name: 'Delete Tile' }));
+        await user.click(await screen.findByRole('button', { name: 'Delete' }));
+        await push('operationProgress', { id: PROJECTS_BATCH_OPERATION_ID, state: 'running' });
+    }
+
+    it("opens the batch window here, on the dashboard's own project, and runs nothing before its press", async () => {
+        answers(DELETE_QUESTIONS);
         const user = setupUser();
         render(<Dashboard />);
 
         await user.click(screen.getByRole('button', { name: 'Delete Tile' }));
 
-        expect(mockPostMessage).toHaveBeenCalledWith('deleteFromProjectsList');
-        expect(sentTypes()).toEqual(['deleteFromProjectsList']);
-        expect(screen.queryByRole('dialog')).toBeNull();
+        expect(mockRequest).toHaveBeenCalledWith('prepareProjectsBatch', { action: 'delete', projectPaths: [PATH] });
+        await screen.findByRole('button', { name: 'Delete' });
+        expect(screen.getByRole('dialog', { name: 'Delete Kukla Luma?' })).toHaveAttribute('data-status', 'warning');
+        expect(mockRequest).not.toHaveBeenCalledWith('runProjectsBatch', expect.anything());
+    });
+
+    it('cancelled at the question, it stays on the dashboard and asks for nothing more', async () => {
+        answers(DELETE_QUESTIONS);
+        const user = setupUser();
+        render(<Dashboard />);
+        await user.click(screen.getByRole('button', { name: 'Delete Tile' }));
+        await screen.findByRole('button', { name: 'Delete' });
+
+        await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+        await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+        expect(sentTypes()).toEqual(['prepareProjectsBatch']);
+    });
+
+    it('once the project is deleted, closing the window moves to the projects list', async () => {
+        answers(DELETE_QUESTIONS);
+        const user = setupUser();
+        render(<Dashboard />);
+        await deleteThroughWindow(user);
+
+        await push('projectsBatchRow', { path: PATH, state: 'done' });
+        await push('operationProgress', { id: PROJECTS_BATCH_OPERATION_ID, state: 'succeeded' });
+        await user.click(screen.getByRole('button', { name: 'Close' }));
+
+        await waitFor(() => expect(mockPostMessage).toHaveBeenCalledWith('navigateBack'));
+        expect(mockPostMessage).not.toHaveBeenCalledWith('requestStatus');
+    });
+
+    it('a delete that failed leaves the SC on the dashboard, which asks for its status again', async () => {
+        answers(DELETE_QUESTIONS);
+        const user = setupUser();
+        render(<Dashboard />);
+        await deleteThroughWindow(user);
+
+        await push('projectsBatchRow', { path: PATH, state: 'failed', message: 'The folder could not be removed.' });
+        await push('operationProgress', { id: PROJECTS_BATCH_OPERATION_ID, state: 'failed' });
+        await user.click(screen.getByRole('button', { name: 'Close' }));
+
+        await waitFor(() => expect(mockPostMessage).toHaveBeenCalledWith('requestStatus'));
+        expect(mockPostMessage).not.toHaveBeenCalledWith('navigateBack');
     });
 });
 

@@ -6,7 +6,7 @@ the `projectsList` bundle, auto-shown on activation when no project is current.
 ```
 projects-dashboard/
 ├── commands/showProjectsList.ts       the webview command
-├── handlers/projectsListHandlers.ts   29 keys — the source of truth for messages
+├── handlers/projectsListHandlers.ts   28 keys — the source of truth for messages
 └── ui/
     ├── ProjectsDashboard.tsx          container
     └── components/                    ProjectCard · ProjectsGrid · DashboardEmptyState
@@ -44,12 +44,10 @@ instead of a list of one (`OneRunning`, owner 2026-11-15). A card's or row's Res
 project (`useListBatch`), its words naming it: "Reset Kukla Luma?", the button "Reset", "Resetting
 Kukla Luma", "Kukla Luma Reset" (`ui/batchWords.ts`; decisions J7-1, step-05 S2). The list sends no
 `resetProject` or `deleteProject` any more, and neither does the project dashboard (step-05 S4,
-owner 2026-11-13): its Reset opens this window on the dashboard, its project the one row
-(`useDashboardResetDelete`); its Delete (`deleteFromProjectsList`) opens this list on the one-row
-Delete window, since the dashboard closes when its project goes. The list is handed the project the
-way Check for Updates hands it the Updates window: held for a list still loading
-(`takeDeleteRequest`), pushed to one already open (`openDeleteWindow`). Cancelled, the SC stays on
-the list. The work is `services/projectsBatch.ts`,
+owner 2026-11-13): its Reset and Delete open this window on the dashboard, its project the one row
+(`useDashboardResetDelete`). The dashboard stays while the window is open; only once its project is
+actually deleted does closing the window move to this list, and Cancel or a failed delete leaves the
+SC on the dashboard (owner, release test 2.7, 2026-11-16). The work is `services/projectsBatch.ts`,
 reusing the single delete (`runProjectDelete`) and each reset's answered run. Only the
 ticked projects the filter shows count. Rationale and decisions:
 `.rptc/research/projects-bulk-actions/research.md`.

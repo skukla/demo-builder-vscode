@@ -164,6 +164,9 @@ Mark each test's **Result** line: `passed 2026-11-DD`, or `failed 2026-11-DD: wh
 | F135 | 1.7 (2026-11-10) | Owner: no text in the steps may wrap; the columns must be wide enough that wrapping is never needed | Proposed: every row and its second line stay on one line. Each column is at least as wide as the longest line it can show ("Linking product options 12,345 of 12,345", and "Attribute Assign to Set"), and the window takes its width from that when it opens: two columns at large for more than six data types, one column at medium for six or fewer. In an editor too narrow for two such columns, one column from the start. Today the grid splits whatever width it gets (`.work-row-columns`, `minmax(0, 1fr)`) and cuts long lines short Built 2026-11-10: dense columns never narrower than their longest line (`minmax(max-content, 1fr)`), one column at medium for six or fewer or a narrow editor (`runColumns` in `importModalView.ts`, `useRunColumns`). Live check owed. Review fixes 2026-11-10: notes wrap without widening the columns (`contain: inline-size` on dense notes). |
 | F122 live | 1.7 (2026-11-10) | Walk step 2 | Pass: the status read "1,917 of 2,046 products, linking product options" while configurables went in; check all 2,048 match |
 | F136 | 2.7 (2026-11-16) | Owner: Settings showed the Cleanup Behavior dropdown's raw values ("ask", "deleteAll", "localOnly"), which read like code. Seven enum settings had no `enumItemLabels` (updateChannel, logLevel, projectsViewMode, integrationsViewMode, cleanupBehavior, blockLibraries.syncBehavior, dataInstaller.changesOnRemoval), and `ai.permissions` had two labels not in Title Case | Every enum setting now has Title Case labels (stored values unchanged, so saved settings keep working), and the value descriptions read as sentences. Guarded by `tests/sop/setting-enum-labels.test.ts`: one label per value, each Title Case by `firstNonTitleWord`; it failed on all seven and the two labels before the fix |
+| F137 | 2.7 (2026-11-16) | Owner: the Cleanup Behavior setting's description told the SC to tick "Delete Datapack"; the box is "Uninstall Datapack", and the 2.6 and 2.7 test steps named the old box too | The setting's description names **Uninstall Datapack** and says the datapack is never touched by the setting (`40dc2ec7c`); 2.6 and 2.7 name the current box. No source, test or doc names "Delete Datapack" any more (only dated research and history) |
+| F138 | 2.7 (2026-11-16) | Owner: deleting one project waited on "Reading projects" | One project waits on "Reading the project" with its name under it; several keep "Reading projects" (`WAIT_STAGES.readingProject`, `ProjectsBatchModal` `waitOf`; `ProjectsBatchModal-read.test.tsx`) |
+| F139 | 2.7 (2026-11-16) | Owner: the dashboard's Delete moved to the projects list before the dialog, so Cancel left the SC on the list | The dashboard's Delete opens the batch window on the dashboard, as Reset does; closing it moves to the projects list only when the project's row ended deleted, and Cancel or a failed delete leaves the SC on the dashboard (`useDashboardResetDelete`, `useProjectsBatch`'s close reports which rows finished). The hand-over it replaced (`deleteFromProjectsList`, `takeDeleteRequest`, `openDeleteWindow`) is removed. Both paths tested (`useDashboardResetDelete.test.tsx`) |
 
 ## Questions raised
 
@@ -189,7 +192,7 @@ Mark each test's **Result** line: `passed 2026-11-DD`, or `failed 2026-11-DD: wh
 | 2.1 to 2.4 | Projects list: select, reset several, failures, the open project | passed 2026-11-04 |
 | 2.5 | A datapack in a reset batch | passed in part 2026-11-04 and 2026-11-15 (Save Changes As branch still open) |
 | 2.6 | Delete Selected | open |
-| 2.7 | Single delete | passed in part 2026-11-05 |
+| 2.7 | Single delete | passed 2026-11-16 (re-look owed after F137 to F139) |
 | 2.8 | Agent delete | open |
 | 3.1 to 3.5 | Smaller changes since the last walk | passed 2026-11-05 |
 | 4.1 | Merge demo-erp's order-removal branch into `main` | passed 2026-11-16 (checked: `main` holds `88546bc` and `0deea9f`) |
@@ -534,24 +537,32 @@ Demo Builder pack with changes was refused, uninstalling nothing. Still open: th
 
 Use throwaway projects only.
 
-1. Tick two, click **Delete Selected**. Expect "Reading Projects", then **Delete Projects** with a
-   table: **Delete Repository**, **Delete DA.live Site**, **Delete Datapack**.
-2. Expect each column header to tick or untick its column. **Delete Datapack** never ticked to start.
+1. Tick two, click **Delete Selected**. Expect "Reading projects", then **Delete 2 Projects?** with a
+   table: **Delete Repository**, **Delete DA.live Site**, **Uninstall Datapack**.
+2. Expect each column header to tick or untick its column. **Uninstall Datapack** is never ticked
+   to start.
 3. Click **Delete 2 Projects**. Expect **Deleting Projects**, then **Projects Deleted**.
 
 **Result:** open
 
 ### 2.7 Single delete
 
-1. With the setting `demoBuilder.cleanupBehavior` set to `deleteAll`, open a project's **More** menu, **Delete**.
-2. Expect `Delete "<name>"? Its files are removed from this machine. You can also delete what it
-   created online.` with **Delete Repository** and **Delete DA.live Site** ticked,
-   **Delete Datapack** unticked, and a **Delete** button. It asks first.
-3. Make two local projects on the same GitHub repository. Delete one. Expect no
-   **Delete Repository** box.
-4. Batch-delete both. Expect the box back, because both are going.
+Rewritten to today's dialog 2026-11-16.
 
-**Result:** passed in part (owner, 2026-11-05). Steps 1 and 2 (single delete, its boxes under `ask`) and Delete Selected looked at, then redesigned (F19, F20). Steps 3 and 4 (two projects on one repository) counted as covered by tests, not run live (owner, 2026-11-05): Delete Selected drops the repository and site boxes another project still uses (`projectsBatch.test.ts`), the single delete takes the same shared check, and the shared site is pinned in `edsExternalCleanup.test.ts`. A live run would only add the real lookup finding a real second project
+1. With the setting **Cleanup Behavior** (`demoBuilder.cleanupBehavior`) on **Tick Repository and
+   Site**, open the delete from the project dashboard's **Delete**, or from the card's **⋯** menu
+   on the projects list, **Delete**. There is no **More** menu.
+2. Expect "Reading the project" with the project's name, then the title **Delete <name>?** with
+   the amber icon, the line "Project files are removed from this machine. Datapacks stay installed
+   in Commerce unless you uninstall them.", **Delete Repository** and **Delete DA.live Site**
+   ticked, **Uninstall Datapack** unticked, and **Cancel** and **Delete**. It asks first.
+3. From the dashboard: click **Cancel**. Expect to stay on the dashboard. Open it again and delete:
+   expect "Deleting <name>", then "<name> Deleted", and only then the projects list.
+4. Make two local projects on the same GitHub repository. Delete one. Expect no
+   **Delete Repository** box.
+5. Batch-delete both. Expect the box back, because both are going.
+
+**Result:** passed 2026-11-16 (owner): the dialog as step 2 describes it, from the dashboard and the card's menu; three findings filed (F137 to F139), and a re-look owed after their build (step 3, and "Reading the project"). Earlier, passed in part (owner, 2026-11-05). Steps 1 and 2 (single delete, its boxes under `ask`) and Delete Selected looked at, then redesigned (F19, F20). Steps 3 and 4 (two projects on one repository) counted as covered by tests, not run live (owner, 2026-11-05): Delete Selected drops the repository and site boxes another project still uses (`projectsBatch.test.ts`), the single delete takes the same shared check, and the shared site is pinned in `edsExternalCleanup.test.ts`. A live run would only add the real lookup finding a real second project
 
 ### 2.8 Agent delete
 

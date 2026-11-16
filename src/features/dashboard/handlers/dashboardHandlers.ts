@@ -13,7 +13,7 @@
  *                                  wiring) + reAuthenticate/switchOrg
  *   - openUrlHandlers.ts           open-in-browser handlers + getProjectUrls
  *   - panelNavigationHandlers.ts   webview surface swaps (configure,
- *                                  navigateBack, deleteFromProjectsList,
+ *                                  navigateBack,
  *                                  openIntegrations, showProjectDashboard)
  *   - projectManagementHandlers.ts edit/rename/export
  *   - edsContentHandlers.ts        syncStorefront/refreshBlockLibrary/
@@ -46,7 +46,6 @@ import {
 } from './openUrlHandlers';
 import {
     handleConfigure,
-    handleDeleteFromProjectsList,
     handleNavigateBack,
     handleOpenIntegrations,
     handleShowProjectDashboard,
@@ -166,7 +165,6 @@ export {
 } from './openUrlHandlers';
 export {
     handleConfigure,
-    handleDeleteFromProjectsList,
     handleNavigateBack,
     handleOpenIntegrations,
     handleShowProjectDashboard,
@@ -461,7 +459,6 @@ export const dashboardHandlers = defineHandlers({
     // one-row Delete window, since the dashboard closes when its project is deleted.
     prepareProjectsBatch: handlePrepareProjectsBatch,
     runProjectsBatch: handleRunProjectsBatch,
-    deleteFromProjectsList: handleDeleteFromProjectsList,
     editProject: handleEditProject,
     renameProject: handleRenameProject,
     exportProjectSettings: handleExportProjectSettings,

@@ -1,14 +1,16 @@
 /**
  * useDashboardResetDelete — the project dashboard's Reset and Delete (step-05 S4; owner
- * 2026-11-13, P5-Q2).
+ * 2026-11-13, P5-Q2; Delete on the dashboard, owner 2026-11-16, release test 2.7).
  *
- * Reset opens the projects list's batch window here, on the dashboard's own project as its one row
- * (`useProjectsBatch`, `ProjectsBatchModal`): the same window and words as a card's Reset ("Reset
- * Kukla Luma?", "Reset", "Resetting Kukla Luma", "Kukla Luma Reset"). After a run, closing the
- * window keeps the dashboard and asks for its status again.
+ * Both open the projects list's batch window here, on the dashboard's own project as its one row
+ * (`useProjectsBatch`, `ProjectsBatchModal`): the same window and words as a card's Reset or Delete
+ * ("Delete Kukla Luma?", "Delete", "Deleting Kukla Luma", "Kukla Luma Deleted").
  *
- * Delete opens the projects list on its one-row Delete window (`deleteFromProjectsList`): the
- * dashboard closes when its project is deleted, so the window cannot live here.
+ * The dashboard stays while the window is open. Only once its project is actually deleted (its row
+ * ended `done`) does closing the window move to the projects list (`navigateBack`). A cancelled
+ * question, a failed delete, a reset, or a run sent to the background leaves the SC on this
+ * dashboard, which asks for its status again. Delete used to hand over to the projects list before
+ * asking, so Cancel left the SC on the list instead of where they started (owner, 2026-11-16).
  *
  * Both are real cloud operations: the window's red button is the only thing that starts a run.
  *
@@ -18,6 +20,7 @@
 import { useCallback, useMemo } from 'react';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import {
+    type BatchClosed,
     useProjectsBatch,
     type ProjectsBatchControls,
 } from '@/features/projects-dashboard/ui/hooks/useProjectsBatch';
@@ -29,16 +32,6 @@ export interface DashboardResetDelete {
     handleDeleteProject: () => void;
 }
 
-/** After a reset the dashboard stays: its status is asked for again. Module-level, so stable. */
-function refreshStatus(): void {
-    webviewClient.postMessage('requestStatus');
-}
-
-/** The hand-over: the extension opens the projects list on this project's Delete window. */
-function deleteFromProjectsList(): void {
-    webviewClient.postMessage('deleteFromProjectsList');
-}
-
 /**
  * @param name - the name the dashboard shows, which titles the window
  * @param path - the project's folder now (a rename moves it), or undefined before it is known
@@ -48,13 +41,27 @@ export function useDashboardResetDelete(
     name: string,
     path: string | undefined,
 ): DashboardResetDelete {
-    const batch = useProjectsBatch(refreshStatus);
+    const afterRun = useCallback(
+        ({ action, done }: BatchClosed): void => {
+            if (action === 'delete' && path !== undefined && done.includes(path)) {
+                // The project is gone: the list is the only screen left to show.
+                webviewClient.postMessage('navigateBack');
+                return;
+            }
+            webviewClient.postMessage('requestStatus');
+        },
+        [path],
+    );
+    const batch = useProjectsBatch(afterRun);
     const { start } = batch;
     const handleResetProject = useCallback((): void => {
         if (path) start('reset', [{ path, name }]);
     }, [start, path, name]);
+    const handleDeleteProject = useCallback((): void => {
+        if (path) start('delete', [{ path, name }]);
+    }, [start, path, name]);
     return useMemo(
-        () => ({ batch, handleResetProject, handleDeleteProject: deleteFromProjectsList }),
-        [batch, handleResetProject],
+        () => ({ batch, handleResetProject, handleDeleteProject }),
+        [batch, handleResetProject, handleDeleteProject],
     );
 }

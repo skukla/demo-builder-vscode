@@ -27,7 +27,6 @@ import {
     handleOpenAiForProject,
     handleSetProjectPinned,
 } from './dashboardHandlers';
-import { handleTakeDeleteRequest } from './deleteWindowRequest';
 import { handlePrepareProjectsBatch, handleRunProjectsBatch } from './projectsBatchHandlers';
 import { handleSetViewModeOverride } from '@/core/handlers/viewModeHandler';
 import {
@@ -66,7 +65,6 @@ export const projectsListHandlers = defineHandlers({
     runProjectsBatch: handleRunProjectsBatch,
     // A screen opened by the project dashboard's Delete asks, once mounted, which project's
     // Delete window to open (step-05 S4).
-    takeDeleteRequest: handleTakeDeleteRequest,
 
     // Demo control handlers
     startDemo: handleStartDemo,

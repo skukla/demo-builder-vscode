@@ -3,7 +3,6 @@
  *
  * Tests for action handlers that delegate to commands or open external resources:
  * - handleConfigure: opens project configuration UI
- * - handleDeleteFromProjectsList: hands Delete over to the projects list (step-05 S4)
  * - handleOpenBrowser: opens demo in browser
  */
 
@@ -18,7 +17,6 @@ jest.mock('@/core/utils/browserUtils', () => ({
 import * as vscode from 'vscode';
 import {
     handleConfigure,
-    handleDeleteFromProjectsList,
     handleEditProject,
     handleOpenAdminPanel,
     handleOpenBrowser,
@@ -97,36 +95,6 @@ describe('Dashboard Action Handlers', () => {
 
             expect(result).toEqual({ success: true });
             expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.configureProject', '/path/to/project');
-        });
-    });
-
-    // The dashboard's Delete (owner, 2026-11-13, P5-Q2): the projects list opens on its one-row
-    // Delete window for this project. Nothing is deleted here; the window asks first.
-    describe('handleDeleteFromProjectsList', () => {
-        it("opens the projects list on this project's Delete window, landing on the list", async () => {
-            const { mockContext, mockProject } = setupMocks();
-
-            const result = await handleDeleteFromProjectsList(mockContext);
-
-            expect(result).toEqual({ success: true });
-            expect(mockContext.stateManager.clearProject).toHaveBeenCalledTimes(1);
-            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.showProjectsList', {
-                deleteProject: mockProject.path,
-            });
-        });
-
-        it('should return error when no project available, opening nothing', async () => {
-            const { mockContext } = setupMocks();
-            mockContext.stateManager.getCurrentProject = jest.fn().mockResolvedValue(null);
-
-            const result = await handleDeleteFromProjectsList(mockContext);
-
-            expect(result).toEqual({
-                success: false,
-                error: 'No project found to delete',
-                code: ErrorCode.PROJECT_NOT_FOUND,
-            });
-            expect(mockExecuteCommand).not.toHaveBeenCalled();
         });
     });
 

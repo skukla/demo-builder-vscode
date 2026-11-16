@@ -234,7 +234,7 @@ function ProjectsDashboardApp() {
     const updates = useUpdatesModal(refreshList);
     // Reset and Delete, one project's from its card or several selected: one window, run row by row
     // (owner, 2026-11-04; step-05 S2). The project dashboard's Delete arrives on it (S4).
-    const { batch, listBatch, onResetProject, onDeleteProject } = useListBatch(refreshList, projects);
+    const { batch, listBatch, onResetProject, onDeleteProject } = useListBatch(refreshList);
 
     // Copy from a project: the modal asks which one, then the wizard opens with
     // its settings (picker-to-modal).

@@ -4,7 +4,7 @@
  * Project-level actions from the dashboard: edit, rename, and the headless
  * settings export behind the export_project_settings MCP tool. Reset and delete
  * left for the projects list's batch window (step-05 S4: `prepareProjectsBatch`,
- * `runProjectsBatch`, `deleteFromProjectsList`). Extracted from
+ * `runProjectsBatch`). Extracted from
  * `dashboardHandlers.ts` for the 500-line handler cap; the parent re-exports
  * everything here so import sites are unchanged.
  */

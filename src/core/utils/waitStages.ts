@@ -56,6 +56,8 @@ export const WAIT_STAGES = {
         detail: 'From each selected project',
     },
     readingProjects: { label: 'Reading projects', expectation: FEW_SECONDS },
+    // One project is read as one (owner, release test 2.7, 2026-11-16); its name goes on the line under.
+    readingProject: { label: 'Reading the project', expectation: FEW_SECONDS },
     readingErpStatus: { label: 'Reading the ERP status', expectation: FEW_SECONDS },
     checkingDemoSetup: { label: 'Checking the demo setup', expectation: FEW_SECONDS },
     // The first read of an org's APIs is slow on Adobe's side (the old helper text said so).

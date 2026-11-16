@@ -150,13 +150,21 @@ function useRowPushes(): { order: string[]; statuses: BatchRowStatuses; timings:
     return { order, statuses, timings, clear };
 }
 
+/** How a run stood when its window closed: which projects had finished, by path. */
+export interface BatchClosed {
+    action: ProjectsBatchAction;
+    /** The rows that ended `done`. A row still running, failed or skipped is not here. */
+    done: readonly string[];
+}
+
 /**
  * The batch window's controls.
  *
- * @param onClosedAfterRun - called when a window that ran is closed, to refresh the projects
+ * @param onClosedAfterRun - called when a window that ran is closed, with which rows finished: the
+ *   list refreshes; the project dashboard leaves only once its own project was deleted
  * @returns the view and its actions
  */
-export function useProjectsBatch(onClosedAfterRun: () => void): ProjectsBatchControls {
+export function useProjectsBatch(onClosedAfterRun: (closed: BatchClosed) => void): ProjectsBatchControls {
     const [view, setView] = useState<BatchView>(CLOSED);
     const [runs, setRuns] = useState(0);
     const choices = useBatchChoices();
@@ -226,10 +234,11 @@ export function useProjectsBatch(onClosedAfterRun: () => void): ProjectsBatchCon
                 };
                 webviewClient.postMessage('backgroundOperation', request);
             }
-            onClosedAfterRun();
+            const done = view.rows.map((row) => row.path).filter((path) => statuses[path]?.state === 'done');
+            onClosedAfterRun({ action: view.action, done });
         }
         setView(CLOSED);
-    }, [view, progress, answer, onClosedAfterRun]);
+    }, [view, progress, answer, onClosedAfterRun, statuses]);
 
     return useMemo(
         () => ({ view, choices, start, run, close, order, statuses, timings, progress, answer, onTyped, runs }),
