@@ -937,6 +937,14 @@ check says so and names the file.
 > Enforced by `tests/sop/ui-label-case.test.ts`, which reads every webview bundle with the compiler,
 > holds strings it cannot read to a pin, and proves itself on planted defects.
 
+> **Convention.** A setting with a fixed list of values names each value in the Settings dropdown:
+> every `enum` in `package.json`'s settings has `enumItemLabels`, one per value, in Title Case. The
+> stored values never change, so saved settings keep working.
+> *Why:* VS Code shows the raw value when a label is missing, so Settings showed Cleanup Behavior as
+> "ask", "deleteAll", "localOnly", which read like code (owner, release test 2.7, 2026-11-16).
+> Enforced by `tests/sop/setting-enum-labels.test.ts`, which reads every setting and checks each
+> label with the same Title Case check as the UI labels.
+
 > **Convention.** A datapack has one set of words, and every screen takes them from
 > `features/data-installer/datapackWords.ts`: it is **installed** and **uninstalled**, never
 > imported or removed; the trial run is **Dry Run**; the settings it carries are its **Store
@@ -1995,11 +2003,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 22 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 69 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 70 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, agent coverage (import cycles moved to an enforcer suite on 2026-10-08)
 
-**This handbook states 143 conventions. 140 of them are enforced; 3 are not.**
+**This handbook states 144 conventions. 141 of them are enforced; 3 are not.**
 
 The last one to get there was "vendor CSS sits in the lowest cascade layer", and it was
 outstanding because it was **not yet true**: `@layer vendor` existed in no bundle, so a
