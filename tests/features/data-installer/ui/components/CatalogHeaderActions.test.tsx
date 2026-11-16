@@ -86,14 +86,16 @@ describe("in a project's Datapacks", () => {
         expect(save.onSaveAsNew).not.toHaveBeenCalled();
     });
 
-    it("is Save ▾ on the SC's own datapack, with Save and Save As New", async () => {
-        const save = saveActions('save-menu');
+    // Owner walk, 2026-11-16 (U2.2): the item names the datapack it saves into, so a selected card
+    // cannot be taken for the target.
+    it("is Save ▾ on the SC's own datapack, with Save to that datapack and Save As New", async () => {
+        const save = { ...saveActions('save-menu'), into: 'Release Save Test' };
         renderHeader(save);
 
         expect(screen.getByRole('button', { name: 'Save' })).toHaveTextContent('Save▾');
-        expect(menuItemsOf('Save')).toEqual(['Save', 'Save As New']);
+        expect(menuItemsOf('Save')).toEqual(['Save to Release Save Test', 'Save As New']);
 
-        await press(screen.getByRole('menuitem', { name: 'Save' }));
+        await press(screen.getByRole('menuitem', { name: 'Save to Release Save Test' }));
         expect(save.onSave).toHaveBeenCalledTimes(1);
         await press(screen.getByRole('menuitem', { name: 'Save As New' }));
         expect(save.onSaveAsNew).toHaveBeenCalledTimes(1);

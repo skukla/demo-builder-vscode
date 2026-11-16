@@ -8,7 +8,7 @@
  * change while it is on screen (7b). Until the project and the catalog have answered it is the
  * header's waiting button (disabled, a spinner, no words, as its Refresh is while it reads). Then:
  * Create with no datapack, or one with no install record (step-07 P3); Save ▾ (Save, Save As New)
- * on the SC's own; a plain Save As New on someone else's. Each choice opens
+ * on the SC's own, Save naming the datapack it writes into; a plain Save As New on someone else's. Each choice opens
  * today's flow, through the handlers it is given.
  *
  * Install from File adds the file's datapack to My Datapacks, then, after a clean load, opens the
@@ -49,6 +49,8 @@ export interface HeaderSaveActions {
     onSave: () => void;
     /** Save As New: a new datapack of the SC's from the one the project holds. */
     onSaveAsNew: () => void;
+    /** The datapack Save writes into, by name: its menu item says so (owner walk, 2026-11-16). */
+    into?: string;
 }
 
 export interface CatalogHeaderActionsProps {
@@ -70,7 +72,7 @@ export interface CatalogHeaderActionsProps {
 
 /** The save button, as its state says (`headerSave`). */
 function SaveButton({ save }: { save: HeaderSaveActions }): React.JSX.Element {
-    const { state, onCreate, onSave, onSaveAsNew } = save;
+    const { state, onCreate, onSave, onSaveAsNew, into } = save;
     const pick = useCallback((key: React.Key): void => (key === 'as-new' ? onSaveAsNew() : onSave()), [onSave, onSaveAsNew]);
     if (state === 'pending') {
         return (
@@ -82,7 +84,7 @@ function SaveButton({ save }: { save: HeaderSaveActions }): React.JSX.Element {
     if (state === 'save-menu') {
         return (
             <CardActionsMenu label="Save" ariaLabel="Save" icon={renderMenuIcon('capture')} onAction={pick}>
-                {[<Item key="save">Save</Item>, <Item key="as-new">Save As New</Item>]}
+                {[<Item key="save">{into ? `Save to ${into}` : 'Save'}</Item>, <Item key="as-new">Save As New</Item>]}
             </CardActionsMenu>
         );
     }

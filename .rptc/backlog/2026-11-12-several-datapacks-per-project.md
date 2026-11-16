@@ -80,6 +80,13 @@ Read from the local clone; a fresh fetch was refused by the org's IP allow list.
 ## Design questions to walk first
 
 - With two of the SC's own datapacks installed, which one does the header's Save save into?
+- Where the demo's own datapacks live on the Datapacks screen (owner walk, 2026-11-16, U2.2). The
+  screen mixes "this demo's data" (the installed card) and "the library" (every card, each
+  selectable), and a header Save sits between them: the owner could not tell whether Save meant the
+  selected card. The direction agreed: show the demo's datapacks apart from the library, with their
+  actions on them (Save, Save As New, Update, Uninstall), and Create in the header for a new
+  datapack from the store. Prototype it and walk it before building. beta.153 only names the
+  target in the menu ("Save to Release Save Test").
 - How Install picks the website or store view when the project has more than one.
 - What "Restore" and "Undo Last Save" mean with several installed: per datapack, surely, but
   reached from where.

@@ -212,6 +212,7 @@ Mark each test's **Result** line: `passed 2026-11-DD`, or `failed 2026-11-DD: wh
 | F182 | U2.1 step 5 (2026-11-16) | The install's run opened on "Starting" alone | **Fixed** with tests: before the first step reports, the window says the job ("Installing in Commerce") over the installer's words ("Preparing to install", "Preparing to update", "Preparing to save", else "Preparing"); "Starting" is gone from every run window. **Owner must re-look** |
 | F183 | U2.2 step 1 (2026-11-16) | After installing Release Save Test, the Datapacks header still read Create, so there was no Save | **Fixed** with a test: the install created nothing (the datapack's one category was already in the store, since it was saved from it), and the engine wrote its install record only when it created something. No record reads as "Demo Builder never installed it". An install that succeeds now always leaves its record, empty or not. Live check: install again, then the header reads Save |
 | F184 | U2.2 step 1 (2026-11-16) | A failed install's reason was cut to one line and could not be read | **Fixed** with tests (owner's go): a problem line stays one line while anything in the run is working, so the window never shifts, and shows whole, wrapping, once the run has ended. In the import window, the progress window and the several-projects run. Replaces the one-line rule of 2026-11-11 for ended runs |
+| F185 | U2.2 step 2 (2026-11-16) | It was not obvious that the header's Save saves into the installed datapack rather than the selected card | **Fixed** with tests (owner's go): the menu item names its target, "Save to Release Save Test". The bigger change (the demo's datapacks shown apart from the library, their actions on them) goes to the several-datapacks backlog item, to prototype and walk first |
 
 ## Questions raised
 
@@ -356,7 +357,7 @@ U2.1 notes (2026-11-16). Step 4 passed: Creating Release Save Test, then Release
 1. In the Admin, rename ZZ Customer Picks to "ZZ Customer Picks 2". In the Datapacks header, click
    **Save**, then **Save** in the window. Expect "Saved to Release Save Test".
 
-U2.2 notes (2026-11-16). Reached step 1: the header still read Create after U2.1's install (finding F183, fixed). Steve installs Release Save Test again, then repeats step 1. The second install refused: the category had already been renamed to "ZZ Customer Picks 2", so the datapack's "ZZ Customer Picks" matched nothing and its URL key clashed (right, my step order). Its reason was unreadable (finding F184, fixed). Steve renames it back, then installs.
+U2.2 notes (2026-11-16). Reached step 1: the header still read Create after U2.1's install (finding F183, fixed). Steve installs Release Save Test again, then repeats step 1. The second install refused: the category had already been renamed to "ZZ Customer Picks 2", so the datapack's "ZZ Customer Picks" matched nothing and its URL key clashed (right, my step order). Its reason was unreadable (finding F184, fixed). Steve renamed it back and installed: the header read Save (F183 proven live).
 
 **Test U2.3: Another demo picks up the newer save** (1.7 steps 3 to 6, 1.11 step 4)
 1. Create a project named "Scratch 1028 B" on the test website and the test store view, picking

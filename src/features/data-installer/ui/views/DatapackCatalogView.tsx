@@ -195,8 +195,8 @@ export function DatapackCatalogView({ library = false, clearArrival }: { library
     const saveState = headerSave({ projectAnswered, catalogAnswered: settled, held, installedAt, heldInCatalog });
     const save = useMemo(
         (): HeaderSaveActions | undefined =>
-            library ? undefined : { state: saveState, onCreate: createDatapack, onSave: saveDemo, onSaveAsNew: saveDemoAsNew },
-        [library, saveState, createDatapack, saveDemo, saveDemoAsNew],
+            library ? undefined : { state: saveState, onCreate: createDatapack, onSave: saveDemo, onSaveAsNew: saveDemoAsNew, into: heldInCatalog?.displayName },
+        [library, saveState, createDatapack, saveDemo, saveDemoAsNew, heldInCatalog],
     );
 
     const retryDetail = useCallback((): void => {
