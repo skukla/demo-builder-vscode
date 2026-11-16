@@ -226,7 +226,7 @@ export function phaseLine(message: string): string {
  */
 function landOutcome(title: string, toolName: string, outcome: AgentOutcome, logger: Logger): void {
     if (outcome.kind === 'done') {
-        vscode.window.setStatusBarMessage(`$(check) ${title} — done`, TIMEOUTS.STATUS_BAR_SUCCESS);
+        vscode.window.setStatusBarMessage(`$(check) ${agentNotice(title)} — done`, TIMEOUTS.STATUS_BAR_SUCCESS);
         return;
     }
     if (outcome.kind === 'askedAgent') {

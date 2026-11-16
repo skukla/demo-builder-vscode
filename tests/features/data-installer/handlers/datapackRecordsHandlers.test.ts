@@ -17,7 +17,8 @@ const ITEMS = {
         { product: { sku: 'BD-CENTRIFUGE', name: 'Benchtop Centrifuge' } },
         { product: { sku: 'BD-GLOVES', name: 'Nitrile Gloves' } },
     ],
-    categories: [{ category: { name: 'Centrifuges', path: 'Bodea Catalog/Lab Equipment' } }],
+    // As a pack holds them (`categoriesKind.ts`): an object, not a list (walk F148).
+    categories: { categories: [{ category: { name: 'Centrifuges', path: 'Bodea Catalog/Lab Equipment' } }] },
     coupons: [{ coupon: { code: 'SAVE10' } }],
     // A kind that keeps no record has no name to show.
     store_config: [{ path: 'general/locale/code', value: 'en_US' }],

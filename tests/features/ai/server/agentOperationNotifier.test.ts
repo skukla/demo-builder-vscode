@@ -159,6 +159,20 @@ describe('createAgentOperationNotifier', () => {
         expect(mockShowWarningMessage).not.toHaveBeenCalled();
     });
 
+    // Walk F149 (2026-11-16): an agent's Commerce write flashed "Changing Commerce records — done"
+    // while the SC ran a datapack check, and read as the check's. The flash opens "Agent:", as
+    // every agent notice does (`agentNotice.ts`).
+    it('says the finished call was the agent\'s', async () => {
+        const notifier = createAgentOperationNotifier(logger);
+
+        await notifier('sync_storefront', async () => ({ ok: true }));
+
+        expect(mockSetStatusBarMessage).toHaveBeenCalledWith(
+            '$(check) Agent: Pushing the storefront to GitHub — done',
+            expect.any(Number)
+        );
+    });
+
     // VS Code renders "title: phase", so a colon in the title made two
     // (owner, 2026-09-19).
     it('titles the card without a colon or ellipsis of its own', async () => {

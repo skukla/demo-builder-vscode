@@ -172,6 +172,11 @@ Mark each test's **Result** line: `passed 2026-11-DD`, or `failed 2026-11-DD: wh
 | F142 | 1.8 (2026-11-16) | From 07:24 every datapack library read failed with "missing x-gw-ims-org-id header", and Steve's own Datapacks screen hit it opening Frescopa. Cause: Adobe's Console API rejects the stored token ("Oauth token is not valid", 401013) while `get_auth_status` still reports Adobe signed in (it checks only the expiry). The org lookup then fails, `serviceOrgCode` (`dataInstallerHandlers.ts:220`) goes on with no org, and the library refuses with a header message that names neither the sign-in nor what to do | Open. Steve signs in again to clear it now. The fix: when the org list cannot be read because the sign-in is refused, say "Your Adobe sign-in is no longer valid. Sign in again." instead of sending a request without an org; and the sign-in check should treat a token Adobe refuses as signed out |
 | F143 | Opening Scratch 1028 (2026-11-16) | A browser sign-in opened with no question first. At 07:21:50 the stored token had two minutes left and the extension called it valid. The dashboard's mesh check then ran `aio api-mesh describe`, and the Adobe CLI, which treats any token with under ten minutes left as no token (aio-lib-ims `getTokenIfValid`), signed in through the browser on its own. The new sign-in left the Console API holding the old token, which is how F142 began | Fixed: the extension now calls a token valid only with more than the CLI's ten minutes left (`TIMEOUTS.AUTH.CLI_MIN_TOKEN_LIFE`), and a cached "signed in" stops at the same point, so the usual Sign In prompt asks first. Steve re-checks by opening a project when the token is near its end |
 | F144 | 1.4 step 2 (2026-11-16) | Opening the Frescopa card on scratch-1028's Datapacks screen showed "Data Installer Sign-In Failed" with the store's raw reply ("missing x-gw-ims-org-id header") and "Check the Data Installer address in settings". Three things were wrong. The flyout never called the Data Installer: a library pack is read from Demo Builder's own datapack library, but every refused sign-in was worded as the Data Installer's. The header was missing because the org lookup failed (Adobe's Console client still held the sign-in the Adobe CLI had replaced, F143) and the request was then sent with no org. And the advice named a setting with no way to open it: the screens' Open Settings button existed but no screen ever passed it in | Fixed. The org lookup starts the Console client again from the stored sign-in and asks once more; if Adobe still does not answer, the request is not sent and the message says "Adobe didn't confirm your sign-in. Sign in to Adobe again, then retry." A refused sign-in is worded per store, with no raw reply on screen. Each failure that names a setting carries that setting's id and shows Open Settings, which opens it; `tests/sop/settings-message-opens-setting.test.ts` fails a message that says "in Settings" with no way to open it. Steve redoes 1.4 from step 2 |
+| F145 | 1.4 redo (2026-11-16) | Test 1.4's steps were out of date: step 2 said "import the Frescopa pack onto the test store view". Scratch 1028 holds We.Cafe, so the flyout's button is **Switch to Frescopa** and its question **Switch to Frescopa?**; a datapack installs onto a website, not a store view; and back to zero named the retired Import and Remove All Data | Fixed: 1.4 rewritten to today's screens, labels read from the source (`PackActions.tsx`, `SummaryPhase.tsx`, `packRootStep.ts`, `PackSetupStepLine.tsx`), with what the Switch question shows and what Switch does |
+| F146 | 1.4 redo (2026-11-16) | **Switch to Frescopa?** showed only "Products 25, Categories 10" with Review Records, Cancel and Switch. Steve could not tell what the numbers were or that Switch also uninstalls We.Cafe, and asked whether to click. The numbers are what Frescopa adds (the install check's table, `useDatapackJob.ts`); the window has no opening line by design (J2-3, J8-1) | Design question for Steve. Proposed line under the title: "Uninstalls We.Cafe from <website>, then installs Frescopa. Frescopa adds:" over the same table |
+| F147 | 1.4 redo (2026-11-16) | Review Records, Products: one column headed "Name", holding csm5122, hbmr211, morningmuselightroastpod. Those are SKUs: the column shows each record's key (`keyOf`, `packForm.ts:183`), which for a product is its SKU, as the pack stores it (lowercased by the export). The same pane serves Install, Save, Update and Clear (`TypeRail.tsx:88`), always headed "Name" whatever the key is (a SKU, an attribute code, a coupon code). Products appear in three places: this pane (one column, the SKU), Assign ERP Products (`AssignProductList.tsx`: SKU, Name, Category, Owner) and Create's product picker (`storeItems.ts:91`: the name, else the SKU, with the SKU beside it) | Design question for Steve. Proposed shared set for any products grid: **SKU** and **Name** always, then the columns that screen needs (Category on Assign ERP Products, Owner there too). For Review Records that means the records read returns each product's name with its SKU, and the pane heads its column by what it holds ("SKU" and "Name" for products, "Code" for attributes and coupons) instead of "Name" for everything |
+| F148 | 1.4 redo (2026-11-16) | Review Records, Categories: the rail said 10, the table listed nothing. The rail counts the install check's rows, which read a pack's categories as `{ root_category, categories: [...] }` (`storeCopies.ts` `rowsOf`); the list came from `recordNames` (`packRecords.ts`), which skipped any data type that was not a plain list. Any other kind a pack holds as an object (stock, B2B assignments) was missing from the list the same way | Fixed: `recordNames` reads rows as the install does (`rowsByKey`), and shows the root by its own name instead of the internal "(root)". Categories now list as their place in the tree ("Coffee/Pods"), not as a tree: Clear draws a tree, Install and Save do not; drawing one there is a small follow-up if Steve wants it |
+| F149 | 1.4 redo (2026-11-16) | After the Switch check, the status bar read "Changing Commerce records — done" though nothing had been installed. It was not the check: it was the agent (this thread) writing to the test store for the swatch fix (a throwaway swatch attribute and two products, 08:42 to 08:48, all deleted; and the blank `color` option removed at 08:28). The flash had no "Agent:", against the rule every agent notice follows (`agentNotice.ts`), so it read as the check's. The agent's writes also overlapped Steve's run: his check at 08:43:55, his switch at 08:48:18, the throwaway products deleted at 08:48:40; they had their own SKUs and touched no Frescopa or We.Cafe record | Fixed: the flash now reads "Agent: Changing Commerce records — done" (`agentOperationNotifier.ts`). And no more agent writes to the test store while Steve is walking a test |
 
 ## Questions raised
 
@@ -229,23 +234,31 @@ Needs a store without Bodea's data already on it.
 ### 1.4 Shared root: the one Admin step (live test 3)
 
 In real Chrome. The step only appears when the pack keeps its own root and the store's root is
-shared with another store, on the pack's first install there.
+shared with another store, on the pack's first install there. Rewritten 2026-11-16 to today's
+screens (walk F145): Scratch 1028 already holds We.Cafe, so installing Frescopa is a switch, and a
+datapack installs onto a website, not a store view.
 
 1. Admin change 1: in **Stores > All Stores > Tailspin Test Store**, set Root Category to
    `Tailspin Catalog` (id 119, shared with the real Tailspin store), then **Save Store**.
-2. In Datapacks, import the Frescopa pack onto the test store view.
-3. Expect the question **One Step in the Admin to Show <root>'s Categories**, with **Open Admin**,
-   **I've done it** and **Skip for Now**.
-4. Click **I've done it** without changing anything. Expect it to ask again, starting
+2. In Scratch 1028's Datapacks, open the **Frescopa** card. Its flyout's main button reads
+   **Switch to Frescopa**, because the project holds We.Cafe. Click it.
+3. Expect the question **Switch to Frescopa?** over a table of what Frescopa adds, by data type
+   (on 2026-11-16: Products 25, Categories 10), with **Review Records**, **Cancel** and **Switch**.
+   Switch uninstalls We.Cafe from the test website first, then installs Frescopa there. If you
+   changed anything We.Cafe installed, **Save Your Changes First?** comes next.
+4. Click **Switch**. Expect the question **One Step in the Admin to Show <root>'s Categories**,
+   with **Open Admin**, **I've done it** and **Skip for Now**.
+5. Click **I've done it** without changing anything. Expect it to ask again, starting
    "<store> still uses the root category …".
-5. Click **Skip for Now**. Expect the install to finish with "One step is left in the Admin: …".
-6. Open the Frescopa card's flyout. Expect the line **1 step left in the Admin** with **Show Step**.
-7. Click **Show Step**, then **Open Admin**. Expect the Admin to open.
-8. Admin change 2: set the store's Root Category to Frescopa's root, then **Save Store**.
-9. Back in the dialog, click **Check**. Expect "<store> now shows the categories under <root>."
-   and the flyout line gone.
-10. Back to zero: **Import**, **Remove All Data**, confirm. Set the root back to Default Category
-    (id 2) and **Save Store**. Expect no ZZ categories.
+6. Click **Skip for Now**. Expect the run to finish with "One step is left in the Admin: …".
+7. Open the Frescopa card's flyout. Expect the line **1 step left in the Admin** with **Show Step**.
+8. Click **Show Step**, then **Open Admin**. Expect the Admin to open.
+9. Admin change 2: set the store's Root Category to Frescopa's root, then **Save Store**.
+10. Back in the dialog, click **Check**. Expect "<store> now shows the categories under <root>."
+    and the flyout line gone.
+11. Back to zero: open the **We.Cafe** card and click **Switch to We.Cafe**, then **Switch**. In the
+    Admin, set the store's Root Category back to Default Category (id 2) and **Save Store**.
+    Expect no Frescopa categories left on the test website.
 
 **Result:** open
 
