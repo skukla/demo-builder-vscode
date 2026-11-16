@@ -24,6 +24,7 @@ import {
     sent,
     settle,
     mockRequest,
+    shownStep,
 } from './DatapackJobWindow.testUtils';
 import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -270,7 +271,7 @@ describe('Save Your Changes First?', () => {
         expect(screen.queryByRole('button', { name: 'Close' })).toBeNull();
     });
 
-    it('Save and Switch keeps them, shows the save step from the press, and asks for the tip', async () => {
+    it('Save and Switch keeps them, shows the save starting from the press, and asks for the tip', async () => {
         holding(CHANGED_MINE);
         answer({ target: TARGET, changes: { success: true, data: CHANGED_MINE } }, [
             'start-datapack-import',
@@ -286,8 +287,7 @@ describe('Save Your Changes First?', () => {
         });
         expect(sent('start-datapack-import')).not.toHaveProperty('saveAs');
         expect(await heading('Switching to Bodea')).toBeInTheDocument();
-        expect(screen.getAllByText('Save Your Changes').length).toBeGreaterThan(0);
-        expect(screen.getAllByText('Starting').length).toBeGreaterThan(0);
+        expect(shownStep().getByText('Starting')).toBeInTheDocument();
         expect(tipCalls()).toStrictEqual([[TIP]]);
     });
 
@@ -524,7 +524,7 @@ describe('another version of the held datapack', () => {
         expect(sends('reset-datapack')).toBe(0);
     });
 
-    it('Save and Install draws Save Your Changes from the press', async () => {
+    it('Save and Install shows the save starting from the press', async () => {
         holdingMain(CHANGED_MINE, {}, ['start-datapack-import']);
         await openVersion();
         await heading('Install Bodea, eds-compatible?');
@@ -534,7 +534,6 @@ describe('another version of the held datapack', () => {
 
         expect(sent('start-datapack-import')).toMatchObject({ changes: 'keep' });
         expect(await heading('Installing Bodea, eds-compatible')).toBeInTheDocument();
-        expect(screen.getAllByText('Save Your Changes').length).toBeGreaterThan(0);
-        expect(screen.getAllByText('Starting').length).toBeGreaterThan(0);
+        expect(shownStep().getByText('Starting')).toBeInTheDocument();
     });
 });

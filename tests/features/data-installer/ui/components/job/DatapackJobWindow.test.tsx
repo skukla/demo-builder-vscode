@@ -22,6 +22,7 @@ import {
     sends,
     sent,
     settle,
+    shownStep,
     PROJECT_SCOPE,
 } from './DatapackJobWindow.testUtils';
 import { MATCHING_PREVIEW } from '../../../../../helpers/changePreviewFixtures';
@@ -196,14 +197,15 @@ describe('Install', () => {
         expect(sent('start-datapack-import')).not.toHaveProperty('storeCode');
     });
 
-    it('runs on its steps while the job runs, with Run in Background as the way out, which hands it over', async () => {
+    it('runs on the centred lines while the job runs, with Run in Background as the way out, which hands it over', async () => {
         answer({ statusAfter: record() });
         const { onClose } = await openOnSummary();
 
         await press(button('Install'));
 
         expect(await heading('Installing Bodea')).toBeInTheDocument();
-        expect(screen.getByTestId('import-run')).toBeInTheDocument();
+        expect(shownStep().queryByTestId('import-run')).toBeNull();
+        expect(shownStep().getByText('Starting')).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Close' })).not.toBeInTheDocument();
         await press(button('Run in Background'));
         expect(mockPostMessage.mock.calls).toStrictEqual([
@@ -389,7 +391,7 @@ describe('a window opened on a running job', () => {
         await settle();
 
         expect(await heading('Restoring My Luma')).toBeInTheDocument();
-        expect(screen.getByTestId('import-run')).toBeInTheDocument();
+        expect(shownStep().getByText('Starting')).toBeInTheDocument();
         expect(sends('preview-datapack-changes')).toBe(0);
         expect(button('Run in Background')).toBeInTheDocument();
     });

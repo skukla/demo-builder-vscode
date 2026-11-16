@@ -1,9 +1,9 @@
 /**
  * Uninstall in the job window (step 03, S7; decisions J5-1, J5-2): the check, then "Uninstall My
  * Luma?" over what its install record lists, counted by type, with a red Uninstall and Cancel (rule
- * 20); with unsaved changes "Save Your Changes First?" next, its verb Uninstall; then the run drawn
- * as steps (Save Your Changes when saving first, then Uninstall My Luma), titled "Uninstalling My
- * Luma"; a clean end "My Luma Uninstalled", which closes itself; a stop "Couldn't Uninstall My Luma"
+ * 20); with unsaved changes "Save Your Changes First?" next, its verb Uninstall; then the run on
+ * the centred lines (the save's stage when saving first, then the uninstall's), titled "Uninstalling
+ * My Luma"; a clean end "My Luma Uninstalled", which closes itself; a stop "Couldn't Uninstall My Luma"
  * on its steps with Retry. The title names no store (the owner's J5-1; plan Q7).
  *
  * Ported from `ImportDatapackModal-removal.test.tsx`, `-decisions`, `.lifecycle` and
@@ -27,6 +27,7 @@ import {
     sends,
     sent,
     settle,
+    shownStep,
 } from './DatapackJobWindow.testUtils';
 import { webviewClientHandlers } from '../../../../../helpers/webviewClientMock';
 import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
@@ -66,6 +67,9 @@ const UNINSTALLING = record({
     operation: 'reset',
     purpose: 'uninstall',
 });
+
+/** The uninstall stopped: how it ended keeps its rows. */
+const STOPPED = { ...UNINSTALLING, outcome: 'error' as const, reason: 'Commerce refused the category Gear.' };
 
 const button = (name: string) => screen.getByRole('button', { name });
 const heading = (name: string) => screen.findByRole('heading', { name });
@@ -363,7 +367,7 @@ describe('Save Your Changes First?', () => {
         expect(sends('reset-datapack')).toBe(0);
     });
 
-    it('Save and Uninstall keeps them, and the run draws Save Your Changes from the press, then Uninstall My Luma', async () => {
+    it('Save and Uninstall keeps them, and the run shows the save starting from the press', async () => {
         await asked(CHANGED_MINE, {}, ['reset-datapack']);
 
         await press(button('Save and Uninstall'));
@@ -371,15 +375,11 @@ describe('Save Your Changes First?', () => {
         expect(sent('reset-datapack')).toMatchObject({ confirm: true, changes: 'keep' });
         expect(sent('reset-datapack')).not.toHaveProperty('saveAs');
         expect(await heading('Uninstalling My Luma')).toBeInTheDocument();
-        const run = screen.getByTestId('import-run');
-        const labels = within(run)
-            .getAllByText(/^(Save Your Changes|Uninstall My Luma)$/u)
-            .map((el) => el.textContent);
-        expect(labels).toStrictEqual(['Save Your Changes', 'Uninstall My Luma']);
-        expect(within(run).getByText('Starting')).toBeInTheDocument();
+        expect(shownStep().queryByTestId('import-run')).toBeNull();
+        expect(shownStep().getByText('Starting')).toBeInTheDocument();
     });
 
-    it("says each stage of the save on its row, and ignores another operation's progress", async () => {
+    it("says each stage of the save, and ignores another operation's progress", async () => {
         await asked(CHANGED_MINE, {}, ['reset-datapack']);
         await press(button('Save and Uninstall'));
         const push = (id: string, stage: string) =>
@@ -390,30 +390,31 @@ describe('Save Your Changes First?', () => {
         push(DATAPACK_OPERATION_ID, 'Saving to the library');
         push('something-else', 'Deploying the mesh');
 
-        const run = screen.getByTestId('import-run');
-        expect(within(run).getByText('Saving to the library').closest('.work-row')).toHaveTextContent('Save Your Changes');
+        expect(shownStep().getByText('Saving to the library')).toBeInTheDocument();
         expect(screen.queryByText('Deploying the mesh')).toBeNull();
     });
 
-    it('once its job runs, the save step says where the changes went', async () => {
+    it('once its job runs, moves on from the save to the uninstall', async () => {
         await asked(CHANGED_MINE, { statusAfter: UNINSTALLING });
 
         await press(button('Save and Uninstall'));
         await settle();
 
-        const run = screen.getByTestId('import-run');
-        expect(within(run).getByText('Saved to My Luma')).toBeInTheDocument();
+        expect(shownStep().getByText('Preparing to uninstall')).toBeInTheDocument();
+        expect(shownStep().queryByText('Starting')).toBeNull();
     });
 
     // Review 2026-11-14 (item 9): its own name typed in another case still names the real datapack.
+    // While it runs the centred lines say what it does now; where the save went is the ended rows'.
     it('names the datapack by its own name when the field holds it in another case', async () => {
-        await asked(CHANGED_MINE, { statusAfter: UNINSTALLING });
+        await asked(CHANGED_MINE, { statusAfter: STOPPED });
         fireEvent.change(screen.getByRole('textbox', { name: 'Save As' }), { target: { value: ' my luma ' } });
         await settle();
 
         await press(button('Save and Uninstall'));
         await settle();
 
+        expect(await heading("Couldn't Uninstall My Luma")).toBeInTheDocument();
         expect(within(screen.getByTestId('import-run')).getByText('Saved to My Luma')).toBeInTheDocument();
     });
 

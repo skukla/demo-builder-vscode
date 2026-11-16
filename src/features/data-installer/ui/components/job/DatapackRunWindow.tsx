@@ -15,6 +15,7 @@
 
 import React, { useState } from 'react';
 import { type ImportStep, type StepSource, uninstallSteps } from '../../../importSteps';
+import { runStage } from '../../../runStage';
 import type { ImportJobRecord } from '../../../types';
 import { useImportProgress } from '../../hooks/useImportProgress';
 import type { ResultContent } from '../importResult';
@@ -29,13 +30,13 @@ import {
     uninstallLiveSteps,
     uninstallStartingSteps,
 } from './runSteps';
+import { questionFrame } from '@/core/ui/components/feedback/OperationProgressBody';
 import { StageRows } from '@/core/ui/components/feedback/StageWait';
 import { LeadText } from '@/core/ui/components/ui/LeadText';
 import type { ActionButton, ModalStatus } from '@/core/ui/components/ui/Modal';
 import { StepsWindow } from '@/core/ui/components/ui/StepsDialog';
 import { useRunClock } from '@/core/ui/hooks/useRunClock';
 import { promptAnswerLabels, promptCloseLabel } from '@/core/ui/utils/promptButtons';
-import { questionFrame } from '@/core/ui/components/feedback/OperationProgressBody';
 import type { OperationPrompt } from '@/types/webviewPayloads';
 
 /** A question the run is paused on (walk F150), and how to answer it: undefined is dismissed. */
@@ -166,35 +167,28 @@ function uninstallReserve(name: string, uninstalling: Uninstalling, columns: 1 |
 }
 
 /**
- * A run of one step, under way: the progress window's centred lines, its step's state and the clock,
- * not a list of one row (owner, 2026-11-16, walk F152: the rule the projects window's one project
- * follows, `OneRunning`, for every run window). An uninstall with nothing to save is one step.
+ * A run under way: the progress window's centred lines, what it is doing now, how far and the clock,
+ * moving from step to step (`runStage`). One project's run is the wizard's centred view, never a
+ * list of rows (owner, 2026-11-16: rows are for a run over several projects; walk F152 first for a
+ * run of one step, `OneRunning` in the projects window for one project). How it ended keeps its rows.
  */
-function OneStep({ step, startedAt }: { step: ImportStep; startedAt: number }): React.ReactElement {
+function Running({ steps, startedAt }: { steps: ImportStep[]; startedAt: number }): React.ReactElement {
     const clock = useRunClock(startedAt);
     return (
         <div className="modal-wait modal-wait-progress">
-            <StageRows size="L" clock={clock} lines={{ label: step.line ?? 'Starting' }} />
+            <StageRows size="L" clock={clock} lines={runStage(steps)} />
         </div>
     );
-}
-
-/** Steps under way: the centred lines for one, the rows for two or more. */
-function Running({ steps, columns, startedAt }: { steps: ImportStep[]; columns: 1 | 2; startedAt: number }): React.ReactElement {
-    if (steps.length === 1) return <OneStep step={steps[0]} startedAt={startedAt} />;
-    return <ImportRunView steps={steps} columns={columns} running={{ startedAt }} />;
 }
 
 /** The steps while the job runs, from its live progress. */
 function LiveRun({
     record,
-    columns,
     name,
     startedAt,
     uninstalling,
 }: {
     record: ImportJobRecord;
-    columns: 1 | 2;
     name: string;
     startedAt: number;
     uninstalling?: Uninstalling;
@@ -203,7 +197,7 @@ function LiveRun({
     const steps = uninstalling
         ? uninstallLiveSteps(record, live, name, uninstalling)
         : liveSteps(record, live, name);
-    return <Running steps={steps} columns={columns} startedAt={startedAt} />;
+    return <Running steps={steps} startedAt={startedAt} />;
 }
 
 /** The step the window is on: ended, running, or starting. */
@@ -227,7 +221,6 @@ function RunBody(props: DatapackRunWindowProps & { pressedAt: number }): React.R
         return (
             <LiveRun
                 record={record}
-                columns={columns}
                 name={installing.name}
                 startedAt={startedAt}
                 {...(uninstalling ? { uninstalling } : {})}
@@ -237,7 +230,7 @@ function RunBody(props: DatapackRunWindowProps & { pressedAt: number }): React.R
     const steps = uninstalling
         ? uninstallStartingSteps(installing.name, uninstalling)
         : startingSteps(types, installing, switching);
-    return <Running steps={steps} columns={columns} startedAt={pressedAt} />;
+    return <Running steps={steps} startedAt={pressedAt} />;
 }
 
 /** The window's icon: a question's, as the progress window draws it (none for a routine step); else the run's. */

@@ -6,7 +6,7 @@
 
 import { mockPostMessage } from '../../../../../helpers/webviewClientMock';
 import React from 'react';
-import { render } from '@testing-library/react';
+import { render, within } from '@testing-library/react';
 import { press, settle } from '../../../../../helpers/reactSettle';
 
 // Below the mock on purpose — see the module docstring.
@@ -172,6 +172,16 @@ export const sent = (type: string): unknown =>
 /** How many requests of `type` were sent. */
 export const sends = (type: string): number =>
     mockRequest.mock.calls.filter((c) => c[0] === type).length;
+
+/**
+ * The run window's step on screen, never the tallest states it draws hidden (`modal-steps-ghost`)
+ * to hold its height: a running run's centred lines, or how it ended.
+ */
+export function shownStep() {
+    const shown = document.querySelector('.modal-steps > div:not(.modal-steps-ghost)');
+    if (!shown) throw new Error('no step on screen');
+    return within(shown as HTMLElement);
+}
 
 export function renderWindow(over: Partial<React.ComponentProps<typeof DatapackJobWindow>> = {}) {
     const onClose = jest.fn();

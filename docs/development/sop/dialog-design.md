@@ -47,11 +47,13 @@ form, confirm, progress, result) shows one at a time.
 |---|---|---|---|
 | **Form** | `FormDialog` | Fields, then the actions | medium; large or extra-wide when a list needs columns |
 | **Confirm** | `ConfirmActionDialog` | A question as the title, as few short sentences as it takes, Cancel and the action | small (400); the run's width when a run follows in the same window |
-| **Progress** | `ProgressDialog` | A spinner, what is happening, how far; a run through a list (updates, projects, a datapack's data types) shows a row per item instead (`WorkRow`) | small from start to finish; a run shown as rows keeps the box its rows need |
+| **Progress** | `ProgressDialog` | A spinner, what is happening, how far, and the time. One project's run moves these lines from step to step, as the wizard does (a datapack install, switch, update, restore or uninstall: "Installing Products", "1,200 of 2,046"); only a run over several projects shows a row per project (`WorkRow`) | small from start to finish; a run shown as rows keeps the box its rows need |
 | **Result** | `ResultDialog` | The outcome as the title, then only what is left to know or do | small |
 | **Guide** | `GuideDialog` | Steps with their state, one step open (the demo setup guide; a pack's setup step is a guide of one) | large |
 
 ## Rules
+
+**One project's run is the centred view; rows are for several projects** (owner, 2026-11-16). While a run on one project is under way, the window shows the large spinner with what it is doing now and how far, moving from step to step, never a checklist of its steps or data types (`runStage`, the datapack run window; `OneRunning`, the projects window's one project). A run over several projects shows a row per project. How a run ends is the next rule's. Still drawn as rows on one project, to be moved: a datapack save, Clear Demo Data, a single project's reset, and the Updates run.
 
 **A wait shows nothing else, and says what it is waiting for.** While a dialog waits for what it
 will show, only the title, the wait and the way out (Close or Cancel) appear: no fields and no action

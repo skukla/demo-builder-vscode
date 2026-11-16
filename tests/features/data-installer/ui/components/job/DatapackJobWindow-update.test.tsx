@@ -19,6 +19,7 @@ import {
     record,
     renderWindow,
     settle,
+    shownStep,
 } from './DatapackJobWindow.testUtils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { UpdateDatapackResult } from '@/types/webviewRequests';
@@ -153,11 +154,10 @@ describe('what changed', () => {
             { datapackName: 'luma', confirm: true, dataTypes: ['categories', 'products'], version: 'v2' },
         ]);
         expect(await heading('Updating Luma')).toBeInTheDocument();
-        const run = screen.getByTestId('import-run');
-        expect(within(run).getByText(/^Update Luma/u)).toBeInTheDocument();
-        expect(within(run).getByText('Updating 24 of 48')).toBeInTheDocument();
-        expect(within(run).queryByText(/Installing/u)).toBeNull();
-        expect(within(run).getByText('Verify Installation')).toBeInTheDocument();
+        const shown = shownStep();
+        expect(shown.getByText('Updating Products')).toBeInTheDocument();
+        expect(shown.getByText('24 of 48')).toBeInTheDocument();
+        expect(shown.queryByText(/Installing/u)).toBeNull();
     });
 
     it('greys Update once nothing is ticked, and Select All ticks every type again', async () => {

@@ -1,8 +1,8 @@
 /**
- * The run window's steps (step 03, S4 and S7), drawn from what it is handed: an install's while it
- * starts, while it runs and once it ended with a problem; an uninstall's, Save Your Changes when it
- * saves first, then Uninstall <name>. The window draws its tallest states hidden (`reserve`), so
- * every query here reads the step on screen, not the ghosts.
+ * The run window (step 03, S4 and S7), drawn from what it is handed: while an install or an
+ * uninstall starts and runs, the centred lines (what it is doing now and how far, owner 2026-11-16);
+ * once it ended with a problem, its steps as rows. The window draws its tallest states hidden
+ * (`reserve`), so every query here reads the step on screen, not the ghosts.
  *
  * Ported from `ImportDatapackModalBody-confirm.test.tsx` ("the running view", "an import's ending,
  * on its steps"), whose cases drew the same steps through the old window's body; its CONTROL that a
@@ -11,7 +11,7 @@
 
 import { mockPostMessage } from '../../../../../helpers/webviewClientMock';
 import React from 'react';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import type { ImportJobRecord, InstallCheck } from '@/features/data-installer/types';
 import type { ResultContent } from '@/features/data-installer/ui/components/importResult';
@@ -67,45 +67,27 @@ function renderRun(over: Partial<DatapackRunWindowProps> = {}) {
 
 type Shown = ReturnType<typeof renderRun>;
 const rowOf = (shown: Shown, text: string) => shown.getByText(text).closest('.work-row');
-const stepNames = (shown: Shown) =>
-    Array.from(
-        (shown.getByTestId('import-run') as HTMLElement).querySelectorAll(
-            '.step-rows > .work-row > .work-row-text > .checkbox-row-label'
-        )
-    ).map((el) => el.textContent);
-
 beforeEach(() => mockPostMessage.mockClear());
 
+// Owner, 2026-11-16: one project's run is the wizard's centred view while it runs, what it is doing
+// now and how far, moving from step to step (`runStage`); rows are for a run over several projects.
 describe('an install while it runs', () => {
-    it('draws a first install as Install and Verify, the data types under Install in install order', () => {
+    it('starts a first install on the centred lines, not a list of steps', () => {
         const shown = renderRun({ record: RECORD });
 
-        expect(stepNames(shown)).toStrictEqual([
-            'Install ZZ Test Root DB12, 1',
-            'Verify Installation',
-        ]);
-        // Inside the step on screen (`renderRun` returns it), never a reserved, hidden one.
-        const types = Array.from(
-            (shown.getByTestId('import-run') as HTMLElement).querySelectorAll(
-                '.step-rows-nested .work-row--dense .checkbox-row-label'
-            )
-        ).map((el) => el.textContent);
-        expect(types).toStrictEqual(['Categories', 'Products']);
-        expect(shown.getAllByText('Waiting')).toHaveLength(1);
+        expect(shown.queryByTestId('import-run')).toBeNull();
         expect(shown.getByText('Starting')).toBeInTheDocument();
     });
 
-    it('puts the comparison before the first type on Install, in the step’s words', () => {
+    it('says the comparison before the first type, in the step’s words', () => {
         const shown = renderRun({
             record: { ...RECORD, phase: 'Comparing Commerce with the datapack' },
         });
 
-        expect(rowOf(shown, 'Reading from Commerce')).toHaveTextContent(
-            'Install ZZ Test Root DB12, 1'
-        );
+        expect(shown.getByText('Reading from Commerce')).toBeInTheDocument();
     });
 
-    it('shows the type in progress with a second line, and Install how many are in', () => {
+    it('names the type in progress and says how far it has got', () => {
         const record: ImportJobRecord = {
             ...RECORD,
             perType: { categories: 'success', products: 'processing' },
@@ -113,15 +95,11 @@ describe('an install while it runs', () => {
         };
         const shown = renderRun({ record });
 
-        const doing = shown.getByText('Installing 450 of 2,046');
-        expect(doing).toHaveClass('work-row-doing');
-        expect(doing.closest('.work-row')?.querySelector('.checkbox-row-label')).toHaveTextContent(
-            /^Products$/u
-        );
-        expect(rowOf(shown, '1 of 2 data types')).toHaveTextContent('Install ZZ Test Root DB12, 1');
+        expect(shown.getByText('Installing Products')).toBeInTheDocument();
+        expect(shown.getByText('450 of 2,046')).toBeInTheDocument();
     });
 
-    it('says Linking product options on the Products row during the slow part', () => {
+    it('says Linking product options during the slow part of Products, with its count', () => {
         const record: ImportJobRecord = {
             ...RECORD,
             perType: { categories: 'success', products: 'processing' },
@@ -129,61 +107,28 @@ describe('an install while it runs', () => {
         };
         const shown = renderRun({ record });
 
-        expect(rowOf(shown, 'Linking product options 2,044 of 2,046')).toHaveTextContent(
-            'Products'
-        );
+        expect(shown.getByText('Linking product options')).toBeInTheDocument();
+        expect(shown.getByText('2,044 of 2,046')).toBeInTheDocument();
     });
 
-    // The window never changes height on its own (walk F133): every column holds room for the second
-    // line, and the column with the working row has it in the row instead.
-    it('holds room for the second line in every column, the working row’s column filling it', () => {
-        const dataTypes = ['attribute_sets', 'categories', 'products', 'customers'];
-        const working: ImportJobRecord = { ...RECORD, dataTypes, perType: { attribute_sets: 'success', categories: 'success', products: 'processing' }, detail: '1,200 of 2,046 products' };
-        const shown = renderRun({ record: working });
-
-        const columns = Array.from((shown.getByTestId('import-run') as HTMLElement).querySelectorAll('.work-row-column'));
-        expect(columns.map((c) => c.className)).toStrictEqual(['work-row-column', 'work-row-column work-row-column--working']);
-        expect(columns[1]).toHaveTextContent('Installing 1,200 of 2,046');
-    });
-
-    it('draws the data types in one column when the window chose one', () => {
-        const record: ImportJobRecord = {
-            ...RECORD,
-            dataTypes: ['attribute_sets', 'categories', 'products', 'customers'],
-        };
-        const shown = renderRun({ record, columns: 1 });
-
-        expect(
-            (shown.getByTestId('import-run') as HTMLElement).querySelectorAll('.work-row-column')
-        ).toHaveLength(1);
-    });
-
-    it('shows the steps while the import starts, before its job is recorded, and the clock’s line at once', () => {
+    it('shows Starting while the import starts, before its job is recorded, and the clock once a second is up', () => {
         const shown = renderRun();
 
-        expect(stepNames(shown)).toStrictEqual([
-            'Install ZZ Test Root DB12, 1',
-            'Verify Installation',
-        ]);
-        expect(
-            (shown.getByTestId('import-run') as HTMLElement).parentElement?.querySelector(
-                '.dialog-note'
-            )
-        ).not.toBeNull();
+        expect(shown.queryByTestId('import-run')).toBeNull();
+        expect(shown.getByText('Starting')).toBeInTheDocument();
+        act(() => {
+            jest.advanceTimersByTime(1000);
+        });
+        expect(shown.getByText('1 second')).toBeInTheDocument();
     });
 
-    it('starts a switch with its save spinning first, then Uninstall, Install and Verify waiting', () => {
+    it('starts a switch on its save’s stage', () => {
         const shown = renderRun({
             switching: { replaces: 'Bodea, main', savingStage: 'Saving to the library' },
         });
 
-        expect(stepNames(shown)).toStrictEqual([
-            'Save Your Changes',
-            'Uninstall Bodea, main',
-            'Install ZZ Test Root DB12, 1',
-            'Verify Installation',
-        ]);
-        expect(rowOf(shown, 'Saving to the library')).toHaveTextContent('Save Your Changes');
+        expect(shown.queryByTestId('import-run')).toBeNull();
+        expect(shown.getByText('Saving to the library')).toBeInTheDocument();
     });
 });
 
@@ -294,26 +239,25 @@ describe('an uninstall', () => {
         expect(shown.getByText('Preparing to uninstall')).toBeInTheDocument();
     });
 
-    it('saving first, draws Save Your Changes on its stage, then the uninstall waiting', () => {
+    it('saving first, says the save’s stage', () => {
         const shown = renderRun({
             ...UNINSTALL,
             uninstalling: { saves: true, savingStage: 'Reading Commerce' },
         });
 
-        expect(stepNames(shown)).toStrictEqual(['Save Your Changes', 'Uninstall My Luma']);
-        expect(rowOf(shown, 'Reading Commerce')).toHaveTextContent('Save Your Changes');
-        expect(rowOf(shown, 'Waiting')).toHaveTextContent('Uninstall My Luma');
+        expect(shown.queryByTestId('import-run')).toBeNull();
+        expect(shown.getByText('Reading Commerce')).toBeInTheDocument();
     });
 
-    it('while its job runs, says where the save went and how far the uninstall has got', () => {
+    it('while its job runs, says how far the uninstall has got', () => {
         const shown = renderRun({
             ...UNINSTALL,
             record: { ...RUNNING, detail: '12 of 40 products' },
             uninstalling: { saves: true, savedTo: 'My Luma' },
         });
 
-        expect(rowOf(shown, 'Saved to My Luma')).toHaveTextContent('Save Your Changes');
-        expect(rowOf(shown, 'Uninstalling Products, 12 of 40')).toHaveTextContent('Uninstall My Luma');
+        expect(shown.getByText('Uninstalling Products')).toBeInTheDocument();
+        expect(shown.getByText('12 of 40')).toBeInTheDocument();
         expect(shown.queryByText(/^Install /u)).toBeNull();
     });
 
