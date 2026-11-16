@@ -23,6 +23,7 @@ import { GIFT_CARD_KIND } from './productKinds';
 import { type ProductLookups, productLookups } from './productLookups';
 import { STORE_CONFIG_KIND, rebasedSetting } from './storeConfigKind';
 import { type ProductsSeen, READABLE_KINDS, onceInventory, packKindIn, packedFingerprint, readCopies, rowsByKey } from './storeCopies';
+import { storeFormOfAttribute } from './swatchCarry';
 import type { CommerceProduct } from '@/types/commerceWire';
 
 /** One object, hashed from its copy now and against the row it matches, if any. */
@@ -112,7 +113,12 @@ function copiesInRows(created: readonly CreatedObject[], saved: Record<string, u
         const from = ROW_BY_ID[kind];
         if (!from) continue;
         const rows = new Map<string, unknown>();
-        for (const packKind of from) for (const [key, row] of rowsByKey(packKind, saved[packKind])) rows.set(key, row);
+        // A carried swatch goes back to what the store answers: a copy is the store's (`swatchCarry.ts`).
+        for (const packKind of from) {
+            for (const [key, row] of rowsByKey(packKind, saved[packKind])) {
+                rows.set(key, packKind === 'product_attributes' ? storeFormOfAttribute(row) : row);
+            }
+        }
         byKind.set(kind, rows);
     }
     return byKind;

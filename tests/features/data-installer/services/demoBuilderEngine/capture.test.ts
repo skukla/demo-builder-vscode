@@ -125,6 +125,22 @@ describe('capturePack', () => {
         expect(products.map((r) => [r.product.sku, r.product.name])).toEqual([['DigiWristQuantum', 'DigiWrist Quantum']]);
     });
 
+    // F140: the store answers a swatch as a select with no colours, so the save keeps the installed
+    // version's swatch type and each option's colour by label.
+    it("keeps an installed swatch's type and colours, which the store cannot answer", async () => {
+        const installed = {
+            product_attributes: [
+                { attribute: { attribute_code: 'band_type', frontend_input: 'swatch_visual', options: [{ label: 'Sport', value: '#ff0000' }] } },
+            ],
+        };
+
+        const { result } = await capture(RECORD, installed);
+
+        expect(result.items.product_attributes).toEqual([
+            { attribute: expect.objectContaining({ attribute_code: 'band_type', frontend_input: 'swatch_visual', options: [{ label: 'Sport', value: '#ff0000' }] }) },
+        ]);
+    });
+
     it('counts what it captured, by kind', async () => {
         const { result } = await capture();
 

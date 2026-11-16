@@ -39,6 +39,7 @@ import type { CreatedObject } from './installRecord';
 import { type KindContext, segment } from './kindContext';
 import { ancestorIds, attributePackForm, categoryPackForm, productPackForm } from './packForm';
 import { packRootOf } from './packRoot';
+import { withPackSwatch } from './swatchCarry';
 import { GIFT_CARD_KIND } from './productKinds';
 import { type ProductLookups, type StoreCategory, productLookups } from './productLookups';
 import { captureSettings } from './storeConfigKind';
@@ -123,14 +124,18 @@ function renamedTop(rows: Array<{ category: Row }>, rootName: string): Array<{ c
     return rows.map(({ category }) => ({ category: { ...category, path: [rootName, ...String(category.path ?? '').split('/').slice(1)].join('/') } }));
 }
 
-/** The user-defined attributes named, with their options; Commerce's own are every store's. */
-async function captureAttributes(lk: ProductLookups, codes: Set<string>): Promise<{ rows: unknown[]; codes: Set<string> }> {
+/**
+ * The user-defined attributes named, with their options; Commerce's own are every store's. A swatch
+ * keeps the installed version's type and colours, which the store cannot answer (`swatchCarry.ts`).
+ */
+async function captureAttributes(lk: ProductLookups, codes: Set<string>, installed: unknown): Promise<{ rows: unknown[]; codes: Set<string> }> {
+    const packRows = new Map(rowsOf(installed).map((row) => [fieldOf(row, 'attribute', 'attribute_code'), row]));
     const rows: unknown[] = [];
     const kept = new Set<string>();
     for (const code of codes) {
         const attribute = await lk.attribute(code).catch(() => undefined);
         if (!attribute?.is_user_defined) continue;
-        rows.push(attributePackForm({ attribute_code: code, ...attribute }));
+        rows.push(withPackSwatch(attributePackForm({ attribute_code: code, ...attribute }), packRows.get(code)));
         kept.add(code);
     }
     return { rows, codes: kept };
@@ -298,7 +303,7 @@ export async function capturePack(
     onPhase(2);
     const codes = await attributeCodes(lk, products, created);
     for (const code of names.attributeCodes) codes.add(code);
-    const attributes = await captureAttributes(lk, codes);
+    const attributes = await captureAttributes(lk, codes, installed.product_attributes);
     onPhase(3);
     const setIds = new Set(
         [

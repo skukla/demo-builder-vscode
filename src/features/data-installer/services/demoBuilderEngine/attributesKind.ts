@@ -22,6 +22,7 @@ import { certainlyNotMade, createOne } from './pendingCreates';
 import type { PendingObject } from './pendingRecord';
 import { tryRow } from './refusedRows';
 import { counted } from './rowCount';
+import { SWATCH_INPUTS } from './swatchCarry';
 import type { CommerceSend } from '@/types/commerceWire';
 
 export const ATTRIBUTE_KIND = 'product_attributes';
@@ -35,14 +36,13 @@ export const ATTRIBUTE_OPTION_KIND = 'attribute_options';
  */
 export const INSTALLS_WITH: Readonly<Record<string, string>> = { [ATTRIBUTE_OPTION_KIND]: ATTRIBUTE_KIND };
 
-/**
+/*
  * Swatch attributes are made in the service's two steps (spec §1 step 6;
  * `ProductAttributeImportProcessor.js` L338-352, L475-525): the attribute without its options or
  * default, then each option through the options route, its `value` the swatch (a colour or a
  * text). The service says Commerce does not store the swatch when options come with the create.
- * Not yet run against a live store from here.
+ * Run on the test store 2026-11-16: the attribute read back with `swatch_input_type: VISUAL`.
  */
-const SWATCH_INPUTS = new Set(['swatch_visual', 'swatch_text']);
 
 const optionSchema = z
     .object({ label: z.string(), value: z.unknown().optional(), sort_order: z.unknown().optional(), is_default: z.unknown().optional() })
@@ -90,7 +90,10 @@ async function installAttribute(ctx: KindContext, row: AttributeRow): Promise<vo
     if (ownedId(ctx.session, ATTRIBUTE_KIND, code) === null) return;
     const existing = await readOrNull<object>(ctx.get, `products/attributes/${segment(code)}`);
     if (existing && !ctx.recorder.has(ATTRIBUTE_KIND, code)) {
-        await addMissingOptions(ctx, code, row.attribute.options ?? [], row.attribute.frontend_input);
+        // No swatch data on an attribute the store already had: it is every demo's on the instance
+        // (owner, F140). Its new options go in plain; a pack that wants swatches brings its own
+        // attribute, which this engine makes.
+        await addMissingOptions(ctx, code, row.attribute.options ?? []);
         return;
     }
     // Step 14 item 3: an attribute Commerce refuses is skipped, and the rows that need it with it.
@@ -145,8 +148,9 @@ async function readOptions(ctx: KindContext, code: string): Promise<StoreOption[
  * read back by label rather than taken from the POST's answer, whose shape no live answer in
  * this repo records.
  *
- * @param input - the row's `frontend_input`: a swatch option keeps its `value`, which is the
- *   swatch; any other option's `value` is the source store's option id and is dropped
+ * @param input - the row's `frontend_input`, given only for an attribute this engine made: a swatch
+ *   option keeps its `value`, which is the swatch; any other option's `value` is the source store's
+ *   option id and is dropped
  */
 export async function addMissingOptions(ctx: KindContext, code: string, options: readonly PackOption[], input?: string): Promise<void> {
     const have = await readOptions(ctx, code);

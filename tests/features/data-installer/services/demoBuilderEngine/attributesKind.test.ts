@@ -171,7 +171,9 @@ describe('swatch attributes', () => {
         expect(ctx.recorder.created).toEqual([{ kind: ATTRIBUTE_KIND, id: 'cs_color', key: 'cs_color' }]);
     });
 
-    it('adds the options a store\'s own swatch lacks with their swatch, and records each', async () => {
+    // F140 (owner, 2026-11-16): an attribute the store already had is every demo's on the
+    // instance, so its new options go in plain, with no swatch.
+    it('adds the options a store\'s own swatch lacks with no swatch, and records each', async () => {
         let options = [{ label: 'Black', value: '60' }];
         const ctx = await fakeContext(
             {
@@ -187,13 +189,13 @@ describe('swatch attributes', () => {
         await installAttributes(ctx, parseAttributeRows([COLOR]));
 
         expect(ctx.sent).toEqual<SentCall[]>([
-            { method: 'POST', path: 'products/attributes/cs_color/options', body: { option: { label: 'Blue', value: '#286785', sort_order: 1, is_default: false } } },
+            { method: 'POST', path: 'products/attributes/cs_color/options', body: { option: { label: 'Blue', sort_order: 1, is_default: false } } },
         ]);
         expect(ctx.recorder.created).toEqual([{ kind: ATTRIBUTE_OPTION_KIND, id: 'cs_color/61', key: 'cs_color/Blue' }]);
     });
 
-    // What Commerce answers as a swatch's `frontend_input` is not captured in this repo, so both
-    // forms our save could write are pinned: a swatch input, or the plain dropdown it is stored as.
+    // Commerce answers a visual swatch's `frontend_input` as `select` (test store, 2026-11-16), and a
+    // save keeps the pack's swatch input (`swatchCarry.ts`), so both forms are pinned.
     it('reinstalls a swatch our save wrote, whichever input Commerce answered it with', async () => {
         const stored: StoreAttribute = {
             attribute_id: 93,
