@@ -25,6 +25,8 @@ import type { BackgroundOperationRequest } from '@/types/webviewRequests';
 export type NoticeTitles = Pick<BackgroundOperationRequest, 'doneTitle' | 'failedTitle' | 'warnedTitle'>;
 
 interface Notice {
+    /** The notification's own title, which its line never repeats. */
+    title: string;
     titles: NoticeTitles;
     report: (message: string) => void;
     end: () => void;
@@ -33,15 +35,13 @@ interface Notice {
 const notices = new Map<string, Notice>();
 
 /**
- * The notification's line for a progress payload: the STAGE, never the step or
- * detail. The stage is the short set of words, capped in `operationStages` so it
- * fits after the title; the step and detail are the long set, written to sit under
- * the stage in the modal. A notification showing a detail alone read as "The APIs
- * on the workspace's credent…" (owner screenshot, 2026-09-19). VS Code draws the
- * notification at a fixed width, so there is no room to buy.
+ * The notification's line: the run's stage, or its step when the stage only says what the title
+ * already does (owner walk, 2026-11-16: "Installing Frescopa: Installing Frescopa").
  */
-function lineFor(payload: OperationProgressPayload): string | undefined {
-    return payload.stage && stageLine(payload.stage, payload.position);
+function lineFor(payload: OperationProgressPayload, title: string): string | undefined {
+    const stage = payload.stage && stageLine(payload.stage, payload.position);
+    if (stage && stage !== title) return stage;
+    return payload.step;
 }
 
 /**
@@ -67,11 +67,12 @@ export function openBackgroundNotice(
                     return;
                 }
                 notices.set(current.id, {
+                    title,
                     titles,
                     report: (message) => progress.report({ message }),
                     end: resolve,
                 });
-                const line = lineFor(current);
+                const line = lineFor(current, title);
                 if (line) progress.report({ message: line });
             }),
     );
@@ -96,7 +97,7 @@ export function forwardToBackgroundNotice(payload: OperationProgressPayload): vo
     const notice = notices.get(payload.id);
     if (!notice) return;
     if (payload.state === 'running') {
-        const line = lineFor(payload);
+        const line = lineFor(payload, notice.title);
         if (line) notice.report(line);
         return;
     }

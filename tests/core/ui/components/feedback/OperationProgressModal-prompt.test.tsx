@@ -209,6 +209,24 @@ it('cancels rather than backgrounding while it waits', async () => {
     expect(onClose).toHaveBeenCalled();
 });
 
+// Owner walk, 2026-11-16: Skip for Now closed the window and sent the run to the background. A
+// question's own dismiss answer is the close button, and pressing it answers and stays.
+it('makes a dismiss answer the close button, once, and answering it keeps the window', async () => {
+    progress = {
+        id: OPERATION.id,
+        state: 'running',
+        prompt: { title: 'One Step', message: 'Set it, then Save.', actions: ['Open Admin', 'Skip for Now'], dismiss: 'Skip for Now', tone: 'info' },
+    };
+    const { onClose } = renderModal();
+
+    expect(screen.getAllByRole('button', { name: 'Skip for Now' })).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull();
+    await user().click(screen.getByRole('button', { name: 'Skip for Now' }));
+
+    expect(mockPostMessage).toHaveBeenCalledWith('answerOperationPrompt', { id: OPERATION.id, answer: 'Skip for Now', values: {} });
+    expect(onClose).not.toHaveBeenCalled();
+});
+
 it('still offers Run in Background when nothing is being asked', async () => {
     progress = { id: OPERATION.id, state: 'running', stage: 'Publishing pages' };
     renderModal();

@@ -87,6 +87,16 @@ describe('Run in background', () => {
         expect(mockProgressReport).toHaveBeenLastCalledWith({ message: 'Installing into Commerce' });
     });
 
+    // Owner walk, 2026-11-16: "Installing Frescopa: Installing Frescopa". A stage that only says what
+    // the title does gives way to the step: the part under way.
+    it('says the step, not the stage, when the stage is the title again', async () => {
+        await pushOperationProgress({ id: 'datapack-x', state: 'running', stage: 'Installing Frescopa', step: 'Categories, 4 of 10' });
+        await handleBackgroundOperation(createMockHandlerContext(), { ...REQUEST, id: 'datapack-x', title: 'Installing Frescopa' });
+
+        expect(mockProgressReport).toHaveBeenLastCalledWith({ message: 'Categories, 4 of 10' });
+        await pushOperationProgress({ id: 'datapack-x', state: 'succeeded' });
+    });
+
     it('shows the pair count after the stage', async () => {
         await runningInBackground();
 

@@ -241,6 +241,8 @@ export function OperationProgressModal({
     const close = useCallback((): void => {
         if (prompt) {
             answer(prompt.dismiss);
+            // A dismiss answer (Skip for Now) is an answer: the run goes on here (owner walk, 2026-11-16).
+            if (prompt.dismiss) return;
         } else if (operation && !failed && !succeeded) {
             const request: BackgroundOperationRequest = {
                 id: operation.id,

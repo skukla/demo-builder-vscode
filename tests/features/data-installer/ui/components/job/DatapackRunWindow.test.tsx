@@ -375,7 +375,8 @@ describe('a question the run is paused on', () => {
 
         fireEvent.click(screen.getByRole('button', { name: 'Skip for Now' }));
         expect(answer).toHaveBeenCalledWith('Skip for Now');
-        expect(onClose).toHaveBeenCalledTimes(1);
+        // An answer, not a close: the run goes on in the window to its result.
+        expect(onClose).not.toHaveBeenCalled();
     });
 });
 

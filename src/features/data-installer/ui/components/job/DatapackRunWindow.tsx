@@ -201,10 +201,12 @@ export function DatapackRunWindow(props: DatapackRunWindowProps): React.ReactEle
     const { title, status, ended, actionButtons, onClose, question } = props;
     // When Install was pressed: one clock from the press to the end.
     const [pressedAt] = useState(() => Date.now());
-    // Closing while asked answers it dismissed (Skip for Now), then the window goes as it would.
+    // While asked, a dismiss answer (Skip for Now) is an answer: the run goes on in the window to
+    // its result (owner walk, 2026-11-16: it closed the window and sent the install to the
+    // background). A question with none is dismissed as Cancel, and the window goes as it would.
     const close = (): void => {
-        question?.answer(question.prompt.dismiss);
-        onClose();
+        if (question) question.answer(question.prompt.dismiss);
+        if (!question?.prompt.dismiss) onClose();
     };
     return (
         <StepsWindow
