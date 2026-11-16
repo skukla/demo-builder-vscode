@@ -37,6 +37,13 @@ import type { HandlerContext } from '@/types/handlers';
 const PERCENT = 97;
 
 /**
+ * Shown while a swap builds the new menu, after the old one came out (owner, 2026-11-16): the
+ * removal's own sentence stood alone for the half minute the new pages took, so the step read as if
+ * the menu were only taken away. The removal's sentence still goes to the log.
+ */
+export const SWAP_LINE = 'Took the old catalog menu out. Building the new one.';
+
+/**
  * Edit mode rebuilds the project's component instances from scratch, which would drop
  * the record of what Demo Builder wrote and turn its own pages into "someone else's".
  * Carry the record over when the storefront is the same one.
@@ -91,19 +98,19 @@ export async function rewriteCatalogMenuPhase(
     const say = sayer(context, progressTracker, OPERATION_STAGES.updatingCatalogMenu.label);
     await runCatalogMenu(context, project, say, makeSite, undefined, async (site) => {
         const removed = await removeCatalogMenuStep(project, site);
-        if (removed !== undefined) say(removed.summary);
+        if (removed !== undefined) say(removed.summary, SWAP_LINE);
     });
 }
 
-/** Logs and shows one catalog menu sentence under `step`. */
+/** Logs one catalog menu sentence and shows it under `step`, or `shown` in its place. */
 function sayer(
     context: HandlerContext,
     progressTracker: ProgressReporter,
     step: string,
-): (summary: string) => void {
-    return (summary) => {
+): (summary: string, shown?: string) => void {
+    return (summary, shown = summary) => {
         context.logger.info(`[Catalog Menu] ${summary}`);
-        progressTracker(step, PERCENT, summary);
+        progressTracker(step, PERCENT, shown);
     };
 }
 

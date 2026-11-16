@@ -12,6 +12,7 @@ import type { CatalogMenuSite } from '@/features/eds/services/catalogMenu/catalo
 import { hashOf, type StorefrontPages } from '@/features/eds/services/catalogMenu/ownedPages';
 import {
     executeCatalogMenuPhase,
+    SWAP_LINE,
     rewriteCatalogMenuPhase,
 } from '@/features/project-creation/services/catalogMenuPhase';
 import type { Project } from '@/types/base';
@@ -177,6 +178,17 @@ describe('rewriteCatalogMenuPhase — after an Edit removed the old datapack (PL
 
         expect(progress).toHaveBeenCalledWith(OPERATION_STAGES.updatingCatalogMenu.label, 97, expect.any(String));
         expect(progress).not.toHaveBeenCalledWith(OPERATION_STAGES.addingCatalogMenu.label, 97, expect.anything());
+    });
+
+    // Owner, 2026-11-16: the removal's sentence stood alone while the new pages were published, so
+    // the step read as if the menu were only taken away. The line says the new one is on its way.
+    it('says the old menu came out and the new one is being built, while it is', async () => {
+        const { project, s, helix } = await withOldPack();
+        const progress = jest.fn();
+
+        await rewriteCatalogMenuPhase(createMockHandlerContext(), project, progress, () => newPack(s.port, helix));
+
+        expect(progress).toHaveBeenNthCalledWith(1, OPERATION_STAGES.updatingCatalogMenu.label, 97, SWAP_LINE);
     });
 
     it('never removes a page the SC edited since', async () => {

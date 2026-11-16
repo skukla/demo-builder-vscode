@@ -75,14 +75,25 @@ export async function heldDisplayName(
     context: HandlerContext,
     held: NonNullable<Project['datapack']>,
 ): Promise<string> {
+    return (await knownPackName(context, held)) ?? held.name;
+}
+
+/**
+ * The pack's name as the SC knows it, or undefined when neither memory nor the library has it: a
+ * progress step then keeps the table's "the datapack" rather than showing an id (owner, 2026-11-16).
+ */
+export async function knownPackName(
+    context: HandlerContext,
+    held: NonNullable<Project['datapack']>,
+): Promise<string | undefined> {
     try {
         const known =
             held.store === 'library'
                 ? rememberedPackName(context.context.globalState, held.name)
                 : undefined;
-        return known ?? (await libraryDisplayName({ ...context, panel: undefined }, held)) ?? held.name;
+        return known ?? (await libraryDisplayName({ ...context, panel: undefined }, held));
     } catch {
-        // A name is not worth stopping for: the id still says which pack.
-        return held.name;
+        // A name is not worth stopping for: the step still says what it does.
+        return undefined;
     }
 }

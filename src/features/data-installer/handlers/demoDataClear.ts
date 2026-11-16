@@ -53,6 +53,7 @@ import { andList } from '@/core/utils/andList';
 import { DATAPACK_STAGES } from '@/core/utils/datapackStages';
 import { DEMO_DATA_CLEAR_OPERATION_ID } from '@/core/utils/operationIds';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { packStage } from '@/core/utils/packStage';
 import { withOperationProgress } from '@/core/vscode/withOperationProgress';
 import { changesAnswer, changesNeedAnswer } from '@/features/ai/server/datapackAnswerArgs';
 import { forgetRemovedPack } from '@/features/eds/services/reset/edsResetDatapack';
@@ -127,7 +128,7 @@ async function uninstallFirst(deps: DemoDataDeps, context: HandlerContext, opene
         return { response: { success: false, error: 'The datapack this project uses changed since the list was made. Check again.' } };
     }
     run.uninstalling(true);
-    run.report(OPERATION_STAGES.removingDatapack.label);
+    run.report(packStage(OPERATION_STAGES.removingDatapack, removing.name));
     // The products the wipe deletes next leave too, so the uninstall keeps what Clear's check removes.
     const removal = await deps.remove(opened.project, context, run.report, changesAnswer(payload), shown.plan.deleteSkus);
     run.uninstalling(false);

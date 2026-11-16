@@ -14,10 +14,13 @@ import { STOREFRONT_STAGES } from '@/core/utils/storefrontStages';
 import { UPDATE_STAGES } from '@/core/utils/updateStages';
 import {
     OPERATION_STAGES,
+    baseStage,
     detailFor,
     expectationFor,
     type OperationStage,
 } from '@/core/utils/operationStages';
+import { packStage } from '@/core/utils/packStage';
+import { stepPosition } from '@/core/utils/numberedSteps';
 
 const ROOT = join(__dirname, '..', '..', '..');
 
@@ -202,5 +205,36 @@ describe('stage reporters', () => {
         expect(LITERAL_STAGE.test("deps.onProgress?.('Subscribing Adobe APIs…');")).toBe(true);
         expect(LITERAL_STAGE.test("report('Checking requirements…');")).toBe(true);
         expect(LITERAL_STAGE.test('report(OPERATION_STAGES.adding.label);')).toBe(false);
+    });
+});
+
+// Owner, 2026-11-16: an Edit's switch read "Uninstalling the datapack", then "Installing the
+// datapack". The steps now name the pack, and still find their timing line and their place in a run.
+describe('a datapack step named for its pack', () => {
+    const { installingDatapack: install, removingDatapack: remove } = OPERATION_STAGES;
+
+    it('names the pack on each step', () => {
+        expect(packStage(remove, 'We.Cafe')).toBe('Uninstalling We.Cafe');
+        expect(packStage(install, 'Frescopa')).toBe('Installing Frescopa');
+    });
+
+    it('CONTROL: keeps the table label when the name is not known', () => {
+        expect(packStage(install, undefined)).toBe(install.label);
+    });
+
+    it('keeps the timing and detail lines of the step it names', () => {
+        expect(expectationFor('Installing Frescopa')).toBe(install.expectation);
+        expect(detailFor('Uninstalling We.Cafe')).toBe(remove.detail);
+        expect(baseStage('Uninstalling We.Cafe')).toBe(remove.label);
+    });
+
+    it('sits where the run lists the step', () => {
+        const steps = [OPERATION_STAGES.writingConfigFiles.label, install.label, OPERATION_STAGES.finishingProject.label];
+
+        expect(stepPosition(steps, 'Installing Frescopa')).toEqual({ index: 2, total: 3 });
+    });
+
+    it('CONTROL: a table label is its own base, whatever its first word', () => {
+        expect(baseStage(OPERATION_STAGES.installingUpdateDependencies.label)).toBe(OPERATION_STAGES.installingUpdateDependencies.label);
     });
 });

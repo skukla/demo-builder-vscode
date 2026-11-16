@@ -17,7 +17,6 @@
 import { typesLine } from '../services/datapackTypesLine';
 import type { DataTypeStatus } from '../types';
 import { dataTypeLabel } from './dataTypeLabel';
-import { OPERATION_STAGES } from '@/core/utils/operationStages';
 
 /** A type the service has finished with, whether or not it went well. */
 const TERMINAL: readonly DataTypeStatus[] = ['success', 'error'];
@@ -62,20 +61,6 @@ export function summarizeProgress(
         waiting: requestedTypes.filter((type) => !TERMINAL.includes(perType[type]) && perType[type] !== 'processing'),
         percent: total === 0 ? 0 : Math.min(100, Math.round((done / total) * 100)),
     };
-}
-
-/**
- * The step the job is, from the stage table: the same name creation and the
- * notification it hands over to show.
- *
- * "Uninstalling", not "Resetting": the button that starts it says "Uninstall", and a
- * project RESET restores the pack. The `reset` operation id is the wire, not
- * the wording.
- */
-export function progressStep(operation: 'import' | 'reset' = 'import'): string {
-    return operation === 'reset'
-        ? OPERATION_STAGES.removingDatapack.label
-        : OPERATION_STAGES.installingDatapack.label;
 }
 
 /**

@@ -22,6 +22,7 @@
 import { ADOBE_PROJECT_STAGES } from './adobeProjectStages';
 import { CREATION_STAGES } from './creationStages';
 import { DATAPACK_STAGES } from './datapackStages';
+import { namedStageBase } from './packStage';
 import { RESET_STAGES } from './resetStages';
 import { STOREFRONT_STAGES } from './storefrontStages';
 import { UPDATE_STAGES } from './updateStages';
@@ -276,12 +277,17 @@ const BY_LABEL: ReadonlyMap<string, OperationStage> = new Map(
     Object.values(OPERATION_STAGES).map((stage) => [stage.label, stage]),
 );
 
+/** A reported stage's table label: itself, or the step a named one stands for (`packStage`). */
+export function baseStage(stage: string): string {
+    return BY_LABEL.has(stage) ? stage : (namedStageBase(stage) ?? stage);
+}
+
 /**
  * The expectation line for a reported stage, or `undefined` for a stage this table
  * does not name — which then shows no line rather than a guessed one.
  */
 export function expectationFor(stage: string): string | undefined {
-    return BY_LABEL.get(stage)?.expectation;
+    return BY_LABEL.get(baseStage(stage))?.expectation;
 }
 
 /**
@@ -289,5 +295,5 @@ export function expectationFor(stage: string): string | undefined {
  * stage this table does not name.
  */
 export function detailFor(stage: string): string | undefined {
-    return BY_LABEL.get(stage)?.detail;
+    return BY_LABEL.get(baseStage(stage))?.detail;
 }

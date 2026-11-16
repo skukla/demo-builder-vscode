@@ -12,12 +12,14 @@
 import type { DatapackRemoval } from './resetDatapackStep';
 import { createNonSwitchingStateManager } from '@/core/state/workingProjectStateManager';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { packStage } from '@/core/utils/packStage';
 import { askForDetailsDuringOperation, modalIsAsking } from '@/core/vscode/operationPrompt';
 import type { ReportStage } from '@/core/vscode/withOperationProgress';
 import { saveFirstLabel, withoutSavingLabel } from '@/features/data-installer/datapackWords';
 import { commerceBackendOf } from '@/features/data-installer/services/commerceBackend';
 import { typesLine } from '@/features/data-installer/services/datapackTypesLine';
 import { dropStaleFailure } from '@/features/data-installer/services/installFailure';
+import { rememberedPackName } from '@/features/data-installer/services/packNames';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext } from '@/types/handlers';
@@ -174,7 +176,11 @@ export async function removeProjectSampleDataOutcome(
         if (settled.kept !== undefined) return settled;
         const saved = settled.savedInto ? { savedInto: settled.savedInto } : {};
 
-        report(OPERATION_STAGES.removingDatapack.label);
+        // Named for the pack, "Uninstalling We.Cafe" (owner, 2026-11-16); "the datapack" when unknown.
+        // The name remembered when the dashboard showed the pack: a removal reads nothing more.
+        const memory = context.context?.globalState;
+        const step = packStage(OPERATION_STAGES.removingDatapack, memory && project.datapack ? rememberedPackName(memory, project.datapack.name) : undefined);
+        report(step);
 
         const { removeSampleData } = await import(
             '@/features/data-installer/services/projectDatapackInstall'
@@ -191,7 +197,7 @@ export async function removeProjectSampleDataOutcome(
                 context,
                 project,
                 // The count of types is the line under the step, never its position.
-                (sd) => report(OPERATION_STAGES.removingDatapack.label, typesLine(sd.done, sd.total, sd.processing)),
+                (sd) => report(step, typesLine(sd.done, sd.total, sd.processing)),
                 'remove',
             ),
             // Clear Demo Data's: the products its wipe deletes next count as going (step-06 C3 re-review).

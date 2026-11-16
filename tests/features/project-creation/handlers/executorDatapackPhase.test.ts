@@ -30,6 +30,7 @@
 
 import { executeSampleDataPhase } from '@/features/project-creation/handlers/executorDatapackPhase';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { PACK_NAMES_KEY } from '@/features/data-installer/services/packNames';
 import { installSampleData } from '@/features/data-installer/services/projectDatapackInstall';
 import type { Project } from '@/types/base';
 import { createMockLogger } from '../../../helpers/loggerFake';
@@ -140,17 +141,26 @@ describe('executeSampleDataPhase', () => {
      * told WHICH pack the minutes ahead are spent on. Pinned exactly — a phase
      * that announced an empty label would look identical to one that never ran.
      */
+    // Owner, 2026-11-16: the step names the pack, "Installing Bodea", where it read "Installing the
+    // datapack" with the id under it.
     it('opens by naming the pack it is about to install', async () => {
+        const progress = jest.fn();
+        const context = makeContext();
+        await context.context.globalState.update(PACK_NAMES_KEY, { bodea: 'Bodea' });
+        const project = makeProject();
+        project.datapack = { name: 'bodea', version: 'main', store: 'library' };
+
+        await executeSampleDataPhase(context, project, progress);
+
+        expect(progress).toHaveBeenNthCalledWith(1, 'Installing Bodea', 92, OPERATION_STAGES.installingDatapack.detail);
+    });
+
+    it('CONTROL: keeps the table step, never the id, when the name is not known', async () => {
         const progress = jest.fn();
 
         await executeSampleDataPhase(makeContext(), makeProject(), progress);
 
-        expect(progress).toHaveBeenNthCalledWith(
-            1,
-            OPERATION_STAGES.installingDatapack.label,
-            92,
-            'Installing bodea'
-        );
+        expect(progress).toHaveBeenNthCalledWith(1, OPERATION_STAGES.installingDatapack.label, 92, OPERATION_STAGES.installingDatapack.detail);
     });
 
     /** The pack, the scope and the credentials all travel in the project itself. */

@@ -29,6 +29,7 @@ import { openProjectStore, openSave, readPayload, savedFrom, type StoreChangesPa
 import { reportPhase } from '@/core/utils/agentPhaseChannel';
 import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { packStage } from '@/core/utils/packStage';
 import { pushOperationProgress, startModalRun } from '@/core/vscode/operationProgress';
 import type { Project } from '@/types/base';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
@@ -221,8 +222,10 @@ export function removalStageReporter(context: HandlerContext): (stage: string) =
     };
 }
 
-/** The stage a removal is on once the save has finished. */
-export const STARTING_REMOVAL_STAGE = OPERATION_STAGES.removingDatapack.label;
+/** The stage a removal is on once the save has finished, named for the pack when known (owner, 2026-11-16). */
+export function startingRemovalStage(name: string | undefined): string {
+    return packStage(OPERATION_STAGES.removingDatapack, name);
+}
 
 /**
  * This context, with `project` as its current project. A project reset can be started from the

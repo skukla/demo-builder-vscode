@@ -20,8 +20,7 @@
  * Strict TDD: written BEFORE the module exists.
  */
 
-import { OPERATION_STAGES } from '@/core/utils/operationStages';
-import { summarizeProgress, progressLabel, progressStep } from '@/features/data-installer/ui/importProgress';
+import { summarizeProgress, progressLabel } from '@/features/data-installer/ui/importProgress';
 import type { DataTypeStatus } from '@/features/data-installer/types';
 
 const REQUESTED = ['attribute_sets', 'categories', 'products', 'customers'];
@@ -176,16 +175,3 @@ describe('progressLabel', () => {
     });
 });
 
-// The step on line 1: the stage table's, so the modal, creation and the notification
-// it hands over to name the same job the same way.
-describe('progressStep', () => {
-    it("names an import by the table's datapack step", () => {
-        expect(progressStep('import')).toBe(OPERATION_STAGES.installingDatapack.label);
-    });
-
-    // "Removing", not "Resetting": the button reads "Remove data", and a project
-    // RESET restores the pack. The `reset` operation id is the wire, not the wording.
-    it('names a removal as removing, never as importing', () => {
-        expect(progressStep('reset')).toBe(OPERATION_STAGES.removingDatapack.label);
-    });
-});

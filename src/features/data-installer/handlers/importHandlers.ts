@@ -25,6 +25,7 @@
 import { announcingChanges } from '../services/datapackChanges';
 import type { DatapackEngine } from '../services/datapackEngine';
 import type { ImportRequest } from '../services/importRequest';
+import { rememberedPackName } from '../services/packNames';
 import type { ImportJobRecord, ValidationResult } from '../types';
 import { datapackLibraryHandlers } from './datapackLibraryHandlers';
 import { datapackRecordsHandlers } from './datapackRecordsHandlers';
@@ -38,7 +39,7 @@ import { skippedPage, waitForJob, waitMsOf } from './importJobWait';
 import { JOB_KEY, runAndWatch } from './importJobWatch';
 import { type StartImportPayload, afterWait, prepareImport, readInput, startDatapackImport } from './importStart';
 import { importTargetHandlers } from './importTargetHandlers';
-import { STARTING_REMOVAL_STAGE, type SavedFirst, removalChangesHandlers, removalStageReporter, settleChangesBeforeRemoval } from './removalChanges';
+import { startingRemovalStage, type SavedFirst, removalChangesHandlers, removalStageReporter, settleChangesBeforeRemoval } from './removalChanges';
 import { restoreDatapackHandlers } from './restoreDatapack';
 import { saveQuestionTipHandlers } from './saveQuestionTip';
 import { storeChangesHandlers } from './storeChangesHandlers';
@@ -265,7 +266,8 @@ async function settleBeforeReset(
         stage,
     );
     if ('saved' in settled && settled.saved) {
-        stage(STARTING_REMOVAL_STAGE);
+        const memory = context.context?.globalState;
+        stage(startingRemovalStage(memory ? rememberedPackName(memory, input.datapackName) : undefined));
     }
     if ('response' in settled && settled.response.code === ErrorCode.CHANGES_NOT_SAVED) {
         // A window closed during the save handed it to a notification, which has to hear the end.

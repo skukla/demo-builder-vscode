@@ -10,6 +10,8 @@
 
 import type { ProgressTracker } from './shared';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { packStage } from '@/core/utils/packStage';
+import { knownPackName } from '@/features/data-installer/handlers/libraryWriter';
 import { typesLine } from '@/features/data-installer/services/datapackTypesLine';
 import { creationFailureReason, recordCreationInstall } from '@/features/data-installer/services/installFailure';
 import type { Project } from '@/types/base';
@@ -52,7 +54,9 @@ export async function executeSampleDataPhase(
         return;
     }
 
-    progressTracker(OPERATION_STAGES.installingDatapack.label, 92, `Installing ${chosen.name}`);
+    // Named for the pack, "Installing Frescopa" (owner, 2026-11-16); "the datapack" when unknown.
+    const step = packStage(OPERATION_STAGES.installingDatapack, await knownPackName(context, chosen));
+    progressTracker(step, 92, OPERATION_STAGES.installingDatapack.detail);
 
     try {
         const { installSampleData } = await import(
@@ -69,7 +73,7 @@ export async function executeSampleDataPhase(
                 // installed right now, go on the line under it (progress vocabulary,
                 // owner 2026-10-16).
                 progressTracker(
-                    OPERATION_STAGES.installingDatapack.label,
+                    step,
                     94,
                     typesLine(sd.done, sd.total, sd.processing),
                 ),
@@ -77,7 +81,7 @@ export async function executeSampleDataPhase(
         );
 
         progressTracker(
-            OPERATION_STAGES.installingDatapack.label,
+            step,
             96,
             describeSampleDataResult(chosen.name, result),
         );
@@ -89,7 +93,7 @@ export async function executeSampleDataPhase(
         const reason = error instanceof Error ? error.message : String(error);
         context.logger.warn(`[Sample Data] Phase failed, continuing: ${reason}`);
         progressTracker(
-            OPERATION_STAGES.installingDatapack.label,
+            step,
             96,
             `Datapack could not be installed \u2014 ${reason}`,
         );

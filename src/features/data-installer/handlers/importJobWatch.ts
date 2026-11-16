@@ -21,12 +21,14 @@ import { addUpdateBehind } from '../services/demoBuilderEngine/installRecordUpda
 import { type ImportJobResult, watchImportJob } from '../services/importJobRunner';
 import type { ImportRequest } from '../services/importRequest';
 import { dropStaleFailure, recordInstallEnd } from '../services/installFailure';
+import { rememberedPackName } from '../services/packNames';
 import { type DataTypeStatus, IMPORT_PROGRESS_MESSAGE, type ImportJobRecord, type JobPurpose, type ValidationResult } from '../types';
-import { progressLabel, progressStep, summarizeProgress } from '../ui/importProgress';
+import { progressLabel, summarizeProgress } from '../ui/importProgress';
 import { PollingService } from '@/core/shell/pollingService';
 import { TransientStateManager } from '@/core/state/transientStateManager';
 import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
-import { detailFor, expectationFor } from '@/core/utils/operationStages';
+import { OPERATION_STAGES, detailFor, expectationFor } from '@/core/utils/operationStages';
+import { packStage } from '@/core/utils/packStage';
 import { pushOperationProgress } from '@/core/vscode/operationProgress';
 import type { DatapackId } from '@/types/datapack';
 import { ErrorCode } from '@/types/errorCodes';
@@ -49,8 +51,10 @@ function datapackStage(
     record: ImportJobRecord,
     perType: ImportJobRecord['perType'],
     detail: string | undefined,
+    name?: string,
 ): { stage: string; step: string; expectation?: string } {
-    const stage = progressStep(record.operation === 'reset' ? 'reset' : 'import');
+    // Named for the pack when known, "Installing Frescopa" (owner, 2026-11-16).
+    const stage = packStage(record.operation === 'reset' ? OPERATION_STAGES.removingDatapack : OPERATION_STAGES.installingDatapack, name);
     const step = progressLabel(summarizeProgress(perType ?? {}, record.dataTypes), detail) ?? detailFor(stage) ?? '';
     return { stage, step, expectation: expectationFor(stage) };
 }
@@ -97,6 +101,8 @@ async function watchAndRecord(
     };
     // Walk F97: the project names the new pack once the one it replaces is gone, never before.
     const named = namedOnceReplaced(context, replacement);
+    const memory = context.context?.globalState;
+    const packName = memory ? rememberedPackName(memory, record.datapackName) : undefined;
     try {
         // The engine that started the job is the one asked how it is going: only it knows.
         const result = await watchImportJob({
@@ -125,7 +131,7 @@ async function watchAndRecord(
                 void pushOperationProgress({
                     id: DATAPACK_OPERATION_ID,
                     state: 'running',
-                    ...datapackStage(record, perType, detail),
+                    ...datapackStage(record, perType, detail, packName),
                 });
                 writeProgress(perType, detail, phase, replacing);
             },
