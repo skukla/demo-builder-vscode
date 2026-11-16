@@ -98,7 +98,8 @@ export function StepsWindow({
             clearTimeout(spin);
         };
     }, [ready]);
-    const { ref, locked } = useFixedHeight(ready || late);
+    // The limit holds the height only for steps that read for themselves; a named wait holds on.
+    const { ref, locked } = useFixedHeight(ready || (late && !waiting));
 
     // While what the steps hold is read, the wait is a small window, titled as the window will be,
     // with its way out: a window that appears and then grows is what the SC must never see (owner,
@@ -107,7 +108,10 @@ export function StepsWindow({
     // window at a new step (rule 14). Unseen for its first moment, so a quick read shows nothing.
     // The steps stay mounted, hidden, all along: some do the read themselves (a destination list).
     // Only before the first height is held: a window already open keeps its size through a later read.
-    const reading = !ready && !late && !locked;
+    // A window waiting on a read it names (`waiting`) stays the small wait until that read answers:
+    // the 30-second limit is for steps that read for themselves (walk F158: a minute-long check
+    // opened the full window around the wait, then locked to it).
+    const reading = !ready && (!late || Boolean(waiting)) && !locked;
 
     return (
         <Modal

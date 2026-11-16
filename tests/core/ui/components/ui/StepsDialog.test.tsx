@@ -155,6 +155,19 @@ describe('StepsDialog', () => {
         expect(screen.getByText('The form')).toBeInTheDocument();
     });
 
+    // Walk F158: a minute-long check, past the 30-second limit, opened the full window around its wait
+    // and locked to that height, so the table came into a box too small for it.
+    it('stays the small wait past the time limit while it waits on a read it names', () => {
+        renderSteps({ ready: false, waiting: WAIT });
+
+        act(() => {
+            jest.advanceTimersByTime(FRONTEND_TIMEOUTS.DIALOG_MEASURE_LIMIT);
+        });
+
+        expect(dialog()).toHaveAttribute('data-size', 'S');
+        expect(dialog()).not.toHaveClass('is-locked');
+    });
+
     // Owner, 2026-11-16: "Opening <title>" read "Opening Uninstall Frescopa?" under a question title.
     it('says Loading when the caller gave no wait words, never "Opening" and the title', () => {
         renderSteps({ ready: false });

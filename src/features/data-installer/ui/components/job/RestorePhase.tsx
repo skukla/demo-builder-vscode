@@ -125,6 +125,8 @@ export function RestorePhase({
     return (
         <StepsWindow
             title={`${RESTORE} ${name}`}
+            // Nothing is shown until the check answers: the small wait window (owner walk, 2026-11-16).
+            ready={false}
             waiting={WAIT_STAGES.checkingForChanges}
             closeLabel="Cancel"
             onClose={onClose}

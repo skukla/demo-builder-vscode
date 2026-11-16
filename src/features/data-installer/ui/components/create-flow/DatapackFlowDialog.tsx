@@ -123,6 +123,9 @@ export function DatapackFlowDialog({ title, ownNames, onClose, onSave }: Datapac
                     reserve={isPicks(flow.stage) ? PICKS_ROOM : undefined}
                     onClose={onClose}
                     closeLabel="Cancel"
+                    // Not ready while it reads: the small wait window, then the picks at their size
+                    // (owner walk, 2026-11-16: it opened full size around the wait).
+                    ready={!flow.waiting}
                     waiting={flow.waiting ? waitLines(flow.stage) : false}
                     {...footerOf(flow)}
                 >
