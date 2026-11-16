@@ -2,8 +2,7 @@
 
 Site: DA.live org `skukla`, site `bodea-source` (matches the block-source repo name).
 
-Bodea = B2B network enclosures / data-center racks. Robin's repo also holds a separate Marine
-Corps (ORG C) demo — none of that content travels.
+Bodea = B2B network enclosures / data-center racks. Robin's repo also holds a separate Org C (ORG C) demo — none of that content travels.
 
 1. Curated copy from `org-j/org-k`:
    - PRUNE pages for every dropped block (2026-08-14 curation, commit 079522f):

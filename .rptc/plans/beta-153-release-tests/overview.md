@@ -191,7 +191,12 @@ Mark each test's **Result** line: `passed 2026-11-DD`, or `failed 2026-11-DD: wh
 | 2.7 | Single delete | passed in part 2026-11-05 |
 | 2.8 | Agent delete | open |
 | 3.1 to 3.5 | Smaller changes since the last walk | passed 2026-11-05 |
-| 4.1 to 4.5 | Before the cut | open |
+| 4.1 | Merge demo-erp's order-removal branch into `main` | passed 2026-11-16 (checked: `main` holds `88546bc` and `0deea9f`) |
+| 4.2 | Merge commerce-erp-integration's reset-rule branch into `main` | passed 2026-11-16 (checked: `main` holds `18f28a9` to `d783ab2`) |
+| 4.3 | Point the live demo's four ERP folders back at `main` | passed in part 2026-11-16: all four on `main` with the merged commits; three demo-erp folders one commit behind `origin/main`, and `erp/status` not yet read live |
+| 4.4 | Share the datapacks as team packs | open (owner's go): team packs but `shared: false` |
+| 4.5a | The two lapsed quality passes (codebase-sweep, reflect) | passed 2026-11-16 (findings filed, 7 reflect proposals waiting for the owner) |
+| 4.5 | Merge into develop, then cut beta.153 | open |
 
 ---
 
