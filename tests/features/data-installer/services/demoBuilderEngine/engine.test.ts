@@ -91,7 +91,7 @@ describe('demoBuilderEngine install', () => {
 
         expect(status.perType).toEqual({ attribute_sets: 'success' });
         const record = await readInstallRecord(files, PROJECT, PACK);
-        expect(record?.created).toEqual([]);
+        expect(record?.created).toStrictEqual([]);
         expect(record?.startedAt).toBe('2026-10-27T18:00:00.000Z');
     });
 
