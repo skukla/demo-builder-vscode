@@ -176,7 +176,7 @@ red, and so is a registry entry for something deleted.
 
 | Cadence | What runs | Who triggers it |
 |---|---|---|
-| per-tool-call | 21 hook rules in `.claude/hooks/rules/` | automatic |
+| per-tool-call | 22 hook rules in `.claude/hooks/rules/` | automatic |
 | per-jest-run | 69 enforcer suites in `tests/sop/` | automatic |
 | per-push | lint, both typecheckers, 2 validators | CI |
 | per-push (local) | the CSS baseline check — `.githooks/pre-push` only, never CI | the git hook |
@@ -254,7 +254,7 @@ without producing a signal.
 ## The conventions live in one place
 
 **[docs/development/handbook.md](docs/development/handbook.md)** states every convention
-this codebase holds itself to — 142 of them, 139 with an enforcer that fails the build — and
+this codebase holds itself to — 143 of them, 140 with an enforcer that fails the build — and
 explains each one for a human reader. Read it once, start to finish.
 
 Some rules appear both there and here, deliberately: this file is loaded into every agent
@@ -549,3 +549,11 @@ For detailed information about specific areas, navigate to the CLAUDE.md file in
 
 ## RPTC Verification Configuration
 verification-agent-mode: automatic
+
+## Lessons
+
+- **Use the extension's own tools before handing a step to the person.** Before asking them to
+  reload the window, republish, deploy or build something in Commerce, check the demo-builder MCP
+  tools and the window-reload ability (`reload_window`). If one can do it, do it yourself and say
+  which tool you used. Three corrections on record, the last of them "You have the ability to do
+  what you need to do agenticly, do you not?" (reflect proposal 7, accepted 2026-11-16).

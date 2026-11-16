@@ -127,6 +127,7 @@ describe('a long operation reports where the SC is looking', () => {
                 current,
             );
 
+            // Code moved under a row? Re-key it: `npm run ledger -- move progress <section>:<old file:line> <new file:line>`.
             expect({ unlisted, stale, unexplained }).toEqual({
                 unlisted: [],
                 stale: [],
@@ -148,6 +149,7 @@ describe('a long operation reports where the SC is looking', () => {
                 current,
             );
 
+            // Code moved under a row? Re-key it: `npm run ledger -- move progress <section>:<old file:line> <new file:line>`.
             expect({ unlisted, stale, unexplained }).toEqual({
                 unlisted: [],
                 stale: [],

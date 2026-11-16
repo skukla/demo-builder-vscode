@@ -1103,6 +1103,14 @@ check says so and names the file.
 > Enforced by `.claude/hooks/rules/21-push-no-verify.rule`, which blocks every time
 > rather than once per session.
 
+> **Convention.** The gate runs through the pipeline's `checks` tool, not typed by hand.
+> *Why:* `checks` runs exactly `npm run gate` (`.pipeline.yaml`: `checks: [npm run gate]`)
+> and reports pass or fail per check with the failing output, so nothing is read back from a
+> file; sessions typed the gate by hand 448 times in 11 sessions (reflect proposal 2,
+> accepted 2026-11-16).
+> Enforced by `.claude/hooks/rules/22-gate-via-checks.rule`, which stops the first
+> hand-typed `npm run gate` in a session and lets a repeat run.
+
 > **Convention.** A new webview message is wired through its skill.
 > *Why:* a message is only live when the MessageType, the handler, the feature's
 > handler map and the webview call site all agree. Miss one and the message is sent
@@ -1986,12 +1994,12 @@ it is, and the count of unenforced rules is stated rather than hidden.
 
 Conventions decay unless something checks them. Four layers do:
 
-- **Hooks** stop a bad action as it happens — 21 rules in `.claude/hooks/rules/`
+- **Hooks** stop a bad action as it happens — 22 rules in `.claude/hooks/rules/`
 - **Enforcer suites** fail the build when code drifts — 69 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, agent coverage (import cycles moved to an enforcer suite on 2026-10-08)
 
-**This handbook states 142 conventions. 139 of them are enforced; 3 are not.**
+**This handbook states 143 conventions. 140 of them are enforced; 3 are not.**
 
 The last one to get there was "vendor CSS sits in the lowest cascade layer", and it was
 outstanding because it was **not yet true**: `@layer vendor` existed in no bundle, so a

@@ -208,6 +208,7 @@ export function expectClean(ledger: Ledger, check: string, violations: string[])
     const rows = (ledger[check] ?? {}) as Record<string, string>;
     const found = new Set(violations);
     expect({
+        // The user-facing-errors ledger: re-key a row whose code moved with `npm run ledger -- move errors rawMessageToUser:<old> <new>`.
         newViolations: violations.filter((v) => !(v in rows)),
         staleExemptions_deleteWithTheFix: Object.keys(rows).filter((k) => !found.has(k)),
         exemptionsWithoutReasons: Object.entries(rows)

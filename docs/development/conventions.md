@@ -12,7 +12,7 @@ were wrong within an hour of being written. This one is derived from the
 handbook's own callouts and checked against the enforcers on disk in both
 directions, so it cannot.
 
-- **142** conventions, **139** enforced
+- **143** conventions, **140** enforced
 - **31** name the decision record behind them
 - **6** name a procedure — an SOP or a skill
 - **1** have all three layers
@@ -137,6 +137,7 @@ it means the rule rests on somebody noticing.
 | A change to the MCP tool surface is made through its skill. |  |  | `37-mcp-tool.rule` |
 | A source file that is already over its size limit does not grow. |  |  | `49-god-file.rule`<br>`god-file-ratchet.test.ts` |
 | Never push with the pre-push gate disabled. |  |  | `21-push-no-verify.rule` |
+| The gate runs through the pipeline's `checks` tool, not typed by hand. |  |  | `22-gate-via-checks.rule` |
 | A new webview message is wired through its skill. |  |  | `38-webview-handler.rule` |
 | App Builder catalog edits go through the authoring skill. |  |  | `39-appbuilder-component.rule` |
 | Helix, DA.live and Config Service work goes through its skill. |  |  | `42-eds-publish.rule` |

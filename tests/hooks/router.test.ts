@@ -437,6 +437,8 @@ describe('every rule is reachable through the pre-filter', () => {
         // first run and found by their own proofs, which is the fourth and fifth
         // time that gate has been the actual bug.
         'push-no-verify': () => run(bash(`git push --no-verify origin develop`), fresh()),
+        // Reflect proposal 2 (2026-11-16): a hand-typed gate is pointed at the `checks` tool.
+        'gate-via-checks': () => run(bash(`npm run gate > gate.txt 2>&1`), fresh()),
         'webview-handler': () => run(edit(path.join(REPO2, 'src/types/messages.ts')), fresh()),
         'appbuilder-component': () =>
             run(edit(path.join(REPO2, 'src/features/components/config/app-builder-components.json')), fresh()),

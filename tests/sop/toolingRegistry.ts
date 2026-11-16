@@ -347,6 +347,17 @@ const MUTATION: readonly Instrument[] = [
         resultKind: 'report',
     },
     {
+        id: 'ledger',
+        kind: 'npm-script',
+        cadence: 'on-demand',
+        what: 'lists, checks, adds, removes or re-keys rows in the mutation, errors and progress ledgers, keeping each file byte-for-byte in its own format (reflect proposal 5, 2026-11-16)',
+        runs: 'npm run ledger -- check <mutation|errors|progress>',
+        resultKind: 'gate',
+        writes: true,
+        unwiredReason:
+            'Run when code moves under a ledger row: the pipeline toolbox exposes it as the `ledger` tool, and the ledger suites name it in their failure messages.',
+    },
+    {
         id: 'test:mutation:focus',
         kind: 'npm-script',
         cadence: 'on-demand',

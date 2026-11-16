@@ -21,3 +21,6 @@ neighbours:
   message: { key: "\b(?:request|postMessage|sendMessage|send|onMessage|invoke)(?:<[^()]*?>)?\(\s*'([a-z][A-Za-z0-9]*(?:-[a-z0-9]+)*)(?=')", from: "src/**/*.ts*", in: "src/**", min: 150 }
   component-id: { json: "src/features/components/config/components.json#frontends,backends,mesh,integrations,addons,tools,services", in: "src/**", min: 10 }
   ai-gate: { key: "export function (\w+)", from: "src/features/project-creation/services/aiBundle/aiToolingGate.ts", in: "src/**", min: 4 }
+tools:
+  compile: { run: npm run compile, about: "Build the extension and its webview bundles (the esbuild production build)" }
+  ledger: { run: python3 scripts/ledger.py, about: "List, check, add, remove or move rows of the mutation, errors and progress ledgers, keeping each file's format; --dry-run previews" }
