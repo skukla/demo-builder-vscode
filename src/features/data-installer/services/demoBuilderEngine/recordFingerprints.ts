@@ -21,6 +21,7 @@ import type { KindContext } from './kindContext';
 import { keyOf } from './packForm';
 import { GIFT_CARD_KIND } from './productKinds';
 import { type ProductLookups, productLookups } from './productLookups';
+import { inLanes } from './readLanes';
 import { STORE_CONFIG_KIND, rebasedSetting } from './storeConfigKind';
 import { type ProductsSeen, READABLE_KINDS, onceInventory, packKindIn, packedFingerprint, readCopies, rowsByKey } from './storeCopies';
 import { storeFormOfAttribute } from './swatchCarry';
@@ -58,16 +59,18 @@ function rowsOnce(items: Record<string, unknown>): (kind: string) => Map<string,
  */
 async function copiesByKind(ctx: KindContext, objects: readonly CreatedObject[], lk: ProductLookups, seen?: ProductsSeen): Promise<Map<string, Map<string, unknown>>> {
     const inventory = onceInventory(ctx);
-    const byKind = new Map<string, Map<string, unknown>>();
-    for (const kind of READABLE_KINDS) {
-        const of = objects.filter((o) => o.kind === kind);
-        if (of.length === 0) continue;
+    // Products beside the rest (walk F160), each lane one kind at a time.
+    const kinds = READABLE_KINDS.filter((kind) => objects.some((o) => o.kind === kind));
+    const read = await inLanes(kinds, async (kind) => {
         try {
-            byKind.set(kind, await readCopies(ctx, lk, kind, of, inventory, seen));
+            return await readCopies(ctx, lk, kind, objects.filter((o) => o.kind === kind), inventory, seen);
         } catch (error) {
             ctx.log(`could not read ${kind} back to hash: ${error instanceof Error ? error.message : String(error)}`);
+            return undefined;
         }
-    }
+    });
+    const byKind = new Map<string, Map<string, unknown>>();
+    for (const [kind, copies] of read) if (copies) byKind.set(kind, copies);
     return byKind;
 }
 

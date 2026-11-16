@@ -39,6 +39,7 @@ import { type ExportRow, PRODUCT_EXPORT_KIND, updateProductRows } from './produc
 import { PRODUCT_KINDS } from './productKinds';
 import { productLookups } from './productLookups';
 import { parseProductRows, toCommerceProduct } from './productsKind';
+import { inLanes } from './readLanes';
 import { tryRow } from './refusedRows';
 import { type RefusedRemoval, takeBackAll } from './removalRuns';
 import { type KeptContainer, decideRemovals } from './removers';
@@ -116,13 +117,13 @@ async function planKind(ctx: KindContext, kind: string, recorded: CreatedObject[
  * kinds the request installs. Reads only.
  */
 export async function planRepeat(ctx: KindContext, items: Items, created: readonly CreatedObject[]): Promise<KindPlan[]> {
-    const plans: KindPlan[] = [];
-    for (const kind of READABLE_KINDS) {
+    // Products beside the rest (walk F160): they were most of a minute, read after everything else.
+    const kinds = READABLE_KINDS.filter((kind) => packKindIn(kind, items) in items);
+    const plans = await inLanes(kinds, async (kind): Promise<KindPlan> => {
         const packKind = packKindIn(kind, items);
-        if (!(packKind in items)) continue;
-        plans.push({ ...(await planKind(ctx, kind, created.filter((o) => o.kind === kind), items[packKind])), packKind });
-    }
-    return plans;
+        return { ...(await planKind(ctx, kind, created.filter((o) => o.kind === kind), items[packKind])), packKind };
+    });
+    return [...plans.values()];
 }
 
 /** The ids a kind's install should use for the pack's rows, and the ones the SC deleted. */
