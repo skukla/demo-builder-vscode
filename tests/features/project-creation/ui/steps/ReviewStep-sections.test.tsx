@@ -13,6 +13,7 @@ import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { render, screen } from '@testing-library/react';
 import React from 'react';
 import { ReviewStep } from '@/features/project-creation/ui/steps/ReviewStep';
+import type { CommerceStoreStructure } from '@/types/commerceStore';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
 import type { WizardState } from '@/types/webview';
@@ -393,5 +394,39 @@ describe('the Datapack row', () => {
         renderReview({});
 
         expect(screen.queryByText('Datapack')).toBeNull();
+    });
+});
+
+// Walk F211 (owner, 2026-11-17): Scratch 1028 B was created on the live store's website, picked by
+// mistake from two of the same brand, and the review never said which website it would write to.
+describe('where the project writes in Commerce', () => {
+    const STORE: CommerceStoreStructure = {
+        websites: [
+            { id: 1, code: 'acme', name: 'Acme Website' },
+            { id: 2, code: 'acme_test', name: 'Acme Test' },
+        ],
+        storeGroups: [{ id: 3, code: 'acme_test_store', name: 'Acme Test Store', website_id: 2, root_category_id: 2 }],
+        storeViews: [{ id: 4, code: 'acme_test_us', name: 'Acme Test Store US', store_group_id: 3, website_id: 2 }],
+    };
+    const chosen = (website: string, storeView: string): Partial<WizardState> => ({
+        selectedBackend: 'adobe-commerce-accs',
+        storeDiscoveryData: STORE,
+        componentConfigs: { 'adobe-commerce-accs': { ACCS_WEBSITE_CODE: website, ACCS_STORE_VIEW_CODE: storeView } },
+    });
+
+    it('names the website and store view by their names', () => {
+        renderReview(chosen('acme_test', 'acme_test_us'));
+
+        expect(screen.getByText('Website')).toBeInTheDocument();
+        expect(screen.getByText('Acme Test')).toBeInTheDocument();
+        expect(screen.getByText('Store View')).toBeInTheDocument();
+        expect(screen.getByText('Acme Test Store US')).toBeInTheDocument();
+    });
+
+    it('shows neither row before a website is chosen', () => {
+        renderReview({});
+
+        expect(screen.queryByText('Website')).not.toBeInTheDocument();
+        expect(screen.queryByText('Store View')).not.toBeInTheDocument();
     });
 });

@@ -8,6 +8,7 @@ import {
     reviewStorePreparation,
     StorePreparationNotice,
 } from './reviewStepHelpers';
+import { reviewStoreScope } from './reviewStoreScope';
 import { COMPONENT_IDS, isMeshComponentId } from '@/core/constants';
 import { ContentColumn } from '@/core/ui/components/layout/ContentColumn';
 import { useCanProceed } from '@/core/ui/hooks/useCanProceed';
@@ -170,18 +171,23 @@ function ProjectConfigSection({
     packageName,
     stackName,
     datapackName,
+    scope,
 }: {
     packageName?: string;
     stackName?: string;
     /** The datapack the project gets, as its card named it (owner, 2026-11-16). */
     datapackName?: string;
+    /** Where it writes in Commerce, by name (walk F211). */
+    scope: ReturnType<typeof reviewStoreScope>;
 }) {
-    if (!packageName && !stackName && !datapackName) return <View />;
+    if (!packageName && !stackName && !datapackName && !scope.website) return <View />;
     return (
         <Section title="Project Configuration">
             {packageName && <LabelValue label="Package" value={packageName} />}
             {stackName && <LabelValue label="Architecture" value={stackName} />}
             {datapackName && <LabelValue label="Datapack" value={datapackName} />}
+            {scope.website && <LabelValue label="Website" value={scope.website} />}
+            {scope.storeView && <LabelValue label="Store View" value={scope.storeView} />}
         </Section>
     );
 }
@@ -392,7 +398,7 @@ export function ReviewStep({
                 <div data-span-columns={
                     !adobeOrgName && !adobeProjectName && !adobeWorkspaceName ? 'true' : undefined
                 }>
-                    <ProjectConfigSection packageName={packageName} stackName={stackName} datapackName={datapackNameOf(state)} />
+                    <ProjectConfigSection packageName={packageName} stackName={stackName} datapackName={datapackNameOf(state)} scope={reviewStoreScope(state)} />
                 </div>
                 {(adobeOrgName || adobeProjectName || adobeWorkspaceName) && (
                     <AdobeIOSection
