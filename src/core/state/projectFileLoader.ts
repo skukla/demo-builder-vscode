@@ -94,6 +94,7 @@ export interface ProjectManifest {
     demo?: Project['demo'];
     datapack?: Project['datapack'];
     datapackInstallFailure?: Project['datapackInstallFailure'];
+    finishSetup?: Project['finishSetup'];
     commerceAdminExperience?: Project['commerceAdminExperience'];
     selectedStack?: string;
     selectedAddons?: string[];
@@ -198,6 +199,7 @@ export class ProjectFileLoader {
                 demo: manifest.demo,
                 datapack: manifest.datapack,
                 datapackInstallFailure: manifest.datapackInstallFailure,
+                finishSetup: manifest.finishSetup,
                 commerceAdminExperience: manifest.commerceAdminExperience,
                 selectedStack: manifest.selectedStack,
                 selectedAddons: manifest.selectedAddons,

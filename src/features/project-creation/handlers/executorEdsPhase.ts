@@ -23,6 +23,7 @@ import { authoredSheetRefresh } from '@/features/eds/services/catalogMenu/author
 import { syncConfigToRemote } from '@/features/eds/services/configSyncService';
 import { readPatchesRelease } from '@/features/eds/services/patches/lkgReader';
 import { writeBrokenLinks } from '@/features/eds/services/storefront/brokenLinksRecord';
+import { replaceFinishSetup } from '@/features/eds/services/storefront/codeStepRecord';
 import { recordStorefrontBuilt } from '@/features/eds/services/storefront/storefrontChanges';
 import { readRepoBoilerplate } from '@/features/eds/services/storefront/storefrontOrigin';
 import { extractConfigParamsFromConfigs } from '@/features/eds/services/storefrontConfigParams';
@@ -59,6 +60,8 @@ function recordWhatSetupFound(
     // Built the way Demo Builder builds storefronts now: the "Needs reset" status reads it.
     if (typeof edsConfig.storefrontBuildComplete === 'boolean') {
         recordStorefrontBuilt(project, edsConfig.storefrontBuildComplete);
+        // Setup built it: what it left to finish replaces the record (PL-101).
+        replaceFinishSetup(project, edsConfig.codeNotServed);
     }
 }
 

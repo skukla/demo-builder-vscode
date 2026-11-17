@@ -903,6 +903,8 @@ export interface StorefrontSetupCompletePayload {
     installedBlockLibraries?: InstalledBlockLibrary[];
     /** Whether the build step's fixes all landed; creation stamps the project with it. */
     storefrontBuildComplete?: boolean;
+    /** The code files the live site did not serve yet; creation saves them as the Republish the Code step (PL-101). */
+    codeNotServed?: string[];
 }
 
 /** `storefront-setup-error` — the pipeline failed; the wizard offers Retry. */

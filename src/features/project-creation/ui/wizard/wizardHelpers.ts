@@ -570,6 +570,7 @@ function buildProjectEdsConfig(wizardState: ProjectConfigSource) {
         ...(eds.storefrontBuildComplete !== undefined
             ? { storefrontBuildComplete: eds.storefrontBuildComplete }
             : {}),
+        ...(eds.codeNotServed?.length ? { codeNotServed: eds.codeNotServed } : {}),
     };
 }
 

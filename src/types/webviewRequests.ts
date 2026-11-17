@@ -39,6 +39,24 @@ import type { GitHubUser } from './webviewPayloads';
 import type { LeftOut, PickableKind, Selections } from '@/features/data-installer/pickableKinds';
 
 /**
+ * `setFinishSetupStep` — the Finish Setup guide's Mark as Done (`done`), Skip (`dismissed`) and
+ * Undo Skip (`open`) on one of the project's steps (PL-101). Checked by the handler: an agent may
+ * send anything.
+ */
+export interface SetFinishSetupStepRequest {
+    stepId?: string;
+    state?: string;
+}
+
+/**
+ * `checkFinishSetupSteps` — run one step's check (`stepId`), as the guide asks one at a time, or
+ * every step not skipped when absent (PL-101). Answers `{ items }`, the steps as the check saved them.
+ */
+export interface CheckFinishSetupStepsRequest {
+    stepId?: string;
+}
+
+/**
  * `undo-last-save` — go back to the save before the newest of the project's own datapack (Phase 2,
  * owner 2026-11-12). Sent by the Datapacks flyout's Undo Last Save once its dialog is confirmed, and
  * by the agent tool. Nothing changes in Commerce unless `confirm` is true.
@@ -587,6 +605,8 @@ export interface ProjectCreationConfig {
         installedBlockLibraries?: import('./blockLibraries').InstalledBlockLibrary[];
         /** Present when setup built the storefront: whether its fixes all landed (storefrontChanges.ts). */
         storefrontBuildComplete?: boolean;
+        /** The code files the live site did not serve after setup: saved as the Republish the Code step (PL-101). */
+        codeNotServed?: string[];
         // Note: previewUrl/liveUrl not stored - derived from githubRepo by typeGuards
         // Patch IDs to apply during reset (from demo-packages.json)
         patches?: string[];

@@ -199,6 +199,13 @@
           "$ref": "#/definitions/DatapackInstallFailure",
           "description": "The creation-time install of `datapack` that did not end in success, until a later install of it succeeds or the project stops naming it (`installFailure.ts`). Absent on every project predating it, which shows nothing. Never exported in a project file."
         },
+        "finishSetup": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/FinishSetupRecord"
+          },
+          "description": "The steps a run left for the SC to finish (PL-101), by step id: Republish the Code (`republish-code`, with the files the live site did not serve yet) and where the SC is on each step the Finish Setup guide lists (Skip, Mark as Done, what its last check found). A finished step is kept, shown done, until the next creation or reset REPLACES the record. Absent when no run left anything. Never exported in a project file."
+        },
         "commerceAdminExperience": {
           "$ref": "#/definitions/CommerceAdminExperience",
           "description": "The Commerce Admin interface chosen on Configure. Absent: the setting's."
@@ -1730,6 +1737,39 @@
         "version"
       ],
       "description": "A creation-time install of the project's datapack that did not end in success (step-04 S7).\n\nKept on the PROJECT, never on `ProjectDatapack`, which travels in project files: a failure belongs to this store, not to a copy. Rules in `features/data-installer/services/installFailure.ts`."
+    },
+    "FinishSetupRecord": {
+      "type": "object",
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": [
+            "done",
+            "dismissed"
+          ],
+          "description": "Absent = still to do."
+        },
+        "note": {
+          "type": "string",
+          "description": "What the last automatic check found, in words (e.g. which companies share a group)."
+        },
+        "lastCheck": {
+          "$ref": "#/definitions/SetupCheckOutcome",
+          "description": "What that check concluded: set up, not set up, or it could not tell (the state is then left as it was, so the state alone cannot say). Absent on records saved before 2026-10-01; `setupChecklistOf` infers it from the state for those."
+        },
+        "checkedAt": {
+          "type": "string",
+          "description": "When that check ran (ISO)."
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Republish the Code: the repository paths the live site did not serve as committed."
+        }
+      },
+      "description": "One Finish Setup step's saved state (PL-101): a setup step's record, and the files a code step is about."
     },
     "CommerceAdminExperience": {
       "type": "string",

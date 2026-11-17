@@ -113,7 +113,7 @@ it('puts one quiet line in the panel, and the step itself in the dialog Show Ste
     await press(within(panel()).getByRole('button', { name: 'Show Step' }));
 
     // The step's title IS the dialog's title, once: no "One step in the Admin" over a second heading.
-    expect(within(dialog()).getAllByText("Show ZZ Root DB12's Categories on the Storefront")).toHaveLength(1);
+    expect(within(dialog()).getAllByText('Set the Root Category')).toHaveLength(1);
     expect(within(dialog()).queryByText('One step in the Admin')).not.toBeInTheDocument();
     expect(within(dialog()).getByLabelText('Stores > All Stores > Tailspin Test Store')).toBeInTheDocument();
     expect(within(dialog()).getByText('Root Category: ZZ Root DB12')).toBeInTheDocument();

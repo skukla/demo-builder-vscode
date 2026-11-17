@@ -290,4 +290,15 @@ describe('StorefrontSetupStep — completion keeps what creation must record', (
             }),
         });
     });
+
+    // PL-101: creation saves them as the project's Republish the Code step.
+    it('holds the code files the live site did not serve yet', () => {
+        const { updateState } = renderStep();
+
+        pushComplete({ message: 'Done', githubRepo: 'https://github.com/o/r', codeNotServed: ['scripts/commerce.js'] });
+
+        expect(updateState).toHaveBeenCalledWith({
+            edsConfig: expect.objectContaining({ codeNotServed: ['scripts/commerce.js'] }),
+        });
+    });
 });

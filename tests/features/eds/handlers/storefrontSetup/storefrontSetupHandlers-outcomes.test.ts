@@ -487,6 +487,22 @@ describe('handleStartStorefrontSetup — the two outcomes', () => {
         );
     });
 
+    // PL-101: creation saves them as the project's Republish the Code step.
+    it('hands back the code files the live site did not serve yet', async () => {
+        mockExecutePhases.mockResolvedValue({
+            success: true,
+            repoUrl: 'https://github.com/demo-org/demo-repo',
+            codeNotServed: ['scripts/commerce.js'],
+        });
+        const context = createContext();
+
+        await handleStartStorefrontSetup(context, payload());
+
+        expect(messagePayload(context, 'storefront-setup-complete')?.codeNotServed).toStrictEqual([
+            'scripts/commerce.js',
+        ]);
+    });
+
     it('leaves broken links off the message when the run found none', async () => {
         mockExecutePhases.mockResolvedValue({
             success: true,

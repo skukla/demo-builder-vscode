@@ -13,13 +13,17 @@ import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import { getComponentIds } from '@/types/typeGuards';
 
-/** The datapack the project names, and a failed creation install of it (step-04 S7). */
+/** The datapack the project names, a failed creation install of it (step-04 S7), and the steps left to finish. */
 function addDatapackFields(manifest: Record<string, unknown>, project: Project): void {
     if (project.datapack !== undefined) {
         manifest.datapack = project.datapack;
     }
     if (project.datapackInstallFailure !== undefined) {
         manifest.datapackInstallFailure = project.datapackInstallFailure;
+    }
+    // The steps a run left for the SC (PL-101); absent when no run left any.
+    if (project.finishSetup && Object.keys(project.finishSetup).length > 0) {
+        manifest.finishSetup = project.finishSetup;
     }
 }
 

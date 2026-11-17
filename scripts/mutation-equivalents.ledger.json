@@ -4998,7 +4998,7 @@
             "anchors": [
                 "const failures = [];"
             ],
-            "line": 388,
+            "line": 390,
             "mutants": 1,
             "category": "other",
             "reason": "The mutant seeds the failures list with one junk string, which flips the aggregate to 'cleanup had errors'. Its return value is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. So nothing this expression computes can reach a test except through log wording.",
@@ -5011,7 +5011,7 @@
             "anchors": [
                 "if (!result.github.success && !result.github.skipped) {"
             ],
-            "line": 389,
+            "line": 391,
             "mutants": 6,
             "category": "branch",
             "reason": "Every variant of this guard \u2014 forced true, forced false, && to ||, either negation dropped, and the body emptied \u2014 changes only whether a 'GitHub: ...' string joins the failure list. The GitHub deletion itself already happened inside CleanupService; this line classifies its report. Its return value is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. So nothing this expression computes can reach a test except through log wording.",
@@ -5024,7 +5024,7 @@
             "anchors": [
                 "if (!result.daLive.success && !result.daLive.skipped) {"
             ],
-            "line": 392,
+            "line": 394,
             "mutants": 6,
             "category": "branch",
             "reason": "The DA.live twin of the GitHub guard above, with the same shape and the same fate: it appends a 'DA.live: ...' string to the failure list after the deletion has already been attempted. Its return value is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. So nothing this expression computes can reach a test except through log wording.",
@@ -5037,7 +5037,7 @@
             "anchors": [
                 "if (failures.length > 0) {"
             ],
-            "line": 400,
+            "line": 402,
             "mutants": 5,
             "category": "branch",
             "reason": "This is the point where the failure list becomes a success flag, so it is the closest thing here to a decision \u2014 but the flag has one reader and that reader picks a log line. Forcing it either way, or comparing with >= or <=, changes 'Cleanup completed successfully' into 'Cleanup completed with errors' or the reverse. Its return value is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. So nothing this expression computes can reach a test except through log wording.",
@@ -5050,7 +5050,7 @@
             "anchors": [
                 "return { success: false, error: failures.join('; ') };"
             ],
-            "line": 401,
+            "line": 403,
             "mutants": 2,
             "category": "other",
             "reason": "Emptying this object literal, or flipping its false to true, changes the shape and the verdict of the cleanup report. The value returned here is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way.",
@@ -5063,7 +5063,7 @@
             "anchors": [
                 "return { success: true };"
             ],
-            "line": 404,
+            "line": 406,
             "mutants": 2,
             "category": "other",
             "reason": "The all-clear answer from the cleanup helper. Emptying the literal or flipping its true to false turns a clean cleanup into a reported failure. The value returned here is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way.",
@@ -5076,7 +5076,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 405,
+            "line": 407,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying this catch body makes the helper return undefined instead of a failure verdict. The caller then throws a TypeError reading .success on undefined, which its own catch swallows into a different log line \u2014 so the handler still resolves { success: true } and no resource is treated differently. The value returned here is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way.",
@@ -5089,7 +5089,7 @@
             "anchors": [
                 "return { success: false, error: (error as Error).message };"
             ],
-            "line": 406,
+            "line": 408,
             "mutants": 2,
             "category": "other",
             "reason": "The failure verdict for an exception thrown anywhere in the helper \u2014 including the fail-fast when there is no authenticated session. Emptying the literal or flipping its false to true changes only that verdict. The value returned here is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. The fail-fast ITSELF is tested: with no authManager, no CleanupService is constructed and cleanupEdsResources is never called.",
@@ -9443,7 +9443,7 @@
             "anchors": [
                 "this.messageQueue = [];"
             ],
-            "line": 341,
+            "line": 343,
             "mutants": 1,
             "category": "other",
             "reason": "Nothing reads the queue after dispose. The only reader is flushMessageQueue, which runs once from the handshake completion handler, and that handler was registered with once() and deleted itself when it ran \u2014 a disposed manager cannot handshake again. Seeding the array rather than emptying it therefore leaves a value no code path can observe. Re-anchored 2026-10-18 (318 -> 322): unchanged code; four comment lines above it budget getErpOwnershipOptions. Re-anchored 2026-10-20 (327 -> 326): unchanged code; the Updates modal's check timeout above it was removed (PL-80). Re-anchored 2026-10-22 (326 -> 328): unchanged code, moved by the recheckUpdates timeout entry above it (PL-80). Re-anchored 2026-10-30 (328 -> 332): unchanged code, moved by the check-demo-data timeout entry above it (datapack-engine step 10). Re-anchored 2026-10-30 (333 -> 337): unchanged code, moved by the check-datapack-setup-step timeout entry above it (DI-5). Re-anchored 2026-11-13 (344 -> 341): unchanged code, moved by the deleteProject timeout entry above it, removed with the last screen that sent it (step-05 S4).",
@@ -9456,7 +9456,7 @@
             "anchors": [
                 "this.messageQueue = [];"
             ],
-            "line": 520,
+            "line": 522,
             "mutants": 1,
             "category": "other",
             "reason": "This assignment is what makes the flush non-repeating, but nothing flushes twice: flushMessageQueue is called only from the handshake completion handler, which once() deletes as it fires. So the array left behind here is read by nothing, and seeding it rather than emptying it cannot change a message sent or a piece of state observed. Re-anchored 2026-10-18 (497 -> 501): unchanged code; four comment lines above it budget getErpOwnershipOptions. Re-anchored 2026-10-20 (506 -> 505): unchanged code; the Updates modal's check timeout above it was removed (PL-80). Re-anchored 2026-10-22 (505 -> 507): unchanged code, moved by the recheckUpdates timeout entry above it (PL-80). Re-anchored 2026-10-30 (507 -> 511): unchanged code, moved by the check-demo-data timeout entry above it (datapack-engine step 10). Re-anchored 2026-10-30 (512 -> 516): unchanged code, moved by the check-datapack-setup-step timeout entry above it (DI-5). Re-anchored 2026-11-13 (523 -> 520): unchanged code, moved by the deleteProject timeout entry above it, removed with the last screen that sent it (step-05 S4).",
@@ -9469,7 +9469,7 @@
             "anchors": [
                 "}).catch((hintError) => {"
             ],
-            "line": 397,
+            "line": 399,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying this catch body leaves the catch itself in place, so the timeout hint's failure is still swallowed and the handler still runs next \u2014 which is the documented contract, the hint is explicitly fire-and-forget so it cannot block. The only thing inside the body is a logger.warn, so the sole difference is whether a warning prints, and pinning that would mean asserting a logger call's arguments. Re-anchored 2026-10-18 (374 -> 378): unchanged code; four comment lines above it budget getErpOwnershipOptions. Re-anchored 2026-10-20 (383 -> 382): unchanged code; the Updates modal's check timeout above it was removed (PL-80). Re-anchored 2026-10-22 (382 -> 384): unchanged code, moved by the recheckUpdates timeout entry above it (PL-80). Re-anchored 2026-10-30 (384 -> 388): unchanged code, moved by the check-demo-data timeout entry above it (datapack-engine step 10). Re-anchored 2026-10-30 (389 -> 393): unchanged code, moved by the check-datapack-setup-step timeout entry above it (DI-5). Re-anchored 2026-11-13 (400 -> 397): unchanged code, moved by the deleteProject timeout entry above it, removed with the last screen that sent it (step-05 S4).",

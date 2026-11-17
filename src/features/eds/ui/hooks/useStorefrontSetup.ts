@@ -109,6 +109,8 @@ export function useStorefrontSetup(
                     installedBlockLibraries: data.installedBlockLibraries,
                     // Stamped on the project by creation ("Needs reset", storefrontChanges.ts).
                     storefrontBuildComplete: data.storefrontBuildComplete,
+                    // Saved by creation as the project's Republish the Code step (PL-101).
+                    codeNotServed: data.codeNotServed,
                 },
             });
         },

@@ -34,6 +34,7 @@ import { lostGrantsMessage } from '../configService/lostGrantsMessage';
 import { DaLiveContentOperations } from '../daLive/daLiveContentOperations';
 import type { TokenProvider } from '../daLive/daLiveOrgOperations';
 import { brokenLinksSentence } from '../storefront/brokenLinksRecord';
+import { replaceFinishSetup } from '../storefront/codeStepRecord';
 import { recordStorefrontBuilt } from '../storefront/storefrontChanges';
 import { migrateStorefrontNamingIfNeeded } from '../storefront/storefrontNameMigration';
 import { GitHubAppNotInstalledError } from '../types';
@@ -193,7 +194,7 @@ export async function executeEdsReset(
         contentCopied = content.contentCopied;
         const catalogMenu = await putBackCatalogMenu(params, catalogMenuSite, context.logger, report);
         // After the content copy, so AEM has had minutes to catch up with the last commits.
-        const codeNotServed = await confirmResetCodeServed(
+        const served = await confirmResetCodeServed(
             params,
             repoResetResult.resetCommitSha,
             { githubFileOps, githubTokenService, tokenProvider, logger: context.logger },
@@ -206,6 +207,8 @@ export async function executeEdsReset(
         // Code the site does not serve yet is Republish's to fix, as its warning says, not a
         // reason to reset again (walk F208).
         recordStorefrontBuilt(params.project, repoResetResult.buildComplete);
+        // What the reset left to finish replaces the record: a clean reset leaves no step (PL-101).
+        replaceFinishSetup(params.project, served.files);
 
         // Steps 11-12: CDN verification + optional mesh redeploy + state persistence
         const result = await finalizeReset(
@@ -223,7 +226,7 @@ export async function executeEdsReset(
         const warned = content.pipelineWarnings.length > 0
             ? { ...withSentences, pipelineWarnings: content.pipelineWarnings }
             : withSentences;
-        const notOnSite = [codeNotPublished, codeNotServed].filter(Boolean).join(' ');
+        const notOnSite = [codeNotPublished, served.sentence].filter(Boolean).join(' ');
         const withCode = notOnSite ? { ...warned, codeNotPublished: notOnSite } : warned;
         const linksNote = brokenLinksSentence(content.brokenLinks);
         const withLinks = linksNote ? { ...withCode, brokenLinks: linksNote } : withCode;

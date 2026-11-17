@@ -18,7 +18,7 @@ import type { GitHubFileOperations } from '../github/githubFileOperations';
 import type { GitHubTokenService } from '../github/githubTokenService';
 import { HelixService } from '../helix/helixService';
 import { previewCodeAwaitingAdminRole } from '../helix/previewCodeAwaitingAdminRole';
-import { confirmStorefrontCodeServed } from '../storefront/codeServed';
+import { type CodeServedResult, confirmStorefrontCodeServed } from '../storefront/codeServed';
 import type { EdsResetParams } from './edsResetParams';
 import { RESET_STEP } from '@/core/utils/resetStages';
 import type { HandlerContext } from '@/types/handlers';
@@ -140,21 +140,21 @@ export async function republishCodeIfMissed(
  * @param resetCommitSha - the reset's own commit
  * @param clients - credentials, the repository reader and logger
  * @param report - progress reporter
- * @returns a sentence for the SC when some code still did not reach the site, else undefined
+ * @returns the files the site still does not serve, and the SC's sentence when there are any
  */
 export async function confirmResetCodeServed(
     params: Pick<EdsResetParams, 'repoOwner' | 'repoName'>,
     resetCommitSha: string,
     clients: RepublishClients & { githubFileOps: GitHubFileOperations },
     report: (step: number, message: string) => void,
-): Promise<string | undefined> {
+): Promise<CodeServedResult> {
     const { githubFileOps, githubTokenService, tokenProvider, logger } = clients;
     // On the last step, where the live site is checked: it runs after the content, so on step 2
     // the run read "10 of 11", "2 of 11", "11 of 11" (owner, 2026-11-04).
     report(RESET_STEP.checkingSettings, 'Checking the site serves the new code');
     const helix = new HelixService(logger, githubTokenService, tokenProvider);
     const site = { owner: params.repoOwner, repo: params.repoName };
-    const sentence = await confirmStorefrontCodeServed(githubFileOps, helix, site, resetCommitSha, logger);
-    if (sentence) report(RESET_STEP.checkingSettings, `⚠️ ${sentence}`);
-    return sentence;
+    const served = await confirmStorefrontCodeServed(githubFileOps, helix, site, resetCommitSha, logger);
+    if (served.sentence) report(RESET_STEP.checkingSettings, `⚠️ ${served.sentence}`);
+    return served;
 }

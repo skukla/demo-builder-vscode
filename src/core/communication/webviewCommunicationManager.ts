@@ -56,6 +56,8 @@ const REQUEST_TIMEOUTS: Record<string, number> = {
     // first check past the 30s default on 2026-10-01) before its Commerce reads.
     checkSetupSteps: TIMEOUTS.LONG, // 180s - credential read + up to three Commerce reads
     prepareSetupChecks: TIMEOUTS.LONG, // 180s - the same credential read, done ahead of a check
+    // The project's Finish Setup check (PL-101): GitHub and the live site, or the store.
+    checkFinishSetupSteps: TIMEOUTS.LONG, // 180s - a file read per step file, or a credential + store read
     // Add another ERP's store read: the same credential, then every product in the store.
     // On Tailspin it outran the 30s default and the dialog gave up while the read went on
     // (2026-10-18).

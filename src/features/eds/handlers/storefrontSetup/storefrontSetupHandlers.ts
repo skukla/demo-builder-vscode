@@ -322,6 +322,8 @@ export async function handleStartStorefrontSetup(
                 // Recorded by creation on the project it makes, as brokenLinks are.
                 installedBlockLibraries: result.installedBlockLibraries,
                 storefrontBuildComplete: result.storefrontBuildComplete,
+                // Saved by creation as the project's Republish the Code step (PL-101).
+                ...(result.codeNotServed?.length ? { codeNotServed: result.codeNotServed } : {}),
                 // Note: previewUrl/liveUrl not sent - derived from githubRepo by typeGuards
             } satisfies StorefrontSetupCompletePayload);
             return { success: true, data: result };

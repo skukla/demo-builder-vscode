@@ -321,7 +321,9 @@ describe('dashboardHandlers', () => {
             // table's "1 delete" and "1 reset" rows above are those two retired messages.
             // deleteFromProjectsList out (96 → 95, 2026-11-16, release test 2.7): Delete runs in
             // the batch window here too, and the dashboard leaves only once the project is gone.
-            expect(types).toHaveLength(95);
+            // getFinishSetup + setFinishSetupStep + checkFinishSetupSteps + prepareFinishSetupChecks
+            // (95 → 99, PL-101, 2026-11-17): the project's Finish Setup steps, in the setup guide.
+            expect(types).toHaveLength(99);
         });
 
         it('should have handlers as functions', () => {

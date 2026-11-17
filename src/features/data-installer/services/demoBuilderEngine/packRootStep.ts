@@ -42,12 +42,15 @@ export interface RootCheck {
     note: string;
 }
 
+/** The step's id, in the guide and on the project's Finish Setup record (PL-101). */
+export const PACK_ROOT_STEP_ID = 'pack-root-category';
+
 /** The step, in the setup guide's own format (`SetupStep`, the shape `app-builder-components.json` declares). */
 export function packRootGuideStep(step: PackRootStep): Omit<SetupStep, 'check'> {
     return {
-        id: 'pack-root-category',
+        id: PACK_ROOT_STEP_ID,
         label: 'Root category',
-        title: `Show ${step.rootName}'s Categories on the Storefront`,
+        title: 'Set the Root Category',
         why: `The store ${step.storeName} shares its root category with another store, so ${step.rootName}'s categories are a root of their own, and a store shows only its root's categories. No API can change a store's root.`,
         where: `Stores > All Stores > ${step.storeName}`,
         path: ['Stores', 'All Stores', step.storeName],

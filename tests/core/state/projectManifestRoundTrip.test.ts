@@ -62,6 +62,12 @@ const FIELDS: { [K in keyof Required<Project>]: Decision<Project[K]> } = {
         },
     },
     datapackInstallFailure: { roundTrips: DATAPACK_INSTALL_FAILURE },
+    finishSetup: {
+        roundTrips: {
+            'republish-code': { files: ['scripts/commerce.js'], state: 'done', lastCheck: 'passed', checkedAt: '2026-11-17T10:00:00.000Z' },
+            'pack-root-category': { state: 'dismissed' },
+        },
+    },
     commerceAdminExperience: { roundTrips: 'classic' },
     selectedStack: { roundTrips: 'eds-accs' },
     selectedAddons: { roundTrips: ['adobe-commerce-aco'] },

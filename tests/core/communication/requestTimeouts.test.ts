@@ -50,6 +50,12 @@ describe('REQUEST_TIMEOUTS', () => {
         expect([...budgetedTypes()]).toContain('checkSetupSteps');
     });
 
+    // PL-101: a Finish Setup check reads GitHub and the live site (15s a file) or the store with
+    // the project's credential, so it budgets as the integrations' check does.
+    it('budgets the Finish Setup check checkFinishSetupSteps', () => {
+        expect([...budgetedTypes()]).toContain('checkFinishSetupSteps');
+    });
+
     // Add another ERP's store read: a credential plus every product in the store. On
     // Tailspin it outran 30s, and the dialog said the store could not be read while the
     // extension was still reading it (2026-10-18).

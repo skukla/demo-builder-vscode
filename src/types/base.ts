@@ -132,6 +132,14 @@ export interface Project {
      * predating it, which shows nothing. Never exported in a project file.
      */
     datapackInstallFailure?: DatapackInstallFailure;
+    /**
+     * The steps a run left for the SC to finish (PL-101), by step id: Republish the Code
+     * (`republish-code`, with the files the live site did not serve yet) and where the SC is on
+     * each step the Finish Setup guide lists (Skip, Mark as Done, what its last check found). A
+     * finished step is kept, shown done, until the next creation or reset REPLACES the record.
+     * Absent when no run left anything. Never exported in a project file.
+     */
+    finishSetup?: Record<string, FinishSetupRecord>;
     /** The Commerce Admin interface chosen on Configure. Absent: the setting's. */
     commerceAdminExperience?: CommerceAdminExperience;
     /** Stack ID selected during project creation (e.g., 'headless-paas') */
@@ -303,6 +311,12 @@ export interface SetupStepRecord {
     lastCheck?: SetupCheckOutcome;
     /** When that check ran (ISO). */
     checkedAt?: string;
+}
+
+/** One Finish Setup step's saved state (PL-101): a setup step's record, and the files a code step is about. */
+export interface FinishSetupRecord extends SetupStepRecord {
+    /** Republish the Code: the repository paths the live site did not serve as committed. */
+    files?: string[];
 }
 
 /** What a setup check concluded. */

@@ -223,7 +223,7 @@ describe('confirmResetCodeServed', () => {
     };
 
     it('reports on the last step, where the live site is checked', async () => {
-        mockCodeServed.mockResolvedValue(undefined);
+        mockCodeServed.mockResolvedValue({ files: [] });
         const steps: Array<[number, string]> = [];
 
         await confirmResetCodeServed(params, 'sha-1', clients, (s, m) => steps.push([s, m]));
@@ -232,11 +232,13 @@ describe('confirmResetCodeServed', () => {
     });
 
     it('says on the same step when some code did not reach the site', async () => {
-        mockCodeServed.mockResolvedValue('2 files are not live yet.');
+        mockCodeServed.mockResolvedValue({ files: ['scripts/a.js', 'scripts/b.js'], sentence: '2 files are not live yet.' });
         const steps: Array<[number, string]> = [];
 
-        await confirmResetCodeServed(params, 'sha-1', clients, (s, m) => steps.push([s, m]));
+        const served = await confirmResetCodeServed(params, 'sha-1', clients, (s, m) => steps.push([s, m]));
 
         expect(steps.map(([step]) => step)).toStrictEqual([RESET_STEP.checkingSettings, RESET_STEP.checkingSettings]);
+        // PL-101: the files, for the reset to save as the project's Republish the Code step.
+        expect(served).toStrictEqual({ files: ['scripts/a.js', 'scripts/b.js'], sentence: '2 files are not live yet.' });
     });
 });

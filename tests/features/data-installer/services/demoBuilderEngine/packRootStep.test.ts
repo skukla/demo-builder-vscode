@@ -67,7 +67,7 @@ describe('packRootGuideStep', () => {
 
         expect(step).toMatchObject({
             id: 'pack-root-category',
-            title: "Show Frescopa's Categories on the Storefront",
+            title: 'Set the Root Category',
             where: 'Stores > All Stores > Tailspin Test Store',
             path: ['Stores', 'All Stores', 'Tailspin Test Store'],
             enter: ['Root Category: Frescopa'],

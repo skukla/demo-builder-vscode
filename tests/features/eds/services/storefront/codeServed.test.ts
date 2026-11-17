@@ -6,6 +6,7 @@
 
 import {
     codeNotServedSentence,
+    codeServedNow,
     confirmCodeServed,
     confirmStorefrontCodeServed,
     type CodeServedDeps,
@@ -191,7 +192,7 @@ describe('confirmStorefrontCodeServed', () => {
 
         const said = await confirmStorefrontCodeServed(files, { previewCode: jest.fn() }, SITE, 'reset', createMockLogger());
 
-        expect(said).toBeUndefined();
+        expect(said).toStrictEqual({ files: [] });
         expect(files.treeCommits.filesChangedSince).toHaveBeenCalledWith('skukla', 'kukla-tailspin', 'reset');
         expect(files.getFileContent).toHaveBeenCalledWith('skukla', 'kukla-tailspin', 'scripts/commerce.js', 'head');
         expect(files.treeCommits.earliestRecentCommitSha).not.toHaveBeenCalled();
@@ -213,7 +214,7 @@ describe('confirmStorefrontCodeServed', () => {
 
         const said = await confirmStorefrontCodeServed(files, { previewCode }, SITE, 'reset', createMockLogger());
 
-        expect(said).toBeUndefined();
+        expect(said).toStrictEqual({ files: [] });
         expect(previewCode).not.toHaveBeenCalled();
         expect(files.getFileContent).toHaveBeenCalledWith('skukla', 'kukla-tailspin', '.hlxignore', 'head');
         const fetched = (global.fetch as jest.Mock).mock.calls.map(([url]) => new URL(url).pathname);
@@ -231,7 +232,7 @@ describe('confirmStorefrontCodeServed', () => {
 
         const said = await confirmStorefrontCodeServed(files, { previewCode }, SITE, 'reset', createMockLogger());
 
-        expect(said).toContain('blocks/hero-3/_hero-3.json');
+        expect(said.sentence).toContain('blocks/hero-3/_hero-3.json');
     });
 
     it("compares a just-created storefront from the commit its template made", async () => {
@@ -250,7 +251,9 @@ describe('confirmStorefrontCodeServed', () => {
         const said = await confirmStorefrontCodeServed(github(), { previewCode }, SITE, 'reset', createMockLogger());
 
         expect(previewCode).toHaveBeenCalledWith('skukla', 'kukla-tailspin', '/scripts/commerce.js');
-        expect(said).toContain('1 code file did not reach the live site (scripts/commerce.js)');
+        expect(said.sentence).toContain('1 code file did not reach the live site (scripts/commerce.js)');
+        // PL-101: the files themselves, so the project's Finish Setup step can check them later.
+        expect(said.files).toStrictEqual(['scripts/commerce.js']);
     });
 
     /**
@@ -269,7 +272,7 @@ describe('confirmStorefrontCodeServed', () => {
 
         expect(previewCode).toHaveBeenCalledTimes(1);
         expect(previewCode).toHaveBeenCalledWith('skukla', 'kukla-tailspin', '/*');
-        expect(said).toBeUndefined();
+        expect(said).toStrictEqual({ files: [] });
     });
 
     it("says the pages show without styles or scripts when the template's code never arrives", async () => {
@@ -279,10 +282,11 @@ describe('confirmStorefrontCodeServed', () => {
         const said = await confirmStorefrontCodeServed(github(), { previewCode }, SITE, undefined, createMockLogger());
 
         expect(previewCode.mock.calls.map((call) => call[2])).toEqual(['/*', '/*', '/*']);
-        expect(said).toBe(
+        expect(said.sentence).toBe(
             "The storefront's code did not reach the live site (scripts/aem.js, styles/styles.css), so its pages " +
                 'show without styles or scripts. Select Republish on the project dashboard to publish the code again.',
         );
+        expect(said.files).toStrictEqual(['scripts/aem.js', 'styles/styles.css']);
     });
 
     it('CONTROL: publishes nothing more when the site serves the template and every change', async () => {
@@ -307,6 +311,55 @@ describe('confirmStorefrontCodeServed', () => {
 
         await expect(
             confirmStorefrontCodeServed(files, { previewCode: jest.fn() }, SITE, 'reset', createMockLogger()),
-        ).resolves.toBeUndefined();
+        ).resolves.toStrictEqual({ files: [] });
+    });
+});
+
+/**
+ * PL-101: the Finish Setup step's Check looks at the files the run left without publishing
+ * anything: a check never changes the site it checks.
+ */
+describe('codeServedNow', () => {
+    const SITE = { owner: 'skukla', repo: 'kukla-tailspin' };
+    const originalFetch = global.fetch;
+
+    function github(head: string | null = 'head') {
+        return {
+            getLatestCommitSha: jest.fn().mockResolvedValue(head),
+            getFileContent: jest
+                .fn()
+                .mockImplementation(async (_o: string, _r: string, path: string) => ({ content: 'new', sha: 's', path })),
+        };
+    }
+
+    function serve(body: Record<string, string>): void {
+        global.fetch = jest.fn(async (url: string) => {
+            const text = body[new URL(url).pathname.slice(1)];
+            return { ok: text !== undefined, text: async () => text };
+        }) as unknown as typeof fetch;
+    }
+
+    afterEach(() => {
+        global.fetch = originalFetch;
+    });
+
+    it('answers the given files the site does not serve as the repository has them at its head', async () => {
+        serve({ 'scripts/a.js': 'new', 'scripts/b.js': 'old' });
+        const files = github();
+
+        await expect(codeServedNow(files, SITE, ['scripts/a.js', 'scripts/b.js'])).resolves.toStrictEqual(['scripts/b.js']);
+        expect(files.getFileContent).toHaveBeenCalledWith('skukla', 'kukla-tailspin', 'scripts/b.js', 'head');
+    });
+
+    it('answers none when the site serves every file now', async () => {
+        serve({ 'scripts/a.js': 'new' });
+
+        await expect(codeServedNow(github(), SITE, ['scripts/a.js'])).resolves.toStrictEqual([]);
+    });
+
+    it('fails when the repository head cannot be read, rather than answering "served"', async () => {
+        serve({});
+
+        await expect(codeServedNow(github(null), SITE, ['scripts/a.js'])).rejects.toThrow();
     });
 });

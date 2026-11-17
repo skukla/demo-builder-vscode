@@ -39,7 +39,7 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: { QUICK: 5000 },
 }));
 
-const mockCodeServed = jest.fn().mockResolvedValue(undefined);
+const mockCodeServed = jest.fn().mockResolvedValue({ files: [] });
 /** The build's own fixes all landed, as on a clean creation: only the code warning can change it. */
 jest.mock('@/features/eds/handlers/storefrontSetup/storefrontSetupPhase2', () => {
     const actual = jest.requireActual('@/features/eds/handlers/storefrontSetup/storefrontSetupPhase2');
@@ -385,12 +385,14 @@ describe('the result of a finished run', () => {
         const sentence = '1 code file did not reach the live site (scripts/x.js), so it still runs the old code. Select Republish on the project dashboard to publish the code again.';
         mockExecuteEdsPipeline.mockResolvedValue(createMockPipelineResult({ contentFilesCopied: 0, libraryPaths: [] }));
         const run = () => executeStorefrontSetupPhases(createSetupContext(), createEdsConfig(), new AbortController().signal, undefined, SERVICES);
-        mockCodeServed.mockResolvedValueOnce(sentence);
+        mockCodeServed.mockResolvedValueOnce({ files: ['scripts/x.js'], sentence });
 
         const result = await run();
 
         expect(result.pipelineWarnings).toEqual([sentence]);
         expect(result.storefrontBuildComplete).toBe(true);
+        // PL-101: the files, for creation to save as the project's Republish the Code step.
+        expect(result.codeNotServed).toEqual(['scripts/x.js']);
     });
 
     it('carries no such sentence when the storefront serves them all', async () => {
@@ -410,5 +412,6 @@ describe('the result of a finished run', () => {
         );
 
         expect(result).not.toHaveProperty('pipelineWarnings');
+        expect(result).not.toHaveProperty('codeNotServed');
     });
 });

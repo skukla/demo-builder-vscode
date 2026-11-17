@@ -567,6 +567,8 @@ export interface EDSConfig {
     installedBlockLibraries?: import('./blockLibraries').InstalledBlockLibrary[];
     /** Whether preflight's build step left all of Demo Builder's fixes; creation stamps it. */
     storefrontBuildComplete?: boolean;
+    /** The code files the live site did not serve after preflight; creation saves them as a Finish Setup step (PL-101). */
+    codeNotServed?: string[];
     // Note: previewUrl and liveUrl are NOT stored - they are derived from githubRepo
     // by getEdsPreviewUrl() and getEdsLiveUrl() in typeGuards.ts
     /** Whether to skip content copy (e.g., when using existing content) */

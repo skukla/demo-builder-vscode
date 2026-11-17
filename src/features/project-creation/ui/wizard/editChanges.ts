@@ -131,6 +131,7 @@ const EDS_FIELDS: Record<keyof EDSConfig, Kind> = {
     brokenLinks: 'screen',
     installedBlockLibraries: 'screen',
     storefrontBuildComplete: 'screen',
+    codeNotServed: 'screen',
 };
 
 /**

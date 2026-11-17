@@ -275,15 +275,17 @@ async function runEdsPipelineWithRecovery(
             // After the copy, as a reset does: the code publish can miss the last commits.
             // The warning names Republish as the fix; it is no reason to reset, so the build
             // stays complete (walk F208: a new project read "Needs reset").
-            const codeNotServed = await confirmStorefrontCodeServed(
+            const served = await confirmStorefrontCodeServed(
                 services.githubFileOps,
                 services.helixService,
                 { owner: repoInfo.repoOwner, repo: repoInfo.repoName },
                 undefined,
                 logger,
             );
-            if (codeNotServed) {
-                repoInfo.pipelineWarnings = [...(repoInfo.pipelineWarnings ?? []), codeNotServed];
+            if (served.sentence) {
+                repoInfo.pipelineWarnings = [...(repoInfo.pipelineWarnings ?? []), served.sentence];
+                // Saved by creation as the project's Republish the Code step (PL-101).
+                repoInfo.codeNotServed = served.files;
             }
             return { libraryPaths: result.libraryPaths };
         },

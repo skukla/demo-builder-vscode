@@ -348,6 +348,20 @@ describe('settingsSerializer', () => {
             expect(JSON.stringify(edited)).not.toContain(DATAPACK_INSTALL_FAILURE.reason);
         });
 
+        // PL-101: the steps a run left belong to this project's own storefront and store.
+        it('never carries the Finish Setup steps, in the file, a copy or an edit', () => {
+            const left = createMockProject({ finishSetup: { 'republish-code': { files: ['scripts/left-behind.js'] } } });
+
+            const file = createExportSettings(left, '1.2.3');
+            const copied = copySeedFromProject(left);
+            const edited = extractSettingsFromProject(left);
+
+            expect(JSON.stringify(file)).not.toContain('scripts/left-behind.js');
+            expect(copied.ok).toBe(true);
+            expect(copied.ok && JSON.stringify(copied.file)).not.toContain('scripts/left-behind.js');
+            expect(JSON.stringify(edited)).not.toContain('scripts/left-behind.js');
+        });
+
         it('writes the Adobe org and workspace NAMES, which version 1 read and never wrote', () => {
             const file = createExportSettings(
                 createMockProject({

@@ -423,6 +423,12 @@ describe('buildProjectConfig', () => {
             expect(withEds({})).not.toHaveProperty('storefrontBuildComplete');
         });
 
+        it('should hand over the code files the live site did not serve, and no key when it served them all', () => {
+            expect(withEds({ codeNotServed: ['scripts/commerce.js'] })?.codeNotServed).toStrictEqual(['scripts/commerce.js']);
+            expect(withEds({})).not.toHaveProperty('codeNotServed');
+            expect(withEds({ codeNotServed: [] })).not.toHaveProperty('codeNotServed');
+        });
+
         it('should hand over the broken links storefront setup found, and no key when it found none', () => {
             const brokenLinks: StorefrontBrokenLink[] = [{ link: '/fr', pages: ['/footer'] }];
 

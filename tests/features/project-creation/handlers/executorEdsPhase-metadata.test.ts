@@ -190,3 +190,40 @@ describe('populateEdsMetadata — the storefront built the way Demo Builder buil
         expect(metadataOf(target)).not.toHaveProperty('storefrontBuiltThrough');
     });
 });
+
+// PL-101: the project's Finish Setup steps. A setup that ran replaces the record whole, so a
+// clean run leaves no stale step; an edit that ran no setup keeps what the project had.
+describe('populateEdsMetadata — the steps setup left to finish', () => {
+    beforeEach(() => getFileContent.mockRejectedValue(new Error('not needed here')));
+
+    const ran = (codeNotServed?: string[]): ProjectCreationConfig => ({
+        ...CONFIG,
+        edsConfig: { ...CONFIG.edsConfig!, storefrontBuildComplete: true, ...(codeNotServed ? { codeNotServed } : {}) },
+    });
+
+    it('saves Republish the Code with the files the live site did not serve', async () => {
+        const target = project();
+
+        await populateEdsMetadata(context(), target, ran(['scripts/commerce.js']), true);
+
+        expect(target.finishSetup).toStrictEqual({ 'republish-code': { files: ['scripts/commerce.js'] } });
+    });
+
+    it('replaces an earlier record when setup ran and the site served everything', async () => {
+        const target = project();
+        target.finishSetup = { 'republish-code': { files: ['scripts/old.js'], state: 'done' } };
+
+        await populateEdsMetadata(context(), target, ran(), true);
+
+        expect(target).not.toHaveProperty('finishSetup');
+    });
+
+    it('CONTROL: keeps the record when setup did not run (an edit builds nothing)', async () => {
+        const target = project();
+        target.finishSetup = { 'republish-code': { files: ['scripts/old.js'] } };
+
+        await populateEdsMetadata(context(), target, CONFIG, true);
+
+        expect(target.finishSetup).toStrictEqual({ 'republish-code': { files: ['scripts/old.js'] } });
+    });
+});

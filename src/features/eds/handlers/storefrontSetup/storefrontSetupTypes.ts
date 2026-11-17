@@ -38,6 +38,8 @@ export interface StorefrontSetupResult {
     installedBlockLibraries?: InstalledBlockLibrary[];
     /** See {@link RepoInfo.storefrontBuildComplete} — spread in from the threaded repoInfo. */
     storefrontBuildComplete?: boolean;
+    /** See {@link RepoInfo.codeNotServed} — spread in from the threaded repoInfo. */
+    codeNotServed?: string[];
     // Note: previewUrl/liveUrl not included - derived from githubRepo by typeGuards
 }
 
@@ -114,4 +116,10 @@ export interface RepoInfo {
      * (`storefrontChanges.ts`); for the same reason as the libraries, setup does not.
      */
     storefrontBuildComplete?: boolean;
+    /**
+     * The code files the live site still did not serve as committed after the content copy
+     * (`confirmStorefrontCodeServed`), for creation to save as the project's Republish the Code
+     * step (PL-101). Absent when the site serves them all.
+     */
+    codeNotServed?: string[];
 }
