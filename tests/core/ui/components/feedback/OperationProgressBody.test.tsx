@@ -152,6 +152,28 @@ describe('OperationProgressBody, a run whose rows are steps with rows under them
         expect(container.querySelector('.step-rows-nested')).toBeNull();
     });
 
+    // Walk F194 (2026-11-17): a save of categories alone reads them, then passes the reads it has no
+    // types for, with no step under way and the run's stage set: line 2 went blank for a second or
+    // two before "Saving to My Datapacks".
+    it('keeps both lines through a push with no step under way, though the run names its stage', () => {
+        const save: OperationRow = { kind: 'save', label: 'Save My Luma', status: 'pending', line: 'Waiting' };
+        const reading: OperationRow[] = [
+            { kind: 'export', label: 'Export from Commerce', status: 'checking', line: '0 of 1 data type', types: [{ kind: 'categories', label: 'Categories', status: 'checking', line: 'Exporting' }] },
+            save,
+        ];
+        const between: OperationRow[] = [
+            { kind: 'export', label: 'Export from Commerce', status: 'success', line: 'Exported', types: [{ kind: 'categories', label: 'Categories', status: 'success', line: 'Done' }] },
+            save,
+        ];
+        const { container, rerender } = renderRunning({ progress: { id: 'x', state: 'running', stage: 'Exporting from Commerce', rows: reading } });
+        const before = container.querySelector('.modal-wait-progress')?.textContent;
+
+        rerender(<OperationProgressBody failed={false} succeeded={false} onTyped={jest.fn()} progress={{ id: 'x', state: 'running', stage: 'Exporting from Commerce', rows: between }} />);
+
+        expect(before).toContain('Categories');
+        expect(container.querySelector('.modal-wait-progress')?.textContent).toBe(before);
+    });
+
     // Decisions Phase 1b (J1-3d growth): the reason was a sentence under the steps, a line nothing
     // held. It takes the stopped step's line instead, once, red.
     it('ends a failed run on its steps, the reason on the stopped step in place of its line', () => {

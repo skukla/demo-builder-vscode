@@ -52,6 +52,16 @@ function runningLines(progress: OperationProgressPayload | null | undefined): Wa
     return { label, detail: progress?.step, expectation: progress?.expectation };
 }
 
+/**
+ * A push with nothing under way: "Starting" mid-run, or rows none of which is working (a save passes
+ * the reads it has no types for, its stage still set; walk F194). The last lines stay.
+ */
+function betweenSteps(progress: OperationProgressPayload | null | undefined, now: WaitLines): boolean {
+    if (now.label === PREPARING) return true;
+    const rows = progress?.rows;
+    return rows !== undefined && rows.length > 0 && !rows.some((row) => row.status === 'checking');
+}
+
 export function OperationProgressBody({
     prompt,
     failed,
@@ -86,7 +96,7 @@ export function OperationProgressBody({
     // only for how it ended (walk F91 asked for more than one line over a save's minutes of reading:
     // the part under way and its count are that line).
     const now = runningLines(progress);
-    const lines = now.label === PREPARING && lastLines.current ? lastLines.current : now;
+    const lines = betweenSteps(progress, now) && lastLines.current ? lastLines.current : now;
     lastLines.current = lines;
     // Size L, as every other progress display here: M left-aligns and shrinks
     // the text.
