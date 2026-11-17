@@ -272,8 +272,9 @@ async function runEdsPipelineWithRecovery(
             );
             if (!result.success) throw new Error(result.error || 'Content pipeline failed');
             if (result.warnings.length > 0) repoInfo.pipelineWarnings = result.warnings;
-            // After the copy, as a reset does: the code publish can miss the last
-            // commits, and a storefront whose site runs old code is not built.
+            // After the copy, as a reset does: the code publish can miss the last commits.
+            // The warning names Republish as the fix; it is no reason to reset, so the build
+            // stays complete (walk F208: a new project read "Needs reset").
             const codeNotServed = await confirmStorefrontCodeServed(
                 services.githubFileOps,
                 services.helixService,
@@ -283,7 +284,6 @@ async function runEdsPipelineWithRecovery(
             );
             if (codeNotServed) {
                 repoInfo.pipelineWarnings = [...(repoInfo.pipelineWarnings ?? []), codeNotServed];
-                repoInfo.storefrontBuildComplete = false;
             }
             return { libraryPaths: result.libraryPaths };
         },

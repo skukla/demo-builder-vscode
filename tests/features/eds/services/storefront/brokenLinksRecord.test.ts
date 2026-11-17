@@ -3,7 +3,7 @@
  */
 
 import { COMPONENT_IDS } from '@/core/constants';
-import { brokenLinksLine, brokenLinksSentence, readBrokenLinks, writeBrokenLinks } from '@/features/eds/services/storefront/brokenLinksRecord';
+import { brokenLinksSentence, readBrokenLinks, writeBrokenLinks } from '@/features/eds/services/storefront/brokenLinksRecord';
 import type { Project } from '@/types/base';
 import { createMockProject } from '../../../../helpers/projectFake';
 
@@ -85,17 +85,3 @@ describe('brokenLinksSentence', () => {
 });
 
 // The "Project Created" screen's one line (EDS-64): a count, and where the list is.
-describe('brokenLinksLine', () => {
-    it('says nothing when there are none', () => {
-        expect(brokenLinksLine([])).toBeUndefined();
-    });
-
-    it('counts them and points at Diagnostics', () => {
-        expect(brokenLinksLine([{ link: '/fr', pages: ['/a'] }])).toBe(
-            '1 link in the copied content goes to a missing page. Diagnostics lists them.',
-        );
-        expect(brokenLinksLine([{ link: '/a', pages: [] }, { link: '/b', pages: [] }])).toBe(
-            '2 links in the copied content go to missing pages. Diagnostics lists them.',
-        );
-    });
-});

@@ -872,8 +872,9 @@ export interface StorefrontSetupProgressPayload {
 /**
  * A link in a storefront's copied content to a page the content site it was
  * copied from does not have either: a broken link in the source, carried over.
- * Recorded on the project (`metadata.brokenLinks`); a reset's last view says so, and
- * Diagnostics lists them. Never a pop-up: nothing was left out of the copy.
+ * Recorded on the project (`metadata.brokenLinks`); Diagnostics lists them and an agent's reset
+ * answers them. No screen says so (walk F209): nothing was left out of the copy, and a link only
+ * the block library's docs pages carry is not recorded.
  */
 export interface StorefrontBrokenLink {
     /** The address the link points at: "/fr". */

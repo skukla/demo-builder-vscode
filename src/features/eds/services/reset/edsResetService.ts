@@ -203,8 +203,9 @@ export async function executeEdsReset(
         await recordPatchesRelease(params.project, context.logger);
         recordBoilerplate(params.project, repoResetResult.boilerplate);
         // Built the way Demo Builder builds storefronts now: no "Needs reset" (saved below).
-        // Code the site does not serve is not built, whatever the repository says.
-        recordStorefrontBuilt(params.project, repoResetResult.buildComplete && !codeNotServed);
+        // Code the site does not serve yet is Republish's to fix, as its warning says, not a
+        // reason to reset again (walk F208).
+        recordStorefrontBuilt(params.project, repoResetResult.buildComplete);
 
         // Steps 11-12: CDN verification + optional mesh redeploy + state persistence
         const result = await finalizeReset(

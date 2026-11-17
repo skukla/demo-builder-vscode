@@ -486,17 +486,12 @@ describe('projectFinalizationService', () => {
             await finalizeProject(context);
 
             expect(mockProgressTracker).toHaveBeenCalledWith(OPERATION_STAGES.finishingProject.label, 95);
-            // No broken links recorded: no line for the success screen.
-            expect(mockProgressTracker).toHaveBeenCalledWith(
-                'Project Created',
-                100,
-                'Project creation complete',
-                undefined,
-                undefined,
-            );
+            expect(mockProgressTracker).toHaveBeenCalledWith('Project Created', 100, 'Project creation complete');
         });
 
-        it('hands the success screen one line when the copy carried broken links (EDS-64)', async () => {
+        // Walk F209 (owner, 2026-11-17): a line on a green screen naming nothing to fix was read by
+        // nobody. Broken links stay on the record, in Diagnostics and in the agent's answer.
+        it('says nothing of broken links on the success screen, though the copy carried some', async () => {
             const storefront = mockProject.componentInstances?.['eds-storefront'];
             if (!storefront) throw new Error('fixture lost its storefront');
             storefront.metadata = { ...storefront.metadata, brokenLinks: [{ link: '/fr', pages: ['/footer'] }] };
@@ -510,13 +505,7 @@ describe('projectFinalizationService', () => {
                 sendMessage: mockSendMessage,
             });
 
-            expect(mockProgressTracker).toHaveBeenCalledWith(
-                'Project Created',
-                100,
-                'Project creation complete',
-                undefined,
-                '1 link in the copied content goes to a missing page. Diagnostics lists them.',
-            );
+            expect(mockProgressTracker).toHaveBeenCalledWith('Project Created', 100, 'Project creation complete');
         });
 
         it('should log debug messages', async () => {

@@ -14,7 +14,6 @@ import type { ComponentDefinitionEntry } from './componentInstallationOrchestrat
 import { isMeshComponentId } from '@/core/constants';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { brokenLinksLine, readBrokenLinks } from '@/features/eds/services/storefront/brokenLinksRecord';
 import { generateComponentConfigFiles } from '@/features/project-creation/helpers/componentConfigFiles';
 import { ProjectSetupContext } from '@/features/project-creation/services/ProjectSetupContext';
 import { getComponentIds, getEntryCount } from '@/types/typeGuards';
@@ -105,8 +104,9 @@ export async function finalizeProject(context: FinalizationContext): Promise<voi
         throw saveError;
     }
 
-    // Links the copy carried over to pages that do not exist: one line on the success screen.
-    progressTracker('Project Created', 100, 'Project creation complete', undefined, brokenLinksLine(readBrokenLinks(project)));
+    // Broken links in the copy stay on the record, in Diagnostics and the agent's answer, not on
+    // the success screen, where a line naming nothing to fix was read by nobody (walk F209).
+    progressTracker('Project Created', 100, 'Project creation complete');
     logger.debug('[Project Creation] Phase 5 complete: Project finalized');
 }
 

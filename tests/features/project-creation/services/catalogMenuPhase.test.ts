@@ -78,6 +78,20 @@ describe('executeCatalogMenuPhase', () => {
         );
     });
 
+    // Walk F207 (2026-11-17): the step said nothing until it ended, so creation's screen sat on
+    // the step before it ("Warming product pages, 49 of 49") for the 39 s it took.
+    it('says its step as it starts, before any page is written', async () => {
+        const project = storefront();
+        const s = fakeSite();
+        const helix = fakeCategoryHelix();
+        const progress = jest.fn();
+
+        await executeCatalogMenuPhase(createMockHandlerContext(), project, progress, undefined, () => siteOver(s.port, helix));
+
+        expect(progress.mock.calls[0]).toEqual([OPERATION_STAGES.addingCatalogMenu.label, 97, OPERATION_STAGES.addingCatalogMenu.detail]);
+        expect(progress).toHaveBeenCalledTimes(2);
+    });
+
     it('builds nothing for a project without a storefront', async () => {
         const makeSite = jest.fn();
         const progress = jest.fn();

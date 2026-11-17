@@ -70,10 +70,11 @@ export async function executeCatalogMenuPhase(
     existingProject?: Project,
     makeSite?: (target: CatalogMenuTarget) => CatalogMenuSite,
 ): Promise<void> {
-    const say = sayer(context, progressTracker, OPERATION_STAGES.addingCatalogMenu.label);
+    const { label, detail } = OPERATION_STAGES.addingCatalogMenu;
+    const say = sayer(context, progressTracker, label);
     await runCatalogMenu(context, project, say, makeSite, (target) =>
         carryRecord(project, existingProject, target),
-    );
+    undefined, () => progressTracker(label, PERCENT, detail));
 }
 
 /**
@@ -114,6 +115,21 @@ function sayer(
     };
 }
 
+/**
+ * The site, saying the step has started once it confirms the storefront has the menu block: the
+ * step said nothing until it ended, so the screen sat on the step before it (walk F207).
+ */
+function announcing(site: CatalogMenuSite, onStart: () => void): CatalogMenuSite {
+    return {
+        ...site,
+        hasBlock: async () => {
+            const has = await site.hasBlock();
+            if (has) onStart();
+            return has;
+        },
+    };
+}
+
 /** Resolve the site, run what comes first, then the write. Never throws. */
 async function runCatalogMenu(
     context: HandlerContext,
@@ -122,13 +138,15 @@ async function runCatalogMenu(
     makeSite: ((target: CatalogMenuTarget) => CatalogMenuSite) | undefined,
     beforeSite?: (target: CatalogMenuTarget) => void,
     beforeWrite?: (site: CatalogMenuSite) => Promise<void>,
+    onStart?: () => void,
 ): Promise<void> {
     try {
         const target = storefrontTarget(project);
         if (!target) return;
         beforeSite?.(target);
-        const site = makeSite ? makeSite(target) : catalogMenuSiteFor(context, project);
-        if (!site) return;
+        const built = makeSite ? makeSite(target) : catalogMenuSiteFor(context, project);
+        if (!built) return;
+        const site = onStart ? announcing(built, onStart) : built;
         await beforeWrite?.(site);
         const summary = (await applyCatalogMenuStep(project, site))?.summary;
         if (summary !== undefined) say(summary);
