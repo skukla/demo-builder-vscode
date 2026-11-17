@@ -29,12 +29,15 @@ const ABOUT_A_MINUTE = 'Usually about a minute';
 const FROM_COMMERCE = 'From Commerce';
 
 export const WAIT_STAGES = {
-    // Comparing Commerce with the datapack the demo uses. One read with two purposes, named by the
-    // purpose (walk F193, owner 2026-11-17; F114 had made three names one). Before an action that
-    // overwrites or removes (Restore, Uninstall, Switch, installing another version): the edits it
-    // would lose. Before Update and Save Changes, whose point is the edits: the comparison itself.
-    // Measured 2026-11-08: 58 seconds for Luma's 12 data types on a live instance.
-    checkingForChanges: { label: 'Finding unsaved changes', expectation: ABOUT_A_MINUTE },
+    // The check before an action that overwrites or removes: it reads the edits the action would lose
+    // and what it goes back to or puts in, so it is named for the action it prepares, as installers do
+    // (walk F200, owner 2026-11-17; "Finding unsaved changes" named one read, and the question after
+    // it is about the other). Before Update and Save Changes, whose point is the edits, the comparison
+    // itself (F193). Measured 2026-11-08: 58 seconds for Luma's 12 data types on a live instance.
+    preparingRestore: { label: 'Preparing to restore', expectation: ABOUT_A_MINUTE },
+    preparingUninstall: { label: 'Preparing to uninstall', expectation: ABOUT_A_MINUTE },
+    preparingSwitch: { label: 'Preparing to switch', expectation: ABOUT_A_MINUTE },
+    preparingInstall: { label: 'Preparing to install', expectation: ABOUT_A_MINUTE },
     comparingWithCommerce: { label: 'Comparing with Commerce', expectation: ABOUT_A_MINUTE },
     // A Dry Run of an install: the request is checked and nothing is written (D6; the name Dry Run
     // is kept, owner 2026-11-10). The label alone; the result says nothing was written.

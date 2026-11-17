@@ -3,7 +3,8 @@
  * dots menus are hard to see and easy to miss"; the datapack flyout followed, 2026-11-17).
  *
  * Quiet rows: an icon and a plain label, the weight of the rest of the panel, never an accent
- * button. The ones that remove go last, behind a divider, in the danger colour. Extracted from the
+ * button. The ones that take something away go last, behind a divider; the danger colour marks only
+ * those with no way back (owner, 2026-11-17: a red Uninstall beside a red Delete said both were). Extracted from the
  * integrations flyout at its second consumer: `FlyoutActions` (integrations) and `PackActions`
  * (datapacks) both draw it. Styled by `integration-cards.css`, which both bundles' entries import.
  *
@@ -19,7 +20,9 @@ export interface FlyoutActionRow {
     label: string;
     /** A concept of the shared icon vocabulary (`menuIcons`); none draws no icon. */
     icon?: string;
-    /** It removes something: last, behind the divider, in the danger colour. */
+    /** It takes something away: last, behind the divider. */
+    removes?: boolean;
+    /** There is no way back: the danger colour. Implies `removes`. */
     danger?: boolean;
 }
 
@@ -34,8 +37,9 @@ export function FlyoutActionList({
     onAction,
 }: FlyoutActionListProps): React.ReactElement | null {
     if (rows.length === 0) return null;
-    const safe = rows.filter((row) => !row.danger);
-    const danger = rows.filter((row) => row.danger);
+    const takesAway = (row: FlyoutActionRow): boolean => row.removes === true || row.danger === true;
+    const safe = rows.filter((row) => !takesAway(row));
+    const danger = rows.filter(takesAway);
     return (
         <section className="integration-panel-section" aria-label="Actions">
             <div className="integration-panel-section-label">Actions</div>

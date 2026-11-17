@@ -30,6 +30,7 @@ export function FlyoutActions({ model, onAction }: FlyoutActionsProps): React.Re
     const rows = model.menuActions.map((action) => ({
         key: action,
         ...actionRowFor(model, action),
+        removes: DESTRUCTIVE.has(action),
         danger: DESTRUCTIVE.has(action),
     }));
     return <FlyoutActionList rows={rows} onAction={(key) => onAction(model, key as CardAction)} />;

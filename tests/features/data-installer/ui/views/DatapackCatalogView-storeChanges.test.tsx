@@ -151,7 +151,7 @@ describe('saving the demo\'s datapack', () => {
 
         expect(await inFlyout().findByRole('button', { name: 'Install Newer Version' })).toBeInTheDocument();
         expect(inFlyout().queryByRole('button', { name: /Restore/u })).not.toBeInTheDocument();
-        expect(inFlyout().getByRole('button', { name: 'Uninstall' })).toHaveClass('is-danger');
+        expect(inFlyout().getByRole('button', { name: 'Uninstall' })).not.toHaveClass('is-danger');
     });
 
     it("offers no save in the flyout of a team pack the demo uses", async () => {

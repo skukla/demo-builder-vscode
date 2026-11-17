@@ -68,7 +68,7 @@ export function UpdateSummary({
         <StepsWindow
             title={`${INSTALL} ${name}`}
             ready={!checking}
-            waiting={checking ? WAIT_STAGES.checkingForChanges : false}
+            waiting={checking ? WAIT_STAGES.preparingInstall : false}
             closeLabel="Cancel"
             startButtons={[{ label: 'Review Records', variant: 'secondary', onPress: job.review }]}
             actionButtons={[

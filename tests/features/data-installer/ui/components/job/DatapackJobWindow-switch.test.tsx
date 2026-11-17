@@ -95,7 +95,7 @@ describe('the check', () => {
         await settle();
 
         expect(screen.getByRole('heading', { name: 'Switch to Bodea' })).toBeInTheDocument();
-        expect(screen.getAllByText('Finding unsaved changes').length).toBeGreaterThan(0);
+        expect(screen.getAllByText('Preparing to switch').length).toBeGreaterThan(0);
         expect(screen.queryByRole('button', { name: 'Switch' })).not.toBeInTheDocument();
         expect(sent('preview-datapack-changes')).toEqual({
             datapackName: 'bodea',
@@ -451,6 +451,14 @@ describe('another version of the held datapack', () => {
         await settle();
         return view;
     }
+
+    // Walk F200: the check is named for what it prepares, an install of the other version.
+    it('waits on "Preparing to install" while it reads', async () => {
+        answer({ target: TARGET }, ['get-datapack-removal-changes']);
+        await openVersion();
+
+        expect(screen.getAllByText('Preparing to install').length).toBeGreaterThan(0);
+    });
 
     it("reads the held version's changes in its store, then asks in Install's words with a blue Install", async () => {
         holdingMain(NOTHING);

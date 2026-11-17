@@ -75,12 +75,14 @@ export function summaryFrame(job: DatapackJob, opened: Opened, checking: boolean
     };
 }
 
-/** The wait the summary shows: the check's, or a Dry Run's. */
-function summaryWait(job: DatapackJob) {
-    const { phase, kind } = job.state;
+/** The wait the summary shows: the check's, named for the action it prepares (walk F200), or a Dry Run's. */
+function summaryWait(job: DatapackJob, opened: Opened) {
+    const { phase } = job.state;
     if (phase === 'dry-wait') return WAIT_STAGES.checkingImport;
     if (phase !== 'check') return false;
-    return kind === 'install' ? WAIT_STAGES.readingWhatToSelect : WAIT_STAGES.checkingForChanges;
+    if (opened.kind === 'install') return WAIT_STAGES.readingWhatToSelect;
+    if (opened.kind === 'uninstall') return WAIT_STAGES.preparingUninstall;
+    return opened.verb === 'Switch' ? WAIT_STAGES.preparingSwitch : WAIT_STAGES.preparingInstall;
 }
 
 /** The summary window: the check's wait, the type table, a Dry Run's wait. */
@@ -101,7 +103,7 @@ export function SummaryPhase({
             rows={job.rows}
             {...(problem ? { problem } : {})}
             ready={!checking}
-            waiting={summaryWait(job)}
+            waiting={summaryWait(job, opened)}
             onClose={onClose}
         />
     );

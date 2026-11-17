@@ -92,7 +92,7 @@ it('waits under "Update Luma", sending update-datapack once without confirm', as
 
     expect(screen.getByRole('heading', { name: 'Install Luma' })).toBeInTheDocument();
     // Walk F193: installing over the demo's datapack can lose the SC's edits.
-    expect(screen.getAllByText('Finding unsaved changes').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Preparing to install').length).toBeGreaterThan(0);
     expect(updateSends()).toEqual([{ datapackName: 'luma', records: true }]);
     expect(mockRequest.mock.calls.some(([type]) => type === 'preview-datapack-changes')).toBe(
         false

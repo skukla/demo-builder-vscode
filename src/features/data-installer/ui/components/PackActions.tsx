@@ -2,7 +2,7 @@
  * The flyout's actions, visible as one list (owner, 2026-11-17, matching the integration flyouts:
  * a menu is easy to miss; the shared `FlyoutActionList`). It replaced one main button and a "More"
  * menu (step-04 S5, decisions Phase 7). The first row is the main action, then the rest, then the
- * ones that remove, behind a divider, in the danger colour.
+ * ones that take something away, behind a divider: Uninstall, then Delete, the only one in red.
  *
  * The main action: **Install**; **Switch to <Name>** over another datapack the demo holds and Demo
  * Builder installed (J8-1, owner 2026-11-12), whose window asks "Switch to Bodea?"; **Update <Name>**
@@ -162,7 +162,8 @@ export function PackActions({
     const rows: FlyoutActionRow[] = [
         ...(onImport ? [mainRow(detail, { restores, updates, switches, failed })] : []),
         ...packRows(detail, undoTo !== undefined, onMarkChanged !== undefined),
-        ...removeRows(onRemoveData !== undefined, deletable(detail)).map((row) => ({ ...row, danger: true })),
+        // Both take something away; only Delete is for good, so only it is red (owner, 2026-11-17).
+        ...removeRows(onRemoveData !== undefined, deletable(detail)).map((row) => ({ ...row, removes: true, danger: row.key === 'remove' })),
     ];
     return (
         <>

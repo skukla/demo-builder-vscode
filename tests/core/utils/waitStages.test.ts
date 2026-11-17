@@ -38,18 +38,15 @@ describe('WAIT_STAGES', () => {
         expect(WAITS.filter((wait) => /the store\b/i.test(`${wait.label} ${wait.detail}`))).toStrictEqual([]);
     });
 
-    // Walk F114: the re-import's comparison, the replace's check and Remove Data's check are one read.
-    // F126: its line says since when, in the question's own words, not which pack.
-    // Walk F193 (owner, 2026-11-17): one read, two purposes, two names. Before an action that
-    // overwrites or removes, the edits it would lose; before a save, the edits it saves.
-    it('names the check by what it is for', () => {
-        expect(WAIT_STAGES.checkingForChanges).toEqual({
-            label: 'Finding unsaved changes',
-            expectation: 'Usually about a minute',
-        });
-        expect(WAIT_STAGES.comparingWithCommerce).toEqual({
-            label: 'Comparing with Commerce',
-            expectation: 'Usually about a minute',
-        });
+    // Walk F193, then F200 (owner, 2026-11-17): the check before an action does two reads (the edits
+    // it would lose, and what it goes back to or puts in), so it is named for the action it prepares;
+    // before a save, whose point is the edits, the comparison itself.
+    it('names the check by the action it prepares', () => {
+        expect(WAIT_STAGES.preparingRestore.label).toBe('Preparing to restore');
+        expect(WAIT_STAGES.preparingUninstall.label).toBe('Preparing to uninstall');
+        expect(WAIT_STAGES.preparingSwitch.label).toBe('Preparing to switch');
+        expect(WAIT_STAGES.preparingInstall.label).toBe('Preparing to install');
+        expect(WAIT_STAGES.comparingWithCommerce.label).toBe('Comparing with Commerce');
+        expect(WAIT_STAGES).not.toHaveProperty('checkingForChanges');
     });
 });

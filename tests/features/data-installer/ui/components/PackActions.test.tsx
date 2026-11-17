@@ -145,10 +145,13 @@ describe('a library pack', () => {
         expect(menuLabels()).toEqual(['Install', 'Save as File', 'Share']);
     });
 
-    it('offers Uninstall, last and in red, and no Delete on a held Demo Builder datapack', () => {
+    // Owner, 2026-11-17: a red Uninstall beside a red Delete said both were for good. Uninstall is
+    // undone by installing again, so it sits behind the divider in the normal colour.
+    it('offers Uninstall last, behind the divider, not in red, and no Delete on a held Demo Builder datapack', () => {
         renderActions({ detail: { ...OWN, team: true }, onRemoveData: jest.fn() });
         expect(menuLabels()).toEqual(['Install', 'Save as File', 'Share', 'Uninstall']);
-        expect(row('Uninstall')).toHaveClass('is-danger');
+        expect(row('Uninstall')).not.toHaveClass('is-danger');
+        expect(document.querySelector('.integration-panel-actions-divider')).not.toBeNull();
     });
 });
 

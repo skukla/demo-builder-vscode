@@ -127,7 +127,7 @@ export function RestorePhase({
             title={`${RESTORE} ${name}`}
             // Nothing is shown until the check answers: the small wait window (owner walk, 2026-11-16).
             ready={false}
-            waiting={WAIT_STAGES.checkingForChanges}
+            waiting={WAIT_STAGES.preparingRestore}
             closeLabel="Cancel"
             onClose={onClose}
         />
