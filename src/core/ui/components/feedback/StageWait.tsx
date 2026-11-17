@@ -9,8 +9,13 @@
  * wait appears. Its words come from `WAIT_STAGES` (`@/core/utils/waitStages`), as a run's come from
  * `OPERATION_STAGES`.
  *
- * Medium and centred in a dialog or flyout: the large spinner dominated a short dialog (owner,
- * 2026-10-31), and the progress window keeps its large one.
+ * **One size, large** (owner, 2026-11-17, walk F217): a dialog's wait and the run after it sat in one
+ * place at two sizes, medium then large. Three times a size was picked for one window to match its
+ * neighbour (dialogs medium 2026-10-31, flyouts medium 2026-11-02, one-project runs large 2026-11-16),
+ * because each window passed its own. So no window can: `StageRows` takes no size, and the compiler
+ * refuses one. Large because the wizard, the projects window and every run already were, and a
+ * dialog's wait has said three rows since 2026-11-08, so the spinner no longer sits alone in a short
+ * box (2026-10-31's reason). Only a flyout's `brief` wait stays medium: a label alone, in a panel.
  *
  * @module core/ui/components/feedback/StageWait
  */
@@ -35,18 +40,19 @@ export interface WaitLines {
 export function StageRows({
     lines,
     clock,
-    size = 'M',
     hold = false,
+    brief = false,
 }: {
     lines: WaitLines;
     clock?: string;
-    size?: 'M' | 'L';
     hold?: boolean;
+    /** A flyout's wait, its label alone: the one medium spinner. */
+    brief?: boolean;
 }): React.ReactElement {
     const hasRowThree = Boolean(lines.expectation || clock);
     return (
         <LoadingDisplay
-            size={size}
+            size={brief ? 'M' : 'L'}
             centered
             steady
             noBlankRows={!hold}
@@ -65,5 +71,5 @@ export function StageRows({
 export function StageWait({ lines, brief = false }: { lines: WaitLines; brief?: boolean }): React.ReactElement {
     const [startedAt] = useState(() => Date.now());
     const clock = useRunClock(startedAt);
-    return brief ? <StageRows lines={{ label: lines.label }} /> : <StageRows lines={lines} clock={clock} />;
+    return brief ? <StageRows brief lines={{ label: lines.label }} /> : <StageRows lines={lines} clock={clock} />;
 }

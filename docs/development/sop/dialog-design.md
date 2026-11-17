@@ -57,7 +57,8 @@ form, confirm, progress, result) shows one at a time.
 
 **A wait shows nothing else, and says what it is waiting for.** While a dialog waits for what it
 will show, only the title, the wait and the way out (Close or Cancel) appear: no fields and no action
-buttons. The wait is the progress window's rows, medium and centred (`StageWait`): what it is
+buttons. The wait is the progress window's rows, large and centred like the run that may follow it
+(`StageWait`; one size, owner 2026-11-17, walk F217; only a flyout's brief wait is medium): what it is
 doing ("Reading demo data"), a second line only when it tells the SC something the first does not
 ("From Commerce"), and how long it usually takes with the time so far ("Usually a few seconds · 4
 seconds"). A second line is never required: "Preparing to restore" says it all. Its words come from `WAIT_STAGES`

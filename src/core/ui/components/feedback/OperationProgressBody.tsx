@@ -110,7 +110,7 @@ export function OperationProgressBody({
             {/* Rows 2 and 3 hold their room from the first frame, so nothing shifts when a count or the
                 first second arrives (owner, 2026-11-16: "It shouldn't shift", over the 2026-11-01 rule
                 of no blank rows under "Starting"). */}
-            <StageRows size="L" hold clock={total} lines={lines} />
+            <StageRows hold clock={total} lines={lines} />
         </div>
     );
 }

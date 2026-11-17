@@ -97,7 +97,7 @@ export interface DatapackRunWindowProps {
  */
 const RUN_RESERVE: React.ReactNode[] = [
     <div key="run" className="modal-wait modal-wait-progress">
-        <StageRows size="L" hold clock="1 minute, 30 seconds" lines={{ label: 'Uninstalling from Commerce', detail: 'Products, 1,000 of 1,000' }} />
+        <StageRows hold clock="1 minute, 30 seconds" lines={{ label: 'Uninstalling from Commerce', detail: 'Products, 1,000 of 1,000' }} />
     </div>,
 ];
 
@@ -125,7 +125,7 @@ function Running({ steps, startedAt }: { steps: ImportStep[]; startedAt: number 
     const clock = useRunClock(startedAt);
     return (
         <div className="modal-wait modal-wait-progress">
-            <StageRows size="L" hold clock={clock} lines={runStage(steps, stepJob)} />
+            <StageRows hold clock={clock} lines={runStage(steps, stepJob)} />
         </div>
     );
 }

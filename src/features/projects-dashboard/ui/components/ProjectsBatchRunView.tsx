@@ -157,7 +157,6 @@ function OneRunning({ status, timing }: { status: BatchRowStatuses[string] | und
     return (
         <div className="modal-wait modal-wait-progress">
             <StageRows
-                size="L"
                 clock={clock}
                 lines={{
                     label: (running && status?.message) || PREPARING,
