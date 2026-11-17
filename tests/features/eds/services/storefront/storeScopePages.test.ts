@@ -157,11 +157,8 @@ describe('replaceStoreScopePages', () => {
             'Now on CitiSignal: 11 category pages and 39 product pages published. 30 old product pages removed.',
         );
         expect(result.counts).toEqual({ categoryPages: 11, productPages: 39, oldProductPagesRemoved: 30 });
-        // Walk F212 (owner, 2026-11-17): the result window lists what was done, one line each.
-        expect(result.lines).toStrictEqual([
-            'Now on CitiSignal: 11 category pages and 39 product pages published.',
-            '30 old product pages removed.',
-        ]);
+        // Walk F212 (owner, 2026-11-17): the counts were noise; a clean change shows its title alone.
+        expect(result.lines).toStrictEqual([]);
         expect(p.edsStorefrontState?.catalogPagesPending).toBeUndefined();
         expect(p.edsStorefrontStatusSummary).toBe('published');
     });
@@ -197,6 +194,8 @@ describe('replaceStoreScopePages', () => {
 
         expect(s.pages.get('/old-0')).toContain('Edited by hand');
         expect(result.sentence).toMatch(/ Kept "\/old-0": you edited it\.$/);
+        // The one line the window keeps (walk F212): something left as it was.
+        expect(result.lines).toStrictEqual(['Kept "/old-0": you edited it.']);
     });
 
     it('respects the shared-repository refusal: no product page is removed, and the sentence says why', async () => {
@@ -238,6 +237,8 @@ describe('replaceStoreScopePages', () => {
 
         expect(result.sentence).toMatch(/^Now on CitiSignal: 11 category pages published\./);
         expect(result.sentence).toContain('Product pages were not published (empty catalog).');
+        // An empty store is no problem: the window says nothing of it (walk F212).
+        expect(result.lines).toStrictEqual([]);
     });
 
     it('never throws: a failing step is said in the sentence and the rest still runs', async () => {

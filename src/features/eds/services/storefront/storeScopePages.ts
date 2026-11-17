@@ -67,7 +67,10 @@ export type StoreScopeReport = (stage: string, step?: string) => void;
 export interface StoreScopePagesResult {
     /** One sentence for the SC: where the storefront is now, and what changed (an agent's answer). */
     sentence: string;
-    /** The same, one line each, for a result window's list of what was done (walk F212). */
+    /**
+     * What the SC has to know, one line each, for the result window: only what was kept or not
+     * done (owner, 2026-11-17, walk F212: the counts were noise). Empty after a clean change.
+     */
     lines: string[];
     counts: { categoryPages: number; productPages: number; oldProductPagesRemoved: number };
 }
@@ -123,6 +126,22 @@ function linesOf(
         : `Now on ${store}: no category or product pages were published.`;
     return [head, removedSentence(removal), keptSentence(categories.kept), categories.problem, productSentence(publish)]
         .filter((line): line is string => Boolean(line));
+}
+
+/** The skip an empty store gives the warm-up: nothing went wrong, so nothing is said. */
+const EMPTY_CATALOG = 'empty catalog';
+
+/** Of the full account, only what was kept or not done: the result window's lines (walk F212). */
+function problemLinesOf(
+    removal: ProductPageRemovalResult,
+    categories: CatalogMenuReplacement,
+    publish: PrewarmResult,
+): string[] {
+    const removalProblem = removal.status === 'removed' || removal.status === 'nothing' ? undefined : removal.summary;
+    const publishProblem = publish.skipped && publish.skipReason === EMPTY_CATALOG ? undefined : productSentence(publish);
+    return [removalProblem, keptSentence(categories.kept), categories.problem, publishProblem].filter(
+        (line): line is string => Boolean(line),
+    );
 }
 
 async function publishProductPages(deps: StoreScopePagesDeps, report: StoreScopeReport): Promise<PrewarmResult> {
@@ -182,8 +201,8 @@ export async function replaceStoreScopePages(
         const publish = await publishProductPages(deps, report);
         await clearMarker(project, deps);
 
-        const lines = linesOf(store, removal, categories, publish);
-        const sentence = lines.join(' ');
+        const sentence = linesOf(store, removal, categories, publish).join(' ');
+        const lines = problemLinesOf(removal, categories, publish);
         deps.logger.info(`[StoreScopePages] ${sentence}`);
         const counts = {
             categoryPages: categories.written,
