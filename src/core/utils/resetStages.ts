@@ -55,7 +55,7 @@ export const RESET_STAGES = {
     checkingCopiedPages: {
         label: 'Checking copied pages',
         expectation: 'Usually a few seconds',
-        detail: 'The live site serves every demo page',
+        detail: 'Each demo page on the live site',
     },
     warmingProductPages: {
         label: 'Warming product pages',

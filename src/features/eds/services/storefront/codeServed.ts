@@ -76,10 +76,37 @@ function asServedHtml(text: string): string {
         .trim();
 }
 
+/** A sheet's rows: AEM's served shape (`:type` "sheet", rows in `data`), or a file wrapping one in `data`. */
+function sheetRows(value: unknown): unknown {
+    if (typeof value !== 'object' || value === null) return undefined;
+    const sheet = value as { ':type'?: unknown; data?: unknown };
+    if (sheet[':type'] === 'sheet') return sheet.data;
+    const inner = sheet.data as { data?: unknown } | undefined;
+    return typeof inner === 'object' && inner !== null && Array.isArray(inner.data) ? inner.data : undefined;
+}
+
+/**
+ * A JSON file as AEM serves it: a sheet-shaped file comes back unwrapped from `data` and tagged
+ * `":type": "sheet"`, so it never equals the committed one byte for byte, and its rows are
+ * compared instead. Measured 2026-11-17 on placeholders/company-switcher.json (walk F204).
+ */
+function sameJson(repo: string, served: string): boolean {
+    try {
+        const committed: unknown = JSON.parse(repo);
+        const live: unknown = JSON.parse(served);
+        const rows = sheetRows(committed);
+        if (rows !== undefined) return JSON.stringify(rows) === JSON.stringify(sheetRows(live));
+        return JSON.stringify(committed) === JSON.stringify(live);
+    } catch {
+        return false;
+    }
+}
+
 /** The two copies say the same thing, as far as what AEM changes on the way out allows. */
 function same(path: string, repo: string, served: string): boolean {
     if (/\.html$/i.test(path)) return asServedHtml(repo) === asServedHtml(served);
-    return repo.replace(/\r\n/g, '\n') === served.replace(/\r\n/g, '\n');
+    if (repo.replace(/\r\n/g, '\n') === served.replace(/\r\n/g, '\n')) return true;
+    return /\.json$/i.test(path) && sameJson(repo, served);
 }
 
 /** The files among `paths` the site does not serve as the repository has them. */

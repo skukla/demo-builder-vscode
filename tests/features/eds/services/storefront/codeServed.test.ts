@@ -106,6 +106,29 @@ describe('confirmCodeServed', () => {
         await expect(confirmCodeServed(['404.html'], deps)).resolves.toStrictEqual(['404.html']);
     });
 
+    // Walk F204 (2026-11-17): Scratch 1028 B's creation reported placeholders/company-switcher.json
+    // as never reaching the site, three publishes in a row. The site served it, at the publish's
+    // time, in the sheet shape AEM gives a JSON file: unwrapped from "data", tagged ":type". Both
+    // copies below are the ones read that day from the repository and from the live site.
+    const STUB = 'Label overrides are authored as DA.live /placeholders sheets. This file only answers the storefront\'s request so the browser console stays quiet; it sets no label.';
+    const COMMITTED_SHEET = JSON.stringify({ data: { total: 1, offset: 0, limit: 1, data: [{ Key: '_stub', Value: STUB }] } }, null, 2);
+    const SERVED_SHEET = JSON.stringify({ total: 1, offset: 0, limit: 1, data: [{ Key: '_stub', Value: STUB }], ':type': 'sheet' });
+    const SHEET_PATH = 'placeholders/company-switcher.json';
+
+    it('reads a sheet-shaped JSON file as AEM serves it: the same rows are served', async () => {
+        const { deps, publishes } = world({ [SHEET_PATH]: COMMITTED_SHEET }, { [SHEET_PATH]: SERVED_SHEET });
+
+        await expect(confirmCodeServed([SHEET_PATH], deps)).resolves.toStrictEqual([]);
+        expect(publishes).toStrictEqual([]);
+    });
+
+    it('CONTROL: still sees a sheet-shaped JSON file whose rows the site serves old', async () => {
+        const old = SERVED_SHEET.replace('_stub', '_old');
+        const { deps } = world({ [SHEET_PATH]: COMMITTED_SHEET }, { [SHEET_PATH]: old }, 99);
+
+        await expect(confirmCodeServed([SHEET_PATH], deps)).resolves.toStrictEqual([SHEET_PATH]);
+    });
+
     it('treats a failed publish like any other file still not served', async () => {
         const { deps } = world({ 'scripts/a.js': 'new' }, { 'scripts/a.js': 'old' });
         deps.publish = jest.fn().mockRejectedValue(new Error('403'));
