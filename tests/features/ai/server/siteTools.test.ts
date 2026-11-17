@@ -341,9 +341,7 @@ describe('find_storefront_name_mismatches', () => {
 
         // A scan that persisted every project it read would be a write hiding
         // in a read.
-        expect(loadProjectFromPath).toHaveBeenCalledWith('/projects/demo', expect.any(Function), {
-            persistAfterLoad: false,
-        });
+        expect(loadProjectFromPath).toHaveBeenCalledWith('/projects/demo', expect.any(Function));
         expect(saveProject).not.toHaveBeenCalled();
 
         // `expect.any(Function)` passes for ANY function, so it does not check what the
@@ -557,9 +555,7 @@ describe('migrate_storefront_name', () => {
 
         // Same rule as the scan: resolving WHICH project to migrate must not persist
         // the manifest as a side effect of reading it.
-        expect(loadProjectFromPath).toHaveBeenCalledWith('/projects/demo', expect.any(Function), {
-            persistAfterLoad: false,
-        });
+        expect(loadProjectFromPath).toHaveBeenCalledWith('/projects/demo', expect.any(Function));
         const [, terminals] = loadProjectFromPath.mock.calls[0];
         expect(terminals!()).toStrictEqual([]);
     });

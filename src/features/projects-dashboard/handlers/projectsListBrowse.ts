@@ -147,7 +147,8 @@ export const handleSelectProject: MessageHandler<{
             };
         }
 
-        const project = await context.stateManager.loadProjectFromPath(payload.projectPath);
+        // Opened: the project it picked becomes the open project, saved, and in the recent list.
+        const project = await context.stateManager.openProject(payload.projectPath);
 
         if (!project) {
             return {
@@ -155,9 +156,6 @@ export const handleSelectProject: MessageHandler<{
                 error: 'Project not found',
             };
         }
-
-        // Set as current project in state
-        await context.stateManager.saveProject(project);
         context.logger.info(`Selected project: ${project.name}`);
 
         const forceNewWindow = payload.forceNewWindow === true;

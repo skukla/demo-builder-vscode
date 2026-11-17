@@ -707,7 +707,7 @@ export async function runProjectCreation(ctx: HandlerContext, request: CreationR
 
 /** Is there a project at this folder now (its manifest loads)? */
 async function projectExistsAt(ctx: HandlerContext, folder: string): Promise<boolean> {
-    return (await ctx.stateManager.loadProjectFromPath(folder, undefined, { persistAfterLoad: false })) !== null;
+    return (await ctx.stateManager.loadProjectFromPath(folder)) !== null;
 }
 
 /** The run itself, once the name is known to be usable. */

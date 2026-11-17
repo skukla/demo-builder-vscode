@@ -232,15 +232,25 @@ describe('StateManager.loadProjectFromPath — what it holds and which terminals
         mockWindow.terminals = [];
     });
 
-    it('adopts the project in memory even when asked not to persist it', async () => {
+    // Walk F206 (2026-11-17): a read adopted the project in memory, and by default saved
+    // it as the open one. A read now holds nothing; opening is openProject.
+    it('neither writes nor adopts the project on a read', async () => {
         primeManifest();
         await testMocks.stateManager.initialize();
 
-        await testMocks.stateManager.loadProjectFromPath(PROJECT_PATH, () => [], {
-            persistAfterLoad: false,
-        });
+        await testMocks.stateManager.loadProjectFromPath(PROJECT_PATH, () => []);
 
         expect(fs.writeFile).not.toHaveBeenCalled();
+        await expect(testMocks.stateManager.hasProject()).resolves.toBe(false);
+    });
+
+    it('CONTROL: adopts and saves the project when it is opened', async () => {
+        primeManifest();
+        await testMocks.stateManager.initialize();
+
+        await testMocks.stateManager.openProject(PROJECT_PATH, () => []);
+
+        expect(fs.writeFile).toHaveBeenCalled();
         await expect(testMocks.stateManager.hasProject()).resolves.toBe(true);
     });
 
@@ -271,5 +281,27 @@ describe('StateManager.loadProjectFromPath — what it holds and which terminals
 
         expect(current?.status).toBe('running');
         expect(vscode.window.terminals).toHaveLength(1);
+    });
+
+    // Walk F206: a read no longer adopts, so getCurrentProject adopts what it read itself,
+    // and this window's in-memory copy converges on the saved pointer without a write.
+    it('getCurrentProject holds the project it read, writing nothing', async () => {
+        (fs.readFile as jest.Mock).mockImplementation(async (target: string) => {
+            if (target === mockStateFile) {
+                return JSON.stringify({ version: 1, currentProjectPath: PROJECT_PATH });
+            }
+            if (target === path.join(PROJECT_PATH, '.demo-builder.json')) {
+                return JSON.stringify(FRONTEND_MANIFEST);
+            }
+            throw new Error('ENOENT');
+        });
+        await testMocks.stateManager.initialize();
+        await testMocks.stateManager.clearProject();
+        (fs.writeFile as jest.Mock).mockClear();
+
+        await testMocks.stateManager.getCurrentProject();
+
+        await expect(testMocks.stateManager.hasProject()).resolves.toBe(true);
+        expect(fs.writeFile).not.toHaveBeenCalled();
     });
 });

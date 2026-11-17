@@ -92,9 +92,7 @@ describe('otherProjectsPublishingTo', () => {
 
         await otherProjectsPublishingTo(stateManager, 'skukla/shared');
 
-        expect(loadProjectFromPath).toHaveBeenCalledWith('/projects/a', expect.any(Function), {
-            persistAfterLoad: false,
-        });
+        expect(loadProjectFromPath).toHaveBeenCalledWith('/projects/a', expect.any(Function));
         expect(stateManager.saveProject).not.toHaveBeenCalled();
     });
 });

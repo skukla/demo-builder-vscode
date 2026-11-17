@@ -70,10 +70,7 @@ describe('resolveProjectFromPath', () => {
         ).resolves.toEqual({ ok: true, project });
         expect(validateProjectPath).toHaveBeenCalledWith(PROJECT_PATH);
         expect(context.stateManager.loadProjectFromPath).toHaveBeenCalledWith(
-            PROJECT_PATH,
-            undefined,
-            { persistAfterLoad: false },
-        );
+            PROJECT_PATH);
     });
 
     it('says the project was not found when nothing loads', async () => {

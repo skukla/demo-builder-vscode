@@ -362,9 +362,9 @@ describe('registerEwSettingChangeListener', () => {
     });
 
     it('reads each project without persisting it back', async () => {
-        // persistAfterLoad: false is load-bearing — this is a BACKGROUND read
-        // triggered by a settings edit, and persisting would rewrite the on-disk
-        // current project out from under whatever the SC is doing. The empty
+        // A read is load-bearing — this is a BACKGROUND read triggered by a
+        // settings edit, and opening would rewrite the on-disk current project out
+        // from under whatever the SC is doing. The empty
         // component factory matters for the same reason: a populated catalog
         // here would let the load reshape componentInstances.
         (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Not Now');
@@ -374,9 +374,7 @@ describe('registerEwSettingChangeListener', () => {
         fireChange('demoBuilder.daLive.authoringExperience');
         await flushDebounce();
 
-        expect(sm.loadProjectFromPath).toHaveBeenCalledWith('/p/solo', expect.any(Function), {
-            persistAfterLoad: false,
-        });
+        expect(sm.loadProjectFromPath).toHaveBeenCalledWith('/p/solo', expect.any(Function));
         const [, componentFactory] = (sm.loadProjectFromPath as jest.Mock).mock.calls[0];
         expect((componentFactory as () => unknown[])()).toStrictEqual([]);
     });

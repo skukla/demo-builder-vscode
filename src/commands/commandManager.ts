@@ -170,7 +170,7 @@ export class CommandManager {
                 await vscode.commands.executeCommand('demoBuilder.stopDemo');
             }
 
-            const project = await this.stateManager.loadProjectFromPath(projectPath);
+            const project = await this.stateManager.openProject(projectPath);
             if (project) {
                 this.logger.info(`[LoadProject] Loaded project: ${project.name}`);
                 vscode.commands.executeCommand('demoBuilder.showProjectDashboard');

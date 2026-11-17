@@ -24,6 +24,8 @@ import {
     mockGetCurrentProject,
     mockGetAllProjects,
     mockLoadProjectFromPath,
+    mockOpenProject,
+    mockSaveProject,
     mockRefreshAiBundles,
     mockRenewPublishKeys,
     mockSweepCommerceSecrets,
@@ -174,24 +176,21 @@ describe('the activation upkeep sweeps', () => {
         mockLoadProjectFromPath.mockClear();
         await args.loadProject('/projects/demo-a');
 
-        // persistAfterLoad: false — the sweep saves config-only itself, and the
-        // default load path would also move currentProject and the recents list
-        // for every migrated project.
-        expect(mockLoadProjectFromPath).toHaveBeenCalledWith('/projects/demo-a', undefined, {
-            persistAfterLoad: false,
-        });
+        // A read: the sweep saves config-only itself, and opening would move the open
+        // project and the recents list for every migrated project.
+        expect(mockLoadProjectFromPath).toHaveBeenCalledWith('/projects/demo-a');
     });
 
     // Walk F206 (2026-11-17): a DA.live sign-in ran the publish-key sweep, which loaded every
     // project the way opening one does, saving each as the open project; the last loaded stayed
-    // open. Every sweep's load leaves the open project alone.
-    it('loads every project for every sweep without making it the open project', async () => {
+    // open. A sweep reads projects and never opens or saves one as the open project.
+    it('reads every project for every sweep, and opens none', async () => {
         await activate(createActivationContext());
         await settleSweeps();
 
-        const loads = mockLoadProjectFromPath.mock.calls;
-        expect(loads.length).toBeGreaterThan(0);
-        expect(loads.filter((call) => (call[2] as { persistAfterLoad?: boolean } | undefined)?.persistAfterLoad !== false)).toStrictEqual([]);
+        expect(mockLoadProjectFromPath.mock.calls.length).toBeGreaterThan(0);
+        expect(mockOpenProject).not.toHaveBeenCalled();
+        expect(mockSaveProject).not.toHaveBeenCalled();
     });
 
     it('skips a project the loader cannot read rather than pushing a hole', async () => {

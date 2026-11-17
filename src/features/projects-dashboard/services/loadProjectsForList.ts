@@ -44,9 +44,7 @@ export async function loadProjectsForList(
 ): Promise<Project[]> {
     const projects: Project[] = [];
     for (const item of await stateManager.getAllProjects()) {
-        const project = await stateManager.loadProjectFromPath(item.path, undefined, {
-            persistAfterLoad: false,
-        });
+        const project = await stateManager.loadProjectFromPath(item.path);
         if (!project) continue;
         const work = runningWork(project.path);
         if (work) project.status = work;

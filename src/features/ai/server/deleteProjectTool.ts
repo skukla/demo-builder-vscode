@@ -105,7 +105,7 @@ export function registerDeleteProjectTool(
                 return asText({ error: `No project named "${name}"`, projects: summaries.map((p) => p.name) });
             }
 
-            const project = await ctx.stateManager.loadProjectFromPath(match.path, undefined, { persistAfterLoad: false });
+            const project = await ctx.stateManager.loadProjectFromPath(match.path);
             if (!project) {
                 return asText({ error: `Failed to load project "${name}"` });
             }

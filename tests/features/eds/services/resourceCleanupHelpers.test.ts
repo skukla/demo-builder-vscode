@@ -226,7 +226,9 @@ describe('getLinkedEdsProjects', () => {
         const call = (stateManager.loadProjectFromPath as jest.Mock).mock.calls[0];
         expect(call[0]).toBe('/path/to/eds1');
         expect(call[1]()).toStrictEqual([]);
-        expect(call[2]).toEqual({ persistAfterLoad: false });
+        // A read: nothing is opened (walk F206).
+        expect(call).toHaveLength(2);
+        expect(stateManager.openProject).not.toHaveBeenCalled();
     });
 
     it('should exclude non-EDS projects', async () => {

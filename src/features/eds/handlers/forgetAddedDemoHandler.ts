@@ -54,9 +54,7 @@ export async function countProjectsBuiltOn(
     const key = addedDemoKey({ source });
     let count = 0;
     for (const summary of await context.stateManager.getAllProjects()) {
-        const project = await context.stateManager.loadProjectFromPath(summary.path, undefined, {
-            persistAfterLoad: false,
-        });
+        const project = await context.stateManager.loadProjectFromPath(summary.path);
         if (project?.demo && addedDemoKey(project.demo) === key) count += 1;
     }
     return count;
@@ -69,9 +67,7 @@ export async function projectWithStorefront(
 ): Promise<string | undefined> {
     const wanted = `${source.owner}/${source.repo}`.toLowerCase();
     for (const summary of await context.stateManager.getAllProjects()) {
-        const project = await context.stateManager.loadProjectFromPath(summary.path, undefined, {
-            persistAfterLoad: false,
-        });
+        const project = await context.stateManager.loadProjectFromPath(summary.path);
         if (project && getEdsGithubRepo(project)?.toLowerCase() === wanted) return project.name;
     }
     return undefined;

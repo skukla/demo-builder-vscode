@@ -95,9 +95,7 @@ describe('copy_project — checked before anything is created', () => {
     it('loads the source without saving it back', async () => {
         await toolServer().call({ sourceProject: 'bodea-demo', projectName: 'bodea-copy', ...RECEIVER });
 
-        expect(loadProjectFromPath).toHaveBeenCalledWith('/projects/bodea-demo', undefined, {
-            persistAfterLoad: false,
-        });
+        expect(loadProjectFromPath).toHaveBeenCalledWith('/projects/bodea-demo');
     });
 
     it('requires confirm:true, and says what the copy would create before it does', async () => {

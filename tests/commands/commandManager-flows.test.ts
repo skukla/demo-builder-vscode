@@ -55,11 +55,11 @@ const project = (over: Partial<Project> = {}): Project =>
 describe('loadProject', () => {
     it('loads straight away when no demo is running', async () => {
         const h = harness();
-        h.stateManager.loadProjectFromPath.mockResolvedValue(project());
+        h.stateManager.openProject.mockResolvedValue(project());
 
         await h.handlerFor('demoBuilder.loadProject')('/p/bodea');
 
-        expect(h.stateManager.loadProjectFromPath).toHaveBeenCalledWith('/p/bodea');
+        expect(h.stateManager.openProject).toHaveBeenCalledWith('/p/bodea');
         expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
         expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
             'demoBuilder.showProjectDashboard'
@@ -71,13 +71,13 @@ describe('loadProject', () => {
     it('asks before switching away from a RUNNING demo, and stops it on consent', async () => {
         const h = harness();
         h.stateManager.getCurrentProject.mockResolvedValue(project({ status: 'running' }));
-        h.stateManager.loadProjectFromPath.mockResolvedValue(project({ name: 'other' }));
+        h.stateManager.openProject.mockResolvedValue(project({ name: 'other' }));
         (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Stop & Switch');
 
         await h.handlerFor('demoBuilder.loadProject')('/p/other');
 
         expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.stopDemo');
-        expect(h.stateManager.loadProjectFromPath).toHaveBeenCalledWith('/p/other');
+        expect(h.stateManager.openProject).toHaveBeenCalledWith('/p/other');
     });
 
     it('abandons the switch when the user cancels', async () => {
@@ -89,7 +89,7 @@ describe('loadProject', () => {
         await h.handlerFor('demoBuilder.loadProject')('/p/other');
 
         expect((vscode.commands.executeCommand as jest.Mock).mock.calls.map(([id]) => id)).not.toContain('demoBuilder.stopDemo');
-        expect(h.stateManager.loadProjectFromPath).not.toHaveBeenCalled();
+        expect(h.stateManager.openProject).not.toHaveBeenCalled();
     });
 
     // Cancelling with no project left open would otherwise leave an empty
@@ -122,7 +122,7 @@ describe('loadProject', () => {
     it('does not prompt for a project that is merely open', async () => {
         const h = harness();
         h.stateManager.getCurrentProject.mockResolvedValue(project({ status: 'ready' }));
-        h.stateManager.loadProjectFromPath.mockResolvedValue(project());
+        h.stateManager.openProject.mockResolvedValue(project());
 
         await h.handlerFor('demoBuilder.loadProject')('/p/bodea');
 
@@ -131,7 +131,7 @@ describe('loadProject', () => {
 
     it('reports a path that would not load, and opens no dashboard', async () => {
         const h = harness();
-        h.stateManager.loadProjectFromPath.mockResolvedValue(null);
+        h.stateManager.openProject.mockResolvedValue(null);
 
         await h.handlerFor('demoBuilder.loadProject')('/p/missing');
 

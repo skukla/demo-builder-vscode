@@ -31,7 +31,7 @@ describe('createWorkingProjectStateManager', () => {
 
         expect(project?.path).toBe(WORKING);
         expect(real.loadProjectFromPath).toHaveBeenCalledTimes(2);
-        expect(real.loadProjectFromPath).toHaveBeenCalledWith(WORKING, undefined, { persistAfterLoad: false });
+        expect(real.loadProjectFromPath).toHaveBeenCalledWith(WORKING);
     });
 
     it('follows the current project while it has no working project', async () => {
@@ -52,7 +52,7 @@ describe('createWorkingProjectStateManager', () => {
         await view.getCurrentProject();
 
         expect(real.getCurrentProject).toHaveBeenCalledTimes(1);
-        expect(real.loadProjectFromPath).toHaveBeenCalledWith(WORKING, undefined, { persistAfterLoad: false });
+        expect(real.loadProjectFromPath).toHaveBeenCalledWith(WORKING);
     });
 
     it('saves without moving the pointer while its project is not the current one', async () => {

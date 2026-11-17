@@ -102,7 +102,7 @@ describe('replaceDeployedElsewhere', () => {
         expect(result).toBeUndefined();
         // Loaded without moving the current-project pointer; itself never loaded.
         expect(stateManager.loadProjectFromPath).toHaveBeenCalledTimes(1);
-        expect(stateManager.loadProjectFromPath).toHaveBeenCalledWith('/projects/tailspin', undefined, { persistAfterLoad: false });
+        expect(stateManager.loadProjectFromPath).toHaveBeenCalledWith('/projects/tailspin');
         // The OTHER project's deps, from the services the handler resolved.
         expect(mockBuildRunnerDepsContext).toHaveBeenCalledWith(context, other, SERVICES);
         expect(mockBuildDefaultRunnerDeps).toHaveBeenCalledWith(

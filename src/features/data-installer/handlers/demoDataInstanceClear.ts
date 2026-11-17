@@ -151,7 +151,7 @@ async function askedFirst(
  */
 async function projectNow(context: HandlerContext, opened: Opened, path: string): Promise<Project | undefined> {
     if (opened.project.path === path) return opened.project;
-    return (await context.stateManager.loadProjectFromPath(path, undefined, { persistAfterLoad: false })) ?? undefined;
+    return (await context.stateManager.loadProjectFromPath(path)) ?? undefined;
 }
 
 const samePack = (held: Project['datapack'], pack: InstanceRemoval['pack']): boolean => held?.name === pack.name && held.version === pack.version;

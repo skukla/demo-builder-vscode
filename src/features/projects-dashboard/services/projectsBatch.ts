@@ -70,7 +70,7 @@ type RowOutcome = { error?: string; warnings?: string[]; note?: string } | undef
 
 /** Each project picked, loaded, in the order picked; a path that no longer loads is left out. */
 async function loadAll(context: HandlerContext, paths: readonly string[]): Promise<Project[]> {
-    const loaded = await Promise.all(paths.map((path) => context.stateManager.loadProjectFromPath(path, undefined, { persistAfterLoad: false })));
+    const loaded = await Promise.all(paths.map((path) => context.stateManager.loadProjectFromPath(path)));
     return loaded.filter((project): project is Project => Boolean(project));
 }
 
@@ -200,7 +200,7 @@ export async function runDeleteBatch(context: HandlerContext, answers: readonly 
     let failed = 0;
     for (const answer of answers) {
         const ok = await runRow(answer.path, tell, report, async (rowReport) => {
-            const project = await context.stateManager.loadProjectFromPath(answer.path, undefined, { persistAfterLoad: false });
+            const project = await context.stateManager.loadProjectFromPath(answer.path);
             if (!project) return { error: 'This project is no longer on this computer.' };
             const cleanupOptions = { deleteGitHubRepo: answer.deleteGitHubRepo, deleteDaLiveSite: answer.deleteDaLiveSite, removeDatapackData: answer.removeDatapackData };
             // Given up front, by the save question, as a reset batch's are (`edsResetUI`).

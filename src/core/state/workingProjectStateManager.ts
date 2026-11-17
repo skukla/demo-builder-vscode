@@ -8,8 +8,8 @@
  * scratch project. Every handler asks `getCurrentProject()`; this view answers it with the
  * surface's own project, so the 149 call sites need no change.
  *
- * - `getCurrentProject` loads the working project from disk, per call (`persistAfterLoad:
- *   false`: a read must not move the pointer). No working project: the current one.
+ * - `getCurrentProject` reads the working project from disk, per call (`loadProjectFromPath`,
+ *   a read: it cannot move the pointer). No working project: the current one.
  * - `saveProject` is today's save when there is no working project, or the working project
  *   IS the current one: the surface and the person agree, so nothing changes (the change
  *   event fires, an open dashboard refreshes, a rename moves the pointer to the new folder,
@@ -44,7 +44,7 @@ export function createWorkingProjectStateManager(
         getCurrentProject: async () => {
             const path = workingPath();
             if (!path) return real.getCurrentProject();
-            const project = await real.loadProjectFromPath(path, undefined, { persistAfterLoad: false });
+            const project = await real.loadProjectFromPath(path);
             return project ?? undefined;
         },
         saveProject: async (project: Project) => {

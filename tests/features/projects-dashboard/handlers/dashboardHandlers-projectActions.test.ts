@@ -167,7 +167,7 @@ describe('handleEditProject', () => {
 });
 
 describe('handleRenameProject', () => {
-    it('loads WITH persistence and hands the raw new name to the rename core', async () => {
+    it('opens the project and hands the raw new name to the rename core', async () => {
         const project = createProjectsDashboardProject();
         const context = createProjectsDashboardContext([project]);
         mockRenameProjectCore.mockResolvedValue({ success: true, data: { name: 'renamed' } });
@@ -177,12 +177,8 @@ describe('handleRenameProject', () => {
             newName: 'Renamed Demo',
         });
 
-        // persistAfterLoad: true — the rename is about to save changes back.
-        expect(context.stateManager.loadProjectFromPath).toHaveBeenCalledWith(
-            project.path,
-            undefined,
-            { persistAfterLoad: true },
-        );
+        // Opened, as before the load/open split: the rename's own save makes it the open project.
+        expect(context.stateManager.openProject).toHaveBeenCalledWith(project.path);
         expect(mockRenameProjectCore).toHaveBeenCalledWith(context, project, 'Renamed Demo');
         expect(result).toEqual({ success: true, data: { name: 'renamed' } });
     });

@@ -48,6 +48,9 @@ export const mockOnProjectChanged = {
 export const mockGetAllProjects = jest.fn();
 export const mockLoadProjectFromPath = jest.fn();
 export const mockSaveProjectConfigOnly = jest.fn();
+/** What opening a project does; no sweep may call either (walk F206). */
+export const mockOpenProject = jest.fn();
+export const mockSaveProject = jest.fn();
 export const mockStateManagerDispose = jest.fn();
 
 jest.mock('@/core/state/stateManager', () => ({
@@ -59,6 +62,8 @@ jest.mock('@/core/state/stateManager', () => ({
         getAllProjects: mockGetAllProjects,
         loadProjectFromPath: mockLoadProjectFromPath,
         saveProjectConfigOnly: mockSaveProjectConfigOnly,
+        openProject: mockOpenProject,
+        saveProject: mockSaveProject,
         dispose: mockStateManagerDispose,
     })),
 }));

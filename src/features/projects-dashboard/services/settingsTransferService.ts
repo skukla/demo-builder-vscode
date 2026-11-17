@@ -170,9 +170,7 @@ export async function copySettingsFromProject(context: HandlerContext): Promise<
         const projects: Project[] = [];
 
         for (const item of projectList) {
-            const project = await context.stateManager.loadProjectFromPath(item.path, undefined, {
-                persistAfterLoad: false,
-            });
+            const project = await context.stateManager.loadProjectFromPath(item.path);
             if (project) {
                 projects.push(project);
             }

@@ -35,7 +35,7 @@ describe('BaseCommand.stateFor', () => {
         const state = await command.execute('/projects/tailspin');
 
         expect(await state.getCurrentProject()).toBe(TAILSPIN);
-        expect(real.loadProjectFromPath).toHaveBeenCalledWith('/projects/tailspin', undefined, { persistAfterLoad: false });
+        expect(real.loadProjectFromPath).toHaveBeenCalledWith('/projects/tailspin');
     });
 
     it.each([[undefined], [{ label: 'tree item' }], ['']])('means the current project for %p', async (arg) => {

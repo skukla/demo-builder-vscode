@@ -116,8 +116,8 @@ describe('ShowProjectsListCommand — refreshing the webview', () => {
 
     describe('refreshProjectsList', () => {
         it('loads each project WITHOUT persisting, and sends them all', async () => {
-            // persistAfterLoad:false is the whole point of this read: refreshing a
-            // list must not write every project back to disk.
+            // A read is the whole point: refreshing a list must not write every
+            // project back to disk, nor open one.
             const { command, stateManager, sendMessage } = build();
             withChannel(command);
             stateManager.getAllProjects.mockResolvedValue([listedAt('/p/one'), listedAt('/p/two')]);
@@ -125,9 +125,8 @@ describe('ShowProjectsListCommand — refreshing the webview', () => {
 
             await internals(command).refreshProjectsList();
 
-            expect(stateManager.loadProjectFromPath).toHaveBeenCalledWith('/p/one', undefined, {
-                persistAfterLoad: false,
-            });
+            expect(stateManager.loadProjectFromPath).toHaveBeenCalledWith('/p/one');
+            expect(stateManager.openProject).not.toHaveBeenCalled();
             expect(sendMessage).toHaveBeenCalledWith('projectsUpdated', {
                 projects: [projectAt('/p/one'), projectAt('/p/two')],
             });

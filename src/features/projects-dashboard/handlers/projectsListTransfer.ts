@@ -83,9 +83,7 @@ export const handleExportProject: MessageHandler<{ projectPath: string }> = asyn
         };
     }
 
-    const project = await context.stateManager.loadProjectFromPath(payload.projectPath, undefined, {
-        persistAfterLoad: false,
-    });
+    const project = await context.stateManager.loadProjectFromPath(payload.projectPath);
     if (!project) {
         return {
             success: false,

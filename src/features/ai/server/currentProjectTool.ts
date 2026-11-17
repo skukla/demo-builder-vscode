@@ -113,7 +113,7 @@ async function chooseProject(ctx: HandlerContext, projectPath: unknown) {
     // Only a project the projects list would show: the path came from an agent.
     const known = (await ctx.stateManager.getAllProjects()).some((p) => p.path === projectPath);
     const project = known
-        ? await ctx.stateManager.loadProjectFromPath(projectPath, undefined, { persistAfterLoad: false })
+        ? await ctx.stateManager.loadProjectFromPath(projectPath)
         : null;
     if (!project) return { error: `No project at ${projectPath}. Use a path from list_projects.` };
     ctx.agentWorkingProject.path = project.path;

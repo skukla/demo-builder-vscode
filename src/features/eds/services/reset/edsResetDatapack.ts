@@ -268,7 +268,7 @@ export async function forgetRemovedPack(project: Project, context: HandlerContex
 async function withoutPackOnDisk(project: Project, context: HandlerContext): Promise<Project> {
     const current = await context.stateManager.getCurrentProject();
     if (current?.path === project.path) return project;
-    const fresh = await context.stateManager.loadProjectFromPath(project.path, undefined, { persistAfterLoad: false });
+    const fresh = await context.stateManager.loadProjectFromPath(project.path);
     if (!fresh) return project;
     fresh.datapack = undefined;
     dropStaleFailure(fresh);

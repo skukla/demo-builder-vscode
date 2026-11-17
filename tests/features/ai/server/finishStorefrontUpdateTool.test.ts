@@ -82,7 +82,7 @@ describe('finish_storefront_update', () => {
     it('finds the project by name, not the open one, and loads it without saving', async () => {
         await server().call({ project: 'tailspin' });
 
-        expect(loadProjectFromPath).toHaveBeenCalledWith('/p/tailspin', undefined, { persistAfterLoad: false });
+        expect(loadProjectFromPath).toHaveBeenCalledWith('/p/tailspin');
         expect(previewMock).toHaveBeenCalledWith(expect.objectContaining({ name: 'tailspin' }), expect.anything());
     });
 

@@ -854,16 +854,16 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
  * Every project on disk, fully loaded, none of them saved or made the open project.
  *
  * Shared by the upkeep sweeps below, which each need the whole set and each save only
- * what they change (`saveProjectConfigOnly`). `loadProjectFromPath` defaults to
- * `persistAfterLoad: true`, which saves each project as the open one: every sweep
- * moved the open project to the last project loaded, at activation and again on a
- * DA.live sign-in, mid-wizard (walk F206, 2026-11-17). So no load here persists.
+ * what they change (`saveProjectConfigOnly`). `loadProjectFromPath` is a read: it once
+ * opened and saved by default, and every sweep moved the open project to the last
+ * project loaded, at activation and again on a DA.live sign-in, mid-wizard (walk F206,
+ * 2026-11-17). Opening is `openProject`, which no sweep calls.
  */
 async function loadAllProjects(): Promise<Project[]> {
     const summaries = await stateManager.getAllProjects();
     const projects: Project[] = [];
     for (const summary of summaries) {
-        const project = await stateManager.loadProjectFromPath(summary.path, undefined, { persistAfterLoad: false });
+        const project = await stateManager.loadProjectFromPath(summary.path);
         if (project) projects.push(project);
     }
     return projects;
@@ -932,9 +932,9 @@ async function sweepPublishKeyRenewals(context: vscode.ExtensionContext): Promis
 /**
  * Glue for the manifest write-back migration (see manifestFormatSweep.ts).
  *
- * persistAfterLoad: false — the sweep saves via saveProjectConfigOnly itself;
- * the default save path would also move currentProject and the recents list
- * for every migrated project.
+ * Reads each project (`loadProjectFromPath`) and saves via saveProjectConfigOnly itself;
+ * opening one would also move the open project and the recents list for every
+ * migrated project.
  */
 async function sweepManifestFormats(): Promise<void> {
     try {
@@ -942,9 +942,7 @@ async function sweepManifestFormats(): Promise<void> {
         await sweepManifestFormat({
             projectPaths: summaries.map((s) => s.path),
             loadProject: (projectPath) =>
-                stateManager.loadProjectFromPath(projectPath, undefined, {
-                    persistAfterLoad: false,
-                }),
+                stateManager.loadProjectFromPath(projectPath),
             saveProject: (project) => stateManager.saveProjectConfigOnly(project),
             log: (line) => logger.info(`[ManifestFormat] ${line}`),
         });
@@ -955,7 +953,7 @@ async function sweepManifestFormats(): Promise<void> {
 
 /**
  * Glue for the Node sweep (demoBuilderNodeSweep.ts, PR-1a step 9): loads every project the
- * careful way (persistAfterLoad: false, like the manifest sweep), saves through
+ * careful way (a read, like the manifest sweep), saves through
  * saveProjectConfigOnly, and is the one place it is shown to the SC: the shared
  * progress notification while it works, then a status-bar line, or a warning naming
  * anything that could not move.

@@ -177,11 +177,9 @@ async function findAffectedProjects(
     const summaries = await stateManager.getAllProjects();
     const affected: Project[] = [];
     for (const summary of summaries) {
-        // Load full project data to access componentInstances (persistAfterLoad:
-        // false — a background read must not mutate the on-disk current project).
-        const project = await stateManager.loadProjectFromPath(summary.path, () => [], {
-            persistAfterLoad: false,
-        });
+        // Read full project data to access componentInstances (a read: a background
+        // read must not move the on-disk current project).
+        const project = await stateManager.loadProjectFromPath(summary.path, () => []);
         if (!project || !isEdsProject(project)) {
             continue;
         }

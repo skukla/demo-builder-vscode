@@ -8,10 +8,10 @@
  * startup — and answered confidently, because the project's MANIFEST really was
  * re-read every call. Fresh data about the wrong project.
  *
- * It is not only a cross-window problem. `loadProjectFromPath` with
- * `persistAfterLoad: false` assigns `state.currentProject`, and the home-screen
- * kebab calls it on whatever project the row belongs to — so a pin or rename on
- * an unrelated project reassigned this window's in-memory pointer too.
+ * It was not only a cross-window problem: reading a project once assigned
+ * `state.currentProject`, so a home-screen kebab action on an unrelated project
+ * reassigned this window's in-memory pointer too. A read no longer does (walk F206);
+ * getCurrentProject adopts what it read itself.
  */
 
 import { setupMocks, createStateManagerProject, type TestMocks } from './stateManager.testUtils';
@@ -67,7 +67,6 @@ describe('StateManager.getCurrentProject — disk pointer', () => {
         expect(load).toHaveBeenCalledWith(
             '/projects/selected-elsewhere',
             expect.any(Function),
-            expect.objectContaining({ persistAfterLoad: false })
         );
     });
 
@@ -85,7 +84,6 @@ describe('StateManager.getCurrentProject — disk pointer', () => {
         expect(load).toHaveBeenCalledWith(
             '/projects/legacy',
             expect.any(Function),
-            expect.anything()
         );
     });
 
@@ -104,7 +102,6 @@ describe('StateManager.getCurrentProject — disk pointer', () => {
             expect(load).toHaveBeenCalledWith(
                 '/projects/held-at-startup',
                 expect.any(Function),
-                expect.anything()
             );
         });
 
@@ -120,7 +117,6 @@ describe('StateManager.getCurrentProject — disk pointer', () => {
             expect(load).toHaveBeenCalledWith(
                 '/projects/held-at-startup',
                 expect.any(Function),
-                expect.anything()
             );
         });
 

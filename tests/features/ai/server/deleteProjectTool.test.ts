@@ -122,9 +122,7 @@ describe('delete_project', () => {
         registerDeleteProjectTool(s, ctxFactory);
         const res = await s.call({ name: 'alpha', confirm: true, confirmName: 'alpha' });
         expect(res).toEqual({ deleted: true, name: 'alpha' });
-        expect(loadProjectFromPath).toHaveBeenCalledWith('/p/alpha', undefined, {
-            persistAfterLoad: false,
-        });
+        expect(loadProjectFromPath).toHaveBeenCalledWith('/p/alpha');
         expect(deleteProjectFilesMock).toHaveBeenCalledWith(expect.anything(), {
             name: 'alpha',
             path: '/p/alpha',

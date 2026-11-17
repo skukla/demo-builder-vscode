@@ -115,7 +115,6 @@ export const loadProjectFromPath = jest.fn(
         // which is how the terminal provider below stopped being described as a
         // "component list" it never was.
         _terminalProvider?: () => readonly unknown[],
-        _options?: { persistAfterLoad?: boolean }
     ) => world.projectsOnDisk[path]
 );
 export const saveProject = jest.fn().mockResolvedValue(undefined);

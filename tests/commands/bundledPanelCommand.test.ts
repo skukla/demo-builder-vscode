@@ -147,7 +147,7 @@ describe('openForCurrentProject', () => {
         expect(await screen.open()).toBe(A);
         await screen.state().getCurrentProject();
 
-        expect(real.loadProjectFromPath).toHaveBeenCalledWith(A.path, undefined, { persistAfterLoad: false });
+        expect(real.loadProjectFromPath).toHaveBeenCalledWith(A.path);
     });
 
     it('opens for a project another screen named, without reading the current one', async () => {

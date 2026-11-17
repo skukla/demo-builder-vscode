@@ -127,10 +127,9 @@ export const handleRenameProject: MessageHandler<{ projectPath: string; newName:
         };
     }
 
-    // Load project (persist after load since we'll be saving changes)
-    const project = await context.stateManager.loadProjectFromPath(payload.projectPath, undefined, {
-        persistAfterLoad: true,
-    });
+    // Opened as before: the rename's own save makes it the open project and moves the pointer
+    // with its folder (renameProjectCore).
+    const project = await context.stateManager.openProject(payload.projectPath);
     if (!project) {
         return {
             success: false,
@@ -174,8 +173,6 @@ export const handleSetProjectPinned: MessageHandler<{
     try {
         const project = await context.stateManager.loadProjectFromPath(
             payload.projectPath,
-            undefined,
-            { persistAfterLoad: false },
         );
         if (!project) {
             return { success: false, error: 'Project not found' };

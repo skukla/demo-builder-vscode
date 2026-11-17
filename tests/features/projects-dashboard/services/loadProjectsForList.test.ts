@@ -30,9 +30,7 @@ describe('loadProjectsForList', () => {
         const projects = await loadProjectsForList(stateManager);
 
         expect(projects.map((p: Project) => p.path)).toEqual(['/p/a']);
-        expect(stateManager.loadProjectFromPath).toHaveBeenCalledWith('/p/a', undefined, {
-            persistAfterLoad: false,
-        });
+        expect(stateManager.loadProjectFromPath).toHaveBeenCalledWith('/p/a');
         expect(stateManager.saveProject).not.toHaveBeenCalled();
     });
 

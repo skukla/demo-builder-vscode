@@ -112,7 +112,6 @@ export async function getLinkedEdsProjects(
         const project = await stateManager.loadProjectFromPath(
             projectSummary.path,
             () => [],
-            { persistAfterLoad: false },
         );
 
         if (project) {

@@ -134,10 +134,7 @@ describe('handleExportProject', () => {
         const result = await handleExportProject(context, { projectPath: project.path });
 
         expect(context.stateManager.loadProjectFromPath).toHaveBeenCalledWith(
-            project.path,
-            undefined,
-            { persistAfterLoad: false },
-        );
+            project.path);
         // Exporting must never move the current-project pointer.
         expect(context.stateManager.saveProject).not.toHaveBeenCalled();
         expect(mockExportProjectSettings).toHaveBeenCalledWith(context, project);
@@ -192,7 +189,8 @@ describe('demo control handlers', () => {
 
         const result = await handler(context, { projectPath: project.path });
 
-        expect(context.stateManager.saveProject).toHaveBeenCalledWith(project);
+        // Opening sets the pointer (walk F206: openProject reads, makes current, saves).
+        expect(context.stateManager.openProject).toHaveBeenCalledWith(project.path);
         expect(mockExecuteCommand).toHaveBeenCalledWith(commandId);
         expect(result).toEqual({ success: true });
     });
@@ -253,10 +251,7 @@ describe('handleSetProjectPinned', () => {
         await handleSetProjectPinned(context, { projectPath: project.path, pinned: true });
 
         expect(context.stateManager.loadProjectFromPath).toHaveBeenCalledWith(
-            project.path,
-            undefined,
-            { persistAfterLoad: false },
-        );
+            project.path);
     });
 
     it('refuses an absent payload instead of throwing', async () => {

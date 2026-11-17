@@ -361,13 +361,12 @@ export function registerSiteTools(server: McpToolServer, ctxFactory: () => Handl
 
             for (const summary of summaries) {
                 try {
-                    // persistAfterLoad: false — this is a read. A scan that
-                    // rewrote every manifest it inspected would be a write
-                    // hiding in a read, which the tool conventions forbid.
+                    // A read (`loadProjectFromPath`). A scan that rewrote every
+                    // manifest it inspected would be a write hiding in a read,
+                    // which the tool conventions forbid.
                     const project = await ctx.stateManager.loadProjectFromPath(
                         summary.path,
                         () => [],
-                        { persistAfterLoad: false },
                     );
                     if (!project) continue;
 
@@ -431,9 +430,7 @@ export function registerSiteTools(server: McpToolServer, ctxFactory: () => Handl
             }
 
             const ctx = ctxFactory();
-            const project = await ctx.stateManager.loadProjectFromPath(projectPath, () => [], {
-                persistAfterLoad: false,
-            });
+            const project = await ctx.stateManager.loadProjectFromPath(projectPath, () => []);
             if (!project) {
                 return asText({ error: `No project found at ${projectPath}` });
             }

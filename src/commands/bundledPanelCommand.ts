@@ -57,7 +57,7 @@ export abstract class BundledPanelCommand<TInitialData> extends BaseWebviewComma
             this.stateManager = createWorkingProjectStateManager(this.projectStateReal, () => this.ownProjectPath);
         }
         const project = typeof projectPath === 'string' && projectPath
-            ? ((await this.projectStateReal.loadProjectFromPath(projectPath, undefined, { persistAfterLoad: false })) ?? undefined)
+            ? ((await this.projectStateReal.loadProjectFromPath(projectPath)) ?? undefined)
             : await this.projectStateReal.getCurrentProject();
         this.ownProjectPath = project?.path;
         return project;

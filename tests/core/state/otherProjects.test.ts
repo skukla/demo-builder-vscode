@@ -28,8 +28,8 @@ describe('loadOtherProjects', () => {
 
         expect(await loadOtherProjects(made, A.path)).toEqual([B]);
         expect(made.stateManager.loadProjectFromPath.mock.calls).toEqual([
-            [B.path, undefined, { persistAfterLoad: false }],
-            ['/nonexistent/projects/broken', undefined, { persistAfterLoad: false }],
+            [B.path, undefined],
+            ['/nonexistent/projects/broken', undefined],
         ]);
     });
 
