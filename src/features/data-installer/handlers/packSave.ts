@@ -135,7 +135,7 @@ export async function saveToPack(
             leftOut: result.leftOut,
             ...(result.settingsLayer ? { settingsLayer: result.settingsLayer } : {}),
         };
-        // A clean save ends on the small result, where it went and which pack the demo now uses
+        // A clean save ends on its outcome without rows, where it went and which pack the demo now uses
         // (owner, 2026-11-09; no rows, review 2026-11-10). The agent keeps the whole sentence, in
         // `data.message`.
         const startedFrom = pack ? { name: pack.name, displayName: result.installedName } : undefined;

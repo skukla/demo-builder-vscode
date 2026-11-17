@@ -146,6 +146,7 @@ describe('a run that stops on a question', () => {
                 message: 'prepareCommerceStore',
                 payload: { id: 'erp-integration', confirm: true, stepIds: ['second-source'] },
                 title: 'Applying ERP warehouse',
+                thing: 'ERP warehouse',
                 failureTitle: "Couldn't Apply ERP warehouse",
                 successTitle: 'ERP warehouse Applied',
             },

@@ -56,8 +56,19 @@ export function runningTitle({ action, one }: BatchSubject): string {
 }
 
 /**
- * The run's header once it has ended: what happened, by name for one project; for several, which
- * project and why is in the rows beneath.
+ * What an ended run is about, its window's title (owner, 2026-11-17, walk F222): the project by name
+ * when there is one, else the kind. What happened is `endTitle` with this taken out, under the mark.
+ */
+export function endThing({ one }: BatchSubject): string {
+    return one ?? PROJECTS_KIND;
+}
+
+/** What a run over several projects is about, a literal type so the label scan reads it. */
+export const PROJECTS_KIND = 'Projects';
+
+/**
+ * The run's end as one sentence, by name for one project, which the notification of a run closed
+ * mid-way ends in; for several, which project and why is in the rows beneath.
  *
  * @param fell - the run failed, or some project did not go through
  */

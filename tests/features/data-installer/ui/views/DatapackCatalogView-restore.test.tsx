@@ -9,6 +9,7 @@
 
 import { render, screen, within } from '@testing-library/react';
 import { press, settle } from '../../../../helpers/reactSettle';
+import { findResult } from '../../../../helpers/resultQueries';
 import '@testing-library/jest-dom';
 import {
     CATALOG,
@@ -193,6 +194,6 @@ describe('Restore, in the flyout of the datapack the demo uses', () => {
 
         expect(inFlyout().queryByRole('button', { name: /^Restore/u })).not.toBeInTheDocument();
         expect(mockRequest.mock.calls.filter(([type]) => type === 'update-datapack').map(([, sent]) => sent)).toEqual([{ datapackName: 'my-luma', records: true }]);
-        expect(await screen.findByRole('heading', { name: 'My Luma Is Up to Date' })).toBeInTheDocument();
+        expect(await findResult('My Luma', 'Up to Date')).toBeInTheDocument();
     });
 });

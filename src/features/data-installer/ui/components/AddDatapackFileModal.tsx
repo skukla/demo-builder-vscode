@@ -35,6 +35,7 @@ import { copyName, longestNameProblem, nameProblem } from '../../saveAsName';
 import { dataTypeLabel } from '../dataTypeLabel';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import { AddFileForm, type OpenedFile } from './AddFileForm';
+import { datapackResultWords } from './datapackResultWords';
 import { type ResultContent, resultStatus } from './importResult';
 import { RemoveFromLibraryButton } from './RemoveFromLibraryButton';
 import { FormDialog } from '@/core/ui/components/ui/FormDialog';
@@ -171,7 +172,8 @@ export function AddDatapackFileModal({
         return (
             <ResultDialog
                 isOpen
-                title={result.title}
+                title={datapackResultWords(result).title}
+                outcome={datapackResultWords(result).outcome}
                 status={resultStatus(result) ?? 'warning'}
                 rows={resultRows(outcome, undo, loadedName(file, outcome))}
                 onClose={onClose}
@@ -215,7 +217,7 @@ function loadResult(args: {
 }): ResultContent | null {
     const { openError, file, outcome, loadError } = args;
     if (openError || !file) {
-        return { variant: 'error', title: "Couldn't Open the File", message: openError ?? 'No file was opened.' };
+        return { variant: 'error', title: "Couldn't Open the File", thing: 'File', message: openError ?? 'No file was opened.' };
     }
     const name = loadedName(file, outcome);
     if (!outcome && !loadError) return null;
@@ -225,16 +227,16 @@ function loadResult(args: {
         ...(layer?.reason ? [`Store Configuration: ${layer.reason}`] : []),
     ];
     if (loadError) {
-        return { variant: 'error', title: `Couldn't Add ${name}`, message: loadError, details };
+        return { variant: 'error', title: `Couldn't Add ${name}`, thing: name, message: loadError, details };
     }
     const stored = outcome?.stored.length ?? 0;
     const failed = outcome?.failed.length ?? 0;
     const landed = layer?.outcome === 'created' || layer?.outcome === 'updated';
     const where = loadedWhere(outcome?.target === 'installer', landed);
-    if (details.length === 0) return { variant: 'success', title: `${name} Loaded`, message: where };
+    if (details.length === 0) return { variant: 'success', title: `${name} Loaded`, thing: name, message: where };
     // Partly: the count says how much, the details say what was refused and why.
     const partly = failed > 0 ? `Loaded ${stored} of ${stored + failed} data types. ` : '';
-    return { variant: 'warning', title: `${name} ${failed > 0 ? 'Partly Loaded' : 'Loaded'}`, message: `${partly}${where}`, details };
+    return { variant: 'warning', title: `${name} ${failed > 0 ? 'Partly Loaded' : 'Loaded'}`, thing: name, message: `${partly}${where}`, details };
 }
 
 /**

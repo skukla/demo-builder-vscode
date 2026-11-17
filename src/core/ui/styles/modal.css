@@ -605,6 +605,61 @@
     color: var(--spectrum-global-color-gray-700);
     overflow-wrap: anywhere;
 }
+
+/* How a run or an action ended (`ResultBody`; owner, 2026-11-17, walk F222): the wizard's success
+   look in a dialog. The large mark centred where the run's spinner was, the outcome in bold under
+   it, one reason centred and muted under that. At least the room the run's three centred lines
+   held (`.modal-wait-progress`), so a window never shrinks from its run to its result. */
+.result-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 176px;
+    padding-top: 8px;
+    text-align: center;
+}
+
+.result-body > * {
+    margin: 0;
+}
+
+.result-mark {
+    display: flex;
+    margin-bottom: 8px;
+}
+
+.result-outcome {
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--spectrum-global-color-gray-900);
+    overflow-wrap: anywhere;
+}
+
+.result-reason {
+    max-width: 60ch;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--spectrum-global-color-gray-700);
+    overflow-wrap: anywhere;
+}
+
+/* Several lines, or the rows a run keeps, read left-aligned under the outcome, 16 below it. The
+   capped scroll (`scroll-fade--capped`) keeps the mark, the outcome and the buttons in view. */
+.result-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-self: stretch;
+    margin-top: 8px;
+    text-align: left;
+}
+
+.result-detail > * {
+    margin: 0;
+}
 }
 
 @layer overrides {

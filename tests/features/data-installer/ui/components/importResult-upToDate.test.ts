@@ -9,7 +9,7 @@ import { isUpToDate, upToDateResult } from '@/features/data-installer/ui/compone
 
 describe('upToDateResult', () => {
     it('is the small result named for the datapack', () => {
-        expect(upToDateResult('Bodea')).toEqual({ variant: 'success', title: 'Bodea Is Up to Date', finished: true });
+        expect(upToDateResult('Bodea')).toEqual({ variant: 'success', title: 'Bodea Is Up to Date', thing: 'Bodea', finished: true });
     });
 });
 

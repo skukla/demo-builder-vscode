@@ -12,10 +12,10 @@
  * next step, which wait to be read. A failure
  * stays: the reason, Retry, and the Debug Logs where the full detail went.
  *
- * Its window keeps the height it opens at for every state (`ProgressDialog`; owner, 2026-11-11),
- * and its title is the outcome or the question once there is one (`progressFrame`), by the
- * dialog design rules (owner, 2026-10-31). Its body fitted each state and eased between them
- * until then, which still moved the window as a run ended.
+ * Its window keeps the height it opens at for every state, its result included (`ProgressDialog`;
+ * owner, 2026-11-11, and 2026-11-17, walk F222, over "a clean finish ends small"). A question is its
+ * title (`progressFrame`); an end names the thing in the title and draws the outcome in the body,
+ * under a large mark (`ResultBody`).
  *
  * It also carries a QUESTION the work is paused on — an expired sign-in, a missing
  * prerequisite, a merge needing a decision — because a notification asking that
@@ -33,10 +33,11 @@
 
 import React, { useCallback, useRef } from 'react';
 import {
-    keepsRows,
     OperationProgressBody,
     progressEnding,
     progressFrame,
+    type ProgressFrame,
+    type RunOutcome,
 } from '@/core/ui/components/feedback/OperationProgressBody';
 import type { ModalStatus } from '@/core/ui/components/ui/Modal';
 import { ProgressDialog, type ProgressAction } from '@/core/ui/components/ui/ProgressDialog';
@@ -46,33 +47,18 @@ import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { OperationOffer, OperationProgressPayload, OperationPrompt } from '@/types/webviewPayloads';
 import type { BackgroundOperationRequest } from '@/types/webviewRequests';
 
-/**
- * A success that says something beyond its title (a warning, a note, what it changed, rows it keeps
- * because one has a problem) waits to be read.
- */
-/** Whether a success ends in the small result window: no rows kept, no list of changes, no next step. */
-function endsSmallHere(succeeded: boolean, progress: OperationProgressPayload | null | undefined, offering: ProgressModalNextStep | undefined): boolean {
-    if (!succeeded || offering || keepsRows(progress)) return false;
-    return !(progress?.details?.length || progress?.changes?.length);
-}
-
-/** A clean finish, small: its title, the sentence left to read when there is one, and Close. */
-function SmallEnd({ title, status, sentences, onClose }: { title: string; status?: ModalStatus; sentences: ReadonlyArray<string | undefined>; onClose: () => void }): React.ReactElement {
-    const sentence = sentences.filter(Boolean).join(' ');
-    return (
-        <ProgressDialog isOpen title={title} {...(status ? { status } : {})} onClose={onClose}>
-            {/* A line of the result: the window sets each line in its own paragraph. */}
-            {sentence ? <span data-testid="operation-end">{sentence}</span> : null}
-        </ProgressDialog>
-    );
-}
-
 /** The operation a progress modal shows: which one, and what it is called. */
 export interface ProgressModalOperation {
     /** What the operation's progress is keyed by. */
     id: string;
     /** "-ing verb + object": the modal's title, and the notification's on handover. */
     title: string;
+    /**
+     * What it acts on, the result's title once it ends ("Storefront", "My Luma"); the kind when it
+     * acts on no one thing. The outcome under the result's mark is the result's title with this
+     * taken out (`resultOutcome`; owner, 2026-11-17, walk F222).
+     */
+    thing: string;
     /**
      * What it acts on, as its own line under a short title rather than inside a long
      * one that wraps (release test, 2026-10-28). The notification joins the two.
@@ -185,6 +171,25 @@ function successTitleOf(progress: OperationProgressPayload | null | undefined, s
     return (succeeded && progress?.title) || fallback;
 }
 
+/** The title's icon: a question's. An end's status is the body's mark, under the thing (walk F222). */
+function titleStatus(frame: ProgressFrame): { status?: ModalStatus } {
+    return frame.outcome === undefined && frame.status ? { status: frame.status } : {};
+}
+
+/** How it ended, for the body: the mark and the outcome. None while it runs or asks. */
+function endingOf(frame: ProgressFrame): { ending?: RunOutcome } {
+    if (frame.outcome === undefined) return {};
+    return { ending: frame.status ? { outcome: frame.outcome, status: frame.status } : { outcome: frame.outcome } };
+}
+
+/**
+ * The subject's own line over the body: while it asks. While it runs the body draws it, around which
+ * it levels the spinner; once it ends the title names the thing.
+ */
+function subjectLine(subject: string | undefined, running: boolean, frame: ProgressFrame): string | undefined {
+    return running || frame.outcome !== undefined ? undefined : subject;
+}
+
 /** The progress modal for one operation. */
 export function OperationProgressModal({
     operation,
@@ -273,6 +278,7 @@ export function OperationProgressModal({
     if (!operation) return <></>;
     const frame = progressFrame({
         title: operation.title,
+        thing: operation.thing,
         successTitle: successTitleOf(progress, succeeded, operation.successTitle),
         failureTitle: operation.failureTitle,
         prompt,
@@ -281,18 +287,14 @@ export function OperationProgressModal({
         ending: progressEnding(progress),
     });
 
-    // A clean finish ends small (owner, 2026-11-16, over the 2026-11-11 rule that kept the run's
-    // height): the title, the one sentence left to read when there is one, and Close. A finish that
-    // keeps its rows, lists what it changed, or offers a next step stays in the run's window.
-    if (endsSmallHere(succeeded, progress, offering)) {
-        return <SmallEnd title={frame.title} status={frame.status} sentences={[warning, note]} onClose={onClose} />;
-    }
-
+    // Every end stays in the run's window, at its size (owner, 2026-11-17, walk F222, over "a clean
+    // finish ends small"): the thing as the title, the outcome under its mark in the body.
+    const above = subjectLine(operation.subject, running, frame);
     return (
         <ProgressDialog
             isOpen
             title={frame.title}
-            status={frame.status}
+            {...titleStatus(frame)}
             closeLabel={closeLabelFor(failed || succeeded, prompt)}
             onClose={close}
             actions={
@@ -302,8 +304,7 @@ export function OperationProgressModal({
             }
             stream={
                 <>
-                    {/* While it runs the body draws the subject, around which it levels the spinner. */}
-                    {operation.subject && !running && <div className="modal-progress-subject">{operation.subject}</div>}
+                    {above ? <div className="modal-progress-subject">{above}</div> : null}
                     {/* The window keeps the height it opened at for every state (owner,
                         2026-11-11; `ProgressDialog`): a shorter result sits in the same box, a
                         longer one scrolls. */}
@@ -317,6 +318,7 @@ export function OperationProgressModal({
                         progress={progress}
                         onTyped={onTyped}
                         subject={operation.subject}
+                        {...endingOf(frame)}
                     />
                 </>
             }

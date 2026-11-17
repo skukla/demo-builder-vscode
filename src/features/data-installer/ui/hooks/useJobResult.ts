@@ -17,7 +17,7 @@ import type { useJobStatus } from './useJobStatus';
 import { ErrorCode } from '@/types/errorCodes';
 
 /**
- * What Restore's check answered, when it answered without a job (S8): up to date, the small result; refused, its own words. The question is no result (J9-5 to J9-7); `undefined`
+ * What Restore's check answered, when it answered without a job (S8): up to date, a result of its own; refused, its own words. The question is no result (J9-5 to J9-7); `undefined`
  * when it accepted a job, whose end is read as any start's.
  */
 function restoreAnswer(
@@ -27,7 +27,7 @@ function restoreAnswer(
     const { failure, value } = starts.start;
     if (failure?.code === ErrorCode.CHANGES_NEED_ANSWER) return null;
     if (failure) {
-        return { variant: 'error', title: jobWords('restore', name).failed, message: failure.message };
+        return { variant: 'error', title: jobWords('restore', name).failed, thing: name, message: failure.message };
     }
     if (value && 'upToDate' in value) return upToDateResult(name);
     if (value && 'asks' in value) return null;
@@ -38,7 +38,7 @@ function restoreAnswer(
 function updateAnswer(state: JobState, update: UpdateCheck | undefined, name: string): ResultContent | undefined {
     // Before Update is pressed: the check's answer stays the result once the window has moved to it.
     if (state.kind !== 'update' || state.lastAction !== null || !update) return undefined;
-    if (update.failure) return { variant: 'error', title: jobWords('update', name).failed, message: update.failure };
+    if (update.failure) return { variant: 'error', title: jobWords('update', name).failed, thing: name, message: update.failure };
     return update.upToDate ? upToDateResult(name) : undefined;
 }
 

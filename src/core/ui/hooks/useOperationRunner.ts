@@ -38,6 +38,11 @@ export interface ScreenOperation {
     /** The modal's title, and the notification's when it runs in the background. */
     title: string;
     /**
+     * What it acts on, the result window's title once it ends ("Storefront", "My Luma"); the kind
+     * when it acts on no one thing (owner, 2026-11-17, walk F222).
+     */
+    thing: string;
+    /**
      * What it acts on, on its own line under the title, when naming it IN the title
      * would wrap: "Changing destination" over "Kukla Test App 2 · Production".
      */

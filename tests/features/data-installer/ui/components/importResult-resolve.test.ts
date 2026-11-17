@@ -40,6 +40,7 @@ describe('resolveResult — dry run', () => {
         const result = resolveResult('dryRun', sources({ dryRun: succeeded({ valid: true }) }));
 
         expect(result).toEqual({
+            thing: PACK_NAME,
             variant: 'success',
             title: 'Dry Run Passed',
             message: `${PACK_NAME} can be installed here. Nothing was written.`,
@@ -65,6 +66,7 @@ describe('resolveResult — dry run', () => {
         const result = resolveResult('dryRun', sources({ dryRun: failed('Request timed out') }));
 
         expect(result).toEqual({
+            thing: PACK_NAME,
             variant: 'error',
             title: 'Dry Run Failed',
             message: 'Request timed out',
@@ -156,6 +158,7 @@ describe('resolveResult — a removal that was to save the changes first (step 0
         reset.failure = { message: 'The library is not answering.', code: ErrorCode.CHANGES_NOT_SAVED };
 
         expect(resolveResult('reset', sources({ reset }))).toEqual({
+            thing: PACK_NAME,
             variant: 'error',
             title: "Couldn't Save Changes",
             message: 'Nothing was uninstalled.',
@@ -205,7 +208,7 @@ describe('resolveResult — a removal that was to save the changes first (step 0
             startedActivation: ACTIVATION,
         }));
 
-        expect(result).toEqual({ variant: 'success', title: `${PACK_NAME} Uninstalled`, finished: true });
+        expect(result).toEqual({ thing: PACK_NAME, variant: 'success', title: `${PACK_NAME} Uninstalled`, finished: true });
     });
 
     it('CONTROL: an import says nothing of it, whatever an earlier removal left', () => {

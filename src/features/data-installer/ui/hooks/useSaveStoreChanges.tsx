@@ -57,7 +57,7 @@ type Ending = 'into' | 'as-new' | 'create';
 
 /** The run, its request and its words; the result names the datapack (owner, 2026-11-10; J3-1). */
 function runOf(name: string, payload: SaveBody, ending: Ending): StartableOperation {
-    const run = { id: DATAPACK_SAVE_OPERATION_ID, name, message: 'save-store-changes-to-pack', payload: { ...payload } };
+    const run = { id: DATAPACK_SAVE_OPERATION_ID, name, thing: name, message: 'save-store-changes-to-pack', payload: { ...payload } };
     if (ending === 'create') return { ...run, title: `Creating ${name}`, failureTitle: `Couldn't Create ${name}`, successTitle: `${name} Created` };
     if (ending === 'as-new') return { ...run, title: `Saving ${name}`, failureTitle: `Couldn't Save ${name}`, successTitle: `Saved as ${name}` };
     // Into the demo's own datapack it is Update (owner walk, 2026-11-16), as the header's menu says.

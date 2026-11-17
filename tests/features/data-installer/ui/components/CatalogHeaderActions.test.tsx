@@ -6,6 +6,7 @@
  */
 
 import '../../../../helpers/webviewClientMock';
+import { findResult } from '../../../../helpers/resultQueries';
 import React from 'react';
 import { render, screen, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
@@ -124,7 +125,7 @@ describe("in a project's Datapacks", () => {
         expect(onInstall).toHaveBeenCalledWith({ id: { name: 'tailspin', version: 'v1' }, displayName: 'Tailspin B2B' });
         expect(onCatalogChanged).toHaveBeenCalled();
         expect(screen.queryByRole('heading', { name: 'Add from File' })).not.toBeInTheDocument();
-        expect(screen.queryByRole('heading', { name: 'Tailspin B2B Loaded' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('heading', { name: 'Tailspin B2B' })).not.toBeInTheDocument();
     });
 
     // 7b: a button's words never change while it is on screen. The first words drawn are the last:
@@ -228,6 +229,6 @@ describe('in the Datapack Library', () => {
         await settle();
 
         expect(onInstall).not.toHaveBeenCalled();
-        expect(screen.getByRole('heading', { name: 'Tailspin B2B Loaded' })).toBeInTheDocument();
+        expect(await findResult('Tailspin B2B', 'Loaded')).toBeInTheDocument();
     });
 });

@@ -49,6 +49,7 @@ it('shows the modal for an add whose Retry re-sends that same add', () => {
         message: 'addAppBuilderComponent',
         payload: { id: 'erp-integration', name: 'Northwind ERP' },
         title: 'Adding Northwind ERP',
+        thing: 'Northwind ERP',
         failureTitle: "Couldn't Add Northwind ERP",
         successTitle: 'Northwind ERP Added',
     });

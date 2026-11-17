@@ -17,7 +17,7 @@
  * DialogContainer, with Cancel beside its one accent action. While reading it is the small wait
  * window, with nothing else on screen (dialog design rules, owner 2026-11-01); it opens at
  * the table's height and keeps it (rule 14). A read that failed and nothing to assign are the
- * title's outcome, with what is left to know under it, in a small result window
+ * outcome under the large mark, with what is left to know under it, in a small result window
  * (`ResultWindow`) with Close alone. No intro under the title (owner,
  * 2026-10-19: "still feels busy"): the title says what it does, and the website is in the count.
  * The attribute-set warning is a problem note over the list it is about, with its fix beside it.
@@ -31,6 +31,7 @@ import { AssignProductList } from './AssignProductList';
 import type { ModalStatus, ModalWait } from '@/core/ui/components/ui/Modal';
 import { ResultWindow } from '@/core/ui/components/ui/ResultDialog';
 import { StepsWindow } from '@/core/ui/components/ui/StepsDialog';
+import { resultOutcome } from '@/core/ui/utils/resultWords';
 import { WAIT_STAGES } from '@/core/utils/waitStages';
 import { previewAssignment } from '@/features/app-builder/services/erpAssignSelection';
 import { setsInWords } from '@/features/app-builder/services/erpOwnerAttributeSets';
@@ -145,9 +146,13 @@ function AssignForm({ target, onClose, onAssign, onAddSets }: AssignErpProductsM
     };
     if (noList) {
         return (
-            <ResultWindow title={noList.title} status={noList.status} onClose={onClose}>
-                <p className="dialog-line">{noList.body}</p>
-            </ResultWindow>
+            <ResultWindow
+                title={ASSIGN_COPY.title(target.name)}
+                outcome={resultOutcome(noList.title, target.name)}
+                status={noList.status}
+                lines={[noList.body]}
+                onClose={onClose}
+            />
         );
     }
     return (

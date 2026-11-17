@@ -13,10 +13,10 @@
  * or Delete Without Saving, Cancel (which closes everything), and Save and Reset or Save and Delete.
  * Only those two, or the red button when nothing is asked, start the run.
  * The run: `ProjectsBatchRunView` in the Progress layout's window (step-07 Win1), large and holding
- * the height it opens at, closed into the background while it goes, its end the title with its
- * status icon, as the Updates run ends. A run where every project went through hands off to the
- * small result (`ResultWindow`), the title alone, which waits for Close (walk F195); one with a problem
- * stays on its rows (owner, 2026-11-10, walk F134). A failed read is a small result too.
+ * the height it opens at, closed into the background while it goes. Its end stays in the same
+ * window at the same size, as the Updates run's does (owner, 2026-11-17, walk F222): the project
+ * (or "Projects") as the title, the outcome under a large mark, and the rows under it, only those with
+ * something to read carrying a line. It waits for Close (walk F195). A failed read is a result window of its own, small.
  *
  * @module features/projects-dashboard/ui/components/ProjectsBatchModal
  */
@@ -24,7 +24,7 @@
 import { DialogContainer } from '@adobe/react-spectrum';
 import React from 'react';
 import { saveQuestionOf } from '../batchChoices';
-import { batchSubject, confirmTitle, endTitle, runLabel, runningTitle, type BatchSubject } from '../batchWords';
+import { batchSubject, confirmTitle, endThing, endTitle, PROJECTS_KIND, runLabel, runningTitle, type BatchSubject } from '../batchWords';
 import type { BatchView, ProjectsBatchControls } from '../hooks/useProjectsBatch';
 import { BatchDeleteQuestions } from './BatchDeleteQuestions';
 import { BatchResetQuestions } from './BatchResetQuestions';
@@ -38,7 +38,8 @@ import type { ActionButton, ModalStatus } from '@/core/ui/components/ui/Modal';
 import { ProgressWindow } from '@/core/ui/components/ui/ProgressDialog';
 import { ResultWindow } from '@/core/ui/components/ui/ResultDialog';
 import { StepsWindow } from '@/core/ui/components/ui/StepsDialog';
-import { endStatus, endsSmall } from '@/core/ui/utils/runEnding';
+import { resultOutcome } from '@/core/ui/utils/resultWords';
+import { endStatus } from '@/core/ui/utils/runEnding';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { WAIT_STAGES } from '@/core/utils/waitStages';
 import type { SaveQuestion } from '@/features/data-installer/saveAsName';
@@ -74,39 +75,39 @@ function subjectOf(view: Exclude<BatchView, { phase: 'closed' }>): BatchSubject 
     return batchSubject(view.action, view.rows.map((row) => row.name));
 }
 
-/**
- * Whether the run ended cleanly, by the shared rule (`endsSmall`): it succeeded with no warning and
- * every project is done with nothing to read under it. Only then does the window leave its rows for
- * the small result (walk F134).
- */
-export function endedClean(controls: Pick<ProjectsBatchControls, 'view' | 'progress' | 'statuses'>): boolean {
-    const { view, progress, statuses } = controls;
-    if (view.phase !== 'running') return false;
-    const rows = view.rows.map((row) => endingRowOf(statuses[row.path]));
-    return endsSmall({ succeeded: progress?.state === 'succeeded', warning: progress?.warning, rows });
-}
-
 /** The save question over the questions as answered; absent outside them. */
 function saveQuestionOfView(controls: ProjectsBatchControls): SaveQuestion | undefined {
     const { view, choices } = controls;
     return view.phase === 'asking' ? saveQuestionOf(view.questions, choices) : undefined;
 }
 
+/** Whether the run has ended, either way. */
+function hasEnded(controls: Pick<ProjectsBatchControls, 'view' | 'progress'>): boolean {
+    const state = controls.progress?.state;
+    return controls.view.phase === 'running' && (state === 'succeeded' || state === 'failed');
+}
+
 /**
  * The window's header in every phase (`batchWords`): several projects by kind, a confirm adding the
- * button's count (owner, 2026-11-05); one project by its name (J7-1). Some failing is said by the
- * amber icon, the rows by their own.
+ * button's count (owner, 2026-11-05); one project by its name (J7-1); once ended, what it was about,
+ * its outcome under the mark (`outcomeOf`; walk F222).
  */
 function titleOf(controls: ProjectsBatchControls): string {
-    const { view, progress } = controls;
+    const { view } = controls;
     if (view.phase === 'closed') return '';
-    if (view.phase === 'unread') return UNREAD_TITLE;
+    if (view.phase === 'unread') return PROJECTS_KIND;
     const subject = subjectOf(view);
     if (view.phase !== 'running') return confirmTitle(subject);
-    if (progress?.state === 'succeeded' || progress?.state === 'failed') {
-        return endTitle(subject, progress.state === 'failed' || Boolean(progress.warning));
-    }
+    if (hasEnded(controls)) return endThing(subject);
     return askingOf(controls)?.title ?? runningTitle(subject);
+}
+
+/** What an ended run did, under its mark: the end's sentence with the projects taken out. */
+function outcomeOf(controls: ProjectsBatchControls, view: Extract<BatchView, { phase: 'running' }>): string {
+    const { progress } = controls;
+    const subject = subjectOf(view);
+    const fell = progress?.state === 'failed' || Boolean(progress?.warning);
+    return resultOutcome(endTitle(subject, fell), endThing(subject));
 }
 
 /**
@@ -122,13 +123,11 @@ export function runStatus(controls: Pick<ProjectsBatchControls, 'view' | 'progre
     return endStatus({ succeeded: progress.state === 'succeeded', warning: progress.warning, rows });
 }
 
+/** The title's icon: a question's, or a confirm's (both are dangerous: amber). An end's is the body's mark. */
 function statusOf(controls: ProjectsBatchControls): ModalStatus | undefined {
     const { view } = controls;
-    if (view.phase === 'unread') return 'error';
     if (askingOf(controls)?.title) return 'warning';
-    // Both confirms are dangerous: amber, as the dialog rules have it.
-    if (view.phase === 'asking') return 'warning';
-    return runStatus(controls);
+    return view.phase === 'asking' ? 'warning' : undefined;
 }
 
 /** The run's dismiss: into the background while it goes, Close once it has ended. */
@@ -184,6 +183,7 @@ function RunBody({ controls, view }: { controls: ProjectsBatchControls; view: Ex
             timings={controls.timings}
             progress={controls.progress}
             onTyped={controls.onTyped}
+            {...(hasEnded(controls) ? { ending: { outcome: outcomeOf(controls, view), ...statusProp(runStatus(controls)) } } : {})}
         />
     );
 }
@@ -259,12 +259,9 @@ function RunWindow({ controls, view, onClose }: { controls: ProjectsBatchControl
     );
 }
 
-/**
- * The small result a clean run ends on, its title alone (walk F134). It waits for Close, as every
- * result does (owner, 2026-11-17, walk F195).
- */
-function CleanEnd({ title, onClose }: { title: string; onClose: () => void }): React.ReactElement {
-    return <ResultWindow title={title} status="success" onClose={onClose} />;
+/** A status as a prop, left out when there is none. */
+function statusProp(status: ModalStatus | undefined): { status?: ModalStatus } {
+    return status ? { status } : {};
 }
 
 /** The window in the container: the questions, the save question, the run, or a result. */
@@ -273,9 +270,13 @@ function BatchWindow({ controls, onDismiss }: { controls: ProjectsBatchControls;
     if (view.phase === 'closed') return null;
     if (view.phase === 'unread') {
         return (
-            <ResultWindow title={UNREAD_TITLE} status="error" onClose={controls.close}>
-                <p className="work-row-why">{view.error}</p>
-            </ResultWindow>
+            <ResultWindow
+                title={PROJECTS_KIND}
+                outcome={resultOutcome(UNREAD_TITLE, PROJECTS_KIND)}
+                status="error"
+                lines={[view.error]}
+                onClose={controls.close}
+            />
         );
     }
     if (view.phase === 'asking' && controls.choices.saving) {
@@ -291,8 +292,6 @@ function BatchWindow({ controls, onDismiss }: { controls: ProjectsBatchControls;
     if (view.phase === 'reading' || view.phase === 'asking') {
         return <QuestionsWindow key="questions" controls={controls} view={view} />;
     }
-    // A clean end is the small result, the title alone (walk F134).
-    if (endedClean(controls)) return <CleanEnd title={titleOf(controls)} onClose={controls.close} />;
     return <RunWindow controls={controls} view={view} onClose={onDismiss} />;
 }
 

@@ -67,6 +67,7 @@ export function useClearDemoData(onClosed: () => void): ClearDemoData {
                 message: 'clear-demo-data',
                 payload: { ...payload },
                 title: 'Clearing Demo Data',
+                thing: 'Demo Data',
                 subject: websites.join(', '),
                 // Named by the button's thing, Demo Data: a list of websites would put a comma in the title.
                 failureTitle: "Couldn't Clear Demo Data",
@@ -85,6 +86,7 @@ export function useClearDemoData(onClosed: () => void): ClearDemoData {
                 message: 'clear-commerce-instance',
                 payload: { ...payload },
                 title: 'Clearing Commerce Instance',
+                thing: 'Commerce Instance',
                 subject: websites.join(', '),
                 failureTitle: "Couldn't Clear Commerce Instance",
                 successTitle: 'Commerce Instance Cleared',

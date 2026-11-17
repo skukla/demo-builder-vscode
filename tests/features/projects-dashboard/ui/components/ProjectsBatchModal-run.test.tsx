@@ -290,33 +290,35 @@ describe('ProjectsBatchModal: the run', () => {
         expect(screen.getByRole('dialog', { name: 'Sign In to DA.live' })).toBeInTheDocument();
     });
 
-    it('ends as its title says, with its icon, and Close refreshes the list', async () => {
+    // Walk F222 (owner, 2026-11-17): the title names what it was about, the outcome is under the mark.
+    it('ends on "Projects", the outcome under its mark, and Close refreshes the list', async () => {
         const { user, onClosed } = await running();
         // Every project through: a row never told would be one that did not happen, amber (I3).
         for (const path of ['/p/a', '/p/b', '/p/c']) await push('projectsBatchRow', { path, state: 'done' });
         await push('operationProgress', { id: ID, state: 'succeeded' });
 
-        const dialog = screen.getByRole('dialog', { name: 'Projects Deleted' });
-        expect(dialog).toHaveAttribute('data-status', 'success');
+        const dialog = screen.getByRole('dialog', { name: 'Projects' });
+        expect(dialog).not.toHaveAttribute('data-status');
+        expect(dialog.querySelector('.result-mark')).toHaveAttribute('data-status', 'success');
+        expect(within(dialog).getByText('Deleted')).toHaveClass('result-outcome');
         await user.click(screen.getByRole('button', { name: 'Close' }));
 
         expect(onClosed).toHaveBeenCalledTimes(1);
         expect(mockPostMessage).not.toHaveBeenCalledWith('backgroundOperation', expect.anything());
     });
 
-    // Walk F134 (owner, 2026-11-10): every project through hands off to the small result, the
-    // title alone; a run with a problem stays on its rows.
-    it('hands a run where every project went through to the small result, the title alone', async () => {
+    // Walk F222 (owner, 2026-11-17, over walk F134's small result): a run over several projects keeps
+    // its window and its rows under the outcome; a row with nothing to read carries no line.
+    it('keeps a run where every project went through in its window, its rows lineless, and Took', async () => {
         const { user, onClosed } = await running();
         for (const path of ['/p/a', '/p/b', '/p/c']) await push('projectsBatchRow', { path, state: 'done' });
         await push('operationProgress', { id: ID, state: 'succeeded', tookMs: 125_000 });
 
-        const dialog = screen.getByRole('dialog', { name: 'Projects Deleted' });
-        expect(dialog).toHaveAttribute('data-size', 'S');
-        expect(dialog).not.toHaveAttribute('data-wide');
-        expect(dialog).toHaveAttribute('data-status', 'success');
-        expect(document.querySelector('.work-row')).toBeNull();
-        expect(screen.queryByText(/^Took /u)).toBeNull();
+        const dialog = screen.getByRole('dialog', { name: 'Projects' });
+        expect(dialog).toHaveAttribute('data-size', 'L');
+        expect(dialog.querySelectorAll('.work-row')).toHaveLength(3);
+        expect(within(dialog).queryByText('Finished')).toBeNull();
+        expect(within(dialog).getByText('Took 2 minutes, 5 seconds')).toBeInTheDocument();
         await user.click(screen.getByRole('button', { name: 'Close' }));
         expect(onClosed).toHaveBeenCalledTimes(1);
     });
@@ -328,8 +330,9 @@ describe('ProjectsBatchModal: the run', () => {
         await push('projectsBatchRow', { path: '/p/c', state: 'done' });
         await push('operationProgress', { id: ID, state: 'succeeded', warning: '1 project not deleted.' });
 
-        const dialog = screen.getByRole('dialog', { name: "Couldn't Delete Projects" });
+        const dialog = screen.getByRole('dialog', { name: 'Projects' });
         expect(dialog).toHaveAttribute('data-size', 'L');
+        expect(within(dialog).getByText("Couldn't Delete")).toHaveClass('result-outcome');
         expect(screen.getByText('GitHub refused the delete.')).toHaveClass('work-row-problem', 'text-negative');
     });
 
@@ -353,8 +356,10 @@ describe('ProjectsBatchModal: the run', () => {
         await push('projectsBatchRow', { path: '/p/b', state: 'done' });
         await push('operationProgress', { id: ID, state: 'succeeded' });
 
-        const dialog = screen.getByRole('dialog', { name: 'Projects Reset' });
+        const dialog = screen.getByRole('dialog', { name: 'Projects' });
         expect(dialog).toHaveAttribute('data-size', 'L');
+        expect(within(dialog).getByText('Reset')).toHaveClass('result-outcome');
+        expect(dialog.querySelector('.result-mark')).toHaveAttribute('data-status', 'warning');
         expect(screen.getByText(warnings.join(' '))).toHaveClass('dialog-problem', 'text-notice', 'work-row-problem');
         expect(rows()).toEqual([
             ['A', 'done'],
@@ -379,15 +384,17 @@ describe('ProjectsBatchModal: the run', () => {
         await running();
         await push('operationProgress', { id: ID, state: 'succeeded', warning: '1 project not deleted.' });
 
-        expect(screen.getByRole('dialog', { name: "Couldn't Delete Projects" })).toHaveAttribute('data-status', 'warning');
+        expect(screen.getByText("Couldn't Delete")).toHaveClass('result-outcome');
+        expect(document.querySelector('.result-mark')).toHaveAttribute('data-status', 'warning');
     });
 
-    it('a failed run says why above the rows and offers the logs', async () => {
+    it('a failed run says why under the outcome, above the rows, and offers the logs', async () => {
         await running();
         await push('operationProgress', { id: ID, state: 'failed', error: 'Projects are already being reset or deleted.' });
 
-        expect(screen.getByRole('dialog', { name: "Couldn't Delete Projects" })).toHaveAttribute('data-status', 'error');
-        expect(screen.getByText('Projects are already being reset or deleted.')).toHaveClass('work-row-why');
+        expect(screen.getByText("Couldn't Delete")).toHaveClass('result-outcome');
+        expect(document.querySelector('.result-mark')).toHaveAttribute('data-status', 'error');
+        expect(screen.getByText('Projects are already being reset or deleted.')).toHaveClass('result-reason');
         expect(screen.getByRole('button', { name: 'Open Debug Logs' })).toBeInTheDocument();
     });
 
@@ -422,8 +429,8 @@ describe('ProjectsBatchModal: one project, its words by name', () => {
         delete: { success: true, data: deleteQuestions([ONE_ROW]) },
     };
     const WORDS = {
-        reset: { verb: 'Reset', running: 'Resetting Kukla Luma', done: 'Kukla Luma Reset', failed: "Couldn't Reset Kukla Luma" },
-        delete: { verb: 'Delete', running: 'Deleting Kukla Luma', done: 'Kukla Luma Deleted', failed: "Couldn't Delete Kukla Luma" },
+        reset: { verb: 'Reset', running: 'Resetting Kukla Luma', done: 'Kukla Luma Reset', failed: "Couldn't Reset Kukla Luma", doneOutcome: 'Reset', failedOutcome: "Couldn't Reset" },
+        delete: { verb: 'Delete', running: 'Deleting Kukla Luma', done: 'Kukla Luma Deleted', failed: "Couldn't Delete Kukla Luma", doneOutcome: 'Deleted', failedOutcome: "Couldn't Delete" },
     } as const;
 
     /** The one-row window on its questions, then its red button pressed. */
@@ -460,19 +467,24 @@ describe('ProjectsBatchModal: one project, its words by name', () => {
             expect(mockRequest).toHaveBeenCalledWith('runProjectsBatch', expect.objectContaining({ action }));
         });
 
-        it('ends with the project first, then what happened to it', async () => {
+        // Walk F222: the project is the title, what happened to it is under the mark.
+        it('ends with the project as the title, then what happened to it under the mark', async () => {
             await runningOne(action);
             await push('projectsBatchRow', { path: '/p/kukla', state: 'done' });
             await push('operationProgress', { id: ID, state: 'succeeded' });
 
-            expect(screen.getByRole('dialog', { name: words.done })).toHaveAttribute('data-status', 'success');
+            const dialog = screen.getByRole('dialog', { name: 'Kukla Luma' });
+            expect(within(dialog).getByText(words.doneOutcome)).toHaveClass('result-outcome');
+            expect(dialog.querySelector('.result-mark')).toHaveAttribute('data-status', 'success');
         });
 
         it('a run that did not go through says which project it could not', async () => {
             await runningOne(action);
             await push('operationProgress', { id: ID, state: 'failed', error: 'GitHub refused.' });
 
-            expect(screen.getByRole('dialog', { name: words.failed })).toHaveAttribute('data-status', 'error');
+            const dialog = screen.getByRole('dialog', { name: 'Kukla Luma' });
+            expect(within(dialog).getByText(words.failedOutcome)).toHaveClass('result-outcome');
+            expect(dialog.querySelector('.result-mark')).toHaveAttribute('data-status', 'error');
         });
 
         it('closing mid-run hands it to a notification under the same name', async () => {

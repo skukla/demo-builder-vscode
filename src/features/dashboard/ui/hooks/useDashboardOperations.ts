@@ -48,6 +48,7 @@ export function useDashboardOperations(projectName: string): DashboardOperations
             name: projectName,
             message: 'syncStorefront',
             title: 'Syncing the Storefront',
+            thing: 'Storefront',
             failureTitle: "Couldn't Sync the Storefront",
             successTitle: 'Storefront Synced',
         });
@@ -59,6 +60,7 @@ export function useDashboardOperations(projectName: string): DashboardOperations
             name: projectName,
             message: 'refreshBlockLibrary',
             title: 'Refreshing the Block Library',
+            thing: 'Block Library',
             failureTitle: "Couldn't Refresh the Block Library",
             successTitle: 'Block Library Refreshed',
         });
@@ -70,6 +72,7 @@ export function useDashboardOperations(projectName: string): DashboardOperations
             name: projectName,
             message: 'republishContent',
             title: `Republishing ${projectName}`,
+            thing: projectName,
             failureTitle: `Couldn't Republish ${projectName}`,
             successTitle: `${projectName} Republished`,
         });

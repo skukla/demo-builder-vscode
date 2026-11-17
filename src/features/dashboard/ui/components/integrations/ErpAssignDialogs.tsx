@@ -82,6 +82,7 @@ export function useErpAssignDialogs(operations: ComponentOperationControls): Erp
                 message: 'assignErpProducts',
                 payload: { erp: target.erp, selection, confirm: true },
                 title: `Assigning Products to ${target.name}`,
+                thing: target.name,
                 failureTitle: `Couldn't Assign Products to ${target.name}`,
                 successTitle: `Products Assigned to ${target.name}`,
             });
@@ -96,6 +97,7 @@ export function useErpAssignDialogs(operations: ComponentOperationControls): Erp
                 message: 'undoErpAssignment',
                 payload: { erp: undoing.erp, confirm: true },
                 title: `Undoing ${undoing.name}'s Last Assignment`,
+                thing: `${undoing.name}'s Last Assignment`,
                 failureTitle: `Couldn't Undo ${undoing.name}'s Last Assignment`,
                 successTitle: `${undoing.name}'s Last Assignment Undone`,
             });
@@ -113,6 +115,7 @@ export function useErpAssignDialogs(operations: ComponentOperationControls): Erp
                 title: adding
                     ? 'Adding erp_owner to Attribute Sets'
                     : 'Removing erp_owner from Attribute Sets',
+                thing: 'Attribute Sets',
                 failureTitle: adding
                     ? "Couldn't Add erp_owner to Attribute Sets"
                     : "Couldn't Remove erp_owner from Attribute Sets",

@@ -17,7 +17,8 @@
  * the window never looks finished while it is still going (owner, 2026-10-21: it was a
  * stage line, first under the list and then in the panel, that vanished once passed).
  * A run that ends with rows the SC unticked still waiting says how many above the list
- * (owner, 2026-10-22).
+ * (owner, 2026-10-22). Once it ends, the outcome sits over the rows under its large mark, the
+ * shared `ResultBody`, in the same window (owner, 2026-11-17, walk F222).
  *
  * @module features/projects-dashboard/ui/components/UpdatesRunView
  */
@@ -26,6 +27,8 @@ import React from 'react';
 import type { RowStatuses } from '../hooks/useUpdatesModal';
 import { ICON_OF, RunQuestion } from './runWindowParts';
 import { groupsOf, type RowGroup } from './updateGroups';
+import type { RunOutcome } from '@/core/ui/components/feedback/OperationProgressBody';
+import { ResultBody } from '@/core/ui/components/feedback/ResultBody';
 import { StepStatusIcon, type StepStatus } from '@/core/ui/components/feedback/StepStatusIcon';
 import { WorkRow } from '@/core/ui/components/feedback/WorkRow';
 import { localCopyRowId, type PendingUpdateRow, type UpdateRowState, type UpdateRowStatus } from '@/types/pendingUpdates';
@@ -46,9 +49,11 @@ interface RunViewProps {
     onTyped: (values: Record<string, string>) => void;
     /** Once the run has ended: how many rows the SC left unticked are still waiting. */
     remaining: number;
+    /** Once the run has ended: the mark and the outcome over the rows. */
+    ending?: RunOutcome;
 }
 
-/** "1 update pending", "2 updates pending": the run's rows, and the small result a clean run ends on. */
+/** "1 update pending", "2 updates pending": under the outcome, when the SC left some for later. */
 export function waitingLine(count: number): string {
     return count === 1 ? '1 update pending' : `${count} updates pending`;
 }
@@ -142,18 +147,27 @@ function failureLine(progress: OperationProgressPayload | null, rows: PendingUpd
 }
 
 /** Every ticked row and where it is; a question under the row asking it, or above the list. */
-export function UpdatesRunView({ rows, statuses, progress, onTyped, remaining }: RunViewProps): React.ReactElement {
+export function UpdatesRunView({ rows, statuses, progress, onTyped, remaining, ending }: RunViewProps): React.ReactElement {
     const running = progress?.state !== 'failed' && progress?.state !== 'succeeded';
+    if (!running && ending) {
+        const failure = failureLine(progress, rows, statuses);
+        const waiting = progress?.state === 'succeeded' && remaining > 0 ? waitingLine(remaining) : undefined;
+        // The list scrolls in the result's own block, under the outcome.
+        return (
+            <ResultBody {...ending} lines={[failure, waiting]}>
+                <div className="updates-group-list">
+                    {groupsOf(rows).map((group) => (
+                        <RunGroup key={group.key} group={group} statuses={statuses} live={{ onTyped }} />
+                    ))}
+                </div>
+            </ResultBody>
+        );
+    }
     const question = running ? progress?.prompt : undefined;
     const rowRunning = rows.some((r) => statuses[r.id]?.state === 'running');
     const live: Live = { step: progress?.step, question, onTyped };
-    const failure = failureLine(progress, rows, statuses);
     return (
         <div className="updates-group-list scroll-fade scroll-fade--capped">
-            {failure && <p className="work-row-why">{failure}</p>}
-            {progress?.state === 'succeeded' && remaining > 0 && (
-                <p className="work-row-note">{waitingLine(remaining)}</p>
-            )}
             {question && !rowRunning && <RunQuestion prompt={question} onTyped={onTyped} />}
             {groupsOf(rows).map((group) => (
                 <RunGroup key={group.key} group={group} statuses={statuses} live={live} />

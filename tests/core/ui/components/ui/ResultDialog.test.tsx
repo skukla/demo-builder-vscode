@@ -1,7 +1,8 @@
 /**
- * ResultDialog: the one way a result is drawn (dialog design rules). Small, its title says what
- * happened, each child is a line to read, Close beside at most one action, and a clean result that
- * is its title alone waits for Close like any other (walk F195). The real Modal over the shared Spectrum mock.
+ * ResultDialog: the one way a result is drawn (dialog design rules). Small, its title names the
+ * thing, the body draws the outcome the wizard's way (a large mark, the outcome in bold, the lines
+ * under it; owner, 2026-11-17, walk F222), Close beside at most one action, and a clean result waits
+ * for Close like any other (walk F195). The real Modal over the shared Spectrum mock.
  */
 
 import '@testing-library/jest-dom';
@@ -16,7 +17,7 @@ function renderResult(props: Partial<ResultDialogProps> = {}) {
     const onClose = jest.fn();
     render(
         <Provider theme={defaultTheme}>
-            <ResultDialog isOpen title="My Luma Installed" status="success" onClose={onClose} {...props} />
+            <ResultDialog isOpen title="My Luma" outcome="Installed" status="success" onClose={onClose} {...props} />
         </Provider>,
     );
     return { onClose };
@@ -33,21 +34,29 @@ describe('ResultDialog', () => {
     it('renders nothing while closed', () => {
         renderResult({ isOpen: false });
 
-        expect(screen.queryByText('My Luma Installed')).toBeNull();
+        expect(screen.queryByText('My Luma')).toBeNull();
     });
 
-    it('is small, with the status icon before the title', () => {
+    it('is small, its title naming the thing with no status icon', () => {
         renderResult();
 
         expect(screen.getByRole('dialog')).toHaveAttribute('data-size', 'S');
         expect(screen.getByRole('dialog')).toHaveClass('modal-fit-content');
-        expect(document.querySelector('.modal-status-icon')).not.toBeNull();
+        expect(screen.getByRole('heading')).toHaveTextContent(/^My Luma$/u);
+        expect(document.querySelector('.modal-status-icon')).toBeNull();
+    });
+
+    it('draws the outcome in the body under a large mark', () => {
+        renderResult();
+
+        expect(document.querySelector('.result-mark')).toHaveAttribute('data-status', 'success');
+        expect(screen.getByText('Installed')).toHaveClass('result-outcome');
     });
 
     it('puts each child on a line of its own', () => {
         renderResult({ children: ['3 products were skipped.', 'Open the log to see why.'] });
 
-        const lines = Array.from(document.querySelectorAll('.dialog-rows > .dialog-line'));
+        const lines = Array.from(document.querySelectorAll('.result-detail .dialog-line'));
         expect(lines.map((line) => line.textContent)).toEqual([
             '3 products were skipped.',
             'Open the log to see why.',
@@ -55,7 +64,7 @@ describe('ResultDialog', () => {
     });
 
     it('offers Close alone, and Close closes', () => {
-        const { onClose } = renderResult({ status: 'error', title: "Couldn't Install My Luma" });
+        const { onClose } = renderResult({ status: 'error', outcome: "Couldn't Install" });
 
         expect(buttonNames()).toEqual(['Close']);
         fireEvent.click(screen.getByRole('button', { name: 'Close' }));
@@ -103,7 +112,8 @@ describe('ResultDialog', () => {
         it('draws a row per line with its own action under it', () => {
             renderResult({
                 status: 'warning',
-                title: 'Luma Partly Loaded',
+                title: 'Luma',
+                outcome: 'Partly Loaded',
                 rows: [
                     { label: 'Customers', status: 'warning', note: 'Too large to send.' },
                     { label: 'Luma, main', status: 'success', action: <button type="button">Delete Datapack</button> },

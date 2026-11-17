@@ -2,8 +2,10 @@
  * The Progress layout: a run, then how it ended, in one window that never changes size
  * (`docs/development/sop/dialog-design.md`). Small from start to finish; the size of a list
  * when it shows its steps as rows. While it runs it shows the wait, or the rows, and Close;
- * once it ends the title says how, with the status icon, and the lines under it are what the
- * SC still has to read.
+ * once it ends the title names the thing and the body is the shared `ResultBody`: the large mark
+ * where the spinner was, the outcome under it, then the lines left to read and the rows (owner,
+ * 2026-11-17, walk F222). A streamed run draws its own ending in its stream (`OperationProgressBody`
+ * does it with the same `ResultBody`), so for it `status` is only a question's icon in the title.
  *
  * Every end waits for Close, a clean one included (owner, 2026-11-17, walk F195). The
  * caller passes words, rows and actions, never a size or a class
@@ -20,6 +22,7 @@
 
 import { DialogContainer } from '@adobe/react-spectrum';
 import React from 'react';
+import { ResultBody } from '@/core/ui/components/feedback/ResultBody';
 import { WorkRow, type WorkRowProps } from '@/core/ui/components/feedback/WorkRow';
 import { Modal, type ActionButton, type ModalStatus, type ModalWait } from '@/core/ui/components/ui/Modal';
 import { resultActionButtons, type ResultAction } from '@/core/ui/components/ui/ResultDialog';
@@ -33,14 +36,19 @@ type ProgressRow = WorkRowProps & {
 
 export interface ProgressDialogProps {
     isOpen: boolean;
-    /** "Installing My Luma" while it runs; what happened once it ends. */
+    /** "Installing My Luma" while it runs; the thing it was about once it ends: "My Luma". */
     title: string;
     /** What the run is doing (`WAIT_STAGES`), while it runs and shows no rows. */
     waiting?: ModalWait | false;
     /** The run's steps, one row each. Given from start to finish, so the size never changes. */
     rows?: ProgressRow[];
-    /** How it ended; absent while it runs. */
+    /**
+     * How it ended, the mark in the body; absent while it runs. For a streamed run, which draws its
+     * own ending, a question's icon in the title instead.
+     */
     status?: ModalStatus;
+    /** What happened, under the mark once it ends: "Installed", "Couldn't Install". */
+    outcome?: string;
     /** What the SC still has to read once it ends, one line per child. */
     children?: React.ReactNode;
     /** Retry, Fix with AI: the one thing an ended run can offer beside Close. */
@@ -87,31 +95,39 @@ function sizeOf(listed: boolean, asksUnderRows: boolean): 'S' | 'M' | 'L' {
     return asksUnderRows ? 'L' : 'M';
 }
 
-/** The rows, each with its question under it, then what is left to read once it ends. */
-function RunBody({ rows, lines }: { rows?: ProgressRow[]; lines: React.ReactNode[] }): React.ReactElement {
+/** The rows, each with its question under it. */
+function RowList({ rows }: { rows: ProgressRow[] }): React.ReactElement {
     return (
-        <div className="dialog-stack">
-            {rows && (
-                <ul className="work-row-list">
-                    {rows.map(({ question, ...row }) => (
-                        <li key={row.label}>
-                            <WorkRow {...row}>
-                                {row.children}
-                                {question}
-                            </WorkRow>
-                        </li>
-                    ))}
-                </ul>
-            )}
-            {lines.length > 0 && (
-                <div className="dialog-rows">
-                    {lines.map((line, index) => (
-                        <p key={index} className="dialog-line">{line}</p>
-                    ))}
-                </div>
-            )}
-        </div>
+        <ul className="work-row-list">
+            {rows.map(({ question, ...row }) => (
+                <li key={row.label}>
+                    <WorkRow {...row}>
+                        {row.children}
+                        {question}
+                    </WorkRow>
+                </li>
+            ))}
+        </ul>
     );
+}
+
+/** How a run that is not streamed ended: the mark, the outcome and the lines to read. */
+interface RunEnding {
+    status: ModalStatus;
+    outcome: string;
+    lines: React.ReactNode[];
+}
+
+/** While it runs: the rows. Once it ends: the outcome under its mark, the lines, then the rows. */
+function RunBody({ rows, ending }: { rows?: ProgressRow[]; ending?: RunEnding }): React.ReactElement {
+    if (ending) {
+        return (
+            <ResultBody status={ending.status} outcome={ending.outcome} lines={ending.lines}>
+                {rows ? <RowList rows={rows} /> : null}
+            </ResultBody>
+        );
+    }
+    return <div className="dialog-stack">{rows && <RowList rows={rows} />}</div>;
 }
 
 /**
@@ -128,6 +144,7 @@ export function ProgressWindow({
     waiting = false,
     rows,
     status,
+    outcome,
     children,
     action,
     stream,
@@ -140,26 +157,29 @@ export function ProgressWindow({
 }: Omit<ProgressDialogProps, 'isOpen'>): React.ReactElement {
     const lines = React.Children.toArray(children);
     const streamed = stream !== undefined;
-    const ended = Boolean(status) && !waiting;
+    const ended = !streamed && status !== undefined && !waiting;
     const listed = Boolean(rows) || streamed;
     let footer: ActionButton[] | undefined;
     if (streamed) footer = actions;
     else if (ended) footer = resultActionButtons(action);
+    let ending: RunEnding | undefined;
+    if (ended) ending = { status, outcome: outcome ?? title, lines };
     return (
         <ProgressFrame
             title={title}
-            status={ended ? status : undefined}
+            status={streamed ? status : undefined}
             size={sizeOf(listed, asksUnderRows)}
             wide={listed && wide}
             streamed={streamed}
-            holdSize={streamed ? closeLabel === 'Run in Background' : listed && !ended}
+            // The run's box holds for its result: a window never shrinks from its run to its end.
+            holdSize={streamed ? closeLabel === 'Run in Background' : listed}
             waiting={listed ? false : waiting}
             onClose={onClose}
             closeLabel={closeLabel}
             hideClose={hideClose}
             actionButtons={footer}
         >
-            {streamed ? stream : <RunBody rows={rows} lines={ended ? lines : []} />}
+            {streamed ? stream : <RunBody rows={rows} {...(ending ? { ending } : {})} />}
         </ProgressFrame>
     );
 }

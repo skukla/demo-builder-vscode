@@ -21,6 +21,7 @@ import {
     settle,
     shownStep,
 } from './DatapackJobWindow.testUtils';
+import { findResult } from '../../../../../helpers/resultQueries';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { UpdateDatapackResult } from '@/types/webviewRequests';
 
@@ -104,7 +105,7 @@ it('nothing to write in a newer version: confirms the move once, with the versio
     answer({ update: { success: true, data: { upToDate: true, displayName: 'Luma', movesTo: 'v2' } } });
     await openUpdate();
 
-    expect(await heading('Luma Is Up to Date')).toBeInTheDocument();
+    expect(await findResult('Luma', 'Up to Date')).toBeInTheDocument();
     await settle();
     expect(updateSends()).toEqual([{ datapackName: 'luma', records: true }, { datapackName: 'luma', confirm: true, version: 'v2' }]);
 });
@@ -114,7 +115,7 @@ it('nothing left to apply: "Luma Is Up to Date", which waits for Close', async (
     answer({ update: { success: true, data: { upToDate: true, displayName: 'Luma' } } });
     const { onClose } = await openUpdate();
 
-    expect(await heading('Luma Is Up to Date')).toBeInTheDocument();
+    expect(await findResult('Luma', 'Up to Date')).toBeInTheDocument();
     expect(updateSends()).toHaveLength(1);
     // Walk F195 (owner, 2026-11-17): every result waits for Close.
     await act(async () => {
@@ -212,7 +213,7 @@ describe('what changed', () => {
 
         await press(button('Install'));
 
-        expect(await heading('Luma Installed')).toBeInTheDocument();
+        expect(await findResult('Luma', 'Installed')).toBeInTheDocument();
         // Walk F195 (owner, 2026-11-17): every result waits for Close.
         await act(async () => {
             jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 3);

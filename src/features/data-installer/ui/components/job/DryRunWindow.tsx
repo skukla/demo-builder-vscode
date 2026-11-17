@@ -1,7 +1,8 @@
 /**
  * A Dry Run's answer, its own small window (step 03, S4; decisions Phase 4, J2-4; rules 12, 14):
- * "Dry Run Passed" with Back and Install; "Dry Run Failed" with Back and Retry; "Dry Run Found a
- * Problem" with Back and Fix with AI (S5), the install's ending buttons. Fix with AI asks the
+ * the datapack as the title, and under the mark "Dry Run Passed" with Back and Install, "Dry Run
+ * Failed" with Back and Retry, or "Dry Run Found a Problem" with Back and Fix with AI (S5), the
+ * install's ending buttons (walk F222). Fix with AI asks the
  * extension for the dry run it recorded, so the prompt never carries the window's text. Its one
  * sentence is the result's: the pass says nothing was written, a problem is the service's own reason.
  *
@@ -10,8 +11,8 @@
 
 import React from 'react';
 import { FIX_WITH_AI, FIX_WITH_AI_HINT, INSTALL } from '../../../datapackWords';
-import { type ResultContent, resultStatus } from '../importResult';
-import { LeadText } from '@/core/ui/components/ui/LeadText';
+import { datapackResultWords } from '../datapackResultWords';
+import type { ResultContent } from '../importResult';
 import type { ActionButton } from '@/core/ui/components/ui/Modal';
 import { ResultWindow } from '@/core/ui/components/ui/ResultDialog';
 
@@ -49,15 +50,13 @@ export function DryRunWindow({
 }: DryRunWindowProps): React.ReactElement {
     return (
         <ResultWindow
-            title={result.title}
-            status={resultStatus(result)}
+            {...datapackResultWords(result)}
             actionButtons={[
                 { label: 'Back', variant: 'secondary', onPress: onBack },
                 ...mainButton(result, { onInstall, onRetry, onFix }),
             ]}
             onClose={onClose}
         >
-            {result.message ? <LeadText sentences>{result.message}</LeadText> : null}
             {problem ? <p className="dialog-problem text-notice">{problem}</p> : null}
         </ResultWindow>
     );

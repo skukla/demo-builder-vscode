@@ -1,8 +1,9 @@
 /**
  * The Result layout: what happened, drawn the one way the dialog design rules draw a result
- * (`docs/development/sop/dialog-design.md`). The title says it, with the status icon before it;
- * any lines under it are what the SC still has to read. Small, Close, and at most one more
- * action (Retry, Fix with AI, Open).
+ * (`docs/development/sop/dialog-design.md`). The title names the thing; the body is the shared
+ * `ResultBody`: the large mark, the outcome in bold under it, then what the SC still has to read
+ * (owner, 2026-11-17, walk F222). Small, Close, and at most one more action (Retry, Fix with AI,
+ * Open).
  *
  * A result can carry rows of its own, each a `WorkRow` with the button that acts on that line alone
  * (Delete beside the datapack a file load created): the row owns its button's
@@ -17,6 +18,7 @@
 
 import { DialogContainer } from '@adobe/react-spectrum';
 import React from 'react';
+import { ResultBody } from '@/core/ui/components/feedback/ResultBody';
 import type { StepStatus } from '@/core/ui/components/feedback/StepStatusIcon';
 import { WorkRow } from '@/core/ui/components/feedback/WorkRow';
 import { Modal, type ActionButton, type ModalStatus } from '@/core/ui/components/ui/Modal';
@@ -55,8 +57,10 @@ export interface ResultRow {
 
 export interface ResultDialogProps {
     isOpen: boolean;
-    /** What happened: "My Luma Installed", "Couldn't Install My Luma". */
+    /** The thing it is about: "My Luma"; the kind when there is no one thing. */
     title: string;
+    /** What happened, under the mark: "Installed", "Couldn't Install". */
+    outcome: string;
     status: ModalStatus;
     /** What the SC still has to read, one line per child. None: the title says it all. */
     children?: React.ReactNode;
@@ -71,12 +75,13 @@ const NO_ROWS: ResultRow[] = [];
 /**
  * Host a result; present it when open.
  *
- * @param props - open state, the title and its status, the lines, the extra action and Close
+ * @param props - open state, the thing, the outcome and its status, the lines, the extra action and Close
  * @returns the dialog container
  */
 export function ResultDialog({
     isOpen,
     title,
+    outcome,
     status,
     children,
     rows = NO_ROWS,
@@ -89,29 +94,19 @@ export function ResultDialog({
             {isOpen && (
                 <Modal
                     title={title}
-                    status={status}
                     size="S"
                     fitContent
                     onClose={onClose}
                     actionButtons={resultActionButtons(action)}
                 >
-                    {(lines.length > 0 || rows.length > 0) && (
-                    <div className="dialog-stack">
-                        {lines.length > 0 && (
-                            <div className="dialog-rows">
-                                {lines.map((line, index) => (
-                                    <p key={index} className="dialog-line">{line}</p>
-                                ))}
-                            </div>
-                        )}
+                    <ResultBody status={status} outcome={outcome} lines={lines}>
                         {rows.map((row) => (
                             <div key={row.label} className="dialog-row-action">
                                 <WorkRow status={row.status} label={row.label} note={row.note} why={row.status === 'error'} />
                                 {row.action}
                             </div>
                         ))}
-                    </div>
-                    )}
+                    </ResultBody>
                 </Modal>
             )}
         </DialogContainer>
@@ -119,11 +114,18 @@ export function ResultDialog({
 }
 
 export interface ResultWindowProps {
-    /** What happened: "My Luma Installed", "Dry Run Found a Problem". */
+    /** The thing it is about: "My Luma"; the kind when there is no one thing. */
     title: string;
+    /** What happened, under the mark: "Installed", "Found a Problem". */
+    outcome: string;
+    /** The mark's colour; none for an end that is neither good nor bad. */
     status?: ModalStatus;
-    /** What the SC still has to read, already laid out by its owner. None: the title says it all. */
+    /** What is left to read, a line each: one is centred, several read left-aligned. */
+    lines?: readonly React.ReactNode[];
+    /** Anything else left to read (an Admin step, a list), in the block under the lines. */
     children?: React.ReactNode;
+    /** How long the run took; said only for a run of a minute or more. */
+    tookMs?: number;
     /** Buttons at the start of the row: Back. */
     startButtons?: ActionButton[];
     /** Beside Close, main last: Install, Retry, Fix with AI. */
@@ -141,13 +143,16 @@ export interface ResultWindowProps {
  * (`tests/sop/modal-hosting.test.ts`): a new window, so it takes its own small size (owner,
  * 2026-11-11), and it may lead Back to the steps.
  *
- * @param props - the title and its status, what to read, Back and the actions, and Close
+ * @param props - the thing, the outcome and its status, what to read, Back and the actions, and Close
  * @returns the window
  */
 export function ResultWindow({
     title,
+    outcome,
     status,
+    lines,
     children,
+    tookMs,
     startButtons,
     actionButtons,
     holdsAdminPath = false,
@@ -156,14 +161,15 @@ export function ResultWindow({
     return (
         <Modal
             title={title}
-            status={status}
             size={holdsAdminPath ? 'M' : 'S'}
             fitContent
             onClose={onClose}
             startButtons={startButtons}
             actionButtons={actionButtons}
         >
-            {children}
+            <ResultBody status={status} outcome={outcome} {...(lines ? { lines } : {})} {...(tookMs === undefined ? {} : { tookMs })}>
+                {children}
+            </ResultBody>
         </Modal>
     );
 }

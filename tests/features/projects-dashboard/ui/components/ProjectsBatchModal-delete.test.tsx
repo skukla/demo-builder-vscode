@@ -164,8 +164,9 @@ describe('ProjectsBatchModal: Delete Selected', () => {
     it('says a refusal from the read in the window, under its own title', async () => {
         await openOn('delete', { success: false, error: 'Select at least one project.' });
 
-        const dialog = await screen.findByRole('dialog', { name: "Couldn't Read Projects" });
-        expect(dialog).toHaveAttribute('data-status', 'error');
+        const dialog = await screen.findByRole('dialog', { name: 'Projects' });
+        expect(dialog.querySelector('.result-mark')).toHaveAttribute('data-status', 'error');
+        expect(within(dialog).getByText("Couldn't Read")).toHaveClass('result-outcome');
         expect(within(dialog).getByText('Select at least one project.')).toBeInTheDocument();
         expect(within(dialog).queryByRole('button', { name: /Delete/ })).toBeNull();
     });

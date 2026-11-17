@@ -9,7 +9,7 @@ import '@testing-library/jest-dom';
 
 import { render, screen } from '@testing-library/react';
 import React from 'react';
-import { OperationProgressBody, keepsRows } from '@/core/ui/components/feedback/OperationProgressBody';
+import { OperationProgressBody, keepsRows, progressFrame } from '@/core/ui/components/feedback/OperationProgressBody';
 import type { OperationRow } from '@/types/webviewPayloads';
 import { SAVE_WRITING } from '../../../../helpers/operationRowFixtures';
 
@@ -78,14 +78,16 @@ describe('OperationProgressBody, a run with rows', () => {
         expect(screen.queryByText('Categories')).not.toBeInTheDocument();
     });
 
-    // Review, 2026-11-10: a clean run ends small, its sentence alone, no rows and no "Took …".
-    it('ends a clean run small: the sentence, no rows, no Took', () => {
+    // Review, 2026-11-10: a clean run's rows say nothing the outcome does not. Owner, 2026-11-17
+    // (walk F222): the window keeps the run's size, so its "Took …" stays under the sentence.
+    it('ends a clean run on its outcome and sentence, no rows, with Took', () => {
         const ended = ROWS.map((row) => ({ ...row, status: 'success' as const, line: 'Done' }));
-        render(<OperationProgressBody failed={false} succeeded onTyped={jest.fn()} successMessage="Saved a new version of My Luma." progress={{ id: 'x', state: 'succeeded', rows: ended, tookMs: 240_000 }} />);
+        render(<OperationProgressBody failed={false} succeeded onTyped={jest.fn()} ending={{ status: 'success', outcome: 'Saved' }} successMessage="Saved a new version of My Luma." progress={{ id: 'x', state: 'succeeded', rows: ended, tookMs: 240_000 }} />);
 
-        expect(screen.getByText('Saved a new version of My Luma.')).toBeInTheDocument();
+        expect(screen.getByText('Saved')).toHaveClass('result-outcome');
+        expect(screen.getByText('Saved a new version of My Luma.')).toHaveClass('result-reason');
         expect(screen.queryByText('Products')).not.toBeInTheDocument();
-        expect(screen.queryByText(/^Took /u)).not.toBeInTheDocument();
+        expect(screen.getByText('Took 4 minutes')).toBeInTheDocument();
     });
 
     it('CONTROL: a run that ends with a warning keeps its rows', () => {
@@ -138,6 +140,33 @@ describe('OperationProgressBody, a run with rows', () => {
 
         expect(screen.queryByTestId('operation-rows')).not.toBeInTheDocument();
         expect(screen.getByText('0 of 1 data type')).toBeInTheDocument();
+    });
+});
+
+// Owner, 2026-11-17 (walk F222): a result names the thing in the title and draws what happened in
+// the body, the wizard's way: a large mark, the outcome in bold, the reason under it.
+describe('OperationProgressBody, how it ended', () => {
+    it('draws the outcome under its large mark', () => {
+        const { container } = render(<OperationProgressBody failed={false} succeeded onTyped={jest.fn()} ending={{ status: 'success', outcome: 'Republished' }} progress={{ id: 'x', state: 'succeeded' }} />);
+
+        expect(container.querySelector('.result-mark')).toHaveAttribute('data-status', 'success');
+        expect(screen.getByText('Republished')).toHaveClass('result-outcome');
+    });
+
+    it('draws a failure red, its reason centred under the outcome', () => {
+        const { container } = render(<OperationProgressBody failed succeeded={false} onTyped={jest.fn()} ending={{ status: 'error', outcome: "Couldn't Republish" }} progress={{ id: 'x', state: 'failed', error: 'Adobe refused this.' }} />);
+
+        expect(container.querySelector('.result-mark')).toHaveAttribute('data-status', 'error');
+        expect(screen.getByText("Couldn't Republish")).toHaveClass('result-outcome');
+        expect(screen.getByText('Adobe refused this.')).toHaveClass('result-reason');
+    });
+
+    it('frames the end with the thing as the title and the outcome for the body', () => {
+        const base = { title: 'Republishing Storefront', thing: 'Storefront', successTitle: 'Storefront Republished', failureTitle: "Couldn't Republish the Storefront", ending: { rows: [] } };
+
+        expect(progressFrame({ ...base, failed: false, succeeded: true })).toEqual({ title: 'Storefront', status: 'success', outcome: 'Republished' });
+        expect(progressFrame({ ...base, failed: true, succeeded: false })).toEqual({ title: 'Storefront', status: 'error', outcome: "Couldn't Republish" });
+        expect(progressFrame({ ...base, failed: false, succeeded: false })).toEqual({ title: 'Republishing Storefront' });
     });
 });
 
@@ -204,7 +233,7 @@ describe('OperationProgressBody, a run whose rows are steps with rows under them
         expect(keepsRows({ id: 'x', state: 'succeeded', rows: ended })).toBe(true);
     });
 
-    it('CONTROL: a clean run of steps still ends small', () => {
+    it('CONTROL: a clean run of steps leaves its rows out', () => {
         const [exported, save] = SAVE_WRITING as [OperationRow, OperationRow];
 
         expect(keepsRows({ id: 'x', state: 'succeeded', rows: [exported, { ...save, status: 'success', line: 'Saved' }] })).toBe(false);

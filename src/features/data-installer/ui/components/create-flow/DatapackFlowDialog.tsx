@@ -8,8 +8,8 @@
  * Each window is sized to what it shows and keeps that height (owner, 2026-11-11): the questions
  * share one window at the height of the first, and the pick screen, which is wider and much
  * taller, is a window of its own, held at the picks' height from the first frame. A name field
- * is never padded to the height of a two-column list. A result is a new, small window with its
- * outcome as the title. The first
+ * is never padded to the height of a two-column list. A result is a new, small window, the
+ * datapack as its title and the outcome under a large mark (walk F222). The first
  * read of a list the screen is made of is the window's wait, the store's counts and first kind's
  * list included, so the two columns appear together. A later kind's items read inside their own
  * pane, with the kinds and the buttons still on, since a slow read must not cost what is already
@@ -27,8 +27,8 @@
 
 import { DialogContainer } from '@adobe/react-spectrum';
 import React from 'react';
+import { datapackResultWords } from '../datapackResultWords';
 import { ExportDatapackResult } from '../ExportDatapackResult';
-import { resultStatus } from '../importResult';
 import { NameField } from '../save/NameField';
 import { AcoKindsStage } from './stages/AcoKindsStage';
 import { AcoViewsStage } from './stages/AcoViewsStage';
@@ -50,6 +50,9 @@ export interface DatapackFlowDialogProps {
     /** Start the save with what was chosen, and the new pack's name. */
     onSave: (choice: StoreChoice, name: string) => void;
 }
+
+/** A created datapack's result names it; before a name is typed, the kind. */
+const DATAPACK_KIND = 'Datapack';
 
 /** The read of what the screen will show: the store's data to pick from, or ACO's catalog views. */
 function waitLines(stage: string): ModalWait {
@@ -106,14 +109,15 @@ export function DatapackFlowDialog({ title, ownNames, onClose, onSave }: Datapac
         <DialogContainer onDismiss={onClose}>
             {result ? (
                 <ResultWindow
-                    title={result.title}
-                    status={resultStatus(result)}
+                    {...datapackResultWords(result, flow.name.trim() || DATAPACK_KIND)}
                     onClose={onClose}
                     actionButtons={[{ label: 'Back', variant: 'secondary', onPress: flow.answers.dismissResult }]}
                 >
-                    <div className="datapack-export-body">
-                        <ExportDatapackResult result={result} savable={savable} source="library" />
-                    </div>
+                    {savable ? (
+                        <div className="datapack-export-body">
+                            <ExportDatapackResult savable={savable} source="library" />
+                        </div>
+                    ) : null}
                 </ResultWindow>
             ) : (
                 <StepsWindow

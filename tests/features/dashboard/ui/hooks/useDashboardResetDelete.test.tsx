@@ -116,7 +116,8 @@ describe("the dashboard's Reset", () => {
 
         await push('projectsBatchRow', { path: PATH, state: 'done' });
         await push('operationProgress', { id: PROJECTS_BATCH_OPERATION_ID, state: 'succeeded' });
-        expect(screen.getByRole('dialog', { name: 'Kukla Luma Reset' })).toHaveAttribute(
+        // Walk F222: the title names the project; the outcome is under the large mark.
+        expect(screen.getByRole('dialog', { name: 'Kukla Luma' }).querySelector('.result-mark')).toHaveAttribute(
             'data-status',
             'success'
         );

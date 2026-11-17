@@ -7,6 +7,7 @@
 
 import { screen } from '@testing-library/react';
 import { press, settle } from '../../../../helpers/reactSettle';
+import { expectResult } from '../../../../helpers/resultQueries';
 import { loadedFile } from '../../../../helpers/datapackFileFixtures';
 import type { LoadOutcome } from '@/features/data-installer/ui/components/AddDatapackFileModal';
 import { deleteCalls, loadCall, mockRequest, OPENED, openModal, withService } from './AddDatapackFileModal.testUtils';
@@ -71,8 +72,7 @@ it('loads into the library by default, private, without replacing anything', asy
     await settle();
 
     expect(loadCall()).toEqual({ path: OPENED.path, target: 'library', update: false });
-    const heading = screen.getByRole('heading', { name: 'Tailspin B2B Loaded' });
-    expect(heading.querySelector('.text-positive')).not.toBeNull();
+    expectResult('Tailspin B2B', 'Loaded', 'success');
     expect(screen.getByText('Added to My Datapacks.')).toBeInTheDocument();
 });
 
@@ -158,8 +158,7 @@ it('lists each refused type with its reason when only part of the file landed', 
     await press(screen.getByRole('button', { name: 'Add' }));
     await settle();
 
-    const heading = screen.getByRole('heading', { name: 'Tailspin B2B Partly Loaded' });
-    expect(heading.querySelector('.text-notice')).not.toBeNull();
+    expectResult('Tailspin B2B', 'Partly Loaded', 'warning');
     expect(screen.getByText('Loaded 1 of 2 data types. Added to My Datapacks.')).toBeInTheDocument();
     expect(screen.getByText(/too large to send in one request/)).toBeInTheDocument();
 });
@@ -171,8 +170,7 @@ it('titles a load the service refused, with its reason in the body', async () =>
     await press(screen.getByRole('button', { name: 'Add' }));
     await settle();
 
-    const heading = screen.getByRole('heading', { name: "Couldn't Add Tailspin B2B" });
-    expect(heading.querySelector('.text-negative')).not.toBeNull();
+    expectResult('Tailspin B2B', "Couldn't Add", 'error');
     expect(screen.getByText('The library is not reachable.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
@@ -188,8 +186,7 @@ it('explains a file that cannot be opened, in the handler words', async () => {
 
     await openModal();
 
-    const heading = screen.getByRole('heading', { name: "Couldn't Open the File" });
-    expect(heading.querySelector('.text-negative')).not.toBeNull();
+    expectResult('File', "Couldn't Open", 'error');
     expect(screen.getByText('This zip is not a Demo Builder datapack file.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Add' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument();
@@ -270,7 +267,7 @@ describe('a file that carries a settings layer (datapack-engine step 09)', () =>
         // A line of its own (layout variant 6): the part, then the reason under it.
         expect(screen.getByText('Store Configuration')).toBeInTheDocument();
         expect(screen.getByText(/already holds tailspin-settings@/)).toBeInTheDocument();
-        expect(screen.getByRole('heading', { name: 'Tailspin B2B Loaded' })).toBeInTheDocument();
+        expect(expectResult('Tailspin B2B', 'Loaded')).toBeInTheDocument();
         await press(screen.getByRole('button', { name: 'Delete' }));
         await settle();
 

@@ -16,7 +16,8 @@
  * What the dialog shows follows the dialog design rules, on the Steps layout (Phase 1b): the
  * read is the window's wait, the list and the apply follow at one height, and a failed apply is
  * the title's outcome. A failed read and "signed out" are a small result window in its place
- * (`ResultWindow`): the title's outcome, with the one way on as the action.
+ * (`ResultWindow`): the dialog's title, the outcome under the large mark, and the one way on as
+ * the action (walk F222).
  *
  * Hosting mirrors {@link AppBuilderComponentRemoveDialog}: an always-mounted
  * DialogContainer with the window rendered only while `isOpen`; the list owns
@@ -201,20 +202,21 @@ function applyingWait(stage: string | undefined, step: string | undefined): Moda
  * A read with no list to show: signed out, whose one way on is signing in (never a Retry), or a
  * failed read, whose way on is Retry. Its own small result window, in place of the steps.
  */
-function NoListWindow({ list, onClose }: { list: ApiList; onClose: () => void }): React.ReactElement {
-    if (list.needsSignIn) {
-        const signIn: ActionButton = { label: MANAGE_APIS_COPY.signIn, variant: 'accent', onPress: list.signIn };
-        return (
-            <ResultWindow title={MANAGE_APIS_COPY.signInTitle} status="warning" actionButtons={[signIn]} onClose={onClose}>
-                <p className="dialog-line">{MANAGE_APIS_COPY.signInBody}</p>
-            </ResultWindow>
-        );
-    }
+function NoListWindow({ list, title, onClose }: { list: ApiList; title: string; onClose: () => void }): React.ReactElement {
+    const signIn: ActionButton = { label: MANAGE_APIS_COPY.signIn, variant: 'accent', onPress: list.signIn };
     const retry: ActionButton = { label: MANAGE_APIS_COPY.retry, variant: 'accent', onPress: list.retry };
+    const end = list.needsSignIn
+        ? { outcome: MANAGE_APIS_COPY.signInTitle, status: 'warning' as const, line: MANAGE_APIS_COPY.signInBody, action: signIn }
+        : { outcome: MANAGE_APIS_COPY.loadFailedTitle, status: 'error' as const, line: list.loadError, action: retry };
     return (
-        <ResultWindow title={MANAGE_APIS_COPY.loadFailedTitle} status="error" actionButtons={[retry]} onClose={onClose}>
-            <p className="dialog-line">{list.loadError}</p>
-        </ResultWindow>
+        <ResultWindow
+            title={title}
+            outcome={end.outcome}
+            status={end.status}
+            lines={[end.line]}
+            actionButtons={[end.action]}
+            onClose={onClose}
+        />
     );
 }
 
@@ -277,7 +279,7 @@ function ManageApisDialog({ componentName, componentId, onClose }: Omit<ManageAp
     const list = useApiList(componentId);
     const apply = useApply(componentId, list, onClose);
     const { isApplying, stage, step, error } = apply.state;
-    if (list.needsSignIn || list.loadError) return <NoListWindow list={list} onClose={onClose} />;
+    if (list.needsSignIn || list.loadError) return <NoListWindow list={list} title={MANAGE_APIS_COPY.title(componentName)} onClose={onClose} />;
     let waiting: ModalWait | false = false;
     if (isApplying) waiting = applyingWait(stage, step);
     else if (list.isLoading) waiting = WAIT_STAGES.readingAdobeServices;

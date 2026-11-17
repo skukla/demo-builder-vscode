@@ -51,13 +51,15 @@ export interface GuideRun {
 const nameOf = (item: SetupChecklistItem): string => item.label ?? item.title;
 
 /** The progress window's three titles for a run, for the one case handed to it. */
-function titlesOf(name: string, mode: GuideRunMode, steps: SetupChecklistItem[]): Pick<StartableOperation, 'title' | 'failureTitle' | 'successTitle'> {
+function titlesOf(name: string, mode: GuideRunMode, steps: SetupChecklistItem[]): Pick<StartableOperation, 'title' | 'thing' | 'failureTitle' | 'successTitle'> {
     const label = steps.length === 1 ? nameOf(steps[0]) : 'the demo setup';
-    if (mode === 'undo') return { title: `Undoing ${label}`, failureTitle: `Couldn't Undo ${label}`, successTitle: `${label} Undone` };
+    // The result names the step when there is one, else the integration (walk F222).
+    const thing = steps.length === 1 ? label : name;
+    if (mode === 'undo') return { title: `Undoing ${label}`, thing, failureTitle: `Couldn't Undo ${label}`, successTitle: `${label} Undone` };
     if (steps.length > 1) {
-        return { title: `Applying the Demo Setup for ${name}`, failureTitle: `Couldn't Apply the Demo Setup for ${name}`, successTitle: `Demo Setup Applied for ${name}` };
+        return { title: `Applying the Demo Setup for ${name}`, thing, failureTitle: `Couldn't Apply the Demo Setup for ${name}`, successTitle: `Demo Setup Applied for ${name}` };
     }
-    return { title: `Applying ${label}`, failureTitle: `Couldn't Apply ${label}`, successTitle: `${label} Applied` };
+    return { title: `Applying ${label}`, thing, failureTitle: `Couldn't Apply ${label}`, successTitle: `${label} Applied` };
 }
 
 /** The request a run sends: the steps to apply, or the one step to undo. */

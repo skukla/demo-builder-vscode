@@ -1,9 +1,10 @@
 /**
- * The run, its own window (step 03, S4; the prototype's `RunWindow`): the install's steps
- * (`ImportRunView`) with the clock under them while it runs, and, once it ends with a problem, each
- * step's final state, the problem on its row and `RunFoot` under them (rules 15, 16). The window is
- * held at its tallest state from the first frame (`reserve`: mid-run and stopped), so it never grows
- * (rule 14). A clean end leaves for the small result instead (rule 17).
+ * The run, its own window (step 03, S4; the prototype's `RunWindow`): the centred lines while it
+ * runs, then how it ended in the same window, at the same size (owner, 2026-11-17, walk F222, over
+ * "a clean end leaves for the small result"): the datapack as the title, the outcome under a large
+ * mark (`ResultBody`), the lines left to read, and, when it ended with a problem, each step's final
+ * state with the problem on its row (rules 15, 16). The window is held at its tallest state from the
+ * first frame (`reserve`), so it never grows (rule 14).
  *
  * A switch (S6) draws its Save Your Changes and Uninstall rows before its job is recorded
  * (`switching`), the save's stage on the first while the start waits on it (walk F129), and holds
@@ -18,6 +19,7 @@ import { type ImportStep, type StepSource } from '../../../importSteps';
 import { FINISHING, REPLACING, SAVING } from '../../../runRows';
 import type { ImportJobRecord } from '../../../types';
 import { useImportProgress } from '../../hooks/useImportProgress';
+import { datapackResultWords, KeptRootFacts } from '../datapackResultWords';
 import type { ResultContent } from '../importResult';
 import { ImportRunView } from '../ImportRunView';
 import {
@@ -31,6 +33,7 @@ import {
     uninstallStartingSteps,
 } from './runSteps';
 import { questionFrame } from '@/core/ui/components/feedback/OperationProgressBody';
+import { ResultBody } from '@/core/ui/components/feedback/ResultBody';
 import { StageRows } from '@/core/ui/components/feedback/StageWait';
 import { LeadText } from '@/core/ui/components/ui/LeadText';
 import type { ActionButton, ModalStatus } from '@/core/ui/components/ui/Modal';
@@ -62,11 +65,11 @@ function answerButtons({ prompt, answer }: RunQuestion): ActionButton[] {
 }
 
 export interface DatapackRunWindowProps {
+    /** What the job is doing while it runs; the datapack once it ended. */
     title: string;
-    status?: ModalStatus;
     /** The job watched, once recorded, while it runs. */
     record: ImportJobRecord | null;
-    /** An end with a problem, drawn on its steps. */
+    /** How it ended; one with a problem keeps its steps under the outcome. */
     ended: ResultContent | null;
     /** The whole pack's data types, for the steps before the job is recorded. */
     types: string[];
@@ -149,22 +152,34 @@ function LiveRun({
     return <Running steps={steps} startedAt={startedAt} />;
 }
 
+/** What an end on its steps leaves to read: where the datapack went, then the engine's lines for the SC. */
+function endedRunLines(ended: ResultContent, run: ImportJobRecord): string[] {
+    const lead = ended.lead ? [ended.lead] : [];
+    return [...lead, ...(run.scLines ?? [])];
+}
+
+/**
+ * How the run ended: the outcome under its mark, the lines left to read, and when it ended with a
+ * problem, its steps with the problem on its row; the Admin step a removal left.
+ */
+function RunEnd({ ended, installing, columns, uninstalling }: Pick<DatapackRunWindowProps, 'installing' | 'columns' | 'uninstalling'> & { ended: ResultContent }): React.ReactElement {
+    const { outcome, status, lines, tookMs } = datapackResultWords(ended, installing.name);
+    const { run } = ended;
+    const steps = run && (uninstalling ? uninstallEndedSteps(run, installing.name, uninstalling) : endedSteps(run, installing.name));
+    const shown = run ? endedRunLines(ended, run) : lines;
+    return (
+        <ResultBody outcome={outcome} {...(status ? { status } : {})} lines={shown} {...(tookMs === undefined ? {} : { tookMs })}>
+            {steps ? <ImportRunView steps={steps} columns={columns} /> : null}
+            <KeptRootFacts result={ended} />
+        </ResultBody>
+    );
+}
+
 /** The step the window is on: ended, running, or starting. */
 function RunBody(props: DatapackRunWindowProps & { pressedAt: number }): React.ReactElement {
     const { ended, record, types, installing, columns, opensRunning, pressedAt, switching, uninstalling } =
         props;
-    if (ended?.run) {
-        const end = {
-            ...(ended.lead ? { lead: ended.lead } : {}),
-            lines: ended.run.scLines ?? [],
-            ...(ended.tookMs === undefined ? {} : { tookMs: ended.tookMs }),
-        };
-        const { run } = ended;
-        const steps = uninstalling
-            ? uninstallEndedSteps(run, installing.name, uninstalling)
-            : endedSteps(run, installing.name);
-        return <ImportRunView steps={steps} columns={columns} end={end} />;
-    }
+    if (ended) return <RunEnd ended={ended} installing={installing} columns={columns} {...(uninstalling ? { uninstalling } : {})} />;
     if (record?.outcome === 'watching') {
         const startedAt = opensRunning ? Date.parse(record.startedAt) : pressedAt;
         return (
@@ -182,13 +197,13 @@ function RunBody(props: DatapackRunWindowProps & { pressedAt: number }): React.R
     return <Running steps={steps} startedAt={pressedAt} />;
 }
 
-/** The window's icon: a question's, as the progress window draws it (none for a routine step); else the run's. */
-function statusFor(status: ModalStatus | undefined, question: RunQuestion | undefined): { status?: ModalStatus } {
-    if (question) {
-        const asked = questionFrame(question.prompt, '').status;
-        return asked ? { status: asked } : {};
-    }
-    return status ? { status } : {};
+/**
+ * The title's icon: a question's, as the progress window draws it (none for a routine step). How the
+ * run ended is the body's mark, not the title's (walk F222).
+ */
+function statusFor(question: RunQuestion | undefined): { status?: ModalStatus } {
+    const asked = question ? questionFrame(question.prompt, '').status : undefined;
+    return asked ? { status: asked } : {};
 }
 
 /** The question's dismiss answer, or Cancel, while asked; Close once ended; else Run in Background. */
@@ -198,7 +213,7 @@ function closeLabelFor(ended: boolean, question: RunQuestion | undefined): strin
 }
 
 export function DatapackRunWindow(props: DatapackRunWindowProps): React.ReactElement {
-    const { title, status, ended, actionButtons, onClose, question } = props;
+    const { title, ended, actionButtons, onClose, question } = props;
     // When Install was pressed: one clock from the press to the end.
     const [pressedAt] = useState(() => Date.now());
     // While asked, a dismiss answer (Skip for Now) is an answer: the run goes on in the window to
@@ -211,7 +226,7 @@ export function DatapackRunWindow(props: DatapackRunWindowProps): React.ReactEle
     return (
         <StepsWindow
             title={question?.prompt.title ?? title}
-            {...statusFor(status, question)}
+            {...statusFor(question)}
             reserve={RUN_RESERVE}
             // Run in Background while it runs: closing hands the job over, it stops nothing.
             closeLabel={closeLabelFor(Boolean(ended), question)}

@@ -1,6 +1,6 @@
 /**
  * Restore's check (step 03, S8; step-07 U1, J9-5 to J9-7): on open, `restore-datapack` without
- * `confirm`, which starts nothing. It answers up to date (the small result), or the question
+ * `confirm`, which starts nothing. It answers up to date (a result of its own), or the question
  * (`RestoreQuestion`), which moves the window to it. Restore there sends it again confirmed, with the
  * point chosen, as the job's start (`useJobStart`). Split out of `useDatapackJob`.
  *

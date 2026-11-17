@@ -12,6 +12,7 @@
 
 import { fireEvent, screen, within } from '@testing-library/react';
 import { press, settle } from '../../../../helpers/reactSettle';
+import { expectResult } from '../../../../helpers/resultQueries';
 import { loadedFile } from '../../../../helpers/datapackFileFixtures';
 import { loadCall, OPENED, openModal, withService } from './AddDatapackFileModal.testUtils';
 
@@ -85,7 +86,7 @@ describe('Replace or Keep Both (F1)', () => {
         await press(screen.getByRole('button', { name: 'Add' }));
         await settle();
 
-        expect(screen.getByRole('heading', { name: 'My Luma 2 Loaded' })).toBeInTheDocument();
+        expect(expectResult('My Luma 2', 'Loaded')).toBeInTheDocument();
     });
 });
 
@@ -106,7 +107,7 @@ describe('Install from File: add, then install (F2)', () => {
             displayName: 'Tailspin B2B',
         });
         expect(
-            screen.queryByRole('heading', { name: 'Tailspin B2B Loaded' })
+            screen.queryByRole('heading', { name: 'Tailspin B2B' })
         ).not.toBeInTheDocument();
         expect(onClose).not.toHaveBeenCalled();
     });
@@ -174,7 +175,7 @@ describe('Install from File: add, then install (F2)', () => {
 
         expect(onInstall).not.toHaveBeenCalled();
         expect(
-            screen.getByRole('heading', { name: 'Tailspin B2B Partly Loaded' })
+            expectResult('Tailspin B2B', 'Partly Loaded')
         ).toBeInTheDocument();
     });
 
@@ -190,7 +191,7 @@ describe('Install from File: add, then install (F2)', () => {
 
         expect(onInstall).not.toHaveBeenCalled();
         expect(
-            screen.getByRole('heading', { name: "Couldn't Add Tailspin B2B" })
+            expectResult('Tailspin B2B', "Couldn't Add")
         ).toBeInTheDocument();
     });
 });

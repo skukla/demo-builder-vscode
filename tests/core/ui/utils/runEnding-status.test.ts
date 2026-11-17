@@ -14,14 +14,8 @@ import { endStatus, type RunEnding } from '@/core/ui/utils/runEnding';
 import { asDisplayName } from '@/core/utils/projectDisplayName';
 import type { DataTypeStatus, ImportJobRecord } from '@/features/data-installer/types';
 import { resolveResult } from '@/features/data-installer/ui/components/importResult';
-import {
-    endedClean as batchEndedClean,
-    runStatus,
-} from '@/features/projects-dashboard/ui/components/ProjectsBatchModal';
-import {
-    endedClean as updatesEndedClean,
-    runHeadingOf,
-} from '@/features/projects-dashboard/ui/components/UpdatesModal';
+import { runStatus } from '@/features/projects-dashboard/ui/components/ProjectsBatchModal';
+import { runHeadingOf } from '@/features/projects-dashboard/ui/components/UpdatesModal';
 import type { BatchRowStatuses } from '@/features/projects-dashboard/ui/hooks/useProjectsBatch';
 import type { RowStatuses } from '@/features/projects-dashboard/ui/hooks/useUpdatesModal';
 import type { PendingUpdateRow } from '@/types/pendingUpdates';
@@ -128,6 +122,7 @@ describe('the progress window', () => {
         const progress = payloadOf(name);
         const frame = progressFrame({
             title: 'Saving My Luma',
+            thing: 'My Luma',
             successTitle: 'Saved to My Luma',
             failureTitle: "Couldn't Save My Luma",
             failed: progress.state === 'failed',
@@ -172,15 +167,6 @@ describe('the projects batch window', () => {
             endStatus(CASES[name])
         );
     });
-
-    it('keeps the window open on a note, green', () => {
-        const statuses: BatchRowStatuses = {
-            '/p/a': { path: '/p/a', state: 'done' },
-            '/p/b': second('note'),
-        };
-
-        expect(batchEndedClean({ view, progress: progressOf('note'), statuses })).toBe(false);
-    });
 });
 
 describe('the Updates window', () => {
@@ -221,10 +207,6 @@ describe('the Updates window', () => {
         expect(runHeadingOf(progressOf(name), rows, statusesOf(name)).status).toBe(
             endStatus(CASES[name])
         );
-    });
-
-    it('keeps the window open on a note, green', () => {
-        expect(updatesEndedClean(progressOf('note'), rows, statusesOf('note'))).toBe(false);
     });
 });
 

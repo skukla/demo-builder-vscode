@@ -72,6 +72,7 @@ const OPERATION = {
     title: 'Republishing Bodea',
     failureTitle: "Couldn't Republish Bodea",
     successTitle: 'Bodea Republished',
+    thing: 'Bodea',
     run: 1,
     resume: false,
 };
@@ -353,11 +354,15 @@ describe('the end of a run', () => {
     // It used to vanish the instant the run succeeded, so an operation the SC had
     // watched ended by saying nothing (owner, 2026-09-20).
     // Walk F195 (owner, 2026-11-17): every result waits for Close.
+    // Walk F222 (owner, 2026-11-17): the title names the thing, with no icon; the outcome is under
+    // the large mark in the body.
     it('shows the success and waits for Close', async () => {
         progress = { id: OPERATION.id, state: 'succeeded' };
         const { onClose } = renderModal();
 
-        expect(screen.getByRole('dialog', { name: 'Bodea Republished' })).toHaveAttribute('data-status', 'success');
+        expect(screen.getByRole('dialog', { name: 'Bodea' })).not.toHaveAttribute('data-status');
+        expect(document.querySelector('.result-mark')).toHaveAttribute('data-status', 'success');
+        expect(screen.getByText('Republished')).toHaveClass('result-outcome');
         expect(onClose).not.toHaveBeenCalled();
 
         await act(async () => {
@@ -367,21 +372,22 @@ describe('the end of a run', () => {
         expect(onClose).not.toHaveBeenCalled();
     });
 
-    // An ending is the dialog's title, with its status icon, and the body holds only what is
-    // left (dialog design rules, owner 2026-10-31).
-    it("shows a success's note as the sentence under its title", () => {
+    // An ending's outcome sits under the mark, and the sentence under it (walk F222).
+    it("shows a success's note as the sentence under its outcome", () => {
         progress = { id: OPERATION.id, state: 'succeeded', note: 'Added Demo Team Block Collection (9 blocks).' };
         renderModal();
 
-        expect(screen.getByRole('dialog', { name: 'Bodea Republished' })).toHaveAttribute('data-status', 'success');
+        expect(document.querySelector('.result-mark')).toHaveAttribute('data-status', 'success');
         expect(screen.getByTestId('operation-end')).toHaveTextContent('Added Demo Team Block Collection (9 blocks).');
     });
 
-    it("titles a failure red, with its reason under it", () => {
+    it("marks a failure red, with its reason under it", () => {
         progress = { id: OPERATION.id, state: 'failed', error: 'Adobe refused this.' };
         renderModal();
 
-        expect(screen.getByRole('dialog', { name: "Couldn't Republish Bodea" })).toHaveAttribute('data-status', 'error');
+        expect(screen.getByRole('dialog', { name: 'Bodea' })).not.toHaveAttribute('data-status');
+        expect(document.querySelector('.result-mark')).toHaveAttribute('data-status', 'error');
+        expect(screen.getByText("Couldn't Republish")).toHaveClass('result-outcome');
         expect(screen.getByTestId('operation-end')).toHaveTextContent('Adobe refused this.');
     });
 
@@ -394,7 +400,7 @@ describe('the end of a run', () => {
             jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 3);
         });
 
-        expect(screen.getByRole('dialog', { name: "Couldn't Republish Bodea" })).toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: 'Bodea' })).toBeInTheDocument();
         expect(onClose).not.toHaveBeenCalled();
     });
 
@@ -446,11 +452,11 @@ describe('a next step on success', () => {
         return { onClose, onPress };
     }
 
-    it('says what is left under the success title, and offers it', () => {
+    it('says what is left under the success outcome, and offers it', () => {
         progress = { id: OPERATION.id, state: 'succeeded' };
         renderWithNext();
 
-        expect(screen.getByRole('dialog', { name: 'Bodea Republished' })).toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: 'Bodea' })).toBeInTheDocument();
         expect(screen.getByText(NEXT.message)).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Open Demo Setup' })).toHaveAttribute('data-variant', 'accent');
     });

@@ -1,9 +1,10 @@
 /**
  * OperationProgressBody — the one row of the progress modal that changes: a question
  * the run is paused on, its failure, its success, or where the work has got to and
- * how long the run has been going. `progressFrame` gives the dialog around it its title
- * and status: by the dialog design rules (`docs/development/sop/dialog-design.md`, owner
- * 2026-10-31) an outcome or a question is the TITLE, so the body holds only what is left.
+ * how long the run has been going. `progressFrame` gives the dialog around it its title: a
+ * question is the title (`docs/development/sop/dialog-design.md`); an end names the thing in the
+ * title and the body draws what happened, the large mark and the outcome under it, in the shared
+ * `ResultBody` (owner, 2026-11-17, walk F222).
  *
  * Split out of {@link OperationProgressModal} (2026-10-16), which keeps the dialog,
  * its buttons and the state that drives them.
@@ -13,7 +14,7 @@
 
 import React, { useRef } from 'react';
 import { OperationQuestion } from '@/core/ui/components/feedback/OperationQuestion';
-import { RunFoot } from '@/core/ui/components/feedback/RunFoot';
+import { ResultBody } from '@/core/ui/components/feedback/ResultBody';
 import { StageRows, type WaitLines } from '@/core/ui/components/feedback/StageWait';
 import { StepRows } from '@/core/ui/components/feedback/StepRows';
 import { WorkRow } from '@/core/ui/components/feedback/WorkRow';
@@ -22,7 +23,8 @@ import { LeadText } from '@/core/ui/components/ui/LeadText';
 import type { ModalStatus } from '@/core/ui/components/ui/Modal';
 import { useRunClock } from '@/core/ui/hooks/useRunClock';
 import { cn } from '@/core/ui/utils/classNames';
-import { endStatus, endsSmall, type RunEnding } from '@/core/ui/utils/runEnding';
+import { resultOutcome } from '@/core/ui/utils/resultWords';
+import { endStatus, endsClean, type RunEnding } from '@/core/ui/utils/runEnding';
 import { PREPARING, rowsLines } from '@/core/utils/runStage';
 import { stageLine } from '@/core/utils/stageLine';
 import type { OperationChange, OperationPrompt, OperationProgressPayload, OperationRow } from '@/types/webviewPayloads';
@@ -38,7 +40,17 @@ export interface OperationProgressBodyProps {
     onTyped: (values: Record<string, string>) => void;
     /** What the run acts on: while it runs, a line under the title, clear of the level spinner. */
     subject?: string;
+    /** How it ended, once it has: the mark's colour and the outcome under it (`progressFrame`). */
+    ending?: RunOutcome;
 }
+
+/** How a run ended, as its body draws it: the mark and the words under it. */
+export interface RunOutcome {
+    status?: ModalStatus;
+    outcome: string;
+}
+
+const NO_OUTCOME: RunOutcome = { outcome: '' };
 
 /** The one row that changes: a question, a failure, or where the work has got to. */
 /**
@@ -70,6 +82,7 @@ export function OperationProgressBody({
     progress,
     onTyped,
     subject,
+    ending = NO_OUTCOME,
 }: OperationProgressBodyProps): React.ReactElement | null {
     // The whole run, from the start the extension stamped on every push. The only
     // thing that moves while a step waits on Adobe.
@@ -88,9 +101,9 @@ export function OperationProgressBody({
         return prompt.title ? <LeadText>{prompt.message}</LeadText> : null;
     }
     if (failed) {
-        return <EndView message={progress?.error} rows={progress?.rows} tookMs={progress?.tookMs} failed />;
+        return <EndView ending={ending} message={progress?.error} rows={progress?.rows} tookMs={progress?.tookMs} failed />;
     }
-    if (succeeded) return <SuccessEnd message={successMessage} progress={progress} />;
+    if (succeeded) return <SuccessEnd ending={ending} message={successMessage} progress={progress} />;
     // A run that sends its parts as rows says the one under way, centred, step to step: one
     // project's run is the wizard's view, never a checklist (owner, 2026-11-16). Its rows come back
     // only for how it ended (walk F91 asked for more than one line over a save's minutes of reading:
@@ -126,13 +139,13 @@ function RunRows({ rows }: { rows: readonly OperationRow[] }): React.ReactElemen
 
 /**
  * Whether a run that succeeded keeps its rows on screen: it sent rows, and by the shared rule
- * (`endsSmall`) it does not end small, a warning or a row with a problem, a nested row's included.
+ * (`endsClean`) it did not end clean, a warning or a row with a problem, a nested row's included.
  * A row's note reaches here as a problem that did not fail (`runRows.ts`). The modal holds such an
  * ending open to be read.
  */
 export function keepsRows(progress?: OperationProgressPayload | null): boolean {
     // A step's nested rows count as its own: a problem on a data type under a step keeps them too.
-    return (progress?.rows ?? []).length > 0 && !endsSmall({ succeeded: true, ...progressEnding(progress) });
+    return (progress?.rows ?? []).length > 0 && !endsClean({ succeeded: true, ...progressEnding(progress) });
 }
 
 /**
@@ -145,13 +158,14 @@ export function progressEnding(progress?: OperationProgressPayload | null): Pick
 }
 
 /**
- * A success. A clean run shown as rows ends small: no rows, no "Took …". One with a warning or a
- * row's problem keeps them (dialog design rules, the run paragraph; review, 2026-11-10, the save
- * window; plan step-03 S1, the problem row the warning-only rule hid).
+ * A success. A clean run's rows say nothing its outcome does not, so they are left out; one with a
+ * warning or a row's problem keeps them (dialog design rules; review, 2026-11-10, the save window;
+ * plan step-03 S1, the problem row the warning-only rule hid). "Took …" stays either way: the
+ * window keeps the run's size (owner, 2026-11-17, walk F222).
  */
-function SuccessEnd({ message, progress }: { message?: string; progress?: OperationProgressPayload | null }): React.ReactElement | null {
-    if (progress?.rows?.length && !keepsRows(progress)) return <EndView message={message} outcome={progress} />;
-    return <EndView message={message} outcome={progress} rows={progress?.rows} tookMs={progress?.tookMs} />;
+function SuccessEnd({ ending, message, progress }: { ending: RunOutcome; message?: string; progress?: OperationProgressPayload | null }): React.ReactElement {
+    const rows = keepsRows(progress) ? progress?.rows : undefined;
+    return <EndView ending={ending} message={message} outcome={progress} rows={rows} tookMs={progress?.tookMs} />;
 }
 
 /** Whether a row, or a row nested under one, says what went wrong. */
@@ -172,40 +186,41 @@ function withReason(rows: OperationRow[], reason: string | undefined): Operation
 }
 
 /**
- * How a run ended, below the title that says it: the sentence, the lines it left to know, what
- * it changed as rows, and how long a long run took. Nothing at all for a plain success, whose
- * title says everything. It was a status box repeating the title over the same lines, which read
- * as machine-made (dialog design rules, owner 2026-10-31).
+ * How a run ended, under the title that names the thing (owner, 2026-11-17, walk F222): the large
+ * mark and the outcome (`ResultBody`), then the sentence, the lines it left to know, its rows when
+ * they have something to read, what it changed as rows, and how long a long run took.
  *
- * A run that ends on its rows keeps one height from first frame to last (decisions Phase 1b, J1-3d
- * growth, owner 2026-11-11): its problem is on its row, in the room the row's line held, and no
- * closing sentence goes under the rows to repeat it. A sentence no row can carry still says itself.
+ * A failed run's reason sits on the row that stopped when it has rows, in the room the row's line
+ * held, and no closing sentence repeats it (decisions Phase 1b, J1-3d growth, owner 2026-11-11). A
+ * sentence no row can carry still says itself.
  */
-function EndView({ message, outcome, rows, tookMs, failed = false }: {
+function EndView({ ending, message, outcome, rows, tookMs, failed = false }: {
+    ending: RunOutcome;
     message?: string;
-    /** The run's rows as it ended, when it sent them: above its sentence, where they were. */
+    /** The run's rows as it ended, when they have something to read. */
     rows?: OperationRow[];
     /** A success's lines and changes; none on a failure, whose reason is the message. */
     outcome?: Pick<OperationProgressPayload, 'details' | 'changes'> | null;
-    /** How long the run took; `RunFoot` says it only for a long run. */
+    /** How long the run took; said only for a long run. */
     tookMs?: number;
     /** The run failed: `message` is its reason, which the row that stopped can carry. */
     failed?: boolean;
-}): React.ReactElement | null {
-    const { details: lines, changes } = outcome ?? {};
+}): React.ReactElement {
+    const { details, changes } = outcome ?? {};
     const hasRows = Boolean(rows && rows.length > 0);
     const shown = rows && failed ? withReason(rows, message) : rows;
     const lead = shown && hasRows && rowsSayAProblem(shown) ? undefined : message;
-    const foot = (
-        <RunFoot lead={lead} lines={lines} tookMs={tookMs} testId={hasRows ? undefined : 'operation-end'}>
-            {changes && changes.length > 0 ? <ChangeRows changes={changes} /> : null}
-        </RunFoot>
-    );
-    if (!shown || !hasRows) return foot;
     return (
-        <div className="dialog-stack" data-testid="operation-end">
-            <RunRows rows={shown} />
-            {foot}
+        <div data-testid="operation-end">
+            <ResultBody
+                {...(ending.status ? { status: ending.status } : {})}
+                outcome={ending.outcome}
+                lines={[lead, ...(details ?? [])]}
+                {...(tookMs === undefined ? {} : { tookMs })}
+            >
+                {shown && hasRows ? <RunRows rows={shown} /> : null}
+                {changes && changes.length > 0 ? <ChangeRows changes={changes} /> : null}
+            </ResultBody>
         </div>
     );
 }
@@ -222,21 +237,28 @@ export function questionFrame(prompt: OperationPrompt, runTitle: string): Progre
     return { title: prompt.message, ...status };
 }
 
-/** The dialog around the body: its title and the title's status. */
+/**
+ * The dialog around the body: its title, and the status. A question's status is the title's icon;
+ * an end's is the body's mark, with its outcome under it (`outcome` set).
+ */
 export interface ProgressFrame {
     title: string;
     status?: ModalStatus;
+    /** Once it ended: what happened, for the body under the mark. */
+    outcome?: string;
 }
 
 /**
- * The progress window's title for where the run stands: the run's own title while it works, the
- * outcome when it ends (green, amber when it succeeded with a warning or a row's problem by the one
- * amber rule, `endStatus`, red when it failed), and a
- * question with buttons as its own heading with an amber icon. A question with fields sits under
- * the run's title, as its form does.
+ * The progress window's title for where the run stands: the run's own title while it works; the
+ * thing once it ends, with the outcome for the body (green, amber when it succeeded with a warning
+ * or a row's problem by the one amber rule, `endStatus`, red when it failed; owner, 2026-11-17,
+ * walk F222); and a question with buttons as its own heading with an amber icon. A question with
+ * fields sits under the run's title, as its form does.
  */
 export function progressFrame(a: {
     title: string;
+    /** What the run is about: the end's title ("Storefront", "My Luma"). */
+    thing: string;
     successTitle: string;
     failureTitle: string;
     prompt?: OperationPrompt;
@@ -246,8 +268,11 @@ export function progressFrame(a: {
     ending: Pick<RunEnding, 'warning' | 'rows'>;
 }): ProgressFrame {
     if (a.prompt) return questionFrame(a.prompt, a.title);
-    if (a.failed) return { title: a.failureTitle, status: 'error' };
-    if (a.succeeded) return { title: a.successTitle, status: endStatus({ succeeded: true, ...a.ending }) };
+    if (a.failed) return { title: a.thing, status: 'error', outcome: resultOutcome(a.failureTitle, a.thing) };
+    if (a.succeeded) {
+        const status = endStatus({ succeeded: true, ...a.ending });
+        return { title: a.thing, status, outcome: resultOutcome(a.successTitle, a.thing) };
+    }
     return { title: a.title };
 }
 

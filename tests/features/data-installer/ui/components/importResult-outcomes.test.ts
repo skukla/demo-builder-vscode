@@ -46,6 +46,7 @@ describe('an import that finished cleanly (walk F134)', () => {
 
         // No `run` (so no steps), no lead, no "Took …", no line: the title alone.
         expect(outcomeOf(record)).toEqual({
+            thing: PACK_NAME,
             variant: 'success',
             title: `${PACK_NAME} Installed`,
             finished: true,
@@ -65,6 +66,7 @@ describe('an import that finished cleanly (walk F134)', () => {
         });
 
         expect(result).toEqual({
+            thing: PACK_NAME,
             variant: 'success',
             title: `${PACK_NAME} Installed`,
             finished: true,
@@ -89,6 +91,7 @@ describe('an import that finished cleanly (walk F134)', () => {
 
     it('is the title alone when there is nothing left to know', () => {
         expect(outcomeOf({ outcome: 'success', perType: done('categories') })).toEqual({
+            thing: PACK_NAME,
             variant: 'success',
             title: `${PACK_NAME} Installed`,
             finished: true,
@@ -119,6 +122,7 @@ describe('an import that finished with a problem (walk F134)', () => {
         };
 
         expect(outcomeOf(record)).toEqual({
+            thing: PACK_NAME,
             variant: 'warning',
             title: `${PACK_NAME} Installed`,
             run: jobRecord(record),
@@ -263,6 +267,7 @@ describe('an ending worded for what the job was for', () => {
 describe('a removal', () => {
     it('calls a reset a REMOVAL, and ends it on the small result', () => {
         expect(outcomeOf({ outcome: 'success', operation: 'reset' })).toEqual({
+            thing: PACK_NAME,
             variant: 'success',
             title: `${PACK_NAME} Uninstalled`,
             finished: true,
@@ -277,6 +282,7 @@ describe('a removal', () => {
         });
 
         expect(result).toEqual({
+            thing: PACK_NAME,
             variant: 'success',
             title: `${PACK_NAME} Uninstalled`,
             message: 'Kept the category Gear: it holds yours.',
@@ -300,6 +306,7 @@ describe('a removal', () => {
                 note: 'Kept the category ZZ Root DB12: ...',
             })
         ).toEqual({
+            thing: PACK_NAME,
             variant: 'warning',
             title: `One Step Left to Uninstall ${PACK_NAME}`,
             message:
@@ -318,6 +325,7 @@ describe('a removal', () => {
         });
 
         expect(resolveResult('reset', recordOnlySources(record))).toEqual({
+            thing: PACK_NAME,
             variant: 'error',
             title: `Couldn't Uninstall ${PACK_NAME}`,
             run: record,

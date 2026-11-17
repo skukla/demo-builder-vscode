@@ -68,9 +68,10 @@ describe('ErpDowntimeDialog', () => {
 
         await open();
 
-        // The title is the outcome, with nothing to start.
-        expect(screen.getByText("Couldn't Read Nordwind")).toBeInTheDocument();
-        expect(document.querySelector('.modal-status-icon')).not.toBeNull();
+        // The title names the ERP, the outcome under the large mark, with nothing to start (walk F222).
+        expect(screen.getByRole('heading')).toHaveTextContent('Nordwind');
+        expect(screen.getByText("Couldn't Read")).toHaveClass('result-outcome');
+        expect(document.querySelector('.result-mark')).toHaveAttribute('data-status', 'error');
         expect(screen.getByText('Adobe sign-in required.')).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: /^start downtime$/i })).toBeNull();
     });

@@ -63,6 +63,7 @@ describe('useIntegrationsScreenActions', () => {
             name: 'API Mesh',
             message: 'deployMesh',
             title: 'Deploying API Mesh',
+            thing: 'API Mesh',
             failureTitle: "Couldn't Deploy API Mesh",
             successTitle: 'API Mesh Deployed',
         });
@@ -129,6 +130,7 @@ describe('useIntegrationsScreenActions', () => {
                     message: 'setProjectDestination',
                     payload: { project, workspace },
                     title: 'Changing Destination',
+                    thing: 'Destination',
                     subject: 'Kukla Mesh, Stage',
                     failureTitle: "Couldn't Change the Destination",
                     successTitle: 'Destination Changed',

@@ -116,8 +116,10 @@ describe.each(CASES)(
         it('says a failed read in the result, as before', async () => {
             await openOn(action, { success: false, error: 'No such project' }, projects);
 
-            const dialog = screen.getByRole('dialog', { name: "Couldn't Read Projects" });
-            expect(dialog).toHaveAttribute('data-status', 'error');
+            // Walk F222: "Projects" as the title, the outcome under the large red mark.
+            const dialog = screen.getByRole('dialog', { name: 'Projects' });
+            expect(dialog.querySelector('.result-mark')).toHaveAttribute('data-status', 'error');
+            expect(within(dialog).getByText("Couldn't Read")).toHaveClass('result-outcome');
             // A result, at the Result layout's small size (it was the run's large window).
             expect(dialog).toHaveAttribute('data-size', 'S');
             expect(dialog).not.toHaveAttribute('data-measuring');

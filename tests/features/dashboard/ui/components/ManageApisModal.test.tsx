@@ -338,15 +338,15 @@ describe('ManageApisModal', () => {
         });
     });
 
-    // A failed read is the title's outcome (dialog design rules), not a big icon in the body.
+    // A failed read is the outcome under the large mark, the dialog's title above it (walk F222).
     describe('a failed read', () => {
         it('offers a Retry on failure that re-fires the fetch', async () => {
             getClient().request.mockResolvedValue({ success: false, error: 'boom' });
             renderModal();
             await flush();
 
-            expect(screen.getByText("Couldn't Load Adobe APIs")).toBeInTheDocument();
-            expect(document.querySelector('.modal-status-icon')).not.toBeNull();
+            expect(screen.getByText("Couldn't Load Adobe APIs")).toHaveClass('result-outcome');
+            expect(document.querySelector('.result-mark')).toHaveAttribute('data-status', 'error');
             expect(screen.getByText('boom')).toBeInTheDocument();
             const callsBefore = getClient().request.mock.calls.length;
 
@@ -371,8 +371,8 @@ describe('ManageApisModal', () => {
             renderModal();
             await flush();
 
-            expect(screen.getByText('Sign In to Adobe')).toBeInTheDocument();
-            expect(document.querySelector('.modal-status-icon')).not.toBeNull();
+            expect(screen.getByText('Sign In to Adobe')).toHaveClass('result-outcome');
+            expect(document.querySelector('.result-mark')).toHaveAttribute('data-status', 'warning');
             expect(screen.getByText(/Adobe sign-in will open in your browser/)).toBeInTheDocument();
             expect(screen.getByRole('button', { name: /sign in with adobe/i })).toBeInTheDocument();
             expect(screen.queryByRole('button', { name: /^retry$/i })).not.toBeInTheDocument();

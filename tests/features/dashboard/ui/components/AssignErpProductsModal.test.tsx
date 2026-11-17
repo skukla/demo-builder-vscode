@@ -269,8 +269,10 @@ describe('AssignErpProductsModal', () => {
     it("says why nothing can be assigned to an ERP whose rule is not erp_owner, and shows no list", async () => {
         const refusal = 'Tailspin ERP owns every product no other ERP claims, not the products tagged with erp_owner.';
         await open({ ...STORE, ownerValue: undefined, refusal });
-        expect(screen.getByText(ASSIGN_COPY.nothingToAssign('Accuform ERP'))).toBeInTheDocument();
-        expect(document.querySelector('.modal-status-icon')).not.toBeNull();
+        // Walk F222: the window's title, the outcome under the large amber mark.
+        expect(screen.getByRole('heading')).toHaveTextContent(ASSIGN_COPY.title('Accuform ERP'));
+        expect(screen.getByText('Nothing to Assign')).toHaveClass('result-outcome');
+        expect(document.querySelector('.result-mark')).toHaveAttribute('data-status', 'warning');
         expect(screen.getByText(refusal)).toBeInTheDocument();
         expect(screen.queryByRole('grid', { name: 'Products' })).toBeNull();
         // Nothing to do here but close.
@@ -286,8 +288,8 @@ describe('AssignErpProductsModal', () => {
         );
         await flush();
         expect(screen.getByText('Adobe Sign-In Required to assign products.')).toBeInTheDocument();
-        expect(screen.getByText(ASSIGN_COPY.readFailed)).toBeInTheDocument();
-        expect(document.querySelector('.modal-status-icon')).not.toBeNull();
+        expect(screen.getByText(ASSIGN_COPY.readFailed)).toHaveClass('result-outcome');
+        expect(document.querySelector('.result-mark')).toHaveAttribute('data-status', 'error');
         expect(screen.queryByRole('button', { name: ASSIGN_COPY.actionIdle })).toBeNull();
     });
 

@@ -21,11 +21,11 @@
  * (2026-10-20) had a group's own tick-all; a project's updates are now ticked one by one or all at
  * once. One sentence under the title, only when a listed update reaches the live site (owner,
  * 2026-11-05). Built from the house pieces: the layouts' windows in one `DialogContainer` (the list a
- * Steps window, the run the Progress layout's, the small result a Result window; step-07 Win1),
+ * Steps window, the run and how it ended the Progress layout's; step-07 Win1),
  * `CheckboxRow`, and the batch window's table classes (`projects-batch.css`).
- * How a run ended is the title with its status icon. A run where every update applied with nothing
- * to read hands off to the small result, "Updates Applied" and only what is left to know; a run
- * with a problem, or a row with something to read, stays on its rows (owner, 2026-11-10, walk F134).
+ * How a run ended is drawn in the run's own window, at its size (owner, 2026-11-17, walk F222): the
+ * title "Updates", the outcome under a large mark ("Applied", "Couldn't Apply"), and the rows under
+ * it, each saying only what is left to read.
  * The list and the run each hold the height they open at (rule 14).
  *
  * @module features/projects-dashboard/ui/components/UpdatesModal
@@ -43,20 +43,23 @@ import {
 } from '../hooks/useUpdatesModal';
 import { endingRowOf, promptButtons } from './runWindowParts';
 import { groupsOf, updatesLiveSite, type RowGroup } from './updateGroups';
-import { UpdatesRunView, waitingLine } from './UpdatesRunView';
+import { UpdatesRunView } from './UpdatesRunView';
+import type { RunOutcome } from '@/core/ui/components/feedback/OperationProgressBody';
 import { OperationQuestion, questionTakesWindow } from '@/core/ui/components/feedback/OperationQuestion';
 import { CheckboxRow } from '@/core/ui/components/selection/CheckboxRow';
 import { LeadText } from '@/core/ui/components/ui/LeadText';
 import type { ActionButton, ModalStatus } from '@/core/ui/components/ui/Modal';
 import { ProgressWindow } from '@/core/ui/components/ui/ProgressDialog';
-import { ResultWindow } from '@/core/ui/components/ui/ResultDialog';
 import { StepsWindow } from '@/core/ui/components/ui/StepsDialog';
-import { type EndingRow, endStatus, endsSmall } from '@/core/ui/utils/runEnding';
+import { resultOutcome } from '@/core/ui/utils/resultWords';
+import { type EndingRow, endStatus } from '@/core/ui/utils/runEnding';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { PendingUpdateRow } from '@/types/pendingUpdates';
 import type { OperationProgressPayload, OperationPrompt } from '@/types/webviewPayloads';
 
 const LIST_TITLE = 'Updates Available';
+/** What the run is about, its title once it ends (walk F222). */
+const RESULT_THING = 'Updates';
 const LIVE_SITE_SENTENCE = 'Storefront updates go to the live site.';
 const NO_ACTIONS: ActionButton[] = [];
 
@@ -147,16 +150,6 @@ function endingRowsOf(rows: PendingUpdateRow[], statuses: RowStatuses): EndingRo
     return [...rows.map((row) => statuses[row.id]), ...Object.values(statuses)].map(endingRowOf);
 }
 
-/**
- * Whether the run ended cleanly, by the shared rule (`endsSmall`): it succeeded with no warning and
- * every row, its local copy steps included, is done with nothing to read under it. Only then does
- * the window leave the rows (walk F134).
- */
-export function endedClean(progress: OperationProgressPayload | null, rows: PendingUpdateRow[], statuses: RowStatuses): boolean {
-    const succeeded = progress?.state === 'succeeded';
-    return endsSmall({ succeeded, warning: progress?.warning, rows: endingRowsOf(rows, statuses) });
-}
-
 /** The window's dismiss button and the buttons beside it. */
 interface Chrome {
     closeLabel?: 'Close' | 'Run in Background' | 'Cancel';
@@ -223,6 +216,16 @@ function ListWindow({ rows, controls, onClose }: { rows: PendingUpdateRow[]; con
     );
 }
 
+/**
+ * Once the run ended, what the body draws: the outcome under the mark, the heading's words with
+ * "Updates" taken out, since an end names the thing as its title (walk F222). None while it runs.
+ */
+function endingOf(progress: OperationProgressPayload | null, heading: Heading): RunOutcome | undefined {
+    if (progress?.state !== 'succeeded' && progress?.state !== 'failed') return undefined;
+    const outcome = resultOutcome(heading.title, RESULT_THING);
+    return heading.status ? { outcome, status: heading.status } : { outcome };
+}
+
 /** A task taking the window (a sign-in): its own heading, amber. */
 function taskHeading(asking: OperationPrompt): Heading {
     return { title: asking.title ?? APPLYING_TITLE, status: 'warning' };
@@ -238,15 +241,16 @@ function RunWindow({ rows, controls, onClose }: { rows: PendingUpdateRow[]; cont
     const takes = asking && questionTakesWindow(asking);
     const heading = takes ? taskHeading(asking) : runHeadingOf(controls.progress, rows, controls.statuses);
     const chrome = runChrome(controls);
+    const ending = endingOf(controls.progress, heading);
     const stream = takes ? (
         <OperationQuestion prompt={asking} onTyped={controls.onTyped} />
     ) : (
-        <UpdatesRunView rows={rows} statuses={controls.statuses} progress={controls.progress} onTyped={controls.onTyped} remaining={controls.remaining} />
+        <UpdatesRunView rows={rows} statuses={controls.statuses} progress={controls.progress} onTyped={controls.onTyped} remaining={controls.remaining} {...(ending ? { ending } : {})} />
     );
     return (
         <ProgressWindow
-            title={heading.title}
-            {...(heading.status ? { status: heading.status } : {})}
+            title={ending ? RESULT_THING : heading.title}
+            {...(!ending && heading.status ? { status: heading.status } : {})}
             stream={stream}
             actions={chrome.actions}
             {...(chrome.closeLabel ? { closeLabel: chrome.closeLabel } : {})}
@@ -257,21 +261,11 @@ function RunWindow({ rows, controls, onClose }: { rows: PendingUpdateRow[]; cont
     );
 }
 
-/** The small result a clean run ends on: its title, and how many updates the SC left for later. */
-function CleanEnd({ controls }: { controls: UpdatesModalControls }) {
-    return (
-        <ResultWindow title={APPLIED_TITLE} status="success" actionButtons={backTo(controls)} onClose={controls.close}>
-            {controls.remaining > 0 ? <LeadText>{waitingLine(controls.remaining)}</LeadText> : null}
-        </ResultWindow>
-    );
-}
-
-/** The window the view shows: the list, the run, or the small result. */
+/** The window the view shows: the list, or the run and how it ended. */
 function UpdatesWindow({ controls, onClose }: { controls: UpdatesModalControls; onClose: () => void }) {
     const { view } = controls;
     if (view.phase === 'closed') return null;
     if (view.phase === 'list') return <ListWindow rows={view.rows} controls={controls} onClose={onClose} />;
-    if (endedClean(controls.progress, view.rows, controls.statuses)) return <CleanEnd controls={controls} />;
     return <RunWindow rows={view.rows} controls={controls} onClose={onClose} />;
 }
 

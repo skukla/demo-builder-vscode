@@ -17,6 +17,7 @@ import React, { useState } from 'react';
 import { FormDialog } from '@/core/ui/components/ui/FormDialog';
 import type { ModalWait } from '@/core/ui/components/ui/Modal';
 import { ResultDialog } from '@/core/ui/components/ui/ResultDialog';
+import { resultOutcome } from '@/core/ui/utils/resultWords';
 import { WAIT_STAGES } from '@/core/utils/waitStages';
 import {
     useErpDemoControls,
@@ -71,7 +72,7 @@ function DowntimeForm({ target, onClose }: {
     // A read that failed has nothing to fill in: the result, with the ERP's words and Close (rule 17).
     if (!state && error) {
         return (
-            <ResultDialog isOpen title={titleOf(target.name, state, error)} status="error" onClose={onClose}>
+            <ResultDialog isOpen title={target.name} outcome={resultOutcome(titleOf(target.name, state, error), target.name)} status="error" onClose={onClose}>
                 {error}
             </ResultDialog>
         );

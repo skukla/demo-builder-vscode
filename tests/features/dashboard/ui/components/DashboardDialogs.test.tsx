@@ -95,6 +95,7 @@ const SYNC_OPERATION: ScreenOperation = {
     title: 'Syncing the Storefront',
     failureTitle: "Couldn't Sync the Storefront",
     successTitle: 'Storefront Synced',
+    thing: 'Storefront',
     run: 1,
     resume: false,
 };

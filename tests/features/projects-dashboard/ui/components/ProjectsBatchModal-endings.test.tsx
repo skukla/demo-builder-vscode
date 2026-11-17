@@ -1,7 +1,7 @@
 /**
- * How the batch window's run ends (rule 17; step-07 follow-up): a run where every project went
- * through ends on the small result, its title alone. Every ending waits for Close (owner,
- * 2026-11-17, walk F195), and closing refreshes the list.
+ * How the batch window's run ends (owner, 2026-11-17, walk F222): in the run's own window, at its
+ * size, "Projects" as the title, the outcome under the large mark and the rows under it. Every
+ * ending waits for Close (walk F195), and closing refreshes the list.
  */
 
 import { act, screen, within } from '@testing-library/react';
@@ -43,11 +43,16 @@ beforeEach(() => {
 });
 
 describe('ProjectsBatchModal: how the run ends', () => {
-    it('keeps the small clean result until Close, which refreshes the list (walk F195)', async () => {
+    it("keeps a clean end in the run's window, its rows under the outcome, until Close, which refreshes the list", async () => {
         const { onClosed, user } = await running();
         for (const path of ['/p/a', '/p/b']) await push('projectsBatchRow', { path, state: 'done' });
         await push('operationProgress', { id: ID, state: 'succeeded' });
-        expect(screen.getByRole('dialog', { name: 'Projects Deleted' })).toHaveAttribute('data-size', 'S');
+        const dialog = screen.getByRole('dialog', { name: 'Projects' });
+        expect(dialog).toHaveAttribute('data-size', 'L');
+        expect(within(dialog).getByText('Deleted')).toHaveClass('result-outcome');
+        expect(dialog.querySelector('.result-mark')).toHaveAttribute('data-status', 'success');
+        expect(within(dialog).getByText('A')).toBeInTheDocument();
+        expect(within(dialog).getByText('B')).toBeInTheDocument();
 
         await glance();
 
@@ -66,7 +71,7 @@ describe('ProjectsBatchModal: how the run ends', () => {
         await glance();
 
         expect(onClosed).not.toHaveBeenCalled();
-        expect(screen.getByRole('dialog', { name: 'Projects Deleted' })).toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: 'Projects' })).toBeInTheDocument();
     });
 });
 

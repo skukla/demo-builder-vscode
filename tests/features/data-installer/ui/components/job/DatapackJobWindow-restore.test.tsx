@@ -23,6 +23,7 @@ import {
     sends,
     settle,
 } from './DatapackJobWindow.testUtils';
+import { findResult } from '../../../../../helpers/resultQueries';
 import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { versionLabel } from '@/features/data-installer/packVersions';
@@ -94,7 +95,7 @@ it('up to date: says so in the small result, which waits for Close, and starts n
     answer({ restore: asked({ upToDate: true, displayName: 'My Luma' }) });
     const { onClose } = await openRestore();
 
-    expect(await heading('My Luma Is Up to Date')).toBeInTheDocument();
+    expect(await findResult('My Luma', 'Up to Date')).toBeInTheDocument();
     expect(screen.queryByTestId('import-run')).toBeNull();
     expect(restoreSends()).toEqual([{ datapackName: 'my-luma' }]);
     // Walk F195 (owner, 2026-11-17): every result waits for Close.
@@ -203,7 +204,7 @@ describe('the run', () => {
         await heading('Restore My Luma?');
         await press(button('Restore'));
 
-        expect(await heading('My Luma Restored')).toBeInTheDocument();
+        expect(await findResult('My Luma', 'Restored')).toBeInTheDocument();
         // Walk F195 (owner, 2026-11-17): every result waits for Close.
         await act(async () => {
             jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 3);
@@ -247,7 +248,7 @@ it('a refusal shows its own words with Close, and opens no run', async () => {
     });
     const { onClose } = await openRestore();
 
-    expect(await heading("Couldn't Restore My Luma")).toBeInTheDocument();
+    expect(await findResult('My Luma', "Couldn't Restore")).toBeInTheDocument();
     expect(screen.getByText(/no record of installing this datapack/u)).toBeInTheDocument();
     expect(screen.queryByTestId('import-run')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Back' })).toBeNull();

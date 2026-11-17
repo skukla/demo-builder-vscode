@@ -30,7 +30,7 @@
  */
 
 import { DialogContainer } from '@adobe/react-spectrum';
-import React from 'react';
+import React, { useState } from 'react';
 import {
     INSTALL,
     jobWords,
@@ -163,15 +163,27 @@ function asideWindow(job: DatapackJob, opened: Opened, close: () => void): React
     return null;
 }
 
+/**
+ * Whether the job's run window has been on screen: its end then stays in it, at its size (owner,
+ * 2026-11-17, walk F222). Held as state, set while rendering the run phase (React's "adjust state
+ * on a prop change" pattern), so a Retry or a Check that runs again keeps it.
+ */
+function useHasRun(phase: string): boolean {
+    const [ran, setRan] = useState(phase === 'run');
+    if (phase === 'run' && !ran) setRan(true);
+    return ran || phase === 'run';
+}
+
 /** The one window the job's phase is on. */
-function windowFor(job: DatapackJob, run: RunShape, opened: Opened, close: () => void, picks: UpdatePicks): React.ReactElement {
+function windowFor(job: DatapackJob, run: RunShape, opened: Opened, close: () => void, picks: UpdatePicks, ran: boolean): React.ReactElement {
     const { phase } = job.state;
     const aside = asideWindow(job, opened, close);
     if (aside) return aside;
-    if (phase === 'no-instance') return <JobResultWindow result={NO_INSTANCE} onClose={close} />;
-    if ((phase === 'done' || phase === 'ended') && job.result && !job.result.run)
-        return <ResultPhase job={job} result={job.result} onClose={close} />;
-    if (phase === 'run' || phase === 'ended') return <RunPhase job={job} run={run} opened={opened} onClose={close} />;
+    if (phase === 'no-instance') return <JobResultWindow result={{ ...NO_INSTANCE, thing: opened.name }} onClose={close} />;
+    const ended = (phase === 'done' || phase === 'ended') && Boolean(job.result);
+    // An end no run came before (what a check found) is a window of its own.
+    if (ended && job.result && !ran) return <ResultPhase job={job} result={job.result} onClose={close} />;
+    if (phase === 'run' || phase === 'ended' || ended) return <RunPhase job={job} run={run} opened={opened} onClose={close} />;
     if (opened.kind === 'restore')
         return <RestorePhase job={job} name={opened.name} onClose={close} />;
     if (opened.kind === 'update') return <UpdateSummary job={job} name={opened.name} picks={picks} onClose={close} />;
@@ -211,9 +223,10 @@ export function DatapackJobWindow(props: DatapackJobWindowProps): React.ReactEle
     };
 
     const picks = useUpdatePicks(job.rows);
+    const hasRun = useHasRun(job.state.phase);
     // An update runs only the types ticked, written over the version installed (step-07 U1).
     const updating = opened.kind === 'update';
     const ran = updating ? job.rows.filter((row) => picks.ticked.has(row.type)).map((row) => row.type) : types;
     const run: RunShape = { name: displayName, version: id.version, types: ran, columns };
-    return <DialogContainer onDismiss={close}>{windowFor(job, run, opened, close, picks)}</DialogContainer>;
+    return <DialogContainer onDismiss={close}>{windowFor(job, run, opened, close, picks, hasRun)}</DialogContainer>;
 }

@@ -1,16 +1,16 @@
 /**
- * A datapack job's small result (step 03, S4): the clean end, "Bodea Installed", which waits for
- * Close like every result (owner, 2026-11-17, walk F195); a start that never ran ("Couldn't
- * Install Bodea" with the refusal, Back to the summary); and no Commerce instance. Lines left to
- * read keep it open, as today's ending rules do (the plan parks Q3 and Q8).
+ * A datapack job's result window when no run came before it (step 03, S4): what a check found
+ * ("Bodea" over "Up to Date"), a start that never ran ("Couldn't Install" with the refusal, Back to
+ * the summary), and no Commerce instance. A run's end stays in the run's window
+ * (`DatapackRunWindow`; owner, 2026-11-17, walk F222). Every result waits for Close (walk F195).
  *
  * @module features/data-installer/ui/components/job/JobResultWindow
  */
 
 import React from 'react';
 import { useOpenAdmin } from '../../hooks/useOpenAdmin';
-import { DatapackResultBody } from '../DatapackResultBody';
-import { type ResultContent, resultStatus } from '../importResult';
+import { datapackResultWords, KeptRootFacts } from '../datapackResultWords';
+import type { ResultContent } from '../importResult';
 import type { ActionButton } from '@/core/ui/components/ui/Modal';
 import { ResultWindow } from '@/core/ui/components/ui/ResultDialog';
 
@@ -27,6 +27,23 @@ export interface JobResultWindowProps {
     onCheck?: () => void;
 }
 
+/**
+ * The Admin step a removal left has its way to the Admin, as the install's step does, and its Check
+ * (walk F153): in this window and in the run's.
+ *
+ * @param result - the end
+ * @param onCheck - runs the uninstall again, when it can
+ * @returns the buttons, none without a kept root
+ */
+export function useKeptRootButtons(result: ResultContent | null, onCheck?: () => void): ActionButton[] {
+    const { opening, openAdmin } = useOpenAdmin();
+    if (!result?.keptRoot) return [];
+    return [
+        { label: 'Open Admin', variant: 'secondary', onPress: openAdmin, isPending: opening },
+        ...(onCheck ? [{ label: 'Check', variant: 'accent' as const, onPress: onCheck }] : []),
+    ];
+}
+
 export function JobResultWindow({
     result,
     actionButtons,
@@ -34,23 +51,15 @@ export function JobResultWindow({
     problem,
     onCheck,
 }: JobResultWindowProps): React.ReactElement {
-    // The Admin step a removal left has its way to the Admin, as the install's step does (walk F153).
-    const { opening, openAdmin } = useOpenAdmin();
-    const admin: ActionButton[] = result.keptRoot
-        ? [
-              { label: 'Open Admin', variant: 'secondary', onPress: openAdmin, isPending: opening },
-              ...(onCheck ? [{ label: 'Check', variant: 'accent' as const, onPress: onCheck }] : []),
-          ]
-        : [];
+    const admin = useKeptRootButtons(result, onCheck);
     return (
         <ResultWindow
-            title={result.title}
-            status={resultStatus(result)}
+            {...datapackResultWords(result)}
             holdsAdminPath={Boolean(result.keptRoot)}
             actionButtons={[...admin, ...(actionButtons ?? [])]}
             onClose={onClose}
         >
-            <DatapackResultBody result={result} />
+            <KeptRootFacts result={result} />
             {problem ? <p className="dialog-problem text-notice">{problem}</p> : null}
         </ResultWindow>
     );

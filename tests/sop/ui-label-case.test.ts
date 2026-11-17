@@ -71,8 +71,13 @@ const LEDGER: Readonly<Record<string, Reason>> = {
  * Cancel (`promptCloseLabel`), so the same button no longer draws twice beside Cancel.
  * 79 -> 80 on 2026-11-16 (a clean finish ends small, owner): the progress window's small result
  * (`SmallEnd`) takes the run's result title, the same words the streamed window already showed.
+ * 80 -> 78 on 2026-11-17 (walk F222, results take the wizard's look): `SmallEnd` and the batch's
+ * clean result went with "a clean finish ends small", the batch's failed read is titled with the
+ * literal kind (`PROJECTS_KIND`), and Manage APIs' two no-list results are one window. A result's
+ * title is now the thing it is about, often a name from the SC, so the remaining runtime titles are
+ * names, not outcomes.
  */
-const DYNAMIC_PIN = 80;
+const DYNAMIC_PIN = 78;
 
 /**
  * The six dialog layouts (the Steps layout joined 2026-11-11) hand their caller's words on to Modal (`title={title}`). Those words are

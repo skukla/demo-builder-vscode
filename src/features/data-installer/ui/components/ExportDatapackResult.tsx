@@ -1,6 +1,7 @@
 /**
- * The export screen's result: what the export did, per type. `exportResult` words it, because its
- * outcome is the dialog's title; `ExportDatapackResult` is the body under that title.
+ * The export screen's result: what the export did, per type. `exportResult` words it; the result
+ * window draws its outcome and lines (`datapackResultWords`), and `ExportDatapackResult` is what it
+ * adds under them: Save as file, once something was captured.
  *
  * The `reason` line is the point of this view. The service reports a failed export as an
  * all-zero count with no explanation unless `verbose` is asked for; the client asks, so the
@@ -11,7 +12,6 @@
 
 import React from 'react';
 import { dataTypeLabel } from '../dataTypeLabel';
-import { DatapackResultBody } from './DatapackResultBody';
 import type { ResultContent } from './importResult';
 import { SaveDatapackFileButton } from './SaveDatapackFileButton';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
@@ -63,16 +63,10 @@ export function exportResult(outcome: ExportOutcome | null, error?: string): Res
     };
 }
 
-/** What is left under the title: the per-type lines, and Save as file once something was captured. */
-export function ExportDatapackResult({ result, savable, source }: {
-    result: ResultContent;
+/** What is left under the per-type lines: Save as file, once something was captured. */
+export function ExportDatapackResult({ savable, source }: {
     savable: DatapackId | null;
     source: DatapackStoreName;
-}): React.JSX.Element {
-    return (
-        <>
-            <DatapackResultBody result={result} />
-            {savable ? <SaveDatapackFileButton id={savable} source={source} /> : null}
-        </>
-    );
+}): React.JSX.Element | null {
+    return savable ? <SaveDatapackFileButton id={savable} source={source} /> : null;
 }

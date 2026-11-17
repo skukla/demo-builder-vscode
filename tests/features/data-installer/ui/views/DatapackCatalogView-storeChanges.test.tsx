@@ -14,6 +14,7 @@
 
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import { change, press, settle } from '../../../../helpers/reactSettle';
+import { findResult } from '../../../../helpers/resultQueries';
 import { mockOnMessage } from '../../../../helpers/webviewClientMock';
 import '@testing-library/jest-dom';
 import { CATALOG, DatapackCatalogView, INVENTORY_COMPLETE, makeSummary, mockPost, mockRequest } from './DatapackCatalogView.testUtils';
@@ -232,7 +233,7 @@ describe('saving the demo\'s datapack', () => {
 
         await push({ id: 'datapack-save', state: 'succeeded' });
 
-        expect(await screen.findByRole('heading', { name: /Saved as Luma Holiday$/u })).toBeInTheDocument();
+        expect(await findResult('Luma Holiday', 'Saved')).toBeInTheDocument();
     });
 
     it('reads the catalog again when the save finishes, once, without waiting for Close', async () => {
@@ -257,7 +258,7 @@ describe('saving the demo\'s datapack', () => {
 
         await push({ id: 'datapack-save', state: 'succeeded' });
 
-        expect(await screen.findByRole('heading', { name: /^Acme Bodea Updated$/u })).toBeInTheDocument();
+        expect(await findResult('Acme Bodea', 'Updated')).toBeInTheDocument();
         expect(screen.queryByRole('heading', { name: /Acme Bodea Saved/u })).not.toBeInTheDocument();
     });
 });
@@ -266,7 +267,7 @@ describe('saving the demo\'s datapack', () => {
 // Save ▾ on the SC's own, Save As New on someone else's, Create with no install record (step-07 P3).
 describe('the header button', () => {
     // Create is two windows (step-04 S3; J3-2): the picks, everything ticked, then the name; the run
-    // ends on "Acme Test Created" (P4-Q1, rule 21: the thing first).
+    // ends on "Acme Test" over "Created" (P4-Q1; walk F222: the thing is the title).
     it('reads Create while the demo has no datapack, and creates from the picks under the name typed', async () => {
         store(undefined);
         const answering = mockRequest.getMockImplementation();
@@ -298,7 +299,7 @@ describe('the header button', () => {
             progress: 'modal',
         });
         await push({ id: 'datapack-save', state: 'succeeded' });
-        expect(await screen.findByRole('heading', { name: /Acme Test Created$/u })).toBeInTheDocument();
+        expect(await findResult('Acme Test', 'Created')).toBeInTheDocument();
     });
 
     // Step-07 P3 (owner, 2026-11-14, rule 6): Create where Save would be, and no line saying why.

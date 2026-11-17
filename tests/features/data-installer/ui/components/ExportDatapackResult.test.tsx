@@ -1,5 +1,6 @@
 /**
- * An export's result: the title says how it went, and the lines what each type did.
+ * An export's result: the outcome says how it went, and the lines what each type did, drawn in the
+ * shared result body (walk F222) with Save as File under them.
  *
  * Moved here from the Create Datapack window's suite, which drove the Data Installer service's own
  * export, deleted on 2026-11-06 (DI-12). An ACO pack's outcome has the same shape and lands here.
@@ -13,7 +14,9 @@ import '@testing-library/jest-dom';
 import { press } from '../../../../helpers/reactSettle';
 
 // Below the mock import on purpose — see webview-test-authoring §3.
+import { ResultBody } from '@/core/ui/components/feedback/ResultBody';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { datapackResultWords } from '@/features/data-installer/ui/components/datapackResultWords';
 import {
     ExportDatapackResult,
     exportResult,
@@ -35,12 +38,11 @@ function renderResult(
     success = true,
     savable: typeof PACK | null = null
 ) {
+    const { outcome, status, lines } = datapackResultWords(exportResult({ success, perType }));
     render(
-        <ExportDatapackResult
-            result={exportResult({ success, perType })}
-            savable={savable}
-            source="library"
-        />
+        <ResultBody outcome={outcome} {...(status ? { status } : {})} lines={lines}>
+            <ExportDatapackResult savable={savable} source="library" />
+        </ResultBody>
     );
 }
 

@@ -20,6 +20,7 @@ const OPERATION: StartableOperation = {
     title: 'Republishing storefront',
     failureTitle: "Couldn't Republish the Storefront",
     successTitle: 'Storefront Republished',
+    thing: 'Storefront',
 };
 
 function push(payload: Record<string, unknown>): void {

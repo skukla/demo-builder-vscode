@@ -1,6 +1,8 @@
 /**
- * The one rule for whether a run ends on the small result: the outcome as the title and only what
- * is left to know, with the run's rows gone (owner, 2026-11-10, walk F134; plan step-03 S1).
+ * The one rule for whether a run ended clean: nothing to read under its outcome but its sentence, so
+ * the rows of a run of one thing are left out (owner, 2026-11-10, walk F134; plan step-03 S1). It no
+ * longer changes the window's size: a result keeps the run's window (owner, 2026-11-17, walk F222,
+ * over "a clean finish ends small").
  *
  * Four windows decided this on their own until 2026-11-12 (the import, the Updates run, the projects
  * batch run and the progress window) and disagreed: the progress window looked only at the run's
@@ -41,12 +43,12 @@ export interface RunEnding {
 }
 
 /**
- * Whether the run ends small: it succeeded, has no warning, and no row has a problem or a note.
+ * Whether the run ended clean: it succeeded, has no warning, and no row has a problem or a note.
  *
  * @param run - how the run ended, with its rows
- * @returns true when the window should leave the rows for the small result
+ * @returns true when its rows have nothing to say under the outcome
  */
-export function endsSmall(run: RunEnding): boolean {
+export function endsClean(run: RunEnding): boolean {
     return run.succeeded && !run.warning && everyRow(run.rows).every((row) => !row.problem && !row.note);
 }
 

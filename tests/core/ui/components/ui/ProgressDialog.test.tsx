@@ -1,7 +1,9 @@
 /**
  * ProgressDialog: the one way a run is drawn (dialog design rules). It waits or shows its steps as
  * rows, keeps its size from start to finish, offers Close and nothing else while it runs, puts its
- * one action beside Close once it ends, and waits for Close however it ended (walk F195).
+ * one action beside Close once it ends, and waits for Close however it ended (walk F195). Its end
+ * names the thing in the title and draws the outcome in the body under a large mark, with no icon in
+ * the title (owner, 2026-11-17, walk F222).
  * The real Modal over the shared Spectrum mock.
  */
 
@@ -57,7 +59,7 @@ describe('ProgressDialog', () => {
 
     it('keeps the size it waited at for its result', () => {
         const { rerender } = renderProgress({ waiting: { label: 'Installing My Luma' } });
-        rerender({ title: 'My Luma Installed', status: 'success', children: 'Open the store to see it.' });
+        rerender({ title: 'My Luma', outcome: 'Installed', status: 'success', children: 'Open the store to see it.' });
 
         expect(screen.getByRole('dialog')).toHaveAttribute('data-size', 'S');
     });
@@ -73,7 +75,7 @@ describe('ProgressDialog', () => {
 
     it('keeps the size of its rows for its result', () => {
         const { rerender } = renderProgress({ rows: ROWS });
-        rerender({ rows: ROWS, title: "Couldn't Install My Luma", status: 'error' });
+        rerender({ rows: ROWS, title: 'My Luma', outcome: "Couldn't Install", status: 'error' });
 
         expect(screen.getByRole('dialog')).toHaveAttribute('data-size', 'M');
     });
@@ -85,18 +87,22 @@ describe('ProgressDialog', () => {
         expect(document.querySelector('.modal-status-icon')).toBeNull();
     });
 
-    it('once ended, shows its status, its lines, and its one action after Close', () => {
+    it('once ended, names the thing, draws the outcome under its mark, its lines, and its one action after Close', () => {
         const onPress = jest.fn();
         renderProgress({
             rows: ROWS,
-            title: "Couldn't Install My Luma",
+            title: 'My Luma',
+            outcome: "Couldn't Install",
             status: 'error',
             children: ['Verify failed.', 'Open the log to see why.'],
             action: { label: 'Retry', onPress },
         });
 
-        expect(document.querySelector('.modal-status-icon')).not.toBeNull();
-        const lines = Array.from(document.querySelectorAll('.dialog-stack > .dialog-rows > .dialog-line'));
+        expect(document.querySelector('.modal-status-icon')).toBeNull();
+        expect(screen.getByRole('heading')).toHaveTextContent(/^My Luma$/u);
+        expect(document.querySelector('.result-mark')).toHaveAttribute('data-status', 'error');
+        expect(screen.getByText("Couldn't Install")).toHaveClass('result-outcome');
+        const lines = Array.from(document.querySelectorAll('.result-detail > .dialog-line'));
         expect(lines.map((line) => line.textContent)).toEqual(['Verify failed.', 'Open the log to see why.']);
         expect(buttonNames()).toEqual(['Close', 'Retry']);
         expect(screen.getByRole('dialog')).toHaveAttribute('data-size', 'M');
@@ -121,7 +127,7 @@ describe('ProgressDialog', () => {
 
     // Walk F195 (owner, 2026-11-17): a clean end with nothing to read waits for Close too.
     it('waits for Close after it ended clean with nothing to read', () => {
-        const { onClose } = renderProgress({ rows: ROWS, title: 'My Luma Installed', status: 'success' });
+        const { onClose } = renderProgress({ rows: ROWS, title: 'My Luma', outcome: 'Installed', status: 'success' });
 
         act(() => {
             jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 3);
@@ -177,13 +183,13 @@ describe('ProgressDialog', () => {
         });
 
         it('keeps a medium window for its result', () => {
-            renderProgress({ stream, title: 'Pages Published', status: 'success' });
+            renderProgress({ stream, title: 'Pages' });
 
             expect(screen.getByRole('dialog')).toHaveAttribute('data-size', 'M');
         });
 
         it('waits for Close after it ended clean with nothing to read', () => {
-            const { onClose } = renderProgress({ stream, title: 'Pages Published', status: 'success' });
+            const { onClose } = renderProgress({ stream, title: 'Pages' });
 
             act(() => {
                 jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 3);

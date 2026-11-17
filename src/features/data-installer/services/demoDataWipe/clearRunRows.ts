@@ -8,7 +8,7 @@
  * How it ended goes on the rows, each orange on its own: part of a step Commerce refused, orders left
  * open with a note (payment review), list settings only the Admin resets, the ERP not brought in line,
  * and part of the datapack left in Commerce on purpose. The house rule decides from them whether the
- * window ends small (`endsSmall`, rule 17). Pure: no Commerce, no VS Code.
+ * rows show under the outcome (`endsClean`, rule 17). Pure: no Commerce, no VS Code.
  *
  * @module features/data-installer/services/demoDataWipe/clearRunRows
  */

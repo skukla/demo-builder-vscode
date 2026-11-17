@@ -18,6 +18,7 @@ export const REPUBLISH_OPERATION: StartableOperation = {
     name: 'storefront',
     message: 'republish-storefront',
     title: 'Republishing Storefront',
+    thing: 'Storefront',
     failureTitle: "Couldn't Republish the Storefront",
     successTitle: 'Storefront Republished',
 };

@@ -248,6 +248,7 @@ function ProjectsDashboardApp() {
             name: 'settings',
             message: 'copyFromExisting',
             title: 'Copy Settings from a Project',
+            thing: 'Settings',
             failureTitle: "Couldn't Copy the Settings",
             successTitle: 'Settings Copied',
         });

@@ -29,6 +29,7 @@ import {
     settle,
     shownStep,
 } from './DatapackJobWindow.testUtils';
+import { findResult } from '../../../../../helpers/resultQueries';
 import { webviewClientHandlers } from '../../../../../helpers/webviewClientMock';
 import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -287,7 +288,7 @@ describe('Uninstall with nothing changed', () => {
         await heading('Uninstall My Luma?');
         await press(button('Uninstall'));
 
-        expect(await heading('My Luma Uninstalled')).toBeInTheDocument();
+        expect(await findResult('My Luma', 'Uninstalled')).toBeInTheDocument();
     });
 
     it('ends clean on "My Luma Uninstalled", which waits for Close', async () => {
@@ -302,7 +303,7 @@ describe('Uninstall with nothing changed', () => {
         await heading('Uninstall My Luma?');
         await press(button('Uninstall'));
 
-        expect(await heading('My Luma Uninstalled')).toBeInTheDocument();
+        expect(await findResult('My Luma', 'Uninstalled')).toBeInTheDocument();
         expect(screen.queryByTestId('import-run')).toBeNull();
         expect(screen.queryByRole('button', { name: 'Back' })).toBeNull();
         // Walk F195 (owner, 2026-11-17): every result waits for Close.
@@ -326,7 +327,7 @@ describe('Uninstall with nothing changed', () => {
         await heading('Uninstall My Luma?');
         await press(button('Uninstall'));
 
-        expect(await heading("Couldn't Uninstall My Luma")).toBeInTheDocument();
+        expect(await findResult('My Luma', "Couldn't Uninstall")).toBeInTheDocument();
         expect(
             within(screen.getByTestId('import-run')).getByText(
                 'Commerce refused the category Gear.'
@@ -357,7 +358,7 @@ describe('Uninstall with nothing changed', () => {
         await heading('Uninstall My Luma?');
         await press(button('Uninstall'));
 
-        expect(await heading('One Step Left to Uninstall My Luma')).toBeInTheDocument();
+        expect(await findResult('My Luma', 'One Step Left to Uninstall')).toBeInTheDocument();
         await act(async () => {
             jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE);
         });
@@ -370,7 +371,7 @@ describe('Uninstall with nothing changed', () => {
         await heading('Uninstall My Luma?');
         await press(button('Uninstall'));
 
-        expect(await heading("Couldn't Uninstall My Luma")).toBeInTheDocument();
+        expect(await findResult('My Luma', "Couldn't Uninstall")).toBeInTheDocument();
         expect(screen.getByText('The service said no.')).toBeInTheDocument();
         await press(button('Back'));
         expect(await heading('Uninstall My Luma?')).toBeInTheDocument();
@@ -451,7 +452,7 @@ describe('Save Your Changes First?', () => {
         await press(button('Save and Uninstall'));
         await settle();
 
-        expect(await heading("Couldn't Uninstall My Luma")).toBeInTheDocument();
+        expect(await findResult('My Luma', "Couldn't Uninstall")).toBeInTheDocument();
         expect(within(screen.getByTestId('import-run')).getByText('Saved to My Luma')).toBeInTheDocument();
     });
 
@@ -507,7 +508,7 @@ describe('Save Your Changes First?', () => {
         });
         await press(button('Save and Uninstall'));
 
-        expect(await heading("Couldn't Save Changes")).toBeInTheDocument();
+        expect(await findResult('My Luma', "Couldn't Save Changes")).toBeInTheDocument();
         expect(screen.getByText('Nothing was uninstalled.')).toBeInTheDocument();
         await press(button('Back'));
 

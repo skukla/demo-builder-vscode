@@ -74,6 +74,7 @@ describe('ErpAssignDialogs', () => {
             message: 'undoErpAssignment',
             payload: { erp: 'demo-erp-2', confirm: true },
             title: "Undoing Accuform ERP's Last Assignment",
+            thing: "Accuform ERP's Last Assignment",
             failureTitle: "Couldn't Undo Accuform ERP's Last Assignment",
             successTitle: "Accuform ERP's Last Assignment Undone",
         });

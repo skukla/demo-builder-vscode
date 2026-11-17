@@ -85,14 +85,15 @@ const VERBS: Partial<
 function titlesFor(
     action: CardAction,
     name: string,
-): Pick<ScreenOperation, 'title' | 'failureTitle' | 'successTitle'> {
+): Pick<ScreenOperation, 'title' | 'thing' | 'failureTitle' | 'successTitle'> {
     const verb = VERBS[action];
     if (!verb) {
-        return { title: name, failureTitle: `${name} Did Not Finish`, successTitle: `${name} Finished` };
+        return { title: name, thing: name, failureTitle: `${name} Did Not Finish`, successTitle: `${name} Finished` };
     }
     const suffix = verb.suffix ?? '';
     return {
         title: `${verb.running} ${name}${suffix}`,
+        thing: name,
         failureTitle: `Couldn't ${titleWord(verb.base)} ${name}${suffix}`,
         successTitle: `${name}${suffix} ${titleWord(verb.done)}`,
     };
@@ -142,6 +143,7 @@ export function useComponentOperation(): ComponentOperationControls {
                 name: 'the ERPs',
                 message: 'resetErpRecords',
                 title: 'Resetting the ERPs',
+                thing: 'ERPs',
                 failureTitle: "Couldn't Reset the ERPs",
                 successTitle: 'ERPs Reset',
             });
@@ -160,6 +162,7 @@ export function useComponentOperation(): ComponentOperationControls {
                 name: erpName,
                 message: 'loadErpDemoData',
                 title: `Filling ${erpName} from Commerce`,
+                thing: erpName,
                 failureTitle: `Couldn't Fill ${erpName} from Commerce`,
                 successTitle: `${erpName} Filled from Commerce`,
             });
@@ -189,6 +192,7 @@ export function useComponentOperation(): ComponentOperationControls {
                 message: 'addAppBuilderComponent',
                 payload,
                 title: `Adding ${name}`,
+                thing: name,
                 failureTitle: `Couldn't Add ${name}`,
                 successTitle: `${name} Added`,
             });
@@ -209,6 +213,7 @@ export function useComponentOperation(): ComponentOperationControls {
                 // The SC confirmed in the dialog; without it the handler only previews (AB-75).
                 payload: { name: erpName, owns, confirm: true },
                 title: `Adding ${erpName}`,
+                thing: erpName,
                 failureTitle: `Couldn't Add ${erpName}`,
                 successTitle: `${erpName} Added`,
             });

@@ -4,8 +4,9 @@
  *
  * The one `tookValue` call, so the one-minute rule and the wording have one home: "Took 3 minutes,
  * 12 seconds" as the house's quiet `dialog-note`, the last line of the body, only for a run of a
- * minute or more. A host draws this only while the window stays open: a run that ends small
- * (`endsSmall`) shows no Took (owner, 2026-11-10).
+ * minute or more. A result keeps the run's window, so every end of a long run says it (owner,
+ * 2026-11-17, walk F222, over 2026-11-10's "a run that ends small shows no Took"). `ResultBody`
+ * draws it under the outcome.
  *
  * Four windows hand-rolled this until 2026-11-12: the import's run (`ImportRunView`), the progress
  * window (`OperationProgressBody`), the projects batch run and the datapack result body.

@@ -26,6 +26,7 @@ import {
     PROJECT_SCOPE,
 } from './DatapackJobWindow.testUtils';
 import { MATCHING_PREVIEW } from '../../../../../helpers/changePreviewFixtures';
+import { findResult } from '../../../../../helpers/resultQueries';
 import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { windowRoute } from '@/features/data-installer/ui/hooks/useImportWindow';
@@ -85,7 +86,7 @@ describe('a datapack the store already matches', () => {
         answer({ preview: { success: true, data: MATCHING_PREVIEW } });
         const { onClose } = await openOnSummary();
 
-        expect(await heading('Bodea Is Up to Date')).toBeInTheDocument();
+        expect(await findResult('Bodea', 'Up to Date')).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Install' })).not.toBeInTheDocument();
         expect(sends('start-datapack-import')).toBe(0);
         // Walk F195 (owner, 2026-11-17): every result waits for Close.
@@ -135,7 +136,7 @@ describe('the summary', () => {
         answer({ target: { success: true, data: { projectName: 'demo-1' } } });
         await openOnSummary();
 
-        expect(await heading('No Commerce Instance')).toBeInTheDocument();
+        expect(await findResult('Bodea', 'No Commerce Instance')).toBeInTheDocument();
         expect(screen.getByText(/Connect Commerce on the project dashboard/)).toBeInTheDocument();
         expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual(['Close']);
     });
@@ -226,12 +227,16 @@ describe('Install', () => {
         expect(onClose).toHaveBeenCalledTimes(1);
     });
 
-    it('ends clean on the small result, which waits for Close', async () => {
+    // Owner, 2026-11-17 (walk F222): the result keeps the run's window, its title the datapack and
+    // the outcome under a large mark in the body.
+    it('ends clean in the run\'s own window, the outcome under its mark, and waits for Close', async () => {
         const { onClose } = await openOnSummary();
 
         await press(button('Install'));
 
-        expect(await heading('Bodea Installed')).toBeInTheDocument();
+        expect(await heading('Bodea')).toBeInTheDocument();
+        expect(screen.getByText('Installed')).toHaveClass('result-outcome');
+        expect(screen.getByRole('dialog')).toHaveAttribute('data-size', 'L');
         expect(screen.queryByTestId('import-run')).not.toBeInTheDocument();
         // Walk F195 (owner, 2026-11-17): every result waits for Close.
         await act(async () => {
@@ -255,7 +260,7 @@ describe('Install', () => {
         await openOnSummary();
         await press(button('Install'));
 
-        expect(await heading("Couldn't Install Bodea")).toBeInTheDocument();
+        expect(await findResult('Bodea', "Couldn't Install")).toBeInTheDocument();
         expect(screen.getByTestId('import-run')).toBeInTheDocument();
         expect(screen.getByText('Commerce did not respond.')).toBeInTheDocument();
 
@@ -272,7 +277,7 @@ describe('Install', () => {
 
         await press(button('Install'));
 
-        expect(await heading("Couldn't Install Bodea")).toBeInTheDocument();
+        expect(await findResult('Bodea', "Couldn't Install")).toBeInTheDocument();
         expect(screen.getByText(/Must provide one of/)).toBeInTheDocument();
     });
 });
@@ -283,7 +288,7 @@ describe('Dry Run', () => {
 
         await press(button('Dry Run'));
 
-        expect(await heading('Dry Run Passed')).toBeInTheDocument();
+        expect(await findResult('Bodea', 'Dry Run Passed')).toBeInTheDocument();
         expect(
             screen.getByText('Bodea can be installed here. Nothing was written.')
         ).toBeInTheDocument();
@@ -315,7 +320,7 @@ describe('Dry Run', () => {
 
         await press(button('Dry Run'));
 
-        expect(await heading('Dry Run Found a Problem')).toBeInTheDocument();
+        expect(await findResult('Bodea', 'Dry Run Found a Problem')).toBeInTheDocument();
         expect(screen.getByText(/attribute set Commerce doesn't have/)).toBeInTheDocument();
         const names = screen.getAllByRole('button').map((b) => b.textContent);
         expect(names.slice(-3)).toEqual(['Close', 'Back', 'Fix with AI']);
@@ -335,7 +340,7 @@ describe('Dry Run', () => {
         answer(PROBLEM);
         await openOnSummary();
         await press(button('Dry Run'));
-        await heading('Dry Run Found a Problem');
+        await findResult('Bodea', 'Dry Run Found a Problem');
 
         await press(button('Fix with AI'));
 
@@ -353,7 +358,7 @@ describe('Dry Run', () => {
         );
         await openOnSummary();
         await press(button('Dry Run'));
-        await heading('Dry Run Found a Problem');
+        await findResult('Bodea', 'Dry Run Found a Problem');
 
         await press(button('Fix with AI'));
 
@@ -365,7 +370,7 @@ describe('Dry Run', () => {
         await openOnSummary();
         await press(button('Dry Run'));
 
-        expect(await heading('Dry Run Failed')).toBeInTheDocument();
+        expect(await findResult('Bodea', 'Dry Run Failed')).toBeInTheDocument();
         await press(button('Retry'));
 
         expect(sends('validate-datapack-import')).toBe(2);
@@ -377,12 +382,12 @@ describe('Dry Run', () => {
         answer({ start: { success: false, error: 'Refused.' } });
         await openOnSummary();
         await press(button('Install'));
-        expect(await heading("Couldn't Install Bodea")).toBeInTheDocument();
+        expect(await findResult('Bodea', "Couldn't Install")).toBeInTheDocument();
         await press(button('Back'));
 
         await press(button('Dry Run'));
 
-        expect(await heading('Dry Run Passed')).toBeInTheDocument();
+        expect(await findResult('Bodea', 'Dry Run Passed')).toBeInTheDocument();
     });
 });
 
@@ -414,7 +419,7 @@ describe('a window opened on a running job', () => {
         await settle();
         await settle();
 
-        expect(await heading('Last Save Undone')).toBeInTheDocument();
+        expect(await findResult('My Luma', 'Last Save Undone')).toBeInTheDocument();
     });
 
     it('an install window that finds a job running picks it up at its run', async () => {

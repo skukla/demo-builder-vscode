@@ -17,7 +17,7 @@ import type { ChangePreview } from '../../services/demoBuilderEngine/storeChange
 import { FINISHING_STOP, type ImportJobRecord, type KeptRootStep, SAVE_STOP } from '../../types';
 import type { DataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import type { ModalStatus } from '@/core/ui/components/ui/Modal';
-import { endStatus, endsSmall, type RunEnding } from '@/core/ui/utils/runEnding';
+import { endStatus, endsClean, type RunEnding } from '@/core/ui/utils/runEnding';
 import { jobPurpose, jobWords } from '@/features/data-installer/datapackWords';
 import { ErrorCode } from '@/types/errorCodes';
 
@@ -26,13 +26,19 @@ export type LastAction = 'dryRun' | 'start' | 'reset';
 
 /**
  * One rendered outcome, whatever produced it, in the dialog design rules' result shape
- * (`docs/development/sop/dialog-design.md`): the outcome as the dialog's title, with its status as
- * an icon before it, then only what is left to know or do.
+ * (`docs/development/sop/dialog-design.md`): the thing as the window's title, then the outcome under
+ * a large mark in the body, then only what is left to know or do (owner, 2026-11-17, walk F222).
  */
 export interface ResultContent {
-    /** The title's status icon; `info` has none (stopping watching is neither good nor bad). */
+    /** The mark's status; `info` has none (stopping watching is neither good nor bad). */
     variant: 'success' | 'warning' | 'error' | 'info';
+    /**
+     * The result as one sentence, "Bodea Installed", as a notification says it; the window shows it
+     * split at `thing` (`resultOutcome`).
+     */
     title: string;
+    /** What it is about, the window's title: the datapack's name. */
+    thing?: string;
     message?: string;
     details?: string[];
     /** How long the job ran, when it reported it. */
@@ -44,7 +50,7 @@ export interface ResultContent {
     /**
      * An import Demo Builder's engine ran that ended with a problem or a stop: the window keeps its
      * steps and draws the ending under them, from this record. A clean finish has none and shows as
-     * the small result (owner, 2026-11-10, walk F134).
+     * the result without them (owner, 2026-11-10, walk F134).
      */
     run?: ImportJobRecord;
     /** The import ran to its end, cleanly or not: the window closes, with nothing to go back to (walk F117). */
@@ -77,11 +83,11 @@ export function resultStatus(result: ResultContent): ModalStatus | undefined {
 }
 
 /**
- * "Bodea Is Up to Date": a check that found nothing to do, the small result. One
+ * "Bodea Is Up to Date": a check that found nothing to do, a result of its own. One
  * result for Restore, Update and an install of what the store already matches (owner walk Q8).
  */
 export function upToDateResult(name: string): ResultContent {
-    return { variant: 'success', title: `${name} Is Up to Date`, finished: true };
+    return { variant: 'success', title: `${name} Is Up to Date`, thing: name, finished: true };
 }
 
 /**
@@ -135,6 +141,13 @@ export function resolveResult(
         replacing?: { name: string; dataTypes: string[] };
     },
 ): ResultContent | null {
+    const result = resolveUnnamed(lastAction, sources);
+    // Every outcome is about the datapack: its name is the window's title (walk F222).
+    return result ? { thing: sources.name, ...result } : null;
+}
+
+/** The outcome, before it is named for its window. */
+function resolveUnnamed(lastAction: LastAction | null, sources: Parameters<typeof resolveResult>[1]): ResultContent | null {
     const { name, dryRun, start, reset, record, startedActivation } = sources;
 
     switch (lastAction) {
@@ -221,7 +234,7 @@ function leftToKnow(record: ImportJobRecord): Pick<ResultContent, 'details'> {
 /**
  * The import as the shared ending rules read it: a data type that failed is a row's problem, and so is
  * a row's note, which is the rows Commerce refused (`rowNotesOf`); a check that differs is the run's
- * warning. What it kept of the SC's is not here: those lines are the small result's to read, green
+ * warning. What it kept of the SC's is not here: those lines are the result's to read, green
  * (`leftToKnow`).
  */
 function endingOf(record: ImportJobRecord, ranToEnd: boolean): RunEnding {
@@ -235,8 +248,8 @@ function endingOf(record: ImportJobRecord, ranToEnd: boolean): RunEnding {
 }
 
 /**
- * An import's ending (owner, 2026-11-10, walk F134). A clean finish hands off to the small result:
- * "My Luma Installed", then only what is left to know (`leftToKnow`). Only a problem keeps the steps:
+ * An import's ending (owner, 2026-11-10, walk F134). A clean finish leaves its steps out: "My Luma"
+ * over "Installed", then only what is left to know (`leftToKnow`). Only a problem keeps the steps:
  * the same title in amber, how long search takes and "Took …" under them, with Fix with AI. A run that
  * stopped is its failed title, "Couldn't Install My Luma", on its steps, with Retry while a retry can
  * get past the stop, else Fix with AI. Every title is the job's (`jobWords`), by what it was for. It ran to the end when nothing failed but the store configuration, which
@@ -253,7 +266,7 @@ function runResult(record: ImportJobRecord, name: string, retries: number): Resu
     }
     const title = words.done;
     const ending = endingOf(record, ranToEnd);
-    if (endsSmall(ending)) return { variant: 'success', title, finished: true, ...leftToKnow(record) };
+    if (endsClean(ending)) return { variant: 'success', title, finished: true, ...leftToKnow(record) };
     const lead = record.searchDelay ? { lead: record.searchDelay } : {};
     // Coloured by the one amber rule (`endStatus`), as every run window's end is.
     return { variant: endStatus(ending), title, run: record, finished: true, action: 'fix', ...lead, ...took };
@@ -261,7 +274,7 @@ function runResult(record: ImportJobRecord, name: string, retries: number): Resu
 
 /**
  * An uninstall's ending, on its steps like an install's (step 03, S7; decisions J5-2). A clean one
- * is the small result, "My Luma Uninstalled", the kept root's Admin step when the store kept it; the
+ * is "My Luma" over "Uninstalled", the kept root's Admin step when the store kept it; the
  * save made first is not repeated, its own step said where (rule 3). One that stopped, or left part
  * of the datapack behind, stays on its steps as "Couldn't Uninstall My Luma", with Retry: uninstalling
  * again tries what is left again.

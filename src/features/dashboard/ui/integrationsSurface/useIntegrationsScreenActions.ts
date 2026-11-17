@@ -30,6 +30,7 @@ export const MESH_OPERATION: Omit<ComponentOperation, 'run' | 'resume'> = {
     name: 'API Mesh',
     message: 'deployMesh',
     title: 'Deploying API Mesh',
+    thing: 'API Mesh',
     failureTitle: "Couldn't Deploy API Mesh",
     successTitle: 'API Mesh Deployed',
 };
@@ -114,6 +115,7 @@ export function useIntegrationsScreenActions(
                 payload: { project: chosen.project, workspace: chosen.workspace },
                 // The target on its own line: "project · workspace" in the title wrapped.
                 title: 'Changing Destination',
+                thing: 'Destination',
                 subject: target,
                 failureTitle: "Couldn't Change the Destination",
                 successTitle: 'Destination Changed',

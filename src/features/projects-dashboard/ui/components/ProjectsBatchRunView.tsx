@@ -8,7 +8,9 @@
  * row, or above the list before any row runs.
  *
  * One project under way with nothing asked is the progress window's three rows instead, centred
- * (`OneRunning`, owner 2026-11-15); its ending is its row, as the run of several ends.
+ * (`OneRunning`, owner 2026-11-15). Once it ends, the outcome sits over the rows under its large mark
+ * (the shared `ResultBody`), with "Took …" under them, and only a row with something to read keeps a
+ * line under its name (owner, 2026-11-17, walk F222).
  *
  * @module features/projects-dashboard/ui/components/ProjectsBatchRunView
  */
@@ -16,6 +18,8 @@
 import React from 'react';
 import type { BatchRowStatuses, BatchRowTimings, BatchRunRow } from '../hooks/useProjectsBatch';
 import { ICON_OF, RunQuestion } from './runWindowParts';
+import type { RunOutcome } from '@/core/ui/components/feedback/OperationProgressBody';
+import { ResultBody } from '@/core/ui/components/feedback/ResultBody';
 import { RunFoot, type RunFootProps } from '@/core/ui/components/feedback/RunFoot';
 import { StageRows } from '@/core/ui/components/feedback/StageWait';
 import { WorkRow } from '@/core/ui/components/feedback/WorkRow';
@@ -27,12 +31,6 @@ import type { OperationProgressPayload, OperationPrompt } from '@/types/webviewP
 /** The run has no clock of its own (each row keeps one): the foot only holds the Took line's room. */
 const NOT_TIMED: NonNullable<RunFootProps['running']> = {};
 
-/** The foot's props: the Took line once ended, its held room while the run goes. */
-function footOf(ended: boolean, progress: OperationProgressPayload | null): Pick<RunFootProps, 'tookMs' | 'running'> {
-    if (ended) return { tookMs: progress?.tookMs };
-    return { running: NOT_TIMED };
-}
-
 interface RunViewProps {
     rows: BatchRunRow[];
     /** Paths in the order the extension first told them. */
@@ -41,6 +39,8 @@ interface RunViewProps {
     timings: BatchRowTimings;
     progress: OperationProgressPayload | null;
     onTyped: (values: Record<string, string>) => void;
+    /** Once the run has ended: the mark and the outcome over the rows. */
+    ending?: RunOutcome;
 }
 
 /** The rows in the run's order; any not told yet keep the order they were asked in, after them. */
@@ -61,13 +61,14 @@ interface RowProps {
 }
 
 /**
- * The line under a project's name: every row has one, so none changes height as the run goes
- * (owner, 2026-11-04). Where a finished project's changes were saved takes Finished's place.
+ * The line under a project's name: every row has one while the run goes, so none changes height
+ * (owner, 2026-11-04). Where a finished project's changes were saved takes Finished's place. Once
+ * the run ends, a finished row with nothing to read has none (walk F222).
  */
-function lineOf(state: UpdateRowState, message: string | undefined): string | undefined {
+function lineOf(state: UpdateRowState, message: string | undefined, ended: boolean): string | undefined {
     if (state === 'waiting') return 'Waiting';
     if (state === 'running') return message ?? PREPARING;
-    if (state === 'done') return message ?? 'Finished';
+    if (state === 'done') return message ?? (ended ? undefined : 'Finished');
     return undefined;
 }
 
@@ -99,7 +100,7 @@ function RunRow({ row, statuses, timing, asking, onTyped, ended }: RowProps) {
     const question = state === 'running' ? asking : undefined;
     const problem = problemOf(state, status);
     const saved = savedLineOf(state, status);
-    const detail = question || problem ? undefined : lineOf(state, status?.message);
+    const detail = question || problem ? undefined : lineOf(state, status?.message, ended);
     // A row left alone says why under its name, in place of a working line it never had.
     const note = state === 'skipped' ? status?.message : undefined;
     // A done row with a warning turns amber; a failed one stays red.
@@ -176,7 +177,7 @@ function oneUnderWay(rows: BatchRunRow[], statuses: BatchRowStatuses, ended: boo
 }
 
 /** Every project of the run and where it is. */
-export function ProjectsBatchRunView({ rows, order, statuses, timings, progress, onTyped }: RunViewProps): React.ReactElement {
+export function ProjectsBatchRunView({ rows, order, statuses, timings, progress, onTyped, ending }: RunViewProps): React.ReactElement {
     const ended = progress?.state === 'failed' || progress?.state === 'succeeded';
     const question = ended ? undefined : progress?.prompt;
     if (oneUnderWay(rows, statuses, ended, question)) {
@@ -188,9 +189,8 @@ export function ProjectsBatchRunView({ rows, order, statuses, timings, progress,
     const runningCount = shown.filter((row) => statuses[row.path]?.state === 'running').length;
     const underRow = runningCount === 1;
     const failure = failureLine(progress, rows, statuses);
-    return (
+    const list = (
         <div className="projects-batch-run">
-            {failure && <p className="work-row-why">{failure}</p>}
             {question && !underRow && <RunQuestion prompt={question} onTyped={onTyped} />}
             {withOrgHeadings(shown).map((item) =>
                 'heading' in item ? (
@@ -207,9 +207,14 @@ export function ProjectsBatchRunView({ rows, order, statuses, timings, progress,
                     />
                 ),
             )}
-            {/* How long the run took, as the single window ends a long one (over a minute). Its line is
-                held while the run goes (the foot's held line), so it never grows the held window. */}
-            <RunFoot {...footOf(ended, progress)} className="projects-batch-took" />
+            {/* The Took line's room, held while the run goes, so it never grows the held window. */}
+            {ended ? null : <RunFoot running={NOT_TIMED} className="projects-batch-took" />}
         </div>
+    );
+    if (!ended || !ending) return list;
+    return (
+        <ResultBody {...ending} lines={[failure]} {...(progress?.tookMs === undefined ? {} : { tookMs: progress.tookMs })}>
+            {list}
+        </ResultBody>
     );
 }

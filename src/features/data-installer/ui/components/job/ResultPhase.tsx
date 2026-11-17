@@ -1,6 +1,6 @@
 /**
- * A datapack job's end buttons and its small result window (step 03, S4, S6 and S7): a clean end, or
- * a start that never ran, in `JobResultWindow`. Split out of `DatapackJobWindow`, which picks it;
+ * A datapack job's end buttons and the result window for an end no run came before (step 03, S4, S6
+ * and S7), in `JobResultWindow`; a run's end stays in the run's window (walk F222). Split out of `DatapackJobWindow`, which picks it;
  * the run window shares `endButtons`.
  *
  * @module features/data-installer/ui/components/job/ResultPhase
@@ -37,7 +37,15 @@ export function endButtons(job: DatapackJob, result: ResultContent): ActionButto
 /** The kinds a refused start goes Back from: those with a summary or question behind it. */
 const HAS_SUMMARY: ReadonlySet<JobKind> = new Set<JobKind>(['install', 'switch', 'uninstall']);
 
-/** A result in the small window: a clean end, a start that never ran; Back after an own start. */
+/** Back to the summary after a start of the window's own that did not run: the kinds that have one. */
+export function backButtons(job: DatapackJob): ActionButton[] {
+    const { phase, kind } = job.state;
+    return phase === 'ended' && HAS_SUMMARY.has(kind)
+        ? [{ label: 'Back', variant: 'secondary', onPress: job.back }]
+        : [];
+}
+
+/** A result no run came before, in its own window: what a check found; Back after an own start. */
 export function ResultPhase({
     job,
     result,
@@ -48,15 +56,11 @@ export function ResultPhase({
     onClose: () => void;
 }): React.ReactElement {
     const { phase, kind } = job.state;
-    const back: ActionButton[] =
-        phase === 'ended' && HAS_SUMMARY.has(kind)
-            ? [{ label: 'Back', variant: 'secondary', onPress: job.back }]
-            : [];
     return (
         <JobResultWindow
             key={phase}
             result={result}
-            actionButtons={[...back, ...endButtons(job, result)]}
+            actionButtons={[...backButtons(job), ...endButtons(job, result)]}
             onClose={onClose}
             {...(result.keptRoot && kind === 'uninstall' ? { onCheck: job.retry } : {})}
             {...(job.fixProblem ? { problem: job.fixProblem } : {})}
