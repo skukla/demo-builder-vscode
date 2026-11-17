@@ -302,6 +302,12 @@ export const TIMEOUTS = {
      * The MCP client library's default limit on one call is 60 s (`DEFAULT_REQUEST_TIMEOUT_MSEC`),
      * so a 60 s wait timed out in a client on the default, measured live 2026-11-06.
      */
+    /**
+     * The pause between tries at Demo Builder's datapack store list (owner, 2026-11-17, walk F215):
+     * a one-off 5xx answered normally a moment later, so three tries a second apart hide it.
+     */
+    DATAPACK_STORE_RETRY: 1000,
+
     DATAPACK_JOB_WAIT_POLL: 2000,
     DATAPACK_JOB_WAIT_MAX: 45 * 1000,
 

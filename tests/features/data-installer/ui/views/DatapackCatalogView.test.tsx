@@ -565,7 +565,8 @@ describe('DatapackCatalogView — Demo Builder\'s datapacks beside the Data Inst
         expect(notice).toHaveClass('inline-notice--info');
     });
 
-    it('still shows the Data Installer\'s datapacks when Demo Builder\'s cannot be listed, and says so', async () => {
+    // Owner, 2026-11-17 (walk F215): nothing switches for the SC; the banner offers both ways on.
+    it("says Demo Builder's datapacks are missing, staying put, with Try Again and the Data Installer's one click away", async () => {
         mockRequest.mockResolvedValue({
             success: true,
             data: { items: [makeSummary('bodea', 'main')], count: 1, storeMissing: true },
@@ -573,13 +574,21 @@ describe('DatapackCatalogView — Demo Builder\'s datapacks beside the Data Inst
 
         render(<DatapackCatalogView />);
         await settle();
-        // One choice away from Recommended, which holds only yours and Demo Builder's (step-07 P1).
-        fireEvent.change(showSelect(), { target: { value: 'installer' } });
 
-        await waitFor(() => expect(screen.getAllByTestId('datapack-card')).toHaveLength(1));
-        const notice = screen.getByTestId('datapack-source-notice');
+        const notice = await screen.findByTestId('datapack-source-notice');
         expect(notice).toHaveTextContent(SOURCE_NOTICE_COPY.storeMissing);
         expect(notice).not.toHaveClass('inline-notice--info');
+        expect(showSelect().value).toBe('recommended');
+        expect(screen.queryAllByTestId('datapack-card')).toHaveLength(0);
+
+        fireEvent.click(within(notice).getByRole('button', { name: 'Show Data Installer Datapacks' }));
+        await waitFor(() => expect(screen.getAllByTestId('datapack-card')).toHaveLength(1));
+        expect(showSelect().value).toBe('installer');
+        expect(within(screen.getByTestId('datapack-source-notice')).queryByRole('button', { name: 'Show Data Installer Datapacks' })).toBeNull();
+
+        const asked = mockRequest.mock.calls.filter((call) => call[0] === 'find-datapacks').length;
+        fireEvent.click(within(screen.getByTestId('datapack-source-notice')).getByRole('button', { name: 'Try Again' }));
+        await waitFor(() => expect(mockRequest.mock.calls.filter((call) => call[0] === 'find-datapacks')).toHaveLength(asked + 1));
     });
 });
 

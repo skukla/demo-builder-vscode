@@ -13,20 +13,54 @@
 
 import type { DataInstallerClient } from '../services/dataInstallerClient';
 import { resolveDataInstallerBaseUrl } from '../services/dataInstallerConfig';
+import { classifyTransportError, DataInstallerApiError } from '../services/dataInstallerErrors';
 import { type NameMemory, rememberPackNames } from '../services/packNames';
 import type { CatalogPage, DatapackSummary, Page } from '../types';
+import { sleep } from '@/core/utils/sleep';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerResponse } from '@/types/handlers';
 
 export const LIBRARY_LIST_FAILED = 'Could not list the datapack store.';
 
-/** The store's catalog, each row tagged `library`: shared packs plus the SC's own. */
+/** Tries at the store's list before it counts as down (owner, 2026-11-17, walk F215). */
+export const LIBRARY_LIST_TRIES = 3;
+
+/** A failure another try could change: the store erred (5xx), timed out or could not be reached. */
+function worthAnotherTry(error: unknown): boolean {
+    if (error instanceof DataInstallerApiError) return error.status >= 500;
+    return classifyTransportError(error) !== 'unknown';
+}
+
+/** The last failure, saying how many tries it took, so a log, a screen and an agent all know. */
+function afterTries(error: unknown, tries: number): unknown {
+    if (tries === 1 || !(error instanceof Error)) return error;
+    const message = `${error.message} (tried ${tries} times)`;
+    return error instanceof DataInstallerApiError ? new DataInstallerApiError(message, error.status, error.action) : new Error(message);
+}
+
+/**
+ * The store's catalog, each row tagged `library`: shared packs plus the SC's own. A failure another
+ * try could change is asked again, up to three tries a second apart, so a one-off error never
+ * reaches a screen (it did once, 2026-11-17, answering normally a moment later).
+ *
+ * @param onRetry - told of each failed try before the next, for the log
+ */
 export async function listLibrary(
     client: DataInstallerClient,
     paging: { limit?: number; skip?: number },
+    onRetry?: (failedTry: number, error: unknown) => void,
 ): Promise<Page<DatapackSummary>> {
-    const listed = await client.findDatapacks(paging);
-    return { ...listed, items: listed.items.map((item) => ({ ...item, store: 'library' as const })) };
+    for (let attempt = 1; ; attempt += 1) {
+        try {
+            const listed = await client.findDatapacks(paging);
+            return { ...listed, items: listed.items.map((item) => ({ ...item, store: 'library' as const })) };
+        } catch (error) {
+            if (attempt >= LIBRARY_LIST_TRIES || !worthAnotherTry(error)) throw afterTries(error, attempt);
+            onRetry?.(attempt, error);
+            await sleep(TIMEOUTS.DATAPACK_STORE_RETRY);
+        }
+    }
 }
 
 /**

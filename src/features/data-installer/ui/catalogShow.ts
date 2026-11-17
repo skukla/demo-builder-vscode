@@ -21,18 +21,6 @@ export const CATALOG_REQUEST = { includeCommunity: true };
  */
 export const DEFAULT_SHOW: CatalogShow = 'recommended';
 
-/**
- * What the list opens on for this load. With Demo Builder's datapack store down, Recommended is
- * empty while the banner says only the Data Installer's are listed, so it opens on those (owner,
- * 2026-11-14). Read per load and never kept: once the store answers, Recommended again.
- *
- * @param page - the catalog's answer, as far as it says which stores answered
- * @returns the choice to open on
- */
-export function openingShow(page: { storeMissing?: boolean; installerMissing?: string } | null | undefined): CatalogShow {
-    return page?.storeMissing && page.installerMissing === undefined ? 'installer' : DEFAULT_SHOW;
-}
-
 const SHOW_OPTIONS: ReadonlyArray<{ key: CatalogShow; label: string }> = [
     { key: 'recommended', label: 'Recommended' },
     { key: 'yours', label: 'My Datapacks' },

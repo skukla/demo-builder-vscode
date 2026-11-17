@@ -18,10 +18,12 @@ import { webviewClient } from '@/core/ui/utils/WebviewClient';
 export interface DatapackCatalog extends Omit<DataInstallerRequest<CatalogPage>, 'load'> {
     /** Read the list again. Stable: an effect can depend on it. */
     refresh: () => void;
-    /** The list as the "no access" notice reads it: dismissed at once when the SC closes it. */
-    noticePage: CatalogPage | null;
-    /** Close the "no access" notice; the extension remembers it on this machine (2026-11-03). */
-    dismissNoAccess: () => void;
+    /**
+     * What the source banner (`DatapackSourceNotice`) needs from the list: the page as it reads it
+     * (dismissed at once when the SC closes "no access"), closing that notice (remembered on this
+     * machine, 2026-11-03), and asking again (the pressed Refresh, walk F215).
+     */
+    notice: { page: CatalogPage | null; onDismiss: () => void; onRetry: () => void };
     /**
      * The search row's Refresh, pressed by the SC: its read waits in the grid's place, the button
      * quiet, while a re-read nobody pressed keeps the cards (walk F214). Spread into `SearchHeader`.
@@ -67,5 +69,9 @@ export function useDatapackCatalog(alsoOnChange?: RefObject<(() => void) | undef
         () => ({ onRefresh: pressRefresh, isRefreshing: loading, refreshWaitBelow: pressed }),
         [pressRefresh, loading, pressed],
     );
-    return { ...request, refresh, noticePage, dismissNoAccess, refreshControl };
+    const notice = useMemo(
+        () => ({ page: noticePage, onDismiss: dismissNoAccess, onRetry: pressRefresh }),
+        [noticePage, dismissNoAccess, pressRefresh],
+    );
+    return { ...request, refresh, notice, refreshControl };
 }

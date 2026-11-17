@@ -68,9 +68,9 @@ describe('useCatalogShow elsewhere', () => {
     });
 });
 
-// Owner, 2026-11-14: with Demo Builder's datapack store down, Recommended (yours and Demo
-// Builder's) is empty while the banner says "Only the Data Installer's are listed." So the list
-// opens on Data Installer Datapacks then, and nothing sticks: with the store back, Recommended.
+// Owner, 2026-11-17 (walk F215), replacing the 2026-11-14 switch: with Demo Builder's datapack store
+// down the list stays where it is, Recommended or the SC's choice. The banner offers Try Again and
+// Show Data Installer Datapacks, so the SC chooses; nothing switches for them.
 describe('useCatalogShow, opening with the datapack store down', () => {
     const installers: DatapackSummary = { ...pack('luma', '1'), store: 'installer', mine: undefined };
     const storeDown: CatalogPage = { ...pageOf(installers), storeMissing: true };
@@ -79,30 +79,18 @@ describe('useCatalogShow, opening with the datapack store down', () => {
             initialProps: { p: page },
         });
 
-    it("opens on the Data Installer's datapacks, so the list holds what the banner says", () => {
+    it('stays on Recommended, switching nothing for the SC', () => {
         const { result } = open(storeDown);
+
+        expect(result.current.show).toBe('recommended');
+        expect(names(result.current.shown)).toHaveLength(0);
+    });
+
+    it("shows the Data Installer's datapacks once the SC chooses them", () => {
+        const { result } = open(storeDown);
+        act(() => result.current.setShow('installer'));
 
         expect(result.current.show).toBe('installer');
         expect(names(result.current.shown)).toEqual(['luma']);
-    });
-
-    it('opens on Recommended again once the store answers', () => {
-        const { result, rerender } = open(storeDown);
-        rerender({ p: pageOf(pack('acme', '1'), installers) });
-
-        expect(result.current.show).toBe('recommended');
-    });
-
-    it("keeps Recommended when the Data Installer isn't answering either", () => {
-        const { result } = open({ ...pageOf(), storeMissing: true, installerMissing: 'no-answer' });
-
-        expect(result.current.show).toBe('recommended');
-    });
-
-    it('keeps what the SC chose while the store is down', () => {
-        const { result } = open(storeDown);
-        act(() => result.current.setShow('all'));
-
-        expect(result.current.show).toBe('all');
     });
 });

@@ -103,10 +103,10 @@ export function DatapackCatalogView({ library = false, clearArrival }: { library
     // The one list: Demo Builder's datapack store, then the Data Installer's if it answers.
     // Set below, once the callbacks it needs exist: what a pack change also reads again (F66).
     const onPacksChanged = useRef<(() => void) | undefined>(undefined);
-    const { refresh, value, failure, settled, noticePage, dismissNoAccess, refreshControl } = useDatapackCatalog(onPacksChanged);
+    const { refresh, value, failure, settled, notice, refreshControl } = useDatapackCatalog(onPacksChanged);
     const detail = useDataInstallerRequest<DatapackDetailResponse>('get-datapack-detail');
     const { held, installedAt, failed, updateBehind, installedPacks, projectAnswered, reloadProject, reloadHolding } = useProjectHolding(library);
-    const { show, setShow, installerAnswered, groups, shown, filtered, elsewhere, hideRemoved } = useCatalogShow({
+    const { show, setShow, installerAnswered, showInstaller, groups, shown, filtered, elsewhere, hideRemoved } = useCatalogShow({
         page: value,
         installedPacks,
         held,
@@ -296,7 +296,7 @@ export function DatapackCatalogView({ library = false, clearArrival }: { library
                     />
                 }
             >
-                <DatapackSourceNotice page={noticePage} onDismiss={dismissNoAccess} />
+                <DatapackSourceNotice {...notice} onShowInstaller={showInstaller} />
                 <DatapackCatalogGrid
                     groups={shown}
                     filtered={filtered}

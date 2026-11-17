@@ -9,7 +9,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { groupDatapacks, isHeld, withoutLayerCards, type DatapackGroup } from '../../services/datapackCatalog';
 import type { CatalogPage } from '../../types';
-import { DEFAULT_SHOW, inShow, inShowOrder, matchesElsewhere, openingShow, type CatalogShow, type ShowElsewhere } from '../catalogShow';
+import { DEFAULT_SHOW, inShow, inShowOrder, matchesElsewhere, type CatalogShow, type ShowElsewhere } from '../catalogShow';
 import { matchesSearchFields } from '@/core/ui/hooks/useSearchFilter';
 import type { DatapackId, ProjectDatapack } from '@/types/datapack';
 
@@ -34,6 +34,8 @@ export interface CatalogShowState {
     setShow: (show: CatalogShow) => void;
     /** Whether the Data Installer answered this load: an SC it has not has no such packs to choose. */
     installerAnswered: boolean;
+    /** Put the Data Installer's datapacks on view; absent while they are not answering or already shown (F215). */
+    showInstaller: (() => void) | undefined;
     /** Every pack, before the Show list. */
     groups: DatapackGroup[];
     /** The packs the Show list leaves. */
@@ -64,7 +66,8 @@ function withoutRemoved(page: CatalogPage | null | undefined, removed: readonly 
  * @returns the Show list's state and the packs to draw
  */
 export function useCatalogShow({ page, installedPacks, held, query, heldFirst }: CatalogShowOptions): CatalogShowState {
-    // Unset until the SC picks one: until then the list follows this load (`openingShow`).
+    // Unset until the SC picks one. Nothing switches it for them, a store that is down included: the
+    // banner offers the Data Installer's datapacks instead (owner, 2026-11-17, walk F215).
     const [picked, setShow] = useState<CatalogShow | undefined>(undefined);
     // Kept with the page it was hidden from: the next page the screen loads has it gone for real.
     const [removed, setRemoved] = useState<{ from: typeof page; ids: DatapackId[] }>({ from: page, ids: [] });
@@ -75,7 +78,7 @@ export function useCatalogShow({ page, installedPacks, held, query, heldFirst }:
     // A choice that went away (the Data Installer stopped answering) falls back, rather than a list
     // showing a choice it no longer offers.
     const installerAnswered = page?.installerMissing === undefined;
-    const chosen = picked ?? openingShow(page);
+    const chosen = picked ?? DEFAULT_SHOW;
     const show = chosen === 'installer' && !installerAnswered ? DEFAULT_SHOW : chosen;
     const groups = useMemo(() => {
         // A settings layer is reached from its pack's flyout, not as a demo of its own (step 09).
@@ -94,5 +97,7 @@ export function useCatalogShow({ page, installedPacks, held, query, heldFirst }:
         if (!query || filtered.length > 0) return undefined;
         return matchesElsewhere(groups.filter((group) => matchesSearchFields(group, SEARCH_FIELDS, query)), show);
     }, [groups, filtered, query, show]);
-    return { show, setShow, installerAnswered, groups, shown, filtered, elsewhere, hideRemoved };
+    const toInstaller = useCallback((): void => setShow('installer'), []);
+    const showInstaller = installerAnswered && show !== 'installer' ? toInstaller : undefined;
+    return { show, setShow, installerAnswered, showInstaller, groups, shown, filtered, elsewhere, hideRemoved };
 }

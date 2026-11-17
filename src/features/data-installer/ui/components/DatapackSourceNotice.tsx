@@ -15,10 +15,14 @@
  * Data Installer answers them. "Didn't answer" passes, and Refresh is its remedy; "Demo Builder's
  * datapacks aren't available" means the screen is mostly broken. Neither closes.
  *
+ * With the store down nothing switches the list for the SC (owner, 2026-11-17, walk F215, replacing
+ * the 2026-11-14 switch to the Data Installer's): the banner offers Try Again, and Show Data
+ * Installer Datapacks while those are answering and not already on view.
+ *
  * @module features/data-installer/ui/components/DatapackSourceNotice
  */
 
-import { ActionButton } from '@adobe/react-spectrum';
+import { ActionButton, Button, Flex } from '@adobe/react-spectrum';
 import Close from '@spectrum-icons/workflow/Close';
 import React from 'react';
 import type { CatalogPage } from '../../types';
@@ -31,7 +35,9 @@ export const SOURCE_NOTICE_COPY = {
         "Your Adobe account can't use the Data Installer, so its datapacks aren't listed. An admin of your Adobe org can add you to it.",
     noAnswer: "The Data Installer isn't responding, so its datapacks aren't listed.",
     storeMissing: "Demo Builder's datapacks aren't available",
-    storeMissingLine: "Only the Data Installer's are listed. Refresh to try again.",
+    storeMissingLine: "Demo Builder's datapack store didn't answer after three tries.",
+    tryAgain: 'Try Again',
+    showInstaller: 'Show Data Installer Datapacks',
     dismiss: 'Dismiss',
 };
 
@@ -41,22 +47,45 @@ const INSTALLER_LINES: Partial<Record<NonNullable<CatalogPage['installerMissing'
     'no-answer': SOURCE_NOTICE_COPY.noAnswer,
 };
 
+interface SourceNoticeProps {
+    page: CatalogPage | null;
+    onDismiss: () => void;
+    /** Ask the store again (the search row's Refresh, so its wait shows where the cards go). */
+    onRetry: () => void;
+    /** Put the Data Installer's datapacks on view; absent when they are not answering or already shown. */
+    onShowInstaller?: () => void;
+}
+
+/** The store is down: say so, and offer both ways on. */
+function StoreMissing({ onRetry, onShowInstaller }: Pick<SourceNoticeProps, 'onRetry' | 'onShowInstaller'>): React.ReactElement {
+    const actions = (
+        <Flex gap="size-100">
+            {onShowInstaller && (
+                <Button variant="secondary" onPress={onShowInstaller}>
+                    {SOURCE_NOTICE_COPY.showInstaller}
+                </Button>
+            )}
+            <Button variant="secondary" onPress={onRetry}>
+                {SOURCE_NOTICE_COPY.tryAgain}
+            </Button>
+        </Flex>
+    );
+    return (
+        <InlineNotice title={SOURCE_NOTICE_COPY.storeMissing} action={actions} actionBelow testId="datapack-source-notice">
+            {SOURCE_NOTICE_COPY.storeMissingLine}
+        </InlineNotice>
+    );
+}
+
 /**
  * The banner, or nothing when the grid shows everything the SC asked for.
  *
- * @param props.page - the catalog's answer
- * @param props.onDismiss - close the "no access" banner, and remember that it was
+ * @param props - {@link SourceNoticeProps}
  * @returns the banner, or null
  */
-export function DatapackSourceNotice({ page, onDismiss }: { page: CatalogPage | null; onDismiss: () => void }): React.ReactElement | null {
+export function DatapackSourceNotice({ page, onDismiss, onRetry, onShowInstaller }: SourceNoticeProps): React.ReactElement | null {
     if (!page) return null;
-    if (page.storeMissing) {
-        return (
-            <InlineNotice title={SOURCE_NOTICE_COPY.storeMissing} testId="datapack-source-notice">
-                {SOURCE_NOTICE_COPY.storeMissingLine}
-            </InlineNotice>
-        );
-    }
+    if (page.storeMissing) return <StoreMissing onRetry={onRetry} onShowInstaller={onShowInstaller} />;
     const line = page.installerMissing ? INSTALLER_LINES[page.installerMissing] : undefined;
     if (!line) return null;
     const noAccess = page.installerMissing === 'no-access';

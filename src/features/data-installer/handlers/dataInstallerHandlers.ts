@@ -26,7 +26,7 @@ import { packReadsVia } from '../services/recordedPack';
 import { layerForDetail } from '../services/settingsLayer';
 import { sharedInFileWarningFor } from '../services/sharedInFiles';
 import type { CatalogPage, DatapackSummary, OperationMode, Page } from '../types';
-import { INSTALLER_OFF, LIBRARY_LIST_FAILED, isListable, listLibrary, mergedCatalog, rememberingNames } from './catalogLibraryRows';
+import { INSTALLER_OFF, LIBRARY_LIST_FAILED, LIBRARY_LIST_TRIES, isListable, listLibrary, mergedCatalog, rememberingNames } from './catalogLibraryRows';
 import { activityFromBoth, installedFromBoth } from './engineHistoryReads';
 import { STORE_ADDRESS_SETTING, serviceOrgCode, signInRefused } from './serviceOrg';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
@@ -310,6 +310,14 @@ async function withNoAccessDismissal(context: HandlerContext, response: HandlerR
     return response;
 }
 
+/** Each failed try at the store's list, before the next (walk F215). */
+function logRetry(context: HandlerContext): (failedTry: number, error: unknown) => void {
+    return (failedTry, error) =>
+        context.logger.warn(
+            `${LOG_PREFIX} The datapack store's list failed (try ${failedTry} of ${LIBRARY_LIST_TRIES}); asking again: ${error instanceof Error ? error.message : String(error)}`,
+        );
+}
+
 export const dataInstallerHandlers = defineHandlers({
     'check-datapack-service': async (context: HandlerContext): Promise<HandlerResponse> =>
         withClient(context, 'Could not reach the Data Installer API.', (client) =>
@@ -325,7 +333,7 @@ export const dataInstallerHandlers = defineHandlers({
             ...(payload?.skip !== undefined ? { skip: payload.skip } : {}),
         };
         const askLibrary = (): Promise<HandlerResponse> =>
-            withClient(context, LIBRARY_LIST_FAILED, (client) => listLibrary(client, paging), 'library');
+            withClient(context, LIBRARY_LIST_FAILED, (client) => listLibrary(client, paging, logRetry(context)), 'library');
         const askInstaller = (): Promise<HandlerResponse> =>
             withClient(context, 'Could not list datapacks.', (client) =>
                 client.findDatapacks({
