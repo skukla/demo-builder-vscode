@@ -155,6 +155,26 @@ describe('the question', () => {
         expect(sends('reset-datapack')).toBe(0);
     });
 
+    // Walk F191 (2026-11-17): a record that lists nothing opened a window with nothing in it.
+    it('says it removes nothing when the record lists nothing, with no empty table and no Review Records', async () => {
+        holding(NOTHING, { scope: { success: true, data: { kinds: [] } } });
+        await openUninstall();
+
+        expect(await heading('Uninstall My Luma?')).toBeInTheDocument();
+        expect(screen.getByText('Removes nothing from the store. The demo stops using My Luma.')).toBeInTheDocument();
+        expect(screen.queryByRole('table')).toBeNull();
+        expect(screen.queryByRole('button', { name: 'Review Records' })).toBeNull();
+        expect(button('Uninstall')).toBeInTheDocument();
+    });
+
+    it('CONTROL: a record that lists something shows no such line', async () => {
+        holding(NOTHING);
+        await openUninstall();
+
+        await heading('Uninstall My Luma?');
+        expect(screen.queryByText(/Removes nothing/u)).toBeNull();
+    });
+
     // Walk F151: what it would take and what it would keep, from the install record and the
     // uninstall's own decision, before anything is deleted.
     it('Review Records asks for what the uninstall would take and keep, and shows both', async () => {

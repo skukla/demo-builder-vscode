@@ -73,7 +73,7 @@ export function JobSummaryWindow({
     const body = (line: string | undefined): React.ReactElement => (
         <div className="clear-demo-body">
             {lead ? <LeadText>{lead}</LeadText> : null}
-            <TypeTable rows={rows} />
+            {rows.length > 0 ? <TypeTable rows={rows} /> : null}
             {children}
             {line ? <p className="dialog-problem text-notice">{line}</p> : null}
         </div>

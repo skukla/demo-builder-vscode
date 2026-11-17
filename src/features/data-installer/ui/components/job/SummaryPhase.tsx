@@ -27,6 +27,10 @@ export function switchLead(held: string, name: string, website?: string): string
     return `Uninstalls ${held}${from}, then installs ${name}. ${name} adds:`;
 }
 
+/** An uninstall whose record lists nothing (walk F191): it leaves the store as it is. */
+export const removesNothing = (name: string): string =>
+    `Removes nothing from the store. The demo stops using ${name}.`;
+
 /** A question's title: without its question mark while the check reads. */
 const asked = (title: string, checking: boolean): string => (checking ? title : `${title}?`);
 
@@ -53,6 +57,8 @@ export function summaryFrame(job: DatapackJob, opened: Opened, checking: boolean
     const held = job.switching.heldTitle;
     const lead = verb === 'Switch' && held ? switchLead(held, name, job.switching.changes.websiteName) : undefined;
     const unread = job.checkFailed ? (uninstall ? RECORD_UNREAD : PREVIEW_UNREAD) : undefined;
+    // Walk F191: a record that lists nothing opened an empty window; say so, with nothing to review.
+    const takesNothing = uninstall && !checking && !job.checkFailed && job.rows.length === 0;
     return {
         title: asked(title, checking),
         status: 'warning' as const,
@@ -65,7 +71,7 @@ export function summaryFrame(job: DatapackJob, opened: Opened, checking: boolean
         ],
         problem: job.switching.changes.readFailed ? CHANGES_UNCHECKED : unread,
         ...(lead ? { lead } : {}),
-        onReview: job.review,
+        ...(takesNothing ? { lead: removesNothing(name) } : { onReview: job.review }),
     };
 }
 
