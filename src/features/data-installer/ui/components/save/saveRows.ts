@@ -2,7 +2,7 @@
  * "Save Changes to My Luma"'s rows (step-04 S2; decisions Phase 7b, J3-1; P4-Q3, step-07 E1): what
  * the datapack holds, one row per type, from what its install record lists, the count bare
  * ("2,046"), with how many the SC changed and added by hand since the install only where there are
- * some ("2,046, 4 changed, 2 added"; prototype-conventions rule 5, a word only when it says
+ * some ("4 of 2,046 changed, 2 added"; prototype-conventions rule 5, a word only when it says
  * something new). A changed or added type the record does not count gets a row of its own ("2
  * added"). What is added is what the save takes that the datapack does not hold (`demoAdditions.ts`).
  *
@@ -19,13 +19,16 @@ type Counted = ReadonlyArray<Pick<ChangedKind, 'kind' | 'count'>>;
 
 const digits = (n: number): string => n.toLocaleString('en-US');
 
-/** "2,046", "2,046, 4 changed, 2 added", or "4 changed" for a type the record does not count. */
+/**
+ * "2,046", "4 of 2,046 changed, 2 added", "2,046, 2 added", or "4 changed" for a type the record
+ * does not count. The changed count says what it is of (walk F196, owner 2026-11-17): "1, 1 changed"
+ * read as a typo.
+ */
 function happensOf(count: number | undefined, changed: number, added: number): string {
-    const parts = [
-        ...(count === undefined ? [] : [digits(count)]),
-        ...(changed > 0 ? [`${digits(changed)} changed`] : []),
-        ...(added > 0 ? [`${digits(added)} added`] : []),
-    ];
+    const total = count === undefined ? undefined : digits(count);
+    let first: string | undefined = total;
+    if (changed > 0) first = total === undefined ? `${digits(changed)} changed` : `${digits(changed)} of ${total} changed`;
+    const parts = [...(first === undefined ? [] : [first]), ...(added > 0 ? [`${digits(added)} added`] : [])];
     return parts.join(', ');
 }
 

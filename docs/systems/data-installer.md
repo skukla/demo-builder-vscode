@@ -369,7 +369,7 @@ included, and opening on the version the demo uses (`DatapackCatalogGrid`):
   Datapack, named for what it does ("Save Changes" read as changing the team pack): it makes a new
   pack of the SC's. Save opens **"Save Changes to My Luma"** (`components/save/SaveChangesWindow`,
   step-04 S2, J3-1): what My Luma will hold, read-only, one row per type from what its install record
-  lists (`get-datapack-removal-scope`), "2,046, 4 changed, 2 added" where the SC changed some or
+  lists (`get-datapack-removal-scope`), "4 of 2,046 changed, 2 added" (walk F196) where the SC changed some or
   added some by hand since the install (`get-datapack-removal-changes` with `added`; step-07 E1):
   "added" counts the records the save takes that the datapack does not hold (`demoAdditions.ts`, the
   save's own rule), by their own type: the top-level rows only, so a hand-added product counts once

@@ -1,7 +1,7 @@
 /**
  * "Update My Luma" (step-04 S2; decisions Phase 7b, J3-1; P4-Q3): the check's wait, then
  * what My Luma will hold, read-only, one row per type, with "N changed" on a type the SC changed
- * ("2,046, 4 changed"), and no line above the table. Review Records opens the same spot check as an
+ * ("4 of 2,046 changed"), and no line above the table. Review Records opens the same spot check as an
  * install's, Back only. Cancel and Save; Save hands on to the run.
  *
  * Counts come from what the install record lists (`get-datapack-removal-scope`), the changes from
@@ -142,7 +142,7 @@ describe('the summary', () => {
         answer();
         await open();
 
-        expect(rows()).toStrictEqual(['Categories41', 'Products2,046, 4 changed']);
+        expect(rows()).toStrictEqual(['Categories41', 'Products4 of 2,046 changed']);
         expect(document.querySelector('.lead-text')).toBeNull();
         expect(screen.queryByRole('checkbox')).toBeNull();
     });
@@ -196,7 +196,7 @@ describe('the summary', () => {
 
         expect(rows()).toStrictEqual([
             'Categories41',
-            'Products2,046, 4 changed, 2 added',
+            'Products4 of 2,046 changed, 2 added',
             'Customers1 added',
         ]);
     });
@@ -285,7 +285,7 @@ describe('Review Records', () => {
         ).toEqual(['Back']);
 
         await press(button('Back'));
-        expect(rows()).toStrictEqual(['Categories41', 'Products2,046, 4 changed']);
+        expect(rows()).toStrictEqual(['Categories41', 'Products4 of 2,046 changed']);
         await press(button('Review Records'));
         expect(sends('get-datapack-records')).toBe(1);
     });
