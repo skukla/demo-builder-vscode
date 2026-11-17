@@ -63,6 +63,11 @@ export interface SearchHeaderProps {
     onRefresh?: () => void;
     /** Whether currently refreshing */
     isRefreshing?: boolean;
+    /**
+     * The refresh's wait shows in the body (a pressed Refresh, `FullScreenSurface`'s `waiting`): the
+     * button stops taking presses and draws no spinner of its own, one spinner per wait (walk F214).
+     */
+    refreshWaitBelow?: boolean;
     /** Aria label for refresh button */
     refreshAriaLabel?: string;
 
@@ -119,6 +124,7 @@ function renderRefreshButton(
     onRefresh: (() => void) | undefined,
     isRefreshing: boolean,
     refreshAriaLabel: string,
+    waitBelow = false,
 ): React.ReactNode {
     if (!onRefresh) return null;
     return (
@@ -126,9 +132,9 @@ function renderRefreshButton(
             isQuiet
             onPress={onRefresh}
             aria-label={refreshAriaLabel}
-            isDisabled={isRefreshing}
+            isDisabled={isRefreshing || waitBelow}
         >
-            {isRefreshing ? <Spinner size="S" /> : <Refresh />}
+            {isRefreshing && !waitBelow ? <Spinner size="S" /> : <Refresh />}
         </ActionButton>
     );
 }
@@ -278,7 +284,7 @@ export function SearchHeader(props: SearchHeaderProps) {
 
     const ActionButtons = renderActionButtons(
         renderViewToggle(viewMode, onViewModeChange),
-        renderRefreshButton(onRefresh, isRefreshing, refreshAriaLabel),
+        renderRefreshButton(onRefresh, isRefreshing, refreshAriaLabel, props.refreshWaitBelow),
         action,
     );
 

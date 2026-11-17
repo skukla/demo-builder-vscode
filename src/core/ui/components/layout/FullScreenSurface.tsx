@@ -28,6 +28,8 @@
  */
 
 import React from 'react';
+import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 
 export interface FullScreenSurfaceProps {
     /**
@@ -39,19 +41,36 @@ export interface FullScreenSurfaceProps {
     header: React.ReactNode;
     /** The scrolling body. This component supplies its width constraint. */
     children: React.ReactNode;
+    /**
+     * A pressed Refresh's wait, in the first load's words ("Loading datapacks"): the body gives way
+     * to one large spinner where the answer will land, and the band stays (owner, 2026-11-17, walk
+     * F214). A re-read nobody pressed passes nothing and keeps the body.
+     */
+    waiting?: string;
 }
+
+/** Room the wait holds, so the band does not jump up while the body is out. */
+const WAIT_HEIGHT = 'size-6000';
 
 /**
  * @param props - {@link FullScreenSurfaceProps}
  * @returns the sticky header band followed by the padded content column
  */
-export function FullScreenSurface({ header, children }: FullScreenSurfaceProps): React.JSX.Element {
+export function FullScreenSurface({ header, children, waiting }: FullScreenSurfaceProps): React.JSX.Element {
     return (
         <>
             <div className="projects-sticky-header">
                 <div className="page-container-padded page-header-section">{header}</div>
             </div>
-            <div className="page-container-padded pb-6">{children}</div>
+            <div className="page-container-padded pb-6">
+                {waiting ? (
+                    <CenteredFeedbackContainer height={WAIT_HEIGHT}>
+                        <LoadingDisplay size="L" message={waiting} />
+                    </CenteredFeedbackContainer>
+                ) : (
+                    children
+                )}
+            </div>
         </>
     );
 }

@@ -226,6 +226,18 @@ describe('the refresh control', () => {
 
         expect(screen.getByRole('button', { name: /refresh projects/i })).toBeDisabled();
     });
+
+    // A pressed Refresh waits where the answer lands, in the first load's words (walk F214).
+    it('a pressed refresh swaps the projects for one spinner, the button quiet', () => {
+        renderDashboard({ onRefresh: jest.fn(), isRefreshing: true, refreshPressed: true });
+
+        expect(screen.getByText('Loading projects')).toBeInTheDocument();
+        expect(screen.queryByText('Project 1')).toBeNull();
+        const button = screen.getByRole('button', { name: /refresh projects/i });
+        expect(button).toBeDisabled();
+        expect(button.querySelector('[role="progressbar"]')).toBeNull();
+        expect(screen.getByPlaceholderText(/filter projects/i)).toBeInTheDocument();
+    });
 });
 
 describe('the focus trap it configures', () => {

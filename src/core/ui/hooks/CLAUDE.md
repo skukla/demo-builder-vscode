@@ -16,6 +16,7 @@ is the inventory plus the handful of behaviours the source will not tell you.
 | `useViewModePreference` | A list's cards/rows choice: `choose` switches and tells the extension (kept for the session), `adopt` takes a view the extension announced |
 | **State** | |
 | `useLoadingState` | Loading/error/data, plus `hasLoadedOnce` and `isRefreshing` |
+| `useRefreshPress` | Whether the read under way was a pressed Refresh, so its wait goes in the body (`FullScreenSurface`'s `waiting`) while a re-read nobody pressed keeps the content |
 | `useSelection` | Single-item selection with key extraction |
 | `useSelectionStep` | A whole wizard selection step (see below) |
 | `useAsyncData` | Async fetch wired to VS Code messages; auto-select-single |

@@ -51,7 +51,7 @@ import { headerSave, heldInCatalogOf } from '../headerSave';
 import { useCatalogShow } from '../hooks/useCatalogShow';
 import type { ClearArrival } from '../hooks/useClearArrival';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
-import { useDatapackCatalog } from '../hooks/useDatapackCatalog';
+import { CATALOG_LOADING, useDatapackCatalog } from '../hooks/useDatapackCatalog';
 import { requestDatapackRename, useDetailFlyout } from '../hooks/useDetailFlyout';
 import { useHeldPack } from '../hooks/useHeldPack';
 import { ImportWindowModal, ownedOf, useImportWindow } from '../hooks/useImportWindow';
@@ -103,7 +103,7 @@ export function DatapackCatalogView({ library = false, clearArrival }: { library
     // The one list: Demo Builder's datapack store, then the Data Installer's if it answers.
     // Set below, once the callbacks it needs exist: what a pack change also reads again (F66).
     const onPacksChanged = useRef<(() => void) | undefined>(undefined);
-    const { refresh, loading, value, failure, settled, noticePage, dismissNoAccess } = useDatapackCatalog(onPacksChanged);
+    const { refresh, value, failure, settled, noticePage, dismissNoAccess, refreshControl } = useDatapackCatalog(onPacksChanged);
     const detail = useDataInstallerRequest<DatapackDetailResponse>('get-datapack-detail');
     const { held, installedAt, failed, updateBehind, installedPacks, projectAnswered, reloadProject, reloadHolding } = useProjectHolding(library);
     const { show, setShow, installerAnswered, groups, shown, filtered, elsewhere, hideRemoved } = useCatalogShow({
@@ -248,7 +248,7 @@ export function DatapackCatalogView({ library = false, clearArrival }: { library
         // there; centred across the whole window it sat far to their right
         // (2026-10-29).
         return (
-            <FullScreenLoading message="Loading datapacks" withinContentColumn />
+            <FullScreenLoading message={CATALOG_LOADING} withinContentColumn />
         );
     }
 
@@ -263,6 +263,7 @@ export function DatapackCatalogView({ library = false, clearArrival }: { library
             {/* No `Flex` wrapper around the header: the two surfaces that have
                 one need it for trailing buttons, and this one has none to place. */}
             <FullScreenSurface
+                waiting={refreshControl.refreshWaitBelow ? CATALOG_LOADING : undefined}
                 header={
                     <SearchHeader
                         searchQuery={query}
@@ -271,8 +272,7 @@ export function DatapackCatalogView({ library = false, clearArrival }: { library
                         totalCount={shown.length}
                         filteredCount={filtered.length}
                         itemNoun="datapack"
-                        onRefresh={refresh}
-                        isRefreshing={loading}
+                        {...refreshControl}
                         refreshAriaLabel="Refresh datapacks"
                         hasLoadedOnce={value !== null}
                         // Always: the Show list lives on this row, and an empty view is

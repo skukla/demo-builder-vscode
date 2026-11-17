@@ -11,6 +11,7 @@ import { type RefObject, useCallback, useEffect, useMemo, useState } from 'react
 import { DATAPACK_LIST_CHANGED_MESSAGE, type CatalogPage } from '../../types';
 import { CATALOG_REQUEST } from '../catalogShow';
 import { useDataInstallerRequest, type DataInstallerRequest } from './useDataInstallerRequest';
+import { useRefreshPress } from '@/core/ui/hooks/useRefreshPress';
 import { useVSCodeMessage } from '@/core/ui/hooks/useVSCodeMessage';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 
@@ -21,7 +22,15 @@ export interface DatapackCatalog extends Omit<DataInstallerRequest<CatalogPage>,
     noticePage: CatalogPage | null;
     /** Close the "no access" notice; the extension remembers it on this machine (2026-11-03). */
     dismissNoAccess: () => void;
+    /**
+     * The search row's Refresh, pressed by the SC: its read waits in the grid's place, the button
+     * quiet, while a re-read nobody pressed keeps the cards (walk F214). Spread into `SearchHeader`.
+     */
+    refreshControl: { onRefresh: () => void; isRefreshing: boolean; refreshWaitBelow: boolean };
 }
+
+/** The catalog's wait, the first load's and a pressed Refresh's alike (F214). */
+export const CATALOG_LOADING = 'Loading datapacks';
 
 
 /**
@@ -47,7 +56,16 @@ export function useDatapackCatalog(alsoOnChange?: RefObject<(() => void) | undef
         setNoAccessClosed(true);
         webviewClient.postMessage('dismiss-datapack-no-access');
     }, []);
-    const { value } = request;
+    const { value, loading } = request;
     const noticePage = useMemo(() => (value && noAccessClosed ? { ...value, noAccessDismissed: true } : value), [value, noAccessClosed]);
-    return { ...request, refresh, noticePage, dismissNoAccess };
+    const { pressed, markPressed } = useRefreshPress(loading);
+    const pressRefresh = useCallback((): void => {
+        markPressed();
+        refresh();
+    }, [markPressed, refresh]);
+    const refreshControl = useMemo(
+        () => ({ onRefresh: pressRefresh, isRefreshing: loading, refreshWaitBelow: pressed }),
+        [pressRefresh, loading, pressed],
+    );
+    return { ...request, refresh, noticePage, dismissNoAccess, refreshControl };
 }

@@ -29,6 +29,9 @@ import { useFocusTrap } from '@/core/ui/hooks/useFocusTrap';
 import { matchesSearchFields } from '@/core/ui/hooks/useSearchFilter';
 import type { Project } from '@/types/base';
 
+/** The list's wait, the first load's and a pressed Refresh's alike (walk F214). */
+const PROJECTS_LOADING = 'Loading projects';
+
 export interface ProjectsDashboardProps {
     /** Array of all projects */
     projects: Project[];
@@ -52,6 +55,8 @@ export interface ProjectsDashboardProps {
     isLoading?: boolean;
     /** Whether projects are refreshing (background refresh) */
     isRefreshing?: boolean;
+    /** The refresh under way was pressed for: it waits in the projects' place (walk F214) */
+    refreshPressed?: boolean;
     /** Callback to refresh projects list */
     onRefresh?: () => void;
     /** Whether data has loaded at least once */
@@ -84,6 +89,7 @@ export function ProjectsDashboard({
     actions = {},
     isLoading = false,
     isRefreshing = false,
+    refreshPressed = false,
     onRefresh,
     hasLoadedOnce = true,
     initialViewMode = 'cards',
@@ -133,7 +139,7 @@ export function ProjectsDashboard({
     if (isLoading) {
         return (
             <div ref={containerRef}>
-                <FullScreenLoading message="Loading projects" backgroundColor="gray-50" />
+                <FullScreenLoading message={PROJECTS_LOADING} backgroundColor="gray-50" />
             </div>
         );
     }
@@ -188,6 +194,7 @@ export function ProjectsDashboard({
                 {/* Sticky controls - search and view toggle. Adding is the card at the
                     grid's end (PL-62), not a header button. */}
                 <FullScreenSurface
+                    waiting={refreshPressed ? PROJECTS_LOADING : undefined}
                     header={
                         <Flex alignItems="start" gap="size-300">
                             <View flex>
@@ -200,6 +207,7 @@ export function ProjectsDashboard({
                                     itemNoun="project"
                                     onRefresh={onRefresh}
                                     isRefreshing={isRefreshing}
+                                    refreshWaitBelow={refreshPressed}
                                     refreshAriaLabel="Refresh projects"
                                     viewMode={viewMode}
                                     onViewModeChange={handleViewModeChange}

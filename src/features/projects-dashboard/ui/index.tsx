@@ -16,6 +16,7 @@ import { ProjectsDashboard } from './ProjectsDashboard';
 import { OperationProgressModal } from '@/core/ui/components/feedback/OperationProgressModal';
 import { WebviewApp } from '@/core/ui/components/WebviewApp';
 import { useOperationRunner } from '@/core/ui/hooks/useOperationRunner';
+import { useRefreshPress } from '@/core/ui/hooks/useRefreshPress';
 import { useViewModePreference } from '@/core/ui/hooks/useViewModePreference';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { COPY_SETTINGS_OPERATION_ID } from '@/core/utils/operationIds';
@@ -172,9 +173,12 @@ function ProjectsDashboardApp() {
     }, [fetchProjects, adoptViewMode]);
 
     // Handle refresh
+    // A pressed Refresh waits in the projects' place; a re-read after an operation keeps them (F214).
+    const { pressed: refreshPressed, markPressed } = useRefreshPress(isRefreshing);
     const handleRefresh = useCallback(() => {
+        markPressed();
         fetchProjects(true);
-    }, [fetchProjects]);
+    }, [fetchProjects, markPressed]);
 
     // Handle project selection. The optional `opts.forceNewWindow` rides along
     // when the user shift/cmd-clicked the tile — the backend opens the project
@@ -461,6 +465,7 @@ function ProjectsDashboardApp() {
             actions={projectActions}
             isLoading={isLoading}
             isRefreshing={isRefreshing}
+            refreshPressed={refreshPressed}
             onRefresh={handleRefresh}
             hasLoadedOnce={hasLoadedOnce}
             initialViewMode={viewMode}
