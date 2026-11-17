@@ -19,13 +19,16 @@
  * **A newer version waiting goes up to the tile** (walk F218): `newer: true` when the card would wear
  * its amber dot, by the card's rule (`updateWaiting`): a newer save remembered than the one held, or
  * data types an update left behind, and only with Demo Builder's install record. The newest save is
- * remembered by every list, the read behind this line and each save, so no read waits for it here.
+ * remembered by every list, the read behind this line and each save, so no read waits for it here,
+ * except the first time, when nothing is remembered for the pack yet.
  *
  * @module features/dashboard/handlers/datapackLineHandler
  */
 
+import { sleep } from '@/core/utils/sleep';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { libraryDisplayName } from '@/features/data-installer/handlers/libraryWriter';
-import { isNewerSave, packLine } from '@/features/data-installer/packVersions';
+import { isNewerSave, isSavedVersion, packLine } from '@/features/data-installer/packVersions';
 import { installStateOf } from '@/features/data-installer/services/demoBuilderEngine/installState';
 import { installFailedOf } from '@/features/data-installer/services/installFailure';
 import { rememberedNewestSave, rememberedPackChoices, rememberedPackName } from '@/features/data-installer/services/packNames';
@@ -58,9 +61,21 @@ export async function handleGetDatapackLine(context: HandlerContext): Promise<Ha
         : undefined;
     const name = known ?? (await reading);
     const line = name ? lineOf(name, held, context) : UNNAMED_DATAPACK;
+    await firstNewestRead(context, held, reading);
     const newer = await newerWaiting(context, project, held);
     const data: DatapackLine = { line, ...(installFailedOf(project) ? { failed: true } : {}), ...(newer ? { newer: true } : {}) };
     return { success: true, data };
+}
+
+/**
+ * A datapack of saves with no newest save remembered yet (the first draw since this memory began, or
+ * since it was installed): the read already running remembers it, so wait for that once, a few
+ * seconds at most, since the line must not wait on a slow library (F69; live walk F218).
+ */
+async function firstNewestRead(context: HandlerContext, held: NonNullable<Project['datapack']>, reading: Promise<unknown>): Promise<void> {
+    if (held.store !== 'library' || !isSavedVersion(held.version)) return;
+    if (rememberedNewestSave(context.context.globalState, held.name) !== undefined) return;
+    await Promise.race([reading, sleep(TIMEOUTS.DATAPACK_LINE_NEWEST_WAIT)]);
 }
 
 /** The card's amber dot, by its rule: a newer save or types left behind, with Demo Builder's record. */

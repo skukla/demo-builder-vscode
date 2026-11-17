@@ -308,6 +308,13 @@ export const TIMEOUTS = {
      */
     DATAPACK_STORE_RETRY: 1000,
 
+    /**
+     * The longest the dashboard's Datapacks tile waits, the first time, for the library read that
+     * remembers a pack's newest save (walk F218): its name must show at once (F69), so a slow library
+     * costs the dot until the next draw, never the line.
+     */
+    DATAPACK_LINE_NEWEST_WAIT: 3000,
+
     DATAPACK_JOB_WAIT_POLL: 2000,
     DATAPACK_JOB_WAIT_MAX: 45 * 1000,
 

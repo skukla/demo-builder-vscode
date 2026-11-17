@@ -17,6 +17,7 @@ import { createMockHandlerContext } from '../../../helpers/handlerContextTestHel
 import { createMockProject } from '../../../helpers/projectFake';
 import { NO_DATAPACK, UNNAMED_DATAPACK, handleGetDatapackLine } from '@/features/dashboard/handlers/datapackLineHandler';
 import { libraryDisplayName } from '@/features/data-installer/handlers/libraryWriter';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { installStateOf } from '@/features/data-installer/services/demoBuilderEngine/installState';
 import { PACK_CHOICES_KEY, PACK_NAMES_KEY, PACK_NEWEST_SAVE_KEY } from '@/features/data-installer/services/packNames';
 import type { Project } from '@/types/base';
@@ -158,6 +159,40 @@ describe('get-datapack-line', () => {
             const answer = await handleGetDatapackLine(contextHolding(held, { 'release-save': 'Release Save' }));
 
             expect(answer.data).toStrictEqual({ line: 'Release Save', newer: true });
+        });
+
+        // Live walk, 2026-11-17: the name was remembered, so the line answered before the library read
+        // behind it; with no newest save remembered yet, the dot was missing until the next draw.
+        it('waits for the read behind the line when no newest save was remembered yet', async () => {
+            mockInstallState.mockResolvedValue(installed);
+            const context = contextHolding(held, { 'release-save': 'Release Save' });
+            const kept = context.context.globalState;
+            mockName.mockImplementation(async () => {
+                // The library answers later, as a network read does.
+                await new Promise((resolve) => setImmediate(resolve));
+                const stored: Record<string, unknown> = { [PACK_NEWEST_SAVE_KEY]: { 'release-save': '20261117-203400' } };
+                (kept.get as jest.Mock).mockImplementation((key: string) => stored[key] ?? (key === PACK_NAMES_KEY ? { 'release-save': 'Release Save' } : undefined));
+                return 'Release Save';
+            });
+
+            const answer = await handleGetDatapackLine(context);
+
+            expect(answer.data).toStrictEqual({ line: 'Release Save', newer: true });
+        });
+
+        it('never holds the line past a few seconds on a library that does not answer (F69)', async () => {
+            jest.useFakeTimers();
+            try {
+                mockInstallState.mockResolvedValue(installed);
+                mockName.mockReturnValue(new Promise(() => undefined));
+                const pending = handleGetDatapackLine(contextHolding(held, { 'release-save': 'Release Save' }));
+
+                await jest.advanceTimersByTimeAsync(TIMEOUTS.DATAPACK_LINE_NEWEST_WAIT);
+
+                await expect(pending).resolves.toStrictEqual({ success: true, data: { line: 'Release Save' } });
+            } finally {
+                jest.useRealTimers();
+            }
         });
 
         it('says nothing when the newest save seen is the one installed', async () => {
