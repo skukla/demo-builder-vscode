@@ -148,7 +148,8 @@ describe('installCategories', () => {
         expect(ctx.recorder.created.map((o) => o.key)).toEqual(['(root)', 'Gear', 'Parts', 'Gear/Tools']);
     });
 
-    it('uses categories the store already has under the same parent, and records nothing for them', async () => {
+    // Walk F187 (owner, 2026-11-16): the store's own are recorded, marked adopted, so a save follows them.
+    it('uses categories the store already has under the same parent, and records them as the store\'s', async () => {
         const ctx = await fakeContext(
             {
                 [childSearch(1, 'Bodea')]: { items: [{ id: 12, name: 'Bodea', parent_id: 1 }] },
@@ -161,7 +162,13 @@ describe('installCategories', () => {
         await installCategories(ctx, parseCategoryPack(BODEA));
 
         expect(ctx.sent.map((c) => (c.body as { category: { parent_id: number } }).category.parent_id)).toEqual([13]);
-        expect(ctx.recorder.created).toEqual([{ kind: CATEGORY_KIND, id: '40', key: 'Products/Critical Power' }]);
+        expect(ctx.recorder.created).toEqual([
+            { kind: CATEGORY_KIND, id: '12', key: '(root)', adopted: true },
+            { kind: CATEGORY_KIND, id: '13', key: 'Products', adopted: true },
+            { kind: CATEGORY_KIND, id: '40', key: 'Products/Critical Power' },
+        ]);
+        expect(ctx.recorder.has(CATEGORY_KIND, '13')).toBe(false);
+        expect(ctx.recorder.has(CATEGORY_KIND, '40')).toBe(true);
     });
 
     it('does not take a same-named category under another parent for this one', async () => {

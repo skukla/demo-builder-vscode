@@ -40,7 +40,7 @@ import type { DatapackFile } from '../datapackZip';
 import { capturePack } from './capture';
 import { captureLines, captureRows } from './capturePhases';
 import { demoPicks, withPicks } from './demoAdditions';
-import { type InstallRecord, type RecordFiles, forgetInstallRecord, nodeRecordFiles, readInstallRecord, writeInstallRecord } from './installRecord';
+import { type CreatedObject, type InstallRecord, type RecordFiles, forgetInstallRecord, nodeRecordFiles, readInstallRecord, writeInstallRecord } from './installRecord';
 import { jobClock } from './jobClock';
 import type { KindContext } from './kindContext';
 import { lookUpLayer } from './layerStep';
@@ -241,6 +241,11 @@ export async function saveStoreChanges(
         // Only what the engine made moves onto the new version: a pick it did not make stays the SC's.
         await writeInstallRecord(files, deps.projectPath, { ...record, pack: saveAs.id, created: await rebaseRecord(ctx, record.created, captured.items, captured) });
         await forgetInstallRecord(files, deps.projectPath, pack);
+    } else if (!pack) {
+        report(OPERATION_STAGES.savingToLibrary.label, RECORD_STEP, undefined, progress.finishing(RECORD_STEP));
+        // Walk F187: the demo now uses it, and the store holds it already, so its record lists what it took.
+        const created = await rebaseRecord(ctx, seeds.map(asAdopted), captured.items, captured);
+        await writeInstallRecord(files, deps.projectPath, createdRecord(deps, saveAs.id, exportedAt, created));
     }
     const installedAs = installedAsOf(pack, about);
     return {
@@ -254,6 +259,15 @@ export async function saveStoreChanges(
         ...(settingsLayer ? { settingsLayer } : {}),
         ...(installedAs ? { installedName: installedAs.displayName } : {}),
     };
+}
+
+/** One of Create's picks, as its record keeps it: the store had it, so no removal takes it (`adoptedObjects.ts`). */
+const asAdopted = (seed: CreatedObject): CreatedObject => ({ ...seed, adopted: true });
+
+/** The record of a datapack Create made: installed where it was read from, as of the save. */
+function createdRecord(deps: StoreChangesDeps, pack: DatapackId, at: string, created: CreatedObject[]): InstallRecord {
+    const target = deps.target ? { target: { websiteCode: deps.target.websiteCode, storeCode: deps.target.storeCode } } : {};
+    return { format: 1, pack, engine: 'demo-builder', startedAt: at, ...target, ...(deps.instance ? { instance: deps.instance } : {}), created };
 }
 
 /** The save row's line while it writes: the write, then the record moved onto the new version (`rebaseRecord`). */

@@ -11,13 +11,14 @@
  * @module features/data-installer/handlers/removalRecords
  */
 
+import { madeByEngine } from '../services/demoBuilderEngine/adoptedObjects';
 import { type CreatedObject, nodeRecordFiles, readInstallRecord, removalOrder } from '../services/demoBuilderEngine/installRecord';
+import { ROOT_KEY } from '../services/demoBuilderEngine/packForm';
 import { decideRemovals, keptObjects } from '../services/demoBuilderEngine/removers';
 import type { PackItems } from '../services/demoBuilderEngine/runPack';
+import { STORE_CONFIG_KIND } from '../services/demoBuilderEngine/storeConfigKind';
 import { packKindOf } from '../services/demoBuilderEngine/storeCopies';
 import { categoryTreeOfKeys, packRootName, productNamesOf } from '../services/packRecords';
-import { ROOT_KEY } from '../services/demoBuilderEngine/packForm';
-import { STORE_CONFIG_KIND } from '../services/demoBuilderEngine/storeConfigKind';
 import { failure } from './packSave';
 import { openProjectStore } from './storeChangesHandlers';
 import type { DatapackId } from '@/types/datapack';
@@ -54,7 +55,8 @@ export async function readRemovalRecords(
     try {
         const commerce = await store.deps.commerce();
         if ('refusal' in commerce) return { success: false, error: commerce.refusal };
-        const objects = removalOrder({ ...record, created: [...record.created] });
+        // What the store had before stays (walk F187): not the uninstall's to take.
+        const objects = removalOrder({ ...record, created: madeByEngine(record.created) });
         const settings = objects.filter((o) => o.kind === STORE_CONFIG_KIND);
         const { take, kept } = await decideRemovals(commerce.get, objects.filter((o) => o.kind !== STORE_CONFIG_KIND));
         // A kept container by the name the store gives it; anything else by the pack's name for it.

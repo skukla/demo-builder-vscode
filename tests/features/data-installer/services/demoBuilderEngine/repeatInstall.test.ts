@@ -99,6 +99,25 @@ describe('installing a pack again', () => {
         expect(ctx.recorder.has('products', 'vrrack')).toBe(false);
     });
 
+    // Walk F187 (owner, 2026-11-16): the store had it before the datapack, so no install takes it out.
+    it('leaves a product the store had before in the store when the pack no longer has it, off the record', async () => {
+        const ctx = await store(AS_INSTALLED, [recorded({ adopted: true })]);
+
+        await installPack(ctx, { products: [] });
+
+        expect(ctx.sent).toStrictEqual([]);
+        expect(ctx.recorder.byKey('products', 'vrrack')).toBeUndefined();
+    });
+
+    it('CONTROL: installing again sends nothing for a product the store had before, and keeps it on the record', async () => {
+        const ctx = await store(AS_INSTALLED, [recorded({ adopted: true })]);
+
+        await installPack(ctx, { products: [PACK_ROW] });
+
+        expect(ctx.sent).toStrictEqual([]);
+        expect(ctx.recorder.byKey('products', 'vrrack')?.adopted).toBe(true);
+    });
+
     it('keeps a product the pack no longer has when the SC changed it', async () => {
         const ctx = await store({ ...AS_INSTALLED, name: 'VR Rack (demo)' });
 

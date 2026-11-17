@@ -62,6 +62,7 @@ import { withOperationProgress } from '@/core/vscode/withOperationProgress';
 import { orgGuard } from '@/features/authentication/services/projectOrgGuard';
 import { handleOpenAdminPanel } from '@/features/dashboard/handlers/openUrlHandlers';
 import { resolveInstallTarget } from '@/features/data-installer/installTarget';
+import { deriveImportInstance } from '@/features/data-installer/services/importInstance';
 import type { Project } from '@/types/base';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 import { ErrorCode } from '@/types/errorCodes';
@@ -84,7 +85,7 @@ export interface StoreChangesPayload extends Partial<Omit<SaveStoreChangesReques
     source?: string;
     /** The kinds to look at; all the pack holds when absent. Preview only. */
     dataTypes?: string[];
-    /** Review Records for an uninstall: what it would take and keep (`removalRecords.ts`, walk F151). */
+    /** For an uninstall: Review Records (what it would take and keep, `removalRecords.ts`, walk F151), and the scope without what the store had before (F187). */
     removal?: boolean;
     /**
      * Also count what was added by hand since the install (`addedSinceInstall`): what a save would
@@ -159,6 +160,7 @@ export async function openProjectStore(context: HandlerContext, use?: ReadWindow
         describe: describer(context, (id) => gate.catalog.getDatapackDetail(id)),
         projectPath: gate.project.path,
         target: resolveInstallTarget(gate.project) ?? undefined,
+        instance: deriveImportInstance(gate.project.componentConfigs),
         log,
         // The settings layer (step 09) is previewed and saved as the engine applies it.
         ...layerFinder({ libraryCatalog }),

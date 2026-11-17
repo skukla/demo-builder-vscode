@@ -108,6 +108,19 @@ describe('readRemovalRecords', () => {
         expect(handed).toEqual(expect.arrayContaining(['categories', 'products']));
     });
 
+    // Walk F187 (owner, 2026-11-16): what the store had before the datapack stays, so it is not the
+    // uninstall's to list as going.
+    it('hands the decision nothing the store had before', async () => {
+        const CABLES: CreatedObject = { kind: 'categories', id: '42', key: 'Cables', adopted: true };
+        jest.mocked(readInstallRecord).mockResolvedValue({ ...RECORD, created: [ROOT, COFFEE, CABLES, POD] });
+
+        await readRemovalRecords(context(), PACK);
+
+        const handed = jest.mocked(decideRemovals).mock.calls[0][1].map((o) => o.id);
+        expect(handed).not.toContain('42');
+        expect(handed).toEqual(expect.arrayContaining(['1506', '1507', 'csm5122']));
+    });
+
     // Walk F147: the products' names, from the datapack's own rows, for the Name column.
     it("names the products from the datapack's rows", async () => {
         const answer = await readRemovalRecords(context(), PACK, async () => ({

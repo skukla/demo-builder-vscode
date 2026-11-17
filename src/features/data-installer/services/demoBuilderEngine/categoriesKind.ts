@@ -23,6 +23,7 @@
  */
 
 import { z } from 'zod';
+import { adoptedRow } from './adoptedObjects';
 import { deleteIfPresent, eachFewAtOnce, firstOfEach, type KindContext, ownedId, segment } from './kindContext';
 import { keyOf } from './packForm';
 import { createOne } from './pendingCreates';
@@ -104,7 +105,11 @@ async function findOrCreate(
     if (owned === null) return undefined;
     if (owned !== undefined) return Number(owned);
     const existing = await findChild(ctx.get, parentId, category.name);
-    if (existing !== undefined) return Number(existing);
+    if (existing !== undefined) {
+        // Walk F187: the store's own, on the record so a save follows it; no removal takes it.
+        await ctx.recorder.record(adoptedRow(CATEGORY_KIND, String(existing), key));
+        return Number(existing);
+    }
     const made = await createOne(ctx, { kind: CATEGORY_KIND, key, find: { parentId, name: category.name } }, async () => {
         const created = (await ctx.send('POST', 'categories', body(category, parentId))) as FoundCategory | null;
         if (created?.id === undefined) throw new Error(`Commerce made no category ${category.name}.`);

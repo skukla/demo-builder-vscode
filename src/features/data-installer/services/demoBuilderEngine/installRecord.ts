@@ -49,6 +49,8 @@ export interface CreatedObject {
     fingerprint?: string;
     /** The pack's row, hashed as it was installed: what "the pack changed" compares. */
     wrote?: string;
+    /** The store had it before (Create took it, or an install matched it): followed, never removed (walk F187). */
+    adopted?: true;
 }
 
 /** What an update may change about an object; the kind and id say which one. */
@@ -128,6 +130,7 @@ export interface InstallRecorder {
     readonly rootStep?: PackRootStep;
     /** Write down where that step stands. */
     setRootStep(step: PackRootStep): Promise<void>;
+    /** This engine made it: an `adopted` object answers false, the store's own. */
     has(kind: string, id: string): boolean;
     record(object: CreatedObject): Promise<void>;
     /** Change what is kept about objects already recorded, in one write; nothing for one that is not. */
@@ -148,12 +151,7 @@ export interface InstallRecorder {
 }
 
 /** The record is missing a safe name, unreadable, or belongs to another pack. */
-export class InstallRecordError extends Error {
-    constructor(message: string) {
-        super(message);
-        this.name = 'InstallRecordError';
-    }
-}
+export class InstallRecordError extends Error { override name = 'InstallRecordError'; }
 
 /** A pack name or version safe to use as part of a file name. */
 const SAFE_PART = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
@@ -186,6 +184,7 @@ const recordSchema = z.object({
             key: z.string().optional(),
             fingerprint: z.string().optional(),
             wrote: z.string().optional(),
+            adopted: z.literal(true).optional(),
         }),
     ),
     pending: z.array(pendingSchema).optional(),
@@ -313,7 +312,7 @@ export async function openInstallRecord(
             record.rootStep = step;
             await save();
         },
-        has: (kind, id) => indexOf(kind, id) >= 0,
+        has: (kind, id) => record.created.some((o) => o.kind === kind && o.id === id && !o.adopted),
         async record(object) {
             if (indexOf(object.kind, object.id) >= 0) return;
             record.created.push(object);

@@ -26,6 +26,8 @@ export interface StoreChangesDeps {
     projectPath: string;
     /** The website and store view the project installs into. */
     target: TargetCodes | undefined;
+    /** The Commerce instance, for a record Create writes (`deriveImportInstance`). */
+    instance?: string;
     log: (line: string) => void;
     files?: RecordFiles;
     now?: () => Date;

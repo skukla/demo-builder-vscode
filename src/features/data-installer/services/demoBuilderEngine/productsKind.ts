@@ -20,6 +20,7 @@
  */
 
 import { z } from 'zod';
+import { adoptedRow } from './adoptedObjects';
 import { BULK_WAIT, type BulkRun, type BulkWait, createProductsInBulk, productIdsInStore, type ProductToMake } from './bulkProducts';
 import { amountsForStore, withoutAmounts } from './giftCardAmounts';
 import { deleteIfPresent, type KindContext, MissingNameError } from './kindContext';
@@ -242,12 +243,17 @@ export async function installProducts(ctx: KindContext, rows: readonly ProductRo
         told.add(key);
         ctx.log(`left ${code} "${value}" at the store's default: the store does not offer it`);
     };
-    const todo = rows.filter((row) => !PRODUCT_KINDS.some((k) => ctx.recorder.has(k, row.sku)));
+    // On the record at all, made here or the store's own (walk F187): handled already.
+    const onRecord = new Set(ctx.recorder.created.filter((o) => PRODUCT_KINDS.includes(o.kind)).map((o) => o.id));
+    const todo = rows.filter((row) => !onRecord.has(row.sku));
     const there = await productIdsInStore(ctx.get, todo.map((row) => row.sku));
     const known = (ctx.session.productIds ??= new Map());
     for (const [sku, id] of there) known.set(sku, id);
     const fresh = todo.filter((row) => !there.has(row.sku.toLowerCase()));
-    for (const row of todo) if (there.has(row.sku.toLowerCase())) ctx.log(`left ${row.sku} alone: the store already has it`);
+    const had = todo.filter((row) => there.has(row.sku.toLowerCase()));
+    for (const row of had) ctx.log(`left ${row.sku} alone: the store already has it`);
+    // Walk F187: the store's own, on the record (one write) so a save follows them; no removal takes them.
+    if (had.length > 0) await ctx.recorder.confirm([], had.map((row) => adoptedRow(kind, row.sku, row.sku)));
     const run: BulkRun = {
         kind,
         noun: kind === GIFT_CARD_KIND ? 'gift cards' : 'products',

@@ -152,6 +152,38 @@ describe('get-datapack-removal-scope', () => {
         await expect(scope()).resolves.toMatchObject({ success: false, error: expect.any(String) });
     });
 
+    // Walk F187 (owner, 2026-11-16): what the store had before stays on uninstall, so the uninstall's
+    // count leaves it out; Save Changes counts all the datapack follows.
+    describe('what the store had before the datapack', () => {
+        function recordWithAdopted(): void {
+            const file = installRecordPath(h.dir, PACK);
+            fs.mkdirSync(path.dirname(file), { recursive: true });
+            const created = [
+                { kind: 'categories', id: '41', key: 'Cables', adopted: true },
+                { kind: 'products', id: 'vrrack' },
+            ];
+            fs.writeFileSync(file, JSON.stringify({ format: 1, pack: PACK, engine: 'demo-builder', startedAt: '2026-11-16T18:00:00.000Z', created }));
+        }
+
+        it('is left out of what an uninstall takes', async () => {
+            recordWithAdopted();
+
+            await expect(scope({ datapackName: PACK.name, version: PACK.version, removal: true })).resolves.toEqual({
+                success: true,
+                data: { kinds: [{ kind: 'products', count: 1 }] },
+            });
+        });
+
+        it('CONTROL: is counted for Save Changes, which asks without removal', async () => {
+            recordWithAdopted();
+
+            await expect(scope()).resolves.toEqual({
+                success: true,
+                data: { kinds: [{ kind: 'categories', count: 1 }, { kind: 'products', count: 1 }] },
+            });
+        });
+    });
+
     it('needs the pack', async () => {
         await expect(scope({})).resolves.toEqual({ success: false, error: 'A datapack name and version are required.' });
     });

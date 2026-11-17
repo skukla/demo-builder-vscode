@@ -18,6 +18,7 @@
  */
 
 import { type KeptRootStep, PREPARING_UNINSTALL } from '../../types';
+import { leaveAdopted } from './adoptedObjects';
 import { installAssignments, installAttributeSets, parseAssignmentRows, parseAttributeSetRows } from './attributeSetsKind';
 import { INSTALLS_WITH, installAttributes, parseAttributeRows } from './attributesKind';
 import { ASSIGNMENT_KINDS, CATALOG_KIND, COMPANY_KIND, CUSTOMER_GROUP_KIND, CUSTOMER_KIND } from './b2bKeys';
@@ -349,7 +350,8 @@ export async function removePack(
     // Step 14 item 1: a create that landed unanswered is taken back too; one that never did costs nothing.
     await settlePending(commerce.get, recorder, () => undefined);
     took('settled what an earlier run left half made');
-    const created = recorder.created;
+    // What the store had before stays there, off the record (walk F187).
+    const created = await leaveAdopted(recorder, [...recorder.created]);
     // Settings first: they went in last. Each leaves the record once put back or kept.
     const settingObjects = created.filter((o) => o.kind === STORE_CONFIG_KIND);
     const settings = settingObjects.length > 0 ? await putBackSettings(commerce, settingObjects, (o) => recorder.drop(o)) : undefined;

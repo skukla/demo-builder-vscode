@@ -138,7 +138,7 @@ function useTableRead(args: JobReadsArgs, pack: object) {
     const loadPreview = preview.load;
     const loadScope = scope.load;
     useEffect(() => {
-        if (kind === 'uninstall') loadScope({ datapackName: id.name, version: id.version });
+        if (kind === 'uninstall') loadScope({ datapackName: id.name, version: id.version, removal: true });
         else if (kind === 'install' || kind === 'switch') loadPreview(pack);
     }, [loadPreview, loadScope, kind, id, pack]);
     const read = tableReadOf(kind, { preview, scope, update: update.read });

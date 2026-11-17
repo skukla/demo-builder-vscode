@@ -137,6 +137,34 @@ describe('removePack', () => {
         expect(files.data.has(installRecordPath(PROJECT, PACK))).toBe(false);
     });
 
+    // Walk F187 (owner, 2026-11-16): what the store had before the datapack (Create took it, or an
+    // install matched it) stays in the store; it leaves the record only.
+    it('leaves in the store what the store had before, taking back only what the engine made', async () => {
+        const files = memoryFiles();
+        const recorder = await openInstallRecord(files, PROJECT, PACK, NOW);
+        await recorder.record({ kind: 'categories', id: '41', key: 'Server Racks', adopted: true });
+        await recorder.record({ kind: 'products', id: 'vrrack' });
+        const ctx = await fakeContext();
+
+        const result = await removePack(ctx, files, { projectPath: PROJECT, pack: PACK });
+
+        expect(ctx.sent).toEqual<SentCall[]>([{ method: 'DELETE', path: 'products/vrrack', body: undefined }]);
+        expect(result).toEqual({ removed: 1, noRecord: false, kept: [], refused: [] });
+        expect(files.data.has(installRecordPath(PROJECT, PACK))).toBe(false);
+    });
+
+    it('CONTROL: a record of only what the store had sends nothing and is forgotten', async () => {
+        const files = memoryFiles();
+        const recorder = await openInstallRecord(files, PROJECT, PACK, NOW);
+        await recorder.record({ kind: 'categories', id: '41', key: 'Server Racks', adopted: true });
+        const ctx = await fakeContext();
+
+        await removePack(ctx, files, { projectPath: PROJECT, pack: PACK });
+
+        expect(ctx.sent).toStrictEqual([]);
+        expect(files.data.has(installRecordPath(PROJECT, PACK))).toBe(false);
+    });
+
     // Walk F161 (owner, 2026-11-16): the uninstall says what it does now, and how far, by data type. It
     // was one bare count over every type ("10 of 10"), and nothing at all while it read what to take back.
     it('says it is preparing to uninstall, then each type with its own count', async () => {

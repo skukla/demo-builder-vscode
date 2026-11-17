@@ -113,7 +113,7 @@ describe('the check', () => {
         expect(screen.getByRole('heading', { name: 'Uninstall My Luma' })).toBeInTheDocument();
         expect(screen.getAllByText('Checking for your changes').length).toBeGreaterThan(0);
         expect(screen.queryByRole('button', { name: 'Uninstall' })).toBeNull();
-        expect(sent('get-datapack-removal-scope')).toEqual({ datapackName: 'luma', version: 'v1' });
+        expect(sent('get-datapack-removal-scope')).toEqual({ datapackName: 'luma', version: 'v1', removal: true });
         expect(sent('get-datapack-removal-changes')).toEqual({
             datapackName: 'luma',
             version: 'v1',

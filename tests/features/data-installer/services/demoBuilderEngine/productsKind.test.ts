@@ -264,13 +264,14 @@ describe('installProducts', () => {
         });
     });
 
-    it('leaves a product the store already has alone, and records nothing for it', async () => {
+    // Walk F187 (owner, 2026-11-16): recorded, marked adopted, so a save follows it and no removal takes it.
+    it('leaves a product the store already has alone, and records it as the store\'s', async () => {
         const ctx = await storeContext({ 'products/vrrack': { id: 12, sku: 'vrrack' } });
 
         await installProducts(ctx, parseProductRows([VR_RACK]));
 
         expect(ctx.sent).toStrictEqual([]);
-        expect(ctx.recorder.created).toStrictEqual([]);
+        expect(ctx.recorder.created).toStrictEqual([{ kind: 'products', id: 'vrrack', key: 'vrrack', adopted: true }]);
     });
 
     it('skips a product naming an option label the store does not have, rather than sending it on', async () => {

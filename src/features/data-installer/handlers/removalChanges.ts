@@ -18,6 +18,7 @@
 
 import { type ChangesAnswer, type DatapackRemovalChanges, type DatapackRemovalScope, changesFromPreview, changesSentence } from '../removalChanges';
 import { changesOnRemoval } from '../services/dataInstallerConfig';
+import { madeByEngine } from '../services/demoBuilderEngine/adoptedObjects';
 import { addedSinceInstall } from '../services/demoBuilderEngine/demoAdditions';
 import { InstallRecordError, nodeRecordFiles, readInstallRecord } from '../services/demoBuilderEngine/installRecord';
 import { kindsOnRecord } from '../services/demoBuilderEngine/runPack';
@@ -27,13 +28,13 @@ import { installedElsewhere } from './installedElsewhere';
 import { failure, saveIntoFor, saveToPack } from './packSave';
 import { openProjectStore, openSave, readPayload, savedFrom, type StoreChangesPayload } from './storeChangesHandlers';
 import { reportPhase } from '@/core/utils/agentPhaseChannel';
+import { readWebsiteName } from '@/core/utils/commerceNames';
 import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { packStage } from '@/core/utils/packStage';
 import { pushOperationProgress, startModalRun } from '@/core/vscode/operationProgress';
 import type { Project } from '@/types/base';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
-import { readWebsiteName } from '@/core/utils/commerceNames';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
 import type { SaveStoreChangesResult } from '@/types/webviewRequests';
@@ -248,10 +249,15 @@ export function contextForProject(context: HandlerContext, project: Project): Ha
     return { ...context, stateManager };
 }
 
-/** What an uninstall of this pack takes, when Demo Builder's engine installed it: read from the record alone. */
-async function removalScope(project: Project | undefined, pack: DatapackId): Promise<DatapackRemovalScope> {
-    const record = project ? await readInstallRecord(nodeRecordFiles, project.path, pack) : undefined;
-    if (!record) return { kinds: null };
+/**
+ * What an uninstall of this pack takes, when Demo Builder's engine installed it: read from the record
+ * alone. For the uninstall, less what the store had before, which it leaves (walk F187); for Save
+ * Changes, all the datapack follows.
+ */
+async function removalScope(project: Project | undefined, pack: DatapackId, uninstall: boolean): Promise<DatapackRemovalScope> {
+    const read = project ? await readInstallRecord(nodeRecordFiles, project.path, pack) : undefined;
+    if (!read) return { kinds: null };
+    const record = uninstall ? { ...read, created: madeByEngine(read.created) } : read;
     const counts = new Map<string, number>();
     for (const object of [...record.created, ...(record.pending ?? [])]) {
         const kind = packKindOf(object.kind);
@@ -266,7 +272,7 @@ export const removalChangesHandlers = defineHandlers({
         const input = readPayload(payload);
         if ('error' in input) return { success: false, error: input.error };
         try {
-            return { success: true, data: await removalScope(await context.stateManager.getCurrentProject(), input.pack) };
+            return { success: true, data: await removalScope(await context.stateManager.getCurrentProject(), input.pack, payload?.removal === true) };
         } catch (error) {
             if (error instanceof InstallRecordError) return { success: false, error: error.message };
             throw error;
