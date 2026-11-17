@@ -996,15 +996,27 @@ check says so and names the file.
 > (`FormDialog`), Confirm (`ConfirmActionDialog`), Progress (`ProgressDialog`), Result
 > (`ResultDialog`) and Guide (`GuideDialog`), all in `core/ui/components/ui/`. The component owns the
 > width, the spacing, the kinds of text, the button order and how the window ends; a caller passes
-> words and actions, and has no prop for a size, a margin or a class. Confirm and Result are small,
-> and so is Progress unless it shows rows; Cancel stands beside a button that commits and Close
-> everywhere else; the button that loses the SC's changes is outline, the dangerous one red.
+> words and actions, and has no prop for a size, a margin or a class. Confirm is small, and so is
+> Progress unless it shows rows; a result keeps the size of the run it ends, and one no run came
+> before is small; Cancel stands beside a button that commits and Close everywhere else; the
+> button that loses the SC's changes is outline, the dangerous one red. Every result is drawn the
+> wizard's way, in the one shared body (`ResultBody`): the title names the thing ("Release Save
+> Test 2", or the kind, "Projects", when there is no one thing), and the body has a large status
+> mark centred where the run's spinner was, the outcome under it in bold ("Up to Date",
+> "Couldn't Install"), one reason centred under that or several lines left-aligned in the capped
+> scroll, and "Took …" for a long run. No status icon goes in a result's title, and the next step
+> is always a footer button. This replaced "status in the title" for results and "a clean finish
+> ends small" (owner, 2026-11-17, walk F222: a title that carries the outcome "combines a title
+> with a result").
 > *Why:* the owner, 2026-11-10: the inventory in `.rptc/research/modal-conventions-audit/` found the
 > rules written down and drawn differently in nearly every window, because each window assembled
 > `Modal` on the spot. A rule a component owns cannot drift window by window.
 > Enforced by `tests/sop/modal-layouts.test.ts`: a file that renders `Modal` itself fails, except
 > the five layouts and the windows its ledger lists, each still to move, and the ledger may only
-> shrink.
+> shrink. The result's look is enforced by `tests/core/ui/components/feedback/ResultBody.test.tsx`,
+> `tests/core/ui/components/ui/ResultDialog.test.tsx` and
+> `tests/core/ui/components/ui/ProgressDialog.test.tsx` (no icon in the title, the mark and the
+> outcome in the body).
 
 > **Convention.** Text in a window is set by the shared stylesheet, never by the window: a lead
 > (`LeadText`, `.lead-text`) and a line (`.dialog-line`) stop at about 60 characters (`max-width:
@@ -1017,16 +1029,16 @@ check says so and names the file.
 > `max-width`, `font-size` or `font-weight` on `.lead-text`, `.dialog-line` or `.modal-button`, and
 > checks the shared rules are there in `core/ui/styles/modal.css`.
 
-> **Convention.** Every result waits for the SC to close it, a clean one that is its title alone
-> included; no window closes itself on a timer.
+> **Convention.** Every result waits for the SC to close it, a clean one with nothing under its
+> outcome included; no window closes itself on a timer.
 > *Why:* the owner, 2026-11-17 (walk F195), over his 2026-11-10 rule that a clean title alone closed
 > itself after a glance: which results stayed depended on whether they had a sentence, which the SC
 > cannot see, so it read as inconsistent; a long run is when an SC looks away, and a window gone
 > before they look back hides whether it worked; and modal dialogs in real software wait to be
 > dismissed.
 > Enforced by `tests/core/ui/components/ui/ResultDialog.test.tsx` and
-> `tests/core/ui/components/ui/ProgressDialog.test.tsx`: a clean title alone is still open three
-> glances later.
+> `tests/core/ui/components/ui/ProgressDialog.test.tsx`: a clean result with nothing under its
+> outcome is still open three glances later.
 
 > **Convention.** A CSS class used in a bundle is styled by that bundle.
 > *Why:* a stylesheet only reaches bundles whose entry imports it, so a class can be styled

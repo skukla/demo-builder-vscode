@@ -23,7 +23,7 @@ what reads as AI-written:
 | "Closing this doesn't stop it." | The button says "Run in background" |
 | "Remove X's data from this store?" under the title "Remove X" | It repeats the title |
 | "Data (12)" | It counts a list the SC can see |
-| "Every data type went in." | It says nothing the green title did not |
+| "Every data type went in." | It says nothing the green outcome did not |
 
 Six patterns the owner rejected (2026-11-10, `.rptc/research/datapack-versions-and-wording/`).
 Each has one rejected example; the words module (`features/data-installer/datapackWords.ts`) holds
@@ -47,13 +47,13 @@ form, confirm, progress, result) shows one at a time.
 |---|---|---|---|
 | **Form** | `FormDialog` | Fields, then the actions | medium; large or extra-wide when a list needs columns |
 | **Confirm** | `ConfirmActionDialog` | A question as the title, as few short sentences as it takes, Cancel and the action | small (400); the run's width when a run follows in the same window |
-| **Progress** | `ProgressDialog` | A spinner, what is happening, how far, and the time. One project's run moves these lines from step to step, as the wizard does (a datapack install, switch, update, restore or uninstall: "Installing Products", "1,200 of 2,046"); only a run over several projects shows a row per project (`WorkRow`) | small from start to finish; a run shown as rows keeps the box its rows need |
-| **Result** | `ResultDialog` | The outcome as the title, then only what is left to know or do | small |
+| **Progress** | `ProgressDialog` | A spinner, what is happening, how far, and the time. One project's run moves these lines from step to step, as the wizard does (a datapack install, switch, update, restore or uninstall: "Installing Products", "1,200 of 2,046"); only a run over several projects shows a row per project (`WorkRow`). How it ended is drawn in the same window (`ResultBody`) | small from start to finish; a run shown as rows keeps the box its rows need, its result included |
+| **Result** | `ResultDialog` | The thing as the title; in the body the large status mark, the outcome under it, then only what is left to know or do (`ResultBody`) | small when no run came before it; a run's result keeps the run's window |
 | **Guide** | `GuideDialog` | Steps with their state, one step open (the demo setup guide; a pack's setup step is a guide of one) | large |
 
 ## Rules
 
-**One project's run is the centred view; rows are for several projects** (owner, 2026-11-16). While a run on one project is under way, the window shows the large spinner with what it is doing now and how far, moving from step to step, never a checklist of its steps or data types (`runStage` in `core/utils`, used by the datapack run window and the progress window, so a datapack save, Clear Demo Data and a project's reset follow it too; `OneRunning`, the projects window's one project). A run over several projects shows a row per project: the projects batch, and the Updates run, whose rows sit under each project's heading. How a run ends is the next rule's. The lines are line 1 the job ("Uninstalling from Commerce"), line 2 the part under way and how far ("Products, 12 of 25"), line 3 the time, and all three hold their room from the first frame, so nothing shifts when a count or the first second arrives (owner, 2026-11-16: "It shouldn't shift"; this replaced, for a run, the 2026-11-01 rule of no blank rows under "Starting"). A clean finish ends small, in every run window: the small result window, its title and the one sentence left to read (owner, 2026-11-16, over the 2026-11-11 rule that kept a run's height to its end); a finish with a problem keeps the run's window and its rows.
+**One project's run is the centred view; rows are for several projects** (owner, 2026-11-16). While a run on one project is under way, the window shows the large spinner with what it is doing now and how far, moving from step to step, never a checklist of its steps or data types (`runStage` in `core/utils`, used by the datapack run window and the progress window, so a datapack save, Clear Demo Data and a project's reset follow it too; `OneRunning`, the projects window's one project). A run over several projects shows a row per project: the projects batch, and the Updates run, whose rows sit under each project's heading. How a run ends is the result rules'. The lines are line 1 the job ("Uninstalling from Commerce"), line 2 the part under way and how far ("Products, 12 of 25"), line 3 the time, and all three hold their room from the first frame, so nothing shifts when a count or the first second arrives (owner, 2026-11-16: "It shouldn't shift"; this replaced, for a run, the 2026-11-01 rule of no blank rows under "Starting").
 
 **A wait shows nothing else, and says what it is waiting for.** While a dialog waits for what it
 will show, only the title, the wait and the way out (Close or Cancel) appear: no fields and no action
@@ -74,43 +74,57 @@ Clear demo data or pressing Check on a pack's setup step, is not a wait for the 
 goes where the answer lands and the rest stays (owner, 2026-11-01).
 A flyout waits the same way: its title and the same rows (owner, 2026-11-08).
 
-**A dialog and a whole wizard screen draw an outcome differently, on purpose** (owner, 2026-11-02).
-A dialog has a title bar, so the outcome sits in it, with a small icon. A whole wizard screen has
-none, so it uses `StatusDisplay`: the large centred icon with the message beneath. Same icons, same
-colours. Neither borrows the other's layout.
+**A result is drawn the wizard's way: the title names the thing, the body says what happened**
+(owner, 2026-11-17, walk F222: a title that carries the outcome "combines a title with a result").
+The title is the thing the run or the action was about ("Release Save Test 2", "Scratch 1028 B"),
+or, when there is no one thing, the job or the kind ("Projects", "Updates", "Datapacks"). No status
+icon goes in a result's title. The body is the shared `ResultBody`, the wizard's success view
+(`StatusDisplay`'s large `StatusIcon`) in a dialog: the large mark centred where the run's spinner
+was (green done, amber a warning, red failed), the outcome under it in bold ("Up to Date",
+"Installed", "Couldn't Install", "Created, 2 Steps Remaining"), then the reason. One reason line is
+centred and muted under the outcome; several lines keep the mark and the outcome centred and read
+left-aligned in a block below, since centred paragraphs are hard to read. A run over several things
+(the projects batch, the Updates run) keeps its rows under the outcome, and only a row with something
+to read carries a line. "Took …" for a run of a minute or more stays, under the rest. Lines and rows
+sit in the house capped scroll with a fade (`scroll-fade--capped`), so the mark, the outcome and the
+buttons stay in view; there is no "Show more". The next step is always a footer button (Retry, Fix
+with AI, Sign In, Finish Setup), beside Close. This replaced, for results, the 2026-11-02 rules that
+a dialog's outcome sits in its title with a small icon and that a dialog and a wizard screen draw an
+outcome differently.
 
-**Status lives in the title.** A small icon before it: green done, amber needs the
-SC (including a dangerous confirm), red failed. No status boxes in the body. The one
-exception is a setup step's banner (`SetupStepHeader`): a Check needs one place to show
-its answer and its spinner (owner, 2026-11-02). A
-done result with nothing else to say is just its title.
+**Status lives in the title for a question and a confirm.** A small icon before it: amber needs the
+SC (including a dangerous confirm). No status boxes in the body. The one exception is a setup step's
+banner (`SetupStepHeader`): a Check needs one place to show its answer and its spinner (owner,
+2026-11-02). A result's status is its large mark in the body (above).
 
 **A sentence gets a small box.** The sizes belong to the layout components (the handbook's "one
 component per layout" convention), so a window cannot pick its own. For example, Clear Demo Data's
-confirm and its result are both small, and the progress window stays small from its first frame to
-a result that is its title alone; only a run shown as rows takes the box its rows need. Before the
-rule the progress window was medium for all 31 operations and often ended on a title alone
-(`.rptc/research/modal-conventions-audit/`).
+confirm is small, and the progress window stays small from its first frame to its result; only a
+run shown as rows takes the box its rows need. Before the rule the progress window was medium for
+all 31 operations (`.rptc/research/modal-conventions-audit/`).
 
 **Every result waits for Close.** The rule is the handbook's "every result waits for the SC to
-close it" convention (owner, 2026-11-17, walk F195). "Projects Reset" with nothing under it stays
-until closed, as "My Luma Installed" followed by "Your changes are saved in Version History." does.
-No window closes itself on a timer.
+close it" convention (owner, 2026-11-17, walk F195). "Projects" over "Reset" with nothing under it
+stays until closed, as "My Luma" over "Installed" and "Your changes are saved in Version History."
+does. No window closes itself on a timer.
 
-**A clean run ends small; a run with a problem ends where it ran.** A window that shows a run as
-rows (the Updates run, the projects batch run, a datapack import, a datapack save) and finishes cleanly hands off
-to the small Result layout: the outcome as the title with its green icon, then only what is left
-to know ("My Luma Installed", then "Your changes are saved in Version History." when a save ran),
-or the title alone when nothing is. No rows, no "Took …". A run that finishes with any problem (a
-row or step with a warning or error, a stop) does not switch: the title turns to the outcome with
-its icon, the rows stay with each one's final state, and a problem sits on the row it is about,
-one short line in orange or red, in the room the row's progress line held, cut to fit. No closing
-sentence goes under the list to repeat a row: only what no row can say (one sentence), then
-"Took …", so the size does not change from first frame to last (owner, 2026-11-11). The rule was "a run ends where it
-ran" for every run (owner, 2026-11-07, generalising the Updates run's rule of 2026-10-21); since
-2026-11-10 that holds only for a run with a problem, because a clean finish's rows told the SC
-nothing the title did not (owner, walk F134: "Do all three"). A save that finds nothing changed
-ends on its title alone, "No Changes to Save". A run shown as rows has no rows of its own for work
+**A result keeps the run's window** (owner, 2026-11-17, walk F222, replacing "a clean finish ends
+small" of 2026-11-16). The window does not shrink from its run to its result: the large mark takes
+the place the run's spinner held (`.result-body` holds at least the room of the run's three centred
+lines), and a window shown as rows keeps its size.
+
+**Every run ends where it ran; only problem lines show.** A run ends in its own window (owner,
+2026-11-07, generalising the Updates run's rule of 2026-10-21; again 2026-11-17, walk F222). A run
+of one thing that finishes cleanly leaves its rows out, because they would tell the SC nothing the
+outcome does not (owner, walk F134: "Do all three"): the mark, the outcome and only what is left to
+know ("My Luma" over "Installed", then "Your changes are saved in Version History." when a save
+ran). A run over several things keeps its rows under the outcome, and only a row with something to
+read carries a line; never a list of what went fine. A run that finishes with any problem (a row or
+step with a warning or error, a stop) keeps its rows with each one's final state, and a problem sits
+on the row it is about, one short line in orange or red, in the room the row's progress line held,
+cut to fit. No closing sentence goes under the list to repeat a row: only what no row can say (one
+sentence), then "Took …" (owner, 2026-11-11). A save that finds nothing changed ends on its outcome
+alone, "No Changes to Save". A run shown as rows has no rows of its own for work
 outside its items: a save says it on the row it leads to, the first while it finds what to read and
 the last while it writes (review, 2026-11-10). A run made of
 steps shows the steps, each named for what it does, in the order it runs, and only those that
@@ -161,15 +175,15 @@ dangerous main action is solid red. Never two buttons that do the same thing.
 - Titles take one form in every window (owner, 2026-11-10; the counts are the extension's own,
   from the same inventory). A form says what it will do: "Install My Luma". While it runs, the
   "-ing" form: "Installing My Luma" (32 of 38 runs already did). A window that is a form and then a
-  run changes its title when the run starts. Done: the thing, then what happened. Failed:
-  "Couldn't" and the verb ("Couldn't Install My Luma"), never "… Failed", "… Stopped" or "… Did
-  Not …".
-- A result's title NAMES the thing, then what happened to it ("My Luma Installed", "My Luma
-  Uninstalled", "Couldn't Save My Luma"), never a generic kind ("Datapack Removed"). Only when
-  there is no name to give does it name the kind ("Couldn't Open the File"). A title is a
-  statement, never the reason, and has no comma. Owner, 2026-11-10, settling the contradiction
-  between the 2026-11-04 rule (a generic title, the name in the body) and the approved clean
-  ending above; the generic rule is withdrawn.
+  run changes its title when the run starts. Once it ends, the title is the thing alone.
+- A result's words are written once, as a sentence that names the thing and then what happened
+  ("My Luma Installed", "Couldn't Save My Luma"), which a run closed into the background ends its
+  notification in. The window splits it at the thing (`resultOutcome`, `core/ui/utils/resultWords.ts`):
+  "My Luma" as the title, "Installed" or "Couldn't Save" under the mark (owner, 2026-11-17, walk
+  F222). Done: what happened. Failed: "Couldn't" and the verb, never "… Failed", "… Stopped" or
+  "… Did Not …". The title names the thing, never a generic kind ("Datapack Removed"); only when
+  there is no name to give does it name the kind ("File", "Projects"). An outcome is a statement,
+  never the reason (owner, 2026-11-10, settling the 2026-11-04 rule of a generic title).
 - The body never repeats the title.
 - Facts, not commentary. Digits for numbers, with separators (1,284).
 - A warning is a word in the main sentence ("Permanently removes…"), never a
@@ -230,7 +244,9 @@ step.
 The five layouts, `core/ui/components/ui/` `FormDialog`, `ConfirmActionDialog`, `ProgressDialog`,
 `ResultDialog` and `GuideDialog`, each built on `Modal` and the only files that render it
 (`tests/sop/modal-layouts.test.ts`; its ledger lists the windows still to move).
-`core/ui/components/ui/Modal.tsx` (the title's status icon, the width steps and
+`core/ui/components/feedback/ResultBody.tsx` (every result's body: the mark, the outcome, the lines,
+"Took …"; styled by `.result-body` in `modal.css`).
+`core/ui/components/ui/Modal.tsx` (the title's status icon for a question or a confirm, the width steps and
 their easing, the button styles), `core/ui/components/ui/useDialogViewChange.ts` (a
 change of view), `core/ui/components/ui/DialogOutcome.tsx` (a state or a wait deep in a dialog's
 body reporting to its title and footer), `core/ui/styles/modal.css` (pinning, text kinds, spacing,
