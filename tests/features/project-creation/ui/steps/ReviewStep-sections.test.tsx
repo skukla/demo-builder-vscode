@@ -149,16 +149,19 @@ describe('the GitHub Repository row', () => {
         expect(screen.queryByText('GitHub Repository')).not.toBeInTheDocument();
     });
 
-    it('reads "New repository" when no repo mode was chosen', () => {
+    // Walk F203 (owner, 2026-11-17): New creates the repository at once and selects it as an
+    // existing one (EDS-18), so the review called the repository it had just made "Existing
+    // repository". Neither word is said; only a reset, which replaces what is in it, is.
+    it('says nothing under a new repository', () => {
         renderReview(withEds({ repoName: 'acme-site' }));
 
-        expect(subItemsUnder('GitHub Repository')).toBe('New repository');
+        expect(subItemsUnder('GitHub Repository')).toBeNull();
     });
 
-    it('reads "Existing repository" for an existing repo that is not being reset', () => {
+    it('says nothing under an existing repository that is not being reset', () => {
         renderReview(withEds({ repoName: 'acme-site', repoMode: 'existing' }));
 
-        expect(subItemsUnder('GitHub Repository')).toBe('Existing repository');
+        expect(subItemsUnder('GitHub Repository')).toBeNull();
     });
 
     it('reads "Reset to template" for an existing repo that is being reset', () => {
@@ -169,10 +172,10 @@ describe('the GitHub Repository row', () => {
         expect(subItemsUnder('GitHub Repository')).toBe('Reset to template');
     });
 
-    it('stays "New repository" when a reset is flagged on a repo that is not existing', () => {
+    it('says no reset when one is flagged on a repo that is not existing', () => {
         renderReview(withEds({ repoName: 'acme-site', resetToTemplate: true }));
 
-        expect(subItemsUnder('GitHub Repository')).toBe('New repository');
+        expect(subItemsUnder('GitHub Repository')).toBeNull();
     });
 });
 

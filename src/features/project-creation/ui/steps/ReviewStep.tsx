@@ -117,7 +117,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 /** Derive GitHub repo display info from EDS config */
 function deriveGithubRepoInfo(
     edsConfig: WizardState['edsConfig'],
-): { fullName: string; mode: string } | null {
+): { fullName: string; mode?: string } | null {
     if (!edsConfig) return null;
 
     const owner =
@@ -126,17 +126,10 @@ function deriveGithubRepoInfo(
     if (!repoName) return null;
 
     const fullName = owner ? `${owner}/${repoName}` : repoName;
-    const isExisting = edsConfig.repoMode === 'existing';
-    const willReset = isExisting && edsConfig.resetToTemplate;
-
-    let mode = 'New repository';
-    if (isExisting && willReset) {
-        mode = 'Reset to template';
-    } else if (isExisting) {
-        mode = 'Existing repository';
-    }
-
-    return { fullName, mode };
+    // Only a reset is said: it replaces what is in the repository. New or existing is not, since New
+    // creates the repository at once and selects it as an existing one (EDS-18; walk F203).
+    const willReset = edsConfig.repoMode === 'existing' && edsConfig.resetToTemplate === true;
+    return willReset ? { fullName, mode: 'Reset to template' } : { fullName };
 }
 
 /**
@@ -240,7 +233,7 @@ function EdsSection({
     daLiveInfo,
     aemAssetsEnabled,
 }: {
-    githubRepoInfo: { fullName: string; mode: string } | null;
+    githubRepoInfo: { fullName: string; mode?: string } | null;
     daLiveInfo: { org: string; site: string; mode: string } | null;
     aemAssetsEnabled: boolean;
 }) {
@@ -250,7 +243,7 @@ function EdsSection({
                 <LabelValue
                     label="GitHub Repository"
                     value={githubRepoInfo.fullName}
-                    subItems={[githubRepoInfo.mode]}
+                    {...(githubRepoInfo.mode ? { subItems: [githubRepoInfo.mode] } : {})}
                 />
             )}
             {daLiveInfo && (

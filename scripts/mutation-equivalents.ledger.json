@@ -2252,7 +2252,7 @@
             "anchors": [
                 "return title && title.length > 0 ? title : name;"
             ],
-            "line": 167,
+            "line": 160,
             "mutants": 2,
             "category": "branch",
             "reason": "Forcing the length test true, or widening it to >= 0, changes the answer only for a title that is present but empty \u2014 and an empty string is falsy, so the && short-circuits to it and the ternary still takes the name branch. Both mutants therefore return the same value for every title: undefined, empty, or set. A test with title '' passes under all three.",
@@ -2265,7 +2265,7 @@
             "anchors": [
                 "if (!orgName && !projectName && !workspaceName) return <View />;"
             ],
-            "line": 206,
+            "line": 199,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this guard false makes AdobeIOSection render its card with no rows \u2014 but the component is only mounted inside the (orgName || projectName || workspaceName) test at line 385, so it is never called with all three absent. There is no wizard state that reaches this line with the condition true, which is why only the false direction survives.",
@@ -2278,7 +2278,7 @@
             "anchors": [
                 "...(stack.dependencies || []),"
             ],
-            "line": 310,
+            "line": 303,
             "mutants": 2,
             "category": "other",
             "reason": "Every stack in stacks.json declares dependencies as an empty array, and an empty array is truthy \u2014 so the || never falls through, and swapping it for && yields the mutant's own empty array instead, spreading to nothing either way. The uncovered array-literal mutant is the same fact from the other side: the fallback is unreachable while no stack omits the field.",
@@ -2291,7 +2291,7 @@
             "anchors": [
                 "...(state.selectedAppBuilderComponents || []).filter(isMeshComponentId),"
             ],
-            "line": 311,
+            "line": 304,
             "mutants": 1,
             "category": "other",
             "reason": "This fallback fires only when no App Builder components are selected, and whatever it produces goes straight through filter(isMeshComponentId). Stryker's placeholder string is not a mesh id, so it is filtered out and the dependencies list is empty either way. The .filter call itself is NOT equivalent \u2014 a test with a non-mesh selection kills that one.",
@@ -2304,7 +2304,7 @@
             "anchors": [
                 "() => resolveReviewIntegrationNames(state, packages ?? [], stacks ?? []),"
             ],
-            "line": 328,
+            "line": 321,
             "mutants": 2,
             "category": "other",
             "reason": "Both fallbacks fire only when the catalog prop is absent, and each is handed to resolveReviewIntegrationNames, which uses them for one thing: stacks.find(s => s.id === state.selectedStack) and the package lookup behind meshComponentForStack. A list holding Stryker's placeholder string matches no stack or package id, so the resolved names are identical to the empty-list case.",
@@ -2317,7 +2317,7 @@
             "anchors": [
                 "{(adobeOrgName || adobeProjectName || adobeWorkspaceName) && ("
             ],
-            "line": 404,
+            "line": 397,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this true always mounts AdobeIOSection, which opens with its own guard returning an empty View when all three names are absent \u2014 so the rendered output is the same empty element the falsy branch produces. The two guards are deliberately redundant, and that redundancy is exactly what makes this mutant unobservable.",
@@ -7619,7 +7619,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 339,
+            "line": 343,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is one debugLogger.debug. That the catch EXISTS is tested \u2014 a project write that throws must still report the import as started, because the service has already accepted it \u2014 and emptying the body changes only which line reaches Debug Logs. Moved with recordDatapackOnProject to importJobWatch.ts (2026-10-08). Re-anchored 2026-10-31 (247 -> 248): unchanged code; the kept root step was carried onto the record above it. Re-anchored 2026-11-05 (251 -> 272): unchanged code; the progress push above it carries the engine's count. Re-anchored 2026-11-06 (272 -> 274): unchanged code; the job record carries timings and skips above it. Re-anchored again 2026-11-06 (274 -> 275): unchanged code; the job record carries the install check above it. Re-anchored 2026-11-08 (281 -> 284): unchanged code; the pack-change announcement was added above it. Re-anchored 2026-11-09 (295 -> 298): unchanged code; walk F105's save label was carried onto the job record above it. Re-anchored 2026-11-09 (298 -> 301): unchanged code; the import window's steps redesign (walk F107 to F118) moved lines above it. Re-anchored 2026-11-12 (301 -> 318): unchanged code; runAndWatch's afterSuccess was added above it. Re-anchored 2026-11-12 (318 -> 321): unchanged code; runAndWatch's spec gained the job's purpose and the record carries it above it (step 03, S2). Re-anchored 2026-11-12 (321 -> 326): unchanged code; runAndWatch reads the project the job started from for every job, and the watch settles a failed install's record above it (step-04 S7). Re-anchored 2026-11-14 (326 -> 328): unchanged code; two imports for the update's note (step-07 U1) were added above it.",
@@ -7632,7 +7632,7 @@
             "anchors": [
                 "if (!project) {"
             ],
-            "line": 330,
+            "line": 334,
             "mutants": 2,
             "category": "branch",
             "reason": "Both mutants are absorbed by the catch two lines below. Removing the guard lets 'project.datapack = ...' throw on a null project; the catch swallows it, logs, and the handler still reports the import as started \u2014 which is exactly what the guard produces. The only difference is a debug line. Moved with recordDatapackOnProject to importJobWatch.ts (2026-10-08). Re-anchored 2026-10-31 (240 -> 241): unchanged code; the kept root step was carried onto the record above it. Re-anchored 2026-11-05 (244 -> 265): unchanged code; the progress push carries the engine's count. Re-anchored 2026-11-06 (265 -> 267): unchanged code; the job record carries timings and skips above it. Re-anchored again 2026-11-06 (267 -> 268): unchanged code; the job record carries the install check above it. Re-anchored 2026-11-08 (274 -> 277): unchanged code; the pack-change announcement was added above it. Re-anchored 2026-11-09 (288 -> 291): unchanged code; walk F105's save label was carried onto the job record above it. Re-anchored 2026-11-09 (291 -> 294): unchanged code; the import window's steps redesign (walk F107 to F118) moved lines above it. Re-anchored 2026-11-12 (294 -> 311): unchanged code; runAndWatch's afterSuccess was added above it. Re-anchored 2026-11-12 (311 -> 314): unchanged code; runAndWatch's spec gained the job's purpose and the record carries it above it (step 03, S2). Re-anchored 2026-11-12 (314 -> 317): unchanged code; runAndWatch reads the project the job started from for every job, and the watch settles a failed install's record above it (step-04 S7). Re-anchored 2026-11-14 (317 -> 319): unchanged code; two imports for the update's note (step-07 U1) were added above it.",
