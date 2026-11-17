@@ -378,14 +378,19 @@ end).
 Restart notes (2026-11-17). Step 1 passed on the F191/F192 build: the window read "Removes nothing from the store. The demo stops using Release Save Test." with Cancel and a red Uninstall only; Uninstalling Release Save Test, then Release Save Test Uninstalled; the card lost its check and the flyout offers Install. Before the fix it was refused (F192) and the window was empty (F191). Step 2 passed: the tree shows ZZ Customer Picks (ID: 1585) under Default Category (the first save kept the old name; renamed again). Step 3 passed: Create Datapack read the store ("Reading from Commerce"), Categories 1 of 1 selected, ZZ Customer Picks the only category. Step 4 passed: Creating Release Save Test 2 ("Exporting from Commerce / Reading your selection", then the save; line 2 blank for a moment between, F194), Release Save Test 2 Created ("Scratch 1028 now uses Release Save Test 2."), the card tagged Mine with the check, Saved Nov 17, 8:20 AM. Step 5 first half passed: the header reads Save at once, no install (F187 proven live: Create wrote the record). Step 5 second half passed: renamed to ZZ Customer Picks 2, Update Release Save Test 2 listed Categories "1, 1 changed" (F196: now "1 of 1 changed"), the run (noisy line 1, F196; slow read, F197), saved as version 20261117-134338 in 10 s (Debug Logs), the card Saved Nov 17, 8:43 AM. Step 6 passed: the install record lists category 1585 keyed "ZZ Customer Picks 2", marked the store's own (F187 proven live: Update followed the renamed category). Owner questions raised on the way: why a new pack rather than Update (answered: the old pack predates F187's record; Create is new in beta.153, so no SC has such a pack), the result that waits for Close (F195). Earlier: "Checking for your changes" is the one wait for Restore, Uninstall, Switch, Update and Save Changes (F193, open).
 
 **Test U2.3: Another demo picks up the newer save** (1.7 steps 3 to 6, 1.11 step 4)
+Rewritten 2026-11-17 for the restart's datapack and the current labels (F189, F198). The instance has
+one test website, so Scratch 1028 B shares Scratch 1028's store: step 4 proves B picks up and installs
+the newer version, not a change in a store of its own (the category is the same object in both).
+0. On Scratch 1028's Datapacks, install **Release Save Test 2** again (its list's **Install**). Expect
+   the header to read **Save**.
 1. Create a project named "Scratch 1028 B" on the test website and the test store view, picking
-   Release Save Test in the wizard's **Datapacks** step. Expect it installed during creation.
-2. Back on Scratch 1028: rename the category to "ZZ Customer Picks 3", then **Save**, **Save**.
-   Expect "Saved to Release Save Test".
-3. Open Scratch 1028 B's Datapacks. Expect an amber dot on the Release Save Test card, reading
-   "Newer version available" on hover. The card's main button reads **Update Release Save Test**.
-4. Click it, then **Update**. Expect **Release Save Test Updated**, the dot gone, and the category
-   on Scratch 1028 B's store named "ZZ Customer Picks 3".
+   Release Save Test 2 in the wizard's **Datapacks** step. Expect it installed during creation.
+2. Back on Scratch 1028: rename the category to "ZZ Customer Picks 3", then **Save** menu, **Update
+   Release Save Test 2**, **Save**. Expect **Release Save Test 2 Updated**.
+3. Open Scratch 1028 B's Datapacks. Expect an amber dot on the Release Save Test 2 card, reading
+   "Newer version available" on hover, and its flyout's first action **Install Newer Version**.
+4. Click it, then **Install**. Expect **Release Save Test 2 Installed** with nothing to change (the
+   shared store already holds the rename), and the dot gone.
 
 **Test U2.4: The library and the demo stay in step** (1.10 step 7)
 1. Open the **Datapack Library** (sidebar, **Datapacks**) beside Scratch 1028's Datapacks. In the
