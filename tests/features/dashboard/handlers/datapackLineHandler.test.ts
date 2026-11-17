@@ -9,23 +9,30 @@ jest.mock('@/features/data-installer/handlers/libraryWriter', () => ({
     heldDisplayName: jest.fn(async (_context: unknown, held: { name: string }) => held.name),
 }));
 
+jest.mock('@/features/data-installer/services/demoBuilderEngine/installState', () => ({
+    installStateOf: jest.fn(async () => ({})),
+}));
+
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockProject } from '../../../helpers/projectFake';
 import { NO_DATAPACK, UNNAMED_DATAPACK, handleGetDatapackLine } from '@/features/dashboard/handlers/datapackLineHandler';
 import { libraryDisplayName } from '@/features/data-installer/handlers/libraryWriter';
-import { PACK_CHOICES_KEY, PACK_NAMES_KEY } from '@/features/data-installer/services/packNames';
+import { installStateOf } from '@/features/data-installer/services/demoBuilderEngine/installState';
+import { PACK_CHOICES_KEY, PACK_NAMES_KEY, PACK_NEWEST_SAVE_KEY } from '@/features/data-installer/services/packNames';
 import type { Project } from '@/types/base';
 
 const mockName = libraryDisplayName as jest.Mock;
+const mockInstallState = installStateOf as jest.Mock;
 
 function contextHolding(
     datapack: Project['datapack'],
     remembered: Record<string, string> = {},
     datapackInstallFailure?: Project['datapackInstallFailure'],
     choices: Record<string, number> = { luma: 2 },
+    newest: Record<string, string> = {},
 ) {
     const context = createMockHandlerContext();
-    const kept: Record<string, unknown> = { [PACK_NAMES_KEY]: remembered, [PACK_CHOICES_KEY]: choices };
+    const kept: Record<string, unknown> = { [PACK_NAMES_KEY]: remembered, [PACK_CHOICES_KEY]: choices, [PACK_NEWEST_SAVE_KEY]: newest };
     (context.context.globalState.get as jest.Mock).mockImplementation((key: string) => kept[key]);
     (context.stateManager.getCurrentProject as jest.Mock).mockResolvedValue(
         createMockProject({ datapack, datapackInstallFailure }),
@@ -128,5 +135,47 @@ describe('get-datapack-line', () => {
         );
 
         expect(answer.data).toStrictEqual({ line: UNNAMED_DATAPACK });
+    });
+
+    // Walk F218 (owner, 2026-11-17): the dot goes up to the dashboard's Datapacks tile, as the card's.
+    describe('a newer version waiting', () => {
+        const held = { name: 'release-save', version: '20261117-134338', store: 'library' as const };
+        const installed = { installedAt: '2026-11-17T15:00:00.000Z' };
+
+        it('says so when a newer save of the held pack was seen, and Demo Builder installed it', async () => {
+            mockName.mockResolvedValue('Release Save');
+            mockInstallState.mockResolvedValue(installed);
+
+            const answer = await handleGetDatapackLine(contextHolding(held, { 'release-save': 'Release Save' }, undefined, {}, { 'release-save': '20261117-203400' }));
+
+            expect(answer.data).toStrictEqual({ line: 'Release Save', newer: true });
+        });
+
+        it('says so when an update left data types on the older version', async () => {
+            mockName.mockResolvedValue('Release Save');
+            mockInstallState.mockResolvedValue({ ...installed, updateBehind: true });
+
+            const answer = await handleGetDatapackLine(contextHolding(held, { 'release-save': 'Release Save' }));
+
+            expect(answer.data).toStrictEqual({ line: 'Release Save', newer: true });
+        });
+
+        it('says nothing when the newest save seen is the one installed', async () => {
+            mockName.mockResolvedValue('Release Save');
+            mockInstallState.mockResolvedValue(installed);
+
+            const answer = await handleGetDatapackLine(contextHolding(held, { 'release-save': 'Release Save' }, undefined, {}, { 'release-save': held.version }));
+
+            expect(answer.data).toStrictEqual({ line: 'Release Save' });
+        });
+
+        it('says nothing without Demo Builder install record, as the card does', async () => {
+            mockName.mockResolvedValue('Release Save');
+            mockInstallState.mockResolvedValue({});
+
+            const answer = await handleGetDatapackLine(contextHolding(held, { 'release-save': 'Release Save' }, undefined, {}, { 'release-save': '20261117-203400' }));
+
+            expect(answer.data).toStrictEqual({ line: 'Release Save' });
+        });
     });
 });

@@ -82,6 +82,8 @@ export interface DatapackLine {
     line: string;
     /** Present only when the project's datapack failed to install. */
     failed?: true;
+    /** A newer version of the project's datapack waits, or an update left data types behind (walk F218). */
+    newer?: true;
 }
 
 /**

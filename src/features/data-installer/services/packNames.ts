@@ -8,13 +8,17 @@
  * new name as it lands.
  *
  * Kept in global state: a pack's name is the same in every project and survives a window reload. So
- * is how many versions it offers (step-07 P4), which the same read answers.
+ * is how many versions it offers (step-07 P4), which the same read answers, and its newest save (walk
+ * F218), so the dashboard's tile says a newer version waits without a read of its own.
  *
  * @module features/data-installer/services/packNames
  */
 
 /** The global state key holding pack id to display name. */
 export const PACK_NAMES_KEY = 'demoBuilder.datapackNames';
+
+import { newestOwnSave } from '../packVersions';
+import type { DatapackSummary } from '../types';
 
 /** What this reads and writes: the extension's global state. */
 export interface NameMemory {
@@ -78,4 +82,34 @@ export async function rememberPackChoices(memory: NameMemory, packName: string, 
     const known = choices(memory);
     if (known[packName] === count) return;
     await memory.update(PACK_CHOICES_KEY, { ...known, [packName]: count });
+}
+
+/** The global state key holding pack id to its newest save seen (walk F218). */
+export const PACK_NEWEST_SAVE_KEY = 'demoBuilder.datapackNewestSaves';
+
+function newestSaves(memory: NameMemory): Record<string, string> {
+    return memory.get<Record<string, string>>(PACK_NEWEST_SAVE_KEY) ?? {};
+}
+
+/** A library pack's newest save of the SC's own or Demo Builder's, as last seen, or undefined. */
+export function rememberedNewestSave(memory: NameMemory, packName: string): string | undefined {
+    return newestSaves(memory)[packName];
+}
+
+/**
+ * Keep each listed pack's newest save, never going back to an older one: a list, the read behind the
+ * dashboard's line and a save each tell it. One write, and none when nothing is newer.
+ */
+export async function rememberNewestSaves(
+    memory: NameMemory,
+    listed: ReadonlyArray<Pick<DatapackSummary, 'id' | 'mine' | 'team'>>,
+): Promise<void> {
+    const known = newestSaves(memory);
+    const fresh: Record<string, string> = {};
+    for (const name of new Set(listed.map((item) => item.id.name))) {
+        const newest = newestOwnSave(name, listed);
+        if (newest !== undefined && (known[name] === undefined || newest > known[name])) fresh[name] = newest;
+    }
+    if (Object.keys(fresh).length === 0) return;
+    await memory.update(PACK_NEWEST_SAVE_KEY, { ...known, ...fresh });
 }

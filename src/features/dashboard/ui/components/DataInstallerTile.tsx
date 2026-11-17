@@ -15,10 +15,10 @@
  * close what you were looking at. The command's own registration records that
  * decision; the separate `openDataInstaller` message is how this tile honours it.
  *
- * **One dot: a failed install** (step-04 J6-4). When the project's datapack failed to install, the
- * card wears the error dot and its hover says "Install failed", the datapack status vocabulary's
- * words; the line stays the bare name, with no reason beside it (the reason is in the Datapacks
- * flyout). Otherwise no dot: the demo's data is not a deployed artifact with a health state.
+ * **Two dots.** A failed install (step-04 J6-4): the error dot, "Install failed" on hover, the
+ * datapack status vocabulary's words; the line stays the bare name (the reason is in the Datapacks
+ * flyout). A newer version waiting (walk F218, owner 2026-11-17): the amber dot, "Newer version
+ * available", the card's own words, as an integration's tile carries its update. The error wins.
  *
  * @module features/dashboard/ui/components/DataInstallerTile
  */
@@ -39,6 +39,14 @@ function failedStatus(): DashboardTileStatus {
 }
 
 const FAILED_STATUS = failedStatus();
+
+/** The amber dot the demo's datapack card wears when a newer version waits, in its words (J9-1). */
+const NEWER_STATUS: DashboardTileStatus = { variant: 'warning', tooltip: 'Newer version available', testId: 'datapacks-newer' };
+
+function statusOf(line: DatapackLine | undefined): DashboardTileStatus | undefined {
+    if (line?.failed) return FAILED_STATUS;
+    return line?.newer ? NEWER_STATUS : undefined;
+}
 
 /** The card's line from the extension, read now and whenever the dashboard is shown again. */
 function useDatapackLine(): DatapackLine | undefined {
@@ -80,7 +88,7 @@ export function DataInstallerTile(): React.ReactElement {
             onPress={() => webviewClient.postMessage('openDataInstaller')}
             action="dataInstaller"
             tooltip="Install, save or change this demo's datapack"
-            status={line?.failed ? FAILED_STATUS : undefined}
+            status={statusOf(line)}
         />
     );
 }

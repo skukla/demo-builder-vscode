@@ -135,6 +135,23 @@ describe('DataInstallerTile', () => {
         expect(screen.getByRole('button')).toHaveAttribute('aria-label', 'Datapacks, Install failed');
     });
 
+    // Walk F218 (owner, 2026-11-17): the card's amber dot goes up to the tile, in the card's words.
+    it('wears the amber dot when a newer version waits, explained on hover', async () => {
+        posted.request.mockResolvedValue({ success: true, data: { line: 'Release Save Test 2', newer: true } });
+        await renderTile();
+
+        expect(screen.getByTestId('datapacks-newer')).toHaveAttribute('data-variant', 'warning');
+        expect(screen.getByRole('tooltip')).toHaveTextContent(/^Newer version available$/);
+    });
+
+    it('keeps the error dot over the amber one when both are true', async () => {
+        posted.request.mockResolvedValue({ success: true, data: { line: 'My Luma', failed: true, newer: true } });
+        await renderTile();
+
+        expect(screen.getByTestId('datapacks-failed')).toBeInTheDocument();
+        expect(screen.queryByTestId('datapacks-newer')).not.toBeInTheDocument();
+    });
+
     it('drops the dot when a later read says the install no longer fails', async () => {
         posted.request.mockResolvedValue({ success: true, data: { line: 'My Luma', failed: true } });
         await renderTile();

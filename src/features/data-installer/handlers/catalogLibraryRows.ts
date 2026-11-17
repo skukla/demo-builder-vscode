@@ -14,7 +14,7 @@
 import type { DataInstallerClient } from '../services/dataInstallerClient';
 import { resolveDataInstallerBaseUrl } from '../services/dataInstallerConfig';
 import { classifyTransportError, DataInstallerApiError } from '../services/dataInstallerErrors';
-import { type NameMemory, rememberPackNames } from '../services/packNames';
+import { type NameMemory, rememberNewestSaves, rememberPackNames } from '../services/packNames';
 import type { CatalogPage, DatapackSummary, Page } from '../types';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -104,7 +104,12 @@ export const INSTALLER_OFF = 'off';
  */
 export async function rememberingNames(memory: NameMemory | undefined, response: HandlerResponse): Promise<HandlerResponse> {
     try {
-        if (memory && response.success) await rememberPackNames(memory, (response.data as Page<DatapackSummary>).items);
+        if (memory && response.success) {
+            const { items } = response.data as Page<DatapackSummary>;
+            await rememberPackNames(memory, items);
+            // And each pack's newest save, so the dashboard's tile can say a newer version waits (F218).
+            await rememberNewestSaves(memory, items);
+        }
     } catch {
         // The list still answers; the names are kept next time.
     }

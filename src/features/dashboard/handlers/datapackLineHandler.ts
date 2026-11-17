@@ -16,13 +16,19 @@
  * project's failure record names its datapack (`installFailedOf`, S7's rule). The card turns it into
  * the error dot with "Install failed" on hover; the line stays the bare name, with no reason.
  *
+ * **A newer version waiting goes up to the tile** (walk F218): `newer: true` when the card would wear
+ * its amber dot, by the card's rule (`updateWaiting`): a newer save remembered than the one held, or
+ * data types an update left behind, and only with Demo Builder's install record. The newest save is
+ * remembered by every list, the read behind this line and each save, so no read waits for it here.
+ *
  * @module features/dashboard/handlers/datapackLineHandler
  */
 
 import { libraryDisplayName } from '@/features/data-installer/handlers/libraryWriter';
-import { packLine } from '@/features/data-installer/packVersions';
+import { isNewerSave, packLine } from '@/features/data-installer/packVersions';
+import { installStateOf } from '@/features/data-installer/services/demoBuilderEngine/installState';
 import { installFailedOf } from '@/features/data-installer/services/installFailure';
-import { rememberedPackChoices, rememberedPackName } from '@/features/data-installer/services/packNames';
+import { rememberedNewestSave, rememberedPackChoices, rememberedPackName } from '@/features/data-installer/services/packNames';
 import type { Project } from '@/types/base';
 import type { DatapackLine } from '@/types/datapack';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
@@ -52,6 +58,15 @@ export async function handleGetDatapackLine(context: HandlerContext): Promise<Ha
         : undefined;
     const name = known ?? (await reading);
     const line = name ? lineOf(name, held, context) : UNNAMED_DATAPACK;
-    const data: DatapackLine = installFailedOf(project) ? { line, failed: true } : { line };
+    const newer = await newerWaiting(context, project, held);
+    const data: DatapackLine = { line, ...(installFailedOf(project) ? { failed: true } : {}), ...(newer ? { newer: true } : {}) };
     return { success: true, data };
+}
+
+/** The card's amber dot, by its rule: a newer save or types left behind, with Demo Builder's record. */
+async function newerWaiting(context: HandlerContext, project: Project, held: NonNullable<Project['datapack']>): Promise<boolean> {
+    const { installedAt, updateBehind } = await installStateOf(project.path, held);
+    if (installedAt === undefined) return false;
+    const newest = rememberedNewestSave(context.context.globalState, held.name);
+    return updateBehind === true || (newest !== undefined && isNewerSave(held, newest));
 }

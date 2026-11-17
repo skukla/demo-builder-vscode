@@ -5,6 +5,9 @@
 import {
     PACK_CHOICES_KEY,
     PACK_NAMES_KEY,
+    PACK_NEWEST_SAVE_KEY,
+    rememberNewestSaves,
+    rememberedNewestSave,
     rememberPackChoices,
     rememberPackName,
     rememberPackNames,
@@ -88,5 +91,43 @@ describe('pack version choices', () => {
         expect(rememberedPackChoices(kept, 'luma')).toBe(2);
         expect(rememberedPackChoices(kept, 'bodea')).toBe(1);
         expect(kept.update).toHaveBeenCalledTimes(1);
+    });
+});
+
+// Walk F218: the newest save of each pack seen, so the dashboard's Datapacks tile can say a newer
+// version waits without a library read of its own.
+describe('newest saves', () => {
+    function saves(initial: Record<string, string> | undefined): NameMemory & { update: jest.Mock } {
+        let stored: unknown = initial;
+        return {
+            get: <T>(key: string) => (key === PACK_NEWEST_SAVE_KEY ? (stored as T) : undefined),
+            update: jest.fn(async (_key: string, value: unknown) => {
+                stored = value;
+            }),
+        };
+    }
+    const row = (name: string, version: string, mine = true) => ({ id: { name, version }, mine });
+
+    it("keeps each pack's newest save of the SC's own or Demo Builder's, never a named version", async () => {
+        const kept = saves(undefined);
+
+        await rememberNewestSaves(kept, [
+            row('acme', '20261117-134338'),
+            row('acme', '20261117-203400'),
+            row('acme', 'main'),
+            row('theirs', '20261118-090000', false),
+        ]);
+
+        expect(rememberedNewestSave(kept, 'acme')).toBe('20261117-203400');
+        expect(rememberedNewestSave(kept, 'theirs')).toBeUndefined();
+    });
+
+    it('never goes back to an older save, and writes nothing when nothing is newer', async () => {
+        const kept = saves({ acme: '20261117-203400' });
+
+        await rememberNewestSaves(kept, [row('acme', '20261117-134338')]);
+
+        expect(rememberedNewestSave(kept, 'acme')).toBe('20261117-203400');
+        expect(kept.update).not.toHaveBeenCalled();
     });
 });

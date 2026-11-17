@@ -12,7 +12,7 @@ import { versionChoices } from '../packVersions';
 import type { DataInstallerClient } from '../services/dataInstallerClient';
 import { resolveDataInstallerBaseUrl, resolveDatapackStoreBaseUrl } from '../services/dataInstallerConfig';
 import { DatapackStoreWriter } from '../services/datapackStoreWriter';
-import { rememberPackChoices, rememberPackName, rememberedPackName } from '../services/packNames';
+import { rememberNewestSaves, rememberPackChoices, rememberPackName, rememberedPackName } from '../services/packNames';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
 import type { Project } from '@/types/base';
 import { storeOf } from '@/types/datapack';
@@ -62,6 +62,7 @@ export async function libraryDisplayName(context: HandlerContext, held: NonNulla
         await rememberPackName(context.context.globalState, held.name, name);
         // The same read says how many versions the pack offers: the dashboard line names one only with two (step-07 P4).
         await rememberPackChoices(context.context.globalState, held.name, versionChoices(versions.map((item) => item.id.version)).length);
+        await rememberNewestSaves(context.context.globalState, versions);
         return name;
     } catch (error) {
         context.debugLogger.debug(`[Data Installer] Could not read ${held.name}'s display name: ${error instanceof Error ? error.message : String(error)}`);

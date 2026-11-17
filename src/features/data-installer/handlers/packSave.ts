@@ -23,6 +23,7 @@ import { saveNote } from '../services/demoBuilderEngine/saveOutcome';
 import { saveStoreChanges } from '../services/demoBuilderEngine/saveStore';
 import { StoreChangesError } from '../services/demoBuilderEngine/storeAccess';
 import { type SaveInto, planSave, recordSave } from '../services/demoPack';
+import { rememberNewestSaves } from '../services/packNames';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
 import { ownNames } from './ownDatapackNames';
 import type { ProjectStore, SaveOpened } from './storeChangesHandlers';
@@ -117,6 +118,8 @@ export async function saveToPack(
         // The pack it was made from names the store its rows were actually read from.
         const recorded = planSave(opened.project, pack ? { ...pack, store: result.readFrom } : undefined, { name: plan.id.name, displayName: plan.displayName }, at);
         await recordOnProject(context, opened.project, { ...recorded, id: plan.id });
+        // Another demo holding this pack shows the newer version on its dashboard tile at once (F218).
+        await rememberNewestSaves(context.context.globalState, [{ id: result.saved, mine: true }]);
         // A save into the SC's own datapack keeps two saves; a Save As made a new one (Phase 2).
         if (into.name) await trimOldSaves(context, library, plan.id);
         const from = pack ? `the store's copy of ${pack.name}@${pack.version}` : 'what was picked from the store';

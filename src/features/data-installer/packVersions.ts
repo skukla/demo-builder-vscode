@@ -125,10 +125,22 @@ type ListedVersion = Pick<DatapackSummary, 'id' | 'mine' | 'team'>;
  * @returns the newer save, or undefined when there is none
  */
 export function newerVersion(held: ProjectDatapack, listed: readonly ListedVersion[]): string | undefined {
-    if (held.store !== 'library' || !isSavedVersion(held.version)) return undefined;
-    const ours = listed.filter((item) => item.id.name === held.name && (item.mine === true || item.team === true));
-    const newest = savesOf(ours.map((item) => item.id.version))[0];
-    return newest !== undefined && newest > held.version ? newest : undefined;
+    const newest = newestOwnSave(held.name, listed);
+    return newest !== undefined && isNewerSave(held, newest) ? newest : undefined;
+}
+
+/** The newest save of a pack among these versions, of the SC's own or Demo Builder's only. */
+export function newestOwnSave(packName: string, listed: readonly ListedVersion[]): string | undefined {
+    const ours = listed.filter((item) => item.id.name === packName && (item.mine === true || item.team === true));
+    return savesOf(ours.map((item) => item.id.version))[0];
+}
+
+/**
+ * Whether a save is newer than the one the project holds: only a library datapack of saves has one.
+ * The dashboard's tile asks it of the newest save remembered (`packNames.ts`, walk F218).
+ */
+export function isNewerSave(held: ProjectDatapack, save: string): boolean {
+    return held.store === 'library' && isSavedVersion(held.version) && save > held.version;
 }
 
 /**
