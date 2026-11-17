@@ -33,9 +33,13 @@ export const UNINSTALL = 'Uninstall';
 export const RESTORE = 'Restore';
 
 /**
- * The button that applies what a newer version of the demo's datapack changed, keeping the SC's own
- * edits (step-07 U1, J9; owner 2026-11-14: "Update means apply what changed").
+ * The card's button that applies what a newer version of the demo's datapack changed, keeping the
+ * SC's own edits (step-07 U1, J9). Owner walk, 2026-11-16: "Update" now names the header's save
+ * from Commerce into the datapack, so this direction says what it does.
  */
+export const INSTALL_NEWER = 'Install Newer Version';
+
+/** The header's save of the store's copy into the demo's own datapack (owner walk, 2026-11-16). */
 export const UPDATE = 'Update';
 
 /** The button that asks whether an install would go through, writing nothing (D6). */
@@ -92,9 +96,9 @@ export function jobWords(purpose: JobPurpose, name: string): JobWords {
             };
         case 'update':
             return {
-                running: `Updating ${name}`,
-                done: `${name} Updated`,
-                failed: `Couldn't ${UPDATE} ${name}`,
+                running: `Installing ${name}`,
+                done: `${name} Installed`,
+                failed: `Couldn't ${INSTALL} ${name}`,
             };
         case 'undo':
             return {

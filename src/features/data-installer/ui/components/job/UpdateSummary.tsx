@@ -12,7 +12,7 @@
  */
 
 import React, { useMemo, useState } from 'react';
-import { UPDATE } from '../../../datapackWords';
+import { INSTALL } from '../../../datapackWords';
 import type { DatapackJob } from '../../hooks/useDatapackJob';
 import { TypeTable } from '../typeSummary/TypeTable';
 import type { TypeRow } from './installRows';
@@ -66,14 +66,14 @@ export function UpdateSummary({
     const chosen = job.rows.filter((row) => picks.ticked.has(row.type)).map((row) => row.type);
     return (
         <StepsWindow
-            title={`${UPDATE} ${name}`}
+            title={`${INSTALL} ${name}`}
             ready={!checking}
             waiting={checking ? WAIT_STAGES.checkingForChanges : false}
             closeLabel="Cancel"
             startButtons={[{ label: 'Review Records', variant: 'secondary', onPress: job.review }]}
             actionButtons={[
                 {
-                    label: UPDATE,
+                    label: INSTALL,
                     variant: 'accent',
                     onPress: () => job.startWith({ dataTypes: chosen, ...(job.update.version ? { version: job.update.version } : {}) }),
                     isDisabled: chosen.length === 0,
@@ -116,7 +116,7 @@ export function UpdateRecords({
     const { changed, kept } = updateRecords(job.update.changes);
     return (
         <RecordsWindow
-            title={`${UPDATE} ${name}`}
+            title={`${INSTALL} ${name}`}
             rows={job.rows}
             records={changed}
             reading={false}

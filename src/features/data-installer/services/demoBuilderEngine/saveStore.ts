@@ -204,7 +204,7 @@ export async function saveStoreChanges(
     const seeds = [...(record?.created ?? []), ...seedsOf(picks)];
     const seeded = [...seeds.map((seed) => seed.kind), ...Object.keys(installed.rows)];
     const lineFor = captureLines(seeded);
-    const progress = captureRows(seeded, saveAs.displayName);
+    const progress = captureRows(seeded, saveAs.displayName, intoOwn(target));
     const reading = (at: number): void => {
         took(`reading ${lineFor(at)}`);
         report(OPERATION_STAGES.readingStoreChanges.label, lineFor(at), undefined, progress.reading(at));
@@ -248,7 +248,7 @@ export async function saveStoreChanges(
         counts,
         ...(installed.source ? { readFrom: installed.source } : {}),
         sentence: saveSentence(savedSentence(saveAs, installedAs), layerLine(settingsLayer), leftOutLine(leftOut), unnamedLine(captured.unnamed)),
-        details: resultLines(pack !== undefined && saveAs.id.name === pack.name ? leftOut : [], settingsLayer, captured.unnamed),
+        details: resultLines(intoOwn(target) ? leftOut : [], settingsLayer, captured.unnamed),
         unnamed: captured.unnamed,
         leftOut,
         ...(settingsLayer ? { settingsLayer } : {}),
@@ -260,10 +260,13 @@ export async function saveStoreChanges(
 const SAVING_STEP = 'Saving to My Datapacks';
 const RECORD_STEP = 'Finishing the save';
 
+/** The save writes a new version of the demo's own datapack, not a new one. */
+const intoOwn = (target: SaveTarget): boolean => target.pack !== undefined && target.saveAs.id.name === target.pack.name;
+
 /** The steps before what the demo uses is known: the kinds the record, the pack and the picks name. */
 function preparingRows(record: InstallRecord | undefined, rows: Record<string, unknown>, target: SaveTarget): OperationRow[] {
     const kinds = [...(record?.created ?? []).map((o) => o.kind), ...Object.keys(rows), ...seedsOf(target.picks ?? {}).map((o) => o.kind), ...(target.wholeKinds ?? [])];
-    return captureRows(kinds, target.saveAs.displayName).preparing(firstStep(target) ?? 'Reading your selection');
+    return captureRows(kinds, target.saveAs.displayName, intoOwn(target)).preparing(firstStep(target) ?? 'Reading your selection');
 }
 
 /**

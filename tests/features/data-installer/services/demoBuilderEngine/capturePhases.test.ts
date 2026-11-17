@@ -85,6 +85,13 @@ describe('captureRows, the save as two steps', () => {
         expect(types(rows[0])).toEqual([['Customer Groups', 'success', 'Done']]);
     });
 
+    // Owner walk, 2026-11-16: writing the demo's own datapack is Update, as the header menu says.
+    it('names the save step Update when it writes the demo\'s own datapack', () => {
+        const rows = captureRows(['customer_groups'], 'My Luma', true).finishing('Saving to My Datapacks');
+
+        expect(steps(rows)[1]).toEqual(['save', 'Update My Luma', 'checking', 'Saving to My Datapacks']);
+    });
+
     it('CONTROL: with no type it recognises, the export still spins while it reads', () => {
         expect(steps(captureRows([], 'My Luma').reading(0))[0]).toEqual(['export', 'Export from Commerce', 'checking', 'Exporting']);
     });

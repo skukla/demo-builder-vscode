@@ -24,8 +24,6 @@ export interface RunShape {
     version: string;
     types: string[];
     columns: 1 | 2;
-    /** An update: written over the version installed, "Update Luma" (step-07 U1). */
-    updating?: boolean;
 }
 
 /** The run's title: the end's once it ended with a problem, else what the job watched is for. */
@@ -81,7 +79,7 @@ export function RunPhase({
             record={job.record}
             ended={ended}
             types={run.types}
-            installing={{ name: run.name, version: run.version, ...(run.updating ? { updating: true } : {}) }}
+            installing={{ name: run.name, version: run.version }}
             columns={run.columns}
             opensRunning={job.state.kind === 'watch'}
             {...(switching ? { switching } : {})}

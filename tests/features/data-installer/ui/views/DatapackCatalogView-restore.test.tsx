@@ -1,7 +1,7 @@
 /**
  * DatapackCatalogView — Restore and Update (Phase 3/5, J4-2; step 03, S8; step-07 U1, J9-1). On the
  * datapack the demo uses, the flyout's main button reads "Restore My Luma" in place of Install, or
- * "Update My Luma" while a newer version waits. Pressing it opens the job window on that check; the
+ * "Install Newer Version" while a newer version waits. Pressing it opens the job window on that check; the
  * check, its question or summary, its result and its run are the window's, pinned in
  * `DatapackJobWindow-restore.test.tsx` and `DatapackJobWindow-update.test.tsx`. Here: the buttons,
  * and that each reaches its window end to end.
@@ -183,12 +183,12 @@ describe('Restore, in the flyout of the datapack the demo uses', () => {
     });
 
     // J9-1: a newer save waits, so the main button is Update, and it opens Update's check.
-    it('a newer version waiting: reads "Update My Luma", and opens Update\'s check', async () => {
+    it('a newer version waiting: reads "Install Newer Version", and opens its check', async () => {
         ITEMS = [SAVE, NEWER_SAVE, ...CATALOG];
         store({ success: true, data: { upToDate: true, displayName: 'My Luma' } });
         await openFlyout();
 
-        await press(await inFlyout().findByRole('button', { name: 'Update My Luma' }));
+        await press(await inFlyout().findByRole('button', { name: 'Install Newer Version' }));
         await settle();
 
         expect(inFlyout().queryByRole('button', { name: /^Restore/u })).not.toBeInTheDocument();

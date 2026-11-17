@@ -13,6 +13,7 @@
 
 import { DialogContainer } from '@adobe/react-spectrum';
 import React from 'react';
+import { UPDATE } from '../../../datapackWords';
 import { JobSummaryWindow } from '../job/JobSummaryWindow';
 import { RecordsWindow } from '../job/RecordsWindow';
 import type { PackBeingSaved } from './packBeingSaved';
@@ -33,7 +34,7 @@ export function SaveChangesWindow({
     onClose,
 }: SaveChangesWindowProps): React.ReactElement {
     const summary = useSaveSummary(pack);
-    const title = `Save Changes to ${pack.displayName}`;
+    const title = `${UPDATE} ${pack.displayName}`;
     return (
         <DialogContainer onDismiss={onClose}>
             {summary.reviewing ? (

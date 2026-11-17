@@ -7,7 +7,7 @@
  * Save As New on someone else's, Create with none. A finished save reads the catalog again at once,
  * so Close only closes.
  *
- * Save opens "Save Changes to Acme Bodea" and Save As New "Save As New Datapack", its own form
+ * Update Acme Bodea opens "Update Acme Bodea" and Save As New "Save As New Datapack", its own form
  * (step-04 S2; decisions Phase 7b, J3-1): the windows' own suites are in `components/save/`.
  */
 
@@ -148,7 +148,7 @@ describe('saving the demo\'s datapack', () => {
         await renderView();
         await press(card('acme-1a2b3c'));
 
-        expect(await inFlyout().findByRole('button', { name: 'Update Acme Bodea' })).toBeInTheDocument();
+        expect(await inFlyout().findByRole('button', { name: 'Install Newer Version' })).toBeInTheDocument();
         expect(inFlyout().queryByRole('button', { name: /Restore/u })).not.toBeInTheDocument();
         await press(inFlyout().getByRole('button', { name: /More actions/u }));
         expect(screen.queryByRole('menuitem', { name: /Restore/u })).not.toBeInTheDocument();
@@ -168,8 +168,8 @@ describe('saving the demo\'s datapack', () => {
         store(OWN, MINE, false, AT);
         await renderView();
 
-        await press(screen.getByRole('menuitem', { name: 'Save to Acme Bodea' }));
-        const saveWindow = await inWindow('Save Changes to Acme Bodea');
+        await press(screen.getByRole('menuitem', { name: 'Update Acme Bodea' }));
+        const saveWindow = await inWindow('Update Acme Bodea');
         // Review Records, Cancel and Save: Save As New is the header's (J3-1).
         expect(saveWindow.queryByRole('button', { name: 'Save As New' })).not.toBeInTheDocument();
         await press(saveWindow.getByRole('button', { name: 'Save' }));
@@ -219,8 +219,8 @@ describe('saving the demo\'s datapack', () => {
     it('reads the catalog again when the save finishes, once, without waiting for Close', async () => {
         store(OWN, MINE, false, AT);
         await renderView();
-        await press(screen.getByRole('menuitem', { name: 'Save to Acme Bodea' }));
-        await press((await inWindow('Save Changes to Acme Bodea')).getByRole('button', { name: 'Save' }));
+        await press(screen.getByRole('menuitem', { name: 'Update Acme Bodea' }));
+        await press((await inWindow('Update Acme Bodea')).getByRole('button', { name: 'Save' }));
         const before = catalogReads();
 
         await push({ id: 'datapack-save', state: 'succeeded' });
@@ -230,15 +230,15 @@ describe('saving the demo\'s datapack', () => {
     });
 
     // J3-1 (owner, 2026-11-12: "3-1 is good"): a save into the SC's own datapack ends on where it went.
-    it('ends on "Saved to" the datapack, thing named, no version', async () => {
+    it('ends on the datapack Updated, thing named, no version', async () => {
         store(OWN, MINE, false, AT);
         await renderView();
-        await press(screen.getByRole('menuitem', { name: 'Save to Acme Bodea' }));
-        await press((await inWindow('Save Changes to Acme Bodea')).getByRole('button', { name: 'Save' }));
+        await press(screen.getByRole('menuitem', { name: 'Update Acme Bodea' }));
+        await press((await inWindow('Update Acme Bodea')).getByRole('button', { name: 'Save' }));
 
         await push({ id: 'datapack-save', state: 'succeeded' });
 
-        expect(await screen.findByRole('heading', { name: /Saved to Acme Bodea$/u })).toBeInTheDocument();
+        expect(await screen.findByRole('heading', { name: /^Acme Bodea Updated$/u })).toBeInTheDocument();
         expect(screen.queryByRole('heading', { name: /Acme Bodea Saved/u })).not.toBeInTheDocument();
     });
 });
@@ -298,9 +298,9 @@ describe('the header button', () => {
 
         expect(screen.queryByRole('button', { name: 'Create' })).not.toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Save' })).toHaveTextContent('Save▾');
-        await press(screen.getByRole('menuitem', { name: 'Save to Acme Bodea' }));
+        await press(screen.getByRole('menuitem', { name: 'Update Acme Bodea' }));
 
-        expect(await screen.findByRole('heading', { name: 'Save Changes to Acme Bodea' })).toBeInTheDocument();
+        expect(await screen.findByRole('heading', { name: 'Update Acme Bodea' })).toBeInTheDocument();
     });
 
     it("is Save ▾ on the SC's own datapack: Save As New makes a new datapack from it", async () => {
@@ -318,7 +318,7 @@ describe('the header button', () => {
         store({ name: 'luma', version: 'eds-compatible', store: 'library' }, [TEAM, ...CATALOG], false, AT);
         await renderView();
 
-        expect(screen.queryByRole('menuitem', { name: /^Save( to .*)?$/u })).not.toBeInTheDocument();
+        expect(screen.queryByRole('menuitem', { name: /^(Save|Update)( .*)?$/u })).not.toBeInTheDocument();
         await press(screen.getByRole('button', { name: 'Save As New' }));
 
         expect(await screen.findByRole('heading', { name: 'Save As New Datapack' })).toBeInTheDocument();

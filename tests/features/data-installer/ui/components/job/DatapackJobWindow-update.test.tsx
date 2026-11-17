@@ -90,7 +90,7 @@ it('waits under "Update Luma", sending update-datapack once without confirm', as
     answer({}, ['update-datapack']);
     await openUpdate();
 
-    expect(screen.getByRole('heading', { name: 'Update Luma' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Install Luma' })).toBeInTheDocument();
     expect(updateSends()).toEqual([{ datapackName: 'luma', records: true }]);
     expect(mockRequest.mock.calls.some(([type]) => type === 'preview-datapack-changes')).toBe(
         false
@@ -135,7 +135,7 @@ describe('what changed', () => {
         expect(tick('Products')).toBeChecked();
         expect(button('Review Records')).toBeInTheDocument();
         expect(button('Cancel')).toBeInTheDocument();
-        expect(button('Update')).toBeEnabled();
+        expect(button('Install')).toBeEnabled();
         // Nothing says the SC's edits are kept (rule 6): that is the spot check's Kept tab.
         expect(screen.queryByText(/kept/iu)).toBeNull();
     });
@@ -146,19 +146,19 @@ describe('what changed', () => {
         await screen.findByRole('table', { name: 'What the update writes, by type' });
 
         await press(tick('Cart Rules'));
-        await press(button('Update'));
+        await press(button('Install'));
         await settle();
 
         expect(updateSends()).toEqual([
             { datapackName: 'luma', records: true },
             { datapackName: 'luma', confirm: true, dataTypes: ['categories', 'products'], version: 'v2' },
         ]);
-        expect(await heading('Updating Luma')).toBeInTheDocument();
+        expect(await heading('Installing Luma')).toBeInTheDocument();
         const shown = shownStep();
         // Line 1 the job, line 2 the type and its count (owner, 2026-11-16).
-        expect(shown.getByText('Updating in Commerce')).toBeInTheDocument();
+        expect(shown.getByText('Installing in Commerce')).toBeInTheDocument();
         expect(shown.getByText('Products, 24 of 48')).toBeInTheDocument();
-        expect(shown.queryByText(/Installing/u)).toBeNull();
+        expect(shown.queryByText(/Updating/u)).toBeNull();
     });
 
     it('greys Update once nothing is ticked, and Select All ticks every type again', async () => {
@@ -167,9 +167,9 @@ describe('what changed', () => {
         await screen.findByRole('table', { name: 'What the update writes, by type' });
 
         await press(tick('Select All'));
-        expect(button('Update')).toHaveAttribute('aria-disabled', 'true');
+        expect(button('Install')).toHaveAttribute('aria-disabled', 'true');
         await press(tick('Select All'));
-        expect(button('Update')).toBeEnabled();
+        expect(button('Install')).toBeEnabled();
         expect(tick('Cart Rules')).toBeChecked();
     });
 
@@ -205,9 +205,9 @@ describe('what changed', () => {
         const { onClose } = await openUpdate();
         await screen.findByRole('table', { name: 'What the update writes, by type' });
 
-        await press(button('Update'));
+        await press(button('Install'));
 
-        expect(await heading('Luma Updated')).toBeInTheDocument();
+        expect(await heading('Luma Installed')).toBeInTheDocument();
         await act(async () => {
             jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE);
         });
@@ -221,7 +221,7 @@ describe('what changed', () => {
         await openUpdate();
         await screen.findByRole('table', { name: 'What the update writes, by type' });
         await press(tick('Cart Rules'));
-        await press(button('Update'));
+        await press(button('Install'));
         await settle();
 
         await press(await screen.findByRole('button', { name: 'Retry' }));

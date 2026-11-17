@@ -12,6 +12,7 @@
  * @module features/data-installer/services/demoBuilderEngine/capturePhases
  */
 
+import { UPDATE } from '../../datapackWords';
 import { SAVE_RUN, runRows } from '../../runRows';
 import type { DataTypeStatus } from '../../types';
 import { phaseLine } from '../datapackTypesLine';
@@ -92,11 +93,12 @@ function exportStep(types: OperationRow[], line?: string): OperationRow {
  *
  * @param seeded - the kinds the save starts from, as `captureLines` takes them
  * @param into - the name of the datapack the save writes: the demo's own, or the Save As name
+ * @param updates - it writes the demo's own datapack, so the step says Update, as the menu does
  */
-export function captureRows(seeded: Iterable<string>, into: string): CaptureRows {
+export function captureRows(seeded: Iterable<string>, into: string, updates = false): CaptureRows {
     const shown = shownPhases(seeded);
     const kinds = shown.flat();
-    const save = { kind: 'save', label: `Save ${into}` };
+    const save = { kind: 'save', label: `${updates ? UPDATE : 'Save'} ${into}` };
     const typeRows = (perType: Record<string, DataTypeStatus>): OperationRow[] => runRows({ dataTypes: kinds, perType, running: true }, SAVE_RUN);
     const statesAt = (at: number): Record<string, DataTypeStatus> =>
         Object.fromEntries(shown.flatMap((phase, i) => phase.map((kind): [string, DataTypeStatus] => [kind, readState(i, at)])));

@@ -111,7 +111,7 @@ const STEP_JOBS: Record<string, string> = {
 
 /** Line 1 for a step: its job; Install's says whether it installs or updates. */
 function stepJob(step: ImportStep): string | undefined {
-    if (step.kind === 'install') return step.label.startsWith('Update') ? 'Updating in Commerce' : 'Installing in Commerce';
+    if (step.kind === 'install') return 'Installing in Commerce';
     return STEP_JOBS[step.kind];
 }
 

@@ -18,19 +18,14 @@ import {
 } from '../../../importSteps';
 import type { ImportJobRecord, ImportProgressMessage } from '../../../types';
 
-/** The pack installed, as the steps name it; `updating`, written over the version installed (step-07 U1). */
+/** The pack installed, as the steps name it. */
 export interface Installing {
     name: string;
     version: string;
-    updating?: boolean;
 }
 
-/** The pack a job record installs, as its steps name it: an update's says Update (step-07 U1). */
-const installingOf = (record: ImportJobRecord, name: string): Installing => ({
-    name,
-    version: record.version,
-    ...(record.purpose === 'update' ? { updating: true } : {}),
-});
+/** The pack a job record installs, as its steps name it. */
+const installingOf = (record: ImportJobRecord, name: string): Installing => ({ name, version: record.version });
 
 /** What the steps take from a job replacing the demo's pack (walk F97): the removal, and the save before it. */
 export function replacingOf(

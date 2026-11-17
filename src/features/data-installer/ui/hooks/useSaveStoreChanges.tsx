@@ -60,7 +60,8 @@ function runOf(name: string, payload: SaveBody, ending: Ending): StartableOperat
     const run = { id: DATAPACK_SAVE_OPERATION_ID, name, message: 'save-store-changes-to-pack', payload: { ...payload } };
     if (ending === 'create') return { ...run, title: `Creating ${name}`, failureTitle: `Couldn't Create ${name}`, successTitle: `${name} Created` };
     if (ending === 'as-new') return { ...run, title: `Saving ${name}`, failureTitle: `Couldn't Save ${name}`, successTitle: `Saved as ${name}` };
-    return { ...run, title: `Saving ${name}`, failureTitle: `Couldn't Save ${name}`, successTitle: `Saved to ${name}` };
+    // Into the demo's own datapack it is Update (owner walk, 2026-11-16), as the header's menu says.
+    return { ...run, title: `Updating ${name}`, failureTitle: `Couldn't Update ${name}`, successTitle: `${name} Updated` };
 }
 
 /** What a save from a datapack sends: the datapack, in its store, confirmed. */

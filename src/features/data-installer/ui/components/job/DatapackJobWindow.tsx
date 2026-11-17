@@ -37,7 +37,6 @@ import {
     RESTORE,
     saveFirstLabel,
     UNINSTALL,
-    UPDATE,
     withoutSavingLabel,
 } from '../../../datapackWords';
 import { packLine } from '../../../packVersions';
@@ -97,7 +96,7 @@ function openedAs(props: DatapackJobWindowProps): Opened {
     const { startsAt, switching, uninstalling, restoring, updating, displayName, id } = props;
     if (startsAt === 'run') return { kind: 'watch', verb: INSTALL, name: displayName };
     if (restoring) return { kind: 'restore', verb: RESTORE, name: displayName };
-    if (updating) return { kind: 'update', verb: UPDATE, name: displayName };
+    if (updating) return { kind: 'update', verb: INSTALL, name: displayName };
     if (uninstalling) return { kind: 'uninstall', verb: UNINSTALL, name: displayName };
     if (switching?.verb) return { kind: 'switch', verb: INSTALL, name: packLine(displayName, id.version) };
     if (switching) return { kind: 'switch', verb: 'Switch', name: displayName };
@@ -215,6 +214,6 @@ export function DatapackJobWindow(props: DatapackJobWindowProps): React.ReactEle
     // An update runs only the types ticked, written over the version installed (step-07 U1).
     const updating = opened.kind === 'update';
     const ran = updating ? job.rows.filter((row) => picks.ticked.has(row.type)).map((row) => row.type) : types;
-    const run: RunShape = { name: displayName, version: id.version, types: ran, columns, ...(updating ? { updating: true } : {}) };
+    const run: RunShape = { name: displayName, version: id.version, types: ran, columns };
     return <DialogContainer onDismiss={close}>{windowFor(job, run, opened, close, picks)}</DialogContainer>;
 }

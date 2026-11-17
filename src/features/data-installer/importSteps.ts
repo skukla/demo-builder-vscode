@@ -37,9 +37,8 @@ export interface StepSource extends RunSource, Pick<JobStanding, 'replacing'> {
     savedAs?: string;
     /**
      * The pack installed, as the SC knows it, and its version: "Install My Luma", "Install Luma, main".
-     * `updating`: an update writes it over the version installed (step-07 U1), "Update Luma".
      */
-    installing: { name: string; version: string; updating?: boolean };
+    installing: { name: string; version: string };
     /** The install check, once the job ended: Verify's last line. */
     check?: InstallCheck;
 }
@@ -135,10 +134,8 @@ export function removalLine(detail: string | undefined, fallback: string): strin
  * products go in. The engine's detail is "1,200 of 2,046 products", with `LINKING_OPTIONS` after it
  * during the slow part; before it gives a count, the word alone.
  */
-export function doingLine(detail: string | undefined, updating = false): string {
-    // An update's working line says what it does: "Updating 24 of 48" (J9 build item), never "Installing".
-    const doing = updating ? 'Updating' : 'Installing';
-    const word = detail?.endsWith(LINKING_OPTIONS) ? 'Linking product options' : doing;
+export function doingLine(detail: string | undefined): string {
+    const word = detail?.endsWith(LINKING_OPTIONS) ? 'Linking product options' : 'Installing';
     const count = countIn(detail);
     return count ? `${word} ${count}` : word;
 }
@@ -146,7 +143,7 @@ export function doingLine(detail: string | undefined, updating = false): string 
 /** The data types' rows, as the run's rows draw them, the working one saying what it does. */
 function typeRows(source: StepSource): OperationRow[] {
     return runRows(source).map((row) =>
-        row.status === 'checking' ? { ...row, line: doingLine(source.detail, source.installing.updating) } : row,
+        row.status === 'checking' ? { ...row, line: doingLine(source.detail) } : row,
     );
 }
 
@@ -156,15 +153,16 @@ const isDone = (row: OperationRow): boolean => row.status === 'success' || row.s
  * Where the engine is before the first data type, as a step's line; before it says, the words an
  * installer uses (owner walk, 2026-11-16: "Starting" alone read oddly).
  */
-function phaseWords(phase: string | undefined, updating = false): string {
-    if (!phase) return updating ? 'Preparing to update' : 'Preparing to install';
+function phaseWords(phase: string | undefined): string {
+    if (!phase) return 'Preparing to install';
     return STEP_LINES[phase] ?? phase;
 }
 
 /** Install: its data types under it, and where they have got as its line. */
 function installStep(source: StepSource, types: OperationRow[]): ImportStep {
     // A save is named by its datapack, never by when it was saved (Phase 2, owner 2026-11-12).
-    const verb = source.installing.updating ? 'Update' : 'Install';
+    // A newer version installs too (owner walk, 2026-11-16: "Update" is the save from Commerce).
+    const verb = 'Install';
     const label = `${verb} ${packLine(source.installing.name, source.installing.version)}`;
     const row = { kind: 'install', label, types };
     // The reason is the data type's own red line, under this step: said once (review, 2026-11-10).
@@ -172,13 +170,13 @@ function installStep(source: StepSource, types: OperationRow[]): ImportStep {
         return { ...row, status: 'error', line: 'Stopped' };
     const done = types.filter(isDone).length;
     if (types.length > 0 && done === types.length)
-        return { ...row, status: 'success', line: source.installing.updating ? 'Updated' : 'Installed' };
+        return { ...row, status: 'success', line: 'Installed' };
     const replaced = !source.replaces || source.replacing === 'success';
     const begun = types.some((t) => t.status !== 'pending');
     // Install is the step in hand once nothing comes before it: a first install from the first frame
     // (it spun as Preparing Import's "Starting" before steps), a replace once the old data is out.
     if (source.running && replaced) {
-        const phaseLine = begun ? undefined : phaseWords(source.phase, source.installing.updating);
+        const phaseLine = begun ? undefined : phaseWords(source.phase);
         return {
             ...row,
             status: 'checking',

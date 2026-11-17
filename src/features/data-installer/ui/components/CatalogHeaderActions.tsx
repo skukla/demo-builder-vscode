@@ -8,7 +8,7 @@
  * change while it is on screen (7b). Until the project and the catalog have answered it is the
  * header's waiting button (disabled, a spinner, no words, as its Refresh is while it reads). Then:
  * Create with no datapack, or one with no install record (step-07 P3); Save ▾ (Save, Save As New)
- * on the SC's own, Save naming the datapack it writes into; a plain Save As New on someone else's. Each choice opens
+ * on the SC's own, Update naming the datapack it writes into; a plain Save As New on someone else's. Each choice opens
  * today's flow, through the handlers it is given.
  *
  * Install from File adds the file's datapack to My Datapacks, then, after a clean load, opens the
@@ -28,6 +28,7 @@
 
 import { ActionButton, Divider, Item, Text } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useState } from 'react';
+import { UPDATE } from '../../datapackWords';
 import type { HeaderSave } from '../headerSave';
 import { useClearDemoData } from '../hooks/useClearDemoData';
 import type { RemovalAnswer } from '../hooks/useSwitchChanges';
@@ -84,7 +85,7 @@ function SaveButton({ save }: { save: HeaderSaveActions }): React.JSX.Element {
     if (state === 'save-menu') {
         return (
             <CardActionsMenu label="Save" ariaLabel="Save" icon={renderMenuIcon('capture')} onAction={pick}>
-                {[<Item key="save">{into ? `Save to ${into}` : 'Save'}</Item>, <Item key="as-new">Save As New</Item>]}
+                {[<Item key="save">{into ? `${UPDATE} ${into}` : UPDATE}</Item>, <Item key="as-new">Save As New</Item>]}
             </CardActionsMenu>
         );
     }

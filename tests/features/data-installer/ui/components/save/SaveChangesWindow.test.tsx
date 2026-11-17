@@ -1,5 +1,5 @@
 /**
- * "Save Changes to My Luma" (step-04 S2; decisions Phase 7b, J3-1; P4-Q3): the check's wait, then
+ * "Update My Luma" (step-04 S2; decisions Phase 7b, J3-1; P4-Q3): the check's wait, then
  * what My Luma will hold, read-only, one row per type, with "N changed" on a type the SC changed
  * ("2,046, 4 changed"), and no line above the table. Review Records opens the same spot check as an
  * install's, Back only. Cancel and Save; Save hands on to the run.
@@ -98,7 +98,7 @@ describe('the check', () => {
         await open();
 
         expect(
-            screen.getByRole('heading', { name: 'Save Changes to My Luma' })
+            screen.getByRole('heading', { name: 'Update My Luma' })
         ).toBeInTheDocument();
         expect(screen.getAllByText('Checking for your changes').length).toBeGreaterThan(0);
         expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
@@ -275,7 +275,7 @@ describe('Review Records', () => {
             source: 'library',
         });
         expect(
-            screen.getByRole('heading', { name: 'Save Changes to My Luma' })
+            screen.getByRole('heading', { name: 'Update My Luma' })
         ).toBeInTheDocument();
         expect(screen.getByText('Gear/Bags')).toBeInTheDocument();
         expect(

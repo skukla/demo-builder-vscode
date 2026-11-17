@@ -362,7 +362,7 @@ describe('save-store-changes-to-pack', () => {
         expect(saved.datapack?.origin).toEqual({ name: 'bodea', version: 'main' });
     });
 
-    // J3-1 (owner, 2026-11-12): a save into the SC's own pack ends on "Saved to My Bodea", wherever its
+    // J3-1 (owner, 2026-11-12): a save into the SC's own pack ends on "My Bodea Updated" (owner walk, 2026-11-16), wherever its
     // window shows (an agent's save opens it too), with no line repeating it and no version named.
     it("ends a save into the SC's own pack on where it went, with no line under it", async () => {
         const own = { name: 'my-bodea-1a2b3c', version: '20261028-090000', store: 'library' as const };
@@ -375,7 +375,7 @@ describe('save-store-changes-to-pack', () => {
 
         const result = await storeChangesHandlers['save-store-changes-to-pack'](context, { datapackName: own.name, version: own.version, confirm: true });
 
-        expect(result).toMatchObject({ success: true, title: 'Saved to My Bodea' });
+        expect(result).toMatchObject({ success: true, title: 'My Bodea Updated' });
         expect(result).not.toHaveProperty('note');
     });
 
