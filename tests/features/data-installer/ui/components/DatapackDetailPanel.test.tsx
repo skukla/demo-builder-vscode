@@ -17,7 +17,7 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { DatapackDetailPanel } from '@/features/data-installer/ui/components/DatapackDetailPanel';
 import type { DatapackDetail, DataItemInventory } from '@/features/data-installer/types';
@@ -365,12 +365,11 @@ describe('DatapackDetailPanel', () => {
          * extension using it. One instance is not a convention; it is a stray
          * mark that invites exactly the question it got.
          */
-        it('labels the button Install, with no trailing ellipsis', () => {
+        it('labels the row Install, with no trailing ellipsis', () => {
             renderPanel();
 
-            const button = screen.getByRole('button', { name: /install/i });
-
-            expect(button).toHaveTextContent(/^Install$/);
+            // The exact name: its icon is hidden from the name, so "Install…" would not match.
+            expect(screen.getByRole('button', { name: 'Install' }).textContent).not.toMatch(/…|\.\.\./u);
         });
     });
 
@@ -430,22 +429,24 @@ describe('DatapackDetailPanel', () => {
 });
 
 /**
- * The actions live in `PackActions` (its own suite): Import on view, the rest in the kebab. The
- * panel only hands it the pack, and offers nothing while the detail is loading or failed.
+ * The actions live in `PackActions` (its own suite): one visible Actions list, Install first (owner,
+ * 2026-11-17, matching the integration flyouts). The panel only hands it the pack, and offers
+ * nothing while the detail is loading or failed.
  */
 describe('DatapackDetailPanel — actions', () => {
-    it('puts Install and the menu for this pack in the flyout', () => {
+    it('puts the Actions list for this pack in the flyout, Install first, with no More menu', () => {
         renderPanel({});
 
-        expect(screen.getByRole('button', { name: 'Install' })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'More actions for Bodea' })).toBeInTheDocument();
-        expect(screen.getByRole('menuitem', { name: 'Save as File' })).toBeInTheDocument();
+        const actions = within(screen.getByRole('region', { name: 'Actions' }));
+        expect(actions.getByRole('button', { name: 'Install' })).toBeInTheDocument();
+        expect(actions.getByRole('button', { name: 'Save as File' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'More actions for Bodea' })).not.toBeInTheDocument();
     });
 
-    it('offers no menu while the detail is loading', () => {
+    it('offers no actions while the detail is loading', () => {
         renderPanel({ selected: ANOTHER_PACK, loading: true });
 
-        expect(screen.queryByRole('button', { name: 'More actions for Bodea' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('region', { name: 'Actions' })).not.toBeInTheDocument();
     });
 });
 

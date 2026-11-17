@@ -103,7 +103,8 @@ async function openUndo(): Promise<void> {
     await settle();
     await screen.findAllByTestId('datapack-card');
     await press(card('my-luma'));
-    await press(await inFlyout().findByRole('button', { name: 'More actions for My Luma' }));
+    // The flyout's actions are a visible list (owner, 2026-11-17), with no More menu to open.
+    await inFlyout().findByRole('region', { name: 'Actions' });
 }
 
 describe('Undo Last Save, in the flyout', () => {
@@ -111,7 +112,7 @@ describe('Undo Last Save, in the flyout', () => {
         store(ON_NEWEST, { success: true, data: { activationId: 'act-undo' } });
         await openUndo();
 
-        await press(screen.getByRole('menuitem', { name: 'Undo Last Save' }));
+        await press(inFlyout().getByRole('button', { name: 'Undo Last Save' }));
         await press(screen.getByRole('button', { name: 'Undo' }));
         await settle();
 
@@ -128,16 +129,14 @@ describe('Undo Last Save, in the flyout', () => {
         store({ ...ON_NEWEST, version: PREVIOUS.id.version }, { success: true });
         await openUndo();
 
-        expect(screen.getAllByRole('menuitem').map((row) => row.textContent)).not.toContain(
-            'Undo Last Save'
-        );
+        expect(inFlyout().queryByRole('button', { name: 'Undo Last Save' })).not.toBeInTheDocument();
     });
 
     it('CONTROL: opens no window when the undo is refused', async () => {
         store(ON_NEWEST, { success: false, error: 'There is no earlier save to go back to.' });
         await openUndo();
 
-        await press(screen.getByRole('menuitem', { name: 'Undo Last Save' }));
+        await press(inFlyout().getByRole('button', { name: 'Undo Last Save' }));
         await press(screen.getByRole('button', { name: 'Undo' }));
         await settle();
 

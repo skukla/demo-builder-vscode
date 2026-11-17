@@ -6,7 +6,7 @@
  * the pack again. A project's Datapacks offers no mark row.
  */
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import { press, settle } from '../../../../helpers/reactSettle';
 import '@testing-library/jest-dom';
 import { DatapackCatalogView, INVENTORY_COMPLETE, makeSummary, mockRequest } from './DatapackCatalogView.testUtils';
@@ -28,13 +28,16 @@ async function openFlyout(library: boolean): Promise<void> {
     render(library ? <DatapackCatalogView library /> : <DatapackCatalogView />);
     await settle();
     await press((await screen.findAllByTestId('datapack-card'))[0]);
-    await screen.findByRole('button', { name: 'More actions for Bodea' });
+    await screen.findByRole('region', { name: 'Actions' });
 }
+
+/** A row of the flyout's Actions list (owner, 2026-11-17: visible, as the integration flyouts'). */
+const action = (name: string) => within(screen.getByRole('region', { name: 'Actions' })).queryByRole('button', { name });
 
 it('takes the mark off in the Datapack Library, after asking, then reads the catalog and the pack again', async () => {
     await openFlyout(true);
 
-    await press(screen.getByRole('menuitem', { name: 'Remove Demo Builder Mark' }));
+    await press(action('Remove Demo Builder Mark') as HTMLElement);
     expect(screen.getByRole('heading', { name: 'Remove the Demo Builder Mark?' })).toBeInTheDocument();
     const findsBefore = calls('find-datapacks').length;
     await press(screen.getByRole('button', { name: 'Remove Mark' }));
@@ -48,5 +51,5 @@ it('takes the mark off in the Datapack Library, after asking, then reads the cat
 it("offers no mark row in a project's Datapacks", async () => {
     await openFlyout(false);
 
-    expect(screen.queryByRole('menuitem', { name: 'Remove Demo Builder Mark' })).not.toBeInTheDocument();
+    expect(action('Remove Demo Builder Mark')).not.toBeInTheDocument();
 });

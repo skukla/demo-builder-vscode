@@ -19,6 +19,7 @@ import Beaker from '@spectrum-icons/workflow/Beaker';
 import Clock from '@spectrum-icons/workflow/Clock';
 import Copy from '@spectrum-icons/workflow/Copy';
 import DataAdd from '@spectrum-icons/workflow/DataAdd';
+import DataDownload from '@spectrum-icons/workflow/DataDownload';
 import DataUpload from '@spectrum-icons/workflow/DataUpload';
 import Delete from '@spectrum-icons/workflow/Delete';
 import Duplicate from '@spectrum-icons/workflow/Duplicate';
@@ -78,6 +79,8 @@ const MENU_ICONS: Record<string, React.ReactElement> = {
     saveFile: <SaveFloppy size="S" />,
     /** Open a file the SC picks (a datapack's Add from File). */
     openFile: <FolderOpen size="S" />,
+    /** Put something kept into a store (a datapack's Install). */
+    install: <DataDownload size="S" />,
     /** Take what is in a store into something kept (Save store changes to this pack). */
     capture: <DataUpload size="S" />,
     /** Let others see and use it (a library pack's Share and Stop sharing). */

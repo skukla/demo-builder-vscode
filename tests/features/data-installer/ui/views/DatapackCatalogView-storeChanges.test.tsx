@@ -130,29 +130,28 @@ async function inWindow(title: string | RegExp): Promise<ReturnType<typeof withi
 // itself is the mockup's (owner, 2026-11-09, F83): into the demo's pack when it is the SC's, else
 // into a new pack of theirs.
 describe('saving the demo\'s datapack', () => {
-    it("offers no save in the flyout of the demo's own pack: Restore and More, no Copy", async () => {
+    it("offers no save in the flyout of the demo's own pack: Restore first in the list, no Copy", async () => {
         store({ ...OWN, version: NEWER.id.version }, MINE, true, AT);
         await renderView();
         await press(card('acme-1a2b3c'));
 
-        // The demo's installed pack: its main button is Restore, in place of Install (Phase 5, J4-2).
+        // The demo's installed pack: its main action is Restore, in place of Install (Phase 5, J4-2).
+        // Save as File keeps a copy as a file; it saves nothing into a datapack.
         expect(await inFlyout().findByRole('button', { name: 'Restore Acme Bodea' })).toBeInTheDocument();
-        expect(inFlyout().queryByRole('button', { name: /^Save/u })).not.toBeInTheDocument();
+        expect(inFlyout().queryByRole('button', { name: /^Save(?! as File)/u })).not.toBeInTheDocument();
         // Owner, 2026-11-06: Copy to the Data Installer is off until our accounts can write to it.
         expect(screen.queryByRole('button', { name: 'Copy to the Data Installer' })).not.toBeInTheDocument();
     });
 
-    // J9-1: with a newer version waiting, Update is the main button, and Restore is nowhere.
-    it("makes Update the main button while a newer version waits, with no Restore anywhere", async () => {
+    // J9-1: with a newer version waiting, Install Newer Version is the main action, and Restore is nowhere.
+    it("makes Install Newer Version the main action while a newer version waits, with no Restore anywhere", async () => {
         store(OWN, MINE, false, AT);
         await renderView();
         await press(card('acme-1a2b3c'));
 
         expect(await inFlyout().findByRole('button', { name: 'Install Newer Version' })).toBeInTheDocument();
         expect(inFlyout().queryByRole('button', { name: /Restore/u })).not.toBeInTheDocument();
-        await press(inFlyout().getByRole('button', { name: /More actions/u }));
-        expect(screen.queryByRole('menuitem', { name: /Restore/u })).not.toBeInTheDocument();
-        expect(screen.getByRole('menuitem', { name: 'Uninstall' })).toBeInTheDocument();
+        expect(inFlyout().getByRole('button', { name: 'Uninstall' })).toHaveClass('is-danger');
     });
 
     it("offers no save in the flyout of a team pack the demo uses", async () => {
@@ -161,7 +160,7 @@ describe('saving the demo\'s datapack', () => {
         await press(card('luma'));
 
         expect(await inFlyout().findByRole('button', { name: 'Restore Luma' })).toBeInTheDocument();
-        expect(inFlyout().queryByRole('button', { name: /^Save/u })).not.toBeInTheDocument();
+        expect(inFlyout().queryByRole('button', { name: /^Save(?! as File)/u })).not.toBeInTheDocument();
     });
 
     it("saves into the SC's own pack from the header, with no name", async () => {

@@ -25,11 +25,17 @@ const digits = (n: number): string => n.toLocaleString('en-US');
  * read as a typo.
  */
 function happensOf(count: number | undefined, changed: number, added: number): string {
-    const total = count === undefined ? undefined : digits(count);
-    let first: string | undefined = total;
-    if (changed > 0) first = total === undefined ? `${digits(changed)} changed` : `${digits(changed)} of ${total} changed`;
-    const parts = [...(first === undefined ? [] : [first]), ...(added > 0 ? [`${digits(added)} added`] : [])];
+    const parts: string[] = [];
+    if (changed > 0) parts.push(changedOf(count, changed));
+    else if (count !== undefined) parts.push(digits(count));
+    if (added > 0) parts.push(`${digits(added)} added`);
     return parts.join(', ');
+}
+
+/** "4 of 2,046 changed", or "4 changed" when the record does not count the type. */
+function changedOf(count: number | undefined, changed: number): string {
+    if (count === undefined) return `${digits(changed)} changed`;
+    return `${digits(changed)} of ${digits(count)} changed`;
 }
 
 /**

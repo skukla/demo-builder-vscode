@@ -1,9 +1,10 @@
 /**
- * The flyout's actions (owner, 2026-10-30; step-04 S5, decisions Phase 7): one main button, and
- * everything else behind "More" (`CardActionsMenu` with a label, owner 2026-10-31: a bare ⋯ read as
- * unclear; icons from `renderMenuIcon`).
+ * The flyout's actions, visible as one list (owner, 2026-11-17, matching the integration flyouts:
+ * a menu is easy to miss; the shared `FlyoutActionList`). It replaced one main button and a "More"
+ * menu (step-04 S5, decisions Phase 7). The first row is the main action, then the rest, then the
+ * ones that remove, behind a divider, in the danger colour.
  *
- * The main button: **Install**; **Switch to <Name>** over another datapack the demo holds and Demo
+ * The main action: **Install**; **Switch to <Name>** over another datapack the demo holds and Demo
  * Builder installed (J8-1, owner 2026-11-12), whose window asks "Switch to Bodea?"; **Update <Name>**
  * on the demo's installed version while a newer version waits (J9-1), which opens the job window on
  * Update's check; otherwise **Restore <Name>** there (J4-2), which opens it on Restore's check (S8);
@@ -11,21 +12,19 @@
  * then **Fix with AI** once retries have not helped (step-04 S8, J6-2, J6-3; `useRetryInstall`).
  * The flyout saves nothing: saving lives in the header (step-04 S1, S5).
  *
- * More, upper section: Save as File; Undo Last Save, on the datapack the demo uses when there is a
+ * Then: Save as File; Undo Last Save, on the datapack the demo uses when there is a
  * save to go back to (Phase 2, owner 2026-11-12); Share or Stop Sharing, on the SC's own library
  * datapack; in the Datapack Library, Remove Demo Builder Mark on their own Demo Builder datapack and
- * Mark as Demo Builder Datapack on their own other one (owner, 2026-11-14; rule 1). Lower section: Uninstall, on the demo's installed version; Delete, on the SC's own library
+ * Mark as Demo Builder Datapack on their own other one (owner, 2026-11-14; rule 1). Behind the divider: Uninstall, on the demo's installed version; Delete, on the SC's own library
  * datapack but never a Demo Builder one (overview Phase 7). Bare verbs (J8-3): the datapack is the
- * menu's subject, and each window's title names it ("Delete My Luma?"). A pack of saves is deleted
+ * list's subject, and each window's title names it ("Delete My Luma?"). A pack of saves is deleted
  * whole; a named version alone (P4-Q6 is open).
  *
  * **Undo Last Save, Share, Stop Sharing, the two mark rows and Delete ask in a dialog** (`ConfirmActionDialog`, owner,
  * 2026-11-05). **While a menu row's work runs, the flyout waits**: its title and the medium spinner
- * its load shows, nothing else (dialog design rules), since the menu has closed and has no button to
- * spin. What each one says afterwards (where the file went, why it could not) shows under the actions.
+ * its load shows, nothing else (dialog design rules), since a row has no button to spin. What each one says afterwards (where the file went, why it could not) shows under the actions.
  *
- * The Datapack Library touches no store (owner, 2026-11-07), so there the bar is More alone (Phase
- * 7b: one pinned bar, the same buttons in the same order, everywhere). Copy to the Data Installer,
+ * The Datapack Library touches no store (owner, 2026-11-07), so there the list has no main action. Copy to the Data Installer,
  * which puts a library pack in the catalog other teams share, is not shown (`INSTALLER_WRITES_SHOWN`):
  * the Data Installer does not let our accounts write to it yet (owner, 2026-11-06), so it would fail
  * every time. The copy itself is built and tested, and its agent tool says why it is refused.
@@ -33,7 +32,6 @@
  * @module features/data-installer/ui/components/PackActions
  */
 
-import { Button, Item, Section, Text } from '@adobe/react-spectrum';
 import React, { useCallback, useLayoutEffect, useState } from 'react';
 import { INSTALLER_WRITES_SHOWN } from '../../installerWrites';
 import { isSavedVersion } from '../../packVersions';
@@ -44,13 +42,12 @@ import type { HeldFailure } from '../hooks/useProjectHolding';
 import { useRetryInstall } from '../hooks/useRetryInstall';
 import { useUndoLastSave } from '../hooks/useUndoLastSave';
 import { CopyToInstallerButton } from './CopyToInstallerButton';
-import { type Asking, confirmCopy, deletable, failedButtonLabel, mainButtonLabel, type PackMenuRow, packRows, removeRows } from './packMenu';
+import { type Asking, confirmCopy, deletable, failedButtonLabel, mainButtonLabel, packRows, removeRows } from './packMenu';
 import { useLibraryRemoval } from './RemoveFromLibraryButton';
 import { useSaveDatapackFile } from './SaveDatapackFileButton';
 import { StageWait, type WaitLines } from '@/core/ui/components/feedback/StageWait';
-import { CardActionsMenu } from '@/core/ui/components/ui/CardActionsMenu';
 import { ConfirmActionDialog } from '@/core/ui/components/ui/ConfirmActionDialog';
-import { renderMenuIcon } from '@/core/ui/components/ui/menuIcons';
+import { type FlyoutActionRow, FlyoutActionList } from '@/core/ui/components/ui/FlyoutActionList';
 import { WAIT_STAGES } from '@/core/utils/waitStages';
 import type { DatapackId } from '@/types/datapack';
 
@@ -146,8 +143,11 @@ export function PackActions({
         return () => onWorking?.(false);
     }, [working, onWorking]);
 
-    const onAction = (key: React.Key): void => {
-        if (key === 'save-file') saveFile.start();
+    const onAction = (key: string): void => {
+        if (key === 'main' && onImport) openMain(onImport, detail.id, mainOpensOn(restores, updates));
+        else if (key === 'retry') retry.start();
+        else if (key === 'fix-with-ai') retry.fixWithAi();
+        else if (key === 'save-file') saveFile.start();
         else if (key === 'remove-data') onRemoveData?.();
         else if (isAsked(key)) setAsking(key);
     };
@@ -159,14 +159,11 @@ export function PackActions({
         else if (asking === 'remove') removal.start();
     };
 
-    // An inferred return type keeps the row assignable to Spectrum's Item collection type.
-    const renderRow = (row: PackMenuRow) => (
-        <Item key={row.key} textValue={row.label}>
-            {renderMenuIcon(row.icon)}
-            <Text>{row.label}</Text>
-        </Item>
-    );
-    const removing = removeRows(onRemoveData !== undefined, deletable(detail));
+    const rows: FlyoutActionRow[] = [
+        ...(onImport ? [mainRow(detail, { restores, updates, switches, failed })] : []),
+        ...packRows(detail, undoTo !== undefined, onMarkChanged !== undefined),
+        ...removeRows(onRemoveData !== undefined, deletable(detail)).map((row) => ({ ...row, danger: true })),
+    ];
     return (
         <>
             {working ? (
@@ -182,18 +179,7 @@ export function PackActions({
             ) : null}
             {working ? null : (
                 <>
-                    <div className="db-drawer-actions">
-                        {onImport && failed ? <FailedButton retries={failed.retries} retry={retry} /> : null}
-                        {onImport && !failed ? (
-                            <Button variant="accent" onPress={() => openMain(onImport, detail.id, mainOpensOn(restores, updates))}>
-                                {mainButtonLabel(detail, restores, switches, updates)}
-                            </Button>
-                        ) : null}
-                        <CardActionsMenu label="More" ariaLabel={`More actions for ${detail.displayName}`} onAction={onAction}>
-                            <Section key="pack">{packRows(detail, undoTo !== undefined, onMarkChanged !== undefined).map(renderRow)}</Section>
-                            {removing.length > 0 ? <Section key="remove">{removing.map(renderRow)}</Section> : null}
-                        </CardActionsMenu>
-                    </div>
+                    <FlyoutActionList rows={rows} onAction={onAction} />
                     <PackActionNotes>
                         {saveFile.note}
                         {undo.note}
@@ -214,9 +200,9 @@ export function PackActions({
     );
 }
 
-/** The menu rows that ask in a dialog first. */
-const ASKED: readonly React.Key[] = ['undo', 'share', 'mark', 'unmark', 'remove'];
-function isAsked(key: React.Key): key is NonNullable<Asking> {
+/** The rows that ask in a dialog first. */
+const ASKED: readonly string[] = ['undo', 'share', 'mark', 'unmark', 'remove'];
+function isAsked(key: string): key is NonNullable<Asking> {
     return ASKED.includes(key);
 }
 
@@ -238,12 +224,18 @@ function PackActionNotes({ children }: { children: React.ReactNode }): React.JSX
     return said.length > 0 ? <div className="datapack-action-notes">{said}</div> : null;
 }
 
-/** The main button on a failed install: Retry, or Fix with AI once retries have not helped. */
-function FailedButton({ retries, retry }: { retries: number; retry: { start: () => void; fixWithAi: () => void } }): React.JSX.Element {
-    const label = failedButtonLabel(retries);
-    return (
-        <Button variant="accent" onPress={label === 'Retry' ? retry.start : retry.fixWithAi}>
-            {label}
-        </Button>
-    );
+/**
+ * The first row: Install, Switch to, Install Newer Version or Restore; on a failed install, Retry,
+ * then Fix with AI once retries have not helped.
+ */
+function mainRow(
+    detail: DatapackDetail,
+    held: { restores: boolean; updates: boolean; switches: boolean; failed?: HeldFailure },
+): FlyoutActionRow {
+    if (held.failed) {
+        const label = failedButtonLabel(held.failed.retries);
+        return label === 'Retry' ? { key: 'retry', label, icon: 'reset' } : { key: 'fix-with-ai', label, icon: 'ai' };
+    }
+    const label = mainButtonLabel(detail, held.restores, held.switches, held.updates);
+    return { key: 'main', label, icon: held.restores && !held.updates ? 'reset' : 'install' };
 }

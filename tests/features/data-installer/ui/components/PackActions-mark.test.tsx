@@ -36,7 +36,7 @@ function renderInLibrary(detail: DatapackDetail, onMarkChanged = jest.fn()) {
 beforeEach(resetRequests);
 
 describe('Remove Demo Builder Mark', () => {
-    it("sits in More on the SC's own Demo Builder datapack, with no Delete", () => {
+    it("is in the list on the SC's own Demo Builder datapack, with no Delete", () => {
         renderInLibrary(OWN_DEMO_BUILDER);
         expect(menuLabels()).toEqual(['Save as File', 'Stop Sharing', 'Remove Demo Builder Mark']);
     });
@@ -98,7 +98,7 @@ describe('Remove Demo Builder Mark', () => {
 });
 
 describe('Mark as Demo Builder Datapack', () => {
-    it("sits in More on the SC's own other datapack, beside Delete", () => {
+    it("is in the list on the SC's own other datapack, before Delete", () => {
         renderInLibrary(OWN);
         expect(menuLabels()).toEqual([
             'Save as File',
@@ -141,7 +141,7 @@ describe("outside the Datapack Library, or on a colleague's datapack", () => {
                 installerOn={false}
             />
         );
-        expect(menuLabels()).toEqual(['Save as File', 'Stop Sharing']);
+        expect(menuLabels()).toEqual(['Install', 'Save as File', 'Stop Sharing']);
     });
 
     it("offers no mark row on a colleague's Demo Builder datapack", () => {

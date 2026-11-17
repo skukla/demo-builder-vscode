@@ -490,14 +490,14 @@
 }
 }
 
-/* What the flyout's actions say, under them (PackActions): where a saved file went, Share's and
-   Remove's confirmation, that a pack was removed, or why not. Padded like the actions row above
-   it (drawer.css .db-drawer-actions). Only this bundle renders it. */
+/* What the flyout's actions say, under the Actions list (PackActions): where a saved file went,
+   Share's and Delete's confirmation, that a pack was deleted, or why not. Left, under the list's
+   rows (walk, owner 2026-11-17). Only this bundle renders it. */
 @layer theme {
 .datapack-action-notes {
     display: flex;
     flex-direction: column;
-    align-items: flex-end;
+    align-items: flex-start;
     gap: 8px;
     padding: 0 18px 16px;
 }

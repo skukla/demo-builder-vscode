@@ -175,22 +175,6 @@
     white-space: nowrap;
 }
 
-/* One line, not two.
-
-   `.integration-panel-row` ends with a border-bottom, guarded by a
-   `:last-child` rule so the final row does not leave a trailing line. That guard
-   silently stops applying the moment ANYTHING follows the rows — and this footer
-   does, as their sibling inside `.db-drawer-body`. So the last row kept its
-   bottom border, this kept its top border, and the two rendered a pixel apart as
-   a double rule.
-
-   Dropping the footer's border only where a row precedes it: the row's own line
-   is already there, and where the panel body ends with something else the footer
-   still draws its own. Exactly one line either way. */
-.integration-panel-row + .db-drawer-actions {
-    border-top: none;
-}
-
 /* One height whether or not the name can be edited. A renamable title carries the
    rename pencil, which is hidden by width only, so it still makes the line as tall as
    an action button (Spectrum sizes it from --spectrum-alias-single-line-height). A
