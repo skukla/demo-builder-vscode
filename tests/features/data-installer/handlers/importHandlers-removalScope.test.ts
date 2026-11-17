@@ -111,6 +111,29 @@ describe('reset-datapack on a pack Demo Builder installed', () => {
     });
 });
 
+// Walk F192 (2026-11-17): an install that made nothing leaves a record listing nothing, and the
+// uninstall the window sends names no types, so it was refused "Select at least one data type".
+describe('reset-datapack on a pack whose record lists nothing', () => {
+    function emptyRecord(): void {
+        const file = installRecordPath(h.dir, PACK);
+        fs.mkdirSync(path.dirname(file), { recursive: true });
+        fs.writeFileSync(file, JSON.stringify({ format: 1, pack: PACK, engine: 'demo-builder', startedAt: '2026-11-16T18:00:00.000Z', created: [] }));
+    }
+
+    it('runs, sends nothing to the store, and clears the record and the project', async () => {
+        emptyRecord();
+        const project = projectOf();
+
+        const result = await importHandlers['reset-datapack'](makeImportHarness(project).context, RESET);
+        await whenWatchEnds();
+
+        expect(result.success).toBe(true);
+        expect(h.store.sent).toStrictEqual([]);
+        expect(fs.existsSync(installRecordPath(h.dir, PACK))).toBe(false);
+        expect(project.datapack).toBeUndefined();
+    });
+});
+
 describe('reset-datapack on a pack with no record', () => {
     // The Data Installer service installed it, before its engine was deleted (DI-12): nothing is removed by name.
     it('is refused with Clear Demo Data, and nothing is sent', async () => {

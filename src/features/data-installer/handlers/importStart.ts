@@ -154,10 +154,9 @@ export async function prepareImport(
     if ('response' in engine) {
         return engine;
     }
+    // A removal goes by the record, which may list nothing (an install that made nothing): it
+    // still runs, to clear the record and the project (walk F192).
     const dataTypes = write === 'remove' ? await typesToRemove(gate.project.path, pack, input.dataTypes) : input.dataTypes;
-    if (dataTypes.length === 0) {
-        return { response: { success: false, error: 'Select at least one data type to uninstall.' } };
-    }
     return {
         engine: engine.engine,
         request: {

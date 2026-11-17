@@ -277,6 +277,19 @@ describe('Uninstall with nothing changed', () => {
         expect(onClose).toHaveBeenCalledTimes(1);
     });
 
+    // Walk F192: a record listing nothing runs over no types and still ends on its result.
+    it('with nothing on the record, ends clean on "My Luma Uninstalled"', async () => {
+        holding(NOTHING, {
+            scope: { success: true, data: { kinds: [] } },
+            statusAfter: { ...UNINSTALLING, outcome: 'success', perType: {} },
+        });
+        await openUninstall();
+        await heading('Uninstall My Luma?');
+        await press(button('Uninstall'));
+
+        expect(await heading('My Luma Uninstalled')).toBeInTheDocument();
+    });
+
     it('ends clean on "My Luma Uninstalled", which closes itself', async () => {
         holding(NOTHING, {
             statusAfter: {
