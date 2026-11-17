@@ -406,7 +406,7 @@ describe('where the project writes in Commerce', () => {
             { id: 2, code: 'acme_test', name: 'Acme Test' },
         ],
         storeGroups: [{ id: 3, code: 'acme_test_store', name: 'Acme Test Store', website_id: 2, root_category_id: 2 }],
-        storeViews: [{ id: 4, code: 'acme_test_us', name: 'Acme Test Store US', store_group_id: 3, website_id: 2 }],
+        storeViews: [{ id: 4, code: 'acme_test_us', name: 'Acme Test Store US', store_group_id: 3, website_id: 2, is_active: true }],
     };
     const chosen = (website: string, storeView: string): Partial<WizardState> => ({
         selectedBackend: 'adobe-commerce-accs',
