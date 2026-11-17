@@ -424,7 +424,7 @@ describe('Finish Setup steps — the dot on the tile that fixes each', () => {
 
         expect(screen.getByTestId('manage-commerce-dot')).toHaveAttribute('data-variant', 'warning');
         expect(
-            screen.getByRole('button', { name: /^Manage Commerce, .*Root Category/ })
+            screen.getByRole('button', { name: /^Manage Commerce, Root category needed/ })
         ).toBeInTheDocument();
     });
 
