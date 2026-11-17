@@ -35,7 +35,7 @@ import type { CreatedObject } from './installRecord';
 import { type KindContext, type SettingsDone, parseRows } from './kindContext';
 import { certainlyNotMade } from './pendingCreates';
 import type { PendingObject } from './pendingRecord';
-import { skipRow } from './refusedRows';
+import { commerceSaid, skipRow } from './refusedRows';
 import { counted, startRowCount } from './rowCount';
 import { andList } from '@/core/utils/andList';
 import { decideOwnedChange } from '@/core/utils/ownedChange';
@@ -263,7 +263,8 @@ function skipRefused(ctx: KindContext, writing: readonly PlannedSetting[], rejec
     for (const text of rejected) {
         const planned = writing.find((p) => p.item && text.startsWith(`${p.item.path}: `));
         const path = planned?.item?.path ?? text.split(': ')[0];
-        skipRow(ctx, { kind: STORE_CONFIG_KIND, key: planned?.key ?? path, reason: text.slice(path.length + 2) });
+        const reason = text.slice(path.length + 2);
+        skipRow(ctx, { kind: STORE_CONFIG_KIND, key: planned?.key ?? path, reason, cause: commerceSaid(reason) });
     }
 }
 

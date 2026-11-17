@@ -22,7 +22,7 @@ import type { CreatedObject } from './installRecord';
 import { eachFewAtOnce, type KindContext, newCatalogSession, readOrNull, REQUESTS_AT_ONCE } from './kindContext';
 import { certainlyNotMade } from './pendingCreates';
 import type { PendingObject } from './pendingRecord';
-import { reasonOf, skipRow } from './refusedRows';
+import { commerceSaid, reasonOf, skipRow } from './refusedRows';
 import { runInBatches } from '@/core/utils/promiseUtils';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -228,7 +228,7 @@ async function makeBatch(
     for (const { product } of made) ctx.log(`created product ${product.sku}`);
     await ctx.recorder.forgetPending(pendingOf(refused.map((r) => r.product)));
     for (const { product, message } of refused)
-        skipRow(ctx, { kind: run.kind, key: product.sku, reason: message });
+        skipRow(ctx, { kind: run.kind, key: product.sku, reason: message, cause: commerceSaid(message) });
     for (const { product, message } of again) {
         ctx.log(
             `product ${product.sku} did not finish in the bulk queue (${message}); sending it on its own`,

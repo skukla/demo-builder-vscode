@@ -7,6 +7,7 @@
  */
 
 import { jobWords } from '../../datapackWords';
+import { plainFailure } from '../../plainFailure';
 import { type ResultContent, resolveResult, upToDateResult } from '../components/importResult';
 import type { JobState } from '../components/job/datapackJob';
 import type { DataInstallerRequest } from './useDataInstallerRequest';
@@ -27,7 +28,7 @@ function restoreAnswer(
     const { failure, value } = starts.start;
     if (failure?.code === ErrorCode.CHANGES_NEED_ANSWER) return null;
     if (failure) {
-        return { variant: 'error', title: jobWords('restore', name).failed, thing: name, message: failure.message };
+        return { variant: 'error', title: jobWords('restore', name).failed, thing: name, message: plainFailure(failure.message) };
     }
     if (value && 'upToDate' in value) return upToDateResult(name);
     if (value && 'asks' in value) return null;
@@ -38,7 +39,7 @@ function restoreAnswer(
 function updateAnswer(state: JobState, update: UpdateCheck | undefined, name: string): ResultContent | undefined {
     // Before Update is pressed: the check's answer stays the result once the window has moved to it.
     if (state.kind !== 'update' || state.lastAction !== null || !update) return undefined;
-    if (update.failure) return { variant: 'error', title: jobWords('update', name).failed, thing: name, message: update.failure };
+    if (update.failure) return { variant: 'error', title: jobWords('update', name).failed, thing: name, message: plainFailure(update.failure) };
     return update.upToDate ? upToDateResult(name) : undefined;
 }
 

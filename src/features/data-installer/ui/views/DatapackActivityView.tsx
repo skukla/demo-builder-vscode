@@ -30,6 +30,7 @@ import { Button, Item, Picker } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { DRY_RUN, INSTALL } from '../../datapackWords';
 import { versionLabel } from '../../packVersions';
+import { plainFailure } from '../../plainFailure';
 import type { ActivityEntry, DatapackEngineId, HistoryPage, OperationMode } from '../../types';
 import { renderDataInstallerFailure } from '../dataInstallerFailure';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
@@ -307,9 +308,10 @@ function SourceNotes({ page }: { page: HistoryPage<ActivityEntry> | null }): Rea
     );
 }
 
-/** One logged run: which engine ran it, and, for Demo Builder's, whether it failed and why. */
+/** One logged run: which engine ran it, and for Demo Builder's, what it said in plain words (F221). */
 function ActivityRow({ entry }: { entry: ActivityEntry }): React.JSX.Element {
     const mode = modeWord(entry.mode);
+    const said = entry.shown ?? (entry.detail ? plainFailure(entry.detail) : undefined);
     return (
         <div className="datapack-row" data-testid="activity-row">
             <div className="datapack-row-main">
@@ -322,7 +324,7 @@ function ActivityRow({ entry }: { entry: ActivityEntry }): React.JSX.Element {
             <div className="datapack-row-meta">
                 <span>{entry.dataTypes.length} data types</span>
                 {entry.at ? <span>{formatDateTime(entry.at)}</span> : null}
-                {entry.detail ? <span>{entry.detail}</span> : null}
+                {said ? <span>{said}</span> : null}
             </div>
         </div>
     );

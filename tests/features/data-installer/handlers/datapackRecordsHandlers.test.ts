@@ -102,7 +102,7 @@ describe('get-datapack-records', () => {
             read
         );
 
-        expect(answer).toMatchObject({ success: false, error: 'The records could not be read. Details are in Debug Logs.' });
+        expect(answer).toMatchObject({ success: false, error: 'The records could not be read.' });
     });
 
     it('is reachable from the Datapacks screen', () => {

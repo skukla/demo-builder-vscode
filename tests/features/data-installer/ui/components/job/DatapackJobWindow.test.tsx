@@ -253,7 +253,7 @@ describe('Install', () => {
                 outcome: 'partial',
                 perType: { categories: 'success', products: 'error' },
                 stoppedAt: 'products',
-                reason: 'Commerce did not respond.',
+                reason: 'Commerce did not respond to V1/products: timed out',
                 retryable: true,
             }),
         });
@@ -262,7 +262,9 @@ describe('Install', () => {
 
         expect(await findResult('Bodea', "Couldn't Install")).toBeInTheDocument();
         expect(screen.getByTestId('import-run')).toBeInTheDocument();
-        expect(screen.getByText('Commerce did not respond.')).toBeInTheDocument();
+        // Walk F221: plain words on the row, no API route.
+        expect(screen.getByText('Commerce stopped answering while products were installing.')).toBeInTheDocument();
+        expect(screen.queryByText(/V1\//u)).toBeNull();
 
         await press(button('Retry'));
 

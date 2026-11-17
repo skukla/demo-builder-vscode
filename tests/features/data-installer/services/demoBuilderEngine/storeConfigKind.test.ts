@@ -108,7 +108,7 @@ describe('installing a pack’s store settings', () => {
         await installStoreConfig(ctx, [row(GRID, '24'), row(LIST, '20')]);
 
         expect(ctx.recorder.created.map((o) => o.key)).toEqual([`${GRID}@default`]);
-        expect(ctx.session.skipped).toEqual([{ kind: 'store_config', key: `${LIST}@default`, reason: '10 → 20: not allowed' }]);
+        expect(ctx.session.skipped).toEqual([{ kind: 'store_config', key: `${LIST}@default`, reason: '10 → 20: not allowed', cause: { by: 'commerce', message: '10 → 20: not allowed' } }]);
         expect(ctx.recorder.pending).toStrictEqual([]);
     });
 });

@@ -15,6 +15,7 @@
  */
 
 import { removalLine } from '../importSteps';
+import { plainFailure, type PlainText } from '../plainFailure';
 import { announceDatapacksChanged } from '../services/datapackChanges';
 import type { DatapackEngine } from '../services/datapackEngine';
 import { nodeRecordFiles } from '../services/demoBuilderEngine/installRecord';
@@ -40,6 +41,12 @@ export const JOB_KEY = 'dataInstaller.import.current';
 
 /** Said for a job that ended without success and without saying why. */
 const JOB_DID_NOT_FINISH = 'The job did not finish.';
+
+/** Why a job failed, for its notification, in plain words: where it stopped and why (walk F221). */
+function noticeFailure(record: ImportJobRecord, result: Pick<ImportJobResult, 'reason' | 'stoppedAt'>): PlainText {
+    const work = record.operation === 'reset' ? 'uninstalling' : 'installing';
+    return plainFailure(result.reason ?? JOB_DID_NOT_FINISH, { kind: result.stoppedAt, work });
+}
 
 /**
  * What a datapack job shows on the SHARED progress channel, the notification the
@@ -153,7 +160,8 @@ async function watchAndRecord(
                 : {
                       id: DATAPACK_OPERATION_ID,
                       state: 'failed',
-                      error: result.reason ?? JOB_DID_NOT_FINISH,
+                      // Plain words (walk F221); the record below keeps Commerce's for agents.
+                      error: noticeFailure(record, result),
                   },
         );
         await transient.set(JOB_KEY, {

@@ -20,6 +20,7 @@ import {
     RETRIES_BEFORE_FIX,
 } from '@/features/data-installer/ui/components/importResult';
 import { jobRecord, PACK_NAME, recordOnlySources } from './importResult.testUtils';
+import { plain } from '@/features/data-installer/plainFailure';
 
 const SEARCH = 'New products can take 20 minutes to show in search.';
 
@@ -62,7 +63,7 @@ describe('an import that finished cleanly (walk F134)', () => {
             savedAs: 'Nov 9, 11:52 PM',
             replaces: 'Frescopa',
             searchDelay: SEARCH,
-            scLines: ['Kept 2 things you had changed in the Admin.'],
+            scLines: [plain('Kept 2 things you had changed in the Admin.')],
         });
 
         expect(result).toEqual({
@@ -116,7 +117,7 @@ describe('an import that finished with a problem (walk F134)', () => {
         const record = {
             outcome: 'success' as const,
             perType: done('categories', 'products'),
-            rowNotes: { products: 'Commerce refused 3 rows.' },
+            rowNotes: { products: plain('Commerce refused 3 rows.') },
             searchDelay: SEARCH,
             processingTimeMs: 72_000,
         };
@@ -279,13 +280,15 @@ describe('a removal', () => {
             outcome: 'success',
             operation: 'reset',
             note: 'Kept the category Gear: it holds yours.',
+            // Walk F221: the window reads the engine's lines for the SC; the note is for agents.
+            scLines: [plain('Kept the category Gear: it holds yours.')],
         });
 
         expect(result).toEqual({
             thing: PACK_NAME,
             variant: 'success',
             title: `${PACK_NAME} Uninstalled`,
-            message: 'Kept the category Gear: it holds yours.',
+            details: ['Kept the category Gear: it holds yours.'],
             finished: true,
         });
     });

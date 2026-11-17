@@ -14,6 +14,7 @@ import {
 } from '@/features/data-installer/importSteps';
 import { versionLabel } from '@/features/data-installer/packVersions';
 import { FINISHING_STOP, type InstallCheck, LINKING_OPTIONS, PREPARING_UNINSTALL, REPLACE_STOP, SAVE_STOP } from '@/features/data-installer/types';
+import { plain } from '@/features/data-installer/plainFailure';
 
 const NONE_FOUND = { count: 0, examples: [] as string[] };
 
@@ -191,7 +192,7 @@ describe('Uninstall’s lines', () => {
                 ...SAME_PACK,
                 running: false,
                 stoppedAt: REPLACE_STOP,
-                reason: 'Commerce did not respond.',
+                reason: plain('Commerce did not respond.'),
             })
         );
 
@@ -214,7 +215,7 @@ describe('Uninstall’s lines', () => {
                 running: false,
                 perType: { categories: 'success', products: 'error' },
                 stoppedAt: 'products',
-                reason: 'Commerce did not respond.',
+                reason: plain('Commerce did not respond.'),
             })
         );
 
@@ -280,7 +281,7 @@ describe('Install’s lines', () => {
             source({
                 running: false,
                 perType: { categories: 'success', products: 'success' },
-                rowNotes: { products: 'Commerce refused 3 rows.' },
+                rowNotes: { products: plain('Commerce refused 3 rows.') },
             })
         );
 
@@ -385,7 +386,7 @@ describe('Verify’s lines', () => {
                 running: false,
                 perType: allIn,
                 stoppedAt: FINISHING_STOP,
-                reason: 'The record could not be written.',
+                reason: plain('The record could not be written.'),
             })
         );
 
@@ -404,7 +405,7 @@ describe('a stop', () => {
                 dataTypes: ['categories', 'products', 'source_items'],
                 perType: { categories: 'success', products: 'error', source_items: 'error' },
                 stoppedAt: 'products',
-                reason: 'Commerce did not respond.',
+                reason: plain('Commerce did not respond.'),
             })
         );
 
@@ -425,7 +426,7 @@ describe('a stop', () => {
 
     it('before any type, with nothing replaced: the reason sits on Install', () => {
         const steps = importSteps(
-            source({ running: false, reason: 'Choose the website and store view first.' })
+            source({ running: false, reason: plain('Choose the website and store view first.') })
         );
 
         expect(install(steps)).toMatchObject({
@@ -440,7 +441,7 @@ describe('a stop', () => {
             source({
                 replaces: 'Bodea, main',
                 running: false,
-                reason: 'The new version could not be read.',
+                reason: plain('The new version could not be read.'),
             })
         );
 
@@ -499,13 +500,13 @@ describe("an uninstall's steps", () => {
     });
 
     it('a stop puts the reason on the row, one line', () => {
-        const [row] = uninstallSteps({ ...LUMA, running: false, ended: 'stopped', reason: 'Commerce refused the category Gear.' });
+        const [row] = uninstallSteps({ ...LUMA, running: false, ended: 'stopped', reason: plain('Commerce refused the category Gear.') });
         expect(row).toMatchObject({ status: 'error', problem: { text: 'Commerce refused the category Gear.', failed: true } });
         expect(row.line).toBeUndefined();
     });
 
     it('a save that failed is red on its own row, and the uninstall did not run', () => {
-        const steps = uninstallSteps({ ...LUMA, running: false, ended: 'stopped', stoppedAt: SAVE_STOP, reason: 'The library is read-only.' });
+        const steps = uninstallSteps({ ...LUMA, running: false, ended: 'stopped', stoppedAt: SAVE_STOP, reason: plain('The library is read-only.') });
 
         expect(steps[0]).toMatchObject({ status: 'error', problem: { text: 'The library is read-only.', failed: true } });
         expect(steps[1]).toMatchObject({ status: 'pending', line: 'Not run' });

@@ -10,12 +10,13 @@ import '@testing-library/jest-dom';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { renderDataInstallerFailure } from '@/features/data-installer/ui/dataInstallerFailure';
 import { ErrorCode } from '@/types/errorCodes';
+import { plain, plainFailure } from '@/features/data-installer/plainFailure';
 
 jest.mock('@/core/ui/utils/WebviewClient', () => ({ webviewClient: { postMessage: jest.fn() } }));
 
 const ADDRESS = 'demoBuilder.dataInstaller.apiBaseUrl';
-const refused = (message: string, setting?: string) => ({ message, code: ErrorCode.AUTH_FORBIDDEN, ...(setting ? { setting } : {}) });
-const unconfigured = (message: string, setting?: string) => ({ message, code: ErrorCode.INVALID_OPERATION, ...(setting ? { setting } : {}) });
+const refused = (message: string, setting?: string) => ({ message: plainFailure(message), code: ErrorCode.AUTH_FORBIDDEN, ...(setting ? { setting } : {}) });
+const unconfigured = (message: string, setting?: string) => ({ message: plainFailure(message), code: ErrorCode.INVALID_OPERATION, ...(setting ? { setting } : {}) });
 const TITLE = "Datapacks Aren't Available";
 
 describe('renderDataInstallerFailure, a surface about datapacks', () => {
@@ -51,7 +52,7 @@ describe('renderDataInstallerFailure, the one list', () => {
     it.each([
         ['a refused sign-in', refused('The store refused the sign-in.')],
         ['an unusable address', unconfigured('The store has no usable address.')],
-        ['anything else', { message: 'The store is down.', code: ErrorCode.UNKNOWN }],
+        ['anything else', { message: plain('The store is down.'), code: ErrorCode.UNKNOWN }],
     ])('titles %s as datapacks being unavailable, with its own message and no Data Installer advice', (_name, failure) => {
         render(renderDataInstallerFailure(failure, jest.fn(), { unreachableTitle: TITLE }));
 
@@ -62,7 +63,7 @@ describe('renderDataInstallerFailure, the one list', () => {
     });
 
     it('still offers the sign-in, the one failure an SC can fix from here', () => {
-        render(renderDataInstallerFailure({ message: 'Sign in.', code: ErrorCode.AUTH_REQUIRED }, jest.fn(), { unreachableTitle: TITLE }));
+        render(renderDataInstallerFailure({ message: plain('Sign in.'), code: ErrorCode.AUTH_REQUIRED }, jest.fn(), { unreachableTitle: TITLE }));
 
         expect(screen.getByRole('button', { name: 'Sign In with Adobe' })).toBeInTheDocument();
     });

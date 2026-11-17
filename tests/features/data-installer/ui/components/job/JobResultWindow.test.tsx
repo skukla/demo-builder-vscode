@@ -11,11 +11,12 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import type { ResultContent } from '@/features/data-installer/ui/components/importResult';
 import { JobResultWindow } from '@/features/data-installer/ui/components/job/JobResultWindow';
+import { plain } from '@/features/data-installer/plainFailure';
 
 const KEPT: ResultContent = {
     variant: 'warning',
     title: 'One Step Left to Uninstall Frescopa',
-    message: "Tailspin Test Store still uses the category Frescopa as its root category, so Demo Builder couldn't delete that category. Everything else is uninstalled.",
+    message: plain("Tailspin Test Store still uses the category Frescopa as its root category, so Demo Builder couldn't delete that category. Everything else is uninstalled."),
     keptRoot: { store: 'Tailspin Test Store', category: 'Frescopa', restore: 'Tailspin Catalog' },
 };
 
@@ -54,7 +55,7 @@ describe('a removal that left the root a store uses', () => {
     });
 
     it('offers no Open Admin on a result with no Admin step', () => {
-        render(<JobResultWindow result={{ variant: 'error', title: "Couldn't Uninstall Frescopa", message: 'Stopped.' }} onClose={jest.fn()} />);
+        render(<JobResultWindow result={{ variant: 'error', title: "Couldn't Uninstall Frescopa", message: plain('Stopped.') }} onClose={jest.fn()} />);
 
         expect(screen.queryByRole('button', { name: 'Open Admin' })).not.toBeInTheDocument();
     });

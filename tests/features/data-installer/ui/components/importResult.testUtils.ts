@@ -11,6 +11,7 @@
 import type { DataTypeStatus, ImportJobRecord } from '@/features/data-installer/types';
 import type { resolveResult } from '@/features/data-installer/ui/components/importResult';
 import type { DataInstallerRequest } from '@/features/data-installer/ui/hooks/useDataInstallerRequest';
+import { plainFailure } from '@/features/data-installer/plainFailure';
 
 /** The activation the session started, so a record can match it or not. */
 export const ACTIVATION = 'act-123';
@@ -30,7 +31,7 @@ export function failed<T>(message: string): DataInstallerRequest<T> {
         load: jest.fn(),
         loading: false,
         value: null,
-        failure: { message },
+        failure: { message: plainFailure(message) },
     };
 }
 

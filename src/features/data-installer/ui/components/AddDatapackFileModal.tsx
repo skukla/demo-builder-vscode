@@ -31,6 +31,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { INSTALLER_WRITES_SHOWN } from '../../installerWrites';
+import { plain, plainFailure, plainLabelled } from '../../plainFailure';
 import { copyName, longestNameProblem, nameProblem } from '../../saveAsName';
 import { dataTypeLabel } from '../dataTypeLabel';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
@@ -217,26 +218,26 @@ function loadResult(args: {
 }): ResultContent | null {
     const { openError, file, outcome, loadError } = args;
     if (openError || !file) {
-        return { variant: 'error', title: "Couldn't Open the File", thing: 'File', message: openError ?? 'No file was opened.' };
+        return { variant: 'error', title: "Couldn't Open the File", thing: 'File', message: openError ? plainFailure(openError) : plain('No file was opened.') };
     }
     const name = loadedName(file, outcome);
     if (!outcome && !loadError) return null;
     const layer = outcome?.settingsLayer;
     const details = [
-        ...(outcome?.failed ?? []).map((f) => `${dataTypeLabel(f.dataType)}: ${f.reason}`),
-        ...(layer?.reason ? [`Store Configuration: ${layer.reason}`] : []),
+        ...(outcome?.failed ?? []).map((f) => plainLabelled(dataTypeLabel(f.dataType), f.reason)),
+        ...(layer?.reason ? [plainLabelled('Store Configuration', layer.reason)] : []),
     ];
     if (loadError) {
-        return { variant: 'error', title: `Couldn't Add ${name}`, thing: name, message: loadError, details };
+        return { variant: 'error', title: `Couldn't Add ${name}`, thing: name, message: plainFailure(loadError), details };
     }
     const stored = outcome?.stored.length ?? 0;
     const failed = outcome?.failed.length ?? 0;
     const landed = layer?.outcome === 'created' || layer?.outcome === 'updated';
     const where = loadedWhere(outcome?.target === 'installer', landed);
-    if (details.length === 0) return { variant: 'success', title: `${name} Loaded`, thing: name, message: where };
+    if (details.length === 0) return { variant: 'success', title: `${name} Loaded`, thing: name, message: plainFailure(where) };
     // Partly: the count says how much, the details say what was refused and why.
     const partly = failed > 0 ? `Loaded ${stored} of ${stored + failed} data types. ` : '';
-    return { variant: 'warning', title: `${name} ${failed > 0 ? 'Partly Loaded' : 'Loaded'}`, thing: name, message: `${partly}${where}`, details };
+    return { variant: 'warning', title: `${name} ${failed > 0 ? 'Partly Loaded' : 'Loaded'}`, thing: name, message: plainFailure(`${partly}${where}`), details };
 }
 
 /**
@@ -246,9 +247,9 @@ function loadResult(args: {
  * Installer, or replaced a datapack), it is that layer.
  */
 function resultRows(outcome: LoadOutcome | null, created: readonly DatapackId[], name: string): ResultRow[] {
-    const rows: ResultRow[] = (outcome?.failed ?? []).map((f) => ({ label: dataTypeLabel(f.dataType), status: 'warning', note: f.reason }));
+    const rows: ResultRow[] = (outcome?.failed ?? []).map((f) => ({ label: dataTypeLabel(f.dataType), status: 'warning', note: plainFailure(f.reason) }));
     const layer = outcome?.settingsLayer;
-    if (layer?.reason) rows.push({ label: 'Store Configuration', status: 'warning', note: layer.reason });
+    if (layer?.reason) rows.push({ label: 'Store Configuration', status: 'warning', note: plainFailure(layer.reason) });
     if (outcome && created.length > 0) {
         const packCreated = created.some((id) => id.name === outcome.datapackName);
         // The SC never sees a version (D3): the datapack by its name alone.

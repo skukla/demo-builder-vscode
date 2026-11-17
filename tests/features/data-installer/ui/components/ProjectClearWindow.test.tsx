@@ -273,7 +273,7 @@ describe('the whole check failing', () => {
         mockRequest.mockReset();
         mockRequest.mockResolvedValue({
             success: false,
-            error: "What this project's websites hold could not be read. Details are in Debug Logs.",
+            error: "What this project's websites hold could not be read.",
             code: ErrorCode.NETWORK,
         });
 
@@ -282,7 +282,7 @@ describe('the whole check failing', () => {
         expect(screen.getByText("Couldn't Reach Commerce")).toBeInTheDocument();
         expect(
             screen.getByText(
-                "What this project's websites hold could not be read. Details are in Debug Logs."
+                "What this project's websites hold could not be read."
             )
         ).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: /^Clear/ })).not.toBeInTheDocument();

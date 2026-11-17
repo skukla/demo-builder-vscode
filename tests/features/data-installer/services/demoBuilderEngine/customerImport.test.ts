@@ -71,7 +71,7 @@ describe('makeCustomersByImport', () => {
         const ids = await makeCustomersByImport(ctx, [customerImportRows({ email: 'vip@thelumastory.com', firstname: 'Sharon', lastname: 'Reynolds' }, ctx)]);
 
         expect(ids.size).toBe(0);
-        expect(ctx.session.skipped).toEqual([{ kind: 'customers', key: 'vip@thelumastory.com', reason: 'Please enter a valid email.' }]);
+        expect(ctx.session.skipped).toEqual([{ kind: 'customers', key: 'vip@thelumastory.com', reason: 'Please enter a valid email.', cause: { by: 'commerce', message: 'Please enter a valid email.' } }]);
         expect(ctx.recorder.pending).toStrictEqual([]);
     });
 });

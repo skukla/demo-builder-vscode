@@ -27,6 +27,7 @@ import type {
 } from '@/features/data-installer/types';
 import { resolveResult } from '@/features/data-installer/ui/components/importResult';
 import type { OperationProgressPayload, OperationRow } from '@/types/webviewPayloads';
+import { plain } from '@/features/data-installer/plainFailure';
 
 describe('endsClean', () => {
     it('ends clean when it succeeded, with no warning and every row clean', () => {
@@ -159,7 +160,7 @@ describe('the import window (an install the engine ran)', () => {
             });
         }
         if (name === 'note')
-            return jobRecord({ ...base, rowNotes: { products: 'Something to know.' } });
+            return jobRecord({ ...base, rowNotes: { products: plain('Something to know.') } });
         if (name === 'failed') {
             return jobRecord({
                 ...base,

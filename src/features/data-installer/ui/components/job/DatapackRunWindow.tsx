@@ -16,6 +16,7 @@
 
 import React, { useState } from 'react';
 import { type ImportStep, type StepSource } from '../../../importSteps';
+import type { PlainText } from '../../../plainFailure';
 import { FINISHING, REPLACING, SAVING } from '../../../runRows';
 import type { ImportJobRecord } from '../../../types';
 import { useImportProgress } from '../../hooks/useImportProgress';
@@ -153,7 +154,7 @@ function LiveRun({
 }
 
 /** What an end on its steps leaves to read: where the datapack went, then the engine's lines for the SC. */
-function endedRunLines(ended: ResultContent, run: ImportJobRecord): string[] {
+function endedRunLines(ended: ResultContent, run: ImportJobRecord): PlainText[] {
     const lead = ended.lead ? [ended.lead] : [];
     return [...lead, ...(run.scLines ?? [])];
 }

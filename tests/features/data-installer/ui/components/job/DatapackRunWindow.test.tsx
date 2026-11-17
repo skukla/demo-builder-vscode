@@ -19,6 +19,7 @@ import {
     DatapackRunWindow,
     type DatapackRunWindowProps,
 } from '@/features/data-installer/ui/components/job/DatapackRunWindow';
+import { plain } from '@/features/data-installer/plainFailure';
 
 const NONE_FOUND = { count: 0, examples: [] as string[] };
 const CHECK: InstallCheck = {
@@ -142,7 +143,8 @@ describe('an install that ended with a problem, on its steps', () => {
         outcome: 'partial',
         perType: { categories: 'success', products: 'error', source_items: 'error' },
         stoppedAt: 'products',
-        reason: 'Commerce did not respond.',
+        // The record keeps Commerce's words for agents; the row says it plainly (walk F221).
+        reason: 'Commerce did not respond to V1/products: timed out',
     };
     const ALL_IN: ImportJobRecord = {
         ...RUN,
@@ -162,7 +164,7 @@ describe('an install that ended with a problem, on its steps', () => {
         });
 
         expect(rowOf(shown, 'Stopped')).toHaveTextContent('Install ZZ Test Root DB12, 1');
-        const reason = shown.getByText('Commerce did not respond.');
+        const reason = shown.getByText('Commerce stopped answering while products were installing.');
         expect(reason).toHaveClass('dialog-problem', 'text-negative');
         expect(reason.closest('.work-row')).toHaveTextContent('Products');
         expect(rowOf(shown, 'Not run')).toHaveTextContent('Verify Installation');
@@ -172,14 +174,14 @@ describe('an install that ended with a problem, on its steps', () => {
     it('puts a problem that did not stop it on its type, orange, and the sentence under the steps', () => {
         const run: ImportJobRecord = {
             ...ALL_IN,
-            rowNotes: { products: 'Commerce refused 3 rows.' },
-            scLines: ['Kept 2 things you had changed in the Admin.'],
+            rowNotes: { products: plain('Commerce refused 3 rows.') },
+            scLines: [plain('Kept 2 things you had changed in the Admin.')],
         };
         const shown = ended({
             variant: 'warning',
             title: 'Luma Installed',
             run,
-            lead: 'Luma is in Tailspin Test Store.',
+            lead: plain('Luma is in Tailspin Test Store.'),
         });
 
         expect(shown.getByText('Commerce refused 3 rows.')).toHaveClass(

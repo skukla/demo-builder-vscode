@@ -18,6 +18,7 @@ import {
     readEngineActivity,
     recordJobEnd,
 } from '@/features/data-installer/services/engineActivityLog';
+import { plain } from '@/features/data-installer/plainFailure';
 
 const PROJECT = '/projects/bodea';
 const PACK = { name: 'bodea-main', version: '1.2.0' };
@@ -78,6 +79,27 @@ describe('engineActivityLog', () => {
         expect(entry.outcome).toBe('failed');
         expect(entry.detail).toBe('Commerce answered 400');
         expect('commerceInstance' in entry).toBe(false);
+    });
+
+    // Walk F221: the Activity tab reads plain words; `detail` keeps Commerce's for agents.
+    it('keeps plain words for the screen beside the raw detail', () => {
+        const stopped = activityEntryFrom(
+            jobEnd({
+                perType: { categories: 'success', products: 'error' },
+                reason: 'Commerce did not respond to V1/products: timed out',
+                stoppedAt: 'products',
+            }),
+            undefined,
+        );
+        const skipped = activityEntryFrom(
+            jobEnd({ note: 'Skipped 1 row, and installed the rest: products p2 (Invalid SKU).', scLines: [plain("Product p2 wasn't added: Commerce didn't accept its SKU.")] }),
+            undefined,
+        );
+
+        expect(stopped.detail).toBe('Commerce did not respond to V1/products: timed out');
+        expect(stopped.shown).toBe('Commerce stopped answering while products were installing.');
+        expect(skipped.shown).toBe("Product p2 wasn't added: Commerce didn't accept its SKU.");
+        expect('shown' in activityEntryFrom(jobEnd({ note: 'Kept the category Sale.' }), undefined)).toBe(false);
     });
 
     it('reads entries back newest first', async () => {

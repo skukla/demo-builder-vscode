@@ -32,7 +32,7 @@ import type { CreatedObject } from './installRecord';
 import { eachFewAtOnce, type KindContext, readOrNull, REQUESTS_AT_ONCE, segment } from './kindContext';
 import type { PendingObject } from './pendingRecord';
 import { GIFT_CARD_KIND, PRODUCT_KIND } from './productKinds';
-import { skipRow } from './refusedRows';
+import { commerceSaid, skipRow } from './refusedRows';
 import { runInBatches } from '@/core/utils/promiseUtils';
 
 export const PRODUCT_EXPORT_KIND = 'product_export';
@@ -197,12 +197,10 @@ async function importCall(
     await ctx.recorder.confirm(pendingOf(made), objects);
     for (const row of made) ctx.log(`created product ${row.sku}`);
     await ctx.recorder.forgetPending(pendingOf(missing));
-    for (const sku of new Set(missing.map((r) => r.sku)))
-        skipRow(ctx, {
-            kind: skipKind,
-            key: sku,
-            reason: reasons.get(sku) || 'Commerce took the row but did not make the product',
-        });
+    for (const sku of new Set(missing.map((r) => r.sku))) {
+        const reason = reasons.get(sku) || 'Commerce took the row but did not make the product';
+        skipRow(ctx, { kind: skipKind, key: sku, reason, cause: commerceSaid(reason) });
+    }
 }
 
 /**
@@ -294,7 +292,8 @@ async function checkConfigurables(ctx: KindContext, rows: readonly ExportRow[], 
     for (const row of bare) {
         await ctx.send('POST', 'import/json', importBody('catalog_product', 'append', [forStore(row, ctx, root)], 'validation-stop-on-errors'));
         if ((await optionsOf(ctx, row.sku)).length > 0) continue;
-        skipRow(ctx, { kind: skipKind, key: row.sku, reason: 'Commerce made it with its children but without its options, twice' });
+        const twice = 'Commerce made it with its children but without its options, twice';
+        skipRow(ctx, { kind: skipKind, key: row.sku, reason: twice, cause: commerceSaid(twice) });
     }
 }
 
@@ -320,7 +319,7 @@ export async function updateProductRows(ctx: KindContext, rows: readonly ExportR
             // "Row N": the call's Nth row, which stopped it; nothing in the call was imported.
             const at = Number(/^Row (\d+)/u.exec(refusedLine(answer))?.[1] ?? 1) - 1;
             const bad = call[Math.min(Math.max(at, 0), call.length - 1)];
-            skipRow(ctx, { kind: PRODUCT_EXPORT_KIND, key: bad.sku, reason: refusal });
+            skipRow(ctx, { kind: PRODUCT_EXPORT_KIND, key: bad.sku, reason: refusal, cause: commerceSaid(refusal) });
             call = call.filter((r) => r !== bad);
         }
     }

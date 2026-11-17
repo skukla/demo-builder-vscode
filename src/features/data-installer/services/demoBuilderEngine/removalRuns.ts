@@ -166,11 +166,12 @@ async function takeBackRun(
     }
 }
 
-/** How many refused removals the line names; Debug Logs names each one. */
+/** How many refused removals the line names; the log names each one. */
 const NAMED_REFUSALS = 10;
 
 /**
- * The one line about what Commerce would not take back, or nothing.
+ * The one line about what Commerce would not take back, in its words, for the note (agents and the
+ * record), or nothing. The SC reads the same rows grouped in plain words (`plainRefusedRemovals`).
  *
  * @param again - what tries it again: "Installing" the pack again, or "Removing" it again
  */
@@ -178,6 +179,7 @@ export function refusedRemovalsLine(refused: readonly RefusedRemoval[], again: '
     if (refused.length === 0) return undefined;
     const rows = refused.slice(0, NAMED_REFUSALS).map((row) => `${dataTypeLabel(row.kind).toLowerCase()} ${row.key} (${row.reason.replace(/\.$/u, '')})`);
     const count = refused.length === 1 ? '1 item' : `${refused.length.toLocaleString('en-US')} items`;
-    const more = refused.length > NAMED_REFUSALS ? `; and ${refused.length - NAMED_REFUSALS} more, each named in Debug Logs` : '';
+    // datapack-words: not on screen
+    const more = refused.length > NAMED_REFUSALS ? `; and ${refused.length - NAMED_REFUSALS} more, each still on the record` : '';
     return `Commerce would not take out ${count}: ${rows.join('; ')}${more}. ${again} the datapack again tries again.`;
 }

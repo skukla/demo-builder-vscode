@@ -10,10 +10,10 @@ const skipped = (kind: string, n: number): SkippedRow[] =>
     Array.from({ length: n }, (_, i) => ({ kind, key: `${kind}-${i}`, reason: 'refused' }));
 
 describe('rowNotesOf', () => {
-    it('says how many rows Commerce refused, on that data type', () => {
+    it('says how many were not added, in the words of that data type (walk F221)', () => {
         expect(rowNotesOf([...skipped('products', 3), ...skipped('categories', 1)])).toEqual({
-            products: 'Commerce refused 3 rows.',
-            categories: 'Commerce refused 1 row.',
+            products: "3 products weren't added.",
+            categories: "1 category wasn't added.",
         });
     });
 

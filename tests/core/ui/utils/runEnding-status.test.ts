@@ -24,6 +24,7 @@ import {
     jobRecord,
     recordOnlySources,
 } from '../../../features/data-installer/ui/components/importResult.testUtils';
+import { plain } from '@/features/data-installer/plainFailure';
 
 describe('endStatus', () => {
     it('is green when it succeeded with no warning and no row with a problem', () => {
@@ -231,10 +232,10 @@ describe('the install result', () => {
         if (name === 'warning') return jobRecord({ ...base, check: differs });
         // Commerce refused rows: the engine's line on that type's row.
         if (name === 'problem')
-            return jobRecord({ ...base, rowNotes: { products: 'Commerce refused 3 rows.' } });
+            return jobRecord({ ...base, rowNotes: { products: plain('Commerce refused 3 rows.') } });
         // The SC's edits kept: something to know.
         if (name === 'note')
-            return jobRecord({ ...base, scLines: ['Kept 3 items changed in the Admin.'] });
+            return jobRecord({ ...base, scLines: [plain('Kept 3 items changed in the Admin.')] });
         if (name === 'failed')
             return jobRecord({
                 ...base,

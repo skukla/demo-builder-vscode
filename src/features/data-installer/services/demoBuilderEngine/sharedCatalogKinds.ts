@@ -52,7 +52,7 @@ import { companyByName, readCatalogs, readHeld } from './b2bReads';
 import { deleteIfPresent, isAlreadyGone, type KindContext, MissingNameError, parseRows, ownedId, segment } from './kindContext';
 import { createRecorded } from './pendingCreates';
 import { type ProductLookups, productLookups } from './productLookups';
-import { isRowRefusal, needsUnskipped, reasonOf, skipRow, tryRow } from './refusedRows';
+import { causeOf, isRowRefusal, needsUnskipped, reasonOf, skipRow, tryRow } from './refusedRows';
 import { counted } from './rowCount';
 import type { CommerceSend, CommerceSharedCatalog } from '@/types/commerceWire';
 import type { SharedCatalogHeld } from '@/types/storePreparation';
@@ -223,9 +223,11 @@ async function memberRef(ctx: KindContext, kind: AssignmentKind, member: string)
     return String(company.id);
 }
 
-/** Skip every pair in `pairs` for one reason (step 14 item 3). */
-function skipPairs(ctx: KindContext, kind: AssignmentKind, pairs: readonly FlatAssignment[], reason: string): void {
-    for (const pair of pairs) skipRow(ctx, { kind, key: assignmentKey(pair), reason });
+/** Skip every pair in `pairs` for one error: a missing name, or Commerce refusing the batch (step 14 item 3). */
+function skipPairs(ctx: KindContext, kind: AssignmentKind, pairs: readonly FlatAssignment[], error: unknown): void {
+    const reason = reasonOf(ctx.session, error);
+    const cause = causeOf(ctx.session, error);
+    for (const pair of pairs) skipRow(ctx, { kind, key: assignmentKey(pair), reason, cause });
 }
 
 /** Assign what each catalog does not hold yet, one call per catalog; record each pair assigned. */
@@ -246,7 +248,7 @@ async function assignToCatalog(ctx: KindContext, kind: AssignmentKind, name: str
     const catalog = catalogs.find((c) => c.name === name) ?? catalogs.find((c) => standIn !== undefined && c.id === standIn);
     if (catalog?.id === undefined) {
         // Step 14 item 3: a catalog the store lacks (or this install skipped) skips what goes in it, by name.
-        skipPairs(ctx, kind, ofCatalog, reasonOf(ctx.session, new MissingNameError(CATALOG_KIND, name, `Commerce has no shared catalog named ${name}.`)));
+        skipPairs(ctx, kind, ofCatalog, new MissingNameError(CATALOG_KIND, name, `Commerce has no shared catalog named ${name}.`));
         return;
     }
     const held = new Set((await readHeld(ctx.get, catalog.id))[route.list].map(String));
@@ -268,7 +270,7 @@ async function assignToCatalog(ctx: KindContext, kind: AssignmentKind, name: str
     } catch (error) {
         // One call carries the catalog's whole batch, so a refusal skips each pair in it, each named.
         if (!isRowRefusal(error)) throw error;
-        skipPairs(ctx, kind, adding.map((a) => a.pair), reasonOf(ctx.session, error));
+        skipPairs(ctx, kind, adding.map((a) => a.pair), error);
         return;
     }
     ctx.log(`assigned ${adding.length} to shared catalog ${name}`);

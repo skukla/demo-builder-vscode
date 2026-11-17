@@ -191,7 +191,12 @@ async function placeInTree(ctx: KindContext, category: CategoryRow['category'], 
     const own = `${category.path}/${category.name}`;
     if (tree.skipped.has(category.path)) {
         tree.skipped.add(own);
-        skipRow(ctx, { ...asRow(category, category.path), reason: `its parent category ${category.path.split('/').pop()} was skipped` });
+        const parent = category.path.split('/').pop() ?? category.path;
+        skipRow(ctx, {
+            ...asRow(category, category.path),
+            reason: `its parent category ${parent} was skipped`,
+            cause: { by: 'needs', kind: CATEGORY_KIND, name: parent },
+        });
         return;
     }
     // Under a category the SC deleted: left out with it.

@@ -49,6 +49,7 @@ import { pollingStub, snap } from './importJobRunner.testUtils';
 import { watchImportJob, IMPORT_POLL, type ProgressListener } from '@/features/data-installer/services/importJobRunner';
 import type { JobStatusSnapshot } from '@/features/data-installer/types';
 import { PollingService } from '@/core/shell/pollingService';
+import { plain } from '@/features/data-installer/plainFailure';
 
 /** Runner with a scripted sequence of status responses. */
 function runWith(
@@ -249,7 +250,7 @@ describe('watchImportJob', () => {
 
         // The window's rows and its main action read these off the finished job.
         it('hands on where the job stopped, whether a retry can help, and what the SC reads', async () => {
-            const said = { stoppedAt: 'products', retryable: true, scLines: ['Kept 2 things.'], searchDelay: 'Soon.', rowNotes: { categories: 'Commerce refused 1.' } };
+            const said = { stoppedAt: 'products', retryable: true, scLines: [plain('Kept 2 things.')], searchDelay: 'Soon.', rowNotes: { categories: plain('Commerce refused 1.') } };
             const { promise } = runWith([snap({ categories: 'success', products: 'error' }, said)]);
 
             expect(await promise).toMatchObject(said);

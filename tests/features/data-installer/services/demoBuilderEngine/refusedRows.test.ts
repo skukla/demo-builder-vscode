@@ -136,8 +136,9 @@ describe("what is the row's fault", () => {
         expect(skippedLine([])).toBeUndefined();
     });
 
-    // A bulk install can skip hundreds for one reason; the line reaches the window and every agent's status read.
-    it('names the first ten skipped rows and counts the rest, which Debug Logs names', () => {
+    // A bulk install can skip hundreds for one reason; the line reaches every agent's status read, whose
+    // skipped list carries each row (walk F221: Debug Logs is no place to send anyone).
+    it('names the first ten skipped rows and counts the rest, which the skipped list names', () => {
         const many = Array.from({ length: 25 }, (_, i) => ({ kind: 'products', key: `p${i}`, reason: 'Invalid SKU.' }));
 
         const line = skippedLine(many)!;
@@ -145,7 +146,7 @@ describe("what is the row's fault", () => {
         expect(line).toContain('Skipped 25 rows');
         expect(line).toContain('products p9 (Invalid SKU)');
         expect(line).not.toContain('p10 ');
-        expect(line.endsWith('; and 15 more, each named in Debug Logs.')).toBe(true);
+        expect(line.endsWith('; and 15 more, each in the skipped list.')).toBe(true);
     });
 });
 
@@ -168,7 +169,13 @@ describe('a row Commerce refuses is skipped and the rest go in', () => {
         expect(ctx.recorder.created.map((o) => o.id)).toEqual(['p1', 'p3']);
         expect(ctx.recorder.pending).toStrictEqual([]);
         expect(outcome.skipped).toEqual([
-            { kind: 'products', key: 'p2', reason: 'The value of attribute "color" must be set.' },
+            {
+                kind: 'products',
+                key: 'p2',
+                reason: 'The value of attribute "color" must be set.',
+                // Through the bulk queue: its answer carries Commerce's message, never a status.
+                cause: { by: 'commerce', message: 'The value of attribute "color" must be set.' },
+            },
         ]);
     });
 
@@ -249,17 +256,20 @@ describe('a row other rows need takes them with it, by name', () => {
                 key: expect.any(String),
                 names: ['Racks', 'racks'],
                 reason: 'URL key for specified store already exists.',
+                cause: { by: 'commerce', status: 400, message: 'URL key for specified store already exists.' },
             },
             {
                 kind: 'categories',
                 key: expect.any(String),
                 names: ['Wall'],
                 reason: 'its parent category Racks was skipped',
+                cause: { by: 'needs', kind: 'categories', name: 'Racks' },
             },
             {
                 kind: 'products',
                 key: 'vrrack',
                 reason: 'it needs the category racks, which was skipped',
+                cause: { by: 'needs', kind: 'categories', name: 'racks' },
             },
         ]);
         expect(ctx.recorder.created.map((o) => `${o.kind} ${o.id}`)).toEqual([

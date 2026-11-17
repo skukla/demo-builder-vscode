@@ -13,6 +13,7 @@
  * @module features/data-installer/ui/components/importResult
  */
 
+import { plain, plainFailure, type PlainText } from '../../plainFailure';
 import type { ChangePreview } from '../../services/demoBuilderEngine/storeChanges';
 import { FINISHING_STOP, type ImportJobRecord, type KeptRootStep, SAVE_STOP } from '../../types';
 import type { DataInstallerRequest } from '../hooks/useDataInstallerRequest';
@@ -39,8 +40,9 @@ export interface ResultContent {
     title: string;
     /** What it is about, the window's title: the datapack's name. */
     thing?: string;
-    message?: string;
-    details?: string[];
+    /** What is left to read, in plain words (walk F221). */
+    message?: PlainText;
+    details?: PlainText[];
     /** How long the job ran, when it reported it. */
     tookMs?: number;
     /** The kept root's Admin step, shown as the setup step's Where / Set / Then. */
@@ -56,7 +58,7 @@ export interface ResultContent {
     /** The import ran to its end, cleanly or not: the window closes, with nothing to go back to (walk F117). */
     finished?: true;
     /** The ending under the rows: where the pack went and how long search takes. */
-    lead?: string;
+    lead?: PlainText;
     /** The footer's main action: run the same import again, or hand the problem to the SC's AI. */
     action?: 'retry' | 'fix';
 }
@@ -161,11 +163,11 @@ function resolveUnnamed(lastAction: LastAction | null, sources: Parameters<typeo
                 return notSavedRun(request.failure.message, name, sources.replacing);
             }
             if (request.failure?.code === ErrorCode.CHANGES_NOT_SAVED) {
-                return { variant: 'error', title: "Couldn't Save Changes", message: 'Nothing was uninstalled.', details: [request.failure.message], backToConfirm: true };
+                return { variant: 'error', title: "Couldn't Save Changes", message: plain('Nothing was uninstalled.'), details: [plainFailure(request.failure.message)], backToConfirm: true };
             }
             if (request.failure) {
                 // Named, as every datapack result is (owner, 2026-11-10): "Couldn't Uninstall My Luma".
-                return { variant: 'error', title: `Couldn't ${words.verbTitle} ${name}`, message: request.failure.message };
+                return { variant: 'error', title: `Couldn't ${words.verbTitle} ${name}`, message: plainFailure(request.failure.message) };
             }
             // The terminal record for THIS session's job. A running record is
             // the watching view's business, not a result.
@@ -207,7 +209,7 @@ function notSavedRun(reason: string, name: string, replacing: { name: string; da
         reason,
     };
     // A switch and an install fail in the same words (`jobWords`).
-    return { variant: 'error', title: jobWords('install', name).failed, run, lead: 'Nothing was uninstalled or installed.', backToConfirm: true };
+    return { variant: 'error', title: jobWords('install', name).failed, run, lead: plain('Nothing was uninstalled or installed.'), backToConfirm: true };
 }
 
 /**
@@ -267,7 +269,7 @@ function runResult(record: ImportJobRecord, name: string, retries: number): Resu
     const title = words.done;
     const ending = endingOf(record, ranToEnd);
     if (endsClean(ending)) return { variant: 'success', title, finished: true, ...leftToKnow(record) };
-    const lead = record.searchDelay ? { lead: record.searchDelay } : {};
+    const lead = record.searchDelay ? { lead: plainFailure(record.searchDelay) } : {};
     // Coloured by the one amber rule (`endStatus`), as every run window's end is.
     return { variant: endStatus(ending), title, run: record, finished: true, action: 'fix', ...lead, ...took };
 }
@@ -290,11 +292,11 @@ function uninstallResult(record: ImportJobRecord, name: string): ResultContent {
  * pass says what it means for this datapack, and its footer offers the install itself (Flow 2.14).
  */
 function dryRunResult(dryRun: DataInstallerRequest<{ valid: boolean; reason?: string }>, name: string): ResultContent | null {
-    if (dryRun.failure) return { variant: 'error', title: 'Dry Run Failed', message: dryRun.failure.message };
+    if (dryRun.failure) return { variant: 'error', title: 'Dry Run Failed', message: plainFailure(dryRun.failure.message) };
     if (!dryRun.value) return null;
     return dryRun.value.valid
-        ? { variant: 'success', title: 'Dry Run Passed', message: `${name} can be installed here. Nothing was written.` }
-        : { variant: 'warning', title: 'Dry Run Found a Problem', message: dryRun.value.reason, action: 'fix' };
+        ? { variant: 'success', title: 'Dry Run Passed', message: plainFailure(`${name} can be installed here. Nothing was written.`) }
+        : { variant: 'warning', title: 'Dry Run Found a Problem', message: plainFailure(dryRun.value.reason), action: 'fix' };
 }
 
 /**
@@ -320,22 +322,22 @@ function successResult(record: ImportJobRecord, name: string, words: OperationWo
             title: `One Step Left to Uninstall ${name}`,
             // Plain words (walk F153): which store, that it is the store's root, what stayed, and
             // that the rest went.
-            message: `${record.keptRoot.store} still uses the category ${record.keptRoot.category} as its root category, so Demo Builder couldn't delete that category. Everything else is uninstalled.`,
+            message: plainFailure(`${record.keptRoot.store} still uses the category ${record.keptRoot.category} as its root category, so Demo Builder couldn't delete that category. Everything else is uninstalled.`),
             keptRoot: record.keptRoot,
         };
     }
     // The datapack, then what happened to it, as "My Luma Installed" (review, 2026-11-10).
-    return { variant: 'success', title: `${name} ${words.done}`, ...(record.note ? { message: record.note } : {}) };
+    return { variant: 'success', title: `${name} ${words.done}`, ...leftToKnow(record) };
 }
 
 /** What is left to say of a job that has no rows to end on. */
 function unfinishedResult(record: ImportJobRecord, words: OperationWords): ResultContent {
-    const later = 'Still running. The result will be on the Activity tab.';
+    const later = plain('Still running. The result will be on the Activity tab.');
     switch (record.outcome) {
         case 'never-registered':
-            return { variant: 'error', title: `${words.nounTitle} Did Not Start`, message: record.reason };
+            return { variant: 'error', title: `${words.nounTitle} Did Not Start`, message: plainFailure(record.reason) };
         case 'stopped':
-            return { variant: 'info', title: 'Running in Background', message: `The ${words.noun} continues in the background.` };
+            return { variant: 'info', title: 'Running in Background', message: plainFailure(`The ${words.noun} continues in the background.`) };
         case 'still-running':
             return { variant: 'info', title: 'Still Running', message: later };
         case 'unwatchable':

@@ -11,6 +11,7 @@
  */
 
 import type { z } from 'zod';
+import type { SkipCause } from '../../types';
 import type { CreatedObject, InstallRecorder } from './installRecord';
 import type { StoreRoot } from './packRoot';
 import type { RootStepAsker } from './packRootStep';
@@ -112,6 +113,8 @@ export interface SkippedRow {
     reason: string;
     /** Other names later rows know it by (a category's url key), so a row needing it is told why. */
     names?: string[];
+    /** Why, as data, for the window's plain words (walk F221); `reason` keeps Commerce's text. */
+    cause?: SkipCause;
 }
 
 /**

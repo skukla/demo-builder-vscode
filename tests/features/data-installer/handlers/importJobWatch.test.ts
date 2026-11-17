@@ -28,6 +28,7 @@ import * as vscode from 'vscode';
 import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { startModalRun } from '@/core/vscode/operationProgress';
+import { plain } from '@/features/data-installer/plainFailure';
 
 beforeEach(() => {
     resetImportHandlerMocks();
@@ -306,7 +307,7 @@ describe('the shared progress channel', () => {
             outcome: 'success',
             perType: {},
             note: 'One step is left in the Admin: set Root Category. Checked 25 products against the datapack: all match.',
-            scLines: ['One step is left in the Admin: set Root Category.'],
+            scLines: [plain('One step is left in the Admin: set Root Category.')],
         });
         const { context } = makeImportHarness();
 
@@ -332,6 +333,27 @@ describe('the shared progress channel', () => {
             id: DATAPACK_OPERATION_ID,
             state: 'failed',
             error: 'two types failed',
+        });
+    });
+
+    // Walk F221: the notification says it plainly; the record keeps Commerce's words for agents.
+    it('closes the notice in plain words, with no API route', async () => {
+        happyEngine();
+        mockedWatch.mockResolvedValue({
+            outcome: 'error',
+            perType: {},
+            stoppedAt: 'products',
+            reason: 'Commerce did not respond to V1/products: timed out',
+        });
+        const { context } = makeImportHarness();
+
+        await importHandlers['start-datapack-import'](context, PAYLOAD);
+        await new Promise((r) => setTimeout(r, 25));
+
+        expect(pushes()).toContainEqual({
+            id: DATAPACK_OPERATION_ID,
+            state: 'failed',
+            error: 'Commerce stopped answering while products were installing.',
         });
     });
 

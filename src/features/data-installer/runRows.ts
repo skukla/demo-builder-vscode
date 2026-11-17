@@ -13,6 +13,7 @@
  * @module features/data-installer/runRows
  */
 
+import type { PlainText } from './plainFailure';
 import { inInstallOrder } from './services/demoBuilderEngine/installOrder';
 import { type DataTypeStatus, FINISHING_STOP, type JobStanding, REPLACE_STOP, SAVE_STOP } from './types';
 import { dataTypeLabel } from './ui/dataTypeLabel';
@@ -44,7 +45,8 @@ export interface RunSource extends Pick<JobStanding, 'phase' | 'stoppedAt' | 'ro
     /** The engine's count for the type in progress. */
     detail?: string;
     /** Why the job stopped, for the row it stopped on. */
-    reason?: string;
+    /** Why it stopped, in plain words (walk F221): the record's raw reason goes through `plainFailure`. */
+    reason?: PlainText;
     /** Still running. Otherwise each row says how it ended. */
     running?: boolean;
 }

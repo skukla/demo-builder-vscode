@@ -144,7 +144,12 @@ describe('createProductsInBulk', () => {
 
         expect(h.ctx.recorder.created.map((o) => o.id)).toEqual(['s0']);
         expect(h.ctx.session.skipped).toEqual([
-            { kind: 'products', key: 's1', reason: 'URL key for specified store already exists.' },
+            {
+                kind: 'products',
+                key: 's1',
+                reason: 'URL key for specified store already exists.',
+                cause: { by: 'commerce', message: 'URL key for specified store already exists.' },
+            },
         ]);
         expect(single.mock.calls.map(([p]) => p.sku)).toEqual(['s2', 's3']);
         // Handed to the single route still pending: it records them once Commerce answers.

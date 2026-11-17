@@ -6,6 +6,8 @@
  * @module features/data-installer/services/demoBuilderEngine/engineRemoval
  */
 
+import { plainFailure, type PlainText } from '../../plainFailure';
+import { plainRefusedRemovals } from '../../plainRows';
 import type { DataTypeStatus, KeptRootStep } from '../../types';
 import { installedOnAnotherInstanceLine, onAnotherInstance } from '../instanceKey';
 import { type RecordFiles, readInstallRecord } from './installRecord';
@@ -26,8 +28,10 @@ export const NO_RECORD =
 
 /** What a removal did, as the job reports it. */
 export interface RecordedRemoval {
-    /** What it kept, refused or put back, in one line; absent when there is nothing to say. */
+    /** What it kept, refused or put back, in one line, in Commerce's words; absent when there is nothing to say. */
     note?: string;
+    /** The same for the SC, a line each, in plain words (walk F221). */
+    scLines: PlainText[];
     /** It kept containers holding the SC's things, or Commerce refused some, so part is still in the store. */
     leftInStore: boolean;
     /** Commerce refused to take some of it out: still in the store and on the record, and named in the note. */
@@ -63,13 +67,17 @@ export async function removeRecordedPack(
     if (onAnotherInstance(record?.instance, target.instance)) throw new Error(installedOnAnotherInstanceLine(target.pack, target.name));
     const result = await removePack(commerce, files, target);
     if (result.noRecord) throw new Error(NO_RECORD);
-    const lines = [
-        containersLine(result.kept),
-        refusedRemovalsLine(result.refused, 'Uninstalling'),
-        settingsLine(result.settings, 'Put back'),
+    const kept = containersLine(result.kept);
+    const putBack = settingsLine(result.settings, 'Put back');
+    const lines = [kept, refusedRemovalsLine(result.refused, 'Uninstalling'), putBack];
+    const scLines = [
+        ...(kept ? [plainFailure(kept)] : []),
+        ...plainRefusedRemovals(result.refused, 'Uninstalling'),
+        ...(putBack ? [plainFailure(putBack)] : []),
     ];
     return {
         note: lines.filter(Boolean).join(' ') || undefined,
+        scLines,
         leftInStore: result.kept.length > 0 || result.refused.length > 0,
         refused: result.refused.length > 0,
         ...(result.keptRoot ? { keptRoot: result.keptRoot } : {}),
@@ -104,7 +112,11 @@ export async function removeReplacedPack(
     const progress = (line: string): void => void (job.detail = line);
     const removal = await removeRecordedPack(commerce, files, { projectPath: target.projectPath, pack: target.pack, log: target.log, progress, instance: target.instance, name: target.nameOf?.(target.pack) });
     job.detail = undefined;
-    if (removal.refused) throw new Error(`${removal.note ?? 'Commerce refused part of the uninstall.'} Nothing was installed.`);
+    if (removal.refused) {
+        // Debug Logs keep Commerce's words; the stop says it plainly, as the step's row shows it (walk F221).
+        target.log(`[Data Installer] Removing the replaced datapack: ${removal.note ?? 'Commerce refused part of the uninstall.'}`);
+        throw new Error(`${removal.scLines.join(' ')} Nothing was installed.`);
+    }
     job.replacing = 'success';
     return removal.note;
 }

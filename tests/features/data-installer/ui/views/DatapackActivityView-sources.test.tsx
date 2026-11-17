@@ -14,6 +14,7 @@ import { makeEntry, mockRequest, resolveWith, resolveWithPage } from './Datapack
 
 // Below the mock on purpose (see useDataInstallerRequest's suite).
 import { DatapackActivityView } from '@/features/data-installer/ui/views/DatapackActivityView';
+import { plain } from '@/features/data-installer/plainFailure';
 
 describe('DatapackActivityView sources', () => {
     beforeEach(() => {
@@ -32,14 +33,33 @@ describe('DatapackActivityView sources', () => {
         expect(rows[1]).toHaveTextContent('Data Installer');
     });
 
-    it('says a run of Demo Builder\'s failed, and why', async () => {
+    it('says a run of Demo Builder\'s failed, and why, in plain words (walk F221)', async () => {
         resolveWith([makeEntry({ source: 'demo-builder', mode: 'delete', outcome: 'failed', detail: 'Commerce answered 500 for categories/40' })]);
 
         render(<DatapackActivityView />);
         const [row] = await screen.findAllByTestId('activity-row');
 
         expect(row).toHaveTextContent('Failed');
-        expect(row).toHaveTextContent('Commerce answered 500 for categories/40');
+        // An entry from before walk F221 has no plain words of its own: the raw detail is translated.
+        expect(row).toHaveTextContent('Commerce ran into a problem.');
+        expect(row).not.toHaveTextContent('categories/40');
+    });
+
+    it('draws the plain words an entry keeps, never its raw detail', async () => {
+        resolveWith([
+            makeEntry({
+                source: 'demo-builder',
+                outcome: 'success',
+                detail: 'Skipped 1 row, and installed the rest: products p2 (Invalid SKU).',
+                shown: plain("Product p2 wasn't added: Commerce didn't accept its SKU."),
+            }),
+        ]);
+
+        render(<DatapackActivityView />);
+        const [row] = await screen.findAllByTestId('activity-row');
+
+        expect(row).toHaveTextContent("Product p2 wasn't added: Commerce didn't accept its SKU.");
+        expect(row).not.toHaveTextContent('products p2');
     });
 
     it('does not call a run that worked failed', async () => {

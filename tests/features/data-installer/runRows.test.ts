@@ -6,6 +6,7 @@
 import type { DataTypeStatus } from '@/features/data-installer/types';
 import { SAVE_RUN, runRows, type RunSource } from '@/features/data-installer/runRows';
 import type { OperationRow } from '@/types/webviewPayloads';
+import { plain } from '@/features/data-installer/plainFailure';
 
 const source = (over: Partial<RunSource>): RunSource => ({
     perType: {},
@@ -57,7 +58,7 @@ describe('runRows', () => {
             source({
                 perType: states({ categories: 'error', products: 'error' }),
                 stoppedAt: 'categories',
-                reason: 'Commerce did not respond.',
+                reason: plain('Commerce did not respond.'),
             })
         );
 
@@ -72,7 +73,7 @@ describe('runRows', () => {
         const rows = typeRows(
             source({
                 perType: states({ categories: 'success', products: 'success' }),
-                rowNotes: { products: 'Commerce refused 3.' },
+                rowNotes: { products: plain('Commerce refused 3.') },
             })
         );
 
@@ -85,7 +86,7 @@ describe('runRows', () => {
     // Review, 2026-11-10: work outside the data types has no row of its own.
     it('has a row per data type and nothing else, running or ended', () => {
         expect(runRows(source({ running: true, phase: 'Reading the datapack' })).map((r) => r.kind)).toEqual(['categories', 'products']);
-        expect(runRows(source({ stoppedAt: 'finishing', reason: 'x' })).map((r) => r.kind)).toEqual(['categories', 'products']);
+        expect(runRows(source({ stoppedAt: 'finishing', reason: plain('x') })).map((r) => r.kind)).toEqual(['categories', 'products']);
     });
 
     it('CONTROL: a clean run is all done, with no problem', () => {

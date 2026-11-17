@@ -1111,8 +1111,11 @@ small pack needs one call. Without `waitSeconds` every call answers at once, as 
 `get_datapack_import_status` is live while a job runs: the watch writes each poll's per-type states
 to the record it reads, and while products go in, Demo Builder's engine adds a count as `detail`.
 Until 2026-11-05 the record said only `watching` until the job ended, while the window counted
-products. Its note names at most ten skipped rows and counts the rest (`skippedLine`; Debug Logs
-names each): a 2,000-row skip would otherwise put about 180,000 characters into every status read. The watch now follows a job for up to an hour, up from ten minutes, because a 2,000-product
+products. Its note names at most ten skipped rows, in Commerce's words, and counts the rest
+(`skippedLine`; the status's `skipped` list, paged by `skippedFrom`, names each with its reason and,
+since walk F221, its `cause`): a 2,000-row skip would otherwise put about 180,000 characters into
+every status read. The SC never reads that line: the window shows the same rows grouped by reason in
+plain words (`plainRows.ts`). The watch now follows a job for up to an hour, up from ten minutes, because a 2,000-product
 install can run past ten.
 
 45 seconds, not the whole job: each agent client limits how long one call may run. The MCP client

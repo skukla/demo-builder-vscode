@@ -134,7 +134,16 @@ describe('demoBuilderEngine install', () => {
         expect(await engine.getJobFailureReason(activationId)).toBeUndefined();
         // 2026-11-06: the note names ten; the status carries every skipped row whole, and each kind's seconds
         // (their values: engine-timings.test.ts, on a clock it controls).
-        expect(status.skipped).toEqual([{ kind: 'categories', key: 'Sale', reason: 'URL key for specified store already exists.' }]);
+        expect(status.skipped).toEqual([
+            {
+                kind: 'categories',
+                key: 'Sale',
+                reason: 'URL key for specified store already exists.',
+                cause: { by: 'commerce', status: 400, message: 'URL key for specified store already exists.' },
+            },
+        ]);
+        // Walk F221: the window reads it in plain words, grouped by reason; the note keeps Commerce's.
+        expect(status.scLines).toEqual(["Sale wasn't added: another category already uses its web address."]);
         expect(Object.keys(status.timings ?? {})).toEqual(['attribute_sets', 'categories']);
     });
 

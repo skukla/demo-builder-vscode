@@ -119,6 +119,6 @@ describe('check-datapack-setup-step', () => {
 
         const result = await storeChangesHandlers['check-datapack-setup-step'](harness(), ID);
 
-        expect(result).toMatchObject({ success: false, error: 'The step could not be checked. Details are in Debug Logs.' });
+        expect(result).toMatchObject({ success: false, error: 'The step could not be checked.' });
     });
 });

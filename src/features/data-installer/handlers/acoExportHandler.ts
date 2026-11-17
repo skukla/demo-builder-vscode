@@ -136,7 +136,7 @@ export async function startAcoExport(
         );
         return {
             success: false,
-            error: 'The ACO datapack could not be made. Details are in Debug Logs.',
+            error: 'The ACO datapack could not be made.',
             code: ErrorCode.UNKNOWN,
         };
     }

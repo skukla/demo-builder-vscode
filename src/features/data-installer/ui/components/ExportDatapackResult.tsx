@@ -11,6 +11,7 @@
  */
 
 import React from 'react';
+import { plainFailure, plainLabelled, type PlainText } from '../../plainFailure';
 import { dataTypeLabel } from '../dataTypeLabel';
 import type { ResultContent } from './importResult';
 import { SaveDatapackFileButton } from './SaveDatapackFileButton';
@@ -31,15 +32,15 @@ export interface ExportOutcome {
 }
 
 /** One line per type: what it captured, or why it did not. */
-function describeType(row: ExportTypeOutcome): string {
+function describeType(row: ExportTypeOutcome): PlainText {
     const label = dataTypeLabel(row.dataType);
     if (!row.success) {
-        return `${label} failed: ${row.reason ?? 'the service gave no reason'}`;
+        return plainLabelled(`${label} failed`, row.reason ?? 'The service gave no reason.');
     }
     // "Left out" is true of the service's exclusions and of an ACO pack's (downloadable and
     // grouped products) alike.
     const excluded = row.excluded > 0 ? ` (${row.excluded.toLocaleString('en-US')} left out)` : '';
-    return `${label}: ${row.exported.toLocaleString('en-US')} exported${excluded}`;
+    return plainFailure(`${label}: ${row.exported.toLocaleString('en-US')} exported${excluded}`);
 }
 
 /**
@@ -48,7 +49,7 @@ function describeType(row: ExportTypeOutcome): string {
  */
 export function exportResult(outcome: ExportOutcome | null, error?: string): ResultContent {
     if (error) {
-        return { variant: 'error', title: 'Export Failed', message: error };
+        return { variant: 'error', title: 'Export Failed', message: plainFailure(error) };
     }
     const perType = outcome?.perType ?? [];
     const details = perType.map(describeType);

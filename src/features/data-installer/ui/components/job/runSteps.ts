@@ -16,6 +16,7 @@ import {
     type UninstallSource,
     uninstallSteps,
 } from '../../../importSteps';
+import { plainFailure, type PlainText } from '../../../plainFailure';
 import type { ImportJobRecord, ImportProgressMessage } from '../../../types';
 
 /** The pack installed, as the steps name it. */
@@ -75,7 +76,7 @@ export function endedSteps(run: ImportJobRecord, name: string): ImportStep[] {
         dataTypes: run.dataTypes,
         stoppedAt: run.stoppedAt,
         rowNotes: run.rowNotes,
-        reason: run.reason,
+        ...(run.reason ? { reason: plainFailure(run.reason, { kind: run.stoppedAt }) } : {}),
         installing: installingOf(run, name),
         ...(run.check ? { check: run.check } : {}),
         ...replacingOf(run, run.replacing),
@@ -114,9 +115,16 @@ export function uninstallLiveSteps(
     return uninstallSteps({ name, running: true, ...(detail ? { detail } : {}), ...savedOf(uninstalling) });
 }
 
+/** Why an uninstall stopped, or what it left, in plain words (walk F221). */
+function stoppedReason(run: ImportJobRecord): PlainText | undefined {
+    if (run.reason) return plainFailure(run.reason, { kind: run.stoppedAt, work: 'uninstalling' });
+    // What it left, as the engine wrote it for the SC; the note is Commerce's words, for agents.
+    return run.scLines?.length ? plainFailure(run.scLines.join(' ')) : undefined;
+}
+
 /** An uninstall that stopped: the reason (or what it left) on its row, a failed save on its own. */
 export function uninstallEndedSteps(run: ImportJobRecord, name: string, uninstalling: Uninstalling): ImportStep[] {
-    const reason = run.reason ?? run.note;
+    const reason = stoppedReason(run);
     return uninstallSteps({
         name,
         running: false,

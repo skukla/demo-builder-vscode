@@ -28,6 +28,7 @@ import { DATAPACK_INSTALL_FAILURE, FAILED_PACK } from '../../../helpers/datapack
 import { createMockProject } from '../../../helpers/projectFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import type { Project } from '@/types/base';
+import { plain } from '@/features/data-installer/plainFailure';
 
 const RECORD: ImportJobRecord = {
     activationId: 'demo-builder-1',
@@ -43,7 +44,7 @@ const RECORD: ImportJobRecord = {
 describe('fixImportPrompt', () => {
     it('names the pack, the project, each row’s problem, and the tools that fix it', () => {
         const prompt = fixImportPrompt(
-            { ...RECORD, rowNotes: { products: 'Commerce refused 3 rows.' } },
+            { ...RECORD, rowNotes: { products: plain('Commerce refused 3 rows.') } },
             'Tailspin Demo'
         );
 
@@ -106,7 +107,7 @@ describe('fix-datapack-import-with-ai', () => {
 
     it('opens the SC’s AI in a new chat on the recorded problem', async () => {
         const result = await importFixWithAiHandlers['fix-datapack-import-with-ai'](
-            contextWith({ ...RECORD, rowNotes: { products: 'Commerce refused 3 rows.' } })
+            contextWith({ ...RECORD, rowNotes: { products: plain('Commerce refused 3 rows.') } })
         );
 
         expect(result).toEqual({ success: true });
@@ -223,7 +224,7 @@ describe('fix-datapack-import-with-ai from the dry run', () => {
 
     it('reads the dry run, not the last install, even when the install has a problem', async () => {
         await importFixWithAiHandlers['fix-datapack-import-with-ai'](
-            contextWith(DRY_RUN, { ...RECORD, rowNotes: { products: 'Install problem.' } }),
+            contextWith(DRY_RUN, { ...RECORD, rowNotes: { products: plain('Install problem.') } }),
             { from: 'dry-run' }
         );
 
@@ -295,7 +296,7 @@ describe('fix-datapack-import-with-ai from a failed install', () => {
         await importFixWithAiHandlers['fix-datapack-import-with-ai'](
             contextWith(
                 { datapack: FAILED_PACK, datapackInstallFailure: FAILED },
-                { ...RECORD, rowNotes: { products: 'Job problem.' } }
+                { ...RECORD, rowNotes: { products: plain('Job problem.') } }
             ),
             sentByWindow
         );

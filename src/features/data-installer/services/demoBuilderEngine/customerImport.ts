@@ -21,7 +21,7 @@ import { importBody, importRefusal } from './importApi';
 import type { CreatedObject } from './installRecord';
 import { type KindContext, REQUESTS_AT_ONCE } from './kindContext';
 import type { PendingObject } from './pendingRecord';
-import { skipRow } from './refusedRows';
+import { commerceSaid, skipRow } from './refusedRows';
 import { runInBatches } from '@/core/utils/promiseUtils';
 import type { CommerceCustomer, CommerceCustomerAddress } from '@/types/commerceWire';
 
@@ -179,14 +179,10 @@ async function importCall(
     await ctx.recorder.confirm(pendingOf(made, websiteId), objects);
     for (const c of made) ctx.log(`created customer ${customerKey(c.email)}`);
     await ctx.recorder.forgetPending(pendingOf(missing, websiteId));
-    for (const c of missing)
-        skipRow(ctx, {
-            kind: CUSTOMER_KIND,
-            key: customerKey(c.email),
-            reason:
-                reasons.get(customerKey(c.email)) ||
-                'Commerce took the row but did not make the customer',
-        });
+    for (const c of missing) {
+        const reason = reasons.get(customerKey(c.email)) || 'Commerce took the row but did not make the customer';
+        skipRow(ctx, { kind: CUSTOMER_KIND, key: customerKey(c.email), reason, cause: commerceSaid(reason) });
+    }
     return ids;
 }
 

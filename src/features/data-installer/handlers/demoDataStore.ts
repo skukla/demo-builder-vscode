@@ -157,7 +157,7 @@ export function failure(
     context.logger.warn(
         `${LOG_PREFIX} ${fallback} ${error instanceof Error ? error.message : String(error)}`,
     );
-    return { success: false, error: `${fallback} Details are in Debug Logs.`, code: codeOf(error) };
+    return { success: false, error: fallback, code: codeOf(error) };
 }
 
 /** Which websites the project uses, and what to respect, read for this project. */

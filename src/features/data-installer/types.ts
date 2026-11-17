@@ -13,6 +13,7 @@
  * @module features/data-installer/types
  */
 
+import type { PlainText } from './plainFailure';
 import type { SetupChecklistItem } from '@/types/appBuilderComponents';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 
@@ -122,8 +123,10 @@ export interface ActivityEntry {
     source?: DatapackEngineId;
     /** Demo Builder's only: whether every requested kind succeeded. The service's log does not say. */
     outcome?: 'success' | 'failed';
-    /** Demo Builder's only: why it failed, or what it said about a run that worked. */
+    /** Demo Builder's only: why it failed, or what it said about a run that worked (raw, for agents). */
     detail?: string;
+    /** Demo Builder's only: the same in plain words, for the Activity tab (walk F221). */
+    shown?: PlainText;
     siteType?: string;
     /**
      * Opaque on purpose. The documented enum (`SINGLE_DB`, `ENTIRE_DB`, …) does
@@ -293,12 +296,12 @@ export interface JobStanding {
     stoppedAt?: string;
     /** Running it again could get past what stopped it: Commerce failing, slowing down or not answering. */
     retryable?: boolean;
-    /** The note's lines the SC needs to read in the window; `note` holds every line. */
-    scLines?: string[];
+    /** The note's lines the SC needs to read in the window, in plain words; `note` holds every line. */
+    scLines?: PlainText[];
     /** When the job wrote products: how long until storefront search shows them. */
     searchDelay?: string;
     /** A line for each data type with a problem that did not stop the job: what is wrong, what to do. */
-    rowNotes?: Record<string, string>;
+    rowNotes?: Record<string, PlainText>;
     /**
      * An import replacing the pack the demo uses (walk F97): how removing that pack first stands.
      * Absent when the import replaces nothing.
@@ -320,11 +323,23 @@ export interface KeptRootStep {
     restore?: string;
 }
 
+/**
+ * Why a row was skipped, as data, so the screen can say it in plain words (walk F221): it needed a
+ * row this install skipped, it named something Commerce does not have, or Commerce refused it
+ * (its status, when it gave one, and its own message).
+ */
+export type SkipCause =
+    | { by: 'needs'; kind: string; name: string }
+    | { by: 'missing'; kind: string; name: string }
+    | { by: 'commerce'; status?: number; message: string };
+
 /** A row a job skipped: its kind, the pack's name for it, and Commerce's reason, whole. */
 export interface SkippedRowRecord {
     kind: string;
     key: string;
     reason: string;
+    /** Why, as data; absent on a record written before walk F221. */
+    cause?: SkipCause;
 }
 
 /** A snapshot of one async job's progress. */

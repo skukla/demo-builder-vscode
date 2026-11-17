@@ -13,6 +13,7 @@
  */
 
 import React from 'react';
+import { plainFailure, type PlainText } from '../../plainFailure';
 import type { HeldFailure } from '../hooks/useProjectHolding';
 import { IntegrationStatusLabel, type IntegrationStatusLabelProps } from '@/core/ui/components/integrations/IntegrationStatusLabel';
 import { getDatapackStatusDisplay, severityToDot } from '@/core/ui/utils/statusVocabulary';
@@ -45,7 +46,7 @@ export function InstallFailedLine(): React.JSX.Element {
 }
 
 /** The flyout's health line on a failed install: the label, and the reason under it. */
-export function FailedHealthLine({ reason }: { reason: string }): React.JSX.Element {
+export function FailedHealthLine({ reason }: { reason: PlainText }): React.JSX.Element {
     return (
         <div className="integration-panel-health">
             <span className="integration-statusline">
@@ -85,7 +86,7 @@ export function StatusHead({ failed, newer = false, close, children }: { failed:
         <div className="db-drawer-head integration-panel-head">
             <div className="integration-panel-heading">
                 {children}
-                {failed ? <FailedHealthLine reason={failed.reason} /> : <NewerHealthLine />}
+                {failed ? <FailedHealthLine reason={plainFailure(failed.reason)} /> : <NewerHealthLine />}
             </div>
             {close}
         </div>

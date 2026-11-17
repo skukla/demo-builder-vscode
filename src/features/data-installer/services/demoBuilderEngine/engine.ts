@@ -19,6 +19,8 @@
  */
 
 import * as crypto from 'crypto';
+import type { PlainText } from '../../plainFailure';
+import { plainRefusedRemovals, plainSkipped } from '../../plainRows';
 import { type DataTypeStatus, ENGINE_PHASES, FINISHING_STOP, REPLACE_STOP, type ImportStart, type InstallCheck, type JobStatusSnapshot, type KeptRootStep, type ValidationResult } from '../../types';
 import type { DatapackEngine } from '../datapackEngine';
 import type { CredentialCheck, ImportRequest } from '../importRequest';
@@ -90,6 +92,9 @@ export interface JobEnd {
     perType: Record<string, DataTypeStatus>;
     reason?: string;
     note?: string;
+    /** Where it stopped and the lines the SC read, for the Activity tab's plain words (walk F221). */
+    stoppedAt?: string;
+    scLines?: PlainText[];
     startedAt: number;
     finishedAt: number;
 }
@@ -125,12 +130,12 @@ interface Job {
     phase?: string;
     /** Every kind's rows are in: a stop from here is the finishing work's, not the last kind's. */
     finishing?: boolean;
-    /** The note's lines the SC needs to read; the rest are for the record and agents. */
-    scLines?: string[];
+    /** The note's lines the SC needs to read, in plain words; the rest are for the record and agents. */
+    scLines?: PlainText[];
     /** When the install wrote products: how long until storefront search shows them. */
     searchDelay?: string;
     /** A line for each data type with a problem that did not stop the install (`rowNotesOf`). */
-    rowNotes?: Record<string, string>;
+    rowNotes?: Record<string, PlainText>;
     /** Removing the pack the import replaces (walk F97), before anything is installed. */
     replacing?: DataTypeStatus;
     startedAt: number;
@@ -254,7 +259,7 @@ async function runInstall(deps: DemoBuilderEngineDeps, request: ImportRequest, j
         [addedKindsLine(all, request.dataTypes), false],
         [skippedLine(session.skipped), false],
         [tookOutLine(outcome.tookOut), true],
-        [refusedRemovalsLine(outcome.notTakenOut, 'Installing'), true],
+        [refusedRemovalsLine(outcome.notTakenOut, 'Installing'), false],
         [keptLine([...outcome.kept, ...layerKept(lookup, ctx)]), true],
         [containersLine(outcome.containers), true],
         [settingsDoneLine(lookup, ctx), false],
@@ -264,7 +269,7 @@ async function runInstall(deps: DemoBuilderEngineDeps, request: ImportRequest, j
         [ambiguousKeysLine(session.ambiguousCategoryKeys), false],
         [checked.line, false],
         ...(outcome.productsWritten ? AFTER_PRODUCTS_LINES.map((line): NoteLine => [line, false]) : []),
-    ]));
+    ], [...plainSkipped(session.skipped), ...plainRefusedRemovals(outcome.notTakenOut, 'Installing')]));
     if (outcome.productsWritten) job.searchDelay = AFTER_PRODUCTS_LINES[0];
     const rowNotes = rowNotesOf(session.skipped);
     if (Object.keys(rowNotes).length > 0) job.rowNotes = rowNotes;
@@ -298,8 +303,9 @@ function start(deps: DemoBuilderEngineDeps, jobs: Map<string, Job>, request: Imp
         })
         .finally(() => {
             job.finishedAt = Date.now();
-            const { perType, reason, note, startedAt, finishedAt } = job;
-            deps.onJobEnd?.({ activationId, operation, request, perType: { ...perType }, reason, note, startedAt, finishedAt });
+            const { perType, reason, note, startedAt, finishedAt, stoppedAt, scLines } = job;
+            const said = { ...(stoppedAt ? { stoppedAt } : {}), ...(scLines ? { scLines } : {}) };
+            deps.onJobEnd?.({ activationId, operation, request, perType: { ...perType }, reason, note, ...said, startedAt, finishedAt });
         });
     return { activationId };
 }
@@ -362,6 +368,7 @@ export function demoBuilderEngine(deps: DemoBuilderEngineDeps): DatapackEngine {
                 // The last count stays until the result replaces it (owner, 2026-11-16): cleared, the
                 // window fell back to its first line for the moment before the end.
                 job.note = result.note;
+                if (result.scLines.length > 0) job.scLines = result.scLines;
                 if (result.leftInStore) job.leftInStore = true;
                 if (result.keptRoot) job.keptRoot = result.keptRoot;
                 for (const kind of Object.keys(job.perType)) job.perType[kind] = 'success';
@@ -379,7 +386,7 @@ export function demoBuilderEngine(deps: DemoBuilderEngineDeps): DatapackEngine {
                 ...(job && Object.keys(job.timings).length > 0 ? { timings: { ...job.timings } } : {}),
                 ...(job?.check ? { check: job.check } : {}),
                 ...(job ? whereItStands(job) : {}),
-                ...(job?.skipped && job.skipped.length > 0 ? { skipped: job.skipped.map(({ kind, key, reason }) => ({ kind, key, reason })) } : {}),
+                ...(job?.skipped && job.skipped.length > 0 ? { skipped: job.skipped.map(({ kind, key, reason, cause }) => ({ kind, key, reason, ...(cause ? { cause } : {}) })) } : {}),
                 ...(job?.finishedAt !== undefined ? { processingTimeMs: job.finishedAt - job.startedAt } : {}),
             };
         },

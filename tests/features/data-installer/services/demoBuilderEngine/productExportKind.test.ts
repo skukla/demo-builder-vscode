@@ -162,6 +162,7 @@ describe('installProductExport', () => {
                 kind: 'product_export',
                 key: 'MS01',
                 reason: "Value for 'material' attribute contains incorrect value, see acceptable values on settings specified for Admin",
+                cause: { by: 'commerce', message: "Value for 'material' attribute contains incorrect value, see acceptable values on settings specified for Admin" },
             },
         ]);
         // The refused row alone, stopping on its error, for the reason.
@@ -252,7 +253,7 @@ describe('installProductExport', () => {
             ['validation-skip-errors', ['MH01', 'MH02']],
             ['validation-stop-on-errors', ['MH02']],
         ]);
-        expect(ctx.session.skipped).toEqual([{ kind: 'product_export', key: 'MH02', reason: 'Commerce made it with its children but without its options, twice' }]);
+        expect(ctx.session.skipped).toEqual([{ kind: 'product_export', key: 'MH02', reason: 'Commerce made it with its children but without its options, twice', cause: { by: 'commerce', message: 'Commerce made it with its children but without its options, twice' } }]);
     });
 
     it('leaves the products pending when the import call gets no answer, for the next run to settle', async () => {

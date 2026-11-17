@@ -7,6 +7,8 @@
  * @module features/data-installer/services/demoBuilderEngine/installNote
  */
 
+import { plainFailure, type PlainText } from '../../plainFailure';
+import { plainRowNote } from '../../plainRows';
 import type { SkippedRow } from './kindContext';
 
 /**
@@ -20,15 +22,15 @@ export const AFTER_PRODUCTS_LINES = [
 ];
 
 /**
- * A line for each data type with a problem that did not stop the install, for its row: the rows
- * Commerce refused. What the check found is Verify's line alone, so it shows once (review,
- * 2026-11-10: it was on the products' row as well).
+ * A line for each data type with a problem that did not stop the install, for its row: how many of
+ * its rows were not added, "3 products weren't added." (walk F221). What the check found is Verify's
+ * line alone, so it shows once (review, 2026-11-10: it was on the products' row as well).
  */
-export function rowNotesOf(skipped: readonly SkippedRow[] | undefined): Record<string, string> {
+export function rowNotesOf(skipped: readonly SkippedRow[] | undefined): Record<string, PlainText> {
     const refused = new Map<string, number>();
     for (const row of skipped ?? []) refused.set(row.kind, (refused.get(row.kind) ?? 0) + 1);
-    const notes: Record<string, string> = {};
-    for (const [kind, n] of refused) notes[kind] = `Commerce refused ${n.toLocaleString('en-US')} ${n === 1 ? 'row' : 'rows'}.`;
+    const notes: Record<string, PlainText> = {};
+    for (const [kind, n] of refused) notes[kind] = plainRowNote(kind, n);
     return notes;
 }
 
@@ -37,11 +39,15 @@ export type NoteLine = [line: string | undefined, forSc: boolean];
 
 /**
  * The note, every line in order for the record and agents, and the few the window shows the SC:
- * what changed in their store and what is left for them to do (owner, 2026-11-07: the whole note
- * as one paragraph was "far too noisy"). A problem with one data type goes on its row instead.
+ * what was not added, grouped by reason in plain words (walk F221), then what changed in their store
+ * and what is left for them to do (owner, 2026-11-07: the whole note as one paragraph was "far too
+ * noisy"). The SC's lines go through the plain-words door (`plainFailure`), which keeps the engine's
+ * own sentences and stops anything still raw. The note keeps Commerce's words for agents.
+ *
+ * @param plainLines - the SC's lines already in plain words: what was not added or not deleted
  */
-export function noteOf(lines: NoteLine[]): { note?: string; scLines?: string[] } {
+export function noteOf(lines: NoteLine[], plainLines: readonly PlainText[] = []): { note?: string; scLines?: PlainText[] } {
     const said = lines.filter((line): line is [string, boolean] => Boolean(line[0]));
-    const forSc = said.filter(([, sc]) => sc).map(([line]) => line);
+    const forSc = [...plainLines, ...said.filter(([, sc]) => sc).map(([line]) => plainFailure(line))];
     return { note: said.map(([line]) => line).join(' ') || undefined, ...(forSc.length > 0 ? { scLines: forSc } : {}) };
 }

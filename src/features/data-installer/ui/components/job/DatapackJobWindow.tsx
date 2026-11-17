@@ -40,6 +40,7 @@ import {
     withoutSavingLabel,
 } from '../../../datapackWords';
 import { packLine } from '../../../packVersions';
+import { plain } from '../../../plainFailure';
 import { useDatapackJob, type DatapackJob } from '../../hooks/useDatapackJob';
 import { useRunColumns } from '../../hooks/useRunColumns';
 import { useVersionTypes } from '../../hooks/useVersionTypes';
@@ -86,7 +87,7 @@ export interface DatapackJobWindowProps {
 const NO_INSTANCE: ResultContent = {
     variant: 'warning',
     title: 'No Commerce Instance',
-    message: 'Connect Commerce on the project dashboard first.',
+    message: plain('Connect Commerce on the project dashboard first.'),
 };
 const NO_RECORDS: Record<string, string[]> = {};
 const NO_NAMES: string[] = [];

@@ -25,6 +25,7 @@ import {
 } from './importResult.testUtils';
 import { importSteps } from '@/features/data-installer/importSteps';
 import { ErrorCode } from '@/types/errorCodes';
+import { plain, plainFailure } from '@/features/data-installer/plainFailure';
 
 describe('resolveResult — no action yet', () => {
     it.each([
@@ -69,7 +70,8 @@ describe('resolveResult — dry run', () => {
             thing: PACK_NAME,
             variant: 'error',
             title: 'Dry Run Failed',
-            message: 'Request timed out',
+            // Walk F221: plain words, never the transport's.
+            message: 'No answer came in time.',
         });
     });
 
@@ -155,7 +157,7 @@ describe('resolveResult — a removal that was to save the changes first (step 0
 
     it('says nothing was removed when the save failed, with a way back to the confirm', () => {
         const reset = { ...failed<{ activationId: string }>('The library is not answering.') };
-        reset.failure = { message: 'The library is not answering.', code: ErrorCode.CHANGES_NOT_SAVED };
+        reset.failure = { message: plain('The library is not answering.'), code: ErrorCode.CHANGES_NOT_SAVED };
 
         expect(resolveResult('reset', sources({ reset }))).toEqual({
             thing: PACK_NAME,
@@ -170,7 +172,7 @@ describe('resolveResult — a removal that was to save the changes first (step 0
     // Review, 2026-11-10: the failure sits on Save Your Changes, which stays; it sat on Uninstall.
     it('an import replacing the demo\'s pack whose save failed keeps Save Your Changes, red, and runs nothing after it', () => {
         const start = { ...failed<{ activationId: string }>('The library is not answering.') };
-        start.failure = { message: 'The library is not answering.', code: ErrorCode.CHANGES_NOT_SAVED };
+        start.failure = { message: plain('The library is not answering.'), code: ErrorCode.CHANGES_NOT_SAVED };
 
         const result = resolveResult('start', sources({ start, replacing: { name: 'Version 1.1.0', dataTypes: ['products'] } }));
 
@@ -184,7 +186,7 @@ describe('resolveResult — a removal that was to save the changes first (step 0
         });
         const run = result?.run;
         if (!run) throw new Error('no run');
-        const steps = importSteps({ ...run, installing: { name: 'My Luma', version: '1' } });
+        const steps = importSteps({ ...run, reason: plainFailure(run.reason), installing: { name: 'My Luma', version: '1' } });
         expect(steps.map((s) => [s.label, s.status, s.problem?.text ?? s.line])).toEqual([
             ['Save Your Changes', 'error', 'The library is not answering.'],
             ['Uninstall Version 1.1.0', 'pending', 'Not run'],

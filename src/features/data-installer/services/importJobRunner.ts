@@ -30,7 +30,7 @@
  * @module features/data-installer/services/importJobRunner
  */
 
-import { type DataTypeStatus, FINISHING_STOP, type InstallCheck, type JobFailureReason, type JobStatusSnapshot, type KeptRootStep, type SkippedRowRecord } from '../types';
+import { type DataTypeStatus, FINISHING_STOP, type InstallCheck, type JobFailureReason, type JobStanding, type JobStatusSnapshot, type KeptRootStep, type SkippedRowRecord } from '../types';
 import type { PollingService } from '@/core/shell/pollingService';
 
 /**
@@ -95,9 +95,9 @@ export interface ImportJobResult {
     /** Where it stopped, whether a retry could help, and what the SC reads (`JobStanding`). */
     stoppedAt?: string;
     retryable?: boolean;
-    scLines?: string[];
+    scLines?: JobStanding['scLines'];
     searchDelay?: string;
-    rowNotes?: Record<string, string>;
+    rowNotes?: JobStanding['rowNotes'];
     /** How removing the pack the import replaces ended (`JobStanding.replacing`). */
     replacing?: DataTypeStatus;
 }

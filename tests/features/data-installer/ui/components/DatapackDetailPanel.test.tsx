@@ -21,6 +21,7 @@ import { render, screen, fireEvent, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { DatapackDetailPanel } from '@/features/data-installer/ui/components/DatapackDetailPanel';
 import type { DatapackDetail, DataItemInventory } from '@/features/data-installer/types';
+import { plain } from '@/features/data-installer/plainFailure';
 
 /** The one datapack date format (J8-2), in whatever time zone the suite runs. */
 const ONE_FORMAT = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
@@ -354,7 +355,7 @@ describe('DatapackDetailPanel', () => {
 
         /** Same stale-data window, reached through a failure instead of a load. */
         it('withholds Import when the panel is showing a failure', () => {
-            renderPanel({ failure: { message: 'The service did not answer.' } });
+            renderPanel({ failure: { message: plain('The service did not answer.') } });
 
             expect(screen.queryByRole('button', { name: /install/i })).not.toBeInTheDocument();
         });
@@ -409,7 +410,7 @@ describe('DatapackDetailPanel', () => {
             renderPanel({
                 detail: null,
                 inventory: null,
-                failure: { message: 'Could not load the datapack.' },
+                failure: { message: plain('Could not load the datapack.') },
             });
 
             expect(screen.getByText('Could not load the datapack.')).toBeInTheDocument();
@@ -420,7 +421,7 @@ describe('DatapackDetailPanel', () => {
             renderPanel({
                 detail: null,
                 inventory: null,
-                failure: { message: 'Adobe sign-in is required.', code: 'AUTH_REQUIRED' },
+                failure: { message: plain('Adobe sign-in is required.'), code: 'AUTH_REQUIRED' },
             });
 
             expect(screen.getByRole('button', { name: /sign in with adobe/i })).toBeInTheDocument();

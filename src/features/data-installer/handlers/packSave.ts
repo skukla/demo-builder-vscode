@@ -42,7 +42,7 @@ const LOG_PREFIX = '[Data Installer]';
 export function failure(context: HandlerContext, error: unknown, fallback: string): HandlerResponse {
     if (error instanceof StoreChangesError) return { success: false, error: error.message };
     context.logger.warn(`${LOG_PREFIX} ${fallback} ${error instanceof Error ? error.message : String(error)}`);
-    return { success: false, error: `${fallback} Details are in Debug Logs.`, code: ErrorCode.UNKNOWN };
+    return { success: false, error: fallback, code: ErrorCode.UNKNOWN };
 }
 
 /** A save the SC must name: the demo's pack is a team pack, not theirs, or none. Writes nothing. */

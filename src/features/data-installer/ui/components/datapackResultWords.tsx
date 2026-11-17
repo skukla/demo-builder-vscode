@@ -11,6 +11,7 @@
  */
 
 import React from 'react';
+import type { PlainText } from '../../plainFailure';
 import type { KeptRootStep } from '../../types';
 import { type ResultContent, resultStatus } from './importResult';
 import type { ModalStatus } from '@/core/ui/components/ui/Modal';
@@ -26,7 +27,7 @@ export interface DatapackResultWords {
     title: string;
     outcome: string;
     status?: ModalStatus;
-    lines: string[];
+    lines: PlainText[];
     tookMs?: number;
 }
 
