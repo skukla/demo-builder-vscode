@@ -602,6 +602,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-99` | chore | [Finished items still naming work](2026-11-16-finished-items-still-naming-work.md) | — | low | backlog |
 | `PL-100` | fix | [A project name that starts with a number loses it, and nothing says why](2026-11-17-project-name-drops-leading-number.md) | — | low | backlog |
 | `PL-101` | feature | [What a run left to finish: one list, each item with its fix](2026-11-17-what-a-run-left-to-finish.md) | _before the beta.153 cut (owner, 2026-11-17)_ | high | backlog |
+| `PL-102` | fix | [Failure text a person reads, in plain words, everywhere outside the datapack windows](2026-11-17-plain-failure-wording-everywhere.md) | — | med | backlog |
 
 <!-- END GENERATED registry -->
 
