@@ -176,11 +176,33 @@ describe('StepContentArea', () => {
             expect(screen.queryByText('Click below to view your projects')).not.toBeInTheDocument();
         });
 
-        it('shows the finishing update\'s one line under the heading (EDS-64)', () => {
-            const note = '2 links in the copied content go to missing pages. Diagnostics lists them.';
-            renderContent({ isCompleted: true, progress: progressOf({ currentOperation: 'Project Created', note }) });
+        // PL-101: what the run left to finish, in the owner's words, under the title.
+        it.each([
+            [2, '2 steps remaining'],
+            [1, '1 step remaining'],
+        ])('says %i left to finish as "%s" under Project Created', (stepsRemaining, line) => {
+            renderContent({
+                isCompleted: true,
+                progress: progressOf({ currentOperation: 'Project Created', stepsRemaining }),
+            });
 
-            expect(screen.getByText(note)).toBeInTheDocument();
+            expect(screen.getByText('Project Created')).toBeInTheDocument();
+            expect(screen.getByText(line)).toBeInTheDocument();
+        });
+
+        it('shows the title alone when no step is left', () => {
+            renderContent({
+                isCompleted: true,
+                progress: progressOf({ currentOperation: 'Project Created', stepsRemaining: 0 }),
+            });
+
+            expect(screen.queryByText(/remaining/)).not.toBeInTheDocument();
+        });
+
+        it('says it is opening the project while Finish Setup takes the SC to it', () => {
+            renderContent({ isCompleted: true, isOpeningProject: true, opensDashboard: true });
+
+            expect(screen.getByText('Opening your project')).toBeInTheDocument();
         });
 
         it('shows the loading transition while the project is being opened', () => {

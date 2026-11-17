@@ -14,11 +14,13 @@
  * @module features/dashboard/services/finishSetup
  */
 
+import { isLeftToDo } from '@/core/ui/components/integrations/setupLeftToDo';
 import { rootStepItem } from '@/features/data-installer/services/demoBuilderEngine/packRootCheck';
 import { PACK_ROOT_STEP_ID, type PackRootStep } from '@/features/data-installer/services/demoBuilderEngine/packRootStep';
 import { REPUBLISH_CODE_STEP } from '@/features/eds/services/storefront/codeStepRecord';
 import type { SetupChecklistItem } from '@/types/appBuilderComponents';
 import type { FinishSetupRecord, Project } from '@/types/base';
+import type { FinishSetupStatus } from '@/types/webviewPayloads';
 
 /** Why the code step matters, naming the files in the SC's words. */
 function codeWhy(files: readonly string[]): string {
@@ -50,7 +52,9 @@ function codeStep(record: FinishSetupRecord | undefined): SetupChecklistItem | u
 
 /** The datapack's root step, with the SC's Skip or Mark as Done from the project laid over it. */
 function rootStep(step: PackRootStep, record: FinishSetupRecord | undefined): SetupChecklistItem {
-    const item = rootStepItem(step);
+    // The guide's rail names a step by its label: the pack's "Root category" read as a noun
+    // among actions, so the rail falls back to the step's title here.
+    const { label: _label, ...item } = rootStepItem(step);
     return record?.state ? { ...item, state: record.state } : item;
 }
 
@@ -71,4 +75,26 @@ export function finishSetupOf(
         ...(code ? [code] : []),
         ...(packRoot ? [rootStep(packRoot, records[PACK_ROOT_STEP_ID])] : []),
     ];
+}
+
+/** Whether one of the steps, by id, is still to do. */
+function due(items: SetupChecklistItem[], id: string): boolean {
+    return items.some((item) => item.id === id && isLeftToDo(item));
+}
+
+/**
+ * The steps as the dashboard shows them: the list, how many remain, and which tile's fix is due
+ * (Republish for the code, Manage Commerce for the root category).
+ *
+ * @param items - the steps, from {@link finishSetupOf}
+ * @returns undefined when no run left a step
+ */
+export function finishSetupStatus(items: SetupChecklistItem[]): FinishSetupStatus | undefined {
+    if (items.length === 0) return undefined;
+    return {
+        items,
+        remaining: items.filter(isLeftToDo).length,
+        ...(due(items, REPUBLISH_CODE_STEP) ? { republishDue: true as const } : {}),
+        ...(due(items, PACK_ROOT_STEP_ID) ? { adminDue: true as const } : {}),
+    };
 }

@@ -61,6 +61,21 @@ describe('dashboardHandlers - handleRequestStatus', () => {
         detectFrontendChanges.mockReturnValue(false);
     });
 
+    // Every status push carries the steps a run left: the dashboard replaces its status with
+    // each one, so the "N steps remaining" line lives on all of them (PL-101).
+    it('carries the steps a run left to finish', async () => {
+        const { mockContext } = setupMocks({
+            finishSetup: { 'republish-code': { files: ['scripts/a.js'] } },
+        });
+
+        const result = await handleRequestStatus(mockContext);
+
+        expect(result).toMatchObject({
+            success: true,
+            data: { finishSetup: { remaining: 1, republishDue: true } },
+        });
+    });
+
     it('should return persisted mesh status from meshStatusSummary (Pattern B)', async () => {
         const { detectFrontendChanges } = require('@/core/state/frontendEnvDrift');
         detectFrontendChanges.mockReturnValue(false);

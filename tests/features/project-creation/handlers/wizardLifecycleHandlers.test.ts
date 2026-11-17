@@ -69,7 +69,8 @@ describe('lifecycleHandlers', () => {
             // (show-logs removed — the Logs toggle moved to the sidebar utility)
             // 10 → 6: four superseded handlers removed 2026-08-05 (nothing sent them).
             // 6 → 7: backToProject, Edit's last button (2026-10-17).
-            expect(types).toHaveLength(7);
+            // 7 → 8: finishSetup, the end screen's Finish Setup (PL-101, 2026-11-17).
+            expect(types).toHaveLength(8);
         });
 
         it('should have handlers as functions', () => {

@@ -12,10 +12,14 @@ import * as vscode from 'vscode';
 import { ProgressTracker } from '../handlers/shared';
 import type { ComponentDefinitionEntry } from './componentInstallationOrchestrator';
 import { isMeshComponentId } from '@/core/constants';
+import { isLeftToDo } from '@/core/ui/components/integrations/setupLeftToDo';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { projectFinishSetup } from '@/features/dashboard/services/projectFinishSetup';
 import { generateComponentConfigFiles } from '@/features/project-creation/helpers/componentConfigFiles';
 import { ProjectSetupContext } from '@/features/project-creation/services/ProjectSetupContext';
+import type { Project } from '@/types/base';
+import type { Logger } from '@/types/logger';
 import { getComponentIds, getEntryCount } from '@/types/typeGuards';
 
 export interface FinalizationContext {
@@ -106,8 +110,33 @@ export async function finalizeProject(context: FinalizationContext): Promise<voi
 
     // Broken links in the copy stay on the record, in Diagnostics and the agent's answer, not on
     // the success screen, where a line naming nothing to fix was read by nobody (walk F209).
-    progressTracker('Project Created', 100, 'Project creation complete');
+    await reportProjectCreated(progressTracker, project, logger, 'Project creation complete');
     logger.debug('[Project Creation] Phase 5 complete: Project finalized');
+}
+
+/**
+ * The sentinel the wizard's end screen finishes on ('Project Created'), carrying how many Finish
+ * Setup steps the run left still to do: the one count that screen shows, "2 steps remaining"
+ * (PL-101). Creation and an Edit both end here, so the two end screens cannot disagree.
+ *
+ * @param progressTracker - the run's reporter
+ * @param project - the finished project, its record saved
+ * @param logger - where an unreadable install record is said
+ * @param message - line 2 of the finishing update
+ */
+export async function reportProjectCreated(
+    progressTracker: ProgressTracker,
+    project: Project,
+    logger: Logger,
+    message: string,
+): Promise<void> {
+    const steps = await projectFinishSetup(project, logger);
+    const remaining = steps.filter(isLeftToDo).length;
+    if (remaining > 0) {
+        progressTracker('Project Created', 100, message, undefined, remaining);
+    } else {
+        progressTracker('Project Created', 100, message);
+    }
 }
 
 /**

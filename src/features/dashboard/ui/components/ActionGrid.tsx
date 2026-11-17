@@ -97,6 +97,7 @@ import { OpenZone } from './OpenZone';
 import { ShareZone } from './ShareZone';
 import { StorefrontZone } from './StorefrontZone';
 import type { AppBuilderComponentState } from '@/types/base';
+import type { FinishSetupStatus } from '@/types/webviewPayloads';
 
 /**
  * Props for the ActionGrid component
@@ -180,6 +181,29 @@ export interface ActionGridProps {
     handleResetProject: () => void;
     /** Handler for Delete button */
     handleDeleteProject: () => void;
+    /**
+     * What a run left to finish (PL-101): the tile that fixes an open step wears its dot,
+     * Republish for the code, Manage Commerce for the root category.
+     */
+    finishSetup?: FinishSetupStatus;
+}
+
+/** Republish's hover while Republish the Code is open: why the dot is there. */
+const CODE_STEP_TOOLTIP =
+    'Republish needed — the live site does not serve the latest storefront code yet';
+
+/** Which tiles a Finish Setup step dots, and the Republish hover that says why. */
+function finishSetupDots(finishSetup: FinishSetupStatus | undefined): {
+    republishDue: boolean;
+    republishTooltip?: string;
+    adminDue: boolean;
+} {
+    const republishDue = finishSetup?.republishDue === true;
+    return {
+        republishDue,
+        ...(republishDue ? { republishTooltip: CODE_STEP_TOOLTIP } : {}),
+        adminDue: finishSetup?.adminDue === true,
+    };
 }
 
 /**
@@ -234,13 +258,15 @@ export function ActionGrid({
     handleChangeDemoSource,
     handleResetProject,
     handleDeleteProject,
+    finishSetup,
 }: ActionGridProps): React.ReactElement {
     // Edit gating mirrors the kebab's Edit: non-EDS only while stopped, EDS always.
     const canEdit = Boolean(handleEditProject) && (isEds || !isRunning);
 
     // Which fix is due, from the status named where the state is decided.
     const needsRestart = demoStatus?.remedy === 'restart';
-    const needsRepublish = demoStatus?.remedy === 'republish';
+    const steps = finishSetupDots(finishSetup);
+    const needsRepublish = demoStatus?.remedy === 'republish' || steps.republishDue;
     // Extracted rather than inlined: a 4-operand && chain in JSX trips the
     // complex-expression SOP scan (tests/sop/complex-expressions.test.ts).
     const canRestart = !isEds && isRunning && Boolean(handleRestartDemo);
@@ -270,6 +296,7 @@ export function ActionGrid({
                 handleOpenLiveSite={handleOpenLiveSite}
                 handleOpenDaLive={handleOpenDaLive}
                 handleOpenAdminPanel={handleOpenAdminPanel}
+                adminStepDue={steps.adminDue}
                 integrations={
                     <IntegrationsSummaryTile
                         appBuilderComponents={appBuilderComponents}
@@ -282,6 +309,7 @@ export function ActionGrid({
             {isEds && (
                 <StorefrontZone
                     needsRepublish={needsRepublish}
+                    republishTooltip={steps.republishTooltip}
                     handleRepublishContent={handleRepublishContent}
                     handleSyncStorefront={handleSyncStorefront}
                     handleRefreshBlockLibrary={handleRefreshBlockLibrary}

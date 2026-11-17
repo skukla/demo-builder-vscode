@@ -20,6 +20,7 @@ import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, HandlerContext } from '@/types/handlers';
 import { SimpleResult, DataResult } from '@/types/results';
 import { toError } from '@/types/typeGuards';
+import type { DashboardOpenOptions } from '@/types/webviewPayloads';
 
 /**
  * ready - Initial wizard ready event
@@ -124,6 +125,19 @@ export async function handleBackToProject(_context: HandlerContext): Promise<Sim
 }
 
 /**
+ * finishSetup - the end screen's Finish Setup (PL-101): the new project's dashboard, opening on
+ * its Finish Setup guide. Beside View Projects, never in its place (owner, 2026-11-17).
+ */
+export async function handleFinishSetup(_context: HandlerContext): Promise<SimpleResult> {
+    const options: DashboardOpenOptions = { openFinishSetup: true };
+    await swapWebviewSurface(WIZARD_WEBVIEW_ID, {
+        id: 'demoBuilder.showProjectDashboard',
+        args: [options],
+    });
+    return { success: true };
+}
+
+/**
  * log - Handles logging messages from webview
  *
  * Routes log messages from the webview to the appropriate logger.
@@ -214,6 +228,7 @@ export const lifecycleHandlers = defineHandlers({
     // Project actions
     'openProject': handleOpenProject,
     'backToProject': handleBackToProject,
+    'finishSetup': handleFinishSetup,
 
     // Utilities
     'log': handleLog,

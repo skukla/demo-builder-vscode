@@ -22,6 +22,6 @@ export type ProgressTracker = (
     progress: number,
     message?: string,
     position?: OperationPosition,
-    /** On the finishing update only: one line the success screen shows (`CreationProgress.note`). */
-    note?: string,
+    /** On the finishing update only: the steps left to finish (`CreationProgress.stepsRemaining`). */
+    stepsRemaining?: number,
 ) => void;

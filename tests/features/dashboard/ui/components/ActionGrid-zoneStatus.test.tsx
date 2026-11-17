@@ -25,6 +25,7 @@ import React from 'react';
 import { render, screen, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { ActionGrid, defaultProps, edsProps, getZone } from './ActionGrid.testUtils';
+import type { SetupChecklistItem } from '@/types/appBuilderComponents';
 
 const stale = { color: 'yellow' as const, text: 'Republish needed', remedy: 'republish' as const };
 const published = { color: 'green' as const, text: 'Published' };
@@ -393,5 +394,44 @@ describe('Edit and Sync Storefront tiles', () => {
 
         (tile(container, 'sync-storefront') as HTMLElement).click();
         expect(handleSyncStorefront).toHaveBeenCalledTimes(1);
+    });
+});
+
+// PL-101: the tile that fixes a Finish Setup step wears the amber dot while the step is open, with
+// the hover saying why (ActionGrid's status placement rule).
+describe('Finish Setup steps — the dot on the tile that fixes each', () => {
+    const items: SetupChecklistItem[] = [];
+
+    it('dots Republish while Republish the Code is open, saying why on hover', () => {
+        render(
+            <ActionGrid
+                {...edsProps}
+                demoStatus={published}
+                finishSetup={{ items, remaining: 1, republishDue: true }}
+            />
+        );
+
+        expect(screen.getByTestId('republish-tile-dot')).toHaveAttribute('data-variant', 'warning');
+        expect(
+            screen.getByRole('button', { name: /^Republish, .*live site.*code/i })
+        ).toBeInTheDocument();
+    });
+
+    it('dots Manage Commerce while Set the Root Category is open, saying why on hover', () => {
+        render(
+            <ActionGrid {...defaultProps} finishSetup={{ items, remaining: 1, adminDue: true }} />
+        );
+
+        expect(screen.getByTestId('manage-commerce-dot')).toHaveAttribute('data-variant', 'warning');
+        expect(
+            screen.getByRole('button', { name: /^Manage Commerce, .*Root Category/ })
+        ).toBeInTheDocument();
+    });
+
+    it('dots neither when every step is done or skipped', () => {
+        render(<ActionGrid {...edsProps} demoStatus={published} finishSetup={{ items, remaining: 0 }} />);
+
+        expect(screen.queryByTestId('republish-tile-dot')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('manage-commerce-dot')).not.toBeInTheDocument();
     });
 });

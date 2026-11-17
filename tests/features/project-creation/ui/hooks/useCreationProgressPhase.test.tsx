@@ -229,5 +229,22 @@ describe('useCreationProgressPhase (through ProjectCreationStep)', () => {
             expect(mockPostMessage).toHaveBeenCalledWith('backToProject');
             expect(mockPostMessage).not.toHaveBeenCalledWith('openProject');
         });
+
+        // PL-101: Finish Setup opens the new project's dashboard with its guide, not the list.
+        it('Finish Setup opens the project, then asks the extension for its Finish Setup guide', async () => {
+            await renderStep(progressOf({ currentOperation: 'Project Created', stepsRemaining: 2 }));
+
+            expect(screen.getByText('2 steps remaining')).toBeInTheDocument();
+            await press(screen.getByRole('button', { name: 'Finish Setup' }));
+            expect(screen.getByText('Opening your project')).toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: 'Finish Setup' })).not.toBeInTheDocument();
+
+            await act(async () => {
+                jest.advanceTimersByTime(TIMEOUTS.PROJECT_OPEN_TRANSITION);
+            });
+
+            expect(mockPostMessage).toHaveBeenCalledWith('finishSetup');
+            expect(mockPostMessage).not.toHaveBeenCalledWith('openProject');
+        });
     });
 });

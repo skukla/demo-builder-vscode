@@ -268,6 +268,45 @@ describe('projectFinalizationService', () => {
             expect(mockProgressTracker).toHaveBeenCalledWith(OPERATION_STAGES.writingConfigFiles.label, 85);
         });
 
+        // PL-101: the end screen says "N steps remaining" from a typed count, not parsed text.
+        it('tells the end screen how many Finish Setup steps the run left still to do', async () => {
+            mockProject.finishSetup = { 'republish-code': { files: ['scripts/commerce.js'] } };
+
+            await finalizeProject({
+                setupContext: mockSetupContext,
+                projectPath: '/test/project',
+                componentDefinitions: mockComponentDefinitions,
+                progressTracker: mockProgressTracker,
+                saveProject: mockSaveProject,
+                sendMessage: mockSendMessage,
+            });
+
+            expect(mockProgressTracker).toHaveBeenLastCalledWith(
+                'Project Created',
+                100,
+                'Project creation complete',
+                undefined,
+                1,
+            );
+        });
+
+        it('counts no finished or skipped step as remaining', async () => {
+            mockProject.finishSetup = {
+                'republish-code': { files: ['scripts/commerce.js'], state: 'dismissed' },
+            };
+
+            await finalizeProject({
+                setupContext: mockSetupContext,
+                projectPath: '/test/project',
+                componentDefinitions: mockComponentDefinitions,
+                progressTracker: mockProgressTracker,
+                saveProject: mockSaveProject,
+                sendMessage: mockSendMessage,
+            });
+
+            expect(mockProgressTracker).toHaveBeenLastCalledWith('Project Created', 100, 'Project creation complete');
+        });
+
         it('should log debug messages', async () => {
             const context: FinalizationContext = {
                 setupContext: mockSetupContext,

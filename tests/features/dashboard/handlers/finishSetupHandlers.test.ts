@@ -41,6 +41,7 @@ import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockProject, edsStorefrontInstance } from '../../../helpers/projectFake';
 import { makeStateManager } from '../../../helpers/stateManagerFake';
+import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
 
 const PACK = { name: 'frescopa', version: 'main' };
 const ROOT: PackRootStep = {
@@ -109,7 +110,11 @@ function storeShowing(rootId: number): void {
     mockOpenStore.mockResolvedValue(store);
 }
 
-function setup(finishSetup?: Record<string, FinishSetupRecord>, withPack = false) {
+function setup(
+    finishSetup?: Record<string, FinishSetupRecord>,
+    withPack = false,
+    panel?: HandlerContext['panel'],
+) {
     const eds = edsStorefrontInstance();
     const project = createMockProject({
         path: projectDir,
@@ -121,7 +126,7 @@ function setup(finishSetup?: Record<string, FinishSetupRecord>, withPack = false
         ...(withPack ? { datapack: PACK } : {}),
     });
     const stateManager = makeStateManager(project);
-    const context = createMockHandlerContext({ stateManager }) as HandlerContext;
+    const context = createMockHandlerContext({ stateManager, ...(panel ? { panel } : {}) }) as HandlerContext;
     const saved = () =>
         (stateManager.saveProject as jest.Mock).mock.calls.at(-1)?.[0] as Project | undefined;
     return { context, saved };
@@ -274,6 +279,25 @@ describe('checkFinishSetupSteps', () => {
         );
         // The check decides now: the Skip the SC gave it no longer stands over it.
         expect(saved()?.finishSetup).toBeUndefined();
+    });
+
+    // A root check writes the install record, not the project, so no save pushes the dashboard's
+    // status: the guide and the dashboard line read the steps from that push (PL-101).
+    it("pushes the dashboard's status after a check, so the guide and the line redraw", async () => {
+        await recordRootStep(ROOT);
+        storeShowing(300);
+        const panel = createMockWebviewPanel();
+        const { context } = setup(undefined, true, panel);
+
+        await handleCheckFinishSetupSteps(context, { stepId: 'pack-root-category' });
+
+        const pushed = (panel.webview.postMessage as jest.Mock).mock.calls.map(([message]) => message);
+        expect(pushed).toContainEqual({
+            type: 'statusUpdate',
+            payload: expect.objectContaining({
+                finishSetup: expect.objectContaining({ remaining: 0 }),
+            }),
+        });
     });
 
     it("answers the store's refusal when the project's store cannot be opened", async () => {

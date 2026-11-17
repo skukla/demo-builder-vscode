@@ -6,7 +6,7 @@ import StopCircle from '@spectrum-icons/workflow/StopCircle';
 import UserAdmin from '@spectrum-icons/workflow/UserAdmin';
 import React from 'react';
 import type { OpeningTile } from '../hooks/useDashboardActions';
-import { DashboardTile } from './DashboardTile';
+import { DashboardTile, type DashboardTileStatus } from './DashboardTile';
 import { DashboardZone, RemedyTile } from './DashboardZone';
 import { DataInstallerTile } from './DataInstallerTile';
 
@@ -58,6 +58,13 @@ function LifecycleTile({
     );
 }
 
+/** Manage Commerce's dot while the Finish Setup step Set the Root Category is open (PL-101). */
+const ADMIN_STEP_DOT: DashboardTileStatus = {
+    variant: 'warning',
+    tooltip: "Root category needed — the store does not show the datapack's categories yet",
+    testId: 'manage-commerce-dot',
+};
+
 /** A tile whose host handler is optional still needs something to press. */
 const NOOP = (): void => undefined;
 
@@ -88,6 +95,7 @@ export function OpenZone({
     handleOpenLiveSite,
     handleOpenDaLive,
     handleOpenAdminPanel,
+    adminStepDue = false,
     integrations,
 }: {
     isEds: boolean;
@@ -108,6 +116,8 @@ export function OpenZone({
     handleOpenLiveSite?: () => void;
     handleOpenDaLive?: () => void;
     handleOpenAdminPanel: () => void;
+    /** The Finish Setup step Set the Root Category is open (PL-101): Manage Commerce wears its dot. */
+    adminStepDue?: boolean;
     /** The Integrations card, built by the caller (it owns the status inputs). */
     integrations?: React.ReactNode;
 }): React.ReactElement {
@@ -173,6 +183,7 @@ export function OpenZone({
                 icon={<UserAdmin size="L" />}
                 onPress={handleOpenAdminPanel}
                 isBusy={openingTile === 'admin'}
+                status={adminStepDue ? ADMIN_STEP_DOT : undefined}
             />
 
             {integrations}

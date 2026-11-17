@@ -35,6 +35,7 @@ import { createMcpHealthCheck } from '@/features/dashboard/services/onOpenChecks
 import { createMeshVerifyCheck } from '@/features/dashboard/services/onOpenChecks/meshVerifyCheck';
 import { runOnOpenChecks } from '@/features/dashboard/services/onOpenChecks/orchestrator';
 import { createOrgContextCheck } from '@/features/dashboard/services/onOpenChecks/orgContextCheck';
+import { projectFinishSetup } from '@/features/dashboard/services/projectFinishSetup';
 import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import {
     applicableMcpPackages,
@@ -126,6 +127,7 @@ export async function postStatusUpdate(
         project,
         frontendConfigChanged,
         meshComponent ? { status: meshStatus, endpoint: meshEndpoint } : undefined,
+        await projectFinishSetup(project, context.logger),
     );
 
     panel.webview.postMessage({

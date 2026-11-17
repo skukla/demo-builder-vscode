@@ -208,7 +208,7 @@ export async function executeEdsReset(
         // reason to reset again (walk F208).
         recordStorefrontBuilt(params.project, repoResetResult.buildComplete);
         // What the reset left to finish replaces the record: a clean reset leaves no step (PL-101).
-        replaceFinishSetup(params.project, served.files);
+        replaceFinishSetup(params.project, served.files, codeNotPublished !== undefined);
 
         // Steps 11-12: CDN verification + optional mesh redeploy + state persistence
         const result = await finalizeReset(

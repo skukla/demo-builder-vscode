@@ -17,6 +17,7 @@
 
 import React from 'react';
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
 import { StepFooterArea } from '@/features/project-creation/ui/steps/projectCreationStepFooter';
@@ -35,7 +36,9 @@ const BASE = {
     onOpenProject: jest.fn(),
 };
 
-const renderFooter = (overrides: Partial<typeof BASE>) =>
+type FooterProps = React.ComponentProps<typeof StepFooterArea>;
+
+const renderFooter = (overrides: Partial<FooterProps>) =>
     render(
         <Provider theme={defaultTheme} colorScheme="dark">
             <StepFooterArea {...BASE} {...overrides} />
@@ -112,5 +115,29 @@ describe('what the footer states actually render', () => {
 
         expect(container.querySelector('.footer-content-container')).not.toBeNull();
         expect(hasFooter(container)).toBe(false);
+    });
+});
+
+// PL-101: a run that left steps offers Finish Setup BESIDE View Projects (owner: it does not
+// replace it), and nothing when no step is left.
+describe('Finish Setup on the finished screen', () => {
+    it('offers Finish Setup beside View Projects when steps remain, and starts it', async () => {
+        const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+        const onFinishSetup = jest.fn();
+        renderFooter({ isCompleted: true, stepsRemaining: 2, onFinishSetup });
+
+        const names = screen.getAllByRole('button').map((button) => button.textContent);
+        expect(names).toStrictEqual(['Finish Setup', 'View Projects']);
+
+        await user.click(screen.getByRole('button', { name: 'Finish Setup' }));
+        expect(onFinishSetup).toHaveBeenCalledTimes(1);
+    });
+
+    it('offers View Projects alone when no step is left', () => {
+        renderFooter({ isCompleted: true, stepsRemaining: 0, onFinishSetup: jest.fn() });
+
+        expect(screen.getAllByRole('button').map((button) => button.textContent)).toStrictEqual([
+            'View Projects',
+        ]);
     });
 });

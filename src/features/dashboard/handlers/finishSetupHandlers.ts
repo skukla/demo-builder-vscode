@@ -15,15 +15,13 @@
  * @module features/dashboard/handlers/finishSetupHandlers
  */
 
+import { postStatusUpdate } from '@/features/dashboard/handlers/statusHandlers';
 import { finishSetupOf } from '@/features/dashboard/services/finishSetup';
 import { type CodeStepReads, checkCodeStep } from '@/features/dashboard/services/finishSetupChecks';
+import { readPackRootStep } from '@/features/dashboard/services/projectFinishSetup';
 import { failure } from '@/features/data-installer/handlers/packSave';
 import { openProjectStore } from '@/features/data-installer/handlers/storeChangesHandlers';
-import { nodeRecordFiles } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
-import {
-    checkRecordedRootStep,
-    recordedRootStep,
-} from '@/features/data-installer/services/demoBuilderEngine/packRootCheck';
+import { checkRecordedRootStep } from '@/features/data-installer/services/demoBuilderEngine/packRootCheck';
 import {
     PACK_ROOT_STEP_ID,
     type PackRootStep,
@@ -57,13 +55,7 @@ const NO_PROJECT: HandlerResponse = {
 async function openFinishSetup(context: HandlerContext): Promise<Opened | Refusal> {
     const project = await context.stateManager.getCurrentProject();
     if (!project) return { error: NO_PROJECT };
-    const held = project.datapack;
-    const packRoot = held
-        ? await recordedRootStep(nodeRecordFiles, project.path, {
-              name: held.name,
-              version: held.version,
-          })
-        : undefined;
+    const packRoot = await readPackRootStep(project);
     return { project, ...(packRoot ? { packRoot } : {}) };
 }
 
@@ -208,6 +200,9 @@ export const handleCheckFinishSetupSteps: MessageHandler<CheckFinishSetupStepsRe
         if ('error' in next) return next.error;
         opened = next;
     }
+    // A root check writes the install record, not the project, so no save pushed the status the
+    // guide and the dashboard line redraw from: push it here.
+    if (context.panel) await postStatusUpdate(context, context.panel, opened.project);
     return answer(opened);
 };
 

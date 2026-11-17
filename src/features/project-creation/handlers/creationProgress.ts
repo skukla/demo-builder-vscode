@@ -86,7 +86,7 @@ export function creationReporter(
     startedAt: number = Date.now(),
 ): CreationReporter {
     let steps: readonly string[] = [];
-    const report: ProgressTracker = (stage, progress, message, position, note) => {
+    const report: ProgressTracker = (stage, progress, message, position, stepsRemaining) => {
         const line = stepUnder(stage, message) ?? detailFor(stage) ?? '';
         const at = position ?? stepPosition(steps, stage);
         const payload: CreationProgressPayload = {
@@ -96,7 +96,7 @@ export function creationReporter(
             logs: [],
             ...(at ? { position: at } : {}),
             startedAt,
-            ...(note ? { note } : {}),
+            ...(stepsRemaining !== undefined ? { stepsRemaining } : {}),
         };
         void sendMessage('creationProgress', payload);
         // ...and to an AGENT, which has no wizard screen to send to. A `create_project`

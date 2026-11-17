@@ -31,9 +31,7 @@ import {
     getEdsLiveUrl,
     getEdsDaLiveUrl,
 } from '@/types/typeGuards';
-import type {
-    DashboardInitialData,
-} from '@/types/webviewPayloads';
+import type { DashboardInitialData, DashboardOpenOptions } from '@/types/webviewPayloads';
 
 /** Absolute path to the Demo Builder projects directory (`~/.demo-builder/projects`). */
 const DEMO_BUILDER_PROJECTS_BASE = path.join(os.homedir(), '.demo-builder', 'projects');
@@ -130,12 +128,23 @@ export class ProjectDashboardWebviewCommand extends BundledPanelCommand<Dashboar
     // Static reference to active instance for refreshStatus
     private static activeInstance: ProjectDashboardWebviewCommand | null = null;
 
+    /** The next init opens the Finish Setup guide (PL-101); cleared once sent. */
+    private openFinishSetupNext = false;
+
     constructor(
         context: vscode.ExtensionContext,
         stateManager: import('@/types/state').StateManager,
         logger: import('@/types/logger').Logger,
     ) {
         super(context, stateManager, logger);
+    }
+
+    /**
+     * What the dashboard opens on this time: the creation end screen's Finish Setup asks for its
+     * guide. Called by `execute`; the next init carries it, once.
+     */
+    public openOn(options: DashboardOpenOptions | undefined): void {
+        this.openFinishSetupNext = options?.openFinishSetup === true;
     }
 
     // ============================================================================
@@ -181,6 +190,8 @@ export class ProjectDashboardWebviewCommand extends BundledPanelCommand<Dashboar
         // runs when the project has an Adobe org). Lets the UI telegraph the
         // "Checking Adobe organization…" state before the result arrives.
         const hasAdobeContext = Boolean(project?.adobe?.organization);
+        const openFinishSetup = this.openFinishSetupNext;
+        this.openFinishSetupNext = false;
 
         return {
             theme,
@@ -214,6 +225,7 @@ export class ProjectDashboardWebviewCommand extends BundledPanelCommand<Dashboar
                       },
                   }
                 : {}),
+            ...(openFinishSetup ? { openFinishSetup: true as const } : {}),
         };
     }
 
@@ -366,7 +378,8 @@ export class ProjectDashboardWebviewCommand extends BundledPanelCommand<Dashboar
     // Lifecycle Hooks
     // ============================================================================
 
-    public async execute(): Promise<void> {
+    public async execute(options?: DashboardOpenOptions): Promise<void> {
+        this.openOn(options);
         // The project this screen is for, kept after the current project moves (AI-15)
         const project = await this.openForCurrentProject();
         if (!project) {

@@ -52,6 +52,7 @@ import type { GuardableResult } from '@/features/dashboard/handlers/appBuilderCo
 import { removeWithCleanup } from '@/features/dashboard/handlers/appBuilderComponentRemove';
 import { confirmLeavingAdobeProject } from '@/features/dashboard/handlers/destinationHandlers';
 import type { NameMemory } from '@/features/data-installer/services/packNames';
+import { reportProjectCreated } from '@/features/project-creation/services/projectFinalizationService';
 import {
     appliesInPlace,
     selectionDelta,
@@ -170,8 +171,8 @@ async function applyInPlace(
     await context.stateManager.saveProject(project);
     if (warnings.length > 0) void vscode.window.showWarningMessage(warnings.join(' '));
     if (ending.notes.length > 0) void vscode.window.showInformationMessage(ending.notes.join(' '));
-    // The sentinel the wizard's progress screen finishes on.
-    progressTracker('Project Created', 100, 'Changes applied');
+    // The sentinel the wizard's progress screen finishes on, with what the Edit left to finish.
+    await reportProjectCreated(progressTracker, project, context.logger, 'Changes applied');
     return true;
 }
 

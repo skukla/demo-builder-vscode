@@ -10,6 +10,7 @@
  */
 
 import { buildStatusPayload } from '../services/dashboardStatusService';
+import { projectFinishSetup } from '../services/projectFinishSetup';
 import { hasMeshDeploymentRecord, getMeshEndpoint } from '@/core/state/appBuilderComponentState';
 import { detectFrontendChanges } from '@/core/state/frontendEnvDrift';
 import { Project } from '@/types/base';
@@ -104,6 +105,11 @@ export async function sendDemoStatusUpdate(context: HandlerContext): Promise<voi
 
     context.panel.webview.postMessage({
         type: 'statusUpdate',
-        payload: buildStatusPayload(project, frontendConfigChanged, meshStatus),
+        payload: buildStatusPayload(
+            project,
+            frontendConfigChanged,
+            meshStatus,
+            await projectFinishSetup(project, context.logger),
+        ),
     });
 }

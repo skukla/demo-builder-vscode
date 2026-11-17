@@ -335,8 +335,11 @@ export interface CreationProgress {
     position?: OperationPosition;
     /** When the run began, in ms since the epoch: the screen's clock counts from it. */
     startedAt?: number;
-    /** On the finishing update only: one line the success screen shows under its heading. */
-    note?: string;
+    /**
+     * On the finishing update only: how many Finish Setup steps the run left still to do
+     * (PL-101). The success screen says "N steps remaining" and offers Finish Setup.
+     */
+    stepsRemaining?: number;
 }
 
 export interface FormValidation {

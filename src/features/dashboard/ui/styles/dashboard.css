@@ -130,6 +130,12 @@
     color: var(--spectrum-global-color-gray-600);
 }
 
+/* What a run left to finish (PL-101): the plain "2 steps remaining" line with Finish Setup
+   (`FinishSetupLine`, the integration flyout's line), above the zones. */
+.dashboard-finish-setup {
+    padding-top: 8px;
+}
+
 /* Dashboard grid - left-align the stacked action zones so their left edge
    matches the project title and status badges above. */
 .dashboard-grid-container {

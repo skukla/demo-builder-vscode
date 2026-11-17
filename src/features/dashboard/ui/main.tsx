@@ -47,6 +47,8 @@ import '@/core/ui/styles/shared-ui.css';
 import '@/core/ui/styles/icon-label.css';
 // .integrations-* — the integrations surface shell and grid.
 import './styles/integrations.css';
+// The Finish Setup line (PL-101) is drawn as the integration flyout's Demo Setup line, styled there.
+import '@/core/ui/styles/integration-cards.css';
 // .db-* — the shared detail drawer.
 import '@/core/ui/styles/drawer.css';
 // .two-* — the shared two-column layout's stacking breakpoint.

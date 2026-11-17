@@ -14,12 +14,14 @@ import { ActionGrid } from './components/ActionGrid';
 import { DashboardDialogs } from './components/DashboardDialogs';
 import { DashboardStatusHeader } from './components/DashboardStatusHeader';
 import { DemoSourceNotice } from './components/DemoSourceNotice';
+import { FinishSetupLine } from './components/FinishSetupLine';
 import { OrgContextNotice } from './components/OrgContextNotice';
 import { isStartActionDisabled } from './dashboardPredicates';
 import { useDashboardActions } from './hooks/useDashboardActions';
 import { useDashboardOperations } from './hooks/useDashboardOperations';
 import { useDashboardResetDelete } from './hooks/useDashboardResetDelete';
 import { useDashboardStatus, isMeshBusy } from './hooks/useDashboardStatus';
+import { useFinishSetup } from './hooks/useFinishSetup';
 import { useHandoverDialogs } from './hooks/useHandoverDialogs';
 import { useInlineRename } from './hooks/useInlineRename';
 import { useLiveDaLiveUrl } from './hooks/useLiveDaLiveUrl';
@@ -64,6 +66,7 @@ export function ProjectDashboardScreen({
     hasAdobeContext,
     appBuilderComponents,
     demo,
+    openFinishSetup,
 }: ProjectDashboardScreenProps) {
     // Capture isEds on first render and never change it (project type doesn't change)
     const isEdsRef = useRef(isEds);
@@ -177,6 +180,11 @@ export function ProjectDashboardScreen({
         projectStatus?.path ?? project?.path,
     );
 
+    // Republish is a storefront's (EDS only): the tile, and Apply on the Finish Setup code step.
+    const republish = isEdsStable ? handleRepublishContent : undefined;
+    // What a run left to finish (PL-101): the line, its guide, and Apply's Republish.
+    const finishSetup = useFinishSetup(projectStatus?.finishSetup, openFinishSetup, republish);
+
     // Build subtitle from package/stack (e.g., "CitiSignal, Headless + PaaS")
     const brandStackSubtitle = [packageName, stackName].filter(Boolean).join(', ') || undefined;
 
@@ -251,6 +259,10 @@ export function ProjectDashboardScreen({
                     }
                     primary={
                         <>
+                            <FinishSetupLine
+                                status={finishSetup.status}
+                                onOpen={finishSetup.open}
+                            />
                             <div className="dashboard-grid-container">
                                 <ActionGrid
                                     isEds={isEdsStable}
@@ -275,9 +287,7 @@ export function ProjectDashboardScreen({
                                     handleRefreshBlockLibrary={
                                         isEdsStable ? handleRefreshBlockLibrary : undefined
                                     }
-                                    handleRepublishContent={
-                                        isEdsStable ? handleRepublishContent : undefined
-                                    }
+                                    handleRepublishContent={republish}
                                     handleConfigure={handleConfigure}
                                     handleOpenAemAssets={handleOpenAemAssets}
                                     handleOpenSiteAccess={isEdsStable ? handleOpenSiteAccess : undefined}
@@ -287,6 +297,7 @@ export function ProjectDashboardScreen({
                                     handleChangeDemoSource={openChangeSource}
                                     handleResetProject={handleResetProject}
                                     handleDeleteProject={handleDeleteProject}
+                                    finishSetup={finishSetup.status}
                                 />
                             </div>
                         </>
@@ -304,6 +315,8 @@ export function ProjectDashboardScreen({
                 capabilitiesOpen={showCapabilities}
                 onCloseCapabilities={() => setShowCapabilities(false)}
                 ai={dashboardStatus}
+                finishSetup={finishSetup}
+                projectName={displayName}
             />
         </div>
     );

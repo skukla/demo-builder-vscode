@@ -110,7 +110,7 @@ export class CommandManager {
             this.stateManager,
             this.logger,
         );
-        this.registerCommand('demoBuilder.showProjectDashboard', async () => {
+        this.registerCommand('demoBuilder.showProjectDashboard', async (options?: unknown) => {
             // Clear projects list context to show components tree in sidebar
             await vscode.commands.executeCommand(
                 'setContext',
@@ -124,7 +124,10 @@ export class CommandManager {
             }
             // Note: Projects List disposal is handled by showDashboard.execute() AFTER panel creation
             ShowIntegrationsCommand.disposeActivePanel();
-            await projectDashboard.execute();
+            // The creation end screen's Finish Setup opens the dashboard on its guide (PL-101).
+            await projectDashboard.execute({
+                openFinishSetup: isRecord(options) && options.openFinishSetup === true,
+            });
         });
 
         // Integrations surface (dedicated, opened from the dashboard summary tile)

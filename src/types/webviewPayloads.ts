@@ -13,7 +13,11 @@
  * @module types/webviewPayloads
  */
 
-import type { AppBuilderComponentCatalogEntry, ComponentSettings } from './appBuilderComponents';
+import type {
+    AppBuilderComponentCatalogEntry,
+    ComponentSettings,
+    SetupChecklistItem,
+} from './appBuilderComponents';
 import type {
     AppBuilderComponentState,
     AuthoringExperience, CommerceAdminExperience,
@@ -140,6 +144,17 @@ export interface DashboardInitialData {
      * to update it.
      */
     demo?: Pick<AddedDemo, 'name' | 'source' | 'storefrontKind'> & { demoPackageName?: string };
+    /**
+     * Open the Finish Setup guide as the dashboard shows (PL-101): the creation end screen's
+     * Finish Setup asked for it. Present only then.
+     */
+    openFinishSetup?: true;
+}
+
+/** What `demoBuilder.showProjectDashboard` may be run with. */
+export interface DashboardOpenOptions {
+    /** Open the project's Finish Setup guide once the dashboard shows. */
+    openFinishSetup?: boolean;
 }
 
 /**
@@ -362,6 +377,23 @@ export interface DashboardStatusUpdatePayload {
      * the Reset tile says "Needs reset". Present only when true.
      */
     storefrontNeedsReset?: true;
+    /** What a run left the SC to finish (PL-101). Present only when a run left a step. */
+    finishSetup?: FinishSetupStatus;
+}
+
+/**
+ * A project's Finish Setup steps as the dashboard shows them (PL-101, `finishSetupStatus`): the
+ * steps for the guide, how many are still to do for the "N steps remaining" line, and which tile's
+ * fix is due, for its amber dot. A finished or skipped step stays listed.
+ */
+export interface FinishSetupStatus {
+    items: SetupChecklistItem[];
+    /** Steps still to do (open); 0 when every step is done or skipped. */
+    remaining: number;
+    /** Republish the Code is still to do: the Republish tile wears its dot. */
+    republishDue?: true;
+    /** Set the Root Category is still to do: Manage Commerce wears its dot. */
+    adminDue?: true;
 }
 
 /** `meshStatusUpdate` — mesh-only status push (deploy flows). */

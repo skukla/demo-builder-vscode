@@ -16,6 +16,7 @@ import {
     type AiCapabilityState,
     type DashboardDialogsProps,
 } from '@/features/dashboard/ui/components/DashboardDialogs';
+import type { FinishSetupControls } from '@/features/dashboard/ui/hooks/useFinishSetup';
 import type { HandoverDialogs } from '@/features/dashboard/ui/hooks/useHandoverDialogs';
 import type { OperationRunnerControls, ScreenOperation } from '@/core/ui/hooks/useOperationRunner';
 import { asDisplayName } from '@/core/utils/projectDisplayName';
@@ -156,7 +157,19 @@ function props(overrides: Partial<DashboardDialogsProps> = {}): DashboardDialogs
         capabilitiesOpen: false,
         onCloseCapabilities: jest.fn(),
         ai: ai(),
+        finishSetup: finishSetupClosed(),
+        projectName: 'Scratch',
         ...overrides,
+    };
+}
+
+/** The Finish Setup guide's controls, closed (PL-101): at rest the dashboard mounts no guide. */
+function finishSetupClosed(): FinishSetupControls {
+    return {
+        isOpen: false,
+        open: jest.fn(),
+        close: jest.fn(),
+        openAdmin: jest.fn().mockResolvedValue(undefined),
     };
 }
 

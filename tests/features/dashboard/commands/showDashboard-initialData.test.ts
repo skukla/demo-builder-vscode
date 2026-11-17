@@ -97,6 +97,32 @@ describe('ProjectDashboardWebviewCommand - getInitialData - the added demo', () 
     });
 });
 
+// PL-101: the creation end screen's Finish Setup opens the dashboard on its guide, once.
+describe('ProjectDashboardWebviewCommand - opening on Finish Setup', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        vscode.window.activeColorTheme = { kind: vscode.ColorThemeKind.Dark };
+    });
+
+    it('asks the dashboard to open its Finish Setup guide when it was opened for it, and only that once', async () => {
+        const command = commandFor(createMockProject());
+        command.openOn({ openFinishSetup: true });
+
+        const first = await internals(command).getInitialData<DashboardInitialData>();
+        const again = await internals(command).getInitialData<DashboardInitialData>();
+
+        expect(first.openFinishSetup).toBe(true);
+        expect('openFinishSetup' in again).toBe(false);
+    });
+
+    it('asks nothing when the dashboard is opened plainly', async () => {
+        const command = commandFor(createMockProject());
+        command.openOn(undefined);
+
+        expect('openFinishSetup' in (await internals(command).getInitialData<DashboardInitialData>())).toBe(false);
+    });
+});
+
 describe('ProjectDashboardWebviewCommand - the Author Content URL', () => {
     beforeEach(() => {
         jest.clearAllMocks();

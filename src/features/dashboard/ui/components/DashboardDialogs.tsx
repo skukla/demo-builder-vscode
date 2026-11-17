@@ -1,7 +1,8 @@
 /**
  * DashboardDialogs — everything the project dashboard can open ON TOP of
  * itself: Change source, Share Demo, the long-operation
- * progress modal, the Reset batch window, and the AI capability catalog.
+ * progress modal, the Reset batch window, the AI capability catalog, and the
+ * Finish Setup guide (PL-101).
  *
  * Split out of `ProjectDashboardScreen` (EDS-8, 2026-10-09): the screen decides
  * what the dashboard SHOWS; this decides which dialog is mounted over it. The
@@ -15,8 +16,10 @@
 import { DialogContainer } from '@adobe/react-spectrum';
 import React from 'react';
 import type { UseDashboardStatusReturn } from '../hooks/dashboardStatusTypes';
+import type { FinishSetupControls } from '../hooks/useFinishSetup';
 import type { HandoverDialogs } from '../hooks/useHandoverDialogs';
 import { AiCapabilitiesModal } from './AiCapabilitiesModal';
+import { FinishSetupGuide } from './FinishSetupGuide';
 import { ShareModal } from './share/ShareModal';
 import { OperationProgressModal } from '@/core/ui/components/feedback/OperationProgressModal';
 import type { OperationRunnerControls } from '@/core/ui/hooks/useOperationRunner';
@@ -64,6 +67,10 @@ export interface DashboardDialogsProps {
     capabilitiesOpen: boolean;
     onCloseCapabilities: () => void;
     ai: AiCapabilityState;
+    /** The Finish Setup guide's controls (PL-101); its dialog shows only while open. */
+    finishSetup: FinishSetupControls;
+    /** The project's name, for the guide's title. */
+    projectName: string;
 }
 
 /** After a change of source, status is re-requested so the source check re-runs. */
@@ -86,6 +93,8 @@ export function DashboardDialogs({
     capabilitiesOpen,
     onCloseCapabilities,
     ai,
+    finishSetup,
+    projectName,
 }: DashboardDialogsProps) {
     return (
         <>
@@ -114,6 +123,8 @@ export function DashboardDialogs({
             />
 
             {batch.view.phase !== 'closed' && <ProjectsBatchModal controls={batch} />}
+
+            <FinishSetupGuide controls={finishSetup} projectName={projectName} />
 
             {/* Capability catalog — reached from the "View AI Capabilities" link,
                 NOT the health badge. Two sections (skills + MCP servers) plus a

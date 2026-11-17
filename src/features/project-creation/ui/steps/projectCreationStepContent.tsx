@@ -17,19 +17,30 @@ import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { useRunClock } from '@/core/ui/hooks/useRunClock';
+import { stepsRemainingText } from '@/core/ui/utils/stepsRemaining';
 import { expectationFor } from '@/core/utils/operationStages';
 import { expectationLine, stageLine } from '@/core/utils/stageLine';
 import { GitHubAppInstallDialog } from '@/features/eds/ui/components/GitHubAppInstallDialog';
 import type { CreationProgress, WizardState } from '@/types/webview';
 
 /** Success completion content */
-function SuccessContent({ isOpeningProject, isEdit, note }: { isOpeningProject: boolean; isEdit: boolean; note?: string }) {
+function SuccessContent({
+    isOpeningProject,
+    opensDashboard,
+    isEdit,
+    stepsRemaining,
+}: {
+    isOpeningProject: boolean;
+    opensDashboard: boolean;
+    isEdit: boolean;
+    stepsRemaining?: number;
+}) {
     if (isOpeningProject) {
         return (
             <CenteredFeedbackContainer>
                 <LoadingDisplay
                     size="L"
-                    message={isEdit ? 'Opening your project' : 'Loading your projects'}
+                    message={isEdit || opensDashboard ? 'Opening your project' : 'Loading your projects'}
                 />
             </CenteredFeedbackContainer>
         );
@@ -37,12 +48,13 @@ function SuccessContent({ isOpeningProject, isEdit, note }: { isOpeningProject: 
 
     // A whole wizard screen, so the large centred check every wizard success has (dialog design
     // rules, owner 2026-11-02). Edit's heading says it all; a second line read as a claim about the
-    // project (owner, 2026-10-17). The one line worth knowing is about broken links (EDS-64).
+    // project (owner, 2026-10-17). The one line worth knowing is what the run left to finish,
+    // "2 steps remaining" (PL-101); the title stands alone when nothing is.
     return (
         <StatusDisplay
             variant="success"
             title={isEdit ? 'Changes Saved' : 'Project Created'}
-            message={note}
+            message={stepsRemainingText(stepsRemaining)}
             centerMessage
             maxWidth="520px"
         />
@@ -112,6 +124,8 @@ export function StepContentArea(props: {
     onGitHubAppInstalled: () => void;
     /** Edit says "Changes Saved", not "Project Created" (PL-75). */
     isEdit?: boolean;
+    /** Finish Setup is opening the project's dashboard, not the projects list. */
+    opensDashboard?: boolean;
 }) {
     const {
         phase,
@@ -124,6 +138,7 @@ export function StepContentArea(props: {
         githubAppInstallData,
         onGitHubAppInstalled,
         isEdit = false,
+        opensDashboard = false,
     } = props;
 
     if (phase === 'github-app-install' && githubAppInstallData) {
@@ -143,7 +158,14 @@ export function StepContentArea(props: {
     }
 
     if (isCompleted && !progress?.error) {
-        return <SuccessContent isOpeningProject={isOpeningProject} isEdit={isEdit} note={progress?.note} />;
+        return (
+            <SuccessContent
+                isOpeningProject={isOpeningProject}
+                opensDashboard={opensDashboard}
+                isEdit={isEdit}
+                stepsRemaining={progress?.stepsRemaining}
+            />
+        );
     }
 
     if (showGenericError) {

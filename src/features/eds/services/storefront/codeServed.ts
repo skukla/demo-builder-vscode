@@ -47,7 +47,7 @@ const CONCURRENCY = 8;
  * mrajkovich/bodea (2026-10-27, EDS-66) AEM accepted the publish of `/*` and never brought
  * the template's files: the site served no styles and no scripts, and nothing looked.
  */
-const TEMPLATE_PROBES = ['scripts/aem.js', 'styles/styles.css'];
+export const TEMPLATE_PROBES: readonly string[] = ['scripts/aem.js', 'styles/styles.css'];
 
 /** What the check reads and does; built by {@link codeServedDeps}, faked in tests. */
 export interface CodeServedDeps {

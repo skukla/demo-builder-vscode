@@ -120,6 +120,25 @@ beforeEach(() => {
 });
 
 describe('finishEditWithoutRebuild — which Edits it finishes', () => {
+    it('says the steps still left to finish on an unchanged Edit too', async () => {
+        const project = { ...savedProject(), finishSetup: { 'republish-code': { files: ['scripts/a.js'] } } };
+        const { context, progress, ask } = setup(project);
+
+        await finishEditWithoutRebuild(context, config(), progress, ask);
+
+        expect(progress).toHaveBeenLastCalledWith('Project Created', 100, 'No changes to apply', undefined, 1);
+    });
+
+    // PL-101: an Edit whose reset left steps says so on its end screen, as creation does.
+    it('tells the end screen how many Finish Setup steps the Edit left still to do', async () => {
+        const project = { ...savedProject(), finishSetup: { 'republish-code': { files: ['scripts/a.js'] } } };
+        const { context, progress, ask } = setup(project);
+
+        await finishEditWithoutRebuild(context, ADD_ERP, progress, ask);
+
+        expect(progress).toHaveBeenLastCalledWith('Project Created', 100, 'Changes applied', undefined, 1);
+    });
+
     it('saves an unchanged Edit and adds or removes nothing', async () => {
         const { context, stateManager, progress, ask } = setup();
 

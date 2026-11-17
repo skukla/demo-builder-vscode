@@ -664,6 +664,18 @@ describe('executeEdsReset - the project\'s Finish Setup steps', () => {
         expect(project.finishSetup).toStrictEqual({ 'republish-code': { files: ['scripts/commerce.js'] } });
     });
 
+    // The second publish failed too, and the served-code check found nothing to name (it could
+    // not run): the step still exists, checking the two files every storefront page loads.
+    it("saves Republish the Code with the template's own files when the code could not be published at all", async () => {
+        mockPreviewCode.mockRejectedValue(new Error('helix down'));
+
+        const { project } = await runReset();
+
+        expect(project.finishSetup).toStrictEqual({
+            'republish-code': { files: ['scripts/aem.js', 'styles/styles.css'] },
+        });
+    });
+
     it('replaces an earlier record when the site serves everything (no stale step)', async () => {
         const { project } = await runReset({
             project: createMockProject({
