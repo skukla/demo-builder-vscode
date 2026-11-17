@@ -143,13 +143,14 @@ describe('customers', () => {
         expect(ctx.logged.join('\n')).not.toContain(TEST_PASSWORD);
     });
 
-    it('leaves a customer the website already has, whatever the case of the email', async () => {
+    // Walk F190 (owner, 2026-11-16): recorded, marked adopted, so a save follows it and no removal takes it.
+    it('leaves a customer the website already has, whatever the case of the email, recording it as the store\'s', async () => {
         const ctx = await storeFor([{ ...CUSTOMER_44, email: 'admin.savvy@example.com', website_id: 3 }]);
 
         await installCustomers(ctx, parseCustomerRows([BODEA_CUSTOMER_ROWS[0]]));
 
         expect(ctx.sent).toStrictEqual([]);
-        expect(ctx.recorder.created).toStrictEqual([]);
+        expect(ctx.recorder.created).toStrictEqual([{ kind: 'customers', id: '44', key: 'admin.savvy@example.com', adopted: true }]);
     });
 
     it('makes one when only another website has an account with that email', async () => {

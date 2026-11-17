@@ -30,6 +30,7 @@
  */
 
 import { z } from 'zod';
+import { adoptFound } from './adoptedObjects';
 import { CUSTOMER_GROUP_KIND, CUSTOMER_KIND, customerKey } from './b2bKeys';
 import { customerByEmail, groupByCode } from './b2bReads';
 import { type CustomerToMake, customerImportRows, makeCustomersByImport } from './customerImport';
@@ -143,8 +144,11 @@ export async function installCustomers(ctx: KindContext, rows: CustomerRows): Pr
     for (const row of rows) {
         const key = customerKey(row.customer.email);
         if (ownedId(ctx.session, CUSTOMER_KIND, key) !== undefined || ctx.recorder.byKey(CUSTOMER_KIND, key)) continue;
-        if (await customerByEmail(ctx.get, row.customer.email, websiteId)) {
+        const found = await customerByEmail(ctx.get, row.customer.email, websiteId);
+        if (found) {
             ctx.log(`left customer ${key} as it is: the website already has it`);
+            // Walk F190: the store's own, on the record so a save follows it; no removal takes it.
+            await adoptFound(ctx.recorder, CUSTOMER_KIND, found.id, key);
             ctx.count?.settled(CUSTOMER_KIND, key);
             continue;
         }

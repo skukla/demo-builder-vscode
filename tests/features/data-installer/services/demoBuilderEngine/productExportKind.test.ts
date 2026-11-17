@@ -172,7 +172,8 @@ describe('installProductExport', () => {
         expect(ctx.recorder.pending).toStrictEqual([]);
     });
 
-    it('leaves a SKU the store already has alone, and a product the pack made that the SC deleted since', async () => {
+    // Walk F190 (owner, 2026-11-16): recorded, marked adopted, so a save follows it and no removal takes it.
+    it('leaves a SKU the store already has alone, recorded as the store\'s, and a product the pack made that the SC deleted since', async () => {
         const { ctx, imports } = await store(['THEIRS']);
         await ctx.recorder.record({ kind: 'products', id: 'DELETED', key: 'DELETED' });
 
@@ -183,7 +184,8 @@ describe('installProductExport', () => {
 
         expect(imports.flatMap((call) => call.items.map((r) => r.sku))).toEqual(['NEW']);
         expect(ctx.logged).toContain('left THEIRS alone: the store already has it');
-        expect(ctx.recorder.created.filter((o) => o.kind === 'products').map((o) => o.id)).toEqual(['DELETED', 'NEW']);
+        expect(ctx.recorder.created.filter((o) => o.kind === 'products').map((o) => o.id)).toEqual(['DELETED', 'THEIRS', 'NEW']);
+        expect(ctx.recorder.byKey('products', 'THEIRS')?.adopted).toBe(true);
     });
 
     it(`sends ${PRODUCTS_PER_IMPORT} rows to a call, and says how far it has got`, async () => {

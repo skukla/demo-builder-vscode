@@ -28,6 +28,7 @@
  */
 
 import { z } from 'zod';
+import { adoptFound } from './adoptedObjects';
 import { filterBy } from './b2bReads';
 import type { CreatedObject } from './installRecord';
 import { deleteIfPresent, eachCopy, type KindContext, ownedId, parseRows, readOrNull, segment } from './kindContext';
@@ -114,8 +115,11 @@ export async function installCartRules(ctx: KindContext, rows: CartRuleRows): Pr
 
 async function installCartRule(ctx: KindContext, lk: ProductLookups, rule: PackRule, websiteId: number): Promise<void> {
     if (ownedId(ctx.session, CART_RULE_KIND, rule.name) !== undefined || ctx.recorder.byKey(CART_RULE_KIND, rule.name)) return;
-    if (await ruleByName(ctx.get, rule.name)) {
+    const found = await ruleByName(ctx.get, rule.name);
+    if (found) {
         ctx.log(`left cart rule ${rule.name} as it is: the store already has it`);
+        // Walk F190: the store's own, on the record so a save follows it; no removal takes it.
+        await adoptFound(ctx.recorder, CART_RULE_KIND, found.rule_id, rule.name);
         return;
     }
     if (namesSegment(rule.condition) || namesSegment(rule.action_condition)) {

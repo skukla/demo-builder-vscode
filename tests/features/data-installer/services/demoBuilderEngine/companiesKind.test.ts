@@ -129,13 +129,14 @@ describe('installCompanies', () => {
         ]);
     });
 
-    it('leaves a company the store has by that name', async () => {
+    // Walk F190 (owner, 2026-11-16): recorded, marked adopted, so a save follows it and no removal takes it.
+    it('leaves a company the store has by that name, recording it as the store\'s', async () => {
         const ctx = await store({ companies: [{ id: 5, company_name: 'Altura' }] });
 
         await installCompanies(ctx, parseCompanyRows([BODEA_COMPANY_ROW]));
 
         expect(ctx.sent).toStrictEqual([]);
-        expect(ctx.recorder.created).toStrictEqual([]);
+        expect(ctx.recorder.created).toStrictEqual([{ kind: 'b2b_companies', id: '5', key: 'Altura', adopted: true }]);
     });
 
     it("drops the source store's company id from its quote settings", async () => {

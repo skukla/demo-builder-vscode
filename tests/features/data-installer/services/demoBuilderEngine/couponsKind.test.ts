@@ -57,13 +57,14 @@ describe('coupons install', () => {
         expect(ctx.sent).toStrictEqual([]);
     });
 
-    it('leaves a code the store already has, and does not record it', async () => {
+    // Walk F190 (owner, 2026-11-16): recorded, marked adopted, so a save follows it and no removal takes it.
+    it('leaves a code the store already has, recording it as the store\'s', async () => {
         const ctx = await fakeContext({ [couponSearch('coupon10')]: { items: [{ coupon_id: 3, rule_id: 2, code: 'coupon10' }], total_count: 1 } });
 
         await installCoupons(ctx, parseCouponRows([COUPON10]));
 
         expect(ctx.sent).toStrictEqual([]);
-        expect(ctx.recorder.created).toStrictEqual([]);
+        expect(ctx.recorder.created).toStrictEqual([{ kind: 'coupons', id: '3', key: 'coupon10', adopted: true }]);
     });
 
     it("leaves a code alone when the SC deleted the rule this engine made for it", async () => {

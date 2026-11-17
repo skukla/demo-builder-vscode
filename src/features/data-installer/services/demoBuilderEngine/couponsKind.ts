@@ -25,6 +25,7 @@
  */
 
 import { z } from 'zod';
+import { adoptFound } from './adoptedObjects';
 import { filterBy } from './b2bReads';
 import { CART_RULE_KIND, ruleByName } from './cartRulesKind';
 import type { CreatedObject } from './installRecord';
@@ -94,8 +95,11 @@ export async function installCoupons(ctx: KindContext, rows: CouponRows): Promis
 
 async function installCoupon(ctx: KindContext, coupon: PackCoupon): Promise<void> {
     if (ownedId(ctx.session, COUPON_KIND, coupon.code) !== undefined || ctx.recorder.byKey(COUPON_KIND, coupon.code)) return;
-    if (await couponByCode(ctx.get, coupon.code)) {
+    const found = await couponByCode(ctx.get, coupon.code);
+    if (found) {
         ctx.log(`left coupon ${coupon.code} as it is: the store already has it`);
+        // Walk F190: the store's own, on the record so a save follows it; no removal takes it.
+        await adoptFound(ctx.recorder, COUPON_KIND, found.coupon_id, coupon.code);
         return;
     }
     // Step 14 item 3: a code Commerce refuses, or whose rule was skipped, is skipped; the rest go on.

@@ -41,3 +41,8 @@ export const adoptedRow = (kind: string, id: string, key: string): CreatedObject
     key,
     adopted: true,
 });
+
+/** Record a row an install found the store already has, when the store named its id (walk F187, F190). */
+export async function adoptFound(recorder: Pick<InstallRecorder, 'record'>, kind: string, id: number | string | undefined, key: string): Promise<void> {
+    if (id !== undefined) await recorder.record(adoptedRow(kind, String(id), key));
+}

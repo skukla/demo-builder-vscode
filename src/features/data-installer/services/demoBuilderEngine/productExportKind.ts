@@ -24,6 +24,7 @@
 
 import { z } from 'zod';
 import { LINKING_OPTIONS } from '../../types';
+import { adoptedRow } from './adoptedObjects';
 import { skusInStore } from './bulkProducts';
 import { installCategories, parseCategoryPack } from './categoriesKind';
 import { importBody, importOneRow, importRefusal } from './importApi';
@@ -230,6 +231,9 @@ export async function installProductExport(
         (r) => there.has(r.sku.toLowerCase()) && !ours(r) && !r.store_view_code,
     ))
         ctx.log(`left ${row.sku} alone: the store already has it`);
+    // Walk F190: the store's own, on the record (one write) so a save follows them; no removal takes them.
+    const had = rows.filter((r) => there.has(r.sku.toLowerCase()) && !r.store_view_code && !ctx.recorder.byKey(kindOf(r), r.sku));
+    if (had.length > 0) await ctx.recorder.confirm([], had.map((r) => adoptedRow(kindOf(r), r.sku, r.sku)));
     const todo = rows.filter((r) => !there.has(r.sku.toLowerCase()) && !ours(r));
     const total = new Set(todo.map((r) => r.sku)).size;
     let done = 0;

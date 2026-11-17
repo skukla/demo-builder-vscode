@@ -13,6 +13,7 @@
  */
 
 import { z } from 'zod';
+import { adoptFound } from './adoptedObjects';
 import { CUSTOMER_KIND, customerKey } from './b2bKeys';
 import { customerByEmail } from './b2bReads';
 import { type CustomerToMake, makeCustomersByImport } from './customerImport';
@@ -96,8 +97,11 @@ export async function installCustomersExport(
     // No record keyed by this kind's rows, so it counts its own: one per customer not made yet (`rowCount.ts`).
     const counting = { ...ctx, count: startRowCount(ctx.progress, CUSTOMER_KIND, notMade.map(([key]) => key)) };
     for (const [key, own] of notMade) {
-        if (await customerByEmail(ctx.get, own[0].email, websiteId)) {
+        const found = await customerByEmail(ctx.get, own[0].email, websiteId);
+        if (found) {
             ctx.log(`left customer ${key} as it is: the website already has it`);
+            // Walk F190: the store's own, on the record so a save follows it; no removal takes it.
+            await adoptFound(ctx.recorder, CUSTOMER_KIND, found.id, key);
             counting.count.settled(CUSTOMER_KIND, key);
             continue;
         }

@@ -245,6 +245,69 @@ describe('a pack installed, installed again, and removed', () => {
     });
 });
 
+/**
+ * Walk F187/F190 (owner, 2026-11-16): a store that already holds everything the pack has, filled by
+ * hand or by an install whose record is gone. Installing finds it all and records what a save follows
+ * as the store's own (`adoptedObjects.ts`); installing again sends nothing; removing takes none of it.
+ */
+async function cycleOverAFilledStore(rows: PackItems) {
+    const store = memoryStore();
+    const settings = configStore({ default: { [GRID]: '12' } });
+    const access = commerce(store, settings);
+    const filling = memoryFiles();
+    await installPack(await opened(access, filling, []), rows);
+    const filled = holdings(store, settings);
+    const files = memoryFiles();
+    store.sent.length = 0;
+    const first = await installPack(await opened(access, files, []), rows);
+    const sentFirst = store.sent.map((c) => `${c.method} ${c.path}`);
+    const made = (await readInstallRecord(files, PROJECT, PACK))?.created ?? [];
+    store.sent.length = 0;
+    await installPack(await opened(access, files, []), rows);
+    const sentAgain = store.sent.map((c) => `${c.method} ${c.path}`);
+    store.sent.length = 0;
+    await removePack(access, files, { projectPath: PROJECT, pack: PACK });
+    const sentRemoving = store.sent.filter((c) => c.method === 'DELETE').map((c) => c.path);
+    return { store, settings, filled, first, sentFirst, made, sentAgain, sentRemoving, files };
+}
+
+describe('a pack installed into a store that already holds all of it', () => {
+    /** The kinds a save follows by the record: what Create can pick, and the import forms of two of them. */
+    const FOLLOWED = ['cart_rules', 'categories', 'coupons', 'customers', 'giftcards', 'products'];
+
+    it('records what the store had of each followed kind as the store\'s own, and makes none of it', async () => {
+        const { first, sentFirst, made } = await cycleOverAFilledStore(PACK_ROWS);
+
+        expect(first.skipped).toStrictEqual([]);
+        expect(sentFirst.filter((c) => c.startsWith('POST'))).toStrictEqual([]);
+        const adopted = new Set(made.filter((o) => o.adopted).map((o) => o.kind));
+        expect([...adopted].sort()).toEqual(FOLLOWED);
+    });
+
+    it('sends nothing when installed again', async () => {
+        const { sentAgain } = await cycleOverAFilledStore(PACK_ROWS);
+
+        expect(sentAgain).toStrictEqual([]);
+    });
+
+    it('deletes none of what the store had on removal, and forgets the record', async () => {
+        const { store, settings, filled, sentRemoving, files } = await cycleOverAFilledStore(PACK_ROWS);
+
+        expect(sentRemoving).toStrictEqual([]);
+        expect(holdings(store, settings)).toEqual(filled);
+        await expect(readInstallRecord(files, PROJECT, PACK)).resolves.toBeUndefined();
+    });
+
+    it.each(Object.keys(IMPORT_FORM_PACKS))('does the same for a %s pack', async (kind) => {
+        const { made, sentAgain, sentRemoving, store, settings, filled } = await cycleOverAFilledStore(IMPORT_FORM_PACKS[kind]);
+
+        expect(made.map((o) => o.adopted)).toEqual([true]);
+        expect(sentAgain).toStrictEqual([]);
+        expect(sentRemoving).toStrictEqual([]);
+        expect(holdings(store, settings)).toEqual(filled);
+    });
+});
+
 describe('every data type proves "install again, nothing sent" somewhere', () => {
     const inCycle = new Set([...Object.keys(PACK_ROWS), ...Object.keys(IMPORT_FORM_PACKS)]);
 

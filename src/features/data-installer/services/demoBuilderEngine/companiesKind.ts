@@ -39,6 +39,7 @@
  */
 
 import { z } from 'zod';
+import { adoptFound } from './adoptedObjects';
 import { COMPANY_KIND, customerKey } from './b2bKeys';
 import { PUBLIC_CATALOG_TYPE, companyByName, customerByEmail, readCatalogs, sameText } from './b2bReads';
 import { customerImportRows, makeCustomersByImport } from './customerImport';
@@ -181,8 +182,11 @@ interface CompanyScope {
 async function installCompany(ctx: KindContext, row: CompanyRows[number], { websiteId, publicGroup, regions }: CompanyScope): Promise<void> {
     const { company_name: name, company_email: email, company_admin: admin } = row.variables.input;
     if (ownedId(ctx.session, COMPANY_KIND, name) !== undefined || ctx.recorder.byKey(COMPANY_KIND, name)) return;
-    if (await companyByName(ctx.get, name, email)) {
+    const found = await companyByName(ctx.get, name, email);
+    if (found) {
         ctx.log(`left company ${name} as it is: the store already has it`);
+        // Walk F190: the store's own, on the record so a save follows it; no removal takes it.
+        await adoptFound(ctx.recorder, COMPANY_KIND, found.id, name);
         return;
     }
     // Step 14 item 3: a row Commerce refuses, or that needs a row skipped, is skipped; the rest go on.

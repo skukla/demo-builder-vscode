@@ -87,14 +87,15 @@ describe('cart_rules install', () => {
         expect(ctx.logged.join('\n')).toContain('names a customer segment');
     });
 
-    it('leaves a rule the store already has by that exact name, and does not record it', async () => {
+    // Walk F190 (owner, 2026-11-16): recorded, marked adopted, so a save follows it and no removal takes it.
+    it('leaves a rule the store already has by that exact name, recording it as the store\'s', async () => {
         const found = { items: [{ rule_id: 9, name: FRIENDS_AND_FAMILY.rule.name }], total_count: 1 };
         const ctx = await storeWith({ [ruleSearch(FRIENDS_AND_FAMILY.rule.name)]: found });
 
         await installCartRules(ctx, parseCartRuleRows([FRIENDS_AND_FAMILY]));
 
         expect(ctx.sent).toStrictEqual([]);
-        expect(ctx.recorder.created).toStrictEqual([]);
+        expect(ctx.recorder.created).toStrictEqual([{ kind: 'cart_rules', id: '9', key: 'Anaïs Clément - Friends and Family Promo', adopted: true }]);
     });
 
     it('does not take a rule whose name only resembles the one asked for that one', async () => {
