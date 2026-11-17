@@ -100,3 +100,18 @@ the guide the integrations already use, with its words:
   one-step-left (`usePackSetupStep`) folds into it rather than staying a third.
 
 Mock-up: the walk thread, 2026-11-17 ("Revised: trimmed Republish result and Demo Setup reuse").
+
+## Revision 2, 2026-11-17 (owner): the flow, not the words
+
+Reuse the Demo Setup guide's FLOW (steps on the left, the shown step's Where, Set, Then, Why,
+Check, Open Commerce Admin, steps clearing as their check passes), not its "Demo Setup" labels,
+which belong to an integration's setup. Owner-approved words:
+
+| Place | Words |
+|---|---|
+| End screen | title **Project Created**, the line "2 steps remaining", button **Finish Setup** |
+| The guide | title **Finish Setup: <project>**, the Demo Setup guide's layout and buttons |
+| Step names | Title Case actions: **Set the Root Category**, **Republish the Code** |
+| Project dashboard | "2 steps remaining" with **Finish Setup**, and the amber dot on the tile that fixes a step |
+
+This replaces the first revision's "Demo Setup: 0 of 2 done" and "Open Demo Setup".
