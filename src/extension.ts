@@ -851,20 +851,19 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
 }
 
 /**
- * Every project on disk, fully loaded.
+ * Every project on disk, fully loaded, none of them saved or made the open project.
  *
- * Shared by the upkeep sweeps below, which each need the whole set. Extracted at
- * two rather than three because the duplicate carries a SIDE EFFECT that is easy
- * to miss: `loadProjectFromPath` defaults to `persistAfterLoad: true`, so each
- * copy re-saves every project and moves `currentProject`. Two copies did that
- * twice per activation. A sweep that saves only what it changed passes
- * `persistAfterLoad: false` (the Node sweep).
+ * Shared by the upkeep sweeps below, which each need the whole set and each save only
+ * what they change (`saveProjectConfigOnly`). `loadProjectFromPath` defaults to
+ * `persistAfterLoad: true`, which saves each project as the open one: every sweep
+ * moved the open project to the last project loaded, at activation and again on a
+ * DA.live sign-in, mid-wizard (walk F206, 2026-11-17). So no load here persists.
  */
-async function loadAllProjects(options: { persistAfterLoad?: boolean } = {}): Promise<Project[]> {
+async function loadAllProjects(): Promise<Project[]> {
     const summaries = await stateManager.getAllProjects();
     const projects: Project[] = [];
     for (const summary of summaries) {
-        const project = await stateManager.loadProjectFromPath(summary.path, undefined, options);
+        const project = await stateManager.loadProjectFromPath(summary.path, undefined, { persistAfterLoad: false });
         if (project) projects.push(project);
     }
     return projects;
@@ -967,7 +966,7 @@ async function sweepDemoBuilderNode(context: vscode.ExtensionContext): Promise<v
         const installer = new ComponentManager(logger, externalCommandManager);
         const registry = getComponentRegistryManager(context.extensionPath);
         const result = await sweepOntoDemoBuilderNode({
-            projects: await loadAllProjects({ persistAfterLoad: false }),
+            projects: await loadAllProjects(),
             node,
             nodeReady: async () => (await listNodeFolderMajors(externalCommandManager)).includes(node)
                 && adobeCliInstalledUnder(externalCommandManager, node),

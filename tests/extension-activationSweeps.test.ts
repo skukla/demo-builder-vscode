@@ -182,6 +182,18 @@ describe('the activation upkeep sweeps', () => {
         });
     });
 
+    // Walk F206 (2026-11-17): a DA.live sign-in ran the publish-key sweep, which loaded every
+    // project the way opening one does, saving each as the open project; the last loaded stayed
+    // open. Every sweep's load leaves the open project alone.
+    it('loads every project for every sweep without making it the open project', async () => {
+        await activate(createActivationContext());
+        await settleSweeps();
+
+        const loads = mockLoadProjectFromPath.mock.calls;
+        expect(loads.length).toBeGreaterThan(0);
+        expect(loads.filter((call) => (call[2] as { persistAfterLoad?: boolean } | undefined)?.persistAfterLoad !== false)).toStrictEqual([]);
+    });
+
     it('skips a project the loader cannot read rather than pushing a hole', async () => {
         mockLoadProjectFromPath.mockImplementation(async (p: string) =>
             p === '/projects/demo-b' ? null : { name: p, path: p },
