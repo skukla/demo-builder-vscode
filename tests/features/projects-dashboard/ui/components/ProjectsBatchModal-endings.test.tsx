@@ -1,8 +1,7 @@
 /**
  * How the batch window's run ends (rule 17; step-07 follow-up): a run where every project went
- * through ends on the small result, its title alone, which closes itself after a glance, as the
- * install window's clean result does (`useCloseWhenClean`). A run with anything to read under its
- * rows stays open until closed.
+ * through ends on the small result, its title alone. Every ending waits for Close (owner,
+ * 2026-11-17, walk F195), and closing refreshes the list.
  */
 
 import { act, screen, within } from '@testing-library/react';
@@ -44,14 +43,16 @@ beforeEach(() => {
 });
 
 describe('ProjectsBatchModal: how the run ends', () => {
-    it('closes the small clean result by itself after a glance, and refreshes the list', async () => {
-        const { onClosed } = await running();
+    it('keeps the small clean result until Close, which refreshes the list (walk F195)', async () => {
+        const { onClosed, user } = await running();
         for (const path of ['/p/a', '/p/b']) await push('projectsBatchRow', { path, state: 'done' });
         await push('operationProgress', { id: ID, state: 'succeeded' });
         expect(screen.getByRole('dialog', { name: 'Projects Deleted' })).toHaveAttribute('data-size', 'S');
 
         await glance();
 
+        expect(onClosed).not.toHaveBeenCalled();
+        await user.click(screen.getByRole('button', { name: 'Close' }));
         expect(onClosed).toHaveBeenCalledTimes(1);
     });
 

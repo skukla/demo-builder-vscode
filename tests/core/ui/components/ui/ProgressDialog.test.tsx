@@ -1,7 +1,7 @@
 /**
  * ProgressDialog: the one way a run is drawn (dialog design rules). It waits or shows its steps as
  * rows, keeps its size from start to finish, offers Close and nothing else while it runs, puts its
- * one action beside Close once it ends, and closes itself when it ended clean with nothing to read.
+ * one action beside Close once it ends, and waits for Close however it ended (walk F195).
  * The real Modal over the shared Spectrum mock.
  */
 
@@ -119,12 +119,15 @@ describe('ProgressDialog', () => {
         expect(items[0]).not.toHaveTextContent('Stop the demo first?');
     });
 
-    it('closes itself a glance after it ended clean with nothing to read', () => {
+    // Walk F195 (owner, 2026-11-17): a clean end with nothing to read waits for Close too.
+    it('waits for Close after it ended clean with nothing to read', () => {
         const { onClose } = renderProgress({ rows: ROWS, title: 'My Luma Installed', status: 'success' });
 
         act(() => {
-            jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE);
+            jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 3);
         });
+        expect(onClose).not.toHaveBeenCalled();
+        fireEvent.click(screen.getByRole('button', { name: 'Close' }));
         expect(onClose).toHaveBeenCalledTimes(1);
     });
 
@@ -174,18 +177,18 @@ describe('ProgressDialog', () => {
         });
 
         it('keeps a medium window for its result', () => {
-            renderProgress({ stream, title: 'Pages Published', status: 'success', holds: true });
+            renderProgress({ stream, title: 'Pages Published', status: 'success' });
 
             expect(screen.getByRole('dialog')).toHaveAttribute('data-size', 'M');
         });
 
-        it('closes itself a glance after it ended clean with nothing to read', () => {
+        it('waits for Close after it ended clean with nothing to read', () => {
             const { onClose } = renderProgress({ stream, title: 'Pages Published', status: 'success' });
 
             act(() => {
-                jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE);
+                jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 3);
             });
-            expect(onClose).toHaveBeenCalledTimes(1);
+            expect(onClose).not.toHaveBeenCalled();
         });
 
         // Step-07 Win1: the projects batch run and the Updates run, whose rows can each be asked a
@@ -211,18 +214,6 @@ describe('ProgressDialog', () => {
             });
 
             expect(buttonNames()).toEqual(['Skip', 'Stop It']);
-        });
-
-        it.each<[string, Partial<ProgressDialogProps>]>([
-            ['with a result to read', { holds: true }],
-            ['with a next step offered', { actions: [{ label: 'Open', variant: 'accent', onPress: jest.fn() }] }],
-        ])('CONTROL: a clean end stays open %s', (_name, props) => {
-            const { onClose } = renderProgress({ stream, title: 'Pages Published', status: 'success', ...props });
-
-            act(() => {
-                jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 3);
-            });
-            expect(onClose).not.toHaveBeenCalled();
         });
     });
 });

@@ -17,8 +17,7 @@ import type { useJobStatus } from './useJobStatus';
 import { ErrorCode } from '@/types/errorCodes';
 
 /**
- * What Restore's check answered, when it answered without a job (S8): up to date, the small result
- * that closes itself; refused, its own words. The question is no result (J9-5 to J9-7); `undefined`
+ * What Restore's check answered, when it answered without a job (S8): up to date, the small result; refused, its own words. The question is no result (J9-5 to J9-7); `undefined`
  * when it accepted a job, whose end is read as any start's.
  */
 function restoreAnswer(

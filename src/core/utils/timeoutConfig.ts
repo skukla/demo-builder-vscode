@@ -89,14 +89,10 @@ export const TIMEOUTS = {
         FOCUS_FALLBACK: 1000,
 
         /**
-         * How long a finished operation's modal shows its result before closing
-         * itself (owner, 2026-09-20: "show success, then auto-close").
-         *
-         * Long enough to register a tick and a line of text, and no longer: at 3s
-         * it "sits too long" (owner, 2026-09-20, watching a real republish). The
-         * SC has been looking at this window for the whole run, so the result is
-         * a confirmation rather than something to read from cold. A failure never
-         * auto-closes — only a success, where there is nothing to act on.
+         * How long the GitHub app dialog shows "installed" before moving on to the
+         * next step (owner, 2026-09-20: at 3s it "sits too long"). Result windows
+         * no longer close themselves: every one waits for Close (owner, 2026-11-17,
+         * walk F195).
          */
         RESULT_GLANCE: 1500,
 

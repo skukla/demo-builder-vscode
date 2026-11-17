@@ -124,7 +124,7 @@ which lists every object the install made. It never removes by name.
   a red **Uninstall** and Cancel; no store in the title. With unsaved changes **"Save Your Changes
   First?"** follows, its verb Uninstall, the same question a switch asks. The run is steps: **Save Your
   Changes** when saving first, then **Uninstall My Luma** (`uninstallSteps`), titled "Uninstalling My
-  Luma"; a clean end is "My Luma Uninstalled", which closes itself; a stop is "Couldn't Uninstall My
+  Luma"; a clean end is "My Luma Uninstalled", which waits for Close; a stop is "Couldn't Uninstall My
   Luma" on its steps with Retry, which takes out what the record still lists. A root a store kept
   ends on its Admin step instead. A removal's check asks nothing of the pack, so a pack deleted from
   its store can still be removed (`validateRemoval`); it refuses only a store other than the one on
@@ -168,7 +168,7 @@ which lists every object the install made. It never removes by name.
   take that width (F127). **A clean finish hands off to the small result** (owner, 2026-11-10, walk
   F134): "My Luma Installed", then "New products can take 20 minutes to show in search." when
   products went in, after any line the engine has for the SC (what it kept of theirs, a step left
-  in the Admin). With nothing under its title it closes itself. A save that ran first is not
+  in the Admin). With nothing under its title it still waits for Close. A save that ran first is not
   repeated there: its own step said where the changes went (Phase 2).
   A finish with a problem (a data type refused rows, the check found products that differ, the
   store configuration failed) stays on its steps under the same title in amber, with Fix with AI,

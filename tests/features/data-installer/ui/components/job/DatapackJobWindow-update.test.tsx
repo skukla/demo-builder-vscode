@@ -2,12 +2,12 @@
  * Update in the job window (step-07 U1, J9-2 to J9-4, as the walked prototype draws it). The flyout's
  * "Update Luma" opens the window on its check, titled "Update Luma" with the check's wait, which sends
  * `update-datapack` without `confirm`. Then:
- * - nothing left: the small result "Luma Is Up to Date", which closes itself;
+ * - nothing left: the small result "Luma Is Up to Date", which waits for Close;
  * - what changed: the house type table with a tick on each type and Select All, Review Records (its
  *   Changed and Kept tabs, a type with kept records wearing the notice dot), Cancel and a blue Update,
  *   greyed while nothing is ticked; Update sends it confirmed with the types ticked;
  * - the run "Updating Luma": one Update Luma step with a row per type chosen, working line "Updating
- *   24 of 48", then Verify; ending "Luma Updated", which closes itself.
+ *   24 of 48", then Verify; ending "Luma Updated", which waits for Close.
  */
 
 import { act, screen, within } from '@testing-library/react';
@@ -109,16 +109,19 @@ it('nothing to write in a newer version: confirms the move once, with the versio
     expect(updateSends()).toEqual([{ datapackName: 'luma', records: true }, { datapackName: 'luma', confirm: true, version: 'v2' }]);
 });
 
-it('nothing left to apply: "Luma Is Up to Date", which closes itself', async () => {
+it('nothing left to apply: "Luma Is Up to Date", which waits for Close', async () => {
     // CONTROL: up to date with nothing to move confirms nothing.
     answer({ update: { success: true, data: { upToDate: true, displayName: 'Luma' } } });
     const { onClose } = await openUpdate();
 
     expect(await heading('Luma Is Up to Date')).toBeInTheDocument();
     expect(updateSends()).toHaveLength(1);
+    // Walk F195 (owner, 2026-11-17): every result waits for Close.
     await act(async () => {
-        jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE);
+        jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 3);
     });
+    expect(onClose).not.toHaveBeenCalled();
+    await press(button('Close'));
     expect(onClose).toHaveBeenCalledTimes(1);
 });
 
@@ -195,7 +198,7 @@ describe('what changed', () => {
         ).toBeInTheDocument();
     });
 
-    it('ends clean on "Luma Updated", which closes itself', async () => {
+    it('ends clean on "Luma Updated", which waits for Close', async () => {
         answer({
             update: CHANGED,
             statusAfter: {
@@ -210,9 +213,12 @@ describe('what changed', () => {
         await press(button('Install'));
 
         expect(await heading('Luma Installed')).toBeInTheDocument();
+        // Walk F195 (owner, 2026-11-17): every result waits for Close.
         await act(async () => {
-            jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE);
+            jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 3);
         });
+        expect(onClose).not.toHaveBeenCalled();
+        await press(button('Close'));
         expect(onClose).toHaveBeenCalledTimes(1);
     });
 

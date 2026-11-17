@@ -77,7 +77,7 @@ export function resultStatus(result: ResultContent): ModalStatus | undefined {
 }
 
 /**
- * "Bodea Is Up to Date": a check that found nothing to do, the small result that closes itself. One
+ * "Bodea Is Up to Date": a check that found nothing to do, the small result. One
  * result for Restore, Update and an install of what the store already matches (owner walk Q8).
  */
 export function upToDateResult(name: string): ResultContent {
@@ -208,8 +208,8 @@ function ranOnRows(record: ImportJobRecord): boolean {
 /**
  * What is left to know after a clean import: the engine's lines for the SC (what it kept of theirs, a
  * step left in the Admin), a line each (review, 2026-11-10), which keep the window open to be read.
- * How long search takes is not one of them: a clean install is its title alone and closes itself
- * (owner walk Q3, 2026-11-13); the line stays for an ending on its steps (`runResult`) and for agents
+ * How long search takes is not one of them: a clean install is its title alone, waiting for Close
+ * (owner walk Q3, 2026-11-13; walk F195); the line stays for an ending on its steps (`runResult`) and for agents
  * (the record's note). A save made first is not repeated: its own step said where the changes went
  * (Phase 2, owner 2026-11-12; rule 3, say a fact once).
  */

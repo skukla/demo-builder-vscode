@@ -1017,14 +1017,16 @@ check says so and names the file.
 > `max-width`, `font-size` or `font-weight` on `.lead-text`, `.dialog-line` or `.modal-button`, and
 > checks the shared rules are there in `core/ui/styles/modal.css`.
 
-> **Convention.** A clean result that is its title alone closes itself after a glance
-> (`TIMEOUTS.UI.RESULT_GLANCE`), in every window; a result with anything to read (a line, a note, a
-> list, a next step, an action, a problem) stays until the SC closes it. One hook decides it,
-> `useCloseWhenClean`, and every layout that ends calls it.
-> *Why:* the owner, 2026-11-10: which component drew the run used to decide it, so a four-minute
-> mesh deploy vanished while "Projects Reset" stayed on its title.
-> Enforced by `tests/core/ui/hooks/useCloseWhenClean.test.ts`, the hook's contract; the Result
-> and Progress layouts' tests show a line or an action keeping the window open.
+> **Convention.** Every result waits for the SC to close it, a clean one that is its title alone
+> included; no window closes itself on a timer.
+> *Why:* the owner, 2026-11-17 (walk F195), over his 2026-11-10 rule that a clean title alone closed
+> itself after a glance: which results stayed depended on whether they had a sentence, which the SC
+> cannot see, so it read as inconsistent; a long run is when an SC looks away, and a window gone
+> before they look back hides whether it worked; and modal dialogs in real software wait to be
+> dismissed.
+> Enforced by `tests/core/ui/components/ui/ResultDialog.test.tsx` and
+> `tests/core/ui/components/ui/ProgressDialog.test.tsx`: a clean title alone is still open three
+> glances later.
 
 > **Convention.** A CSS class used in a bundle is styled by that bundle.
 > *Why:* a stylesheet only reaches bundles whose entry imports it, so a class can be styled

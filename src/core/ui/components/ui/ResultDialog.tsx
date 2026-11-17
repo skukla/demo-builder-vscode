@@ -8,8 +8,8 @@
  * (Delete beside the datapack a file load created): the row owns its button's
  * wait and note, so Close stays the only window button.
  *
- * A clean result that is its title alone closes itself after a glance (`useCloseWhenClean`);
- * anything to read stays. The caller passes words and actions, never a size or a class: the
+ * Every result waits for Close, a clean title alone included (owner, 2026-11-17, walk F195).
+ * The caller passes words and actions, never a size or a class: the
  * layout owns those (`tests/sop/modal-layouts.test.ts`).
  *
  * @module core/ui/components/ui/ResultDialog
@@ -20,7 +20,6 @@ import React from 'react';
 import type { StepStatus } from '@/core/ui/components/feedback/StepStatusIcon';
 import { WorkRow } from '@/core/ui/components/feedback/WorkRow';
 import { Modal, type ActionButton, type ModalStatus } from '@/core/ui/components/ui/Modal';
-import { useCloseWhenClean } from '@/core/ui/hooks/useCloseWhenClean';
 
 /** The one extra thing a result can offer beside Close. */
 export interface ResultAction {
@@ -85,9 +84,6 @@ export function ResultDialog({
     onClose,
 }: ResultDialogProps): React.ReactElement {
     const lines = React.Children.toArray(children);
-    const titleAlone = lines.length === 0 && rows.length === 0 && !action;
-    useCloseWhenClean(isOpen && titleAlone && status === 'success', onClose);
-
     return (
         <DialogContainer onDismiss={onClose}>
             {isOpen && (

@@ -536,17 +536,16 @@ describe('UpdatesModal', () => {
             expect(screen.getByRole('button', { name: 'Back to Updates' })).toBeInTheDocument();
         });
 
-        // Rule 17 (step-07 follow-up): the small result closes itself when it is its title alone, as
-        // the install window's clean result does; one that says what is left stays.
-        it('closes the small result by itself after a glance when nothing is left', () => {
+        // Walk F195 (owner, 2026-11-17): the small result waits for Close, its title alone included.
+        it('keeps the small result until Close when nothing is left (walk F195)', () => {
             const c = allApplied(0);
             render(<UpdatesModal controls={c} />);
 
             act(() => {
-                jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE);
+                jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 3);
             });
 
-            expect(c.close).toHaveBeenCalledTimes(1);
+            expect(c.close).not.toHaveBeenCalled();
         });
 
         it('CONTROL: keeps the small result open while it says how many updates wait', () => {

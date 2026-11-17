@@ -1,6 +1,6 @@
 /**
- * A datapack job's small result (step 03, S4): the clean end, "Bodea Installed", which closes itself
- * when its title says it all (rule 17, `useCloseWhenClean`); a start that never ran ("Couldn't
+ * A datapack job's small result (step 03, S4): the clean end, "Bodea Installed", which waits for
+ * Close like every result (owner, 2026-11-17, walk F195); a start that never ran ("Couldn't
  * Install Bodea" with the refusal, Back to the summary); and no Commerce instance. Lines left to
  * read keep it open, as today's ending rules do (the plan parks Q3 and Q8).
  *
@@ -8,12 +8,11 @@
  */
 
 import React from 'react';
+import { useOpenAdmin } from '../../hooks/useOpenAdmin';
 import { DatapackResultBody } from '../DatapackResultBody';
 import { type ResultContent, resultStatus } from '../importResult';
-import { useOpenAdmin } from '../../hooks/useOpenAdmin';
 import type { ActionButton } from '@/core/ui/components/ui/Modal';
 import { ResultWindow } from '@/core/ui/components/ui/ResultDialog';
-import { useCloseWhenClean } from '@/core/ui/hooks/useCloseWhenClean';
 
 export interface JobResultWindowProps {
     result: ResultContent;
@@ -28,16 +27,6 @@ export interface JobResultWindowProps {
     onCheck?: () => void;
 }
 
-/** A success with nothing to read or do: its title says it all. */
-function titleAlone(result: ResultContent): boolean {
-    return (
-        result.variant === 'success' &&
-        !result.message &&
-        !result.details?.length &&
-        !result.keptRoot
-    );
-}
-
 export function JobResultWindow({
     result,
     actionButtons,
@@ -45,7 +34,6 @@ export function JobResultWindow({
     problem,
     onCheck,
 }: JobResultWindowProps): React.ReactElement {
-    useCloseWhenClean(titleAlone(result) && !actionButtons?.length, onClose);
     // The Admin step a removal left has its way to the Admin, as the install's step does (walk F153).
     const { opening, openAdmin } = useOpenAdmin();
     const admin: ActionButton[] = result.keptRoot

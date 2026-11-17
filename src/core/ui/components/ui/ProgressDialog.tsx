@@ -5,7 +5,7 @@
  * once it ends the title says how, with the status icon, and the lines under it are what the
  * SC still has to read.
  *
- * A clean end that is its title alone closes itself after a glance (`useCloseWhenClean`). The
+ * Every end waits for Close, a clean one included (owner, 2026-11-17, walk F195). The
  * caller passes words, rows and actions, never a size or a class
  * (`tests/sop/modal-layouts.test.ts`).
  *
@@ -24,7 +24,6 @@ import { WorkRow, type WorkRowProps } from '@/core/ui/components/feedback/WorkRo
 import { Modal, type ActionButton, type ModalStatus, type ModalWait } from '@/core/ui/components/ui/Modal';
 import { resultActionButtons, type ResultAction } from '@/core/ui/components/ui/ResultDialog';
 import { useFixedHeight } from '@/core/ui/components/ui/useFixedHeight';
-import { useCloseWhenClean } from '@/core/ui/hooks/useCloseWhenClean';
 
 /** One step of the run as a row; a question about that step is asked under it. */
 type ProgressRow = WorkRowProps & {
@@ -72,8 +71,6 @@ export interface ProgressDialogProps {
     asksUnderRows?: boolean;
     /** A list of names that cannot be broken (Delete's projects): wider than large. */
     wide?: boolean;
-    /** A clean end that still has something to read (a warning, a note, what it changed). */
-    holds?: boolean;
     onClose: () => void;
 }
 
@@ -139,14 +136,11 @@ export function ProgressWindow({
     hideClose = false,
     asksUnderRows = false,
     wide = false,
-    holds = false,
     onClose,
 }: Omit<ProgressDialogProps, 'isOpen'>): React.ReactElement {
     const lines = React.Children.toArray(children);
     const streamed = stream !== undefined;
     const ended = Boolean(status) && !waiting;
-    const titleAlone = lines.length === 0 && !action && actions.length === 0 && !holds;
-    useCloseWhenClean(ended && titleAlone && status === 'success', onClose);
     const listed = Boolean(rows) || streamed;
     let footer: ActionButton[] | undefined;
     if (streamed) footer = actions;

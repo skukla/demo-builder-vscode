@@ -352,7 +352,8 @@ describe('a question that needs something typed', () => {
 describe('the end of a run', () => {
     // It used to vanish the instant the run succeeded, so an operation the SC had
     // watched ended by saying nothing (owner, 2026-09-20).
-    it('shows the success, then closes itself once it has been read', async () => {
+    // Walk F195 (owner, 2026-11-17): every result waits for Close.
+    it('shows the success and waits for Close', async () => {
         progress = { id: OPERATION.id, state: 'succeeded' };
         const { onClose } = renderModal();
 
@@ -360,10 +361,10 @@ describe('the end of a run', () => {
         expect(onClose).not.toHaveBeenCalled();
 
         await act(async () => {
-            jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE);
+            jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 3);
         });
 
-        expect(onClose).toHaveBeenCalled();
+        expect(onClose).not.toHaveBeenCalled();
     });
 
     // An ending is the dialog's title, with its status icon, and the body holds only what is

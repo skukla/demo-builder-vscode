@@ -67,12 +67,6 @@ function SmallEnd({ title, status, sentences, onClose }: { title: string; status
     );
 }
 
-/** Whether the result holds the window open: something to read. */
-function holdsResult(progress: OperationProgressPayload | null | undefined): boolean {
-    const says = Boolean(progress?.warning || progress?.note || progress?.details?.length || progress?.changes?.length);
-    return says || keepsRows(progress);
-}
-
 /** The operation a progress modal shows: which one, and what it is called. */
 export interface ProgressModalOperation {
     /** What the operation's progress is keyed by. */
@@ -255,8 +249,6 @@ export function OperationProgressModal({
     const warning = succeeded ? progress?.warning : undefined;
     const note = succeeded ? progress?.note : undefined;
     // So does a list of what the run changed (2026-10-22): it is the result, to be read.
-    const held = holdsResult(progress);
-
     const close = useCallback((): void => {
         if (prompt) {
             answer(prompt.dismiss);
@@ -302,7 +294,6 @@ export function OperationProgressModal({
             title={frame.title}
             status={frame.status}
             closeLabel={closeLabelFor(failed || succeeded, prompt)}
-            holds={held}
             onClose={close}
             actions={
                 prompt

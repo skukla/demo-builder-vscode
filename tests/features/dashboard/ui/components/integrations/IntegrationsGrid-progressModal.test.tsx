@@ -1,7 +1,7 @@
 /**
  * PL-59 — the progress modal an integration operation opens on the integrations
  * screen: titled with the action and the integration, then the stage, its step and
- * how long it usually takes; closes by itself on success; stays with the reason,
+ * how long it usually takes; waits for Close on success (walk F195); stays with the reason,
  * Retry and Debug Logs on failure; "Run in background" hides it and the running tile
  * brings it back.
  */
@@ -132,8 +132,8 @@ describe('the progress modal', () => {
 
     // It used to vanish the instant the run succeeded, so a deploy the SC had
     // watched for two minutes ended with nothing said (owner, 2026-09-20). It shows
-    // the result, then closes itself.
-    it('shows the success, then closes by itself', async () => {
+    // the result, which waits for Close (walk F195).
+    it('shows the success and waits for Close', async () => {
         const user = setupUser();
         renderGrid({ appBuilderComponents: NOT_DEPLOYED });
         await startDeploy(user);
@@ -143,13 +143,11 @@ describe('the progress modal', () => {
         // The outcome is the dialog's title, green (dialog design rules, 2026-10-31).
         expect(screen.getByRole('dialog', { name: 'custom-app Deployed' })).toHaveAttribute('data-status', 'success');
 
-        // Long enough to read, then gone without a click.
+        // Walk F195 (owner, 2026-11-17): it stays until Close.
         await act(async () => {
-            jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE);
+            jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 3);
         });
-        expect(
-            screen.queryByRole('dialog', { name: 'custom-app Deployed' }),
-        ).not.toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: 'custom-app Deployed' })).toBeInTheDocument();
     });
 
     // AB-26z: the warning of a run that succeeded is said where the SC is looking, and

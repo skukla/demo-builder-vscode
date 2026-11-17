@@ -3,7 +3,7 @@
  * it). The flyout's "Restore My Luma" opens the window on its check, titled "Restore My Luma" with the
  * "Finding unsaved changes" wait, which sends `restore-datapack` without `confirm` (it starts
  * nothing). Then:
- * - up to date: the small result "My Luma Is Up to Date", which closes itself;
+ * - up to date: the small result "My Luma Is Up to Date", which waits for Close;
  * - the question, "Restore Luma?" / "Restore My Luma?", Cancel and a blue Restore: one line for a
  *   Demo Builder datapack ("as it ships") or the SC's own with nothing unsaved (its original); the
  *   Last Saved / Original choice over unsaved edits, where Original asks "Save Your Changes First?";
@@ -90,16 +90,19 @@ describe('the check', () => {
     });
 });
 
-it('up to date: says so in the small result, which closes itself, and starts nothing', async () => {
+it('up to date: says so in the small result, which waits for Close, and starts nothing', async () => {
     answer({ restore: asked({ upToDate: true, displayName: 'My Luma' }) });
     const { onClose } = await openRestore();
 
     expect(await heading('My Luma Is Up to Date')).toBeInTheDocument();
     expect(screen.queryByTestId('import-run')).toBeNull();
     expect(restoreSends()).toEqual([{ datapackName: 'my-luma' }]);
+    // Walk F195 (owner, 2026-11-17): every result waits for Close.
     await act(async () => {
-        jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE);
+        jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 3);
     });
+    expect(onClose).not.toHaveBeenCalled();
+    await press(button('Close'));
     expect(onClose).toHaveBeenCalledTimes(1);
 });
 
@@ -191,7 +194,7 @@ describe('the question', () => {
 });
 
 describe('the run', () => {
-    it('ends clean on "My Luma Restored", which closes itself', async () => {
+    it('ends clean on "My Luma Restored", which waits for Close', async () => {
         answer({
             restore: AS_SHIPS,
             statusAfter: { ...RESTORING, outcome: 'success', perType: { categories: 'success', products: 'success' } },
@@ -201,9 +204,12 @@ describe('the run', () => {
         await press(button('Restore'));
 
         expect(await heading('My Luma Restored')).toBeInTheDocument();
+        // Walk F195 (owner, 2026-11-17): every result waits for Close.
         await act(async () => {
-            jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE);
+            jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 3);
         });
+        expect(onClose).not.toHaveBeenCalled();
+        await press(button('Close'));
         expect(onClose).toHaveBeenCalledTimes(1);
     });
 

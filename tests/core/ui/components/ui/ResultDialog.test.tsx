@@ -1,7 +1,7 @@
 /**
  * ResultDialog: the one way a result is drawn (dialog design rules). Small, its title says what
  * happened, each child is a line to read, Close beside at most one action, and a clean result that
- * is its title alone closes itself after a glance. The real Modal over the shared Spectrum mock.
+ * is its title alone waits for Close like any other (walk F195). The real Modal over the shared Spectrum mock.
  */
 
 import '@testing-library/jest-dom';
@@ -79,11 +79,12 @@ describe('ResultDialog', () => {
         expect(screen.getByRole('button', { name: 'Remove' })).toHaveClass('modal-button-negative');
     });
 
-    it('closes itself a glance after a clean result that is its title alone', () => {
+    // Walk F195 (owner, 2026-11-17): every result waits for Close.
+    it('waits for Close after a clean result that is its title alone', () => {
         const { onClose } = renderResult();
 
-        jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE);
-        expect(onClose).toHaveBeenCalledTimes(1);
+        jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 3);
+        expect(onClose).not.toHaveBeenCalled();
     });
 
     it.each<[string, Partial<ResultDialogProps>]>([

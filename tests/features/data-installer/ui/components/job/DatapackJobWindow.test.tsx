@@ -1,7 +1,7 @@
 /**
  * The datapack job window (step 03, S4): a first install, one window per phase, in ONE dialog
  * container. Check wait, then the type table; Review Records (Back only); Dry Run's own small
- * window; the run; the small result that closes itself, or "Couldn't Install Bodea" with Retry. A
+ * window; the run; the small result that waits for Close, or "Couldn't Install Bodea" with Retry. A
  * window opened on a running job starts at its run, titled by what the job is for.
  *
  * Ported from `ImportDatapackModal.test.tsx`, `.targeting`, `-decisions` and `.lifecycle` for the
@@ -81,16 +81,19 @@ describe('the check', () => {
 
 // Owner walk Q8 (2026-11-13): installing what the store already matches has nothing to do.
 describe('a datapack the store already matches', () => {
-    it('ends at "Bodea Is Up to Date", which closes itself, with no Install and nothing started', async () => {
+    it('ends at "Bodea Is Up to Date", which waits for Close, with no Install and nothing started', async () => {
         answer({ preview: { success: true, data: MATCHING_PREVIEW } });
         const { onClose } = await openOnSummary();
 
         expect(await heading('Bodea Is Up to Date')).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Install' })).not.toBeInTheDocument();
         expect(sends('start-datapack-import')).toBe(0);
+        // Walk F195 (owner, 2026-11-17): every result waits for Close.
         await act(async () => {
-            jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE);
+            jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 3);
         });
+        expect(onClose).not.toHaveBeenCalled();
+        await press(button('Close'));
         expect(onClose).toHaveBeenCalledTimes(1);
     });
 });
@@ -223,16 +226,19 @@ describe('Install', () => {
         expect(onClose).toHaveBeenCalledTimes(1);
     });
 
-    it('ends clean on the small result, which closes itself', async () => {
+    it('ends clean on the small result, which waits for Close', async () => {
         const { onClose } = await openOnSummary();
 
         await press(button('Install'));
 
         expect(await heading('Bodea Installed')).toBeInTheDocument();
         expect(screen.queryByTestId('import-run')).not.toBeInTheDocument();
+        // Walk F195 (owner, 2026-11-17): every result waits for Close.
         await act(async () => {
-            jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE);
+            jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 3);
         });
+        expect(onClose).not.toHaveBeenCalled();
+        await press(button('Close'));
         expect(onClose).toHaveBeenCalledTimes(1);
     });
 

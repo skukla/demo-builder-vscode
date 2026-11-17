@@ -35,7 +35,7 @@ const done = (...kinds: string[]): Record<string, DataTypeStatus> =>
 
 describe('an import that finished cleanly (walk F134)', () => {
     // Owner walk Q3 (2026-11-13): the search-delay line goes from the clean result, so it is the title
-    // alone and closes itself. The line stays for an ending that keeps its steps, and for agents.
+    // alone, waiting for Close. The line stays for an ending that keeps its steps, and for agents.
     it('is the small result: the pack Installed, nothing else, not even how long search takes', () => {
         const record = {
             outcome: 'success' as const,
@@ -44,7 +44,7 @@ describe('an import that finished cleanly (walk F134)', () => {
             processingTimeMs: 72_000,
         };
 
-        // No `run` (so no steps), no lead, no "Took …", no line: the title alone, which closes itself.
+        // No `run` (so no steps), no lead, no "Took …", no line: the title alone.
         expect(outcomeOf(record)).toEqual({
             variant: 'success',
             title: `${PACK_NAME} Installed`,
@@ -256,7 +256,7 @@ describe('an ending worded for what the job was for', () => {
 
 /**
  * An uninstall, drawn as steps (step 03, S7; decisions J5-2): a clean one ends on the small result,
- * "Luma Uninstalled", which closes itself unless something is left to read; one that stopped or
+ * "Luma Uninstalled"; one that stopped or
  * left part behind stays on its steps as "Couldn't Uninstall Luma", with Retry (J5-1's picture).
  * The kept root keeps its Admin step in the small window.
  */

@@ -91,10 +91,10 @@ a result that is its title alone; only a run shown as rows takes the box its row
 rule the progress window was medium for all 31 operations and often ended on a title alone
 (`.rptc/research/modal-conventions-audit/`).
 
-**Nothing left to read closes itself; something to read stays.** The rule is the handbook's "a
-clean result closes itself" convention, kept by `useCloseWhenClean`. For example, "Projects Reset"
-with nothing under it closes after a glance, as a four-minute mesh deploy already did, while "My
-Luma Installed" followed by "Your changes are saved in Version History." stays until closed.
+**Every result waits for Close.** The rule is the handbook's "every result waits for the SC to
+close it" convention (owner, 2026-11-17, walk F195). "Projects Reset" with nothing under it stays
+until closed, as "My Luma Installed" followed by "Your changes are saved in Version History." does.
+No window closes itself on a timer.
 
 **A clean run ends small; a run with a problem ends where it ran.** A window that shows a run as
 rows (the Updates run, the projects batch run, a datapack import, a datapack save) and finishes cleanly hands off
@@ -229,7 +229,6 @@ step.
 The five layouts, `core/ui/components/ui/` `FormDialog`, `ConfirmActionDialog`, `ProgressDialog`,
 `ResultDialog` and `GuideDialog`, each built on `Modal` and the only files that render it
 (`tests/sop/modal-layouts.test.ts`; its ledger lists the windows still to move).
-`core/ui/hooks/useCloseWhenClean.ts` (a clean result closing itself).
 `core/ui/components/ui/Modal.tsx` (the title's status icon, the width steps and
 their easing, the button styles), `core/ui/components/ui/useDialogViewChange.ts` (a
 change of view), `core/ui/components/ui/DialogOutcome.tsx` (a state or a wait deep in a dialog's

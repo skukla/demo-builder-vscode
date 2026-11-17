@@ -16,7 +16,7 @@
  * one-minute `aio app deploy`, reads as a frozen screen. The latest payload per id is
  * the answer to "where is it now?".
  *
- * A successful run is forgotten: the modal closes itself on success and the tile holds
+ * A successful run is forgotten: the modal shows the result until closed and the tile holds
  * the result. A failure is kept until the next run of that integration starts, so a
  * modal reopened after "Run in background" still shows the reason.
  *

@@ -260,7 +260,7 @@ async function runResetSteps(
     project.status = 'ready';
     await context.stateManager.saveProject(project);
 
-    // No timed success toast (PL-59 R6): the modal closes itself, and a run handed to
+    // No timed success toast (PL-59 R6): the modal shows the result until closed, and a run handed to
     // the background ends in its result's words (`operationBackgroundNotice`). What the mesh
     // did belongs in the log, which is where anyone checking will look.
     context.logger.info(

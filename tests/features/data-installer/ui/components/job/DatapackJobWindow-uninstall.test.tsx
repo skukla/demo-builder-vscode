@@ -3,7 +3,7 @@
  * Luma?" over what its install record lists, counted by type, with a red Uninstall and Cancel (rule
  * 20); with unsaved changes "Save Your Changes First?" next, its verb Uninstall; then the run on
  * the centred lines (the save's stage when saving first, then the uninstall's), titled "Uninstalling
- * My Luma"; a clean end "My Luma Uninstalled", which closes itself; a stop "Couldn't Uninstall My Luma"
+ * My Luma"; a clean end "My Luma Uninstalled", which waits for Close; a stop "Couldn't Uninstall My Luma"
  * on its steps with Retry. The title names no store (the owner's J5-1; plan Q7).
  *
  * Ported from `ImportDatapackModal-removal.test.tsx`, `-decisions`, `.lifecycle` and
@@ -290,7 +290,7 @@ describe('Uninstall with nothing changed', () => {
         expect(await heading('My Luma Uninstalled')).toBeInTheDocument();
     });
 
-    it('ends clean on "My Luma Uninstalled", which closes itself', async () => {
+    it('ends clean on "My Luma Uninstalled", which waits for Close', async () => {
         holding(NOTHING, {
             statusAfter: {
                 ...UNINSTALLING,
@@ -305,9 +305,12 @@ describe('Uninstall with nothing changed', () => {
         expect(await heading('My Luma Uninstalled')).toBeInTheDocument();
         expect(screen.queryByTestId('import-run')).toBeNull();
         expect(screen.queryByRole('button', { name: 'Back' })).toBeNull();
+        // Walk F195 (owner, 2026-11-17): every result waits for Close.
         await act(async () => {
-            jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE);
+            jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 3);
         });
+        expect(onClose).not.toHaveBeenCalled();
+        await press(button('Close'));
         expect(onClose).toHaveBeenCalledTimes(1);
     });
 
