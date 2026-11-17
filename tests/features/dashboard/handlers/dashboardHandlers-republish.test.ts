@@ -220,20 +220,22 @@ describe('handleRepublishContent', () => {
         expect(typeof params.onStage).toBe('function');
     });
 
-    it('ends with the store-change sentence when the pages were replaced', async () => {
-        const sentence = 'Now on CitiSignal: 11 category pages and 39 product pages published.';
-        mockRepublishStorefrontContent.mockResolvedValue({ success: true, cdnVerified: true, storePages: sentence });
+    // Walk F212 (owner, 2026-11-17): what a store change did, one line each, not a paragraph.
+    it('ends with what the store change did, one line each, when the pages were replaced', async () => {
+        const lines = ['Now on CitiSignal: 11 category pages and 39 product pages published.', '30 old product pages removed.'];
+        mockRepublishStorefrontContent.mockResolvedValue({ success: true, cdnVerified: true, storePages: lines.join(' '), storePageLines: lines });
         const context = createMockContext(createMockEdsProject());
 
         const result = await handleRepublishContent(context);
 
-        expect(result).toMatchObject({ success: true, note: sentence });
+        expect(result).toMatchObject({ success: true, details: lines });
+        expect(result).not.toHaveProperty('note');
     });
 
-    it('adds no note when the store did not change', async () => {
+    it('adds no lines when the store did not change', async () => {
         const result = await handleRepublishContent(createMockContext(createMockEdsProject()));
 
-        expect(result).not.toHaveProperty('note');
+        expect(result).not.toHaveProperty('details');
     });
 
     it('does NOT push when the republish failed — nothing changed', async () => {

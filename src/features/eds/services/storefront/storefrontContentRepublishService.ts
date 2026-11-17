@@ -100,6 +100,8 @@ export interface RepublishContentResult {
     catalogMenu?: string;
     /** After a store change: the one sentence on the new store's pages (EDS-44). */
     storePages?: string;
+    /** The same, one line each, which the success window lists (walk F212). */
+    storePageLines?: string[];
 }
 
 /** The clients this pipeline built, which the catalog's page steps reuse. */
@@ -208,7 +210,7 @@ async function replaceStorePages(
     params: RepublishContentParams,
     clients: PageClients,
     step: StoreScopeReport,
-): Promise<string> {
+): Promise<{ storePages: string; storePageLines: string[] }> {
     const { project, logger } = params;
     const deps = createStoreScopePagesDeps({
         project,
@@ -221,8 +223,8 @@ async function replaceStorePages(
         helixService: clients.helixService,
         daLiveSourceOps: clients.daLiveContentOps.sourceOps,
     });
-    const { sentence } = await replaceStoreScopePages(project, deps, step);
-    return sentence;
+    const { sentence, lines } = await replaceStoreScopePages(project, deps, step);
+    return { storePages: sentence, storePageLines: lines };
 }
 
 /**
@@ -333,7 +335,7 @@ async function runRepublish(params: RepublishContentParams): Promise<RepublishCo
         const storeChanged =
             hasCatalogPagesPending(project) && configResult.success && !configResult.cdnError;
         const sentences = storeChanged
-            ? { storePages: await replaceStorePages(params, clients, step) }
+            ? await replaceStorePages(params, clients, step)
             : await refreshCatalogPages(params, clients, step, catalogMenuSite, overlayUrl);
 
         // Step 6: Verify config.json on the CDN (best-effort).

@@ -231,8 +231,9 @@ export const handleRepublishContent: MessageHandler<StorefrontActionPayload> =
                 // reason — the title also comes from that payload.
                 await handleRequestStatus(context);
                 // After a store change, the run ends with what the new store got (EDS-44).
-                return contentResult.storePages
-                    ? { success: true, note: contentResult.storePages }
+                // One line each, a list of what was done (walk F212).
+                return contentResult.storePageLines?.length
+                    ? { success: true, details: contentResult.storePageLines }
                     : { success: true };
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : String(error);

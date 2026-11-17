@@ -157,6 +157,11 @@ describe('replaceStoreScopePages', () => {
             'Now on CitiSignal: 11 category pages and 39 product pages published. 30 old product pages removed.',
         );
         expect(result.counts).toEqual({ categoryPages: 11, productPages: 39, oldProductPagesRemoved: 30 });
+        // Walk F212 (owner, 2026-11-17): the result window lists what was done, one line each.
+        expect(result.lines).toStrictEqual([
+            'Now on CitiSignal: 11 category pages and 39 product pages published.',
+            '30 old product pages removed.',
+        ]);
         expect(p.edsStorefrontState?.catalogPagesPending).toBeUndefined();
         expect(p.edsStorefrontStatusSummary).toBe('published');
     });
@@ -274,7 +279,8 @@ describe('replaceStoreScopePages', () => {
             OPERATION_STAGES.updatingCatalogMenu.label,
             OPERATION_STAGES.warmingProductPages.label,
         ]);
-        expect(report).toHaveBeenCalledWith(OPERATION_STAGES.removingProductPages.label, '30 pages');
+        // Walk F212: the count while the removal runs, as the warm-up's line does, not after it.
+        expect(report).toHaveBeenCalledWith(OPERATION_STAGES.removingProductPages.label, '30 pages from the old store');
         expect(report).toHaveBeenCalledWith(OPERATION_STAGES.warmingProductPages.label, 'Warming product pages: 1 of 39 pages');
         const positions = report.mock.calls.filter((call) => call.length > 2 && call[2] !== undefined);
         expect(positions).toStrictEqual([]);

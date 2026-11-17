@@ -236,6 +236,7 @@ async function removeOverlayPages(
     site: ProductPageSite,
     deps: OverlayPageRemovalDeps,
     findPaths: () => Promise<string[]>,
+    onFound?: (count: number) => void,
 ): Promise<ProductPageRemovalResult> {
     const name = `${site.repoOwner}/${site.repoName}`;
     const pages = pagesOf(kind);
@@ -257,6 +258,7 @@ async function removeOverlayPages(
         return error instanceof DaLiveAuthError ? { ...failed, signInRefused: true } : failed;
     }
     if (paths.length === 0) return none('nothing', `Helix lists no ${kind.noun} pages published on ${name}.`);
+    onFound?.(paths.length);
 
     try {
         const removed = await deps.helix.unpublishPages(site.repoOwner, site.repoName, BRANCH, paths);
@@ -282,8 +284,9 @@ async function removeOverlayPages(
 export async function removeProductPages(
     site: ProductPageSite,
     deps: ProductPageRemovalDeps,
+    onFound?: (count: number) => void,
 ): Promise<ProductPageRemovalResult> {
-    return removeOverlayPages(PRODUCT_PAGES, site, deps, () => productPagesOn(site, deps));
+    return removeOverlayPages(PRODUCT_PAGES, site, deps, () => productPagesOn(site, deps), onFound);
 }
 
 /**

@@ -49,7 +49,7 @@ export const STOREFRONT_STAGES = {
     removingProductPages: {
         label: STOREFRONT_JOBS.removingProductPages,
         expectation: 'Usually under a minute',
-        detail: "The old store's product pages",
+        detail: "Finding the old store's pages",
     },
     // Republish refreshes the catalog menu, or swaps it after a store change. Measured
     // from one reset (2026-10-16): 47 seconds for 11 category pages.
