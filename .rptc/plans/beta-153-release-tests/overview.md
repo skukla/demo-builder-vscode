@@ -349,19 +349,19 @@ end).
 4. Type "Release Save Test" as the **Datapack Name** and click **Create**. Expect "Creating Release
    Save Test", then **Release Save Test Created**. Close it. Expect a card tagged **Mine** with the
    blue check.
-5. Open the card and click **Install**, then **Install** in the window. Expect **Release Save Test
-   Installed**. Expect the header to read **Save**, and the dashboard's **Datapacks** card to read
-   "Release Save Test". (Creating from the demo writes no install record, so until this install the
-   header says Create: no install record, no Save, decisions.md. A rewrite that skipped this step was
-   wrong and is undone, 2026-11-16.)
+5. Expect the header to read **Save** at once, with no install, and the dashboard's **Datapacks**
+   card to read "Release Save Test". (F187, owner 2026-11-16: Create now writes the datapack's
+   record, listing what it took as the store's own. Before, Create wrote none and this step was an
+   install that changed nothing.)
 
 U2.1 notes (2026-11-16). Step 4 passed: Creating Release Save Test, then Release Save Test Created ("Scratch 1028 now uses Release Save Test."), the card tagged Mine with the check; findings F180, F181. Step 5 passed (Steve: "Successful"): Release Save Test installed; finding F182. All 5 steps walked; result awaiting Steve's word. Step 3 passed: window opened complete (every list read in the opening wait, F178/F179), ZZ Customer Picks alone ticked, Next to Datapack Name with Back, Cancel, Create. Step 1 passed: ZZ Customer Picks saved under Default Category. Step 2 passed on the fixed build (F177): Create Datapack, every type ticked, Select All Data at the top; categories in the shared tree.
 
 **Test U2.2: Save a later edit into it**
-1. In the Admin, rename ZZ Customer Picks to "ZZ Customer Picks 2". In the Datapacks header, click
-   **Save**, then **Save** in the window. Expect "Saved to Release Save Test".
+1. In the Admin, rename ZZ Customer Picks to "ZZ Customer Picks 2". In the Datapacks header, open the
+   **Save** menu and click **Update Release Save Test**, then **Save** in the window. Expect
+   **Release Save Test Updated**, and the card's records to name "ZZ Customer Picks 2". (Labels: F189.)
 
-U2.2 notes (2026-11-16). Reached step 1: the header still read Create after U2.1's install (finding F183, fixed). Steve installs Release Save Test again, then repeats step 1. The second install refused: the category had already been renamed to "ZZ Customer Picks 2", so the datapack's "ZZ Customer Picks" matched nothing and its URL key clashed (right, my step order). Its reason was unreadable (finding F184, fixed). Steve renamed it back and installed: the header read Save (F183 proven live). A save into Release Save Test had already landed at 5:31 PM (the record moved to version 20261116-223102); the reopened window was empty (finding F186, fixed). After the fix the window read Categories 1 (F186 proven live).
+U2.2 notes (2026-11-16). Reached step 1: the header still read Create after U2.1's install (finding F183, fixed). Steve installs Release Save Test again, then repeats step 1. The second install refused: the category had already been renamed to "ZZ Customer Picks 2", so the datapack's "ZZ Customer Picks" matched nothing and its URL key clashed (right, my step order). Its reason was unreadable (finding F184, fixed). Steve renamed it back and installed: the header read Save (F183 proven live). A save into Release Save Test had already landed at 5:31 PM (the record moved to version 20261116-223102); the reopened window was empty (finding F186, fixed). After the fix the window read Categories 1 (F186 proven live). The save then failed (F187, F188); F187 fixed, so U2.1 and U2.2 are walked again from a clean demo: Release Save Test uninstalled (its record was empty, so nothing leaves the store), the category renamed back, and a new datapack, Release Save Test 2, made by Create.
 
 **Test U2.3: Another demo picks up the newer save** (1.7 steps 3 to 6, 1.11 step 4)
 1. Create a project named "Scratch 1028 B" on the test website and the test store view, picking
