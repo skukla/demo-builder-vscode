@@ -13,8 +13,8 @@
  * |---|---|---|
  * | customer groups | a customer, cart rule or company of this demo is in the group | the customers' `group_id`, the rules' `customer_group_ids`, the companies' `customer_group_id` |
  * | shared catalogs | the catalog is for one of those groups | the catalog's `customer_group_id` |
- * | attribute sets | one of this demo's products has the set | a count of the website's products by `attribute_set_id` |
- * | product attributes | one of this demo's products has a value for it | a count of the website's products with the attribute `notnull` |
+ * | attribute sets | one of this demo's products has the set | the products' `attribute_set_id` when a save read them whole, else a count of the website's products by it |
+ * | product attributes | one of this demo's products has a value for it | a count of the website's products with the attribute `notnull`; none when the website has no products |
  *
  * Read live on Scratch 1028 (website 6), 2026-11-09: Luma's 8 sets hold all 2,048 of its products
  * and the other 13 none; `color` has a value on 1,856, and `cs_format`, `brand` and `erp_owner`,
@@ -118,8 +118,14 @@ export function demoUses(ctx: KindContext, websiteProducts?: Promise<CommercePro
                     .map((c) => c.id),
             );
         }
-        if (kind === 'attribute_sets')
+        // The website's products, when a save has read them whole already, answer without a count
+        // per item (walk F197): none uses nothing, and a product names its own set.
+        const products = websiteProducts ? await websiteProducts : undefined;
+        if (products?.length === 0) return new Set();
+        if (kind === 'attribute_sets') {
+            if (products) return new Set(products.map((p) => String(p.attribute_set_id)));
             return usedByProducts(ctx, items, (id) => ['attribute_set_id', 'eq', id]);
+        }
         return usedByProducts(ctx, items, (code) => [code, 'notnull', '']);
     }
 

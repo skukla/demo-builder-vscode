@@ -194,6 +194,40 @@ describe('what this demo uses, of the kinds Commerce keeps for the whole instanc
         expect(ids(attributes)).toEqual(['color']);
     });
 
+    // Walk F197 (2026-11-17): a save of a one-category pack spent 5 s counting products per set and
+    // per attribute, one request each, though it had read the website's products whole already.
+    describe("with the website's products read whole already, as a save does", () => {
+        const counts = (asked: string[]) => asked.filter((path) => path.startsWith('products?'));
+        const thisSite = PRODUCTS.filter((p) => p.extension_attributes?.website_ids?.includes(THIS_SITE));
+
+        it('takes the attribute sets its products have, asking Commerce for no count', async () => {
+            const { ctx, asked } = await store();
+
+            const sets = await demoUses(ctx, Promise.resolve(thisSite)).of('attribute_sets');
+
+            expect(ids(sets)).toEqual(['16']);
+            expect(counts(asked)).toStrictEqual([]);
+        });
+
+        it('takes no set and no attribute, asking for no count, when the website has no products', async () => {
+            const { ctx, asked } = await store();
+            const uses = demoUses(ctx, Promise.resolve([]));
+
+            expect(await uses.of('attribute_sets')).toStrictEqual([]);
+            expect(await uses.of('product_attributes')).toStrictEqual([]);
+            expect(counts(asked)).toStrictEqual([]);
+        });
+
+        it('CONTROL: still counts the attributes when the website has products', async () => {
+            const { ctx, asked } = await store();
+
+            const attributes = await demoUses(ctx, Promise.resolve(thisSite)).of('product_attributes');
+
+            expect(ids(attributes)).toEqual(['color']);
+            expect(counts(asked).length).toBeGreaterThan(0);
+        });
+    });
+
     it("takes every one of its website's products: they are all the demo's", async () => {
         const { ctx } = await store();
 
