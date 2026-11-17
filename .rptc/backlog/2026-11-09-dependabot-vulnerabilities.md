@@ -49,3 +49,7 @@ Most alerts by package: `axios` 31, `hono` 26, `undici` 21, `fast-uri` 12, `hand
    type sees.
 
 Not decided: whether this blocks beta.153. The owner asked for it to be filed, not scheduled.
+
+## Shipped so far
+
+- 2026-11-17  2026-11-17 release walk: npm audit on fix/release-walk-fixes found 0 vulnerabilities in shipped (production) dependencies and 60 high, 0 critical in development tooling. GitHub's 214 (5 critical) is master, which is older. Owner: post-release, not part of beta.153.
