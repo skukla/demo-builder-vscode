@@ -96,6 +96,14 @@ describe('rowsLines, the shared progress window', () => {
         expect(rowsLines(rows, 'Saving the datapack')).toEqual({ label: 'Saving to My Datapacks', detail: 'Release Save Test' });
     });
 
+    // Walk F196 (2026-11-17): an Update's save step is labelled "Update Release Save Test 2", so line 1
+    // read "Updating Release Save Test 2", the window's own title, under "Exporting from Commerce".
+    it('puts the save step\'s own job first when the step is an Update', () => {
+        const rows = [{ ...exporting([]), status: 'success' as const, line: 'Exported' }, save({ label: 'Update Release Save Test 2', status: 'checking', line: 'Saving to My Datapacks' })];
+
+        expect(rowsLines(rows, 'Saving the datapack')).toEqual({ label: 'Saving to My Datapacks', detail: 'Release Save Test 2' });
+    });
+
     it('takes the run\'s stage for a step whose label has no verb it knows, and when no step is under way', () => {
         const unknown: OperationRow = { kind: 'products', label: 'Products', status: 'checking', line: '40 of 120' };
 

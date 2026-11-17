@@ -102,6 +102,11 @@ const GERUNDS: Readonly<Record<string, string>> = {
     Delete: 'Deleting',
 };
 
+const DOING = new Set(Object.values(GERUNDS));
+
+/** A line that starts with a job's verb ("Saving to My Datapacks"). */
+const saysAJob = (line: string | undefined): boolean => line !== undefined && DOING.has(line.split(' ')[0]);
+
 /** A step's label as its job, when it starts with a verb the table knows; else none. */
 export function gerundJob(label: string): string | undefined {
     const [verb, ...rest] = label.split(' ');
@@ -121,12 +126,13 @@ export function gerundJob(label: string): string | undefined {
 export function rowsLines(rows: readonly OperationRow[], stage: string | undefined): RunStageLines {
     const working = rows.find((row) => row.status === 'checking');
     if (!working) return { label: stage ?? PREPARING };
-    const job = gerundJob(working.label);
-    const verb = job?.split(' ')[0];
     const typeWorking = working.types?.some((t) => t.status === 'checking');
-    if (verb && !typeWorking && working.line?.startsWith(`${verb} `)) {
+    // A step's own line that already names a job leads, whichever verb its label has: an Update's
+    // save step ("Update Release Save Test 2") says "Saving to My Datapacks" (walk F196), where line 1
+    // read the window's own title.
+    if (gerundJob(working.label) && !typeWorking && saysAJob(working.line)) {
         const acted = working.label.slice(working.label.indexOf(' ') + 1);
-        return { label: working.line, detail: acted };
+        return { label: working.line as string, detail: acted };
     }
     return runStage(rows, (row) => gerundJob(row.label) ?? stage);
 }
