@@ -460,6 +460,19 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         },
     },
     {
+        tool: 'get_finish_setup',
+        needsAuth: false,
+        readOnly: true,
+        description:
+            "Read what the open project still needs after it was created or reset (its Finish " +
+            'Setup): steps a run could not finish itself, e.g. republish the storefront code ' +
+            "(republish-code) or set the store's root category (pack-root-category), each done, " +
+            'dismissed (skipped) or still to do, with the last check\'s note. As saved: runs no ' +
+            'check (check_finish_setup does). An empty list means nothing is left.',
+        map: dashboardHandlers,
+        type: 'getFinishSetup',
+    },
+    {
         tool: 'list_console_apis',
         needsAuth: ['adobe'],
         readOnly: true,

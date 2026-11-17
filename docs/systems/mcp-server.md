@@ -1282,6 +1282,20 @@ on 27 October. Anyone who hasn't created that project yet will get Bodea instead
 made from is named as the store lists it, never by its id. Plan:
 `.rptc/plans/datapack-engine/step-07-demo-packs.md`.
 
+### What a creation or reset left to finish (PL-101, 2026-11-17)
+
+A run that cannot finish everything itself leaves the project's Finish Setup steps: Republish
+the Code (`republish-code`) when the live site may not serve the code yet, and Set the Root
+Category (`pack-root-category`) when the datapack's root is not the store's. Three tools dispatch
+into the same handlers as the dashboard's Finish Setup guide (`finishSetupHandlers.ts`), and
+each answers `{items}`, the steps as the guide lists them. `get_finish_setup` reads them as
+saved and runs no check. `set_finish_setup_step` marks one `done`, `dismissed` (Skip) or `open`
+(Undo Skip), and changes only the project's record. `check_finish_setup` runs the checks (one
+step with `stepId`, else every step not skipped): it reads the repository and the live site, or
+the store through the project's credential, publishes nothing, and saves what each found. It is
+declared a write for that save, as `check_setup_steps` is. None of the three is gated: nothing
+outside Demo Builder changes.
+
 ### Integrations live in Adobe workspaces of their own (AB-23)
 
 Since 2026-09-21 every integration an SC adds gets an Adobe workspace of its own,

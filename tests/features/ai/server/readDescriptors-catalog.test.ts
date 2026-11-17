@@ -112,6 +112,13 @@ const CATALOG: Row[] = [
         args: ['id'],
     },
     {
+        tool: 'get_finish_setup',
+        map: dashboardHandlers,
+        type: 'getFinishSetup',
+        needsAuth: false,
+        args: null,
+    },
+    {
         tool: 'list_console_apis',
         map: dashboardHandlers,
         type: 'listConsoleApis',

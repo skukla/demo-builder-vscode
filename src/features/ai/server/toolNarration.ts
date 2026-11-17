@@ -186,6 +186,10 @@ export const TOOL_NARRATION: Record<string, string> = {
     get_setup_checklist: 'Reading the demo setup checklist',
     set_setup_step: 'Marking a demo setup step',
     check_setup_steps: 'Checking demo setup in Commerce',
+    // The project's Finish Setup (PL-101): what a creation or reset left to do.
+    get_finish_setup: 'Reading the finish setup steps',
+    set_finish_setup_step: 'Marking a finish setup step',
+    check_finish_setup: 'Checking the finish setup steps',
 
     // ── I/O Events lifecycle (AB-6) ─────────────────────────────────────
     list_event_providers: 'Listing the event providers',

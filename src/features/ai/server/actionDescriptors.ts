@@ -443,6 +443,45 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         },
     },
     {
+        tool: 'set_finish_setup_step',
+        needsAuth: false,
+        readOnly: false,
+        description:
+            "Mark one of the open project's Finish Setup steps (from get_finish_setup: what it " +
+            'still needs after it was created or reset) done, skip it (dismissed), or undo a ' +
+            'skip (open). Changes only the record in Demo Builder, not the storefront or the ' +
+            'store. Mark a step done only when the user says they did it.',
+        map: dashboardHandlers,
+        type: 'setFinishSetupStep',
+        inputSchema: {
+            stepId: z.string().describe('The step id (from get_finish_setup)'),
+            state: z.enum(['done', 'dismissed', 'open']).describe('What the step becomes'),
+        },
+    },
+    {
+        tool: 'check_finish_setup',
+        // The code step reads the storefront repository and the live site; the root step
+        // reads the store through the project's credential.
+        needsAuth: ['adobe', 'github'],
+        // A write, though it changes nothing outside Demo Builder: it saves what each check
+        // found on the project's record, as check_setup_steps does.
+        readOnly: false,
+        description:
+            "Check what the open project still needs after it was created or reset (its Finish " +
+            'Setup): whether the live site now serves the code as the repository has it, or ' +
+            "whether the store's root category is set. Reads only, publishes nothing; saves " +
+            'what each check found: a pass marks the step done, a fail opens it again with the ' +
+            'reason. One step when stepId is sent, else every step not skipped.',
+        map: dashboardHandlers,
+        type: 'checkFinishSetupSteps',
+        inputSchema: {
+            stepId: z
+                .string()
+                .optional()
+                .describe('Only this step (from get_finish_setup); default every step not skipped'),
+        },
+    },
+    {
         tool: 'redeploy_integration',
         needsAuth: ['adobe'],
         readOnly: false,

@@ -1165,6 +1165,33 @@
         "why": "Added with the tool (2026-09-25, AB-26x): the SC's demo setup steps in Commerce Admin, as a checklist Demo Builder keeps. A MISS is a discoverability finding about the tool, not a bad prompt."
     },
     {
+        "id": "finish-setup-read",
+        "cwd": "project",
+        "prompt": "I just reset my demo. Is there anything left I need to finish before it's ready?",
+        "expect": [
+            "get_finish_setup"
+        ],
+        "why": "Added with the tool (2026-11-17, PL-101): what a project still needs after a creation or reset (republish the code, set the root category), kept on the project. A MISS is a discoverability finding about the tool, not a bad prompt."
+    },
+    {
+        "id": "finish-setup-mark",
+        "cwd": "project",
+        "prompt": "I set the root category myself in Commerce Admin; mark that step of my project's finish setup as done.",
+        "expect": [
+            "set_finish_setup_step"
+        ],
+        "why": "Added with the tool (2026-11-17, PL-101): what a project still needs after a creation or reset (republish the code, set the root category), kept on the project. A MISS is a discoverability finding about the tool, not a bad prompt."
+    },
+    {
+        "id": "finish-setup-check",
+        "cwd": "project",
+        "prompt": "Check whether my live storefront serves the latest code now, and tick it off the project's finish setup if it does.",
+        "expect": [
+            "check_finish_setup"
+        ],
+        "why": "Added with the tool (2026-11-17, PL-101): what a project still needs after a creation or reset (republish the code, set the root category), kept on the project. A MISS is a discoverability finding about the tool, not a bad prompt."
+    },
+    {
         "id": "erp-add-another",
         "prompt": "Add a second ERP to this demo called Brand B ERP, next to the one the ERP integration already has.",
         "expect": [

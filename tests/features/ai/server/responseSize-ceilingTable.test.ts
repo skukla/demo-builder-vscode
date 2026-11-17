@@ -148,6 +148,11 @@ describe('the ceiling table tracks the tool surface', () => {
         'get_setup_checklist',
         'set_setup_step',
         'check_setup_steps',
+        // One row per Finish Setup step a creation or reset left (PL-101: the code step and the
+        // root category step), bounded by the step kinds, not by the project or the instance.
+        'get_finish_setup',
+        'set_finish_setup_step',
+        'check_finish_setup',
     ]);
 
     it('records a ceiling for every DESCRIPTOR tool that is not deliberately exempt', () => {

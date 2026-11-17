@@ -425,6 +425,11 @@ describe('rows with no output safety net are classified', () => {
         'get_setup_checklist',
         'set_setup_step',
         'check_setup_steps',
+        // The project's Finish Setup (PL-101, `finishSetupHandlers.ts`): each returns `{items}`,
+        // one row per step a creation or reset left (at most two today), with fixed fields.
+        'get_finish_setup',
+        'set_finish_setup_step',
+        'check_finish_setup',
         // Datapack files, read before listing (`datapackZipHandlers.ts`): save answers
         // `{path, bytes, dataTypes}` (or `{cancelled}`), open answers
         // `{path, datapackName, version, displayName, dataTypes, …}` and load answers
