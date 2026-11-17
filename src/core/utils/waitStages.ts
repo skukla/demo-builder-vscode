@@ -25,15 +25,17 @@ import type { OperationStage } from './operationStages';
 export type WaitStage = Omit<OperationStage, 'detail'> & { readonly detail?: string };
 
 const FEW_SECONDS = 'Usually a few seconds';
+const ABOUT_A_MINUTE = 'Usually about a minute';
 const FROM_COMMERCE = 'From Commerce';
 
 export const WAIT_STAGES = {
-    // Comparing Commerce with the datapack the demo uses: before installing it again (EDS walk F56),
-    // before installing another over it, and before Uninstall. One read, so one name (owner,
-    // 2026-11-09, walk F114: it had three). Measured 2026-11-08: 58 seconds for Luma's 12 data types
-    // on a live instance. The label says it all; "Since this demo's last save" was a fragment
-    // (Phase 1, owner 2026-11-10).
-    checkingForChanges: { label: 'Checking for your changes', expectation: 'Usually about a minute' },
+    // Comparing Commerce with the datapack the demo uses. One read with two purposes, named by the
+    // purpose (walk F193, owner 2026-11-17; F114 had made three names one). Before an action that
+    // overwrites or removes (Restore, Uninstall, Switch, installing another version): the edits it
+    // would lose. Before Update and Save Changes, whose point is the edits: the comparison itself.
+    // Measured 2026-11-08: 58 seconds for Luma's 12 data types on a live instance.
+    checkingForChanges: { label: 'Finding unsaved changes', expectation: ABOUT_A_MINUTE },
+    comparingWithCommerce: { label: 'Comparing with Commerce', expectation: ABOUT_A_MINUTE },
     // A Dry Run of an install: the request is checked and nothing is written (D6; the name Dry Run
     // is kept, owner 2026-11-10). The label alone; the result says nothing was written.
     checkingImport: { label: 'Running the dry run', expectation: FEW_SECONDS },

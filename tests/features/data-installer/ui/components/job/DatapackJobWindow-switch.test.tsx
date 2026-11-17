@@ -95,7 +95,7 @@ describe('the check', () => {
         await settle();
 
         expect(screen.getByRole('heading', { name: 'Switch to Bodea' })).toBeInTheDocument();
-        expect(screen.getAllByText('Checking for your changes').length).toBeGreaterThan(0);
+        expect(screen.getAllByText('Finding unsaved changes').length).toBeGreaterThan(0);
         expect(screen.queryByRole('button', { name: 'Switch' })).not.toBeInTheDocument();
         expect(sent('preview-datapack-changes')).toEqual({
             datapackName: 'bodea',

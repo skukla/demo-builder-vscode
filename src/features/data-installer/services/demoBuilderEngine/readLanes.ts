@@ -1,7 +1,7 @@
 /**
  * A read-back's data types in two lanes (walk F160, owner yes 2026-11-16).
  *
- * "Checking for your changes" read each type after the last. Measured on Luma (Debug Logs,
+ * "Finding unsaved changes" (then "Checking for your changes") read each type after the last. Measured on Luma (Debug Logs,
  * 2026-11-16): products 53 s, then gift cards, categories, attributes, sets and assignments about
  * 20 s more. Products and gift cards now read in a lane of their own beside the rest, which still
  * go one type at a time: the wait is about the products' alone, and Commerce is never asked for more

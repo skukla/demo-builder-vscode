@@ -55,7 +55,7 @@ export function SaveChangesWindow({
                     rows={summary.rows}
                     {...(summary.problem ? { problem: summary.problem } : {})}
                     ready={summary.ready}
-                    waiting={summary.ready ? false : WAIT_STAGES.checkingForChanges}
+                    waiting={summary.ready ? false : WAIT_STAGES.comparingWithCommerce}
                     onReview={summary.review}
                     actionButtons={[{ label: 'Save', variant: 'accent', onPress: onSave }]}
                     onClose={onClose}

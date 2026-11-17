@@ -40,9 +40,15 @@ describe('WAIT_STAGES', () => {
 
     // Walk F114: the re-import's comparison, the replace's check and Remove Data's check are one read.
     // F126: its line says since when, in the question's own words, not which pack.
-    it('names the changes check one way', () => {
+    // Walk F193 (owner, 2026-11-17): one read, two purposes, two names. Before an action that
+    // overwrites or removes, the edits it would lose; before a save, the edits it saves.
+    it('names the check by what it is for', () => {
         expect(WAIT_STAGES.checkingForChanges).toEqual({
-            label: 'Checking for your changes',
+            label: 'Finding unsaved changes',
+            expectation: 'Usually about a minute',
+        });
+        expect(WAIT_STAGES.comparingWithCommerce).toEqual({
+            label: 'Comparing with Commerce',
             expectation: 'Usually about a minute',
         });
     });

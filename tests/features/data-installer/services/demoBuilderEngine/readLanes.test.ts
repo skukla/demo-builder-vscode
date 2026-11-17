@@ -1,7 +1,7 @@
 /**
  * inLanes — a read-back's data types in two lanes (walk F160, owner yes 2026-11-16).
  *
- * "Checking for your changes" read each type after the last: Luma's products took 53 s and the rest
+ * "Finding unsaved changes" (then "Checking for your changes") read each type after the last: Luma's products took 53 s and the rest
  * about 20 more, one after another. Products and gift cards now read in a lane of their own beside
  * the others, which still go one at a time, so Commerce is never asked for more at once than two
  * types' reads.

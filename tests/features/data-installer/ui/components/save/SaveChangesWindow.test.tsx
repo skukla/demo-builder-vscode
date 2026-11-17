@@ -100,7 +100,7 @@ describe('the check', () => {
         expect(
             screen.getByRole('heading', { name: 'Update My Luma' })
         ).toBeInTheDocument();
-        expect(screen.getAllByText('Checking for your changes').length).toBeGreaterThan(0);
+        expect(screen.getAllByText('Comparing with Commerce').length).toBeGreaterThan(0);
         expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
         expect(sent('get-datapack-removal-scope')).toEqual({
             datapackName: 'my-luma-1a2b3c',

@@ -60,7 +60,7 @@ will show, only the title, the wait and the way out (Close or Cancel) appear: no
 buttons. The wait is the progress window's rows, medium and centred (`StageWait`): what it is
 doing ("Reading demo data"), a second line only when it tells the SC something the first does not
 ("From Commerce"), and how long it usually takes with the time so far ("Usually a few seconds · 4
-seconds"). A second line is never required: "Checking for your changes" says it all. Its words come from `WAIT_STAGES`
+seconds"). A second line is never required: "Finding unsaved changes" says it all. Its words come from `WAIT_STAGES`
 (`core/utils/waitStages.ts`), held to the stage table's rules: a label of 25 characters at most, a
 detail of 40, an expectation of 25, and the stage table's words for the same work ("Reading from
 Commerce", never "Reading the store"). Work the SC started reports its own stages in the same rows.

@@ -1,7 +1,7 @@
 /**
  * Restore in the job window (step 03, S8; step-07 U1, J9-5 to J9-7, as the walked prototype draws
  * it). The flyout's "Restore My Luma" opens the window on its check, titled "Restore My Luma" with the
- * "Checking for your changes" wait, which sends `restore-datapack` without `confirm` (it starts
+ * "Finding unsaved changes" wait, which sends `restore-datapack` without `confirm` (it starts
  * nothing). Then:
  * - up to date: the small result "My Luma Is Up to Date", which closes itself;
  * - the question, "Restore Luma?" / "Restore My Luma?", Cancel and a blue Restore: one line for a
@@ -72,7 +72,7 @@ describe('the check', () => {
         await openRestore();
 
         expect(screen.getByRole('heading', { name: 'Restore My Luma' })).toBeInTheDocument();
-        expect(screen.getAllByText('Checking for your changes').length).toBeGreaterThan(0);
+        expect(screen.getAllByText('Finding unsaved changes').length).toBeGreaterThan(0);
         expect(screen.queryByRole('button', { name: 'Restore' })).toBeNull();
         expect(restoreSends()).toEqual([{ datapackName: 'my-luma' }]);
         expect(sends('preview-datapack-changes')).toBe(0);

@@ -134,7 +134,7 @@ which lists every object the install made. It never removes by name.
   held pack and install the new one. It used to run as a first install: products already in the store
   were left alone, the project named the new pack, and the old data had nothing pointing at it. Now,
   when Demo Builder installed the pack the project uses, the job window's check reads what installing
-  changes and the SC's changes to the held pack together ("Checking for your changes", walk F114), then
+  changes and the SC's changes to the held pack together ("Finding unsaved changes", walk F114, F193), then
   asks over the type table: **"Switch to Bodea?"** with a blue Switch for another datapack (step 03
   S6, decisions J2-3, J8-1), or **"Install Bodea, eds-compatible?"** with a blue Install for another
   version of the same one (S7; a save's dated version is never named). With changes **"Save Your
