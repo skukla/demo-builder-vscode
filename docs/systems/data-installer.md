@@ -35,7 +35,7 @@ above the cards says only Demo Builder's datapacks are shown, and why (`installe
 (`no-address`) shows nothing: that is most SCs (owner, 2026-11-03). Neither does `turned-off`:
 `demoBuilder.dataInstaller.enabled` turns the Data Installer off without deleting its address
 (owner, 2026-11-05). The store's list is asked up to three times, a second apart, before it
-counts as down, so a one-off error never reaches a screen or an agent; each retry is logged, and a
+counts as down (server errors and an unreachable store; not a timeout, which already waited 30 s), so a one-off error never reaches a screen or an agent; each retry is logged, and a
 failure after three says "(tried 3 times)" (walk F215). When the store still does not answer, an
 amber banner says so (`storeMissing`) with **Try Again** and **Show Data Installer Datapacks**;
 nothing switches the Show list for the SC (owner, 2026-11-17). Only when neither

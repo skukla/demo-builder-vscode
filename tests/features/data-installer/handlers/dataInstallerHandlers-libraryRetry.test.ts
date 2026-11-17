@@ -101,14 +101,25 @@ describe("the datapack store's list, asked again before it counts as down", () =
         });
     });
 
-    it('retries a timeout, as it does a server error', async () => {
+    it('retries a store it could not reach, as it does a server error', async () => {
+        const unreachable = () => new TypeError('fetch failed');
+        const store = storeAnswers(fails(unreachable), lists);
+
+        await dataInstallerHandlers['find-datapacks'](makeHeadlessContext(), { store: 'library' });
+
+        expect(store.libraryAsks()).toBe(2);
+    });
+
+    // A try already waited the full request timeout (30 s); three would hold the spinner for 90 s
+    // before the banner and its Try Again (owner, 2026-11-17).
+    it('asks once when the store timed out', async () => {
         const timeout = () =>
             Object.assign(new Error('The operation was aborted'), { name: 'AbortError' });
         const store = storeAnswers(fails(timeout), lists);
 
         await dataInstallerHandlers['find-datapacks'](makeHeadlessContext(), { store: 'library' });
 
-        expect(store.libraryAsks()).toBe(2);
+        expect(store.libraryAsks()).toBe(1);
     });
 
     it.each([

@@ -26,10 +26,14 @@ export const LIBRARY_LIST_FAILED = 'Could not list the datapack store.';
 /** Tries at the store's list before it counts as down (owner, 2026-11-17, walk F215). */
 export const LIBRARY_LIST_TRIES = 3;
 
-/** A failure another try could change: the store erred (5xx), timed out or could not be reached. */
+/**
+ * A failure another try could change, and quickly: the store erred (5xx) or could not be reached.
+ * Not a timeout: that try already waited the full 30 s, and three would hold the spinner 90 s before
+ * the banner's Try Again (owner, 2026-11-17).
+ */
 function worthAnotherTry(error: unknown): boolean {
     if (error instanceof DataInstallerApiError) return error.status >= 500;
-    return classifyTransportError(error) !== 'unknown';
+    return classifyTransportError(error) === 'unreachable';
 }
 
 /** The last failure, saying how many tries it took, so a log, a screen and an agent all know. */
@@ -40,8 +44,8 @@ function afterTries(error: unknown, tries: number): unknown {
 }
 
 /**
- * The store's catalog, each row tagged `library`: shared packs plus the SC's own. A failure another
- * try could change is asked again, up to three tries a second apart, so a one-off error never
+ * The store's catalog, each row tagged `library`: shared packs plus the SC's own. A quick failure
+ * another try could change is asked again, up to three tries a second apart, so a one-off error never
  * reaches a screen (it did once, 2026-11-17, answering normally a moment later).
  *
  * @param onRetry - told of each failed try before the next, for the log
