@@ -36,6 +36,20 @@ describe('SelectionStepContent — which state it shows', () => {
             expect(screen.queryByText('Selectable Org')).not.toBeInTheDocument();
         });
 
+        // Walk F202 (owner, 2026-11-17): "Adobe can be slow to respond" showed over a GitHub
+        // repository list. The line is the caller's to give, for an Adobe list.
+        it('says nothing of Adobe unless the caller gives that line', () => {
+            renderContent({ showLoading: true });
+
+            expect(screen.queryByText(/Adobe can be slow/u)).not.toBeInTheDocument();
+        });
+
+        it("CONTROL: shows the caller's line while it loads", () => {
+            renderContent({ showLoading: true, labels: { ...baseLabels, loadingHelper: 'Adobe can be slow to respond' } });
+
+            expect(screen.getByText('Adobe can be slow to respond')).toBeInTheDocument();
+        });
+
         it('shows loading on a FIRST load even when showLoading is false', () => {
             // `isLoading && !hasLoadedOnce` — the first fetch has nothing behind it,
             // so the spinner is the whole screen.

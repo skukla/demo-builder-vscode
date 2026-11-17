@@ -50,6 +50,11 @@ export interface SelectionLabels {
     loadingMessage: string;
     /** Sub-message shown during loading (optional) */
     loadingSubMessage?: string;
+    /**
+     * A line under the wait for a list that is slow for a known reason ("Adobe can be slow to
+     * respond…"). The caller's: it showed over GitHub repositories when it was written here (walk F202).
+     */
+    loadingHelper?: string;
     /** Title shown when error occurs */
     errorTitle: string;
     /** Title shown when no items found */
@@ -177,7 +182,7 @@ export function SelectionStepContent<T extends SelectableItem>({
                         size="L"
                         message={labels.loadingMessage}
                         subMessage={labels.loadingSubMessage}
-                        helperText="Adobe can be slow to respond — this may take a minute"
+                        helperText={labels.loadingHelper}
                     />
                 </CenteredFeedbackContainer>
             </>

@@ -20,6 +20,7 @@
 
 import { Text } from '@adobe/react-spectrum';
 import React from 'react';
+import { ADOBE_SLOW_HELPER } from './adobeListWait';
 import type { SelectionDialogHost } from '@/core/ui/components/selection/selectionDialogHost';
 import { SelectionStepContent } from '@/core/ui/components/selection/SelectionStepContent';
 import { useSelectionStep } from '@/core/ui/hooks/useSelectionStep';
@@ -154,6 +155,7 @@ export function AdobeWorkspacePicker({
             onSelect={selectItem}
             labels={{
                 loadingMessage: 'Loading workspaces',
+                loadingHelper: ADOBE_SLOW_HELPER,
                 loadingSubMessage: state.adobeProject
                     ? `Fetching from project: ${state.adobeProject.title || state.adobeProject.name}`
                     : undefined,

@@ -4,13 +4,11 @@
  * The project-selection body extracted from the retired `AdobeProjectStep` so it
  * can be folded into the Integrations area's Mesh tile (slice 2b). It owns the
  * SAME `useSelectionStep` wiring the step used:
- *  - loads projects via `get-projects` (org-context threaded through
- *    `messagePayload.orgId`),
+ *  - loads projects via `get-projects` (org-context threaded through `messagePayload.orgId`),
  *  - auto-selects a single project,
  *  - search/filter + caching in wizard state,
  *  - writes `state.adobeProject` on select and clears the dependent workspace
- *    selection + cache so workspaces reload (and re-auto-select Stage) for the
- *    new project,
+ *    selection + cache so workspaces reload (and re-auto-select Stage) for the new project,
  *  - surfaces the same "no projects found" messaging.
  *
  * Each row's title is an inline rename field (`InlineRenameField`): its pencil turns
@@ -39,6 +37,7 @@
 import { ActionButton, Text } from '@adobe/react-spectrum';
 import Delete from '@spectrum-icons/workflow/Delete';
 import React, { useCallback, useEffect, useState } from 'react';
+import { ADOBE_SLOW_HELPER } from './adobeListWait';
 import { InlineRenameField } from '@/core/ui/components/forms/InlineRenameField';
 import type { SelectionDialogHost } from '@/core/ui/components/selection/selectionDialogHost';
 import { SelectionStepContent } from '@/core/ui/components/selection/SelectionStepContent';
@@ -322,6 +321,7 @@ export function AdobeProjectPicker({
                 labels={{
                     heading: '',
                     loadingMessage: 'Loading your Adobe projects',
+                    loadingHelper: ADOBE_SLOW_HELPER,
                     loadingSubMessage: state.adobeOrg?.name
                         ? `Fetching from organization: ${state.adobeOrg.name}`
                         : 'Fetching projects',
