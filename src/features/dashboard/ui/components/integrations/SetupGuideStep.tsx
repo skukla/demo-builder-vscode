@@ -167,8 +167,8 @@ export interface StepProps {
      * tech, and `visibility: hidden` takes them out of the tab order.
      */
     shown?: boolean;
-    /** The integration, for the shown step's read of what Apply will do. */
-    integrationId: string;
+    /** The integration, for the shown step's read of what Apply will do; absent, no plan. */
+    integrationId?: string;
     /** The guide's run, on the shown step only (AB-82, `StepHeader`). */
     run?: GuideRun;
     /** Check all steps is checking this step now: its banner shows the spinner. */

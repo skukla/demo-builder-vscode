@@ -87,6 +87,9 @@ const LAYOUT_FILES: ReadonlySet<string> = new Set([
     // The save question's frame over the Steps layout (step-05, R2): its two button labels are its
     // caller's, read where the caller writes them (`SaveFirstWindow.saveLabel`, ...).
     'src/core/ui/components/feedback/SaveFirstWindow.tsx',
+    // The setup guide's flow over the Guide layout (PL-101): its title is its caller's, read where
+    // the caller writes it (`SetupGuide.title`: "Demo Setup: <integration>").
+    'src/features/dashboard/ui/components/integrations/SetupGuide.tsx',
 ]);
 
 const forwardedByALayout = (site: LabelSite): boolean =>

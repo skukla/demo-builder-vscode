@@ -46,10 +46,12 @@ export interface FooterInput {
  * Apply on an open step Demo Builder can do; Undo on one it applied and recorded (AB-77). A step
  * saved done shows no Apply (owner, 2026-10-22): the guide checks never-checked steps as it
  * opens, so done is fresh enough, and Check all steps reopens a stale one. Nothing for a step
- * with no fix, a skipped step, or when the screen offers none.
+ * with no fix, a skipped step, or when the screen offers none. "Can do" is the item's
+ * `applicable`, not its `setup`: an integration's step is applicable exactly when it declares a
+ * setup (`setupChecklistOf`), and a step that is not an integration's has no `setup` to declare.
  */
 function fixButtons(item: SetupChecklistItem, fix: FooterInput['fix'], busy: boolean): ActionButton[] {
-    if (!item.setup || !fix || item.state === 'dismissed') return [];
+    if (!item.applicable || !fix || item.state === 'dismissed') return [];
     const apply: ActionButton = { label: APPLY_COPY.apply, variant: 'secondary', onPress: () => fix('apply'), isDisabled: busy };
     const undo: ActionButton = { label: APPLY_COPY.undo, variant: 'secondary', onPress: () => fix('undo'), isDisabled: busy };
     if (item.state === 'done') return item.setupApplied ? [undo] : [];
