@@ -48,6 +48,8 @@ const NO_PROBLEM = ' ';
 interface Props {
     question: SaveTableQuestion;
     onName: (path: string, name: string) => void;
+    /** Each pack's project under its name; off when the window is about one project, whose title names it (walk F213). */
+    withProject?: boolean;
 }
 
 function SaveAsCell({
@@ -75,7 +77,7 @@ function SaveAsCell({
 }
 
 /** Where each datapack's changes go: its own pack, or a new one under the name given. */
-export function BatchSaveTable({ question, onName }: Props): React.ReactElement {
+export function BatchSaveTable({ question, onName, withProject = true }: Props): React.ReactElement {
     return (
         <div className="batch-delete scroll-fade scroll-fade--capped">
             <table className="batch-delete-table batch-changes-table">
@@ -90,7 +92,7 @@ export function BatchSaveTable({ question, onName }: Props): React.ReactElement 
                         <tr key={row.path}>
                             <th scope="row">
                                 <span className="checkbox-row-label">{row.datapack?.name}</span>
-                                <div className="work-row-detail">{row.name}</div>
+                                {withProject && <div className="work-row-detail">{row.name}</div>}
                             </th>
                             <SaveAsCell row={row} question={question} onName={onName} />
                         </tr>

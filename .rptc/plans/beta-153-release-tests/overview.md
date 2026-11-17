@@ -240,6 +240,7 @@ Mark each test's **Result** line: `passed 2026-11-DD`, or `failed 2026-11-DD: wh
 | F210 | U2.3 step 1 (2026-11-17) | **Scratch 1028 B was created on the live store's website and store view, not the test store's**, and its datapack install made category 1595 under the live store's catalog root | **Cleaned** with the owner's go: Release Save Test 2 uninstalled from Scratch 1028 B (1 object taken back), category 1595 read back gone, the test store's 1585 untouched. Nothing pre-fills the website; the log shows the selection changing to the live website after discovery listed both websites. The review screen does not show the website. Scratch 1028 B is to be deleted and created again on the test store |
 | F211 | U2.3 step 1 (2026-11-17) | The review screen did not say which website or store view a new project writes to (F210's mix-up went unseen until after Create; owner: "I chose it as a mistake, most likely") | **Fixed** with tests: Project Configuration names the Website and Store View by their names, under the Datapack |
 | F212 | U2.3, Scratch 1028 B moved to the test store (2026-11-17) | Owner: Republish after the store change read "Unpublishing product pages / The old store's product pages", and ended on one paragraph ("Now on …: 1 category page published. 49 old product pages removed. Product pages were not published (empty catalog).") where the extension lists what was done | **Fixed** with tests. The removal is one request (no batches), so line 2 reads "Finding the old store's pages", then the count as the pages go ("49 pages from the old store"). The success window lists each sentence on its own line (the outcome's `details`), from Configure's Republish and the dashboard's; an agent still gets the one sentence. Then (owner: "is it valuable or noise?", yes to trimming): a clean store change ends on the title alone; a line only for what was kept or not done (an edited page kept, pages that failed); an empty catalog says nothing |
+| F213 | U2.3, Reset on Scratch 1028 B's dashboard (2026-11-17) | Owner: the one-project Reset window repeated the project's name and repository in a table under a title that already named it. Same in Delete and Save Your Changes First?. Also the Needs reset dot was stale: the flag was set at creation by the F204 false alarm, before F208. | Fixed: one project draws no table. Reset says the repository in its sentence; Delete names the online name once ("You can also delete <repo> online.") and its boxes say where (Delete GitHub Repository, Delete DA.live Site), a name under a box only where it differs; the save window drops the project line. Several projects keep the tables. The stale flag was removed from the project file by hand. Owner approved the mock-up (option B). |
 
 ## Questions raised
 
@@ -427,7 +428,7 @@ day.
    wizard titled **Import Project** with Release Save Test already chosen in **Datapacks**.
 3. Create it with a new repository name and a new DA.live site. Expect "Installing Release Save
    Test" during creation, and the new demo's store holding ZZ Customer Picks 3.
-4. Back to zero: delete the new project, ticking **Delete Repository**, **Delete DA.live Site** and
+4. Back to zero: delete the new project, ticking **Delete GitHub Repository**, **Delete DA.live Site** and
    **Uninstall Datapack**. Expect "<name> Deleted".
 
 **Result:** open
@@ -476,13 +477,13 @@ end).
 1. Create a project named "Scratch 1028 C", choosing Scratch 1028 B's repository in the wizard's
    storefront area instead of **New**.
 2. On Scratch 1028 C's dashboard, click **Delete**. Expect **Delete Scratch 1028 C?** with no
-   **Delete Repository** box (Scratch 1028 B uses it). Click **Cancel**. Expect to stay on the
+   **Delete GitHub Repository** box (Scratch 1028 B uses it). Click **Cancel**. Expect to stay on the
    dashboard.
 3. On the projects list, **Select Projects**, tick both, **Delete Selected**. Expect the **Delete
    Repository** box back, because both are going. Click **Cancel**.
 4. Ask an agent to delete Scratch 1028 C, with its repository. Expect it deleted, and the answer
    "Kept the GitHub repository: Scratch 1028 B also uses it."
-5. On Scratch 1028 B's dashboard, click **Delete**, tick **Delete Repository** and **Delete DA.live
+5. On Scratch 1028 B's dashboard, click **Delete**, tick **Delete GitHub Repository** and **Delete DA.live
    Site**, then **Delete**. Expect "Deleting Scratch 1028 B", then **Scratch 1028 B Deleted**, and
    only then the projects list.
 
@@ -616,7 +617,7 @@ the steps below as "the GitHub and DA.live round trip" (2026-11-16).
 5. Create it with a new repository name and a new DA.live site.
 6. Expect "Installing <name>" during creation, a new GitHub repository, a new DA.live site, and
    the store showing the pack's data.
-7. Back to zero: delete the new project with **Delete Repository**, **Delete DA.live Site** and
+7. Back to zero: delete the new project with **Delete GitHub Repository**, **Delete DA.live Site** and
    the pack's data removed.
 
 **Result:** open
@@ -665,7 +666,7 @@ and the library's Delete refuses while a project uses it (step 9 below).
    can't be deleted. Uninstall it there first."
 10. On Scratch 1028 B's dashboard, click **Delete**. Expect "Delete Scratch 1028 B?" on the
     dashboard itself (F139), with "Project files are removed from this machine. Datapacks stay
-    installed in Commerce unless you uninstall them.", and **Delete Repository**, **Delete DA.live
+    installed in Commerce unless you uninstall them.", and **Delete GitHub Repository**, **Delete DA.live
     Site** and **Uninstall Datapack**. **Uninstall Datapack** is never ticked to start. Tick all
     three, click **Delete**. Expect "Deleting Scratch 1028 B", then "Scratch 1028 B Deleted", and
     only then the projects list.
@@ -863,7 +864,7 @@ Demo Builder pack with changes was refused, uninstalling nothing. Still open: th
 Use throwaway projects only.
 
 1. Tick two, click **Delete Selected**. Expect "Reading projects", then **Delete 2 Projects?** with a
-   table: **Delete Repository**, **Delete DA.live Site**, **Uninstall Datapack**.
+   table: **Delete GitHub Repository**, **Delete DA.live Site**, **Uninstall Datapack**.
 2. Expect each column header to tick or untick its column. **Uninstall Datapack** is never ticked
    to start.
 3. Click **Delete 2 Projects**. Expect **Deleting Projects**, then **Projects Deleted**.
@@ -879,12 +880,12 @@ Rewritten to today's dialog 2026-11-16.
    on the projects list, **Delete**. There is no **More** menu.
 2. Expect "Reading the project" with the project's name, then the title **Delete <name>?** with
    the amber icon, the line "Project files are removed from this machine. Datapacks stay installed
-   in Commerce unless you uninstall them.", **Delete Repository** and **Delete DA.live Site**
+   in Commerce unless you uninstall them.", **Delete GitHub Repository** and **Delete DA.live Site**
    ticked, **Uninstall Datapack** unticked, and **Cancel** and **Delete**. It asks first.
 3. From the dashboard: click **Cancel**. Expect to stay on the dashboard. Open it again and delete:
    expect "Deleting <name>", then "<name> Deleted", and only then the projects list.
 4. Make two local projects on the same GitHub repository. Delete one. Expect no
-   **Delete Repository** box.
+   **Delete GitHub Repository** box.
 5. Batch-delete both. Expect the box back, because both are going.
 
 **Result:** passed 2026-11-16 (owner): the dialog as step 2 describes it, from the dashboard and the card's menu; three findings filed (F137 to F139), and a re-look owed after their build (step 3, and "Reading the project"). Earlier, passed in part (owner, 2026-11-05). Steps 1 and 2 (single delete, its boxes under `ask`) and Delete Selected looked at, then redesigned (F19, F20). Steps 3 and 4 (two projects on one repository) counted as covered by tests, not run live (owner, 2026-11-05): Delete Selected drops the repository and site boxes another project still uses (`projectsBatch.test.ts`), the single delete takes the same shared check, and the shared site is pinned in `edsExternalCleanup.test.ts`. A live run would only add the real lookup finding a real second project

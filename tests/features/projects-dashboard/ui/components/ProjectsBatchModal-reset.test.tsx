@@ -247,16 +247,16 @@ describe('ProjectsBatchModal: Reset Selected', () => {
 
     // Each project as the run draws it: its name, and under it what it is (owner, 2026-11-04).
     it("draws each project's package and stack under its name", async () => {
-        await openOn('reset', prepared([{ path: '/p/a', name: asDisplayName('A'), summary: 'Starter (B2B + B2C), Edge Delivery + ACCS' }]));
-        await screen.findByRole('dialog', { name: 'Reset A?' });
+        await openOn('reset', prepared([{ path: '/p/a', name: asDisplayName('A'), summary: 'Starter (B2B + B2C), Edge Delivery + ACCS' }, { path: '/p/b', name: asDisplayName('B') }]));
+        await screen.findByRole('dialog', { name: 'Reset 2 Projects?' });
 
         expect(screen.getByText('Starter (B2B + B2C), Edge Delivery + ACCS')).toHaveClass('work-row-detail');
     });
 
     // A storefront's repository names what the reset overwrites; it leads over the summary.
     it("draws a storefront's repository under its name, in place of its summary", async () => {
-        await openOn('reset', prepared([{ path: '/p/a', name: asDisplayName('A'), repository: 'skukla/a', summary: 'Starter (B2B + B2C), Edge Delivery + ACCS' }]));
-        await screen.findByRole('dialog', { name: 'Reset A?' });
+        await openOn('reset', prepared([{ path: '/p/a', name: asDisplayName('A'), repository: 'skukla/a', summary: 'Starter (B2B + B2C), Edge Delivery + ACCS' }, { path: '/p/b', name: asDisplayName('B') }]));
+        await screen.findByRole('dialog', { name: 'Reset 2 Projects?' });
 
         expect(screen.getByText('skukla/a')).toHaveClass('work-row-detail');
         expect(screen.queryByText('Starter (B2B + B2C), Edge Delivery + ACCS')).toBeNull();

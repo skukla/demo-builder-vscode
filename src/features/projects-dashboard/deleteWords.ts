@@ -6,11 +6,14 @@
  */
 
 /**
- * The question's sentence: what goes whatever is ticked, and, when the box is offered, that the
- * datapack stays installed in Commerce unless the SC uninstalls it. The box itself is
- * `UNINSTALL_DATAPACK` (`data-installer/datapackWords.ts`).
+ * The question's sentence: what goes whatever is ticked; for one project, the name its repository
+ * and site have online, said once (walk F213), so its boxes need only say where each thing lives;
+ * and, when the box is offered, that the datapack stays installed in Commerce unless the SC
+ * uninstalls it. The box itself is `UNINSTALL_DATAPACK` (`data-installer/datapackWords.ts`).
  */
-export function deleteSentence(offersData: boolean): string {
-    const files = 'Project files are removed from this machine.';
-    return offersData ? `${files} Datapacks stay installed in Commerce unless you uninstall them.` : files;
+export function deleteSentence(offersData: boolean, onlineName?: string): string {
+    const parts = ['Project files are removed from this machine.'];
+    if (onlineName) parts.push(`You can also delete ${onlineName} online.`);
+    if (offersData) parts.push('Datapacks stay installed in Commerce unless you uninstall them.');
+    return parts.join(' ');
 }

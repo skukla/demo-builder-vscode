@@ -74,9 +74,9 @@ describe('ProjectsBatchModal: Delete Selected', () => {
         await openOn('delete', DELETE);
         await screen.findByRole('dialog', { name: /^Delete \d+ Projects?\?$/ });
 
-        expect(box('Delete Repository, A')).toBeChecked();
+        expect(box('Delete GitHub Repository, A')).toBeChecked();
         expect(box('Delete DA.live Site, A')).toBeChecked();
-        expect(box('Delete Repository, B')).not.toBeChecked();
+        expect(box('Delete GitHub Repository, B')).not.toBeChecked();
         expect(screen.queryByRole('checkbox', { name: 'Delete DA.live Site, B' })).toBeNull();
         const rowC = screen.getByText('C').closest('tr') as HTMLElement;
         expect(within(rowC).queryAllByRole('checkbox')).toHaveLength(0);
@@ -90,7 +90,7 @@ describe('ProjectsBatchModal: Delete Selected', () => {
 
         expect(screen.getByText('Project files are removed from this machine.')).toBeInTheDocument();
         expect(screen.getByText('Project')).toBeInTheDocument();
-        expect(within(box('Delete Repository, A').closest('td') as HTMLElement).getByText('me/a')).toBeInTheDocument();
+        expect(within(box('Delete GitHub Repository, A').closest('td') as HTMLElement).getByText('me/a')).toBeInTheDocument();
         expect(within(box('Delete DA.live Site, A').closest('td') as HTMLElement).getByText('org/a')).toBeInTheDocument();
         const nameCell = screen.getByText('A').closest('th') as HTMLElement;
         expect(nameCell).toHaveTextContent(/^A$/);
@@ -105,33 +105,33 @@ describe('ProjectsBatchModal: Delete Selected', () => {
 
         expect(await screen.findByRole('dialog', { name: 'Delete A?' })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Delete' })).toHaveAttribute('data-variant', 'negative');
-        expect(screen.getByText('Project files are removed from this machine.')).toBeInTheDocument();
+        expect(screen.getByText('Project files are removed from this machine. You can also delete me/a online.')).toBeInTheDocument();
     });
 
     it("a column's header shows some, ticks all, then ticks none, over only the rows that have it", async () => {
         const { user } = await openOn('delete', DELETE);
         await screen.findByRole('dialog', { name: /^Delete \d+ Projects?\?$/ });
-        const header = box('Delete Repository');
+        const header = box('Delete GitHub Repository');
 
         expect(header).toHaveAttribute('aria-checked', 'mixed');
         expect(box('Delete DA.live Site')).toBeChecked();
 
         await user.click(header);
-        expect(box('Delete Repository, A')).toBeChecked();
-        expect(box('Delete Repository, B')).toBeChecked();
-        expect(box('Delete Repository')).toBeChecked();
+        expect(box('Delete GitHub Repository, A')).toBeChecked();
+        expect(box('Delete GitHub Repository, B')).toBeChecked();
+        expect(box('Delete GitHub Repository')).toBeChecked();
 
-        await user.click(box('Delete Repository'));
-        expect(box('Delete Repository, A')).not.toBeChecked();
-        expect(box('Delete Repository, B')).not.toBeChecked();
-        expect(box('Delete Repository')).not.toHaveAttribute('aria-checked', 'mixed');
+        await user.click(box('Delete GitHub Repository'));
+        expect(box('Delete GitHub Repository, A')).not.toBeChecked();
+        expect(box('Delete GitHub Repository, B')).not.toBeChecked();
+        expect(box('Delete GitHub Repository')).not.toHaveAttribute('aria-checked', 'mixed');
     });
 
     it('sends one answer per project from the boxes, on the red button naming the count', async () => {
         const { user } = await openOn('delete', DELETE);
         await screen.findByRole('dialog', { name: /^Delete \d+ Projects?\?$/ });
         await user.click(box('Delete DA.live Site, A'));
-        await user.click(box('Delete Repository, B'));
+        await user.click(box('Delete GitHub Repository, B'));
         const run = screen.getByRole('button', { name: 'Delete 3 Projects' });
 
         expect(run).toHaveAttribute('data-variant', 'negative');

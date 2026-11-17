@@ -197,7 +197,7 @@ function waitOf(view: BatchView): WaitLines | false {
 }
 
 /** "Save Your Changes First?", in the window's own container; the verb is the batch's. */
-function SaveFirstOf({ controls, action, question }: { controls: ProjectsBatchControls; action: ProjectsBatchAction; question: SaveQuestion }): React.ReactElement {
+function SaveFirstOf({ controls, action, question, single }: { controls: ProjectsBatchControls; action: ProjectsBatchAction; question: SaveQuestion; single: boolean }): React.ReactElement {
     const verb = action === 'delete' ? 'Delete' : 'Reset';
     return (
         <SaveFirstWindow
@@ -207,7 +207,7 @@ function SaveFirstOf({ controls, action, question }: { controls: ProjectsBatchCo
             onAnswer={(saves) => controls.run(saves ? 'save' : 'drop')}
             onClose={controls.close}
         >
-            <BatchSaveTable question={question} onName={controls.choices.setName} />
+            <BatchSaveTable question={question} onName={controls.choices.setName} withProject={!single} />
         </SaveFirstWindow>
     );
 }
@@ -279,7 +279,14 @@ function BatchWindow({ controls, onDismiss }: { controls: ProjectsBatchControls;
         );
     }
     if (view.phase === 'asking' && controls.choices.saving) {
-        return <SaveFirstOf controls={controls} action={view.questions.action} question={saveQuestionOf(view.questions, controls.choices)} />;
+        return (
+            <SaveFirstOf
+                controls={controls}
+                action={view.questions.action}
+                question={saveQuestionOf(view.questions, controls.choices)}
+                single={view.questions.rows.length === 1}
+            />
+        );
     }
     if (view.phase === 'reading' || view.phase === 'asking') {
         return <QuestionsWindow key="questions" controls={controls} view={view} />;

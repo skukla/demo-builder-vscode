@@ -1,7 +1,7 @@
 /**
  * agentProjectCleanup — the cloud half of an agent's project delete (AI-9).
  *
- * The button offers a checklist with two boxes, both unticked: "Delete
+ * The button offers a checklist with two boxes, both unticked: "Delete GitHub
  * Repository" and "Delete DA.live Site" (which is also what unpublishes the
  * CDN). Press Enter without ticking either and it deletes locally — exactly what
  * `delete_project` has always done. The difference was never policy; the agent

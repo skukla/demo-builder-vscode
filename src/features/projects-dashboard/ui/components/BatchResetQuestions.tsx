@@ -7,6 +7,9 @@
  * discards changes nobody could see (option B). The packs' changes are asked after the red button,
  * in "Save Your Changes First?" (`BatchSaveTable`), shared with Delete Selected (step-05 S1).
  *
+ * One project draws no table (walk F213): the title names it, so its sentence says the repository
+ * and its pack is one box (`OneResetQuestion`).
+ *
  * The table is Delete Selected's (`batch-delete-table`), so the two windows draw a project and its
  * boxes one way, and it stacks the same in a narrow window.
  *
@@ -40,13 +43,35 @@ function ProjectCell({ row }: { row: BatchResetRow }) {
     );
 }
 
+/**
+ * One project (walk F213): the title names it, so no table of one row repeats it. The sentence says
+ * the repository a reset rewrites; the datapack is one box beside the pack's name.
+ */
+function OneResetQuestion({ row, choices }: { row: BatchResetRow; choices: BatchChoices }): React.ReactElement {
+    const lost = row.repository ? `Code changes in ${row.repository} are lost.` : 'Code changes are lost.';
+    return (
+        <div className="batch-confirm">
+            <LeadText>{`${row.name} returns to how it was set up. ${lost}`}</LeadText>
+            {removable(row) && (
+                <CheckboxRow
+                    label={UNINSTALL_DATAPACK}
+                    {...(row.datapack ? { detail: row.datapack.name } : {})}
+                    isSelected={choices.removeTicks[row.path] === true}
+                    onChange={() => choices.toggleRemove(row.path)}
+                />
+            )}
+            {row.datapack?.changes === 'unchecked' && <p className="dialog-problem text-notice">{UNCHECKED_NOTE}</p>}
+        </div>
+    );
+}
+
 /** What a reset does, then the projects and whose pack goes. */
 export function BatchResetQuestions({ rows, choices }: Props): React.ReactElement {
+    if (rows.length === 1) return <OneResetQuestion row={rows[0]} choices={choices} />;
     const column = removeColumnState(rows, choices.removeTicks);
     return (
         <div className="batch-confirm">
-            {/* One project by its name, as the title names it (live run 6, 2026-11-15). */}
-            <LeadText>{`${rows.length === 1 ? rows[0].name : 'Each project'} returns to how it was set up. Code changes are lost.`}</LeadText>
+            <LeadText>Each project returns to how it was set up. Code changes are lost.</LeadText>
             <div className="batch-delete scroll-fade scroll-fade--capped">
                 <table className="batch-delete-table">
                     {column.offered && (
