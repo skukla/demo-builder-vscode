@@ -89,6 +89,12 @@ describe('removeRows', () => {
         expect(removeRows(true, true).map((row) => row.key)).toEqual(['remove-data', 'remove']);
         expect(labels(removeRows(true, true))).toEqual(['Uninstall', 'Delete']);
     });
+
+    // Owner, 2026-11-17: the two looked the same. An uninstall is undone by installing again; a
+    // delete is for good, so only Delete keeps the trash can.
+    it('draws Uninstall as taking data out, and only Delete as the trash can', () => {
+        expect(removeRows(true, true).map((row) => row.icon)).toEqual(['uninstall', 'delete']);
+    });
 });
 
 describe('deletable', () => {

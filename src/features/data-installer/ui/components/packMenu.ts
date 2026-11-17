@@ -57,7 +57,7 @@ export function deletable(detail: DatapackDetail): boolean {
 export function removeRows(removesData: boolean, deletes: boolean): PackMenuRow[] {
     return [
         // Uninstall, the pair of Install (owner, 2026-11-09, walk F120): "Remove Data" read as all data.
-        ...(removesData ? [{ key: 'remove-data', label: 'Uninstall', icon: 'delete' }] : []),
+        ...(removesData ? [{ key: 'remove-data', label: 'Uninstall', icon: 'uninstall' }] : []),
         // Delete, not Remove (owner, 2026-11-09, walk F118): it leaves the library for good, where
         // Uninstall takes a demo's data out of its store and an install puts it back.
         ...(deletes ? [{ key: 'remove', label: 'Delete', icon: 'delete' }] : []),

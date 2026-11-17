@@ -20,6 +20,7 @@ import Clock from '@spectrum-icons/workflow/Clock';
 import Copy from '@spectrum-icons/workflow/Copy';
 import DataAdd from '@spectrum-icons/workflow/DataAdd';
 import DataDownload from '@spectrum-icons/workflow/DataDownload';
+import DataRemove from '@spectrum-icons/workflow/DataRemove';
 import DataUpload from '@spectrum-icons/workflow/DataUpload';
 import Delete from '@spectrum-icons/workflow/Delete';
 import Duplicate from '@spectrum-icons/workflow/Duplicate';
@@ -81,6 +82,11 @@ const MENU_ICONS: Record<string, React.ReactElement> = {
     openFile: <FolderOpen size="S" />,
     /** Put something kept into a store (a datapack's Install). */
     install: <DataDownload size="S" />,
+    /**
+     * Take what something put into a store back out, the pair of `install` (a datapack's Uninstall).
+     * Not `delete`'s trash can: an uninstall is undone by installing again (owner, 2026-11-17).
+     */
+    uninstall: <DataRemove size="S" />,
     /** Take what is in a store into something kept (Save store changes to this pack). */
     capture: <DataUpload size="S" />,
     /** Let others see and use it (a library pack's Share and Stop sharing). */
