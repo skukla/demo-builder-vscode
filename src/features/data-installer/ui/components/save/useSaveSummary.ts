@@ -2,14 +2,15 @@
  * What "Save Changes to My Luma" reads (step-04 S2; decisions Phase 7b, J3-1; P4-Q3): what its
  * install record lists, by type (`get-datapack-removal-scope`), and the SC's changes, counted by type
  * and the records added by hand since the install (`get-datapack-removal-changes` with `added`,
- * step-07 E1), both sent once as the window opens; and, from Review Records, the
- * datapack's records (`get-datapack-records`), read once. Two reads are enough: what the datapack
- * holds, and what changed in it.
+ * step-07 E1), both sent once as the window opens. Two reads are enough: what the datapack holds,
+ * and what changed in it. The datapack's records (`get-datapack-records`) are read only when the
+ * install record is empty, to count what it holds. No Review Records (walk F216, owner 2026-11-17):
+ * it listed the datapack's old names under an Update title; the counts say what the save takes.
  *
  * @module features/data-installer/ui/components/save/useSaveSummary
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import type { DatapackRemovalChanges, DatapackRemovalScope, RecordedKind } from '../../../removalChanges';
 import { useDataInstallerRequest } from '../../hooks/useDataInstallerRequest';
 import type { TypeRow } from '../job/installRows';
@@ -28,22 +29,6 @@ export interface SaveSummary {
     rows: TypeRow[];
     /** What could not be read, as the problem line under the table says it. */
     problem?: string;
-    /** Review Records is open. */
-    reviewing: boolean;
-    records: Record<string, string[]> | null;
-    /** The tree of a type that nests, and the products' names, for Review Records. */
-    recordsShown: Pick<DatapackRecordsResult, 'trees' | 'productNames'>;
-    recordsReading: boolean;
-    review: () => void;
-    back: () => void;
-}
-
-/** What Review Records draws beside the names: the category tree and the products' names. */
-export function shownOf(value: DatapackRecordsResult | null | undefined): Pick<DatapackRecordsResult, 'trees' | 'productNames'> {
-    return {
-        ...(value?.trees ? { trees: value.trees } : {}),
-        ...(value?.productNames ? { productNames: value.productNames } : {}),
-    };
 }
 
 /** The datapack as the reads name it: its store only when it is the library. */
@@ -75,7 +60,6 @@ export function useSaveSummary(pack: PackBeingSaved): SaveSummary {
         READ_CHANGES,
     );
     const records = useDataInstallerRequest<DatapackRecordsResult>('get-datapack-records');
-    const [reviewing, setReviewing] = useState(false);
     const loadScope = scope.load;
     const loadChanges = changes.load;
     useEffect(() => {
@@ -101,14 +85,5 @@ export function useSaveSummary(pack: PackBeingSaved): SaveSummary {
         ready: scope.settled && changes.settled && (!recordEmpty || records.settled),
         rows,
         ...(problem ? { problem } : {}),
-        reviewing,
-        records: records.value?.records ?? null,
-        recordsShown: shownOf(records.value),
-        recordsReading: !records.settled,
-        review: () => {
-            setReviewing(true);
-            if (!records.settled && !records.loading) records.load(packFields(pack));
-        },
-        back: () => setReviewing(false),
     };
 }

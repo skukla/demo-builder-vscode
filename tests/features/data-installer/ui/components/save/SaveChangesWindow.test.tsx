@@ -147,11 +147,14 @@ describe('the summary', () => {
         expect(screen.queryByRole('checkbox')).toBeNull();
     });
 
-    it('offers Review Records at the start, then Cancel and Save, and no Save As New', async () => {
+    // Walk F216 (owner, 2026-11-17): Review Records listed the datapack's old names under an Update
+    // title, just after the SC renamed one in Commerce. The counts say what the save takes; the list
+    // of what Commerce holds now is filed for after the release.
+    it('offers Cancel and Save alone: no Review Records, and no Save As New', async () => {
         answer();
         await open();
 
-        expect(button('Review Records')).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Review Records' })).toBeNull();
         expect(button('Cancel')).toBeInTheDocument();
         expect(button('Save')).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Save As New' })).toBeNull();
@@ -261,32 +264,3 @@ describe('Save and Cancel', () => {
     });
 });
 
-describe('Review Records', () => {
-    it("reads the datapack's records once, lists them read-only with Back alone, and Back returns to the summary", async () => {
-        answer();
-        await open();
-
-        await press(button('Review Records'));
-        await settle();
-
-        expect(sent('get-datapack-records')).toEqual({
-            datapackName: 'my-luma-1a2b3c',
-            version: '20261110-091500',
-            source: 'library',
-        });
-        expect(
-            screen.getByRole('heading', { name: 'Update My Luma' })
-        ).toBeInTheDocument();
-        expect(screen.getByText('Gear/Bags')).toBeInTheDocument();
-        expect(
-            screen
-                .getAllByRole('button', { name: /^(Back|Cancel|Close|Save)$/u })
-                .map((b) => b.textContent)
-        ).toEqual(['Back']);
-
-        await press(button('Back'));
-        expect(rows()).toStrictEqual(['Categories41', 'Products4 of 2,046 changed']);
-        await press(button('Review Records'));
-        expect(sends('get-datapack-records')).toBe(1);
-    });
-});
