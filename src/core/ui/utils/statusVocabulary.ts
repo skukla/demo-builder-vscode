@@ -165,10 +165,12 @@ export function getStorefrontStatusDisplay(status: string | undefined): StatusDi
  * failed": a datapack is installed, not deployed (step-04 J6-1 and J6-4, owner 2026-11-12). The
  * state comes from `installFailed` on `get-datapack-import-target`.
  */
-export type DatapackDisplayStatus = 'install-failed';
+export type DatapackDisplayStatus = 'install-failed' | 'newer-version';
 
 const DATAPACK_DISPLAY: Record<DatapackDisplayStatus, StatusDisplayEntry> = {
     'install-failed': { label: 'Install failed', severity: 'error' },
+    // The card's amber dot, the dashboard tile's and the flyout's status line (J9-1; walk F218, F220).
+    'newer-version': { label: 'Newer version available', severity: 'warning' },
 };
 
 /**

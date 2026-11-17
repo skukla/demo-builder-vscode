@@ -475,3 +475,22 @@ describe('DatapackDetailPanel and a settings layer (datapack-engine step 09)', (
         expect(screen.queryByText('Store Configuration')).not.toBeInTheDocument();
     });
 });
+
+// Walk F220 (owner, 2026-11-17): a newer version waiting is said in the flyout's status line under
+// its title, as the integration flyout says an update, in the card's words; the actions stay plain.
+describe('a newer version waiting', () => {
+    it('says so under the title, with the amber dot, and no dot on any action', () => {
+        renderPanel({ updates: true, restores: false });
+
+        const line = document.querySelector('.integration-panel-health') as HTMLElement;
+        expect(line).toHaveTextContent(/^Newer version available$/);
+        expect(line.querySelector('[data-variant="warning"]')).not.toBeNull();
+        expect(document.querySelectorAll('.db-drawer-body [data-variant="warning"]')).toHaveLength(0);
+    });
+
+    it('CONTROL: says nothing under the title while no newer version waits', () => {
+        renderPanel({ restores: true });
+
+        expect(document.querySelector('.integration-panel-health')).toBeNull();
+    });
+});

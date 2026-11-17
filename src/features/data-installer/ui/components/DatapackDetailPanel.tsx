@@ -38,7 +38,7 @@ import type { DataInstallerFailure } from '../hooks/useDataInstallerRequest';
 import type { HeldFailure } from '../hooks/useProjectHolding';
 import type { HeldSaves } from '../installedPackProps';
 import { DatapackPanelTitle } from './DatapackPanelTitle';
-import { FailedHead } from './FailedHealthLine';
+import { StatusHead } from './FailedHealthLine';
 import { PackActions } from './PackActions';
 import { StoreConfigurationRow } from './StoreConfigurationRow';
 import { StageWait } from '@/core/ui/components/feedback/StageWait';
@@ -156,8 +156,9 @@ export function DatapackDetailPanel({
         <Drawer isOpen={selected !== undefined} onClose={onClose} ariaLabel={`${title} details`}>
             {selected ? (
                 <>
-                    <FailedHead
+                    <StatusHead
                         failed={failed}
+                        newer={updates}
                         close={
                             <ActionButton isQuiet aria-label="Close details" onPress={onClose}>
                                 <Close size="S" />
@@ -168,7 +169,7 @@ export function DatapackDetailPanel({
                             <DatapackPanelTitle title={title} detail={loading || failure || working ? null : detail} onRename={onRename} />
                             <span className="datapack-panel-version">{shownVersion(selected.version)}</span>
                         </div>
-                    </FailedHead>
+                    </StatusHead>
                     <div className="db-drawer-body">
                         {working ? null : renderPanelBody({ detail, inventory, loading, failure, onRetry, settingsLayer })}
                         {detail && !loading && !working ? setupStep : null}

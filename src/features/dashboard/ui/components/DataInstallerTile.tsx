@@ -41,7 +41,13 @@ function failedStatus(): DashboardTileStatus {
 const FAILED_STATUS = failedStatus();
 
 /** The amber dot the demo's datapack card wears when a newer version waits, in its words (J9-1). */
-const NEWER_STATUS: DashboardTileStatus = { variant: 'warning', tooltip: 'Newer version available', testId: 'datapacks-newer' };
+function newerStatus(): DashboardTileStatus {
+    const entry = getDatapackStatusDisplay('newer-version');
+    if (!entry) throw new Error('The status vocabulary has no newer-version entry.');
+    return { variant: severityToDot(entry.severity), tooltip: entry.label, testId: 'datapacks-newer' };
+}
+
+const NEWER_STATUS = newerStatus();
 
 function statusOf(line: DatapackLine | undefined): DashboardTileStatus | undefined {
     if (line?.failed) return FAILED_STATUS;

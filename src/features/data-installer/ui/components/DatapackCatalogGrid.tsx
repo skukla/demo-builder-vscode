@@ -20,6 +20,7 @@ import { EMPTY_SHOW_TITLE, type CatalogShow, type ShowElsewhere } from '../catal
 import { DatapackCard } from './DatapackCard';
 import { ShowElsewhereNote } from './ShowElsewhereNote';
 import { EmptyState } from '@/core/ui/components/feedback/EmptyState';
+import { getDatapackStatusDisplay } from '@/core/ui/utils/statusVocabulary';
 import type { DatapackId, DatapackStoreName, ProjectDatapack } from '@/types/datapack';
 
 /** The version the demo uses, when the library still lists it. */
@@ -148,8 +149,8 @@ export function DatapackCatalogGrid({
     );
 }
 
-/** The amber dot's hover (J9-1, owner 2026-11-14, in J4-1's form). */
-const NEWER_VERSION = 'Newer version available';
+/** The amber dot's hover (J9-1, owner 2026-11-14, in J4-1's form), from the status vocabulary (F220). */
+const NEWER_VERSION = getDatapackStatusDisplay('newer-version')?.label ?? 'Newer version available';
 
 /**
  * The dot's words for the demo's own pack: present exactly when Update is waiting (`updateWaiting`,
