@@ -364,11 +364,11 @@ included, and opening on the version the demo uses (`DatapackCatalogGrid`):
   new pack's name, then what goes in it. It makes a new pack of the SC's, whose library name is
   generated from the name typed (`packIdFor`: a slug and a random suffix, so it can never land on a
   colleague's). The demo then uses it.
-- **Save Changes** or **Save As New Datapack**, once the demo has a pack Demo Builder installed: in
-  the header only (step-04 S5 removed the flyout's copy; owner, 2026-11-09, walk F83: an SC could not
-  tell which door saved what). On the SC's own library
-  pack (`mine`, not `team`) it is Save Changes, a new version; the header's Save ▾ also offers
-  **Save As New** to branch off into a second pack. On a team pack or a colleague's it is Save As New
+- **Update <pack>** or **Save As New**, once the demo has a pack Demo Builder installed: in that
+  pack's flyout only, under its main action (owner, 2026-11-17, walk F219, replacing step-04 S5's
+  header Save menu; the header reads Create and holds what is about no one datapack). On the SC's
+  own library pack (`mine`, not `team`) it is Update, a new version, and **Save As New** branches
+  off into a second pack. On a team pack or a colleague's it is Save As New
   Datapack, named for what it does ("Save Changes" read as changing the team pack): it makes a new
   pack of the SC's. Save opens **"Save Changes to My Luma"** (`components/save/SaveChangesWindow`,
   step-04 S2, J3-1): what My Luma will hold, read-only, one row per type from what its install record

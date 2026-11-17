@@ -246,6 +246,7 @@ Mark each test's **Result** line: `passed 2026-11-DD`, or `failed 2026-11-DD: wh
 | F216 | U2.3 step 2 (2026-11-17) | Owner: Update's Review Records listed the category as ZZ Customer Picks 2, just after the SC renamed it to ZZ Customer Picks 3 | **Open.** Review Records in the save window shows the datapack's records as they are (`get-datapack-records`), not what the save will write; the Update reads the store separately |
 | F217 | U2.3 step 2 (2026-11-17) | Owner: the wait ("Comparing with Commerce") has a medium spinner, the run that follows in the same flow a large one | **Fixed** with tests (owner, do it): one size, large, everywhere a wait or run shows its rows; only a flyout's brief wait (a label alone) stays medium. The size setting is gone from the shared rows, so no window can pass its own: the compiler refuses one. Three earlier choices each matched one window to its neighbour (dialogs medium 2026-10-31, flyouts 2026-11-02, one-project runs large 2026-11-16); large because the wizard and every run already were, and a dialog's wait has had three rows since 2026-11-08 |
 | F218 | U2.3 step 3 (2026-11-17) | Owner: the card's amber dot (newer version) should go up to the dashboard's Datapacks tile, as an integration's does | **Fixed** with tests: the tile wears the amber dot, "Newer version available", by the card's rule (a newer save than the one held, or types an update left behind, with Demo Builder's install record); the failed-install dot wins. Each pack's newest save is remembered by every list, the read behind the tile's line and each save, so the tile needs no read of its own; a save on one demo shows on another's tile at once |
+| F219 | U2.3 step 3 (2026-11-17) | Owner: with the actions in the flyout, should the header offer only Create, and the demo's datapack's update and save live in its flyout? | **Built** with tests (owner, do it): the header reads Create whatever the demo holds, then Install from File and Clear; the installed datapack's flyout offers **Update <pack>** and **Save As New** under its main action (Save As New alone on someone else's), opening the same windows. Replaces step-04 S5 (saving in the header only). Not built: a dot for unsaved changes, since finding them takes the minute-long comparison with Commerce |
 
 ## Questions raised
 
@@ -404,7 +405,7 @@ the newer version, not a change in a store of its own (the category is the same 
 1. Create a project named "Scratch 1028 B" on the test website and the test store view, picking
    Release Save Test 2 in the wizard's **Datapacks** step. Expect it installed during creation.
 2. Back on Scratch 1028: rename the category to "ZZ Customer Picks 3", then **Save** menu, **Update
-   Release Save Test 2**, **Save**. Expect **Release Save Test 2 Updated**.
+   Release Save Test 2**, **Save**. (Since F219 Update is in the datapack's flyout, under its main action.) Expect **Release Save Test 2 Updated**.
 3. Open Scratch 1028 B's Datapacks. Expect an amber dot on the Release Save Test 2 card, reading
    "Newer version available" on hover, and its flyout's first action **Install Newer Version**.
 4. Click it, then **Install**. Expect **Release Save Test 2 Installed** with nothing to change (the

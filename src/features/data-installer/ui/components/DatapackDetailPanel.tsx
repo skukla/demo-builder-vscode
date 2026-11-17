@@ -36,6 +36,7 @@ import { renderDataInstallerFailure } from '../dataInstallerFailure';
 import { dataTypeLabel } from '../dataTypeLabel';
 import type { DataInstallerFailure } from '../hooks/useDataInstallerRequest';
 import type { HeldFailure } from '../hooks/useProjectHolding';
+import type { HeldSaves } from '../installedPackProps';
 import { DatapackPanelTitle } from './DatapackPanelTitle';
 import { FailedHead } from './FailedHealthLine';
 import { PackActions } from './PackActions';
@@ -105,6 +106,8 @@ export interface DatapackDetailPanelProps {
     switches?: boolean;
     /** That same version's install failed (step-04 S8): the label and reason under the title, and Retry. */
     failed?: HeldFailure;
+    /** The installed version's saves, Update and Save As New (walk F219). */
+    saves?: HeldSaves;
 }
 
 export function DatapackDetailPanel({
@@ -129,6 +132,7 @@ export function DatapackDetailPanel({
     onRemoveData,
     restores = false,
     updates = false,
+    saves,
     switches = false,
     failed,
 }: DatapackDetailPanelProps): React.JSX.Element {
@@ -185,6 +189,7 @@ export function DatapackDetailPanel({
                                 switches={switches}
                                 failed={failed}
                                 importable={importable}
+                                saves={saves}
                             />
                         ) : null}
                     </div>

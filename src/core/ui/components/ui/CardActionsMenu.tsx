@@ -46,7 +46,7 @@ export interface CardActionsMenuProps {
     label?: string;
     /**
      * With `label`: draw the trigger as a quiet action button led by this icon, as a header's quiet
-     * buttons are (the Datapacks header's Save ▾, step-04 S1). Without it, the pill.
+     * buttons are (the Datapacks header's Clear ▾). Without it, the pill.
      */
     icon?: React.ReactNode;
     /**

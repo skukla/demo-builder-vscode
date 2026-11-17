@@ -1,9 +1,9 @@
 /**
  * What the catalog offers for the pack the open project holds:
  *
- * - The header's Save and Save As New on the demo's pack, and its Create when the demo has none
+ * - Update and Save As New on the demo's pack, in its flyout (walk F219), and the header's Create
  *   (step-04 S1, `headerSave`): into the demo's pack when it is the SC's, else into a new pack of
- *   theirs (owner, 2026-11-09). The flyout saves nothing (step-04 S5). Save opens
+ *   theirs (owner, 2026-11-09). Update opens
  *   "Save Changes to My Luma", Save As New its own form, its name empty from the SC's own datapack
  *   and "My Bodea" from anyone else's (step-04 S2, J3-1); the windows and the progress window are
  *   `useSaveStoreChanges`'s.
@@ -45,9 +45,9 @@ export interface HeldPackInput {
 export interface HeldPack {
     /** Create Datapack: a new pack from what is picked, named first; for a demo with no pack. Stable. */
     create: SaveStoreChanges['create'];
-    /** The header's Save: into the demo's pack, a new version. Stable. */
+    /** The flyout's Update: into the demo's pack, a new version. Stable. */
     saveDemo: () => void;
-    /** The header's Save As New: a new pack of the SC's from the demo's pack. Stable. */
+    /** The flyout's Save As New: a new pack of the SC's from the demo's pack. Stable. */
     saveDemoAsNew: () => void;
     /** The held pack's Admin step, as one line for the flyout. */
     setupStepLine: React.JSX.Element | null;

@@ -4,12 +4,10 @@
  * in the Datapack Library Add from File alone, since the library touches no store (owner,
  * 2026-11-07).
  *
- * The save button is one state (`headerSave`), decided before it is drawn: a button's words never
- * change while it is on screen (7b). Until the project and the catalog have answered it is the
- * header's waiting button (disabled, a spinner, no words, as its Refresh is while it reads). Then:
- * Create with no datapack, or one with no install record (step-07 P3); Save ▾ (Save, Save As New)
- * on the SC's own, Update naming the datapack it writes into; a plain Save As New on someone else's. Each choice opens
- * today's flow, through the handlers it is given.
+ * Create, once the project and the catalog have answered; until then the header's waiting button
+ * (disabled, a spinner, no words, as its Refresh is while it reads), so its words never change on
+ * screen (7b). Saving the demo's datapack, Update and Save As New, is in that datapack's flyout
+ * (owner, 2026-11-17, walk F219): the header holds what is about no one datapack.
  *
  * Install from File adds the file's datapack to My Datapacks, then, after a clean load, opens the
  * install window on it (step-07 F2, P4-Q7; the screen's `onInstall`); cancelling that window leaves
@@ -28,8 +26,6 @@
 
 import { ActionButton, Divider, Item, Text } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useState } from 'react';
-import { UPDATE } from '../../datapackWords';
-import type { HeaderSave } from '../headerSave';
 import { useClearDemoData } from '../hooks/useClearDemoData';
 import type { RemovalAnswer } from '../hooks/useSwitchChanges';
 import { type LoadedDatapack, AddDatapackFileModal } from './AddDatapackFileModal';
@@ -41,17 +37,15 @@ import { Spinner } from '@/core/ui/components/ui/Spinner';
 import type { DatapackId } from '@/types/datapack';
 import type { ClearWindowKind } from '@/types/demoDataWipe';
 
-/** The save button's state, and the flow each of its choices opens. Handlers stable. */
+/**
+ * The header's Create (owner, 2026-11-17, walk F219): the header holds what is about no one datapack;
+ * saving the demo's datapack, Update and Save As New, moved to that datapack's flyout. Stable.
+ */
 export interface HeaderSaveActions {
-    state: HeaderSave;
+    /** The project or the catalog has not answered: the header's waiting button, never a label first (7b). */
+    pending: boolean;
     /** Create: a new datapack from the project's store. */
     onCreate: () => void;
-    /** Save: into the SC's own datapack, as a new version. */
-    onSave: () => void;
-    /** Save As New: a new datapack of the SC's from the one the project holds. */
-    onSaveAsNew: () => void;
-    /** The datapack Save writes into, by name: its menu item says so (owner walk, 2026-11-16). */
-    into?: string;
 }
 
 export interface CatalogHeaderActionsProps {
@@ -71,29 +65,19 @@ export interface CatalogHeaderActionsProps {
     onInstall?: (loaded: LoadedDatapack) => void;
 }
 
-/** The save button, as its state says (`headerSave`). */
-function SaveButton({ save }: { save: HeaderSaveActions }): React.JSX.Element {
-    const { state, onCreate, onSave, onSaveAsNew, into } = save;
-    const pick = useCallback((key: React.Key): void => (key === 'as-new' ? onSaveAsNew() : onSave()), [onSave, onSaveAsNew]);
-    if (state === 'pending') {
+/** Create, or the header's waiting button until the project and the catalog have answered. */
+function CreateButton({ save }: { save: HeaderSaveActions }): React.JSX.Element {
+    if (save.pending) {
         return (
             <ActionButton isQuiet isDisabled aria-label="Loading">
                 <Spinner size="S" />
             </ActionButton>
         );
     }
-    if (state === 'save-menu') {
-        return (
-            <CardActionsMenu label="Save" ariaLabel="Save" icon={renderMenuIcon('capture')} onAction={pick}>
-                {[<Item key="save">{into ? `${UPDATE} ${into}` : UPDATE}</Item>, <Item key="as-new">Save As New</Item>]}
-            </CardActionsMenu>
-        );
-    }
-    const create = state === 'create';
     return (
-        <ActionButton isQuiet onPress={create ? onCreate : onSaveAsNew}>
-            {renderMenuIcon(create ? 'add' : 'capture')}
-            {create ? <Text>Create</Text> : <Text>Save As New</Text>}
+        <ActionButton isQuiet onPress={save.onCreate}>
+            {renderMenuIcon('add')}
+            <Text>Create</Text>
         </ActionButton>
     );
 }
@@ -161,7 +145,7 @@ export function CatalogHeaderActions(props: CatalogHeaderActionsProps): React.JS
 
     return (
         <>
-            {save ? <SaveButton save={save} /> : null}
+            {save ? <CreateButton save={save} /> : null}
             <ActionButton isQuiet onPress={() => setOpen('load')}>
                 {renderMenuIcon('openFile')}
                 {save ? <Text>Install from File</Text> : <Text>Add from File</Text>}

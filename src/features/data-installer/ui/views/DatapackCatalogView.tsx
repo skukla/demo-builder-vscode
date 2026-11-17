@@ -47,7 +47,7 @@ import { DatapackCatalogGrid } from '../components/DatapackCatalogGrid';
 import { DatapackDetailPanel } from '../components/DatapackDetailPanel';
 import { DatapackSourceNotice } from '../components/DatapackSourceNotice';
 import { renderDataInstallerFailure } from '../dataInstallerFailure';
-import { headerSave, heldInCatalogOf } from '../headerSave';
+import { headerSave, heldInCatalogOf, heldSavesOf } from '../headerSave';
 import { useCatalogShow } from '../hooks/useCatalogShow';
 import type { ClearArrival } from '../hooks/useClearArrival';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';
@@ -189,15 +189,11 @@ export function DatapackCatalogView({ library = false, clearArrival }: { library
         onSaved: afterSave,
     });
 
-    // The header's save button, one state (step-04 S1): Create, Save ▾ or Save As New, each opening
-    // its window (S2). None in the Datapack Library.
+    // The header reads Create once known; the demo's datapack's saves are in its flyout (walk F219).
     const { create: createDatapack, saveDemo, saveDemoAsNew } = heldPack;
     const saveState = headerSave({ projectAnswered, catalogAnswered: settled, held, installedAt, heldInCatalog });
-    const save = useMemo(
-        (): HeaderSaveActions | undefined =>
-            library ? undefined : { state: saveState, onCreate: createDatapack, onSave: saveDemo, onSaveAsNew: saveDemoAsNew, into: heldInCatalog?.displayName },
-        [library, saveState, createDatapack, saveDemo, saveDemoAsNew, heldInCatalog],
-    );
+    const save = useMemo((): HeaderSaveActions | undefined => (library ? undefined : { pending: saveState === 'pending', onCreate: createDatapack }), [library, saveState, createDatapack]);
+    const heldSaves = useMemo(() => heldSavesOf(saveState, { onUpdate: saveDemo, onSaveAsNew: saveDemoAsNew, into: heldInCatalog?.displayName }), [saveState, saveDemo, saveDemoAsNew, heldInCatalog]);
 
     const retryDetail = useCallback((): void => {
         if (selected) {
@@ -336,7 +332,7 @@ export function DatapackCatalogView({ library = false, clearArrival }: { library
                 {...(library ? { onMarkChanged: sharingChanged } : {})}
                 settingsLayer={detail.value?.settingsLayer}
                 {...(flyout.undoTo ? { undoTo: flyout.undoTo } : {})}
-                {...installedPackProps({ library, held, installedAt, selected, failed, updatable: heldUpdatable }, importWindow.openRemoval)}
+                {...installedPackProps({ library, held, installedAt, selected, failed, updatable: heldUpdatable, saves: heldSaves }, importWindow.openRemoval)}
             />
             {heldPack.windows}
 

@@ -5,7 +5,7 @@
  * @module features/data-installer/ui/components/packMenu
  */
 
-import { FIX_WITH_AI, INSTALL, INSTALL_NEWER, RESTORE } from '../../datapackWords';
+import { FIX_WITH_AI, INSTALL, INSTALL_NEWER, RESTORE, UPDATE } from '../../datapackWords';
 import { SHARE_CONSENT } from '../../shareWording';
 import type { DatapackDetail } from '../../types';
 import { RETRIES_BEFORE_FIX } from './importResult';
@@ -33,6 +33,18 @@ export function packRows(detail: DatapackDetail, undoable: boolean, marks = fals
         if (marks) rows.push(markRow(detail.team === true));
     }
     return rows;
+}
+
+/**
+ * The demo's datapack's saves, under its main action (owner, 2026-11-17, walk F219): Update naming
+ * the datapack it writes into (F189), then Save As New. Moved here from the header's Save menu.
+ */
+export function saveRows(saves: { onUpdate?: () => void; into?: string } | undefined): PackMenuRow[] {
+    if (!saves) return [];
+    const asNew = { key: 'save-as-new', label: 'Save As New', icon: 'add' };
+    if (!saves.onUpdate) return [asNew];
+    const label = saves.into ? `${UPDATE} ${saves.into}` : UPDATE;
+    return [{ key: 'update-pack', label, icon: 'capture' }, asNew];
 }
 
 /** Take the Demo Builder mark off, or put it on. */

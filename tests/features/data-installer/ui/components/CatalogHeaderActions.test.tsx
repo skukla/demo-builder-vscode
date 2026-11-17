@@ -25,8 +25,9 @@ const mockRequest = webviewClient.request as jest.Mock;
 
 const SAVE_WORDS = /^(Create|Save|Save As New)$/;
 
-function saveActions(state: HeaderSave): HeaderSaveActions {
-    return { state, onCreate: jest.fn(), onSave: jest.fn(), onSaveAsNew: jest.fn() };
+/** The header's Create, waiting or known: the state no longer changes its words (walk F219). */
+function saveActions(state: HeaderSave): HeaderSaveActions & { onCreate: jest.Mock } {
+    return { pending: state === 'pending', onCreate: jest.fn() };
 }
 
 function renderHeader(save?: HeaderSaveActions): ReturnType<typeof render> {
@@ -82,41 +83,22 @@ describe("in a project's Datapacks", () => {
         await press(screen.getByRole('button', { name: 'Create' }));
 
         expect(save.onCreate).toHaveBeenCalledTimes(1);
-        expect(save.onSave).not.toHaveBeenCalled();
-        expect(save.onSaveAsNew).not.toHaveBeenCalled();
     });
 
-    // Owner walk, 2026-11-16 (U2.2): the item names the datapack it saves into, so a selected card
-    // cannot be taken for the target.
-    it("is Save ▾ on the SC's own datapack, with Update that datapack and Save As New", async () => {
-        const save = { ...saveActions('save-menu'), into: 'Release Save Test' };
-        renderHeader(save);
+    // Owner, 2026-11-17 (walk F219): saving the demo's datapack moved to its flyout; the header holds
+    // what is about no one datapack, so it reads Create whatever the demo holds.
+    it.each(['save-menu', 'save-as-new'] as const)('reads Create, with no Save menu, when the demo holds a datapack (%s)', (state) => {
+        renderHeader(saveActions(state));
 
-        expect(screen.getByRole('button', { name: 'Save' })).toHaveTextContent('Save▾');
-        expect(menuItemsOf('Save')).toEqual(['Update Release Save Test', 'Save As New']);
-
-        await press(screen.getByRole('menuitem', { name: 'Update Release Save Test' }));
-        expect(save.onSave).toHaveBeenCalledTimes(1);
-        await press(screen.getByRole('menuitem', { name: 'Save As New' }));
-        expect(save.onSaveAsNew).toHaveBeenCalledTimes(1);
-        expect(save.onCreate).not.toHaveBeenCalled();
+        expect(screen.getByRole('button', { name: 'Create' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /^(Save|Save As New)$/u })).not.toBeInTheDocument();
+        expect(screen.queryByRole('menuitem', { name: /^(Update|Save As New)/u })).not.toBeInTheDocument();
     });
 
-    it("is a plain Save As New on someone else's datapack", async () => {
-        const save = saveActions('save-as-new');
-        renderHeader(save);
-
-        expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
-        await press(screen.getByRole('button', { name: 'Save As New' }));
-
-        expect(save.onSaveAsNew).toHaveBeenCalledTimes(1);
-        expect(save.onSave).not.toHaveBeenCalled();
-    });
-
-    it('puts the save button first, then Install from File, then Clear', () => {
+    it('puts Create first, then Install from File, then Clear', () => {
         renderHeader(saveActions('save-as-new'));
 
-        expect(buttonsInOrder(['Save As New', 'Install from File', 'Clear'])).toEqual(['Save As New', 'Install from File', 'Clear']);
+        expect(buttonsInOrder(['Create', 'Install from File', 'Clear'])).toEqual(['Create', 'Install from File', 'Clear']);
     });
 
     it("opens today's file load from Install from File", async () => {
@@ -145,11 +127,12 @@ describe("in a project's Datapacks", () => {
         expect(screen.queryByRole('heading', { name: 'Tailspin B2B Loaded' })).not.toBeInTheDocument();
     });
 
-    // 7b: a button's words never change while it is on screen. The first words drawn are the last.
+    // 7b: a button's words never change while it is on screen. The first words drawn are the last:
+    // Create, whatever the demo holds (walk F219).
     it.each<[HeaderSave, string]>([
         ['create', 'Create'],
-        ['save-menu', 'Save'],
-        ['save-as-new', 'Save As New'],
+        ['save-menu', 'Create'],
+        ['save-as-new', 'Create'],
     ])('never shows another label before %s as the answers arrive', (settled, words) => {
         const frames: string[][] = [];
         const record = (): void => {

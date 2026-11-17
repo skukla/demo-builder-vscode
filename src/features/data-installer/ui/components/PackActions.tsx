@@ -41,8 +41,9 @@ import { useLibrarySharing } from '../hooks/useLibrarySharing';
 import type { HeldFailure } from '../hooks/useProjectHolding';
 import { useRetryInstall } from '../hooks/useRetryInstall';
 import { useUndoLastSave } from '../hooks/useUndoLastSave';
+import type { HeldSaves } from '../installedPackProps';
 import { CopyToInstallerButton } from './CopyToInstallerButton';
-import { type Asking, confirmCopy, deletable, failedButtonLabel, mainButtonLabel, packRows, removeRows } from './packMenu';
+import { type Asking, confirmCopy, deletable, failedButtonLabel, mainButtonLabel, packRows, removeRows, saveRows } from './packMenu';
 import { useLibraryRemoval } from './RemoveFromLibraryButton';
 import { useSaveDatapackFile } from './SaveDatapackFileButton';
 import { StageWait, type WaitLines } from '@/core/ui/components/feedback/StageWait';
@@ -84,6 +85,8 @@ export interface PackActionsProps {
     failed?: HeldFailure;
     /** The data types the service holds for this version: a Retry installs every one. */
     importable?: readonly string[];
+    /** The installed version's saves: Update and Save As New, under the main action (walk F219). */
+    saves?: HeldSaves | undefined;
 }
 
 const NO_TYPES: readonly string[] = [];
@@ -121,6 +124,7 @@ export function PackActions({
     switches = false,
     failed,
     importable = NO_TYPES,
+    saves,
 }: PackActionsProps): React.JSX.Element {
     const library = detail.store === 'library';
     const [asking, setAsking] = useState<Asking>(null);
@@ -149,6 +153,8 @@ export function PackActions({
         else if (key === 'fix-with-ai') retry.fixWithAi();
         else if (key === 'save-file') saveFile.start();
         else if (key === 'remove-data') onRemoveData?.();
+        else if (key === 'update-pack') saves?.onUpdate?.();
+        else if (key === 'save-as-new') saves?.onSaveAsNew();
         else if (isAsked(key)) setAsking(key);
     };
     const confirm = (): void => {
@@ -161,6 +167,7 @@ export function PackActions({
 
     const rows: FlyoutActionRow[] = [
         ...(onImport ? [mainRow(detail, { restores, updates, switches, failed })] : []),
+        ...saveRows(saves),
         ...packRows(detail, undoTo !== undefined, onMarkChanged !== undefined),
         // Both take something away; only Delete is for good, so only it is red (owner, 2026-11-17).
         ...removeRows(onRemoveData !== undefined, deletable(detail)).map((row) => ({ ...row, removes: true, danger: row.key === 'remove' })),

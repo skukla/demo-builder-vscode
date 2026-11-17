@@ -7,10 +7,13 @@
  *
  * - `create`: the project holds no datapack, or one with no install record, so nothing a save could
  *   count (step-07 P3, owner 2026-11-14). The button reads Create, with no line saying why (rule 6).
- * - `save-menu`: the project holds the SC's own library datapack and Demo Builder installed it.
- *   Save ▾, with Save and Save As New.
+ * - `save-menu`: the project holds the SC's own library datapack and Demo Builder installed it:
+ *   its flyout offers Update and Save As New.
  * - `save-as-new`: it holds someone else's (a team pack, a colleague's, the Data Installer's),
- *   installed. A plain Save As New.
+ *   installed: its flyout offers Save As New.
+ *
+ * The header itself reads Create whatever the state, once known (owner, 2026-11-17, walk F219):
+ * what acts on the demo's datapack lives in that datapack's flyout, as an integration's does.
  *
  * @module features/data-installer/ui/headerSave
  */
@@ -76,4 +79,14 @@ export function heldInCatalogOf(page: CatalogPage | null, held: ProjectDatapack 
     const item = ofHeld.find((each) => each.id.version === held.version) ?? ofHeld[0];
     if (!item) return undefined;
     return { displayName: item.displayName, store: item.store, mine: item.mine, team: item.team };
+}
+
+/** What the held version's flyout saves with, by state: nothing until Demo Builder installed it (F219). */
+export function heldSavesOf(
+    state: HeaderSave,
+    actions: { onUpdate: () => void; onSaveAsNew: () => void; into?: string },
+): { onUpdate?: () => void; onSaveAsNew: () => void; into?: string } | undefined {
+    if (state === 'save-menu') return actions;
+    if (state === 'save-as-new') return { onSaveAsNew: actions.onSaveAsNew };
+    return undefined;
 }
