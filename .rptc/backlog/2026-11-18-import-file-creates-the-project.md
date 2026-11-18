@@ -54,7 +54,7 @@ colleagues, and Add a Demo Package's zip door stays a template import.
 - The wizard reads as an import of this project, not a choice among packages: the bundle's demo
   is shown as what is being imported (decide in design: skip the packages grid, or show it
   selected and locked).
-- The agent's door (`create_project_from_file`) behaves the same way.
+- Every action has its agent tool (owner, 2026-11-18): the plan's agent table.
 
 ## Questions for the design
 
@@ -62,8 +62,8 @@ colleagues, and Add a Demo Package's zip door stays a template import.
   DA.live site, not the content (`demoBundle.ts:53-78`); creation copies from that site and does
   not need the source repository (`edsPipeline.ts:311-346`). Researched 2026-11-18.
 - Reset: a project reset puts the storefront back to its template. With no template repository,
-  what does reset restore from? Likely the brand the demo was built on (the bundle's
-  `selectedPackage`), as a Starter build does; confirm.
+  the plan recommends restoring the project as imported (the import's commit in its own
+  repository), not the brand it was built on, which would discard the sender's code.
 - Code sync: unchanged. The project's repository is new, and the wizard's code sync step
   (`storefrontSetupPhase3.ts`, `pauseForGitHubApp`) covers it.
 

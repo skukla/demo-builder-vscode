@@ -92,9 +92,31 @@ Send a Link loses its **Add to My Welcome Step** box (owner: Share Demo is not t
   the wizard's fixed Welcome step, the agent door with a zip, and the existing import-a-card
   tests moved to Add a Demo Package's zip door, which keeps the template path.
 
+### Agents can do every one of these (each phase, not a phase of its own)
+
+Every action a button gains or changes, an agent gets through the same handler (owner,
+2026-11-18). Each tool change follows `mcp-tool-authoring`: the input schema from the handler's
+payload type, `readOnly`, a narration phrase, consent copy for a write, the count pins, and
+`docs/systems/mcp-server.md`.
+
+| Action | Button | Agent tool | Change |
+|---|---|---|---|
+| Save as Package | dashboard, new | `save_demo_package` (`demoPackageTools.ts:72`) | its description leads with Save as Package (a card on your own Welcome step); `addToWelcome` stays, default true, so today's callers are unchanged |
+| Remove Package | Save as Package window | `remove_demo_package` (`:120`) | description names Remove Package; behaviour unchanged |
+| Send a Link | Share Demo | `save_demo_package` with `addToWelcome:false`, then `get_demo_package_preview` for the link | the handler's new "leave the list as it is" case: an omitted box from the link step must not take a card off; the tool keeps its explicit true/false |
+| Send a File | Share Demo | `export_demo_bundle` (`:151`) | none (already path-based) |
+| Share Datapack | Share Demo's notice | `share_datapack` | none |
+| Import from File (a bundle) | projects list | `create_project_from_file` (`createProjectFromFileTool.ts:306`) | accepts a bundle zip, creates the project from its files through the same `bundleSource` path; today it reads JSON only and a zip fails |
+| Add a Demo Package from a zip | Welcome step | `add_shared_demo` with `zipPath` (`addedDemoTools.ts:176`) | none: stays the template import |
+| Reset an imported project | dashboard | `reset_project` (`resetProjectTool.ts:168`) | none to the tool; it reaches the new reset branch through the same handler, and its answer says what it restored |
+
+Proof, in phase 3: `mcp-live-probe` against the running build for each changed tool (its real
+answer, not the fixtures), and the reset and import run once by tool as well as by button.
+
 ### 3. Docs, walk and live cycle
 
 - `docs/systems/sharing-a-demo.md`, `moving-projects.md`, the MCP tool docs; walk rows.
+- The agent tools above probed live (`mcp-live-probe`), and `docs/systems/mcp-server.md` synced.
 - Live, with the owner's go (real GitHub, DA.live and Commerce writes): Save as Package on
   Scratch 1028, a project from that card; Send a File, Import from File, Create, publish, then
   Reset and see the imported code come back. Delete what the walk made.
