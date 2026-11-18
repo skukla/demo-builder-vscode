@@ -34,17 +34,19 @@ import React from 'react';
 import { isAdobeSignedIn } from '../../steps/tileStatus';
 import type { UseProjectBuilderReturn } from '../../steps/useProjectBuilder';
 import { apiAccessProblemOf, type ApiAccessProblem } from './apiAccessProblem';
+import { CREATE_TITLES, CreateEntityBody } from './CreateEntityBody';
+import { FlowDestinationLine } from './FlowDestinationLine';
 import { journeyFooter, type Footer } from './flowFooter';
 import { FlowStageBody } from './FlowStageBody';
 import { type FlowMode, FlowStageId } from './flowStages';
 import type { UnavailableEntries } from './stages/CatalogStage';
+import { useEntityCreate, type CreatableEntity, type EntityCreate } from './useEntityCreate';
 import {
     useIntegrationFlow,
     type ApiEditTarget,
     type UseIntegrationFlowReturn,
 } from './useIntegrationFlow';
 import { useOrgApis } from './useOrgApis';
-import { DestinationContext as SharedDestinationContext } from '@/core/ui/components/ui/DestinationContext';
 import type { DialogOutcome } from '@/core/ui/components/ui/DialogOutcome';
 import { StepsWindow } from '@/core/ui/components/ui/StepsDialog';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
@@ -118,55 +120,16 @@ export interface AddIntegrationFlowModalProps {
 
 type JourneyProps = Omit<AddIntegrationFlowModalProps, 'isOpen' | 'confirmation'>;
 
-/** Stages that ARE the destination picker — the line would be redundant there. */
-const DEST_PICKER_STAGES: ReadonlySet<string> = new Set([
-    'dest-signin',
-    'dest-project',
-    'dest-workspace',
-]);
-
-/**
- * The committed destination as a persistent context LINE, not a stage.
- *
- * It replaced the `dest-summary` step, whose only job was confirming a destination
- * the user never chose (it appears only when one is already committed) — a whole
- * modal step for zero decisions. As a line the destination stays visible while the
- * user does the real work, and the flow loses a click on EVERY add.
- *
- * Gated on the STAGE rather than on `draft.changingDestination`: that flag never
- * resets once set, so gating on it would hide the line for the rest of the session
- * after one Change.
- *
- * @param props - wizard state (the committed destination) and the Change action
- * @returns the line, or null when there is no committed destination to show
- */
-function DestinationContext({
-    state,
-    stage,
-    onChange,
-}: {
-    state: AdobeAuthSessionState;
-    stage: FlowStageId;
-    onChange: () => void;
-}): React.ReactElement | null {
-    // The stage gate stays HERE, not in the shared component: hiding the line
-    // while the user is on the picker stages is this modal's concern.
-    if (DEST_PICKER_STAGES.has(stage)) return null;
-    return (
-        <SharedDestinationContext
-            project={state.adobeProject?.title || state.adobeProject?.name || ''}
-            onChange={onChange}
-            className="dest-context--block"
-        />
-    );
-}
-
 /**
  * Which window each stage is drawn in (step-07 Win3; owner 2026-11-14, rule 14): the kind and the
  * two naming stages are of a comparable height and share the first window, which holds the tallest
  * of them; a stage much taller than the first (the pre-built gallery, the project and workspace
  * lists, the API list) opens as a window of its own at its own size, never a scrolling body. A long
  * list scrolls in its own pane. Signing in is a short window of its own between them.
+ *
+ * Naming a new project or workspace (New on either list) is not a stage: it is the short `CREATE_WINDOW`
+ * over the list's stage, sized to the one field it holds (walk F286), and Back or a finished create
+ * returns to the list's window.
  */
 const WINDOW_OF: Record<FlowStageId, string> = {
     kind: 'choose',
@@ -179,6 +142,9 @@ const WINDOW_OF: Record<FlowStageId, string> = {
     'api-access': 'apis',
 };
 
+/** The create window's key: one at a time, whichever list it was opened from. */
+const CREATE_WINDOW = 'create';
+
 const CHOOSE_STAGES: FlowStageId[] = ['kind', 'source-blank', 'source-custom'];
 
 interface StageViewProps {
@@ -188,10 +154,20 @@ interface StageViewProps {
     problem: ApiAccessProblem | undefined;
     onOutcome: (outcome: DialogOutcome | null) => void;
     onWaiting: (waiting: boolean) => void;
+    /** The create window's state: when one is open, it is the body. */
+    create: EntityCreate;
 }
 
-/** One stage's body: the read's problem, or the destination line over the stage. */
-function StageView({ flow, props, apis, problem, onOutcome, onWaiting }: StageViewProps): React.ReactElement {
+/** One stage's body: the create window's field, the read's problem, or the destination line over the stage. */
+function StageView({ flow, props, apis, problem, onOutcome, onWaiting, create }: StageViewProps): React.ReactElement {
+    const { entity } = create;
+    if (entity) {
+        return (
+            <div className="intflow-stage-body">
+                <CreateEntityBody entity={entity} create={create} state={props.state} onOutcome={onOutcome} />
+            </div>
+        );
+    }
     return (
         <div className="intflow-stage-body">
             {problem ? (
@@ -204,8 +180,15 @@ function StageView({ flow, props, apis, problem, onOutcome, onWaiting }: StageVi
                 </div>
             ) : (
                 <>
-                    <DestinationContext state={props.state} stage={flow.stage} onChange={flow.changeDestination} />
-                    <FlowStageBody flow={flow} props={props} apis={apis} onOutcome={onOutcome} onWaiting={onWaiting} />
+                    <FlowDestinationLine state={props.state} stage={flow.stage} onChange={flow.changeDestination} />
+                    <FlowStageBody
+                        flow={flow}
+                        props={props}
+                        apis={apis}
+                        onOutcome={onOutcome}
+                        onWaiting={onWaiting}
+                        onNew={create.open}
+                    />
                 </>
             )}
         </div>
@@ -214,7 +197,7 @@ function StageView({ flow, props, apis, problem, onOutcome, onWaiting }: StageVi
 
 /** The window's other stages, drawn hidden as it opens so the tallest sets its height. */
 function reserveOf(view: StageViewProps): React.ReactNode {
-    if (WINDOW_OF[view.flow.stage] !== 'choose') return null;
+    if (view.create.entity || WINDOW_OF[view.flow.stage] !== 'choose') return null;
     return CHOOSE_STAGES.filter((stage) => stage !== view.flow.stage).map((stage) => (
         <StageView key={stage} {...view} problem={undefined} flow={{ ...view.flow, stage }} />
     ));
@@ -271,17 +254,27 @@ function FlowJourney(props: JourneyProps): React.ReactElement {
     const problem = onApiStage ? apiAccessProblemOf(orgApis, props.onSignIn) : undefined;
     const [outcome, setOutcome] = React.useState<DialogOutcome | null>(null);
     const [stageWaiting, setStageWaiting] = React.useState(false);
+    const { setPendingProject, setPendingWorkspace } = flow;
+    // The new one is committed: drop the list's pending pick, so the list shows it selected and
+    // Continue keeps it (a row picked before New would otherwise outrank it).
+    const onCreated = React.useCallback(
+        (made: CreatableEntity): void => (made === 'project' ? setPendingProject(undefined) : setPendingWorkspace(undefined)),
+        [setPendingProject, setPendingWorkspace],
+    );
+    const create = useEntityCreate({ state: props.state, updateState: props.updateState, onCreated });
+    const createHeading = create.entity ? { title: CREATE_TITLES[create.entity] } : undefined;
     return (
         <FlowWindow
-            key={WINDOW_OF[flow.stage]}
+            key={create.entity ? CREATE_WINDOW : WINDOW_OF[flow.stage]}
             flow={flow}
             props={props}
             apis={orgApis.apis}
             problem={problem}
             onOutcome={setOutcome}
             onWaiting={setStageWaiting}
-            heading={problem ?? outcome ?? undefined}
-            footer={journeyFooter(flow, props.mode, problem, { waiting: stageWaiting, outcome })}
+            create={create}
+            heading={problem ?? outcome ?? createHeading}
+            footer={journeyFooter(flow, props.mode, problem, { waiting: stageWaiting, outcome, create })}
             reading={onApiStage && orgApis.loading}
             stageWaiting={stageWaiting}
         />

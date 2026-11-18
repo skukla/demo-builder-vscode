@@ -343,19 +343,6 @@ describe('AddIntegrationFlowModal — cancel & reopen', () => {
     });
 });
 
-describe('AddIntegrationFlowModal — phase-running bridge', () => {
-    it('a running destination phase disables Continue (setPhaseRunning seam)', async () => {
-        const { setOpen } = renderModal();
-        await walkMeshToProject();
-        await click('pick-project');
-        expectEnabled('Continue');
-        setPhases({ phase: 'creating', phaseMessage: 'Creating project…' });
-        setOpen(true);
-        expect(screen.getByText('Creating project…')).toBeInTheDocument();
-        expectDisabled('Continue');
-    });
-});
-
 /**
  * `describe('integration-flow module index')` was DELETED here on 2026-08-31
  * (PL-31). It required the barrel's export list to equal an exact array, and

@@ -39,15 +39,27 @@ jest.mock('@/features/authentication/ui/steps/AdobeAuthStep', () => ({
 }));
 jest.mock('@/features/authentication/ui/components/AdobeEntityFields', () => ({
     AdobeProjectField: ({
+        state,
         selectedProjectId,
         onProjectSelect,
+        onNew,
         dialogHost,
     }: {
+        state: { adobeProject?: { id: string } };
         dialogHost?: { onWaiting: (waiting: boolean) => void };
         selectedProjectId?: string;
         onProjectSelect?: (p: { id: string; name: string; title?: string }) => void;
+        onNew?: () => void;
     }) => (
-        <div data-testid="project-field" data-selected={selectedProjectId ?? ''}>
+        <div
+            data-testid="project-field"
+            data-selected={selectedProjectId ?? ''}
+            // The row the real picker highlights: the pending pick, else the committed project.
+            data-shown={selectedProjectId ?? state.adobeProject?.id ?? ''}
+        >
+            <button type="button" onClick={onNew}>
+                new-project
+            </button>
             <button
                 type="button"
                 onClick={() =>
@@ -65,13 +77,24 @@ jest.mock('@/features/authentication/ui/components/AdobeEntityFields', () => ({
         </div>
     ),
     AdobeWorkspaceField: ({
+        state,
         selectedWorkspaceId,
         onWorkspaceSelect,
+        onNew,
     }: {
+        state: { adobeWorkspace?: { id: string } };
         selectedWorkspaceId?: string;
         onWorkspaceSelect?: (ws: { id: string; name: string; title?: string }) => void;
+        onNew?: () => void;
     }) => (
-        <div data-testid="workspace-field" data-selected={selectedWorkspaceId ?? ''}>
+        <div
+            data-testid="workspace-field"
+            data-selected={selectedWorkspaceId ?? ''}
+            data-shown={selectedWorkspaceId ?? state.adobeWorkspace?.id ?? ''}
+        >
+            <button type="button" onClick={onNew}>
+                new-workspace
+            </button>
             <button
                 type="button"
                 onClick={() =>

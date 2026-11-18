@@ -4338,18 +4338,6 @@
             "source": "PL-22 batch MUT-05"
         },
         {
-            "module": "src/features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal.tsx",
-            "anchors": [
-                "const DEST_PICKER_STAGES: ReadonlySet<string> = new Set(["
-            ],
-            "mutants": 1,
-            "category": "other",
-            "reason": "The same static-mutant limitation as EMPTY_IDS: the report marks it static with coveredBy [], because this Set is built at module load, before any test runs, and Jest's module cache holds the unmutated value for the whole worker. Emptying the Set by hand in the source DOES fail a test \u2014 'hides the destination line on the picker stages, where it would be redundant' (run 2026-09-04, 1 failed 41 passed) \u2014 because the destination line then reappears above the very control that changes it. The sibling mutant on the has() call at the use site is killed by that same test.",
-            "decision": "none \u2014 the stage list is correct and covered; only the static mutation cannot be activated under Jest",
-            "recorded": "2026-09-04",
-            "source": "PL-22 batch MUT-05"
-        },
-        {
             "module": "src/features/project-creation/ui/helpers/stackHelpers.ts",
             "anchors": [
                 "if (!oldStack || !currentConfigs || Object.keys(currentConfigs).length === 0) {"
@@ -14872,6 +14860,18 @@
             "decision": "none, the value is only read when rows[0] exists",
             "recorded": "2026-11-18",
             "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/ui/components/integration-flow/FlowDestinationLine.tsx",
+            "anchors": [
+                "const DEST_PICKER_STAGES: ReadonlySet<string> = new Set(["
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The same static-mutant limitation as EMPTY_IDS: the report marks it static with coveredBy [], because this Set is built at module load, before any test runs, and Jest's module cache holds the unmutated value for the whole worker. Emptying the Set by hand in the source DOES fail a test \u2014 'hides the destination line on the picker stages, where it would be redundant' (run 2026-09-04, 1 failed 41 passed) \u2014 because the destination line then reappears above the very control that changes it. The sibling mutant on the has() call at the use site is killed by that same test.",
+            "decision": "none \u2014 the stage list is correct and covered; only the static mutation cannot be activated under Jest",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-05"
         }
     ]
 }

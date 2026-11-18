@@ -17,10 +17,9 @@
  * wizard state, so discarding the draft discards everything. A destination
  * committed mid-flow survives cancel by design (matches the previous UI).
  *
- * `phaseRunning` (blocks the dest Continues while a create/workspace phase is in
- * flight) has no wizard-state source — the phase machine is component-local in
- * useProjectCreationPhases — so the hook holds it locally and exposes
- * `setPhaseRunning` for the DestinationStage to report through.
+ * Creating a project or workspace is not a stage: it is the modal's create window
+ * (`useEntityCreate`), whose own footer replaces Continue while it is open, so no
+ * gate here has to wait on it.
  *
  * @module features/project-creation/ui/components/integration-flow/useIntegrationFlow
  */
@@ -113,8 +112,6 @@ export interface UseIntegrationFlowReturn {
     setPendingWorkspace: (workspace: Workspace | undefined) => void;
     /** Re-expands the dest stages from the later-add summary ("Change"). */
     changeDestination: () => void;
-    /** DestinationStage reports its create/workspace phase activity through this. */
-    setPhaseRunning: (running: boolean) => void;
 }
 
 /**
@@ -137,7 +134,6 @@ function createInitialDraft(editTarget?: ApiEditTarget): FlowDraft {
 function computeSlice(
     state: AdobeAuthSessionState,
     meshComponent: AppBuilderComponentCatalogEntry | undefined,
-    phaseRunning: boolean,
 ): FlowStateSlice {
     const projectCommitted = Boolean(state.adobeProject?.id);
     const workspaceCommitted = Boolean(state.adobeWorkspace?.id);
@@ -146,7 +142,6 @@ function computeSlice(
         destinationCommitted: projectCommitted && workspaceCommitted,
         projectCommitted,
         workspaceCommitted,
-        phaseRunning,
         selectedIds: state.selectedAppBuilderComponents ?? EMPTY_STRING_ARRAY,
         meshSelected: meshComponent ? isMeshSelected(state, meshComponent.id) : false,
     };
@@ -164,7 +159,6 @@ export function useIntegrationFlow(args: UseIntegrationFlowArgs): UseIntegration
     const { blankComponent, editTarget } = args;
 
     const [draft, setDraft] = useState<FlowDraft>(() => createInitialDraft(editTarget));
-    const [phaseRunning, setPhaseRunning] = useState(false);
     // The stored stage id is the only walked state; the DISPLAYED stage is
     // derived — when the stored stage vanishes from the order (e.g. dest-signin
     // after a mid-flow sign-in), the flowStages clamp resolves the survivor.
@@ -175,8 +169,8 @@ export function useIntegrationFlow(args: UseIntegrationFlowArgs): UseIntegration
     const [storedStage, setStoredStage] = useState<FlowStageId>('kind');
 
     const slice = useMemo(
-        () => computeSlice(state, meshComponent, phaseRunning),
-        [state, meshComponent, phaseRunning],
+        () => computeSlice(state, meshComponent),
+        [state, meshComponent],
     );
     const order = useMemo(() => deriveStageOrder(draft, slice, mode), [draft, slice, mode]);
     const stage: FlowStageId = order.includes(storedStage)
@@ -413,6 +407,5 @@ export function useIntegrationFlow(args: UseIntegrationFlowArgs): UseIntegration
         setPendingProject,
         setPendingWorkspace,
         changeDestination,
-        setPhaseRunning,
     };
 }

@@ -175,7 +175,8 @@ describe('AddIntegrationFlowModal — a destination stage that failed', () => {
         const retry = jest.fn();
         setPhases({ phase: 'failed', failedPhase: 'workspace', error: 'Adobe did not answer.', retry });
         renderFlowModal({ mode: 'destination', initial: SIGNED_IN, reservedIds: RESERVED_IDS });
-        await act(async () => {});
+        // The project is made in the create window (walk F286), so its setup fails there.
+        await click('new-project');
 
         const title = screen.getByRole('heading', { name: 'Project Setup Failed' });
         expect(title.querySelector('.modal-status-icon .text-negative')).not.toBeNull();

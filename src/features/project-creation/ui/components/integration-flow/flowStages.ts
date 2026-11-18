@@ -90,8 +90,6 @@ export interface FlowStateSlice {
     destinationCommitted: boolean;
     projectCommitted: boolean;
     workspaceCommitted: boolean;
-    /** A destination phase (project/workspace creation, loading) is in flight. */
-    phaseRunning: boolean;
     /** Selected integration ids, for the custom-source duplicate guard. */
     selectedIds: string[];
     meshSelected: boolean;
@@ -219,10 +217,8 @@ const CONTINUE_GATES: Record<FlowStageId, (draft: FlowDraft, slice: FlowStateSli
     'source-blank': () => true,
     'source-custom': customSourceValid,
     'dest-signin': (_draft, slice) => slice.isSignedIn,
-    'dest-project': (draft, slice) =>
-        (draft.pendingProject !== undefined || slice.projectCommitted) && !slice.phaseRunning,
-    'dest-workspace': (draft, slice) =>
-        (draft.pendingWorkspace !== undefined || slice.workspaceCommitted) && !slice.phaseRunning,
+    'dest-project': (draft, slice) => draft.pendingProject !== undefined || slice.projectCommitted,
+    'dest-workspace': (draft, slice) => draft.pendingWorkspace !== undefined || slice.workspaceCommitted,
     // The interactive picker (custom/import only): free API picks are optional —
     // locked codes are already covered — so it never blocks Continue.
     'api-access': () => true,

@@ -5,7 +5,7 @@
  * component behaviors run as ONE sequence behind a single centered spinner:
  *
  *   creating  → `create-adobe-project` (commits `adobeProject`, clears the
- *               dependent workspace + cache — exactly what AdobeProjectField does)
+ *               dependent workspace + cache — what a project-list pick clears)
  *   workspace → `get-workspaces` for the new project, taking the only workspace it
  *               has (AB-24 stopped creating a second one), then commits
  *               `adobeWorkspace` + `workspacesCache`
@@ -269,7 +269,7 @@ export function useProjectCreationPhases({
                         org_id: res.data.org_id,
                     };
                     runCtx.current.project = project;
-                    // Commit exactly what AdobeProjectField.handleCreate commits.
+                    // The new project, with its dependent workspace cleared.
                     // `projectsCache` is always written, even as undefined: leaving
                     // the key out keeps the pre-create list, and the picker skips its
                     // auto-load whenever a cache exists — so it would remount showing

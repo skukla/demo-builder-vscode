@@ -16,7 +16,7 @@
  *
  * The map spans three features because the flow's tree does. The destination stage
  * renders `AdobeAuthStep`, `AdobeProjectField`/`AdobeWorkspaceField` (and their
- * pickers) and drives `useProjectCreationPhases` — components the flow renders but
+ * pickers), and the create window drives `useProjectCreationPhases` — code the flow runs but
  * does not live beside, which is exactly why a directory-scanning guard missed them.
  * The authority on this list is not this comment: `webviewHandlerCoverage` walks
  * each panel's real import graph and fails naming any type the panel cannot answer.

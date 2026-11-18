@@ -286,12 +286,11 @@ export async function handleCreateAdobeProject(
 
         // Refresh the project list and return it ON THIS RESPONSE (best-effort).
         // It must NOT be a `sendMessage` push: the only listener for `get-projects`
-        // lives in AdobeProjectPicker, and every create path has replaced that
-        // picker with the create panel (AdobeProjectField) or a phase spinner
-        // (the Add Integration flow) by the time this runs. WebviewClient drops a
-        // message with no registered listener, so the pushed refresh was lost and
-        // the remounted picker read a stale cache — a list missing the project the
-        // user had just made. The caller awaits this response, so it always lands.
+        // lives in AdobeProjectPicker, and the create path (the Add Integration
+        // flow's create window) has replaced that picker by the time this runs.
+        // WebviewClient drops a message with no registered listener, so the pushed
+        // refresh was lost and the remounted picker read a stale cache — a list
+        // missing the project the user had just made. The caller awaits this response, so it always lands.
         // Goes through the SAME deletable stamping as get-projects.
         let projects: AdobeProject[] | undefined;
         try {

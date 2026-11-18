@@ -17,6 +17,7 @@ import { CatalogStage, type UnavailableEntries } from './stages/CatalogStage';
 import { CustomStage } from './stages/CustomStage';
 import { DestinationStage } from './stages/DestinationStage';
 import { KindStage } from './stages/KindStage';
+import type { CreatableEntity } from './useEntityCreate';
 import type { UseIntegrationFlowReturn } from './useIntegrationFlow';
 import type { ApiAccessOption } from '@/core/ui/components/selection/ApiAccessPicker';
 import type { ReportOutcome } from '@/core/ui/components/ui/DialogOutcome';
@@ -30,12 +31,11 @@ import type { AdobeAuthSessionState, WizardState } from '@/types/webview';
 /** Stable empty selection (avoids the inline-array re-render gotcha). */
 const EMPTY_IDS: string[] = [];
 
-/** flow stage id → DestinationStage view, for the four destination stages. */
+/** flow stage id → DestinationStage view, for the three destination stages. */
 const DEST_VIEWS = {
     'dest-signin': 'signin',
     'dest-project': 'project',
     'dest-workspace': 'workspace',
-    'dest-summary': 'summary',
 } as const;
 
 /** What the stage bodies read off the journey's inputs (see the modal's props). */
@@ -62,6 +62,7 @@ export function FlowStageBody({
     apis,
     onOutcome,
     onWaiting,
+    onNew,
 }: {
     flow: UseIntegrationFlowReturn;
     props: StageBodyInputs;
@@ -71,6 +72,8 @@ export function FlowStageBody({
     onOutcome: ReportOutcome;
     /** Tells the dialog a destination list's silent wait is on. */
     onWaiting: (waiting: boolean) => void;
+    /** A destination list's New: opens the create window for a project or workspace. */
+    onNew: (entity: CreatableEntity) => void;
 }): React.ReactElement {
     const { stage, draft } = flow;
     const { state, updateState, meshComponent, catalog, unavailable, onSignIn } = props;
@@ -173,7 +176,7 @@ export function FlowStageBody({
             pendingWorkspace={draft.pendingWorkspace}
             onPendingProject={flow.setPendingProject}
             onPendingWorkspace={flow.setPendingWorkspace}
-            onPhaseRunningChange={flow.setPhaseRunning}
+            onNew={onNew}
             onOutcome={onOutcome}
             onWaiting={onWaiting}
             onSignIn={onSignIn}
