@@ -68,14 +68,6 @@
         line-height: 1.4;
     }
 
-    .export-link-row {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        flex-wrap: wrap;
-        max-width: 100%;
-    }
-
     .export-link-text {
         font-family: var(--vscode-editor-font-family, monospace);
         font-size: 13px;

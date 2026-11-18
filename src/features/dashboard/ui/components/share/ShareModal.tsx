@@ -5,19 +5,20 @@
  * same handler, which writes the details file into the repository and puts the
  * card on the SC's Welcome step (`.rptc/research/share-dialogs-overlap/`).
  *
- * One question first: HOW it travels, as two choice cards with a line on each,
- * the same way its inverse, Add a Demo, asks link or zip (owner, 2026-11-18,
- * walk F227: the window now uses the house controls other windows use). A link
- * (`ShareLinkForm`), when the colleague can reach your GitHub; a file
- * (`ShareFileForm`), when they cannot.
- * The storefront is read once on open, behind the window's wait, before either
- * form shows. A storefront that could not be read is a note line where the link
- * would be: the file still works.
+ * Two steps in one window, the house flow Add a Demo and Add Integration use (owner,
+ * 2026-11-18, walk F228). Step 1 asks HOW it travels, as two choice cards with a line on
+ * each, the same way its inverse, Add a Demo, asks link or zip; Next goes on. Step 2 is the
+ * chosen form, with Back at the footer's start: a link (`ShareLinkForm`), when the
+ * colleague can reach your GitHub; a file (`ShareFileForm`), when they cannot. Both forms'
+ * state lives above the windows, so Back and Next keep what the SC set.
+ * The storefront is read once on open, behind the window's wait, before step 1 shows. A
+ * storefront that could not be read is a note line where the link would be: the file
+ * still works.
  *
- * A Steps window (step-07 Win2): each form's main button, Copy Link or Save File,
- * sits in the footer beside Close, and both forms are drawn hidden as the window
- * opens (`reserve`), so it opens at the taller one and never grows; a note that
- * appears after scrolls in the middle.
+ * A Steps window per step, as Add a Demo's stages (step-07 Win3; rule 14): each opens at its own
+ * height rather than at the taller step's. The form step reserves the chosen form at its tallest
+ * (`reserve`), so a note that arrives after it opens never grows it. Each form's main button,
+ * Copy Link or Save File, sits in the footer beside Close.
  *
  * @module features/dashboard/ui/components/share/ShareModal
  */
@@ -38,6 +39,9 @@ import { WAIT_STAGES } from '@/core/utils/waitStages';
 import type { DemoPackagePreview } from '@/types/webviewRequests';
 
 type ShareForm = 'link' | 'file';
+
+/** The window's two steps: how to share, then the chosen form. */
+type ShareStep = 'choose' | 'form';
 
 /** A dialog reading what it will show says nothing while it does. */
 const READING: ModalWait = WAIT_STAGES.readingDemo;
@@ -185,32 +189,51 @@ interface WindowProps extends Omit<ShareModalProps, 'isOpen'> {
     storefront: StorefrontState;
 }
 
-/** The window, once per storefront state: the link flow starts from what the read answered. */
+/** A step's body, in the stage chrome Add a Demo's stages use. */
+function StepBody({ children }: { children: React.ReactNode }): React.ReactElement {
+    return <div className="intflow-stage-body export-body">{children}</div>;
+}
+
+/**
+ * The window, once per storefront state: the link flow starts from what the read answered. Each
+ * step is a window of its own (a key per step), so each opens at its own size.
+ */
 function ShareWindow({ isEds, onClose, storefront }: WindowProps): React.ReactElement {
     const [form, setForm] = useState<ShareForm>('link');
+    const [step, setStep] = useState<ShareStep>('choose');
     const flow = useShareLink(storefront.status === 'ready' ? storefront.preview : UNREAD);
     const file = useShareFile(isEds);
     const loading = storefront.status === 'loading';
-    const step = (shown: ShareForm, withRoom = false): React.ReactElement => (
-        <div className="intflow-stage-body export-body">
-            <FormChoice form={shown} onChange={setForm} />
-            {shown === 'link' ? (
-                <LinkForm state={storefront} flow={withRoom ? linkRoom(flow) : flow} />
-            ) : (
-                <ShareFileForm isEds={isEds} file={withRoom ? fileRoom(file) : file} />
-            )}
-        </div>
-    );
+    if (step === 'choose') {
+        return (
+            <StepsWindow
+                key="choose"
+                title={SHARE_COPY.title}
+                ready={!loading}
+                waiting={loading ? READING : false}
+                actionButtons={[{ label: SHARE_COPY.next, variant: 'accent', onPress: () => setStep('form') }]}
+                onClose={onClose}
+            >
+                <StepBody>
+                    <FormChoice form={form} onChange={setForm} />
+                </StepBody>
+            </StepsWindow>
+        );
+    }
+    const formOf = (withRoom: boolean): React.ReactElement => {
+        if (form === 'file') return <ShareFileForm isEds={isEds} file={withRoom ? fileRoom(file) : file} />;
+        return <LinkForm state={storefront} flow={withRoom ? linkRoom(flow) : flow} />;
+    };
     return (
         <StepsWindow
+            key="form"
             title={SHARE_COPY.title}
-            ready={!loading}
-            waiting={loading ? READING : false}
-            reserve={loading ? null : [step('link', true), step('file', true)]}
+            reserve={<StepBody>{formOf(true)}</StepBody>}
+            startButtons={[{ label: SHARE_COPY.back, variant: 'secondary', onPress: () => setStep('choose') }]}
             actionButtons={mainButton(form, storefront, flow, file)}
             onClose={onClose}
         >
-            {step(form)}
+            <StepBody>{formOf(false)}</StepBody>
         </StepsWindow>
     );
 }

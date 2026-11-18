@@ -1,14 +1,14 @@
 /**
  * The Share dialog (owner, 2026-10-22: "I do want the merged share dialog").
- * One dialog replaces Export and Save as demo package. It asks how the demo
- * travels first, as two choice cards with a line on each, as Add a Demo asks link or
- * zip (owner, 2026-11-18, walk F227). The link
- * form is the link and one button, the "Also show it on my Welcome step" box,
- * the name and description behind a quiet link, only the checks that need the
- * SC, and the undo. The button
- * says whether the press will write: "Save details and copy link" until the
- * details are in the repository (and again after an edit), then "Copy link".
- * The file form is unchanged from Export.
+ * One dialog replaces Export and Save as demo package. Two steps in one window,
+ * the house flow Add a Demo uses (owner, 2026-11-18, walk F228): step 1 asks how
+ * the demo travels, as two choice cards with a line on each, with Next; step 2 is
+ * the chosen form, with Back. The link form is the checks that need the SC first,
+ * then the repository as a labelled fact, the "Show on Welcome Step" box, the name
+ * and description behind a quiet link, and the undo. The button says whether the
+ * press will write: "Save Details and Copy Link" until the details are in the
+ * repository (and again after an edit), then "Copy Link". The file form is
+ * unchanged from Export.
  */
 
 import { act, fireEvent, screen, within } from '@testing-library/react';
@@ -21,11 +21,14 @@ import {
     mockRequest,
     mockWriteText,
     nameInput,
+    next,
     openDetails,
     partBox,
     PREVIEW,
     REMOVED,
     renderShare,
+    renderShareFile,
+    renderShareLink,
     renderSharePending,
     resetShareMocks,
     SAVED,
@@ -37,33 +40,95 @@ const LINK_LINE = 'For colleagues with access to your repository. Includes later
 const FILE_LINE = 'For colleagues without access. A single zip file, with no later changes.';
 const SAVE_AND_COPY = 'Save Details and Copy Link';
 
+const footer = (): HTMLElement => document.querySelector('.modal-footer-actions') as HTMLElement;
+const body = (): HTMLElement => document.querySelector('.modal-body') as HTMLElement;
+/** A button's words, without the hidden labels that hold its width (`sizeLabels`). */
+function labelOf(button: HTMLElement): string | null {
+    const copy = button.cloneNode(true) as HTMLElement;
+    copy.querySelectorAll('.modal-button-sizer').forEach((sizer) => sizer.remove());
+    return copy.textContent;
+}
+/** The footer's buttons, left to right. */
+const footerLabels = (): Array<string | null> => within(footer()).getAllByRole('button').map(labelOf);
+
 describe('ShareModal', () => {
     beforeEach(resetShareMocks);
 
-    it('opens under its own title on the link form, with the two ways to hand over as cards', async () => {
-        await renderShare();
-        expect(screen.getByRole('heading', { name: 'Share Demo' })).toBeInTheDocument();
-        expect(screen.getByTestId('share-form')).toHaveTextContent('How to Share');
-        const link = screen.getByTestId('share-form-link');
-        const file = screen.getByTestId('share-form-file');
-        // Each card names its way and says, at once, who it is for.
-        expect(link).toHaveClass('choice-card');
-        expect(link).toHaveTextContent('Send a Link');
-        expect(link).toHaveTextContent(LINK_LINE);
-        expect(file).toHaveTextContent('Send a File');
-        expect(file).toHaveTextContent(FILE_LINE);
-        expect(link).toHaveAttribute('data-selected', 'true');
-        expect(file).toHaveAttribute('data-selected', 'false');
-        expect(screen.queryByRole('radio')).not.toBeInTheDocument();
-        expect(screen.queryByText('What to Include')).not.toBeInTheDocument();
+    describe('step 1: how to share', () => {
+        it('opens under its own title with only the two ways to hand over, as cards', async () => {
+            await renderShare();
+            expect(screen.getByRole('heading', { name: 'Share Demo' })).toBeInTheDocument();
+            expect(screen.getByTestId('share-form')).toHaveTextContent('How to Share');
+            const link = screen.getByTestId('share-form-link');
+            const file = screen.getByTestId('share-form-file');
+            // Each card names its way and says, at once, who it is for.
+            expect(link).toHaveClass('choice-card');
+            expect(link).toHaveTextContent('Send a Link');
+            expect(link).toHaveTextContent(LINK_LINE);
+            expect(file).toHaveTextContent('Send a File');
+            expect(file).toHaveTextContent(FILE_LINE);
+            expect(link).toHaveAttribute('data-selected', 'true');
+            expect(file).toHaveAttribute('data-selected', 'false');
+            expect(screen.queryByRole('radio')).not.toBeInTheDocument();
+            // Neither form is on this step, nor its checks.
+            expect(screen.queryByTestId('share-link-form')).not.toBeInTheDocument();
+            expect(screen.queryByTestId('export-file-form')).not.toBeInTheDocument();
+            expect(screen.queryByTestId('package-check-index')).not.toBeInTheDocument();
+        });
+
+        it('has Close and Next in its footer, Next enabled for the default choice, and no Back', async () => {
+            await renderShare();
+            expect(footerLabels()).toEqual(['Close', 'Next']);
+            expect(button('Next')).not.toHaveAttribute('aria-disabled', 'true');
+        });
+
+        it('choosing the file card selects it and stays on the step', async () => {
+            await renderShare();
+            await chooseFile();
+            expect(screen.getByTestId('share-form-file')).toHaveAttribute('data-selected', 'true');
+            expect(screen.getByTestId('share-form-link')).toHaveAttribute('data-selected', 'false');
+            expect(screen.queryByTestId('export-file-form')).not.toBeInTheDocument();
+        });
+
+        it('prints no middle dot', async () => {
+            await renderShare();
+            // Positive control: the step rendered the text it is searched for.
+            expect(screen.getByTestId('share-form')).toHaveTextContent('Send a Link');
+            expect(screen.getByTestId('share-form').textContent).not.toContain('·');
+        });
     });
 
-    it('choosing the file card selects it and shows the file form', async () => {
-        await renderShare();
-        await chooseFile();
-        expect(screen.getByTestId('share-form-file')).toHaveAttribute('data-selected', 'true');
-        expect(screen.getByTestId('share-form-link')).toHaveAttribute('data-selected', 'false');
-        expect(screen.getByText('What to Include')).toBeInTheDocument();
+    describe('step 2: the chosen form', () => {
+        it('Next on the link card shows the link form alone, with Back, Close and its button', async () => {
+            await renderShareLink();
+            expect(screen.getByTestId('share-link-form')).toBeInTheDocument();
+            expect(screen.queryByTestId('share-form')).not.toBeInTheDocument();
+            expect(footerLabels()).toEqual(['Back', 'Close', SAVE_AND_COPY]);
+        });
+
+        it('Next on the file card shows the file form alone, with Back, Close and Save File', async () => {
+            await renderShareFile();
+            expect(screen.getByText('What to Include')).toBeInTheDocument();
+            expect(screen.queryByTestId('share-form')).not.toBeInTheDocument();
+            expect(footerLabels()).toEqual(['Back', 'Close', 'Save File']);
+        });
+
+        it('Back returns to step 1 with the choice kept', async () => {
+            await renderShareFile();
+            await click('Back');
+            expect(screen.getByTestId('share-form-file')).toHaveAttribute('data-selected', 'true');
+            expect(screen.queryByTestId('export-file-form')).not.toBeInTheDocument();
+            expect(footerLabels()).toEqual(['Close', 'Next']);
+        });
+
+        it('keeps what the SC set on the link form through Back and Next', async () => {
+            await renderShareLink();
+            fireEvent.click(welcomeBox());
+            expect(welcomeBox().checked).toBe(false);
+            await click('Back');
+            await next();
+            expect(welcomeBox().checked).toBe(false);
+        });
     });
 
     it('while the storefront is being read, the spinner is the whole body', () => {
@@ -75,31 +140,40 @@ describe('ShareModal', () => {
         expect(screen.queryByTestId('share-link-form')).not.toBeInTheDocument();
     });
 
-    it('a headless project has nothing to read, opens on the choice, and says there is no storefront', async () => {
+    it('a headless project has nothing to read, opens on the choice, and its link form says there is no storefront', async () => {
         await renderShare(undefined, { isEds: false });
         expect(mockRequest).not.toHaveBeenCalled();
+        expect(screen.getByTestId('share-form')).toBeInTheDocument();
+        await next();
         expect(screen.getByTestId('share-link-form')).toHaveTextContent(
             'This project has no storefront of its own. Send a file instead.',
         );
     });
 
-    it("shows the storefront read's failure", async () => {
-        await renderShare({ success: false, error: 'Sign In to GitHub First.' });
+    it("shows the storefront read's failure on the link form", async () => {
+        await renderShareLink({ success: false, error: 'Sign In to GitHub First.' });
         expect(screen.getByTestId('share-link-failed')).toHaveTextContent('Sign In to GitHub First.');
     });
 
     it('prints no middle dot anywhere in the link form', async () => {
-        await renderShare();
+        await renderShareLink();
         await openDetails();
         // Positive control: the form rendered the text it is searched for.
         expect(screen.getByTestId('share-link-form')).toHaveTextContent(LINK);
         expect(screen.getByTestId('share-link-form').textContent).not.toContain('·');
-        expect(screen.getByTestId('share-form').textContent).not.toContain('·');
+    });
+
+    it('shows the repository as a labelled fact', async () => {
+        await renderShareLink();
+        const facts = screen.getByTestId('share-link').querySelector('.fact-list') as HTMLElement;
+        expect(facts).not.toBeNull();
+        expect(within(facts).getByText('Repository').tagName).toBe('DT');
+        expect(within(facts).getByText(LINK).closest('dd')).not.toBeNull();
     });
 
     describe('the link and its button', () => {
         it('a storefront that already carries its details: the button only copies', async () => {
-            await renderShare(answer({ ...PREVIEW, saved: true, onList: true }));
+            await renderShareLink(answer({ ...PREVIEW, saved: true, onList: true }));
             const link = screen.getByTestId('share-link');
             expect(link).toHaveTextContent(LINK);
             expect(screen.queryByRole('button', { name: SAVE_AND_COPY })).not.toBeInTheDocument();
@@ -112,7 +186,7 @@ describe('ShareModal', () => {
         });
 
         it('a storefront without them: the button says it saves, writes the prefilled details with the card, then copies', async () => {
-            await renderShare();
+            await renderShareLink();
             // A button labelled only "Copy link" must not write.
             expect(screen.queryByRole('button', { name: 'Copy Link' })).not.toBeInTheDocument();
             mockRequest.mockResolvedValueOnce(answer(SAVED));
@@ -129,7 +203,7 @@ describe('ShareModal', () => {
         });
 
         it('once saved, a second press only copies', async () => {
-            await renderShare();
+            await renderShareLink();
             mockRequest.mockResolvedValueOnce(answer(SAVED));
             await click(SAVE_AND_COPY);
             act(() => {
@@ -143,7 +217,7 @@ describe('ShareModal', () => {
         });
 
         it('a write that fails copies nothing, says so, and keeps the save wording', async () => {
-            await renderShare();
+            await renderShareLink();
             mockRequest.mockResolvedValueOnce({ success: false, error: 'GitHub refused the write.' });
 
             await click(SAVE_AND_COPY);
@@ -156,7 +230,7 @@ describe('ShareModal', () => {
         });
 
         it('a details file that is not ours is left alone, said so, and the link is still copied', async () => {
-            await renderShare();
+            await renderShareLink();
             mockRequest.mockResolvedValueOnce(
                 answer({ ...SAVED, file: 'skipped', fileReason: 'demo.demo-builder.json is already there and was not written by Demo Builder.' }),
             );
@@ -169,8 +243,16 @@ describe('ShareModal', () => {
     });
 
     describe('the checks', () => {
+        it('come first on the link form, above the repository', async () => {
+            await renderShareLink();
+            const notice = screen.getByTestId('package-check-index');
+            const repository = screen.getByText('Repository');
+            // DOCUMENT_POSITION_FOLLOWING: the repository comes after the notice.
+            expect(notice.compareDocumentPosition(repository) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        });
+
         it('shows only the ones that need the SC, each as an amber notice, with the republish hint', async () => {
-            await renderShare();
+            await renderShareLink();
             const index = screen.getByTestId('package-check-index');
             expect(index).toHaveClass('inline-notice');
             expect(index).not.toHaveClass('inline-notice--info');
@@ -184,7 +266,7 @@ describe('ShareModal', () => {
 
         it('says nothing when every check passes', async () => {
             const allOk = PREVIEW.checks.map((check) => ({ ...check, ok: true }));
-            await renderShare(answer({ ...PREVIEW, checks: allOk }));
+            await renderShareLink(answer({ ...PREVIEW, checks: allOk }));
             // Positive control: the form itself rendered.
             expect(screen.getByTestId('share-link')).toHaveTextContent(LINK);
             expect(screen.queryByText('Before Sharing')).not.toBeInTheDocument();
@@ -197,7 +279,7 @@ describe('ShareModal', () => {
                 ok: false,
                 message: "This storefront's code is private. Colleagues will need access to it, or make it public.",
             };
-            await renderShare(answer({ ...PREVIEW, checks: [privateRepo] }));
+            await renderShareLink(answer({ ...PREVIEW, checks: [privateRepo] }));
             expect(screen.getByTestId('package-check-repository')).toHaveTextContent("This storefront's code is private.");
         });
 
@@ -209,7 +291,7 @@ describe('ShareModal', () => {
                 title: "Colleagues Can't Use This Demo's Data Yet",
                 message: 'Release Save Test 2 is only visible to you.',
             };
-            await renderShare(answer({ ...PREVIEW, checks: [privatePack] }));
+            await renderShareLink(answer({ ...PREVIEW, checks: [privatePack] }));
             const notice = screen.getByTestId('package-check-datapack');
             expect(notice).toHaveClass('inline-notice');
             expect(within(notice).getByText("Colleagues Can't Use This Demo's Data Yet")).toHaveClass('inline-notice-title');
@@ -219,7 +301,7 @@ describe('ShareModal', () => {
 
     describe('name and description', () => {
         it('sit behind a quiet link, prefilled from the draft', async () => {
-            await renderShare();
+            await renderShareLink();
             expect(screen.queryByTestId('share-name')).not.toBeInTheDocument();
 
             await openDetails();
@@ -229,7 +311,7 @@ describe('ShareModal', () => {
         });
 
         it('an edit on a saved storefront turns the button back into a save, and sends the trimmed name', async () => {
-            await renderShare(answer({ ...PREVIEW, saved: true, onList: true }));
+            await renderShareLink(answer({ ...PREVIEW, saved: true, onList: true }));
             await openDetails();
             expect(button('Copy Link')).toBeInTheDocument();
 
@@ -245,7 +327,7 @@ describe('ShareModal', () => {
         });
 
         it('an empty name disables the button', async () => {
-            await renderShare();
+            await renderShareLink();
             await openDetails();
             fireEvent.change(nameInput(), { target: { value: '   ' } });
             expect(button(SAVE_AND_COPY)).toHaveAttribute('aria-disabled', 'true');
@@ -254,12 +336,12 @@ describe('ShareModal', () => {
 
     describe('"Show on Welcome Step"', () => {
         it('is the house checkbox row', async () => {
-            await renderShare();
+            await renderShareLink();
             expect(welcomeBox().closest('.checkbox-row')).not.toBeNull();
         });
 
         it('is ticked by default for a storefront not yet shared, and unticked sends addToWelcome:false', async () => {
-            await renderShare();
+            await renderShareLink();
             expect(welcomeBox().checked).toBe(true);
 
             fireEvent.click(welcomeBox());
@@ -270,7 +352,7 @@ describe('ShareModal', () => {
         });
 
         it('says what is true for a saved storefront whose card is off the list, and a change is a save', async () => {
-            await renderShare(answer({ ...PREVIEW, saved: true, onList: false }));
+            await renderShareLink(answer({ ...PREVIEW, saved: true, onList: false }));
             expect(welcomeBox().checked).toBe(false);
             expect(button('Copy Link')).toBeInTheDocument();
 
@@ -282,12 +364,12 @@ describe('ShareModal', () => {
 
     describe('the undo', () => {
         it('is not offered before anything was saved', async () => {
-            await renderShare();
+            await renderShareLink();
             expect(screen.queryByRole('button', { name: 'Remove the Details from My Repository' })).not.toBeInTheDocument();
         });
 
         it('removes the details and the card, says what it undid, and the button goes back to saving', async () => {
-            await renderShare(answer({ ...PREVIEW, saved: true, onList: true }));
+            await renderShareLink(answer({ ...PREVIEW, saved: true, onList: true }));
             mockRequest.mockResolvedValueOnce(answer(REMOVED));
 
             await click('Remove the Details from My Repository');
@@ -302,15 +384,14 @@ describe('ShareModal', () => {
         });
 
         it('is offered for a card on the list even when the file is not ours', async () => {
-            await renderShare(answer({ ...PREVIEW, saved: false, onList: true }));
+            await renderShareLink(answer({ ...PREVIEW, saved: false, onList: true }));
             expect(button('Remove the Details from My Repository')).toBeInTheDocument();
         });
     });
 
     describe('the file form', () => {
         it('ticks setup and storefront by default, saves one bundle through the host, and reports what and where', async () => {
-            await renderShare();
-            await chooseFile();
+            await renderShareFile();
             expect(screen.getByText('What to Include')).toBeInTheDocument();
             expect(partBox('part-setup').checked).toBe(true);
             expect(partBox('part-storefront').checked).toBe(true);
@@ -328,8 +409,7 @@ describe('ShareModal', () => {
         });
 
         it('sends only the ticked parts and refuses none', async () => {
-            await renderShare();
-            await chooseFile();
+            await renderShareFile();
             fireEvent.click(partBox('part-storefront'));
             mockRequest.mockResolvedValueOnce(answer({ path: '/p/x.json', fileCount: 1, parts: ['setup'] }));
             await click('Save File');
@@ -341,8 +421,7 @@ describe('ShareModal', () => {
         });
 
         it('starts with the storefront off and disabled for a headless project, and shows a failure', async () => {
-            await renderShare(undefined, { isEds: false });
-            await chooseFile();
+            await renderShareFile({ isEds: false });
             expect(partBox('part-storefront').checked).toBe(false);
             expect(partBox('part-storefront').disabled).toBe(true);
             mockRequest.mockResolvedValueOnce({ success: false, error: 'Failed to download archive: HTTP 404' });
@@ -351,22 +430,18 @@ describe('ShareModal', () => {
         });
 
         it('says nothing when the save dialog is dismissed', async () => {
-            await renderShare();
-            await chooseFile();
+            await renderShareFile();
             mockRequest.mockResolvedValueOnce(answer({ cancelled: true }));
             await click('Save File');
             expect(screen.queryByTestId('export-saved')).not.toBeInTheDocument();
         });
     });
 
-    // Step-07 Win2: a Steps window. Each form's main button sits in the footer, and the window
-    // opens at the taller form's height and holds it, so switching forms or a note never grows it.
+    // Step-07 Win2, walk F228: a Steps window per step, as Add a Demo has. Each form's main button
+    // sits in the footer, and each step opens at its own height and holds it, so a note never grows it.
     describe('the window', () => {
-        const footer = (): HTMLElement => document.querySelector('.modal-footer-actions') as HTMLElement;
-        const body = (): HTMLElement => document.querySelector('.modal-body') as HTMLElement;
-
         it("puts the link form's button in the footer, beside Close", async () => {
-            await renderShare(answer({ ...PREVIEW, saved: true, onList: true }));
+            await renderShareLink(answer({ ...PREVIEW, saved: true, onList: true }));
 
             expect(within(footer()).getByRole('button', { name: 'Copy Link' })).toBeInTheDocument();
             expect(within(body()).queryByRole('button', { name: 'Copy Link' })).toBeNull();
@@ -374,8 +449,7 @@ describe('ShareModal', () => {
         });
 
         it("puts the file form's Save File in the footer in its place", async () => {
-            await renderShare();
-            await chooseFile();
+            await renderShareFile();
 
             expect(within(footer()).getByRole('button', { name: 'Save File' })).toBeInTheDocument();
             expect(within(footer()).queryByRole('button', { name: SAVE_AND_COPY })).toBeNull();
@@ -383,24 +457,25 @@ describe('ShareModal', () => {
         });
 
         it('offers no link button when there is no storefront to link to', async () => {
-            await renderShare(undefined, { isEds: false });
+            await renderShareLink(undefined, { isEds: false });
 
-            expect(within(footer()).getAllByRole('button').map((b) => b.textContent)).toEqual(['Close']);
+            expect(footerLabels()).toEqual(['Back', 'Close']);
         });
 
-        it('holds the height it opens at through a change of form', async () => {
+        it('opens each step as a window of its own, held at its own height', async () => {
             await renderShare();
-            const dialog = screen.getByRole('dialog');
-            expect(dialog).toHaveClass('is-locked');
+            const first = screen.getByRole('dialog');
+            expect(first).toHaveClass('is-locked');
 
-            await chooseFile();
+            await next();
 
-            expect(screen.getByRole('dialog')).toBe(dialog);
-            expect(dialog).toHaveClass('is-locked');
+            const second = screen.getByRole('dialog');
+            expect(second).not.toBe(first);
+            expect(second).toHaveClass('is-locked');
         });
 
         it('keeps the button the width of its widest label, so Close never moves', async () => {
-            await renderShare();
+            await renderShareLink();
             const sizers = Array.from(footer().querySelectorAll('.modal-button-sizer')).map((s) => s.textContent);
 
             expect(sizers).toEqual(expect.arrayContaining(['Copy Link', SAVE_AND_COPY, 'Copied', 'Save File']));

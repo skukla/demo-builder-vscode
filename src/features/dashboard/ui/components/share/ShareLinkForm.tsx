@@ -1,16 +1,16 @@
 /**
  * The Share dialog's "Send a link" form, once the storefront has been read.
  *
- * Top to bottom: the link with what became of the press (its button is the
- * window's footer button) under it, the Welcome box, the name and description
- * behind a quiet link, any check that needs the SC, then the undo with what
- * became of that under it. What
- * the link does is said once, under the choice. The button names the write when
- * the press will make one (owner, 2026-10-22: a copy button must not silently
- * write). The checks are the ones Save as demo package showed, here because this
- * is the moment the SC is about to send the link (a private repository is said
- * before the link leaves): each an amber notice, its title the extension's when
- * the check has one, with its fix (walk F227). The Welcome box is the house
+ * Top to bottom (walk F228): any check that needs the SC first, since it applies
+ * before the link leaves; the repository as a labelled fact (`FactList`), with what
+ * became of the press (its button is the window's footer button) under it; the
+ * Welcome box; the name and description behind a quiet link; then the undo with
+ * what became of that under it. What the link does is said on step 1, on its
+ * card. The button names the write when the press will make one (owner,
+ * 2026-10-22: a copy button must not silently write). The checks are the ones
+ * Save as demo package showed: each an amber notice, its title the extension's
+ * when the check has one, with its fix (walk F227). They are read with the
+ * storefront, so only the link form has them. The Welcome box is the house
  * checkbox row. The link stays plain text, not a copy-on-click value: the footer
  * button copies it, and saves the details first when they are missing, which a
  * second copy beside it would skip. Outcomes of a press are note lines beside
@@ -25,6 +25,7 @@ import { SHARE_COPY } from './shareCopy';
 import type { UseShareLink } from './useShareLink';
 import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
 import { CheckboxRow } from '@/core/ui/components/selection/CheckboxRow';
+import { Fact, FactList } from '@/core/ui/components/ui/FactList';
 import { Spinner } from '@/core/ui/components/ui/Spinner';
 import type { DemoPackageCheck, DemoPackagePreview, RemoveDemoPackageResult } from '@/types/webviewRequests';
 
@@ -135,13 +136,15 @@ function RemoveNotes({ flow }: { flow: UseShareLink }): React.ReactElement {
 export function ShareLinkForm({ preview, flow }: { preview: DemoPackagePreview; flow: UseShareLink }): React.ReactElement {
     return (
         <div className="export-link" data-testid="share-link">
-            <div className="export-link-row">
-                <code className="export-link-text">{preview.link}</code>
-            </div>
+            <Checks checks={preview.checks} />
+            <FactList>
+                <Fact label={SHARE_COPY.repository}>
+                    <code className="export-link-text">{preview.link}</code>
+                </Fact>
+            </FactList>
             <PressNotes flow={flow} />
             <CheckboxRow label={SHARE_COPY.welcome} isSelected={flow.welcome} onChange={() => flow.setWelcome(!flow.welcome)} />
             <Details flow={flow} />
-            <Checks checks={preview.checks} />
             <RemoveNotes flow={flow} />
             {flow.canRemove ? (
                 <div className="share-remove-row">

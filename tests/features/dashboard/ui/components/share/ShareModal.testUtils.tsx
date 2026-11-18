@@ -85,6 +85,26 @@ export async function chooseFile(): Promise<void> {
     await settle();
 }
 
+/** Step 1 to step 2: the chosen way's form. */
+export async function next(): Promise<void> {
+    await click('Next');
+}
+
+/** Open on step 1, then go on to the link form (the default choice). */
+export async function renderShareLink(preview: unknown = answer(PREVIEW), overrides: Partial<ShareModalProps> = {}) {
+    const view = await renderShare(preview, overrides);
+    await next();
+    return view;
+}
+
+/** Open on step 1, choose the file card, then go on to the file form. */
+export async function renderShareFile(overrides: Partial<ShareModalProps> = {}) {
+    const view = await renderShare(undefined, overrides);
+    await chooseFile();
+    await next();
+    return view;
+}
+
 /** The stub puts the test id on the wrapper (checkbox, text field) or the control itself. */
 function control<T extends HTMLElement>(testId: string, tag: string): T {
     const el = screen.getByTestId(testId);

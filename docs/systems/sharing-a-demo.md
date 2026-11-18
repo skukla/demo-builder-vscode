@@ -194,37 +194,38 @@ which the Storefront area configures. One demo, many storefronts.
 **Share Demo**, in the dashboard's Share row, is the one way to hand this demo on. It replaced
 two dialogs on 2026-10-22 (Export, and Save as demo package), which did the same job: both
 wrote the description file into your repository and put the card on your Welcome step. It
-asks **how** the demo travels first.
+is two steps in one window, the way Add a Demo is (walk F228, 2026-11-18). Step 1, **How to
+Share**, is two cards, **Send a Link** and **Send a File**, with **Next**. Step 2 is the
+chosen form, with **Back** (which keeps the choice and what you set), **Close**, and the
+form's own button.
 
 ### Send a link
 
 For a colleague who can reach your GitHub and the shared services. Keeps the history, and
 they get your later changes. Edge Delivery projects only. Top to bottom, the form shows:
 
-- The link and one button. A link carries nothing itself, so while your repository lacks the
-  description file the button reads **Save details and copy link**: it writes the file from
-  what the project already holds, then copies. Once the file is there it reads **Copy link**
-  and only copies. It reads **Save details and copy link** again after you change the name,
-  the description or the box below, because the next press will write.
-- One line: "Colleagues paste this into "Add a demo package" and get your code, content and
-  later changes."
-- **Also show it on my Welcome step**, ticked by default (it was always on before the merge).
+- What colleagues cannot use yet, first, one amber notice each: a private repository (they
+  need access, or make it public), a site with no published page list (points at Republish),
+  sample data only you can see, and custom integration code they cannot read. Only the
+  checks that need you show; nothing in them stops you saving. Nothing is uploaded.
+- **Repository**, the link to your storefront's repository.
+- **Show on Welcome Step**, ticked by default (it was always on before the merge).
   Ticked, the save also puts the card on your own Welcome step, the way Isle5 is one, so you
   can build new projects from it. Unticked, the save writes the file only, and takes your
   card off the list if it was there. For a demo already shared, the box shows where its
   card is now.
-- **Change name or description**, a quiet link that opens the two fields. They are
+- **Change Name or Description**, a quiet link that opens the two fields. They are
   prefilled from the description file when it is the one Demo Builder wrote, otherwise from
   the brand or demo the project was built on (the project's own title for a Starter build).
-- **What colleagues get**, one line each: whether colleagues can open the storefront's code
-  (a private repository needs access, or make it public), whether they start with your
-  published pages (a site with no published page list says so and points at Republish),
-  whether the sample data the demo uses is available to them, and whether each custom
-  integration's code can be read. The sample-data line only confirms; nothing is uploaded.
-  Nothing in the list stops you saving; it tells you what to fix first.
-- **Remove the details from my repository**, once there is something of yours to undo. It
+- **Remove the Details from My Repository**, once there is something of yours to undo. It
   takes the file out (only when it is ours) and the card off your list. The storefront is
   untouched.
+
+The footer button copies the link. A link carries nothing itself, so while your repository
+lacks the description file the button reads **Save Details and Copy Link**: it writes the
+file from what the project already holds, then copies. Once the file is there it reads
+**Copy Link** and only copies. It reads **Save Details and Copy Link** again after you change
+the name, the description or the box, because the next press will write.
 
 Nothing else about the repository changes: it is not marked as a GitHub template. A project
 created from the card still works, because creation copies a repository that is not a
