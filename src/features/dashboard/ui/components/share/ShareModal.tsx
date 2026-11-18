@@ -221,12 +221,16 @@ function mainButton(form: ShareForm, state: StorefrontState, flow: UseShareLink,
 const REASON_ROOM = SHARE_COPY.removedFileSkipped;
 
 /**
- * The link form as tall as it can get after it opens (rules 13 and 14): the press note, the undo a
- * save makes, and what the undo did, each at its longest. Never shown: drawn hidden as the window
- * opens, so the held height already has their room.
+ * The link form in each state a press can leave it, at its longest (rules 13 and 14): the press
+ * note with the undo a save makes, or, once undone, what the undo did and no undo. Never all three
+ * at once, so each is its own hidden copy and the window takes the taller (walk F232: stacked, they
+ * left a gap under the form). A failed undo is one reason line with the undo, as tall as the first.
  */
-function linkRoom(flow: UseShareLink): UseShareLink {
-    return { ...flow, skipped: REASON_ROOM, canRemove: true, removed: { file: 'skipped', removedFromList: true } };
+function linkRooms(flow: UseShareLink): UseShareLink[] {
+    return [
+        { ...flow, skipped: REASON_ROOM, canRemove: true, removed: undefined },
+        { ...flow, skipped: undefined, canRemove: false, removed: { file: 'skipped', removedFromList: true } },
+    ];
 }
 
 /** The file form at its tallest: "Select at least one part." and what Save File wrote, two lines. */
@@ -288,20 +292,25 @@ function ShareWindow({ isEds, onClose, read }: WindowProps): React.ReactElement 
             <ConfirmActionWindow key="share-datapack" {...shareConfirmCopy(fix.offer.displayName)} onConfirm={fix.confirm} onClose={fix.cancel} />
         );
     }
-    const formOf = (withRoom: boolean): React.ReactElement => {
-        if (form === 'file') return <ShareFileForm isEds={isEds} file={withRoom ? fileRoom(file) : file} checks={checks} fix={fix} />;
-        return <LinkForm state={storefront} flow={withRoom ? linkRoom(flow) : flow} fix={fix} />;
+    const linkOf = (shown: UseShareLink): React.ReactElement => <LinkForm state={storefront} flow={shown} fix={fix} />;
+    const formOf = (): React.ReactElement => {
+        if (form === 'file') return <ShareFileForm isEds={isEds} file={file} checks={checks} fix={fix} />;
+        return linkOf(flow);
     };
+    const reserve =
+        form === 'file'
+            ? [<StepBody key="file"><ShareFileForm isEds={isEds} file={fileRoom(file)} checks={checks} fix={fix} /></StepBody>]
+            : linkRooms(flow).map((room, index) => <StepBody key={`link-${index}`}>{linkOf(room)}</StepBody>);
     return (
         <StepsWindow
             key="form"
             title={SHARE_COPY.title}
-            reserve={<StepBody>{formOf(true)}</StepBody>}
+            reserve={reserve}
             startButtons={[{ label: SHARE_COPY.back, variant: 'secondary', onPress: () => setStep('choose') }]}
             actionButtons={mainButton(form, storefront, flow, file)}
             onClose={onClose}
         >
-            <StepBody>{formOf(false)}</StepBody>
+            <StepBody>{formOf()}</StepBody>
         </StepsWindow>
     );
 }

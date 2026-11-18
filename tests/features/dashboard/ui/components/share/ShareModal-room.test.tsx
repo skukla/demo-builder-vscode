@@ -31,15 +31,20 @@ describe('ShareModal: room for its notes from the first frame', () => {
         expect(reserved()).toHaveLength(0);
     });
 
-    it("reserves only the link form, with its press note, the undo, and what the undo did", async () => {
+    // Walk F232 (owner: "so much space"): the notes were reserved stacked, though a press shows
+    // either its note with the undo, or, once undone, what the undo did, never all three. Each
+    // state is its own hidden copy in the same cell, so the window takes the taller, not the sum.
+    it("reserves only the link form, once per state a press can leave: its note with the undo, or what the undo did", async () => {
         await renderShareLink();
-        expect(reserved()).toHaveLength(1);
-        const link = reserved()[0];
+        expect(reserved()).toHaveLength(2);
+        const [pressed, undone] = reserved();
 
-        expect(within(link).getByTestId('share-skipped')).toBeInTheDocument();
-        expect(within(link).getByText('Remove the Details from My Repository')).toBeInTheDocument();
-        expect(within(link).getByTestId('share-removed')).toBeInTheDocument();
-        expect(link.querySelector('[data-testid="export-file-form"]')).toBeNull();
+        expect(within(pressed).getByTestId('share-skipped')).toBeInTheDocument();
+        expect(within(pressed).getByText('Remove the Details from My Repository')).toBeInTheDocument();
+        expect(within(pressed).queryByTestId('share-removed')).toBeNull();
+        expect(within(undone).getByTestId('share-removed')).toBeInTheDocument();
+        expect(within(undone).queryByText('Remove the Details from My Repository')).toBeNull();
+        expect(pressed.querySelector('[data-testid="export-file-form"]')).toBeNull();
     });
 
     it("reserves only the file form, with its two lines: nothing ticked, and what Save File wrote", async () => {
