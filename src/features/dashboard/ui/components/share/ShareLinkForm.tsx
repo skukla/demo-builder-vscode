@@ -10,8 +10,8 @@
  * 2026-10-22: a copy button must not silently write). The checks are the ones
  * Save as demo package showed: each an amber notice, its title the extension's
  * when the check has one, with its fix (walk F227); a pack only the SC can see
- * offers Share Datapack (walk F229). They are read with the
- * storefront, so only the link form has them. The Welcome box is the house
+ * offers Share Datapack (walk F229); the notices are `ShareChecks`, which the file form
+ * shows too, for the datapack alone (walk F230). The Welcome box is the house
  * checkbox row. The link stays plain text, not a copy-on-click value: the footer
  * button copies it, and saves the details first when they are missing, which a
  * second copy beside it would skip. Outcomes of a press are note lines beside
@@ -20,16 +20,16 @@
  * @module features/dashboard/ui/components/share/ShareLinkForm
  */
 
-import { Button, TextArea, TextField } from '@adobe/react-spectrum';
+import { TextArea, TextField } from '@adobe/react-spectrum';
 import React from 'react';
+import { ShareChecks } from './ShareChecks';
 import { SHARE_COPY } from './shareCopy';
 import type { ShareDatapackFix } from './useShareDatapack';
 import type { UseShareLink } from './useShareLink';
-import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
 import { CheckboxRow } from '@/core/ui/components/selection/CheckboxRow';
 import { Fact, FactList } from '@/core/ui/components/ui/FactList';
 import { Spinner } from '@/core/ui/components/ui/Spinner';
-import type { DemoPackageCheck, DemoPackagePreview, RemoveDemoPackageResult } from '@/types/webviewRequests';
+import type { DemoPackagePreview, RemoveDemoPackageResult } from '@/types/webviewRequests';
 
 /** The button's words: copied for a moment, else the act it will do. Its spinner says it is working. */
 export function buttonLabel(flow: UseShareLink): string {
@@ -41,44 +41,6 @@ export function buttonLabel(flow: UseShareLink): string {
 function removedSentence(result: RemoveDemoPackageResult): string {
     const file = result.file === 'skipped' ? SHARE_COPY.removedFileSkipped : SHARE_COPY.removedFile;
     return result.removedFromList ? `${file} and ${SHARE_COPY.removedCard}.` : `${file}.`;
-}
-
-/** The notice's line: why its fix failed, when it did, else the check's sentence under its title. */
-function noticeLine(check: DemoPackageCheck, fix: ShareDatapackFix): string | undefined {
-    if (check.share && fix.reason) return fix.reason;
-    return check.title ? check.message : undefined;
-}
-
-/**
- * One check that needs the SC, as an amber notice: the extension's title over its sentence, or
- * the sentence alone as a one-line notice when the check carries no title; then its fix. A pack
- * only the SC can see carries Share Datapack (walk F229), busy on the button while it runs.
- */
-function CheckNotice({ check, fix }: { check: DemoPackageCheck; fix: ShareDatapackFix }): React.ReactElement {
-    const hint = check.action === 'republish' ? SHARE_COPY.republishHint : undefined;
-    const action = check.share ? (
-        <Button variant="secondary" onPress={fix.ask} isPending={fix.pending}>
-            {SHARE_COPY.shareDatapack}
-        </Button>
-    ) : undefined;
-    return (
-        <InlineNotice title={check.title ?? check.message} hint={hint} action={action} testId={`package-check-${check.id}`}>
-            {noticeLine(check, fix)}
-        </InlineNotice>
-    );
-}
-
-/** Only the checks that need the SC: a list of green ticks is noise (owner, 2026-10-22). */
-function Checks({ checks, fix }: { checks: DemoPackageCheck[]; fix: ShareDatapackFix }): React.ReactElement | null {
-    const open = checks.filter((check) => !check.ok);
-    if (open.length === 0) return null;
-    return (
-        <>
-            {open.map((check) => (
-                <CheckNotice key={`${check.id}-${check.repository ?? ''}`} check={check} fix={fix} />
-            ))}
-        </>
-    );
 }
 
 /** The name and description, always shown (owner, walk F229: hidden behind a link, they went unseen). */
@@ -151,7 +113,7 @@ export function ShareLinkForm({
 }): React.ReactElement {
     return (
         <div className="export-link" data-testid="share-link">
-            <Checks checks={preview.checks} fix={fix} />
+            <ShareChecks checks={preview.checks} fix={fix} />
             <FactList>
                 <Fact label={SHARE_COPY.repository}>
                     <code className="export-link-text">{preview.link}</code>

@@ -14,7 +14,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { assertPathInsideSync } from '@/core/validation/PathSafetyValidator';
-import { offerToShareBeforeExport, privatePackNote } from '@/features/data-installer/handlers/privatePackPrompt';
+import { privatePackNote } from '@/features/data-installer/handlers/privatePackPrompt';
 import { recordSharedInFile } from '@/features/data-installer/services/sharedInFiles';
 import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { buildDemoBundle, defaultBundleName, type DemoBundleParts } from '@/features/eds/services/demoPackage/demoBundle';
@@ -74,16 +74,6 @@ async function setupOnly(context: HandlerContext, project: Project, providedPath
     return { success: true, data: { path: written.path, fileCount: 1, parts: ['setup'], ...(packNote ? { packNote } : {}) } satisfies ExportDemoBundleResult };
 }
 
-/**
- * A setup part names its pack by reference: a person is offered to share a private one, once,
- * before anything is written; an agent's answer carries the note instead (owner, 2026-10-30).
- */
-async function packSharing(context: HandlerContext, project: Project, asked: boolean): Promise<string | undefined> {
-    if (!asked) return privatePackNote(context, project);
-    await offerToShareBeforeExport(context, project);
-    return undefined;
-}
-
 export const handleExportDemoBundle: MessageHandler<ExportDemoBundleRequest> = async (
     context: HandlerContext,
     data,
@@ -93,7 +83,12 @@ export const handleExportDemoBundle: MessageHandler<ExportDemoBundleRequest> = a
     const wantSetup = data?.setup ?? true;
     const wantStorefront = data?.storefront ?? true;
     if (!wantSetup && !wantStorefront) return { success: false, error: NOTHING_TICKED, code: ErrorCode.INVALID_OPERATION };
-    const packNote = wantSetup ? await packSharing(context, project, Boolean(context.panel) && !data?.path) : undefined;
+    // A setup part names its pack by reference, and a private one is the SC's alone (owner,
+    // 2026-10-30): an agent's answer carries the note. Share Demo's file step already shows the
+    // datapack notice with Share Datapack before Save File is pressed (walk F230), so a save from
+    // the window asks nothing more; the pop-up it replaced never stopped a save either.
+    const fromWindow = Boolean(context.panel) && !data?.path;
+    const packNote = wantSetup && !fromWindow ? await privatePackNote(context, project) : undefined;
     if (!wantStorefront) return setupOnly(context, project, data?.path, packNote);
 
     const storefront = ownStorefrontOf(project);

@@ -142,7 +142,7 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'exportProjectSettings')).toBe(true);
         });
 
-        it('should have exactly 100 handlers', () => {
+        it('should have exactly 101 handlers', () => {
             // Given: dashboardHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(dashboardHandlers) as Array<
@@ -332,7 +332,9 @@ describe('dashboardHandlers', () => {
             // (95 → 99, PL-101, 2026-11-17): the project's Finish Setup steps, in the setup guide.
             // share-library-datapack (99 → 100, walk F229, 2026-11-18): Share Demo's datapack
             // notice shares the pack with the Datapacks screen's own handler.
-            expect(types).toHaveLength(100);
+            // getShareDatapackCheck (100 → 101, walk F230, 2026-11-18): Share Demo's file step
+            // reads the datapack check on a project with no storefront to preview.
+            expect(types).toHaveLength(101);
         });
 
         it('should have handlers as functions', () => {

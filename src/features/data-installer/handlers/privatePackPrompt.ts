@@ -2,16 +2,17 @@
  * Exporting a project whose pack is the SC's own PRIVATE library pack (owner, 2026-10-30).
  *
  * A project file carries its pack by reference, and a private pack is the owner's alone, so a
- * colleague who creates a project from the file cannot read it. Every export door asks: a person,
- * once, "Your teammates can't use this datapack's data. Share it?", with Share (the share's own consent
- * sentence as the detail); declining exports anyway. An agent's export answers the same sentence as
- * a note, naming `share_datapack`. Whether the pack is private is read from the library
+ * colleague who creates a project from the file cannot read it. The projects list's Export asks a
+ * person, once, "Your teammates can't use this datapack's data. Share it?", with Share (the share's
+ * own consent sentence as the detail); declining exports anyway. The dashboard's Share Demo file
+ * step asks nothing here: its window shows the datapack notice with Share Datapack (walk F230). An
+ * agent's export answers the same sentence as a note, naming `share_datapack`. Whether the pack is private is read from the library
  * (`find-datapacks`: `mine`, `shared`); a library that cannot be asked asks nothing, so an export
  * is never held up by it.
  *
- * Doors: the projects list's Export (`projectsListTransfer.ts`), the dashboard's demo bundle with
- * its setup part (`exportDemoBundleHandler.ts`, which also backs `export_demo_bundle`), and
- * `export_project_settings` (`projectManagementHandlers.ts`).
+ * Doors: the projects list's Export (`projectsListTransfer.ts`, the question), an agent's
+ * `export_demo_bundle` with its setup part (`exportDemoBundleHandler.ts`, the note), and
+ * `export_project_settings` (`projectManagementHandlers.ts`, the note).
  *
  * @module features/data-installer/handlers/privatePackPrompt
  */

@@ -139,9 +139,10 @@ describe('ShareModal', () => {
         expect(screen.queryByTestId('share-link-form')).not.toBeInTheDocument();
     });
 
-    it('a headless project has nothing to read, opens on the choice, and its link form says there is no storefront', async () => {
+    it('a headless project reads only its datapack check, opens on the choice, and its link form says there is no storefront', async () => {
         await renderShare(undefined, { isEds: false });
-        expect(mockRequest).not.toHaveBeenCalled();
+        // No storefront to read: the one request is the datapack check the file step shows (walk F230).
+        expect(mockRequest.mock.calls.map(([type]) => type)).toEqual(['getShareDatapackCheck']);
         expect(screen.getByTestId('share-form')).toBeInTheDocument();
         await next();
         expect(screen.getByTestId('share-link-form')).toHaveTextContent(
@@ -397,8 +398,8 @@ describe('ShareModal', () => {
         it('ticks setup and storefront by default, saves one bundle through the host, and reports what and where', async () => {
             await renderShareFile();
             expect(screen.getByText('What to Include')).toBeInTheDocument();
-            expect(partBox('part-setup').checked).toBe(true);
-            expect(partBox('part-storefront').checked).toBe(true);
+            expect(partBox('Setup').checked).toBe(true);
+            expect(partBox('Storefront').checked).toBe(true);
             mockRequest.mockResolvedValueOnce(
                 answer({ path: '/Users/steve/bodea-demo-bundle.zip', fileCount: 813, bytes: 1_000, parts: ['setup', 'storefront'] }),
             );
@@ -414,20 +415,20 @@ describe('ShareModal', () => {
 
         it('sends only the ticked parts and refuses none', async () => {
             await renderShareFile();
-            fireEvent.click(partBox('part-storefront'));
+            fireEvent.click(partBox('Storefront'));
             mockRequest.mockResolvedValueOnce(answer({ path: '/p/x.json', fileCount: 1, parts: ['setup'] }));
             await click('Save File');
             expect(mockRequest).toHaveBeenLastCalledWith('exportDemoBundle', { setup: true, storefront: false });
 
-            fireEvent.click(partBox('part-setup'));
+            fireEvent.click(partBox('Setup'));
             expect(button('Save File')).toHaveAttribute('aria-disabled', 'true');
             expect(screen.getByTestId('export-file-form')).toHaveTextContent('Select at least one part.');
         });
 
         it('starts with the storefront off and disabled for a headless project, and shows a failure', async () => {
             await renderShareFile({ isEds: false });
-            expect(partBox('part-storefront').checked).toBe(false);
-            expect(partBox('part-storefront').disabled).toBe(true);
+            expect(partBox('Storefront').checked).toBe(false);
+            expect(partBox('Storefront').disabled).toBe(true);
             mockRequest.mockResolvedValueOnce({ success: false, error: 'Failed to download archive: HTTP 404' });
             await click('Save File');
             expect(screen.getByTestId('export-error')).toHaveTextContent('HTTP 404');
@@ -478,11 +479,12 @@ describe('ShareModal', () => {
             expect(second).toHaveClass('is-locked');
         });
 
-        it('keeps the button the width of its widest label, so Close never moves', async () => {
+        it("keeps the link button the width of its own widest label, so Close never moves", async () => {
             await renderShareLink();
             const sizers = Array.from(footer().querySelectorAll('.modal-button-sizer')).map((s) => s.textContent);
 
-            expect(sizers).toEqual(expect.arrayContaining(['Copy Link', SAVE_AND_COPY, 'Copied', 'Save File']));
+            // Only the labels this step's button can show: Save File is the other step's (walk F230).
+            expect(sizers).toEqual(['Copy Link', SAVE_AND_COPY, 'Copied']);
         });
     });
 

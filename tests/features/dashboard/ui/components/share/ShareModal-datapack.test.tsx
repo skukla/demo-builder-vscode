@@ -14,6 +14,7 @@ import {
     mockRequest,
     nameInput,
     PREVIEW,
+    PRIVATE_PACK,
     renderShareLink,
     resetShareMocks,
     sent,
@@ -21,17 +22,6 @@ import {
 import { settle } from '../../../../../helpers/reactSettle';
 import { SHARE_CONSENT } from '@/features/data-installer/shareWording';
 import type { DemoPackageCheck, DemoPackagePreview } from '@/types/webviewRequests';
-
-const PRIVATE_PACK: DemoPackageCheck = {
-    id: 'datapack',
-    ok: false,
-    title: "Colleagues Can't Use This Demo's Data Yet",
-    message: 'Release Save Test 2 is only visible to you.',
-    share: {
-        pack: { name: 'release-save-test-2', version: '20261117-101500' },
-        displayName: 'Release Save Test 2',
-    },
-};
 
 const WITH_PRIVATE_PACK: DemoPackagePreview = {
     ...PREVIEW,

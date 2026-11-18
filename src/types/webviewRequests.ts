@@ -428,6 +428,14 @@ export interface DemoPackageCheck {
     share?: { pack: DatapackId; displayName: string };
 }
 
+/**
+ * `getShareDatapackCheck`: the datapack check alone, for Share Demo's file step on a project with
+ * no storefront to preview (walk F230). Empty when the project has no pack or no store could be asked.
+ */
+export interface ShareDatapackChecks {
+    checks: DemoPackageCheck[];
+}
+
 export interface DemoPackagePreview {
     /**
      * What the description file says when the file is ours; otherwise prefilled

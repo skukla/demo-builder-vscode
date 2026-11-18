@@ -9,6 +9,7 @@ import { COMPONENT_IDS } from '@/core/constants';
 import {
     EDS_ONLY,
     handleGetDemoPackagePreview,
+    handleGetShareDatapackCheck,
     handleRemoveDemoPackage,
     handleSaveDemoPackage,
 } from '@/features/dashboard/handlers/demoPackageHandlers';
@@ -16,7 +17,12 @@ import { resolveDataInstallerAccess } from '@/features/data-installer/handlers/d
 import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { forgetAddedDemo, readAddedDemos, rememberAddedDemo } from '@/features/project-creation/services/addedDemoSettings';
 import type { Project } from '@/types/base';
-import type { DemoPackagePreview, RemoveDemoPackageResult, SaveDemoPackageResult } from '@/types/webviewRequests';
+import type {
+    DemoPackagePreview,
+    RemoveDemoPackageResult,
+    SaveDemoPackageResult,
+    ShareDatapackChecks,
+} from '@/types/webviewRequests';
 import { makeAddedDemo } from '../../../helpers/demoPackageFixtures';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockProject } from '../../../helpers/projectFake';
@@ -157,6 +163,54 @@ describe('handleGetDemoPackagePreview', () => {
         expect(preview.onList).toBe(false);
         // Asked with no panel: a preview may never prompt for a sign-in.
         expect(mockAccess).toHaveBeenCalledWith(expect.objectContaining({ panel: undefined }), 'installer');
+    });
+});
+
+// Share Demo's file step on a project with no storefront to preview (walk F230): the datapack
+// check alone, by the preview's own rule, headless-safe.
+describe('handleGetShareDatapackCheck', () => {
+    const headless = (overrides: Partial<Project> = {}): Project => createMockProject({ name: 'acme', ...overrides });
+
+    it("answers the preview's check, with its fix, for a headless project's pack only the SC can see", async () => {
+        const getDatapackDetail = jest.fn().mockResolvedValue({
+            id: { name: 'acme-1a2b3c', version: '7' },
+            displayName: 'Acme Demo',
+            shared: false,
+            dataTypes: [],
+            art: {},
+        });
+        mockAccess.mockResolvedValue({ ok: true, client: { getDatapackDetail } });
+        const { context } = contextFor(headless({ datapack: { name: 'acme-1a2b3c', version: '7', store: 'library' } }));
+
+        const res = await handleGetShareDatapackCheck(context);
+
+        expect(res.success).toBe(true);
+        expect((res.data as ShareDatapackChecks).checks).toEqual([
+            {
+                id: 'datapack',
+                ok: false,
+                title: "Colleagues Can't Use This Demo's Data Yet",
+                message: 'Acme Demo is only visible to you.',
+                share: { pack: { name: 'acme-1a2b3c', version: '7' }, displayName: 'Acme Demo' },
+            },
+        ]);
+        // A read: it may never prompt for a sign-in.
+        expect(mockAccess).toHaveBeenCalledWith(expect.objectContaining({ panel: undefined }), 'library');
+    });
+
+    it('answers no checks for a project with no pack, asking no store', async () => {
+        const { context } = contextFor(headless());
+
+        const res = await handleGetShareDatapackCheck(context);
+
+        expect(res).toEqual({ success: true, data: { checks: [] } });
+        expect(mockAccess).not.toHaveBeenCalled();
+    });
+
+    it('refuses when there is no project', async () => {
+        const { context } = contextFor(null);
+
+        expect((await handleGetShareDatapackCheck(context)).success).toBe(false);
     });
 });
 

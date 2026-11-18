@@ -24,6 +24,7 @@ import * as vscode from 'vscode';
 import { handleGetDatapackLine } from './datapackLineHandler';
 import {
     handleGetDemoPackagePreview,
+    handleGetShareDatapackCheck,
     handleSaveDemoPackage,
     handleRemoveDemoPackage,
 } from './demoPackageHandlers';
@@ -478,6 +479,8 @@ export const dashboardHandlers = defineHandlers({
     removeDemoPackage: handleRemoveDemoPackage,
     // Its datapack notice's Share Datapack: the Datapacks screen's own handler (walk F229).
     'share-library-datapack': datapackLibraryHandlers['share-library-datapack'],
+    // The file step's datapack notice on a project with no storefront to preview (walk F230).
+    getShareDatapackCheck: handleGetShareDatapackCheck,
     // Export, "Send a file": one bundle of the ticked parts (setup, storefront).
     exportDemoBundle: handleExportDemoBundle,
 

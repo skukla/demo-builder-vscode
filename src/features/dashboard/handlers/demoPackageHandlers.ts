@@ -20,6 +20,7 @@ import { packReadsFor } from '@/features/data-installer/handlers/recordedPackHan
 import { availabilityOf } from '@/features/data-installer/services/recordedPack';
 import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import {
+    datapackChecks,
     describeProject,
     ownStorefrontOf,
     packageChecks,
@@ -46,6 +47,7 @@ import type {
     RemoveDemoPackageResult,
     SaveDemoPackageRequest,
     SaveDemoPackageResult,
+    ShareDatapackChecks,
 } from '@/types/webviewRequests';
 
 export const EDS_ONLY =
@@ -131,6 +133,18 @@ function checkDeps(context: HandlerContext): PackageCheckDeps {
         logger: context.logger,
     };
 }
+
+/**
+ * Share Demo's file step on a project with no storefront to preview (walk F230): the datapack
+ * check alone, by the preview's rule and lookup, so the file step's notice says what the link
+ * step's does. Any project, Edge Delivery or not. A read: no panel, no prompt.
+ */
+export const handleGetShareDatapackCheck: MessageHandler = async (context) => {
+    const project = await context.stateManager.getCurrentProject();
+    if (!project) return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
+    const answer: ShareDatapackChecks = { checks: await datapackChecks(project, datapackLookup(context)) };
+    return { success: true, data: answer };
+};
 
 export const handleGetDemoPackagePreview: MessageHandler = async (context) => {
     const ready = await candidate(context);

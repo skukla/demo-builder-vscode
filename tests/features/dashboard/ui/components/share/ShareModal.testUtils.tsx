@@ -28,9 +28,11 @@ Object.defineProperty(navigator, 'clipboard', {
 // The SUT binds below the mocks on purpose (webview-test-authoring §3).
 import { ShareModal, type ShareModalProps } from '@/features/dashboard/ui/components/share/ShareModal';
 import type {
+    DemoPackageCheck,
     DemoPackagePreview,
     RemoveDemoPackageResult,
     SaveDemoPackageResult,
+    ShareDatapackChecks,
 } from '@/types/webviewRequests';
 
 export const LINK = 'https://github.com/steve/kukla-bodea';
@@ -49,13 +51,35 @@ export const PREVIEW: DemoPackagePreview = {
 export const SAVED: SaveDemoPackageResult = { link: LINK, file: 'written', onList: true, checks: PREVIEW.checks };
 export const REMOVED: RemoveDemoPackageResult = { file: 'removed', removedFromList: true };
 
+/** The check a pack only the SC can see answers, with its fix (walk F229). */
+export const PRIVATE_PACK: DemoPackageCheck = {
+    id: 'datapack',
+    ok: false,
+    title: "Colleagues Can't Use This Demo's Data Yet",
+    message: 'Release Save Test 2 is only visible to you.',
+    share: {
+        pack: { name: 'release-save-test-2', version: '20261117-101500' },
+        displayName: 'Release Save Test 2',
+    },
+};
+
 export function answer<D>(data: D): { success: true; data: D } {
     return { success: true, data };
 }
 
-/** The link form reads the storefront preview on open for an Edge Delivery project. */
-export async function renderShare(preview: unknown = answer(PREVIEW), overrides: Partial<ShareModalProps> = {}) {
-    if (overrides.isEds !== false) mockRequest.mockResolvedValueOnce(preview);
+/** What a headless project's datapack read answers when the project's pack needs nothing. */
+export const NO_PACK_CHECKS = answer<ShareDatapackChecks>({ checks: [] });
+
+/**
+ * The dialog reads on open: the storefront preview for an Edge Delivery project, the datapack
+ * check alone for a headless one (`headlessRead`).
+ */
+export async function renderShare(
+    preview: unknown = answer(PREVIEW),
+    overrides: Partial<ShareModalProps> = {},
+    headlessRead: unknown = NO_PACK_CHECKS,
+) {
+    mockRequest.mockResolvedValueOnce(overrides.isEds === false ? headlessRead : preview);
     const props: ShareModalProps = { isOpen: true, isEds: true, onClose: jest.fn(), ...overrides };
     const view = render(<ShareModal {...props} />);
     await settle();
@@ -102,8 +126,12 @@ export async function renderShareLink(preview: unknown = answer(PREVIEW), overri
 }
 
 /** Open on step 1, choose the file card, then go on to the file form. */
-export async function renderShareFile(overrides: Partial<ShareModalProps> = {}) {
-    const view = await renderShare(undefined, overrides);
+export async function renderShareFile(
+    overrides: Partial<ShareModalProps> = {},
+    preview: unknown = answer(PREVIEW),
+    headlessRead: unknown = NO_PACK_CHECKS,
+) {
+    const view = await renderShare(preview, overrides, headlessRead);
     await chooseFile();
     await next();
     return view;
@@ -115,8 +143,9 @@ function control<T extends HTMLElement>(testId: string, tag: string): T {
     return (el.tagName === tag ? el : el.querySelector(tag.toLowerCase())) as T;
 }
 
-export function partBox(testId: string): HTMLInputElement {
-    return control<HTMLInputElement>(testId, 'INPUT');
+/** A part on the file form, a house checkbox row, found by its label (its line follows in the name). */
+export function partBox(label: 'Setup' | 'Storefront'): HTMLInputElement {
+    return screen.getByRole('checkbox', { name: new RegExp(`^${label}`) }) as HTMLInputElement;
 }
 
 /** The Welcome box, a house checkbox row, found by its label (its quiet line follows in the name). */

@@ -274,6 +274,20 @@ function datapackCheckFor(pack: DatapackLocation, found: DatapackWhereabouts | u
 }
 
 /**
+ * The datapack's check alone: none when the project records no pack or no store could be asked.
+ * The preview's checks include it; Share Demo's file step reads it on its own for a project with
+ * no storefront to preview (walk F230), so both steps say the same by one rule.
+ */
+export async function datapackChecks(
+    project: Project,
+    availability: PackageCheckDeps['datapackAvailability'],
+): Promise<PackageCheck[]> {
+    if (!project.datapack || !availability) return [];
+    const check = datapackCheckFor(project.datapack, await availability(project.datapack));
+    return check ? [check] : [];
+}
+
+/**
  * Everything a colleague's "Add a demo package" will need, checked now and said plainly.
  */
 export async function packageChecks(
@@ -311,10 +325,7 @@ export async function packageChecks(
                   action: 'republish',
               },
     );
-    const datapackCheck = project.datapack && deps.datapackAvailability
-        ? datapackCheckFor(project.datapack, await deps.datapackAvailability(project.datapack))
-        : undefined;
-    if (datapackCheck) checks.push(datapackCheck);
+    checks.push(...(await datapackChecks(project, deps.datapackAvailability)));
     for (const [id, state] of Object.entries(project.appBuilderComponents ?? {})) {
         if (state.kind !== 'integration' || getAppBuilderComponentEntry(id) || !state.source) continue;
         const fullName = `${state.source.owner}/${state.source.repo}`;

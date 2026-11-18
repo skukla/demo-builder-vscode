@@ -250,12 +250,35 @@ projects' storefronts. Colleagues who already added the demo keep it.
 
 ### Send a file
 
-For a colleague who can't reach your GitHub. One zip, `<project>-demo-bundle.zip`. **What to
-include** lists the two parts you can tick: **Setup** (your Commerce, Adobe, GitHub and
-DA.live settings, never a credential) and **Storefront** (the repository's code with the
-demo's description file inside). A colleague adds the storefront with Add a demo package's
-**From a zip file**, which reads the bundle. Setup alone writes the plain settings file the
-projects list imports today. Your setup travels only as a file.
+For a colleague who can't reach your GitHub. One zip, `<project>-demo-bundle.zip`. Top to
+bottom, the form shows (walk F230, 2026-11-18, laid out the way the link form is):
+
+- Sample data only you can see, first, as the link form's amber notice with the same
+  **Share Datapack** fix: the file names the datapack, and colleagues cannot install its data
+  until it is shared. It is the link form's own check (`datapackCheckFor`): an Edge Delivery
+  project reads it with the storefront, a headless one reads it alone
+  (`getShareDatapackCheck`), both behind the window's opening wait. The link form's other
+  checks are not shown here: the file carries the code itself. A check that cannot be read
+  shows nothing, and never holds the file up.
+- **What to Include**, the two parts as checkbox rows, each with its line beside it:
+  **Setup** ("Your Commerce, Adobe, GitHub and DA.live settings. Never a credential.") and
+  **Storefront** ("The storefront's code and content site.", the repository's code with the
+  demo's description file inside). On a headless project the storefront row is off and
+  locked, and says the project has none.
+
+**Save File** in the footer saves the ticked parts; with nothing ticked it is off. It asks
+nothing more: before 2026-11-18 it asked a VS Code pop-up ("Your teammates can't use this
+datapack's data. Share it?") whose other answer saved the same file anyway, so with the notice
+already on screen a second question would only repeat it. A file saved without the share still
+works for the colleague: the settings and storefront arrive, and the wizard says it cannot read
+your datapack, offering the one it was made from when there is one, else building without
+sample data (`checkRecordedPack` in `recordedPack.ts`). The projects list's Export, which has no
+notice, still asks that question. An agent's `export_demo_bundle` never asked: its answer
+carries the same sentence as `packNote`.
+
+A colleague adds the storefront with Add a demo package's **From a zip file**, which reads the
+bundle. Setup alone writes the plain settings file the projects list imports today. Your setup
+travels only as a file.
 
 Parts that do not exist yet are not listed. When one is built, it is added to the file form.
 

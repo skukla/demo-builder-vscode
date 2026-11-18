@@ -11,16 +11,18 @@
  * chosen form, with Back at the footer's start: a link (`ShareLinkForm`), when the
  * colleague can reach your GitHub; a file (`ShareFileForm`), when they cannot. Both forms'
  * state lives above the windows, so Back and Next keep what the SC set.
- * The storefront is read once on open, behind the window's wait, before step 1 shows. A
+ * The storefront is read once on open, behind the window's wait, before step 1 shows; a
+ * headless project, with no storefront, reads its datapack check alone instead (walk F230). A
  * storefront that could not be read is a note line where the link would be: the file
  * still works. A pack only the SC can see is a notice with its fix, Share Datapack
- * (`useShareDatapack`, walk F229): its question takes this window in place of the form, and
- * once shared the storefront is read again without the wait, so the form keeps what the SC set.
+ * (`useShareDatapack`, walk F229), on both forms (walk F230): its question takes this window in
+ * place of the form, and once shared the same read runs again without the wait, so the form keeps
+ * what the SC set.
  *
  * A Steps window per step, as Add a Demo's stages (step-07 Win3; rule 14): each opens at its own
  * height rather than at the taller step's. The form step reserves the chosen form at its tallest
  * (`reserve`), so a note that arrives after it opens never grows it. Each form's main button,
- * Copy Link or Save File, sits in the footer beside Close.
+ * Copy Link or Save File, sits in the footer beside Close, as wide as its own labels only.
  *
  * @module features/dashboard/ui/components/share/ShareModal
  */
@@ -41,7 +43,7 @@ import { StepsWindow } from '@/core/ui/components/ui/StepsDialog';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
 import { WAIT_STAGES } from '@/core/utils/waitStages';
 import { shareConfirmCopy } from '@/features/data-installer/ui/components/packMenu';
-import type { DemoPackagePreview } from '@/types/webviewRequests';
+import type { DemoPackageCheck, DemoPackagePreview, ShareDatapackChecks } from '@/types/webviewRequests';
 
 type ShareForm = 'link' | 'file';
 
@@ -55,10 +57,11 @@ const READING: ModalWait = WAIT_STAGES.readingDemo;
 const SAVE_FILE = 'Save File';
 
 /**
- * Every label the footer button can show, on either form: it holds the widest one's width, so
- * Close never moves as the label or the form changes.
+ * Every label the link step's button can show: it holds the widest one's width, so Close never
+ * moves as the label changes. Each step reserves only its own labels (walk F230): the file step's
+ * Save File never changes, so it holds no other step's width.
  */
-const BUTTON_LABELS = [SHARE_COPY.copyLink, SHARE_COPY.saveAndCopy, SHARE_COPY.copied, SAVE_FILE];
+const LINK_LABELS = [SHARE_COPY.copyLink, SHARE_COPY.saveAndCopy, SHARE_COPY.copied];
 
 /** What the link flow is handed before the storefront is read: never shown, never pressed. */
 const UNREAD: DemoPackagePreview = { draft: { name: '', description: '' }, checks: [], link: '', saved: false, onList: false };
@@ -102,10 +105,13 @@ function FormChoice({ form, onChange }: { form: ShareForm; onChange: (form: Shar
     );
 }
 
-/** What the dialog knows about the storefront: read once on open, before anything else shows. */
+/**
+ * What the dialog knows about the storefront: read once on open, before anything else shows. A
+ * project with no storefront reads its datapack check alone, for the file step (walk F230).
+ */
 type StorefrontState =
     | { status: 'loading' }
-    | { status: 'none' }
+    | { status: 'none'; checks: DemoPackageCheck[] }
     | { status: 'failed'; error: string }
     | { status: 'ready'; preview: DemoPackagePreview };
 
@@ -126,6 +132,19 @@ async function readPreview(): Promise<StorefrontState> {
     }
 }
 
+/**
+ * The datapack check of a project with no storefront to preview: the same check the preview
+ * carries (walk F230). A read that fails shows no notice, so the file is never held up by it.
+ */
+async function readDatapackCheck(): Promise<StorefrontState> {
+    try {
+        const answer = await webviewClient.request<Answer<ShareDatapackChecks>>('getShareDatapackCheck');
+        return { status: 'none', checks: answer.success && answer.data ? answer.data.checks : [] };
+    } catch {
+        return { status: 'none', checks: [] };
+    }
+}
+
 /** The storefront as last read, and a read again that keeps the form (Share Datapack's, walk F229). */
 interface Storefront {
     state: StorefrontState;
@@ -135,18 +154,16 @@ interface Storefront {
 }
 
 /**
- * The one read the dialog makes on open. A headless project has no storefront to read,
- * so it is ready at once; an Edge Delivery project shows the house spinner
- * until the answer is in. A read again keeps what is shown until a preview arrives, so
- * the window and what the SC typed stay put.
+ * The one read the dialog makes on open, behind the house wait: an Edge Delivery project's
+ * storefront preview, or a headless project's datapack check (walk F230). A read again keeps what
+ * is shown until an answer worth showing arrives, so the window and what the SC typed stay put.
  */
 function useStorefrontState(isEds: boolean): Storefront {
-    const [state, setState] = useState<StorefrontState>(isEds ? { status: 'loading' } : { status: 'none' });
+    const [state, setState] = useState<StorefrontState>({ status: 'loading' });
     const [rereading, setRereading] = useState(false);
     useEffect(() => {
-        if (!isEds) return undefined;
         let cancelled = false;
-        void readPreview().then((read) => {
+        void (isEds ? readPreview() : readDatapackCheck()).then((read) => {
             if (!cancelled) setState(read);
         });
         return () => {
@@ -155,11 +172,11 @@ function useStorefrontState(isEds: boolean): Storefront {
     }, [isEds]);
     const reread = useCallback((): void => {
         setRereading(true);
-        void readPreview().then((read) => {
-            if (read.status === 'ready') setState(read);
+        void (isEds ? readPreview() : readDatapackCheck()).then((read) => {
+            if (read.status !== 'failed') setState(read);
             setRereading(false);
         });
-    }, []);
+    }, [isEds]);
     return { state, reread, rereading };
 }
 
@@ -182,7 +199,7 @@ function LinkForm({ state, flow, fix }: { state: StorefrontState; flow: UseShare
 /** The footer's button for the chosen form: the link's only once there is one. */
 function mainButton(form: ShareForm, state: StorefrontState, flow: UseShareLink, file: UseShareFile): ActionButton[] {
     if (form === 'file') {
-        return [{ label: SAVE_FILE, variant: 'accent', onPress: file.save, isDisabled: file.nothing, isPending: file.busy, sizeLabels: BUTTON_LABELS }];
+        return [{ label: SAVE_FILE, variant: 'accent', onPress: file.save, isDisabled: file.nothing, isPending: file.busy }];
     }
     if (state.status !== 'ready') return [];
     return [
@@ -192,7 +209,7 @@ function mainButton(form: ShareForm, state: StorefrontState, flow: UseShareLink,
             onPress: flow.press,
             isDisabled: !flow.canPress && flow.busy !== 'save',
             isPending: flow.busy === 'save',
-            sizeLabels: BUTTON_LABELS,
+            sizeLabels: LINK_LABELS,
         },
     ];
 }
@@ -221,8 +238,15 @@ interface WindowProps extends Omit<ShareModalProps, 'isOpen'> {
     read: Storefront;
 }
 
-/** The checks the link form shows: none until the storefront is read. */
-const NO_CHECKS: DemoPackagePreview['checks'] = [];
+/** No checks: none until the dialog's read answers, or the storefront could not be read. */
+const NO_CHECKS: DemoPackageCheck[] = [];
+
+/** The checks the dialog read on open: the preview's, or a headless project's datapack check. */
+function checksOf(state: StorefrontState): DemoPackageCheck[] {
+    if (state.status === 'ready') return state.preview.checks;
+    if (state.status === 'none') return state.checks;
+    return NO_CHECKS;
+}
 
 /** A step's body, in the stage chrome Add a Demo's stages use. */
 function StepBody({ children }: { children: React.ReactNode }): React.ReactElement {
@@ -239,7 +263,8 @@ function ShareWindow({ isEds, onClose, read }: WindowProps): React.ReactElement 
     const [step, setStep] = useState<ShareStep>('choose');
     const flow = useShareLink(storefront.status === 'ready' ? storefront.preview : UNREAD);
     const file = useShareFile(isEds);
-    const fix = useShareDatapack(storefront.status === 'ready' ? storefront.preview.checks : NO_CHECKS, read.reread, read.rereading);
+    const checks = checksOf(storefront);
+    const fix = useShareDatapack(checks, read.reread, read.rereading);
     const loading = storefront.status === 'loading';
     if (step === 'choose') {
         return (
@@ -264,7 +289,7 @@ function ShareWindow({ isEds, onClose, read }: WindowProps): React.ReactElement 
         );
     }
     const formOf = (withRoom: boolean): React.ReactElement => {
-        if (form === 'file') return <ShareFileForm isEds={isEds} file={withRoom ? fileRoom(file) : file} />;
+        if (form === 'file') return <ShareFileForm isEds={isEds} file={withRoom ? fileRoom(file) : file} checks={checks} fix={fix} />;
         return <LinkForm state={storefront} flow={withRoom ? linkRoom(flow) : flow} fix={fix} />;
     };
     return (
