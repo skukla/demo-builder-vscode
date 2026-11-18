@@ -61,7 +61,7 @@ export const handleForcedOrgSwitch: MessageHandler = async (context) => {
 /**
  * The org switch's sign-in itself: forced, behind the org-switch notice. Only org
  * switches call it: the `switchOrg` handler, and the wizard's Switch IMS Org and
- * "Sign In with a Different Account" (its `authenticate` with `force`) — each is the
+ * "Switch IMS Org" on its no-App-Builder screen (its `authenticate` with `force`) — each is the
  * account chooser. Renewing the same account ("Sign In Again", "Re-Authenticate Now")
  * is the one Sign In with `fresh` (`signInToAdobe`), not this (owner, 2026-11-18).
  *

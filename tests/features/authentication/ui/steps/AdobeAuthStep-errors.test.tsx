@@ -93,7 +93,7 @@ describe('AdobeAuthStep - Error Handling', () => {
             );
 
             // The genuine account-switch case keeps force-login, clearly labeled.
-            const accountSwitch = screen.getByText('Sign In with a Different Account');
+            const accountSwitch = screen.getByText('Switch IMS Org');
             expect(accountSwitch).toBeInTheDocument();
             await user.click(accountSwitch);
             expect(mockRequestAuth).toHaveBeenCalledWith(true);

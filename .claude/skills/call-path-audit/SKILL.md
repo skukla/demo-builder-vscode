@@ -84,7 +84,7 @@ and the wizard called `login(force)` directly. They became three entry points:
 |---|---|---|
 | `ensureAdobeIOAuth` (`core/auth/adobeAuthGuard.ts`) | a flow needs a sign-in partway: ask in a VS Code dialog, then sign in | ~15 flows, now including the creation mesh step |
 | `signInToAdobe` (`authentication/handlers/signInToAdobe.ts`) | someone pressed Sign In, or an agent asked; the caller (`'person'` or `'agent'`) is one mode, and `fresh` (a forced sign-in that renews the same account) the other | the `authenticate` handler (every screen; `fresh` is the wizard's Re-Authenticate Now), the Sign In command (`fresh` is its "Sign In Again" over a good session), the `sign_in` tool, the dashboard's expired-sign-in prompt |
-| `handleForcedOrgSwitch` / `signInThroughOrgChooser` (`authentication/handlers/orgSwitchHandler.ts`) | the org switch, forced to open the account chooser | `switchOrg`, the wizard's Switch IMS Org and "Sign In with a Different Account" |
+| `handleForcedOrgSwitch` / `signInThroughOrgChooser` (`authentication/handlers/orgSwitchHandler.ts`) | the org switch, forced to open the account chooser | `switchOrg`, the wizard's Switch IMS Org (one label, also on its no-App-Builder screen) |
 
 The pin is "adobe SIGN-IN entry points" in `spine-chokepoints.test.ts`. Its
 first run, before the doors moved, named exactly the drifted callers.

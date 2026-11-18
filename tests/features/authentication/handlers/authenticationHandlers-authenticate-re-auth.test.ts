@@ -74,7 +74,7 @@ describe('authenticationHandlers - handleAuthenticate - Re-authentication', () =
 		});
 	});
 
-	// The wizard's force is its Switch IMS Org and "Sign In with a Different Account":
+	// The wizard's force is its Switch IMS Org (on the org screen and the no-App-Builder screen):
 	// the account chooser, which is the org switch's sign-in (2026-11-18). A normal
 	// press runs the one Sign In, never forced.
 	describe('forced re-authentication', () => {

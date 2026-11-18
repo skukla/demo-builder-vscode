@@ -63,6 +63,6 @@ describe('AdobeAuthStep - what the error state hands StatusDisplay', () => {
         expect(props.variant).toBe('warning');
         expect(props.title).toBe('Insufficient Privileges');
         expect(props.icon).toBeUndefined();
-        expect(props.actions?.map((a) => a.label)).toEqual(['Sign In with a Different Account']);
+        expect(props.actions?.map((a) => a.label)).toEqual(['Switch IMS Org']);
     });
 });

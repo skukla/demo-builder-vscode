@@ -444,7 +444,7 @@ async function trySkipLogin(
 
 /**
  * The sign-in itself, decided by no one here. `force` is the wizard's Switch IMS Org and
- * "Sign In with a Different Account" (the account chooser): the org switch's sign-in.
+ * the same label on the no-App-Builder screen (the account chooser): the org switch's sign-in.
  * Anything else is the one Sign In, forced when `fresh` (Re-Authenticate Now renews the
  * same account). This handler adds only its own after-steps: the auth-status pushes and
  * the org it resolves.

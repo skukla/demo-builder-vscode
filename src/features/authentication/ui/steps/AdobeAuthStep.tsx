@@ -99,7 +99,7 @@ function authErrorView({ state, authSubMessage, checkAuthentication, handleLogin
         centerMessage: true,
         maxWidth: '520px',
         actions: noAppBuilder
-            ? [{ label: 'Sign In with a Different Account', icon: <Login size="S" />, variant: 'accent', onPress: () => handleLogin(true) }]
+            ? [{ label: 'Switch IMS Org', icon: <Login size="S" />, variant: 'accent', onPress: () => handleLogin(true) }]
             : [
                 { label: 'Retry', icon: <Refresh size="S" />, variant: 'secondary', onPress: () => checkAuthentication() },
                 { label: 'Sign In Again', icon: <Login size="S" />, variant: 'accent', onPress: () => handleLogin(false) },
