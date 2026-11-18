@@ -29,8 +29,9 @@ jest.mock('@/features/dashboard/ui/components/share/SavePackageModal', () => ({
 
 const DEMO = { name: 'Isle5 by Robin', source: { owner: 'robin', repo: 'isle5-demo' }, storefrontKind: 'eds' as const };
 const PAGES = "The Isle5 by Robin demo's pages can't be reached right now.";
-const GUIDANCE = "If it moved, change the source. If it's gone for good, keep this project as your own demo.";
-const KEEP = 'Keep as My Own Demo';
+// Walk F243 (owner): the button names what it opens, in an application's words.
+const GUIDANCE = "If it moved, change the source. If it's gone, save this project as a package.";
+const KEEP = 'Save as Package';
 const UNREACHABLE = "The Isle5 by Robin demo's repository can't be reached. Reset and updates are unavailable until it is.";
 
 describe('ProjectDashboardScreen - added demo source', () => {
@@ -63,14 +64,14 @@ describe('ProjectDashboardScreen - added demo source', () => {
 
     // Keeping the project as your own is a card on your own Welcome step: Save as Package's job
     // since EDS-72, when Share Demo's link stopped placing the card.
-    it('offers Keep as My Own Demo beside Change Source on an Edge Delivery project, opening Save as Package', async () => {
+    it('offers Save as Package beside Change Source on an Edge Delivery project, opening Save as Package', async () => {
         renderDashboard({ demo: DEMO, isEds: true });
         emitWarning();
 
         const banner = await screen.findByTestId('demo-source-banner');
         expect(banner).toHaveTextContent(GUIDANCE);
         expect(within(await screen.findByTestId('demo-source-banner')).getByRole('button', { name: 'Change Source' })).toBeInTheDocument();
-        fireEvent.click(screen.getByRole('button', { name: KEEP }));
+        fireEvent.click(within(banner).getByRole('button', { name: KEEP }));
         expect(screen.getByRole('dialog', { name: 'Save as Package' })).toBeInTheDocument();
         expect(screen.queryByRole('dialog', { name: 'Share Demo' })).not.toBeInTheDocument();
     });
@@ -82,7 +83,7 @@ describe('ProjectDashboardScreen - added demo source', () => {
         const banner = await screen.findByTestId('demo-source-banner');
         expect(banner).not.toHaveTextContent(GUIDANCE);
         expect(within(await screen.findByTestId('demo-source-banner')).getByRole('button', { name: 'Change Source' })).toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: KEEP })).not.toBeInTheDocument();
+        expect(within(banner).queryByRole('button', { name: KEEP })).not.toBeInTheDocument();
     });
 
     it('names the pages, not the source, when only the pages are out of reach, and offers no Keep', async () => {
@@ -98,7 +99,7 @@ describe('ProjectDashboardScreen - added demo source', () => {
         expect(banner).toHaveTextContent("This demo's pages can't be reached");
         expect(banner).not.toHaveTextContent("This demo's source can't be reached");
         expect(banner).toHaveTextContent(PAGES);
-        expect(screen.queryByRole('button', { name: KEEP })).not.toBeInTheDocument();
+        expect(within(banner).queryByRole('button', { name: KEEP })).not.toBeInTheDocument();
     });
 
     it('clears the notice when the check comes back ok', async () => {
