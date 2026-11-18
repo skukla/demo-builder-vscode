@@ -59,6 +59,26 @@ export const THIN_LAYER_RESET_REFUSED =
     + 'bare template would remove the fixes, so that is not offered. Reset the project instead: it '
     + "rebuilds the code at the tested version with every fix (this replaces your own code edits).";
 
+/**
+ * An imported project's code came from the sender's storefront (EDS-72): the brand it records is only
+ * what that code was built on, so resetting it to the brand's bare template would throw the sender's
+ * work away (walk F249). A merge still brings the template's later changes and keeps the code.
+ */
+export const IMPORTED_RESET_REFUSED =
+    "This storefront was imported, so its own code is the source. Resetting it to the brand's template "
+    + "would remove the imported code, so that is not offered. Reset the project instead: it puts the "
+    + 'code back to how it was imported.';
+
+/**
+ * Why a storefront update may not reset this project's code to its template, or nothing when it may.
+ * The one rule: the clash question asks it before offering a reset, and the sync service before running
+ * one, so neither can offer what the other refuses.
+ */
+export function templateResetRefusal(project: Project): string | undefined {
+    if (project.importedFrom) return IMPORTED_RESET_REFUSED;
+    return isThinLayerProject(project) ? THIN_LAYER_RESET_REFUSED : undefined;
+}
+
 export const TESTED_VERSION_UNREADABLE =
     'Could not read the tested boilerplate version from the patches repository, so nothing was '
     + 'changed. Try again later.';

@@ -17,7 +17,7 @@ import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { keepClash, type ClashTrack } from '@/features/updates/services/pendingClash';
 import { describeEdit } from '@/features/updates/services/templateSyncMessages';
 import type { TemplateSyncResult } from '@/features/updates/services/templateSyncTypes';
-import { isThinLayerProject } from '@/features/updates/services/thinLayerUpdate';
+import { isThinLayerProject, templateResetRefusal } from '@/features/updates/services/thinLayerUpdate';
 import type { ClashReport } from '@/features/updates/services/updateApplyResult';
 import type { UpdateContext } from '@/features/updates/services/updateCore';
 import type { Project } from '@/types/base';
@@ -43,9 +43,12 @@ export interface ClashQuestion {
     canReset: boolean;
 }
 
-/** The colleague's row may reset; a tested-boilerplate storefront or Adobe's row never. */
+/**
+ * The colleague's row may reset; a tested-boilerplate storefront, an imported project (walk F249) or
+ * Adobe's row never. The rule is `templateResetRefusal`'s, which the sync service applies too.
+ */
 export function canResetOnClash(project: Project, track: ClashTrack): boolean {
-    return track === 'template' && !isThinLayerProject(project);
+    return track === 'template' && templateResetRefusal(project) === undefined;
 }
 
 /**

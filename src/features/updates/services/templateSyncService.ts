@@ -69,7 +69,7 @@ import {
     patchesNotPutBack,
     reapplyPatchesInCheckout,
     TESTED_VERSION_UNREADABLE,
-    THIN_LAYER_RESET_REFUSED,
+    templateResetRefusal,
     type OverlayResolver,
 } from '@/features/updates/services/thinLayerUpdate';
 import type { Project } from '@/types/base';
@@ -159,7 +159,9 @@ export class TemplateSyncService {
         // fixes; resetting it to the bare template would drop the fixes (EDS-51).
         const lkgSource = lkgSourceOf(metadata);
         if (options.strategy === 'reset') {
-            if (lkgSource) return failure('reset', THIN_LAYER_RESET_REFUSED);
+            // The one rule, shared with the clash question (walk F249): never an imported project's.
+            const refusal = templateResetRefusal(project);
+            if (refusal) return failure('reset', refusal);
             return this.resetRepository(target, preserveFiles);
         }
 
