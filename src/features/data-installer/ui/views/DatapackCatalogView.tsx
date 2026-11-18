@@ -328,8 +328,6 @@ export function DatapackCatalogView({ library = false, clearArrival }: { library
                 onRename={renamePack}
                 sharedInFile={detail.value?.sharedInFile}
                 onSharingChanged={sharingChanged}
-                // The mark shows in the Show list's sources and in the flyout: both are read again.
-                {...(library ? { onMarkChanged: sharingChanged } : {})}
                 settingsLayer={detail.value?.settingsLayer}
                 {...(flyout.undoTo ? { undoTo: flyout.undoTo } : {})}
                 {...installedPackProps({ library, held, installedAt, selected, failed, updatable: heldUpdatable, saves: heldSaves }, importWindow.openRemoval)}

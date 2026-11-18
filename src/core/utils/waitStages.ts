@@ -87,7 +87,6 @@ export const WAIT_STAGES = {
     // Share and Stop Sharing: the label alone (owner, 2026-11-08). Each changes every version.
     sharingPack: { label: 'Sharing the datapack', expectation: FEW_SECONDS },
     makingPackPrivate: { label: 'Making it private', expectation: FEW_SECONDS },
-    changingPackMark: { label: 'Changing the mark', expectation: FEW_SECONDS },
     deletingPack: { label: 'Deleting the datapack', expectation: FEW_SECONDS },
     // Undo Last Save, until its run is accepted and its window takes over (Phase 2).
     startingUndo: { label: 'Starting the undo', expectation: FEW_SECONDS },

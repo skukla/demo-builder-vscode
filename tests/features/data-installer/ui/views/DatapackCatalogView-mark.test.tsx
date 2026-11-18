@@ -1,55 +1,44 @@
 /**
- * DatapackCatalogView — the Demo Builder mark on the screen (owner, 2026-11-14; rule 1).
- *
- * The Datapack Library offers Remove Demo Builder Mark on the SC's own Demo Builder datapack, asks in
- * the house confirm window, sends `mark-team-datapack` with `demoBuilder: false`, and reads the catalog and
- * the pack again. A project's Datapacks offers no mark row.
+ * DatapackCatalogView — no screen marks a datapack as Demo Builder's (owner, 2026-11-18, walk F226,
+ * replacing 2026-11-14). The mark makes a pack look official to every SC, and the store checks only that
+ * the pack is the caller's own, so an SC must not be able to set it from a screen. Neither the Datapack
+ * Library nor a project's Datapacks offers a mark row, on an own Demo Builder pack or an own other pack.
  */
 
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { press, settle } from '../../../../helpers/reactSettle';
 import '@testing-library/jest-dom';
 import { DatapackCatalogView, INVENTORY_COMPLETE, makeSummary, mockRequest } from './DatapackCatalogView.testUtils';
 
 const OWN_DEMO_BUILDER = makeSummary('bodea', 'main', { displayName: 'Bodea', store: 'library', mine: true, team: true, shared: true });
+const OWN_OTHER = makeSummary('acme', '20261101-090000', { displayName: 'Acme', store: 'library', mine: true });
 
-beforeEach(() => {
+function answer(pack: typeof OWN_DEMO_BUILDER): void {
     mockRequest.mockImplementation((type: string) => {
-        if (type === 'find-datapacks') return Promise.resolve({ success: true, data: { items: [OWN_DEMO_BUILDER], count: 1, engine: 'demo-builder' } });
-        if (type === 'get-datapack-detail') return Promise.resolve({ success: true, data: { detail: OWN_DEMO_BUILDER, inventory: INVENTORY_COMPLETE } });
-        if (type === 'mark-team-datapack') return Promise.resolve({ success: true, data: { datapackName: 'bodea', demoBuilder: false, versions: 1 } });
+        if (type === 'find-datapacks') return Promise.resolve({ success: true, data: { items: [pack], count: 1, engine: 'demo-builder' } });
+        if (type === 'get-datapack-detail') return Promise.resolve({ success: true, data: { detail: pack, inventory: INVENTORY_COMPLETE } });
         return Promise.resolve({ success: true, data: null });
     });
-});
+}
 
-const calls = (type: string) => mockRequest.mock.calls.filter((c) => c[0] === type);
-
-async function openFlyout(library: boolean): Promise<void> {
+async function openFlyout(library: boolean): Promise<HTMLElement> {
     render(library ? <DatapackCatalogView library /> : <DatapackCatalogView />);
     await settle();
     await press((await screen.findAllByTestId('datapack-card'))[0]);
-    await screen.findByRole('region', { name: 'Actions' });
+    return screen.findByRole('region', { name: 'Actions' });
 }
 
-/** A row of the flyout's Actions list (owner, 2026-11-17: visible, as the integration flyouts'). */
-const action = (name: string) => within(screen.getByRole('region', { name: 'Actions' })).queryByRole('button', { name });
+const MARK_ROWS = /Demo Builder (Mark|Datapack)/u;
 
-it('takes the mark off in the Datapack Library, after asking, then reads the catalog and the pack again', async () => {
-    await openFlyout(true);
+it.each([
+    ['the Datapack Library, an own Demo Builder pack', true, OWN_DEMO_BUILDER],
+    ['the Datapack Library, an own other pack', true, OWN_OTHER],
+    ["a project's Datapacks", false, OWN_DEMO_BUILDER],
+])('offers no mark row in %s', async (_where, library, pack) => {
+    answer(pack);
+    const actions = await openFlyout(library);
 
-    await press(action('Remove Demo Builder Mark') as HTMLElement);
-    expect(screen.getByRole('heading', { name: 'Remove the Demo Builder Mark?' })).toBeInTheDocument();
-    const findsBefore = calls('find-datapacks').length;
-    await press(screen.getByRole('button', { name: 'Remove Mark' }));
-    await settle();
-
-    expect(calls('mark-team-datapack').map((c) => c[1])).toEqual([{ datapackName: 'bodea', demoBuilder: false }]);
-    await waitFor(() => expect(calls('find-datapacks').length).toBeGreaterThan(findsBefore));
-    expect(calls('get-datapack-detail').length).toBeGreaterThan(1);
-});
-
-it("offers no mark row in a project's Datapacks", async () => {
-    await openFlyout(false);
-
-    expect(action('Remove Demo Builder Mark')).not.toBeInTheDocument();
+    expect(within(actions).getByRole('button', { name: 'Save as File' })).toBeInTheDocument();
+    expect(within(actions).queryByRole('button', { name: MARK_ROWS })).not.toBeInTheDocument();
+    expect(mockRequest.mock.calls.some((call) => call[0] === 'mark-team-datapack')).toBe(false);
 });

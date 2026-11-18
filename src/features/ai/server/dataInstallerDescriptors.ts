@@ -904,8 +904,7 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             demoBuilder: z.boolean().describe('true to mark it as a Demo Builder datapack; false is refused for agents'),
         },
         // Unmarking would reopen the Delete a Demo Builder datapack refuses (owner, 2026-11-14,
-        // "Close it"). The screen's Remove Demo Builder Mark reaches the same handler, so the refusal
-        // is here, on the agent's tool only, before dispatch.
+        // "Close it"). No screen reaches the handler since walk F226; the refusal is here, before dispatch.
         preflight: (args) =>
             args.demoBuilder === false
                 ? { success: false, error: DEMO_BUILDER_UNMARK_REFUSAL, code: ErrorCode.INVALID_OPERATION }

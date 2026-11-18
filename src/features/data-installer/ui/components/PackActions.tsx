@@ -14,8 +14,7 @@
  *
  * Then: Save as File; Undo Last Save, on the datapack the demo uses when there is a
  * save to go back to (Phase 2, owner 2026-11-12); Share or Stop Sharing, on the SC's own library
- * datapack; in the Datapack Library, Remove Demo Builder Mark on their own Demo Builder datapack and
- * Mark as Demo Builder Datapack on their own other one (owner, 2026-11-14; rule 1). Behind the divider: Uninstall, on the demo's installed version; Delete, on the SC's own library
+ * datapack (no screen marks a pack as Demo Builder's: walk F226). Behind the divider: Uninstall, on the demo's installed version; Delete, on the SC's own library
  * datapack but never a Demo Builder one (overview Phase 7). Bare verbs (J8-3): the datapack is the
  * list's subject, and each window's title names it ("Delete My Luma?"). A pack of saves is deleted
  * whole; a named version alone (P4-Q6 is open).
@@ -36,7 +35,6 @@ import React, { useCallback, useLayoutEffect, useState } from 'react';
 import { INSTALLER_WRITES_SHOWN } from '../../installerWrites';
 import { isSavedVersion } from '../../packVersions';
 import type { DatapackDetail } from '../../types';
-import { useLibraryMarking } from '../hooks/useLibraryMarking';
 import { useLibrarySharing } from '../hooks/useLibrarySharing';
 import type { HeldFailure } from '../hooks/useProjectHolding';
 import { useRetryInstall } from '../hooks/useRetryInstall';
@@ -64,11 +62,6 @@ export interface PackActionsProps {
     sharedInFile?: string;
     /** The SC's own pack was shared or stopped being shared. Stable. */
     onSharingChanged?: () => void;
-    /**
-     * The SC's own pack's Demo Builder mark was changed. Handed only by the Datapack Library, and
-     * its presence is what offers the mark rows there. Stable.
-     */
-    onMarkChanged?: () => void;
     /** Whether a menu row's work is running: the flyout hides its other content. Stable. */
     onWorking?: (working: boolean) => void;
     /** The save Undo Last Save goes back to: More offers it only when there is one (`useDetailFlyout`). */
@@ -97,14 +90,12 @@ function workLines(work: {
     undo: { working: boolean };
     retry: { working: boolean };
     sharing: { working: boolean };
-    marking: { working: boolean };
     shared?: boolean;
 }): WaitLines {
     if (work.saveFile.saving) return WAIT_STAGES.savingPackFile;
     if (work.undo.working) return WAIT_STAGES.startingUndo;
     if (work.retry.working) return WAIT_STAGES.startingInstall;
     if (work.sharing.working) return work.shared ? WAIT_STAGES.makingPackPrivate : WAIT_STAGES.sharingPack;
-    if (work.marking.working) return WAIT_STAGES.changingPackMark;
     return WAIT_STAGES.deletingPack;
 }
 
@@ -115,7 +106,6 @@ export function PackActions({
     installerOn,
     sharedInFile,
     onSharingChanged,
-    onMarkChanged,
     onWorking,
     undoTo,
     onRemoveData,
@@ -131,14 +121,13 @@ export function PackActions({
     const saveFile = useSaveDatapackFile(detail.id, library ? 'library' : 'installer');
     const removal = useLibraryRemoval(detail.id, onRemoved, isSavedVersion(detail.id.version));
     const sharing = useLibrarySharing(detail.id, detail.shared, onSharingChanged);
-    const marking = useLibraryMarking(detail.id, detail.team === true, onMarkChanged);
     // Undo opens the window once its job is accepted, straight on its run.
     const openRun = useCallback((id: DatapackId): void => onImport?.(id, 'run'), [onImport]);
     const undo = useUndoLastSave(detail.id.name, undoTo, openRun);
     const retry = useRetryInstall({ id: detail.id, store: detail.store, failed, types: importable }, openRun);
     const doneAsking = useCallback((): void => setAsking(null), []);
     // Still waiting once the pack is gone, as the flyout closes: its rows must not flash back.
-    const working = saveFile.saving || undo.working || retry.working || sharing.working || marking.working || removal.removing || removal.removed;
+    const working = saveFile.saving || undo.working || retry.working || sharing.working || removal.removing || removal.removed;
 
     // Before the paint, or the flyout's rows would show for a frame beside the spinner. The cleanup is
     // for a flyout closed during the wait, which unmounts this with the work still running.
@@ -161,14 +150,13 @@ export function PackActions({
         setAsking(null);
         if (asking === 'undo') undo.start();
         else if (asking === 'share') sharing.start();
-        else if (asking === 'mark' || asking === 'unmark') marking.start();
         else if (asking === 'remove') removal.start();
     };
 
     const rows: FlyoutActionRow[] = [
         ...(onImport ? [mainRow(detail, { restores, updates, switches, failed })] : []),
         ...saveRows(saves),
-        ...packRows(detail, undoTo !== undefined, onMarkChanged !== undefined),
+        ...packRows(detail, undoTo !== undefined),
         // Both take something away; only Delete is for good, so only it is red (owner, 2026-11-17).
         ...removeRows(onRemoveData !== undefined, deletable(detail)).map((row) => ({ ...row, removes: true, danger: row.key === 'remove' })),
     ];
@@ -176,7 +164,7 @@ export function PackActions({
         <>
             {working ? (
                 <div className="datapack-panel-loading">
-                    <StageWait brief lines={workLines({ saveFile, undo, retry, sharing, marking, shared: detail.shared })} />
+                    <StageWait brief lines={workLines({ saveFile, undo, retry, sharing, shared: detail.shared })} />
                 </div>
             ) : null}
             {/* Kept mounted through a wait: a copy's own result would be lost with it. */}
@@ -193,7 +181,6 @@ export function PackActions({
                         {undo.note}
                         {retry.note}
                         {sharing.note}
-                        {marking.note}
                         {removal.note}
                     </PackActionNotes>
                 </>
@@ -209,7 +196,7 @@ export function PackActions({
 }
 
 /** The rows that ask in a dialog first. */
-const ASKED: readonly string[] = ['undo', 'share', 'mark', 'unmark', 'remove'];
+const ASKED: readonly string[] = ['undo', 'share', 'remove'];
 function isAsked(key: string): key is NonNullable<Asking> {
     return ASKED.includes(key);
 }

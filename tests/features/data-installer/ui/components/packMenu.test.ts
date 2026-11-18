@@ -53,28 +53,11 @@ describe('packRows', () => {
         ]);
     });
 
-    // Owner, 2026-11-14 (rule 1, reversibility): in the Datapack Library the mark can be taken off on
-    // the screen, and put on, since no screen marked before. Only the SC's own pack: the store changes
-    // the mark on the caller's own versions only.
-    it('in the Datapack Library, offers Remove Demo Builder Mark on the SC\'s own Demo Builder datapack', () => {
-        const own = makeDetail({ store: 'library', mine: true, team: true });
-        expect(labels(packRows(own, false, true))).toEqual(['Save as File', 'Share', 'Remove Demo Builder Mark']);
-    });
-
-    it("in the Datapack Library, offers Mark as Demo Builder Datapack on the SC's own other pack", () => {
-        const own = makeDetail({ store: 'library', mine: true });
-        expect(labels(packRows(own, false, true))).toEqual(['Save as File', 'Share', 'Mark as Demo Builder Datapack']);
-    });
-
-    it("offers no mark row outside the Datapack Library, or on a colleague's pack", () => {
-        expect(labels(packRows(makeDetail({ store: 'library', mine: true, team: true }), false))).toEqual([
-            'Save as File',
-            'Share',
-        ]);
-        expect(labels(packRows(makeDetail({ store: 'library', mine: false, team: true }), false, true))).toEqual([
-            'Save as File',
-        ]);
-        expect(labels(packRows(makeDetail({ mine: true }), false, true))).toEqual(['Save as File']);
+    // Owner, 2026-11-18 (walk F226, replacing 2026-11-14): no row marks a pack as Demo Builder's; the
+    // mark makes a pack look official to every SC, and the store checks only that it is the caller's own.
+    it("offers no mark row, on an own Demo Builder pack or an own other one", () => {
+        expect(labels(packRows(makeDetail({ store: 'library', mine: true, team: true }), false))).toEqual(['Save as File', 'Share']);
+        expect(labels(packRows(makeDetail({ store: 'library', mine: true }), false))).toEqual(['Save as File', 'Share']);
     });
 });
 
@@ -132,25 +115,6 @@ describe('confirmCopy', () => {
         });
         expect(confirmCopy('share', makeDetail({ shared: true }))).toMatchObject({
             title: 'Stop Sharing Bodea?',
-        });
-    });
-
-    // Blue: neither deletes anything (rule 20).
-    it('asks Remove Demo Builder Mark in blue, naming the datapack', () => {
-        expect(confirmCopy('unmark', makeDetail({ team: true }))).toEqual({
-            title: 'Remove the Demo Builder Mark?',
-            actionLabel: 'Remove Mark',
-            actionVariant: 'accent',
-            children: 'Bodea goes back to being a regular datapack in the library, and can be deleted.',
-        });
-    });
-
-    it('asks Mark as Demo Builder Datapack in blue, naming the datapack', () => {
-        expect(confirmCopy('mark', makeDetail())).toEqual({
-            title: 'Mark as a Demo Builder Datapack?',
-            actionLabel: 'Mark',
-            actionVariant: 'accent',
-            children: "Bodea can't be deleted while it is a Demo Builder datapack.",
         });
     });
 

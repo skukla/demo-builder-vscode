@@ -1204,8 +1204,8 @@ the same question once, with Share, and declining exports anyway.
 pack as a team pack through the store's owner-only `update-datapack-metadata` (`team`). It does not
 unmark: `demoBuilder: false` is refused with "Demo Builder datapacks can't be unmarked by an agent."
 (owner, 2026-11-14), because a marked pack cannot be deleted and unmarking would reopen that. The
-refusal is the tool's `preflight`, so the handler never runs; the Datapack Library's own Remove Demo
-Builder Mark (and Mark as Demo Builder Datapack) reach the same handler from the screen. A team pack is in every SC's default
+refusal is the tool's `preflight`, so the handler never runs. No screen marks or unmarks a pack (owner,
+2026-11-18, walk F226): the mark makes a pack look official to every SC. A team pack is in every SC's default
 list with no tag; any other shared pack is Community, which `find_datapacks` lists unless `includeCommunity` is false. It
 answers `{datapackName, team, versions}`.
 

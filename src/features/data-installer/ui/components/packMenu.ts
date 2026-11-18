@@ -19,18 +19,15 @@ export interface PackMenuRow {
 }
 
 /**
- * The menu's upper section: what any pack offers, then what the SC's own library pack adds.
- *
- * @param marks - the Datapack Library: the SC's own pack also offers its Demo Builder mark, off or on
- *   (owner, 2026-11-14; rule 1). Only their own, as the store changes the mark on the caller's own
- *   versions only.
+ * The menu's upper section: what any pack offers, then what the SC's own library pack adds. No row
+ * marks a pack as Demo Builder's (owner, 2026-11-18, walk F226, replacing 2026-11-14): the mark makes
+ * a pack look official to every SC, and the store checks only that the pack is the caller's own.
  */
-export function packRows(detail: DatapackDetail, undoable: boolean, marks = false): PackMenuRow[] {
+export function packRows(detail: DatapackDetail, undoable: boolean): PackMenuRow[] {
     const rows: PackMenuRow[] = [{ key: 'save-file', label: 'Save as File', icon: 'saveFile' }];
     if (undoable) rows.push({ key: 'undo', label: 'Undo Last Save', icon: 'reset' });
     if (detail.store === 'library' && detail.mine) {
         rows.push({ key: 'share', label: detail.shared ? 'Stop Sharing' : 'Share', icon: 'share' });
-        if (marks) rows.push(markRow(detail.team === true));
     }
     return rows;
 }
@@ -45,13 +42,6 @@ export function saveRows(saves: { onUpdate?: () => void; into?: string } | undef
     if (!saves.onUpdate) return [asNew];
     const label = saves.into ? `${UPDATE} ${saves.into}` : UPDATE;
     return [{ key: 'update-pack', label, icon: 'capture' }, asNew];
-}
-
-/** Take the Demo Builder mark off, or put it on. */
-function markRow(team: boolean): PackMenuRow {
-    return team
-        ? { key: 'unmark', label: 'Remove Demo Builder Mark', icon: 'pinOff' }
-        : { key: 'mark', label: 'Mark as Demo Builder Datapack', icon: 'pinOn' };
 }
 
 /**
@@ -77,7 +67,7 @@ export function removeRows(removesData: boolean, deletes: boolean): PackMenuRow[
 }
 
 /** The dialog open over the flyout, if any. */
-export type Asking = 'undo' | 'share' | 'mark' | 'unmark' | 'remove' | null;
+export type Asking = 'undo' | 'share' | 'remove' | null;
 
 export type ConfirmCopy = Pick<ConfirmActionDialogProps, 'title' | 'actionLabel' | 'actionVariant' | 'children'>;
 
@@ -102,23 +92,6 @@ export function confirmCopy(asking: Asking, detail: DatapackDetail, sharedInFile
             actionLabel: 'Stop Sharing',
             actionVariant: 'accent',
             children: 'Other people can no longer see or install it.',
-        };
-    }
-    // Blue: neither deletes anything (rule 20). Unmarked, its owner's More offers Delete again.
-    if (asking === 'unmark') {
-        return {
-            title: 'Remove the Demo Builder Mark?',
-            actionLabel: 'Remove Mark',
-            actionVariant: 'accent',
-            children: `${name} goes back to being a regular datapack in the library, and can be deleted.`,
-        };
-    }
-    if (asking === 'mark') {
-        return {
-            title: 'Mark as a Demo Builder Datapack?',
-            actionLabel: 'Mark',
-            actionVariant: 'accent',
-            children: `${name} can't be deleted while it is a Demo Builder datapack.`,
         };
     }
     // "Permanently" is the warning, as a word in the sentence (dialog design rules; review 2026-11-10).
