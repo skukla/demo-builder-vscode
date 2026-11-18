@@ -61,7 +61,7 @@ describe('ShareModal: the file step', () => {
             expect(rows).toHaveLength(2);
             expect(rows[0]).toHaveTextContent('Setup');
             expect(rows[0].querySelector('.choice-help')).toHaveTextContent(
-                'Your Commerce, Adobe, GitHub and DA.live settings. Never a credential.'
+                'Your Commerce, Adobe, GitHub and DA.live settings.'
             );
             expect(rows[1]).toHaveTextContent('Storefront');
             expect(rows[1].querySelector('.choice-help')).toHaveTextContent(

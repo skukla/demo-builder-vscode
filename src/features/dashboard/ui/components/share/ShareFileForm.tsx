@@ -21,7 +21,7 @@ import type { DemoPackageCheck, ExportDemoBundleResult } from '@/types/webviewRe
 const FILE_COPY = {
     whatFile: 'What to Include',
     setup: 'Setup',
-    setupWhat: 'Your Commerce, Adobe, GitHub and DA.live settings. Never a credential.',
+    setupWhat: 'Your Commerce, Adobe, GitHub and DA.live settings.',
     storefront: 'Storefront',
     storefrontWhat: "The storefront's code and content site.",
     storefrontHeadless: 'This project has no storefront of its own.',
