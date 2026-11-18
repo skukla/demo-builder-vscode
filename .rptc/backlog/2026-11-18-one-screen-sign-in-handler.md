@@ -4,7 +4,7 @@ kind: chore
 area: platform
 needs: []
 value: med
-status: backlog
+status: active
 ---
 
 # One Adobe sign-in handler for a screen's Sign In button
@@ -45,4 +45,6 @@ sign-in.
 ## Shipped so far
 
 - 2026-11-18 (walk F248): merged. One message, `authenticate`, and one handler, registered on the wizard, Add Integration, the dashboard and Integrations; it runs the one Sign In (`signInToAdobe`, never forced) or, for the wizard's force, the org switch's sign-in. `reAuthenticate` and `handleReAuthenticate` deleted; the dashboard and Integrations re-read status themselves after the sign-in. The palette's Sign In and the agent's `sign_in` run the same function; the creation mesh step moved onto `ensureAdobeIOAuth`. Pinned by "adobe SIGN-IN entry points" in `tests/templates/spine-chokepoints.test.ts`. Not yet checked live: whether a refused token still needs a forced sign-in (the third "Verify before merging" point).
-
+- 2026-11-18  refactor(integrations): the Add Integration window owns its sign-in (F248) (`cbf302a26`)
+- 2026-11-18  refactor(auth): Adobe sign-in starts from three entry points, and a pin keeps it so (F248) (`c32cfdd79`)
+- 2026-11-18  fix(auth): a sign-in Adobe refused counts as signed out, and Sign In makes a new one (F246, F247) (`756f3382a`)

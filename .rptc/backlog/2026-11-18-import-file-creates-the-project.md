@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: high
-status: backlog
+status: active
 ---
 
 # Importing a demo file gives the SC the project, not a template to build one from
@@ -89,3 +89,15 @@ live cycle: import a bundle on a second account, create, publish, reset.
   release (`builtWith.patchesRelease`), and an imported thin-layer project records the sender's
   release instead of today's, so every patches release published since the sender's build is
   offered. Walk row F255.
+- 2026-11-18  fix(import): an imported project counts patches releases from the sender's build (F255) (`5869e31da`)
+- 2026-11-18  fix(share): every shared storefront records the template commit its code matches (F254) (`db733678e`)
+- 2026-11-18  fix(import): an imported project counts updates from the sender's template version (F252) (`643f15844`)
+- 2026-11-18  fix(updates): a storefront update never resets an imported project to the template (F249) (`18ea53f9c`)
+- 2026-11-18  feat(import): Import from File creates the project from the bundle (EDS-72 phase 2) (`988e84d0e`)
+- 2026-11-18  fix(share): plain sentences for the package file and card (F244) (`febb0cbaa`)
+- 2026-11-18  fix(dashboard): the unreachable-source banner offers Save as Package (F243) (`3f02b2e55`)
+- 2026-11-18  feat(dashboard): Save as Package on the Share row; Send a Link only shares (EDS-72 phase 1) (`9a2458671`)
+- 2026-11-18  docs(plan): the owner's four decisions for EDS-72 (`16988d04a`)
+- 2026-11-18  docs(plan): every import and package action has its agent tool (`3bcc0bd11`)
+- 2026-11-18  docs(plan): import creates the project; Save as Package makes the template (`31bae6ec3`)
+- 2026-11-18  docs(backlog): EDS-72, importing a demo file gives the project, not a template (`9c6e78fbb`)
