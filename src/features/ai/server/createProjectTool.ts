@@ -74,7 +74,7 @@ import {
 import { NO_GUEST_PRODUCTS_WARNING, warnsOfNoProducts } from '@/types/commerceStore';
 import type { DemoPackage, Storefront } from '@/types/demoPackages';
 import type { HandlerContext } from '@/types/handlers';
-import type { AddedDemo } from '@/types/projectFile';
+import type { AddedDemo, BundleImportResult, ImportedFrom } from '@/types/projectFile';
 import type { WizardState } from '@/types/webview';
 import type { StorefrontSetupCompletePayload } from '@/types/webviewPayloads';
 import type { StorefrontSetupStartPayload } from '@/types/webviewRequests';
@@ -306,6 +306,8 @@ interface CreateArgs {
     stackId: string;
     demo?: AddedDemo;
     seed?: CreationSeed;
+    /** A demo bundle the project is made from (EDS-72): setup makes the repository from its files. */
+    importedFrom?: ImportedFrom;
     /** The store scope the caller chose, already checked by `parseStoreScope` (AI-11). */
     storeScope?: StoreScope;
     /** EDS: the repository and DA.live site already exist; use them as they are. */
@@ -444,6 +446,21 @@ function seededSetup(args: CreateArgs & { accsEndpoint?: string }): Record<strin
     };
 }
 
+/** A demo bundle's part of the setup config (EDS-72): setup makes the repository from its files. */
+function bundleSourceOf(importedFrom: ImportedFrom | undefined): { bundleSource?: { bundlePath: string } } {
+    return importedFrom ? { bundleSource: { bundlePath: importedFrom.bundlePath } } : {};
+}
+
+/** The import, for creation to record (EDS-72); nothing for any other project. */
+function importedFromOf(importedFrom: ImportedFrom | undefined): { importedFrom?: ImportedFrom } {
+    return importedFrom ? { importedFrom } : {};
+}
+
+/** What setup made from a bundle, for creation to record (EDS-72); nothing for any other project. */
+function bundleImportOf(made: BundleImportResult | undefined): { bundleImport?: BundleImportResult } {
+    return made ? { bundleImport: made } : {};
+}
+
 /** EDS creation path: provision the storefront (captured), then create the project. */
 async function createEds(
     ctx: HandlerContext,
@@ -506,6 +523,8 @@ async function createEds(
         templateOwner: storefront.templateOwner,
         templateRepo: storefront.templateRepo,
         contentSource: storefront.contentSource,
+        // A demo bundle: the repository is made from its files, as the wizard's import does (EDS-72).
+        ...bundleSourceOf(args.importedFrom),
     };
 
     // Phase 1: storefront setup (repo + DA.live content + Helix), reusing the
@@ -572,6 +591,7 @@ async function createEds(
             packages,
         ),
         demo: args.demo,
+        ...importedFromOf(args.importedFrom),
         adobeOrg: adobe?.org,
         adobeProject: adobe?.project,
         adobeWorkspace: adobe?.workspace,
@@ -594,6 +614,8 @@ async function createEds(
             installedBlockLibraries: complete.installedBlockLibraries,
             // Stamped on THIS project by creation, as the wizard does ("Needs reset").
             storefrontBuildComplete: complete.storefrontBuildComplete,
+            // An imported project's commit, recorded for Reset as the wizard does (EDS-72).
+            ...bundleImportOf(complete.bundleImport),
         },
     };
 
@@ -671,6 +693,8 @@ interface CreationRequest {
     /** EDS: the repository and DA.live site already exist; use them as they are. */
     adoptExisting?: boolean;
     seed?: CreationSeed;
+    /** A demo bundle the project is made from (EDS-72); Edge Delivery only. */
+    importedFrom?: ImportedFrom;
     report?: Record<string, unknown>;
 }
 
@@ -713,6 +737,9 @@ async function projectExistsAt(ctx: HandlerContext, folder: string): Promise<boo
 /** The run itself, once the name is known to be usable. */
 async function resolveAndCreate(ctx: HandlerContext, request: CreationRequest) {
     const { pkgId, stackId, link, ...rest } = request;
+    if (rest.importedFrom && !stackId.startsWith('eds-')) {
+        return asText({ error: "A demo bundle's storefront is Edge Delivery, but its setup names a headless stack." });
+    }
     const resolved = await resolvePackage(ctx, { pkgId, stackId, link });
     if ('error' in resolved) return asText(resolved.error);
     const { pkg, storefront, packages, demo } = resolved;

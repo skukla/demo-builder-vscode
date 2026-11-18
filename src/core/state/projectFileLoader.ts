@@ -92,6 +92,7 @@ export interface ProjectManifest {
     edsStorefrontStatusSummary?: Project['edsStorefrontStatusSummary'];
     selectedPackage?: string;
     demo?: Project['demo'];
+    importedFrom?: Project['importedFrom'];
     datapack?: Project['datapack'];
     datapackInstallFailure?: Project['datapackInstallFailure'];
     finishSetup?: Project['finishSetup'];
@@ -197,6 +198,7 @@ export class ProjectFileLoader {
                 edsStorefrontStatusSummary: manifest.edsStorefrontStatusSummary,
                 selectedPackage: normalizePackageId(manifest.selectedPackage),
                 demo: manifest.demo,
+                importedFrom: manifest.importedFrom,
                 datapack: manifest.datapack,
                 datapackInstallFailure: manifest.datapackInstallFailure,
                 finishSetup: manifest.finishSetup,

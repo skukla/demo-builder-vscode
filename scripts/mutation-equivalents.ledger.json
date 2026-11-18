@@ -2174,7 +2174,7 @@
             "anchors": [
                 "existingProjectNames || [],"
             ],
-            "line": 320,
+            "line": 322,
             "mutants": 1,
             "category": "other",
             "reason": "This fallback fires only when the caller passes no existing-names list, and the array goes straight to initializeProjectName, which uses it for one thing: existingNames.includes(baseName) inside generateUniqueProjectName. A list holding Stryker's placeholder string answers that check identically to an empty list for every project name a wizard can be opened with.",
@@ -2187,7 +2187,7 @@
             "anchors": [
                 "const originalStep = wizardSteps?.find((ws) => ws.id === step.id);"
             ],
-            "line": 344,
+            "line": 346,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Removing the optional call would throw only if this map body ran with wizardSteps undefined, and it cannot: enabledSteps is getEnabledWizardSteps(wizardSteps), which returns an empty array for a missing or empty configuration, so the map never executes a single iteration. There is no input that reaches this line with wizardSteps absent.",
@@ -2200,7 +2200,7 @@
             "anchors": [
                 "condition: originalStep?.condition,"
             ],
-            "line": 349,
+            "line": 351,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "originalStep is the result of finding step.id in wizardSteps, and step came from getEnabledWizardSteps(wizardSteps) \u2014 every id being searched for was taken from that same array, so the find always hits. Removing the optional read can never dereference undefined, whatever step configuration is handed in.",
@@ -2213,7 +2213,7 @@
             "anchors": [
                 "if (currentOrgId) {"
             ],
-            "line": 422,
+            "line": 424,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this true sets hasSeenOrgRef when the org is absent, but the flag can only change an outcome once orgActuallyChanged is evaluated with prevOrgId defined \u2014 and prevOrgId is assigned currentOrgId at the end of a previous run, so a defined prevOrgId means that run had a defined currentOrgId and already set the flag unmutated. The two therefore agree on every sequence of org values.",
@@ -2226,7 +2226,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 451,
+            "line": 453,
             "mutants": 1,
             "category": "other",
             "reason": "This is the useCallback dependency list for updateState. Replacing the empty array with one holding a constant string leaves the memo equally stable \u2014 the value never changes between renders, so the callback identity never invalidates either way, and the test asserting updateState keeps the same reference across a state change passes under both.",
@@ -3097,7 +3097,7 @@
             "anchors": [
                 "selectedBlockLibraries = [],"
             ],
-            "line": 75,
+            "line": 77,
             "mutants": 1,
             "category": "other",
             "reason": "PackageCard's default only applies when the prop is omitted, and BrandGallery passes 'isSelected ? selectedBlockLibraries : undefined'. For the selected card that is always an array (BrandGallery defaults it to [] itself), so the default is never used there. For an unselected card the default DOES apply, but 'isComplete' is false for that card, so the block-library summary the count feeds is not rendered at all. No render shows the difference.",
@@ -4876,7 +4876,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 80,
+            "line": 83,
             "mutants": 1,
             "category": "other",
             "reason": "The mutant replaces resetCreation's empty dependency array with a one-element array built fresh on every render, so useCallback hands back a NEW function each render instead of a stable one. The hook returns it to RepoSelectionInline, whose two mode switches (handleCreateNew and handleUseExisting) list it as a dependency and are re-created in turn - but all of them are used only as onPress handlers, never as a dependency of an effect and never compared. Identity churn on callbacks nothing memoises against changes no behaviour a test or a user can observe.",
@@ -4998,7 +4998,7 @@
             "anchors": [
                 "const failures = [];"
             ],
-            "line": 390,
+            "line": 401,
             "mutants": 1,
             "category": "other",
             "reason": "The mutant seeds the failures list with one junk string, which flips the aggregate to 'cleanup had errors'. Its return value is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. So nothing this expression computes can reach a test except through log wording.",
@@ -5011,7 +5011,7 @@
             "anchors": [
                 "if (!result.github.success && !result.github.skipped) {"
             ],
-            "line": 391,
+            "line": 402,
             "mutants": 6,
             "category": "branch",
             "reason": "Every variant of this guard \u2014 forced true, forced false, && to ||, either negation dropped, and the body emptied \u2014 changes only whether a 'GitHub: ...' string joins the failure list. The GitHub deletion itself already happened inside CleanupService; this line classifies its report. Its return value is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. So nothing this expression computes can reach a test except through log wording.",
@@ -5024,7 +5024,7 @@
             "anchors": [
                 "if (!result.daLive.success && !result.daLive.skipped) {"
             ],
-            "line": 394,
+            "line": 405,
             "mutants": 6,
             "category": "branch",
             "reason": "The DA.live twin of the GitHub guard above, with the same shape and the same fate: it appends a 'DA.live: ...' string to the failure list after the deletion has already been attempted. Its return value is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. So nothing this expression computes can reach a test except through log wording.",
@@ -5037,7 +5037,7 @@
             "anchors": [
                 "if (failures.length > 0) {"
             ],
-            "line": 402,
+            "line": 413,
             "mutants": 5,
             "category": "branch",
             "reason": "This is the point where the failure list becomes a success flag, so it is the closest thing here to a decision \u2014 but the flag has one reader and that reader picks a log line. Forcing it either way, or comparing with >= or <=, changes 'Cleanup completed successfully' into 'Cleanup completed with errors' or the reverse. Its return value is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. So nothing this expression computes can reach a test except through log wording.",
@@ -5050,7 +5050,7 @@
             "anchors": [
                 "return { success: false, error: failures.join('; ') };"
             ],
-            "line": 403,
+            "line": 414,
             "mutants": 2,
             "category": "other",
             "reason": "Emptying this object literal, or flipping its false to true, changes the shape and the verdict of the cleanup report. The value returned here is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way.",
@@ -5063,7 +5063,7 @@
             "anchors": [
                 "return { success: true };"
             ],
-            "line": 406,
+            "line": 417,
             "mutants": 2,
             "category": "other",
             "reason": "The all-clear answer from the cleanup helper. Emptying the literal or flipping its true to false turns a clean cleanup into a reported failure. The value returned here is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way.",
@@ -5076,7 +5076,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 407,
+            "line": 418,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying this catch body makes the helper return undefined instead of a failure verdict. The caller then throws a TypeError reading .success on undefined, which its own catch swallows into a different log line \u2014 so the handler still resolves { success: true } and no resource is treated differently. The value returned here is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way.",
@@ -5089,7 +5089,7 @@
             "anchors": [
                 "return { success: false, error: (error as Error).message };"
             ],
-            "line": 408,
+            "line": 419,
             "mutants": 2,
             "category": "other",
             "reason": "The failure verdict for an exception thrown anywhere in the helper \u2014 including the fail-fast when there is no authenticated session. Emptying the literal or flipping its false to true changes only that verdict. The value returned here is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. The fail-fast ITSELF is tested: with no authManager, no CleanupService is constructed and cleanupEdsResources is never called.",

@@ -213,6 +213,18 @@ describe('mode, name and selections', () => {
         expect(state.projectName).toBe('acme');
     });
 
+    // EDS-72: Import from File's bundle rides the seed; the Welcome step and setup read it.
+    it('carries an imported bundle into the state, and none for a plain import or a create', () => {
+        const importedFrom = { bundleName: 'Bodea Summit', bundlePath: '/x/bodea-demo-bundle.zip', sourceRepository: 'sender/kukla-bodea' };
+        const imported = stateFor({ importedSettings: { source: { project: 'acme', extension: '1.0.0' }, importedFrom } });
+        expect(imported.importedFrom).toStrictEqual(importedFrom);
+        // No storefront of the sender's is seeded, bundle or not (PL-56d).
+        expect(imported.edsConfig).toBeUndefined();
+
+        expect(stateFor({ importedSettings: { source: { project: 'acme', extension: '1.0.0' } } }).importedFrom).toBeUndefined();
+        expect(stateFor({}).importedFrom).toBeUndefined();
+    });
+
     it('makes the imported name unique against the projects that already exist', () => {
         const state = stateFor({
             importedSettings: { source: { project: 'acme', extension: '1.0.0' } },

@@ -603,4 +603,30 @@ describe('reset_project on an Edge Delivery project', () => {
             expect('caveats' in res).toBe(false);
         });
     });
+
+    // EDS-72 decision 1: the answer says what the reset restored for an imported project.
+    describe('on a project imported from a demo bundle', () => {
+        it('says it restored the code to the import, and its commit', async () => {
+            getCurrentProject.mockResolvedValue({
+                ...PROJECT,
+                importedFrom: { bundleName: 'Bodea Summit', commit: '1234567890abcdef' },
+            });
+            const s = fakeServer();
+            registerResetProjectTool(s, ctxFactory);
+
+            const res = await s.call({ confirm: true });
+
+            expect(res).toMatchObject({ reset: true, restored: 'Restored the code to Bodea Summit as it was imported (commit 1234567).' });
+        });
+
+        it('CONTROL: says nothing of the kind for any other project', async () => {
+            const s = fakeServer();
+            registerResetProjectTool(s, ctxFactory);
+
+            const res = await s.call({ confirm: true });
+
+            expect(res.reset).toBe(true);
+            expect('restored' in res).toBe(false);
+        });
+    });
 });

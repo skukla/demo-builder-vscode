@@ -288,6 +288,17 @@ describe('StorefrontStep', () => {
             expect(screen.getByTestId('repo-selection-inline')).toBeInTheDocument();
         });
 
+        // EDS-72: an imported project's repository is made from the bundle; there is nothing to pick.
+        it("shows the imported project's repository name in place of the picker", () => {
+            setup({
+                activeStorefrontStep: 'repository',
+                edsConfig: authedEdsConfig(),
+                importedFrom: { bundleName: 'Bodea Summit', bundlePath: '/x/bodea-demo-bundle.zip' },
+            });
+            expect(screen.queryByTestId('repo-selection-inline')).not.toBeInTheDocument();
+            expect(screen.getByText(/from Bodea Summit when the storefront is set up/)).toBeInTheDocument();
+        });
+
 
         it('persists storefrontRepoValid via updateState when the repo reports valid', () => {
             const { updateState } = setup({

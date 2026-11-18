@@ -191,6 +191,10 @@
           "$ref": "#/definitions/AddedDemo",
           "description": "The storefront row for a project built on an added demo (D2): the demo's description and its repository. Read before the catalog by `resolveStorefrontForProject`; absent for a project on a shipped brand."
         },
+        "importedFrom": {
+          "$ref": "#/definitions/ProjectImportedFrom",
+          "description": "Set on a project Import from File made from a demo bundle (EDS-72): the import's commit in the project's own repository, which Reset restores, and where it came from. Such a project has no `demo` row (decision 3)."
+        },
         "datapack": {
           "$ref": "#/definitions/ProjectDatapack",
           "description": "The datapack this demo's store holds, and the store that holds the pack.\n\nChosen on the wizard's Datapacks step and installed by creation itself (`executeSampleDataPhase`, since 8ab56b934); also set by an import from the Data Installer screen and by a save (Save and Save As, `demoPack.ts`), and cleared by a reset once it finishes having taken out everything the pack put there (a reset that stops, or keeps containers holding the SC's things, leaves it). `configure_project` records it without installing."
@@ -1684,6 +1688,32 @@
         }
       },
       "description": "Where a storefront's repository came from, as GitHub records it (EDS-13f decision 1). Both absent is the common case: a repository created empty and pushed, or reset onto a source, carries no record."
+    },
+    "ProjectImportedFrom": {
+      "type": "object",
+      "properties": {
+        "commit": {
+          "type": "string",
+          "description": "The commit the bundle's files were pushed as: Reset puts the code back to it (decision 1)."
+        },
+        "contentSource": {
+          "$ref": "#/definitions/DaLiveContentSource",
+          "description": "The sender's content site the pages were copied from, when the bundle names one."
+        },
+        "bundleName": {
+          "type": "string",
+          "description": "The demo's name as the Welcome step shows it: the setup's title, else its project."
+        },
+        "sourceRepository": {
+          "type": "string",
+          "description": "The sender's owner/repo, provenance only (the setup's `source.storefront.githubRepo`)."
+        }
+      },
+      "required": [
+        "bundleName",
+        "commit"
+      ],
+      "description": "What a project imported from a bundle records (EDS-72 decisions 1 and 3): the import, never a `demo` row. Reset reads `commit`; the rest is provenance."
     },
     "ProjectDatapack": {
       "type": "object",

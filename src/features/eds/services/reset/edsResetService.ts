@@ -50,6 +50,7 @@ import type { MeshRedeployDeps } from './edsResetMeshHelper';
 import type { EdsResetParams, EdsResetProgress, EdsResetResult } from './edsResetParams';
 import { takeOutProductPages, withLeftoverPages, withPageSentences } from './edsResetProductPages';
 import { resetRepoToTemplate } from './edsResetRepoHelper';
+import { forImportedProject } from './importedProjectReset';
 import { RESET_BASE_STEPS } from '@/core/utils/resetStages';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
@@ -83,7 +84,7 @@ function handleResetError(error: unknown, logger: Logger): EdsResetResult {
  * @returns Reset result
  */
 export async function executeEdsReset(
-    params: EdsResetParams,
+    requested: EdsResetParams,
     context: HandlerContext,
     tokenProvider: TokenProvider,
     deps: MeshRedeployDeps,
@@ -95,6 +96,8 @@ export async function executeEdsReset(
      */
     services?: ConfigStepServices,
 ): Promise<EdsResetResult> {
+    // An imported project resets to its import, in its own repository (EDS-72 decision 1).
+    const params = forImportedProject(requested);
     const { redeployMesh = false } = params;
 
     const baseSteps = RESET_BASE_STEPS;

@@ -187,46 +187,53 @@ describe('handleUseBundleSetup', () => {
 });
 
 describe('importDemoBundle', () => {
-    it('with storefront and setup: creates the repository, remembers the card from the description, and opens the wizard pre-filled on it', async () => {
+    // EDS-72 (owner, 2026-11-18): Import from File creates the PROJECT. The bundle is held for
+    // creation; no template repository and no Welcome card are made here.
+    it('with storefront and setup: holds the bundle and opens the wizard on it, with no repository and no card', async () => {
         const files = new Map(STOREFRONT);
         files.set('demo.demo-builder.json', Buffer.from('{"kind":"demo","version":1,"name":"Bodea"}'));
-        mockRead.mockReturnValue({ files, rootName: 'bodea-demo-bundle', dropped: 0, setup: SETUP });
-        repoLifecycle.createEmptyRepository.mockResolvedValue({ fullName: 'steve/bodea', name: 'bodea', defaultBranch: 'main' });
+        mockRead.mockReturnValue({ files, rootName: 'bodea-demo-bundle', dropped: 0, setup: { ...SETUP, title: 'Bodea Summit' } });
 
         const result = await importDemoBundle(ctx(), '/x/bodea-demo-bundle.zip');
 
-        expect(repoLifecycle.createEmptyRepository).toHaveBeenCalledWith('bodea', false);
-        const card = { kind: 'demo', version: 1, name: 'Bodea', source: { owner: 'steve', repo: 'bodea', branch: 'main' }, storefrontKind: 'eds', createdFromZip: true };
-        expect(mockRemember).toHaveBeenCalledWith(card);
-        expect(mockExecute).toHaveBeenCalledWith('demoBuilder.createProject', {
-            importedSettings: expect.objectContaining({ demo: card, selectedPackage: 'added:steve/bodea' }),
-            sourceDescription: expect.any(String),
+        expect(repoLifecycle.createEmptyRepository).not.toHaveBeenCalled();
+        expect(mockRemember).not.toHaveBeenCalled();
+        const [command, args] = mockExecute.mock.calls[0];
+        expect(command).toBe('demoBuilder.createProject');
+        expect(args.importedSettings).toStrictEqual({
+            ...SETUP,
+            title: 'Bodea Summit',
+            importedFrom: { bundleName: 'Bodea Summit', bundlePath: '/x/bodea-demo-bundle.zip', sourceRepository: 'sender/kukla-bodea' },
         });
         expect(result).toMatchObject({ success: true, data: { success: true } });
     });
 
-    it('with a storefront that carries no description, remembers a card named after the repository, recorded as made from the zip', async () => {
-        mockRead.mockReturnValue({ files: new Map(STOREFRONT), rootName: 'summit', dropped: 0 });
-        repoLifecycle.createEmptyRepository.mockResolvedValue({ fullName: 'steve/summit', name: 'summit', defaultBranch: 'main' });
+    it("keeps the setup's own package (the brand the sender built on), and names the demo after its project without a title", async () => {
+        mockRead.mockReturnValue({ files: new Map(STOREFRONT), rootName: 'bodea-demo-bundle', dropped: 0, setup: SETUP });
 
-        await importDemoBundle(ctx(), '/x/summit.zip');
+        await importDemoBundle(ctx(), '/x/bodea-demo-bundle.zip');
 
-        expect(mockRemember).toHaveBeenCalledWith({
-            kind: 'demo', version: 1, name: 'summit', source: { owner: 'steve', repo: 'summit', branch: 'main' }, storefrontKind: 'eds', createdFromZip: true,
-        });
+        const { importedSettings } = mockExecute.mock.calls[0][1];
+        expect(importedSettings.selectedPackage).toBe('bodea');
+        expect(importedSettings.demo).toBeUndefined();
+        expect(importedSettings.importedFrom.bundleName).toBe('bodea');
     });
 
-    it("records the zip's boilerplate on a card that carries no description (EDS-13f decision 4)", async () => {
-        const files = new Map(STOREFRONT);
-        files.set('package.json', Buffer.from('{"name":"@adobe/aem-boilerplate-commerce","version":"4.0.1"}'));
-        mockRead.mockReturnValue({ files, rootName: 'summit', dropped: 0 });
-        repoLifecycle.createEmptyRepository.mockResolvedValue({ fullName: 'steve/summit', name: 'summit', defaultBranch: 'main' });
+    it('refuses a storefront with no setup in words, pointing at Add a Demo Package, and creates nothing', async () => {
+        mockRead.mockReturnValue({ files: new Map(STOREFRONT), rootName: 'summit', dropped: 0 });
 
-        await importDemoBundle(ctx(), '/x/summit.zip');
+        const result = await importDemoBundle(ctx(), '/x/summit.zip');
 
-        expect(mockRemember).toHaveBeenCalledWith(
-            expect.objectContaining({ boilerplate: { name: '@adobe/aem-boilerplate-commerce', version: '4.0.1' } }),
-        );
+        expect(result).toEqual({
+            success: true,
+            data: {
+                success: false,
+                error: 'This zip holds a storefront but no project setup. To build on it, use Add a Demo Package on the Welcome step.',
+            },
+        });
+        expect(repoLifecycle.createEmptyRepository).not.toHaveBeenCalled();
+        expect(mockRemember).not.toHaveBeenCalled();
+        expect(mockExecute).not.toHaveBeenCalled();
     });
 
     it('with setup alone opens the wizard from the setup as a settings file would; with neither, refuses in words', async () => {
@@ -242,31 +249,13 @@ describe('importDemoBundle', () => {
         });
     });
 
-    // Walk F241 (owner: "I get nothing"): importing your own bundle met your own repository's name,
-    // GitHub refused, and the import ended there. The next free name is taken instead.
-    it('takes the next free name when the account already has a repository by that name', async () => {
-        mockRead.mockReturnValue({ files: new Map(STOREFRONT), rootName: 'scratch-1028-demo-bundle', dropped: 0, setup: SETUP });
-        const taken = new Error('Repository creation failed.: {"field":"name","message":"name already exists on this account"}');
-        repoLifecycle.createEmptyRepository
-            .mockRejectedValueOnce(taken)
-            .mockRejectedValueOnce(taken)
-            .mockResolvedValueOnce({ fullName: 'steve/scratch-1028-3', name: 'scratch-1028-3', defaultBranch: 'main' });
-
-        const result = await importDemoBundle(ctx(), '/x/scratch-1028-demo-bundle.zip');
-
-        expect(repoLifecycle.createEmptyRepository.mock.calls.map((call) => call[0])).toEqual(['scratch-1028', 'scratch-1028-2', 'scratch-1028-3']);
-        expect(result).toMatchObject({ success: true, data: { success: true } });
-    });
-
-    it('reports each step, so the window shows what it is doing', async () => {
-        mockRead.mockReturnValue({ files: new Map(STOREFRONT), rootName: 'summit', dropped: 0 });
-        repoLifecycle.createEmptyRepository.mockResolvedValue({ fullName: 'steve/summit', name: 'summit', defaultBranch: 'main' });
+    it('reports reading the file, the only step it now takes', async () => {
+        mockRead.mockReturnValue({ files: new Map(STOREFRONT), rootName: 'bodea-demo-bundle', dropped: 0, setup: SETUP });
         const onProgress = jest.fn();
 
-        await importDemoBundle(ctx(), '/x/summit.zip', onProgress);
+        await importDemoBundle(ctx(), '/x/bodea-demo-bundle.zip', onProgress);
 
-        expect(onProgress).toHaveBeenCalledWith('Reading the file', 'summit.zip');
-        expect(onProgress).toHaveBeenCalledWith('Creating the repository', expect.stringContaining('summit'));
+        expect(onProgress.mock.calls).toStrictEqual([['Reading the file', 'bodea-demo-bundle.zip']]);
     });
 
     it("says when the bundle's setup file cannot be read, before creating anything", async () => {

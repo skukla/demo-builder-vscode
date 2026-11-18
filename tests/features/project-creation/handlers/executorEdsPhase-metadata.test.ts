@@ -227,3 +227,45 @@ describe('populateEdsMetadata — the steps setup left to finish', () => {
         expect(target.finishSetup).toStrictEqual({ 'republish-code': { files: ['scripts/old.js'] } });
     });
 });
+
+// EDS-72 decisions 1 and 3: an imported project records the import (commit, sender's repository,
+// content site) and is recorded as a project on the brand it was built on, with no `demo` row.
+describe('populateEdsMetadata — a project imported from a demo bundle', () => {
+    beforeEach(() => getFileContent.mockRejectedValue(new Error('not needed here')));
+
+    const IMPORTED: ProjectCreationConfig = {
+        ...CONFIG,
+        selectedPackage: 'bodea',
+        importedFrom: { bundleName: 'Bodea Summit', bundlePath: '/x/bodea-demo-bundle.zip', sourceRepository: 'sender/kukla-bodea' },
+        edsConfig: {
+            ...CONFIG.edsConfig!,
+            bundleImport: { commit: 'import-commit', contentSource: { org: 'sender', site: 'kukla-bodea', indexPath: '/query-index.json' } },
+        },
+    };
+
+    it('records the import on the project, without the path on this machine', async () => {
+        const target = project();
+
+        await populateEdsMetadata(context(), target, IMPORTED, true);
+
+        expect(target.importedFrom).toStrictEqual({
+            bundleName: 'Bodea Summit',
+            sourceRepository: 'sender/kukla-bodea',
+            commit: 'import-commit',
+            contentSource: { org: 'sender', site: 'kukla-bodea', indexPath: '/query-index.json' },
+        });
+        expect(target.demo).toBeUndefined();
+        // Read as a brand project: the brand's template is the update record (decision 3).
+        expect(target.componentInstances?.['eds-storefront']?.metadata).toMatchObject({ templateRepo: 'boilerplate-b2b-template' });
+    });
+
+    it('records nothing when setup made no repository from the bundle, and nothing for other projects', async () => {
+        const noCommit = project();
+        await populateEdsMetadata(context(), noCommit, { ...IMPORTED, edsConfig: CONFIG.edsConfig }, true);
+        expect(noCommit.importedFrom).toBeUndefined();
+
+        const brand = project();
+        await populateEdsMetadata(context(), brand, CONFIG, true);
+        expect(brand.importedFrom).toBeUndefined();
+    });
+});

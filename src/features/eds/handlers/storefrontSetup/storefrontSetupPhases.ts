@@ -33,6 +33,7 @@ import {
 } from '../../services/patches/patchReportHelper';
 import { confirmStorefrontCodeServed } from '../../services/storefront/codeServed';
 import { getDaLiveAuthService } from '../edsHelpers';
+import { codeSource, executePhaseBundleRepo, hasCodeSource, readSetupBundle } from './storefrontSetupBundle';
 import { withDemoContentSource } from './storefrontSetupDemo';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
 import { executePhaseGitHubRepo } from './storefrontSetupPhase1';
@@ -329,12 +330,16 @@ async function runEdsPipelineWithRecovery(
  */
 export async function executeStorefrontSetupPhases(
     runContext: HandlerContext,
-    edsConfig: StorefrontSetupStartPayload['edsConfig'],
+    requestedConfig: StorefrontSetupStartPayload['edsConfig'],
     signal: AbortSignal,
     options?: BlockLibraryOptions,
     servicesOverride?: Partial<SetupServices>,
 ): Promise<StorefrontSetupResult> {
     const logger = runContext.logger;
+    // A project imported from a demo bundle is made from its files (EDS-72); any other comes back as it was.
+    const read = await readSetupBundle(requestedConfig, logger);
+    if ('error' in read) return { success: false, error: read.error };
+    const { edsConfig, bundle } = read;
     /**
      * One seam for the whole bundle, rather than one per service.
      *
@@ -391,14 +396,13 @@ export async function executeStorefrontSetupPhases(
             `${authenticatedLogin ? ` (authenticated as ${authenticatedLogin})` : ' (authenticated user unknown)'}`,
     );
 
-    const { templateOwner, templateRepo } = edsConfig;
-    if (!templateOwner || !templateRepo) {
+    if (!hasCodeSource(edsConfig, bundle)) {
         logger.error(
             '[Storefront Setup] Template not configured. Config:',
             JSON.stringify({
                 repoName: edsConfig.repoName,
-                templateOwner,
-                templateRepo,
+                templateOwner: edsConfig.templateOwner,
+                templateRepo: edsConfig.templateRepo,
             }),
         );
         return {
@@ -408,6 +412,7 @@ export async function executeStorefrontSetupPhases(
     }
 
     const repoInfo: RepoInfo = { repoOwner: githubOwner, repoName: edsConfig.repoName };
+    const template = codeSource(undefined, repoInfo, edsConfig);
     const effectiveBlockLibraries = options?.selectedBlockLibraries ?? [];
     const phaseOptions: BlockLibraryOptions = { ...options };
 
@@ -418,16 +423,18 @@ export async function executeStorefrontSetupPhases(
     const patchReport = createPatchReport();
 
     try {
-        const phase1Result = await executePhaseGitHubRepo(
-            context,
-            edsConfig,
-            services,
-            repoInfo,
-            signal,
-            templateOwner,
-            templateRepo,
-            patchReport,
-        );
+        const phase1Result = bundle
+            ? await executePhaseBundleRepo(context, edsConfig, services, repoInfo, bundle)
+            : await executePhaseGitHubRepo(
+                  context,
+                  edsConfig,
+                  services,
+                  repoInfo,
+                  signal,
+                  template.owner,
+                  template.repo,
+                  patchReport,
+              );
         if (phase1Result) return phase1Result;
 
         const { blockCollectionIds, earlyReturn } = await runConfigCodeSyncPhases(
@@ -447,8 +454,9 @@ export async function executeStorefrontSetupPhases(
             services,
             repoInfo,
             edsConfig,
-            templateOwner,
-            templateRepo,
+            // An imported project's code is its own repository's: block definitions are read there.
+            codeSource(bundle, repoInfo, edsConfig).owner,
+            codeSource(bundle, repoInfo, edsConfig).repo,
             blockCollectionIds,
             withDemoContentSource(buildLibraryContentSources(effectiveBlockLibraries), edsConfig.demo),
             wantsToResetContent,

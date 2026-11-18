@@ -184,6 +184,34 @@ export interface RememberedDemo extends AddedDemo {
 }
 
 /**
+ * A demo bundle being imported as a project (EDS-72): Import from File holds the
+ * bundle and opens the wizard on it, and storefront setup makes the project's own
+ * repository from its files. No template repository and no Welcome card.
+ */
+export interface ImportedFrom {
+    /** The demo's name as the Welcome step shows it: the setup's title, else its project. */
+    bundleName: string;
+    /** Absolute path of the bundle on this machine: storefront setup reads the files from here. */
+    bundlePath: string;
+    /** The sender's owner/repo, provenance only (the setup's `source.storefront.githubRepo`). */
+    sourceRepository?: string;
+}
+
+/** What storefront setup reports for a repository it made from a bundle (EDS-72). */
+export interface BundleImportResult {
+    /** The commit the bundle's files were pushed as: Reset puts the code back to it (decision 1). */
+    commit: string;
+    /** The sender's content site the pages were copied from, when the bundle names one. */
+    contentSource?: DaLiveContentSource;
+}
+
+/**
+ * What a project imported from a bundle records (EDS-72 decisions 1 and 3): the
+ * import, never a `demo` row. Reset reads `commit`; the rest is provenance.
+ */
+export type ProjectImportedFrom = Omit<ImportedFrom, 'bundlePath'> & BundleImportResult;
+
+/**
  * What a project travels in. Everything the manifest persists that is not
  * machine-local (the contract step's table), and never a credential.
  */

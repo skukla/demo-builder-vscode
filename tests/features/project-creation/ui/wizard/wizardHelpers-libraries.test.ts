@@ -429,6 +429,19 @@ describe('buildProjectConfig', () => {
             expect(withEds({ codeNotServed: [] })).not.toHaveProperty('codeNotServed');
         });
 
+        // EDS-72: creation records an imported project's commit, for Reset to restore.
+        it('should hand over what setup made from an imported bundle, and no key for any other project', () => {
+            const bundleImport = { commit: 'import-commit' };
+            expect(withEds({ bundleImport })?.bundleImport).toStrictEqual(bundleImport);
+            expect(withEds({})).not.toHaveProperty('bundleImport');
+        });
+
+        it('should hand over the imported bundle itself, and no key for any other project', () => {
+            const importedFrom = { bundleName: 'Bodea Summit', bundlePath: '/x/b.zip', sourceRepository: 'sender/kukla-bodea' };
+            expect(buildProjectConfig({ ...base, importedFrom }, null, []).importedFrom).toStrictEqual(importedFrom);
+            expect(buildProjectConfig(base, null, [])).not.toHaveProperty('importedFrom');
+        });
+
         it('should hand over the broken links storefront setup found, and no key when it found none', () => {
             const brokenLinks: StorefrontBrokenLink[] = [{ link: '/fr', pages: ['/footer'] }];
 

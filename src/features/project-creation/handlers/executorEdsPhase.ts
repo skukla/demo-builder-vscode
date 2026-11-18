@@ -30,6 +30,7 @@ import { extractConfigParamsFromConfigs } from '@/features/eds/services/storefro
 import { resolveTemplateCommitSha } from '@/features/eds/services/templateCommitResolver';
 import { ensureEdsContent } from '@/features/project-creation/services/edsContentSetup';
 import type { HandlerContext } from '@/types/handlers';
+import type { ProjectImportedFrom } from '@/types/projectFile';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
 
 /**
@@ -45,6 +46,24 @@ function authoredSheetHookFor(
     return project && site
         ? { beforeContentPublish: authoredSheetRefresh(project, site, context.logger, '[EDS Content]') }
         : {};
+}
+
+/**
+ * What an imported project records (EDS-72 decisions 1 and 3): the import, with the commit setup
+ * pushed the bundle's files as, so Reset can restore it. The bundle's path is this machine's and
+ * stays out. Nothing when setup made no repository from a bundle.
+ */
+function importRecordOf(typedConfig: ProjectCreationConfig): ProjectImportedFrom | undefined {
+    const made = typedConfig.edsConfig?.bundleImport;
+    if (!typedConfig.importedFrom || !made) return undefined;
+    const { bundlePath: _onThisMachine, ...importedFrom } = typedConfig.importedFrom;
+    return { ...importedFrom, ...made };
+}
+
+/** Record the import on an imported project; any other project is left as it is. */
+function recordImport(project: import('@/types/base').Project, typedConfig: ProjectCreationConfig): void {
+    const imported = importRecordOf(typedConfig);
+    if (imported) project.importedFrom = imported;
 }
 
 /**
@@ -161,6 +180,7 @@ export async function populateEdsMetadata(
         ...(boilerplate ? { boilerplate } : {}),
     };
     recordWhatSetupFound(project, typedConfig.edsConfig);
+    recordImport(project, typedConfig);
     await context.stateManager.saveProject(project);
     context.logger.debug(
         `[Project Creation] Populated EDS metadata for ${COMPONENT_IDS.EDS_STOREFRONT}: githubRepo=${edsInstance.metadata?.githubRepo}`,

@@ -13,10 +13,9 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import {
-    boilerplateOfZip,
-    cardFromZip,
     classifyZipStorefront,
     createRepositoryFromZip,
+    importedFromBundle,
     readStorefrontZip,
     setupForCard,
     suggestRepoName,
@@ -24,39 +23,18 @@ import {
 import { getGitHubServices } from './edsHelpers';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { getRepositoryNameError } from '@/core/validation/normalizers';
-import { showSuccessInStatusBar } from '@/core/vscode/statusBarSuccess';
-import { rememberAddedDemo } from '@/features/project-creation/services/addedDemoSettings';
 import { WIZARD_WEBVIEW_ID } from '@/features/project-creation/wizardWebviewId';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
+import type { ProjectFile } from '@/types/projectFile';
 import type { StorefrontZipProgressPayload } from '@/types/webviewPayloads';
 import type { ImportStorefrontZipRequest, ImportStorefrontZipResult, UseBundleSetupRequest } from '@/types/webviewRequests';
+import type { ProjectSeed } from '@/types/wizard';
 
 const PICKER_TITLE = 'Add a Storefront from a Zip File';
 
-/** How many names a bundle's repository tries: its own, then -2, -3 and so on. */
-const NAME_TRIES = 20;
-
-/** GitHub's refusal of a name the account already uses. */
-function nameTaken(error: unknown): boolean {
-    return /name already exists/i.test((error as Error).message ?? '');
-}
-
-/**
- * Create the bundle's repository under its own name, or the next free one (walk F241): importing
- * your own bundle meets your own repository's name, and GitHub refuses it. The import is a new
- * copy of the demo, so it takes "scratch-1028-2" rather than stopping.
- */
-async function createWithFreeName<T>(base: string, create: (name: string) => Promise<T>): Promise<T> {
-    for (let attempt = 1; attempt < NAME_TRIES; attempt++) {
-        const name = attempt === 1 ? base : `${base}-${attempt}`;
-        try {
-            return await create(name);
-        } catch (error) {
-            if (!nameTaken(error)) throw error;
-        }
-    }
-    return create(`${base}-${NAME_TRIES}`);
-}
+/** A bare storefront zip at Import from File: the template door is the place for it (EDS-72). */
+const STOREFRONT_WITHOUT_SETUP =
+    'This zip holds a storefront but no project setup. To build on it, use Add a Demo Package on the Welcome step.';
 
 /** One sentence from a GitHub failure: its own message, without the JSON and the docs link. */
 function githubSaid(raw: string): string {
@@ -191,10 +169,19 @@ export async function handleUseBundleSetup(context: HandlerContext, request?: Us
 }
 
 /**
- * The projects list's Import, handed a demo bundle: the storefront part becomes
- * a repository in the SC's account and a card on their Welcome step; the setup
- * part, when present, opens the wizard pre-filled on that card. A bundle with
- * setup alone opens the wizard from the setup, as a settings file would.
+ * The setup, seeded to make the project from the bundle (EDS-72): the setup's OWN package (the
+ * brand the sender built on, decision 3) and the bundle's path, which storefront setup reads.
+ */
+function seedFromBundle(setup: ProjectFile, zipPath: string): ProjectSeed {
+    return { ...setup, importedFrom: importedFromBundle(setup, zipPath) };
+}
+
+/**
+ * The projects list's Import, handed a demo bundle (EDS-72, owner 2026-11-18): Import from File
+ * creates the PROJECT. A bundle with storefront and setup opens the wizard on the imported demo,
+ * holding the bundle's path; storefront setup makes the project's own repository from its files.
+ * No template repository and no Welcome card are made here: those are Save as Package and Add a
+ * Demo Package. A bundle with setup alone opens the wizard from the setup, as a settings file would.
  *
  * @param context - Handler context
  * @param zipPath - The bundle on disk
@@ -220,40 +207,13 @@ export async function importDemoBundle(
     if (!hasStorefront && !unpacked.setup) {
         return { success: true, data: { success: false, error: 'This zip is neither a demo bundle nor an Edge Delivery storefront.' } };
     }
-
-    let settings = unpacked.setup;
-    try {
-        if (hasStorefront) {
-            const { repoLifecycle, treeCommits } = getGitHubServices(context.context.secrets);
-            const files = unpacked.files;
-            const created = await createWithFreeName(suggestRepoName(unpacked.rootName, 'storefront'), (repoName) =>
-                createRepositoryFromZip(
-                    { repoOps: repoLifecycle, fileOps: treeCommits, logger: context.logger, ...(onProgress ? { onProgress } : {}) },
-                    files,
-                    { repoName, isPrivate: false },
-                ),
-            );
-            const card = cardFromZip(unpacked.files, created) ?? {
-                kind: 'demo',
-                version: 1,
-                name: created.repo,
-                source: { owner: created.owner, repo: created.repo, branch: created.defaultBranch },
-                storefrontKind: 'eds',
-                ...boilerplateOfZip(unpacked.files),
-                createdFromZip: true,
-            };
-            await rememberAddedDemo(card);
-            context.logger.info(`[Zip] Bundle: ${created.fullName} created and "${card.name}" added to the Welcome step`);
-            if (settings) settings = setupForCard(settings, card);
-            // A success: a ✅ line that goes by itself (owner, 2026-10-15).
-            else showSuccessInStatusBar(`"${card.name}" is on your Welcome step now`);
-        }
-    } catch (error) {
-        context.logger.error(`[Zip] Bundle import failed: ${(error as Error).message}`);
-        return { success: true, data: { success: false, error: `The demo couldn't be imported: ${githubSaid((error as Error).message)}.` } };
+    if (!unpacked.setup) {
+        return { success: true, data: { success: false, error: STOREFRONT_WITHOUT_SETUP } };
     }
 
+    const settings: ProjectSeed = hasStorefront ? seedFromBundle(unpacked.setup, zipPath) : unpacked.setup;
+    if (hasStorefront) context.logger.info(`[Zip] Bundle: ${zipPath} held for creation (${unpacked.files.size} files)`);
     const sourceDescription = path.basename(zipPath);
-    await vscode.commands.executeCommand('demoBuilder.createProject', settings ? { importedSettings: settings, sourceDescription } : undefined);
-    return { success: true, data: { success: true, ...(settings ? { settings } : {}), sourceDescription } };
+    await vscode.commands.executeCommand('demoBuilder.createProject', { importedSettings: settings, sourceDescription });
+    return { success: true, data: { success: true, settings, sourceDescription } };
 }

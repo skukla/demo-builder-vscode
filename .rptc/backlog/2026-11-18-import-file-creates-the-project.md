@@ -72,3 +72,11 @@ colleagues, and Add a Demo Package's zip door stays a template import.
 Project creation's storefront phase gains a source kind (files from a bundle, beside a template
 repository and a non-template one). Needs tests on both creation and regeneration paths and the
 live cycle: import a bundle on a second account, create, publish, reset.
+
+## Shipped so far
+
+- 2026-11-18: phase 2 built on `fix/release-walk-fixes`, uncommitted, not yet run live. Import
+  from File with a bundle opens the wizard on the imported demo alone; storefront setup makes the
+  project's own repository from the bundle (`storefrontSetupBundle.ts`); the project records
+  `importedFrom` with the import commit and Reset restores it (`importedProjectReset.ts`);
+  `create_project_from_file` takes a bundle zip. Walk row F245.

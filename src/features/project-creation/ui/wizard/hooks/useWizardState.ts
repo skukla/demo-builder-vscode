@@ -285,6 +285,8 @@ function computeInitialState(
         // The same seeding edit mode runs (PL-56d): an import used to open with
         // no integrations, no mesh and no backend whatever the file said.
         ...(importedSettings ? choicesFromSettings(importedSettings) : {}),
+        // Import from File's bundle: the project is made from its files (EDS-72).
+        ...(importedSettings?.importedFrom ? { importedFrom: importedSettings.importedFrom } : {}),
         // No storefront and no sign-in state: the receiver creates their own
         // repository and site, and GitHub and DA.live are asked exactly as for a
         // new project. A file's repository is the sender's (provenance only), and

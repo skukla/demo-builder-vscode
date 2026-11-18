@@ -29,7 +29,7 @@ import {
     resolveByomOverlayConfig,
 } from '../edsHelpers';
 import { rehydratePackageDerivedConfig } from './storefrontSetupConfigRehydration';
-import { executeStorefrontSetupPhases } from './storefrontSetupPhases';
+import { executeStorefrontSetupPhases, type StorefrontSetupResult } from './storefrontSetupPhases';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { hasMeshInDependencies } from '@/core/constants';
 import { ServiceLocator } from '@/core/di/serviceLocator';
@@ -176,6 +176,22 @@ function completionMessage(pdpBlocked: boolean, hasCaveats: boolean): string {
     return 'Storefront setup completed successfully!';
 }
 
+/**
+ * What setup found that creation records on the project it makes: setup has no project of its own
+ * to write to, since in the wizard it runs before the project exists. Each only when there is one.
+ */
+function recordedByCreation(result: StorefrontSetupResult): Partial<StorefrontSetupCompletePayload> {
+    return {
+        ...(result.brokenLinks?.length ? { brokenLinks: result.brokenLinks } : {}),
+        installedBlockLibraries: result.installedBlockLibraries,
+        storefrontBuildComplete: result.storefrontBuildComplete,
+        // Saved as the project's Republish the Code step (PL-101).
+        ...(result.codeNotServed?.length ? { codeNotServed: result.codeNotServed } : {}),
+        // An imported project's commit, for Reset to restore (EDS-72).
+        ...(result.bundleImport ? { bundleImport: result.bundleImport } : {}),
+    };
+}
+
 /** The caveats after the PDP ones: what the content pipeline could not do (EDS-55). */
 function otherCaveats(result: { pipelineWarnings?: string[] }): string[] {
     return [...(result.pipelineWarnings ?? [])];
@@ -318,12 +334,7 @@ export async function handleStartStorefrontSetup(
                 daLiveSite: `https://da.live/${edsConfig.daLiveOrg}/${edsConfig.daLiveSite}`,
                 repoOwner: result.repoOwner,
                 repoName: result.repoName,
-                ...(result.brokenLinks?.length ? { brokenLinks: result.brokenLinks } : {}),
-                // Recorded by creation on the project it makes, as brokenLinks are.
-                installedBlockLibraries: result.installedBlockLibraries,
-                storefrontBuildComplete: result.storefrontBuildComplete,
-                // Saved by creation as the project's Republish the Code step (PL-101).
-                ...(result.codeNotServed?.length ? { codeNotServed: result.codeNotServed } : {}),
+                ...recordedByCreation(result),
                 // Note: previewUrl/liveUrl not sent - derived from githubRepo by typeGuards
             } satisfies StorefrontSetupCompletePayload);
             return { success: true, data: result };

@@ -674,6 +674,13 @@ credentials the new project still needs (`stillNeeded.credentials`, read from th
 components' declared env vars against `SECRET_ENV_KEYS`). Like `create_project` it is
 gated by `confirm:true` and is not on the consent-dialog list.
 
+Given a `.zip` (2026-11-18, EDS-72), it reads a demo bundle: the setup decides as a project file
+does, and storefront setup is handed `edsConfig.bundleSource` so it makes the project's own new
+repository from the bundle's storefront (`storefrontSetupBundle.ts`) instead of from a template.
+A bundle with no setup or no storefront is refused before anything is created, as is one whose
+setup names a headless stack. Creation records `importedFrom` with the pushed commit, which
+`reset_project` restores and names in its `restored` answer.
+
 `copy_project` (2026-10-04, PL-56f) is the projects list's Copy from Existing without
 its picker: it takes the source project's NAME, loads it without saving it back, and
 reads it the way the human Copy does — `copySeedFromProject`, the file Export writes

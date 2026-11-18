@@ -279,20 +279,22 @@ sample data (`checkRecordedPack` in `recordedPack.ts`). The projects list's Expo
 notice, still asks that question. An agent's `export_demo_bundle` never asked: its answer
 carries the same sentence as `packNote`.
 
-A colleague adds the storefront with Add a demo package's **From a zip file**, which reads the
-bundle. Setup alone writes the plain settings file the projects list imports today. Your setup
-travels only as a file.
+A colleague imports the file with the projects list's **Import from File**, which creates the
+project from it. Setup alone writes the plain settings file the projects list imports today. Your
+setup travels only as a file.
 
 Parts that do not exist yet are not listed. When one is built, it is added to the file form.
 
-**Receiving a file.** A colleague has two doors, and both read a bundle as well as a bare
-storefront zip. On the projects list, **Import** takes the bundle: the storefront becomes a
-repository in their account and a card on their Welcome step, and the setup part opens the
-wizard pre-filled on that card, with your repository and site names dropped so they name
-theirs. Inside the wizard, Add a demo package's **From a zip file** does the same for the storefront and,
-when the bundle carries setup, offers **Start a project with it**, which adds the card and
-reopens the wizard pre-filled. The setup never carries a credential; the colleague signs in
-to their own accounts as the wizard asks.
+**Receiving a file.** A colleague has two doors. On the projects list, **Import from File**
+creates the project (EDS-72, owner 2026-11-18): the wizard opens with only the imported demo on
+the Welcome step, chosen and fixed, and their storefront setup makes the project's own new
+repository from the bundle's code and copies the pages from your published site. No template
+repository and no Welcome card are made, and a later Reset puts the code back to the import.
+Inside the wizard, Add a demo package's **From a zip file** stays the template door: the
+storefront becomes a repository in their account and a card on their Welcome step, and when the
+bundle carries setup it offers **Start a project with it**. To hand over a reusable package rather
+than a project, use **Send a Link** or **Save as Package**. The setup never carries a credential;
+the colleague signs in to their own accounts as the wizard asks.
 
 ## Save as Package
 
@@ -338,7 +340,8 @@ its description, and `forget_added_demo` takes a demo off the list. The demos an
 `add_shared_demo` also takes `zipPath` for a storefront that arrived as a zip file or a demo
 bundle: the repository it creates in the SC's account needs `confirm:true`. When
 the bundle carries setup, the answer says so and points at the projects list's Import, which
-is the door that opens the wizard pre-filled.
+is the door that opens the wizard pre-filled. `create_project_from_file` given the bundle's
+path creates the project from it, as Import from File does (EDS-72).
 
 Save as Package and Share Demo have the same doors: `get_demo_package_preview` reads what a
 project built from the card would get, `save_demo_package` is Save as Package (it writes the

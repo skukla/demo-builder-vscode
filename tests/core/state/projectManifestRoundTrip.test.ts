@@ -53,6 +53,15 @@ const FIELDS: { [K in keyof Required<Project>]: Decision<Project[K]> } = {
     commerceStoreStructure: { ownSuite: 'projectConfigWriter-storeStructure' },
     selectedPackage: { roundTrips: 'citisignal' },
     demo: { roundTrips: { kind: 'demo', version: 1, name: 'Isle5', source: { owner: 'robin', repo: 'isle5' }, storefrontKind: 'eds' } },
+    // EDS-72: Reset reads the import's commit off the saved project.
+    importedFrom: {
+        roundTrips: {
+            bundleName: 'Bodea Summit',
+            sourceRepository: 'sender/kukla-bodea',
+            commit: 'import-commit',
+            contentSource: { org: 'sender', site: 'kukla-bodea', indexPath: '/query-index.json' },
+        },
+    },
     datapack: {
         roundTrips: {
             name: 'acme-demo-1a2b3c',

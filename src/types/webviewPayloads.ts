@@ -27,7 +27,7 @@ import type {
 import type { BlockLibrary, CustomBlockLibrary, InstalledBlockLibrary } from './blockLibraries';
 import type { CommerceStoreStructure } from './commerceStore';
 import type { EnvVarDefinition, TransformedComponentDefinition } from './components';
-import type { AddedDemo } from './projectFile';
+import type { AddedDemo, BundleImportResult } from './projectFile';
 import type { ViewMode } from './viewMode';
 import type { ComponentSelection, CreationProgress, ThemeMode, UnifiedProgress } from './webview';
 import type { EditProjectConfig, ProjectSeed, WizardStepDefinition } from './wizard';
@@ -937,6 +937,8 @@ export interface StorefrontSetupCompletePayload {
     storefrontBuildComplete?: boolean;
     /** The code files the live site did not serve yet; creation saves them as the Republish the Code step (PL-101). */
     codeNotServed?: string[];
+    /** What setup made from an imported bundle; creation records it on the project (EDS-72). */
+    bundleImport?: BundleImportResult;
 }
 
 /** `storefront-setup-error` — the pipeline failed; the wizard offers Retry. */

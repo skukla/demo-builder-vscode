@@ -32,6 +32,7 @@ import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive
 import { CONTENT_KEPT_LINE } from '@/features/eds/services/reset/demoSourceCheck';
 import { extractResetParams, resetCaveats, type EdsResetResult } from '@/features/eds/services/reset/edsResetParams';
 import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
+import { restoredSentence } from '@/features/eds/services/reset/importedProjectReset';
 import { removeAnsweredDatapack } from '@/features/eds/services/reset/resetDatapackStep';
 import { decideResetSource } from '@/features/eds/services/reset/resetSourceDecision';
 import type { Project } from '@/types/base';
@@ -45,6 +46,12 @@ import { getMeshComponentInstance } from '@/types/typeGuards';
 function caveatsOf(result: EdsResetResult): { caveats?: string[] } {
     const caveats = resetCaveats(result);
     return caveats.length > 0 ? { caveats } : {};
+}
+
+/** What the reset restored, for an imported project; no key for any other. */
+function restoredOf(project: Project): { restored?: string } {
+    const restored = restoredSentence(project);
+    return restored ? { restored } : {};
 }
 
 /** Content kept on purpose (the demo's pages could not be reached), as the agent's `note`; no key without it. */
@@ -185,6 +192,8 @@ export async function runEdsReset(
             // note, not a caveat, as the batch row and the Edit say it (owner walk Q6).
             ...caveatsOf({ ...result, contentKept: undefined }),
             ...noteOf(kept.contentKept ?? result.contentKept),
+            // An imported project goes back to its import (EDS-72 decision 1): said in words.
+            ...restoredOf(project),
             // What became of the datapack, when the call asked to uninstall it.
             ...datapack,
             // Category pages and the catalog menu, re-written by the reset (EDS-24) —

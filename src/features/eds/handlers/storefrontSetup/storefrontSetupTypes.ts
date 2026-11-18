@@ -17,6 +17,7 @@ import type { GitHubRepoOperations } from '../../services/github/githubRepoOpera
 import type { HelixService } from '../../services/helix/helixService';
 import type { TemplateSyncService } from '@/features/updates/services/templateSyncService';
 import type { InstalledBlockLibrary } from '@/types/blockLibraries';
+import type { BundleImportResult } from '@/types/projectFile';
 import type { StorefrontBrokenLink } from '@/types/webviewPayloads';
 
 /**
@@ -40,6 +41,8 @@ export interface StorefrontSetupResult {
     storefrontBuildComplete?: boolean;
     /** See {@link RepoInfo.codeNotServed} — spread in from the threaded repoInfo. */
     codeNotServed?: string[];
+    /** See {@link RepoInfo.bundleImport} — spread in from the threaded repoInfo. */
+    bundleImport?: BundleImportResult;
     // Note: previewUrl/liveUrl not included - derived from githubRepo by typeGuards
 }
 
@@ -122,4 +125,9 @@ export interface RepoInfo {
      * step (PL-101). Absent when the site serves them all.
      */
     codeNotServed?: string[];
+    /**
+     * Set when phase 1 made the repository from an imported bundle (EDS-72): the commit
+     * pushed and the content site the bundle names, for creation to record on the project.
+     */
+    bundleImport?: BundleImportResult;
 }

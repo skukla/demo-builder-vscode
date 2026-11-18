@@ -49,6 +49,10 @@ function addOptionalManifestFields(manifest: Record<string, unknown>, project: P
     if (project.demo !== undefined) {
         manifest.demo = project.demo;
     }
+    // A project imported from a demo bundle (EDS-72): Reset restores the import's commit.
+    if (project.importedFrom !== undefined) {
+        manifest.importedFrom = project.importedFrom;
+    }
     if (project.selectedStack !== undefined) {
         manifest.selectedStack = project.selectedStack;
     }

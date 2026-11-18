@@ -10,7 +10,7 @@ import type { CommerceStoreStructure } from './commerceStore';
 import type { ServiceDefinition } from './components';
 import type { DatapackInstallFailure, ProjectDatapack } from './datapack';
 import type { ErpAssignmentRecord, ErpOwnerSetsRecord } from './erpAssign';
-import type { AddedDemo } from './projectFile';
+import type { AddedDemo, ProjectImportedFrom } from './projectFile';
 import type { CommerceConfigChangeRecord, StorePreparationRecord } from './storePreparation';
 
 /**
@@ -116,6 +116,12 @@ export interface Project {
      * `resolveStorefrontForProject`; absent for a project on a shipped brand.
      */
     demo?: AddedDemo;
+    /**
+     * Set on a project Import from File made from a demo bundle (EDS-72): the
+     * import's commit in the project's own repository, which Reset restores, and
+     * where it came from. Such a project has no `demo` row (decision 3).
+     */
+    importedFrom?: ProjectImportedFrom;
     /**
      * The datapack this demo's store holds, and the store that holds the pack.
      *

@@ -503,6 +503,20 @@ describe('handleStartStorefrontSetup — the two outcomes', () => {
         ]);
     });
 
+    // EDS-72: creation records the import's commit on the project, for Reset to restore.
+    it('hands back what it made from an imported bundle, and nothing for any other project', async () => {
+        const bundleImport = { commit: 'import-commit', contentSource: { org: 'sender', site: 'kukla-bodea', indexPath: '/query-index.json' } };
+        mockExecutePhases.mockResolvedValue({ success: true, repoUrl: 'https://github.com/demo-org/demo-repo', bundleImport });
+        const imported = createContext();
+        await handleStartStorefrontSetup(imported, payload());
+        expect(messagePayload(imported, 'storefront-setup-complete')?.bundleImport).toStrictEqual(bundleImport);
+
+        mockExecutePhases.mockResolvedValue({ success: true, repoUrl: 'https://github.com/demo-org/demo-repo' });
+        const brand = createContext();
+        await handleStartStorefrontSetup(brand, payload());
+        expect(messagePayload(brand, 'storefront-setup-complete')).not.toHaveProperty('bundleImport');
+    });
+
     it('leaves broken links off the message when the run found none', async () => {
         mockExecutePhases.mockResolvedValue({
             success: true,

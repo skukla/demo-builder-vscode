@@ -274,14 +274,21 @@ export async function resetRepoToTemplate(
     // When no SHA can be resolved the reset still proceeds from the branch (ADR-006 D1
     // proceed-and-warn) and returns no commit, so the old record is left alone.
     const templateBranch = project.demo?.source.branch ?? 'main';
-    const templateCommitSha = await resolveTemplateCommitSha(
-        { templateOwner, templateRepo, codePatchSource, templateBranch },
-        githubFileOps,
-        context.logger,
-    );
-    const templateRef = templateCommitSha ?? templateBranch;
+    // An imported project goes back to its import's commit in its own repository (EDS-72), and
+    // the update record is left alone: that commit is not one of the brand template's.
+    const importCommit = project.importedFrom?.commit;
+    const templateCommitSha = importCommit
+        ? undefined
+        : await resolveTemplateCommitSha(
+              { templateOwner, templateRepo, codePatchSource, templateBranch },
+              githubFileOps,
+              context.logger,
+          );
+    const templateRef = importCommit ?? templateCommitSha ?? templateBranch;
     if (templateCommitSha) {
         context.logger.info(`[EdsReset] Pinning reset to ${templateCommitSha.substring(0, 7)}`);
+    } else if (importCommit) {
+        context.logger.info(`[EdsReset] Restoring the import, ${importCommit.substring(0, 7)}`);
     } else {
         context.logger.warn(
             `[EdsReset] Template commit unresolved — resetting from ${templateBranch}; synced commit not updated`,

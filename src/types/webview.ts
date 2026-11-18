@@ -5,7 +5,7 @@ import type { CommerceStoreStructure } from './commerceStore';
 import type { ComponentConfigs } from './components';
 import type { ProjectDatapack } from './datapack';
 import type { ErrorCode } from './errorCodes';
-import type { AddedDemo } from './projectFile';
+import type { AddedDemo, BundleImportResult, ImportedFrom } from './projectFile';
 import type { OperationPosition, PrerequisitePluginState, GitHubUser } from './webviewPayloads';
 
 export type ThemeMode = 'light' | 'dark';
@@ -103,6 +103,8 @@ export interface WizardState {
     projectTitle?: string;
     selectedPackage?: string; // Selected package ID (e.g., 'citisignal', 'buildright')
     demo?: AddedDemo; // The storefront row when the selected package is an added demo (D2); cleared when a shipped brand is picked
+    /** Import from File's bundle (EDS-72): the Welcome step shows it alone, and setup makes the repository from it. */
+    importedFrom?: ImportedFrom;
     selectedBackend?: string; // Persisted Commerce backend id (e.g., 'adobe-commerce-paas'); source of truth for the backend choice + the "frontend pending" display. selectedStack stays the downstream key.
     selectedStack?: string; // Selected stack ID (e.g., 'headless-paas', 'eds-paas')
     selectedAddons?: string[]; // Selected addon IDs (e.g., ['adobe-commerce-aco'])
@@ -572,6 +574,8 @@ export interface EDSConfig {
     storefrontBuildComplete?: boolean;
     /** The code files the live site did not serve after preflight; creation saves them as a Finish Setup step (PL-101). */
     codeNotServed?: string[];
+    /** What preflight made from an imported bundle; creation records it on the project (EDS-72). */
+    bundleImport?: BundleImportResult;
     // Note: previewUrl and liveUrl are NOT stored - they are derived from githubRepo
     // by getEdsPreviewUrl() and getEdsLiveUrl() in typeGuards.ts
     /** Whether to skip content copy (e.g., when using existing content) */

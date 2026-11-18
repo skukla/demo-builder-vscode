@@ -571,6 +571,8 @@ function buildProjectEdsConfig(wizardState: ProjectConfigSource) {
             ? { storefrontBuildComplete: eds.storefrontBuildComplete }
             : {}),
         ...(eds.codeNotServed?.length ? { codeNotServed: eds.codeNotServed } : {}),
+        // An imported project's commit: creation records it for Reset (EDS-72).
+        ...(eds.bundleImport ? { bundleImport: eds.bundleImport } : {}),
     };
 }
 
@@ -629,6 +631,7 @@ export type ProjectConfigSource = Pick<
     | 'storeDiscoveryData'
     | 'selectedPackage'
     | 'demo'
+    | 'importedFrom'
     | 'datapack'
     | 'selectedAppBuilderComponents'
     | 'appBuilderComponentSources'
@@ -723,6 +726,8 @@ export function buildProjectConfig(
         selectedPackage: wizardState.selectedPackage,
         // The row travels with the project (D2); absent for a shipped brand.
         demo: projectRowOf(wizardState.demo),
+        // Import from File's bundle (EDS-72); absent for every other project.
+        ...(wizardState.importedFrom ? { importedFrom: wizardState.importedFrom } : {}),
         selectedStack: wizardState.selectedStack,
         // Recorded for the dashboard to install later — never imported here.
         datapack: wizardState.datapack,

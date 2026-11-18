@@ -184,7 +184,7 @@ server IS — transport, lifecycle, scoping, security — is in
 
 | Tool | | What it does |
 |---|---|---|
-| `create_project_from_file` | **confirm** | Create a new project from an exported project file (what export_project_settings writes). |
+| `create_project_from_file` | **confirm** | Create a new project from an exported project file or a demo bundle zip. |
 
 ## `src/features/ai/server/createProjectTool.ts`
 

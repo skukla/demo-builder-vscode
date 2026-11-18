@@ -25,6 +25,8 @@ import type { ErpOwnsRule } from './erpOwnership';
 import type { ErrorCode } from './errorCodes';
 import type {
     AddedDemo,
+    BundleImportResult,
+    ImportedFrom,
     ProjectFile,
     RememberedDemo,
     SharedDemoDescription,
@@ -557,6 +559,8 @@ export interface ProjectCreationConfig {
     selectedPackage?: string;
     /** The storefront row when the project is built on an added demo (D2); persisted with the project. */
     demo?: AddedDemo;
+    /** Import from File's bundle (EDS-72): creation records the import, with setup's commit, on the project. */
+    importedFrom?: ImportedFrom;
     datapack?: ProjectDatapack;
     selectedStack?: string;
     // Selected App Builder integration ids (Model B deploy) + custom GitHub sources
@@ -625,6 +629,8 @@ export interface ProjectCreationConfig {
         storefrontBuildComplete?: boolean;
         /** The code files the live site did not serve after setup: saved as the Republish the Code step (PL-101). */
         codeNotServed?: string[];
+        /** What setup made from an imported bundle: creation records it on the project (EDS-72). */
+        bundleImport?: BundleImportResult;
         // Note: previewUrl/liveUrl not stored - derived from githubRepo by typeGuards
         // Patch IDs to apply during reset (from demo-packages.json)
         patches?: string[];
@@ -777,6 +783,12 @@ export interface StorefrontSetupStartPayload {
         isPrivate?: boolean;
         resetToTemplate?: boolean;
         skipContent?: boolean;
+        /**
+         * Import from File's bundle (EDS-72): setup makes the project's own new
+         * repository from its files instead of from a template. Not storefront-derived:
+         * it comes from the import, so it is not in `STOREFRONT_DERIVED_FIELDS`.
+         */
+        bundleSource?: { bundlePath: string };
         // Template repository info (from stack/brand config) for GitHub reset operations
         templateOwner?: string;
         templateRepo?: string;
