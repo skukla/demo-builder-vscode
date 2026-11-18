@@ -239,7 +239,7 @@ template's, and the description file rides along with `fstab.yaml` and `config.j
 card and its link keep working.
 
 Demo Builder rewrites only a description file it wrote itself, and knows it by the file's
-recorded revision. A file you wrote or edited by hand is left alone and the dialog says so;
+recorded revision. A file you wrote or edited by hand is left unchanged and the window says so ("The package file in your repository wasn't created by Demo Builder, so it was left unchanged.");
 the link is still copied. The card's own menu on the Welcome step, always visible, has
 **Edit** (rename the card and change its description) and **Remove** too: it takes the card
 off the list and nothing else, and never offers to delete a repository that is one of your

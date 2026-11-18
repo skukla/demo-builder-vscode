@@ -16,9 +16,11 @@ export const SAVE_PACKAGE_COPY = {
     saveFailed: "Couldn't Save the Package",
     removed: 'Package Removed',
     removeFailed: "Couldn't Remove the Package",
-    removedFile: 'The details are out of your repository',
-    removedFileSkipped: "The details file in your repository isn't the one Demo Builder wrote, so it was left alone",
-    removedCard: 'the card is off your Welcome step',
+    // Plain application words for the file and the card (walk F244).
+    removedFile: 'The package file was removed from your repository',
+    removedFileSkipped: "The package file in your repository wasn't created by Demo Builder, so it was left unchanged",
+    removedCard: 'the card was removed from your Welcome step',
+    fileKept: "The package file in your repository wasn't created by Demo Builder, so it was left unchanged.",
 } as const;
 
 /** The saved result's one line: where the package now is. */

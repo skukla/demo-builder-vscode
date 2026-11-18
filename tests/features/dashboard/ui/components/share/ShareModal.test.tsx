@@ -231,7 +231,7 @@ describe('ShareModal', () => {
             expect(button(SAVE_AND_COPY)).toBeInTheDocument();
         });
 
-        it('a details file that is not ours is left alone, said so, and the link is still copied', async () => {
+        it('a package file that is not ours is left unchanged, said so plainly, and the link is still copied', async () => {
             await renderShareLink();
             mockRequest.mockResolvedValueOnce(
                 answer({ ...SAVED, file: 'skipped', fileReason: 'demo.demo-builder.json is already there and was not written by Demo Builder.' }),
@@ -239,7 +239,9 @@ describe('ShareModal', () => {
 
             await click(SAVE_AND_COPY);
 
-            expect(screen.getByTestId('share-skipped')).toHaveTextContent('was not written by Demo Builder');
+            // Walk F244: one plain sentence, not the handler's file name and reason.
+            expect(screen.getByTestId('share-skipped')).toHaveTextContent("The package file in your repository wasn't created by Demo Builder, so it was left unchanged.");
+            expect(screen.getByTestId('share-skipped')).not.toHaveTextContent('demo.demo-builder.json');
             expect(mockWriteText).toHaveBeenCalledWith(LINK);
         });
     });

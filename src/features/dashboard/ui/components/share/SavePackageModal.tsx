@@ -42,7 +42,13 @@ function StepBody({ children }: { children: React.ReactNode }): React.ReactEleme
 function OutcomeBody({ outcome }: { outcome: SavePackageOutcome }): React.ReactElement {
     switch (outcome.kind) {
         case 'saved':
-            return <ResultBody status="success" outcome={SAVE_PACKAGE_COPY.saved} lines={[onWelcomeLine(outcome.name)]} />;
+            return (
+                <ResultBody
+                    status="success"
+                    outcome={SAVE_PACKAGE_COPY.saved}
+                    lines={outcome.fileKept ? [onWelcomeLine(outcome.name), SAVE_PACKAGE_COPY.fileKept] : [onWelcomeLine(outcome.name)]}
+                />
+            );
         case 'removed':
             return <ResultBody status="success" outcome={SAVE_PACKAGE_COPY.removed} lines={[removedSentence(outcome.result)]} />;
         case 'save-failed':

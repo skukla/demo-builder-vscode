@@ -81,6 +81,19 @@ describe('SavePackageModal', () => {
         expect(footerLabels()).toEqual(['Close']);
     });
 
+    // Walk F244: a package file that is not ours is kept, and the result says so in a second line.
+    it('says when a package file it did not create was left unchanged', async () => {
+        await renderSavePackage();
+        mockRequest.mockResolvedValueOnce(answer({ ...SAVED, file: 'skipped', fileReason: 'not ours' }));
+
+        await click(SAVE);
+
+        const result = screen.getByTestId('result-body');
+        expect(result).toHaveTextContent('Package Saved');
+        expect(result).toHaveTextContent("The package file in your repository wasn't created by Demo Builder, so it was left unchanged.");
+        expect(result).not.toHaveTextContent('not ours');
+    });
+
     it("shows a failed save as Couldn't Save the Package with the reason, and Try Again saves again", async () => {
         await renderSavePackage();
         mockRequest.mockResolvedValueOnce({ success: false, error: 'GitHub refused the write.' });
@@ -114,7 +127,8 @@ describe('SavePackageModal', () => {
         expect(mockRequest).toHaveBeenLastCalledWith('removeDemoPackage');
         const result = screen.getByTestId('result-body');
         expect(result).toHaveTextContent('Package Removed');
-        expect(result).toHaveTextContent('The details are out of your repository and the card is off your Welcome step.');
+        // Walk F244 (owner): plain application words for what happened to the file and the card.
+        expect(result).toHaveTextContent('The package file was removed from your repository and the card was removed from your Welcome step.');
         expect(footerLabels()).toEqual(['Close']);
     });
 

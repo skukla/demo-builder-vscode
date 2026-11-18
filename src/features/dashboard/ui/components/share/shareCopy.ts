@@ -26,5 +26,6 @@ export const SHARE_COPY = {
     republishHint: 'Republish, then save again.',
     shareDatapack: 'Share Datapack',
     datapackShared: 'Datapack Shared',
-    skippedTitle: 'Your details file was left alone.',
+    // One plain sentence (walk F244), not the handler's file name and reason.
+    skipped: "The package file in your repository wasn't created by Demo Builder, so it was left unchanged.",
 } as const;

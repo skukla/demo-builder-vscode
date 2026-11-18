@@ -43,7 +43,7 @@ function PressNotes({ flow }: { flow: UseShareLink }): React.ReactElement {
                 <p className="dialog-problem text-negative" data-testid="share-error">{SHARE_COPY.copyFailed} {flow.error}</p>
             ) : null}
             {flow.skipped ? (
-                <p className="dialog-problem text-notice" data-testid="share-skipped">{SHARE_COPY.skippedTitle} {flow.skipped}</p>
+                <p className="dialog-problem text-notice" data-testid="share-skipped">{SHARE_COPY.skipped}</p>
             ) : null}
         </>
     );

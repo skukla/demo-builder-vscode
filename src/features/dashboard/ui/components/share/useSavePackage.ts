@@ -13,7 +13,7 @@ import type { DemoPackagePreview, RemoveDemoPackageResult } from '@/types/webvie
 
 /** How an act ended. */
 export type SavePackageOutcome =
-    | { kind: 'saved'; name: string }
+    | { kind: 'saved'; name: string; fileKept: boolean }
     | { kind: 'save-failed'; reason: string }
     | { kind: 'removed'; result: RemoveDemoPackageResult }
     | { kind: 'remove-failed'; reason: string };
@@ -45,7 +45,7 @@ export function useSavePackage(preview: DemoPackagePreview): UseSavePackage {
         const request = { name: name.trim(), description: description.trim(), addToWelcome: true };
         setBusy('save');
         saveDetails(request)
-            .then(() => setOutcome({ kind: 'saved', name: request.name }))
+            .then((result) => setOutcome({ kind: 'saved', name: request.name, fileKept: result.file === 'skipped' }))
             .catch((failure: Error) => setOutcome({ kind: 'save-failed', reason: failure.message }))
             .finally(() => setBusy(undefined));
     }, [name, description]);
