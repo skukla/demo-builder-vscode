@@ -1,5 +1,6 @@
 import { View, Text, Flex, Heading, Divider } from '@adobe/react-spectrum';
 import React, { useMemo } from 'react';
+import { chosenDatapackName } from './datapackName';
 import { hasRequiredReviewData } from './reviewPredicates';
 import {
     buildComponentInfoList,
@@ -159,11 +160,6 @@ function deriveDaLiveInfo(
 /** Resolve display name preferring title over name */
 function resolveDisplayName(title?: string, name?: string): string | undefined {
     return title && title.length > 0 ? title : name;
-}
-
-/** The chosen datapack as its card named it, the library name until read; none when none is chosen. */
-function datapackNameOf(state: WizardState): string | undefined {
-    return state.datapack ? (state.datapackDisplayName ?? state.datapack.name) : undefined;
 }
 
 /** Project configuration section (package + architecture) */
@@ -398,7 +394,7 @@ export function ReviewStep({
                 <div data-span-columns={
                     !adobeOrgName && !adobeProjectName && !adobeWorkspaceName ? 'true' : undefined
                 }>
-                    <ProjectConfigSection packageName={packageName} stackName={stackName} datapackName={datapackNameOf(state)} scope={reviewStoreScope(state)} />
+                    <ProjectConfigSection packageName={packageName} stackName={stackName} datapackName={chosenDatapackName(state)} scope={reviewStoreScope(state)} />
                 </div>
                 {(adobeOrgName || adobeProjectName || adobeWorkspaceName) && (
                     <AdobeIOSection

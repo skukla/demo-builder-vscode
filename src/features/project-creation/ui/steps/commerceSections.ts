@@ -20,6 +20,7 @@
  */
 
 import { datapackLacksTarget } from './datapackGate';
+import { chosenDatapackName } from './datapackName';
 import { isSetInConfigure } from './editLocks';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
@@ -252,8 +253,8 @@ export function commerceSectionStates(
  * body says why Continue is held (owner, 2026-11-14).
  */
 function sampleDataSection(state: WizardState): CommerceSectionState {
-    // By the name its card showed (owner, 2026-11-16); the library name until the step has read it.
-    const value = state.datapack ? (state.datapackDisplayName ?? state.datapack.name) : 'None';
+    // By its name, not its id (owner, 2026-11-16; F284), as the Final Review names it.
+    const value = chosenDatapackName(state) ?? 'None';
     const status = datapackLacksTarget(state) ? 'upcoming' : 'done';
     return { id: 'sample-data', status, value };
 }

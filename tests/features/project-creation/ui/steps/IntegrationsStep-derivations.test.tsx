@@ -239,7 +239,7 @@ describe('IntegrationsStep — the results shell', () => {
     });
 
     it('drops the empty modifier and prints the destination once a row exists', async () => {
-        await renderStep(baseState({ selectedAppBuilderComponents: [MESH_ID] }));
+        await renderStep(baseState({ selectedAppBuilderComponents: [MESH_ID], ...COMMITTED_DEST }));
 
         expect(areaView()).not.toHaveClass('int-results--empty');
         expect(document.querySelectorAll('.int-destination')).toHaveLength(1);

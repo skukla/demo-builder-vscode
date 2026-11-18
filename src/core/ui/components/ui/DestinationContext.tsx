@@ -32,7 +32,7 @@ export interface DestinationContextProps {
  * What the line is, before it: the Console's own term, so "Kukla ACO test" reads as an Adobe
  * project and not the SC's demo (owner, 2026-11-05). Every host shows it, in one style.
  */
-export const DESTINATION_LABEL = 'Adobe Project';
+const DESTINATION_LABEL = 'Adobe Project';
 
 /**
  * Render "Adobe Project  {project}" with an optional `Change` action, which opens the picker for

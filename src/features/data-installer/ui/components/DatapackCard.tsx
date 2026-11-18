@@ -110,6 +110,7 @@ export function DatapackCard({
     // in a choice grid announce itself as a button.
     const choosing = selected !== undefined;
     const version = selectVersion(group, selectedVersion);
+    const tags = cardTags(group);
 
     const handleOpen = useCallback(
         (): void => onOpen({ name: group.name, version: selectedVersion }, group.store),
@@ -166,7 +167,8 @@ export function DatapackCard({
                     {selected && !isInstalled ? <SelectionCheck testId="datapack-card-selected-check" /> : null}
                 </div>
                 {installFailed ? <InstallFailedLine /> : null}
-                <div className="datapack-card-version-row">
+                {/* Two tags may move below the date, which stays whole (F285); one stays beside it. */}
+                <div className={cn('datapack-card-version-row', tags.length > 1 && 'datapack-card-version-row--wrap')}>
                 {/* Containment: the picker's press must not bubble to the card,
                     or choosing a version would also open the flyout — the
                     conflicting-nested-action problem the integrations grid hit.
@@ -183,7 +185,7 @@ export function DatapackCard({
                 </span>
                 {/* No count of data types (owner, 2026-11-05: the tile was crowded); the flyout
                     names them. */}
-                <CardTags tags={cardTags(group)} />
+                <CardTags tags={tags} />
                 </div>
             </div>
         </div>

@@ -164,9 +164,10 @@ describe('IntegrationsStep — result cards from state', () => {
     it('renders a selected mesh as a card, with the destination unset', async () => {
         await renderStep(baseState({ selectedAppBuilderComponents: [MESH_ID] }));
         expect(row(MESH_NAME)).not.toBeNull();
-        expect(within(destinationLine()).getByText('Not set')).toBeInTheDocument();
         expect(
-            within(destinationLine()).getByRole('button', { name: 'Set Up' })
+            within(screen.getByTestId('adobe-project-notice')).getByRole('button', {
+                name: 'Choose Adobe Project',
+            })
         ).toBeInTheDocument();
     });
 
@@ -174,7 +175,7 @@ describe('IntegrationsStep — result cards from state', () => {
         // onStackSelect seeds a required mesh into selectedAppBuilderComponents (D3).
         await renderStep(baseState({ selectedAppBuilderComponents: [MESH_ID] }));
         expect(row(MESH_NAME)).not.toBeNull();
-        expect(within(destinationLine()).getByText('Not set')).toBeInTheDocument();
+        expect(screen.getByTestId('adobe-project-notice')).toBeInTheDocument();
     });
 
     // The destination is ONE project and ONE workspace for the whole build. It
@@ -294,9 +295,9 @@ describe('IntegrationsStep — modal wiring', () => {
         ).toBeInTheDocument();
     });
 
-    it("the destination line's Set Up opens the modal in destination mode", async () => {
+    it("the project notice's Choose Adobe Project opens the modal in destination mode", async () => {
         await renderStep(baseState({ selectedAppBuilderComponents: [MESH_ID], ...SIGNED_IN }));
-        await press(within(destinationLine()).getByRole('button', { name: 'Set Up' }));
+        await press(screen.getByRole('button', { name: 'Choose Adobe Project' }));
         expect(
             within(currentDialog()).getByRole('heading', { name: 'Deployment Destination' })
         ).toBeInTheDocument();

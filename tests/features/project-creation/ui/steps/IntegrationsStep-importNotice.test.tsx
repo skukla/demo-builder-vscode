@@ -2,16 +2,17 @@
  * IntegrationsStep — an imported demo asks for its own Adobe project (F280).
  *
  * An import or copy opens with no Adobe project (the file's is the sender's, and
- * deploying there replaced the sender's mesh). The Integrations area says so above
- * the Adobe Project line: only on an import, only while no project and workspace
- * are chosen, and never on a new project or an Edit.
+ * deploying there replaced the sender's mesh). Until a project and workspace are
+ * chosen, the Integrations area shows an amber notice that carries the "Choose Adobe
+ * Project" button itself (F283 removed the separate "Not set / Set Up" line). An import
+ * gets its own words; a new project or an Edit gets the general ones.
  *
  * The `jest.mock` preamble is repeated rather than shared, because a `jest.mock` only
  * hoists above the imports of its own file.
  */
 
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { settle } from '../../../../helpers/reactSettle';
 import '@testing-library/jest-dom';
@@ -51,8 +52,11 @@ import {
 } from './IntegrationsStep.testUtils';
 
 const TITLE = 'Choose an Adobe Project';
-const BODY =
+const IMPORT_BODY =
     "Imported demos don't bring an Adobe project. Choose one or create a new one for this demo's integrations.";
+const NEW_BODY =
+    "This demo's integrations deploy into an Adobe project. Choose one or create a new one.";
+const ACTION = 'Choose Adobe Project';
 
 async function renderStep(state: WizardState): Promise<void> {
     render(
@@ -73,33 +77,46 @@ function withMesh(overrides: Partial<WizardState>): WizardState {
     return baseState({ ...SIGNED_IN, selectedAppBuilderComponents: [MESH_ID], ...overrides });
 }
 
-describe('IntegrationsStep — the imported-demo project notice', () => {
-    it('asks an import to choose a project, above the Adobe Project line', async () => {
+const notice = (): HTMLElement => screen.getByTestId('adobe-project-notice');
+
+describe('IntegrationsStep — the Adobe project notice (F280, F283)', () => {
+    it('asks an import to choose a project, with the action in the notice and no destination line', async () => {
         await renderStep(withMesh({ wizardMode: 'import' }));
 
-        const notice = screen.getByTestId('import-adobe-project-notice');
-        expect(notice).toHaveTextContent(TITLE);
-        expect(notice).toHaveTextContent(BODY);
-        // Above the line: the notice comes first in document order.
-        expect(
-            notice.compareDocumentPosition(destinationLine()) & Node.DOCUMENT_POSITION_FOLLOWING
-        ).toBeTruthy();
+        expect(notice()).toHaveTextContent(TITLE);
+        expect(notice()).toHaveTextContent(IMPORT_BODY);
+        expect(within(notice()).getByRole('button', { name: ACTION })).toBeInTheDocument();
+        // F283: the "Not set / Set Up" line is gone; the notice carries the action.
+        expect(destinationLine()).toBeNull();
+        expect(screen.queryByText('Not set')).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Set Up' })).not.toBeInTheDocument();
     });
 
-    it('goes once the import has a project and workspace', async () => {
+    it('asks a new project the same, in its own words', async () => {
+        await renderStep(withMesh({ wizardMode: 'create' }));
+
+        expect(notice()).toHaveTextContent(TITLE);
+        expect(notice()).toHaveTextContent(NEW_BODY);
+        expect(notice()).not.toHaveTextContent(IMPORT_BODY);
+        expect(within(notice()).getByRole('button', { name: ACTION })).toBeInTheDocument();
+        expect(destinationLine()).toBeNull();
+    });
+
+    it('asks an Edit with no project in the new-project words', async () => {
+        await renderStep(withMesh({ wizardMode: 'edit' }));
+
+        expect(notice()).toHaveTextContent(NEW_BODY);
+    });
+
+    it('goes once a project and workspace are chosen, leaving the destination line', async () => {
         await renderStep(withMesh({ wizardMode: 'import', ...COMMITTED_DEST }));
 
         expect(screen.queryByText(TITLE)).not.toBeInTheDocument();
+        expect(destinationLine()).not.toBeNull();
     });
 
-    it('is not shown on a new project', async () => {
-        await renderStep(withMesh({ wizardMode: 'create' }));
-
-        expect(screen.queryByText(TITLE)).not.toBeInTheDocument();
-    });
-
-    it('is not shown on an Edit', async () => {
-        await renderStep(withMesh({ wizardMode: 'edit' }));
+    it('is not shown with no integrations', async () => {
+        await renderStep(baseState({ ...SIGNED_IN, wizardMode: 'import' }));
 
         expect(screen.queryByText(TITLE)).not.toBeInTheDocument();
     });

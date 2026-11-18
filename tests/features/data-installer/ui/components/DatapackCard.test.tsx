@@ -239,6 +239,34 @@ describe('DatapackCard', () => {
             expect(card).not.toHaveTextContent(/\d:\d\d/u);
         });
 
+        // F285 (owner's walk, 2026-11-18): with two tags the date was cut to "Saved No…". The date
+        // stays whole and the two tags move to their own line below it; a one-tag card is unchanged.
+        it('lets two tags move below a whole date, and keeps one tag beside it', () => {
+            const save = '20261117-153400';
+            const pack = (shared: boolean) =>
+                makeGroup({
+                    key: 'library:bodea',
+                    store: 'library',
+                    mine: true,
+                    shared,
+                    versions: [makeVersion({ id: { name: 'bodea', version: save } })],
+                });
+
+            const two = renderCard(pack(true));
+            expect(tagsShown()).toStrictEqual(['Mine', 'Community']);
+            const twoRow = two.card.querySelector('.datapack-card-version-row');
+            expect(twoRow).toHaveClass('datapack-card-version-row--wrap');
+            // The date comes first, so it is the line the tags wrap below.
+            expect(twoRow?.firstElementChild).toHaveClass('datapack-card-version');
+            two.unmount();
+
+            const one = renderCard(pack(false));
+            expect(tagsShown()).toStrictEqual(['Mine']);
+            expect(one.card.querySelector('.datapack-card-version-row')).not.toHaveClass(
+                'datapack-card-version-row--wrap',
+            );
+        });
+
         it('names the version when it has no date', () => {
             const { card } = renderCard(makeGroup());
 

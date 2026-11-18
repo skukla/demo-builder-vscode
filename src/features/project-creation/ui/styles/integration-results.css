@@ -75,11 +75,6 @@
     color: var(--spectrum-global-color-gray-600);
 }
 
-.int-destination-unset {
-    color: var(--spectrum-global-color-gray-500);
-    font-style: italic;
-}
-
 /* ---- The wizard's integration cards ----
    The card itself is `.integration-card`, shared with the dashboard's
    integrations page (core/ui/components/integrations) — do NOT restyle it here,

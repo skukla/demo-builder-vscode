@@ -184,6 +184,18 @@
     text-overflow: ellipsis;
 }
 
+/* Two tags (Mine, Community) beside the date cut it to "Saved No…" (F285). On such a card the
+   date keeps its whole width and the tags move to their own line below it when they do not fit.
+   A one-tag card keeps the single line above. */
+.datapack-card-version-row--wrap {
+    flex-wrap: wrap;
+    row-gap: 4px;
+}
+
+.datapack-card-version-row--wrap > .datapack-card-version {
+    flex: 0 0 auto;
+}
+
 .datapack-card-tags {
     display: flex;
     flex: 0 0 auto;
