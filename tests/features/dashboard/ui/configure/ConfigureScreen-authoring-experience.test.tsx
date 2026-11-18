@@ -297,7 +297,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
         expect(mockRequest.mock.calls[0][1]).not.toHaveProperty('selectedBlockLibraries');
     });
 
-    it('renders the DA.live & authoring settings link inside the Authoring section', () => {
+    it('renders the authoring settings link inside the Authoring section', () => {
         renderWithProvider(
             <ConfigureScreen
                 project={mockProject}
@@ -313,7 +313,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
             .closest('#section-authoring-experience') as HTMLElement;
         expect(authoringSection).toBeInTheDocument();
         expect(
-            within(authoringSection).getByText(/DA\.live & authoring settings are configured in/i)
+            within(authoringSection).getByText(/More authoring settings are in/i)
         ).toBeInTheDocument();
         expect(within(authoringSection).getByText('Extension Settings')).toBeInTheDocument();
     });
@@ -359,7 +359,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
         );
 
         expect(
-            screen.queryByText(/DA\.live & authoring settings are configured in/i)
+            screen.queryByText(/More authoring settings are in/i)
         ).not.toBeInTheDocument();
     });
 

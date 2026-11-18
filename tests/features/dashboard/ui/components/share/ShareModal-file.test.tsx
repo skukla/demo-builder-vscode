@@ -60,11 +60,11 @@ describe('ShareModal: the file step', () => {
             const rows = form().querySelectorAll('.checkbox-row');
             expect(rows).toHaveLength(2);
             expect(rows[0]).toHaveTextContent('Setup');
-            expect(rows[0].querySelector('.checkbox-row-help')).toHaveTextContent(
+            expect(rows[0].querySelector('.choice-help')).toHaveTextContent(
                 'Your Commerce, Adobe, GitHub and DA.live settings. Never a credential.'
             );
             expect(rows[1]).toHaveTextContent('Storefront');
-            expect(rows[1].querySelector('.checkbox-row-help')).toHaveTextContent(
+            expect(rows[1].querySelector('.choice-help')).toHaveTextContent(
                 "The storefront's code and content site."
             );
         });
@@ -73,7 +73,7 @@ describe('ShareModal: the file step', () => {
             await renderShareFile({ isEds: false });
 
             const storefront = form().querySelectorAll('.checkbox-row')[1];
-            expect(storefront.querySelector('.checkbox-row-help')).toHaveTextContent(
+            expect(storefront.querySelector('.choice-help')).toHaveTextContent(
                 'This project has no storefront of its own.'
             );
             expect(partBox('Storefront').disabled).toBe(true);

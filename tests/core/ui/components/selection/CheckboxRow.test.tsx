@@ -23,7 +23,7 @@ describe('CheckboxRow', () => {
         render(<CheckboxRow label="Add to My Welcome Step" help="So you can start new projects from it." isSelected onChange={jest.fn()} />);
 
         const help = screen.getByText('So you can start new projects from it.');
-        expect(help).toHaveClass('checkbox-row-help');
+        expect(help).toHaveClass('choice-help');
         expect(screen.getByRole('checkbox', { name: /^Add to My Welcome Step/ })).toBeInTheDocument();
     });
 

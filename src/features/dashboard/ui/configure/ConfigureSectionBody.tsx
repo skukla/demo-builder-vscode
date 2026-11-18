@@ -26,6 +26,27 @@ import {
 import { ServiceGroupList } from '@/features/components/ui/components/ServiceGroupList';
 import type { AuthoringExperience, CommerceAdminExperience } from '@/types/base';
 
+/**
+ * What each radio changes, on its own line under its name (walk F234: bare names said nothing
+ * about what a choice changes). The class is the checkbox rows' help line.
+ */
+const RADIO_HELP = {
+    daLiveClassic: 'Edit pages as documents in DA.live.',
+    experienceWorkspace: 'Edit pages on the page itself, with Quick Edit.',
+    unifiedShell: 'Opens the Admin inside Adobe Experience Cloud, in your own browser.',
+    classic: "Opens the Admin on its own, in a private window. Use it if the Unified Shell won't load.",
+} as const;
+
+/** A radio's name, and what choosing it changes under it. */
+function RadioLabel({ name, help }: { name: string; help: string }): React.ReactElement {
+    return (
+        <>
+            <span>{name}</span>
+            <span className="choice-help">{help}</span>
+        </>
+    );
+}
+
 export interface ConfigureSectionBodyProps {
     /** The section to draw. */
     section: ConfigureSection;
@@ -72,7 +93,7 @@ function AuthoringBody({
             footer={
                 <Flex marginTop="size-200">
                     <Text UNSAFE_className="text-gray-600 text-sm">
-                        DA.live & authoring settings are configured in{' '}
+                        More authoring settings are in{' '}
                         <Link
                             onPress={() => webviewClient.postMessage('open-eds-settings')}
                             UNSAFE_className="cursor-pointer"
@@ -90,8 +111,10 @@ function AuthoringBody({
                 value={value}
                 onChange={(next) => onChange(next as AuthoringExperience)}
             >
-                <Radio value="da-live-classic">DA.live Classic</Radio>
-                <Radio value="experience-workspace">Experience Workspace</Radio>
+                <Radio value="da-live-classic"><RadioLabel name="DA.live Classic" help={RADIO_HELP.daLiveClassic} /></Radio>
+                <Radio value="experience-workspace">
+                    <RadioLabel name="Experience Workspace" help={RADIO_HELP.experienceWorkspace} />
+                </Radio>
             </RadioGroup>
         </ConfigSection>
     );
@@ -113,8 +136,8 @@ function CommerceAdminBody({
                 value={value}
                 onChange={(next) => onChange(next as CommerceAdminExperience)}
             >
-                <Radio value="unified-shell">Unified Shell</Radio>
-                <Radio value="classic">Classic UI</Radio>
+                <Radio value="unified-shell"><RadioLabel name="Unified Shell" help={RADIO_HELP.unifiedShell} /></Radio>
+                <Radio value="classic"><RadioLabel name="Classic UI" help={RADIO_HELP.classic} /></Radio>
             </RadioGroup>
         </ConfigSection>
     );

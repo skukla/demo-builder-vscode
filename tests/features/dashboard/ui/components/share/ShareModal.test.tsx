@@ -345,7 +345,7 @@ describe('ShareModal', () => {
         it('says what it does in a help line under its label', async () => {
             await renderShareLink();
             const row = welcomeBox().closest('.checkbox-row') as HTMLElement;
-            expect(row.querySelector('.checkbox-row-help')).toHaveTextContent('So you can start new projects from it.');
+            expect(row.querySelector('.choice-help')).toHaveTextContent('So you can start new projects from it.');
             expect(row.querySelector('.checkbox-row-detail')).toBeNull();
         });
 

@@ -51,7 +51,7 @@ export function CheckboxRow({
                 <span className="checkbox-row-label">{label}</span>
                 {detail !== undefined && <span className="checkbox-row-detail">{detail}</span>}
                 {reason !== undefined && <span className="checkbox-row-reason">{reason}</span>}
-                {help !== undefined && <span className="checkbox-row-help">{help}</span>}
+                {help !== undefined && <span className="choice-help">{help}</span>}
             </Checkbox>
         </div>
     );
