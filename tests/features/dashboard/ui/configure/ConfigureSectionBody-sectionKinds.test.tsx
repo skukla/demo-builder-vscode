@@ -71,24 +71,20 @@ beforeEach(() => {
     jest.clearAllMocks();
 });
 
-// Walk F234 (owner): bare names ("Unified Shell", "DA.live Classic") said nothing about what a
-// choice changes. Each radio has a help line under its name, as the checkbox rows do.
-describe('each radio says what it changes', () => {
-    const helpOf = (name: string): string | null | undefined =>
-        screen.getByText(name).closest('[data-value]')?.querySelector('.choice-help')?.textContent;
-
-    it('on Authoring', () => {
+// Walk F234 (owner): the radios are names alone, with no line under each; the note under
+// Authoring has no ampersand.
+describe('the radios', () => {
+    it('are names alone on Authoring, with the settings note in words', () => {
         renderSectionBody({ section: AUTHORING_SECTION, authoringExperience: 'experience-workspace' });
-        expect(helpOf('DA.live Classic')).toBe('Edit pages as documents in DA.live.');
-        expect(helpOf('Experience Workspace')).toBe('Edit pages on the page itself, with Quick Edit.');
+        expect(document.querySelector('.choice-help')).toBeNull();
         expect(screen.getByText(/More authoring settings are in/)).toBeInTheDocument();
         expect(screen.queryByText(/&/)).not.toBeInTheDocument();
     });
 
-    it('on Commerce Admin', () => {
+    it('are names alone on Commerce Admin', () => {
         renderSectionBody({ hasAdminChoice: true, commerceAdminExperience: 'unified-shell', onCommerceAdminExperienceChange: jest.fn() });
-        expect(helpOf('Unified Shell')).toBe('Opens the Admin inside Adobe Experience Cloud, in your own browser.');
-        expect(helpOf('Classic UI')).toBe("Opens the Admin on its own, in a private window. Use it if the Unified Shell won't load.");
+        expect(screen.getByText('Unified Shell')).toBeInTheDocument();
+        expect(document.querySelector('.choice-help')).toBeNull();
     });
 });
 
