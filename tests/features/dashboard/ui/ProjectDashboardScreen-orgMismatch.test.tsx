@@ -178,13 +178,12 @@ describe('ProjectDashboardScreen - Org Context (badge + banner)', () => {
         await showMismatchBanner();
 
         expect(screen.getByText(/Wrong Adobe Organization/i)).toBeInTheDocument();
-        // Banner message names BOTH the current org and the project's expected org.
+        // Banner message names BOTH the current org and the project's expected org, in plain
+        // words (walk F239: the owner asked for messaging that reads like an application).
         expect(
-            screen.getByText(
-                /You're signed into Org B, but this project was created in CitiSignal Org/i
-            )
+            screen.getByText("This project belongs to CitiSignal Org, but you're signed in to Org B.")
         ).toBeInTheDocument();
-        expect(screen.queryByText(/another browser tab/i)).not.toBeInTheDocument();
+        expect(screen.queryByText(/close other Adobe tabs/i)).not.toBeInTheDocument();
     });
 
     it('requests switchOrg when the switch action is clicked', async () => {
@@ -196,8 +195,9 @@ describe('ProjectDashboardScreen - Org Context (badge + banner)', () => {
         expect(webviewClient.request).toHaveBeenCalledWith('switchOrg');
     });
 
-    // Spectrum's busy button, not a spinner plus "Switching" (owner, 2026-10-31): the label
-    // stays and the button ignores presses while the switch is in flight.
+    // A busy button, not a spinner plus "Switching" (owner, 2026-10-31): the label stays and the
+    // button ignores presses while the switch is in flight. The house DialogButton (walk F239),
+    // whose spinner shows on the blue button where Spectrum's did not.
     it('shows the switch button busy while the forced switch is in flight', async () => {
         const { webviewClient } = require('@/core/ui/utils/WebviewClient');
         // Default request mock never resolves — the switch stays in flight.
@@ -207,7 +207,7 @@ describe('ProjectDashboardScreen - Org Context (badge + banner)', () => {
         fireEvent.click(screen.getByText(/Switch IMS Org/i));
 
         await waitFor(() =>
-            expect(screen.getByText(/^Switch IMS Org$/i).closest('button')).toHaveAttribute('aria-busy', 'true')
+            expect(screen.getByText(/^Switch IMS Org$/i).closest('[role="button"]')).toHaveAttribute('aria-busy', 'true')
         );
         expect(screen.queryByText(/Switching/i)).not.toBeInTheDocument();
     });
@@ -219,7 +219,7 @@ describe('ProjectDashboardScreen - Org Context (badge + banner)', () => {
 
         // Re-query each time: after the first press the button is busy, and a second press
         // must not fire the round-trip again.
-        const liveSwitchButton = () => screen.getByText(/Switch IMS Org/i).closest('button')!;
+        const liveSwitchButton = () => screen.getByText(/Switch IMS Org/i).closest('[role="button"]')!;
         fireEvent.click(liveSwitchButton());
         fireEvent.click(liveSwitchButton());
 
@@ -242,7 +242,7 @@ describe('ProjectDashboardScreen - Org Context (badge + banner)', () => {
         emitOrgMismatch();
 
         await waitFor(() => {
-            const button = screen.getByText(/Switch IMS Org/i).closest('button');
+            const button = screen.getByText(/Switch IMS Org/i).closest('[role="button"]');
             expect(button).not.toBeDisabled();
             expect(button).not.toHaveAttribute('aria-busy');
         });
@@ -257,7 +257,7 @@ describe('ProjectDashboardScreen - Org Context (badge + banner)', () => {
         emitOrgMismatch();
 
         await waitFor(() => {
-            expect(screen.getByText(/another browser tab/i)).toBeInTheDocument();
+            expect(screen.getByText(/close other Adobe tabs/i)).toBeInTheDocument();
         });
     });
 
