@@ -9,6 +9,8 @@ status: backlog
 
 # Importing a demo file gives the SC the project, not a template to build one from
 
+Plan: `.rptc/plans/import-creates-project/overview.md` (with Save as Package).
+
 Filed 2026-11-18 from the beta.153 release walk (U3.1 step 2, finding F241's follow-up). Owner:
 in beta.153.
 
@@ -56,9 +58,9 @@ colleagues, and Add a Demo Package's zip door stays a template import.
 
 ## Questions for the design
 
-- The storefront's content site: the bundle carries the content; the project's own DA.live site
-  is filled from it as creation fills one from a card today. Confirm the content path does not
-  depend on the source repository existing.
+- The storefront's content site: the bundle carries only a pointer to the sender's published
+  DA.live site, not the content (`demoBundle.ts:53-78`); creation copies from that site and does
+  not need the source repository (`edsPipeline.ts:311-346`). Researched 2026-11-18.
 - Reset: a project reset puts the storefront back to its template. With no template repository,
   what does reset restore from? Likely the brand the demo was built on (the bundle's
   `selectedPackage`), as a Starter build does; confirm.
