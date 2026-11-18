@@ -245,7 +245,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-33` | fix | [A storefront teardown leaves its pages live when the DA.live content is already gone](2026-10-09-teardown-unpublish-lists-from-deleted-content.md) | — | high | built |
 | `EDS-63` | fix | [The agent's `republish` does what the dashboard's Republish does](2026-10-23-agent-republish-matches-the-button.md) | — | med | active |
 
-### eds  (78)
+### eds  (79)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -326,6 +326,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-70` | question | [Could one Adobe credential replace our separate DA.live and publishing sign-ins?](2026-11-03-eds-service-credential-question.md) | — | med | backlog |
 | `EDS-71` | feature | [The DA.live block library without Universal Editor's `component-definition.json`](2026-11-08-block-library-without-universal-editor.md) | — | high | planned |
 | `EDS-72` | fix | [Importing a demo file gives the SC the project, not a template to build one from](2026-11-18-import-file-creates-the-project.md) | — | high | backlog |
+| `EDS-73` | fix | [Deleting a storefront leaves its AEM Configuration Service site behind](2026-11-18-delete-leaves-config-service-site.md) | — | med | backlog |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | built |
 
 ### app-builder  (130)

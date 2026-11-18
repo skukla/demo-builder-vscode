@@ -5,8 +5,8 @@
  * - Tool installation (clone from GitHub)
  * - Configuration (.env generation with ACO credentials)
  * - Execution (npm scripts with Node 18+)
- * - Commerce and ACO ingestion/cleanup commands
- * - Dry run mode for safe deletion testing
+ * - Commerce and ACO ingestion commands
+ * - Dry run mode
  *
  * Note: Tool updates are handled by the extension's component update system.
  * The tool is registered as a hidden component in components.json and follows
@@ -67,7 +67,7 @@ const NPM_INSTALL_FLAGS = '--no-fund';
  * - Installation via git clone (shallow, branch-specific)
  * - ACO credentials configuration (.env generation)
  * - npm script execution with Node 18+ isolation
- * - Dry run support for safe cleanup operations
+ * - Dry run support
  *
  * @example
  * ```typescript
@@ -224,17 +224,6 @@ export class ToolManager {
     }
 
     /**
-     * Execute ACO data cleanup
-     * Removes all imported data from ACO environment
-     *
-     * @param options - Execution options (supports dryRun for safe preview)
-     * @returns Execution result with success status and cleanup details
-     */
-    async executeAcoCleanup(options: ToolExecutionOptions = {}): Promise<ToolExecutionResult> {
-        return this.executeToolScript('delete:aco', options);
-    }
-
-    /**
      * Execute Commerce (Adobe Commerce) data ingestion
      * Imports product catalog directly to Commerce instance
      *
@@ -243,17 +232,6 @@ export class ToolManager {
      */
     async executeCommerceIngestion(options: ToolExecutionOptions = {}): Promise<ToolExecutionResult> {
         return this.executeToolScript('import:commerce', options);
-    }
-
-    /**
-     * Execute Commerce data cleanup
-     * Removes all imported products from Commerce instance
-     *
-     * @param options - Execution options (supports dryRun for safe preview)
-     * @returns Execution result with success status and cleanup details
-     */
-    async executeCommerceCleanup(options: ToolExecutionOptions = {}): Promise<ToolExecutionResult> {
-        return this.executeToolScript('delete:commerce', options);
     }
 
     /**

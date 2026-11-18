@@ -5746,25 +5746,6 @@
             "equivalent": 7,
             "openGaps": 0
         },
-        "src/features/eds/services/cleanupService.ts": {
-            "score": 85.35,
-            "killed": 134,
-            "survived": 20,
-            "noCoverage": 3,
-            "timeout": 0,
-            "survivorCategories": {
-                "logPresentation": 14,
-                "branch": 4,
-                "string": 2
-            },
-            "uncoveredCategories": {
-                "block": 3
-            },
-            "highValueSurvivors": 4,
-            "equivalent": 7,
-            "openGaps": 0,
-            "recorded": "2026-10-09T23:39:46.258Z"
-        },
         "src/features/eds/services/commerceStoreDiscovery.ts": {
             "score": 95.85,
             "killed": 185,

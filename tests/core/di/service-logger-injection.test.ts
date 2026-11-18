@@ -17,7 +17,6 @@
  * - ToolManager
  * - EdsProjectService
  * - HelixService
- * - CleanupService
  */
 
 import type { Logger } from '@/types/logger';
@@ -240,37 +239,6 @@ describe('Service Logger Injection', () => {
             };
             const service3 = new HelixService(mockLogger, mockGithubTokenService);
             expect(service3).toBeDefined();
-        });
-    });
-
-    describe('CleanupService', () => {
-        it('should accept optional logger in constructor', () => {
-            // Mock dependencies
-            const mockGithubService = { deleteRepository: jest.fn() };
-            const mockDaLiveService = { deleteSite: jest.fn() };
-            const mockToolManager = { executeAcoCleanup: jest.fn() };
-            const mockCodeRemoval = { files: { listRepoFiles: jest.fn() } };
-
-            const { CleanupService } = require('@/features/eds/services/cleanupService');
-
-            // Should work without logger (backward compatible)
-            const service1 = new CleanupService(
-                mockGithubService,
-                mockDaLiveService,
-                mockToolManager,
-                mockCodeRemoval
-            );
-            expect(service1).toBeDefined();
-
-            // Should work with logger (DI pattern)
-            const service2 = new CleanupService(
-                mockGithubService,
-                mockDaLiveService,
-                mockToolManager,
-                mockCodeRemoval,
-                mockLogger
-            );
-            expect(service2).toBeDefined();
         });
     });
 });

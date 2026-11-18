@@ -39,7 +39,6 @@ jest.mock('@/features/eds/handlers/storefrontSetup/storefrontSetupConfigRehydrat
     rehydratePackageDerivedConfig: jest.fn((edsConfig: unknown) => edsConfig),
 }));
 
-jest.mock('@/features/eds/services/cleanupService');
 jest.mock('@/features/eds/services/configService/configurationService');
 jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
     createDaLiveTokenProvider: jest.fn(),

@@ -397,28 +397,6 @@ describe('ToolManager', () => {
             expect(result.error).toBeDefined();
         });
 
-        it('should support delete:aco command for cleanup', async () => {
-            // Given: Tool is installed
-            mockCommandExecutor.execute.mockResolvedValue({
-                code: 0,
-                stdout: 'Cleanup complete: 150 products deleted',
-                stderr: '',
-                duration: 3000,
-            });
-
-            // When: Executing ACO cleanup
-            const result = await toolManager.executeAcoCleanup();
-
-            // Then: Should run npm run delete:aco
-            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
-                expect.stringContaining('npm run delete:aco'),
-                expect.objectContaining({
-                    cwd: TOOL_PATH,
-                })
-            );
-            expect(result.success).toBe(true);
-        });
-
         it('should execute npm run import:commerce command', async () => {
             // Given: Tool is installed
             mockCommandExecutor.execute.mockResolvedValue({
@@ -441,28 +419,6 @@ describe('ToolManager', () => {
             expect(result.success).toBe(true);
         });
 
-        it('should support delete:commerce command for cleanup', async () => {
-            // Given: Tool is installed
-            mockCommandExecutor.execute.mockResolvedValue({
-                code: 0,
-                stdout: 'Commerce cleanup complete',
-                stderr: '',
-                duration: 4000,
-            });
-
-            // When: Executing commerce cleanup
-            const result = await toolManager.executeCommerceCleanup();
-
-            // Then: Should run npm run delete:commerce
-            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
-                expect.stringContaining('npm run delete:commerce'),
-                expect.objectContaining({
-                    cwd: TOOL_PATH,
-                })
-            );
-            expect(result.success).toBe(true);
-        });
-
         it('should support dry run mode for cleanup operations', async () => {
             // Given: Tool is installed
             mockCommandExecutor.execute.mockResolvedValue({
@@ -473,7 +429,7 @@ describe('ToolManager', () => {
             });
 
             // When: Executing cleanup with dry run
-            const result = await toolManager.executeCommerceCleanup({ dryRun: true });
+            const result = await toolManager.executeToolScript('delete:commerce', { dryRun: true });
 
             // Then: Should pass --dry-run flag or set DRY_RUN env var
             expect(mockCommandExecutor.execute).toHaveBeenCalledWith(

@@ -552,8 +552,8 @@ describe('spine choke-points', () => {
         //
         // Traced down, the doors that delete a repository: the delete-project button
         // and the agent's delete_project (both edsExternalCleanup, PL-104 fix 6) and
-        // delete_github_repo (cloudResourceTools), Manage GitHub Repositories, and the
-        // setup cancel (cleanupService; its ARCHIVE keeps the repository and the code).
+        // delete_github_repo (cloudResourceTools), and Manage GitHub Repositories. A setup
+        // stop reaches it through the delete path (edsExternalCleanup, F275).
         // Each hands the primitive to the shared function as a lambda, so each still
         // matches `.deleteRepository(` below. Two doors are NOT storefronts and delete
         // the repository directly: an App Builder app's repository (appRepoPromotion) and
@@ -566,7 +566,6 @@ describe('spine choke-points', () => {
         expect(sorted(/\bdeleteStorefrontRepository\(/)).toStrictEqual([
             'features/ai/server/cloudResourceTools.ts',
             'features/eds/commands/manageGitHubRepos.ts',
-            'features/eds/services/cleanupService.ts',
             'features/eds/services/storefront/storefrontCodeRemoval.ts',
             'features/projects-dashboard/services/edsExternalCleanup.ts',
         ]);
@@ -575,7 +574,6 @@ describe('spine choke-points', () => {
             'features/app-builder/services/appRepoPromotion.ts',
             'features/eds/commands/manageGitHubRepos.ts',
             'features/eds/handlers/forgetAddedDemoHandler.ts',
-            'features/eds/services/cleanupService.ts',
             'features/eds/services/storefront/storefrontCodeRemoval.ts',
             'features/projects-dashboard/services/edsExternalCleanup.ts',
         ]);
