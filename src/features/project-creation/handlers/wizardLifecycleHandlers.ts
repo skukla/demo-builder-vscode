@@ -11,7 +11,7 @@ import * as fsPromises from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { stopCreation } from './creationRun';
+import { stopCreation } from './creationStop';
 import { creationPath } from './executorPreflight';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { swapWebviewSurface } from '@/core/base/swapWebviewSurface';

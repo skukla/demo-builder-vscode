@@ -19,8 +19,10 @@ import {
     defaultStorefrontSetup,
     executeProjectCreation,
     stopCreation,
+    storefrontSetup,
     toolServer,
 } from './createProjectTool.testUtils';
+import { ErrorCode } from '@/types/errorCodes';
 import { creationPath } from '@/features/project-creation/handlers/executorPreflight';
 import { creationCancelledError } from '@/features/project-creation/handlers/creationStop';
 import type { HandlerContext } from '@/types/handlers';
@@ -83,4 +85,69 @@ describe('create_project — a running creation can be stopped', () => {
             expect(events).toEqual(['step ended', 'cleanup']);
         }
     );
+});
+
+/**
+ * An Edge Delivery creation sets up its storefront first, and the run's stop covers it
+ * (F275). Until 2026-11-18 the stop was registered only once creation proper started, so
+ * cancel_project_creation during storefront setup answered "no creation running" and the
+ * repository and DA.live site were still made. What the setup does once stopped (finish the
+ * step, then remove what it made) is pinned in storefrontSetupHandlers-stop.test.ts.
+ */
+describe('create_project — a stop during storefront setup', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it('finds the run, starts no creation, and answers stopped with what was left', async () => {
+        let found: boolean | undefined;
+        storefrontSetup.mockImplementationOnce(async () => {
+            found = stopCreation(creationPath({ projectName: EDS.projectName }));
+            return {
+                success: false,
+                error: 'Storefront setup stopped. Not removed: org/site: Not signed in to DA.live',
+                code: ErrorCode.CANCELLED,
+                data: { left: ['org/site: Not signed in to DA.live'] },
+            };
+        });
+
+        const res = await toolServer().call(EDS);
+
+        expect(found).toBe(true);
+        expect(executeProjectCreation).not.toHaveBeenCalled();
+        expect(res).toMatchObject({
+            created: false,
+            stopped: true,
+            stage: 'storefront-setup',
+            left: ['org/site: Not signed in to DA.live'],
+        });
+        // Nobody to ask: the cleanup refuses sign-ins rather than asking for them.
+        expect(storefrontSetup.mock.calls[0][1]).toMatchObject({ nobodyToAsk: true });
+        // The run's stop is released with it.
+        expect(stopCreation(creationPath({ projectName: EDS.projectName }))).toBe(false);
+    });
+
+    it('shares one stop between setup and creation: a stop after setup ends the creation at once', async () => {
+        storefrontSetup.mockImplementationOnce(async (ctx: { sendMessage: (t: string, d?: unknown) => Promise<void> }) => {
+            await ctx.sendMessage('storefront-setup-complete', {
+                message: 'Done',
+                githubRepo: 'https://github.com/o/r',
+                daLiveSite: 'https://da.live/co/cs',
+                repoOwner: 'o',
+                repoName: 'r',
+            });
+            stopCreation(creationPath({ projectName: EDS.projectName })); // arrives between the two
+            return { success: true };
+        });
+        (executeProjectCreation as jest.Mock).mockImplementationOnce(
+            async (_ctx: HandlerContext, _config: ProjectCreationConfig, signal?: AbortSignal) => {
+                if (signal?.aborted) throw creationCancelledError();
+            }
+        );
+
+        const res = await toolServer().call(EDS);
+
+        expect(res).toMatchObject({ created: false });
+        expect(res.error).toContain('cancelled');
+    });
 });

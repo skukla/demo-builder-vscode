@@ -206,43 +206,6 @@ describe('StorefrontSetupStep — contentCopied bookkeeping', () => {
     });
 });
 
-describe('StorefrontSetupStep — cancel reads the latest config, not the mounted one', () => {
-    it('sends the DA.live target the wizard holds at unmount time', () => {
-        const { rerenderWith, unmount } = renderStep();
-        pushProgress({ phase: 'content', message: 'Copying content...', progress: 50 });
-
-        rerenderWith({
-            state: {
-                edsConfig: {
-                    repoName: 'test-repo',
-                    daLiveOrg: 'renamed-org',
-                    daLiveSite: 'renamed-site',
-                },
-            },
-        });
-        unmount();
-
-        expect(cancelPayloads().at(-1)?.edsConfig).toEqual({
-            daLiveOrg: 'renamed-org',
-            daLiveSite: 'renamed-site',
-        });
-    });
-
-    it('survives a config that has gone away before the wizard closed', () => {
-        const { rerenderWith, unmount } = renderStep();
-        pushProgress({ phase: 'content', message: 'Copying content...', progress: 50 });
-
-        rerenderWith({ state: { edsConfig: undefined } });
-        unmount();
-
-        const sent = cancelPayloads().at(-1)?.edsConfig;
-        expect(sent).toBeDefined();
-        expect(Object.keys(sent ?? {}).sort()).toEqual(['daLiveOrg', 'daLiveSite']);
-        expect(sent?.daLiveOrg).toBeUndefined();
-        expect(sent?.daLiveSite).toBeUndefined();
-    });
-});
-
 describe('StorefrontSetupStep — subscriptions', () => {
     it('subscribes to all four pipeline channels and releases every one on unmount', () => {
         const { unmount } = renderStep();

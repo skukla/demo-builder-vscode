@@ -787,6 +787,12 @@ export interface StorefrontSetupStartPayload {
     selectedStack?: string;
     /** The storefront row when the project is built on an added demo: the phases read it for the repo branch and the pages. */
     demo?: AddedDemo;
+    /**
+     * Set by a door with nobody to ask (the agent's creation): if the run is stopped, the
+     * cleanup of what it made refuses each sign-in it would ask for and names what it
+     * left behind instead (F275, as `delete_project` does).
+     */
+    nobodyToAsk?: true;
     edsConfig: {
         repoName: string;
         repoMode?: 'new' | 'existing';
@@ -894,11 +900,8 @@ export interface StorefrontSetupStartPayload {
  * Payload for storefront-setup-cancel message
  */
 export interface StorefrontSetupCancelPayload {
+    /** What the webview saw the run make; it decides only whether the handler asks first. */
     partialState?: StorefrontSetupPartialState;
-    edsConfig?: {
-        daLiveOrg?: string;
-        daLiveSite?: string;
-    };
 }
 
 /**

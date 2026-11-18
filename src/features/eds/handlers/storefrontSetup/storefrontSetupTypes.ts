@@ -43,6 +43,8 @@ export interface StorefrontSetupResult {
     codeNotServed?: string[];
     /** See {@link RepoInfo.bundleImport} — spread in from the threaded repoInfo. */
     bundleImport?: BundleImportResult;
+    /** See {@link RepoInfo.siteWritten} — spread in from the threaded repoInfo. */
+    siteWritten?: boolean;
     // Note: previewUrl/liveUrl not included - derived from githubRepo by typeGuards
 }
 
@@ -130,4 +132,10 @@ export interface RepoInfo {
      * pushed and the content site the bundle names, for creation to record on the project.
      */
     bundleImport?: BundleImportResult;
+    /**
+     * Set when the run starts writing a NEW DA.live site (its permissions, then its
+     * registration and content), never for a site it was handed. The cleanup after a stop
+     * removes the site only when this is set (F275).
+     */
+    siteWritten?: boolean;
 }

@@ -673,10 +673,17 @@ the wizard's Cancel and the 30-minute limit: creation checks the stop before eac
 the step that was running finishes and no other starts, and `runCreation` answers only
 once that step has ended, so the cleanup sees what it made (F274). A step that never ends
 is waited for `TIMEOUTS.PROJECT_CREATION_STOP_GRACE`; then cleanup runs anyway and the
-error says a step was still running. Storefront setup before the creation step is not
-under this stop: `cancel_project_creation` answers that nothing is running while it runs.
-The 30-minute limit covers the creation step, not storefront setup before it, which has
-its own 30-minute wait for the AEM Code Sync GitHub App.
+error says a step was still running. Storefront setup before the creation step holds the
+same stop (F275): `runProjectCreation` claims it for the project's folder when the run
+starts (`claimCreationStop`), and setup and creation each join it, so
+`cancel_project_creation` finds the run in either. Stopped during setup, the running step
+finishes, no other starts, and setup then removes the repository it created and the new
+DA.live site it began writing (`storefrontSetupStop.ts`, through the delete path's
+`performEdsCleanup`). The agent has nobody to answer a sign-in, so a removal that needs one
+is refused and the answer (`stopped: true`, `left`) names what stayed. A repository or site
+the run was handed (`adoptExisting`) is never removed. The 30-minute limit covers the
+creation step, not storefront setup before it, which has its own 30-minute wait for the
+AEM Code Sync GitHub App; Stop ends that wait.
 
 ### Creating from an exported file (2026-10-03)
 

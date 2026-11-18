@@ -21,6 +21,7 @@
  */
 
 import { creationReporter } from './creationProgress';
+import { claimCreationStop } from './creationStop';
 import { executeProjectCreation } from './executor';
 import { creationPath } from './executorPreflight';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
@@ -29,9 +30,6 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { TimeoutError } from '@/core/utils/timeoutError';
 import type { HandlerContext } from '@/types/handlers';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
-
-/** The stop for each creation running in this window, by project folder. */
-const running = new Map<string, AbortController>();
 
 const TIMEOUT_MESSAGE =
     'Project creation timed out after 30 minutes. ' +
@@ -53,14 +51,15 @@ export async function runCreation(
     context: HandlerContext,
     config: ProjectCreationConfig,
 ): Promise<void> {
-    const controller = new AbortController();
-    const folder = creationPath(config);
+    // The run's stop: the one the door already holds (an agent's run, whose storefront
+    // setup came first, F275), or a new one registered for this folder.
+    const stop = claimCreationStop(creationPath(config));
+    const { controller } = stop;
     context.logger.debug('[Project Creation] Creating NEW AbortController', {
         previousExists: !!context.sharedState.projectCreationAbortController,
         timestamp: new Date().toISOString(),
     });
     context.sharedState.projectCreationAbortController = controller;
-    running.set(folder, controller);
     const startedAt = Date.now();
     const creation = executeProjectCreation(context, config, controller.signal);
     try {
@@ -75,25 +74,13 @@ export async function runCreation(
         controller.abort(); // the limit stops the steps too
         throw await afterRunningStep(context, creation, error, startedAt);
     } finally {
-        if (running.get(folder) === controller) running.delete(folder);
+        stop.release();
         if (context.sharedState.projectCreationAbortController === controller) {
             context.sharedState.projectCreationAbortController = undefined;
         }
     }
 }
 
-/**
- * Stop the creation running on a project folder, whichever door started it.
- *
- * @param projectPath - the folder the creation builds (`creationPath`)
- * @returns true when a creation was running there and has been stopped
- */
-export function stopCreation(projectPath: string): boolean {
-    const controller = running.get(projectPath);
-    if (!controller) return false;
-    controller.abort();
-    return true;
-}
 
 /**
  * Wait for the step that was running when the run was stopped, saying so meanwhile.

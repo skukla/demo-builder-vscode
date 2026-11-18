@@ -65,6 +65,7 @@ import { probeStoreViewProducts } from '@/features/eds/services/storeViewProduct
 import { cleanupFailedCreation } from '@/features/project-creation/handlers/creationFailureCleanup';
 import { projectNameProblem } from '@/features/project-creation/handlers/creationNameCheck';
 import { runCreation } from '@/features/project-creation/handlers/creationRun';
+import { claimCreationStop, stepBoundary } from '@/features/project-creation/handlers/creationStop';
 import { creationPath } from '@/features/project-creation/handlers/executorPreflight';
 import { pickStorefrontDerived } from '@/features/project-creation/ui/steps/edsConfigFromStorefront';
 import {
@@ -73,7 +74,8 @@ import {
 } from '@/features/project-creation/ui/wizard/wizardHelpers';
 import { NO_GUEST_PRODUCTS_WARNING, warnsOfNoProducts } from '@/types/commerceStore';
 import type { DemoPackage, Storefront } from '@/types/demoPackages';
-import type { HandlerContext } from '@/types/handlers';
+import { ErrorCode } from '@/types/errorCodes';
+import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 import type { AddedDemo, BundleImportResult, ImportedFrom } from '@/types/projectFile';
 import type { WizardState } from '@/types/webview';
 import type { StorefrontSetupCompletePayload } from '@/types/webviewPayloads';
@@ -489,6 +491,22 @@ function bundleImportOf(made: BundleImportResult | undefined): { bundleImport?: 
     return made ? { bundleImport: made } : {};
 }
 
+/**
+ * The answer when the run was stopped during storefront setup (F275): setup finished its
+ * running step, started no other, and removed what it made; `left` names what it could not.
+ */
+function stoppedDuringSetup(setupRes: HandlerResponse, events: CapturedEvent[]) {
+    const { left } = (setupRes.data ?? {}) as { left?: string[] };
+    return asText({
+        created: false,
+        stopped: true,
+        stage: 'storefront-setup',
+        message: setupRes.error ?? 'Storefront setup stopped.',
+        left: left ?? [],
+        phases: toPhaseTimeline(events),
+    });
+}
+
 /** EDS creation path: provision the storefront (captured), then create the project. */
 async function createEds(
     ctx: HandlerContext,
@@ -498,6 +516,8 @@ async function createEds(
         daLiveOrg?: string;
         daLiveSite?: string;
         accsEndpoint?: string;
+        /** The run's stop (F275), held by `runProjectCreation` for setup and creation both. */
+        stopSignal?: AbortSignal;
     },
     pkg: DemoPackage,
     storefront: Storefront,
@@ -580,8 +600,11 @@ async function createEds(
             // pages, exactly as the wizard sends it.
             demo: args.demo,
             edsConfig: edsConfigInput,
+            // Stopped, setup removes what it made; nobody here can answer a sign-in.
+            nobodyToAsk: true,
         }),
     );
+    if (setupRes.code === ErrorCode.CANCELLED) return stoppedDuringSetup(setupRes, events);
     if (!setupRes.success) {
         return asText({
             created: false,
@@ -630,6 +653,9 @@ async function createEds(
         },
     });
     try {
+        // The boundary between setup and creation: a stop that arrived after setup ended
+        // ends the run here, as a stopped creation (F275).
+        stepBoundary(args.stopSignal)();
         await runWithAdobeTarget(() => runCreation(capturing, config));
     } catch (err) {
         // Undo what the failed creation built, as the wizard does (owner, 2026-10-16).
@@ -732,10 +758,19 @@ export async function runProjectCreation(ctx: HandlerContext, request: CreationR
     };
     // Listed as running for the whole run, storefront included, so the projects list
     // shows the tile from the start rather than once the project file appears (PL-82).
-    const result = await whileRunning(target, 'creating', () => resolveAndCreate(building, request));
-    // The agent goes on working on what it made: its next tools act on the new project.
-    if (ctx.agentWorkingProject && (await projectExistsAt(ctx, target))) ctx.agentWorkingProject.path = target;
-    return result;
+    // Stoppable for the whole run too: storefront setup and creation join this one stop,
+    // so cancel_project_creation reaches either (F275).
+    const stop = claimCreationStop(target);
+    try {
+        const result = await whileRunning(target, 'creating', () =>
+            resolveAndCreate(building, request, stop.signal),
+        );
+        // The agent goes on working on what it made: its next tools act on the new project.
+        if (ctx.agentWorkingProject && (await projectExistsAt(ctx, target))) ctx.agentWorkingProject.path = target;
+        return result;
+    } finally {
+        stop.release();
+    }
 }
 
 /** Is there a project at this folder now (its manifest loads)? */
@@ -744,7 +779,7 @@ async function projectExistsAt(ctx: HandlerContext, folder: string): Promise<boo
 }
 
 /** The run itself, once the name is known to be usable. */
-async function resolveAndCreate(ctx: HandlerContext, request: CreationRequest) {
+async function resolveAndCreate(ctx: HandlerContext, request: CreationRequest, stopSignal: AbortSignal) {
     const { pkgId, stackId, link, ...rest } = request;
     if (rest.importedFrom && !stackId.startsWith('eds-')) {
         return asText({ error: "A demo bundle's storefront is Edge Delivery, but its setup names a headless stack." });
@@ -758,7 +793,7 @@ async function resolveAndCreate(ctx: HandlerContext, request: CreationRequest) {
     const accsEndpoint = rest.accsEndpoint ?? demo?.configDefaults?.[ACCS_GRAPHQL_ENDPOINT];
     const warned = await storeViewWarnings(ctx, stackId, accsEndpoint, rest.storeScope);
     const report = warned ? { ...rest.report, ...warned } : rest.report;
-    const args = { ...rest, report, accsEndpoint, pkgId: pkg.id, stackId, demo: projectRowOf(demo) };
+    const args = { ...rest, report, accsEndpoint, pkgId: pkg.id, stackId, demo: projectRowOf(demo), stopSignal };
 
     return stackId.startsWith('eds-')
         ? createEds(ctx, args, pkg, storefront, packages)

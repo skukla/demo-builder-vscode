@@ -9,8 +9,9 @@
  *
  * Stopping lets the creation's running step finish, starts no further step, and then
  * runs its cleanup (the half-built project folder, and an API Mesh this creation made),
- * as the wizard's Cancel does (F274). A storefront an Edge Delivery creation already set
- * up stays.
+ * as the wizard's Cancel does (F274). An Edge Delivery creation's storefront setup holds
+ * the same stop: stopped there, setup removes the repository and DA.live site it created
+ * (F275, `storefrontSetupStop.ts`). A storefront whose setup finished stays.
  */
 
 import { z } from 'zod';
@@ -36,7 +37,7 @@ export function registerCancelProjectCreationTool(
             annotations: { readOnlyHint: false, destructiveHint: false },
             title: 'Cancel Project Creation',
             description:
-                "Stop a project creation that is running, by the project name: one this agent started with create_project, create_project_from_file or copy_project, or one the user started in the wizard. The half-built project is cleaned up as the wizard's Cancel does; a storefront already set up stays. Requires confirm:true",
+                "Stop a project creation that is running, by the project name: one this agent started with create_project, create_project_from_file or copy_project, or one the user started in the wizard. The step running finishes, then what the creation made is removed as the wizard's Cancel does: during storefront setup, the repository and DA.live site it created; after it, the half-built project, while the finished storefront stays. Requires confirm:true",
             inputSchema: {
                 projectName: z.string().describe('Name of the project being created'),
                 confirm: z

@@ -121,7 +121,7 @@ server IS — transport, lifecycle, scoping, security — is in
 
 | Tool | | What it does |
 |---|---|---|
-| `cancel_project_creation` | **confirm** | Stop a project creation that is running, by the project name: one this agent started with create_project, create_project_from_file or copy_project, or one the user started in the wizard. The half-buil |
+| `cancel_project_creation` | **confirm** | Stop a project creation that is running, by the project name: one this agent started with create_project, create_project_from_file or copy_project, or one the user started in the wizard. The step runn |
 
 ## `src/features/ai/server/cloudResourceTools.ts`
 

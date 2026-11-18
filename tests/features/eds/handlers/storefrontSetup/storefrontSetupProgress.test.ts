@@ -166,3 +166,29 @@ describe('withSetupSteps', () => {
         expect(sent()).toStrictEqual([{ type: 'storefront-setup-github-app-required', data: asking }]);
     });
 });
+
+describe('withSetupSteps, once the run is stopped (F275)', () => {
+    it('drops the running step\'s progress, so the screen keeps saying it is stopping', async () => {
+        const base = createMockHandlerContext();
+        const stop = new AbortController();
+        const context = withSetupSteps(
+            base,
+            storefrontSetupSteps({ clearsContent: false, copiesContent: true }),
+            STARTED_AT,
+            stop.signal,
+        );
+        stop.abort();
+
+        await context.sendMessage('storefront-setup-progress', {
+            phase: 'content',
+            message: 'Copying the content: 40 of 103 files',
+            progress: 52,
+        } satisfies StorefrontSetupProgressPayload);
+        await context.sendMessage('storefront-setup-github-app-required', { owner: 'o' });
+
+        // Only the non-progress message goes through.
+        expect((base.sendMessage as jest.Mock).mock.calls.map(([type]) => type)).toEqual([
+            'storefront-setup-github-app-required',
+        ]);
+    });
+});

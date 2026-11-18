@@ -10,7 +10,8 @@
 
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { executeProjectCreation } from '@/features/project-creation/handlers/executor';
-import { runCreation, stopCreation } from '@/features/project-creation/handlers/creationRun';
+import { runCreation } from '@/features/project-creation/handlers/creationRun';
+import { stopCreation } from '@/features/project-creation/handlers/creationStop';
 import { creationPath } from '@/features/project-creation/handlers/executorPreflight';
 import type { HandlerContext } from '@/types/handlers';
 import { ErrorCode } from '@/types/errorCodes';

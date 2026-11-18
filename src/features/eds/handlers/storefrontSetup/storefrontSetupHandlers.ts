@@ -3,7 +3,8 @@
  *
  * Message handlers for storefront setup wizard step operations.
  * Manages GitHub repo creation, DA.live content population, and Helix configuration
- * during the storefront-setup step, including cancel/cleanup handling.
+ * during the storefront-setup step. A stopped run removes what it made
+ * (storefrontSetupStop.ts).
  *
  * Phase execution logic lives in storefrontSetupPhases.ts.
  *
@@ -13,38 +14,21 @@
  */
 
 import * as vscode from 'vscode';
-import { CleanupService } from '../../services/cleanupService';
-import { ConfigurationService } from '../../services/configService/configurationService';
-import { DaLiveOrgOperations } from '../../services/daLive/daLiveOrgOperations';
-import {
-    createDaLiveTokenProvider,
-    createDaLiveServiceTokenProvider,
-} from '../../services/daLive/daLiveTokenProviders';
-import { ToolManager } from '../../services/toolManager';
-import type { EdsMetadata, EdsCleanupOptions } from '../../services/types';
-import {
-    ensureDaLiveAuth,
-    explainAbsentOverlay,
-    getDaLiveAuthService,
-    resolveByomOverlayConfig,
-} from '../edsHelpers';
+import { ensureDaLiveAuth, explainAbsentOverlay, resolveByomOverlayConfig } from '../edsHelpers';
 import { rehydratePackageDerivedConfig } from './storefrontSetupConfigRehydration';
 import { executeStorefrontSetupPhases, type StorefrontSetupResult } from './storefrontSetupPhases';
+import { announceStop, removeWhatSetupMade } from './storefrontSetupStop';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { hasMeshInDependencies } from '@/core/constants';
-import { ServiceLocator } from '@/core/di/serviceLocator';
-import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
+import { claimCreationStop } from '@/features/project-creation/handlers/creationStop';
+import { creationPath } from '@/features/project-creation/handlers/executorPreflight';
+import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 import type {
     StorefrontSetupCompletePayload,
     StorefrontSetupErrorPayload,
-    StorefrontSetupProgressPayload,
 } from '@/types/webviewPayloads';
-import type {
-    StorefrontSetupCancelPayload,
-    StorefrontSetupPartialState,
-    StorefrontSetupStartPayload,
-} from '@/types/webviewRequests';
+import type { StorefrontSetupCancelPayload, StorefrontSetupStartPayload } from '@/types/webviewRequests';
 
 // ==========================================================
 // Types
@@ -64,38 +48,31 @@ export type {
 // ==========================================================
 
 /**
- * Handle cancel request for storefront setup operations
+ * The wizard's cancel: the Publish Storefront step was left while setup ran.
  *
- * This handler:
- * 1. Shows confirmation dialog if resources exist
- * 2. Aborts running operations via AbortController
- * 3. Cleans up created resources (GitHub repo, DA.live content)
- * 4. Notifies UI of cancel completion
+ * Asks first when the run has made something, then stops the run. It removes nothing
+ * itself: the run does, once its running step has ended, from its own record of what it
+ * made (`storefrontSetupStop.ts`, F275), the same way an agent's stop does. Until
+ * 2026-11-18 this deleted things at once, from the webview's guess at what existed,
+ * while the step carried on.
  *
  * @param context - Handler context with logging and messaging
- * @param payload - Cancel payload with partial state info
- * @returns Success if cancel handled properly
+ * @param payload - Cancel payload: the webview's view of what the run has made
+ * @returns Success once the question is answered and the run told to stop
  */
 export async function handleCancelStorefrontSetup(
     context: HandlerContext,
     payload?: StorefrontSetupCancelPayload,
 ): Promise<HandlerResponse> {
     const partialState = payload?.partialState;
-    const edsConfig = payload?.edsConfig;
-
     context.logger.info('[Storefront Setup] Cancel requested');
 
-    // Check if any resources were created
-    const hasCreatedResources = partialState?.repoCreated || partialState?.contentCopied;
-
-    if (hasCreatedResources) {
-        // Show confirmation dialog
+    if (partialState?.repoCreated || partialState?.contentCopied) {
         const confirm = await vscode.window.showWarningMessage(
             'Cancelling will delete the GitHub repository and DA.live content created so far. Continue?',
             { modal: true },
             'Yes, Cancel',
         );
-
         if (confirm !== 'Yes, Cancel') {
             // No push here: the cancel request arrives on webview unmount, so
             // there is nobody left to hear a 'storefront-setup-cancel-aborted'
@@ -106,47 +83,14 @@ export async function handleCancelStorefrontSetup(
         }
     }
 
-    // Abort any running operations
-    const abortController = context.sharedState.storefrontSetupAbortController as
-        | AbortController
-        | undefined;
+    const abortController = context.sharedState.storefrontSetupAbortController;
     if (abortController) {
-        context.logger.debug('[Storefront Setup] Aborting running operations');
+        context.logger.debug('[Storefront Setup] Stopping after the current step');
         abortController.abort();
         context.sharedState.storefrontSetupAbortController = undefined;
     }
-
-    // Clean up created resources
-    if (hasCreatedResources && partialState) {
-        try {
-            await context.sendMessage('storefront-setup-progress', {
-                phase: 'cancelling',
-                message: 'Cleaning up resources',
-                progress: 0,
-            } satisfies StorefrontSetupProgressPayload);
-
-            const cleanupResult = await cleanupStorefrontSetupResources(
-                context,
-                partialState,
-                edsConfig,
-            );
-
-            if (cleanupResult.success) {
-                context.logger.info('[Storefront Setup] Cleanup completed successfully');
-            } else {
-                context.logger.warn(
-                    '[Storefront Setup] Cleanup completed with errors:',
-                    cleanupResult.error,
-                );
-            }
-        } catch (error) {
-            // Log error but don't fail - cleanup is best effort
-            context.logger.error('[Storefront Setup] Cleanup failed', error as Error);
-        }
-    }
-
-    // No 'storefront-setup-cancelled' push: same reason as above — the webview
-    // that asked for the cancel is already gone, and no listener ever existed.
+    // No 'storefront-setup-cancelled' push: the webview that asked for the cancel is
+    // already gone, and no listener ever existed.
     return { success: true };
 }
 
@@ -210,6 +154,32 @@ export async function handleStartStorefrontSetup(
         return { success: false, error: 'Missing required parameters' };
     }
 
+    // The project's creation stop: the one the agent's run already holds, or a new one, so
+    // the wizard's Cancel and cancel_project_creation both reach this run (F275).
+    const stop = claimCreationStop(creationPath({ projectName: payload.projectName }));
+    context.sharedState.storefrontSetupAbortController = stop.controller;
+    const onStop = (): void => void announceStop(context);
+    stop.signal.addEventListener('abort', onStop, { once: true });
+    try {
+        return await runStorefrontSetup(context, payload, stop.signal);
+    } finally {
+        stop.signal.removeEventListener('abort', onStop);
+        stop.release();
+        if (context.sharedState.storefrontSetupAbortController === stop.controller) {
+            context.sharedState.storefrontSetupAbortController = undefined;
+        }
+    }
+}
+
+/**
+ * The run itself, under its stop. Stopped, it ends after the running step and removes what
+ * it made (`storefrontSetupStop.ts`), answering CANCELLED with what it could not remove.
+ */
+async function runStorefrontSetup(
+    context: HandlerContext,
+    payload: StorefrontSetupStartPayload,
+    signal: AbortSignal,
+): Promise<HandlerResponse> {
     const { projectName } = payload;
     context.logger.info(`[Storefront Setup] Starting for project: ${projectName}`);
 
@@ -220,10 +190,6 @@ export async function handleStartStorefrontSetup(
         { selectedPackage: payload.selectedPackage, selectedStack: payload.selectedStack, demo: payload.demo },
         context.logger,
     );
-
-    // Create AbortController for cancel support
-    const abortController = new AbortController();
-    context.sharedState.storefrontSetupAbortController = abortController;
 
     // Pre-flight: Check Adobe I/O authentication when mesh is included
     const needsMesh = hasMeshInDependencies(payload.dependencies ?? []);
@@ -300,7 +266,7 @@ export async function handleStartStorefrontSetup(
         const result = await executeStorefrontSetupPhases(
             context,
             effectiveEdsConfig,
-            abortController.signal,
+            signal,
             {
                 selectedBlockLibraries: payload.selectedBlockLibraries,
                 customBlockLibraries: payload.customBlockLibraries,
@@ -308,6 +274,9 @@ export async function handleStartStorefrontSetup(
             },
         );
 
+        if (!result.success && signal.aborted) {
+            return stoppedAnswer(context, effectiveEdsConfig, result, payload.nobodyToAsk === true);
+        }
         // Two outcomes. There used to be a third, "awaiting the GitHub App", when
         // a missing App ENDED the run at the install dialog; since EDS-20
         // (2026-09-25) the run pauses inside the phase and resumes on its own, so
@@ -349,115 +318,24 @@ export async function handleStartStorefrontSetup(
             error: errorMessage,
         } satisfies StorefrontSetupErrorPayload);
         return { success: false, error: errorMessage };
-    } finally {
-        context.sharedState.storefrontSetupAbortController = undefined;
     }
 }
 
-// ==========================================================
-// Helper Functions
-// ==========================================================
-
 /**
- * Clean up resources created during storefront setup
- *
- * @param context - Handler context
- * @param partialState - Tracking state of created resources
- * @param edsConfig - EDS configuration for DA.live info
- * @returns Cleanup result
+ * The answer of a stopped run, once what it made is removed. No error push: the step that
+ * asked for the stop is gone, and a new one on the wizard must not hear this run's end.
  */
-async function cleanupStorefrontSetupResources(
+async function stoppedAnswer(
     context: HandlerContext,
-    partialState: StorefrontSetupPartialState,
-    edsConfig?: { daLiveOrg?: string; daLiveSite?: string },
-): Promise<{ success: boolean; error?: string }> {
-    context.logger.debug('[Storefront Setup] Starting resource cleanup');
-
-    try {
-        // Build metadata from partial state
-        const githubRepo =
-            partialState.repoOwner && partialState.repoName
-                ? `${partialState.repoOwner}/${partialState.repoName}`
-                : partialState.repoUrl?.replace('https://github.com/', '');
-
-        const metadata: EdsMetadata = {
-            githubRepo,
-            daLiveOrg: edsConfig?.daLiveOrg,
-            daLiveSite: edsConfig?.daLiveSite,
-        };
-
-        const options: EdsCleanupOptions = {
-            deleteGitHub: partialState.repoCreated,
-            deleteDaLive: partialState.contentCopied,
-            deleteConfigService: partialState.repoCreated, // Clean up Config Service if repo was created
-            archiveInsteadOfDelete: false, // Full delete for setup
-        };
-
-        // Create cleanup service with required dependencies
-        const cleanupService = await createCleanupService(context);
-        const result = await cleanupService.cleanupEdsResources(metadata, options);
-
-        // Check if any operation failed
-        const failures = [];
-        if (!result.github.success && !result.github.skipped) {
-            failures.push(`GitHub: ${result.github.error}`);
-        }
-        if (!result.daLive.success && !result.daLive.skipped) {
-            failures.push(`DA.live: ${result.daLive.error}`);
-        }
-        // The repository went, and its code on aem.live may not have (EDS-67).
-        if (!result.siteCode.success && !result.siteCode.skipped) {
-            failures.push(`Site code: ${result.siteCode.error}`);
-        }
-
-        if (failures.length > 0) {
-            return { success: false, error: failures.join('; ') };
-        }
-
-        return { success: true };
-    } catch (error) {
-        return { success: false, error: (error as Error).message };
-    }
-}
-
-/**
- * Create CleanupService with all required dependencies
- *
- * @param context - Handler context for services
- * @returns Configured CleanupService
- */
-async function createCleanupService(context: HandlerContext): Promise<CleanupService> {
-    // Fail fast — all downstream services require AuthenticationService
-    if (!context.authManager) {
-        throw new Error('AuthenticationService required for cleanup');
-    }
-
-    // Create service dependencies
-    // Both come from the cache — it builds the repo operations FROM the same
-    // token service, so building them here produced a second pair with a cold
-    // validation cache (D-2).
-    const { repoLifecycle: githubRepoOps, fileOperations } = getGitHubServices(context.context.secrets);
-
-    // Create TokenProvider adapter from AuthenticationService if available
-    const tokenProvider = createDaLiveTokenProvider(context.authManager);
-
-    const daLiveOrgOps = new DaLiveOrgOperations(tokenProvider, context.logger);
-
-    // IMPORTANT: HelixService also needs DA.live token provider for x-content-source-authorization
-    // DA.live uses separate IMS auth from Adobe Console - must use DA.live token
-    const daLiveAuthService = getDaLiveAuthService(context.context);
-    const daLiveTokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
-    const toolManager = new ToolManager(ServiceLocator.getCommandExecutor(), context.logger);
-    const configurationService = new ConfigurationService(daLiveTokenProvider, context.logger);
-
-    return new CleanupService(
-        githubRepoOps,
-        daLiveOrgOps,
-        toolManager,
-        // A deleted repository's code on aem.live goes after it (EDS-67): the files are
-        // read first, and the DA.live IMS token is the one the code bus DELETE accepts.
-        { files: fileOperations, tokenProvider: daLiveTokenProvider },
-        context.logger,
-        configurationService,
-    );
+    edsConfig: StorefrontSetupStartPayload['edsConfig'],
+    result: StorefrontSetupResult,
+    nobodyToAsk: boolean,
+): Promise<HandlerResponse> {
+    context.logger.info('[Storefront Setup] Stopped; removing what it made');
+    const { left } = await removeWhatSetupMade(context, edsConfig, result, nobodyToAsk);
+    if (left.length) context.logger.warn(`[Storefront Setup] Left after the stop: ${left.join('; ')}`);
+    const error = left.length
+        ? `Storefront setup stopped. Not removed: ${left.join('; ')}`
+        : 'Storefront setup stopped. What it made was removed.';
+    return { success: false, error, code: ErrorCode.CANCELLED, data: { left } };
 }

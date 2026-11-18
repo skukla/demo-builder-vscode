@@ -221,12 +221,10 @@ export function useStorefrontSetup(
                 // logger the moment it receives this, which is the side that can
                 // actually persist it. A console.log here only reached the
                 // webview devtools and fired in every test that unmounted.
+                // What it made is the run's own record now (F275): the handler only
+                // asks, from this, whether to confirm.
                 vscode.postMessage('storefront-setup-cancel', {
                     partialState: partialStateRef.current,
-                    edsConfig: {
-                        daLiveOrg: edsConfigRef.current?.daLiveOrg,
-                        daLiveSite: edsConfigRef.current?.daLiveSite,
-                    },
                 } satisfies StorefrontSetupCancelPayload);
             }
         };

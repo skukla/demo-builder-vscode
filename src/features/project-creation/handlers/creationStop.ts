@@ -8,6 +8,9 @@
  * (F274). Before 2026-11-18 no step read the signal, and the steps after a stop still
  * ran, after the cleanup.
  *
+ * The stop itself is registered here by project folder, for the whole run: an agent's
+ * storefront setup and its creation share one (F275).
+ *
  * @module features/project-creation/handlers/creationStop
  */
 
@@ -36,4 +39,57 @@ export function stepBoundary(signal: AbortSignal | undefined): () => void {
     return () => {
         if (signal?.aborted) throw creationCancelledError();
     };
+}
+
+/** The stop for each creation running in this window, by project folder. */
+const running = new Map<string, AbortController>();
+
+/** One part of a run's hold on its stop. */
+export interface CreationStop {
+    /** Aborted by Stop, `cancel_project_creation` or the time limit. */
+    readonly signal: AbortSignal;
+    /** The controller behind it: a door's own Cancel aborts it (the wizard's sharedState). */
+    readonly controller: AbortController;
+    /** Unregister the stop, when this part registered it; a part that joined leaves it. */
+    release(): void;
+}
+
+/**
+ * Hold the stop for a project folder: the one already registered there, or a new one.
+ *
+ * The agent's door claims it when its run starts, so storefront setup and creation join
+ * the same stop and `cancel_project_creation` reaches the run in either (F275). Until
+ * 2026-11-18 only creation registered one, so a stop during the agent's storefront setup
+ * answered "no creation running". A stop that was already used is not joined: a new run
+ * on the folder (the wizard's setup started again) gets a fresh one.
+ *
+ * @param folder - the folder the creation builds (`creationPath`)
+ * @returns this part's hold on the stop
+ */
+export function claimCreationStop(folder: string): CreationStop {
+    const held = running.get(folder);
+    const joined = held !== undefined && !held.signal.aborted;
+    const controller = joined ? held : new AbortController();
+    if (!joined) running.set(folder, controller);
+    return {
+        signal: controller.signal,
+        controller,
+        release: () => {
+            if (!joined && running.get(folder) === controller) running.delete(folder);
+        },
+    };
+}
+
+/**
+ * Stop the creation running on a project folder, whichever door started it and
+ * whichever part of the run it is in.
+ *
+ * @param projectPath - the folder the creation builds (`creationPath`)
+ * @returns true when a creation was running there and has been stopped
+ */
+export function stopCreation(projectPath: string): boolean {
+    const controller = running.get(projectPath);
+    if (!controller) return false;
+    controller.abort();
+    return true;
 }

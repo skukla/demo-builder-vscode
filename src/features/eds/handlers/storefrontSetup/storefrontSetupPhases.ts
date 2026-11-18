@@ -127,6 +127,10 @@ async function runConfigCodeSyncPhases(
                 signal,
                 options,
             );
+            // A step boundary (F275): a stop during the code step registers no site.
+            if (signal.aborted) throw new Error('Operation cancelled');
+            // From here the run writes the site; one it was handed is never its to remove.
+            if (!edsConfig.selectedSite) repoInfo.siteWritten = true;
             const phase3Result =
                 await executePhaseCodeSync(context, edsConfig, services, repoInfo, signal);
             if (phase3Result) {
@@ -363,7 +367,7 @@ export async function executeStorefrontSetupPhases(
         clearsContent: wantsToResetContent,
         copiesContent: !skipContent,
     });
-    const context = withSetupSteps(runContext, steps);
+    const context = withSetupSteps(runContext, steps, Date.now(), signal);
     logger.info(
         `[Storefront Setup] Content: skipContent=${skipContent}, selectedSite=${Boolean(edsConfig.selectedSite)}, resetContent=${wantsToResetContent}`,
     );
@@ -423,6 +427,7 @@ export async function executeStorefrontSetupPhases(
     const patchReport = createPatchReport();
 
     try {
+        if (signal.aborted) throw new Error('Operation cancelled'); // stopped before it began
         const phase1Result = bundle
             ? await executePhaseBundleRepo(context, edsConfig, services, repoInfo, bundle)
             : await executePhaseGitHubRepo(
