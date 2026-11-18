@@ -9,7 +9,7 @@
 
 import React from 'react';
 import type { PackType } from '../datapackFlowStages';
-import { ChoiceCard } from '@/features/project-creation/ui/components/ChoiceCard';
+import { ChoiceCard } from '@/core/ui/components/selection/ChoiceCard';
 
 export interface PackTypeStageProps {
     packType?: PackType;

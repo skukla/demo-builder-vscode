@@ -95,8 +95,9 @@ export function partBox(testId: string): HTMLInputElement {
     return control<HTMLInputElement>(testId, 'INPUT');
 }
 
+/** The Welcome box, a house checkbox row, found by its label. */
 export function welcomeBox(): HTMLInputElement {
-    return partBox('share-welcome');
+    return screen.getByRole('checkbox', { name: 'Show on Welcome Step' }) as HTMLInputElement;
 }
 
 export function nameInput(): HTMLInputElement {

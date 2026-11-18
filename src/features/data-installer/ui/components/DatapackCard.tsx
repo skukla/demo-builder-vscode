@@ -3,7 +3,7 @@
  *
  * Feature-local by intent, per `reuse-first`. What was considered and rejected:
  *
- *   - `project-creation/ui/components/ChoiceCard` — the wizard's card primitive is
+ *   - `core/ui/components/selection/ChoiceCard` — the wizard's card primitive is
  *     a `<button>`, and this card must host a version `Picker`. A control inside a
  *     button is invalid HTML and unreachable by keyboard, so the primitive cannot
  *     be extended to cover this.

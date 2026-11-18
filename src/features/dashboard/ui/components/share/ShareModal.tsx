@@ -5,10 +5,11 @@
  * same handler, which writes the details file into the repository and puts the
  * card on the SC's Welcome step (`.rptc/research/share-dialogs-overlap/`).
  *
- * One question first: HOW it travels, as two plain options with one line on
- * the chosen one (owner, 2026-10-22: two described cards, an eyebrow and a
- * green checklist read as "too busy"). A link (`ShareLinkForm`), when the
- * colleague can reach your GitHub; a file (`ShareFileForm`), when they cannot.
+ * One question first: HOW it travels, as two choice cards with a line on each,
+ * the same way its inverse, Add a Demo, asks link or zip (owner, 2026-11-18,
+ * walk F227: the window now uses the house controls other windows use). A link
+ * (`ShareLinkForm`), when the colleague can reach your GitHub; a file
+ * (`ShareFileForm`), when they cannot.
  * The storefront is read once on open, behind the window's wait, before either
  * form shows. A storefront that could not be read is a note line where the link
  * would be: the file still works.
@@ -21,14 +22,16 @@
  * @module features/dashboard/ui/components/share/ShareModal
  */
 
-import { DialogContainer, Radio, RadioGroup } from '@adobe/react-spectrum';
+import { DialogContainer } from '@adobe/react-spectrum';
 import React, { useEffect, useState } from 'react';
 import { SHARE_COPY } from './shareCopy';
 import { ShareFileForm } from './ShareFileForm';
 import { buttonLabel, ShareLinkForm } from './ShareLinkForm';
 import { useShareFile, type UseShareFile } from './useShareFile';
 import { useShareLink, type UseShareLink } from './useShareLink';
+import { ChoiceCard } from '@/core/ui/components/selection/ChoiceCard';
 import type { ActionButton, ModalWait } from '@/core/ui/components/ui/Modal';
+import { SectionLabel } from '@/core/ui/components/ui/SectionLabel';
 import { StepsWindow } from '@/core/ui/components/ui/StepsDialog';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
 import { WAIT_STAGES } from '@/core/utils/waitStages';
@@ -65,24 +68,28 @@ export interface ShareModalProps {
     isEds: boolean;
 }
 
-/** Two plain options and one line on the chosen one: the dialog is the link, not the choice. */
+/** How it travels: two choice cards, each saying who it is for, as Add a Demo's link or zip. */
 function FormChoice({ form, onChange }: { form: ShareForm; onChange: (form: ShareForm) => void }): React.ReactElement {
     return (
-        <RadioGroup
-            aria-label={SHARE_COPY.how}
-            orientation="horizontal"
-            value={form}
-            onChange={(value) => onChange(value as ShareForm)}
-            description={form === 'link' ? SHARE_COPY.linkWhy : SHARE_COPY.fileWhy}
-            data-testid="share-form"
-        >
-            <Radio value="link" data-testid="share-form-link">
-                {SHARE_COPY.link}
-            </Radio>
-            <Radio value="file" data-testid="share-form-file">
-                {SHARE_COPY.file}
-            </Radio>
-        </RadioGroup>
+        <div data-testid="share-form">
+            <SectionLabel>{SHARE_COPY.how}</SectionLabel>
+            <div className="intflow-kind-choices">
+                <ChoiceCard
+                    name={SHARE_COPY.link}
+                    description={SHARE_COPY.linkWhy}
+                    selected={form === 'link'}
+                    onSelect={() => onChange('link')}
+                    testId="share-form-link"
+                />
+                <ChoiceCard
+                    name={SHARE_COPY.file}
+                    description={SHARE_COPY.fileWhy}
+                    selected={form === 'file'}
+                    onSelect={() => onChange('file')}
+                    testId="share-form-file"
+                />
+            </div>
+        </div>
     );
 }
 

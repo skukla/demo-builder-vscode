@@ -18,9 +18,9 @@
  */
 
 import React from 'react';
-import { ChoiceCard } from '../../ChoiceCard';
 import { BLANK_DEFAULT_LABEL } from '../flowStages';
 import { OptionalNameField } from '../OptionalNameField';
+import { ChoiceCard } from '@/core/ui/components/selection/ChoiceCard';
 import { SectionLabel } from '@/core/ui/components/ui/SectionLabel';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 

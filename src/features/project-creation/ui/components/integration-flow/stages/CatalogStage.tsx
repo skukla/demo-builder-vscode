@@ -16,9 +16,9 @@
  */
 
 import React, { useState } from 'react';
-import { ChoiceCard } from '../../ChoiceCard';
 import { OptionalNameField } from '../OptionalNameField';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
+import { ChoiceCard } from '@/core/ui/components/selection/ChoiceCard';
 import { DEFAULT_PAIR_BASE, pairedSystemOf, systemWordOf } from '@/features/app-builder/services/pairNames';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';

@@ -289,7 +289,7 @@ describe('packageChecks', () => {
         const repoOps = { getRepository: jest.fn().mockResolvedValue(repo('steve/kukla-bodea', false)) };
         const checks = await packageChecks(edsProject({ datapack: { name: 'bodea', version: 'main' } }), OWN, { indexFound: true, pageCount: 157 }, {
             repoOps,
-            datapackAvailability: async () => 'installer',
+            datapackAvailability: async () => ({ where: 'installer', displayName: 'Bodea' }),
             logger,
         });
         // Owner, 2026-09-14: every line says what a COLLEAGUE gets, in plain words.
@@ -297,7 +297,7 @@ describe('packageChecks', () => {
         expect(checks.map((c) => [c.id, c.ok, c.message])).toEqual([
             ['repository', true, "Colleagues can open this storefront's code."],
             ['index', true, 'Colleagues start with your published pages.'],
-            ['datapack', true, 'Colleagues can install the same sample data (bodea).'],
+            ['datapack', true, 'Colleagues can install the same sample data (Bodea).'],
         ]);
     });
 
@@ -312,7 +312,7 @@ describe('packageChecks', () => {
             appBuilderComponents: { 'erp-sync': { kind: 'integration', status: 'deployed', source: { owner: 'robin', repo: 'erp-sync' } } },
         });
 
-        const checks = await packageChecks(project, OWN, { indexFound: false }, { repoOps, datapackAvailability: async () => 'missing', logger });
+        const checks = await packageChecks(project, OWN, { indexFound: false }, { repoOps, datapackAvailability: async () => ({ where: 'missing' }), logger });
 
         expect(checks).toEqual([
             { id: 'repository', ok: false, message: "This storefront's code is private. Colleagues will need access to it, or make it public." },
@@ -325,27 +325,29 @@ describe('packageChecks', () => {
     // Asked of both stores by name AND version (research project-export-datapacks, item 3).
     it('asks for the pack the project records, version and store included', async () => {
         const repoOps = { getRepository: jest.fn().mockResolvedValue(repo('steve/kukla-bodea', false)) };
-        const datapackAvailability = jest.fn(async () => 'library-shared' as const);
+        const datapackAvailability = jest.fn(async () => ({ where: 'library-shared' as const, displayName: 'Acme' }));
         const pack = { name: 'acme-1a2b3c', version: '20261029-183000', store: 'library' as const };
 
         const checks = await packageChecks(edsProject({ datapack: pack }), OWN, { indexFound: true }, { repoOps, datapackAvailability, logger });
 
         expect(datapackAvailability).toHaveBeenCalledWith(pack);
-        expect(checks).toContainEqual({ id: 'datapack', ok: true, message: 'Colleagues can install the same sample data (acme-1a2b3c).' });
+        expect(checks).toContainEqual({ id: 'datapack', ok: true, message: 'Colleagues can install the same sample data (Acme).' });
     });
 
-    it("warns when the pack is in the SC's library where colleagues can't read it", async () => {
+    // Names, not codes (F227): the pack by the name the SC gave it, and a title the screen shows.
+    it("warns, by the pack's name, when it is in the SC's library where colleagues can't read it", async () => {
         const repoOps = { getRepository: jest.fn().mockResolvedValue(repo('steve/kukla-bodea', false)) };
         const checks = await packageChecks(edsProject({ datapack: { name: 'acme', version: '1', store: 'library' } }), OWN, { indexFound: true }, {
             repoOps,
-            datapackAvailability: async () => 'library-yours-only',
+            datapackAvailability: async () => ({ where: 'library-yours-only', displayName: 'Release Save Test 2' }),
             logger,
         });
 
         expect(checks).toContainEqual({
             id: 'datapack',
             ok: false,
-            message: "The sample data this demo uses (acme) is in My Datapacks, which colleagues can't read yet.",
+            title: "Colleagues Can't Use This Demo's Data Yet",
+            message: 'Release Save Test 2 is only visible to you.',
         });
     });
 

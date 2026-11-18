@@ -53,7 +53,7 @@ import '@/core/ui/styles/tree-list.css';
 // stores would do (datapack-engine step 10).
 import '@/core/ui/styles/fact-list.css';
 import '@/core/ui/styles/modal-text.css';
-// .choice-card* — Create datapack's screens are cards (`ChoiceCard`, owned by project-creation).
+// .choice-card* — Create datapack's screens are cards (`ChoiceCard`; its sheet stays in project-creation).
 import '@/features/project-creation/ui/styles/choice-cards.css';
 // A scrolling list's fade, and the batch save table's rows (`BatchSaveTable`, projects-batch.css):
 // Clear Commerce Instance asks the batch save question (step 06 C4). ADR-017 §6: a sheet reaches

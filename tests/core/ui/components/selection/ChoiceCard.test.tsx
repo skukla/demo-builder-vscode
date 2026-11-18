@@ -10,7 +10,7 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
-import { ChoiceCard } from '@/features/project-creation/ui/components/ChoiceCard';
+import { ChoiceCard } from '@/core/ui/components/selection/ChoiceCard';
 
 const renderCard = (ui: React.ReactElement) =>
     render(<Provider theme={defaultTheme}>{ui}</Provider>);

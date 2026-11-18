@@ -1,5 +1,5 @@
 /**
- * ChoiceCard — the wizard's selectable "choice card" primitive.
+ * ChoiceCard — the house's selectable "choice card" primitive.
  *
  * Encapsulates the `.choice-card` visual (a roomy pick-one button: a name + optional
  * description, an optional muted note, selected/disabled states, and a square `tile`
@@ -7,10 +7,13 @@
  * classes. Consolidates the pattern previously duplicated across the Commerce backend
  * picker, the block-libraries step, and the add-integration flow.
  *
- * The `.choice-card*` styling lives in `utilities.css` and is an implementation
- * detail of this component — consumers should not reference those classes directly.
+ * Moved from project-creation to core on 2026-11-18 (walk F227), when the dashboard's Share
+ * Demo window asked link or file with the same two cards Add a Demo uses. The `.choice-card*`
+ * styling stays in `features/project-creation/ui/styles/choice-cards.css`, which every bundle
+ * that renders this imports (ADR-017 §6); it is an implementation detail of this component, so
+ * consumers should not reference those classes directly.
  *
- * @module features/project-creation/ui/components/ChoiceCard
+ * @module core/ui/components/selection/ChoiceCard
  */
 
 import React from 'react';

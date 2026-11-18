@@ -34,7 +34,7 @@ import { lookupComponentConfigValue } from '@/features/components/services/envVa
 import { resolveStorefrontForProject } from '@/features/components/services/storefrontResolver';
 import { readBoilerplateBase } from '@/features/updates/services/boilerplateBase';
 import type { Project } from '@/types/base';
-import type { DatapackAvailability, DatapackLocation } from '@/types/datapack';
+import type { DatapackLocation, DatapackWhereabouts } from '@/types/datapack';
 import type { DaLiveContentSource, DemoIntegrations, DemoPackage } from '@/types/demoPackages';
 import type { Logger } from '@/types/logger';
 import { SHARED_DEMO_FILE_VERSION, type SharedDemoBuiltWith, type SharedDemoDescription } from '@/types/projectFile';
@@ -219,6 +219,8 @@ function fromCatalog(
 export interface PackageCheck {
     id: 'repository' | 'index' | 'datapack' | 'custom-app';
     ok: boolean;
+    /** A heading for the sentence, when the screen shows it as a notice of its own (Title Case). */
+    title?: string;
     message: string;
     /** The door that fixes it, when one exists on the dashboard. */
     action?: 'republish';
@@ -233,7 +235,7 @@ export interface PackageCheckDeps {
      * Where a colleague would find this datapack, asked of both stores by name AND version.
      * Undefined when a store could not be asked.
      */
-    datapackAvailability?: (pack: DatapackLocation) => Promise<DatapackAvailability | undefined>;
+    datapackAvailability?: (pack: DatapackLocation) => Promise<DatapackWhereabouts | undefined>;
     logger: Logger;
 }
 
@@ -254,20 +256,20 @@ export async function resolveOwnContentSource(
     };
 }
 
-/** What colleagues get of the sample data, by where the pack is; nothing when it could not be asked. */
-function datapackCheckFor(name: string, where: DatapackAvailability | undefined): PackageCheck | undefined {
-    if (where === undefined) return undefined;
-    if (where === 'installer' || where === 'library-shared') {
-        return { id: 'datapack', ok: true, message: `Colleagues can install the same sample data (${name}).` };
+/**
+ * What colleagues get of the sample data, by where the pack is; nothing when it could not be asked.
+ * A pack that was found is named by the name the store shows, never its code (walk F227).
+ */
+function datapackCheckFor(name: string, found: DatapackWhereabouts | undefined): PackageCheck | undefined {
+    if (found === undefined) return undefined;
+    const shown = found.displayName ?? name;
+    if (found.where === 'installer' || found.where === 'library-shared') {
+        return { id: 'datapack', ok: true, message: `Colleagues can install the same sample data (${shown}).` };
     }
-    if (where === 'library-yours-only') {
-        return {
-            id: 'datapack',
-            ok: false,
-            message: `The sample data this demo uses (${name}) is in My Datapacks, which colleagues can't read yet.`,
-        };
+    if (found.where === 'library-yours-only') {
+        return { id: 'datapack', ok: false, title: "Colleagues Can't Use This Demo's Data Yet", message: `${shown} is only visible to you.` };
     }
-    return { id: 'datapack', ok: false, message: `The sample data this demo uses (${name}) isn't available to colleagues yet.` };
+    return { id: 'datapack', ok: false, message: `The sample data this demo uses (${shown}) isn't available to colleagues yet.` };
 }
 
 /**

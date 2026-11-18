@@ -19,8 +19,8 @@
  */
 
 import React from 'react';
-import { ChoiceCard } from '../../ChoiceCard';
 import type { IntegrationKind } from '../flowStages';
+import { ChoiceCard } from '@/core/ui/components/selection/ChoiceCard';
 
 export interface KindStageProps {
     /** Whether this stack has a mesh at all (hidden entirely when false). */

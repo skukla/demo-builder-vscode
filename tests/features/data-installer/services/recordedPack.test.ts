@@ -190,26 +190,27 @@ describe('checkRecordedPack', () => {
     });
 });
 
-// The demo package check (research item 3): asked of both stores, by name AND version.
+// The demo package check (research item 3): asked of both stores, by name AND version. A pack
+// that is found answers its display name too, so the check names it rather than its code (F227).
 describe('availabilityOf', () => {
     it('finds a Data Installer pack by its version, not its name alone', async () => {
         const r = reads([{ id: { name: 'bodea', version: 'main' }, store: 'installer' }]);
 
-        await expect(availabilityOf(r, { name: 'bodea', version: 'main' })).resolves.toBe('installer');
-        await expect(availabilityOf(r, { name: 'bodea', version: 'main-saved-20261029-1830' })).resolves.toBe('missing');
+        await expect(availabilityOf(r, { name: 'bodea', version: 'main' })).resolves.toEqual({ where: 'installer', displayName: 'Bodea' });
+        await expect(availabilityOf(r, { name: 'bodea', version: 'main-saved-20261029-1830' })).resolves.toEqual({ where: 'missing' });
     });
 
     it('asks the store recorded first, then the other', async () => {
         const r = reads([{ id: ACME, store: 'library', over: { shared: true } }]);
 
-        await expect(availabilityOf(r, ACME)).resolves.toBe('library-shared');
+        await expect(availabilityOf(r, ACME)).resolves.toEqual({ where: 'library-shared', displayName: 'Acme Demo' });
         expect(r.detail.mock.calls[0][1]).toBe('library');
     });
 
     it('finds a library version recorded with no store, as packs saved before the store was recorded are', async () => {
         const r = reads([{ id: { name: 'bodea', version: 'main-saved-20261029-1830' }, store: 'library', over: { mine: true } }]);
 
-        await expect(availabilityOf(r, { name: 'bodea', version: 'main-saved-20261029-1830' })).resolves.toBe('library-yours-only');
+        await expect(availabilityOf(r, { name: 'bodea', version: 'main-saved-20261029-1830' })).resolves.toEqual({ where: 'library-yours-only', displayName: 'Bodea' });
         expect(r.detail.mock.calls.map((call) => call[1])).toEqual(['installer', 'library']);
     });
 

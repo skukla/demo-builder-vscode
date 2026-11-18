@@ -13,7 +13,6 @@
  * @module types/webviewRequests
  */
 
-import type { TreeListNode } from '@/core/ui/components/ui/TreeList';
 import type { ComponentSettings, ConfigSetupItem } from './appBuilderComponents';
 import type { AdobeConfig } from './base';
 import type { CustomBlockLibrary } from './blockLibraries';
@@ -36,6 +35,7 @@ import type {
 import type { ViewMode, ViewModeList } from './viewMode';
 import type { GitHubRepoItem } from './webview';
 import type { GitHubUser } from './webviewPayloads';
+import type { TreeListNode } from '@/core/ui/components/ui/TreeList';
 import type { LeftOut, PickableKind, Selections } from '@/features/data-installer/pickableKinds';
 
 /**
@@ -414,6 +414,8 @@ export interface ChangeDemoSourceRequest {
 export interface DemoPackageCheck {
     id: 'repository' | 'index' | 'datapack' | 'custom-app';
     ok: boolean;
+    /** A heading for the sentence, when the screen shows it as a notice of its own (Title Case). */
+    title?: string;
     message: string;
     action?: 'republish';
     repository?: string;

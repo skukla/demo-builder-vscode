@@ -22,7 +22,6 @@ export const SHARE_COPY = {
     changeDetails: 'Change Name or Description',
     name: 'Name',
     description: 'Description',
-    checksTitle: 'Before Sharing',
     republishHint: 'Republish, then save again.',
     skippedTitle: 'Your details file was left alone.',
     remove: 'Remove the Details from My Repository',

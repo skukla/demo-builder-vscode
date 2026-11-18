@@ -14,9 +14,9 @@
 
 import { Checkbox } from '@adobe/react-spectrum';
 import React from 'react';
-import { ChoiceCard } from '../ChoiceCard';
 import { COPY, type AddDemoDraft, type AddDemoMode, type AddDemoWay } from './addDemoFlow';
 import { GitHubLinkField } from '@/core/ui/components/forms/GitHubLinkField';
+import { ChoiceCard } from '@/core/ui/components/selection/ChoiceCard';
 import { LeadText } from '@/core/ui/components/ui/LeadText';
 import { SectionLabel } from '@/core/ui/components/ui/SectionLabel';
 import type { AddedDemo } from '@/types/projectFile';

@@ -129,3 +129,12 @@ export type RecordedPackCheck =
  * SC reads; the library, shared; the library, where only its owner can read it; or nowhere.
  */
 export type DatapackAvailability = 'installer' | 'library-shared' | 'library-yours-only' | 'missing';
+
+/**
+ * Where a pack is, with the name the store shows for it when one was found (absent for `missing`),
+ * so a sentence about it names the pack rather than its code (walk F227).
+ */
+export interface DatapackWhereabouts {
+    where: DatapackAvailability;
+    displayName?: string;
+}

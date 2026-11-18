@@ -13,11 +13,11 @@
  */
 
 import React from 'react';
-import { ChoiceCard } from '../components/ChoiceCard';
 import { BACKEND_LABELS, type CommerceSectionId } from './commerceSections';
 import { DatapackStep } from './DatapackStep';
 import { COMMERCE_SET_IN_CONFIGURE } from './editLocks';
 import { SetInConfigureNote } from './SetInConfigureNote';
+import { ChoiceCard } from '@/core/ui/components/selection/ChoiceCard';
 import { AdobeAuthStep } from '@/features/authentication/ui/steps/AdobeAuthStep';
 import type { WizardState } from '@/types/webview';
 

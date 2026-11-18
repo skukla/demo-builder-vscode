@@ -12,8 +12,8 @@
 
 import { Text, Link } from '@adobe/react-spectrum';
 import React from 'react';
-import { ChoiceCard } from './ChoiceCard';
 import { ConfigSection } from '@/core/ui/components/forms/ConfigSection';
+import { ChoiceCard } from '@/core/ui/components/selection/ChoiceCard';
 import type { BlockLibrary, CustomBlockLibrary } from '@/types/blockLibraries';
 
 /** One block-library selection card (a multi-select toggle; disabled = locked native). */

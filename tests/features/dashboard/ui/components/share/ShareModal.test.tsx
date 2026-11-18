@@ -1,7 +1,8 @@
 /**
  * The Share dialog (owner, 2026-10-22: "I do want the merged share dialog").
  * One dialog replaces Export and Save as demo package. It asks how the demo
- * travels first, as two plain options with one line on the chosen one. The link
+ * travels first, as two choice cards with a line on each, as Add a Demo asks link or
+ * zip (owner, 2026-11-18, walk F227). The link
  * form is the link and one button, the "Also show it on my Welcome step" box,
  * the name and description behind a quiet link, only the checks that need the
  * SC, and the undo. The button
@@ -33,25 +34,36 @@ import {
 } from './ShareModal.testUtils';
 
 const LINK_LINE = 'For colleagues with access to your repository. Includes later changes.';
+const FILE_LINE = 'For colleagues without access. A single zip file, with no later changes.';
 const SAVE_AND_COPY = 'Save Details and Copy Link';
 
 describe('ShareModal', () => {
     beforeEach(resetShareMocks);
 
-    it('opens under its own title on the link form, with the two ways to hand over', async () => {
+    it('opens under its own title on the link form, with the two ways to hand over as cards', async () => {
         await renderShare();
         expect(screen.getByRole('heading', { name: 'Share Demo' })).toBeInTheDocument();
-        expect(screen.getByTestId('share-form')).toHaveTextContent('Send a Link');
-        expect(screen.getByTestId('share-form')).toHaveTextContent('Send a File');
-        expect(screen.getByTestId('share-form')).toHaveTextContent(LINK_LINE);
+        expect(screen.getByTestId('share-form')).toHaveTextContent('How to Share');
+        const link = screen.getByTestId('share-form-link');
+        const file = screen.getByTestId('share-form-file');
+        // Each card names its way and says, at once, who it is for.
+        expect(link).toHaveClass('choice-card');
+        expect(link).toHaveTextContent('Send a Link');
+        expect(link).toHaveTextContent(LINK_LINE);
+        expect(file).toHaveTextContent('Send a File');
+        expect(file).toHaveTextContent(FILE_LINE);
+        expect(link).toHaveAttribute('data-selected', 'true');
+        expect(file).toHaveAttribute('data-selected', 'false');
+        expect(screen.queryByRole('radio')).not.toBeInTheDocument();
         expect(screen.queryByText('What to Include')).not.toBeInTheDocument();
     });
 
-    it('the line under the choice follows it', async () => {
+    it('choosing the file card selects it and shows the file form', async () => {
         await renderShare();
         await chooseFile();
-        expect(screen.getByTestId('share-form')).toHaveTextContent("For colleagues without access. A single zip file, with no later changes.");
-        expect(screen.getByTestId('share-form')).not.toHaveTextContent(LINK_LINE);
+        expect(screen.getByTestId('share-form-file')).toHaveAttribute('data-selected', 'true');
+        expect(screen.getByTestId('share-form-link')).toHaveAttribute('data-selected', 'false');
+        expect(screen.getByText('What to Include')).toBeInTheDocument();
     });
 
     it('while the storefront is being read, the spinner is the whole body', () => {
@@ -157,10 +169,14 @@ describe('ShareModal', () => {
     });
 
     describe('the checks', () => {
-        it('shows only the ones that need the SC, with the republish hint', async () => {
+        it('shows only the ones that need the SC, each as an amber notice, with the republish hint', async () => {
             await renderShare();
-            expect(screen.getByTestId('share-link-form')).toHaveTextContent('Before Sharing');
-            expect(screen.getByTestId('package-check-index')).toHaveTextContent('Republish, then save again.');
+            const index = screen.getByTestId('package-check-index');
+            expect(index).toHaveClass('inline-notice');
+            expect(index).not.toHaveClass('inline-notice--info');
+            expect(index).toHaveTextContent('Colleagues would start with an empty site.');
+            expect(index).toHaveTextContent('Republish, then save again.');
+            expect(screen.queryByText('Before Sharing')).not.toBeInTheDocument();
             expect(screen.queryByTestId('package-check-repository')).not.toBeInTheDocument();
             // Sentences, not a list with dots.
             expect(screen.getByTestId('share-link-form').querySelector('ul, li')).toBeNull();
@@ -183,6 +199,21 @@ describe('ShareModal', () => {
             };
             await renderShare(answer({ ...PREVIEW, checks: [privateRepo] }));
             expect(screen.getByTestId('package-check-repository')).toHaveTextContent("This storefront's code is private.");
+        });
+
+        // Walk F227: the pack by its name under a title, never its code or where it is kept.
+        it("names a pack only the SC can see under the extension's title", async () => {
+            const privatePack = {
+                id: 'datapack' as const,
+                ok: false,
+                title: "Colleagues Can't Use This Demo's Data Yet",
+                message: 'Release Save Test 2 is only visible to you.',
+            };
+            await renderShare(answer({ ...PREVIEW, checks: [privatePack] }));
+            const notice = screen.getByTestId('package-check-datapack');
+            expect(notice).toHaveClass('inline-notice');
+            expect(within(notice).getByText("Colleagues Can't Use This Demo's Data Yet")).toHaveClass('inline-notice-title');
+            expect(notice).toHaveTextContent('Release Save Test 2 is only visible to you.');
         });
     });
 
@@ -222,6 +253,11 @@ describe('ShareModal', () => {
     });
 
     describe('"Show on Welcome Step"', () => {
+        it('is the house checkbox row', async () => {
+            await renderShare();
+            expect(welcomeBox().closest('.checkbox-row')).not.toBeNull();
+        });
+
         it('is ticked by default for a storefront not yet shared, and unticked sends addToWelcome:false', async () => {
             await renderShare();
             expect(welcomeBox().checked).toBe(true);

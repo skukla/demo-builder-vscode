@@ -23,10 +23,10 @@ import type { DataInstallerClient } from './dataInstallerClient';
 import { DataInstallerApiError } from './dataInstallerErrors';
 import { groupDatapacks, pickDefaultVersion } from './datapackCatalog';
 import {
-    type DatapackAvailability,
     type DatapackId,
     type DatapackLocation,
     type DatapackStoreName,
+    type DatapackWhereabouts,
     type ProjectDatapack,
     type RecordedPackCheck,
     storeOf,
@@ -174,9 +174,10 @@ export async function checkRecordedPack(reads: PackReads, recorded: ProjectDatap
  * Ask both stores for a pack by name AND version: the store it records first, then the other,
  * since a pack saved before the store was recorded may be a library version.
  *
- * @returns where it is, or undefined when a store could not be asked and none had it
+ * @returns where it is, with the store's name for it when found, or undefined when a store could
+ *   not be asked and none had it
  */
-export async function availabilityOf(reads: PackReads, pack: DatapackLocation): Promise<DatapackAvailability | undefined> {
+export async function availabilityOf(reads: PackReads, pack: DatapackLocation): Promise<DatapackWhereabouts | undefined> {
     const first = storeOf(pack);
     const stores: DatapackStoreName[] = [first, first === 'library' ? 'installer' : 'library'];
     let unasked = false;
@@ -184,11 +185,12 @@ export async function availabilityOf(reads: PackReads, pack: DatapackLocation): 
         try {
             const found = await find(reads, { name: pack.name, version: pack.version, store });
             if (!found) continue;
-            if (store === 'installer') return 'installer';
-            return found.shared ? 'library-shared' : 'library-yours-only';
+            const { displayName } = found;
+            if (store === 'installer') return { where: 'installer', displayName };
+            return { where: found.shared ? 'library-shared' : 'library-yours-only', displayName };
         } catch {
             unasked = true;
         }
     }
-    return unasked ? undefined : 'missing';
+    return unasked ? undefined : { where: 'missing' };
 }
