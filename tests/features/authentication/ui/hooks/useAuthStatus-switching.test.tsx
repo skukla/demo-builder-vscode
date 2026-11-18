@@ -110,6 +110,18 @@ describe('useAuthStatus - switching and org change', () => {
             expect(mockRequestAuth).toHaveBeenCalledWith(true);
         });
 
+        // A fresh sign-in renews the same account: it asks for `fresh`, not `force`,
+        // and holds checks like a switch so the org comparison still runs after it.
+        it('a fresh login requests a fresh sign-in and suspends auth checks', () => {
+            const { result } = renderWithCallback(baseState);
+
+            act(() => result.current.handleLogin(false, true));
+            act(() => result.current.checkAuthentication());
+
+            expect(mockRequestAuth).toHaveBeenCalledWith(false, true);
+            expect(mockPostMessage).not.toHaveBeenCalled();
+        });
+
         it('an authenticated answer ends the switch — checks run again', () => {
             const { result, answer } = renderWithCallback(baseState);
             act(() => result.current.handleLogin(true));

@@ -92,6 +92,26 @@ describe('authenticationHandlers - handleAuthenticate - Re-authentication', () =
 			expect(mockContext.authManager!.login).not.toHaveBeenCalled();
 		});
 
+		// Re-Authenticate Now renews the same account: forced, over a session that is
+		// still good, but through the one Sign In, not the org switch (owner, 2026-11-18).
+		it('routes fresh=true to a forced one Sign In, even over a good session', async () => {
+			(mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
+			(mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
+			(mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([mockOrg]);
+
+			const result = await handleAuthenticate(mockContext, { fresh: true });
+
+			expect(result.success).toBe(true);
+			expect(mockContext.authManager!.login).toHaveBeenCalledWith(true);
+			expect(mockContext.authManager!.loginAndRestoreProjectContext).not.toHaveBeenCalled();
+			expect(mockContext.sendMessage).toHaveBeenCalledWith('auth-status', {
+				isChecking: true,
+				message: 'Signing in',
+				subMessage: 'Starting fresh login',
+				isAuthenticated: false,
+			});
+		});
+
 		it('runs the one Sign In, un-forced, when force is not set', async () => {
 			(mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(false);
 			(mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);

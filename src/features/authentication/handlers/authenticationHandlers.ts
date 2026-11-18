@@ -13,6 +13,7 @@ import type { AdobeOrg } from '@/features/authentication/services/types';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext } from '@/types/handlers';
 import { SimpleResult } from '@/types/results';
+import type { AuthenticateRequest } from '@/types/webviewRequests';
 
 /**
  * Generate user-friendly sub-message for authentication status
@@ -430,9 +431,9 @@ async function handleAlreadyAuthenticated(context: HandlerContext): Promise<Simp
  */
 async function trySkipLogin(
     context: HandlerContext,
-    force: boolean,
+    request: Required<AuthenticateRequest>,
 ): Promise<SimpleResult | undefined> {
-    if (force) return undefined;
+    if (request.force || request.fresh) return undefined;
 
     context.logger.debug('[Auth] Checking for existing valid authentication (token-only)');
     const isAlreadyAuth = await context.authManager?.isAuthenticated();
@@ -444,13 +445,20 @@ async function trySkipLogin(
 /**
  * The sign-in itself, decided by no one here. `force` is the wizard's Switch IMS Org and
  * "Sign In with a Different Account" (the account chooser): the org switch's sign-in.
- * Anything else is the one Sign In. This handler adds only its own after-steps: the
- * auth-status pushes and the org it resolves.
+ * Anything else is the one Sign In, forced when `fresh` (Re-Authenticate Now renews the
+ * same account). This handler adds only its own after-steps: the auth-status pushes and
+ * the org it resolves.
  */
-async function runSignIn(context: HandlerContext, force: boolean): Promise<boolean> {
+async function runSignIn(
+    context: HandlerContext,
+    request: Required<AuthenticateRequest>,
+): Promise<boolean> {
     const { authManager } = context;
-    if (!force) return (await signInToAdobe(authManager, context.logger, 'person')).success;
-    return authManager ? signInThroughOrgChooser(authManager) : false;
+    if (request.force) return authManager ? signInThroughOrgChooser(authManager) : false;
+    const outcome = await signInToAdobe(authManager, context.logger, 'person', {
+        fresh: request.fresh,
+    });
+    return outcome.success;
 }
 
 /**
@@ -458,9 +466,10 @@ async function runSignIn(context: HandlerContext, force: boolean): Promise<boole
  */
 async function executeBrowserLogin(
     context: HandlerContext,
-    force: boolean,
+    request: Required<AuthenticateRequest>,
     authStartTime: number,
 ): Promise<SimpleResult> {
+    const force = request.force || request.fresh;
     context.logger.debug(
         `[Auth] Starting Adobe authentication process${force ? ' (forced)' : ''} - opening browser`,
     );
@@ -473,7 +482,7 @@ async function executeBrowserLogin(
         isAuthenticated: false,
     });
 
-    const loginSuccess = await runSignIn(context, force);
+    const loginSuccess = await runSignIn(context, request);
     const loginDuration = Date.now() - authStartTime;
     context.sharedState.isAuthenticating = false;
 
@@ -498,9 +507,9 @@ async function executeBrowserLogin(
 
 export async function handleAuthenticate(
     context: HandlerContext,
-    payload?: { force?: boolean },
+    payload?: AuthenticateRequest,
 ): Promise<SimpleResult> {
-    const force = payload?.force || false;
+    const request = { force: payload?.force ?? false, fresh: payload?.fresh ?? false };
 
     if (context.sharedState.isAuthenticating) {
         context.logger.warn(
@@ -514,10 +523,10 @@ export async function handleAuthenticate(
     try {
         context.sharedState.isAuthenticating = true;
 
-        const skipResult = await trySkipLogin(context, force);
+        const skipResult = await trySkipLogin(context, request);
         if (skipResult) return skipResult;
 
-        return await executeBrowserLogin(context, force, authStartTime);
+        return await executeBrowserLogin(context, request, authStartTime);
     } catch (error) {
         const failDuration = Date.now() - authStartTime;
         context.sharedState.isAuthenticating = false;

@@ -1,0 +1,534 @@
+{
+    "_what": "One row per user action: the regex for a call into its spine (`entry`), the files that own the spine, and the DOORS - every file outside the spine allowed to call it, each with the audit's verdict. Enforced by tests/templates/action-doors.test.ts on every jest run. Seeded 2026-11-18 from .rptc/research/entry-point-drift-audit/research.md (rows are its table's numbers).",
+    "_rules": [
+        "A file that calls an entry and is not listed is a NEW DOOR and fails. Call an existing door instead, or add a row here with a reason a reviewer can read.",
+        "A listed door that no longer calls the entry is STALE and fails. Delete the row in the change that moved the call.",
+        "verdict `drift` or `lead` is an exemption: known debt, and it must name its fix in `fix`. Fixing the drift deletes or re-labels the row.",
+        "`modeRule` lists arguments the spine decides. A door passing one fails unless it carries `decidesMode`. On a drift door, `decidesMode` is debt and goes stale when the door stops passing the mode; on any other door it is a standing permission (the one entry point whose job IS that mode).",
+        "`mustRead` names spine result fields that hand the door a job. A door that does not read one fails unless it carries `doesNotRead`.",
+        "`bypasses` are files that do the action's job WITHOUT calling the entry. When one starts calling it, the row fails: move it to `doors`.",
+        "`agentOnlyHandlers`: a descriptor handler type no webview sends is a door only an agent reaches. Each needs a reason; one a webview now sends is stale.",
+        "`exemptionCeiling` counts drift and lead doors, bypasses and agent-only handlers. It only falls."
+    ],
+    "_notCovered": "Rows 13 (start/stop demo: every caller runs the command), 18 and 19 (their doors are already pinned in spine-chokepoints.test.ts), and 24 to 30 (one handler type that the button and the agent descriptor both send). The audit's untraced list (edit project, export/import bundle, copy project, ERP actions, block-library promote/remove, added demos) is untraced here too.",
+    "exemptionCeiling": 38,
+    "actions": {
+        "adobe-sign-in": {
+            "auditRow": 1,
+            "entry": "\\.(login|loginAndRestoreProjectContext)\\(",
+            "spine": ["features/authentication/services/"],
+            "modeRule": {
+                "patterns": ["\\btrue\\b", "\\bforce\\b"],
+                "why": "Forced or not is the shared sign-in's decision. A door passing `force` to the raw sign-in is how seven doors drifted (F248)."
+            },
+            "doors": {
+                "core/auth/adobeAuthGuard.ts": {
+                    "verdict": "one-door",
+                    "reason": "The guard `ensureAdobeIOAuth`: a flow that needs a sign-in partway asks first, then signs in."
+                },
+                "features/authentication/handlers/signInToAdobe.ts": {
+                    "verdict": "one-door",
+                    "reason": "The one Sign In `signInToAdobe`: every screen's Sign In, the command and the agent's `sign_in`.",
+                    "decidesMode": "Its caller may ask for a fresh sign-in of the same account (owner, 2026-11-18); this entry point is where that choice becomes a forced sign-in."
+                },
+                "features/authentication/handlers/orgSwitchHandler.ts": {
+                    "verdict": "one-door",
+                    "reason": "The organization switch.",
+                    "decidesMode": "The org switch is the only forced sign-in by design (F248)."
+                }
+            }
+        },
+        "github-sign-in": {
+            "auditRow": 2,
+            "entry": "getSession\\(\\s*['\"]github['\"]",
+            "spine": ["features/eds/handlers/edsGitHubHandlers.ts"],
+            "doors": {
+                "features/ai/server/authTools.ts": {
+                    "verdict": "same-policy",
+                    "reason": "`get_auth_status` reads VS Code's session silently with GITHUB_SCOPES: never prompts, never stores."
+                },
+                "features/eds/commands/manageGitHubRepos.ts": {
+                    "verdict": "drift",
+                    "reason": "Asks for and stores only ['repo','delete_repo'] with no stale-session recovery, where `acquireGitHubSession` asks for GITHUB_SCOPES; the narrow token is the one later storefront work gets.",
+                    "fix": "PL-104 fix 2 (F250)"
+                },
+                "features/projects-dashboard/services/edsExternalCleanup.ts": {
+                    "verdict": "drift",
+                    "reason": "Delete Project's GitHub sign-in asks for and stores only ['repo','delete_repo'], where `acquireGitHubSession` asks for GITHUB_SCOPES.",
+                    "fix": "PL-104 fix 2 (F250)"
+                }
+            }
+        },
+        "dalive-sign-in": {
+            "auditRow": 3,
+            "entry": "\\bshowDaLiveAuthQuickPick\\(",
+            "spine": ["features/eds/handlers/daLive/daLiveAuthPrompt.ts"],
+            "doors": {
+                "commands/commandManager.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The palette's DA.live sign-in; stores through the same strict validation."
+                },
+                "features/ai/server/authTools.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The agent's sign-in; fire-and-forget is a surface adaptation."
+                },
+                "features/eds/handlers/daLive/daLiveAuthGuard.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The in-flow guard: a flow that needs DA.live partway asks first."
+                }
+            }
+        },
+        "dalive-teardown-token": {
+            "auditRow": 4,
+            "entry": "\\bfirstUsableDaLiveToken\\(",
+            "spine": ["features/eds/services/daLive/daLiveTokenChain.ts"],
+            "doors": {
+                "features/ai/server/agentProjectCleanup.ts": {
+                    "verdict": "drift",
+                    "reason": "The agent's delete falls back to the Adobe IMS token, which Helix rejects; its comment claims the button chooses this way, and the button uses the DA.live session only.",
+                    "fix": "PL-104 fix 7 (F250)"
+                },
+                "features/ai/server/cloudResourceTools.ts": {
+                    "verdict": "drift",
+                    "reason": "`cleanup_dalive_site` falls back to the Adobe IMS token; the delete button uses the DA.live session only.",
+                    "fix": "PL-104 fix 7 (F250)"
+                },
+                "features/eds/commands/cleanupDaLiveSites.ts": {
+                    "verdict": "drift",
+                    "reason": "Manage DA.live Sites falls back to the Adobe IMS token; the delete button uses the DA.live session only.",
+                    "fix": "PL-104 fix 7 (F250)"
+                }
+            }
+        },
+        "storefront-reset": {
+            "auditRow": 5,
+            "entry": "\\b(executeEdsReset|resetEdsProjectWithUI|runEdsReset)\\(",
+            "spine": ["features/eds/services/reset/edsResetService.ts"],
+            "modeRule": {
+                "patterns": ["\\bincludeBlockLibrary\\b", "\\bverifyCdn\\b"],
+                "why": "Whether a reset restores the block library and checks the CDN is the reset's decision, not each door's (audit fix 1)."
+            },
+            "doors": {
+                "features/eds/services/reset/edsResetUI.ts": {
+                    "verdict": "same-policy",
+                    "reason": "`resetEdsProjectWithUI`, the button's wrapper: org check, GitHub App check and `whileRunning('resetting')` live here and nowhere the agent reaches."
+                },
+                "features/projects-dashboard/handlers/projectsBatchHandlers.ts": {
+                    "verdict": "same-policy",
+                    "reason": "Reset button, single and batch.",
+                    "decidesMode": "Passes includeBlockLibrary: true, verifyCdn: true, where the agent defaults both to false. Debt of PL-104 fix 1 (F250); see the agent door's row."
+                },
+                "features/project-creation/handlers/executorEditPackage.ts": {
+                    "verdict": "same-policy",
+                    "reason": "An Edit that changes the demo package resets the storefront.",
+                    "decidesMode": "Passes includeBlockLibrary: true, verifyCdn: true, where the agent defaults both to false. Debt of PL-104 fix 1 (F250); see the agent door's row."
+                },
+                "features/ai/server/edsResetTool.ts": {
+                    "verdict": "drift",
+                    "reason": "The agent's reset calls `executeEdsReset` directly: no org-mismatch check, no GitHub App check, no `whileRunning('resetting')`, and block library and CDN check default to false.",
+                    "fix": "PL-104 fix 1 (F250)",
+                    "decidesMode": "Defaults includeBlockLibrary and verifyCdn to false, where the button passes true."
+                },
+                "features/ai/server/resetProjectTool.ts": {
+                    "verdict": "drift",
+                    "reason": "`reset_project` reaches the storefront reset through `runEdsReset`, the agent's smaller reset described on edsResetTool.ts.",
+                    "fix": "PL-104 fix 1 (F250)"
+                }
+            }
+        },
+        "headless-reset": {
+            "auditRow": 6,
+            "entry": "\\b(executeProjectReset|runProjectResetAnswered)\\(",
+            "spine": ["features/lifecycle/services/projectResetService.ts"],
+            "doors": {
+                "features/ai/server/resetProjectTool.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The agent's reset; refuses while a demo runs, where the button stops it (deliberate and documented)."
+                },
+                "features/projects-dashboard/handlers/projectsBatchHandlers.ts": {
+                    "verdict": "same-policy",
+                    "reason": "Reset button, single and batch."
+                }
+            }
+        },
+        "delete-project": {
+            "auditRow": 7,
+            "entry": "\\b(runProjectDelete|cleanUpProjectCloud)\\(",
+            "spine": ["features/projects-dashboard/services/projectDeletionService.ts"],
+            "doors": {
+                "features/projects-dashboard/services/projectsBatch.ts": {
+                    "verdict": "one-door",
+                    "reason": "Delete button, single and batch, through `runProjectDelete`."
+                },
+                "features/ai/server/deleteProjectTool.ts": {
+                    "verdict": "drift",
+                    "reason": "The agent does not call `runProjectDelete`; it re-implements the order and stop rules beside it through `cleanUpProjectCloud` (five 'as the button does' comments).",
+                    "fix": "PL-104 fix 6 (F250)"
+                }
+            }
+        },
+        "republish-storefront": {
+            "auditRow": 8,
+            "entry": "\\brepublishStorefrontContent\\(",
+            "spine": ["features/eds/services/storefront/storefrontContentRepublishService.ts"],
+            "doors": {
+                "features/dashboard/handlers/edsContentHandlers.ts": {
+                    "verdict": "same-policy",
+                    "reason": "Dashboard Republish; marks Finish Setup's 'Republish the Code' done after success (`recheckCodeStep`)."
+                },
+                "features/ai/server/storefrontTools.ts": {
+                    "verdict": "drift",
+                    "reason": "The agent's republish does not run `recheckCodeStep`, so the same republish leaves the Finish Setup checklist behind.",
+                    "fix": "PL-104 fix 10 (F250)"
+                }
+            }
+        },
+        "republish-storefront-settings": {
+            "auditRow": 9,
+            "entry": "\\brepublishStorefrontConfig\\(",
+            "spine": ["features/eds/services/storefront/storefrontRepublishService.ts"],
+            "doors": {
+                "features/mesh/commands/deployMesh.ts": {
+                    "verdict": "same-policy",
+                    "reason": "After a palette mesh deploy."
+                },
+                "features/mesh/handlers/deployHandler.ts": {
+                    "verdict": "same-policy",
+                    "reason": "After a screen or agent mesh deploy."
+                },
+                "features/dashboard/commands/configureStorefrontRepublish.ts": {
+                    "verdict": "same-policy",
+                    "reason": "Configure's Republish."
+                },
+                "features/eds/services/authoringExperienceFlip.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The authoring-experience flip."
+                },
+                "features/eds/services/storefront/storefrontContentRepublishService.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The full republish's settings step."
+                },
+                "features/project-creation/services/meshAddressRepublish.ts": {
+                    "verdict": "same-policy",
+                    "reason": "Creation, once the mesh address is known."
+                },
+                "commands/repairSiteConfiguration.ts": {
+                    "verdict": "drift",
+                    "reason": "A palette command (a person is there) that does not pass `ensureDaLiveSession`, which the service says production callers pass.",
+                    "fix": "PL-104 fix 11 (F250)"
+                }
+            }
+        },
+        "mesh-deploy": {
+            "auditRow": 10,
+            "entry": "\\b(deployMeshComponent|deployMeshCreateOrUpdate|deployMeshWithFeedback)\\(",
+            "spine": [
+                "features/mesh/services/meshDeployment.ts",
+                "features/mesh/services/meshRedeploy.ts",
+                "features/mesh/services/deployMeshHeadless.ts",
+                "features/mesh/services/deployMeshWithFeedback.ts"
+            ],
+            "doors": {
+                "features/mesh/commands/deployMesh.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The palette's Deploy Mesh; takes `meshDeployLock`."
+                },
+                "features/mesh/handlers/deployHandler.ts": {
+                    "verdict": "drift",
+                    "reason": "`deployMeshFromScreen` takes `meshDeployLock`; `handleDeployApiMesh`, the agent's `deploy_mesh` door (no webview sends it), takes no lock and skips `meshActionTaken`, so an agent deploy can run beside a button deploy.",
+                    "fix": "PL-104 fix 4 (F250)"
+                },
+                "features/project-creation/services/meshSetupService.ts": {
+                    "verdict": "same-policy",
+                    "reason": "Project creation's mesh step; listed by the audit, not flagged."
+                },
+                "features/eds/services/reset/edsResetMeshHelper.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The storefront reset's mesh redeploy; listed by the audit, not flagged."
+                },
+                "features/lifecycle/services/projectResetMesh.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The headless reset's mesh redeploy; listed by the audit, not flagged."
+                }
+            }
+        },
+        "mesh-delete": {
+            "auditRow": 11,
+            "entry": "\\bMESH_DELETE_COMMAND\\b",
+            "spine": ["core/shell/meshDeleteCommand.ts"],
+            "doors": {
+                "features/app-builder/services/appBuilderComponentTeardown.ts": {
+                    "verdict": "same-policy",
+                    "reason": "Removing the mesh component; the delete is part of removing its record."
+                },
+                "features/project-creation/handlers/creationFailureCleanup.ts": {
+                    "verdict": "same-policy",
+                    "reason": "Cleanup after a failed creation."
+                },
+                "features/mesh/handlers/deleteHandler.ts": {
+                    "verdict": "drift",
+                    "reason": "The agent's `delete_mesh` deletes the cloud mesh, saves nothing to the project (clears an in-memory flag only), and takes no `meshDeployLock`.",
+                    "fix": "PL-104 fix 5 (F250)"
+                }
+            }
+        },
+        "datapack-job": {
+            "auditRow": 12,
+            "entry": "\\.(startImport|startDelete)\\(",
+            "spine": [],
+            "doors": {
+                "features/data-installer/handlers/importStart.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The Data Installer screen and the agent: validates the request with the synchronous twin before starting."
+                },
+                "features/data-installer/handlers/importHandlers.ts": {
+                    "verdict": "same-policy",
+                    "reason": "`reset-datapack`, the handler path's removal."
+                },
+                "features/data-installer/services/projectDatapackInstallDeps.ts": {
+                    "verdict": "drift",
+                    "reason": "Creation and reset (`runSampleDataJob`) build their own ImportRequest and start it with no validation; the handler path's comment says validation is 'the only thing that will tell us this request is malformed'.",
+                    "fix": "PL-104 fix 3 (F250)"
+                }
+            }
+        },
+        "restart-demo": {
+            "auditRow": 14,
+            "entry": "demoBuilder\\.stopDemo['\"][\\s\\S]{0,200}?demoBuilder\\.startDemo",
+            "spine": ["extension.ts"],
+            "doors": {
+                "core/vscode/envFileWatcherService.ts": {
+                    "verdict": "drift",
+                    "reason": "A hand-rolled stop-then-start: no DEMO_STATUS_UPDATE_DELAY between them and no project path, where `demoBuilder.restartDemo` has both.",
+                    "fix": "PL-104 fix 12 (F250)"
+                },
+                "commands/configure.ts": {
+                    "verdict": "drift",
+                    "reason": "A hand-rolled stop-then-start after a port change: no DEMO_STATUS_UPDATE_DELAY and no project path.",
+                    "fix": "PL-104 fix 12 (F250)"
+                },
+                "features/dashboard/commands/configure.ts": {
+                    "verdict": "drift",
+                    "reason": "Configure's hand-rolled stop-then-start: no DEMO_STATUS_UPDATE_DELAY between them.",
+                    "fix": "PL-104 fix 12 (F250)"
+                }
+            }
+        },
+        "open-commerce-admin": {
+            "auditRow": 15,
+            "entry": "\\bopenCommerceAdmin\\(",
+            "spine": ["core/utils/commerceAdmin.ts"],
+            "doors": {
+                "features/dashboard/handlers/openUrlHandlers.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The dashboard's Open Commerce Admin."
+                },
+                "features/data-installer/handlers/demoDataHandlers.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The Data Installer's link."
+                },
+                "features/data-installer/services/buildDatapackEngine.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The datapack engine's admin opener."
+                }
+            },
+            "bypasses": {
+                "features/ai/server/lifecycleTools.ts": {
+                    "reason": "`open_url` with target commerceAdmin opens the URL in the default browser with no `validateURL` and returns the URL in its answer; the URL may embed credentials.",
+                    "fix": "PL-104 fix 9 (F250)"
+                },
+                "features/projects-dashboard/handlers/projectsListOpen.ts": {
+                    "reason": "The projects list re-inlines the opener (resolve, validateURL, openAdminUrl); it agrees with the house opener today, by memory.",
+                    "fix": "PL-104 fix 9 (F250)"
+                }
+            }
+        },
+        "create-project": {
+            "auditRow": 16,
+            "entry": "\\bexecuteProjectCreation\\(",
+            "spine": ["features/project-creation/handlers/executor.ts"],
+            "doors": {
+                "features/project-creation/handlers/createHandler.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The wizard; wraps creation in `withTimeout`."
+                },
+                "features/ai/server/createProjectTool.ts": {
+                    "verdict": "lead",
+                    "reason": "The agent's two create tools: no `withTimeout`, and the wizard's state rebuilt by hand (11 'as the wizard does' comments). Pattern-matched, not fully read.",
+                    "fix": "PL-104, the leads to finish reading (F250)"
+                }
+            }
+        },
+        "create-github-repo": {
+            "auditRow": 17,
+            "entry": "\\.createFromTemplate\\(",
+            "spine": ["features/eds/services/github/githubRepoLifecycle.ts"],
+            "doors": {
+                "features/eds/handlers/storefrontSetup/storefrontSetupPhase1.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The wizard, through `createRepoFromSource`, which also handles a source that is not a GitHub template."
+                },
+                "features/ai/server/cloudResourceTools.ts": {
+                    "verdict": "drift",
+                    "reason": "`create_github_repo` calls `createFromTemplate` directly and fails on a source that is not a template, where the wizard makes an empty repository and resets it onto the source.",
+                    "fix": "PL-104 fix 13 (F250)"
+                }
+            }
+        },
+        "rename-project": {
+            "auditRow": 20,
+            "entry": "\\brenameProjectCore\\(",
+            "spine": ["features/projects-dashboard/services/projectRenameService.ts"],
+            "doors": {
+                "features/dashboard/handlers/projectManagementHandlers.ts": {
+                    "verdict": "same-policy",
+                    "reason": "Rename the current project."
+                },
+                "features/projects-dashboard/handlers/projectsListLifecycle.ts": {
+                    "verdict": "same-policy",
+                    "reason": "Rename a project by path from the projects list."
+                }
+            }
+        },
+        "apply-updates": {
+            "auditRow": 21,
+            "entry": "\\bapplyUpdatesHeadless\\(",
+            "spine": ["features/updates/services/updateApplyService.ts"],
+            "doors": {
+                "features/updates/handlers/updatesModalHandlers.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The updates window; stops running demos."
+                },
+                "features/ai/server/applyUpdatesTool.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The agent; refuses while demos run (deliberate, matches reset)."
+                }
+            }
+        },
+        "sync-storefront": {
+            "auditRow": 22,
+            "entry": "\\bsyncAndPublish\\(",
+            "spine": ["features/eds/services/storefront/storefrontSyncService.ts"],
+            "doors": {
+                "features/lifecycle/commands/syncStorefront.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The palette command and the dashboard tile."
+                },
+                "mcp/storefrontSyncHandler.ts": {
+                    "verdict": "lead",
+                    "reason": "The agent's sync (separate process): credentials from env vars, and with none it skips the Helix publish. Pattern-matched, not fully read.",
+                    "fix": "PL-104, the leads to finish reading (F250)"
+                },
+                "mcp/blockLibraryPublish.ts": {
+                    "verdict": "lead",
+                    "reason": "Block-library promote and remove reuse the sync; the audit lists block-library promote as not traced.",
+                    "fix": "PL-104, the leads to finish reading (F250)"
+                }
+            }
+        },
+        "delete-console-project": {
+            "auditRow": 23,
+            "entry": "\\bteardownConsoleProject\\(",
+            "spine": ["features/authentication/services/consoleProjectTeardown.ts"],
+            "mustRead": ["shouldClearConsoleSelection"],
+            "doors": {
+                "features/authentication/handlers/deleteAdobeProjectHandler.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The button; validates ids first and clears the console selection when told to."
+                },
+                "features/ai/server/adobeResourceTools.ts": {
+                    "verdict": "drift",
+                    "reason": "`delete_adobe_project` neither validates ids nor acts on `shouldClearConsoleSelection`, which the spine's docstring says the handler must.",
+                    "fix": "PL-104 fix 8 (F250)",
+                    "doesNotRead": "The drift itself: it never clears the console selection."
+                }
+            }
+        },
+        "token-write": {
+            "auditRow": 2,
+            "entry": "\\.storeToken\\(",
+            "spine": [
+                "features/eds/services/github/githubTokenService.ts",
+                "features/eds/services/daLive/daLiveAuthService.ts"
+            ],
+            "doors": {
+                "features/eds/handlers/edsGitHubHandlers.ts": {
+                    "verdict": "one-door",
+                    "reason": "The GitHub sign-in: stores a token with GITHUB_SCOPES."
+                },
+                "features/eds/handlers/daLive/edsDaLiveAuthHandlers.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The wizard's DA.live sign-in; runs `validateDaLiveTokenStrict` before storing (audit row 3)."
+                },
+                "features/eds/handlers/daLive/daLiveAuthPrompt.ts": {
+                    "verdict": "same-policy",
+                    "reason": "The DA.live quick pick; runs `validateDaLiveTokenStrict` before storing (audit row 3)."
+                },
+                "features/eds/commands/manageGitHubRepos.ts": {
+                    "verdict": "drift",
+                    "reason": "Stores a GitHub token scoped only ['repo','delete_repo'].",
+                    "fix": "PL-104 fix 2 (F250)"
+                },
+                "features/projects-dashboard/services/edsExternalCleanup.ts": {
+                    "verdict": "drift",
+                    "reason": "Stores a GitHub token scoped only ['repo','delete_repo'].",
+                    "fix": "PL-104 fix 2 (F250)"
+                }
+            }
+        }
+    },
+    "agentOnlyHandlers": {
+        "deploy-api-mesh": {
+            "reason": "The agent's `deploy_mesh` door; takes no `meshDeployLock` (audit row 10).",
+            "fix": "PL-104 fix 4 (F250)"
+        },
+        "delete-api-mesh": {
+            "reason": "The agent's `delete_mesh` door; records nothing on the project (audit row 11).",
+            "fix": "PL-104 fix 5 (F250)"
+        },
+        "exportProjectSettings": {
+            "reason": "Agent descriptor only; the audit found one door (row 29).",
+            "fix": "PL-104, confirm one door (F250)"
+        },
+        "setErpSettings": {
+            "reason": "Found by this check 2026-11-18, not in the audit's list of three; not yet read.",
+            "fix": "PL-104, trace the agent-only handlers (F250)"
+        },
+        "setErpAppearance": {
+            "reason": "Found by this check 2026-11-18, not in the audit's list of three; not yet read.",
+            "fix": "PL-104, trace the agent-only handlers (F250)"
+        },
+        "deleteUndeclaredRuntimeCode": {
+            "reason": "Found by this check 2026-11-18, not in the audit's list of three; not yet read.",
+            "fix": "PL-104, trace the agent-only handlers (F250)"
+        },
+        "setCommerceConfig": {
+            "reason": "Found by this check 2026-11-18, not in the audit's list of three; not yet read.",
+            "fix": "PL-104, trace the agent-only handlers (F250)"
+        },
+        "writeErpApi": {
+            "reason": "Found by this check 2026-11-18, not in the audit's list of three; not yet read.",
+            "fix": "PL-104, trace the agent-only handlers (F250)"
+        },
+        "invokeRuntimeAction": {
+            "reason": "Found by this check 2026-11-18, not in the audit's list of three; not yet read.",
+            "fix": "PL-104, trace the agent-only handlers (F250)"
+        },
+        "verify-datapack-install": {
+            "reason": "Found by this check 2026-11-18, not in the audit's list of three; not yet read.",
+            "fix": "PL-104, trace the agent-only handlers (F250)"
+        },
+        "build-datapack-from-export": {
+            "reason": "Found by this check 2026-11-18, not in the audit's list of three; not yet read.",
+            "fix": "PL-104, trace the agent-only handlers (F250)"
+        },
+        "addConsoleApis": {
+            "reason": "Found by this check 2026-11-18, not in the audit's list of three; webviews name it only in comments. Not yet read.",
+            "fix": "PL-104, trace the agent-only handlers (F250)"
+        },
+        "mark-team-datapack": {
+            "reason": "Found by this check 2026-11-18, not in the audit's list of three; not yet read.",
+            "fix": "PL-104, trace the agent-only handlers (F250)"
+        }
+    }
+}

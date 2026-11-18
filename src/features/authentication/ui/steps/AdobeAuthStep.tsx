@@ -41,7 +41,7 @@ interface AuthViewInputs {
     authSubMessage?: string;
     authTimeout: boolean;
     checkAuthentication: () => void;
-    handleLogin: (force?: boolean) => void;
+    handleLogin: (force?: boolean, fresh?: boolean) => void;
 }
 
 /** A signed-in session's views: about to expire, connected, or with no org yet. */
@@ -52,6 +52,9 @@ function sessionViews({ state, handleLogin }: AuthViewInputs): StatusDisplayProp
     // presents the account/org chooser. The wizard then reflects whichever org you
     // land on. See .rptc/plans/adobe-org-context-self-heal/overview.md.
     const switchAccount = () => handleLogin(true);
+    // Renewing the session is a fresh sign-in of the same account, not an org switch
+    // (owner, 2026-11-18).
+    const renewSession = () => handleLogin(false, true);
     const views: StatusDisplayProps[] = [];
     if (isTokenExpiringSoon(adobeAuth)) {
         views.push({
@@ -60,7 +63,7 @@ function sessionViews({ state, handleLogin }: AuthViewInputs): StatusDisplayProp
             message: `Your Adobe session expires in ${adobeAuth.tokenExpiresIn || 0} ${adobeAuth.tokenExpiresIn === 1 ? 'minute' : 'minutes'}. Please re-authenticate to avoid interruption during project setup.`,
             centerMessage: true,
             maxWidth: '520px',
-            actions: [{ label: 'Re-Authenticate Now', icon: <Login size="S" />, variant: 'accent', onPress: () => handleLogin(true) }],
+            actions: [{ label: 'Re-Authenticate Now', icon: <Login size="S" />, variant: 'accent', onPress: renewSession }],
         });
     }
     if (isAuthenticatedWithOrg(adobeAuth, adobeOrg) && adobeOrg) {

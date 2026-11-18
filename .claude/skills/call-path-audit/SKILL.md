@@ -55,10 +55,16 @@ this audit's first run, 2026-08-22).
    second path (does the primitive itself, or re-decides a mode at a door —
    the finding) · dead (no callers — delete outright, no soft deprecation).
 
-5. **Pin what passed — both layers.** Add describe blocks to
-   `tests/templates/spine-chokepoints.test.ts`: one asserting the primitive
-   appears ONLY in the spine module, and one asserting that outside the spine's
-   directory only the named entry points call the spine's public entry. Each
+5. **Pin what passed — both layers.** The primitive gets a describe block in
+   `tests/templates/spine-chokepoints.test.ts` asserting it appears ONLY in the
+   spine module. The doors get a row in
+   **`tests/templates/action-doors.ledger.json`** — that ledger is where a new
+   door is declared: the entry regex, the spine files, each door with its verdict
+   and reason, a `modeRule` for arguments the spine decides, `mustRead` for
+   `should*` result fields a door must act on. `action-doors.test.ts` checks it
+   every run in both directions (new caller, stale door) plus the mode rule.
+   Known drift goes in as a `drift` door naming its fix (open ones: PL-104).
+   A door-pin block in spine-chokepoints is the older form. Each
    carries a positive control (every allowed file must register, so a rename
    can't green the test on empty air) and, where the pattern allows, a planted
    self-test (`hasCodeHit` on a planted line and on a comment). Mutation-check
@@ -77,8 +83,8 @@ and the wizard called `login(force)` directly. They became three entry points:
 | Entry point | Job | Who calls it |
 |---|---|---|
 | `ensureAdobeIOAuth` (`core/auth/adobeAuthGuard.ts`) | a flow needs a sign-in partway: ask in a VS Code dialog, then sign in | ~15 flows, now including the creation mesh step |
-| `signInToAdobe` (`authentication/handlers/signInToAdobe.ts`) | someone pressed Sign In, or an agent asked; the caller (`'person'` or `'agent'`) is the only mode | the `authenticate` handler (every screen), the Sign In command, the `sign_in` tool, the dashboard's expired-sign-in prompt |
-| `handleForcedOrgSwitch` / `signInThroughOrgChooser` (`authentication/handlers/orgSwitchHandler.ts`) | the org switch, the only forced sign-in | `switchOrg`, the wizard's Switch IMS Org, the command's "Sign In Again" over a good session |
+| `signInToAdobe` (`authentication/handlers/signInToAdobe.ts`) | someone pressed Sign In, or an agent asked; the caller (`'person'` or `'agent'`) is one mode, and `fresh` (a forced sign-in that renews the same account) the other | the `authenticate` handler (every screen; `fresh` is the wizard's Re-Authenticate Now), the Sign In command (`fresh` is its "Sign In Again" over a good session), the `sign_in` tool, the dashboard's expired-sign-in prompt |
+| `handleForcedOrgSwitch` / `signInThroughOrgChooser` (`authentication/handlers/orgSwitchHandler.ts`) | the org switch, forced to open the account chooser | `switchOrg`, the wizard's Switch IMS Org and "Sign In with a Different Account" |
 
 The pin is "adobe SIGN-IN entry points" in `spine-chokepoints.test.ts`. Its
 first run, before the doors moved, named exactly the drifted callers.
@@ -131,10 +137,12 @@ the audit found a second path or a dead wrapper, fix it in the same slice
 
 ## Release-cut anchor
 
-**Every PINNED row above audited the primitive; only Adobe sign-in has had its
-entry-point layer audited (2026-11-18).** At a release cut, run step 3 on the
-next row: the primitive staying in one file says nothing about how many doors
-re-decide its mode above it.
+**The entry-point layer of 21 actions is in the door ledger (2026-11-18,
+seeded from `.rptc/research/entry-point-drift-audit/research.md`).** At a
+release cut, compare the doors of each multi-door ledger row (pre-flight checks,
+defaults, after-steps side by side; `codebase-sweep` "Compare the doors"), and
+add a row for any action the audit did not trace: the primitive staying in one
+file says nothing about how many doors re-decide its mode above it.
 
 **The 2026-08-22 full campaign pinned every auditable row** — 13 pin blocks in
 `spine-chokepoints.test.ts`, two consolidations filed (Helix two-engines,

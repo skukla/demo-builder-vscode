@@ -38,7 +38,8 @@ interface UseAuthStatusReturn {
     authTimeout: boolean;
     showLoadingSpinner: boolean;
     checkAuthentication: () => void;
-    handleLogin: (force?: boolean) => void;
+    /** `force` is the org switch; `fresh` renews the same account's sign-in. */
+    handleLogin: (force?: boolean, fresh?: boolean) => void;
 }
 
 export function useAuthStatus({
@@ -69,12 +70,14 @@ export function useAuthStatus({
         webviewClient.postMessage('check-auth');
     }, [state.adobeAuth, updateState]);
 
-    const handleLogin = useCallback((force: boolean = false) => {
+    const handleLogin = useCallback((force: boolean = false, fresh: boolean = false) => {
         setAuthTimeout(false);
         setAuthStatus('');
         setAuthSubMessage('');
 
-        if (force) {
+        // A fresh sign-in can still land in another org, so it holds checks and
+        // compares orgs exactly as a switch does.
+        if (force || fresh) {
             isSwitchingRef.current = true;
             // Save current org ID to detect if it changes after re-auth
             // This preserves project/workspace when re-authenticating with same org
@@ -91,7 +94,8 @@ export function useAuthStatus({
             // will clear them only if the org actually changes
         });
 
-        webviewClient.requestAuth(force);
+        if (fresh) webviewClient.requestAuth(false, true);
+        else webviewClient.requestAuth(force);
     }, [state.adobeAuth, state.adobeOrg?.id, updateState]);
 
     // Check authentication on mount and subscribe to auth-status messages

@@ -3191,22 +3191,9 @@
         {
             "module": "src/features/project-creation/ui/steps/IntegrationsStep.tsx",
             "anchors": [
-                "[],"
-            ],
-            "line": 194,
-            "mutants": 1,
-            "category": "other",
-            "reason": "A useCallback whose dependency array is empty is stable for the component's whole life. The mutant replaces it with a one-element array holding the SAME string literal on every render, and React compares dependencies with Object.is per element, so the callback is still created once and never recreated. Nothing observable differs.",
-            "decision": "none \u2014 equivalent by React's dependency comparison",
-            "recorded": "2026-09-04",
-            "source": "mutationLedger add"
-        },
-        {
-            "module": "src/features/project-creation/ui/steps/IntegrationsStep.tsx",
-            "anchors": [
                 "}, []);"
             ],
-            "line": 204,
+            "line": 196,
             "mutants": 1,
             "category": "other",
             "reason": "A useCallback whose dependency array is empty is stable for the component's whole life. The mutant replaces it with a one-element array holding the SAME string literal on every render, and React compares dependencies with Object.is per element, so the callback is still created once and never recreated. Nothing observable differs.",
@@ -7980,7 +7967,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 641,
+            "line": 639,
             "mutants": 1,
             "category": "block",
             "reason": "This is the inner fallback in openComponent: the README open already failed, the package.json open has now failed too, and the body is a single logger.debug. Emptying it leaves the catch in place, so the folder is still revealed and the command still reports success - which the flows suite asserts by driving both file probes to reject. The only difference is whether one debug line prints. Re-anchored 2026-10-19 (608 -> 609): unchanged code, moved when screens kept their own project (AI-15). Re-anchored 2026-10-20 (609 -> 614): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80). Re-anchored 2026-10-22 (614 -> 613): unchanged code; the global MCP registration toast above it became one line. Re-anchored 2026-10-30 (608 -> 618): unchanged code; the projects list command above it now closes the dashboard inside a webview transition (PL-80). Re-anchored 2026-10-31 (618 -> 626): unchanged code; the Sign In commands above it ask in modals now. Re-anchored 2026-11-07 (626 -> 631): unchanged code; the Datapack Library's command was registered above it. Re-anchored 2026-11-13 (631 -> 639): unchanged code; the Command Palette's two Clear commands were registered above it (step 06 C5).",
@@ -11056,24 +11043,11 @@
             "anchors": [
                 "[],"
             ],
-            "line": 270,
+            "line": 269,
             "mutants": 1,
             "category": "other",
             "reason": "React compares a dependency array element-wise with Object.is, so a constant one-element array of the same string literal is as stable across renders as an empty one \u2014 the builder memo recomputes on neither. The mutant changes the array's contents and not the memo's behaviour, which is the only thing any caller can see. Verified by planting ['Stryker was here'] as the dependency list: all 35 tests green, including the rerender tests that DO fail when a genuinely dependent memo is frozen. Re-anchored 2026-10-31 (267 -> 270): unchanged code; the flow's confirmation slot was threaded through above it.",
             "decision": "Recorded, not killed: every replacement Stryker can put here is a constant, and constants are indistinguishable from the empty array to useMemo.",
-            "recorded": "2026-09-06",
-            "source": "PL-22 batch MUT-05"
-        },
-        {
-            "module": "src/features/dashboard/ui/integrationsSurface/AddIntegrationFlowAdapter.tsx",
-            "anchors": [
-                "[],"
-            ],
-            "line": 282,
-            "mutants": 1,
-            "category": "other",
-            "reason": "Same argument as the builder memo above it: useCallback compares dependency arrays element-wise with Object.is, and a constant one-element array of a string literal never changes between renders, so the signIn callback is rebuilt on neither the original nor the mutant. Verified by planting ['Stryker was here'] as the dependency list \u2014 all 35 tests green, while the rerender tests that pin genuinely dependent memos do fail when those are frozen. Re-anchored 2026-10-31 (280 -> 283): unchanged code; the flow's confirmation slot was threaded through above it.",
-            "decision": "Recorded, not killed: the only replacements available are constants, which useCallback cannot tell apart from an empty list.",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-05"
         },
@@ -14317,7 +14291,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 200,
+            "line": 192,
             "mutants": 1,
             "category": "other",
             "reason": "A useCallback whose dependency array is empty is stable for the component's whole life. The mutant replaces it with a one-element array holding the SAME string literal on every render, and React compares dependencies with Object.is per element, so the callback is still created once and never recreated. Nothing observable differs. Same argument as the row for line 202: this is openAdd's array, that one openDestination's.",

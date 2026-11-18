@@ -268,7 +268,8 @@ const JUDGEMENT: readonly Instrument[] = [
         what: 'proves a user action has ONE definitive path to its ground-truth primitive',
         runs: null,
         unwiredReason:
-            'guided review, per-action; its verdicts are pinned in spine-chokepoints.test.ts',
+            'guided review, per-action; its verdicts are pinned in spine-chokepoints.test.ts ' +
+            'and its doors in tests/templates/action-doors.ledger.json',
     },
     {
         id: 'test-divergence-scan',

@@ -310,9 +310,10 @@ describe('CommandManager', () => {
                 expect(mockLoginAndRestore).not.toHaveBeenCalled();
             });
 
-            it('signInAdobe offers the org switch when already signed in', async () => {
-                // A forced sign-in over a good session is the account chooser, the org
-                // switch's job (2026-11-18: the command no longer forces on its own). An
+            it('signInAdobe offers a fresh sign-in when already signed in', async () => {
+                // "Sign In Again" renews the same account: a forced sign-in through the
+                // one Sign In, not the org switch (owner, 2026-11-18: "just because I
+                // want to sign in again doesn't mean I want to switch the org"). An
                 // un-forced login on a valid session succeeds without changing anything,
                 // which is the silent no-op this branch exists to avoid.
                 mockGetTokenStatus.mockResolvedValue({
@@ -325,8 +326,11 @@ describe('CommandManager', () => {
 
                 await handlerFor('demoBuilder.signInAdobe')();
 
-                expect(mockLoginAndRestore).toHaveBeenCalledWith({}, true);
-                expect(mockLogin).not.toHaveBeenCalled();
+                expect(mockLogin).toHaveBeenCalledWith(true);
+                expect(mockLoginAndRestore).not.toHaveBeenCalled();
+                expect((vscode.window.withProgress as jest.Mock).mock.calls[0][0].title).toBe(
+                    'Signing In to Adobe in Your Browser'
+                );
                 // Humanized, not raw: 420 minutes reads "7h", because "~420 min"
                 // makes the reader do the arithmetic (owner, first live use).
                 expect(

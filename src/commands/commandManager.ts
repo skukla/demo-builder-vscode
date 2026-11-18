@@ -17,7 +17,6 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import { openUrl } from '@/core/utils/browserUtils';
 import { formatMinutes } from '@/core/utils/timeFormatting';
 import { showSuccessInStatusBar } from '@/core/vscode/statusBarSuccess';
-import { signInThroughOrgChooser } from '@/features/authentication/handlers/orgSwitchHandler';
 import { signInToAdobe } from '@/features/authentication/handlers/signInToAdobe';
 import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/configure';
 import { ShowAiCommand } from '@/features/dashboard/commands/openAi';
@@ -387,14 +386,15 @@ export class CommandManager {
         // Sign in to Adobe (PL-5). Until now the only doors were the wizard's
         // auth step and an agent calling sign_in — an expired token outside a
         // wizard flow had no human-reachable handle. Checks state FIRST: an
-        // already-valid session offers the org switch's forced sign-in (the
-        // account chooser) rather than silently re-running a login that would
-        // succeed without changing anything. Otherwise it is the one Sign In
-        // (`signInToAdobe`) every screen and the agent run; it decides no mode.
+        // already-valid session offers "Sign In Again", a fresh sign-in that renews
+        // the same account, rather than silently re-running a login that would
+        // succeed without changing anything. It is not the org switch: a new token
+        // is not a new org (owner, 2026-11-18). Either way it is the one Sign In
+        // (`signInToAdobe`) every screen and the agent run; `fresh` is its parameter.
         this.registerCommand('demoBuilder.signInAdobe', async () => {
             const auth = ServiceLocator.getAuthenticationService();
             const status = await auth.getTokenStatus();
-            let switchAccount = false;
+            let fresh = false;
             if (status.isAuthenticated) {
                 const minutes = status.expiresInMinutes;
                 // A modal with a heading, like every other sign-in question, and no Cancel
@@ -414,11 +414,9 @@ export class CommandManager {
                     'Sign In Again',
                 );
                 if (pick !== 'Sign In Again') return;
-                switchAccount = true;
+                fresh = true;
             }
-            const ok = switchAccount
-                ? await signInThroughOrgChooser(auth)
-                : (await signInToAdobe(auth, this.logger, 'person')).success;
+            const { success: ok } = await signInToAdobe(auth, this.logger, 'person', { fresh });
             // Success is announced by the sign-in itself (extension.ts, onDidSignIn).
             if (!ok) {
                 void vscode.window.showWarningMessage(

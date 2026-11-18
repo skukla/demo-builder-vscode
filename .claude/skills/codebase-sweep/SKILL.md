@@ -105,6 +105,18 @@ Second signal: a class named after a component appearing in files that are NOT
 that component (`choice-card-name` in two files plus `ChoiceCard.tsx`) — consumers
 reimplementing its internals instead of using it.
 
+### Compare the doors (added 2026-11-18)
+
+`tests/templates/action-doors.ledger.json` lists every audited action's doors, and
+`action-doors.test.ts` fails on a new or stale one every run. What it cannot judge is
+whether two doors AGREE. At a sweep, for each ledger action with more than one door,
+put the doors' pre-flight checks, defaults and after-steps side by side
+(`call-path-audit` step 3), and count the "as the button / wizard does" comments per
+door file (`grep -rnE "as the (button|wizard|window|batch) does" src`): a rising count
+is drift starting. Each difference is a surface adaptation (say so in the door's
+`reason`) or a finding. The ledger's `drift` and `lead` rows are the open ones, tracked
+in PL-104.
+
 ### Triage rules
 
 - **Cycles**: type-only cycles (`import type`) are harmless; a runtime cycle in the

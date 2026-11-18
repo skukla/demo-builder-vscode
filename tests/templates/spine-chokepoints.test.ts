@@ -12,12 +12,17 @@
  * assert every occurrence in src/ lives inside the spine module.
  *
  * The primitive alone is not enough (2026-11-18): above a pinned primitive, the
- * doors grew seven callers of the Adobe sign-in, each re-deciding its mode. So an
- * audited action also pins its ENTRY-POINT layer — which files outside the spine
- * may call into it. Modes are parameters of the one path; a door may not
- * re-decide a mode or add policy the spine should own.
+ * doors grew seven callers of the Adobe sign-in, each re-deciding its mode. Entry
+ * points may NOT multiply freely. Every audited action's doors — the files outside
+ * the spine allowed to call into it — are declared in
+ * `tests/templates/action-doors.ledger.json` and checked both directions by
+ * `action-doors.test.ts`: a new caller fails, a listed door that stopped calling
+ * fails, and a door passing a mode the spine decides fails. Modes are parameters
+ * of the one path; a door may not re-decide a mode or add policy the spine should
+ * own. A new door is declared there, with a reason, or it does not ship.
  *
- * Each audited action adds one describe block here. A failure means either a
+ * Each audited action adds one describe block here for its primitive, and one
+ * ledger row for its doors. A failure here means either a
  * second path was just written (move the call into the spine) or the spine
  * legitimately moved (update the allowlist in the same PR that moved it).
  */

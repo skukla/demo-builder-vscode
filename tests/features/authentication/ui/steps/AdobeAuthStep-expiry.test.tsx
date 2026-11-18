@@ -72,14 +72,16 @@ describe('AdobeAuthStep - Session Expiring Soon', () => {
         expect(screen.getByText(/expires in 0 minutes\. Please/)).toBeInTheDocument();
     });
 
-    it('re-authenticates with a FORCED login from the action', async () => {
+    // Renewing the session is a fresh sign-in of the same account, not the org
+    // switch (owner, 2026-11-18): `fresh`, never `force`.
+    it('re-authenticates with a fresh sign-in, not the org switch', async () => {
         const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
         renderExpiring(5);
 
         await user.click(screen.getByText('Re-Authenticate Now'));
 
         expect(mockRequestAuth).toHaveBeenCalledTimes(1);
-        expect(mockRequestAuth).toHaveBeenCalledWith(true);
+        expect(mockRequestAuth).toHaveBeenCalledWith(false, true);
     });
 
     it('is absent while the session is not expiring', () => {

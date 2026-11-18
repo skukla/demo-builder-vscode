@@ -5,7 +5,8 @@
  * Its mode is a parameter (who is asking), never a decision a door makes: a person
  * sees the browser notice and is told about DA.live by the notification the sign-in
  * raises itself; an agent sees no notice and gets the DA.live notices in its result.
- * It never forces: only the org switch does.
+ * It forces only when asked for a fresh sign-in (renew the same account); the org
+ * switch, which also forces, is a different path behind a different notice.
  */
 
 jest.mock(
@@ -25,6 +26,7 @@ jest.mock(
     { virtual: true }
 );
 
+import { BROWSER_SIGN_IN_TITLE } from '@/core/auth/browserSignInNotice';
 import { reportSignInNotice } from '@/core/auth/signInNotices';
 import { signInToAdobe } from '@/features/authentication/handlers/signInToAdobe';
 import { createMockLogger } from '../../../helpers/loggerFake';
@@ -52,6 +54,44 @@ describe('signInToAdobe', () => {
         expect(login).toHaveBeenCalledTimes(1);
         expect(login).toHaveBeenCalledWith();
         expect(outcome.success).toBe(true);
+    });
+
+    // "Sign In Again" and "Re-Authenticate Now" renew the same account: a forced
+    // sign-in, but not an org switch (owner, 2026-11-18).
+    it('forces the sign-in when asked for a fresh one', async () => {
+        const login = jest.fn(async () => true);
+
+        const outcome = await signInToAdobe({ login }, createMockLogger(), 'person', {
+            fresh: true,
+        });
+
+        expect(login).toHaveBeenCalledTimes(1);
+        expect(login).toHaveBeenCalledWith(true);
+        expect(outcome.success).toBe(true);
+    });
+
+    it('shows the plain sign-in notice for a fresh sign-in, never the org-switch one', async () => {
+        const vscodeMock = jest.requireMock('vscode');
+
+        await signInToAdobe({ login: jest.fn(async () => true) }, createMockLogger(), 'person', {
+            fresh: true,
+        });
+
+        expect(vscodeMock.window.withProgress).toHaveBeenCalledWith(
+            expect.objectContaining({ title: BROWSER_SIGN_IN_TITLE }),
+            expect.any(Function)
+        );
+    });
+
+    it('hands an agent the DA.live notices a fresh sign-in ended', async () => {
+        const login = loginReporting(true);
+
+        const outcome = await signInToAdobe({ login }, createMockLogger(), 'agent', {
+            fresh: true,
+        });
+
+        expect(login).toHaveBeenCalledWith(true);
+        expect(outcome).toStrictEqual({ success: true, notices: [DA_LIVE_ENDED] });
     });
 
     it('shows the browser notice when a person asked', async () => {

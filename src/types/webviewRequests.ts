@@ -41,6 +41,20 @@ import type { TreeListNode } from '@/core/ui/components/ui/TreeList';
 import type { LeftOut, PickableKind, Selections } from '@/features/data-installer/pickableKinds';
 
 /**
+ * `authenticate` — a screen's Adobe sign-in. Absent fields mean the plain Sign In, which
+ * skips the browser when the session is already good. The two forced kinds are different
+ * intents (owner, 2026-11-18):
+ * - `force` is the org switch: the wizard's Switch IMS Org and "Sign In with a Different
+ *   Account", which open the account chooser. It wins when both are set.
+ * - `fresh` renews the same account (the wizard's Re-Authenticate Now): forced, through
+ *   the one Sign In, not the org switch.
+ */
+export interface AuthenticateRequest {
+    force?: boolean;
+    fresh?: boolean;
+}
+
+/**
  * `setFinishSetupStep` — the Finish Setup guide's Mark as Done (`done`), Skip (`dismissed`) and
  * Undo Skip (`open`) on one of the project's steps (PL-101). Checked by the handler: an agent may
  * send anything.
