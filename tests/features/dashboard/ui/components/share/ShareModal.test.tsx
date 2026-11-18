@@ -340,7 +340,7 @@ describe('ShareModal', () => {
             await renderShareLink();
             const row = welcomeBox().closest('.checkbox-row') as HTMLElement;
             expect(row.querySelector('.checkbox-row-detail')).toHaveTextContent(
-                'Colleagues see it as a card when they create a project.',
+                'Adds it to your own Welcome step, to build new projects from.',
             );
         });
 

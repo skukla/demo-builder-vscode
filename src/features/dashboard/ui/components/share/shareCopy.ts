@@ -22,7 +22,7 @@ export const SHARE_COPY = {
     copied: 'Copied',
     copyFailed: "Couldn't prepare the link.",
     welcome: 'Show on Welcome Step',
-    welcomeWhy: 'Colleagues see it as a card when they create a project.',
+    welcomeWhy: 'Adds it to your own Welcome step, to build new projects from.',
     name: 'Name',
     description: 'Description',
     republishHint: 'Republish, then save again.',
