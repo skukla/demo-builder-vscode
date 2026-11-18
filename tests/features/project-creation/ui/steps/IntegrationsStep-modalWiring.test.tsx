@@ -210,7 +210,8 @@ describe('IntegrationsStep — the modal it hosts', () => {
         expect(within(currentDialog()).getByRole('checkbox', { name: /Adobe Analytics/ })).not.toBeChecked();
     });
 
-    it('routes the picker’s sign-in through the WIZARD’s authenticate message', async () => {
+    // Walk F248: the window owns the one Sign In now; the wizard passes no copy of it.
+    it('routes the picker’s sign-in through the one authenticate message', async () => {
         mockRequest.mockImplementation((type: string) =>
             type === 'list-org-console-apis'
                 ? Promise.resolve({ success: false, code: 'AUTH_REQUIRED', error: 'Signed out' })
@@ -230,7 +231,7 @@ describe('IntegrationsStep — the modal it hosts', () => {
         await settle();
         await press(within(currentDialog()).getByRole('button', { name: /Sign In with Adobe/ }));
 
-        expect(mockRequest).toHaveBeenCalledWith('authenticate', { force: false });
+        expect(mockRequest).toHaveBeenCalledWith('authenticate');
     });
 });
 

@@ -51,7 +51,6 @@ import { IntegrationCard } from '@/core/ui/components/integrations/IntegrationCa
 import type { CardAction, IntegrationCardModel } from '@/core/ui/components/integrations/integrationCardModel.types';
 import { StepAreaShell } from '@/core/ui/components/layout/StepAreaShell';
 import { DESTINATION_LABEL, DestinationContext } from '@/core/ui/components/ui/DestinationContext';
-import { webviewClient } from '@/core/ui/utils/vscode-api';
 import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { AddIntegrationFlowModal } from '@/features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal';
 import type { FlowMode } from '@/features/project-creation/ui/components/integration-flow/flowStages';
@@ -187,13 +186,6 @@ export function IntegrationsStep({
     // The row being API-edited (mode 'api-edit' only) — seeds the picker with its
     // current picks; passed to the modal only in that mode.
     const [editTarget, setEditTarget] = useState<ApiEditTarget | undefined>(undefined);
-    // The one Sign In, `authenticate` (every screen's); it resolves once the browser
-    // sign-in completes, so the API picker can re-fetch immediately after.
-    const signIn = useCallback(
-        () => webviewClient.request('authenticate', { force: false }).catch(() => undefined),
-        [],
-    );
-
     const openAdd = useCallback((): void => {
         setMode('add');
         setModalOpen(true);
@@ -436,7 +428,6 @@ export function IntegrationsStep({
                 blankComponent={blankComponent}
                 reservedIds={reservedIds}
                 builder={builder}
-                onSignIn={signIn}
             />
             <PairedSystemNameDialog target={settingsTarget} onClose={closeSettings} onSave={onRenamePairedSystem} />
         </>

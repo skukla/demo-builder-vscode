@@ -147,12 +147,16 @@ describe('AddIntegrationFlowModal — signed out when it reads the APIs', () => 
         expect(await screen.findByTestId('api-picker-stage')).toBeInTheDocument();
     });
 
-    it('offers no dead button when the host has no sign-in: the reason still shows', async () => {
+    // Walk F248 (owner: tidy it): the window owns its sign-in, the one Sign In every screen sends,
+    // so a host no longer passes its own copy of it.
+    it('signs in by itself when the host passes nothing: the one Sign In, authenticate', async () => {
         answerList(SIGNED_OUT_ANSWER);
         renderEdit();
 
         await screen.findByRole('heading', { name: 'Sign In to Adobe' });
-        expect(footerButtons()).toEqual(['Back', 'Cancel']);
+        expect(footerButtons()).toEqual(['Back', 'Cancel', 'Sign In with Adobe']);
+        await click('Sign In with Adobe');
+        expect(mockRequest).toHaveBeenCalledWith('authenticate');
     });
 
     it('puts the sign-in before the main button on an add', async () => {

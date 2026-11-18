@@ -9,7 +9,7 @@
  */
 
 import { act } from '@testing-library/react';
-import { mockPostMessage, mockRequest } from '../../../../helpers/webviewClientMock';
+import { mockPostMessage } from '../../../../helpers/webviewClientMock';
 import {
     CATALOG,
     INTEGRATION,
@@ -494,20 +494,11 @@ describe('AddIntegrationFlowAdapter', () => {
      * the picker can re-fetch straight after.
      */
     describe('sign-in', () => {
-        it('asks for the one Sign In', async () => {
-            mockRequest.mockResolvedValue(undefined);
+        // Walk F248 (owner: tidy it): the window owns the one Sign In; the host passes no copy.
+        it('leaves the sign-in to the window', () => {
             renderAdapter();
 
-            await modalProps().onSignIn();
-
-            expect(mockRequest).toHaveBeenCalledWith('authenticate');
-        });
-
-        it('swallows a failed sign-in rather than rejecting into the modal', async () => {
-            mockRequest.mockRejectedValue(new Error('the browser was closed'));
-            renderAdapter();
-
-            await expect(modalProps().onSignIn()).resolves.toBeUndefined();
+            expect(modalProps().onSignIn).toBeUndefined();
         });
     });
 });

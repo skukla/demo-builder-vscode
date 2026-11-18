@@ -32,7 +32,6 @@
 
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { liveAddBuilder } from './liveAddBuilder';
-import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { AddIntegrationFlowModal } from '@/features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal';
 import { buildReservedIds } from '@/features/project-creation/ui/components/integration-flow/instanceId';
 import {
@@ -275,13 +274,6 @@ export function AddIntegrationFlowAdapter({
     // instance, so the gallery greys it out the way it does an added mesh.
     const erpHolder = useErpIntegrationHolder(isOpen && mode === 'add' ? ASK_ABOUT_OPEN_PROJECT : undefined);
 
-    // The one Sign In (`authenticate`, every screen's); it awaits the browser sign-in
-    // and returns when done, so the picker can re-fetch straight after.
-    const signIn = useCallback(
-        () => webviewClient.request('authenticate').catch(() => undefined),
-        [],
-    );
-
     return (
         <AddIntegrationFlowModal
             isOpen={isOpen}
@@ -295,7 +287,6 @@ export function AddIntegrationFlowAdapter({
             blankComponent={blankComponent}
             reservedIds={reservedIds}
             builder={builder}
-            onSignIn={signIn}
             confirmation={confirmation}
         />
     );

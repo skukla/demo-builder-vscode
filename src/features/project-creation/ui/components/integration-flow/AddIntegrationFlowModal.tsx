@@ -101,10 +101,9 @@ export interface AddIntegrationFlowModalProps {
         'onAppBuilderComponentToggle' | 'onAddCustomAppBuilderComponent'
     >;
     /**
-     * Start a user-initiated Adobe sign-in; resolves when it finishes.
-     *
-     * Supplied by the HOST, which knows what to do after it. Both hosts send the
-     * one Sign In message, `authenticate`.
+     * Start a user-initiated Adobe sign-in; resolves when it finishes. The window owns it: the one
+     * Sign In every screen sends, `authenticate` (walk F248, owner: no copy per host). Passed only
+     * by tests that drive it.
      */
     onSignIn?: () => Promise<unknown>;
     /**
@@ -257,6 +256,9 @@ function FlowWindow({ heading, footer, reading, stageWaiting, ...view }: FlowWin
     );
 }
 
+/** The one Sign In (`authenticate`, every screen's); a failed one resolves, never rejects into the window. */
+const requestAdobeSignIn = (): Promise<unknown> => webviewClient.request('authenticate').catch(() => undefined);
+
 /** The mounted-while-open journey: the hook, and the window its stage is drawn in. */
 function FlowJourney(props: JourneyProps): React.ReactElement {
     // JourneyProps is structurally UseIntegrationFlowArgs — the hook takes it whole.
@@ -318,7 +320,7 @@ export function AddIntegrationFlowModal({
     // APIs, on the same size="L") already hugged its content.
     return (
         <DialogContainer onDismiss={journey.onClose}>
-            {confirmation ?? (isOpen && <FlowJourney {...journey} />)}
+            {confirmation ?? (isOpen && <FlowJourney {...journey} onSignIn={journey.onSignIn ?? requestAdobeSignIn} />)}
         </DialogContainer>
     );
 }
