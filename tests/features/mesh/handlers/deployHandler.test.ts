@@ -23,6 +23,7 @@ jest.mock('@/features/dashboard/services/projectPanelPushes', () => ({
 import { handleDeployApiMesh } from '@/features/mesh/handlers/deployHandler';
 import { ErrorCode } from '@/types/errorCodes';
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import { meshDeployLock } from '@/features/mesh/services/meshDeployLock';
 import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 import { ctx, seedRegistry } from './deployHandler.testUtils';
 
@@ -161,6 +162,35 @@ describe('handleDeployApiMesh', () => {
         await handleDeployApiMesh(ctx({ name: 'p', path: '/p' }));
 
         expect(mockDeployMeshHeadless.mock.calls[0][0].secrets).toBe(secrets);
+    });
+});
+
+// PL-104 fix 4 (F265): the agent's door used to take no lock and leave the mesh prompt set.
+describe('handleDeployApiMesh — the same lock and prompt as the palette and the button', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        seedRegistry();
+    });
+
+    it('refuses while another door is deploying the mesh', async () => {
+        const release = await meshDeployLock.acquire();
+        try {
+            const result = await handleDeployApiMesh(ctx({ name: 'p', path: '/p' }));
+
+            expect(result).toStrictEqual({ success: false, error: 'A mesh deploy is already running.' });
+            expect(mockDeployMeshHeadless).not.toHaveBeenCalled();
+        } finally {
+            release();
+        }
+    });
+
+    it('clears the mesh prompt after it deploys', async () => {
+        mockDeployMeshHeadless.mockResolvedValue({ success: true });
+        const vscode = require('vscode');
+
+        await handleDeployApiMesh(ctx({ name: 'p', path: '/p' }));
+
+        expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder._internal.meshActionTaken');
     });
 });
 

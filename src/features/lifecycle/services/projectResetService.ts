@@ -354,7 +354,7 @@ function asRowOutcome({ success, error }: ProjectResetOutcome, removal: Datapack
  *
  * The datapack goes once the components to rebuild are known (a reset that cannot read them
  * touches nothing; review, 2026-11-13) and before anything is removed, as a storefront reset's goes
- * first (`edsResetUI`), though there is no catalog pre-warm here to stale: the demo is already
+ * first (`edsResetRun`), though there is no catalog pre-warm here to stale: the demo is already
  * stopped, so nothing serves the catalog while it empties, and the components come back against
  * the catalog the SC is left with. A removal that stops is said on the row and the reset still runs;
  * a reset that fails after it still says what became of the store.

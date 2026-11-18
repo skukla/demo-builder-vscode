@@ -58,6 +58,7 @@ async function republish(project: Project): Promise<jest.Mock> {
         secrets: createMockSecretStorage().secrets,
         logger: createMockLogger(),
         persist,
+        ensureDaLiveSession: null,
     });
     return persist;
 }

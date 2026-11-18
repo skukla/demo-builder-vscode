@@ -31,6 +31,7 @@ import {
     mockShowWarningMessage,
     mockSleep,
     mockStoreToken,
+    mockValidateToken,
 } from './projectDeletionService.testUtils';
 import {
     SERVICES,
@@ -46,6 +47,7 @@ import {
     mockUnpublishPages,
 } from './projectDeletionService.fixtures';
 import type { CleanupResultItem } from '@/features/eds/services/resourceCleanupHelpers';
+import { GITHUB_SCOPES } from '@/features/eds/services/types';
 
 /** The cleanup ledger the delete reports back. */
 function resultsOf(result: { cleanupResults: CleanupResultItem[] }): CleanupResultItem[] {
@@ -402,35 +404,47 @@ describe('the GitHub repository cleanup', () => {
             mockGetToken.mockResolvedValue(null);
         });
 
-        it('stores the session token with the scopes a repo delete needs', async () => {
+        // PL-104 fix 2: the one GitHub sign-in. The stored token is shared, so a narrow
+        // ['repo','delete_repo'] token stored here was the one later storefront work got.
+        it('signs in through the one GitHub sign-in, storing a token with every scope', async () => {
             mockShowWarningMessage.mockResolvedValue('Sign In');
-            mockGetSession.mockResolvedValue({ accessToken: 'gh-session-token' });
+            mockGetSession.mockResolvedValue({ accessToken: 'gh-session-token', account: { label: 'sc' } });
 
             await deleteAnswered(context(), edsProject(), SERVICES, ['github']);
 
-            expect(mockGetSession).toHaveBeenCalledWith(
-                'github',
-                ['repo', 'delete_repo'],
-                { createIfNone: true },
-            );
-            // delete_repo is the scope that makes this work; a bearer token without
-            // it authenticates and then 403s on the delete.
+            expect(mockGetSession).toHaveBeenCalledWith('github', [...GITHUB_SCOPES], { createIfNone: true });
             expect(mockStoreToken).toHaveBeenCalledWith({
                 token: 'gh-session-token',
                 tokenType: 'bearer',
-                scopes: ['repo', 'delete_repo'],
+                scopes: [...GITHUB_SCOPES],
             });
             expect(mockDeleteRepository).toHaveBeenCalled();
         });
 
-        it('proceeds without storing anything when the session comes back empty', async () => {
+        it('recovers a stale cached session with a fresh sign-in, as every other door does', async () => {
             mockShowWarningMessage.mockResolvedValue('Sign In');
-            mockGetSession.mockResolvedValue(undefined);
+            mockGetSession.mockResolvedValue({ accessToken: 'gh-session-token', account: { label: 'sc' } });
+            mockValidateToken.mockResolvedValueOnce({ valid: false });
 
             await deleteAnswered(context(), edsProject(), SERVICES, ['github']);
 
-            expect(mockStoreToken).not.toHaveBeenCalled();
+            expect(mockGetSession).toHaveBeenLastCalledWith('github', [...GITHUB_SCOPES], {
+                forceNewSession: expect.objectContaining({ detail: expect.any(String) }),
+            });
             expect(mockDeleteRepository).toHaveBeenCalled();
+        });
+
+        it('skips the repo, with a reason, when the sign-in returns no session', async () => {
+            mockShowWarningMessage.mockResolvedValue('Sign In');
+            mockGetSession.mockResolvedValue(undefined);
+
+            const result = await deleteAnswered(context(), edsProject(), SERVICES, ['github']);
+
+            expect(mockStoreToken).not.toHaveBeenCalled();
+            expect(mockDeleteRepository).not.toHaveBeenCalled();
+            expect(of(resultsOf(result), 'github')).toEqual([
+                expect.objectContaining({ success: false, skipped: true, error: 'Authentication required' }),
+            ]);
         });
 
         it('skips the repo, with a reason, when the user declines to sign in', async () => {

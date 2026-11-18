@@ -26,6 +26,7 @@ import {
 import { handleAnswerOperationPrompt } from '@/core/vscode/operationPrompt';
 import { handleDiscoverStoreStructure } from '@/features/eds/handlers/edsHandlers';
 import { handleCheckStoreViewProducts } from '@/features/eds/handlers/storeViewProductsHandler';
+import { openCustomBlockLibrarySettings } from '@/features/project-creation/services/blockLibrarySettings';
 import type { CommerceStoreStructure } from '@/types/commerceStore';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
 
@@ -71,11 +72,7 @@ export async function handleOpenEdsSettings(_context: HandlerContext): Promise<H
 export async function handleOpenBlockLibrarySettings(
     _context: HandlerContext,
 ): Promise<HandlerResponse> {
-    await vscode.commands.executeCommand(
-        'workbench.action.openSettings',
-        'demoBuilder.blockLibraries.custom',
-    );
-    return { success: true };
+    return openCustomBlockLibrarySettings();
 }
 
 /**

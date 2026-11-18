@@ -58,7 +58,10 @@ beforeEach(() => {
     mockedAccess.mockImplementation(async (_context, store) =>
         ({ ok: true, client: store === 'library' ? library : installer, baseUrl: 'https://x.test', getToken: async () => 'tok' }) as unknown as Access,
     );
-    mockedBuild.mockReturnValue({ startImport: jest.fn().mockResolvedValue({ activationId: 'a1' }) } as unknown as ReturnType<typeof buildDatapackEngine>);
+    mockedBuild.mockReturnValue({
+        validateImport: jest.fn().mockResolvedValue({ valid: true }),
+        startImport: jest.fn().mockResolvedValue({ activationId: 'a1' }),
+    } as unknown as ReturnType<typeof buildDatapackEngine>);
 });
 
 describe('the creation install reads the store the project recorded', () => {

@@ -98,8 +98,6 @@ const runReset: RunReset = async (context, project, answer, report) => {
             project,
             context,
             logPrefix: '[ProjectsBatch]',
-            includeBlockLibrary: true,
-            verifyCdn: true,
             withinEdit: { report },
             answered,
         });

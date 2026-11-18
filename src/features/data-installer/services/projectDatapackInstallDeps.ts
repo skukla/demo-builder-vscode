@@ -17,6 +17,7 @@ import { buildDatapackEngine, installedByDemoBuilder } from './buildDatapackEngi
 import type { DatapackEngine } from './datapackEngine';
 import { nodeRecordFiles, readInstallRecord } from './demoBuilderEngine/installRecord';
 import { watchImportJob } from './importJobRunner';
+import type { ImportRequest } from './importRequest';
 import type { SampleDataDeps } from './projectDatapackInstall';
 import { PollingService } from '@/core/shell/pollingService';
 import { orgGuard } from '@/features/authentication/services/projectOrgGuard';
@@ -86,7 +87,7 @@ export function buildSampleDataDeps(
             return fromStore.length > 0 ? fromStore : held('installer');
         },
 
-        startImport: async (request) => (await engineOnce()).startImport(request),
+        startImport: async (request) => startChecked(await engineOnce(), request, 'install'),
 
         // Where the pack went, for a removal when the project names no website and store view now.
         installRecordOf: async (pack) => {
@@ -95,7 +96,7 @@ export function buildSampleDataDeps(
         },
 
         // The Reset workflow's half. Same request, same engine, different verb.
-        startDelete: async (request) => (await engineOnce()).startDelete(request),
+        startDelete: async (request) => startChecked(await engineOnce(), request, 'remove'),
 
         /**
          * Polls through the engine, the one that started the job and keeps it in memory.
@@ -142,6 +143,32 @@ export function buildSampleDataDeps(
             });
         },
     };
+}
+
+/** What the check's refusal says when it gives no reason: the handler path's words. */
+const REFUSED: Record<SampleDataMode, string> = {
+    install: 'The Data Installer rejected this install request.',
+    remove: 'The Data Installer rejected this uninstall request.',
+};
+
+/**
+ * Check the request with the engine's dry run, then start it: the order the Data Installer
+ * screen and the agent's tools use (`runAndWatch`), whose comment says the dry run is "the only
+ * thing that will tell us this request is malformed". Creation and reset started theirs with no
+ * check until PL-104 fix 3. A refusal throws, and `runSampleDataJob` reports it as the reason.
+ */
+async function startChecked(
+    engine: DatapackEngine,
+    request: ImportRequest,
+    mode: SampleDataMode,
+): Promise<{ activationId: string }> {
+    const verdict = mode === 'remove'
+        ? await engine.validateRemoval(request)
+        : await engine.validateImport(request);
+    if (!verdict.valid) {
+        throw new Error(verdict.reason ?? REFUSED[mode]);
+    }
+    return mode === 'remove' ? engine.startDelete(request) : engine.startImport(request);
 }
 
 /** The engine, built the way the import handlers build it (`buildDatapackEngine`). */

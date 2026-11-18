@@ -51,8 +51,8 @@ describe('the creation install and reset ask the org question', () => {
         mockedGuard.mockResolvedValue(undefined);
         const deps = buildSampleDataDeps(importHarness(), ACCS_PROJECT, jest.fn());
 
-        // Past the guard, the job stops on the request's missing target, not on the org.
-        await expect(deps.startImport(REQUEST)).resolves.toMatchObject({ activationId: expect.any(String) });
+        // Past the guard, the dry run refuses the request's missing target, not the org (PL-104 fix 3).
+        await expect(deps.startImport(REQUEST)).rejects.toThrow('Choose the website and store view to install into first.');
         expect(mockedGuard).toHaveBeenCalled();
     });
 });

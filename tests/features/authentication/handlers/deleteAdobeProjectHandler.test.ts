@@ -60,7 +60,6 @@ const OWNED_PROJECT = {
 const DELETED_RESULT: ConsoleProjectTeardownResult = {
     success: true,
     projectDeleted: true,
-    shouldClearConsoleSelection: true,
     items: [
         { kind: 'registration', id: 'reg-1', outcome: 'deleted' },
         { kind: 'registration', id: 'reg-2', outcome: 'deleted' },
@@ -73,7 +72,6 @@ const DELETED_RESULT: ConsoleProjectTeardownResult = {
 const FAILED_RESULT: ConsoleProjectTeardownResult = {
     success: false,
     projectDeleted: false,
-    shouldClearConsoleSelection: false,
     items: [
         { kind: 'registration', id: 'reg-1', outcome: 'deleted' },
         {
@@ -499,56 +497,9 @@ describe('handleDeleteAdobeProject', () => {
             ]);
         });
 
-        it('clears the console selection when the cached project IS the deleted one', async () => {
-            jest.mocked(mockContext.authManager.getCacheManager().getCachedProject).mockReturnValue({
-                id: 'proj-1',
-                name: 'My Project',
-            });
-
-            await handleDeleteAdobeProject(mockContext, PAYLOAD);
-
-            expect(entityServicesOf(mockContext.authManager).selector.clearConsoleContext).toHaveBeenCalledTimes(1);
-        });
-
-        it('does NOT clear the selection when the teardown says not to, even for the cached project', async () => {
-            mockTeardown.mockResolvedValue({ ...DELETED_RESULT, shouldClearConsoleSelection: false });
-            jest.mocked(mockContext.authManager.getCacheManager().getCachedProject).mockReturnValue({ id: 'proj-1', name: 'My Project' });
-
-            await handleDeleteAdobeProject(mockContext, PAYLOAD);
-
-            expect(entityServicesOf(mockContext.authManager).selector.clearConsoleContext).not.toHaveBeenCalled();
-        });
-
-        it('does NOT clear the console selection when the cached project differs', async () => {
-            jest.mocked(mockContext.authManager.getCacheManager().getCachedProject).mockReturnValue({
-                id: 'proj-other',
-                name: 'Other',
-            });
-
-            await handleDeleteAdobeProject(mockContext, PAYLOAD);
-
-            expect(entityServicesOf(mockContext.authManager).selector.clearConsoleContext).not.toHaveBeenCalled();
-        });
-
-        it('does NOT clear the console selection when nothing is cached', async () => {
-            await handleDeleteAdobeProject(mockContext, PAYLOAD);
-
-            expect(entityServicesOf(mockContext.authManager).selector.clearConsoleContext).not.toHaveBeenCalled();
-        });
-
-        it('still succeeds when the selection clear fails (best-effort)', async () => {
-            jest.mocked(mockContext.authManager.getCacheManager().getCachedProject).mockReturnValue({
-                id: 'proj-1',
-                name: 'My Project',
-            });
-            entityServicesOf(mockContext.authManager).selector.clearConsoleContext.mockRejectedValue(
-                new Error('clear failed')
-            );
-
-            const result = await handleDeleteAdobeProject(mockContext, PAYLOAD);
-
-            expect(result.success).toBe(true);
-        });
+        // The Console selection is cleared by the teardown itself now (PL-104 fix 8): the
+        // handler-level clear tests moved to the `createTeardownDeps` block below, and the
+        // only-after-a-delete and best-effort rules to consoleProjectTeardown.selection.test.ts.
 
         it('still succeeds when the refresh fetch fails (best-effort)', async () => {
             // First call feeds the ownership gate; the post-delete refresh fails.
@@ -587,15 +538,9 @@ describe('handleDeleteAdobeProject', () => {
             expect(mockShowInfo).not.toHaveBeenCalled();
         });
 
-        it('neither clears the selection nor refreshes the project list', async () => {
-            jest.mocked(mockContext.authManager.getCacheManager().getCachedProject).mockReturnValue({
-                id: 'proj-1',
-                name: 'My Project',
-            });
-
+        it('does not refresh the project list', async () => {
             await handleDeleteAdobeProject(mockContext, PAYLOAD);
 
-            expect(entityServicesOf(mockContext.authManager).selector.clearConsoleContext).not.toHaveBeenCalled();
             // No list read at all: the ownership gate reads one project, and there is no refresh.
             expect(mockContext.authManager.getProjects).not.toHaveBeenCalled();
             expect(mockContext.sendMessage).not.toHaveBeenCalledWith(
@@ -726,6 +671,31 @@ describe('createTeardownDeps', () => {
         expect(entityServicesOf(authService).credentials.getWorkspaceS2SCredential).toHaveBeenCalledWith('o', 'p', 'w');
         expect(entityServicesOf(authService).credentials.createWorkspaceS2SCredentialFor).toHaveBeenCalledWith('o', 'p', 'w');
         expect(entityServicesOf(authService).projectOps.deleteConsoleProject).toHaveBeenCalledWith('o', 'p');
+    });
+
+    describe('clearConsoleSelectionIfCurrent', () => {
+        it('clears the console selection when the cached project IS the deleted one', async () => {
+            const authService = createAuthService();
+            jest.mocked(authService.getCacheManager().getCachedProject).mockReturnValue({ id: 'proj-1', name: 'My Project' });
+            entityServicesOf(authService).selector.clearConsoleContext = jest.fn().mockResolvedValue(undefined);
+
+            await createTeardownDeps(authService).clearConsoleSelectionIfCurrent('proj-1');
+
+            expect(entityServicesOf(authService).selector.clearConsoleContext).toHaveBeenCalledTimes(1);
+        });
+
+        it.each([
+            ['the cached project differs', { id: 'proj-other', name: 'Other' }],
+            ['nothing is cached', undefined],
+        ])('does NOT clear the console selection when %s', async (_when, cached) => {
+            const authService = createAuthService();
+            jest.mocked(authService.getCacheManager().getCachedProject).mockReturnValue(cached);
+            entityServicesOf(authService).selector.clearConsoleContext = jest.fn().mockResolvedValue(undefined);
+
+            await createTeardownDeps(authService).clearConsoleSelectionIfCurrent('proj-1');
+
+            expect(entityServicesOf(authService).selector.clearConsoleContext).not.toHaveBeenCalled();
+        });
     });
 
     it('createEventsClient mints a client exposing the teardown surface', () => {

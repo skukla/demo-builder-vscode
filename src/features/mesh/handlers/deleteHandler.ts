@@ -1,16 +1,24 @@
 /**
  * Mesh Handlers - Delete Handler
  *
- * Handles deleting API Mesh instances.
+ * Handles deleting API Mesh instances: the agent's `delete_mesh` (no webview sends it).
+ *
+ * Takes `meshDeployLock`, so no delete runs in the middle of a deploy, and records the mesh as
+ * gone on the project when the deleted mesh was the project's own (PL-104 fix 5). It used to
+ * save nothing, so the card read "Deployed" over a mesh that no longer existed.
  */
 
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { MESH_DELETE_COMMAND } from '@/core/shell/meshDeleteCommand';
 import { buildOrgTargetFromProjectAdobe, withOrgContext, type OrgContextTarget } from '@/core/shell/orgContextEnv';
+import { getMeshAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateWorkspaceId } from '@/core/validation/validators/AdobeResourceValidator';
 import { ensureAuthenticated } from '@/features/mesh/handlers/shared';
+import { MESH_DEPLOY_ALREADY_RUNNING, meshDeployLock } from '@/features/mesh/services/meshDeployLock';
+import { recordMeshGone } from '@/features/mesh/services/meshGone';
+import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import { HandlerContext } from '@/types/handlers';
 import { toError } from '@/types/typeGuards';
@@ -79,14 +87,19 @@ export async function handleDeleteApiMesh(
             cachedOrg,
         );
 
+        if (meshDeployLock.isLocked()) {
+            return { success: false, error: MESH_DEPLOY_ALREADY_RUNNING };
+        }
         const commandManager = ServiceLocator.getCommandExecutor();
-        const result = await withOrgContext(target, () =>
-            commandManager.execute(MESH_DELETE_COMMAND, {
-                timeout: TIMEOUTS.NORMAL,
-                configureTelemetry: false,
-                useNodeVersion: demoBuilderNode(),
-                enhancePath: true,
-            }),
+        const result = await meshDeployLock.run(() =>
+            withOrgContext(target, () =>
+                commandManager.execute(MESH_DELETE_COMMAND, {
+                    timeout: TIMEOUTS.NORMAL,
+                    configureTelemetry: false,
+                    useNodeVersion: demoBuilderNode(),
+                    enhancePath: true,
+                }),
+            ),
         );
 
         if (result.code === 0) {
@@ -97,6 +110,10 @@ export async function handleDeleteApiMesh(
             context.logger.debug(
                 '[API Mesh] Cleared pre-existing mesh flag after explicit deletion',
             );
+            if (project && meshWorkspaceOf(project) === workspaceId) {
+                recordMeshGone(project);
+                await context.stateManager.saveProject(project);
+            }
             return { success: true };
         } else {
             const errorMsg = result.stderr || 'Failed to delete mesh';
@@ -111,4 +128,10 @@ export async function handleDeleteApiMesh(
             code: ErrorCode.UNKNOWN,
         };
     }
+}
+
+/** The workspace the project's mesh lives in: its own record's, else the project's. */
+function meshWorkspaceOf(project: Project): string | undefined {
+    const mesh = getMeshAppBuilderComponent(project);
+    return mesh?.workspace?.id ?? project.adobe?.workspace;
 }

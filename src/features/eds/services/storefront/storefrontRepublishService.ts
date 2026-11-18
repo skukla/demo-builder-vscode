@@ -55,9 +55,10 @@ export interface RepublishParams {
      * refusal does not stop the GitHub push; it names the reason on `cdnError`
      * and leaves the storefront STALE, so the Republish tile stays amber.
      *
-     * Optional only for callers with nobody to ask; production callers pass it.
+     * Required, so the compiler asks every new caller (PL-104 fix 11): `null` only for a
+     * caller with nobody to ask, or whose own door asked before the run started.
      */
-    ensureDaLiveSession?: () => Promise<{ authenticated: boolean; error?: string }>;
+    ensureDaLiveSession: (() => Promise<{ authenticated: boolean; error?: string }>) | null;
     /**
      * Persist the project after the publish clears its stale flag.
      *

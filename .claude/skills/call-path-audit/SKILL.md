@@ -64,6 +64,21 @@ this audit's first run, 2026-08-22).
    `should*` result fields a door must act on. `action-doors.test.ts` checks it
    every run in both directions (new caller, stale door) plus the mode rule.
    Known drift goes in as a `drift` door naming its fix (open ones: PL-104).
+
+   **The ledger is complete by construction.** `tests/templates/entryPointScan.ts`
+   reads every entry point out of `src/`: every message type (each handler map,
+   followed through spreads and registrations, each direct `comm.on`, the sidebar),
+   every VS Code command (`registerCommand` and package.json), every MCP tool (a
+   descriptor tool counts as its handler type). `action-doors-coverage.test.ts` fails
+   on any that `tests/templates/action-doors.entry-points.json` does not assign, and
+   on any assignment whose entry point is gone. To assign a new one, add its
+   `kind:name` id in the change that registers it: under `actions` with the rows it
+   reaches (its file must then be a door of each), under `forwards` if it only runs
+   another entry point, or in a bucket (`read`, `navigate`, `session`, `internal`,
+   `write`) whose `why` fits. `write` means "no row yet": a second entry point doing
+   the same job is the signal to give the job a row and compare the doors. The same
+   suite fails a read filed among writes (by the tool's own `readOnly` flag) and a
+   message type that two maps implement differently without a `sharedNames` reason.
    A door-pin block in spine-chokepoints is the older form. Each
    carries a positive control (every allowed file must register, so a rename
    can't green the test on empty air) and, where the pattern allows, a planted
@@ -142,7 +157,9 @@ seeded from `.rptc/research/entry-point-drift-audit/research.md`).** At a
 release cut, compare the doors of each multi-door ledger row (pre-flight checks,
 defaults, after-steps side by side; `codebase-sweep` "Compare the doors"), and
 add a row for any action the audit did not trace: the primitive staying in one
-file says nothing about how many doors re-decide its mode above it.
+file says nothing about how many doors re-decide its mode above it. The `write`
+bucket of `action-doors.entry-points.json` is that worklist: every write with no
+row yet, read straight from `src/`.
 
 **The 2026-08-22 full campaign pinned every auditable row** — 13 pin blocks in
 `spine-chokepoints.test.ts`, two consolidations filed (Helix two-engines,

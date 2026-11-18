@@ -511,9 +511,9 @@ describe('spine choke-points', () => {
         // and reports a live-only removal as such.
         //
         // Traced down, every delete door converges on tearDownStorefront: the
-        // delete-project button (edsExternalCleanup, split from projectDeletionService
-        // 2026-10-09), the agent's delete_project
-        // (agentProjectCleanup), cleanup_dalive_site (cloudResourceTools) and the
+        // delete-project button and the agent's delete_project (edsExternalCleanup, split
+        // from projectDeletionService 2026-10-09; the agent runs the button's
+        // runProjectDelete since PL-104 fix 6), cleanup_dalive_site (cloudResourceTools) and the
         // "Manage DA.live Sites" command (cleanupDaLiveSites, since EDS-31: it used to
         // delete content alone and leave every page live). Reset has its own door
         // (edsResetProductPages, called once by executeEdsReset before the content
@@ -533,7 +533,6 @@ describe('spine choke-points', () => {
             'features/eds/services/storefront/storefrontTeardown.ts',
         ]);
         expect(sorted(/\btearDownStorefront\(/)).toStrictEqual([
-            'features/ai/server/agentProjectCleanup.ts',
             'features/ai/server/cloudResourceTools.ts',
             'features/eds/commands/cleanupDaLiveSites.ts',
             'features/eds/services/storefront/storefrontTeardown.ts',
@@ -552,7 +551,7 @@ describe('spine choke-points', () => {
         // and the code removal are one function, `deleteStorefrontRepository`.
         //
         // Traced down, the doors that delete a repository: the delete-project button
-        // (edsExternalCleanup), the agent's delete_project (agentProjectCleanup) and
+        // and the agent's delete_project (both edsExternalCleanup, PL-104 fix 6) and
         // delete_github_repo (cloudResourceTools), Manage GitHub Repositories, and the
         // setup cancel (cleanupService; its ARCHIVE keeps the repository and the code).
         // Each hands the primitive to the shared function as a lambda, so each still
@@ -565,7 +564,6 @@ describe('spine choke-points', () => {
         const sorted = (pattern: RegExp): string[] => filesTouchingPrimitive(pattern).sort();
 
         expect(sorted(/\bdeleteStorefrontRepository\(/)).toStrictEqual([
-            'features/ai/server/agentProjectCleanup.ts',
             'features/ai/server/cloudResourceTools.ts',
             'features/eds/commands/manageGitHubRepos.ts',
             'features/eds/services/cleanupService.ts',
@@ -573,7 +571,6 @@ describe('spine choke-points', () => {
             'features/projects-dashboard/services/edsExternalCleanup.ts',
         ]);
         expect(sorted(/\.deleteRepository\(/)).toStrictEqual([
-            'features/ai/server/agentProjectCleanup.ts',
             'features/ai/server/cloudResourceTools.ts',
             'features/app-builder/services/appRepoPromotion.ts',
             'features/eds/commands/manageGitHubRepos.ts',

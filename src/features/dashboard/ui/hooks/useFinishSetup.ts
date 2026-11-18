@@ -6,8 +6,8 @@
  * Apply on Republish the Code runs the dashboard's own Republish, in its own progress window: the
  * guide closes for it, as the integration guide hands a run that needs a window to the progress
  * window (`useGuideRun`'s `onAsk`). A successful Republish checks the step again on the extension
- * side (`recheckCodeStep`), and the status push it ends with redraws the line, the dots and,
- * reopened, the guide.
+ * side (`republishStorefrontContent`, whichever door ran it), and the status push it ends with
+ * redraws the line, the dots and, reopened, the guide.
  *
  * The steps are not held here: they arrive on every status push, current, and the guide is handed
  * them on each render (the integration guide's rule).

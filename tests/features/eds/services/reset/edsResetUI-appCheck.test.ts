@@ -208,7 +208,8 @@ describe('resetEdsProjectWithUI — the run', () => {
         });
     });
 
-    it('hands executeEdsReset the extracted params, the stamped overlay URL and the defaults', async () => {
+    // The block library and the CDN check are the reset's own decision, for every door (PL-104 fix 1).
+    it('hands executeEdsReset the extracted params, the stamped overlay URL and the reset choices', async () => {
         const context = createContext();
 
         await run(createProject(), context);
@@ -221,8 +222,8 @@ describe('resetEdsProjectWithUI — the run', () => {
                 daLiveSite: 'test-site',
                 templateOwner: 'tmpl-owner',
                 byomOverlayUrl: 'https://overlay.example?org=test-org&site=test-site&key=test-secret',
-                includeBlockLibrary: false,
-                verifyCdn: false,
+                includeBlockLibrary: true,
+                verifyCdn: true,
                 redeployMesh: false,
             }),
             context,
@@ -232,22 +233,11 @@ describe('resetEdsProjectWithUI — the run', () => {
         );
     });
 
-    it('forwards includeBlockLibrary and verifyCdn when the caller sets them', async () => {
-        await run(createProject(), createContext(), { includeBlockLibrary: true, verifyCdn: true });
-
-        expect(mockedReset.mock.calls[0][0]).toMatchObject({
-            includeBlockLibrary: true,
-            verifyCdn: true,
-        });
-    });
-
     it.each([
-        ['auto-detects a mesh', true, undefined, true],
-        ['auto-detects no mesh', false, undefined, false],
-        ['an explicit false wins over a mesh', true, false, false],
-        ['an explicit true wins over no mesh', false, true, true],
-    ])('redeployMesh: %s', async (_label, hasMesh, redeployMesh, expected) => {
-        await run(createProject(hasMesh), createContext(), { redeployMesh });
+        ['a project with a mesh redeploys it', true, true],
+        ['a project with no mesh does not', false, false],
+    ])('redeployMesh: %s', async (_label, hasMesh, expected) => {
+        await run(createProject(hasMesh), createContext());
 
         expect(mockedReset.mock.calls[0][0].redeployMesh).toBe(expected);
     });

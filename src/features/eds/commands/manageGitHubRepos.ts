@@ -9,7 +9,7 @@
  * - Multi-select QuickPick for batch operations
  * - Batch deletion with confirmation; a storefront's code on aem.live goes with its
  *   repository (EDS-67, `deleteStorefrontRepository`)
- * - GitHub authentication with proper scopes
+ * - GitHub sign-in through the one GitHub sign-in (`signInToGitHub`)
  */
 
 import * as vscode from 'vscode';
@@ -21,6 +21,7 @@ import {
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getLogger } from '@/core/logging/debugLogger';
 import { showSuccessInStatusBar } from '@/core/vscode/statusBarSuccess';
+import { signInToGitHub, type GitHubSignInTokenStore } from '@/features/eds/handlers/edsGitHubHandlers';
 import type { Logger } from '@/types/logger';
 
 interface RepoQuickPickItem extends vscode.QuickPickItem {
@@ -117,6 +118,32 @@ export function describeRepoOutcome(outcome: RepoBatchOutcome): {
     return { level: 'success', message: count };
 }
 
+/**
+ * Ask the SC to sign in, then sign in through the one GitHub sign-in (`signInToGitHub`):
+ * every scope the extension uses, and the recovery from a stale cached session. This
+ * command stored a token scoped only ['repo','delete_repo'] until PL-104 fix 2, and the
+ * stored token is the one every later GitHub call reads.
+ *
+ * @returns whether a token is now stored
+ */
+export async function signInForRepoManagement(tokenService: GitHubSignInTokenStore, logger: Logger): Promise<boolean> {
+    const signInButton = 'Sign In';
+    const selection = await vscode.window.showWarningMessage(
+        'GitHub authentication required to manage repositories.',
+        signInButton,
+    );
+    if (selection !== signInButton) return false;
+
+    try {
+        const outcome = await signInToGitHub(tokenService, logger);
+        return !('error' in outcome);
+    } catch (error) {
+        logger.error('[GitHub Manage] Authentication failed:', error as Error);
+        vscode.window.showErrorMessage('GitHub authentication failed. Please try again.');
+        return false;
+    }
+}
+
 export async function manageGitHubReposCommand(context: vscode.ExtensionContext): Promise<void> {
     const logger = getLogger();
 
@@ -131,40 +158,9 @@ export async function manageGitHubReposCommand(context: vscode.ExtensionContext)
         // Check if we have a valid token
         let token = await tokenService.getToken();
         if (!token) {
-            // Prompt user to authenticate
-            const signInButton = 'Sign In';
-            const selection = await vscode.window.showWarningMessage(
-                'GitHub authentication required to manage repositories.',
-                signInButton,
-            );
-
-            if (selection !== signInButton) {
-                return; // User cancelled
-            }
-
-            // Try VS Code's GitHub auth provider with delete_repo scope
-            try {
-                const session = await vscode.authentication.getSession(
-                    'github',
-                    ['repo', 'delete_repo'],
-                    {
-                        createIfNone: true,
-                    },
-                );
-
-                if (session) {
-                    await tokenService.storeToken({
-                        token: session.accessToken,
-                        tokenType: 'bearer',
-                        scopes: ['repo', 'delete_repo'],
-                    });
-                    token = await tokenService.getToken();
-                }
-            } catch (error) {
-                logger.error('[GitHub Manage] Authentication failed:', error as Error);
-                vscode.window.showErrorMessage('GitHub authentication failed. Please try again.');
-                return;
-            }
+            // Declined or failed: the sign-in has already said what it needs to.
+            if (!(await signInForRepoManagement(tokenService, logger))) return;
+            token = await tokenService.getToken();
         }
 
         if (!token) {

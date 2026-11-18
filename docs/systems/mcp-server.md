@@ -618,6 +618,15 @@ refused a headless project. The headless half refuses a running demo and names
 when there is a mesh to redeploy. Nothing undoes a reset — it is the return to
 zero — which is why it is consent-gated (`reversibility.ledger.json`).
 
+**The window's storefront reset, with nobody to ask (PL-104 fix 1, 2026-11-18).** An Edge Delivery
+`reset_project` runs `resetEdsProject` (`edsResetRun.ts`), the same reset the Reset button and an Edit
+run: listed as resetting while it runs, and the same pre-flight. Where the window would show a
+dialog, the agent is refused with the reason and nothing is reset: a missing sign-in is a
+`needsAuth` handoff (Adobe for any project carrying an Adobe org or an ACCS backend), the wrong
+Adobe organization answers `ORG_MISMATCH`, and a missing AEM Code Sync app answers
+`errorType: APP_NOT_INSTALLED` with the `installUrl` to give the user. The reset always restores
+the block library and checks the CDN; the tool no longer takes `includeBlockLibrary` or `verifyCdn`.
+
 **An added demo's source, checked as the button checks it (owner, 2026-11-14).** Before anything is
 touched, a storefront built on an added demo has its source checked (`decideResetSource` in
 `resetSourceDecision.ts`, which the Reset window runs too): a repository that can't be reached

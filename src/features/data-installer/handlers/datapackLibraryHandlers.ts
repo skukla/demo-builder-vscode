@@ -348,9 +348,10 @@ export const datapackLibraryHandlers = defineHandlers({
         }
     },
 
-    // Mark or unmark every version of the SC's own pack. The Datapack Library's More menu does both
-    // (owner, 2026-11-14; rule 1). Agents cannot unmark, as that would reopen the Delete the guard
-    // above refuses: `mark_demo_builder_datapack` refuses demoBuilder:false before it dispatches here.
+    // Mark or unmark every version of the SC's own pack. No screen sends this: walk F226 removed the
+    // Datapack Library's menu row, so the agent's `mark_demo_builder_datapack` is its one door. That
+    // tool refuses demoBuilder:false before it dispatches here (dataInstallerDescriptors.ts
+    // `preflight`), since an unmark would reopen the Delete the guard above refuses.
     'mark-team-datapack': async (
         context: HandlerContext,
         payload?: MarkDemoBuilderDatapackPayload,

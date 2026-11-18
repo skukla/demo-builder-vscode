@@ -5,11 +5,19 @@
  * Uninstall Datapack (`datapackDataRemoval.ts`, walk F96), then what the SC chose online
  * (the GitHub repository, the DA.live site, the CDN unpublish, `edsExternalCleanup.ts`),
  * then the local project with its retry (`projectFilesDeletion.ts`). The question is asked
- * by the batch window before anything runs (`projectsBatch.ts`).
+ * by the batch window before anything runs (`projectsBatch.ts`). The agent's `delete_project`
+ * runs the same delete with `cleanupOptions.nobodyToAsk`, so a sign-in it would ask for is
+ * refused instead (PL-104 fix 6).
  */
 
 import { removeDataBeforeDelete } from './datapackDataRemoval';
-import { edsCleanupSteps, performEdsCleanup, type CleanupOptions, type DeletionServices } from './edsExternalCleanup';
+import {
+    edsCleanupSteps,
+    performEdsCleanup,
+    type CleanupOptions,
+    type DeletionServices,
+    type EdsCleanupOutcome,
+} from './edsExternalCleanup';
 import { deleteProjectFiles } from './projectFilesDeletion';
 import { numberedSteps } from '@/core/utils/numberedSteps';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
@@ -33,9 +41,20 @@ export interface AnsweredDelete {
 }
 
 /**
+ * What the delete did: why it stopped, where the changes went first, whether the datapack
+ * had nothing installed to remove, and the storefront teardown's and site code's results.
+ */
+export interface ProjectDeleteRun extends Omit<EdsCleanupOutcome, 'stopped'> {
+    stopped?: string;
+    saved?: string;
+    /** Removing the datapack's data found nothing of it ever installed (`removeDataBeforeDelete`). */
+    nothingInstalled?: true;
+}
+
+/**
  * The delete itself, answered: the datapack's data first, when the SC ticked it, then the
  * storefront's online resources, then the files. Run by the batch (`projectsBatch.ts`), a row
- * at a time, reporting into its window.
+ * at a time, reporting into its window, and by the agent's `delete_project`.
  *
  * @returns why it stopped, when the data was not all removed or the storefront's pages are still
  *   live, and the project was kept; else where the changes went first, when they were saved
@@ -45,26 +64,30 @@ export async function runProjectDelete(
     project: Project,
     answered: AnsweredDelete,
     report: ReportStage,
-): Promise<{ stopped?: string; saved?: string }> {
+): Promise<ProjectDeleteRun> {
     const { cleanupOptions, askName, cleanupResults, services } = answered;
-    let saved: string | undefined;
+    let data: ProjectDeleteRun = {};
     // The data first: while the project is here a second try can find it, so a removal that
     // does not finish keeps the project (walk F96).
     if (cleanupOptions.removeDatapackData) {
         const removal = await removeDataBeforeDelete(context, project, report, askName);
         if (removal.stopped) return { stopped: removal.stopped };
-        saved = removal.saved;
+        data = {
+            ...(removal.saved ? { saved: removal.saved } : {}),
+            ...(removal.nothingInstalled ? { nothingInstalled: true as const } : {}),
+        };
     }
     const edsMetadata = extractEdsMetadata(project);
-    const online = edsMetadata ? edsCleanupSteps(edsMetadata, cleanupOptions) : [];
+    const onlineSteps = edsMetadata ? edsCleanupSteps(edsMetadata, cleanupOptions) : [];
     // Numbered "(n of N)": the list is known once the SC has said what to remove
     // (progress vocabulary slice 2, owner 2026-10-16). A step that is skipped (a
     // sign-in declined) leaves its number unused and the count moves on.
-    const step = numberedSteps([...online, OPERATION_STAGES.removingProjectFiles.label], report);
+    const step = numberedSteps([...onlineSteps, OPERATION_STAGES.removingProjectFiles.label], report);
 
     // EDS cleanup: Perform external resource cleanup first
+    let online: EdsCleanupOutcome = {};
     if (edsMetadata) {
-        const stopped = await performEdsCleanup(
+        online = await performEdsCleanup(
             context,
             edsMetadata,
             { ...cleanupOptions, projectPath: project.path },
@@ -73,7 +96,7 @@ export async function runProjectDelete(
             services,
         );
         // Pages still live: the project is how a second try finds them (EDS-65).
-        if (stopped) return { stopped };
+        if (online.stopped) return { ...data, ...online };
     }
 
     step(OPERATION_STAGES.removingProjectFiles.label);
@@ -81,5 +104,5 @@ export async function runProjectDelete(
     // Local deletion (stop demo, remove files, drop from recent, clear current).
     await deleteProjectFiles(context, project);
     // Where the changes went first, for the batch row (owner, 2026-11-14).
-    return saved ? { saved } : {};
+    return { ...data, ...online };
 }

@@ -761,11 +761,10 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
         await vscode.commands.executeCommand(commandId, project?.path);
     }
 
-    /** Stop and start the demo so it reads the new `.env`; a failure is logged. */
+    /** Restart the demo so it reads the new `.env`, through the one restart; a failure is logged. */
     private async restartDemo(): Promise<void> {
         try {
-            await this.runForThisProject('demoBuilder.stopDemo');
-            await this.runForThisProject('demoBuilder.startDemo');
+            await this.runForThisProject('demoBuilder.restartDemo');
         } catch (error) {
             this.logger.error('[Configure] Failed to restart demo:', error as Error);
         }

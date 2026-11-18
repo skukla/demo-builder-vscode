@@ -1,6 +1,6 @@
 /**
- * What a reset does about an added demo's source, decided once for the window's reset
- * (`edsResetUI`) and the agent's (`edsResetTool`), so the two cannot drift (owner, 2026-11-14). Its
+ * What a reset does about an added demo's source, decided once in the one storefront reset
+ * (`edsResetRun`), which the window and the agent both run (owner, 2026-11-14; PL-104 fix 1). Its
  * own file so the check it reads (`checkDemoSource`) stays a seam a test can replace.
  *
  * @module features/eds/services/reset/resetSourceDecision

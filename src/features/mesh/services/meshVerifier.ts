@@ -11,6 +11,7 @@ import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
 import { getMeshAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { recordMeshGone } from '@/features/mesh/services/meshGone';
 import type { MeshVerificationResult } from '@/features/mesh/services/types';
 import { ComponentInstance, Project, type AppBuilderComponentState } from '@/types/base';
 import type { Logger } from '@/types/logger';
@@ -317,26 +318,7 @@ function syncMeshStatusImpl(
     }
 
     if (!verificationResult.data.exists) {
-        // Mesh doesn't exist in Adobe I/O — clear the VOLATILE deploy record on
-        // the keyed mesh entry (status/endpoint/envVars/lastDeployed/sourceHash)
-        // while PRESERVING its identity fields (kind/source/name/providesEnvVars),
-        // so a later redeploy re-lands on the SAME entry via recordDeployOutcome
-        // (ADR-011 D3; integration siblings are untouched). Also clear the
-        // in-memory legacy meshState, so the accessors' legacy synthesis can't
-        // resurrect the cleared record.
-        const keyedComponents = project.appBuilderComponents ?? {};
-        for (const state of Object.values(keyedComponents)) {
-            if (state.kind === 'mesh') {
-                state.status = 'not-deployed';
-                state.endpoint = undefined;
-                state.envVars = undefined;
-                state.lastDeployed = undefined;
-                state.sourceHash = undefined;
-            }
-        }
-        meshComponent.status = 'ready'; // Mesh component exists but not deployed
-        // Note: Endpoint is NOT cleared here - that's managed by deployMesh.ts
-        // The single source of truth for endpoint writes is the deployment command
+        recordMeshGone(project);
     } else {
         // Mesh exists - status reflects deployment state
         // Note: Endpoint is NOT updated here - that's managed by deployMesh.ts

@@ -21,10 +21,11 @@ import {
     fakeServer,
     getAllProjects,
     loadProjectFromPath,
+    mockRunProjectDelete,
     registerDeleteProjectTool,
+    useRealDelete,
 } from './deleteProjectTool.testUtils';
 import { z } from 'zod';
-import { cleanUpProjectCloud } from '@/features/ai/server/agentProjectCleanup';
 import { removeProjectSampleDataOutcome, type SaveAsAnswer, type SaveAsAnswering } from '@/features/eds/services/reset/edsResetDatapack';
 import { LEFT_NOTE, REMOVAL_LEFT_IN_STORE, REMOVAL_NO_TARGET } from '../../../helpers/datapackRemovalFixtures';
 import { hasRemovableData, removeDataBeforeDelete } from '@/features/projects-dashboard/services/datapackDataRemoval';
@@ -35,7 +36,6 @@ import { createMockProject } from '../../../helpers/projectFake';
 const mockedHasData = hasRemovableData as jest.MockedFunction<typeof hasRemovableData>;
 const mockedRemove = removeDataBeforeDelete as jest.MockedFunction<typeof removeDataBeforeDelete>;
 const mockedFiles = deleteProjectFiles as jest.MockedFunction<typeof deleteProjectFiles>;
-const mockedCloud = cleanUpProjectCloud as jest.MockedFunction<typeof cleanUpProjectCloud>;
 
 const CONFIRMED = { name: 'acme-demo', confirm: true, confirmName: 'acme-demo' };
 const PROJECT = createMockProject({ name: 'acme-demo', path: '/p/acme-demo' });
@@ -72,7 +72,7 @@ beforeEach(() => {
     mockedHasData.mockResolvedValue(true);
     mockedRemove.mockResolvedValue({});
     mockedFiles.mockResolvedValue(undefined);
-    mockedCloud.mockResolvedValue({});
+    useRealDelete();
 });
 
 describe("delete_project and the datapack's data", () => {
@@ -95,20 +95,21 @@ describe("delete_project and the datapack's data", () => {
         expect(answer).not.toHaveProperty('datapackData');
     });
 
-    it('removes the data before the cloud and the files when asked, and says so', async () => {
+    // Through the button's own delete (PL-104 fix 6), whose order puts the data first.
+    it('removes the data before the files when asked, through the button delete, and says so', async () => {
         const order: string[] = [];
         mockedRemove.mockImplementation(async () => {
             order.push('data');
             return {};
         });
-        mockedCloud.mockImplementation(async () => (order.push('cloud'), {}));
         mockedFiles.mockImplementation(async () => void order.push('files'));
         const tool = register();
 
         const answer = await tool.server.call({ ...CONFIRMED, removeData: true });
 
+        expect(mockRunProjectDelete.mock.calls[0][2].cleanupOptions).toMatchObject({ removeDatapackData: true, nobodyToAsk: true });
         expect(mockedRemove).toHaveBeenCalledWith(tool.ctx(), PROJECT, expect.any(Function), expect.any(Function));
-        expect(order).toEqual(['data', 'cloud', 'files']);
+        expect(order).toEqual(['data', 'files']);
         expect(answer).toMatchObject({ deleted: true, datapackData: { removed: true } });
     });
 
@@ -118,7 +119,6 @@ describe("delete_project and the datapack's data", () => {
 
         const answer = await register().server.call({ ...CONFIRMED, removeData: true });
 
-        expect(mockedCloud).not.toHaveBeenCalled();
         expect(mockedFiles).not.toHaveBeenCalled();
         expect(answer).toEqual({ deleted: false, name: 'acme-demo', error: why });
     });
@@ -183,7 +183,6 @@ describe("delete_project and the datapack's data", () => {
 
         const answer = await register().server.call({ ...CONFIRMED, removeData: true, changes: 'drop' });
 
-        expect(mockedCloud).not.toHaveBeenCalled();
         expect(mockedFiles).not.toHaveBeenCalled();
         expect(answer).toEqual({ deleted: false, name: 'acme-demo', error: `Part of its datapack was left in Commerce, so the project was kept: ${LEFT_NOTE}` });
     });

@@ -24,7 +24,14 @@ jest.mock('@/features/eds/services/reset/edsResetParams', () => ({
 }));
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     getDaLiveAuthService: jest.fn(),
+    getGitHubServices: jest.fn(() => ({ tokenService: {} })),
+    tryCreateDaLiveTokenProvider: jest.fn(() => undefined),
     resolveByomOverlayConfig: jest.fn(),
+}));
+// The window's reset checks the AEM Code Sync app (PL-104 fix 1): installed, for these cases.
+jest.mock('@/features/eds/services/appInstallationResolver', () => ({
+    ...jest.requireActual('@/features/eds/services/appInstallationResolver'),
+    resolveAppInstallation: jest.fn(async () => ({ kind: 'installed' })),
 }));
 jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
     createDaLiveServiceTokenProvider: jest.fn(() => ({})),

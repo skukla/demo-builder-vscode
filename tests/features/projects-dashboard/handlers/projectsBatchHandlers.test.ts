@@ -175,7 +175,7 @@ describe('runProjectsBatch', () => {
  * reset than the list for two years (EDS-12, fixed 2026-09-02).
  */
 describe("runProjectsBatch's reset of a storefront project", () => {
-    it('includes the block library and the CDN check, inside the window, with the answers given', async () => {
+    it('runs inside the window with the answers given, leaving the block library and the CDN check to the reset', async () => {
         let runReset: RunReset | undefined;
         (runResetBatch as jest.Mock).mockImplementation(async (_ctx, _answers, run: { runReset: RunReset }) => {
             runReset = run.runReset;
@@ -194,8 +194,6 @@ describe("runProjectsBatch's reset of a storefront project", () => {
             project,
             context,
             logPrefix: '[ProjectsBatch]',
-            includeBlockLibrary: true,
-            verifyCdn: true,
             withinEdit: { report },
             answered: { removeDatapack: true, changes: 'drop' },
         });

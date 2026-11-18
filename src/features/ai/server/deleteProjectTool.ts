@@ -1,7 +1,8 @@
 /**
- * delete_project (Phase 4) — permanently delete a Demo Builder project's LOCAL
- * footprint (files + recent list + current-project pointer) via the headless
- * `deleteProjectFiles` core extracted from the deletion service (no modals).
+ * delete_project (Phase 4) — permanently delete a Demo Builder project through the
+ * button's own delete, `runProjectDelete` (PL-104 fix 6): the same order, stop rules and
+ * DA.live sign-in, run with nobody to ask, so a sign-in it would ask for is refused with
+ * the sentence saying which. Until then this tool re-ran the steps beside it.
  *
  * Name-addressed and EXTRA-STRICT for this irreversible op: requires
  * `confirm:true` AND a `confirmName` that exactly echoes the project name.
@@ -22,17 +23,16 @@
  */
 
 import { z } from 'zod';
-import { type CloudCleanupChoice, cleanUpProjectCloud, resolveCloudCleanup } from './agentProjectCleanup';
+import { agentCloudOutcome, type CloudCleanupChoice, resolveCloudCleanup } from './agentProjectCleanup';
 import { CHANGES_DESCRIPTION, changesAnswer, changesNeedAnswer, type DatapackAnswerArgs } from './datapackAnswerArgs';
 import { asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
 import { reportPhase } from '@/core/utils/agentPhaseChannel';
-import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import type { AskSaveAsName } from '@/features/eds/services/reset/edsResetDatapack';
-import { extractEdsMetadata } from '@/features/eds/services/resourceCleanupHelpers';
+import { extractEdsMetadata, type CleanupResultItem } from '@/features/eds/services/resourceCleanupHelpers';
 import { type SharedOnline, sharedOnlineOf } from '@/features/eds/services/storefront/sharedRepoProjects';
-import { hasRemovableData, removeDataBeforeDelete } from '@/features/projects-dashboard/services/datapackDataRemoval';
-import { deleteProjectFiles } from '@/features/projects-dashboard/services/projectFilesDeletion';
+import { hasRemovableData } from '@/features/projects-dashboard/services/datapackDataRemoval';
+import { runProjectDelete, type ProjectDeleteRun } from '@/features/projects-dashboard/services/projectDeletionService';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -110,9 +110,6 @@ export function registerDeleteProjectTool(
                 return asText({ error: `Failed to load project "${name}"` });
             }
 
-            // The cloud first: the local record is how the cloud resources are
-            // found, so deleting it first would strand them (the button orders it
-            // the same way).
             // Left out is not "no": the setting decides (AI-71). A word is not a tick either.
             const asked = resolveCloudCleanup({
                 deleteGithubRepo: tickOf(args?.deleteGithubRepo),
@@ -121,37 +118,70 @@ export function registerDeleteProjectTool(
             });
             // What another project here still uses is never deleted with this one, as the button never offers it.
             const { choice, kept } = keepShared(asked, await sharedOnlineOf(ctx.stateManager, extractEdsMetadata(project), [project.path]));
-            // The data first, as the button removes it: a removal that does not finish keeps it all (walk F96).
-            const data = choice.removeData ? await removeDataFirst(ctx, project, args) : undefined;
-            if (data && 'stop' in data) return asText({ deleted: false, name, ...data.stop });
-            const cloud = await cleanUpProjectCloud(ctx, project, choice);
-            // Pages still live: the project is how a second try finds them (EDS-65).
-            if (cloud.stopped) {
-                return asText({ deleted: false, name, ...data, ...cloud, error: cloud.stopped });
-            }
+            const removable = choice.removeData === true && (await hasRemovableData(project));
+            const ran = await runAgentDelete(ctx, project, choice, { removable, args });
+            if ('stop' in ran) return asText({ deleted: false, name, ...ran.stop });
 
-            try {
-                // The button's own words for the step it runs (PL-59 slice 7).
-                reportPhase(OPERATION_STAGES.removingProjectFiles.label);
-                await deleteProjectFiles(ctx, project);
-                return asText({
-                    deleted: true,
-                    name,
-                    ...data,
-                    ...cloud,
-                    ...(kept.length > 0 ? { kept } : {}),
-                    ...(choice.refusedBySetting ? { note: choice.refusedBySetting } : {}),
-                });
-            } catch (err) {
-                return asText({
-                    deleted: false,
-                    name,
-                    ...cloud,
-                    error: err instanceof Error ? err.message : String(err),
-                });
+            const data = choice.removeData ? { datapackData: dataOutcome(removable, ran.run) } : {};
+            const cloud = agentCloudOutcome(project, ran.run, ran.results);
+            // Stopped: the data was not all removed, or pages are still live (EDS-65). The
+            // project is how a second try finds what is left.
+            if (ran.run.stopped) {
+                return asText({ deleted: false, name, ...(cloud.stopped ? data : {}), ...cloud, error: ran.run.stopped });
             }
+            return asText({
+                deleted: true,
+                name,
+                ...data,
+                ...cloud,
+                ...(kept.length > 0 ? { kept } : {}),
+                ...(choice.refusedBySetting ? { note: choice.refusedBySetting } : {}),
+            });
         },
     );
+}
+
+/** What the agent's delete hands back: the button delete's run and rows, or why it answered early. */
+type AgentDelete = { run: ProjectDeleteRun; results: CleanupResultItem[] } | { stop: Record<string, unknown> };
+
+/**
+ * The button's own delete (`runProjectDelete`, PL-104 fix 6): the datapack's data first, then
+ * what the choice names online, then the files, in its order and with its stop rules. Nobody is
+ * there to ask, so each sign-in it would ask for is refused instead (`nobodyToAsk`), and the
+ * datapack's changes take the answer the call gave up front, or stop it until one is given.
+ */
+async function runAgentDelete(
+    ctx: HandlerContext,
+    project: Project,
+    choice: CloudCleanupChoice,
+    data: { removable: boolean; args: DatapackAnswerArgs | undefined },
+): Promise<AgentDelete> {
+    let unanswered: string | undefined;
+    const askName: AskSaveAsName = (asked) => {
+        unanswered = asked.sentence ?? "The user changed this datapack's data since it was installed.";
+        return Promise.resolve(undefined);
+    };
+    const answer = changesAnswer(data.args);
+    const results: CleanupResultItem[] = [];
+    const cleanupOptions = {
+        deleteGitHubRepo: choice.deleteGithubRepo,
+        deleteDaLiveSite: choice.deleteDaLiveSite,
+        removeDatapackData: data.removable,
+        nobodyToAsk: true as const,
+    };
+    try {
+        const run = await runProjectDelete(
+            ctx,
+            project,
+            { cleanupOptions, askName: answer === undefined ? askName : { given: answer }, cleanupResults: results },
+            (stage) => reportPhase(stage),
+        );
+        if (unanswered !== undefined) return { stop: changesNeedAnswer(unanswered, 'deleted') };
+        return { run, results };
+    } catch (err) {
+        const error = err instanceof Error ? err.message : String(err);
+        return { stop: { ...agentCloudOutcome(project, {}, results), error } };
+    }
 }
 
 /** The choice with what another project uses taken out, and a sentence for each kept. */
@@ -169,30 +199,18 @@ function keepShared(choice: CloudCleanupChoice, shared: SharedOnline): { choice:
     return { choice: out, kept };
 }
 
-/** What removing the data did: reported beside the delete, or why nothing was deleted. */
-type DataOutcome = { datapackData: { removed: boolean; note?: string } } | { stop: Record<string, unknown> };
-
 /** Nothing ran: no install record and no install target, so nothing of the pack was installed. */
 const NOTHING_INSTALLED =
     "No website and store view were ever recorded for this project's datapack, so nothing of it was installed in Commerce and there was none to remove.";
 
-/** The project's datapack data, removed before anything else, as the button removes it. */
-async function removeDataFirst(ctx: HandlerContext, project: Project, args: DatapackAnswerArgs | undefined): Promise<DataOutcome> {
-    if (!(await hasRemovableData(project))) {
-        return { datapackData: { removed: false, note: 'This project has no datapack data Demo Builder installed in a Commerce instance, so there was none to remove.' } };
-    }
-    // An answer goes up front, as the window's does (step-05 S1), so a drop reaches the user's own
-    // pack too; with none, the removal asks, and a pack that is not theirs stops the delete.
-    let unanswered: string | undefined;
-    const askName: AskSaveAsName = (asked) => {
-        unanswered = asked.sentence ?? "The user changed this datapack's data since it was installed.";
-        return Promise.resolve(undefined);
-    };
-    const answer = changesAnswer(args);
-    const { stopped, nothingInstalled } = await removeDataBeforeDelete(ctx, project, (stage) => reportPhase(stage), answer === undefined ? askName : { given: answer });
-    if (unanswered !== undefined) return { stop: changesNeedAnswer(unanswered, 'deleted') };
-    if (stopped) return { stop: { error: stopped } };
-    return nothingInstalled ? { datapackData: { removed: false, note: NOTHING_INSTALLED } } : { datapackData: { removed: true } };
+/** No datapack data Demo Builder installed: nothing was asked of the removal. */
+const NO_DATA =
+    'This project has no datapack data Demo Builder installed in a Commerce instance, so there was none to remove.';
+
+/** What removing the data did, beside a delete that went ahead. */
+function dataOutcome(removable: boolean, run: ProjectDeleteRun): { removed: boolean; note?: string } {
+    if (!removable) return { removed: false, note: NO_DATA };
+    return run.nothingInstalled ? { removed: false, note: NOTHING_INSTALLED } : { removed: true };
 }
 
 /** A checkbox argument: a boolean as given, anything else left for the setting to decide. */

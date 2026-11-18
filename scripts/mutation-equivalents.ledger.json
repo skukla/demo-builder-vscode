@@ -689,45 +689,6 @@
         {
             "module": "src/features/authentication/handlers/deleteAdobeProjectHandler.ts",
             "anchors": [
-                "const cached = context.authManager?.getCacheManager().getCachedProject();",
-                "await context.authManager?.getEntityServices()",
-                "const projects = await context.authManager?.getProjects({ orgId });"
-            ],
-            "mutants": 3,
-            "category": "optionalChain",
-            "reason": "All three sit in module-private helpers that run only after the handler's `if (!context.authManager) return` guard, so `authManager` is defined at each read and dropping the `?.` changes nothing. The `?.` is what `HandlerContext`'s optional `authManager` demands at the read site; the helpers are not exported, so no test reaches them with a guard-less context.",
-            "decision": "none \u2014 the `?.` is required by the HandlerContext type",
-            "recorded": "2026-09-03",
-            "source": "reports/mutation/focus.json run of 2026-09-03 (deleteAdobeProjectHandler)"
-        },
-        {
-            "module": "src/features/authentication/handlers/deleteAdobeProjectHandler.ts",
-            "anchors": [
-                "if (cached?.id === projectId) {"
-            ],
-            "mutants": 1,
-            "category": "optionalChain",
-            "reason": "With nothing cached, `cached.id` throws \u2014 inside the best-effort try whose catch swallows it and writes one debug line, after which the delete succeeds exactly as it does when the comparison is simply false. The only trace is the presence of that debug line, and asserting a log's absence is the padding the ratchet refuses.",
-            "decision": "none \u2014 the guard is correct; the surrounding catch is what makes it indistinguishable",
-            "recorded": "2026-09-03",
-            "source": "reports/mutation/focus.json run of 2026-09-03 (deleteAdobeProjectHandler)"
-        },
-        {
-            "module": "src/features/authentication/handlers/deleteAdobeProjectHandler.ts",
-            "anchors": [
-                "context.debugLogger.debug('[Project] Post-delete selection clear failed:', clearError);",
-                "context.debugLogger.debug('[Project] Project list refresh failed:', refreshError);"
-            ],
-            "mutants": 2,
-            "category": "block",
-            "reason": "The two best-effort catch bodies (`} catch (clearError) {` and `} catch (refreshError) {`; the anchors are the bodies' own lines). Each is a single debug line; emptied, the failure is swallowed all the same and the delete still succeeds \u2014 both failure paths are pinned to succeed. Distinguishing them means asserting a log string.",
-            "decision": "none \u2014 the debug line is kept for diagnosis, not behaviour",
-            "recorded": "2026-09-03",
-            "source": "reports/mutation/focus.json run of 2026-09-03 (deleteAdobeProjectHandler)"
-        },
-        {
-            "module": "src/features/authentication/handlers/deleteAdobeProjectHandler.ts",
-            "anchors": [
                 "if (projects) {"
             ],
             "mutants": 1,
@@ -2317,7 +2278,7 @@
             "anchors": [
                 "if (typeof value !== 'object' || value === null) return false;"
             ],
-            "line": 38,
+            "line": 39,
             "mutants": 4,
             "category": "branch",
             "reason": "Relaxing this first guard does not let a bad step through \u2014 it makes the next line run 'id' in value against a string, a number or null, which throws a TypeError. readWizardStepsFile catches that and returns 'unreadable', and getInitialData answers 'unreadable' with the same null wizardSteps it answers 'invalid-shape' with. Every mutant here therefore lands on the identical response; only which error line is logged differs.",
@@ -2330,7 +2291,7 @@
             "anchors": [
                 "function formatComponentDefaults(defaults: ComponentSelection | null): string {"
             ],
-            "line": 50,
+            "line": 51,
             "mutants": 1,
             "category": "block",
             "reason": "This whole function exists to build one string, and it has exactly one call site: a template literal inside this.logger.debug in getInitialData. Emptying its body changes what that debug line prints and nothing else \u2014 componentDefaults reaches the webview from the parsed file, never from this formatter. Killing it would mean asserting a log string.",
@@ -2343,7 +2304,7 @@
             "anchors": [
                 "if (!defaults) return 'no defaults loaded';"
             ],
-            "line": 51,
+            "line": 52,
             "mutants": 3,
             "category": "branch",
             "reason": "Part of formatComponentDefaults, whose only consumer is a template literal inside this.logger.debug. Every mutant on the not-loaded case changes a substring of that one debug line; the componentDefaults value the webview actually receives is read from defaults.json and passed through untouched, so no returned field, message payload or collaborator call differs.",
@@ -2356,7 +2317,7 @@
             "anchors": [
                 "const frontend = defaults.frontend || 'none';"
             ],
-            "line": 52,
+            "line": 53,
             "mutants": 3,
             "category": "branch",
             "reason": "Part of formatComponentDefaults, whose only consumer is a template literal inside this.logger.debug. Every mutant on the frontend fallback changes a substring of that one debug line; the componentDefaults value the webview actually receives is read from defaults.json and passed through untouched, so no returned field, message payload or collaborator call differs.",
@@ -2369,7 +2330,7 @@
             "anchors": [
                 "const backend = defaults.backend || 'none';"
             ],
-            "line": 53,
+            "line": 54,
             "mutants": 3,
             "category": "branch",
             "reason": "Part of formatComponentDefaults, whose only consumer is a template literal inside this.logger.debug. Every mutant on the backend fallback changes a substring of that one debug line; the componentDefaults value the webview actually receives is read from defaults.json and passed through untouched, so no returned field, message payload or collaborator call differs.",
@@ -2382,7 +2343,7 @@
             "anchors": [
                 "const depCount = defaults.dependencies?.length || 0;"
             ],
-            "line": 54,
+            "line": 55,
             "mutants": 4,
             "category": "branch",
             "reason": "Part of formatComponentDefaults, whose only consumer is a template literal inside this.logger.debug. Every mutant on the dependency count changes a substring of that one debug line; the componentDefaults value the webview actually receives is read from defaults.json and passed through untouched, so no returned field, message payload or collaborator call differs.",
@@ -2395,7 +2356,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 133,
+            "line": 134,
             "mutants": 1,
             "category": "block",
             "reason": "The constructor's api-services catch body is a single this.logger.debug. Emptying it still swallows the failure, still leaves sharedState.apiServicesConfig undefined, and still lets the wizard open \u2014 a test asserting exactly that already passes with and without the log. The only difference is whether the reason appears in the debug channel.",
@@ -2408,7 +2369,7 @@
             "anchors": [
                 "return { outcome: 'absent' };"
             ],
-            "line": 162,
+            "line": 163,
             "mutants": 1,
             "category": "other",
             "reason": "Emptying this result object leaves outcome undefined. Both callers discriminate on it: getInitialData matches 'ok', 'invalid-shape' and 'unreadable', and ensureStepLogger matches 'ok' and 'unreadable'. An undefined outcome matches none of them, which is exactly what 'absent' already does \u2014 no steps, no error logged. The two are indistinguishable from outside.",
@@ -2421,7 +2382,7 @@
             "anchors": [
                 "if (!stepsConfig || !Array.isArray(stepsConfig.steps)) {"
             ],
-            "line": 165,
+            "line": 166,
             "mutants": 3,
             "category": "branch",
             "reason": "Relaxing this guard does not admit a malformed file \u2014 it makes the next line call .every on null or on a string, which throws, so the read returns 'unreadable' instead of 'unparseable'. getInitialData answers both with wizardSteps null, and ensureStepLogger passes undefined steps for both. Only the logged wording separates them.",
@@ -2434,7 +2395,7 @@
             "anchors": [
                 "return { outcome: 'unparseable' };"
             ],
-            "line": 166,
+            "line": 167,
             "mutants": 1,
             "category": "other",
             "reason": "Same as the absent result above: an empty object leaves outcome undefined, which matches none of the branches either caller tests, producing the identical no-steps-and-no-error response that 'unparseable' already produces.",
@@ -2447,7 +2408,7 @@
             "anchors": [
                 "return { outcome: 'unreadable', error: error as Error };"
             ],
-            "line": 173,
+            "line": 174,
             "mutants": 1,
             "category": "other",
             "reason": "Emptying this leaves outcome undefined, so getInitialData skips its error log and ensureStepLogger skips its debug \u2014 but wizardSteps is null either way and StepLogger still gets undefined steps. The error field it drops is only ever passed to a logger call, so nothing observable moves.",
@@ -2460,7 +2421,7 @@
             "anchors": [
                 "if (read.outcome === 'ok') {"
             ],
-            "line": 197,
+            "line": 198,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this true assigns read.steps unconditionally \u2014 and on every non-ok outcome that property does not exist, so wizardSteps becomes undefined, which is precisely the value the untaken branch leaves it at. StepLogger.create therefore receives undefined for a failed read either way, which the suite already asserts.",
@@ -2473,7 +2434,7 @@
             "anchors": [
                 "} else if (read.outcome === 'unreadable') {"
             ],
-            "line": 199,
+            "line": 200,
             "mutants": 4,
             "category": "branch",
             "reason": "The body of this branch is one this.logger.debug and nothing else; the step logger is built below it with whatever wizardSteps holds, which this branch never assigns. Forcing the condition either way, inverting the equality or emptying the block all change only whether a line prints.",
@@ -2486,7 +2447,7 @@
             "anchors": [
                 "if (defaults) {"
             ],
-            "line": 252,
+            "line": 253,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this true reads .componentSelection off the null that parseJSON returns for an unreadable file, which throws inside the surrounding try and lands in the catch \u2014 leaving componentDefaults at its initial null, which is exactly what the untaken branch leaves it at. The suite's malformed-defaults test passes under both.",
@@ -2499,7 +2460,7 @@
             "anchors": [
                 "const stepPreview = wizardSteps"
             ],
-            "line": 273,
+            "line": 274,
             "mutants": 1,
             "category": "other",
             "reason": "stepPreview is built solely to be interpolated into the this.logger.debug two lines below; wizardSteps itself is already assigned and is what reaches the webview. Dropping the slice changes how many ids appear in that one log line and nothing a caller can observe.",
@@ -2512,7 +2473,7 @@
             "anchors": [
                 ".map((s) => s.id)"
             ],
-            "line": 275,
+            "line": 276,
             "mutants": 1,
             "category": "other",
             "reason": "Part of the same preview string: the mapped ids are joined and interpolated into one this.logger.debug call. Replacing the mapper changes the text of that line, while the steps sent to the webview come from the parsed file above, untouched by this expression.",
@@ -2525,7 +2486,7 @@
             "anchors": [
                 "const remainingCount = stepCount > 3 ? ` ... (and ${stepCount - 3} more)` : '';"
             ],
-            "line": 277,
+            "line": 278,
             "mutants": 5,
             "category": "branch",
             "reason": "remainingCount is appended to the preview inside the same this.logger.debug. Forcing the comparison either way, widening it, or flipping the subtraction changes only the suffix of that debug line \u2014 the wizardSteps array the webview receives was assigned before this expression and is not derived from it.",
@@ -2538,7 +2499,7 @@
             "anchors": [
                 "} else if (stepsRead.outcome === 'invalid-shape') {"
             ],
-            "line": 279,
+            "line": 280,
             "mutants": 1,
             "category": "branch",
             "reason": "The body is a single this.logger.error. wizardSteps was left null by the branch above and stays null whichever way this condition goes, so the response the webview receives is identical; only whether the validation message is logged changes.",
@@ -2551,7 +2512,7 @@
             "anchors": [
                 "} else if (stepsRead.outcome === 'unreadable') {"
             ],
-            "line": 285,
+            "line": 286,
             "mutants": 4,
             "category": "branch",
             "reason": "Same shape as the invalid-shape branch above: the body is one this.logger.error, and wizardSteps is null on entry and on exit regardless. Forcing the condition either way, inverting the equality or emptying the block moves only a log line.",
@@ -2564,7 +2525,7 @@
             "anchors": [
                 "const customBlockLibraryDefaults = parseCustomBlockLibrarySettings("
             ],
-            "line": 300,
+            "line": 301,
             "mutants": 1,
             "category": "other",
             "reason": "The empty default on the setting read below is only used when the setting has never been set, and whatever it yields goes straight into parseCustomBlockLibrarySettings, which keeps an entry only when parseCustomBlockLibraryUrl resolves it to an owner and repo. Stryker's placeholder string is not a repository URL, so it is dropped and the result is the same empty array.",
@@ -2590,7 +2551,7 @@
             "anchors": [
                 "if (this.editProject?.settings?.edsConfig) {"
             ],
-            "line": 308,
+            "line": 309,
             "mutants": 3,
             "category": "branch",
             "reason": "Both arms of this if are a this.logger.debug, and the editProject sent to the webview is the field itself, assigned in execute and returned untouched below. Forcing the condition false or emptying the block changes only which debug line prints. The optional read on settings is defensive against a value the EditProjectConfig type forbids \u2014 settings is required there, so no caller can produce the shape that would make removing it throw.",
@@ -2603,7 +2564,7 @@
             "anchors": [
                 "} else if (this.editProject) {"
             ],
-            "line": 317,
+            "line": 318,
             "mutants": 3,
             "category": "branch",
             "reason": "The body is one this.logger.debug noting that an edit carried no EDS config. Nothing in the returned initial data is computed here \u2014 editProject is passed through as the field execute assigned \u2014 so forcing the condition either way or emptying the block moves only the debug channel.",
@@ -2616,7 +2577,7 @@
             "anchors": [
                 "if (panel) {"
             ],
-            "line": 466,
+            "line": 461,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this true calls dispose on undefined when no wizard panel is open \u2014 and that call sits inside the try whose catch is deliberately empty, so the TypeError is swallowed and disposeActivePanel still returns having done nothing. The no-panel test passes under both, because the guard and the catch cover the same case.",
@@ -2629,7 +2590,7 @@
             "anchors": [
                 "if (this.importedSettings) {"
             ],
-            "line": 483,
+            "line": 478,
             "mutants": 3,
             "category": "branch",
             "reason": "The body is a single this.logger.debug naming the import source. importedSettings is assigned on the line above and read by getInitialData from the field, never from this branch, so forcing the condition either way or emptying the block leaves the wizard's initial data identical.",
@@ -2642,7 +2603,7 @@
             "anchors": [
                 "if (this.editProject.settings?.selections) {"
             ],
-            "line": 498,
+            "line": 493,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Removing this optional read would throw only for an edit project whose settings is undefined, and EditProjectConfig declares settings as required \u2014 no caller can construct that value without deliberately defeating the type. The guard is defensive against a shape the compiler already refuses.",
@@ -2655,7 +2616,7 @@
             "anchors": [
                 "let componentDefaults: ComponentSelection | null = null;"
             ],
-            "line": 237,
+            "line": 238,
             "mutants": 1,
             "category": "block",
             "reason": "The catch that closes this try block holds one this.logger.debug. Emptying it still swallows the failure and still leaves componentDefaults at the null declared here, which is what the webview receives \u2014 the suite asserts exactly that for both a malformed defaults.json and a throwing read. Only the debug channel differs.",
@@ -8969,7 +8930,7 @@
             "anchors": [
                 "if (meshData) {"
             ],
-            "line": 114,
+            "line": 115,
             "mutants": 1,
             "category": "branch",
             "reason": "parseJSON returns null rather than throwing for output that is not JSON, so forcing this guard true reads .meshId off null - and that TypeError lands in the inner catch two lines below, whose whole purpose is to fall through to the regex parsing. The mutant therefore reaches the same regex path the original reaches by taking the guard, and returns the same value for every input. Forcing it FALSE is killed, by the JSON-output tests.",
@@ -8982,7 +8943,7 @@
             "anchors": [
                 "if (meshData) {"
             ],
-            "line": 246,
+            "line": 247,
             "mutants": 1,
             "category": "branch",
             "reason": "The verify path's copy of the same guard, absorbed the same way: parseJSON answers null for non-JSON output, reading a property off it throws a TypeError, and the inner catch directly below exists to continue with the regex matches. Both the original and the widened guard end at the mesh-id comparison with the same foundMeshId and endpoint. Forcing it false is killed by the JSON-response test.",
@@ -9031,25 +8992,11 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 43,
+            "line": 45,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying this catch makes githubAuthed return undefined instead of false, and its single call site is 'if (!(await githubAuthed(ctx)))' - which takes the same branch for both, returning the needsAuth handoff. The function's return type is boolean, so no caller can distinguish them either; the test that a throwing token validation is treated as unauthenticated already covers the path and passes under both.",
             "decision": "Recorded as equivalent. The explicit false documents the intent; the guard reading it cannot tell the difference.",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/ai/server/cloudResourceTools.ts",
-            "anchors": [
-                "args?.isPrivate === true,",
-                "args?.targetOwner ? String(args.targetOwner).trim() : undefined,",
-                "if (args?.waitForContent !== false) {"
-            ],
-            "mutants": 3,
-            "category": "optionalChain",
-            "reason": "All three of these sit AFTER the required-field guard at the top of create_github_repo, which reads args?.templateOwner, args?.templateRepo and args?.name and returns early unless all three are non-empty strings. Reaching any of these lines therefore proves args is an object with those properties, so dropping the optional chain cannot throw. The same chains on the guard's own reads ARE killed, by the test that calls the tool with no argument object at all.",
-            "decision": "Recorded as equivalent. The chains are defensive repetition behind a guard that has already established the object exists.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"
         },
@@ -9070,7 +9017,7 @@
             "anchors": [
                 "if (args?.confirm !== true || args?.confirmName !== fullName) {"
             ],
-            "line": 242,
+            "line": 260,
             "mutants": 2,
             "category": "optionalChain",
             "reason": "delete_github_repo reads args?.owner and args?.repo above this line and returns early unless both are non-empty, so by the time the confirmation gate runs, args is known to be an object carrying them. Dropping either optional chain here cannot throw on any input that reaches the line. The chains on the owner and repo reads ARE killed, by the no-arguments test - which is where a missing argument object actually arrives.",
@@ -9083,7 +9030,7 @@
             "anchors": [
                 "if (args?.confirm !== true || args?.confirmName !== fullName) {"
             ],
-            "line": 344,
+            "line": 362,
             "mutants": 2,
             "category": "optionalChain",
             "reason": "cleanup_dalive_site's copy of the same situation: args?.org and args?.site are read above and the tool returns early unless both are non-empty strings, so args is an object by the time this gate runs and the optional chains cannot fire. Both halves of the gate - confirm:true and the confirmName echo - are killed by their own tests, including one that supplies a correct echo without confirm. Re-anchored 2026-10-28 (342 -> 344): unchanged code, moved when delete_github_repo keeps a storefront with no working DA.live sign-in (EDS-67).",
@@ -9096,7 +9043,7 @@
             "anchors": [
                 "const offset = Math.max(0, Math.trunc(args?.offset ?? 0));"
             ],
-            "line": 299,
+            "line": 317,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "This line is inside list_dalive_sites, past its \"org is required\" guard, which reads args?.org and returns early when it is empty - so args is an object with a non-empty org string by the time pagination is computed. Dropping the optional chain here cannot throw on any input that reaches the line. The identical line in list_github_repos has no guard in front of it and its chain IS killed, by the test that calls that tool with no argument object at all. Re-anchored 2026-10-28 (297 -> 299): unchanged code, moved when delete_github_repo keeps a storefront with no working DA.live sign-in (EDS-67).",
@@ -9109,7 +9056,7 @@
             "anchors": [
                 "const limit = Math.min(100, Math.max(1, Math.trunc(args?.limit ?? 30)));"
             ],
-            "line": 300,
+            "line": 318,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "This line is inside list_dalive_sites, past its \"org is required\" guard, which reads args?.org and returns early when it is empty - so args is an object with a non-empty org string by the time pagination is computed. Dropping the optional chain here cannot throw on any input that reaches the line. The identical line in list_github_repos has no guard in front of it and its chain IS killed, by the test that calls that tool with no argument object at all. Re-anchored 2026-10-28 (298 -> 300): unchanged code, moved when delete_github_repo keeps a storefront with no working DA.live sign-in (EDS-67).",
@@ -9718,7 +9665,7 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 214,
+            "line": 213,
             "mutants": 1,
             "category": "block",
             "reason": "The else branch of the running-demo check holds one statement and it is a logger.debug line. Emptying the block removes that log and nothing else: no notification is shown on this path either way, no state is written, and no command runs. The classifier reads the line the mutant sits on, which is the bare 'else {', so it cannot see that the body it guards is entirely logging. Killing this would mean asserting the wording of a debug line, which is what the ratchet exists to refuse to reward.",
@@ -9731,7 +9678,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 217,
+            "line": 216,
             "mutants": 1,
             "category": "block",
             "reason": "handleFileChange's whole body sits in a try whose catch does one thing: log the error. Emptying the catch still swallows the error, still returns normally, and still leaves every piece of state exactly as the failure left it \u2014 the only difference is that nothing is written to the output channel. There is no observable outcome to assert on other than the log line itself, and the handler is a void event callback, so a caller cannot see the difference either.",
@@ -9744,7 +9691,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 233,
+            "line": 232,
             "mutants": 1,
             "category": "block",
             "reason": "getFileHash's catch logs and returns null. Emptying it returns undefined instead, and both call sites test the result for falsiness \u2014 'if (!currentHash)' in handleFileChange and 'if (hash)' in the initializeFileHashes command \u2014 so null and undefined take the identical branch at every place the value is read. The value never leaves the class and is never compared to null directly. The only real difference is the debug line naming the unreadable file.",
@@ -9757,7 +9704,7 @@
             "anchors": [
                 "if (workspaceFolders.length === 0) {"
             ],
-            "line": 251,
+            "line": 250,
             "mutants": 2,
             "category": "branch",
             "reason": "Two mutants sit on this early return \u2014 the guard replaced with false, and its block emptied \u2014 and both let execution fall through to the filter below. With no workspace folders the mapped prefix list is empty, so the .some() inside the filter is false for every path and the filter returns an empty array: exactly the value the early return produces. Nothing downstream can tell the two apart, because validateWorkspacePaths returns only that array. The one difference is that the fall-through logs a rejection warning per path, and the guard exists to avoid that noise rather than to change the answer.",
@@ -9770,7 +9717,7 @@
             "anchors": [
                 "if (!isValid) {"
             ],
-            "line": 265,
+            "line": 264,
             "mutants": 1,
             "category": "branch",
             "reason": "This guard wraps a single logger.warn call inside the path filter, and the predicate's return value on the next line is untouched by the mutant. Forcing the condition to true makes the warning print for accepted paths as well as rejected ones; the set of paths the filter returns is identical, so every caller \u2014 registerProgrammaticWrites and initializeFileHashes \u2014 behaves exactly the same. The only assertion that could separate them is one on the warning's presence or wording.",
@@ -9809,7 +9756,7 @@
             "anchors": [
                 "if (hash) {"
             ],
-            "line": 345,
+            "line": 344,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this condition true makes initializeFileHashes record a null hash for a file it could not read, instead of recording nothing. The two cannot be told apart downstream: on the next change event the null previous hash fails the equality check, reaches the debug line that calls previousHash.substring, throws, and is swallowed by handleFileChange's catch \u2014 so no notification is shown, exactly as the unrecorded case produces a quiet first sighting. Both leave the real hash in the map afterwards and both notify on the change after that. Verified 2026-09-05 by applying the mutant to the source and running all four env-watcher suites: 42 tests, unchanged.",
@@ -11643,19 +11590,6 @@
             "category": "block",
             "reason": "Stryker deletes the catch body's `return false`, so adobeAuthed resolves undefined instead. Its only consumer is the negation `!(await adobeAuthed())` in the mesh pre-flight, where undefined and false are the same falsy value \u2014 the needsAuth handoff, the executeEdsReset call and every field of the response come out byte-identical. A test could only tell the two apart by reading the helper's return value directly, and the helper is not exported.",
             "decision": "none \u2014 the explicit false is the correct return type for a Promise<boolean> helper",
-            "recorded": "2026-09-06",
-            "source": "PL-22 batch MUT-04"
-        },
-        {
-            "module": "src/features/ai/server/edsResetTool.ts",
-            "anchors": [
-                "includeBlockLibrary: args?.includeBlockLibrary ?? false,",
-                "verifyCdn: args?.verifyCdn ?? false,"
-            ],
-            "mutants": 2,
-            "category": "optionalChain",
-            "reason": "Stryker drops the `?.` from both reads. Both sit AFTER the confirm gate, which returns the refusal payload whenever `args?.confirm !== true` \u2014 and that holds for undefined and null args alike. So args is provably a non-null object by the time either line runs, and `args.x` behaves exactly as `args?.x`. Killing them would need a call that omits args AND passes the confirm gate, which cannot exist.",
-            "decision": "none \u2014 the ?. is defensive against an argument shape the confirm gate has already excluded",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-04"
         },
@@ -14786,7 +14720,7 @@
             "anchors": [
                 "deleteGithubRepo: tickOf(args?.deleteGithubRepo),"
             ],
-            "line": 118,
+            "line": 115,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "The optional chain on this line is unreachable as a guard. The line runs only after the name check returned for an empty name, and name can be non-empty only when args?.name produced a non-empty string, which requires args to be an object. So args is never null or undefined here and the plain read behaves identically on every input the handler can be called with, including a call with no arguments at all, which returns at the name check and has its own test. The same reasoning is already recorded for the two chains on the confirm line; Stryker planted this one against 25 tests, nine of them driving this line with ticked, unticked and non-boolean values, and all stayed green. Re-anchored 2026-10-19 (89 -> 94): the line now hands the value to tickOf (AI-71) instead of comparing it to true; the chain is the same read of args, behind the same name guard.",
@@ -14799,7 +14733,7 @@
             "anchors": [
                 "deleteDaLiveSite: tickOf(args?.deleteDaLiveSite),"
             ],
-            "line": 119,
+            "line": 116,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "The optional chain on this line is unreachable as a guard. The line runs only after the name check returned for an empty name, and name can be non-empty only when args?.name produced a non-empty string, which requires args to be an object. So args is never null or undefined here and the plain read behaves identically on every input the handler can be called with, including a call with no arguments at all, which returns at the name check and has its own test. The same reasoning is already recorded for the two chains on the confirm line; Stryker planted this one against 25 tests, nine of them driving this line with ticked, unticked and non-boolean values, and all stayed green. Re-anchored 2026-10-19 (90 -> 95): the line now hands the value to tickOf (AI-71) instead of comparing it to true; the chain is the same read of args, behind the same name guard.",
@@ -15102,6 +15036,44 @@
             "decision": "OPEN for the module \u2014 handleAuthenticate could refuse up front when the context has no auth service, as resolveOrgContext in projectHandlers does",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (authenticationHandlers); re-recorded 2026-11-18 with one anchor when the login call moved out"
+        },
+        {
+            "module": "src/features/authentication/handlers/deleteAdobeProjectHandler.ts",
+            "anchors": [
+                "const projects = await context.authManager?.getProjects({ orgId });"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "It sits in `refreshProjects`, which runs only after a handler's `if (!context.authManager) return` guard (the delete handler and the rename handler, its two callers), so `authManager` is defined at the read and dropping the `?.` changes nothing. The `?.` is what `HandlerContext`'s optional `authManager` demands at the read site. Re-anchored 2026-11-18: the other two reads in this entry moved into `createTeardownDeps` when the teardown took over the Console selection clear (PL-104 fix 8).",
+            "decision": "none \u2014 the `?.` is required by the HandlerContext type",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (deleteAdobeProjectHandler)"
+        },
+        {
+            "module": "src/features/authentication/handlers/deleteAdobeProjectHandler.ts",
+            "anchors": [
+                "context.debugLogger.debug('[Project] Project list refresh failed:', refreshError);"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "The best-effort catch body of `refreshProjects` (`} catch (refreshError) {`; the anchor is the body's own line). A single debug line; emptied, the failure is swallowed all the same and the delete still succeeds, which is pinned. Distinguishing them means asserting a log string. Re-anchored 2026-11-18: the selection-clear catch moved into the teardown (PL-104 fix 8).",
+            "decision": "none \u2014 the debug line is kept for diagnosis, not behaviour",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (deleteAdobeProjectHandler)"
+        },
+        {
+            "module": "src/features/ai/server/cloudResourceTools.ts",
+            "anchors": [
+                "isPrivate: args?.isPrivate === true,",
+                "namespace: args?.targetOwner ? String(args.targetOwner).trim() : undefined,",
+                "if (args?.waitForContent !== false) {"
+            ],
+            "mutants": 3,
+            "category": "optionalChain",
+            "reason": "All three of these sit AFTER the required-field guard at the top of create_github_repo, which reads args?.templateOwner, args?.templateRepo and args?.name and returns early unless all three are non-empty strings. Reaching any of these lines therefore proves args is an object with those properties, so dropping the optional chain cannot throw. The same chains on the guard's own reads ARE killed, by the test that calls the tool with no argument object at all. Re-anchored 2026-11-18: the first two now sit in the options object handed to createRepoFromSource (PL-104 fix 13), behind the same guard.",
+            "decision": "Recorded as equivalent. The chains are defensive repetition behind a guard that has already established the object exists.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
         }
     ]
 }

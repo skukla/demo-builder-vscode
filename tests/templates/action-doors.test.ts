@@ -33,9 +33,12 @@ import {
     callersOf,
     diffDoors,
     DOOR_VERDICTS,
+    ENTRY_POINTS,
     entryCalls,
+    isSpine,
     LEDGER,
     modeArguments,
+    shouldFields,
     type ActionRow,
 } from './actionDoorsScan';
 
@@ -48,6 +51,25 @@ const SOURCES = new Map(
 );
 const ROWS = Object.entries(LEDGER.actions);
 const codeOf = (file: string): string => SOURCES.get(file) ?? '';
+
+/**
+ * A mustRead row's problems: doors that skip a field without a `doesNotRead` (or carry
+ * one and read it anyway), and a field no door reads at all, which means a wrong name.
+ */
+function mustReadProblems(
+    row: Pick<ActionRow, 'mustRead' | 'doors'>,
+    read: (file: string) => string
+): string[] {
+    const fields = row.mustRead ?? [];
+    const unreal = fields.filter((f) => !Object.keys(row.doors).some((d) => read(d).includes(f)));
+    const wrong = Object.entries(row.doors)
+        .filter(
+            ([file, door]) =>
+                fields.every((f) => read(file).includes(f)) === Boolean(door.doesNotRead)
+        )
+        .map(([file]) => file);
+    return [...unreal.map((f) => `no door reads ${f}`), ...wrong];
+}
 
 describe('action doors: the scanner', () => {
     const row: Pick<ActionRow, 'entry' | 'spine'> = {
@@ -101,6 +123,31 @@ describe('action doors: the scanner', () => {
         ).toStrictEqual(['{ project: pick(a, b) }']);
     });
 
+    it('CONTROL: the GitHub mode rule catches a door that prompts, and passes a silent read', () => {
+        const gh = LEDGER.actions['github-sign-in'];
+        const prompting =
+            "await vscode.authentication.getSession('github', ['repo'], { createIfNone: true });";
+        const forcing = "getSession('github', SCOPES, { forceNewSession: true })";
+        const silent = "getSession('github', SCOPES, { createIfNone: false, silent: true })";
+        expect(modeArguments(prompting, gh.entry, gh.modeRule!)).toHaveLength(1);
+        expect(modeArguments(forcing, gh.entry, gh.modeRule!)).toHaveLength(1);
+        expect(modeArguments(silent, gh.entry, gh.modeRule!)).toHaveLength(0);
+        // The lookahead keeps another provider's session out of the row.
+        expect(entryCalls("getSession('microsoft', [], {})", gh.entry)).toStrictEqual([]);
+    });
+
+    it('CONTROL: shouldFields finds a planted should* result field and nothing else', () => {
+        const planted = [
+            'export interface TeardownResult {',
+            '    success: boolean;',
+            '    shouldClearSelection?: boolean;',
+            '    shouldNotify: boolean;',
+            '}',
+            'const shouldRun = true;',
+        ].join('\n');
+        expect(shouldFields(planted)).toStrictEqual(['shouldClearSelection', 'shouldNotify']);
+    });
+
     it('CONTROL: the corpus is real and every file the ledger names exists', () => {
         expect(SOURCES.size).toBeGreaterThan(500);
         const named = ROWS.flatMap(([, r]) => [
@@ -138,18 +185,64 @@ describe('action doors: the ledger against src/', () => {
         }
     );
 
-    it.each(ROWS.filter(([, r]) => r.mustRead))(
-        '%s: every door reads the result fields that hand it a job',
-        (_, row) => {
-            const result = Object.entries(row.doors).map(([file, door]) => {
-                const reads = row.mustRead!.every((field) => codeOf(file).includes(field));
-                return { file, ok: reads !== Boolean(door.doesNotRead) };
-            });
-            // The control: at least one door reads the field, so the field name is real.
-            expect(result.some((r) => codeOf(r.file).includes(row.mustRead![0]))).toBe(true);
-            expect(result.filter((r) => !r.ok).map((r) => r.file)).toStrictEqual([]);
-        }
-    );
+    it('every door of a mustRead row reads the result fields that hand it a job', () => {
+        // No row has a mustRead today: the one field, shouldClearConsoleSelection, moved
+        // into the spine (PL-104 fix 8). The planted control below keeps the check honest
+        // until a spine hands a door a job again, which the next test forces into a row.
+        const problems = ROWS.filter(([, r]) => r.mustRead).flatMap(([id, r]) =>
+            mustReadProblems(r, codeOf).map((p) => `${id}: ${p}`)
+        );
+        expect(problems).toStrictEqual([]);
+    });
+
+    it('CONTROL: mustReadProblems catches a door that ignores the field and an unreal field', () => {
+        const code = new Map([
+            ['a.ts', 'if (r.shouldClear) clear();'],
+            ['b.ts', 'return r.success;'],
+        ]);
+        const read = (f: string): string => code.get(f) ?? '';
+        const doors = {
+            'a.ts': { verdict: 'one-door', reason: 'x' },
+            'b.ts': { verdict: 'one-door', reason: 'y' },
+        };
+        expect(mustReadProblems({ mustRead: ['shouldClear'], doors }, read)).toStrictEqual([
+            'b.ts',
+        ]);
+        expect(
+            mustReadProblems(
+                {
+                    mustRead: ['shouldClear'],
+                    doors: { ...doors, 'b.ts': { ...doors['b.ts'], doesNotRead: 'why' } },
+                },
+                read
+            )
+        ).toStrictEqual([]);
+        expect(mustReadProblems({ mustRead: ['shouldGone'], doors }, read)).toStrictEqual([
+            'no door reads shouldGone',
+            'a.ts',
+            'b.ts',
+        ]);
+    });
+
+    it('every should* field a spine declares is a mustRead of a row whose spine holds it', () => {
+        // Audit enforcement 3: a `should*` result field hands the door a job, so some row
+        // must make its doors read it. Controls: the planted shouldFields test above, and
+        // the spine set is read (the one field it had, shouldClearConsoleSelection, moved
+        // into the spine with PL-104 fix 8, so it cannot be the control).
+        const spineFiles = [...SOURCES.keys()].filter((f) =>
+            ROWS.some(([, r]) => isSpine(f, r.spine))
+        );
+        const owed = spineFiles.flatMap((file) =>
+            shouldFields(codeOf(file))
+                .filter(
+                    (field) =>
+                        !ROWS.some(([, r]) => isSpine(file, r.spine) && r.mustRead?.includes(field))
+                )
+                .map((field) => `${file}: ${field}`)
+        );
+        expect(spineFiles.length).toBeGreaterThan(20);
+        expect(owed).toStrictEqual([]);
+    });
 
     it('a recorded bypass still bypasses (move it to doors once it calls the entry)', () => {
         const nowCalling = ROWS.flatMap(([id, row]) =>
@@ -167,7 +260,9 @@ describe('action doors: the exemptions', () => {
     );
     const exempt = doors.filter((d) => d.verdict === 'drift' || d.verdict === 'lead');
     const bypasses = ROWS.flatMap(([, row]) => Object.values(row.bypasses ?? {}));
-    const agentOnly = Object.values(LEDGER.agentOnlyHandlers);
+    const agentOnlyRows = Object.entries(LEDGER.agentOnlyHandlers);
+    const agentOnlyDebt = agentOnlyRows.filter(([, h]) => h.fix !== undefined).map(([, h]) => h);
+    const entryDrift = Object.values(ENTRY_POINTS.drift);
 
     it('every door has a known verdict and a reason; every exemption names its fix', () => {
         const verdicts: readonly string[] = DOOR_VERDICTS;
@@ -176,12 +271,19 @@ describe('action doors: the exemptions', () => {
                 .filter((d) => !verdicts.includes(d.verdict) || !d.reason.trim())
                 .map((d) => d.file)
         ).toStrictEqual([]);
-        const unfixed = [...exempt, ...bypasses, ...agentOnly].filter((e) => !e.fix?.trim());
+        const unfixed = [...exempt, ...bypasses, ...entryDrift].filter((e) => !e.fix?.trim());
         expect(unfixed).toStrictEqual([]);
     });
 
+    it('every agent-only handler is debt (a fix) or on purpose (byDesign), never both or neither', () => {
+        const unclear = agentOnlyRows
+            .filter(([, h]) => !h.reason.trim() || Boolean(h.fix?.trim()) === (h.byDesign === true))
+            .map(([type]) => type);
+        expect(unclear).toStrictEqual([]);
+    });
+
     it('the number of exemptions only falls', () => {
-        const count = exempt.length + bypasses.length + agentOnly.length;
+        const count = exempt.length + bypasses.length + agentOnlyDebt.length + entryDrift.length;
         const ceiling = LEDGER.exemptionCeiling;
         // Above: a new exemption; fix it instead. Below: lower the pin so it cannot grow back.
         expect({

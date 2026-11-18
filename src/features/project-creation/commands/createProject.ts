@@ -18,6 +18,7 @@ import { getEndpoint as getEndpointHelper } from '@/features/mesh/services/meshE
 import { projectCreationHandlers } from '@/features/project-creation/handlers/ProjectCreationHandlerRegistry';
 import { formatGroupName as formatGroupNameHelper } from '@/features/project-creation/helpers/formatters';
 import { readAddedDemos } from '@/features/project-creation/services/addedDemoSettings';
+import { openCustomBlockLibrarySettings } from '@/features/project-creation/services/blockLibrarySettings';
 import { parseCustomBlockLibrarySettings } from '@/features/project-creation/services/customBlockLibraryUtils';
 import { WIZARD_WEBVIEW_ID } from '@/features/project-creation/wizardWebviewId';
 import { HandlerContext, SharedState } from '@/types/handlers';
@@ -407,13 +408,7 @@ export class CreateProjectWebviewCommand extends BundledPanelCommand<WizardIniti
         });
 
         // Open VS Code settings for custom block libraries
-        comm.on('open-block-library-settings', () => {
-            vscode.commands.executeCommand(
-                'workbench.action.openSettings',
-                'demoBuilder.blockLibraries.custom',
-            );
-            return { success: true };
-        });
+        comm.on('open-block-library-settings', openCustomBlockLibrarySettings);
 
         // Edit's line under the backend cards: the Commerce settings change in
         // Configure, so it links there, and Configure takes Edit's place rather than

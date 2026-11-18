@@ -18,6 +18,10 @@ const mockRepublishConfig = jest.fn();
 jest.mock('@/features/eds/services/storefront/storefrontRepublishService', () => ({
     republishStorefrontConfig: (...a: unknown[]) => mockRepublishConfig(...a),
 }));
+const mockEnsureDaLiveAuth = jest.fn();
+jest.mock('@/features/eds/handlers/daLive/daLiveAuthGuard', () => ({
+    ensureDaLiveAuth: (...a: unknown[]) => mockEnsureDaLiveAuth(...a),
+}));
 
 import * as vscode from 'vscode';
 import { RepairSiteConfigurationCommand } from '@/commands/repairSiteConfiguration';
@@ -59,16 +63,24 @@ beforeEach(() => {
     });
 });
 
-it('names each half by its step, under one title', async () => {
+/** The command over one open project, with the context and logger it was built with. */
+function repairCommand() {
     const project = createMockProject({ name: 'shop', path: '/p/shop' });
+    const context = createMockExtensionContext();
+    const logger = createMockLogger() as unknown as Logger;
     const command = new RepairSiteConfigurationCommand(
-        createMockExtensionContext(),
+        context,
         createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(project),
             saveProject: jest.fn().mockResolvedValue(undefined),
         }) as unknown as StateManager,
-        createMockLogger() as unknown as Logger,
+        logger,
     );
+    return { command, context, logger };
+}
+
+it('names each half by its step, under one title', async () => {
+    const { command } = repairCommand();
 
     await command.execute();
 
@@ -76,4 +88,35 @@ it('names each half by its step, under one title', async () => {
         { title: TITLE, lines: [OPERATION_STAGES.updatingSiteConfig.label] },
         { title: TITLE, lines: [OPERATION_STAGES.publishingSettings.label] },
     ]);
+});
+
+// PL-104 fix 11 (F258): a palette command has a person there, so the CDN publish asks for the
+// DA.live sign-in as every other door of the settings republish does.
+it('asks for the DA.live sign-in before the CDN publish, as the Configure save does', async () => {
+    const SESSION = { authenticated: true };
+    mockEnsureDaLiveAuth.mockResolvedValue(SESSION);
+    const { command, context, logger } = repairCommand();
+
+    await command.execute();
+
+    const params = mockRepublishConfig.mock.calls[0][0] as {
+        ensureDaLiveSession: (() => Promise<unknown>) | null;
+    };
+    expect(params.ensureDaLiveSession).not.toBeNull();
+    expect(await params.ensureDaLiveSession!()).toBe(SESSION);
+    expect(mockEnsureDaLiveAuth).toHaveBeenCalledWith({ context, logger }, '[Repair Site Configuration]');
+});
+
+it('says the storefront still serves the old settings when the CDN publish did not land', async () => {
+    const cdnError = 'No DA.live session — sign in to DA.live and republish from the dashboard.';
+    mockRepublishConfig.mockResolvedValue({ success: true, cdnError });
+    const { command } = repairCommand();
+
+    await command.execute();
+
+    const said = (vscode.window.showWarningMessage as jest.Mock).mock.calls.map((c) => c[0]);
+    expect(said).toStrictEqual([
+        `Site configuration was repaired, but the live storefront still serves the previous settings: ${cdnError}`,
+    ]);
+    expect(vscode.window.setStatusBarMessage).not.toHaveBeenCalled();
 });

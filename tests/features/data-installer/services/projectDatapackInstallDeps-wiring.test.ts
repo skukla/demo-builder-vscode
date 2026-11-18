@@ -86,6 +86,9 @@ beforeEach(() => {
     jest.clearAllMocks();
     dataInstallerAddress(INSTALLER_ADDRESS);
     mockedBuild.mockImplementation(() => ({
+        // The dry run each start makes first (PL-104 fix 3); its refusals are pinned in the -validate suite.
+        validateImport: jest.fn().mockResolvedValue({ valid: true }),
+        validateRemoval: jest.fn().mockResolvedValue({ valid: true }),
         startImport: jest.fn().mockResolvedValue({ activationId: 'imp-1' }),
         startDelete: jest.fn().mockResolvedValue({ activationId: 'del-1' }),
     }));

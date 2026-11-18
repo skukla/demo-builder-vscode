@@ -243,41 +243,13 @@ describe('handleRepublishContent', () => {
         expect(result).not.toHaveProperty('details');
     });
 
-    // PL-101: a Republish is the Republish the Code step's fix, so the step is checked as the run
-    // ends and turns done when the live site now serves its files.
-    describe('the Republish the Code step', () => {
-        const originalFetch = global.fetch;
-        afterEach(() => {
-            global.fetch = originalFetch;
-        });
+    // PL-101: a Republish is the Republish the Code step's fix. The republish itself checks the step
+    // as it ends (PL-104 fix 10, storefrontContentRepublishService.test.ts), so every door gets it;
+    // the button hands it the repository reads that check uses.
+    it('hands the republish the repository reads its Republish the Code check uses', async () => {
+        await handleRepublishContent(createMockContext(createMockEdsProject()));
 
-        function withCodeStep(served: string): HandlerContext {
-            global.fetch = jest.fn(async () => ({ ok: true, text: async () => served })) as unknown as typeof fetch;
-            return createMockContext(
-                createMockEdsProject({ selectedStack: 'eds-paas', finishSetup: { 'republish-code': { files: ['scripts/commerce.js'] } } }),
-            );
-        }
-
-        const savedStep = (context: HandlerContext) =>
-            (context.stateManager.saveProject as jest.Mock).mock.calls.at(-1)?.[0]?.finishSetup?.['republish-code'];
-
-        it('turns done when the site serves the files after the publish', async () => {
-            const context = withCodeStep('new');
-
-            await handleRepublishContent(context);
-
-            expect(savedStep(context)).toMatchObject({ files: ['scripts/commerce.js'], state: 'done', lastCheck: 'passed' });
-        });
-
-        it('stays open when the site still serves the old code', async () => {
-            const context = withCodeStep('old');
-
-            const result = await handleRepublishContent(context);
-
-            expect(result.success).toBe(true);
-            expect(savedStep(context)).toMatchObject({ lastCheck: 'failed' });
-            expect(savedStep(context)).not.toHaveProperty('state');
-        });
+        expect(mockRepublishStorefrontContent.mock.calls[0][0].githubFiles).toBe(mockGithubFiles);
     });
 
     it('does NOT push when the republish failed — nothing changed', async () => {

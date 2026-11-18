@@ -7,9 +7,10 @@
  * above it (webview-test-authoring §3): a spec that imported `registerDeleteProjectTool`
  * itself could bind the real collaborators.
  *
- * The three walls: the local deletion core, the cloud step (the real resolver decides; only
- * the step that would touch the cloud is held back, so what it is HANDED can be read), and the
- * removal of the project's datapack data from Commerce.
+ * The walls: the local deletion core and the removal of the project's datapack data from
+ * Commerce. The button's delete (`runProjectDelete`, PL-104 fix 6) is the REAL one unless a
+ * suite says otherwise: `mockRunProjectDelete` passes through to it, so a suite reads what it
+ * was HANDED, and can stand in for it where the online steps would touch the cloud.
  */
 
 import * as vscode from 'vscode';
@@ -27,10 +28,24 @@ jest.mock('@/features/projects-dashboard/services/datapackDataRemoval', () => ({
     hasRemovableData: jest.fn().mockResolvedValue(false),
     removeDataBeforeDelete: jest.fn(),
 }));
-jest.mock('@/features/ai/server/agentProjectCleanup', () => ({
-    ...jest.requireActual('@/features/ai/server/agentProjectCleanup'),
-    cleanUpProjectCloud: jest.fn(),
+/** The button's delete, as the tool calls it; pass-through by default (`useRealDelete`). */
+export const mockRunProjectDelete = jest.fn();
+jest.mock('@/features/projects-dashboard/services/projectDeletionService', () => ({
+    runProjectDelete: (...a: unknown[]) => mockRunProjectDelete(...a),
 }));
+
+type RunProjectDelete = typeof import('@/features/projects-dashboard/services/projectDeletionService').runProjectDelete;
+
+/**
+ * Point the delete at the real `runProjectDelete`. Call from each spec's `beforeEach`: the
+ * config's `resetMocks` empties the pass-through before every test.
+ */
+export function useRealDelete(): void {
+    const real = jest.requireActual<{ runProjectDelete: RunProjectDelete }>(
+        '@/features/projects-dashboard/services/projectDeletionService',
+    ).runProjectDelete;
+    mockRunProjectDelete.mockImplementation(real);
+}
 
 // Below the mocks on purpose — see the note above about hoisting.
 import { registerDeleteProjectTool } from '@/features/ai/server/deleteProjectTool';

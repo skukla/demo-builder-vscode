@@ -109,8 +109,6 @@ export async function applyPackageChange(
             commandManager: ServiceLocator.getCommandExecutor(),
             authManager: ServiceLocator.getAuthenticationService(),
         },
-        includeBlockLibrary: true,
-        verifyCdn: true,
         // Reset's steps with Reset's count: the creation screen shows "(4 of 11)" as the
         // dashboard's progress modal does.
         withinEdit: {

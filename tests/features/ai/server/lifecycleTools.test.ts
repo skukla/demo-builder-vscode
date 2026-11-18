@@ -95,6 +95,43 @@ describe('open_url', () => {
         expect(out).toEqual({ opened: 'liveSite', url: ALL_URLS.liveSite });
     });
 
+    // PL-104 fix 9 (F267): Commerce Admin opens the way the dashboard's Admin button opens it
+    // (validated, Classic Admin in a private window), and its URL — which may embed
+    // credentials — never rides back in the answer.
+    describe('commerceAdmin goes through the house opener', () => {
+        function answering(opened: { success: boolean; error?: string }): void {
+            mockDispatchHandler.mockImplementation(async (_map, _ctx, type: string) =>
+                type === 'getProjectUrls' ? { success: true, data: { urls: ALL_URLS } } : opened,
+            );
+        }
+
+        it("opens it through the dashboard's Admin door, never the raw browser opener", async () => {
+            answering({ success: true });
+            const h = harness();
+
+            const out = await h.call('open_url', { target: 'commerceAdmin', confirm: true });
+
+            expect(mockDispatchHandler).toHaveBeenCalledWith(
+                expect.anything(),
+                expect.anything(),
+                'openAdminPanel',
+                { notify: true },
+            );
+            expect(h.opened).toStrictEqual([]);
+            expect(out).toStrictEqual({ opened: 'commerceAdmin' });
+        });
+
+        it("passes the opener's refusal through, still with no URL", async () => {
+            answering({ success: false, error: 'Invalid URL' });
+            const h = harness();
+
+            const out = await h.call('open_url', { target: 'commerceAdmin', confirm: true });
+
+            expect(out).toStrictEqual({ error: 'Invalid URL' });
+            expect(JSON.stringify(out)).not.toContain(ALL_URLS.commerceAdmin);
+        });
+    });
+
     it('resolves through the SAME handler get_project_urls uses', async () => {
         const h = harness();
 

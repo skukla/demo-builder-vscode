@@ -57,6 +57,7 @@ function run(over: Record<string, unknown> = {}, project = edsProject()) {
             secrets: createMockSecretStorage().secrets,
             logger,
             persist,
+            ensureDaLiveSession: null,
             ...over,
         }),
     };

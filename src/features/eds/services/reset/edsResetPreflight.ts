@@ -4,7 +4,8 @@
  * the AEM Code Sync GitHub App on the repository.
  *
  * Each answers null to carry on, or the result the reset stops with (the
- * project's status restored first).
+ * project's status restored first). The checks that ask are the window's asker
+ * (`edsResetUI`); `findMissingApp` is the App check every door runs (`edsResetRun`).
  *
  * Extracted from `edsResetUI` (EDS-8, 2026-10-08) so that file keeps only the
  * reset door's orchestration.
@@ -153,20 +154,25 @@ export async function checkOrgContext(
     };
 }
 
+/** The AEM Code Sync app is not on the repository: where to install it. */
+export interface MissingApp {
+    repoOwner: string;
+    repoName: string;
+    installUrl: string;
+}
+
 /**
- * Check GitHub App installation and prompt user if not installed.
- * @returns null if installed or user chose to continue, or an EdsResetResult if cancelled.
+ * Whether the AEM Code Sync GitHub App is on the repository, as every reset door asks it.
+ * @returns the install link when it is not, or null to carry on: installed, or AEM never
+ *   answered (advisory, not a gate)
  */
-export async function checkGitHubAppInstallation(
-    vscode: typeof import('vscode'),
+export async function findMissingApp(
     context: HandlerContext,
     repoOwner: string,
     repoName: string,
-    project: Project,
-    originalStatus: ProjectStatus,
     logPrefix: string,
     injectedAppService?: GitHubAppService,
-): Promise<EdsResetResult | null> {
+): Promise<MissingApp | null> {
     const { getGitHubServices } = await import('../../handlers/edsHelpers');
     const { tokenService: preCheckTokenService } = getGitHubServices(context.context.secrets);
     const { GitHubAppService } = await import('../github/githubAppService');
@@ -210,7 +216,21 @@ export async function checkGitHubAppInstallation(
     }
 
     context.logger.warn(`${logPrefix} AEM Code Sync app not installed on ${repoOwner}/${repoName}`);
+    return { repoOwner, repoName, installUrl: appService.getInstallUrl(repoOwner, repoName) };
+}
 
+/**
+ * The window's question when the App is missing: install it, or continue without it.
+ * @returns null when the SC installed it or chose to continue, or the cancelled result.
+ */
+export async function askToInstallApp(
+    vscode: typeof import('vscode'),
+    context: HandlerContext,
+    project: Project,
+    originalStatus: ProjectStatus,
+    logPrefix: string,
+    missing: MissingApp,
+): Promise<EdsResetResult | null> {
     const appWarning = await askDuringOperation(
         {
             title: 'Install the AEM Code Sync App',
@@ -223,8 +243,7 @@ export async function checkGitHubAppInstallation(
     );
 
     if (appWarning === 'Install App') {
-        const installUrl = appService.getInstallUrl(repoOwner, repoName);
-        await vscode.env.openExternal(vscode.Uri.parse(installUrl));
+        await vscode.env.openExternal(vscode.Uri.parse(missing.installUrl));
 
         const afterInstall = await askDuringOperation(
             {

@@ -20,7 +20,11 @@ export const mockRm = jest.fn();
 export const mockGetSession = jest.fn();
 
 jest.mock('vscode', () => ({
-    window: { showWarningMessage: (...a: unknown[]) => mockShowWarningMessage(...a) },
+    window: {
+        showWarningMessage: (...a: unknown[]) => mockShowWarningMessage(...a),
+        // The GitHub sign-in's success line (`signInToGitHub`, PL-104 fix 2).
+        setStatusBarMessage: jest.fn(),
+    },
     commands: { executeCommand: (...a: unknown[]) => mockExecuteCommand(...a) },
     authentication: { getSession: (...a: unknown[]) => mockGetSession(...a) },
 }));
@@ -33,6 +37,12 @@ export const mockDeleteRepository = jest.fn();
 export const mockDeleteDaLiveSite = jest.fn();
 export const mockGetToken = jest.fn();
 export const mockStoreToken = jest.fn();
+/**
+ * The check the one GitHub sign-in (`signInToGitHub`) makes of the token it was handed, and
+ * the clear before its stale-session retry (PL-104 fix 2). Valid unless a test says otherwise.
+ */
+export const mockValidateToken = jest.fn(async (): Promise<{ valid: boolean }> => ({ valid: true }));
+export const mockClearToken = jest.fn();
 export const mockEnsureDaLiveAuth = jest.fn();
 /**
  * The repository's files, listed BEFORE it is deleted so AEM's copy of its code can be
@@ -49,6 +59,8 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
         tokenService: {
             getToken: (...a: unknown[]) => mockGetToken(...a),
             storeToken: (...a: unknown[]) => mockStoreToken(...a),
+            validateToken: () => mockValidateToken(),
+            clearToken: () => mockClearToken(),
         },
         repoLifecycle: { deleteRepository: (...a: unknown[]) => mockDeleteRepository(...a) },
         fileOperations: {
@@ -58,7 +70,12 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     // `{ authenticated }` — read from edsHelpers, not guessed. The first draft
     // wrote `{ success, authService }` and the DA.live cleanup silently skipped.
     ensureDaLiveAuth: (...a: unknown[]) => mockEnsureDaLiveAuth(...a),
-    getDaLiveAuthService: jest.fn().mockReturnValue({}),
+    // The DA.live session the storefront teardown runs on itself (PL-104 fix 7), and the
+    // one sign-in reader a delete with nobody to ask checks instead of asking (fix 6).
+    getDaLiveAuthService: () => ({
+        getAccessToken: () => mockDaLiveAccessToken(),
+        checkSignIn: () => mockDaLiveCheckSignIn(),
+    }),
     // The DA.live session the code removal reads without asking (EDS-67).
     tryCreateDaLiveTokenProvider: () => ({ getAccessToken: () => mockDaLiveAccessToken() }),
 }));
@@ -84,14 +101,13 @@ jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     },
 }));
 /**
- * The DA.live session's token, as the provider hands it over. The provider is an OBJECT
- * with `getAccessToken` (daLiveTokenProviders.ts); this mock returned a bare function
- * until EDS-67, which nothing noticed because nothing it reached called it.
+ * The DA.live session's token: what the storefront teardown runs on (PL-104 fix 7) and what
+ * the code removal after a repository delete reads. The delete hands the session itself to the
+ * teardown now, so the `daLiveTokenProviders` mock this file held went with it.
  */
 export const mockDaLiveAccessToken = jest.fn(async (): Promise<string | null> => 'token');
-jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
-    createDaLiveServiceTokenProvider: () => ({ getAccessToken: () => mockDaLiveAccessToken() }),
-}));
+/** The one sign-in reader's verdict on the DA.live token (`DaLiveAuthService.checkSignIn`). */
+export const mockDaLiveCheckSignIn = jest.fn(async (): Promise<{ state: string }> => ({ state: 'valid' }));
 
 /**
  * The org-config cleanup that runs AFTER the site content is gone. Dynamically

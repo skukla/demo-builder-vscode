@@ -184,14 +184,6 @@ export function registerResetProjectTool(
                 'that is not theirs need changes:"keep" with saveAs, or changes:"drop": without one it answers code ' +
                 'CHANGES_NEED_ANSWER and resets nothing; changes:"drop" loses the user\'s changes in any pack, their own included. Requires confirm:true.',
             inputSchema: {
-                includeBlockLibrary: z
-                    .boolean()
-                    .optional()
-                    .describe('Edge Delivery only: also reset the installed block library'),
-                verifyCdn: z
-                    .boolean()
-                    .optional()
-                    .describe('Edge Delivery only: verify config.json on the CDN after reset'),
                 removeData: z
                     .boolean()
                     .optional()

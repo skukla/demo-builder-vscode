@@ -9,6 +9,7 @@
  *
  * @see .rptc/research/entry-point-drift-audit/research.md — the audit the ledger seeds from
  */
+import rawEntryPoints from './action-doors.entry-points.json';
 import rawLedger from './action-doors.ledger.json';
 
 /** The audit's verdicts, one per door. */
@@ -63,10 +64,46 @@ export interface ActionDoorLedger {
     exemptionCeiling: number;
     actions: Record<string, ActionRow>;
     /** Descriptor handler types no webview sends, each with why. */
-    agentOnlyHandlers: Record<string, Bypass>;
+    agentOnlyHandlers: Record<string, AgentOnlyHandler>;
+}
+
+/** A handler only an agent reaches: debt naming its fix, or a capability that is agent-only on purpose. */
+export interface AgentOnlyHandler {
+    reason: string;
+    /** Debt: where the fix is tracked. Counted toward `exemptionCeiling`. */
+    fix?: string;
+    /** On purpose: the reason says why no person needs this door. Not counted. */
+    byDesign?: boolean;
 }
 
 export const LEDGER: ActionDoorLedger = rawLedger;
+
+/** A no-spine bucket: why its members need no action row, and who they are. */
+export interface EntryBucket {
+    why: string;
+    /** `kind:name` entry ids (see entryPointScan.ts `entryId`). */
+    members: string[];
+}
+
+/**
+ * Every entry point, assigned (`action-doors.entry-points.json`). Each id is in exactly
+ * one of a bucket's members, `forwards` or `actions`.
+ */
+export interface EntryPointLedger {
+    _what: string;
+    _rules: string[];
+    buckets: Record<string, EntryBucket>;
+    /** Entry point -> the entry point it only runs. */
+    forwards: Record<string, string>;
+    /** Entry point -> the action rows (keys of `LEDGER.actions`) it reaches. */
+    actions: Record<string, string[]>;
+    /** Assigned entry points that disagree with another door of the same job. */
+    drift: Record<string, Bypass>;
+    /** Message types several maps implement differently, each with why. */
+    sharedNames: Record<string, string>;
+}
+
+export const ENTRY_POINTS: EntryPointLedger = rawEntryPoints;
 
 /** Find the text between the `(` at `open` and its matching `)`. */
 export function argumentsAt(code: string, open: number): string {
@@ -121,6 +158,14 @@ export function diffDoors(
         newDoors: callers.filter((f) => !listed.includes(f)),
         staleDoors: listed.filter((f) => !callers.includes(f)).sort(),
     };
+}
+
+/**
+ * The `should*` fields a spine file declares (`shouldX:` or `shouldX?:` at the start of
+ * a line): a result field that hands the caller a job.
+ */
+export function shouldFields(code: string): string[] {
+    return [...new Set([...code.matchAll(/^\s*(should[A-Z]\w*)\??\s*:/gm)].map((m) => m[1]))];
 }
 
 /** The entry calls in this code whose arguments carry a mode the spine should decide. */

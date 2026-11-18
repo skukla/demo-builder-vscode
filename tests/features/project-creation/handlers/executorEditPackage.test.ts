@@ -111,11 +111,12 @@ describe('applyPackageChange', () => {
         expect(resetEdsProjectWithUI).toHaveBeenCalledWith(
             expect.objectContaining({
                 project,
-                includeBlockLibrary: true,
-                verifyCdn: true,
                 withinEdit: { report: expect.any(Function) },
             }),
         );
+        // The block library and the CDN check are the reset's to decide, not the Edit's (PL-104 fix 1).
+        const handed = (resetEdsProjectWithUI as jest.Mock).mock.calls[0][0];
+        expect('includeBlockLibrary' in handed || 'verifyCdn' in handed).toBe(false);
         expect(order).toStrictEqual(['env', 'reset']);
         expect(generateAIContextFiles).toHaveBeenCalledWith(project.path, project, context.context.extensionPath);
     });

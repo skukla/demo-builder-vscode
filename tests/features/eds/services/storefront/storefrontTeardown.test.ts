@@ -13,6 +13,7 @@ import type { UnpublishPagesResult } from '@/features/eds/services/helix/helixPa
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { DaLiveAuthError } from '@/features/eds/services/types';
 import {
+    STOPPED_NOT_SIGNED_IN,
     STOPPED_SIGN_IN_REFUSED,
     STOPPED_STILL_LIVE,
     tearDownStorefront,
@@ -31,7 +32,7 @@ jest.mock('@/features/eds/services/daLive/daLiveConfigService', () => ({
     })),
 }));
 
-const TOKEN_PROVIDER = { getAccessToken: async () => 'token' };
+const DA_LIVE_SESSION = { getAccessToken: async (): Promise<string | null> => 'token' };
 
 /** An unpublish where every path went from live and preview (the shape `unpublishPages` returns). */
 function unpublishedAll(n: number): UnpublishPagesResult {
@@ -88,7 +89,7 @@ function depsWith(helix = helixFake(), content = contentFake(), onStep?: (s: str
     return {
         deps: {
             checkLive: liveCheck(),
-            tokenProvider: TOKEN_PROVIDER,
+            daLiveSession: DA_LIVE_SESSION,
             logger: createMockLogger(),
             initKeyStore: jest.fn().mockResolvedValue(undefined),
             makeHelix: () => helix,
@@ -555,5 +556,28 @@ describe('a content deletion that throws', () => {
         const { deps } = depsWith(helixFake(), content);
 
         await expect(tearDownStorefront(SITE, deps)).rejects.toThrow('ORG_MISMATCH');
+    });
+});
+
+// PL-104 fix 7: one DA.live token rule, here. Three doors used to fall back to the Adobe
+// IMS token, which DA.live and Helix refuse; on 2026-10-25 that fallback had DA.live
+// delete the content while Helix refused every unpublish, leaving a live site behind.
+describe('with no DA.live sign-in', () => {
+    it('stops before any step, so nothing is deleted on a token AEM would refuse', async () => {
+        const { deps, helix, content } = depsWith();
+        const onStep = jest.fn();
+
+        const result = await tearDownStorefront(SITE, {
+            ...deps,
+            onStep,
+            daLiveSession: { getAccessToken: async () => null },
+        });
+
+        expect(result).toMatchObject({ stopped: STOPPED_NOT_SIGNED_IN, contentDeleted: false, stillPublished: true });
+        expect(deps.initKeyStore).not.toHaveBeenCalled();
+        expect(helix.listAllPages).not.toHaveBeenCalled();
+        expect(content.deleteAllSiteContent).not.toHaveBeenCalled();
+        expect(removeSitePermissions).not.toHaveBeenCalled();
+        expect(onStep).not.toHaveBeenCalled();
     });
 });

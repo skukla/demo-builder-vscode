@@ -87,6 +87,7 @@ describe('buildSampleDataDeps — watch', () => {
     const engine = {
         getJobStatus: jest.fn(),
         getJobFailureReason: jest.fn(),
+        validateImport: jest.fn(async () => ({ valid: true })),
         startImport: jest.fn(async () => ({ activationId: 'act-1' })),
     } as unknown as DatapackEngine;
 

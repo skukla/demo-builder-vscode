@@ -237,7 +237,7 @@ export async function removeProjectSampleDataOutcome(
  * Uninstall's rule (`settleProjectAfterJob` in `importJobWatch.ts`). Without it a reset left the
  * project naming a pack Commerce no longer held (step-05 R1).
  *
- * On the object this was handed: a reset's `finally` saves the object it holds (`edsResetUI.ts`),
+ * On the object this was handed: a reset's `finally` saves the object it holds (`edsResetRun.ts`),
  * so a clear on another copy would be written back over. Saved without making it the open project,
  * since a batch's rows are not (`createNonSwitchingStateManager`). Never fatal: the data is out of
  * Commerce either way, and a delete reads this module's answer to decide whether the files may go.

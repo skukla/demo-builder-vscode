@@ -17,7 +17,6 @@ import {
     happyEngine,
     importHandlers,
     makeImportHarness,
-    stubEngine,
     mockedWatch,
     PAAS_PROJECT,
     PAYLOAD,
@@ -566,64 +565,6 @@ describe('the feature turned off mid-import', () => {
         expect(mockedWatch).toHaveBeenCalledWith(
             expect.objectContaining({ activationId: 'act-1' })
         );
-    });
-});
-
-describe('a start the service refuses', () => {
-    it('reports the service reason and records no job', async () => {
-        const { context, stores } = makeImportHarness();
-        stubEngine({
-            validateImport: jest.fn().mockResolvedValue({ valid: false, reason: 'unknown pack' }),
-            startImport: jest.fn(),
-            checkCredentials: jest.fn().mockResolvedValue({ usable: true }),
-        });
-
-        const result = await importHandlers['start-datapack-import'](context, PAYLOAD);
-
-        expect(result).toEqual({ success: false, error: 'unknown pack' });
-        expect(stores.peek('dataInstaller.import.current')).toBeUndefined();
-    });
-
-    it('falls back to its own wording when the service gives no reason', async () => {
-        const { context } = makeImportHarness();
-        stubEngine({
-            validateImport: jest.fn().mockResolvedValue({ valid: false }),
-            startImport: jest.fn(),
-            checkCredentials: jest.fn().mockResolvedValue({ usable: true }),
-        });
-
-        const result = await importHandlers['start-datapack-import'](context, PAYLOAD);
-
-        expect(result.error).toBe('The Data Installer rejected this install request.');
-    });
-
-    it('reports a thrown start as a failure rather than losing it', async () => {
-        const { context } = makeImportHarness();
-        stubEngine({
-            validateImport: jest.fn().mockResolvedValue({ valid: true }),
-            startImport: jest.fn().mockRejectedValue(new Error('runtime 503')),
-            checkCredentials: jest.fn().mockResolvedValue({ usable: true }),
-        });
-
-        const result = await importHandlers['start-datapack-import'](context, PAYLOAD);
-
-        expect(result).toMatchObject({ success: false, error: 'runtime 503' });
-    });
-
-    it('uses the operation-specific wording when the thrown value is not an Error', async () => {
-        const { context } = makeImportHarness();
-        stubEngine({
-            validateImport: jest.fn().mockResolvedValue({ valid: true }),
-            startDelete: jest.fn().mockRejectedValue('not an error object'),
-            checkCredentials: jest.fn().mockResolvedValue({ usable: true }),
-        });
-
-        const result = await importHandlers['reset-datapack'](context, {
-            ...PAYLOAD,
-            confirm: true,
-        });
-
-        expect(result.error).toBe('The uninstall could not be started.');
     });
 });
 

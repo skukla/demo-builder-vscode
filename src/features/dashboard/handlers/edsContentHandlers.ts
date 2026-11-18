@@ -8,7 +8,6 @@
  */
 
 import * as vscode from 'vscode';
-import { recheckCodeStep } from './finishSetupHandlers';
 import { handleRequestStatus } from './statusHandlers';
 import { COMPONENT_IDS } from '@/core/constants';
 import { numberedSteps } from '@/core/utils/numberedSteps';
@@ -225,8 +224,7 @@ export const handleRepublishContent: MessageHandler<StorefrontActionPayload> =
                 }
 
                 context.logger.info(`[Dashboard] Content republished for ${repoFullName}`);
-                // The project's Republish the Code step turns done when the site now serves it (PL-101).
-                await recheckCodeStep(context, githubFiles);
+                // The Finish Setup code step was checked by the republish itself (PL-104 fix 10).
                 // Push the new storefront status so the Republish tile drops its
                 // amber dot. `buildStatusPayload` carries `edsStorefrontStatus`,
                 // and without this the open dashboard keeps rendering whatever it

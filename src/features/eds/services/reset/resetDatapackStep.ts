@@ -1,7 +1,7 @@
 /**
  * A reset's datapack step as a batch sees it (step-05 S6, owner 2026-11-13): the batch's answers,
  * what the removal did to the store, the row's line for it, and a reset that failed after it. A
- * storefront reset (`edsResetUI`) and a headless one (`projectResetService`) both run the step;
+ * storefront reset (`edsResetRun`) and a headless one (`projectResetService`) both run the step;
  * the batch row says what it did; the agent's `reset_project` runs it too (S7). Its own file so
  * `edsResetDatapack` keeps only the removal.
  *

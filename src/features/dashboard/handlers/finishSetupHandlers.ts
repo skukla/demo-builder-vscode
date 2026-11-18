@@ -214,25 +214,3 @@ export const handleCheckFinishSetupSteps: MessageHandler<CheckFinishSetupStepsRe
  */
 export const handlePrepareFinishSetupChecks: MessageHandler = async (context) =>
     handleGetFinishSetup(context, undefined);
-
-/**
- * After a Republish: check the project's Republish the Code step, so it turns done when the site
- * now serves its files. Nothing when the project has no such step. Never throws: the Republish
- * has succeeded whatever this finds.
- *
- * @param reads - the repository reads the Republish already holds
- */
-export async function recheckCodeStep(
-    context: HandlerContext,
-    reads: CodeStepReads,
-): Promise<void> {
-    try {
-        const project = await context.stateManager.getCurrentProject();
-        if (project?.finishSetup?.[REPUBLISH_CODE_STEP])
-            await checkCode(context, { project }, reads);
-    } catch (error) {
-        context.logger.warn(
-            `[Finish Setup] Could not check the code step after Republish: ${(error as Error).message}`,
-        );
-    }
-}
