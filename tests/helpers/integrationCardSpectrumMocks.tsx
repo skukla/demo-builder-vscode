@@ -61,6 +61,8 @@ jest.mock('@adobe/react-spectrum', () => ({
         </ul>
     ),
     Item: ({ children }: any) => <>{children}</>,
+    // The rename field's saving spinner (walk F224).
+    ProgressCircle: ({ 'aria-label': label }: any) => <div role="progressbar" aria-label={label} />,
     Text: ({ children }: any) => <span>{children}</span>,
 }));
 

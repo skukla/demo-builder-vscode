@@ -36,6 +36,7 @@
 import { ActionButton } from '@adobe/react-spectrum';
 import Edit from '@spectrum-icons/workflow/Edit';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Spinner } from '@/core/ui/components/ui/Spinner';
 import { cn } from '@/core/ui/utils/classNames';
 
 /** Identity default: without a normalizer the field stores raw keystrokes. */
@@ -218,6 +219,12 @@ export function InlineRenameField({
                     if (!busyRef.current) void commit();
                 }}
             />
+            {/* The save's wait, where the pencil sits: the house wait for a small control (walk F224). */}
+            {busy && (
+                <span className="inline-rename-saving">
+                    <Spinner size="S" aria-label="Saving" />
+                </span>
+            )}
             {error && (
                 <span className="inline-rename-error" role="alert">
                     {error}

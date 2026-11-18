@@ -147,6 +147,14 @@
         margin-left var(--spectrum-global-animation-duration-100) ease;
 }
 
+/* The save's wait, beside the greyed name where the pencil was (walk F224): always shown while
+ * saving, unlike the pencil's slot, which needs hover or focus and the disabled input has neither. */
+.inline-rename-saving {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 6px;
+}
+
 .inline-rename:hover .inline-rename-pencil-slot,
 .inline-rename:focus-within .inline-rename-pencil-slot {
     max-width: 44px;

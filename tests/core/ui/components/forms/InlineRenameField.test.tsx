@@ -438,3 +438,32 @@ describe('InlineRenameField', () => {
         });
     });
 });
+
+// Walk F224 (owner, 2026-11-18): Enter on a rename showed no sign the save was under way. A small
+// spinner sits where the pencil does while it saves, the house wait for a small control.
+describe('InlineRenameField while it saves', () => {
+    it('shows a small spinner beside the name until the save answers', async () => {
+        let resolveRename!: (value: string | null) => void;
+        const onRename = jest.fn(
+            () =>
+                new Promise<string | null>((res) => {
+                    resolveRename = res;
+                })
+        );
+        renderField({ onRename });
+        const input = enterEditMode();
+        fireEvent.change(input, { target: { value: 'Pending Name' } });
+        fireEvent.keyDown(input, { key: 'Enter' });
+
+        expect(await screen.findByRole('progressbar')).toBeInTheDocument();
+        resolveRename(null);
+        await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument());
+    });
+
+    it('CONTROL: shows no spinner while editing, before Enter', () => {
+        renderField();
+        enterEditMode();
+
+        expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+    });
+});
