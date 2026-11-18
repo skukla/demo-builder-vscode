@@ -404,6 +404,13 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
             'run it against, so its size is bounded by reading the shape: the same fields plus ' +
             '`lostGrants`, which scales with the site admin roster',
     },
+    cancel_project_creation: {
+        bytes: 1_000,
+        why:
+            'Bounded by the shape, not measured live (2026-11-18, PL-104 fix 14): `stopped` and one ' +
+            'sentence naming the project, or a one-line refusal. The project name is the only part ' +
+            'that varies, and project names are short folder names',
+    },
 };
 
 /**

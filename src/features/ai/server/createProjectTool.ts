@@ -64,7 +64,7 @@ import { mapBackendToEnvironmentType } from '@/features/eds/services/storefrontC
 import { probeStoreViewProducts } from '@/features/eds/services/storeViewProducts';
 import { cleanupFailedCreation } from '@/features/project-creation/handlers/creationFailureCleanup';
 import { projectNameProblem } from '@/features/project-creation/handlers/creationNameCheck';
-import { executeProjectCreation } from '@/features/project-creation/handlers/executor';
+import { runCreation } from '@/features/project-creation/handlers/creationRun';
 import { creationPath } from '@/features/project-creation/handlers/executorPreflight';
 import { pickStorefrontDerived } from '@/features/project-creation/ui/steps/edsConfigFromStorefront';
 import {
@@ -77,7 +77,7 @@ import type { HandlerContext } from '@/types/handlers';
 import type { AddedDemo, BundleImportResult, ImportedFrom } from '@/types/projectFile';
 import type { WizardState } from '@/types/webview';
 import type { StorefrontSetupCompletePayload } from '@/types/webviewPayloads';
-import type { StorefrontSetupStartPayload } from '@/types/webviewRequests';
+import type { ProjectCreationConfig, StorefrontSetupStartPayload } from '@/types/webviewRequests';
 
 /** Project a possibly-undefined org down to the lean `{ id, name }` surfaced on a mismatch. */
 function leanOrg(
@@ -377,6 +377,54 @@ function withSeed(state: ProjectConfigSource, seed: CreationSeed | undefined): P
     };
 }
 
+/** What only an Edge Delivery creation adds: its storefront, and the endpoint its backend records. */
+interface StorefrontPart {
+    accsEndpoint?: string;
+    edsConfig: ProjectConfigSource['edsConfig'];
+}
+
+/**
+ * The creation config, assembled once for both stacks through the wizard's own
+ * `buildProjectConfig`. Built here, not by hand in each path: two hand copies drifted
+ * once already (EDS-51 was a field one of them dropped), PL-104 fix 14.
+ *
+ * @param args - the creation's ids, row, seed and scope
+ * @param adobe - the Adobe context it records, when it needs one
+ * @param packages - the demo packages, for the config's package-derived fields
+ * @param storefront - Edge Delivery only: the storefront setup made
+ * @returns the config the creation run is handed
+ */
+async function creationConfig(
+    args: CreateArgs,
+    adobe: Partial<AdobeContext> | undefined,
+    packages: DemoPackage[],
+    storefront?: StorefrontPart,
+): Promise<ProjectCreationConfig> {
+    const state: ProjectConfigSource = {
+        projectName: args.projectName,
+        selectedPackage: args.pkgId,
+        selectedStack: args.stackId,
+        // Mesh ids ride selectedAppBuilderComponents (D3) — buildProjectConfig
+        // derives the wire's dependencies list from them.
+        selectedAppBuilderComponents: await getAutoSelectedOptionalDependencies(
+            args.pkgId,
+            args.stackId,
+            packages,
+        ),
+        demo: args.demo,
+        ...importedFromOf(args.importedFrom),
+        adobeOrg: adobe?.org,
+        adobeProject: adobe?.project,
+        adobeWorkspace: adobe?.workspace,
+        componentConfigs: backendEndpointConfig(args.stackId, storefront?.accsEndpoint, args.storeScope),
+        selectedAddons: [],
+        selectedBlockLibraries: [],
+        customBlockLibraries: [],
+        ...(storefront ? { edsConfig: storefront.edsConfig } : {}),
+    };
+    return buildProjectConfig(withSeed(state, args.seed), null, packages);
+}
+
 /** Headless (non-EDS) creation path. */
 
 async function createHeadless(
@@ -389,32 +437,12 @@ async function createHeadless(
     if ('error' in resolved) return asText(resolved.error);
     const { adobe } = resolved;
 
-    const wizardState: ProjectConfigSource = {
-        projectName: args.projectName,
-        selectedPackage: args.pkgId,
-        selectedStack: args.stackId,
-        // Mesh ids ride selectedAppBuilderComponents (D3) — buildProjectConfig
-        // derives the wire's dependencies list from them.
-        selectedAppBuilderComponents: await getAutoSelectedOptionalDependencies(
-            args.pkgId,
-            args.stackId,
-            packages,
-        ),
-        demo: args.demo,
-        adobeOrg: adobe?.org,
-        adobeProject: adobe?.project,
-        adobeWorkspace: adobe?.workspace,
-        componentConfigs: backendEndpointConfig(args.stackId, undefined, args.storeScope),
-        selectedAddons: [],
-        selectedBlockLibraries: [],
-        customBlockLibraries: [],
-    };
-
-    const config = buildProjectConfig(withSeed(wizardState, args.seed), null, packages);
+    const config = await creationConfig(args, adobe, packages);
     try {
         // Run creation under the stored session org context so any `aio` work
-        // targets the selected org/workspace via env (no global mutation).
-        await runWithAdobeTarget(() => executeProjectCreation(ctx, config));
+        // targets the selected org/workspace via env (no global mutation). The
+        // wizard's run: its 30-minute limit and its stop (PL-104 fix 14).
+        await runWithAdobeTarget(() => runCreation(ctx, config));
     } catch (err) {
         // Undo what the failed creation built, as the wizard does (owner, 2026-10-16).
         await cleanupFailedCreation(ctx, config);
@@ -580,25 +608,8 @@ async function createEds(
     const brokenLinks = complete.brokenLinks;
 
     // Phase 2: create the project, with preflight results threaded in.
-    const wizardState: ProjectConfigSource = {
-        projectName: args.projectName,
-        selectedPackage: args.pkgId,
-        selectedStack: args.stackId,
-        // Mesh ids ride selectedAppBuilderComponents (D3), same as createHeadless.
-        selectedAppBuilderComponents: await getAutoSelectedOptionalDependencies(
-            args.pkgId,
-            args.stackId,
-            packages,
-        ),
-        demo: args.demo,
-        ...importedFromOf(args.importedFrom),
-        adobeOrg: adobe?.org,
-        adobeProject: adobe?.project,
-        adobeWorkspace: adobe?.workspace,
-        componentConfigs: backendEndpointConfig(args.stackId, args.accsEndpoint, args.storeScope),
-        selectedAddons: [],
-        selectedBlockLibraries: [],
-        customBlockLibraries: [],
+    const config = await creationConfig(args, adobe, packages, {
+        accsEndpoint: args.accsEndpoint,
         edsConfig: {
             ...edsConfigInput,
             // Every field the storefront contributes, from the wizard's one list. A
@@ -617,11 +628,9 @@ async function createEds(
             // An imported project's commit, recorded for Reset as the wizard does (EDS-72).
             ...bundleImportOf(complete.bundleImport),
         },
-    };
-
-    const config = buildProjectConfig(withSeed(wizardState, args.seed), null, packages);
+    });
     try {
-        await runWithAdobeTarget(() => executeProjectCreation(capturing, config));
+        await runWithAdobeTarget(() => runCreation(capturing, config));
     } catch (err) {
         // Undo what the failed creation built, as the wizard does (owner, 2026-10-16).
         // The storefront it provisioned first stays, as it does in the wizard.

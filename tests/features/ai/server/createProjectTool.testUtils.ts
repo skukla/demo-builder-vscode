@@ -19,6 +19,7 @@ import type { McpToolSchema } from '@/features/ai/server/mcpToolServer';
 import { buildProjectConfig } from '@/features/project-creation/ui/wizard/wizardHelpers';
 import { cleanupFailedCreation } from '@/features/project-creation/handlers/creationFailureCleanup';
 import { executeProjectCreation } from '@/features/project-creation/handlers/executor';
+import { stopCreation } from '@/features/project-creation/handlers/creationRun';
 import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
 import { getGitHubServices, getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
 import { probeStoreViewProducts } from '@/features/eds/services/storeViewProducts';
@@ -99,6 +100,7 @@ export {
     runWithAdobeTarget,
     buildProjectConfig,
     executeProjectCreation,
+    stopCreation,
     cleanupFailedCreation,
     edsHandlers,
     getGitHubServices,

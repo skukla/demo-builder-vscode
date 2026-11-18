@@ -663,6 +663,16 @@ it does in the wizard. A re-run uses it by passing `adoptExisting:true`: the rep
 are, the wizard's "use existing" choice for both, with no reset of the code and no new
 copy of the content. The same flag rebuilds a deleted project whose storefront survived.
 
+The creation step itself runs through `runCreation` (`creationRun.ts`), the function the
+wizard's `create-project` handler calls too, so every door has the same 30-minute limit
+and the same stop (PL-104 fix 14). `cancel_project_creation` stops a running creation by
+the project's name, whichever door started it: it dispatches the wizard's own
+`cancel-project-creation` handler, given the name, because an agent call has no panel to
+cancel from. A stopped creation is cleaned up as a failed one is. Stopping ends the wait:
+creation's phases do not read the signal, which is true of the wizard's Cancel as well.
+The 30-minute limit covers the creation step, not storefront setup before it, which has
+its own 30-minute wait for the AEM Code Sync GitHub App.
+
 ### Creating from an exported file (2026-10-03)
 
 `create_project_from_file` takes an absolute PATH to a file `export_project_settings`

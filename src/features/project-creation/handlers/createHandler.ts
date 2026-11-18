@@ -9,10 +9,8 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { cleanupFailedCreation } from './creationFailureCleanup';
 import { projectNameProblem } from './creationNameCheck';
-import { executeProjectCreation } from './executor';
-import { OVERALL_TIMEOUT_MS } from './shared';
+import { runCreation } from './creationRun';
 import { classifyTransience, extractErrorMessage } from '@/core/errors';
-import { withTimeout } from '@/core/utils/promiseUtils';
 import { GitHubAppNotInstalledError } from '@/features/eds/services/types';
 import { ErrorCode } from '@/types/errorCodes';
 import { HandlerContext } from '@/types/handlers';
@@ -206,13 +204,6 @@ export async function handleCreateProject(
         }
     }
 
-    // Create abort controller for cancellation
-    context.logger.debug('[Project Creation] Creating NEW AbortController', {
-        previousExists: !!context.sharedState.projectCreationAbortController,
-        timestamp: new Date().toISOString(),
-    });
-    context.sharedState.projectCreationAbortController = new AbortController();
-
     try {
         // Log summary at debug, full config at trace
         const typedConfig = config as {
@@ -232,15 +223,8 @@ export async function handleCreateProject(
             logs: [],
         });
 
-        // Execute with timeout and cancellation support
-        await withTimeout(executeProjectCreation(context, config), {
-            timeoutMs: OVERALL_TIMEOUT_MS,
-            timeoutMessage:
-                'Project creation timed out after 30 minutes. ' +
-                'This may indicate a network issue or very large components. ' +
-                'Please check your connection and try again.',
-            signal: context.sharedState.projectCreationAbortController.signal,
-        });
+        // The creation run owns the 30-minute limit and the stop, for every door (PL-104 fix 14).
+        await runCreation(context, config);
 
         return { success: true };
     } catch (error) {

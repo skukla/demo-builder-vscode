@@ -196,6 +196,7 @@
                 "handler:backgroundOperation",
                 "handler:cancel",
                 "handler:cancel-project-creation",
+                "tool:cancel_project_creation",
                 "handler:copyAiPrompt",
                 "handler:datapack-save-question-answered",
                 "handler:dismiss-datapack-no-access",
@@ -536,12 +537,7 @@
             "sync-storefront"
         ]
     },
-    "drift": {
-        "handler:setConsoleApis": {
-            "reason": "Manage APIs and the agent's set_console_apis (both send setConsoleApis) save picks for any componentId, including one the project does not have, and subscribe them on the shared workspace; add_console_apis (addConsoleApis) refuses an unknown integration first (consoleApiHandlers.ts:364-370 vs :405-406). Both end in reconcileExtras, which does not check.",
-            "fix": "PL-104 fix 15 (F269)"
-        }
-    },
+    "drift": {},
     "sharedNames": {
         "cancel": "Each screen's own Cancel: Configure (handleCancelConfigure), the wizard (handleCancel) and the AI panel (openAi.ts). One name, three screens.",
         "clear-commerce-instance": "The agent descriptor's map builds the window's request from the agent's answers, then calls importHandlers['clear-commerce-instance'] (dataInstallerDescriptors.ts:201-204): an adapter in front of the one handler.",

@@ -138,6 +138,7 @@ export const TOOL_NARRATION: Record<string, string> = {
 
     // ── Projects ────────────────────────────────────────────────────────
     create_project: 'Creating the project',
+    cancel_project_creation: 'Stopping the project creation',
     create_project_from_file: 'Creating a project from a file',
     copy_project: 'Copying a project',
     delete_project: 'Deleting the project',

@@ -11,6 +11,8 @@ import * as fsPromises from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { stopCreation } from './creationRun';
+import { creationPath } from './executorPreflight';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { swapWebviewSurface } from '@/core/base/swapWebviewSurface';
 import { openUrl } from '@/core/utils/browserUtils';
@@ -51,19 +53,45 @@ export async function handleCancel(context: HandlerContext): Promise<SimpleResul
 }
 
 /**
- * cancel-project-creation - User cancels project creation
+ * cancel-project-creation - stop a running project creation
  *
- * Aborts the active project creation process if one is running.
+ * With no payload, the wizard's Cancel: aborts the creation this panel started. With a
+ * project name, stops that project's creation whichever door started it; this is how
+ * `cancel_project_creation` reaches a run, since an agent call has no panel and a fresh
+ * context each time (PL-104 fix 14).
+ *
+ * @param context - the handler context
+ * @param payload - optional: the project whose creation to stop
+ * @returns whether a creation was stopped, and a message saying so
  */
 export async function handleCancelProjectCreation(
     context: HandlerContext,
+    payload?: { projectName?: string },
 ): Promise<DataResult<{ message: string }>> {
+    const projectName = typeof payload?.projectName === 'string' ? payload.projectName.trim() : '';
+    if (projectName) return cancelCreationByName(context, projectName);
     if (context.sharedState.projectCreationAbortController) {
         context.logger.debug('[Project Creation] Cancellation requested by user');
         context.sharedState.projectCreationAbortController.abort();
         return { success: true, data: { message: 'Project creation cancelled' } };
     }
     return { success: false, data: { message: 'No active project creation to cancel' }, code: ErrorCode.PROJECT_NOT_FOUND };
+}
+
+/** Stop the creation of the named project, from any door's context. */
+function cancelCreationByName(
+    context: HandlerContext,
+    projectName: string,
+): DataResult<{ message: string }> {
+    if (stopCreation(creationPath({ projectName }))) {
+        context.logger.info(`[Project Creation] Creation of "${projectName}" stopped on request`);
+        return { success: true, data: { message: `Stopped the creation of "${projectName}".` } };
+    }
+    return {
+        success: false,
+        data: { message: `No creation of "${projectName}" is running.` },
+        code: ErrorCode.PROJECT_NOT_FOUND,
+    };
 }
 
 

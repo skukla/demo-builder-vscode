@@ -39,6 +39,7 @@ import { createAgentTraceFileSink } from '@/features/ai/server/agentTraceSink';
 import { registerAgentTraceTool } from '@/features/ai/server/agentTraceTool';
 import { registerApplyUpdatesTool } from '@/features/ai/server/applyUpdatesTool';
 import { registerAuthTools } from '@/features/ai/server/authTools';
+import { registerCancelProjectCreationTool } from '@/features/ai/server/cancelProjectCreationTool';
 import { registerCloudResourceTools } from '@/features/ai/server/cloudResourceTools';
 import { registerCommerceEndpointsTool } from '@/features/ai/server/commerceEndpointsTool';
 import { registerCommerceQueryTool } from '@/features/ai/server/commerceQueryTool';
@@ -790,6 +791,7 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                 registerAuthTools(mcpServer, connCtxFactory);
                 registerAdobeTools(mcpServer, connCtxFactory);
                 registerCreateProjectTool(mcpServer, connCtxFactory);
+                registerCancelProjectCreationTool(mcpServer, connCtxFactory);
                 registerCreateProjectFromFileTool(mcpServer, connCtxFactory);
                 registerCopyProjectTool(mcpServer, connCtxFactory);
                 registerCurrentProjectTool(mcpServer, connCtxFactory, scopedProjectDir);

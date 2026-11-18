@@ -12,7 +12,7 @@
         "A spine that returns a `should*` field hands its doors a job: the field must be in the `mustRead` of a row whose spine holds that file."
     ],
     "_notCovered": "Rows 13 (start/stop demo: every caller runs the command), 18 and 19 (their doors are already pinned in spine-chokepoints.test.ts), and 24 to 30 (one handler type that the button and the agent descriptor both send). The audit's untraced list (edit project, export/import bundle, copy project, ERP actions, added demos) has no rows yet; their entry points sit in the `write` bucket of action-doors.entry-points.json until one is given. Block-library promote/remove was traced 2026-11-18: a sync-storefront door.",
-    "exemptionCeiling": 2,
+    "exemptionCeiling": 0,
     "actions": {
         "adobe-sign-in": {
             "auditRow": 1,
@@ -340,17 +340,19 @@
         },
         "create-project": {
             "auditRow": 16,
-            "entry": "\\bexecuteProjectCreation\\(",
-            "spine": ["features/project-creation/handlers/executor.ts"],
+            "entry": "\\brunCreation\\(",
+            "spine": [
+                "features/project-creation/handlers/creationRun.ts",
+                "features/project-creation/handlers/executor.ts"
+            ],
             "doors": {
                 "features/project-creation/handlers/createHandler.ts": {
                     "verdict": "same-policy",
-                    "reason": "The wizard; wraps creation in `withTimeout`."
+                    "reason": "The wizard, through `runCreation`, which owns the 30-minute limit and the stop."
                 },
                 "features/ai/server/createProjectTool.ts": {
-                    "verdict": "drift",
-                    "reason": "Read 2026-11-18. Shared with the wizard: the name check, buildProjectConfig, executeProjectCreation (which marks the project 'creating') and cleanupFailedCreation. Different: the wizard runs creation under withTimeout (30 minutes) with an abort controller (createHandler.ts:236-243); `runProjectCreation` has neither, so an agent creation that hangs never ends. And the wizard state is rebuilt by hand twice, in createHeadless and createEds (createProjectTool.ts:392-411, 583-620); EDS-51 was a field this copy dropped.",
-                    "fix": "PL-104 fix 14 (F269)"
+                    "verdict": "same-policy",
+                    "reason": "create_project, create_project_from_file and copy_project, through `runCreation` with one `creationConfig` builder; cancel_project_creation stops it (PL-104 fix 14, F272)."
                 }
             }
         },
@@ -505,7 +507,7 @@
             "byDesign": true
         },
         "addConsoleApis": {
-            "reason": "Read 2026-11-18. The additive mode of the one API subscription: it and Manage APIs' setConsoleApis share loadProjectAndGuard and reconcileExtras. The two disagree on one guard, recorded on handler:setConsoleApis (PL-104 fix 15).",
+            "reason": "Read 2026-11-18. The additive mode of the one API subscription: it and Manage APIs' setConsoleApis share loadProjectAndGuard and reconcileExtras. Both refuse an integration the project does not have, inside reconcileExtras (PL-104 fix 15, F273).",
             "byDesign": true
         },
         "mark-team-datapack": {

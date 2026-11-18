@@ -198,7 +198,10 @@ describe('the subscribe progress callbacks', () => {
 });
 
 describe('a project that has no integrations block at all', () => {
-    it('set with a componentId still answers on the project workspace', async () => {
+    // This answered on the project workspace until PL-104 fix 15: set saved picks for
+    // an integration the project does not have and subscribed them. It now refuses
+    // as add does, because the guard sits in the subscription both share.
+    it('set with a componentId refuses as an unknown integration, the same as add', async () => {
         const project = consoleApiProject({ componentApiPicks: { 'erp-sync': ['FireflyAPISDK'] } });
         const context = consoleApiContext(project);
 
@@ -207,9 +210,13 @@ describe('a project that has no integrations block at all', () => {
             apis: ['FireflyAPISDK'],
         });
 
-        expect(result.success).toBe(true);
-        const call = (subscribeRequiredApis as jest.Mock).mock.calls[0];
-        expect(call[1]).toEqual(expect.objectContaining({ workspaceId: 'w-1' }));
+        expect(result).toEqual({
+            success: false,
+            error: 'This project has no integration "erp-sync".',
+            code: ErrorCode.CONFIG_INVALID,
+        });
+        expect(subscribeRequiredApis).not.toHaveBeenCalled();
+        expect(context.stateManager.saveProject).not.toHaveBeenCalled();
     });
 
     it('add with a componentId refuses as an unknown integration rather than throwing', async () => {
@@ -263,7 +270,9 @@ describe('entries the project does not list', () => {
         (getAvailableAppBuilderComponents as jest.Mock).mockReturnValue([]);
     });
 
-    it('set for an integration the project no longer has goes to the project workspace', async () => {
+    // Went to the project workspace until PL-104 fix 15, saving picks for an
+    // integration that is gone. It is refused now, without throwing.
+    it('set for an integration the project no longer has is refused, not thrown', async () => {
         const context = consoleApiContext(twoWorkspaceProject());
 
         const result = await handleSetConsoleApis(context, {
@@ -271,9 +280,12 @@ describe('entries the project does not list', () => {
             apis: ['FireflyAPISDK'],
         });
 
-        expect(result.success).toBe(true);
-        const call = (subscribeRequiredApis as jest.Mock).mock.calls[0];
-        expect(call[1]).toEqual(expect.objectContaining({ workspaceId: 'w-1' }));
+        expect(result).toEqual({
+            success: false,
+            error: 'This project has no integration "removed-app".',
+            code: ErrorCode.CONFIG_INVALID,
+        });
+        expect(subscribeRequiredApis).not.toHaveBeenCalled();
     });
 
     it('a mesh entry the integrations block does not name stays in the shared catalog', async () => {

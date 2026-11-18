@@ -1609,5 +1609,13 @@
             "restore_datapack"
         ],
         "why": "step-07 U1 (owner 2026-11-14): judges that the agent calls restore_datapack with to: original (not Undo Last Save) and offers to save unsaved changes first. Writes to the store, so the battery stops at the consent."
+    },
+    {
+        "id": "stop-running-creation",
+        "prompt": "Stop the summit-demo project you're creating, I picked the wrong package.",
+        "expect": [
+            "cancel_project_creation"
+        ],
+        "why": "Added 2026-11-18 with the tool (PL-104 fix 14): before it, an agent creation could not be stopped at all and had no time limit. Judges that the agent stops the creation by name instead of waiting it out or deleting a project that does not exist yet. Confirm-gated, so the battery stops at the consent."
     }
 ]
