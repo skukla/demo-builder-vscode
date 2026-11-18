@@ -242,6 +242,33 @@ describe('importDemoBundle', () => {
         });
     });
 
+    // Walk F241 (owner: "I get nothing"): importing your own bundle met your own repository's name,
+    // GitHub refused, and the import ended there. The next free name is taken instead.
+    it('takes the next free name when the account already has a repository by that name', async () => {
+        mockRead.mockReturnValue({ files: new Map(STOREFRONT), rootName: 'scratch-1028-demo-bundle', dropped: 0, setup: SETUP });
+        const taken = new Error('Repository creation failed.: {"field":"name","message":"name already exists on this account"}');
+        repoLifecycle.createEmptyRepository
+            .mockRejectedValueOnce(taken)
+            .mockRejectedValueOnce(taken)
+            .mockResolvedValueOnce({ fullName: 'steve/scratch-1028-3', name: 'scratch-1028-3', defaultBranch: 'main' });
+
+        const result = await importDemoBundle(ctx(), '/x/scratch-1028-demo-bundle.zip');
+
+        expect(repoLifecycle.createEmptyRepository.mock.calls.map((call) => call[0])).toEqual(['scratch-1028', 'scratch-1028-2', 'scratch-1028-3']);
+        expect(result).toMatchObject({ success: true, data: { success: true } });
+    });
+
+    it('reports each step, so the window shows what it is doing', async () => {
+        mockRead.mockReturnValue({ files: new Map(STOREFRONT), rootName: 'summit', dropped: 0 });
+        repoLifecycle.createEmptyRepository.mockResolvedValue({ fullName: 'steve/summit', name: 'summit', defaultBranch: 'main' });
+        const onProgress = jest.fn();
+
+        await importDemoBundle(ctx(), '/x/summit.zip', onProgress);
+
+        expect(onProgress).toHaveBeenCalledWith('Reading the file', 'summit.zip');
+        expect(onProgress).toHaveBeenCalledWith('Creating the repository', expect.stringContaining('summit'));
+    });
+
     it("says when the bundle's setup file cannot be read, before creating anything", async () => {
         mockRead.mockReturnValue({ files: STOREFRONT, rootName: 'b', dropped: 0, setupError: 'Missing required field: version' });
         const result = await importDemoBundle(ctx(), '/x/bad.zip');

@@ -19,7 +19,7 @@ import { useOperationRunner } from '@/core/ui/hooks/useOperationRunner';
 import { useRefreshPress } from '@/core/ui/hooks/useRefreshPress';
 import { useViewModePreference } from '@/core/ui/hooks/useViewModePreference';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import { COPY_SETTINGS_OPERATION_ID } from '@/core/utils/operationIds';
+import { COPY_SETTINGS_OPERATION_ID, IMPORT_FILE_OPERATION_ID } from '@/core/utils/operationIds';
 import { sleep } from '@/core/utils/sleep';
 import type { Project } from '@/types/base';
 import type {
@@ -208,15 +208,6 @@ function ProjectsDashboardApp() {
         }
     }, []);
 
-    // Handle import from file
-    const handleImportFromFile = useCallback(async () => {
-        try {
-            await webviewClient.postMessage('importFromFile');
-            // File picker will show, then wizard opens - handled by extension
-        } catch (error) {
-            console.error('Failed to import from file:', error);
-        }
-    }, []);
 
     // Handle export project settings
     const handleExportProject = useCallback(async (project: Project) => {
@@ -251,6 +242,20 @@ function ProjectsDashboardApp() {
             thing: 'Settings',
             failureTitle: "Couldn't Copy the Settings",
             successTitle: 'Settings Copied',
+        });
+    }, [startOperation]);
+
+    // Import from File: the picker first, then the progress window once the import begins, or with
+    // the reason when it is refused (walk F241: it had sent the message and never read the answer).
+    const handleImportFromFile = useCallback(() => {
+        startOperation({
+            id: IMPORT_FILE_OPERATION_ID,
+            name: 'file',
+            message: 'importFromFile',
+            title: 'Import from File',
+            thing: 'Demo',
+            failureTitle: "Couldn't Import the File",
+            successTitle: 'Demo Imported',
         });
     }, [startOperation]);
 

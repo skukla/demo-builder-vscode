@@ -27,6 +27,12 @@ export const REPUBLISH_OPERATION_ID = 'republish';
 export const COPY_SETTINGS_OPERATION_ID = 'copy-settings';
 
 /**
+ * The projects list's "Import from File": a settings file or a demo bundle, its steps and any
+ * refusal in that screen's progress window (walk F241).
+ */
+export const IMPORT_FILE_OPERATION_ID = 'import-file';
+
+/**
  * Changing where a project's integrations deploy. Project-scoped, like the
  * storefront buttons, so it names the operation rather than a target.
  */

@@ -33,6 +33,36 @@ import type { ImportStorefrontZipRequest, ImportStorefrontZipResult, UseBundleSe
 
 const PICKER_TITLE = 'Add a Storefront from a Zip File';
 
+/** How many names a bundle's repository tries: its own, then -2, -3 and so on. */
+const NAME_TRIES = 20;
+
+/** GitHub's refusal of a name the account already uses. */
+function nameTaken(error: unknown): boolean {
+    return /name already exists/i.test((error as Error).message ?? '');
+}
+
+/**
+ * Create the bundle's repository under its own name, or the next free one (walk F241): importing
+ * your own bundle meets your own repository's name, and GitHub refuses it. The import is a new
+ * copy of the demo, so it takes "scratch-1028-2" rather than stopping.
+ */
+async function createWithFreeName<T>(base: string, create: (name: string) => Promise<T>): Promise<T> {
+    for (let attempt = 1; attempt < NAME_TRIES; attempt++) {
+        const name = attempt === 1 ? base : `${base}-${attempt}`;
+        try {
+            return await create(name);
+        } catch (error) {
+            if (!nameTaken(error)) throw error;
+        }
+    }
+    return create(`${base}-${NAME_TRIES}`);
+}
+
+/** One sentence from a GitHub failure: its own message, without the JSON and the docs link. */
+function githubSaid(raw: string): string {
+    return (/"message"\s*:\s*"([^"]+)"/.exec(raw)?.[1] ?? raw.replace(/\s+-\s+https?:\/\/\S+$/, '')).replace(/\.$/, '');
+}
+
 async function pickZip(): Promise<string | undefined> {
     const picked = await vscode.window.showOpenDialog({
         canSelectFiles: true,
@@ -138,8 +168,7 @@ async function refusalForCreate(context: HandlerContext, repoName: string, raw: 
             ...(login ? { existing: { owner: login, repo: repoName } } : {}),
         };
     }
-    const said = /"message"\s*:\s*"([^"]+)"/.exec(raw)?.[1] ?? raw.replace(/\s+-\s+https?:\/\/\S+$/, '');
-    return { success: false, error: `GitHub didn't create ${repoName}: ${said.replace(/\.$/, '')}.` };
+    return { success: false, error: `GitHub didn't create ${repoName}: ${githubSaid(raw)}.` };
 }
 
 /**
@@ -169,9 +198,15 @@ export async function handleUseBundleSetup(context: HandlerContext, request?: Us
  *
  * @param context - Handler context
  * @param zipPath - The bundle on disk
+ * @param onProgress - each step as it starts, for the projects list's progress window (walk F241)
  * @returns `{ success, data }` in the shape the projects list reads
  */
-export async function importDemoBundle(context: HandlerContext, zipPath: string): Promise<HandlerResponse> {
+export async function importDemoBundle(
+    context: HandlerContext,
+    zipPath: string,
+    onProgress?: (message: string, detail?: string) => void,
+): Promise<HandlerResponse> {
+    onProgress?.('Reading the file', path.basename(zipPath));
     let unpacked;
     try {
         unpacked = readStorefrontZip(zipPath);
@@ -190,10 +225,13 @@ export async function importDemoBundle(context: HandlerContext, zipPath: string)
     try {
         if (hasStorefront) {
             const { repoLifecycle, treeCommits } = getGitHubServices(context.context.secrets);
-            const created = await createRepositoryFromZip(
-                { repoOps: repoLifecycle, fileOps: treeCommits, logger: context.logger },
-                unpacked.files,
-                { repoName: suggestRepoName(unpacked.rootName, 'storefront'), isPrivate: false },
+            const files = unpacked.files;
+            const created = await createWithFreeName(suggestRepoName(unpacked.rootName, 'storefront'), (repoName) =>
+                createRepositoryFromZip(
+                    { repoOps: repoLifecycle, fileOps: treeCommits, logger: context.logger, ...(onProgress ? { onProgress } : {}) },
+                    files,
+                    { repoName, isPrivate: false },
+                ),
             );
             const card = cardFromZip(unpacked.files, created) ?? {
                 kind: 'demo',
@@ -212,7 +250,7 @@ export async function importDemoBundle(context: HandlerContext, zipPath: string)
         }
     } catch (error) {
         context.logger.error(`[Zip] Bundle import failed: ${(error as Error).message}`);
-        return { success: true, data: { success: false, error: (error as Error).message } };
+        return { success: true, data: { success: false, error: `The demo couldn't be imported: ${githubSaid((error as Error).message)}.` } };
     }
 
     const sourceDescription = path.basename(zipPath);
