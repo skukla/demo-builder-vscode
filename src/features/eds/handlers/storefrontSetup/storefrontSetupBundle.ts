@@ -16,6 +16,7 @@ import {
     contentSourceOfZip,
     createRepositoryFromZip,
     readStorefrontZip,
+    templateBaseOfZip,
 } from '../../services/storefront/zipStorefrontImport';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
 import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefrontSetupTypes';
@@ -33,6 +34,8 @@ export interface SetupBundle {
     /** Entries left out as never-committed, for the progress line. */
     dropped: number;
     contentSource?: DaLiveContentSource;
+    /** The template commit the sender's code was built on, when the bundle says (F252). */
+    templateBase?: string;
 }
 
 /** A brand's own code and content settings, which a bundle's code and pages replace. */
@@ -94,12 +97,22 @@ export async function readSetupBundle(
                 ? `, pages from ${contentSource.org}/${contentSource.site}`
                 : ', no content site named'),
     );
+    const templateBase = templateBaseOfZip(unpacked.files, {
+        owner: edsConfig.templateOwner ?? '',
+        repo: edsConfig.templateRepo ?? '',
+    });
+    if (!templateBase) {
+        logger.info(
+            "[Storefront Setup] The sender's template version is unknown: updates count from the import",
+        );
+    }
     return {
         edsConfig: { ...kept, contentSource },
         bundle: {
             files: unpacked.files,
             dropped: unpacked.dropped,
             ...(contentSource ? { contentSource } : {}),
+            ...(templateBase ? { templateBase } : {}),
         },
     };
 }
@@ -156,6 +169,7 @@ export async function executePhaseBundleRepo(
     repoInfo.bundleImport = {
         commit: created.commit,
         ...(bundle.contentSource ? { contentSource: bundle.contentSource } : {}),
+        ...(bundle.templateBase ? { templateBase: bundle.templateBase } : {}),
     };
     context.logger.info(
         `[Storefront Setup] Repository created from the imported demo: ${created.fullName} at ${created.commit}`,

@@ -35,6 +35,7 @@ import {
     type AddedDemo,
     type ImportedFrom,
     type ProjectFile,
+    type RepositoryRef,
 } from '@/types/projectFile';
 
 
@@ -250,6 +251,24 @@ export function contentSourceOfZip(files: Map<string, Buffer>): DaLiveContentSou
     const fstab = files.get('fstab.yaml');
     const mounted = fstab ? parseFstabContentSource(fstab.toString('utf-8')) : undefined;
     return mounted ? { ...mounted, indexPath: FALLBACK_CONTENT_INDEX_PATH } : undefined;
+}
+
+/** A template commit, the whole value. */
+const COMMIT_SHA = /^[0-9a-f]{40}$/;
+
+/**
+ * The template commit a bundle's storefront was built on (F252): the description file's
+ * `builtWith.lkg`, when it is a commit and on `template` (a description naming no template is
+ * taken to mean the project's). Nothing otherwise: an older sender wrote no `builtWith`.
+ */
+export function templateBaseOfZip(files: Map<string, Buffer>, template: RepositoryRef): string | undefined {
+    const description = files.get(SHARED_DEMO_FILE_NAME);
+    const read = description ? readSharedDemoDescription(description.toString('utf-8')) : undefined;
+    const builtWith = read?.ok ? read.description.builtWith : undefined;
+    if (!builtWith?.lkg || !COMMIT_SHA.test(builtWith.lkg)) return undefined;
+    const on = builtWith.template;
+    if (on && (on.owner !== template.owner || on.repo !== template.repo)) return undefined;
+    return builtWith.lkg;
 }
 
 /**

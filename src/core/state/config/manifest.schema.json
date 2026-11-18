@@ -1713,7 +1713,7 @@
         "bundleName",
         "commit"
       ],
-      "description": "What a project imported from a bundle records (EDS-72 decisions 1 and 3): the import, never a `demo` row. Reset reads `commit`; the rest is provenance."
+      "description": "What a project imported from a bundle records (EDS-72 decisions 1 and 3): the import, never a `demo` row. Reset reads `commit`; the rest is provenance. The template base is not kept here: it lives in `lastSyncedCommit`, where updates read it."
     },
     "ProjectDatapack": {
       "type": "object",

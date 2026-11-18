@@ -259,6 +259,39 @@ describe('populateEdsMetadata — a project imported from a demo bundle', () => 
         expect(target.componentInstances?.['eds-storefront']?.metadata).toMatchObject({ templateRepo: 'boilerplate-b2b-template' });
     });
 
+    // F252: updates count from the template commit the sender's code was built on, not today's.
+    it("records the sender's template commit as the version updates count from", async () => {
+        const senderBase = 'c'.repeat(40);
+        const target = project();
+        const withBase: ProjectCreationConfig = {
+            ...IMPORTED,
+            edsConfig: { ...IMPORTED.edsConfig!, bundleImport: { commit: 'import-commit', templateBase: senderBase } },
+        };
+
+        await populateEdsMetadata(context(), target, withBase, true);
+
+        expect(target.componentInstances?.['eds-storefront']?.metadata).toMatchObject({
+            templateOwner: 'adobe-commerce',
+            templateRepo: 'boilerplate-b2b-template',
+            lastSyncedCommit: senderBase,
+        });
+        expect(resolveTemplateCommitSha).not.toHaveBeenCalled();
+        // The import record keeps only the import: the base lives where updates read it.
+        expect(target.importedFrom).toStrictEqual({
+            bundleName: 'Bodea Summit',
+            sourceRepository: 'sender/kukla-bodea',
+            commit: 'import-commit',
+        });
+    });
+
+    it("CONTROL: with no sender's commit, records today's template version as before", async () => {
+        const target = project();
+
+        await populateEdsMetadata(context(), target, IMPORTED, true);
+
+        expect(target.componentInstances?.['eds-storefront']?.metadata).toMatchObject({ lastSyncedCommit: 'a'.repeat(40) });
+    });
+
     it('records nothing when setup made no repository from the bundle, and nothing for other projects', async () => {
         const noCommit = project();
         await populateEdsMetadata(context(), noCommit, { ...IMPORTED, edsConfig: CONFIG.edsConfig }, true);

@@ -117,6 +117,50 @@ describe('readSetupBundle', () => {
         expect(read.edsConfig.templateOwner).toBe('demo-system-stores');
     });
 
+    // F252: the sender's storefront was built on an older template commit than today's. Updates
+    // must count from THAT commit, or every Adobe change made in between is never offered.
+    const SENDER_BASE = 'c'.repeat(40);
+    /** A storefront bundle whose description file records `builtWith`. */
+    const bundleBuiltWith = (builtWith: Record<string, unknown>): string =>
+        bundleOnDisk({
+            'scripts/scripts.js': 'export {};',
+            '404.html': '<html>',
+            'head.html': '<meta>',
+            'demo.demo-builder.json': JSON.stringify({ ...JSON.parse(DESCRIPTION), builtWith }),
+        });
+
+    it('reads the template commit the sender was built on, from the description file', async () => {
+        const bundlePath = bundleBuiltWith({
+            template: { owner: 'demo-system-stores', repo: 'accs-bodea' },
+            lkg: SENDER_BASE,
+            extension: '1.0.0',
+        });
+
+        const read = await readSetupBundle(brandConfig({ bundleSource: { bundlePath } }), createMockLogger());
+
+        if ('error' in read) throw new Error(read.error);
+        expect(read.bundle?.templateBase).toBe(SENDER_BASE);
+    });
+
+    it.each([
+        ['names no base (an older sender)', { extension: '1.0.0' }],
+        ['names a base that is not a commit', { lkg: 'main', extension: '1.0.0' }],
+        [
+            'names a base on another template',
+            { template: { owner: 'adobe-commerce', repo: 'boilerplate-b2b-template' }, lkg: SENDER_BASE, extension: '1.0.0' },
+        ],
+    ])('takes no base when the description %s, so updates count from the import', async (_label, builtWith) => {
+        const logger = createMockLogger();
+        const bundlePath = bundleBuiltWith(builtWith);
+
+        const read = await readSetupBundle(brandConfig({ bundleSource: { bundlePath } }), logger);
+
+        if ('error' in read) throw new Error(read.error);
+        // The outcome is the missing base; which line the log prints is not behaviour (the
+        // repo's no-logger-wording rule), so only the absence is asserted.
+        expect(read.bundle).not.toHaveProperty('templateBase');
+    });
+
     it('refuses in words when the file is gone or holds no storefront', async () => {
         const gone = await readSetupBundle(
             brandConfig({ bundleSource: { bundlePath: '/nowhere/x.zip' } }),
@@ -188,6 +232,20 @@ describe('executePhaseBundleRepo', () => {
             repoUrl: 'https://github.com/acme/my-bodea',
             bundleImport: { commit: 'import-commit', contentSource: bundle.contentSource },
         });
+    });
+
+    it("carries the sender's template commit into what setup reports, for creation to record", async () => {
+        const { services } = fakes();
+        const repoInfo: RepoInfo = { repoOwner: 'acme', repoName: 'my-bodea' };
+        const context = createMockHandlerContext({ logger: createMockLogger() });
+
+        await executePhaseBundleRepo(context, brandConfig(), services, repoInfo, {
+            files: new Map([['head.html', Buffer.from('<meta>')]]),
+            dropped: 0,
+            templateBase: 'c'.repeat(40),
+        });
+
+        expect(repoInfo.bundleImport).toStrictEqual({ commit: 'import-commit', templateBase: 'c'.repeat(40) });
         const lines = (context.sendMessage as jest.Mock).mock.calls.map(
             ([, payload]) => payload.message
         );

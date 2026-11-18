@@ -80,3 +80,8 @@ live cycle: import a bundle on a second account, create, publish, reset.
   project's own repository from the bundle (`storefrontSetupBundle.ts`); the project records
   `importedFrom` with the import commit and Reset restores it (`importedProjectReset.ts`);
   `create_project_from_file` takes a bundle zip. Walk row F245.
+- 2026-11-18: updates count from the sender's build, uncommitted. An imported project records
+  the template commit the sender's storefront was pinned to (`builtWith.lkg` in the bundle's
+  description file) as its `lastSyncedCommit`, so a storefront update offers every Adobe change
+  since then; with no recorded commit it counts from the import, as before, and logs that.
+  Walk row F252.

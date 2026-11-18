@@ -203,13 +203,21 @@ export interface BundleImportResult {
     commit: string;
     /** The sender's content site the pages were copied from, when the bundle names one. */
     contentSource?: DaLiveContentSource;
+    /**
+     * The template commit the sender's code was built on (its description file's
+     * `builtWith.lkg`), when the bundle names one on the project's template. Creation records
+     * it as the storefront's `lastSyncedCommit`, so updates count from it (F252).
+     */
+    templateBase?: string;
 }
 
 /**
  * What a project imported from a bundle records (EDS-72 decisions 1 and 3): the
- * import, never a `demo` row. Reset reads `commit`; the rest is provenance.
+ * import, never a `demo` row. Reset reads `commit`; the rest is provenance. The
+ * template base is not kept here: it lives in `lastSyncedCommit`, where updates read it.
  */
-export type ProjectImportedFrom = Omit<ImportedFrom, 'bundlePath'> & BundleImportResult;
+export type ProjectImportedFrom = Omit<ImportedFrom, 'bundlePath'> &
+    Omit<BundleImportResult, 'templateBase'>;
 
 /**
  * What a project travels in. Everything the manifest persists that is not

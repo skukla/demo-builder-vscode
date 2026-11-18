@@ -57,7 +57,8 @@ function importRecordOf(typedConfig: ProjectCreationConfig): ProjectImportedFrom
     const made = typedConfig.edsConfig?.bundleImport;
     if (!typedConfig.importedFrom || !made) return undefined;
     const { bundlePath: _onThisMachine, ...importedFrom } = typedConfig.importedFrom;
-    return { ...importedFrom, ...made };
+    const { templateBase: _inLastSyncedCommit, ...record } = made;
+    return { ...importedFrom, ...record };
 }
 
 /** Record the import on an imported project; any other project is left as it is. */
@@ -82,6 +83,26 @@ function recordWhatSetupFound(
         // Setup built it: what it left to finish replaces the record (PL-101).
         replaceFinishSetup(project, edsConfig.codeNotServed);
     }
+}
+
+/**
+ * The template version updates count from. An imported project's code was built on the
+ * sender's template commit, not today's: updates count from that one, or Adobe's changes made
+ * in between are never offered (F252). Every other storefront asks the resolver.
+ */
+async function syncedCommitOf(
+    edsConfig: NonNullable<ProjectCreationConfig['edsConfig']>,
+    templateBranch: string | undefined,
+    fileOperations: Parameters<typeof resolveTemplateCommitSha>[1],
+    context: HandlerContext,
+): Promise<string | undefined> {
+    const senderBase = edsConfig.bundleImport?.templateBase;
+    if (senderBase) return senderBase;
+    return resolveTemplateCommitSha(
+        { ...edsConfig, ...(templateBranch ? { templateBranch } : {}) },
+        fileOperations,
+        context.logger,
+    );
 }
 
 /**
@@ -135,11 +156,7 @@ export async function populateEdsMetadata(
     // baseline commit both read that branch.
     const templateBranch = typedConfig.demo?.source.branch;
     const { fileOperations } = getGitHubServices(context.context.secrets);
-    const lastSyncedCommit = await resolveTemplateCommitSha(
-        { ...typedConfig.edsConfig, ...(templateBranch ? { templateBranch } : {}) },
-        fileOperations,
-        context.logger,
-    );
+    const lastSyncedCommit = await syncedCommitOf(typedConfig.edsConfig, templateBranch, fileOperations, context);
     // What the new repository was built on (EDS-13f), read from the repository
     // itself, so a shipped brand, a saved package and a colleague's demo all
     // answer the same way. A failed read records nothing rather than a guess.
