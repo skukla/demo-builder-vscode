@@ -19,6 +19,7 @@
  */
 
 import { AuthenticationErrorFormatter } from '@/features/authentication/services/authenticationErrorFormatter';
+import { RejectedTokens } from '@/features/authentication/services/rejectedTokens';
 import {
     TokenManager,
     type StoredTokenConfig,
@@ -32,6 +33,28 @@ const HOUR_MS = 60 * 60 * 1000;
 function managerReading(stored: StoredTokenConfig | undefined): TokenManager {
     return new TokenManager(undefined, undefined, () => stored);
 }
+
+// Walk F247: Adobe turned the token away ("Oauth token is not valid") with hours left on it.
+// A check that trusted the expiry said signed in, and every action failed behind it.
+describe('TokenManager — a token Adobe turned away', () => {
+    it('answers signed out for a turned-away token, whatever its expiry', async () => {
+        const rejected = new RejectedTokens();
+        rejected.mark(LONG_TOKEN);
+        const manager = new TokenManager(undefined, undefined, () => ({ token: LONG_TOKEN, expiry: Date.now() + HOUR_MS }), rejected);
+
+        await expect(manager.isTokenValid()).resolves.toBe(false);
+    });
+
+    it('marks the stored token turned away when told Adobe refused it', async () => {
+        const rejected = new RejectedTokens();
+        const manager = new TokenManager(undefined, undefined, () => ({ token: LONG_TOKEN, expiry: Date.now() + HOUR_MS }), rejected);
+
+        manager.markStoredTokenRejected();
+
+        expect(rejected.has(LONG_TOKEN)).toBe(true);
+        await expect(manager.isTokenValid()).resolves.toBe(false);
+    });
+});
 
 describe('TokenManager — inspectToken', () => {
     it('returns valid, with the token and a positive expiry', async () => {

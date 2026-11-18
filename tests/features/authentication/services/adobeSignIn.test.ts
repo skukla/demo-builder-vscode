@@ -14,6 +14,7 @@ import { createMockDebugLogger } from '../../../helpers/debugLoggerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStepLogger } from './authenticationService.testUtils';
 import { cancelSignIn, signInLink } from '@/core/auth/signInSession';
+import { RejectedTokens } from '@/features/authentication/services/rejectedTokens';
 import type { ExecuteOptions } from '@/core/shell/types';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import {
@@ -139,6 +140,20 @@ describe('runAdobeLogin', () => {
             'aio auth login',
             'aio auth login -f',
         ]);
+    });
+
+    // Walk F247: a plain sign-in reuses the stored sign-in while it has time left, so it handed
+    // back the very token Adobe had turned away, and Sign In changed nothing. Forced, it is new.
+    it('a plain sign-in that hands back a turned-away token retries once, forced', async () => {
+        const { deps, execute } = buildDeps();
+        const rejected = new RejectedTokens();
+        rejected.mark(VALID_TOKEN);
+        const NEW_TOKEN = 'eyJ'.padEnd(120, 'y');
+        execute.mockResolvedValueOnce(createSuccessResult(VALID_TOKEN)).mockResolvedValueOnce(createSuccessResult(NEW_TOKEN));
+
+        await expect(runAdobeLogin({ ...deps, rejected }, false)).resolves.toBe(true);
+
+        expect(execute.mock.calls.map((c) => c[0])).toStrictEqual(['aio auth login', 'aio auth login -f']);
     });
 
     it('a forced sign-in with no token does NOT retry, and answers false', async () => {

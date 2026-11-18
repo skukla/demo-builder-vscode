@@ -11,11 +11,13 @@
  */
 
 import { prepareDeleteBatch, prepareResetBatch, runDeleteBatch, runResetBatch, saveNamesOf, type RunReset, type TellRow } from '../services/projectsBatch';
+import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createNonSwitchingStateManager } from '@/core/state/workingProjectStateManager';
 import { PROJECTS_BATCH_OPERATION_ID } from '@/core/utils/operationIds';
 import { narrateOutcomeToModal } from '@/core/vscode/operationProgress';
 import { withOperationProgress } from '@/core/vscode/withOperationProgress';
+import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, MessageHandler } from '@/types/handlers';
 import type { PrepareProjectsBatchRequest, PrepareProjectsBatchResponse, ProjectsBatchAction, RunProjectsBatchRequest } from '@/types/projectsBatch';
 
@@ -23,6 +25,38 @@ import type { PrepareProjectsBatchRequest, PrepareProjectsBatchResponse, Project
 let running = false;
 
 const ALREADY_RUNNING = 'Projects are already being reset or deleted.';
+/** A datapack's changes could not be read because Adobe refused the sign-in (walk F246). */
+export const SIGN_IN_TO_CHECK = 'Your Adobe sign-in has expired. Sign in to check the datapack for changes.';
+
+type Rows = ReadonlyArray<{ datapack?: { changes?: string } }>;
+
+/**
+ * Whether the read may stand: a datapack it could not check while Adobe refuses the sign-in is
+ * not kept on a guess (walk F246). From a screen, the shared sign-in guard asks in its VS Code
+ * dialog and signs in (`ensureAdobeIOAuth`, as the storefront reset and the Data Installer do);
+ * the caller then reads again. Headless, or dismissed, the read is refused with the reason. Signed
+ * in and still unread, the pack is kept, as before (owner, 2026-11-04).
+ *
+ * @returns 'fine' (nothing to ask), 'signed-in' (read again), or 'refused'
+ */
+async function signInForUnchecked(context: HandlerContext, rows: Rows): Promise<'fine' | 'signed-in' | 'refused'> {
+    if (!rows.some((row) => row.datapack?.changes === 'unchecked')) return 'fine';
+    const authManager = context.authManager;
+    if (!authManager || (await authManager.isAuthenticated())) return 'fine';
+    if (!context.panel) return 'refused';
+    const result = await ensureAdobeIOAuth({ authManager, logger: context.logger, logPrefix: '[Projects Batch]', warningMessage: SIGN_IN_TO_CHECK });
+    return result.authenticated ? 'signed-in' : 'refused';
+}
+
+/** Read the rows, asking for a sign-in once if Adobe refused it; undefined when it stays refused. */
+async function readRows<R extends Rows[number]>(context: HandlerContext, read: () => Promise<R[]>): Promise<R[] | undefined> {
+    const rows = await read();
+    const verdict = await signInForUnchecked(context, rows);
+    if (verdict === 'refused') return undefined;
+    return verdict === 'signed-in' ? read() : rows;
+}
+
+const SIGN_IN_REFUSED = { success: false, error: SIGN_IN_TO_CHECK, code: ErrorCode.AUTH_REQUIRED } as const;
 const NO_PROJECTS = 'Select at least one project.';
 
 const isAction = (value: unknown): value is ProjectsBatchAction => value === 'reset' || value === 'delete';
@@ -34,11 +68,13 @@ export const handlePrepareProjectsBatch: MessageHandler<PrepareProjectsBatchRequ
     if (!isAction(payload?.action)) return { success: false, error: 'Say whether to reset or delete.' };
     if (!isPathList(payload.projectPaths)) return { success: false, error: NO_PROJECTS };
     if (payload.action === 'delete') {
-        const rows = await prepareDeleteBatch(context, payload.projectPaths);
+        const rows = await readRows(context, () => prepareDeleteBatch(context, payload.projectPaths));
+        if (!rows) return SIGN_IN_REFUSED;
         const data: PrepareProjectsBatchResponse = { action: 'delete', rows, ...(await saveNamesOf(context, rows)) };
         return { success: true, data };
     }
-    const rows = await prepareResetBatch(context, payload.projectPaths);
+    const rows = await readRows(context, () => prepareResetBatch(context, payload.projectPaths));
+    if (!rows) return SIGN_IN_REFUSED;
     const data: PrepareProjectsBatchResponse = { action: 'reset', rows, ...(await saveNamesOf(context, rows)) };
     return { success: true, data };
 };

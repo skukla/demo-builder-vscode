@@ -14,6 +14,7 @@ import { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClien
 import { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
 import { OrganizationValidator } from '@/features/authentication/services/organizationValidator';
 import { withTiming } from '@/features/authentication/services/performanceTracker';
+import { RejectedTokens } from '@/features/authentication/services/rejectedTokens';
 import { createSignInGate } from '@/features/authentication/services/signInGate';
 import { TokenManager } from '@/features/authentication/services/tokenManager';
 import type { AdobeOrg, AdobeProject } from '@/features/authentication/services/types';
@@ -72,7 +73,9 @@ export class AuthenticationService {
 
         // Initialize all submodules
         this.cacheManager = new AuthCacheManager();
-        this.tokenManager = new TokenManager(this.cacheManager);
+        // One register of refused sign-ins, read by the token check and the sign-in (walk F247).
+        const rejected = new RejectedTokens();
+        this.tokenManager = new TokenManager(this.cacheManager, undefined, undefined, rejected);
         this.sdkClient = new AdobeSDKClient(logger);
         this.organizationValidator = new OrganizationValidator(
             commandManager,
@@ -88,6 +91,7 @@ export class AuthenticationService {
             logger,
             debugLogger: this.debugLogger,
             stepLogger: () => this.ensureStepLogger(),
+            rejected,
             watchForcedSignIn: async () => {
                 const afters = await Promise.all([...this.forcedSignInWatches].map((watch) => watch()));
                 return async () => {
@@ -147,6 +151,8 @@ export class AuthenticationService {
                 // that had a user signing in three times to no effect.
                 async () => (await this.tokenManager.inspectToken()).valid,
                 this.savedState,
+                // Adobe refused the sign-in itself (walk F247): it counts as signed out.
+                () => this.tokenManager.markStoredTokenRejected(),
             );
 
             return stepLogger;

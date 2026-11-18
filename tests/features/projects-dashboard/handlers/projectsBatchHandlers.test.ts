@@ -17,11 +17,14 @@ jest.mock('@/features/lifecycle/services/projectResetService', () => ({ runProje
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: { getCommandExecutor: jest.fn(), getAuthenticationService: jest.fn() },
 }));
+jest.mock('@/core/auth/adobeAuthGuard', () => ({ ensureAdobeIOAuth: jest.fn() }));
 jest.mock('@/core/vscode/withOperationProgress', () => ({
     withOperationProgress: jest.fn(async (_options: unknown, work: (report: jest.Mock) => Promise<unknown>) => work(jest.fn())),
 }));
 
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
+import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { createMockProject } from '../../../helpers/projectFake';
 import { resetEdsProjectWithUI } from '@/features/eds/services/reset/edsResetUI';
 import { runProjectResetAnswered } from '@/features/lifecycle/services/projectResetService';
@@ -40,6 +43,49 @@ beforeEach(() => {
 });
 
 describe('prepareProjectsBatch', () => {
+    // Walk F246: changes that could not be read because Adobe refused the sign-in are not "kept"
+    // on a guess. From a screen the shared guard asks and signs in, then the read runs again.
+    it('from a screen, asks through the shared sign-in guard and reads again once signed in', async () => {
+        const unchecked = [{ path: '/projects/a', name: 'a', datapack: { name: 'Bodea', changes: 'unchecked' } }];
+        const checked = [{ path: '/projects/a', name: 'a', datapack: { name: 'Bodea' } }];
+        (prepareResetBatch as jest.Mock).mockResolvedValueOnce(unchecked).mockResolvedValueOnce(checked);
+        (ensureAdobeIOAuth as jest.Mock).mockResolvedValue({ authenticated: true });
+        const context = createMockHandlerContext({ panel: createMockWebviewPanel() });
+        (context.authManager as unknown as { isAuthenticated: jest.Mock }).isAuthenticated = jest.fn().mockResolvedValue(false);
+
+        const result = await handlePrepareProjectsBatch(context, { action: 'reset', projectPaths: ['/projects/a'] });
+
+        expect(ensureAdobeIOAuth).toHaveBeenCalledWith(expect.objectContaining({ warningMessage: 'Your Adobe sign-in has expired. Sign in to check the datapack for changes.' }));
+        expect(prepareResetBatch).toHaveBeenCalledTimes(2);
+        expect(result).toMatchObject({ success: true, data: { rows: checked } });
+    });
+
+    it('refuses with the reason when the sign-in is dismissed, or headless with no one to ask', async () => {
+        (prepareResetBatch as jest.Mock).mockResolvedValue([{ path: '/projects/a', name: 'a', datapack: { name: 'Bodea', changes: 'unchecked' } }]);
+        (ensureAdobeIOAuth as jest.Mock).mockResolvedValue({ authenticated: false, cancelled: true });
+        const refused = { success: false, code: 'AUTH_REQUIRED', error: 'Your Adobe sign-in has expired. Sign in to check the datapack for changes.' };
+        const fromScreen = createMockHandlerContext({ panel: createMockWebviewPanel() });
+        (fromScreen.authManager as unknown as { isAuthenticated: jest.Mock }).isAuthenticated = jest.fn().mockResolvedValue(false);
+        expect(await handlePrepareProjectsBatch(fromScreen, { action: 'reset', projectPaths: ['/projects/a'] })).toStrictEqual(refused);
+
+        (ensureAdobeIOAuth as jest.Mock).mockClear();
+        const headless = createMockHandlerContext({ panel: undefined });
+        (headless.authManager as unknown as { isAuthenticated: jest.Mock }).isAuthenticated = jest.fn().mockResolvedValue(false);
+        expect(await handlePrepareProjectsBatch(headless, { action: 'reset', projectPaths: ['/projects/a'] })).toStrictEqual(refused);
+        expect(ensureAdobeIOAuth).not.toHaveBeenCalled();
+    });
+
+    it('keeps the datapack as before when signed in and the check still could not read', async () => {
+        const rows = [{ path: '/projects/a', name: 'a', datapack: { name: 'Bodea', changes: 'unchecked' } }];
+        (prepareResetBatch as jest.Mock).mockResolvedValue(rows);
+        const context = createMockHandlerContext();
+        (context.authManager as unknown as { isAuthenticated: jest.Mock }).isAuthenticated = jest.fn().mockResolvedValue(true);
+
+        const result = await handlePrepareProjectsBatch(context, { action: 'reset', projectPaths: ['/projects/a'] });
+
+        expect(result).toMatchObject({ success: true });
+    });
+
     it('answers the rows for the projects picked', async () => {
         (prepareDeleteBatch as jest.Mock).mockResolvedValue([{ path: '/projects/a', name: 'a' }]);
 

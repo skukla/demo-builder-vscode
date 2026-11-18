@@ -14,6 +14,7 @@ import type { AuthCacheManager } from './authCacheManager';
 import { AuthenticationErrorFormatter } from './authenticationErrorFormatter';
 import { isValidTokenResponse } from './authPredicates';
 import { withTiming } from './performanceTracker';
+import type { RejectedTokens } from './rejectedTokens';
 import { beginSignIn, signInLinkIn } from '@/core/auth/signInSession';
 import type { DebugLogger } from '@/core/logging/debugLogger';
 import type { StepLogger } from '@/core/logging/stepLogger';
@@ -37,6 +38,11 @@ export interface AdobeSignInDeps {
      * back to. Optional: nothing is watched without one.
      */
     watchForcedSignIn?: ForcedSignInWatch;
+    /**
+     * The tokens Adobe refused this session (walk F247). A plain sign-in reuses the stored token
+     * while it has time left, so one that hands back a refused token is run again, forced.
+     */
+    rejected?: RejectedTokens;
 }
 
 /**
@@ -158,7 +164,9 @@ export async function runAdobeLogin(deps: AdobeSignInDeps, force: boolean): Prom
                 debugLogger.debug('[Auth] Login command completed successfully');
                 const token = result.stdout?.trim();
 
-                if (isValidTokenResponse(token)) {
+                const refused = Boolean(token && deps.rejected?.has(token));
+                if (refused) debugLogger.debug('[Auth] The sign-in handed back the token Adobe refused');
+                if (isValidTokenResponse(token) && !refused) {
                     debugLogger.debug('[Auth] Adobe CLI login successful (exit code 0)');
                     stepLogger.logTemplate('adobe-auth', 'statuses.authentication-complete', {});
 

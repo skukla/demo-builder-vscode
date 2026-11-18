@@ -1,6 +1,7 @@
 import * as aioConfig from '@adobe/aio-lib-core-config';
 import type { AuthCacheManager } from './authCacheManager';
 import { AuthenticationErrorFormatter } from './authenticationErrorFormatter';
+import type { RejectedTokens } from './rejectedTokens';
 import { getLogger } from '@/core/logging/debugLogger';
 import { SingleFlight } from '@/core/utils/singleFlight';
 import { formatMinutes } from '@/core/utils/timeFormatting';
@@ -78,11 +79,13 @@ export class TokenManager {
      * @param cacheManager - Optional cache manager for token caching
      * @param logger - Optional logger for dependency injection (defaults to getLogger())
      * @param readTokenConfig - Optional reader override; tests inject a fake store
+     * @param rejected - The tokens Adobe refused this session (walk F247): one of them is signed out
      */
     constructor(
         cacheManager?: AuthCacheManager,
         logger?: Logger,
         private readonly readTokenConfig: TokenConfigReader = readStoredTokenConfig,
+        private readonly rejected?: RejectedTokens,
     ) {
         this.logger = logger ?? getLogger();
         this.cacheManager = cacheManager;
@@ -170,6 +173,12 @@ export class TokenManager {
         // was removed. The library call that DOES renew, `getToken`, gets there by
         // opening a browser, which a background check must never do.
         const verdict = this.classifyStoredToken(tokenData);
+        // Adobe refused this token though it has time left (walk F247): signed out, so Sign In
+        // takes over instead of every action failing behind a "signed in".
+        if (verdict.valid && verdict.token && this.rejected?.has(verdict.token)) {
+            this.logger.debug('[Token] Adobe refused this sign-in; answering signed out');
+            return { valid: false, expiresIn: verdict.expiresIn };
+        }
         if (verdict.valid) {
             this.cacheManager?.setCachedTokenInspection(verdict);
         }
@@ -241,6 +250,23 @@ export class TokenManager {
      * Check if token is valid and not expired
      * Uses atomic token inspection to prevent race conditions
      */
+    /**
+     * Adobe refused the stored token (walk F247): remember it, and forget the cached "signed in".
+     */
+    markStoredTokenRejected(): void {
+        let token: string | undefined;
+        try {
+            token = this.readTokenConfig()?.token;
+        } catch {
+            return;
+        }
+        if (!token || !this.rejected) return;
+        this.rejected.mark(token);
+        this.cacheManager?.clearTokenInspectionCache();
+        this.cacheManager?.clearAuthStatusCache();
+        this.logger.warn('[Token] Adobe no longer accepts the stored sign-in; it counts as signed out until a new one');
+    }
+
     async isTokenValid(): Promise<boolean> {
         const inspection = await this.inspectToken();
         return inspection.valid;

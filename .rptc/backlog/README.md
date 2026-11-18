@@ -494,7 +494,7 @@ each item's own file; what has already landed against an item is in its
 | `PR-1` | epic | [Reframe prerequisites: extension-wide tools vs project-shape requirements (Path A)](2026-06-11-prereqs-architecture-reframe.md) | — | low | backlog |
 | `PR-1a` | feature | └ [Node versions in one place: one register, one resolver, one runner](2026-10-07-node-versions-in-one-place.md) | — | med | active |
 
-### platform  (106)
+### platform  (107)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -604,6 +604,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-100` | fix | [A project name that starts with a number loses it, and nothing says why](2026-11-17-project-name-drops-leading-number.md) | — | low | backlog |
 | `PL-101` | feature | [What a run left to finish: one list, each item with its fix](2026-11-17-what-a-run-left-to-finish.md) | _before the beta.153 cut (owner, 2026-11-17)_ | high | backlog |
 | `PL-102` | fix | [Failure text a person reads, in plain words, everywhere outside the datapack windows](2026-11-17-plain-failure-wording-everywhere.md) | — | med | backlog |
+| `PL-103` | chore | [One Adobe sign-in handler for a screen's Sign In button](2026-11-18-one-screen-sign-in-handler.md) | — | med | backlog |
 
 <!-- END GENERATED registry -->
 
@@ -752,7 +753,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — built
 
-*352 item(s) sit outside the A–G chain.*
+*353 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 

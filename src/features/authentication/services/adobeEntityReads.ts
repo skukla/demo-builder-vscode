@@ -15,6 +15,7 @@
  */
 
 import type { AdobeSDKClient } from './adobeSDKClient';
+import { isTokenRefusal } from './rejectedTokens';
 import type { AdobeOrg, SDKResponse } from './types';
 import { getLogger } from '@/core/logging/debugLogger';
 import { tryWithTimeout } from '@/core/utils/promiseUtils';
@@ -42,7 +43,15 @@ export async function ensureSDKReady(sdkClient: AdobeSDKClient): Promise<void> {
 export class SdkEntityFetch {
     private debugLogger = getLogger();
 
-    constructor(private sdkClient: AdobeSDKClient) {}
+    /**
+     * @param sdkClient - the Console SDK client
+     * @param onTokenRejected - called when Adobe refuses the sign-in itself ("Oauth token is not
+     *   valid", walk F247), so it counts as signed out and Sign In makes a new one
+     */
+    constructor(
+        private sdkClient: AdobeSDKClient,
+        private readonly onTokenRejected?: () => void,
+    ) {}
 
     /**
      * Try SDK fetch with automatic fallback.
@@ -95,6 +104,7 @@ export class SdkEntityFetch {
             this.debugLogger.warn(
                 `[Entity Fetcher] SDK unavailable, using slower CLI fallback for ${entityName} — ${reason}`,
             );
+            if (isTokenRefusal(outcome.error)) this.onTokenRejected?.();
             return undefined;
         }
 
