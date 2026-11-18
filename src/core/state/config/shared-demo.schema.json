@@ -211,6 +211,10 @@
           },
           "description": "The ledger's patch ids the storefront carries."
         },
+        "patchesRelease": {
+          "type": "string",
+          "description": "The ledger's release the storefront was last built or updated from (its `patchesRelease`), so a colleague's import is offered every release published since (F255)."
+        },
         "boilerplate": {
           "$ref": "#/definitions/StorefrontBoilerplate",
           "description": "Its `package.json` name and version when it was saved."

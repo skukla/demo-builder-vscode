@@ -82,6 +82,40 @@ describe('populateEdsMetadata: the patches release is the storefront\'s version'
         });
     });
 
+    // F255: an imported storefront was built from the sender's release, not today's, so every
+    // release published since is offered. The import record keeps only the import.
+    it("records the sender's release for a storefront imported from a bundle", async () => {
+        getFileContent.mockRejectedValue(new Error('not needed'));
+        (readPatchesRelease as jest.Mock).mockResolvedValue('v1.2.0');
+        const target = project();
+        const imported: ProjectCreationConfig = {
+            ...THIN_LAYER,
+            importedFrom: { bundleName: 'Bodea Summit', bundlePath: '/x/bodea.zip' },
+            edsConfig: { ...THIN_LAYER.edsConfig!, bundleImport: { commit: 'import-commit', patchesRelease: 'v1.1.5' } },
+        };
+
+        await populateEdsMetadata(context(), target, imported, true);
+
+        expect(target.componentInstances?.['eds-storefront']?.metadata).toMatchObject({ patchesRelease: 'v1.1.5' });
+        expect(readPatchesRelease).not.toHaveBeenCalled();
+        expect(target.importedFrom).toStrictEqual({ bundleName: 'Bodea Summit', commit: 'import-commit' });
+    });
+
+    it("CONTROL: an import whose bundle names no release records today's", async () => {
+        getFileContent.mockRejectedValue(new Error('not needed'));
+        (readPatchesRelease as jest.Mock).mockResolvedValue('v1.2.0');
+        const target = project();
+        const imported: ProjectCreationConfig = {
+            ...THIN_LAYER,
+            importedFrom: { bundleName: 'Bodea Summit', bundlePath: '/x/bodea.zip' },
+            edsConfig: { ...THIN_LAYER.edsConfig!, bundleImport: { commit: 'import-commit' } },
+        };
+
+        await populateEdsMetadata(context(), target, imported, true);
+
+        expect(target.componentInstances?.['eds-storefront']?.metadata).toMatchObject({ patchesRelease: 'v1.2.0' });
+    });
+
     it('records none for a storefront that is not thin-layer', async () => {
         getFileContent.mockRejectedValue(new Error('not needed'));
         const target = project();

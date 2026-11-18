@@ -191,7 +191,11 @@ function builtWithOf(
     // now, which the next colleague should start from, rather than the creation record.
     const adobe = readBoilerplateBase(project);
     const base = adobe ? { template: adobe.template, lkg: adobe.commit } : {};
-    return { ...carried, ...base, ...(boilerplate ? { boilerplate } : {}), extension };
+    // The patches release creation or the last update recorded, so a colleague's import is offered
+    // every release published since (walk F255).
+    const release = metadata.patchesRelease;
+    const patchesRelease = typeof release === 'string' && release ? { patchesRelease: release } : {};
+    return { ...carried, ...base, ...patchesRelease, ...(boilerplate ? { boilerplate } : {}), extension };
 }
 
 function withoutExtension(builtWith: SharedDemoBuiltWith): Omit<SharedDemoBuiltWith, 'extension'> {

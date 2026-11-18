@@ -12,6 +12,7 @@
  */
 
 import AdmZip from 'adm-zip';
+import semver from 'semver';
 import { FALLBACK_CONTENT_INDEX_PATH } from '../contentIndex';
 import { BUNDLE_SETUP_FILE, BUNDLE_STOREFRONT_DIR } from '../demoPackage/demoBundle';
 import { parseFstabContentSource } from '../fstabGenerator';
@@ -37,6 +38,7 @@ import {
     type ImportedFrom,
     type ProjectFile,
     type RepositoryRef,
+    type SharedDemoBuiltWith,
 } from '@/types/projectFile';
 
 
@@ -254,7 +256,17 @@ export function contentSourceOfZip(files: Map<string, Buffer>): DaLiveContentSou
     return mounted ? { ...mounted, indexPath: FALLBACK_CONTENT_INDEX_PATH } : undefined;
 }
 
-/** A template commit, the whole value. */
+/** The description file's record of what the sender's storefront was built from, when it has one. */
+function builtWithOfZip(files: Map<string, Buffer>): SharedDemoBuiltWith | undefined {
+    const description = files.get(SHARED_DEMO_FILE_NAME);
+    const read = description ? readSharedDemoDescription(description.toString('utf-8')) : undefined;
+    return read?.ok ? read.description.builtWith : undefined;
+}
+
+/** Whether a description's repository is absent (taken to mean the project's) or names `expected`. */
+function isSameRepository(named: RepositoryRef | undefined, expected: RepositoryRef): boolean {
+    return !named || (named.owner === expected.owner && named.repo === expected.repo);
+}
 
 /**
  * The template commit a bundle's storefront was built on (F252): the description file's
@@ -262,13 +274,25 @@ export function contentSourceOfZip(files: Map<string, Buffer>): DaLiveContentSou
  * taken to mean the project's). Nothing otherwise: an older sender wrote no `builtWith`.
  */
 export function templateBaseOfZip(files: Map<string, Buffer>, template: RepositoryRef): string | undefined {
-    const description = files.get(SHARED_DEMO_FILE_NAME);
-    const read = description ? readSharedDemoDescription(description.toString('utf-8')) : undefined;
-    const builtWith = read?.ok ? read.description.builtWith : undefined;
+    const builtWith = builtWithOfZip(files);
     if (!builtWith?.lkg || !FULL_COMMIT_SHA.test(builtWith.lkg)) return undefined;
-    const on = builtWith.template;
-    if (on && (on.owner !== template.owner || on.repo !== template.repo)) return undefined;
-    return builtWith.lkg;
+    return isSameRepository(builtWith.template, template) ? builtWith.lkg : undefined;
+}
+
+/**
+ * The patches release a bundle's storefront was built from (F255): the description file's
+ * `builtWith.patchesRelease`, when it is a version and of `ledger`, the project's patches repo (a
+ * description naming no ledger is taken to mean the project's). Nothing for a project with no
+ * ledger, or a sender that recorded no release.
+ */
+export function patchesReleaseOfZip(
+    files: Map<string, Buffer>,
+    ledger: RepositoryRef | undefined,
+): string | undefined {
+    const builtWith = builtWithOfZip(files);
+    const release = builtWith?.patchesRelease;
+    if (!ledger || !release || !semver.valid(release)) return undefined;
+    return isSameRepository(builtWith.codePatchSource, ledger) ? release : undefined;
 }
 
 /**

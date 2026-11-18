@@ -100,6 +100,11 @@ export interface SharedDemoBuiltWith {
     codePatchSource?: CodePatchSource;
     /** The ledger's patch ids the storefront carries. */
     codePatches?: string[];
+    /**
+     * The ledger's release the storefront was last built or updated from (its `patchesRelease`),
+     * so a colleague's import is offered every release published since (F255).
+     */
+    patchesRelease?: string;
     /** Its `package.json` name and version when it was saved. */
     boilerplate?: StorefrontBoilerplate;
     /** The Demo Builder version that saved it. */
@@ -209,15 +214,22 @@ export interface BundleImportResult {
      * it as the storefront's `lastSyncedCommit`, so updates count from it (F252).
      */
     templateBase?: string;
+    /**
+     * The patches release the sender's code was built from (its description file's
+     * `builtWith.patchesRelease`), when it is a version of the project's ledger. Creation records
+     * it as the storefront's `patchesRelease`, so newer releases are offered (F255).
+     */
+    patchesRelease?: string;
 }
 
 /**
  * What a project imported from a bundle records (EDS-72 decisions 1 and 3): the
  * import, never a `demo` row. Reset reads `commit`; the rest is provenance. The
- * template base is not kept here: it lives in `lastSyncedCommit`, where updates read it.
+ * template base and patches release are not kept here: they live in `lastSyncedCommit` and
+ * `patchesRelease`, where updates read them.
  */
 export type ProjectImportedFrom = Omit<ImportedFrom, 'bundlePath'> &
-    Omit<BundleImportResult, 'templateBase'>;
+    Omit<BundleImportResult, 'templateBase' | 'patchesRelease'>;
 
 /**
  * What a project travels in. Everything the manifest persists that is not

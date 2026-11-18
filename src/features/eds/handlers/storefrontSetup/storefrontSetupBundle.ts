@@ -16,6 +16,7 @@ import {
     contentSourceOfZip,
     createRepositoryFromZip,
     readStorefrontZip,
+    patchesReleaseOfZip,
     templateBaseOfZip,
 } from '../../services/storefront/zipStorefrontImport';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
@@ -36,6 +37,8 @@ export interface SetupBundle {
     contentSource?: DaLiveContentSource;
     /** The template commit the sender's code was built on, when the bundle says (F252). */
     templateBase?: string;
+    /** The patches release the sender's code was built from, when the bundle says (F255). */
+    patchesRelease?: string;
 }
 
 /** A brand's own code and content settings, which a bundle's code and pages replace. */
@@ -106,6 +109,7 @@ export async function readSetupBundle(
             "[Storefront Setup] The sender's template version is unknown: updates count from the import",
         );
     }
+    const patchesRelease = patchesReleaseOfZip(unpacked.files, edsConfig.codePatchSource);
     return {
         edsConfig: { ...kept, contentSource },
         bundle: {
@@ -113,6 +117,7 @@ export async function readSetupBundle(
             dropped: unpacked.dropped,
             ...(contentSource ? { contentSource } : {}),
             ...(templateBase ? { templateBase } : {}),
+            ...(patchesRelease ? { patchesRelease } : {}),
         },
     };
 }
@@ -170,6 +175,7 @@ export async function executePhaseBundleRepo(
         commit: created.commit,
         ...(bundle.contentSource ? { contentSource: bundle.contentSource } : {}),
         ...(bundle.templateBase ? { templateBase: bundle.templateBase } : {}),
+        ...(bundle.patchesRelease ? { patchesRelease: bundle.patchesRelease } : {}),
     };
     context.logger.info(
         `[Storefront Setup] Repository created from the imported demo: ${created.fullName} at ${created.commit}`,

@@ -85,3 +85,7 @@ live cycle: import a bundle on a second account, create, publish, reset.
   description file) as its `lastSyncedCommit`, so a storefront update offers every Adobe change
   since then; with no recorded commit it counts from the import, as before, and logs that.
   Walk row F252.
+- 2026-11-18: the patches release too, uncommitted. Share Demo writes the storefront's patches
+  release (`builtWith.patchesRelease`), and an imported thin-layer project records the sender's
+  release instead of today's, so every patches release published since the sender's build is
+  offered. Walk row F255.

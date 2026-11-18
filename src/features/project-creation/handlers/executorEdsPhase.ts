@@ -57,7 +57,7 @@ function importRecordOf(typedConfig: ProjectCreationConfig): ProjectImportedFrom
     const made = typedConfig.edsConfig?.bundleImport;
     if (!typedConfig.importedFrom || !made) return undefined;
     const { bundlePath: _onThisMachine, ...importedFrom } = typedConfig.importedFrom;
-    const { templateBase: _inLastSyncedCommit, ...record } = made;
+    const { templateBase: _inLastSyncedCommit, patchesRelease: _inMetadata, ...record } = made;
     return { ...importedFrom, ...record };
 }
 
@@ -103,6 +103,19 @@ async function syncedCommitOf(
         fileOperations,
         context.logger,
     );
+}
+
+/**
+ * The patches release a thin-layer storefront was built from. An imported project's code was built
+ * from the sender's release: recording today's would hide every release published in between
+ * (F255). Every other storefront reads the release this session works from.
+ */
+async function patchesReleaseOf(
+    edsConfig: NonNullable<ProjectCreationConfig['edsConfig']>,
+    lkgSource: Parameters<typeof readPatchesRelease>[0],
+    context: HandlerContext,
+): Promise<string | undefined> {
+    return edsConfig.bundleImport?.patchesRelease ?? readPatchesRelease(lkgSource, context.logger);
 }
 
 /**
@@ -180,7 +193,9 @@ export async function populateEdsMetadata(
           }
         : undefined;
 
-    const patchesRelease = lkgSource ? await readPatchesRelease(lkgSource, context.logger) : undefined;
+    const patchesRelease = lkgSource
+        ? await patchesReleaseOf(typedConfig.edsConfig, lkgSource, context)
+        : undefined;
 
     edsInstance.metadata = {
         ...edsInstance.metadata,

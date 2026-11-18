@@ -344,6 +344,21 @@ describe('the patches release', () => {
         expect(result).toMatchObject({ hasUpdates: true, release: '1.2.0', commitsBehind: 3 });
     });
 
+    // F255: a project imported from a bundle records the SENDER's release and template commit.
+    // A release published since the sender's build is offered even when the tested commit has
+    // not moved, which is the case today's release at import time would have hidden.
+    it("offers an imported storefront every release newer than the sender's", async () => {
+        mockReadLatestPatchesRelease.mockResolvedValue('v1.2.0');
+        const imported = {
+            ...thinLayer({ patchesRelease: 'v1.1.5' }),
+            importedFrom: { bundleName: 'Bodea Summit', commit: 'd'.repeat(40) },
+        };
+
+        const result = await checker().checkForUpdates(imported);
+
+        expect(result).toMatchObject({ hasUpdates: true, release: '1.2.0', commitsBehind: 0 });
+    });
+
     it('a release it cannot read still answers by commit', async () => {
         mockReadLatestPatchesRelease.mockResolvedValue(undefined);
 

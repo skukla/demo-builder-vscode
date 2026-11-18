@@ -236,6 +236,30 @@ describe('describeProject — builtWith (EDS-13f step 02)', () => {
         expect(file.builtWith).not.toHaveProperty('lkg');
     });
 
+    // Walk F255: a colleague's import is offered every patches release newer than the sender's,
+    // so the description names the release the storefront was last built or updated from.
+    it('records the patches release the storefront was last built or updated from', () => {
+        const project = pinnedProject();
+        project.componentInstances![COMPONENT_IDS.EDS_STOREFRONT]!.metadata!.patchesRelease = 'v1.1.5';
+
+        const file = describeProject(project, { name: '', description: '' }, CONTENT, { packages: THIN_LAYER });
+
+        expect(file.builtWith?.patchesRelease).toBe('v1.1.5');
+    });
+
+    it("writes the storefront's release over the one a saved package's record carried", () => {
+        const builtWith = { template: B2B, lkg: LKG, patchesRelease: 'v1.0.0', extension: '1.0.0-beta.149' };
+        const project = edsProject({ demo: makeAddedDemo({ builtWith }) });
+        project.componentInstances![COMPONENT_IDS.EDS_STOREFRONT]!.metadata = {
+            ...project.componentInstances![COMPONENT_IDS.EDS_STOREFRONT]!.metadata,
+            patchesRelease: 'v1.1.5',
+        };
+
+        const file = describeProject(project, { name: '', description: '' }, CONTENT, { packages: THIN_LAYER });
+
+        expect(file.builtWith?.patchesRelease).toBe('v1.1.5');
+    });
+
     it("carries a saved package's own record forward when the project was started from one", () => {
         const builtWith = { template: B2B, lkg: LKG, codePatchSource: LEDGER, codePatches: ['pdp-empty-data-redirect'], extension: '1.0.0-beta.149' };
         const project = edsProject({ demo: makeAddedDemo({ builtWith }) });
