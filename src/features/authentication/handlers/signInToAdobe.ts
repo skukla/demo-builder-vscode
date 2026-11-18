@@ -18,9 +18,10 @@
  *   the wizard's "Re-Authenticate Now").
  *   That is a forced sign-in (`aio auth login -f`) behind the same plain notice. It is
  *   not the org switch: wanting a new token does not mean wanting another org (owner,
- *   2026-11-18). Without it the sign-in is not forced; a sign-in Adobe refused while it
- *   still had time left is rerun forced inside the shared sign-in (`RejectedTokens`,
- *   walk F247), so no door needs to force for that.
+ *   2026-11-18). Without it the sign-in is not forced; over a stored sign-in Adobe already
+ *   refused, the shared sign-in runs forced from the start (walk F276), and one that hands a
+ *   refused token back is rerun forced there too (`RejectedTokens`, walk F247), so no door
+ *   needs to force for either.
  *
  * What a screen does AFTER signing in (the wizard's org resolution, the dashboard's
  * status re-read) stays with that screen.

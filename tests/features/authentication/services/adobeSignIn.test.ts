@@ -156,6 +156,26 @@ describe('runAdobeLogin', () => {
         expect(execute.mock.calls.map((c) => c[0])).toStrictEqual(['aio auth login', 'aio auth login -f']);
     });
 
+    // Walk F276: Adobe had already refused the stored token, yet Sign In ran a plain login first,
+    // which handed it straight back, and only then the forced one: two runs for one press.
+    it('goes straight to the forced sign-in, once, when Adobe already refused the stored token', async () => {
+        const { deps, execute } = buildDeps();
+        execute.mockResolvedValue(createSuccessResult(VALID_TOKEN));
+
+        await expect(runAdobeLogin({ ...deps, storedTokenRefused: () => true }, false)).resolves.toBe(true);
+
+        expect(execute.mock.calls.map((c) => c[0])).toStrictEqual(['aio auth login -f']);
+    });
+
+    it('keeps the plain sign-in first when the stored token was not refused', async () => {
+        const { deps, execute } = buildDeps();
+        execute.mockResolvedValue(createSuccessResult(VALID_TOKEN));
+
+        await expect(runAdobeLogin({ ...deps, storedTokenRefused: () => false }, false)).resolves.toBe(true);
+
+        expect(execute.mock.calls.map((c) => c[0])).toStrictEqual(['aio auth login']);
+    });
+
     it('a forced sign-in with no token does NOT retry, and answers false', async () => {
         const { deps, execute } = buildDeps();
         execute.mockResolvedValue(createSuccessResult('no token here'));
@@ -242,6 +262,21 @@ describe('runAdobeLogin — the forced sign-in watch', () => {
         await expect(runAdobeLogin(deps, false)).resolves.toBe(true);
 
         expect(order).toStrictEqual(['aio auth login', 'before', 'aio auth login -f', 'after']);
+    });
+
+    it('covers the forced sign-in a refused stored token goes straight to', async () => {
+        const { deps, execute } = buildDeps();
+        const { order, watch } = watched();
+        deps.watchForcedSignIn = watch;
+        deps.storedTokenRefused = () => true;
+        execute.mockImplementation(async (command: string) => {
+            order.push(command);
+            return createSuccessResult(VALID_TOKEN);
+        });
+
+        await expect(runAdobeLogin(deps, false)).resolves.toBe(true);
+
+        expect(order).toStrictEqual(['before', 'aio auth login -f', 'after']);
     });
 
     it('is not read for a normal sign-in', async () => {

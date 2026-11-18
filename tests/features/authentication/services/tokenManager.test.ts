@@ -56,6 +56,35 @@ describe('TokenManager — a token Adobe turned away', () => {
     });
 });
 
+// Walk F276: Sign In reads this to skip the plain login that would hand the refused token back.
+describe('TokenManager — isStoredTokenRejected', () => {
+    const stored = (): StoredTokenConfig => ({ token: LONG_TOKEN, expiry: Date.now() + HOUR_MS });
+
+    it('is true once Adobe refused the stored token', () => {
+        const rejected = new RejectedTokens();
+        rejected.mark(LONG_TOKEN);
+
+        expect(new TokenManager(undefined, undefined, stored, rejected).isStoredTokenRejected()).toBe(true);
+    });
+
+    it('is false for a stored token Adobe has not refused', () => {
+        const rejected = new RejectedTokens();
+        rejected.mark('y'.repeat(150));
+
+        expect(new TokenManager(undefined, undefined, stored, rejected).isStoredTokenRejected()).toBe(false);
+    });
+
+    it('is false when nothing is stored or the store cannot be read', () => {
+        const rejected = new RejectedTokens();
+        const unreadable = (): StoredTokenConfig => {
+            throw new Error('config locked');
+        };
+
+        expect(new TokenManager(undefined, undefined, () => undefined, rejected).isStoredTokenRejected()).toBe(false);
+        expect(new TokenManager(undefined, undefined, unreadable, rejected).isStoredTokenRejected()).toBe(false);
+    });
+});
+
 describe('TokenManager — inspectToken', () => {
     it('returns valid, with the token and a positive expiry', async () => {
         const manager = managerReading({ token: LONG_TOKEN, expiry: Date.now() + HOUR_MS });

@@ -43,6 +43,12 @@ export interface AdobeSignInDeps {
      * while it has time left, so one that hands back a refused token is run again, forced.
      */
     rejected?: RejectedTokens;
+    /**
+     * Whether Adobe already refused the STORED token as the sign-in starts (walk F276). A plain
+     * sign-in would only hand it back, so the sign-in runs forced from the start: one run, not
+     * a plain one followed by the forced retry.
+     */
+    storedTokenRefused?: () => boolean;
 }
 
 /**
@@ -120,9 +126,17 @@ async function runLoginCommand(deps: AdobeSignInDeps, loginCommand: string): Pro
     }
 }
 
+/** A plain sign-in over a stored token Adobe already refused: run it forced instead. */
+function startsRefused(deps: AdobeSignInDeps): boolean {
+    if (!deps.storedTokenRefused?.()) return false;
+    deps.debugLogger.debug('[Auth] Adobe already refused the stored sign-in; signing in fresh');
+    return true;
+}
+
 /** One sign-in: open the browser and wait for it. Callers go through `login`. */
-export async function runAdobeLogin(deps: AdobeSignInDeps, force: boolean): Promise<boolean> {
+export async function runAdobeLogin(deps: AdobeSignInDeps, requestedForce: boolean): Promise<boolean> {
     const { cacheManager, sdkClient, debugLogger } = deps;
+    const force = requestedForce || startsRefused(deps);
     return withTiming('login', async () => {
         try {
             const stepLogger = await deps.stepLogger();

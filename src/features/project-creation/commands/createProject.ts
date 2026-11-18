@@ -219,9 +219,12 @@ export class CreateProjectWebviewCommand extends BundledPanelCommand<WizardIniti
     }
 
     protected getWebviewTitle(): string {
-        // editProject is set in execute() before the panel/loading state exist,
-        // so edit mode is identified from the first pixel (tab + loading header).
-        return this.editProject ? 'Edit Project' : 'Create Demo Project';
+        // editProject and importedSettings are set in execute() before the panel/loading state
+        // exist, so the mode is identified from the first pixel (tab + loading header). The words
+        // match the page's own title (getWizardTitle), walk F277.
+        if (this.editProject) return 'Edit Project';
+        if (this.importedSettings) return 'Import Project';
+        return 'Create Demo Project';
     }
 
     protected getLoadingHeader(): { title: string; subtitle?: string } {

@@ -247,10 +247,6 @@ export class TokenManager {
     }
 
     /**
-     * Check if token is valid and not expired
-     * Uses atomic token inspection to prevent race conditions
-     */
-    /**
      * Adobe refused the stored token (walk F247): remember it, and forget the cached "signed in".
      */
     markStoredTokenRejected(): void {
@@ -267,6 +263,24 @@ export class TokenManager {
         this.logger.warn('[Token] Adobe no longer accepts the stored sign-in; it counts as signed out until a new one');
     }
 
+    /**
+     * Whether Adobe already refused the stored token (walk F276). A plain sign-in would hand that
+     * token straight back, so Sign In goes to the forced one instead.
+     */
+    isStoredTokenRejected(): boolean {
+        if (!this.rejected) return false;
+        try {
+            const token = this.readTokenConfig()?.token;
+            return Boolean(token && this.rejected.has(token));
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * Check if token is valid and not expired
+     * Uses atomic token inspection to prevent race conditions
+     */
     async isTokenValid(): Promise<boolean> {
         const inspection = await this.inspectToken();
         return inspection.valid;

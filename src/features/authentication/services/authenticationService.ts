@@ -82,8 +82,7 @@ export class AuthenticationService {
             logger,
             this.cacheManager,
         );
-        // Note: entityService will be initialized lazily when first needed
-        // because it depends on stepLogger which requires async initialization
+        // Entity services are built lazily: they need the stepLogger, which initializes async.
         this.signInDeps = {
             commandManager,
             cacheManager: this.cacheManager,
@@ -92,6 +91,7 @@ export class AuthenticationService {
             debugLogger: this.debugLogger,
             stepLogger: () => this.ensureStepLogger(),
             rejected,
+            storedTokenRefused: () => this.tokenManager.isStoredTokenRejected(),
             watchForcedSignIn: async () => {
                 const afters = await Promise.all([...this.forcedSignInWatches].map((watch) => watch()));
                 return async () => {
