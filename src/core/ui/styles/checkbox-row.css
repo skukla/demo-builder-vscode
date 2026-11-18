@@ -40,8 +40,7 @@
 
     /* A sentence on what a choice does (walk F231): its own line under the name, lined up
        with it, as a form field's help text sits. A detail run on after the name read as
-       improvised once it was a sentence. Configure's radios use it too (walk F234), so it is
-       named for the choice, not the checkbox. */
+       improvised once it was a sentence. */
     .choice-help {
         display: block;
         margin-top: 2px;
