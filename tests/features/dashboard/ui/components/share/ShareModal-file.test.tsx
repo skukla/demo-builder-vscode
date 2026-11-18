@@ -141,6 +141,7 @@ describe('ShareModal: the file step', () => {
             ]);
             expect(sent('getDemoPackagePreview')).toHaveLength(2);
             expect(screen.queryByTestId('package-check-datapack')).not.toBeInTheDocument();
+            expect(screen.getByTestId('package-check-datapack-shared')).toBeInTheDocument();
             expect(partBox('Storefront').checked).toBe(false);
         });
 

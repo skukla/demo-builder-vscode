@@ -150,7 +150,6 @@ interface Storefront {
     state: StorefrontState;
     /** Read again; the answer replaces the preview only when it is one. Stable. */
     reread: () => void;
-    rereading: boolean;
 }
 
 /**
@@ -160,7 +159,6 @@ interface Storefront {
  */
 function useStorefrontState(isEds: boolean): Storefront {
     const [state, setState] = useState<StorefrontState>({ status: 'loading' });
-    const [rereading, setRereading] = useState(false);
     useEffect(() => {
         let cancelled = false;
         void (isEds ? readPreview() : readDatapackCheck()).then((read) => {
@@ -171,13 +169,11 @@ function useStorefrontState(isEds: boolean): Storefront {
         };
     }, [isEds]);
     const reread = useCallback((): void => {
-        setRereading(true);
         void (isEds ? readPreview() : readDatapackCheck()).then((read) => {
             if (read.status !== 'failed') setState(read);
-            setRereading(false);
         });
     }, [isEds]);
-    return { state, reread, rereading };
+    return { state, reread };
 }
 
 function LinkForm({ state, flow, fix }: { state: StorefrontState; flow: UseShareLink; fix: ShareDatapackFix }): React.ReactElement {
@@ -271,7 +267,7 @@ function ShareWindow({ isEds, onClose, read }: WindowProps): React.ReactElement 
     const flow = useShareLink(storefront.status === 'ready' ? storefront.preview : UNREAD);
     const file = useShareFile(isEds);
     const checks = checksOf(storefront);
-    const fix = useShareDatapack(checks, read.reread, read.rereading);
+    const fix = useShareDatapack(checks, read.reread);
     const loading = storefront.status === 'loading';
     if (step === 'choose') {
         return (

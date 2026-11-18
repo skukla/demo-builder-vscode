@@ -110,33 +110,36 @@ async function newestSave(reads: PackReads, recorded: ProjectDatapack): Promise<
     return { verdict: 'readable', pack: located(latest, 'library'), displayName: latest.displayName, mine: latest.mine === true, shared: latest.shared };
 }
 
+/**
+ * What the SC reads when the recorded pack is not available to them (walk F237, owner: simple,
+ * readable, like an application): the pack never by its code, since the project records no
+ * display name for it, and never a version (overview Phase 7).
+ */
+const UNAVAILABLE = "This project's datapack isn't available to you";
+const WITHOUT_DATA = 'The project will be created without sample data.';
+
 /** The pack it was made from, its newest version, or nothing: what a fallback can install. */
-async function fallbackFor(reads: PackReads, recorded: ProjectDatapack, unreadable: string): Promise<RecordedPackCheck> {
+async function fallbackFor(reads: PackReads, recorded: ProjectDatapack): Promise<RecordedPackCheck> {
     const origin = recorded.origin;
-    if (!origin) return { verdict: 'none', note: `${unreadable} This project will be created without a datapack.` };
+    if (!origin) return { verdict: 'none', note: `${UNAVAILABLE}. ${WITHOUT_DATA}` };
     const same = await find(reads, origin);
     if (same) {
         return {
             verdict: 'fallback',
             pack: located(same, storeOf(origin)),
             displayName: same.displayName,
-            note: `${unreadable} You can continue with ${same.displayName}, the datapack it was made from; their changes won't be included.`,
+            note: `${UNAVAILABLE}. You can use ${same.displayName}, the datapack it was made from, without the changes made to it.`,
         };
     }
     const latest = await newest(reads, origin);
     if (!latest) {
-        return {
-            verdict: 'none',
-            note: `${unreadable} The datapack it was made from, ${origin.name}, has gone too, so this project will be created without a datapack.`,
-        };
+        return { verdict: 'none', note: `${UNAVAILABLE}, and neither is the one it was made from. ${WITHOUT_DATA}` };
     }
     return {
         verdict: 'fallback',
         pack: located(latest, storeOf(origin)),
         displayName: latest.displayName,
-        note:
-            `${unreadable} ${latest.displayName} version ${origin.version} has gone too, so its newest version, ` +
-            `${latest.id.version}, is used; their changes won't be included.`,
+        note: `${UNAVAILABLE}. You can use the newest ${latest.displayName}, the datapack it was made from, without the changes made to it.`,
     };
 }
 
@@ -162,8 +165,7 @@ export async function checkRecordedPack(reads: PackReads, recorded: ProjectDatap
         // has gone is the same datapack's newest save: the changes are in it.
         const latest = await newestSave(reads, recorded);
         if (latest) return latest;
-        const unreadable = `The ${recorded.name} datapack this project uses can't be read: its owner has deleted it or not shared it.`;
-        return await fallbackFor(reads, recorded, unreadable);
+        return await fallbackFor(reads, recorded);
     } catch {
         return { verdict: 'unknown' };
     }

@@ -76,7 +76,7 @@ describe('DatapackStep — a pack the project arrived with', () => {
 
         const notice = await screen.findByTestId('recorded-datapack-notice');
         expect(check).toHaveBeenCalledWith({ datapack: OWN });
-        expect(notice).toHaveTextContent(/can't be read: its owner has deleted it or not shared it/);
+        expect(notice).toHaveTextContent(fallback.note);
 
         fireEvent.click(screen.getByRole('button', { name: 'Continue with Bodea' }));
         expect(updateState).toHaveBeenCalledWith({ datapack: { name: 'bodea', version: 'main', store: 'installer' } });

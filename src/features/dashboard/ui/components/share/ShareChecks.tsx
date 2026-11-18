@@ -3,15 +3,17 @@
  * `InlineNotice`, its title the extension's when the check has one (walk F227), and Share Datapack
  * on a pack only the SC can see (walk F229). Both steps show them: the link step all of them,
  * the file step the datapack's alone (walk F230), so they live here rather than in either form.
+ * Once the pack is shared, its notice turns green and says so (walk F237). Share Datapack is the
+ * house `DialogButton`, whose spinner shows on the quiet button where Spectrum's grey one did not.
  *
  * @module features/dashboard/ui/components/share/ShareChecks
  */
 
-import { Button } from '@adobe/react-spectrum';
 import React from 'react';
 import { SHARE_COPY } from './shareCopy';
 import type { ShareDatapackFix } from './useShareDatapack';
 import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
+import { DialogButton } from '@/core/ui/components/ui/Modal';
 import type { DemoPackageCheck } from '@/types/webviewRequests';
 
 /** The notice's line: why its fix failed, when it did, else the check's sentence under its title. */
@@ -34,9 +36,7 @@ function CheckNotice({
 }): React.ReactElement {
     const hint = check.action === 'republish' ? SHARE_COPY.republishHint : undefined;
     const action = check.share ? (
-        <Button variant="secondary" onPress={fix.ask} isPending={fix.pending}>
-            {SHARE_COPY.shareDatapack}
-        </Button>
+        <DialogButton button={{ label: SHARE_COPY.shareDatapack, variant: 'secondary', onPress: fix.ask, isPending: fix.pending }} />
     ) : undefined;
     return (
         <InlineNotice
@@ -64,10 +64,16 @@ export function ShareChecks({
     checks: DemoPackageCheck[];
     fix: ShareDatapackFix;
 }): React.ReactElement | null {
-    const open = checks.filter((check) => !check.ok);
-    if (open.length === 0) return null;
+    // A pack just shared shows as shared, whatever a later read of the checks says (walk F237).
+    const open = checks.filter((check) => !check.ok && !(fix.shared && check.share));
+    if (open.length === 0 && !fix.shared) return null;
     return (
         <>
+            {fix.shared ? (
+                <InlineNotice tone="success" title={SHARE_COPY.datapackShared} testId="package-check-datapack-shared">
+                    {`Colleagues can use ${fix.shared} now.`}
+                </InlineNotice>
+            ) : null}
             {open.map((check) => (
                 <CheckNotice
                     key={`${check.id}-${check.repository ?? ''}`}

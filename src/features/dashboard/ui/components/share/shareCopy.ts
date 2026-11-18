@@ -27,6 +27,7 @@ export const SHARE_COPY = {
     description: 'Description',
     republishHint: 'Republish, then save again.',
     shareDatapack: 'Share Datapack',
+    datapackShared: 'Datapack Shared',
     skippedTitle: 'Your details file was left alone.',
     remove: 'Remove the Details from My Repository',
     removedFile: 'The details are out of your repository',

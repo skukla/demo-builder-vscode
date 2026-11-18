@@ -149,7 +149,8 @@ describe('checkRecordedPack', () => {
             verdict: 'fallback',
             pack: { name: 'bodea', version: '1.0.0', store: 'installer' },
             displayName: 'Bodea',
-            note: "The acme-demo-1a2b3c datapack this project uses can't be read: its owner has deleted it or not shared it. You can continue with Bodea, the datapack it was made from; their changes won't be included.",
+            // Walk F237 (owner): simple and readable, the pack never by its code, no version.
+            note: "This project's datapack isn't available to you. You can use Bodea, the datapack it was made from, without the changes made to it.",
         });
     });
 
@@ -162,13 +163,13 @@ describe('checkRecordedPack', () => {
         const check = await checkRecordedPack(r, ACME);
 
         expect(check).toMatchObject({ verdict: 'fallback', pack: { name: 'bodea', version: '2.0.0', store: 'installer' } });
-        expect(check.verdict === 'fallback' && check.note).toContain("Bodea version 1.0.0 has gone too, so its newest version, 2.0.0, is used");
+        expect(check.verdict === 'fallback' && check.note).toBe("This project's datapack isn't available to you. You can use the newest Bodea, the datapack it was made from, without the changes made to it.");
     });
 
     it('continues without a datapack when the datapack it was made from has gone entirely, and says why', async () => {
         await expect(checkRecordedPack(reads([]), ACME)).resolves.toEqual({
             verdict: 'none',
-            note: "The acme-demo-1a2b3c datapack this project uses can't be read: its owner has deleted it or not shared it. The datapack it was made from, bodea, has gone too, so this project will be created without a datapack.",
+            note: "This project's datapack isn't available to you, and neither is the one it was made from. The project will be created without sample data.",
         });
     });
 
@@ -177,7 +178,7 @@ describe('checkRecordedPack', () => {
 
         expect(check).toEqual({
             verdict: 'none',
-            note: "The gone datapack this project uses can't be read: its owner has deleted it or not shared it. This project will be created without a datapack.",
+            note: "This project's datapack isn't available to you. The project will be created without sample data.",
         });
     });
 

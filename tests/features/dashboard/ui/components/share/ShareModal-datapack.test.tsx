@@ -98,6 +98,8 @@ describe('ShareModal: the datapack notice and its fix', () => {
             ['share-library-datapack', { datapackName: 'release-save-test-2', shared: true, confirm: true }],
         ]);
         expect(shareButton()).toHaveAttribute('aria-busy', 'true');
+        // Walk F237: the house busy face, a spinner that shows on the quiet button, not Spectrum's grey one.
+        expect(shareButton().querySelector('.modal-button-pending')).not.toBeNull();
 
         mockRequest.mockResolvedValueOnce(answer(AFTER_SHARE));
         finish({
@@ -108,7 +110,34 @@ describe('ShareModal: the datapack notice and its fix', () => {
 
         expect(sent('getDemoPackagePreview')).toHaveLength(2);
         expect(screen.queryByTestId('package-check-datapack')).not.toBeInTheDocument();
+        expect(screen.getByTestId('package-check-datapack-shared')).toHaveTextContent('Datapack Shared');
         expect(nameInput().value).toBe('Bodea by Steve');
+    });
+
+    // Walk F237 (owner: no success message, the spinner stayed): the share's own answer says it is
+    // shared, so the notice turns green at once; the read again that follows keeps the other checks
+    // fresh but never holds the button or brings the amber notice back.
+    it('says it is shared as soon as the share answers, whatever the read again does', async () => {
+        await renderShareLink(answer(WITH_PRIVATE_PACK));
+        await pressShareDatapack();
+        mockRequest.mockResolvedValueOnce({ success: true, data: { datapackName: 'release-save-test-2', shared: true, versions: 1 } });
+        // The read again answers late, and with the library not yet saying shared.
+        let finishRead: (value: unknown) => void = () => undefined;
+        mockRequest.mockReturnValueOnce(new Promise((resolve) => (finishRead = resolve)));
+
+        await click('Share');
+
+        const shared = screen.getByTestId('package-check-datapack-shared');
+        expect(shared).toHaveClass('inline-notice--success');
+        expect(shared).toHaveTextContent('Datapack Shared');
+        expect(shared).toHaveTextContent('Colleagues can use Release Save Test 2 now.');
+        expect(screen.queryByTestId('package-check-datapack')).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Share Datapack' })).not.toBeInTheDocument();
+
+        finishRead(answer(WITH_PRIVATE_PACK));
+        await settle();
+        expect(screen.queryByTestId('package-check-datapack')).not.toBeInTheDocument();
+        expect(screen.getByTestId('package-check-datapack-shared')).toBeInTheDocument();
     });
 
     it('a failure is the notice line, and the button can be pressed again', async () => {
