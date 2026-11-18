@@ -176,6 +176,14 @@
     min-width: 0;
 }
 
+/* The date never wraps (F279): it is cut with an ellipsis on a card too narrow for it and its tags. */
+.datapack-card-date {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .datapack-card-tags {
     display: flex;
     flex: 0 0 auto;

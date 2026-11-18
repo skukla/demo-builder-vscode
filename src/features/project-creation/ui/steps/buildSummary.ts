@@ -55,6 +55,9 @@ export function architectureLabel(state: WizardState, stacks: Stack[]): string |
 /**
  * The Commerce group. A row shows ✓ + value only when its sub-step is BOTH done
  * AND committed (the user pressed Continue past it) — values never appear alone.
+ * An import skips the commit: the file already chose what it has, so a done step
+ * shows its value at once (F278, owner 2026-11-18). Its settings steps are in the
+ * strip, unlike Edit's, so each row still follows its own step.
  */
 export function commerceSummaryGroup(state: WizardState): SummaryGroup {
     const isAccs = state.selectedBackend === ACCS_BACKEND;
@@ -63,9 +66,10 @@ export function commerceSummaryGroup(state: WizardState): SummaryGroup {
     if (isSetInConfigure(state)) {
         return { heading: 'Commerce', rows: editingRows(state, sectionStates) };
     }
+    const isImport = state.wizardMode === 'import';
     const committed = new Set(state.committedCommerceSteps ?? []);
     const rows: SummaryRow[] = sectionStates.map((s) => {
-        const done = s.status === 'done' && committed.has(s.id);
+        const done = s.status === 'done' && (isImport || committed.has(s.id));
         return { label: ROW_LABELS[s.id], value: done ? s.value : undefined, done };
     });
     return { heading: 'Commerce', rows };

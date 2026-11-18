@@ -2447,7 +2447,7 @@
             "anchors": [
                 "if (defaults) {"
             ],
-            "line": 253,
+            "line": 256,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this true reads .componentSelection off the null that parseJSON returns for an unreadable file, which throws inside the surrounding try and lands in the catch \u2014 leaving componentDefaults at its initial null, which is exactly what the untaken branch leaves it at. The suite's malformed-defaults test passes under both.",
@@ -2460,7 +2460,7 @@
             "anchors": [
                 "const stepPreview = wizardSteps"
             ],
-            "line": 274,
+            "line": 277,
             "mutants": 1,
             "category": "other",
             "reason": "stepPreview is built solely to be interpolated into the this.logger.debug two lines below; wizardSteps itself is already assigned and is what reaches the webview. Dropping the slice changes how many ids appear in that one log line and nothing a caller can observe.",
@@ -2473,7 +2473,7 @@
             "anchors": [
                 ".map((s) => s.id)"
             ],
-            "line": 276,
+            "line": 279,
             "mutants": 1,
             "category": "other",
             "reason": "Part of the same preview string: the mapped ids are joined and interpolated into one this.logger.debug call. Replacing the mapper changes the text of that line, while the steps sent to the webview come from the parsed file above, untouched by this expression.",
@@ -2486,7 +2486,7 @@
             "anchors": [
                 "const remainingCount = stepCount > 3 ? ` ... (and ${stepCount - 3} more)` : '';"
             ],
-            "line": 278,
+            "line": 281,
             "mutants": 5,
             "category": "branch",
             "reason": "remainingCount is appended to the preview inside the same this.logger.debug. Forcing the comparison either way, widening it, or flipping the subtraction changes only the suffix of that debug line \u2014 the wizardSteps array the webview receives was assigned before this expression and is not derived from it.",
@@ -2499,7 +2499,7 @@
             "anchors": [
                 "} else if (stepsRead.outcome === 'invalid-shape') {"
             ],
-            "line": 280,
+            "line": 283,
             "mutants": 1,
             "category": "branch",
             "reason": "The body is a single this.logger.error. wizardSteps was left null by the branch above and stays null whichever way this condition goes, so the response the webview receives is identical; only whether the validation message is logged changes.",
@@ -2512,7 +2512,7 @@
             "anchors": [
                 "} else if (stepsRead.outcome === 'unreadable') {"
             ],
-            "line": 286,
+            "line": 289,
             "mutants": 4,
             "category": "branch",
             "reason": "Same shape as the invalid-shape branch above: the body is one this.logger.error, and wizardSteps is null on entry and on exit regardless. Forcing the condition either way, inverting the equality or emptying the block moves only a log line.",
@@ -2525,7 +2525,7 @@
             "anchors": [
                 "const customBlockLibraryDefaults = parseCustomBlockLibrarySettings("
             ],
-            "line": 301,
+            "line": 304,
             "mutants": 1,
             "category": "other",
             "reason": "The empty default on the setting read below is only used when the setting has never been set, and whatever it yields goes straight into parseCustomBlockLibrarySettings, which keeps an entry only when parseCustomBlockLibraryUrl resolves it to an owner and repo. Stryker's placeholder string is not a repository URL, so it is dropped and the result is the same empty array.",
@@ -2551,7 +2551,7 @@
             "anchors": [
                 "if (this.editProject?.settings?.edsConfig) {"
             ],
-            "line": 309,
+            "line": 312,
             "mutants": 3,
             "category": "branch",
             "reason": "Both arms of this if are a this.logger.debug, and the editProject sent to the webview is the field itself, assigned in execute and returned untouched below. Forcing the condition false or emptying the block changes only which debug line prints. The optional read on settings is defensive against a value the EditProjectConfig type forbids \u2014 settings is required there, so no caller can produce the shape that would make removing it throw.",
@@ -2564,7 +2564,7 @@
             "anchors": [
                 "} else if (this.editProject) {"
             ],
-            "line": 318,
+            "line": 321,
             "mutants": 3,
             "category": "branch",
             "reason": "The body is one this.logger.debug noting that an edit carried no EDS config. Nothing in the returned initial data is computed here \u2014 editProject is passed through as the field execute assigned \u2014 so forcing the condition either way or emptying the block moves only the debug channel.",
@@ -2577,7 +2577,7 @@
             "anchors": [
                 "if (panel) {"
             ],
-            "line": 461,
+            "line": 464,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this true calls dispose on undefined when no wizard panel is open \u2014 and that call sits inside the try whose catch is deliberately empty, so the TypeError is swallowed and disposeActivePanel still returns having done nothing. The no-panel test passes under both, because the guard and the catch cover the same case.",
@@ -2590,7 +2590,7 @@
             "anchors": [
                 "if (this.importedSettings) {"
             ],
-            "line": 478,
+            "line": 481,
             "mutants": 3,
             "category": "branch",
             "reason": "The body is a single this.logger.debug naming the import source. importedSettings is assigned on the line above and read by getInitialData from the field, never from this branch, so forcing the condition either way or emptying the block leaves the wizard's initial data identical.",
@@ -2603,7 +2603,7 @@
             "anchors": [
                 "if (this.editProject.settings?.selections) {"
             ],
-            "line": 493,
+            "line": 496,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Removing this optional read would throw only for an edit project whose settings is undefined, and EditProjectConfig declares settings as required \u2014 no caller can construct that value without deliberately defeating the type. The guard is defensive against a shape the compiler already refuses.",
@@ -2616,7 +2616,7 @@
             "anchors": [
                 "let componentDefaults: ComponentSelection | null = null;"
             ],
-            "line": 238,
+            "line": 241,
             "mutants": 1,
             "category": "block",
             "reason": "The catch that closes this try block holds one this.logger.debug. Emptying it still swallows the failure and still leaves componentDefaults at the null declared here, which is what the webview receives \u2014 the suite asserts exactly that for both a malformed defaults.json and a throwing read. Only the debug channel differs.",

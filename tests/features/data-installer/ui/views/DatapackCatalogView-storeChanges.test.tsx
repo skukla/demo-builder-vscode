@@ -19,7 +19,7 @@ import { mockOnMessage } from '../../../../helpers/webviewClientMock';
 import '@testing-library/jest-dom';
 import { CATALOG, DatapackCatalogView, INVENTORY_COMPLETE, makeSummary, mockPost, mockRequest } from './DatapackCatalogView.testUtils';
 import { PICKABLE_KINDS } from '@/features/data-installer/pickableKinds';
-import { versionLabel } from '@/features/data-installer/packVersions';
+import { datapackDay, savedAt, versionLabel } from '@/features/data-installer/packVersions';
 import type { DatapackSummary } from '@/features/data-installer/types';
 
 /** The SC's own library pack, in two versions; the demo uses the older. */
@@ -84,7 +84,9 @@ describe("the demo's datapack in the library", () => {
         store({ name: 'acme-1a2b3c', version: OLDER.id.version, store: 'library' }, items, false, AT);
         await renderView();
 
-        expect(within(card('acme-1a2b3c')).getByText(`Saved ${versionLabel(OLDER.id.version)}`)).toBeInTheDocument();
+        // The card says the day alone (F279); its accessible name keeps the time.
+        const savedOn = savedAt(OLDER.id.version);
+        expect(within(card('acme-1a2b3c')).getByText(`Saved ${savedOn ? datapackDay(savedOn) : ''}`)).toBeInTheDocument();
         expect(within(card('acme-1a2b3c')).queryByRole('button', { name: /Version of/u })).not.toBeInTheDocument();
         expect(within(card('acme-1a2b3c')).getByRole('button', { name: 'Newer version available' })).toBeInTheDocument();
     });

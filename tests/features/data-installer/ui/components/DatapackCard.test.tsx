@@ -217,6 +217,28 @@ describe('DatapackCard', () => {
             expect(card).not.toHaveTextContent(/9:15/u);
         });
 
+        // F279 (owner's walk, 2026-11-18): "Saved Nov 17, 3:34 PM" wrapped beside Mine and Community.
+        // As F169 did for "Updated", the card says the day alone; the flyout keeps the time.
+        it('says the day alone for a save, on a line that does not wrap, beside two tags', () => {
+            const save = '20261117-153400';
+            const { card } = renderCard(
+                makeGroup({
+                    key: 'library:bodea',
+                    store: 'library',
+                    mine: true,
+                    shared: true,
+                    versions: [makeVersion({ id: { name: 'bodea', version: save } })],
+                }),
+            );
+            const day = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' });
+            const local = new Date(Date.UTC(2026, 10, 17, 15, 34, 0));
+
+            expect(tagsShown()).toStrictEqual(['Mine', 'Community']);
+            const date = within(card).getByText(`Saved ${day.format(local)}`);
+            expect(date).toHaveClass('datapack-card-date');
+            expect(card).not.toHaveTextContent(/\d:\d\d/u);
+        });
+
         it('names the version when it has no date', () => {
             const { card } = renderCard(makeGroup());
 

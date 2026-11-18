@@ -273,6 +273,66 @@ describe('commerceSummaryGroup - Edit', () => {
     });
 });
 
+/**
+ * Import from a file: the file already chose the backend and the datapack, so the rows
+ * read what the import has, without a Continue past each step (F278, owner 2026-11-18).
+ * Unlike Edit, the settings steps ARE in the strip, so their rows follow their own steps
+ * and stay open until each is done.
+ */
+describe('commerceSummaryGroup - Import', () => {
+    const importing = (partial: Partial<WizardState> = {}) =>
+        state({ wizardMode: 'import', selectedBackend: 'adobe-commerce-paas', ...partial });
+
+    it('shows the Backend and the chosen datapack with nothing moved past', () => {
+        const group = commerceSummaryGroup(
+            importing({
+                commerceConnectValid: true,
+                commerceStoreViewChosen: true,
+                componentConfigs: {
+                    'adobe-commerce-paas': {
+                        ADOBE_COMMERCE_WEBSITE_CODE: 'base',
+                        ADOBE_COMMERCE_STORE_VIEW_CODE: 'default',
+                    },
+                },
+                datapack: { name: 'release-save-test-2', version: 'main' },
+                datapackDisplayName: 'Release Save Test 2',
+            }),
+        );
+
+        expect(group.rows.find((r) => r.label === 'Backend')).toEqual({
+            label: 'Backend',
+            value: 'Adobe Commerce (PaaS)',
+            done: true,
+        });
+        expect(group.rows.find((r) => r.label === 'Connection')).toEqual({
+            label: 'Connection',
+            value: 'Connected',
+            done: true,
+        });
+        expect(group.rows.find((r) => r.label === 'Business')?.done).toBe(true);
+        expect(group.rows.find((r) => r.label === 'Datapacks')).toEqual({
+            label: 'Datapacks',
+            value: 'Release Save Test 2',
+            done: true,
+        });
+    });
+
+    it('leaves a step that is not done yet open, with no value', () => {
+        const group = commerceSummaryGroup(importing());
+
+        expect(group.rows.find((r) => r.label === 'Connection')).toEqual({
+            label: 'Connection',
+            value: undefined,
+            done: false,
+        });
+        expect(group.rows.find((r) => r.label === 'Business')).toEqual({
+            label: 'Business',
+            value: undefined,
+            done: false,
+        });
+    });
+});
+
 describe('storefrontSummaryGroup', () => {
     it('names an added demo first, and says when its site will start empty', () => {
         const demo = { kind: 'demo' as const, version: 1, name: 'Isle5 by Robin', source: { owner: 'robin', repo: 'isle5-demo' }, storefrontKind: 'eds' as const };

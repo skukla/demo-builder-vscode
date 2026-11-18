@@ -28,7 +28,7 @@
 import { ActionButton, Badge, Item, Picker, Text, Tooltip, TooltipTrigger } from '@adobe/react-spectrum';
 import React, { useCallback, useState } from 'react';
 import { packSource, type PackSource } from '../../packSource';
-import { isSavedVersion, shownVersion, versionChanged, versionChoices } from '../../packVersions';
+import { datapackDay, isSavedVersion, savedAt, shownVersion, versionChanged, versionChoices } from '../../packVersions';
 import type { DatapackGroup } from '../../services/datapackCatalog';
 import type { DatapackArt, DatapackSummary } from '../../types';
 import { InstallFailedLine } from './FailedHealthLine';
@@ -204,7 +204,7 @@ function VersionChoice({ group, selectedVersion, onVersionChange }: Pick<Datapac
     };
     const choices = versionChoices(group.versions.map((candidate) => candidate.id.version), selectedVersion);
     if (choices.length < 2) {
-        return <span className="text-sm text-gray-700">{changed(selectedVersion) ?? shownVersion(selectedVersion)}</span>;
+        return <span className="datapack-card-date text-sm text-gray-700">{changed(selectedVersion) ?? savedDayOr(selectedVersion)}</span>;
     }
     return (
         <Picker aria-label={`Version of ${group.displayName}`} selectedKey={selectedVersion} onSelectionChange={(key) => onVersionChange(String(key))}>
@@ -216,6 +216,15 @@ function VersionChoice({ group, selectedVersion, onVersionChange }: Pick<Datapac
             ))}
         </Picker>
     );
+}
+
+/**
+ * A save as the card's date line says it: the day alone, "Saved Nov 17", as F169 did for "Updated"
+ * (F279, owner's walk 2026-11-18: the time wrapped beside two tags). The flyout keeps the time.
+ */
+function savedDayOr(version: string): string {
+    const at = savedAt(version);
+    return at ? `Saved ${datapackDay(at)}` : shownVersion(version);
 }
 
 /**
