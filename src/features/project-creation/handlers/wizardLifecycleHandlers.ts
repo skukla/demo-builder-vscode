@@ -73,7 +73,8 @@ export async function handleCancelProjectCreation(
     if (context.sharedState.projectCreationAbortController) {
         context.logger.debug('[Project Creation] Cancellation requested by user');
         context.sharedState.projectCreationAbortController.abort();
-        return { success: true, data: { message: 'Project creation cancelled' } };
+        const message = 'Stopping project creation after the current step';
+        return { success: true, data: { message } };
     }
     return { success: false, data: { message: 'No active project creation to cancel' }, code: ErrorCode.PROJECT_NOT_FOUND };
 }
@@ -85,7 +86,11 @@ function cancelCreationByName(
 ): DataResult<{ message: string }> {
     if (stopCreation(creationPath({ projectName }))) {
         context.logger.info(`[Project Creation] Creation of "${projectName}" stopped on request`);
-        return { success: true, data: { message: `Stopped the creation of "${projectName}".` } };
+        // The run stops at its next step boundary, then cleans up (F274).
+        const message =
+            `Stopping the creation of "${projectName}" after its current step. ` +
+            'What it made is then removed.';
+        return { success: true, data: { message } };
     }
     return {
         success: false,

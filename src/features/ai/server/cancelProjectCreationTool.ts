@@ -7,9 +7,10 @@
  * wizard or from `create_project`, `create_project_from_file` or `copy_project`, runs
  * through `runCreation`, which registers its stop by project folder.
  *
- * Stopping ends the creation step and runs its cleanup (the half-built project folder,
- * and an API Mesh this creation made), as the wizard's Cancel does. A storefront an
- * Edge Delivery creation already set up stays.
+ * Stopping lets the creation's running step finish, starts no further step, and then
+ * runs its cleanup (the half-built project folder, and an API Mesh this creation made),
+ * as the wizard's Cancel does (F274). A storefront an Edge Delivery creation already set
+ * up stays.
  */
 
 import { z } from 'zod';

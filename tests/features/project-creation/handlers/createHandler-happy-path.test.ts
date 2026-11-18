@@ -36,7 +36,11 @@ describe('Project Creation - Create Handler - Happy Path', () => {
 
             expect(result.success).toBe(true);
             expect(validateProjectNameSecurity).toHaveBeenCalledWith('test-project');
-            expect(executor.executeProjectCreation).toHaveBeenCalledWith(mockContext, mockConfig);
+            expect(executor.executeProjectCreation).toHaveBeenCalledWith(
+                mockContext,
+                mockConfig,
+                expect.any(AbortSignal),
+            );
             expect(mockContext.sendMessage).toHaveBeenCalledWith(
                 'creationProgress',
                 expect.objectContaining({

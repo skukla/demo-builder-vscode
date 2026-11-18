@@ -162,4 +162,21 @@ describe('creationReporter', () => {
         expect(sent(send)[0].message).toBe(S.writingConfigFiles.detail);
         expect(reportPhase).toHaveBeenCalledWith(`${S.writingConfigFiles.label} — ${S.writingConfigFiles.detail}`);
     });
+
+    // After Stop the screen says it is stopping (`creationRun.ts`); the step still
+    // finishing must not write over that (F274).
+    it('reports nothing once the run has been stopped', () => {
+        const send = jest.fn();
+        const stop = new AbortController();
+        const progress = creationReporter(send, STARTED_AT, stop.signal);
+
+        progress.report(S.downloadingComponents.label, 25, 'Cloning repositories');
+        stop.abort();
+        progress.report(S.installingComponents.label, 40, 'Running npm install');
+
+        expect(sent(send).map((payload) => payload.currentOperation)).toEqual([
+            S.downloadingComponents.label,
+        ]);
+        expect(reportPhase).toHaveBeenCalledTimes(1);
+    });
 });

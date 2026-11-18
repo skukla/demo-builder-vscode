@@ -29,6 +29,58 @@ function hangingCreation(): void {
     (executeProjectCreation as jest.Mock).mockReturnValue(new Promise<void>(() => undefined));
 }
 
+function cancelled(): Error {
+    return Object.assign(new Error('Project creation cancelled by user'), {
+        code: ErrorCode.CANCELLED,
+    });
+}
+
+/**
+ * A creation whose running step ends only when the test says so; at the boundary after
+ * it, a stopped creation ends, as the real one does (`executor-stopAtStepBoundary`).
+ */
+function steppedCreation(): { finishStep: () => void; signal: () => AbortSignal | undefined } {
+    let finishStep: () => void = () => undefined;
+    const stepDone = new Promise<void>((resolve) => {
+        finishStep = resolve;
+    });
+    (executeProjectCreation as jest.Mock).mockImplementation(
+        async (_context: HandlerContext, _config: ProjectCreationConfig, signal?: AbortSignal) => {
+            await stepDone;
+            if (signal?.aborted) throw cancelled();
+        },
+    );
+    const signal = (): AbortSignal | undefined =>
+        (executeProjectCreation as jest.Mock).mock.calls[0]?.[2];
+    return { finishStep, signal };
+}
+
+/** A creation whose running step ends the moment it is stopped. */
+function creationEndingAtNextStep(): void {
+    (executeProjectCreation as jest.Mock).mockImplementation(
+        (_context: HandlerContext, _config: ProjectCreationConfig, signal: AbortSignal) =>
+            new Promise<void>((_resolve, reject) => {
+                signal.addEventListener('abort', () => reject(cancelled()));
+            }),
+    );
+}
+
+/** Whether a promise has settled, read without waiting for it. */
+function tracked(run: Promise<void>): { failure: Promise<unknown>; settled: () => boolean } {
+    let done = false;
+    const failure = run.then(
+        () => {
+            done = true;
+            return undefined;
+        },
+        (error: unknown) => {
+            done = true;
+            return error;
+        },
+    );
+    return { failure, settled: () => done };
+}
+
 function freshContext(): HandlerContext {
     return createMockHandlerContext({ sharedState: { isAuthenticating: false } });
 }
@@ -44,7 +96,7 @@ describe('runCreation', () => {
     });
 
     it('ends a creation that runs past the 30-minute limit, as a timeout', async () => {
-        hangingCreation();
+        creationEndingAtNextStep();
         const run = runCreation(freshContext(), config);
         const failure = run.catch((error: unknown) => error);
 
@@ -60,7 +112,7 @@ describe('runCreation', () => {
     });
 
     it('is stopped by its project folder, ending as cancelled', async () => {
-        hangingCreation();
+        creationEndingAtNextStep();
         const run = runCreation(freshContext(), config);
         const failure = run.catch((error: unknown) => error);
 
@@ -70,7 +122,7 @@ describe('runCreation', () => {
     });
 
     it("is stopped by the wizard's cancel, which aborts the context's controller", async () => {
-        hangingCreation();
+        creationEndingAtNextStep();
         const context = freshContext();
         const run = runCreation(context, config);
         const failure = run.catch((error: unknown) => error);
@@ -92,5 +144,93 @@ describe('runCreation', () => {
 
     it('answers false for a folder with no creation running', () => {
         expect(stopCreation('/nowhere/at-all')).toBe(false);
+    });
+});
+
+/**
+ * A stop (or the limit) used to end only the WAIT: the door cleaned up at once while
+ * the running step carried on and the steps after it still started, so a repository,
+ * site or mesh could be made after the cleanup and nothing removed it (F274).
+ */
+describe('runCreation: stopping waits for the running step', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    it('hands creation the stop, so its steps can see it', async () => {
+        const { finishStep, signal } = steppedCreation();
+        const { failure } = tracked(runCreation(freshContext(), config));
+
+        expect(signal()?.aborted).toBe(false);
+        stopCreation(folder);
+        expect(signal()?.aborted).toBe(true);
+
+        finishStep();
+        await failure;
+    });
+
+    it('answers only after the running step has ended, so cleanup sees what it made', async () => {
+        const { finishStep } = steppedCreation();
+        const { failure, settled } = tracked(runCreation(freshContext(), config));
+
+        stopCreation(folder);
+        await jest.advanceTimersByTimeAsync(TIMEOUTS.PROJECT_CREATION_STOP_GRACE / 2);
+        expect(settled()).toBe(false);
+
+        finishStep();
+        expect(await failure).toMatchObject({ code: ErrorCode.CANCELLED });
+    });
+
+    it('the time limit stops the steps too, and waits for the running one the same way', async () => {
+        const { finishStep, signal } = steppedCreation();
+        const { failure, settled } = tracked(runCreation(freshContext(), config));
+
+        await jest.advanceTimersByTimeAsync(TIMEOUTS.PROJECT_CREATION_OVERALL);
+        expect(signal()?.aborted).toBe(true);
+        expect(settled()).toBe(false);
+
+        finishStep();
+        expect(await failure).toMatchObject({ code: ErrorCode.TIMEOUT });
+    });
+
+    it('waits only so long for a step that never ends, and says one was still running', async () => {
+        hangingCreation();
+        const { failure, settled } = tracked(runCreation(freshContext(), config));
+
+        stopCreation(folder);
+        await jest.advanceTimersByTimeAsync(TIMEOUTS.PROJECT_CREATION_STOP_GRACE - 1);
+        expect(settled()).toBe(false);
+        await jest.advanceTimersByTimeAsync(1);
+
+        const error = await failure;
+        expect(error).toMatchObject({ code: ErrorCode.CANCELLED });
+        expect((error as Error).message).toContain('still running');
+    });
+
+    it('says it is stopping while the running step finishes', async () => {
+        const { finishStep } = steppedCreation();
+        const context = freshContext();
+        const { failure } = tracked(runCreation(context, config));
+
+        stopCreation(folder);
+        await jest.advanceTimersByTimeAsync(0);
+
+        expect(context.sendMessage).toHaveBeenCalledWith(
+            'creationProgress',
+            expect.objectContaining({ currentOperation: 'Stopping after this step' }),
+        );
+        finishStep();
+        await failure;
+    });
+
+    it('answers a creation that fails on its own at once, with its own error', async () => {
+        (executeProjectCreation as jest.Mock).mockRejectedValue(new Error('clone failed'));
+
+        await expect(runCreation(freshContext(), config)).rejects.toThrow('clone failed');
     });
 });

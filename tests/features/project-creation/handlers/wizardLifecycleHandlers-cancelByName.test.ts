@@ -10,6 +10,7 @@
 
 import { executeProjectCreation } from '@/features/project-creation/handlers/executor';
 import { runCreation } from '@/features/project-creation/handlers/creationRun';
+import { creationCancelledError } from '@/features/project-creation/handlers/creationStop';
 import { handleCancelProjectCreation } from '@/features/project-creation/handlers/wizardLifecycleHandlers';
 import type { HandlerContext } from '@/types/handlers';
 import { ErrorCode } from '@/types/errorCodes';
@@ -29,7 +30,13 @@ describe('handleCancelProjectCreation with a project name', () => {
     });
 
     it("stops that project's creation from another context, which ends as cancelled", async () => {
-        (executeProjectCreation as jest.Mock).mockReturnValue(new Promise<void>(() => undefined));
+        // Its running step ends as soon as it is stopped (the run waits for it, F274).
+        (executeProjectCreation as jest.Mock).mockImplementation(
+            (_context: HandlerContext, _config: unknown, signal: AbortSignal) =>
+                new Promise<void>((_resolve, reject) => {
+                    signal.addEventListener('abort', () => reject(creationCancelledError()));
+                })
+        );
         const failure = runCreation(freshContext(), { projectName: 'named-run' }).catch(
             (error: unknown) => error
         );
@@ -39,6 +46,11 @@ describe('handleCancelProjectCreation with a project name', () => {
         });
 
         expect(result.success).toBe(true);
+        // It says the creation stops after its current step, not that it already has.
+        expect(result.data?.message).toBe(
+            'Stopping the creation of "named-run" after its current step. ' +
+                'What it made is then removed.'
+        );
         expect(await failure).toMatchObject({ code: ErrorCode.CANCELLED });
     });
 

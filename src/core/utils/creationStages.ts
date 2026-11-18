@@ -87,6 +87,13 @@ export const CREATION_STAGES = {
         expectation: 'Usually under a minute',
         detail: 'Swapping what the edit changed',
     },
+    // After Stop or the time limit: the step that was running finishes, then the run's
+    // cleanup deletes what it made (F274).
+    stoppingCreation: {
+        label: 'Stopping after this step',
+        expectation: 'Until this step finishes',
+        detail: 'Then deleting what it made',
+    },
     finishingProject: {
         label: 'Finishing the project',
         expectation: 'Usually a few seconds',

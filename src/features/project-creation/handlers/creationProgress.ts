@@ -79,14 +79,18 @@ export interface CreationReporter {
  *
  * @param sendMessage - the wizard's channel
  * @param startedAt - when the run began, for the screen's clock
+ * @param stop - the run's stop: once stopped, the step still finishing reports nothing, so
+ *   the screen keeps saying it is stopping (`creationRun.ts`, F274)
  * @returns the reporter
  */
 export function creationReporter(
     sendMessage: HandlerContext['sendMessage'],
     startedAt: number = Date.now(),
+    stop?: AbortSignal,
 ): CreationReporter {
     let steps: readonly string[] = [];
     const report: ProgressTracker = (stage, progress, message, position, stepsRemaining) => {
+        if (stop?.aborted) return;
         const line = stepUnder(stage, message) ?? detailFor(stage) ?? '';
         const at = position ?? stepPosition(steps, stage);
         const payload: CreationProgressPayload = {

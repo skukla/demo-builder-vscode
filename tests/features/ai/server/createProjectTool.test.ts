@@ -39,11 +39,13 @@ describe('create_project', () => {
         it('creates a non-mesh project without anchoring the workspace', async () => {
             const s = toolServer();
             const res = await s.call(HEADLESS);
-            // Always-root model: creation never anchors the window, so no options
-            // arg is passed.
-            expect(executeProjectCreation).toHaveBeenCalledWith(expect.anything(), {
-                projectName: 'assembled',
-            });
+            // Always-root model: creation never anchors the window; its third
+            // argument is the run's stop (F274), not an options bag.
+            expect(executeProjectCreation).toHaveBeenCalledWith(
+                expect.anything(),
+                { projectName: 'assembled' },
+                expect.any(AbortSignal),
+            );
             expect(res).toMatchObject({ created: true, name: 'my-proj' });
         });
 
@@ -254,9 +256,11 @@ describe('create_project', () => {
             const res = await s.call(EDS);
 
             expect(storefrontSetup).toHaveBeenCalled();
-            expect(executeProjectCreation).toHaveBeenCalledWith(expect.anything(), {
-                projectName: 'assembled',
-            });
+            expect(executeProjectCreation).toHaveBeenCalledWith(
+                expect.anything(),
+                { projectName: 'assembled' },
+                expect.any(AbortSignal),
+            );
             expect(res).toMatchObject({
                 created: true,
                 name: 'eds-proj',

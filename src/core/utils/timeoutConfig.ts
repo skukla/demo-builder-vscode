@@ -447,6 +447,15 @@ export const TIMEOUTS = {
     /** Complete project creation workflow (30 minutes) */
     PROJECT_CREATION_OVERALL: 30 * 60 * 1000,
 
+    /**
+     * After a stop or the 30-minute limit, how long creation waits for the step that was
+     * running to end before it cleans up anyway (5 minutes). Cleanup waits so it sees what
+     * that step made; the bound is for a step that never ends. The longest single steps
+     * (a mesh deploy, 3 minutes by `MESH_DEPLOY_TOTAL`; a datapack install, a few minutes)
+     * fit inside it.
+     */
+    PROJECT_CREATION_STOP_GRACE: 5 * 60 * 1000,
+
     /** State settling before DOM operations (100ms) */
     UI_UPDATE_DELAY: 100,
 

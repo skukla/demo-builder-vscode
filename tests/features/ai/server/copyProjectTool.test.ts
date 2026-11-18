@@ -150,7 +150,11 @@ describe('copy_project — the copy reaches creation whole, minus what never tra
 
         expect(res).toMatchObject({ created: true, name: 'bodea-copy' });
         expect(buildProjectConfig).toHaveBeenCalledTimes(1);
-        expect(executeProjectCreation).toHaveBeenCalledWith(expect.anything(), { projectName: 'assembled' });
+        expect(executeProjectCreation).toHaveBeenCalledWith(
+            expect.anything(),
+            { projectName: 'assembled' },
+            expect.any(AbortSignal),
+        );
     });
 
     it('hands creation the package, stack, libraries, datapack and settings — never a credential', async () => {

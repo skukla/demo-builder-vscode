@@ -668,8 +668,13 @@ wizard's `create-project` handler calls too, so every door has the same 30-minut
 and the same stop (PL-104 fix 14). `cancel_project_creation` stops a running creation by
 the project's name, whichever door started it: it dispatches the wizard's own
 `cancel-project-creation` handler, given the name, because an agent call has no panel to
-cancel from. A stopped creation is cleaned up as a failed one is. Stopping ends the wait:
-creation's phases do not read the signal, which is true of the wizard's Cancel as well.
+cancel from. A stopped creation is cleaned up as a failed one is, and the same holds for
+the wizard's Cancel and the 30-minute limit: creation checks the stop before each step, so
+the step that was running finishes and no other starts, and `runCreation` answers only
+once that step has ended, so the cleanup sees what it made (F274). A step that never ends
+is waited for `TIMEOUTS.PROJECT_CREATION_STOP_GRACE`; then cleanup runs anyway and the
+error says a step was still running. Storefront setup before the creation step is not
+under this stop: `cancel_project_creation` answers that nothing is running while it runs.
 The 30-minute limit covers the creation step, not storefront setup before it, which has
 its own 30-minute wait for the AEM Code Sync GitHub App.
 

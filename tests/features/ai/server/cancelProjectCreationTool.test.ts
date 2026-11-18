@@ -10,6 +10,7 @@
 import { registerCancelProjectCreationTool } from '@/features/ai/server/cancelProjectCreationTool';
 import type { McpToolSchema } from '@/features/ai/server/mcpToolServer';
 import { runCreation } from '@/features/project-creation/handlers/creationRun';
+import { creationCancelledError } from '@/features/project-creation/handlers/creationStop';
 import { executeProjectCreation } from '@/features/project-creation/handlers/executor';
 import type { HandlerContext } from '@/types/handlers';
 import { ErrorCode } from '@/types/errorCodes';
@@ -51,7 +52,13 @@ describe('cancel_project_creation', () => {
     });
 
     it('stops a running creation by its project name; the creation ends as cancelled', async () => {
-        (executeProjectCreation as jest.Mock).mockReturnValue(new Promise<void>(() => undefined));
+        // Its running step ends as soon as it is stopped (the run waits for it, F274).
+        (executeProjectCreation as jest.Mock).mockImplementation(
+            (_context: HandlerContext, _config: unknown, signal: AbortSignal) =>
+                new Promise<void>((_resolve, reject) => {
+                    signal.addEventListener('abort', () => reject(creationCancelledError()));
+                })
+        );
         const failure = runCreation(freshContext(), { projectName: 'agent-built' }).catch(
             (error: unknown) => error
         );
@@ -59,6 +66,7 @@ describe('cancel_project_creation', () => {
         const res = await serve().call({ projectName: 'agent-built', confirm: true });
 
         expect(res).toMatchObject({ stopped: true });
+        expect(res.message).toContain('after its current step');
         expect(await failure).toMatchObject({ code: ErrorCode.CANCELLED });
     });
 

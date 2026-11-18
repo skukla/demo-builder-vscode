@@ -181,9 +181,11 @@ describe('create_project_from_file — a headless file reaches creation whole', 
 
         expect(res).toMatchObject({ created: true, name: 'new-demo' });
         expect(buildProjectConfig).toHaveBeenCalledTimes(1);
-        expect(executeProjectCreation).toHaveBeenCalledWith(expect.anything(), {
-            projectName: 'assembled',
-        });
+        expect(executeProjectCreation).toHaveBeenCalledWith(
+            expect.anything(),
+            { projectName: 'assembled' },
+            expect.any(AbortSignal),
+        );
     });
 
     it('hands creation the integrations, the mesh, the custom sources and the API picks', async () => {
