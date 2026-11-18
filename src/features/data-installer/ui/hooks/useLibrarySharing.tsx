@@ -6,6 +6,7 @@
  */
 
 import React, { useCallback, useLayoutEffect } from 'react';
+import type { PlainText } from '../../plainFailure';
 import { useDataInstallerRequest } from './useDataInstallerRequest';
 import type { DatapackId } from '@/types/datapack';
 
@@ -15,6 +16,8 @@ export interface LibrarySharing {
     working: boolean;
     /** Why it could not be changed; nothing otherwise. */
     note: React.JSX.Element | null;
+    /** The reason alone, for a host that shows it on a line of its own (Share Demo's notice). */
+    reason: PlainText | null;
 }
 
 /**
@@ -41,5 +44,5 @@ export function useLibrarySharing(id: DatapackId, shared: boolean, onChanged?: (
     const note = request.failure ? (
         <p className="dialog-problem text-negative">{shared ? "Sharing couldn't be stopped" : "It couldn't be shared"}: {request.failure.message}</p>
     ) : null;
-    return { start, working: request.loading, note };
+    return { start, working: request.loading, note, reason: request.failure?.message ?? null };
 }

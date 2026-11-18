@@ -39,6 +39,7 @@ import type { DaLiveContentSource, DemoIntegrations, DemoPackage } from '@/types
 import type { Logger } from '@/types/logger';
 import { SHARED_DEMO_FILE_VERSION, type SharedDemoBuiltWith, type SharedDemoDescription } from '@/types/projectFile';
 import { getEdsDaLiveTarget, getEdsRepoParts } from '@/types/typeGuards';
+import type { DemoPackageCheck } from '@/types/webviewRequests';
 
 /** The storefront the project owns, as the file and the checks need it. */
 export interface OwnStorefront {
@@ -215,18 +216,11 @@ function fromCatalog(
     };
 }
 
-/** One thing a colleague's add will need, checked, in a sentence the SC reads. */
-export interface PackageCheck {
-    id: 'repository' | 'index' | 'datapack' | 'custom-app';
-    ok: boolean;
-    /** A heading for the sentence, when the screen shows it as a notice of its own (Title Case). */
-    title?: string;
-    message: string;
-    /** The door that fixes it, when one exists on the dashboard. */
-    action?: 'republish';
-    /** For a custom-app check: the repository the sentence is about. */
-    repository?: string;
-}
+/**
+ * One thing a colleague's add will need, checked, in a sentence the SC reads: the shape the Share
+ * dialog reads, one type for both sides of the channel.
+ */
+export type PackageCheck = DemoPackageCheck;
 
 export interface PackageCheckDeps {
     repoOps: Pick<GitHubRepoOperations, 'getRepository'>;
@@ -260,14 +254,21 @@ export async function resolveOwnContentSource(
  * What colleagues get of the sample data, by where the pack is; nothing when it could not be asked.
  * A pack that was found is named by the name the store shows, never its code (walk F227).
  */
-function datapackCheckFor(name: string, found: DatapackWhereabouts | undefined): PackageCheck | undefined {
+function datapackCheckFor(pack: DatapackLocation, found: DatapackWhereabouts | undefined): PackageCheck | undefined {
     if (found === undefined) return undefined;
-    const shown = found.displayName ?? name;
+    const shown = found.displayName ?? pack.name;
     if (found.where === 'installer' || found.where === 'library-shared') {
         return { id: 'datapack', ok: true, message: `Colleagues can install the same sample data (${shown}).` };
     }
     if (found.where === 'library-yours-only') {
-        return { id: 'datapack', ok: false, title: "Colleagues Can't Use This Demo's Data Yet", message: `${shown} is only visible to you.` };
+        return {
+            id: 'datapack',
+            ok: false,
+            title: "Colleagues Can't Use This Demo's Data Yet",
+            message: `${shown} is only visible to you.`,
+            // Its fix (walk F229): Share Datapack shares the pack the project records.
+            share: { pack: { name: pack.name, version: pack.version }, displayName: shown },
+        };
     }
     return { id: 'datapack', ok: false, message: `The sample data this demo uses (${shown}) isn't available to colleagues yet.` };
 }
@@ -311,7 +312,7 @@ export async function packageChecks(
               },
     );
     const datapackCheck = project.datapack && deps.datapackAvailability
-        ? datapackCheckFor(project.datapack.name, await deps.datapackAvailability(project.datapack))
+        ? datapackCheckFor(project.datapack, await deps.datapackAvailability(project.datapack))
         : undefined;
     if (datapackCheck) checks.push(datapackCheck);
     for (const [id, state] of Object.entries(project.appBuilderComponents ?? {})) {

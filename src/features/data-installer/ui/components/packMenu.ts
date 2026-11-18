@@ -72,6 +72,14 @@ export type Asking = 'undo' | 'share' | 'remove' | null;
 
 export type ConfirmCopy = Pick<ConfirmActionDialogProps, 'title' | 'actionLabel' | 'actionVariant' | 'children'>;
 
+/**
+ * What Share asks, by the pack's name: the flyout's Share, and Share Demo's Share Datapack (walk
+ * F229), so the two ask the same question.
+ */
+export function shareConfirmCopy(name: string): ConfirmCopy {
+    return { title: `Share ${name}?`, actionLabel: 'Share', actionVariant: 'accent', children: SHARE_CONSENT };
+}
+
 /** What a dialog asks. The title of a closed one is never drawn. */
 export function confirmCopy(asking: Asking, detail: DatapackDetail, sharedInFile?: string): ConfirmCopy {
     const name = detail.displayName;
@@ -84,9 +92,7 @@ export function confirmCopy(asking: Asking, detail: DatapackDetail, sharedInFile
             children: `Commerce goes back to ${name} as it was before your last save. Anything you changed since is lost.`,
         };
     }
-    if (asking === 'share' && !detail.shared) {
-        return { title: `Share ${name}?`, actionLabel: 'Share', actionVariant: 'accent', children: SHARE_CONSENT };
-    }
+    if (asking === 'share' && !detail.shared) return shareConfirmCopy(name);
     if (asking === 'share') {
         return {
             title: `Stop Sharing ${name}?`,

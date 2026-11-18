@@ -4,12 +4,13 @@
  * Top to bottom (walk F228): any check that needs the SC first, since it applies
  * before the link leaves; the repository as a labelled fact (`FactList`), with what
  * became of the press (its button is the window's footer button) under it; the
- * Welcome box; the name and description behind a quiet link; then the undo with
- * what became of that under it. What the link does is said on step 1, on its
+ * Welcome box with one quiet line on what it does; the name and description,
+ * always shown (walk F229); then the undo with what became of that under it. What the link does is said on step 1, on its
  * card. The button names the write when the press will make one (owner,
  * 2026-10-22: a copy button must not silently write). The checks are the ones
  * Save as demo package showed: each an amber notice, its title the extension's
- * when the check has one, with its fix (walk F227). They are read with the
+ * when the check has one, with its fix (walk F227); a pack only the SC can see
+ * offers Share Datapack (walk F229). They are read with the
  * storefront, so only the link form has them. The Welcome box is the house
  * checkbox row. The link stays plain text, not a copy-on-click value: the footer
  * button copies it, and saves the details first when they are missing, which a
@@ -19,9 +20,10 @@
  * @module features/dashboard/ui/components/share/ShareLinkForm
  */
 
-import { TextArea, TextField } from '@adobe/react-spectrum';
-import React, { useState } from 'react';
+import { Button, TextArea, TextField } from '@adobe/react-spectrum';
+import React from 'react';
 import { SHARE_COPY } from './shareCopy';
+import type { ShareDatapackFix } from './useShareDatapack';
 import type { UseShareLink } from './useShareLink';
 import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
 import { CheckboxRow } from '@/core/ui/components/selection/CheckboxRow';
@@ -41,42 +43,46 @@ function removedSentence(result: RemoveDemoPackageResult): string {
     return result.removedFromList ? `${file} and ${SHARE_COPY.removedCard}.` : `${file}.`;
 }
 
+/** The notice's line: why its fix failed, when it did, else the check's sentence under its title. */
+function noticeLine(check: DemoPackageCheck, fix: ShareDatapackFix): string | undefined {
+    if (check.share && fix.reason) return fix.reason;
+    return check.title ? check.message : undefined;
+}
+
 /**
  * One check that needs the SC, as an amber notice: the extension's title over its sentence, or
- * the sentence alone as a one-line notice when the check carries no title; then its fix.
+ * the sentence alone as a one-line notice when the check carries no title; then its fix. A pack
+ * only the SC can see carries Share Datapack (walk F229), busy on the button while it runs.
  */
-function CheckNotice({ check }: { check: DemoPackageCheck }): React.ReactElement {
+function CheckNotice({ check, fix }: { check: DemoPackageCheck; fix: ShareDatapackFix }): React.ReactElement {
     const hint = check.action === 'republish' ? SHARE_COPY.republishHint : undefined;
+    const action = check.share ? (
+        <Button variant="secondary" onPress={fix.ask} isPending={fix.pending}>
+            {SHARE_COPY.shareDatapack}
+        </Button>
+    ) : undefined;
     return (
-        <InlineNotice title={check.title ?? check.message} hint={hint} testId={`package-check-${check.id}`}>
-            {check.title ? check.message : undefined}
+        <InlineNotice title={check.title ?? check.message} hint={hint} action={action} testId={`package-check-${check.id}`}>
+            {noticeLine(check, fix)}
         </InlineNotice>
     );
 }
 
 /** Only the checks that need the SC: a list of green ticks is noise (owner, 2026-10-22). */
-function Checks({ checks }: { checks: DemoPackageCheck[] }): React.ReactElement | null {
+function Checks({ checks, fix }: { checks: DemoPackageCheck[]; fix: ShareDatapackFix }): React.ReactElement | null {
     const open = checks.filter((check) => !check.ok);
     if (open.length === 0) return null;
     return (
         <>
             {open.map((check) => (
-                <CheckNotice key={`${check.id}-${check.repository ?? ''}`} check={check} />
+                <CheckNotice key={`${check.id}-${check.repository ?? ''}`} check={check} fix={fix} />
             ))}
         </>
     );
 }
 
-/** The name and description, behind a quiet link so the form stays the link first. */
+/** The name and description, always shown (owner, walk F229: hidden behind a link, they went unseen). */
 function Details({ flow }: { flow: UseShareLink }): React.ReactElement {
-    const [open, setOpen] = useState(false);
-    if (!open) {
-        return (
-            <button type="button" className="inline-action-link share-details-toggle" onClick={() => setOpen(true)}>
-                {SHARE_COPY.changeDetails}
-            </button>
-        );
-    }
     return (
         <div className="share-details">
             <TextField
@@ -131,19 +137,33 @@ function RemoveNotes({ flow }: { flow: UseShareLink }): React.ReactElement {
  *
  * @param props.preview - what the storefront read answered
  * @param props.flow - the form's state (`useShareLink`)
+ * @param props.fix - Share Datapack, the fix on a pack only the SC can see (`useShareDatapack`)
  * @returns the form
  */
-export function ShareLinkForm({ preview, flow }: { preview: DemoPackagePreview; flow: UseShareLink }): React.ReactElement {
+export function ShareLinkForm({
+    preview,
+    flow,
+    fix,
+}: {
+    preview: DemoPackagePreview;
+    flow: UseShareLink;
+    fix: ShareDatapackFix;
+}): React.ReactElement {
     return (
         <div className="export-link" data-testid="share-link">
-            <Checks checks={preview.checks} />
+            <Checks checks={preview.checks} fix={fix} />
             <FactList>
                 <Fact label={SHARE_COPY.repository}>
                     <code className="export-link-text">{preview.link}</code>
                 </Fact>
             </FactList>
             <PressNotes flow={flow} />
-            <CheckboxRow label={SHARE_COPY.welcome} isSelected={flow.welcome} onChange={() => flow.setWelcome(!flow.welcome)} />
+            <CheckboxRow
+                label={SHARE_COPY.welcome}
+                detail={SHARE_COPY.welcomeWhy}
+                isSelected={flow.welcome}
+                onChange={() => flow.setWelcome(!flow.welcome)}
+            />
             <Details flow={flow} />
             <RemoveNotes flow={flow} />
             {flow.canRemove ? (

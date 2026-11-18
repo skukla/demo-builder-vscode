@@ -4,8 +4,8 @@
  * the house flow Add a Demo uses (owner, 2026-11-18, walk F228): step 1 asks how
  * the demo travels, as two choice cards with a line on each, with Next; step 2 is
  * the chosen form, with Back. The link form is the checks that need the SC first,
- * then the repository as a labelled fact, the "Show on Welcome Step" box, the name
- * and description behind a quiet link, and the undo. The button says whether the
+ * then the repository as a labelled fact, the "Show on Welcome Step" box with its
+ * line, the name and description (always shown, walk F229), and the undo. The button says whether the
  * press will write: "Save Details and Copy Link" until the details are in the
  * repository (and again after an edit), then "Copy Link". The file form is
  * unchanged from Export.
@@ -22,7 +22,6 @@ import {
     mockWriteText,
     nameInput,
     next,
-    openDetails,
     partBox,
     PREVIEW,
     REMOVED,
@@ -157,7 +156,6 @@ describe('ShareModal', () => {
 
     it('prints no middle dot anywhere in the link form', async () => {
         await renderShareLink();
-        await openDetails();
         // Positive control: the form rendered the text it is searched for.
         expect(screen.getByTestId('share-link-form')).toHaveTextContent(LINK);
         expect(screen.getByTestId('share-link-form').textContent).not.toContain('·');
@@ -300,19 +298,17 @@ describe('ShareModal', () => {
     });
 
     describe('name and description', () => {
-        it('sit behind a quiet link, prefilled from the draft', async () => {
+        // Walk F229 (owner): the details were hidden behind a link; they always show now.
+        it('always show, prefilled from the draft, with no link to reveal them', async () => {
             await renderShareLink();
-            expect(screen.queryByTestId('share-name')).not.toBeInTheDocument();
-
-            await openDetails();
 
             expect(nameInput().value).toBe('Bodea');
             expect(screen.getByTestId('share-description')).toBeInTheDocument();
+            expect(screen.queryByText('Change Name or Description')).not.toBeInTheDocument();
         });
 
         it('an edit on a saved storefront turns the button back into a save, and sends the trimmed name', async () => {
             await renderShareLink(answer({ ...PREVIEW, saved: true, onList: true }));
-            await openDetails();
             expect(button('Copy Link')).toBeInTheDocument();
 
             fireEvent.change(nameInput(), { target: { value: ' Bodea by Steve ' } });
@@ -328,7 +324,6 @@ describe('ShareModal', () => {
 
         it('an empty name disables the button', async () => {
             await renderShareLink();
-            await openDetails();
             fireEvent.change(nameInput(), { target: { value: '   ' } });
             expect(button(SAVE_AND_COPY)).toHaveAttribute('aria-disabled', 'true');
         });
@@ -338,6 +333,15 @@ describe('ShareModal', () => {
         it('is the house checkbox row', async () => {
             await renderShareLink();
             expect(welcomeBox().closest('.checkbox-row')).not.toBeNull();
+        });
+
+        // Walk F229 (owner): the box was unclear; one quiet line says what it does.
+        it('says in one quiet line what it does', async () => {
+            await renderShareLink();
+            const row = welcomeBox().closest('.checkbox-row') as HTMLElement;
+            expect(row.querySelector('.checkbox-row-detail')).toHaveTextContent(
+                'Colleagues see it as a card when they create a project.',
+            );
         });
 
         it('is ticked by default for a storefront not yet shared, and unticked sends addToWelcome:false', async () => {

@@ -208,13 +208,19 @@ they get your later changes. Edge Delivery projects only. Top to bottom, the for
   need access, or make it public), a site with no published page list (points at Republish),
   sample data only you can see, and custom integration code they cannot read. Only the
   checks that need you show; nothing in them stops you saving. Nothing is uploaded.
+  Sample data only you can see comes with its fix, **Share Datapack**: it asks first
+  ("Share <name>?", the same question the Datapacks screen's Share asks), then shares the
+  datapack with the same handler (`share-library-datapack`, which the `share_datapack` tool
+  also runs). The button shows it is busy while it runs; once shared, the storefront is read
+  again and the notice goes. If the share fails, the notice's line says why.
 - **Repository**, the link to your storefront's repository.
-- **Show on Welcome Step**, ticked by default (it was always on before the merge).
+- **Show on Welcome Step**, ticked by default (it was always on before the merge), with
+  the line "Colleagues see it as a card when they create a project." beside it.
   Ticked, the save also puts the card on your own Welcome step, the way Isle5 is one, so you
   can build new projects from it. Unticked, the save writes the file only, and takes your
   card off the list if it was there. For a demo already shared, the box shows where its
   card is now.
-- **Change Name or Description**, a quiet link that opens the two fields. They are
+- **Name** (required) and **Description**, always shown. They are
   prefilled from the description file when it is the one Demo Builder wrote, otherwise from
   the brand or demo the project was built on (the project's own title for a Starter build).
 - **Remove the Details from My Repository**, once there is something of yours to undo. It

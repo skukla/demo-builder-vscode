@@ -335,7 +335,8 @@ describe('packageChecks', () => {
     });
 
     // Names, not codes (F227): the pack by the name the SC gave it, and a title the screen shows.
-    it("warns, by the pack's name, when it is in the SC's library where colleagues can't read it", async () => {
+    // F229: and what Share Datapack needs to share it, the pack the project records.
+    it("warns, by the pack's name, when it is in the SC's library where colleagues can't read it, with its fix", async () => {
         const repoOps = { getRepository: jest.fn().mockResolvedValue(repo('steve/kukla-bodea', false)) };
         const checks = await packageChecks(edsProject({ datapack: { name: 'acme', version: '1', store: 'library' } }), OWN, { indexFound: true }, {
             repoOps,
@@ -348,6 +349,7 @@ describe('packageChecks', () => {
             ok: false,
             title: "Colleagues Can't Use This Demo's Data Yet",
             message: 'Release Save Test 2 is only visible to you.',
+            share: { pack: { name: 'acme', version: '1' }, displayName: 'Release Save Test 2' },
         });
     });
 

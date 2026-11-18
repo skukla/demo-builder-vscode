@@ -417,8 +417,15 @@ export interface DemoPackageCheck {
     /** A heading for the sentence, when the screen shows it as a notice of its own (Title Case). */
     title?: string;
     message: string;
+    /** The door that fixes it, when one exists on the dashboard. */
     action?: 'republish';
+    /** For a custom-app check: the repository the sentence is about. */
     repository?: string;
+    /**
+     * For a datapack only the SC can see: the pack Share Datapack shares, and the name the store
+     * shows for it, which its confirm asks by (walk F229).
+     */
+    share?: { pack: DatapackId; displayName: string };
 }
 
 export interface DemoPackagePreview {

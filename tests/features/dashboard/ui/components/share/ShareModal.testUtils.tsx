@@ -13,6 +13,10 @@ export const mockRequest = jest.fn();
 jest.mock('@/core/ui/utils/vscode-api', () => ({
     webviewClient: { request: (...args: unknown[]) => mockRequest(...args) },
 }));
+// Share Datapack asks through the Datapacks screen's hook, which reaches the client this way.
+jest.mock('@/core/ui/utils/WebviewClient', () => ({
+    webviewClient: { request: (...args: unknown[]) => mockRequest(...args) },
+}));
 
 /** The clipboard the link button writes to; jsdom has none. */
 export const mockWriteText = jest.fn();
@@ -115,18 +119,13 @@ export function partBox(testId: string): HTMLInputElement {
     return control<HTMLInputElement>(testId, 'INPUT');
 }
 
-/** The Welcome box, a house checkbox row, found by its label. */
+/** The Welcome box, a house checkbox row, found by its label (its quiet line follows in the name). */
 export function welcomeBox(): HTMLInputElement {
-    return screen.getByRole('checkbox', { name: 'Show on Welcome Step' }) as HTMLInputElement;
+    return screen.getByRole('checkbox', { name: /^Show on Welcome Step/ }) as HTMLInputElement;
 }
 
 export function nameInput(): HTMLInputElement {
     return control<HTMLInputElement>('share-name', 'INPUT');
-}
-
-/** Open the name and description fields behind their quiet link. */
-export async function openDetails(): Promise<void> {
-    await click('Change Name or Description');
 }
 
 /** The requests of one type the dialog sent, in order. */

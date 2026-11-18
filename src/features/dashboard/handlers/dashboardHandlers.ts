@@ -129,6 +129,7 @@ import {
     handleListRuntimePackages,
 } from '@/features/dashboard/handlers/runtimePackageHandlers';
 import { setupHandlerMap } from '@/features/dashboard/handlers/setupHandlerMap';
+import { datapackLibraryHandlers } from '@/features/data-installer/handlers/datapackLibraryHandlers';
 import { handleAddSharedDemo } from '@/features/eds/handlers/addSharedDemoHandler';
 import { handleChangeDemoSource } from '@/features/eds/handlers/changeDemoSourceHandler';
 import {
@@ -475,6 +476,8 @@ export const dashboardHandlers = defineHandlers({
     getDemoPackagePreview: handleGetDemoPackagePreview,
     saveDemoPackage: handleSaveDemoPackage,
     removeDemoPackage: handleRemoveDemoPackage,
+    // Its datapack notice's Share Datapack: the Datapacks screen's own handler (walk F229).
+    'share-library-datapack': datapackLibraryHandlers['share-library-datapack'],
     // Export, "Send a file": one bundle of the ticked parts (setup, storefront).
     exportDemoBundle: handleExportDemoBundle,
 

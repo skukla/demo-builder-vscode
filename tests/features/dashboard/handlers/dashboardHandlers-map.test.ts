@@ -9,6 +9,7 @@
 
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
 import { hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
+import { datapackLibraryHandlers } from '@/features/data-installer/handlers/datapackLibraryHandlers';
 import { projectsListHandlers } from '@/features/projects-dashboard/handlers/projectsListHandlers';
 
 describe('dashboardHandlers', () => {
@@ -90,6 +91,12 @@ describe('dashboardHandlers', () => {
             expect(dashboardHandlers.runProjectsBatch).toBe(projectsListHandlers.runProjectsBatch);
         });
 
+        // Walk F229: Share Demo's datapack notice shares the pack with the Datapacks screen's own
+        // handler, the one the share_datapack tool dispatches, not a copy of it.
+        it("answers Share Datapack with the datapack library's own handler", () => {
+            expect(dashboardHandlers['share-library-datapack']).toBe(datapackLibraryHandlers['share-library-datapack']);
+        });
+
         // Delete runs in the same window, on the dashboard (owner, release test 2.7, 2026-11-16).
         it("no longer hands Delete over, nor answers the dialogs' messages", () => {
             expect(hasHandler(dashboardHandlers, 'deleteFromProjectsList')).toBe(false);
@@ -135,7 +142,7 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'exportProjectSettings')).toBe(true);
         });
 
-        it('should have exactly 96 handlers', () => {
+        it('should have exactly 100 handlers', () => {
             // Given: dashboardHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(dashboardHandlers) as Array<
@@ -323,7 +330,9 @@ describe('dashboardHandlers', () => {
             // the batch window here too, and the dashboard leaves only once the project is gone.
             // getFinishSetup + setFinishSetupStep + checkFinishSetupSteps + prepareFinishSetupChecks
             // (95 → 99, PL-101, 2026-11-17): the project's Finish Setup steps, in the setup guide.
-            expect(types).toHaveLength(99);
+            // share-library-datapack (99 → 100, walk F229, 2026-11-18): Share Demo's datapack
+            // notice shares the pack with the Datapacks screen's own handler.
+            expect(types).toHaveLength(100);
         });
 
         it('should have handlers as functions', () => {
