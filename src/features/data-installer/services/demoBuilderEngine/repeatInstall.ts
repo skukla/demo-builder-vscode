@@ -55,6 +55,12 @@ export interface PlannedObject {
     outcome: OwnedChange;
     /** The pack's row for it, when the pack still has one. */
     row?: unknown;
+    /**
+     * The object hashed afresh from the store's copy, under the pack's name for it, when that copy moved
+     * since the record and is now the pack's row (`refreshedOf`): what the record should say once a move
+     * onto this version has shown the store already matches it (walk F223).
+     */
+    refreshed?: CreatedObject;
 }
 
 /** One recorded kind's objects, and the pack's rows of that kind no object was made for yet. */
@@ -97,17 +103,33 @@ function packKeyOf(kind: string, object: CreatedObject, copy: unknown, rows: Rea
     return named !== undefined && rows.has(named) ? { ...object, key: named } : object;
 }
 
+/**
+ * The object as the record should hold it once the store is known to match this pack: the pack's name,
+ * the store copy's hash and the row's, every other field kept. Only for a copy that moved since the
+ * record (one that did not needs nothing) and IS the row now (hashed whole, or as the record keeps a
+ * row, without a customer's password); an object the SC edited away from the row keeps its hashes, as
+ * it is a change.
+ */
+function refreshedOf(kind: string, object: CreatedObject, current: string | undefined, row: unknown): CreatedObject | undefined {
+    if (object.key === undefined || current === undefined || row === undefined || current === object.fingerprint) return undefined;
+    const wrote = packedFingerprint(kind, row);
+    if (current !== wrote && current !== fingerprintRow(row)) return undefined;
+    return { ...object, fingerprint: current, wrote };
+}
+
 async function planKind(ctx: KindContext, kind: string, recorded: CreatedObject[], records: unknown): Promise<Omit<KindPlan, 'packKind'>> {
     const copies = await readCopies(ctx, productLookups(ctx), kind, recorded);
     const rows = rowsByKey(kind, records);
     const objects = recorded.map((object) => packKeyOf(kind, object, copies.get(object.id), rows));
     const planned = objects.map((object): PlannedObject => {
         const row = object.key === undefined ? undefined : rows.get(object.key);
-        if (object.key === undefined || object.fingerprint === undefined) return { object, outcome: 'leave-not-ours', row };
         const copy = copies.get(object.id);
         const current = copy === undefined ? undefined : fingerprintRow(copy);
+        const refreshed = refreshedOf(kind, object, current, row);
+        const fresh = refreshed ? { refreshed } : {};
+        if (object.key === undefined || object.fingerprint === undefined) return { object, outcome: 'leave-not-ours', row, ...fresh };
         const outcome = decideOwnedChange({ recorded: object.fingerprint, current, wanted: wantedOf(kind, object, row, current) });
-        return { object, outcome, row };
+        return { object, outcome, row, ...fresh };
     });
     const known = new Set(objects.map((o) => o.key).filter((k): k is string => k !== undefined));
     return { kind, objects: planned, added: [...rows.keys()].filter((key) => !known.has(key)) };
@@ -125,6 +147,19 @@ export async function planRepeat(ctx: KindContext, items: Items, created: readon
         return { ...(await planKind(ctx, kind, created.filter((o) => o.kind === kind), items[packKind])), packKind };
     });
     return [...plans.values()];
+}
+
+const objectSlot = (object: CreatedObject): string => JSON.stringify([object.kind, object.id]);
+
+/**
+ * The record's objects with each one the plans hashed afresh (`PlannedObject.refreshed`) in its place,
+ * in the record's order; an object of a kind not planned stays as it is. What a move onto the planned
+ * version records when that version changed nothing in the store (walk F223).
+ */
+export function rebasedRecord(created: readonly CreatedObject[], plans: readonly KindPlan[]): CreatedObject[] {
+    const fresh = new Map<string, CreatedObject>();
+    for (const { object, refreshed } of plans.flatMap((plan) => plan.objects)) if (refreshed) fresh.set(objectSlot(object), refreshed);
+    return created.map((object) => fresh.get(objectSlot(object)) ?? object);
 }
 
 /** The ids a kind's install should use for the pack's rows, and the ones the SC deleted. */

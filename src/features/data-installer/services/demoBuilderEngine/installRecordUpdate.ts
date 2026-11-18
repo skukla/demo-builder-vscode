@@ -6,7 +6,7 @@
  * @module features/data-installer/services/demoBuilderEngine/installRecordUpdate
  */
 
-import { InstallRecordError, type RecordFiles, forgetInstallRecord, readInstallRecord, writeInstallRecord } from './installRecord';
+import { type CreatedObject, InstallRecordError, type RecordFiles, forgetInstallRecord, readInstallRecord, writeInstallRecord } from './installRecord';
 import type { DatapackId } from '@/types/datapack';
 
 const packLabel = (pack: DatapackId): string => `${pack.name}@${pack.version}`;
@@ -18,14 +18,16 @@ const packLabel = (pack: DatapackId): string => `${pack.name}@${pack.version}`;
  * project names the newer version, so the record and the project never disagree. A newer version
  * that already has a record (an update that stopped part way) is not overwritten.
  *
+ * @param created - the objects as the newer version's record holds them, when a comparison against it
+ *   hashed some afresh from the store (`ChangePreview.rebased`, walk F223); the older record's otherwise
  * @returns whether a record was copied
  */
-export async function copyInstallRecord(files: RecordFiles, projectPath: string, from: DatapackId, to: DatapackId): Promise<boolean> {
+export async function copyInstallRecord(files: RecordFiles, projectPath: string, from: DatapackId, to: DatapackId, created?: readonly CreatedObject[]): Promise<boolean> {
     if (from.name !== to.name) throw new InstallRecordError(`${packLabel(from)} cannot be updated to ${packLabel(to)}: they are different datapacks.`);
     if ((await readInstallRecord(files, projectPath, to)) !== undefined) return false;
     const record = await readInstallRecord(files, projectPath, from);
     if (!record) return false;
-    await writeInstallRecord(files, projectPath, { ...record, pack: { name: to.name, version: to.version } });
+    await writeInstallRecord(files, projectPath, { ...record, pack: { name: to.name, version: to.version }, ...(created ? { created: [...created] } : {}) });
     return true;
 }
 

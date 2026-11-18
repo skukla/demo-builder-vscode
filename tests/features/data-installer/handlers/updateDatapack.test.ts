@@ -38,6 +38,7 @@ import {
 } from './importHandlers.testUtils';
 import { resolveDataInstallerAccess } from '@/features/data-installer/handlers/dataInstallerHandlers';
 import {
+    type CreatedObject,
     type InstallRecord,
     forgetInstallRecord,
     readInstallRecord,
@@ -112,6 +113,9 @@ const CHANGED: ChangePreview = {
         kind({ kind: 'cart_rules', update: named('Spring Sale') }),
     ],
 };
+
+/** The installed version's objects as the check hashed them afresh where the store holds the newer rows. */
+const REBASED: CreatedObject[] = [{ kind: 'categories', id: '41', key: 'ZZ Customer Picks 3', fingerprint: 'f3', wrote: 'w3', adopted: true }];
 
 const project = (over: Partial<Project> = {}): Partial<Project> => ({
     ...PAAS_PROJECT,
@@ -193,6 +197,7 @@ describe('the check', () => {
             {
                 recordOf: { name: NAME, version: INSTALLED },
                 allNames: true,
+                rebase: true,
             }
         );
         expect(startImport).not.toHaveBeenCalled();
@@ -249,7 +254,7 @@ describe('the check', () => {
 // J9-4: a newer version that writes nothing here becomes the version installed, so the dot goes; but
 // only once confirmed (review U1-1): a check writes nothing.
 describe('nothing to write', () => {
-    const NOTHING: ChangePreview = { installed: true, kinds: [kind({ keep: named('MJ09') })] };
+    const NOTHING: ChangePreview = { installed: true, kinds: [kind({ keep: named('MJ09') })], rebased: REBASED };
 
     it('the check answers up to date and that it would move, writing nothing', async () => {
         happyEngine();
@@ -273,7 +278,8 @@ describe('nothing to write', () => {
         const response = await update(context, { datapackName: NAME, confirm: true });
 
         expect(response).toEqual({ success: true, data: { upToDate: true, displayName: 'Luma' } });
-        expect(mockCopy).toHaveBeenCalledWith(expect.anything(), expect.any(String), HELD, TARGET);
+        // The check's objects hashed afresh from the store go onto the newer record (walk F223).
+        expect(mockCopy).toHaveBeenCalledWith(expect.anything(), expect.any(String), HELD, TARGET, REBASED);
         const save = context.stateManager.saveProject as jest.Mock;
         expect(save).toHaveBeenCalledWith(expect.objectContaining({ datapack: { name: NAME, version: NEWER, store: 'library' } }));
         expect(mockForget).toHaveBeenCalledWith(expect.anything(), expect.any(String), HELD);
@@ -336,11 +342,24 @@ describe('a start', () => {
 
         await update(context, { datapackName: NAME, confirm: true });
 
-        expect(mockCopy).toHaveBeenCalledWith(expect.anything(), expect.any(String), HELD, TARGET);
+        // The check hashed nothing afresh, so the record goes over as it is.
+        expect(mockCopy).toHaveBeenCalledWith(expect.anything(), expect.any(String), HELD, TARGET, undefined);
         expect(mockBehind).toHaveBeenCalledWith(expect.anything(), expect.any(String), TARGET, []);
         expect(order(mockCopy)).toBeLessThan(order(startImport));
         expect(mockForget.mock.calls.map(([, , pack]) => pack)).toEqual([HELD]);
         expect(order(startImport)).toBeLessThan(order(mockForget));
+    });
+
+    // Walk F223: what the update does not write keeps the store's hash now where it holds the newer rows.
+    it("carries the check's objects hashed afresh onto the newer record before the start", async () => {
+        const { startImport } = happyEngine();
+        mockPreview.mockResolvedValue({ ...CHANGED, rebased: REBASED });
+        const { context } = makeImportHarness(project());
+
+        await update(context, { datapackName: NAME, confirm: true });
+
+        expect(mockCopy).toHaveBeenCalledWith(expect.anything(), expect.any(String), HELD, TARGET, REBASED);
+        expect(order(mockCopy)).toBeLessThan(order(startImport));
     });
 
     it('installs only the types chosen, and notes the rest on the record so the dot stays', async () => {

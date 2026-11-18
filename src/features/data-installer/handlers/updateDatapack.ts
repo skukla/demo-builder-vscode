@@ -12,6 +12,11 @@
  * (`updateChanges`), or up to date when nothing would be written, with `movesTo` when that is a newer
  * version: confirmed, the record and the project then move onto it, so the dot goes.
  *
+ * A record moved onto a newer version holds each object the store has exactly as the newer version's
+ * row under that row's name and the store's hash now (`ChangePreview.rebased`); one the SC edited away
+ * from the row keeps its hashes. Without that, an object renamed in the Admin to what the newer version
+ * also says stayed "changed since install" for every removal after (walk F223).
+ *
  * A start (`confirm`) is one job through the import path (`startDatapackImport`), with nothing
  * uninstalled and nothing saved: the newer version is written over the version installed in place.
  * The installed version's record is copied onto the newer version before the start, the types left
@@ -24,7 +29,7 @@
  */
 
 import { newerVersion } from '../packVersions';
-import { type InstallRecord, forgetInstallRecord, nodeRecordFiles } from '../services/demoBuilderEngine/installRecord';
+import { type CreatedObject, type InstallRecord, forgetInstallRecord, nodeRecordFiles } from '../services/demoBuilderEngine/installRecord';
 import { copyInstallRecord, markUpdateBehind } from '../services/demoBuilderEngine/installRecordUpdate';
 import { previewChanges } from '../services/demoBuilderEngine/storeChanges';
 import { updateChanges } from '../updateChanges';
@@ -52,6 +57,8 @@ interface UpdatePlan {
     displayName: string;
     changes: UpdateTypeChange[];
     commerceInstance: string;
+    /** The installed version's objects, hashed afresh where the store holds the newer rows (walk F223). */
+    rebased?: CreatedObject[];
 }
 
 const WORDS = {
@@ -97,15 +104,18 @@ async function planUpdate(
         recordOf: { name: held.name, version: held.version },
         // The screen's spot check lists every record; an agent's check names the first few.
         allNames: payload?.records === true,
+        // A move records what the store holds as the newer version's row as it is now (walk F223).
+        rebase: true,
     });
-    return { ...found, target, displayName, changes: updateChanges(preview) };
+    return { ...found, target, displayName, changes: updateChanges(preview), ...(preview.rebased ? { rebased: preview.rebased } : {}) };
 }
 
 /**
  * Nothing to write, confirmed: a newer version that changed nothing becomes the version installed, so
- * the dot goes. The newer record is written, then the project saved, then the older record forgotten,
- * so a failure at any point leaves the record and the project naming the same version. A newer
- * version that already has a record (an update that stopped) is not adopted. Never fatal.
+ * the dot goes. The newer record (hashed afresh where the store holds the newer rows) is written, then
+ * the project saved, then the older record forgotten, so a failure at any point leaves the record and
+ * the project naming the same version. A newer version that already has a record (an update that
+ * stopped) is not adopted. Never fatal.
  */
 async function settleUpToDate(context: HandlerContext, plan: UpdatePlan): Promise<void> {
     const { project, held, target } = plan;
@@ -113,7 +123,7 @@ async function settleUpToDate(context: HandlerContext, plan: UpdatePlan): Promis
     const said = (what: string): void => context.debugLogger.debug(`[Data Installer] ${held.name} stays on ${held.version}: ${what}`);
     try {
         if (target.version === held.version) return await markUpdateBehind(nodeRecordFiles, project.path, installed, []);
-        if (!(await copyInstallRecord(nodeRecordFiles, project.path, installed, target))) return said(`${target.version} already has a record`);
+        if (!(await copyInstallRecord(nodeRecordFiles, project.path, installed, target, plan.rebased))) return said(`${target.version} already has a record`);
         try {
             await context.stateManager.saveProject({ ...project, datapack: { ...held, version: target.version } });
         } catch (error) {
@@ -161,7 +171,7 @@ async function startUpdate(context: HandlerContext, plan: UpdatePlan, payload: U
     if ('response' in chosen) return chosen.response;
     const installed = { name: held.name, version: held.version };
     const moving = target.version !== held.version;
-    if (moving && !(await copyInstallRecord(nodeRecordFiles, project.path, installed, target))) return refuse(STALE_RECORD(target.version)).response;
+    if (moving && !(await copyInstallRecord(nodeRecordFiles, project.path, installed, target, plan.rebased))) return refuse(STALE_RECORD(target.version)).response;
     await markUpdateBehind(nodeRecordFiles, project.path, target, changed.filter((type) => !chosen.includes(type)));
     const undo = (): Promise<void> =>
         moving ? forgetInstallRecord(nodeRecordFiles, project.path, target) : markUpdateBehind(nodeRecordFiles, project.path, installed, record.behind ?? []);

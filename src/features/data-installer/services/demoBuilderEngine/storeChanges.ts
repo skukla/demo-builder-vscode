@@ -25,7 +25,7 @@ import { GIFT_CARD_KIND } from './productKinds';
 import { productLookups } from './productLookups';
 import { rememberComparison } from './recentComparison';
 import { containersLine, decideRemovals } from './removers';
-import { type KindPlan, type PlannedObject, keptLine, keptOf, ownedFrom, planRepeat, removalsOf } from './repeatInstall';
+import { type KindPlan, type PlannedObject, keptLine, keptOf, ownedFrom, planRepeat, rebasedRecord, removalsOf } from './repeatInstall';
 import { type Named, named } from './saveOutcome';
 import { LINK_KIND, SOURCE_KIND, STOCK_KIND } from './stockKinds';
 import { type StoreChangesDeps, StoreChangesError, openStore } from './storeAccess';
@@ -76,6 +76,8 @@ export interface ChangePreview {
     root?: string;
     /** What installing would do to store configuration (step 09), when the pack or its layer has any. */
     settings?: SettingsPreview;
+    /** Asked for with `rebase`: the compared record's objects, each one the store holds as the pack's row hashed afresh. */
+    rebased?: CreatedObject[];
 }
 
 /** The store configuration an install would change, by path with old and new value. */
@@ -258,6 +260,13 @@ export interface PreviewOptions {
     recordOf?: DatapackId;
     /** Every record's name in each count, not the first few: an update's spot check lists them. */
     allNames?: boolean;
+    /** Also the compared record's objects hashed afresh where the store matches the pack (`rebased`). */
+    rebase?: boolean;
+}
+
+/** The compared record hashed afresh where the store holds the pack's rows, when asked for (`rebase`). */
+function rebasedPart(options: PreviewOptions, record: InstallRecord | undefined, plans: readonly KindPlan[]): Pick<ChangePreview, 'rebased'> {
+    return options.rebase && record ? { rebased: rebasedRecord(record.created, plans) } : {};
 }
 
 /**
@@ -290,5 +299,6 @@ export async function previewChanges(deps: StoreChangesDeps, pack: DatapackId, s
     // The run that may follow uses these plans instead of reading again (walk F74).
     const target = record?.target ?? deps.target;
     if (target) rememberComparison({ projectPath: deps.projectPath, pack, target }, record?.created ?? [], items, plans);
-    return { installed: record !== undefined, kinds, ...(kept ? { kept } : {}), ...(root ? { root } : {}), ...(settingsPreview ? { settings: settingsPreview } : {}) };
+    const rebased = rebasedPart(options, record, plans);
+    return { installed: record !== undefined, kinds, ...(kept ? { kept } : {}), ...(root ? { root } : {}), ...(settingsPreview ? { settings: settingsPreview } : {}), ...rebased };
 }
