@@ -28,6 +28,7 @@ import {
     PAAS_WEBSITE_CODE,
 } from '@/core/config/envVarKeys';
 import { COMPONENT_IDS } from '@/core/constants';
+import { FULL_COMMIT_SHA } from '@/core/utils/commitSha';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { lookupComponentConfigValue } from '@/features/components/services/envVarHelpers';
@@ -206,7 +207,10 @@ function fromCatalog(
     if (!catalog) return {};
     const storefront = catalog.storefront;
     const { templateOwner, templateRepo, codePatchSource, codePatches } = storefront ?? {};
-    const lkg = metadata.lkgSource && typeof metadata.lastSyncedCommit === 'string' ? metadata.lastSyncedCommit : undefined;
+    // The template commit the code last matched, with or without a patches layer (walk F254), so a
+    // colleague's import counts Adobe's updates from there.
+    const synced = metadata.lastSyncedCommit;
+    const lkg = typeof synced === 'string' && FULL_COMMIT_SHA.test(synced) ? synced : undefined;
     return {
         package: catalog.package.id,
         ...(templateOwner && templateRepo ? { template: { owner: templateOwner, repo: templateRepo } } : {}),

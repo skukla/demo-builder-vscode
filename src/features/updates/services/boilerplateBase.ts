@@ -29,6 +29,7 @@
  */
 
 import { COMPONENT_IDS } from '@/core/constants';
+import { FULL_COMMIT_SHA } from '@/core/utils/commitSha';
 import { bundledDemoPackages } from '@/features/components/services/storefrontResolver';
 import type { LkgSource } from '@/features/eds/services/patches/lkgReader';
 import type { Project } from '@/types/base';
@@ -69,7 +70,6 @@ interface BoilerplateBaseDeps {
 }
 
 const FIELD = 'boilerplateBase';
-const COMMIT_SHA = /^[0-9a-f]{40}$/;
 /** The template's own CI, deleted from a generated repository by its cleanup workflow. */
 const NOT_COMPARED = '.github';
 
@@ -90,7 +90,7 @@ export async function resolveBoilerplateBase(project: Project, deps: Boilerplate
     if (!source) return { reason: 'it was not built from a colleague\'s demo' };
 
     const builtWith = project.demo?.builtWith;
-    if (builtWith?.template && typeof builtWith.lkg === 'string' && COMMIT_SHA.test(builtWith.lkg)) {
+    if (builtWith?.template && typeof builtWith.lkg === 'string' && FULL_COMMIT_SHA.test(builtWith.lkg)) {
         const tracked = trackedTemplate(builtWith.template, deps.packages);
         if (!tracked) return { reason: `${refName(builtWith.template)} is not a template Demo Builder tests` };
         return { base: { ...tracked, commit: builtWith.lkg, found: 'built-with' }, recorded: false };
@@ -163,7 +163,7 @@ export function readBoilerplateBase(project: Project): BoilerplateBase | undefin
     const base = value as Partial<BoilerplateBase>;
     const ok =
         typeof base.commit === 'string' &&
-        COMMIT_SHA.test(base.commit) &&
+        FULL_COMMIT_SHA.test(base.commit) &&
         typeof base.template?.owner === 'string' &&
         typeof base.template?.repo === 'string' &&
         typeof base.lkgSource?.owner === 'string' &&

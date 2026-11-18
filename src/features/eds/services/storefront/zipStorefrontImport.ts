@@ -25,6 +25,7 @@ import {
 } from './repoStorefrontReadiness';
 import { ZIP_COMMIT_MESSAGE } from './zipImportCommit';
 import { readProjectFile, readSharedDemoDescription } from '@/core/state/projectFileReader';
+import { FULL_COMMIT_SHA } from '@/core/utils/commitSha';
 import { parseIgnoreRules } from '@/core/utils/gitignoreRules';
 import { normalizeRepositoryName } from '@/core/validation/normalizers';
 import { addedDemoId } from '@/features/components/services/storefrontResolver';
@@ -254,7 +255,6 @@ export function contentSourceOfZip(files: Map<string, Buffer>): DaLiveContentSou
 }
 
 /** A template commit, the whole value. */
-const COMMIT_SHA = /^[0-9a-f]{40}$/;
 
 /**
  * The template commit a bundle's storefront was built on (F252): the description file's
@@ -265,7 +265,7 @@ export function templateBaseOfZip(files: Map<string, Buffer>, template: Reposito
     const description = files.get(SHARED_DEMO_FILE_NAME);
     const read = description ? readSharedDemoDescription(description.toString('utf-8')) : undefined;
     const builtWith = read?.ok ? read.description.builtWith : undefined;
-    if (!builtWith?.lkg || !COMMIT_SHA.test(builtWith.lkg)) return undefined;
+    if (!builtWith?.lkg || !FULL_COMMIT_SHA.test(builtWith.lkg)) return undefined;
     const on = builtWith.template;
     if (on && (on.owner !== template.owner || on.repo !== template.repo)) return undefined;
     return builtWith.lkg;

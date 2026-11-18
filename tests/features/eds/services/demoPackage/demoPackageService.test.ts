@@ -211,15 +211,29 @@ describe('describeProject — builtWith (EDS-13f step 02)', () => {
         });
     });
 
-    it('records no pin when the storefront was not pinned to a last-known-good', () => {
+    // Walk F254 (owner: a user should always be able to apply Adobe's updates with AI help): a
+    // storefront on a plain template, with no patches layer, still records the template commit its
+    // code last matched, so a colleague's import counts updates from there.
+    it('records the template commit the code last matched, with or without a patches layer', () => {
         const project = pinnedProject();
         const metadata = project.componentInstances![COMPONENT_IDS.EDS_STOREFRONT]!.metadata!;
         delete metadata.lkgSource;
 
         const file = describeProject(project, { name: '', description: '' }, CONTENT, { packages: THIN_LAYER });
 
-        expect(file.builtWith).not.toHaveProperty('lkg');
+        expect(file.builtWith?.lkg).toBe(LKG);
         expect(file.builtWith?.extension).toBe('unknown');
+    });
+
+    it('records no pin when the storefront holds no commit it last matched', () => {
+        const project = pinnedProject();
+        const metadata = project.componentInstances![COMPONENT_IDS.EDS_STOREFRONT]!.metadata!;
+        delete metadata.lkgSource;
+        metadata.lastSyncedCommit = 'main';
+
+        const file = describeProject(project, { name: '', description: '' }, CONTENT, { packages: THIN_LAYER });
+
+        expect(file.builtWith).not.toHaveProperty('lkg');
     });
 
     it("carries a saved package's own record forward when the project was started from one", () => {

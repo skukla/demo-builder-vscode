@@ -28,6 +28,7 @@
 import * as fsPromises from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
+import { FULL_COMMIT_SHA } from '@/core/utils/commitSha';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import type { CodePatch } from '@/features/eds/services/patches/codePatchRegistry';
@@ -52,7 +53,6 @@ import { patchesNotPutBack, reapplyPatchesInCheckout } from '@/features/updates/
 import type { UpdateContext } from '@/features/updates/services/updateCore';
 import type { Project } from '@/types/base';
 
-const COMMIT_SHA = /^[0-9a-f]{40}$/;
 
 export type FinishOutcome =
     /** `localCopyClean`: the copy holds nothing GitHub does not, read after the version was recorded. */
@@ -153,12 +153,12 @@ async function forget(project: Project, copy: LocalCopy | undefined): Promise<vo
  * recorded, the last commit made before it was kept.
  */
 async function keptOn(copy: LocalCopy, record: KeptClashRecord, clash: PendingClash): Promise<string | undefined> {
-    if (record.head && COMMIT_SHA.test(record.head)) return record.head;
+    if (record.head && FULL_COMMIT_SHA.test(record.head)) return record.head;
     const keptAt = new Date(clash.keptAt);
     if (Number.isNaN(keptAt.getTime())) return undefined;
     const found = await copy.git(`git rev-list -1 --first-parent --before="${keptAt.toISOString()}" HEAD`, TIMEOUTS.QUICK);
     const commit = found.stdout.trim();
-    return found.code === 0 && COMMIT_SHA.test(commit) ? commit : undefined;
+    return found.code === 0 && FULL_COMMIT_SHA.test(commit) ? commit : undefined;
 }
 
 /** The checks before a push: the reason it cannot finish, or undefined. */

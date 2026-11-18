@@ -27,6 +27,7 @@ import * as fsPromises from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import { COMPONENT_IDS } from '@/core/constants';
+import { FULL_COMMIT_SHA } from '@/core/utils/commitSha';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { resolveByomOverlayConfig } from '@/features/eds/handlers/byomOverlay';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
@@ -77,7 +78,6 @@ export type KeepClashOutcome =
     | { kind: 'not-kept'; reason: string };
 
 const FIELD = 'pendingClash';
-const COMMIT_SHA = /^[0-9a-f]{40}$/;
 
 function storefrontMetadata(project: Project): Record<string, unknown> | undefined {
     return project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata as Record<string, unknown> | undefined;
@@ -93,9 +93,9 @@ export function readPendingClash(project: Project): PendingClash | undefined {
         typeof clash.source?.owner === 'string' &&
         typeof clash.source?.repo === 'string' &&
         typeof clash.base === 'string' &&
-        COMMIT_SHA.test(clash.base) &&
+        FULL_COMMIT_SHA.test(clash.base) &&
         typeof clash.target === 'string' &&
-        COMMIT_SHA.test(clash.target) &&
+        FULL_COMMIT_SHA.test(clash.target) &&
         Array.isArray(clash.files) &&
         clash.files.length > 0 &&
         typeof clash.fixes === 'boolean' &&
@@ -184,7 +184,7 @@ async function applyInCopy(copy: LocalCopy, request: KeepClashRequest, token: st
  *   the clash was kept on, so what was committed since still counts
  */
 export async function stagedChange(copy: LocalCopy, since = 'HEAD'): Promise<Record<string, string | null> | undefined> {
-    if (since !== 'HEAD' && !COMMIT_SHA.test(since)) return undefined;
+    if (since !== 'HEAD' && !FULL_COMMIT_SHA.test(since)) return undefined;
     const raw = await copy.git(`git diff --cached --raw -z --no-abbrev --no-renames --diff-filter=ADM ${since}`, TIMEOUTS.NORMAL);
     if (raw.code !== 0) return undefined;
     return parseRawDiff(raw.stdout);
@@ -237,7 +237,7 @@ export async function keepClash(project: Project, request: KeepClashRequest, ctx
     }
     const note = `${track} update ${clash.base.slice(0, 7)}..${clash.target.slice(0, 7)}: ${conflicts.join(', ')}`;
     const head = (await copy.git('git rev-parse HEAD', TIMEOUTS.QUICK)).stdout.trim();
-    await markKeptClash(copy.storefrontPath, { note, applied, ...(COMMIT_SHA.test(head) ? { head } : {}) });
+    await markKeptClash(copy.storefrontPath, { note, applied, ...(FULL_COMMIT_SHA.test(head) ? { head } : {}) });
     writePendingClash(project, {
         track,
         source: clash.source,
