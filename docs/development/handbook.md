@@ -392,6 +392,27 @@ every time" and nothing tells you.
 > `tests/sop/architecture-rules.test.ts`.
 > *Why:* a cache rebuilt per message is not a cache, and nothing reports it — the code looks correct and the work is done twice.
 
+A project also survives onto someone else's machine, as a project file, a Copy or a
+demo bundle. Every field of that file is either something that travels to the new
+project or a cloud resource that stays the sender's: their Adobe org, project and
+workspace, their repository and DA.live site, their mesh. The second kind may be read
+as provenance (a template to generate from, a content site to copy from) and never
+becomes the new project's own. F280 broke this: the file's workspace was seeded into
+the wizard, and creation deployed the mesh into the sender's workspace.
+
+> **Convention.** A file sent to someone else cannot point the new project at the
+> sender's cloud resources. Every field of `ProjectSeed` is classified `travels` or
+> `sendersOwn` in `src/types/projectFileOwnership.ts`, which `satisfies` a mapped type
+> over the file's interfaces, so an unclassified field is a compile error. Enforced by
+> `tests/features/project-creation/ui/wizard/sendersOwnFields.test.tsx` and
+> `tests/features/ai/server/createProjectFromFile-sendersOwn.test.ts`: a file with a
+> sentinel in every `sendersOwn` field goes through the real reader, wizard and
+> creation wire, and no sentinel may land there. The one exception is a comparison
+> key: an imported mesh is reused only when the SC chose the sender's workspace
+> themselves.
+> *Why:* the receiver's creation deploys, pushes and publishes into whatever it is
+> pointed at, and a file pointed it at a colleague's live demo.
+
 > **Also relevant.** [state-ownership.md](../architecture/state-ownership.md) ·
 > [state-management.md](../patterns/state-management.md)
 
@@ -1339,6 +1360,24 @@ promising an agent that every response parses.
 > that it works — AB-7 is an open defect where `remove_integration` reported success
 > while leaving deployed code running, and this would not have caught it.
 
+> **Convention.** Every cloud resource the extension creates has its removal, and a path an
+> SC can use to reach it. `tests/templates/cloud-reversals.ledger.json` lists each kind of
+> resource (a GitHub repository, DA.live content, a Configuration Service site, a mesh, an
+> App Builder app, a Console project or workspace, datapack data, and more) with its create
+> call, its remove call, the reversal paths that reach the remove, and what Delete Project
+> does with it: removes it, keeps it on purpose because it has its own reversal, or leaves
+> it as an exemption naming a backlog item. Enforced by
+> `tests/templates/cloud-reversals.test.ts`: every file whose code makes a cloud write (an
+> HTTP write verb, an `aio` deploy or delete, a Console SDK create, a `git push`) must be
+> claimed with its exact count, so a new create fails until it has a row; a row whose create
+> is gone fails; a named path must reach its removal through imports; and the exemption
+> count only falls.
+> *Why:* the reversibility ledger above rules the agent's tools; this rules the code under
+> both surfaces. The beta.153 walk found two creates with no way back that neither caught:
+> the Configuration Service site (EDS-73) and the mesh and integrations a deleted project
+> leaves deployed (AB-87). The check is static, and its limits are written in the ledger's
+> `_method`: it proves a removal is loaded on the path, not that the path calls it.
+
 > **Convention.** A tool removes work; it does not add vocabulary the agent has to guess.
 > Every closed list a tool's input accepts (`z.enum`, `z.literal`, `z.nativeEnum`) is recorded
 > with why the set is the agent's own words — our screens, our states, an HTTP verb — and not
@@ -2032,7 +2071,7 @@ Conventions decay unless something checks them. Four layers do:
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, agent coverage (import cycles moved to an enforcer suite on 2026-10-08)
 
-**This handbook states 145 conventions. 142 of them are enforced; 3 are not.**
+**This handbook states 147 conventions. 144 of them are enforced; 3 are not.**
 
 The last one to get there was "vendor CSS sits in the lowest cascade layer", and it was
 outstanding because it was **not yet true**: `@layer vendor` existed in no bundle, so a

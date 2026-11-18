@@ -12,7 +12,7 @@ were wrong within an hour of being written. This one is derived from the
 handbook's own callouts and checked against the enforcers on disk in both
 directions, so it cannot.
 
-- **145** conventions, **142** enforced
+- **147** conventions, **144** enforced
 - **31** name the decision record behind them
 - **6** name a procedure — an SOP or a skill
 - **1** have all three layers
@@ -77,6 +77,7 @@ it means the rule rests on somebody noticing.
 |---|---|---|---|
 | A session accessor is the only construction site outside the root, and only for something whose state must outlive one call. Enforced by the exemption ledger in `tests/sop/architecture-rules.exemptions.json`. | [ADR](../architecture/adr/020-session-accessors.md) |  | *named in prose* |
 | Anything that runs repeatedly builds nothing stateful. enforced by `tests/sop/architecture-rules.test.ts`. | [ADR](../architecture/adr/020-session-accessors.md) |  | `architecture-rules.test.ts` |
+| A file sent to someone else cannot point the new project at the sender's cloud resources. Every field of `ProjectSeed` is classified `travels` or `sendersOwn` in `src/types/projectFileOwnership.ts`, which `satisfies` a mapped type over the file's interfaces, so an unclassified field is a compile error. Enforced by `tests/features/project-creation/ui/wizard/sendersOwnFields.test.tsx` and `tests/features/ai/server/createProjectFromFile-sendersOwn.test.ts`: a file with a sentinel in every `sendersOwn` field goes through the real reader, wizard and creation wire, and no sentinel may land there. The one exception is a comparison key: an imported mesh is reused only when the SC chose the sender's workspace themselves. |  |  | `sendersOwnFields.test.tsx`<br>`createProjectFromFile-sendersOwn.test.ts` |
 
 ## 6. The two halves talk by message
 
@@ -162,6 +163,7 @@ it means the rule rests on somebody noticing.
 | Every capability has a human surface. MCP tools are additional. Enforced by measurement — `.claude/skills/ai-coverage-scan` reports the gap at release cuts. | [ADR](../architecture/adr/012-diagnostic-surfaces.md) | [procedure](../../.claude/skills/ai-coverage-scan/SKILL.md) | *named in prose* |
 | A tool response is built by `mcpToolResult.ts`'s `asText`/`asRawText`, never by hand. Enforced by `tests/features/ai/server/responseEnvelope.test.ts`, which checks descriptor rows at runtime and every registrar module at the source, in both halves of the server. |  |  | `responseEnvelope.test.ts` |
 | A capability that CREATES something names the capability that undoes it, or states why none can exist. Both go in `tests/sop/reversibility.ledger.json`. |  |  | `reversibility-ledger.test.ts` |
+| Every cloud resource the extension creates has its removal, and a path an SC can use to reach it. `tests/templates/cloud-reversals.ledger.json` lists each kind of resource (a GitHub repository, DA.live content, a Configuration Service site, a mesh, an App Builder app, a Console project or workspace, datapack data, and more) with its create call, its remove call, the reversal paths that reach the remove, and what Delete Project does with it: removes it, keeps it on purpose because it has its own reversal, or leaves it as an exemption naming a backlog item. Enforced by `tests/templates/cloud-reversals.test.ts`: every file whose code makes a cloud write (an HTTP write verb, an `aio` deploy or delete, a Console SDK create, a `git push`) must be claimed with its exact count, so a new create fails until it has a row; a row whose create is gone fails; a named path must reach its removal through imports; and the exemption count only falls. |  |  | `cloud-reversals.test.ts` |
 | A tool removes work; it does not add vocabulary the agent has to guess. Every closed list a tool's input accepts (`z.enum`, `z.literal`, `z.nativeEnum`) is recorded with why the set is the agent's own words — our screens, our states, an HTTP verb — and not a name for something it knows by another. |  |  | `tool-input-constraints.test.ts` |
 | A tool that fails says so — the result carries `isError: true`. Never a successful result whose text happens to report a failure. | [ADR](../architecture/adr/023-error-handling.md) |  | `toolFailureEnvelope.test.ts`<br>`toolDescriptors-failureFlag.test.ts` |
 | A tool requires an explicit `confirm: true` when its effect is hard to walk back: it DELETES something, or it PUSHES to a live site. Merely mutating is deliberately not the bar — deploys, lifecycle and config writes stay ungated, because they are reversible and gating them would make the agent surface useless for routine work. Three irreversible tools go further and require the resource's name echoed back. |  |  | `tool-catalog-gating.test.ts` |

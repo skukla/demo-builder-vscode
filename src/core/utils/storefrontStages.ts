@@ -129,7 +129,7 @@ export const STOREFRONT_STAGES = {
     },
 
     // The wizard's storefront setup, before the work it shares with Reset (whose steps
-    // it shows for that part: 'Publishing code, settings', 'Copying the content',
+    // it shows for that part: 'Publishing code and settings', 'Copying the content',
     // 'Setting up authoring', 'Publishing the pages' and the rest). Measured from five
     // setups in the Debug Logs (2026-10-12, four new repositories, and 2026-10-15, an
     // existing one): 19 to 35 seconds from the start to the content source being

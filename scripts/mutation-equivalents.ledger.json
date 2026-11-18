@@ -624,32 +624,6 @@
             "source": "reports/mutation/focus.json run of 2026-09-03 (useAuthStatus)"
         },
         {
-            "module": "src/features/authentication/ui/components/AdobeEntityFields.tsx",
-            "anchors": [
-                "if (onCreateFlow) {",
-                "const res = await webviewClient.request<HandlerResult<Workspace>>("
-            ],
-            "mutants": 4,
-            "category": "branch",
-            "reason": "Both fields' handleCreate opens with this guard, and both are reachable only through NewAdobeEntityForm's Create button, which is disabled under exactly the same condition: `isDisabled={!trimmed || busy}` with `onCreate(trimmed)`. So `!name` is `!trimmed` and `busy` is the same state, and no click can arrive with either true. Two mutants per site (the constant `false`, and `||` to `&&`), none distinguishable through the form. The guard is kept because handleCreate is handed out as a prop and a future caller need not gate. The guard line `if (!name || busy) return;` appears once per field, so the anchors name the unique line that follows each: the onCreateFlow branch in the project field and the workspace request in the other.",
-            "decision": "none \u2014 a defensive guard on a callback that leaves the component",
-            "recorded": "2026-09-03",
-            "source": "reports/mutation/focus.json run of 2026-09-03 (AdobeEntityFields)"
-        },
-        {
-            "module": "src/features/authentication/ui/components/AdobeEntityFields.tsx",
-            "anchors": [
-                "const [error, setError] = useState<string | undefined>(createError);",
-                "const [error, setError] = useState<string | undefined>();"
-            ],
-            "mutants": 2,
-            "category": "other",
-            "reason": "Each field's `browse` callback is memoised with `[]`, rewritten by Stryker to `['Stryker was here']`. React compares dependencies element-wise with Object.is and a string literal equals itself on every render, so the callback is created once either way. Anchors name each field's error-state declaration, the unique line two above its `browse` callback, because neither the callback body nor its closing `}, []);` is unique in this module.",
-            "decision": "none",
-            "recorded": "2026-09-03",
-            "source": "reports/mutation/focus.json run of 2026-09-03 (AdobeEntityFields)"
-        },
-        {
             "module": "src/features/authentication/services/tokenManager.ts",
             "anchors": [
                 "const expiresIn = expiry > 0 ? Math.floor((expiry - now) / 1000 / 60) : 0;"
@@ -3757,7 +3731,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 386,
+            "line": 380,
             "mutants": 1,
             "category": "other",
             "reason": "These eight callbacks take no dependencies because each one updates the draft through the functional form of setDraft, so nothing they close over can change. The Stryker replacement is a constant literal that compares equal on every render, so useCallback still returns the same function; neither the identity, the call count, nor the resulting draft differs in any way a test can observe.",
@@ -3770,7 +3744,7 @@
             "anchors": [
                 "[],"
             ],
-            "line": 359,
+            "line": 353,
             "mutants": 1,
             "category": "other",
             "reason": "These eight callbacks take no dependencies because each one updates the draft through the functional form of setDraft, so nothing they close over can change. The Stryker replacement is a constant literal that compares equal on every render, so useCallback still returns the same function; neither the identity, the call count, nor the resulting draft differs in any way a test can observe.",
@@ -4440,23 +4414,11 @@
             "anchors": [
                 "if (index >= 0) {"
             ],
-            "line": 201,
+            "line": 199,
             "mutants": 3,
             "category": "block",
             "reason": "Three mutants sit on prevStage's in-order fast path \u2014 tighten the guard to index > 0, force it false, or empty its block \u2014 and none of them is observable, because the fast path is an O(1) restatement of the fallback below it. Falling through runs survivingPredecessor(current, order), which for a current at index k > 0 returns the nearest canonical stage present in order; that IS order[k-1], because a derived order is always a subsequence of the canonical order and never a reshuffle of it. For k === 0 it finds nothing canonically earlier and returns null, which is what the ternary returns too. Enumerated all 3840 reachable (current, kind, changingDestination, isSignedIn, destinationCommitted, meshSelected, selectedIds, mode) combinations against copies of prevStage carrying each mutation: zero disagreements. The subsequence property the argument rests on is pinned by 'derived orders never leave canonical sequence' in flowStages.test.ts, so if a future deriver breaks it this row stops being true and that test says so.",
             "decision": "none \u2014 the index path is kept because it names the common case; the clamp is its general form",
-            "recorded": "2026-09-04",
-            "source": "PL-22 batch MUT-06"
-        },
-        {
-            "module": "src/features/project-creation/ui/components/integration-flow/stages/DestinationStage.tsx",
-            "anchors": [
-                "const createFailure = phases.phase === 'failed' && phases.failedPhase === 'creating';"
-            ],
-            "mutants": 1,
-            "category": "branch",
-            "reason": "Forcing the failedPhase half true leaves createFailure as phases.phase === 'failed', which admits one extra state: failed with a failedPhase that is NOT creating. ProjectView can never be rendered in that state. DestinationBody checks it two lines earlier \u2014 the guard 'phases.phase === failed && phases.failedPhase !== creating' returns the PhaseFailed view \u2014 so by the time control reaches ProjectView, phase === failed implies failedPhase === creating and the two expressions agree on every reachable input. The stale-failedPhase case that DOES reach ProjectView (phase done, failedPhase creating, after a retry succeeded) is covered by a test, and it constrains the OTHER half of the same conjunction.",
-            "decision": "none \u2014 spelling out both halves keeps ProjectView readable on its own, without depending on the caller's guard order",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-06"
         },
@@ -4600,7 +4562,7 @@
             "anchors": [
                 "try {"
             ],
-            "line": 211,
+            "line": 218,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying this inner try leaves errorDetail as the empty string it was initialised to, and errorDetail is read in exactly one place: the warn line that reports a failed copy. The function returns false either way, nothing is written, and the caller sees the same boolean. The try exists only so an unreadable response body cannot turn a reported failure into a thrown one, and that IS tested - a response whose text() rejects still returns false.",
@@ -4613,7 +4575,7 @@
             "anchors": [
                 "return false;"
             ],
-            "line": 289,
+            "line": 296,
             "mutants": 1,
             "category": "branch",
             "reason": "This is the return after the retry for-loop, and it is unreachable: every iteration either returns or hits the catch, and the catch's last attempt (attempt === MAX_RETRY_ATTEMPTS) returns false rather than continuing. TypeScript cannot see that the loop always exits by return, so it requires a terminal return here; deleting it does not compile. Stryker reports it as NoCoverage for the same reason no test can reach it.",
@@ -4724,7 +4686,7 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 175,
+            "line": 199,
             "mutants": 1,
             "category": "block",
             "reason": "This is the else of 'did the discovered reference copy succeed', and its body is one logger.debug line saying the reference was skipped. The success arm pushes the path; the failure arm pushes nothing and never has. A test covers a discovered reference that 404s on source - the copy stays successful and the path is absent from copiedFiles - and that holds with the block emptied.",
@@ -13885,7 +13847,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 349,
+            "line": 343,
             "mutants": 1,
             "category": "other",
             "reason": "One of the eight draft setters memoised with an empty dependency list. Each updates the draft through the functional form of setDraft, so it closes over nothing that can change. Stryker rewrites the list to a constant string literal, which React compares element-wise with Object.is and finds equal on every render, so useCallback returns the same function either way: neither its identity, its call count nor the resulting draft differs in any way a test can observe. Same argument as the two rows already recorded at lines 359 and 386.",
@@ -13898,7 +13860,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 353,
+            "line": 347,
             "mutants": 1,
             "category": "other",
             "reason": "One of the eight draft setters memoised with an empty dependency list. Each updates the draft through the functional form of setDraft, so it closes over nothing that can change. Stryker rewrites the list to a constant string literal, which React compares element-wise with Object.is and finds equal on every render, so useCallback returns the same function either way: neither its identity, its call count nor the resulting draft differs in any way a test can observe. Same argument as the two rows already recorded at lines 359 and 386.",
@@ -13911,7 +13873,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 364,
+            "line": 358,
             "mutants": 1,
             "category": "other",
             "reason": "One of the eight draft setters memoised with an empty dependency list. Each updates the draft through the functional form of setDraft, so it closes over nothing that can change. Stryker rewrites the list to a constant string literal, which React compares element-wise with Object.is and finds equal on every render, so useCallback returns the same function either way: neither its identity, its call count nor the resulting draft differs in any way a test can observe. Same argument as the two rows already recorded at lines 359 and 386.",
@@ -13924,7 +13886,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 369,
+            "line": 363,
             "mutants": 1,
             "category": "other",
             "reason": "One of the eight draft setters memoised with an empty dependency list. Each updates the draft through the functional form of setDraft, so it closes over nothing that can change. Stryker rewrites the list to a constant string literal, which React compares element-wise with Object.is and finds equal on every render, so useCallback returns the same function either way: neither its identity, its call count nor the resulting draft differs in any way a test can observe. Same argument as the two rows already recorded at lines 359 and 386.",
@@ -13937,7 +13899,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 378,
+            "line": 372,
             "mutants": 1,
             "category": "other",
             "reason": "One of the eight draft setters memoised with an empty dependency list. Each updates the draft through the functional form of setDraft, so it closes over nothing that can change. Stryker rewrites the list to a constant string literal, which React compares element-wise with Object.is and finds equal on every render, so useCallback returns the same function either way: neither its identity, its call count nor the resulting draft differs in any way a test can observe. Same argument as the two rows already recorded at lines 359 and 386.",
@@ -13950,7 +13912,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 382,
+            "line": 376,
             "mutants": 1,
             "category": "other",
             "reason": "One of the eight draft setters memoised with an empty dependency list. Each updates the draft through the functional form of setDraft, so it closes over nothing that can change. Stryker rewrites the list to a constant string literal, which React compares element-wise with Object.is and finds equal on every render, so useCallback returns the same function either way: neither its identity, its call count nor the resulting draft differs in any way a test can observe. Same argument as the two rows already recorded at lines 359 and 386.",

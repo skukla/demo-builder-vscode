@@ -73,6 +73,12 @@ interface SingleFileCopy {
      * publishes hands in a list and reads it afterwards.
      */
     writtenSheets?: string[];
+    /**
+     * Collects each source path the content site answered 404 for. A whole-site
+     * copy hands one in so a page its list names that the source does not have is
+     * skipped rather than counted as a failed copy (walk F287).
+     */
+    missingOnSource?: Set<string>;
 }
 
 /**
@@ -166,8 +172,9 @@ async function attemptCopy(
         logger[logLevel](`[DA.live] Failed to fetch source ${sourcePath}: ${sourceResponse.status}`);
         // Told apart for the completeness audit: a 404 means the source has no
         // such page, so a link to it is a broken link there, not a failed copy.
-        if (sourceResponse.status === 404 && copy.patchReport) {
-            addMissingOnSource(copy.patchReport, sourcePath);
+        if (sourceResponse.status === 404) {
+            copy.missingOnSource?.add(sourcePath);
+            if (copy.patchReport) addMissingOnSource(copy.patchReport, sourcePath);
         }
         return false;
     }

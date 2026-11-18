@@ -276,7 +276,7 @@ describe('who can actually fix it', () => {
  * nothing about whether the call was well formed.
  */
 describe('what the phase reports and calls', () => {
-    // Line 2 under 'Publishing code, settings' (progress vocabulary, owner 2026-10-16):
+    // Line 2 under 'Publishing code and settings' (progress vocabulary, owner 2026-10-16):
     // the jobs in the vocabulary's words; the repository was named on the step before.
     it('reports each step in order, each job in the vocabulary', async () => {
         const context = makeContext();

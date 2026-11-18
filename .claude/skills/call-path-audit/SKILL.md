@@ -86,6 +86,12 @@ this audit's first run, 2026-08-22).
    it once: plant a stray call, watch it fail, remove it. From then on a new
    localized implementation fails CI the day it's written.
 
+   **An action that creates a cloud resource also needs its way back.**
+   `tests/templates/cloud-reversals.ledger.json` (checked by `cloud-reversals.test.ts`)
+   lists every cloud create with its removal and the paths that reach it, and fails on
+   any file making a cloud write it does not claim. A new create gets a row there in the
+   same change, or an exemption naming its backlog item.
+
 ### Worked example: Adobe sign-in (2026-11-18)
 
 The primitive pin (`aio auth login` only in `adobeSignIn.ts`) had held since

@@ -23,7 +23,7 @@ export const RESET_STAGES = {
         detail: 'Template code, back in your repository',
     },
     publishingCodeAndSettings: {
-        label: 'Publishing code, settings',
+        label: 'Publishing code and settings',
         expectation: 'Usually under a minute',
         detail: 'Code, permissions and site configuration',
     },

@@ -191,7 +191,7 @@ describe('resetEdsProjectWithUI — the run', () => {
         onProgress({ step: RESET_STEP.publishingCodeAndSettings, totalSteps: 11, message: 'Publishing the code' });
         // The step's own name is the stage, with its position; its passing message is the
         // line under it (since 2026-10-16).
-        expect(report).toHaveBeenLastCalledWith('Publishing code, settings', 'Publishing the code', { index: 2, total: 11 });
+        expect(report).toHaveBeenLastCalledWith('Publishing code and settings', 'Publishing the code', { index: 2, total: 11 });
     });
 
     it('hands the org gate the auth manager, the project and the logger', async () => {
