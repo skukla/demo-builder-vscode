@@ -157,7 +157,9 @@
 
 .inline-rename:hover .inline-rename-pencil-slot,
 .inline-rename:focus-within .inline-rename-pencil-slot {
-    max-width: 44px;
+    /* Room for the whole quiet button: at 44px its hover box was cut off on the right and the
+       pencil sat off-centre in what was left (walk F225). */
+    max-width: 64px;
     margin-left: 6px;
     opacity: 1;
     pointer-events: auto;

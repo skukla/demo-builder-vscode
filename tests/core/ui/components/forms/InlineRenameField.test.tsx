@@ -467,3 +467,28 @@ describe('InlineRenameField while it saves', () => {
         expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
     });
 });
+
+// Walk F225 (owner, 2026-11-18): after the spinner the old name showed for about a second, until the
+// parent's re-read handed the new one. The name just saved shows at once.
+describe('InlineRenameField after a save', () => {
+    it('shows the saved name at once, before the parent hands it back', async () => {
+        renderField({ onRename: jest.fn().mockResolvedValue(null) });
+        const input = enterEditMode();
+        fireEvent.change(input, { target: { value: 'Saved Name' } });
+        fireEvent.keyDown(input, { key: 'Enter' });
+
+        await waitFor(() => expect(screen.queryByRole('textbox')).not.toBeInTheDocument());
+        expect(screen.getByText('Saved Name')).toBeInTheDocument();
+        expect(screen.queryByText('My Project')).not.toBeInTheDocument();
+    });
+
+    it('CONTROL: a refused save keeps the field open on the typed name', async () => {
+        renderField({ onRename: jest.fn().mockResolvedValue('That name is taken') });
+        const input = enterEditMode();
+        fireEvent.change(input, { target: { value: 'Taken' } });
+        fireEvent.keyDown(input, { key: 'Enter' });
+
+        expect(await screen.findByRole('alert')).toHaveTextContent('That name is taken');
+        expect(screen.getByRole('textbox')).toHaveValue('Taken');
+    });
+});

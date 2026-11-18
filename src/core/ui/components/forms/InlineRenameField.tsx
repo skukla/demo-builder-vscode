@@ -95,6 +95,11 @@ export function InlineRenameField({
     const [editing, setEditing] = useState(false);
     const [value, setValue] = useState('');
     const [busy, setBusy] = useState(false);
+    // The name just saved, shown until the parent hands it back (walk F225): its re-read took about a
+    // second, and the old name showed meanwhile. Cleared once `name` changes.
+    const [saved, setSaved] = useState<string | undefined>(undefined);
+    useEffect(() => setSaved(undefined), [name]);
+    const shown = saved ?? name;
     const [error, setError] = useState<string | undefined>(undefined);
     const inputRef = useRef<HTMLInputElement>(null);
     // Mirrors `busy` for event handlers (a disable-triggered blur must not
@@ -115,10 +120,10 @@ export function InlineRenameField({
     }, [editing, busy, error]);
 
     const startEditing = useCallback((): void => {
-        setValue(name);
+        setValue(shown);
         setError(undefined);
         setEditing(true);
-    }, [name]);
+    }, [shown]);
 
     const exitEdit = useCallback((): void => {
         setEditing(false);
@@ -134,7 +139,7 @@ export function InlineRenameField({
     const commit = useCallback(async (): Promise<void> => {
         if (busyRef.current) return;
         const trimmed = value.trim();
-        if (!trimmed || trimmed === name) {
+        if (!trimmed || trimmed === shown) {
             exitEdit();
             return;
         }
@@ -153,11 +158,12 @@ export function InlineRenameField({
             setBusy(false);
         }
         if (result === null) {
+            setSaved(trimmed);
             exitEdit();
         } else {
             setError(result);
         }
-    }, [value, name, onRename, exitEdit]);
+    }, [value, shown, onRename, exitEdit]);
 
     // Contain the editor: the hosting card tile opens on click/Enter/Space.
     const stopPropagation = useCallback(
@@ -171,7 +177,7 @@ export function InlineRenameField({
         // name click. Edit mode (below) contains the whole editor.
         return (
             <span className="inline-rename">
-                <span className={cn('inline-rename-text', textClassName)} title={name}>{name}</span>
+                <span className={cn('inline-rename-text', textClassName)} title={shown}>{shown}</span>
                 {!disabled && !noPencil && (
                     // The SLOT, not the button, is what collapses while hidden —
                     // clipping a Spectrum ActionButton's own box would mean
@@ -185,7 +191,7 @@ export function InlineRenameField({
                     >
                         <ActionButton
                             isQuiet
-                            aria-label={`Rename ${name}`}
+                            aria-label={`Rename ${shown}`}
                             UNSAFE_className="inline-rename-pencil"
                             onPress={startEditing}
                         >

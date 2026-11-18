@@ -632,7 +632,8 @@ describe('ProjectCard', () => {
             fireEvent.change(input, { target: { value: 'New Name' } });
             fireEvent.keyDown(input, { key: 'Enter' });
 
-            await screen.findByText('Old Name'); // back to display mode
+            // Back to display mode on the name just saved, before the list re-reads (walk F225).
+            await screen.findByText('New Name');
             // The TITLE as typed, capitals and spaces intact. The card used to
             // wire `normalizeProjectName`, so a rename rewrote itself to
             // "new-name" under the cursor. `renameProjectCore` derives the slug

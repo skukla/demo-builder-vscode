@@ -72,7 +72,8 @@ describe('ProjectRow — inline rename', () => {
         fireEvent.change(input, { target: { value: 'New Row' } });
         fireEvent.keyDown(input, { key: 'Enter' });
 
-        await screen.findByText('Old Row'); // back to display mode
+        // Back to display mode on the name just saved, before the list re-reads (walk F225).
+        await screen.findByText('New Row');
         // The TITLE as typed. The row used to wire `normalizeProjectName`, so a
         // rename rewrote itself to "new-row" under the cursor. The slug is derived
         // in `renameProjectCore` now, which also moves the folder to match.
