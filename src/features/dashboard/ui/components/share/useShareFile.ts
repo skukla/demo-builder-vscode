@@ -17,7 +17,7 @@ interface Answer<D> {
     data?: D;
 }
 
-export const FILE_FAILED = "Couldn't save the file.";
+const FILE_FAILED = "Couldn't save the file.";
 
 export interface UseShareFile {
     setup: boolean;

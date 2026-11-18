@@ -55,6 +55,7 @@ const READING: ModalWait = WAIT_STAGES.readingDemo;
 
 /** Save File: the file form's one act, named for what it makes beside Close. */
 const SAVE_FILE = 'Save File';
+const TRY_AGAIN = 'Try Again';
 
 /**
  * Every label the link step's button can show: it holds the widest one's width, so Close never
@@ -229,14 +230,6 @@ function linkRooms(flow: UseShareLink): UseShareLink[] {
     ];
 }
 
-/**
- * The file form at its tallest: "Select at least one part." and why Save File failed, two lines.
- * What it wrote is the result window's (walk F236), not a line here.
- */
-function fileRoom(file: UseShareFile): UseShareFile {
-    return { ...file, nothing: true, error: REASON_ROOM };
-}
-
 interface WindowProps extends Omit<ShareModalProps, 'isOpen'> {
     read: Storefront;
 }
@@ -298,6 +291,19 @@ function ShareWindow({ isEds, onClose, read }: WindowProps): React.ReactElement 
             </StepsWindow>
         );
     }
+    if (form === 'file' && file.error !== undefined && !file.busy) {
+        // A failed save ends as a result too (walk F238), so the form holds no room for a line.
+        return (
+            <StepsWindow
+                key="save-failed"
+                title={SHARE_COPY.title}
+                actionButtons={[{ label: TRY_AGAIN, variant: 'accent', onPress: file.save }]}
+                onClose={onClose}
+            >
+                <ShareResult failure={file.error} />
+            </StepsWindow>
+        );
+    }
     if (fix.asking && fix.offer) {
         // Share Datapack asks first, in this window, as the Datapacks screen's Share asks (walk F229).
         return (
@@ -309,10 +315,9 @@ function ShareWindow({ isEds, onClose, read }: WindowProps): React.ReactElement 
         if (form === 'file') return <ShareFileForm isEds={isEds} file={file} checks={checks} fix={fix} />;
         return linkOf(flow);
     };
+    // The file form holds no room (walk F238): no line arrives under its boxes.
     const reserve =
-        form === 'file'
-            ? [<StepBody key="file"><ShareFileForm isEds={isEds} file={fileRoom(file)} checks={checks} fix={fix} /></StepBody>]
-            : linkRooms(flow).map((room, index) => <StepBody key={`link-${index}`}>{linkOf(room)}</StepBody>);
+        form === 'file' ? [] : linkRooms(flow).map((room, index) => <StepBody key={`link-${index}`}>{linkOf(room)}</StepBody>);
     return (
         <StepsWindow
             key="form"

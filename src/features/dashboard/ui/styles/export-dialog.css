@@ -25,12 +25,6 @@
         gap: 4px;
     }
 
-    .export-part-note {
-        font-size: 12px;
-        line-height: 1.4;
-        color: var(--spectrum-global-color-gray-700);
-    }
-
     .export-file-form {
         display: flex;
         flex-direction: column;

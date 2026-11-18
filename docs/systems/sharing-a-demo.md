@@ -265,8 +265,10 @@ bottom, the form shows (walk F230, 2026-11-18, laid out the way the link form is
   demo's description file inside). On a headless project the storefront row is off and
   locked, and says the project has none.
 
-**Save File** in the footer saves the ticked parts; with nothing ticked it is off. Once the
-file is written the window becomes the result (walk F236): a large green check, **File Saved**,
+**Save File** in the footer saves the ticked parts; with nothing ticked it is greyed out, with no
+line about it, and nothing else arrives under the boxes, so the window fits them (walk F238). A
+save that fails becomes a result too: the red mark, **Couldn't Save File**, the reason, and
+**Try Again**. Once the file is written the window becomes the result (walk F236): a large green check, **File Saved**,
 the file and the folder it is in, and **Reveal in Finder** (Reveal in File Explorer on Windows),
 which shows the file through VS Code's own `revealFileInOS` (the `revealFile` handler). Dismissing
 the save dialog leaves the form as it was. It asks

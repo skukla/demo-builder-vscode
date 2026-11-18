@@ -443,12 +443,12 @@ describe('ShareModal', () => {
             expect(mockRequest).toHaveBeenLastCalledWith('exportDemoBundle', { setup: true, storefront: false });
         });
 
-        it('says when nothing is ticked', async () => {
+        it('greys Save File when nothing is ticked, with no line about it (walk F238)', async () => {
             await renderShareFile();
             fireEvent.click(partBox('Storefront'));
             fireEvent.click(partBox('Setup'));
             expect(button('Save File')).toHaveAttribute('aria-disabled', 'true');
-            expect(screen.getByTestId('export-file-form')).toHaveTextContent('Select at least one part.');
+            expect(screen.getByTestId('export-file-form')).not.toHaveTextContent('Select at least one part.');
         });
 
         it('starts with the storefront off and disabled for a headless project, and shows a failure', async () => {
@@ -457,7 +457,17 @@ describe('ShareModal', () => {
             expect(partBox('Storefront').disabled).toBe(true);
             mockRequest.mockResolvedValueOnce({ success: false, error: 'Failed to download archive: HTTP 404' });
             await click('Save File');
-            expect(screen.getByTestId('export-error')).toHaveTextContent('HTTP 404');
+            // Walk F238: a failed save is the result window, as a saved one is (F236), with Try Again.
+            const result = screen.getByTestId('result-body');
+            expect(result).toHaveTextContent("Couldn't Save File");
+            expect(result).toHaveTextContent('HTTP 404');
+            expect(screen.queryByTestId('export-file-form')).not.toBeInTheDocument();
+            expect(footerLabels()).toEqual(['Close', 'Try Again']);
+
+            mockRequest.mockResolvedValueOnce(answer({ path: '/p/x.json', fileCount: 1, parts: ['setup'] }));
+            await click('Try Again');
+            expect(mockRequest).toHaveBeenLastCalledWith('exportDemoBundle', { setup: true, storefront: false });
+            expect(screen.getByTestId('result-body')).toHaveTextContent('File Saved');
         });
 
         it('says nothing when the save dialog is dismissed', async () => {

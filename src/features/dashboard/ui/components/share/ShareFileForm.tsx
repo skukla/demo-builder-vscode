@@ -6,7 +6,9 @@
  * Fixed the link step's way (owner, 2026-11-18, walk F230): a datapack only the SC can see comes
  * first, as the link step's amber notice with Share Datapack (`ShareChecks`), since the file
  * names the pack and colleagues cannot install its data until it is shared; then the parts, each
- * a house checkbox row with its line as the row's quieter detail.
+ * a house checkbox row with its line under it. Nothing arrives under the boxes (walk F238):
+ * nothing ticked greys Save File, and how a save ended, saved or not, is the result window
+ * (`ShareResult`), so the window holds no room and fits the form.
  *
  * @module features/dashboard/ui/components/share/ShareFileForm
  */
@@ -14,7 +16,7 @@
 import React from 'react';
 import { ShareChecks } from './ShareChecks';
 import type { ShareDatapackFix } from './useShareDatapack';
-import { FILE_FAILED, type UseShareFile } from './useShareFile';
+import type { UseShareFile } from './useShareFile';
 import { CheckboxRow } from '@/core/ui/components/selection/CheckboxRow';
 import type { DemoPackageCheck } from '@/types/webviewRequests';
 
@@ -25,7 +27,6 @@ const FILE_COPY = {
     storefront: 'Storefront',
     storefrontWhat: "The storefront's code and content site.",
     storefrontHeadless: 'This project has no storefront of its own.',
-    nothingTicked: 'Select at least one part.',
 } as const;
 
 /** The file's own check: the datapack's. The repository and published pages are the link's concern. */
@@ -70,8 +71,6 @@ export function ShareFileForm({ isEds, file, checks, fix }: ShareFileFormProps):
                     onChange={() => file.setStorefront(!file.storefront)}
                 />
             </div>
-            {file.nothing ? <p className="export-part-note">{FILE_COPY.nothingTicked}</p> : null}
-            {file.error ? <p className="dialog-problem text-negative" data-testid="export-error">{FILE_FAILED} {file.error}</p> : null}
         </div>
     );
 }
