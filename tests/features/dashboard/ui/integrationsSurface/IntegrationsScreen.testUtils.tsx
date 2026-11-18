@@ -205,7 +205,7 @@ export { asDisplayName };
 
 export function getClient() {
     const { webviewClient } = require('@/core/ui/utils/WebviewClient');
-    return webviewClient as { postMessage: jest.Mock; onMessage: jest.Mock };
+    return webviewClient as { postMessage: jest.Mock; onMessage: jest.Mock; request: jest.Mock };
 }
 
 /**

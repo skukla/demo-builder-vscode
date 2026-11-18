@@ -180,10 +180,10 @@ function useApiList(componentId: string | undefined): ApiList {
     const toggle = useCallback((code: string): void => {
         setSelected((prev) => (prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]));
     }, []);
-    // The dashboard webview's sign-in message; resolves when the browser flow ends, so the
-    // reload lands on a signed-in session.
+    // The one Sign In (`authenticate`, every screen's); resolves when the browser flow ends,
+    // so the reload lands on a signed-in session.
     const signIn = useCallback((): void => {
-        void webviewClient.request('reAuthenticate').catch(() => undefined).then(retry);
+        void webviewClient.request('authenticate').catch(() => undefined).then(retry);
     }, [retry]);
 
     return { apis, initial, selected, loadError, needsSignIn, isLoading, toggle, retry, signIn };

@@ -10,7 +10,7 @@
  * unchanged:
  *   - statusHandlers.ts            requestStatus (status payload + on-open
  *                                  checks, incl. the AI-context freshness
- *                                  wiring) + reAuthenticate/switchOrg
+ *                                  wiring) + switchOrg
  *   - openUrlHandlers.ts           open-in-browser handlers + getProjectUrls
  *   - panelNavigationHandlers.ts   webview surface swaps (configure,
  *                                  navigateBack,
@@ -56,7 +56,7 @@ import {
     handleRenameProject,
     handleExportProjectSettings,
 } from './projectManagementHandlers';
-import { handleRequestStatus, handleReAuthenticate, handleSwitchOrg } from './statusHandlers';
+import { handleRequestStatus, handleSwitchOrg } from './statusHandlers';
 import { executeCommandForWorkingProject } from '@/core/handlers/projectCommandHelper';
 import { handleSetViewModeOverride } from '@/core/handlers/viewModeHandler';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -69,6 +69,7 @@ import {
 } from '@/core/vscode/operationProgress';
 import { handleAnswerOperationPrompt } from '@/core/vscode/operationPrompt';
 import { surfaceShowsItself } from '@/core/vscode/surfaceShowsItself';
+import { handleAuthenticate } from '@/features/authentication/handlers/authenticationHandlers';
 import {
     handleAddAppBuilderComponent,
     handleDeployAppBuilderComponent,
@@ -155,7 +156,7 @@ import { isEdsProject } from '@/types/typeGuards';
 
 // Handlers moved to the sibling modules above; re-export so the import sites
 // (tests, MCP descriptors, commands) are unchanged.
-export { handleRequestStatus, handleReAuthenticate, handleSwitchOrg } from './statusHandlers';
+export { handleRequestStatus, handleSwitchOrg } from './statusHandlers';
 export {
     handleOpenBrowser,
     handleOpenLiveSite,
@@ -452,8 +453,7 @@ export const dashboardHandlers = defineHandlers({
     // EDS block library refresh (re-sync DA.live library from component-definition.json)
     refreshBlockLibrary: handleRefreshBlockLibrary,
 
-    // Authentication handlers
-    reAuthenticate: handleReAuthenticate,
+    authenticate: handleAuthenticate, // the one Sign In; the screen re-reads status after
     switchOrg: handleSwitchOrg,
 
     // Project management handlers. Reset opens the projects list's batch window here, on this

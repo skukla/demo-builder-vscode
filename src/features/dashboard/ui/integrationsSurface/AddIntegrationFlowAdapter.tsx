@@ -275,11 +275,10 @@ export function AddIntegrationFlowAdapter({
     // instance, so the gallery greys it out the way it does an added mesh.
     const erpHolder = useErpIntegrationHolder(isOpen && mode === 'add' ? ASK_ABOUT_OPEN_PROJECT : undefined);
 
-    // The DASHBOARD webview registers `reAuthenticate` (not the wizard's
-    // `authenticate`); it awaits the browser sign-in and returns when done, so the
-    // picker can re-fetch straight after.
+    // The one Sign In (`authenticate`, every screen's); it awaits the browser sign-in
+    // and returns when done, so the picker can re-fetch straight after.
     const signIn = useCallback(
-        () => webviewClient.request('reAuthenticate').catch(() => undefined),
+        () => webviewClient.request('authenticate').catch(() => undefined),
         [],
     );
 

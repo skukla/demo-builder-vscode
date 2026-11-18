@@ -33,7 +33,8 @@ describe('authenticationHandlers - handleAuthenticate - New Authentication', () 
 			const result = await handleAuthenticate(mockContext);
 
 			expect(result.success).toBe(true);
-			expect(mockContext.authManager!.login).toHaveBeenCalledWith(false);
+			// The one Sign In: it never passes a mode (only the org switch forces).
+			expect(mockContext.authManager!.login).toHaveBeenCalledWith();
 			expect(mockContext.sharedState.isAuthenticating).toBe(false);
 		});
 

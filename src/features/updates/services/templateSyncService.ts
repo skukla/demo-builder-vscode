@@ -159,8 +159,7 @@ export class TemplateSyncService {
         // fixes; resetting it to the bare template would drop the fixes (EDS-51).
         const lkgSource = lkgSourceOf(metadata);
         if (options.strategy === 'reset') {
-            // The one rule, shared with the clash question (walk F249): never an imported project's.
-            const refusal = templateResetRefusal(project);
+            const refusal = templateResetRefusal(project); // one rule with the clash question (F249)
             if (refusal) return failure('reset', refusal);
             return this.resetRepository(target, preserveFiles);
         }

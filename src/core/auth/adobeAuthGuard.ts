@@ -92,16 +92,19 @@ async function promptAndSignIn(
     // after pressing it seven hours on).
     logger.info(`${logPrefix} awaiting the sign-in prompt in the VS Code window`);
     let timedOut = false;
+    let waitTimer: ReturnType<typeof setTimeout> | undefined;
     const asked = askDuringOperation({ title: 'Sign In to Adobe', message: warningMessage }, 'Sign In', 'Cancel');
     const selection = await Promise.race([
         asked,
-        new Promise<undefined>((resolve) =>
-            setTimeout(() => {
+        new Promise<undefined>((resolve) => {
+            waitTimer = setTimeout(() => {
                 timedOut = true;
                 resolve(undefined);
-            }, TIMEOUTS.LONG),
-        ),
+            }, TIMEOUTS.LONG);
+        }),
     ]);
+    // An answer ends the wait: the timer must not outlive it by minutes.
+    clearTimeout(waitTimer);
     if (selection !== 'Sign In') {
         if (timedOut) {
             logger.warn(`${logPrefix} sign-in prompt unanswered — treating as cancelled`);

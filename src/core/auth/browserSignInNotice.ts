@@ -5,10 +5,11 @@
  * effect for a beat and then a browser window appears from nowhere, which reads as a
  * glitch rather than as the thing the user just asked for.
  *
- * `adobeAuthGuard` got this right and said why; the user-initiated handlers
- * (`reAuthenticate`, `switchOrg`) called the same login directly and stayed silent
- * (2026-07-31). Same job, so it lives in one place rather than being remembered at
- * each call site.
+ * `adobeAuthGuard` got this right and said why; the user-initiated handlers of the
+ * time called the same login directly and stayed silent (2026-07-31). Same job, so it
+ * lives in one place rather than being remembered at each call site. Since 2026-11-18
+ * the user-initiated sign-ins are two, and both wrap it: the one Sign In
+ * (`signInToAdobe`) and the org switch (`signInThroughOrgChooser`).
  *
  * Where it says it follows the progress (owner, 2026-10-23): with a modal on screen
  * the sign-in is a step in that modal, not a notification on top of it; with none,

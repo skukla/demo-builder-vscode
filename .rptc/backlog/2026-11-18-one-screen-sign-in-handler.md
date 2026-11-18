@@ -41,3 +41,8 @@ and a forced sign-in has a cost: it also signs the SC out of DA.live (PL-84).
 One handler, one message, registered wherever a screen offers Sign In; the screens send it; the
 status refresh stays the dashboard's own. Not for beta.153: it touches the wizard and dashboard
 sign-in.
+
+## Shipped so far
+
+- 2026-11-18 (walk F248): merged. One message, `authenticate`, and one handler, registered on the wizard, Add Integration, the dashboard and Integrations; it runs the one Sign In (`signInToAdobe`, never forced) or, for the wizard's force, the org switch's sign-in. `reAuthenticate` and `handleReAuthenticate` deleted; the dashboard and Integrations re-read status themselves after the sign-in. The palette's Sign In and the agent's `sign_in` run the same function; the creation mesh step moved onto `ensureAdobeIOAuth`. Pinned by "adobe SIGN-IN entry points" in `tests/templates/spine-chokepoints.test.ts`. Not yet checked live: whether a refused token still needs a forced sign-in (the third "Verify before merging" point).
+

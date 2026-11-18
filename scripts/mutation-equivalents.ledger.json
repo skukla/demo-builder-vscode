@@ -450,19 +450,6 @@
         {
             "module": "src/features/authentication/handlers/authenticationHandlers.ts",
             "anchors": [
-                "const isAlreadyAuth = await context.authManager?.isAuthenticated();",
-                "const loginSuccess = await context.authManager?.login(force);"
-            ],
-            "mutants": 2,
-            "category": "optionalChain",
-            "reason": "These two ARE reachable without an auth service, and the difference is observable: with the `?.`, a missing service reads as a login that returned nothing, so the user is told the sign-in timed out; without it, the TypeError lands in the outer catch as a generic authentication failure. Neither is the right message for a wiring gap. The only test that kills the mutants would pin 'Sign-in timed out' as the answer to a missing service, and a test that guards a misleading message is worse than a survivor. Recorded rather than pinned; the honest fix is a guard that names the gap, which is a behaviour change outside this batch.",
-            "decision": "OPEN for the module \u2014 handleAuthenticate could refuse up front when the context has no auth service, as resolveOrgContext in projectHandlers does",
-            "recorded": "2026-09-03",
-            "source": "reports/mutation/focus.json run of 2026-09-03 (authenticationHandlers)"
-        },
-        {
-            "module": "src/features/authentication/handlers/authenticationHandlers.ts",
-            "anchors": [
                 "if (!tokenInspection) {"
             ],
             "mutants": 2,
@@ -3206,7 +3193,7 @@
             "anchors": [
                 "[],"
             ],
-            "line": 195,
+            "line": 194,
             "mutants": 1,
             "category": "other",
             "reason": "A useCallback whose dependency array is empty is stable for the component's whole life. The mutant replaces it with a one-element array holding the SAME string literal on every render, and React compares dependencies with Object.is per element, so the callback is still created once and never recreated. Nothing observable differs.",
@@ -3219,7 +3206,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 205,
+            "line": 204,
             "mutants": 1,
             "category": "other",
             "reason": "A useCallback whose dependency array is empty is stable for the component's whole life. The mutant replaces it with a one-element array holding the SAME string literal on every render, and React compares dependencies with Object.is per element, so the callback is still created once and never recreated. Nothing observable differs.",
@@ -7993,7 +7980,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 642,
+            "line": 641,
             "mutants": 1,
             "category": "block",
             "reason": "This is the inner fallback in openComponent: the README open already failed, the package.json open has now failed too, and the body is a single logger.debug. Emptying it leaves the catch in place, so the folder is still revealed and the command still reports success - which the flows suite asserts by driving both file probes to reject. The only difference is whether one debug line prints. Re-anchored 2026-10-19 (608 -> 609): unchanged code, moved when screens kept their own project (AI-15). Re-anchored 2026-10-20 (609 -> 614): unchanged code; the auto-updater wiring above it became the four-hourly quiet check (PL-80). Re-anchored 2026-10-22 (614 -> 613): unchanged code; the global MCP registration toast above it became one line. Re-anchored 2026-10-30 (608 -> 618): unchanged code; the projects list command above it now closes the dashboard inside a webview transition (PL-80). Re-anchored 2026-10-31 (618 -> 626): unchanged code; the Sign In commands above it ask in modals now. Re-anchored 2026-11-07 (626 -> 631): unchanged code; the Datapack Library's command was registered above it. Re-anchored 2026-11-13 (631 -> 639): unchanged code; the Command Palette's two Clear commands were registered above it (step 06 C5).",
@@ -9443,7 +9430,7 @@
             "anchors": [
                 "this.messageQueue = [];"
             ],
-            "line": 343,
+            "line": 341,
             "mutants": 1,
             "category": "other",
             "reason": "Nothing reads the queue after dispose. The only reader is flushMessageQueue, which runs once from the handshake completion handler, and that handler was registered with once() and deleted itself when it ran \u2014 a disposed manager cannot handshake again. Seeding the array rather than emptying it therefore leaves a value no code path can observe. Re-anchored 2026-10-18 (318 -> 322): unchanged code; four comment lines above it budget getErpOwnershipOptions. Re-anchored 2026-10-20 (327 -> 326): unchanged code; the Updates modal's check timeout above it was removed (PL-80). Re-anchored 2026-10-22 (326 -> 328): unchanged code, moved by the recheckUpdates timeout entry above it (PL-80). Re-anchored 2026-10-30 (328 -> 332): unchanged code, moved by the check-demo-data timeout entry above it (datapack-engine step 10). Re-anchored 2026-10-30 (333 -> 337): unchanged code, moved by the check-datapack-setup-step timeout entry above it (DI-5). Re-anchored 2026-11-13 (344 -> 341): unchanged code, moved by the deleteProject timeout entry above it, removed with the last screen that sent it (step-05 S4).",
@@ -9456,7 +9443,7 @@
             "anchors": [
                 "this.messageQueue = [];"
             ],
-            "line": 522,
+            "line": 520,
             "mutants": 1,
             "category": "other",
             "reason": "This assignment is what makes the flush non-repeating, but nothing flushes twice: flushMessageQueue is called only from the handshake completion handler, which once() deletes as it fires. So the array left behind here is read by nothing, and seeding it rather than emptying it cannot change a message sent or a piece of state observed. Re-anchored 2026-10-18 (497 -> 501): unchanged code; four comment lines above it budget getErpOwnershipOptions. Re-anchored 2026-10-20 (506 -> 505): unchanged code; the Updates modal's check timeout above it was removed (PL-80). Re-anchored 2026-10-22 (505 -> 507): unchanged code, moved by the recheckUpdates timeout entry above it (PL-80). Re-anchored 2026-10-30 (507 -> 511): unchanged code, moved by the check-demo-data timeout entry above it (datapack-engine step 10). Re-anchored 2026-10-30 (512 -> 516): unchanged code, moved by the check-datapack-setup-step timeout entry above it (DI-5). Re-anchored 2026-11-13 (523 -> 520): unchanged code, moved by the deleteProject timeout entry above it, removed with the last screen that sent it (step-05 S4).",
@@ -9469,7 +9456,7 @@
             "anchors": [
                 "}).catch((hintError) => {"
             ],
-            "line": 399,
+            "line": 397,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying this catch body leaves the catch itself in place, so the timeout hint's failure is still swallowed and the handler still runs next \u2014 which is the documented contract, the hint is explicitly fire-and-forget so it cannot block. The only thing inside the body is a logger.warn, so the sole difference is whether a warning prints, and pinning that would mean asserting a logger call's arguments. Re-anchored 2026-10-18 (374 -> 378): unchanged code; four comment lines above it budget getErpOwnershipOptions. Re-anchored 2026-10-20 (383 -> 382): unchanged code; the Updates modal's check timeout above it was removed (PL-80). Re-anchored 2026-10-22 (382 -> 384): unchanged code, moved by the recheckUpdates timeout entry above it (PL-80). Re-anchored 2026-10-30 (384 -> 388): unchanged code, moved by the check-demo-data timeout entry above it (datapack-engine step 10). Re-anchored 2026-10-30 (389 -> 393): unchanged code, moved by the check-datapack-setup-step timeout entry above it (DI-5). Re-anchored 2026-11-13 (400 -> 397): unchanged code, moved by the deleteProject timeout entry above it, removed with the last screen that sent it (step-05 S4).",
@@ -9848,7 +9835,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 90,
+            "line": 95,
             "mutants": 1,
             "category": "other",
             "reason": "A useCallback dependency array of constants is compared element-wise with Object.is on every render, so a literal ['Stryker was here'] invalidates the memo exactly as often as [] does \u2014 never. The callback identity, and therefore everything downstream of it, is byte-for-byte the same either way. Verified by planting all eight at once: the five suites pass unchanged, and no assertion could distinguish them because there is nothing to distinguish. Re-homed 2026-10-08 (EDS-8): the callbacks moved unchanged from IntegrationsScreen.tsx into useIntegrationsScreenActions.ts, and the cold focused run there reported the same survivors.",
@@ -9902,7 +9889,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 94,
+            "line": 99,
             "mutants": 1,
             "category": "other",
             "reason": "The dependency array of handleRefresh holds no variables, so React compares a literal ['Stryker was here'] element-wise with Object.is against the same literal on every render and never re-runs or re-creates it, exactly as with []. Nothing observable differs: the useIntegrationsScreenActions suite asserts the update check is posted once across a re-render and that the handlers keep their identity, and both still pass under the mutant (cold focused run, 2026-10-08). Survived on IntegrationsScreen.tsx before the EDS-8 split too, unledgered there.",
@@ -11082,7 +11069,7 @@
             "anchors": [
                 "[],"
             ],
-            "line": 283,
+            "line": 282,
             "mutants": 1,
             "category": "other",
             "reason": "Same argument as the builder memo above it: useCallback compares dependency arrays element-wise with Object.is, and a constant one-element array of a string literal never changes between renders, so the signIn callback is rebuilt on neither the original nor the mutant. Verified by planting ['Stryker was here'] as the dependency list \u2014 all 35 tests green, while the rerender tests that pin genuinely dependent memos do fail when those are frozen. Re-anchored 2026-10-31 (280 -> 283): unchanged code; the flow's confirmation slot was threaded through above it.",
@@ -12984,7 +12971,7 @@
             "anchors": [
                 "workspace: typedConfig.adobe?.workspace,"
             ],
-            "line": 173,
+            "line": 159,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "This line is inside the same-workspace-import branch, which is entered only when isSameWorkspaceImport is true. That requires typedConfig.importedWorkspaceId to be truthy AND strictly equal to typedConfig.adobe?.workspace. A truthy value can never be strictly equal to the undefined that adobe?.workspace yields when adobe is absent, so typedConfig.adobe is provably a non-null object by the time this line runs and dropping the ?. cannot throw. Planted 2026-09-07 (typedConfig.adobe.workspace) and all 40 tests in the four-suite family passed unchanged.",
@@ -13009,7 +12996,7 @@
             "anchors": [
                 "typedConfig.importedWorkspaceId &&"
             ],
-            "line": 245,
+            "line": 231,
             "mutants": 6,
             "category": "branch",
             "reason": "Six mutants on one site: the guard's two ConditionalExpression forms, its LogicalOperator, the second operand's ConditionalExpression and EqualityOperator, and the BlockStatement it guards. The block holds exactly one statement, a context.logger.debug call, and the guard governs nothing else - deployFreshMesh proceeds to ensureMeshPreflightAuth and withOrgContext identically whichever way it evaluates. So every one of the six changes only whether a debug line is emitted, and killing any of them would mean asserting a logger call, which this repo refuses because it pins wording. Each was planted separately on 2026-09-07 and all 40 tests in the four-suite family passed unchanged every time.",
@@ -14330,7 +14317,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 201,
+            "line": 200,
             "mutants": 1,
             "category": "other",
             "reason": "A useCallback whose dependency array is empty is stable for the component's whole life. The mutant replaces it with a one-element array holding the SAME string literal on every render, and React compares dependencies with Object.is per element, so the callback is still created once and never recreated. Nothing observable differs. Same argument as the row for line 202: this is openAdd's array, that one openDestination's.",
@@ -15129,6 +15116,18 @@
             "decision": "none \u2014 an array of constants and an empty array both subscribe once on mount",
             "recorded": "2026-10-10",
             "source": "PL-70 MUT-06"
+        },
+        {
+            "module": "src/features/authentication/handlers/authenticationHandlers.ts",
+            "anchors": [
+                "const isAlreadyAuth = await context.authManager?.isAuthenticated();"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Reachable without an auth service, and the difference is observable: with the `?.`, a missing service reads as not signed in and the handler goes on to the sign-in, which answers not signed in, so the user is told the sign-in timed out; without it, the TypeError lands in the outer catch as a generic authentication failure. Neither is the right message for a wiring gap. The only test that kills the mutant would pin 'Sign-in timed out' as the answer to a missing service, and a test that guards a misleading message is worse than a survivor. The sibling mutant on the login call left with that call on 2026-11-18, when the sign-in moved to the one Sign In (`signInToAdobe`, which answers not signed in for a missing service) and the org switch.",
+            "decision": "OPEN for the module \u2014 handleAuthenticate could refuse up front when the context has no auth service, as resolveOrgContext in projectHandlers does",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (authenticationHandlers); re-recorded 2026-11-18 with one anchor when the login call moved out"
         }
     ]
 }

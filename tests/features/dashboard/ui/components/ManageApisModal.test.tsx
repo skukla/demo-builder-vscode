@@ -387,10 +387,10 @@ describe('ManageApisModal', () => {
             fireEvent.click(screen.getByRole('button', { name: /sign in with adobe/i }));
             await flush();
 
-            // reAuthenticate itself, plus the reload it triggers.
+            // The one Sign In itself, plus the reload it triggers.
             expect(getClient().request.mock.calls.length).toBeGreaterThan(before + 1);
             expect(
-                getClient().request.mock.calls.some((c: unknown[]) => c[0] === 'reAuthenticate')
+                getClient().request.mock.calls.some((c: unknown[]) => c[0] === 'authenticate')
             ).toBe(true);
         });
 

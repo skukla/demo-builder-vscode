@@ -131,7 +131,7 @@ describe('ProjectDashboardScreen - Org Context (badge + banner)', () => {
         expect(screen.queryByText(/Switch IMS Org/i)).not.toBeInTheDocument();
     });
 
-    it('requests reAuthenticate when Sign In is clicked (user-initiated)', async () => {
+    it('requests the one Sign In when Sign In is clicked (user-initiated)', async () => {
         const { webviewClient } = require('@/core/ui/utils/WebviewClient');
         renderDashboard({ hasAdobeContext: true });
 
@@ -140,7 +140,7 @@ describe('ProjectDashboardScreen - Org Context (badge + banner)', () => {
 
         fireEvent.click(await screen.findByText('Sign In'));
 
-        expect(webviewClient.postMessage).toHaveBeenCalledWith('reAuthenticate');
+        expect(webviewClient.request).toHaveBeenCalledWith('authenticate');
     });
 
     it('resolves to a yellow "Not verified" badge with Verify when signed in but unconfirmed', async () => {
@@ -160,7 +160,7 @@ describe('ProjectDashboardScreen - Org Context (badge + banner)', () => {
 
         // Verify re-runs the checks; it must never start a sign-in.
         expect(webviewClient.postMessage).toHaveBeenCalledWith('requestStatus');
-        expect(webviewClient.postMessage).not.toHaveBeenCalledWith('reAuthenticate');
+        expect(webviewClient.request).not.toHaveBeenCalledWith('authenticate');
     });
 
     it('shows no IMS Org badge or banner for a project without an Adobe org', async () => {

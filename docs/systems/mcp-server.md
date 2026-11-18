@@ -1437,6 +1437,11 @@ extension-side in `agentOperationNotifier.ts`:
   (`validate_token`) about the stored token, the same reader the wizard's indicator and
   the session guard use (`DaLiveAuthService.checkSignIn`). `authenticated` is `'unknown'`
   when IMS cannot be reached: neither signed in nor out.
+- **`sign_in(provider:"adobe")` is the one Sign In.** It runs `signInToAdobe`
+  (`features/authentication/handlers/signInToAdobe.ts`) in its agent mode, the same
+  function a screen's Sign In button and the palette's Sign In command run in person
+  mode; it never forces. `tests/templates/spine-chokepoints.test.ts` pins that only it,
+  the in-flow guard (`ensureAdobeIOAuth`) and the org switch start an Adobe sign-in.
 - **A forced Adobe sign-in signs out of DA.live** (measured 2026-10-28). When an agent's
   `sign_in(provider:"adobe")` falls back to the forced sign-in and that ends a working
   DA.live sign-in, the result carries `notices` and `next` instead of a dialog; any other

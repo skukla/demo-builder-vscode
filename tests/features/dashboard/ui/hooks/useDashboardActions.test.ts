@@ -210,14 +210,19 @@ describe('useDashboardActions', () => {
             expect(mockPostMessage).toHaveBeenCalledWith('navigateBack');
         });
 
-        it('should send reAuthenticate message', () => {
+        // The one Sign In (`authenticate`) since 2026-11-18; the dashboard then
+        // re-reads its own status, which the deleted reAuthenticate did for it.
+        it('should request the one Sign In, then re-read status', async () => {
+            const mockRequest = webviewClient.request as jest.Mock;
             const { result } = renderActionsHook();
 
-            act(() => {
+            await act(async () => {
                 result.current.handleReAuthenticate();
             });
 
-            expect(mockPostMessage).toHaveBeenCalledWith('reAuthenticate');
+            expect(mockRequest).toHaveBeenCalledWith('authenticate');
+            expect(mockPostMessage).toHaveBeenCalledWith('requestStatus');
+            expect(mockPostMessage).not.toHaveBeenCalledWith('reAuthenticate');
         });
 
         it('should request switchOrg (round-trip for in-flight feedback)', async () => {

@@ -85,8 +85,13 @@ export function useIntegrationsScreenActions(
         startOperation(MESH_OPERATION);
     }, [startOperation]);
 
+    // The one Sign In (`authenticate`, every screen's), then the screen's own status
+    // re-read, also when the sign-in turned out not to be needed.
     const handleReAuthenticate = useCallback((): void => {
-        webviewClient.postMessage('reAuthenticate');
+        void webviewClient
+            .request('authenticate')
+            .catch(() => undefined)
+            .then(() => webviewClient.postMessage('requestStatus'));
     }, []);
 
     const handleRefresh = useCallback((): void => {

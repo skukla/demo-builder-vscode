@@ -307,12 +307,13 @@ describe('IntegrationsScreen', () => {
         it('asks the extension to re-authenticate when the grid says so', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const handlers = captureHandlers();
+            getClient().request.mockResolvedValue({ success: true });
             render(<IntegrationsScreen hasAdobeContext appBuilderComponents={{ a: DEPLOYED }} />);
             settleStatus(handlers);
 
             await user.click(screen.getByRole('button', { name: 'grid-reauth' }));
 
-            expect(getClient().postMessage).toHaveBeenCalledWith('reAuthenticate');
+            expect(getClient().request).toHaveBeenCalledWith('authenticate');
         });
     });
 

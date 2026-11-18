@@ -20,6 +20,7 @@
 
 import { BROWSER_ORG_SWITCH_TITLE, withBrowserSignInNotice } from '@/core/auth/browserSignInNotice';
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { MessageHandler } from '@/types/handlers';
 
 /**
@@ -42,18 +43,11 @@ export const handleForcedOrgSwitch: MessageHandler = async (context) => {
     const project = await context.stateManager.getCurrentProject();
 
     context.logger.info('[Auth] Starting FORCED Adobe sign-in to switch organization');
-    const loginSuccess = await withBrowserSignInNotice(
-        () =>
-            ServiceLocator.getAuthenticationService().loginAndRestoreProjectContext(
-                {
-                    organization: project?.adobe?.organization,
-                    projectId: project?.adobe?.projectId,
-                    workspace: project?.adobe?.workspace,
-                },
-                true, // force — present the browser org chooser; never silently reuse the SSO tab
-            ),
-        BROWSER_ORG_SWITCH_TITLE,
-    );
+    const loginSuccess = await signInThroughOrgChooser(ServiceLocator.getAuthenticationService(), {
+        organization: project?.adobe?.organization,
+        projectId: project?.adobe?.projectId,
+        workspace: project?.adobe?.workspace,
+    });
 
     if (!loginSuccess) {
         context.logger.warn('[Auth] Forced sign-in failed or cancelled');
@@ -63,3 +57,24 @@ export const handleForcedOrgSwitch: MessageHandler = async (context) => {
     context.logger.info('[Auth] Forced sign-in complete');
     return { success: true };
 };
+
+/**
+ * The org switch's sign-in itself: forced, behind the org-switch notice. The one place
+ * a forced sign-in starts outside the auth services, shared by the `switchOrg` handler,
+ * the wizard's Switch IMS Org (its `authenticate` with `force`) and the Sign In command's
+ * "Sign In Again" over a session that is still good — each is the account chooser.
+ *
+ * @param authManager - the auth service
+ * @param adobeContext - the project's Adobe context, a targeting hint (empty in the wizard)
+ * @returns whether the forced sign-in completed
+ */
+export function signInThroughOrgChooser(
+    authManager: Pick<AuthenticationService, 'loginAndRestoreProjectContext'>,
+    adobeContext: { organization?: string; projectId?: string; workspace?: string } = {},
+): Promise<boolean> {
+    return withBrowserSignInNotice(
+        // force — present the browser org chooser; never silently reuse the SSO tab
+        () => authManager.loginAndRestoreProjectContext(adobeContext, true),
+        BROWSER_ORG_SWITCH_TITLE,
+    );
+}

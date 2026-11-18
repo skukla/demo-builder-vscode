@@ -6,7 +6,7 @@
  * stubbed grid or modal cannot see.
  */
 
-import { mockPostMessage } from '../../../../helpers/webviewClientMock';
+import { mockPostMessage, mockRequest } from '../../../../helpers/webviewClientMock';
 import { act, renderHook } from '@testing-library/react';
 import {
     MESH_OPERATION,
@@ -36,7 +36,6 @@ describe('useIntegrationsScreenActions', () => {
 
     it.each([
         ['handleBack', 'showProjectDashboard'],
-        ['handleReAuthenticate', 'reAuthenticate'],
         ['handleRefresh', 'requestStatus'],
     ] as const)('%s sends %s', (handler, message) => {
         const { result } = setup();
@@ -45,6 +44,19 @@ describe('useIntegrationsScreenActions', () => {
         act(() => result.current[handler]());
 
         expect(mockPostMessage.mock.calls).toStrictEqual([[message]]);
+    });
+
+    // The one Sign In (`authenticate`, the message every screen sends since 2026-11-18),
+    // then the screen's own status re-read, even when the sign-in was not needed.
+    it('handleReAuthenticate requests the one Sign In, then re-reads status', async () => {
+        mockRequest.mockResolvedValue({ success: true });
+        const { result } = setup();
+        mockPostMessage.mockClear();
+
+        await act(async () => result.current.handleReAuthenticate());
+
+        expect(mockRequest).toHaveBeenCalledWith('authenticate');
+        expect(mockPostMessage.mock.calls).toStrictEqual([['requestStatus']]);
     });
 
     it('deploys the mesh through the progress modal', () => {

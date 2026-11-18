@@ -47,7 +47,7 @@ jest.mock(
 );
 
 import './dashboardValidatorMocks';
-import { handleReAuthenticate, handleRequestStatus } from '@/features/dashboard/handlers/dashboardHandlers';
+import { handleRequestStatus } from '@/features/dashboard/handlers/dashboardHandlers';
 import { postStatusUpdate } from '@/features/dashboard/handlers/statusHandlers';
 import { adobeSignInRestored } from '@/features/dashboard/services/adobeSignInPrompt';
 import { warmProjectReads } from '@/features/dashboard/handlers/warmProjectReads';
@@ -248,7 +248,7 @@ describe('dashboardHandlers - handleRequestStatus', () => {
         const signIn = jest.fn().mockResolvedValue(false);
         ServiceLocator.getAuthenticationService.mockReturnValue({
             isAuthenticated: jest.fn().mockResolvedValue(false),
-            loginAndRestoreProjectContext: signIn,
+            login: signIn,
         });
 
         const result = await handleRequestStatus(mockContext);
@@ -304,7 +304,7 @@ describe('dashboardHandlers - handleRequestStatus', () => {
         const signIn = jest.fn().mockResolvedValue(true);
         ServiceLocator.getAuthenticationService.mockReturnValue({
             isAuthenticated: jest.fn().mockResolvedValue(true),
-            loginAndRestoreProjectContext: signIn,
+            login: signIn,
         });
 
         const result = await handleRequestStatus(mockContext);
@@ -349,27 +349,38 @@ describe('dashboardHandlers - handleRequestStatus', () => {
 });
 
 /**
- * The dashboard's "Sign in" buttons appear only after Adobe has refused the sign-in, so they
- * always ask for a FRESH one (`aio auth login -f`). A colleague on beta.149, 2026-10-27:
- * Adobe answered 401 ErrInvalidOauthToken to a token whose saved expiry was hours away, so
- * the normal login reused it in five seconds with no browser, reported success, and the
- * dashboard stayed on "Not Checked" however often she pressed "Sign in to check".
+ * A yes to the expired-sign-in prompt runs the one Sign In (`signInToAdobe`), not a door
+ * of the dashboard's own (2026-11-18: `handleReAuthenticate` and its `reAuthenticate`
+ * message were deleted). It does not force: a sign-in Adobe refused while it still had
+ * time left (a colleague on beta.149, 2026-10-27) is rerun forced inside the shared
+ * sign-in (`RejectedTokens`, walk F247), and forcing here also signed the SC out of DA.live.
  */
-describe('handleReAuthenticate', () => {
-    it('asks for a fresh sign-in, never the saved one', async () => {
+describe('the expired-sign-in prompt', () => {
+    it('signs in with the one Sign In, un-forced, on a yes', async () => {
+        adobeSignInRestored();
+        const { detectFrontendChanges } = require('@/core/state/frontendEnvDrift');
+        detectFrontendChanges.mockReturnValue(false);
         const { mockContext } = setupMocks();
         const { ServiceLocator } = require('@/core/di/serviceLocator');
-        const signIn = jest.fn().mockResolvedValue(false);
-        ServiceLocator.getAuthenticationService.mockReturnValue({ loginAndRestoreProjectContext: signIn });
-        // The sign-in notice runs inside a cancellable progress window.
+        const login = jest.fn().mockResolvedValue(false);
+        const loginAndRestoreProjectContext = jest.fn().mockResolvedValue(false);
+        ServiceLocator.getAuthenticationService.mockReturnValue({
+            isAuthenticated: jest.fn().mockResolvedValue(false),
+            login,
+            loginAndRestoreProjectContext,
+        });
         const vscode = require('vscode');
+        vscode.window.showWarningMessage.mockResolvedValueOnce('Sign In');
+        // The sign-in notice runs inside a cancellable progress window.
         vscode.window.withProgress.mockImplementation((_options: unknown, task: (p: unknown, t: unknown) => unknown) =>
             task({ report: jest.fn() }, { onCancellationRequested: jest.fn() }),
         );
 
-        await handleReAuthenticate(mockContext);
+        await handleRequestStatus(mockContext);
+        for (let i = 0; i < 10; i++) await new Promise((r) => setImmediate(r));
 
-        expect(signIn).toHaveBeenCalledTimes(1);
-        expect(signIn.mock.calls[0][1]).toBe(true);
+        expect(login).toHaveBeenCalledTimes(1);
+        expect(login).toHaveBeenCalledWith();
+        expect(loginAndRestoreProjectContext).not.toHaveBeenCalled();
     });
 });

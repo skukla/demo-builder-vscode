@@ -3,9 +3,11 @@
  *
  * Handles Adobe authentication:
  * - check-auth: Quick authentication status check
- * - authenticate: Browser-based Adobe login flow
+ * - authenticate: a screen's Sign In (wizard, dashboard, integrations, Add Integration)
  */
 
+import { signInThroughOrgChooser } from './orgSwitchHandler';
+import { signInToAdobe } from './signInToAdobe';
 import { formatDuration, formatMinutes } from '@/core/utils/timeFormatting';
 import type { AdobeOrg } from '@/features/authentication/services/types';
 import { ErrorCode } from '@/types/errorCodes';
@@ -440,6 +442,18 @@ async function trySkipLogin(
 }
 
 /**
+ * The sign-in itself, decided by no one here. `force` is the wizard's Switch IMS Org and
+ * "Sign In with a Different Account" (the account chooser): the org switch's sign-in.
+ * Anything else is the one Sign In. This handler adds only its own after-steps: the
+ * auth-status pushes and the org it resolves.
+ */
+async function runSignIn(context: HandlerContext, force: boolean): Promise<boolean> {
+    const { authManager } = context;
+    if (!force) return (await signInToAdobe(authManager, context.logger, 'person')).success;
+    return authManager ? signInThroughOrgChooser(authManager) : false;
+}
+
+/**
  * Execute the browser-based login flow
  */
 async function executeBrowserLogin(
@@ -459,7 +473,7 @@ async function executeBrowserLogin(
         isAuthenticated: false,
     });
 
-    const loginSuccess = await context.authManager?.login(force);
+    const loginSuccess = await runSignIn(context, force);
     const loginDuration = Date.now() - authStartTime;
     context.sharedState.isAuthenticating = false;
 

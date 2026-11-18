@@ -103,8 +103,8 @@ export interface AddIntegrationFlowModalProps {
     /**
      * Start a user-initiated Adobe sign-in; resolves when it finishes.
      *
-     * Supplied by the HOST because the two webviews register different messages
-     * for it (wizard `authenticate`, dashboard `reAuthenticate`).
+     * Supplied by the HOST, which knows what to do after it. Both hosts send the
+     * one Sign In message, `authenticate`.
      */
     onSignIn?: () => Promise<unknown>;
     /**

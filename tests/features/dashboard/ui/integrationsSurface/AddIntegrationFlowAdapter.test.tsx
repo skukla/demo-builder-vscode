@@ -489,18 +489,18 @@ describe('AddIntegrationFlowAdapter', () => {
     });
 
     /**
-     * The DASHBOARD webview registers `reAuthenticate`, not the wizard's
-     * `authenticate` — it awaits the browser sign-in and returns when it is done,
-     * so the picker can re-fetch straight after.
+     * The one Sign In (`authenticate`), the message every screen sends since
+     * 2026-11-18 — it awaits the browser sign-in and returns when it is done, so
+     * the picker can re-fetch straight after.
      */
     describe('sign-in', () => {
-        it('asks the dashboard to reAuthenticate', async () => {
+        it('asks for the one Sign In', async () => {
             mockRequest.mockResolvedValue(undefined);
             renderAdapter();
 
             await modalProps().onSignIn();
 
-            expect(mockRequest).toHaveBeenCalledWith('reAuthenticate');
+            expect(mockRequest).toHaveBeenCalledWith('authenticate');
         });
 
         it('swallows a failed sign-in rather than rejecting into the modal', async () => {

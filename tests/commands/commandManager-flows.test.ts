@@ -213,14 +213,17 @@ describe('signInAdobe', () => {
         );
     });
 
-    it('runs the login inside a progress notification', async () => {
+    // The one Sign In's own notice, the one every screen's Sign In shows: it says the
+    // sign-in happens in the browser and its Cancel stops it.
+    it('runs the login behind the browser sign-in notice', async () => {
         const h = harness();
 
         await h.handlerFor('demoBuilder.signInAdobe')();
 
         expect((vscode.window.withProgress as jest.Mock).mock.calls[0][0]).toEqual({
             location: vscode.ProgressLocation.Notification,
-            title: 'Signing In to Adobe',
+            title: 'Signing In to Adobe in Your Browser',
+            cancellable: true,
         });
     });
 

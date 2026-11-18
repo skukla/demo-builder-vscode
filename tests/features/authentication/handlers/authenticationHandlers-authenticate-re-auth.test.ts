@@ -74,10 +74,13 @@ describe('authenticationHandlers - handleAuthenticate - Re-authentication', () =
 		});
 	});
 
+	// The wizard's force is its Switch IMS Org and "Sign In with a Different Account":
+	// the account chooser, which is the org switch's sign-in (2026-11-18). A normal
+	// press runs the one Sign In, never forced.
 	describe('forced re-authentication', () => {
-		it('should force re-authentication when force=true', async () => {
+		it('routes force=true to the org switch sign-in, not a forced login of its own', async () => {
 			(mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
-			(mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
+			(mockContext.authManager!.loginAndRestoreProjectContext as jest.Mock).mockResolvedValue(true);
 			(mockContext.authManager!.getSdkClient().ensureInitialized as jest.Mock).mockResolvedValue(undefined);
 			(mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([mockOrg]);
 			(mockContext.authManager!.getCacheManager().setCachedOrganization as jest.Mock).mockReturnValue(undefined);
@@ -85,11 +88,24 @@ describe('authenticationHandlers - handleAuthenticate - Re-authentication', () =
 			const result = await handleAuthenticate(mockContext, { force: true });
 
 			expect(result.success).toBe(true);
-			expect(mockContext.authManager!.login).toHaveBeenCalledWith(true);
+			expect(mockContext.authManager!.loginAndRestoreProjectContext).toHaveBeenCalledWith({}, true);
+			expect(mockContext.authManager!.login).not.toHaveBeenCalled();
+		});
+
+		it('runs the one Sign In, un-forced, when force is not set', async () => {
+			(mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(false);
+			(mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
+			(mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([mockOrg]);
+
+			const result = await handleAuthenticate(mockContext, { force: false });
+
+			expect(result.success).toBe(true);
+			expect(mockContext.authManager!.login).toHaveBeenCalledWith();
+			expect(mockContext.authManager!.loginAndRestoreProjectContext).not.toHaveBeenCalled();
 		});
 
 		it('should send "opening browser" message with force flag text', async () => {
-			(mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
+			(mockContext.authManager!.loginAndRestoreProjectContext as jest.Mock).mockResolvedValue(true);
 			(entityServicesOf(mockContext.authManager!).resolver.getCurrentOrganization as jest.Mock).mockResolvedValue(mockOrg);
 			(entityServicesOf(mockContext.authManager!).resolver.getCurrentOrganization as jest.Mock).mockResolvedValue(mockOrg);
 			(mockContext.authManager!.testDeveloperPermissions as jest.Mock).mockResolvedValue({

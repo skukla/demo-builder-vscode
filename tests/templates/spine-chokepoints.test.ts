@@ -9,8 +9,13 @@
  *
  * Method (the 2026-08-22 mesh call-path audit, the worked example): find the
  * PRIMITIVE that IS the action — the literal shell command or API call — and
- * assert every occurrence in src/ lives inside the spine module. Entry points
- * may multiply freely; the primitive may not.
+ * assert every occurrence in src/ lives inside the spine module.
+ *
+ * The primitive alone is not enough (2026-11-18): above a pinned primitive, the
+ * doors grew seven callers of the Adobe sign-in, each re-deciding its mode. So an
+ * audited action also pins its ENTRY-POINT layer — which files outside the spine
+ * may call into it. Modes are parameters of the one path; a door may not
+ * re-decide a mode or add policy the spine should own.
  *
  * Each audited action adds one describe block here. A failure means either a
  * second path was just written (move the call into the spine) or the spine
@@ -47,15 +52,18 @@ function filesTouchingBoth(a: RegExp, b: RegExp): string[] {
     return hits;
 }
 
+/** Whether any CODE line (not a comment line) of a source matches the pattern. */
+function hasCodeHit(source: string, pattern: RegExp): boolean {
+    return source
+        .split('\n')
+        .some((line) => pattern.test(line) && !/^\s*(\/\/|\*|\/\*)/.test(line));
+}
+
 /** Files whose CODE (not comments) matches the pattern. */
 function filesTouchingPrimitive(pattern: RegExp): string[] {
     const hits: string[] = [];
     for (const file of listSourceFiles(SRC)) {
-        const lines = fs.readFileSync(file, 'utf8').split('\n');
-        const codeHit = lines.some(
-            (line) => pattern.test(line) && !/^\s*(\/\/|\*|\/\*)/.test(line)
-        );
-        if (codeHit) hits.push(path.relative(SRC, file));
+        if (hasCodeHit(fs.readFileSync(file, 'utf8'), pattern)) hits.push(path.relative(SRC, file));
     }
     return hits;
 }
@@ -200,6 +208,39 @@ describe('spine choke-points', () => {
 
         expect(hits).toEqual(expect.arrayContaining(spine));
         expect(hits.filter((f) => !spine.includes(f))).toStrictEqual([]);
+    });
+
+    it('adobe SIGN-IN entry points: three doors start a sign-in, and nothing else does', () => {
+        // Audited 2026-11-18 (the ENTRY-POINT layer above the pin before this one). The
+        // primitive pin kept `aio auth login` in one file while seven callers above it each
+        // started a sign-in and re-decided its mode and after-steps (a forced dashboard
+        // re-sign-in, the command's own progress, the mesh step's silent login, the agent's
+        // own notices). Outside the auth services, three may call the sign-in:
+        //   - the guard (`ensureAdobeIOAuth`): a flow that needs a sign-in partway asks first;
+        //   - the one Sign In (`signInToAdobe`): a screen's button, the command, the agent;
+        //   - the org switch (`orgSwitchHandler`): the only forced sign-in.
+        // A new door calls one of those. Modes are parameters of the one path; a door may
+        // not re-decide a mode or add policy the shared sign-in should own.
+        const primitive = /\.(login|loginAndRestoreProjectContext)\(/;
+        const services = 'features/authentication/services/';
+        const doors = [
+            'core/auth/adobeAuthGuard.ts',
+            'features/authentication/handlers/orgSwitchHandler.ts',
+            'features/authentication/handlers/signInToAdobe.ts',
+        ];
+
+        // Self-test of the pattern: a planted door call is caught, a comment is not.
+        expect(hasCodeHit('    const ok = await authManager.login();', primitive)).toBe(true);
+        expect(hasCodeHit('    await auth.loginAndRestoreProjectContext({}, true);', primitive)).toBe(true);
+        expect(hasCodeHit('    // authManager.login() used to be called here', primitive)).toBe(false);
+
+        const callers = filesTouchingPrimitive(primitive)
+            .filter((f) => !f.startsWith(services))
+            .sort();
+
+        // Positive control: all three doors register, so a rename cannot green this.
+        expect(callers).toEqual(expect.arrayContaining(doors));
+        expect(callers.filter((f) => !doors.includes(f))).toStrictEqual([]);
     });
 
     it('manifest WRITE: only the config writer and the MCP agent door write .demo-builder.json', () => {

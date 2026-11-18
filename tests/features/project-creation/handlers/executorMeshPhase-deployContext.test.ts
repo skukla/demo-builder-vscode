@@ -52,6 +52,7 @@ jest.mock('@/features/project-creation/services/projectFinalizationService', () 
 }));
 
 import { deployFreshMesh } from './executorMeshPhase.testUtils';
+import * as vscode from 'vscode';
 import { ProjectSetupContext } from '@/features/project-creation/services/ProjectSetupContext';
 import type { MeshSetupContext } from '@/features/project-creation/services/meshSetupService';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
@@ -229,6 +230,8 @@ describe('Executor - Mesh Deploy Org-Context (Phase 4a)', () => {
     });
 
     it('should forward the project’s Adobe selection to the re-login it triggers', async () => {
+        // The re-login runs through the shared guard, which asks first (2026-11-18).
+        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValueOnce('Sign In');
         const loginAndRestoreProjectContext = jest.fn().mockResolvedValue(true);
         const context = createContext({
             isAuthenticated: jest.fn().mockResolvedValueOnce(false).mockResolvedValue(true),

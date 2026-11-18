@@ -10,6 +10,7 @@
  */
 
 import type { ProgressTracker } from './shared';
+import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { buildOrgTargetFromProjectAdobe, withOrgContext, type OrgContextTarget } from '@/core/shell/orgContextEnv';
 import { getMeshEndpointUrl } from '@/core/state/appBuilderComponentState';
@@ -41,13 +42,16 @@ function getMeshEndpoint(project?: import('@/types/base').Project): string | und
  *
  * Adobe CLI commands (`aio api-mesh:*`) each independently open a browser
  * window when the token is expired. This check ensures the token is valid
- * before any CLI calls run, preventing multiple browser popups. Follows the
- * pattern from DeployMeshCommand (deployMesh.ts:51-92).
+ * before any CLI calls run, preventing multiple browser popups.
+ *
+ * Signs in through the shared guard (`ensureAdobeIOAuth`), like every other flow
+ * that needs a sign-in partway: it asks in a VS Code dialog, and the browser opens
+ * only on "Sign In" (2026-11-18; this used to start its own sign-in unasked).
  *
  * @param authManager - Authentication service (may be undefined)
  * @param logger - Logger for diagnostics
- * @param adobeConfig - Adobe org/project/workspace for context restoration after login
- * @returns true if authenticated (or no authManager), false if re-auth failed
+ * @param adobeConfig - Adobe org/project/workspace, the targeting hint for the sign-in
+ * @returns true if authenticated (or no authManager), false if the sign-in did not land
  */
 export async function ensureMeshPreflightAuth(
     authManager: HandlerContext['authManager'],
@@ -58,35 +62,17 @@ export async function ensureMeshPreflightAuth(
         return true; // Graceful degradation
     }
 
-    const isAuthenticated = await authManager.isAuthenticated();
-    if (isAuthenticated) {
-        return true;
-    }
-
-    // Token expired — attempt re-login with context restoration
-    logger.warn(
-        '[Mesh Setup] Adobe auth token expired before mesh deployment — attempting re-login',
-    );
-    const loginSuccess = await authManager.loginAndRestoreProjectContext({
-        organization: adobeConfig.organization,
-        projectId: adobeConfig.projectId,
-        workspace: adobeConfig.workspace,
+    const { authenticated } = await ensureAdobeIOAuth({
+        authManager,
+        logger,
+        logPrefix: '[Mesh Setup]',
+        projectContext: { ...adobeConfig },
+        warningMessage: 'Adobe sign-in required to set up the API Mesh.',
     });
-
-    if (!loginSuccess) {
-        logger.warn('[Mesh Setup] Re-login failed — mesh deployment will likely fail');
-        return false;
+    if (!authenticated) {
+        logger.warn('[Mesh Setup] Adobe sign-in did not complete — mesh deployment will likely fail');
     }
-
-    // Verify token is actually valid after login
-    const postLoginAuth = await authManager.isAuthenticated();
-    if (!postLoginAuth) {
-        logger.warn('[Mesh Setup] Re-login completed but token still invalid');
-        return false;
-    }
-
-    logger.info('[Mesh Setup] Re-login successful — continuing with mesh deployment');
-    return true;
+    return authenticated;
 }
 
 /**

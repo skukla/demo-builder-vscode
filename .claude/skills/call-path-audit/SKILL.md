@@ -1,6 +1,6 @@
 ---
 name: call-path-audit
-description: Prove a user action has ONE definitive path — trace every entry point down AND every occurrence of the action's ground-truth primitive up, then pin the verdict in tests/templates/spine-chokepoints.test.ts. Use when checking for localized/parallel implementations of the same job, at release cuts (the sweep worklist below), or after building a feature that performs an effect the app already performs somewhere. Catches the drift class where a working-but-local implementation bypasses the shared spine and only the touched path gets future fixes.
+description: Prove a user action has ONE definitive path — trace every entry point down AND every occurrence of the action's ground-truth primitive up, audit the ENTRY-POINT layer (the functions handlers, commands and MCP tools call into the spine through), then pin both in tests/templates/spine-chokepoints.test.ts. Use when checking for localized/parallel implementations of the same job, at release cuts (the sweep worklist below), or after building a feature that performs an effect the app already performs somewhere. Catches the drift class where a working-but-local implementation bypasses the shared spine and only the touched path gets future fixes.
 ---
 
 # Call-Path Audit — one definitive path per action
@@ -13,7 +13,7 @@ reaction, the parallel `appComponentManager` whose death silently broke
 component selections, the callerless `_deployMeshComponent` wrapper (found by
 this audit's first run, 2026-08-22).
 
-## The method (two halves; the second is the one that matters)
+## The method (three layers; pin the primitive AND the entry points)
 
 1. **Trace down from the doors.** List every entry point for the action —
    command registrations (`commandManager.ts`), webview handler maps, MCP
@@ -37,17 +37,51 @@ this audit's first run, 2026-08-22).
    text generated into user projects (`agentsMdSections.ts`); field names that
    merely mention the primitive (`skipNpmInstall`).
 
-3. **Verdict per hit:** spine (the one implementation) · wrapper (calls the
-   spine — fine, but three similar wrappers is Rule-of-Three territory) ·
-   second path (does the primitive itself — the finding) · dead (no callers —
-   delete outright, no soft deprecation).
+3. **Audit the entry-point layer.** A pinned primitive is not enough. Between
+   the doors (handlers, commands, MCP tools) and the spine sits the layer of
+   functions that CALL INTO the spine, and that layer drifts too: each door
+   grows its own caller and re-decides the mode and the after-steps. List every
+   file outside the spine's own directory that calls the spine's public entry
+   (for Adobe sign-in: `.login(` and `.loginAndRestoreProjectContext(`), and
+   for each ask: does it decide a MODE (forced or not, a notice or not) or add
+   POLICY (asking first, retrying, a refresh) the spine or a shared door should
+   own? **Modes are parameters of the one path; a door may not re-decide a mode
+   or add policy the spine should own.** The target is a short list of named
+   entry points, each with one job, that every door calls.
 
-4. **Pin what passed.** Add a describe block to
-   `tests/templates/spine-chokepoints.test.ts` asserting the primitive appears
-   ONLY in the spine module, with a positive control (the spine itself must
-   register, so a rename can't green the test on empty air). Mutation-check it
-   once: plant a stray call, watch it fail, remove it. From then on a new
+4. **Verdict per hit:** spine (the one implementation) · entry point (a named
+   door function the others call; few, each one job) · wrapper (calls the
+   spine — fine, but three similar wrappers is Rule-of-Three territory) ·
+   second path (does the primitive itself, or re-decides a mode at a door —
+   the finding) · dead (no callers — delete outright, no soft deprecation).
+
+5. **Pin what passed — both layers.** Add describe blocks to
+   `tests/templates/spine-chokepoints.test.ts`: one asserting the primitive
+   appears ONLY in the spine module, and one asserting that outside the spine's
+   directory only the named entry points call the spine's public entry. Each
+   carries a positive control (every allowed file must register, so a rename
+   can't green the test on empty air) and, where the pattern allows, a planted
+   self-test (`hasCodeHit` on a planted line and on a comment). Mutation-check
+   it once: plant a stray call, watch it fail, remove it. From then on a new
    localized implementation fails CI the day it's written.
+
+### Worked example: Adobe sign-in (2026-11-18)
+
+The primitive pin (`aio auth login` only in `adobeSignIn.ts`) had held since
+2026-08-22, and above it seven callers had each grown their own sign-in: the
+dashboard's `reAuthenticate` forced it (a workaround the shared sign-in now
+owns, `RejectedTokens`), the palette command opened its own progress, the
+mesh step signed in without asking, the agent tool collected its own notices,
+and the wizard called `login(force)` directly. They became three entry points:
+
+| Entry point | Job | Who calls it |
+|---|---|---|
+| `ensureAdobeIOAuth` (`core/auth/adobeAuthGuard.ts`) | a flow needs a sign-in partway: ask in a VS Code dialog, then sign in | ~15 flows, now including the creation mesh step |
+| `signInToAdobe` (`authentication/handlers/signInToAdobe.ts`) | someone pressed Sign In, or an agent asked; the caller (`'person'` or `'agent'`) is the only mode | the `authenticate` handler (every screen), the Sign In command, the `sign_in` tool, the dashboard's expired-sign-in prompt |
+| `handleForcedOrgSwitch` / `signInThroughOrgChooser` (`authentication/handlers/orgSwitchHandler.ts`) | the org switch, the only forced sign-in | `switchOrg`, the wizard's Switch IMS Org, the command's "Sign In Again" over a good session |
+
+The pin is "adobe SIGN-IN entry points" in `spine-chokepoints.test.ts`. Its
+first run, before the doors moved, named exactly the drifted callers.
 
 Not every primitive belongs to one spine. `npm install` and `git clone`
 legitimately serve unrelated jobs (component deps, tool installs, AI defaults,
@@ -68,6 +102,7 @@ multi-site; skip).
 | App Builder undeploy | `aio app undeploy` | 1 real (+1 description string) | `app-builder/services/appBuilderComponentTeardown.ts` | **PINNED** |
 | Mesh delete | `aio api-mesh:delete` | 3 | `mesh/services/meshDeleteCommand.ts` (verdict: three legitimate doors — dashboard delete, cancel-rollback, removal — sharing ONE command constant; the two spellings unified) | **PINNED** |
 | Adobe sign-in/out | `aio auth login/logout` | 1 each | login in `authentication/services/adobeSignIn.ts` (run only by the service's sign-in gate; moved there unchanged 2026-10-08), logout in `authentication/services/authenticationService.ts` (diagnostics' hit is a `--help` capability probe — a read) | **PINNED** |
+| Adobe sign-in ENTRY POINTS | `.login(` / `.loginAndRestoreProjectContext(` outside `authentication/services/` | 3 (was 7) | the guard, `signInToAdobe`, `orgSwitchHandler` — see the worked example above (2026-11-18) | **PINNED** |
 | Manifest write | names `.demo-builder.json` AND writes | 2 | `core/state/projectConfigWriter.ts` + `mcp-server.ts` (verdict: TWO doors by design — state serializer vs agent byte-writer; the agent door now refuses malformed JSON + reports schema warnings) | **PINNED** |
 | Helix URLs + credentials | partition template + host literal | 1 | **CONSOLIDATED 2026-08-22** — client owns buildPartitionUrl/buildPublishHeaders/buildDeleteHeaders/normalizeWebPath; service delegates; missing publish `Authorization` fixed test-first (MCP failed on admin-protected sites). Item archived to `../complete/` | **PINNED (one engine)** |
 | DA.live host + transport | `admin.da.live` literal | 1 (was 5) | `daLiveConstants` — host now single-sourced + pinned. Transport verdict: **CONSOLIDATED 2026-08-22** — every DA.live admin write rides the client (body factories, 429-return); orgOperations' private retry copy deleted; documented raw exceptions (CDN, bulk copy, probe). Item archived to `../complete/` | **PINNED (host + transport)** |
@@ -95,6 +130,11 @@ the audit found a second path or a dead wrapper, fix it in the same slice
   half and feeds it candidates.
 
 ## Release-cut anchor
+
+**Every PINNED row above audited the primitive; only Adobe sign-in has had its
+entry-point layer audited (2026-11-18).** At a release cut, run step 3 on the
+next row: the primitive staying in one file says nothing about how many doors
+re-decide its mode above it.
 
 **The 2026-08-22 full campaign pinned every auditable row** — 13 pin blocks in
 `spine-chokepoints.test.ts`, two consolidations filed (Helix two-engines,

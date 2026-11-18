@@ -7,6 +7,7 @@
  * Part of Step 3: Handler Registry Simplification
  */
 
+import { handleAuthenticate } from '@/features/authentication/handlers/authenticationHandlers';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
 import { hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import { datapackLibraryHandlers } from '@/features/data-installer/handlers/datapackLibraryHandlers';
@@ -78,8 +79,10 @@ describe('dashboardHandlers', () => {
         it('should include authentication handlers', () => {
             // Given: dashboardHandlers object
             // When: Checking for auth message types
-            // Then: Authentication handlers present (session re-auth + forced org switch)
-            expect(hasHandler(dashboardHandlers, 'reAuthenticate')).toBe(true);
+            // Then: the one Sign In (`authenticate`, shared with the wizard) + forced org switch.
+            // `reAuthenticate` was deleted 2026-11-18: the dashboard's own forced sign-in.
+            expect(dashboardHandlers.authenticate).toBe(handleAuthenticate);
+            expect(hasHandler(dashboardHandlers, 'reAuthenticate')).toBe(false);
             expect(hasHandler(dashboardHandlers, 'switchOrg')).toBe(true);
         });
 
@@ -180,7 +183,8 @@ describe('dashboardHandlers', () => {
             //   1  runtime         listRuntimePackages (the list_runtime_packages
             //                      read: what a removal left running, 2026-09-21)
             //   2  storefront      syncStorefront, refreshBlockLibrary
-            //   2  auth            reAuthenticate, switchOrg
+            //   2  auth            authenticate (the one Sign In; replaced
+            //                      reAuthenticate 2026-11-18, so the count holds), switchOrg
             //   1  delete          deleteProject
             //   4  project actions editProject, renameProject,
             //                      exportProjectSettings (headless, for the

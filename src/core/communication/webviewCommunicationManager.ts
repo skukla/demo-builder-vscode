@@ -29,11 +29,9 @@ interface CommunicationConfig {
  */
 const REQUEST_TIMEOUTS: Record<string, number> = {
     // Authentication
+    // Every screen's Sign In. Callers await it to know when the sign-in finished (the
+    // API picker re-fetches on success; the dashboard re-reads status).
     authenticate: TIMEOUTS.AUTH.SIGN_IN + TIMEOUTS.AUTH.BROWSER, // the sign-in, then a minute to finish
-    // Awaits the SAME browser sign-in as 'authenticate', then restores project context
-    // and refreshes status — so it needs at least the same budget. Callers await it to
-    // know when sign-in finished (the API picker re-fetches on success).
-    reAuthenticate: TIMEOUTS.AUTH.SIGN_IN + TIMEOUTS.AUTH.BROWSER, // the sign-in, then context restore
 
     // Data loading (wizard UI)
     // 30s was NOT enough and timed out on work that would have finished: each of

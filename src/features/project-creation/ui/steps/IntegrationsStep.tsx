@@ -187,9 +187,8 @@ export function IntegrationsStep({
     // The row being API-edited (mode 'api-edit' only) — seeds the picker with its
     // current picks; passed to the modal only in that mode.
     const [editTarget, setEditTarget] = useState<ApiEditTarget | undefined>(undefined);
-    // The WIZARD webview registers `authenticate` (the dashboard's twin is
-    // `reAuthenticate`); it resolves once the browser sign-in completes, so the API
-    // picker can re-fetch immediately after.
+    // The one Sign In, `authenticate` (every screen's); it resolves once the browser
+    // sign-in completes, so the API picker can re-fetch immediately after.
     const signIn = useCallback(
         () => webviewClient.request('authenticate', { force: false }).catch(() => undefined),
         [],

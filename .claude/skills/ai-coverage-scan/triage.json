@@ -27,11 +27,7 @@
         },
         "authenticate": {
             "tool": "sign_in",
-            "reason": "Adobe browser sign-in through the same authManager.login(); the tool does not pass force."
-        },
-        "reAuthenticate": {
-            "tool": "sign_in",
-            "reason": "Adobe browser sign-in. The handler also restores the project's org context afterwards; agent tools carry that per call (runWithAdobeTarget)."
+            "reason": "Both run the one Sign In (signInToAdobe): the screen in person mode, the tool in agent mode. The screen's force is the org switch's sign-in, which an agent does through select_org."
         },
         "check-auth": {
             "tool": "get_auth_status",

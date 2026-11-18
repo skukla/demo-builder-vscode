@@ -29,6 +29,7 @@ import { createMockExtensionContext } from '../helpers/extensionContextFake';
 // not the flow itself — is what these tests pin.
 const mockGetTokenStatus = jest.fn();
 const mockLogin = jest.fn();
+const mockLoginAndRestore = jest.fn();
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         isSidebarInitialized: jest.fn(() => false),
@@ -36,6 +37,7 @@ jest.mock('@/core/di/serviceLocator', () => ({
         getAuthenticationService: jest.fn(() => ({
             getTokenStatus: mockGetTokenStatus,
             login: mockLogin,
+            loginAndRestoreProjectContext: mockLoginAndRestore,
         })),
     },
 }));
@@ -290,24 +292,29 @@ describe('CommandManager', () => {
             beforeEach(() => {
                 mockGetTokenStatus.mockReset();
                 mockLogin.mockReset().mockResolvedValue(true);
+                mockLoginAndRestore.mockReset().mockResolvedValue(true);
                 mockDaLivePick.mockReset().mockResolvedValue({ success: true });
+                // The Sign In runs behind the browser notice, which hands the task a cancel token.
                 (vscode.window.withProgress as jest.Mock).mockImplementation(
-                    async (_o: unknown, fn: () => Promise<unknown>) => fn()
+                    async (_o: unknown, fn: (p: unknown, t: unknown) => Promise<unknown>) =>
+                        fn({ report: jest.fn() }, { onCancellationRequested: jest.fn() })
                 );
             });
 
-            it('signInAdobe logs in un-forced when not signed in', async () => {
+            it('signInAdobe runs the one Sign In (never forced) when not signed in', async () => {
                 mockGetTokenStatus.mockResolvedValue({ isAuthenticated: false });
 
                 await handlerFor('demoBuilder.signInAdobe')();
 
-                expect(mockLogin).toHaveBeenCalledWith(false);
+                expect(mockLogin).toHaveBeenCalledWith();
+                expect(mockLoginAndRestore).not.toHaveBeenCalled();
             });
 
-            it('signInAdobe offers a FORCED re-login when already signed in', async () => {
-                // force=true is the org-switch recovery; an un-forced login on a
-                // valid session succeeds without changing anything, which is the
-                // silent no-op this branch exists to avoid.
+            it('signInAdobe offers the org switch when already signed in', async () => {
+                // A forced sign-in over a good session is the account chooser, the org
+                // switch's job (2026-11-18: the command no longer forces on its own). An
+                // un-forced login on a valid session succeeds without changing anything,
+                // which is the silent no-op this branch exists to avoid.
                 mockGetTokenStatus.mockResolvedValue({
                     isAuthenticated: true,
                     expiresInMinutes: 420,
@@ -318,7 +325,8 @@ describe('CommandManager', () => {
 
                 await handlerFor('demoBuilder.signInAdobe')();
 
-                expect(mockLogin).toHaveBeenCalledWith(true);
+                expect(mockLoginAndRestore).toHaveBeenCalledWith({}, true);
+                expect(mockLogin).not.toHaveBeenCalled();
                 // Humanized, not raw: 420 minutes reads "7h", because "~420 min"
                 // makes the reader do the arithmetic (owner, first live use).
                 expect(
@@ -333,6 +341,7 @@ describe('CommandManager', () => {
                 await handlerFor('demoBuilder.signInAdobe')();
 
                 expect(mockLogin).not.toHaveBeenCalled();
+                expect(mockLoginAndRestore).not.toHaveBeenCalled();
             });
 
             it('signInDaLive delegates to the ONE shared QuickPick flow', async () => {
