@@ -6,9 +6,9 @@
  * repository can't be reached. Reset and updates are unavailable until it is.")
  * with two ways out. "Change source" reopens the Add a demo package dialog to
  * point the project at another copy of the same kind (the author moved it);
- * "Keep as my own demo" opens the Share dialog, whose save puts this project's
+ * "Keep as my own demo" opens Save as Package, which puts this project's
  * storefront on the SC's Welcome step as their own (the author deleted it, owner
- * 2026-09-15; one dialog since 2026-10-22). When only the pages are out of reach
+ * 2026-09-15; Save as Package since EDS-72). When only the pages are out of reach
  * the title says so and Keep is not offered. The same shape as
  * `OrgContextNotice`: an `InlineNotice` shown only on a warning, null otherwise.
  *
@@ -26,7 +26,7 @@ export interface DemoSourceNoticeProps {
     /** Open the change-source dialog. Absent when the project has no demo row. */
     onChangeSource?: () => void;
     /**
-     * Open the Share dialog to keep this project as the SC's own. Absent for a
+     * Open Save as Package to keep this project as the SC's own. Absent for a
      * project that cannot (a headless project: its code is a local copy nothing
      * pushes to a repository of its own).
      */

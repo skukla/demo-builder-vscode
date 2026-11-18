@@ -1,7 +1,9 @@
 /**
- * ProjectDashboardScreen — ONE Share tile and ONE Share dialog (owner,
- * 2026-10-22). Export and Save as demo package were two tiles for one job; the
- * Save as Package tile and its dialog are gone, not hidden.
+ * ProjectDashboardScreen — the Share row. ONE Share tile and ONE Share dialog
+ * (owner, 2026-10-22): Export and Save as demo package were two tiles for one
+ * job. Save as Package came back as its own tile and window on 2026-11-18
+ * (EDS-72), for the card on the SC's own Welcome step, which Share no longer
+ * places: Edge Delivery projects only.
  */
 
 import { fireEvent, screen } from '@testing-library/react';
@@ -16,6 +18,18 @@ jest.mock('@/features/dashboard/ui/components/share/ShareModal', () => ({
         mockShareModal(props);
         return (
             <div role="dialog" aria-label="Share Demo">
+                <button onClick={props.onClose}>Close</button>
+            </div>
+        );
+    },
+}));
+
+const mockSavePackageModal = jest.fn();
+jest.mock('@/features/dashboard/ui/components/share/SavePackageModal', () => ({
+    SavePackageModal: (props: { onClose: () => void }) => {
+        mockSavePackageModal(props);
+        return (
+            <div role="dialog" aria-label="Save as Package">
                 <button onClick={props.onClose}>Close</button>
             </div>
         );
@@ -37,16 +51,25 @@ describe('ProjectDashboardScreen - share', () => {
         expect(screen.queryByRole('dialog', { name: 'Share Demo' })).not.toBeInTheDocument();
     });
 
-    it('has no Save as Package tile and no Export tile, on any project', () => {
+    it('has no Export tile, and Save as Package only on an Edge Delivery project', () => {
         const headless = renderDashboard({ isEds: false });
+        // Positive control: the Share row is on screen.
+        expect(screen.getByText('Share Demo')).toBeInTheDocument();
         expect(screen.queryByText('Save as Package')).not.toBeInTheDocument();
         expect(screen.queryByText('Export')).not.toBeInTheDocument();
         headless.unmount();
 
         renderDashboard({ isEds: true });
-        expect(screen.queryByText('Save as Package')).not.toBeInTheDocument();
+        expect(screen.getByText('Save as Package')).toBeInTheDocument();
         expect(screen.queryByText('Export')).not.toBeInTheDocument();
-        // Positive control: the zone that held them is on screen.
-        expect(screen.getByText('Share Demo')).toBeInTheDocument();
+    });
+
+    it('opens Save as Package from its tile, and closes it', () => {
+        renderDashboard({ isEds: true });
+        fireEvent.click(screen.getByText('Save as Package'));
+        expect(screen.getByRole('dialog', { name: 'Save as Package' })).toBeInTheDocument();
+        expect(screen.queryByRole('dialog', { name: 'Share Demo' })).not.toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+        expect(screen.queryByRole('dialog', { name: 'Save as Package' })).not.toBeInTheDocument();
     });
 });

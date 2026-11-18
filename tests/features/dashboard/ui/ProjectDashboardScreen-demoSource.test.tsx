@@ -23,6 +23,9 @@ jest.mock('@/features/project-creation/ui/components/add-demo/AddDemoModal', () 
 jest.mock('@/features/dashboard/ui/components/share/ShareModal', () => ({
     ShareModal: () => <div role="dialog" aria-label="Share Demo" />,
 }));
+jest.mock('@/features/dashboard/ui/components/share/SavePackageModal', () => ({
+    SavePackageModal: () => <div role="dialog" aria-label="Save as Package" />,
+}));
 
 const DEMO = { name: 'Isle5 by Robin', source: { owner: 'robin', repo: 'isle5-demo' }, storefrontKind: 'eds' as const };
 const PAGES = "The Isle5 by Robin demo's pages can't be reached right now.";
@@ -58,9 +61,9 @@ describe('ProjectDashboardScreen - added demo source', () => {
         expect(within(await screen.findByTestId('demo-source-banner')).getByRole('button', { name: 'Change Source' })).toBeInTheDocument();
     });
 
-    // Save as demo package's own dialog is gone (owner, 2026-10-22): keeping the
-    // project as your own is the Share dialog's save, card on your Welcome step.
-    it('offers Keep as My Own Demo beside Change Source on an Edge Delivery project, opening the Share dialog', async () => {
+    // Keeping the project as your own is a card on your own Welcome step: Save as Package's job
+    // since EDS-72, when Share Demo's link stopped placing the card.
+    it('offers Keep as My Own Demo beside Change Source on an Edge Delivery project, opening Save as Package', async () => {
         renderDashboard({ demo: DEMO, isEds: true });
         emitWarning();
 
@@ -68,7 +71,8 @@ describe('ProjectDashboardScreen - added demo source', () => {
         expect(banner).toHaveTextContent(GUIDANCE);
         expect(within(await screen.findByTestId('demo-source-banner')).getByRole('button', { name: 'Change Source' })).toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: KEEP }));
-        expect(screen.getByRole('dialog', { name: 'Share Demo' })).toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: 'Save as Package' })).toBeInTheDocument();
+        expect(screen.queryByRole('dialog', { name: 'Share Demo' })).not.toBeInTheDocument();
     });
 
     it('offers only Change Source on a headless project, which has no storefront of its own to keep', async () => {

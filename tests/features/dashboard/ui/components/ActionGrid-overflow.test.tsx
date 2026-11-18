@@ -90,9 +90,8 @@ describe('ActionGrid — the Share row', () => {
         jest.clearAllMocks();
     });
 
-    // One Share tile since 2026-10-22: Export and Save as Package were two
-    // tiles for one job, and Save as Package is gone rather than hidden.
-    it('offers Share Demo for every project type, and no Export or Save as Package tile', async () => {
+    // One Share tile since 2026-10-22: Export and Save as Package were two tiles for one job.
+    it('offers Share Demo for every project type, and no Export tile', async () => {
         const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
         const headless = render(<ActionGrid {...defaultProps} />);
         expect(tile(headless.container, 'share-demo')).toBeInTheDocument();
@@ -103,9 +102,29 @@ describe('ActionGrid — the Share row', () => {
         expect(getZone(container, 'share').contains(share)).toBe(true);
         expect(share).toHaveTextContent('Share Demo');
         expect(tile(container, 'export')).not.toBeInTheDocument();
-        expect(tile(container, 'save-demo-package')).not.toBeInTheDocument();
         await user.click(share!);
         expect(edsProps.handleShareDemo).toHaveBeenCalled();
+    });
+
+    // EDS-72 (owner, 2026-11-18): Save as Package came back as its own action, beside Share Demo,
+    // for the card on the SC's own Welcome step. An Edge Delivery project only: a headless project
+    // has no storefront of its own for a card to build from.
+    it('offers Save as Package beside Share Demo on an Edge Delivery project', async () => {
+        const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+        const handleSavePackage = jest.fn();
+        const { container } = render(<ActionGrid {...edsProps} handleSavePackage={handleSavePackage} />);
+        const save = tile(container, 'save-package');
+        expect(getZone(container, 'share').contains(save)).toBe(true);
+        expect(save).toHaveTextContent('Save as Package');
+        await user.click(save!);
+        expect(handleSavePackage).toHaveBeenCalled();
+    });
+
+    it('offers no Save as Package on a headless project, even with a handler', () => {
+        const { container } = render(<ActionGrid {...defaultProps} handleSavePackage={jest.fn()} />);
+        // Positive control: the Share row is there.
+        expect(tile(container, 'share-demo')).toBeInTheDocument();
+        expect(tile(container, 'save-package')).not.toBeInTheDocument();
     });
 
     it('offers Change Source only for a project built on an added demo', async () => {

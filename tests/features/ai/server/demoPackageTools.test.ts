@@ -1,6 +1,6 @@
 /**
  * get_demo_package_preview, save_demo_package and remove_demo_package — the
- * agent's doors for "Save as demo package". The dashboard handlers behind them
+ * agent's doors for the dashboard's Save as Package and Share Demo's Send a Link. The dashboard handlers behind them
  * are mocked at the module boundary; what is asserted is the gate, the
  * refusal's words, and the ARGUMENTS each handler receives.
  */
@@ -46,9 +46,18 @@ const PREVIEW: DemoPackagePreview = {
 
 function fakeServer() {
     const tools = new Map<string, (args: any) => Promise<{ content: Array<{ text: string }> }>>();
+    const descriptions = new Map<string, string>();
     return {
-        registerTool(name: string, _def: unknown, handler: (args: any) => Promise<{ content: Array<{ text: string }> }>) {
+        registerTool(
+            name: string,
+            def: { description: string },
+            handler: (args: any) => Promise<{ content: Array<{ text: string }> }>,
+        ) {
             tools.set(name, handler);
+            descriptions.set(name, def.description);
+        },
+        description(name: string): string {
+            return descriptions.get(name) ?? '';
         },
         async call(name: string, args: unknown): Promise<any> {
             return JSON.parse((await tools.get(name)!(args)).content[0].text);
@@ -98,6 +107,19 @@ describe('get_demo_package_preview', () => {
     });
 });
 
+// EDS-72: an agent finds the tool by the words an SC uses, so each names the dashboard's button.
+describe('the descriptions name the buttons they stand for', () => {
+    it("save_demo_package leads with Save as Package and says addToWelcome:false is Send a Link's save", () => {
+        const description = server().description('save_demo_package');
+        expect(description.startsWith('Save as Package')).toBe(true);
+        expect(description).toMatch(/addToWelcome:false is what Share Demo's Send a Link does/);
+    });
+
+    it('remove_demo_package names Remove Package', () => {
+        expect(server().description('remove_demo_package')).toMatch(/Remove Package/);
+    });
+});
+
 describe('save_demo_package', () => {
     it('refuses without confirm, naming the file, the name it would carry, the repository and the list, and writes nothing', async () => {
         const refusal = await server().call('save_demo_package', {});
@@ -110,7 +132,7 @@ describe('save_demo_package', () => {
 
     it('hands the handler the given name and description, the prefilled ones when absent', async () => {
         const result = await server().call('save_demo_package', { name: ' Bodea by Steve ', confirm: true });
-        // addToWelcome defaults to true, as the dashboard's box does.
+        // addToWelcome defaults to true, as the dashboard's Save as Package sends it.
         expect(mockSave).toHaveBeenCalledWith(ctx, {
             name: 'Bodea by Steve',
             description: 'Bodea-branded B2B demo',

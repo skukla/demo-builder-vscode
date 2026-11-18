@@ -1,7 +1,6 @@
 /**
  * Share's notes have their room from the first frame (rules 13 and 14; step-07 follow-up): a note
- * that arrives after the form opens (why the details file was left alone, what the undo did, the
- * undo itself once a save made one, what Save File wrote, "Select at least one part.") is drawn in
+ * that arrives after the form opens (why the details file was left alone) is drawn in
  * the hidden step the window measures as it opens (`reserve`), so the held window never scrolls
  * for it. Since walk F228 each step is its own window, so only the chosen form is reserved, and
  * the choice step reserves nothing.
@@ -31,19 +30,15 @@ describe('ShareModal: room for its notes from the first frame', () => {
         expect(reserved()).toHaveLength(0);
     });
 
-    // Walk F232 (owner: "so much space"): the notes were reserved stacked, though a press shows
-    // either its note with the undo, or, once undone, what the undo did, never all three. Each
-    // state is its own hidden copy in the same cell, so the window takes the taller, not the sum.
-    it("reserves only the link form, once per state a press can leave: its note with the undo, or what the undo did", async () => {
+    // Walk F232 kept one hidden copy per state a press can leave. Since EDS-72 the undo is Save as
+    // Package's, so a press leaves one state: the note on what became of the save.
+    it('reserves only the link form, with the note a press can leave, and no undo', async () => {
         await renderShareLink();
-        expect(reserved()).toHaveLength(2);
-        const [pressed, undone] = reserved();
+        expect(reserved()).toHaveLength(1);
+        const [pressed] = reserved();
 
         expect(within(pressed).getByTestId('share-skipped')).toBeInTheDocument();
-        expect(within(pressed).getByText('Remove the Details from My Repository')).toBeInTheDocument();
-        expect(within(pressed).queryByTestId('share-removed')).toBeNull();
-        expect(within(undone).getByTestId('share-removed')).toBeInTheDocument();
-        expect(within(undone).queryByText('Remove the Details from My Repository')).toBeNull();
+        expect(within(pressed).queryByText(/Remove/)).toBeNull();
         expect(pressed.querySelector('[data-testid="export-file-form"]')).toBeNull();
     });
 

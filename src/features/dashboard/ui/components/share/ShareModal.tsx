@@ -2,8 +2,10 @@
  * ShareModal — the dashboard's ONE way to hand a demo on (owner, 2026-10-22:
  * "I do want the merged share dialog"). It replaced two dialogs that did the
  * same job: Export's "Send a link" and Save as demo package both ended in the
- * same handler, which writes the details file into the repository and puts the
- * card on the SC's Welcome step (`.rptc/research/share-dialogs-overlap/`).
+ * same handler, which writes the details file into the repository
+ * (`.rptc/research/share-dialogs-overlap/`). The card on the SC's own Welcome step
+ * is no longer Share's: it is Save as Package's, its own dashboard action (owner,
+ * 2026-11-18, EDS-72), so the link's save leaves the Welcome step as it is.
  *
  * Two steps in one window, the house flow Add a Demo and Add Integration use (owner,
  * 2026-11-18, walk F228). Step 1 asks HOW it travels, as two choice cards with a line on
@@ -28,7 +30,8 @@
  */
 
 import { DialogContainer } from '@adobe/react-spectrum';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import type { StorefrontState } from './demoPackageRequests';
 import { SHARE_COPY } from './shareCopy';
 import { ShareFileForm } from './ShareFileForm';
 import { buttonLabel, ShareLinkForm } from './ShareLinkForm';
@@ -36,14 +39,14 @@ import { revealLabel, ShareResult } from './ShareResult';
 import { useShareDatapack, type ShareDatapackFix } from './useShareDatapack';
 import { useShareFile, type UseShareFile } from './useShareFile';
 import { useShareLink, type UseShareLink } from './useShareLink';
+import { useStorefrontState, type Storefront } from './useStorefrontRead';
 import { ChoiceCard } from '@/core/ui/components/selection/ChoiceCard';
 import { ConfirmActionWindow } from '@/core/ui/components/ui/ConfirmActionDialog';
 import type { ActionButton, ModalWait } from '@/core/ui/components/ui/Modal';
 import { StepsWindow } from '@/core/ui/components/ui/StepsDialog';
-import { webviewClient } from '@/core/ui/utils/vscode-api';
 import { WAIT_STAGES } from '@/core/utils/waitStages';
 import { shareConfirmCopy } from '@/features/data-installer/ui/components/packMenu';
-import type { DemoPackageCheck, DemoPackagePreview, ShareDatapackChecks } from '@/types/webviewRequests';
+import type { DemoPackageCheck, DemoPackagePreview } from '@/types/webviewRequests';
 
 type ShareForm = 'link' | 'file';
 
@@ -66,13 +69,6 @@ const LINK_LABELS = [SHARE_COPY.copyLink, SHARE_COPY.saveAndCopy, SHARE_COPY.cop
 
 /** What the link flow is handed before the storefront is read: never shown, never pressed. */
 const UNREAD: DemoPackagePreview = { draft: { name: '', description: '' }, checks: [], link: '', saved: false, onList: false };
-
-/** A handler's answer: branch on `success` before reading anything else (webview-command-handler). */
-interface Answer<D> {
-    success: boolean;
-    error?: string;
-    data?: D;
-}
 
 export interface ShareModalProps {
     isOpen: boolean;
@@ -104,77 +100,6 @@ function FormChoice({ form, onChange }: { form: ShareForm; onChange: (form: Shar
             </div>
         </div>
     );
-}
-
-/**
- * What the dialog knows about the storefront: read once on open, before anything else shows. A
- * project with no storefront reads its datapack check alone, for the file step (walk F230).
- */
-type StorefrontState =
-    | { status: 'loading' }
-    | { status: 'none'; checks: DemoPackageCheck[] }
-    | { status: 'failed'; error: string }
-    | { status: 'ready'; preview: DemoPackagePreview };
-
-/** Why the storefront could not be read, when the handler gave no reason or no answer came back. */
-const UNREAD_REASON = 'The storefront could not be read.';
-
-/**
- * Ask for the storefront's preview: its data, or the handler's reason it could not be read. A
- * request that threw carries transport words (the webview gave up waiting), not words for the SC.
- */
-async function readPreview(): Promise<StorefrontState> {
-    try {
-        const answer = await webviewClient.request<Answer<DemoPackagePreview>>('getDemoPackagePreview');
-        if (!answer.success || !answer.data) return { status: 'failed', error: answer.error ?? UNREAD_REASON };
-        return { status: 'ready', preview: answer.data };
-    } catch {
-        return { status: 'failed', error: UNREAD_REASON };
-    }
-}
-
-/**
- * The datapack check of a project with no storefront to preview: the same check the preview
- * carries (walk F230). A read that fails shows no notice, so the file is never held up by it.
- */
-async function readDatapackCheck(): Promise<StorefrontState> {
-    try {
-        const answer = await webviewClient.request<Answer<ShareDatapackChecks>>('getShareDatapackCheck');
-        return { status: 'none', checks: answer.success && answer.data ? answer.data.checks : [] };
-    } catch {
-        return { status: 'none', checks: [] };
-    }
-}
-
-/** The storefront as last read, and a read again that keeps the form (Share Datapack's, walk F229). */
-interface Storefront {
-    state: StorefrontState;
-    /** Read again; the answer replaces the preview only when it is one. Stable. */
-    reread: () => void;
-}
-
-/**
- * The one read the dialog makes on open, behind the house wait: an Edge Delivery project's
- * storefront preview, or a headless project's datapack check (walk F230). A read again keeps what
- * is shown until an answer worth showing arrives, so the window and what the SC typed stay put.
- */
-function useStorefrontState(isEds: boolean): Storefront {
-    const [state, setState] = useState<StorefrontState>({ status: 'loading' });
-    useEffect(() => {
-        let cancelled = false;
-        void (isEds ? readPreview() : readDatapackCheck()).then((read) => {
-            if (!cancelled) setState(read);
-        });
-        return () => {
-            cancelled = true;
-        };
-    }, [isEds]);
-    const reread = useCallback((): void => {
-        void (isEds ? readPreview() : readDatapackCheck()).then((read) => {
-            if (read.status !== 'failed') setState(read);
-        });
-    }, [isEds]);
-    return { state, reread };
 }
 
 function LinkForm({ state, flow, fix }: { state: StorefrontState; flow: UseShareLink; fix: ShareDatapackFix }): React.ReactElement {
@@ -213,21 +138,18 @@ function mainButton(form: ShareForm, state: StorefrontState, flow: UseShareLink,
 
 /**
  * A line's length the extension's reasons run to (why the details file was left alone, why a save
- * failed): reserved at the longest local sentence, which wraps to two lines at L.
+ * failed): reserved at the reason the host gives for a details file that is not ours, which wraps
+ * to two lines at L.
  */
-const REASON_ROOM = SHARE_COPY.removedFileSkipped;
+const REASON_ROOM =
+    'demo.demo-builder.json is already there and was not written by Demo Builder, or was edited since. Edit it yourself.';
 
 /**
- * The link form in each state a press can leave it, at its longest (rules 13 and 14): the press
- * note with the undo a save makes, or, once undone, what the undo did and no undo. Never all three
- * at once, so each is its own hidden copy and the window takes the taller (walk F232: stacked, they
- * left a gap under the form). A failed undo is one reason line with the undo, as tall as the first.
+ * The link form at its longest (rules 13 and 14): the note a press can leave under the repository.
+ * Its undo moved to Save as Package (EDS-72), so a press leaves only this one state to hold room for.
  */
 function linkRooms(flow: UseShareLink): UseShareLink[] {
-    return [
-        { ...flow, skipped: REASON_ROOM, canRemove: true, removed: undefined },
-        { ...flow, skipped: undefined, canRemove: false, removed: { file: 'skipped', removedFromList: true } },
-    ];
+    return [{ ...flow, skipped: REASON_ROOM }];
 }
 
 interface WindowProps extends Omit<ShareModalProps, 'isOpen'> {

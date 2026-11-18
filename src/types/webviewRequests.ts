@@ -455,8 +455,9 @@ export interface SaveDemoPackageRequest {
     name: string;
     description: string;
     /**
-     * Put the card on the SC's own Welcome step (default true). False writes the
-     * file only, and takes an existing card off the list.
+     * Where the card on the SC's own Welcome step goes. True puts it on (Save as Package);
+     * false takes an existing card off; omitted leaves the Welcome list exactly as it is
+     * (Share Demo's Send a Link). The file is written in every case.
      */
     addToWelcome?: boolean;
 }

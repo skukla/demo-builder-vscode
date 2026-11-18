@@ -50,6 +50,13 @@ jest.mock('@/features/project-creation/ui/components/add-demo/AddDemoModal', () 
         );
     },
 }));
+const mockSavePackageModal = jest.fn();
+jest.mock('@/features/dashboard/ui/components/share/SavePackageModal', () => ({
+    SavePackageModal: (props: { onClose: () => void }) => {
+        mockSavePackageModal(props);
+        return <div role="dialog" aria-label="Save as Package" />;
+    },
+}));
 jest.mock('@/features/dashboard/ui/components/share/ShareModal', () => ({
     ShareModal: (props: { onClose: () => void }) => {
         mockShareModal(props);
@@ -105,6 +112,9 @@ function handover(overrides: Partial<HandoverDialogs> = {}): HandoverDialogs {
         shareOpen: false,
         openShare: jest.fn(),
         closeShare: jest.fn(),
+        savePackageOpen: false,
+        openSavePackage: jest.fn(),
+        closeSavePackage: jest.fn(),
         ...overrides,
     };
 }
@@ -258,6 +268,21 @@ describe('DashboardDialogs', () => {
 
         it('mounts nothing while closed', () => {
             render(<DashboardDialogs {...props({ handover: handover() })} />);
+            expect(mockShareModal).not.toHaveBeenCalled();
+            expect(mockSavePackageModal).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('Save as Package', () => {
+        it('opens with its own close', () => {
+            const given = props({ isEds: true, handover: handover({ savePackageOpen: true }) });
+            render(<DashboardDialogs {...given} />);
+
+            expect(screen.getByRole('dialog', { name: 'Save as Package' })).toBeInTheDocument();
+            expect(mockSavePackageModal).toHaveBeenCalledWith({
+                isOpen: true,
+                onClose: given.handover.closeSavePackage,
+            });
             expect(mockShareModal).not.toHaveBeenCalled();
         });
     });

@@ -61,7 +61,7 @@ the repository. With it, you choose the name and say the things a repository can
 | `integrations` | The integrations the demo depends on: catalog ids, and custom apps by repository |
 | `blockLibraries` | Shipped block libraries to pre-tick |
 | `contentSource` | The content site, when it is not the one `fstab.yaml` names, or to name its index path |
-| `builtWith` | Written by Share Demo's link save, never by hand: the shipped package, template, pin, fix list and boilerplate the storefront was built from, and the Demo Builder version that saved it |
+| `builtWith` | Written by Share Demo's link save and Save as Package, never by hand: the shipped package, template, pin, fix list and boilerplate the storefront was built from, and the Demo Builder version that saved it |
 
 A file that names a content site names its index path; the `indexPath` field is required
 inside `contentSource`. Only the SC's own actions guess a path, and only for a repository
@@ -164,9 +164,9 @@ creation, so a project already built keeps working whatever happens to yours. Re
 updates go back to your repository.
 
 **Keeping a demo nobody can take away.** An SC who wants to keep building on your demo even
-if you remove it builds one project from it and saves it with **Share Demo**, **Also show it
-on my Welcome step** ticked, on that project. The card that makes reads that project's own repository and pages, so it needs
-nothing of yours.
+if you remove it builds one project from it and presses **Save as Package** on that project.
+The card that makes reads that project's own repository and pages, so it needs nothing of
+yours.
 
 Your repository's history is readable by anyone who can read the repository. **Do not share a
 repository whose history ever held a secret.**
@@ -180,8 +180,8 @@ repository whose history ever held a secret.**
 - **If you delete it,** projects built on it keep working. Their reset refuses with one
   sentence, and their dashboard says the demo's repository can't be reached. "Change
   source" points a project at another copy of the same kind, for a demo that moved; on an
-  Edge Delivery project "Keep as my own demo" opens Share Demo to keep it as the SC's own,
-  for one that is gone.
+  Edge Delivery project "Keep as my own demo" opens Save as Package to keep it as the SC's
+  own, for one that is gone.
 
 ## The words
 
@@ -193,7 +193,9 @@ which the Storefront area configures. One demo, many storefronts.
 
 **Share Demo**, in the dashboard's Share row, is the one way to hand this demo on. It replaced
 two dialogs on 2026-10-22 (Export, and Save as demo package), which did the same job: both
-wrote the description file into your repository and put the card on your Welcome step. It
+wrote the description file into your repository and put the card on your Welcome step. The
+card on your own Welcome step is no longer Share Demo's: it is **Save as Package**'s, beside
+it (owner, 2026-11-18, EDS-72, below). It
 is two steps in one window, the way Add a Demo is (walk F228, 2026-11-18). Step 1, **How to
 Share**, is two cards, **Send a Link** and **Send a File**, with **Next**. Step 2 is the
 chosen form, with **Back** (which keeps the choice and what you set), **Close**, and the
@@ -217,20 +219,16 @@ they get your later changes. Edge Delivery projects only. Top to bottom, the for
 - **Name** (required) and **Description**, always shown. They are
   prefilled from the description file when it is the one Demo Builder wrote, otherwise from
   the brand or demo the project was built on (the project's own title for a Starter build).
-- **Add to My Welcome Step**, ticked by default (it was always on before the merge), with
-  the line "So you can start new projects from it." under it. Ticked, the save also puts the card on your own Welcome step, the way Isle5 is one, so you
-  can build new projects from it. Unticked, the save writes the file only, and takes your
-  card off the list if it was there. For a demo already shared, the box shows where its
-  card is now.
-- **Remove the Details from My Repository**, once there is something of yours to undo. It
-  takes the file out (only when it is ours) and the card off your list. The storefront is
-  untouched.
+
+There is no Welcome box and no undo here any more (EDS-72: Share Demo is not the place for
+them). The save writes the description file and leaves your Welcome step exactly as it is: a
+card already there stays, and none is added. Both moved to **Save as Package**.
 
 The footer button copies the link. A link carries nothing itself, so while your repository
 lacks the description file the button reads **Save and Copy Link**: it writes the
 file from what the project already holds, then copies. Once the file is there it reads
 **Copy Link** and only copies. It reads **Save and Copy Link** again after you change
-the name, the description or the box, because the next press will write.
+the name or the description, because the next press will write.
 
 Nothing else about the repository changes: it is not marked as a GitHub template. A project
 created from the card still works, because creation copies a repository that is not a
@@ -296,6 +294,27 @@ when the bundle carries setup, offers **Start a project with it**, which adds th
 reopens the wizard pre-filled. The setup never carries a credential; the colleague signs in
 to their own accounts as the wizard asks.
 
+## Save as Package
+
+**Save as Package**, in the dashboard's Share row beside Share Demo, puts this demo on your own
+Welcome step as a card, the way Isle5 is one, so you can build new projects from it (owner,
+2026-11-18, EDS-72 decision 4). Edge Delivery projects only; a headless project has no
+storefront of its own for the card to build from, so the tile is not shown.
+
+The window reads the storefront behind its opening wait, then shows **Name** (required) and
+**Description**, prefilled exactly as Send a Link's are. **Save as Package** in the footer writes
+the description file into your repository (the same ownership rule as the link's save) and puts
+the card on your Welcome step. The window then becomes the result: **Package Saved**, and
+"<Name> is on your Welcome step." A save that fails becomes **Couldn't Save the Package**, the
+reason, and **Try Again**.
+
+When the project is already on your Welcome step, the form shows a quiet **Remove Package**
+link: it takes the description file out (only when it is ours) and the card off your list. The
+storefront is untouched. Its outcome is a result too: **Package Removed**, with what it did in
+one sentence, or **Couldn't Remove the Package** and **Try Again**.
+
+"Keep as my own demo", on the notice for an added demo whose source is gone, opens this window.
+
 ## Headless demos
 
 A Next.js demo adds the same way; its pages live in the app, so there is no content site
@@ -321,10 +340,12 @@ bundle: the repository it creates in the SC's account needs `confirm:true`. When
 the bundle carries setup, the answer says so and points at the projects list's Import, which
 is the door that opens the wizard pre-filled.
 
-Share Demo has the same doors: `get_demo_package_preview` reads what a project built from
-the card would get, `save_demo_package` writes the file, puts the card on the list (or, with
-`addToWelcome:false`, keeps it off, as the unticked box does) and answers the link, and
-`remove_demo_package` undoes it. Both writes need `confirm:true`. The file form is
+Save as Package and Share Demo have the same doors: `get_demo_package_preview` reads what a
+project built from the card would get, `save_demo_package` is Save as Package (it writes the
+file, puts the card on the list, and answers the link; with `addToWelcome:false` it is Send a
+Link's save, the file only, with the card kept off), and `remove_demo_package` is Remove
+Package. The handler leaves the Welcome list untouched only when `addToWelcome` is omitted,
+which only the link form does; the tool always sends true or false. Both writes need `confirm:true`. The file form is
 `export_demo_bundle`, which writes the bundle inside the project directory. Copying a link
 to the clipboard is a person's act and has no tool.
 

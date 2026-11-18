@@ -97,7 +97,7 @@ export function ProjectDashboardScreen({
     // change mode (rendered by DashboardDialogs).
     const [changeSourceOpen, setChangeSourceOpen] = useState(false);
     const openChangeSource = demo ? () => setChangeSourceOpen(true) : undefined;
-    const handover = useHandoverDialogs(); // the Share dialog
+    const handover = useHandoverDialogs(); // Share Demo and Save as Package
     // Inline title rename commit (null = success; string = inline error).
     const renameInline = useInlineRename();
 
@@ -253,7 +253,7 @@ export function ProjectDashboardScreen({
                             <DemoSourceNotice
                                 issue={demoSourceIssue}
                                 onChangeSource={openChangeSource}
-                                onKeepAsOwn={isEdsStable ? handover.openShare : undefined}
+                                onKeepAsOwn={isEdsStable ? handover.openSavePackage : undefined}
                             />
                         </>
                     }
@@ -294,6 +294,7 @@ export function ProjectDashboardScreen({
                                     needsReset={projectStatus?.storefrontNeedsReset === true}
                                     handleEditProject={handleEditProject}
                                     handleShareDemo={handover.openShare}
+                                    handleSavePackage={isEdsStable ? handover.openSavePackage : undefined}
                                     handleChangeDemoSource={openChangeSource}
                                     handleResetProject={handleResetProject}
                                     handleDeleteProject={handleDeleteProject}

@@ -1,6 +1,6 @@
 /**
  * DashboardDialogs — everything the project dashboard can open ON TOP of
- * itself: Change source, Share Demo, the long-operation
+ * itself: Change source, Share Demo, Save as Package, the long-operation
  * progress modal, the Reset batch window, the AI capability catalog, and the
  * Finish Setup guide (PL-101).
  *
@@ -20,6 +20,7 @@ import type { FinishSetupControls } from '../hooks/useFinishSetup';
 import type { HandoverDialogs } from '../hooks/useHandoverDialogs';
 import { AiCapabilitiesModal } from './AiCapabilitiesModal';
 import { FinishSetupGuide } from './FinishSetupGuide';
+import { SavePackageModal } from './share/SavePackageModal';
 import { ShareModal } from './share/ShareModal';
 import { OperationProgressModal } from '@/core/ui/components/feedback/OperationProgressModal';
 import type { OperationRunnerControls } from '@/core/ui/hooks/useOperationRunner';
@@ -58,7 +59,7 @@ export interface DashboardDialogsProps {
     /** The added demo whose source is being changed: present only while that dialog is open. */
     changeSourceDemo?: NonNullable<DashboardInitialData['demo']>;
     onCloseChangeSource: () => void;
-    /** The Share dialog's open state. */
+    /** Share Demo's and Save as Package's open state. */
     handover: HandoverDialogs;
     /** The long-operation runner whose modal narrates reset, delete, sync and republish. */
     operations: OperationRunnerControls;
@@ -115,6 +116,8 @@ export function DashboardDialogs({
             {handover.shareOpen ? (
                 <ShareModal isOpen isEds={isEds} onClose={handover.closeShare} />
             ) : null}
+
+            {handover.savePackageOpen ? <SavePackageModal isOpen onClose={handover.closeSavePackage} /> : null}
 
             <OperationProgressModal
                 operation={operations.open}

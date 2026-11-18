@@ -20,8 +20,9 @@
  *    — set apart — Reset (a "Needs reset" dot when the storefront is behind how
  *    Demo Builder builds storefronts now) and Delete.
  *  - Share: moving a demo between people. Share Demo (one dialog, a link or a
- *    file, since 2026-10-22), Change Source (only for a project built on an
- *    added demo).
+ *    file, since 2026-10-22), Save as Package (EDS only, since EDS-72: the card
+ *    on the SC's own Welcome step), Change Source (only for a project built on
+ *    an added demo).
  *
  * AEM Assets and Dev Console sat beside the Open cards until Integrations made
  * a fourth card and they ran past the content band (owner, 2026-10-06). They
@@ -172,6 +173,11 @@ export interface ActionGridProps {
     /** Handler for the Share Demo tile: the one dialog for a link or a file */
     handleShareDemo: () => void;
     /**
+     * Handler for the Save as Package tile (EDS-72): the card on the SC's own Welcome step, to
+     * build new projects from. Shown only for an EDS project, whose storefront the card builds from.
+     */
+    handleSavePackage?: () => void;
+    /**
      * Handler for the Change Demo Source tile. Present only for a
      * project built on an added demo: it points the project at another copy
      * of that demo (the notice offers the same door when the source is gone).
@@ -255,6 +261,7 @@ export function ActionGrid({
     needsReset = false,
     handleEditProject,
     handleShareDemo,
+    handleSavePackage,
     handleChangeDemoSource,
     handleResetProject,
     handleDeleteProject,
@@ -326,7 +333,11 @@ export function ActionGrid({
                 handleDeleteProject={handleDeleteProject}
                 needsReset={needsReset}
             />
-            <ShareZone handleShareDemo={handleShareDemo} handleChangeDemoSource={handleChangeDemoSource} />
+            <ShareZone
+                handleShareDemo={handleShareDemo}
+                handleSavePackage={isEds ? handleSavePackage : undefined}
+                handleChangeDemoSource={handleChangeDemoSource}
+            />
             </div>
         </div>
     );

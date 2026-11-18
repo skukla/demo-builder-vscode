@@ -26,6 +26,7 @@ Object.defineProperty(navigator, 'clipboard', {
 });
 
 // The SUT binds below the mocks on purpose (webview-test-authoring §3).
+import { SavePackageModal } from '@/features/dashboard/ui/components/share/SavePackageModal';
 import { ShareModal, type ShareModalProps } from '@/features/dashboard/ui/components/share/ShareModal';
 import type {
     DemoPackageCheck,
@@ -84,6 +85,21 @@ export async function renderShare(
     const view = render(<ShareModal {...props} />);
     await settle();
     return { ...view, props };
+}
+
+/** Save as Package: it reads the storefront on open, as Share Demo's link step does (EDS-72). */
+export async function renderSavePackage(preview: unknown = answer(PREVIEW)) {
+    mockRequest.mockResolvedValueOnce(preview);
+    const onClose = jest.fn();
+    const view = render(<SavePackageModal isOpen onClose={onClose} />);
+    await settle();
+    return { ...view, onClose };
+}
+
+/** Save as Package with its read left unanswered, so its wait stays up. */
+export function renderSavePackagePending(): void {
+    mockRequest.mockReturnValueOnce(new Promise(() => undefined));
+    render(<SavePackageModal isOpen onClose={jest.fn()} />);
 }
 
 /** Render with the storefront read left unanswered, so the loading state stays up. */
@@ -146,11 +162,6 @@ function control<T extends HTMLElement>(testId: string, tag: string): T {
 /** A part on the file form, a house checkbox row, found by its label (its line follows in the name). */
 export function partBox(label: 'Setup' | 'Storefront'): HTMLInputElement {
     return screen.getByRole('checkbox', { name: new RegExp(`^${label}`) }) as HTMLInputElement;
-}
-
-/** The Welcome box, a house checkbox row, found by its label (its quiet line follows in the name). */
-export function welcomeBox(): HTMLInputElement {
-    return screen.getByRole('checkbox', { name: /^Add to My Welcome Step/ }) as HTMLInputElement;
 }
 
 export function nameInput(): HTMLInputElement {

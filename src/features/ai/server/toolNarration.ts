@@ -246,7 +246,7 @@ export const TOOL_NARRATION: Record<string, string> = {
     edit_added_demo: "Editing the added demo's card",
     change_demo_source: "Repointing the project's demo",
     get_demo_package_preview: 'Reading the demo package draft',
-    save_demo_package: 'Saving the storefront as a demo',
+    save_demo_package: 'Saving the demo as a package',
     remove_demo_package: 'Removing the demo package',
     export_demo_bundle: 'Saving the demo as a file',
     repair_site_configuration: 'Repairing the site configuration',

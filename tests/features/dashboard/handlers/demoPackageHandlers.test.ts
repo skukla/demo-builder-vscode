@@ -232,7 +232,11 @@ describe('handleGetShareDatapackCheck', () => {
 describe('handleSaveDemoPackage', () => {
     it('writes the description file, puts the same card on the list with the default branch, and records the sha', async () => {
         const { context, saveProject } = contextFor(edsProject());
-        const result = await handleSaveDemoPackage(context, { name: 'Bodea by Steve', description: 'Data center gear' });
+        const result = await handleSaveDemoPackage(context, {
+            name: 'Bodea by Steve',
+            description: 'Data center gear',
+            addToWelcome: true,
+        });
 
         expect(result.success).toBe(true);
         expect(result.data as SaveDemoPackageResult).toMatchObject({
@@ -265,7 +269,7 @@ describe('handleSaveDemoPackage', () => {
     it('leaves a description file it did not write alone, says so, still puts the card on the list, and records no sha as ours', async () => {
         fileOperations.getFileContent.mockResolvedValue({ content: '{"kind":"demo","name":"hand-written"}', sha: 'theirs' });
         const { context, saveProject } = contextFor(edsProject());
-        const result = await handleSaveDemoPackage(context, { name: 'Bodea', description: '' });
+        const result = await handleSaveDemoPackage(context, { name: 'Bodea', description: '', addToWelcome: true });
         const data = result.data as SaveDemoPackageResult;
         expect(data.file).toBe('skipped');
         expect(data.fileReason).toMatch(/not written by Demo Builder/);
@@ -277,13 +281,33 @@ describe('handleSaveDemoPackage', () => {
     });
 });
 
-// The Share dialog's "Also show it on my Welcome step" box. Ticked is today's
-// behaviour and stays the default; unticked writes the file and leaves (or
-// takes) the card off the SC's own list, so the box always says what is true.
-describe('handleSaveDemoPackage — the Welcome card is optional', () => {
-    it('puts the card on the list when addToWelcome is absent (the default)', async () => {
+// Where the card goes. Save as Package sends true (the card on the SC's own Welcome step); false
+// writes the file and takes the card off; omitted, as Share Demo's Send a Link sends it since its
+// box went (EDS-72), the file is written and the Welcome list is left exactly as it is.
+describe('handleSaveDemoPackage — the Welcome card', () => {
+    it('leaves the list as it is when addToWelcome is omitted, and answers that no card is on it', async () => {
+        const { context, saveProject } = contextFor(edsProject());
+        const data = (await handleSaveDemoPackage(context, { name: 'Bodea', description: '' })).data as SaveDemoPackageResult;
+        expect(fileOperations.createOrUpdateFile).toHaveBeenCalledTimes(1);
+        expect(mockRemember).not.toHaveBeenCalled();
+        expect(mockForget).not.toHaveBeenCalled();
+        expect(data.onList).toBe(false);
+        expect((saveProject.mock.calls[0][0] as Project).demoPackage).toMatchObject({ fileSha: 'blob-1' });
+    });
+
+    it('keeps a card already on the list when addToWelcome is omitted, and answers that it is on', async () => {
+        mockList.mockReturnValue([OWN_CARD]);
         const { context } = contextFor(edsProject());
         const data = (await handleSaveDemoPackage(context, { name: 'Bodea', description: '' })).data as SaveDemoPackageResult;
+        expect(mockRemember).not.toHaveBeenCalled();
+        expect(mockForget).not.toHaveBeenCalled();
+        expect(data.onList).toBe(true);
+    });
+
+    it('puts the card on the list when addToWelcome is true', async () => {
+        const { context } = contextFor(edsProject());
+        const data = (await handleSaveDemoPackage(context, { name: 'Bodea', description: '', addToWelcome: true }))
+            .data as SaveDemoPackageResult;
         expect(mockRemember).toHaveBeenCalledTimes(1);
         expect(data.onList).toBe(true);
     });

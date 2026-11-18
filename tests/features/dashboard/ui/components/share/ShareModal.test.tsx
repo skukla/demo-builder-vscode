@@ -5,8 +5,9 @@
  * the demo travels, as two choice cards with a line on each, with Next; step 2 is
  * the chosen form, with Back. The link form is the checks that need the SC first,
  * then the repository as a read-only field, the name and description (always shown,
- * walk F229), the "Add to My Welcome Step" box with its help line under it (walk F231),
- * and the undo. The button says whether the
+ * walk F229), and nothing else: the "Add to My Welcome Step" box and the undo moved to Save as
+ * Package (owner, 2026-11-18, EDS-72), so the link's save leaves the Welcome step as it is. The
+ * button says whether the
  * press will write: "Save and Copy Link" until the details are in the
  * repository (and again after an edit), then "Copy Link". The file form is
  * unchanged from Export.
@@ -26,7 +27,6 @@ import {
     next,
     partBox,
     PREVIEW,
-    REMOVED,
     renderShare,
     renderShareFile,
     renderShareLink,
@@ -34,7 +34,6 @@ import {
     resetShareMocks,
     SAVED,
     sent,
-    welcomeBox,
 } from './ShareModal.testUtils';
 
 const LINK_LINE = 'For colleagues with access to your repository. Includes later changes.';
@@ -126,11 +125,10 @@ describe('ShareModal', () => {
 
         it('keeps what the SC set on the link form through Back and Next', async () => {
             await renderShareLink();
-            fireEvent.click(welcomeBox());
-            expect(welcomeBox().checked).toBe(false);
+            fireEvent.change(nameInput(), { target: { value: 'Bodea by Steve' } });
             await click('Back');
             await next();
-            expect(welcomeBox().checked).toBe(false);
+            expect(nameInput().value).toBe('Bodea by Steve');
         });
     });
 
@@ -189,7 +187,9 @@ describe('ShareModal', () => {
             expect(button('Copied')).toBeInTheDocument();
         });
 
-        it('a storefront without them: the button says it saves, writes the prefilled details with the card, then copies', async () => {
+        // EDS-72: the link's save writes the details and leaves the Welcome step as it is, so it
+        // sends no addToWelcome at all (omitted is the handler's "do not touch the list").
+        it('a storefront without them: the button says it saves, writes the prefilled details alone, then copies', async () => {
             await renderShareLink();
             // A button labelled only "Copy link" must not write.
             expect(screen.queryByRole('button', { name: 'Copy Link' })).not.toBeInTheDocument();
@@ -197,11 +197,9 @@ describe('ShareModal', () => {
 
             await click(SAVE_AND_COPY);
 
-            expect(mockRequest).toHaveBeenLastCalledWith('saveDemoPackage', {
-                name: 'Bodea',
-                description: 'Bodea-branded B2B demo',
-                addToWelcome: true,
-            });
+            const [[, request]] = sent('saveDemoPackage');
+            expect(request).toEqual({ name: 'Bodea', description: 'Bodea-branded B2B demo' });
+            expect(request).not.toHaveProperty('addToWelcome');
             expect(mockWriteText).toHaveBeenCalledWith(LINK);
             expect(button('Copied')).toBeInTheDocument();
         });
@@ -321,11 +319,9 @@ describe('ShareModal', () => {
             mockRequest.mockResolvedValueOnce(answer(SAVED));
             await click(SAVE_AND_COPY);
 
-            expect(mockRequest).toHaveBeenLastCalledWith('saveDemoPackage', {
-                name: 'Bodea by Steve',
-                description: 'Bodea-branded B2B demo',
-                addToWelcome: true,
-            });
+            const [[, request]] = sent('saveDemoPackage');
+            expect(request).toEqual({ name: 'Bodea by Steve', description: 'Bodea-branded B2B demo' });
+            expect(request).not.toHaveProperty('addToWelcome');
         });
 
         it('an empty name disables the button', async () => {
@@ -335,75 +331,15 @@ describe('ShareModal', () => {
         });
     });
 
-    describe('"Add to My Welcome Step"', () => {
-        it('is the house checkbox row', async () => {
-            await renderShareLink();
-            expect(welcomeBox().closest('.checkbox-row')).not.toBeNull();
-        });
-
-        // Walk F229 (owner): the box was unclear; one quiet line says what it does. Walk F231:
-        // that line sits under the label as help text, not run on after it.
-        it('says what it does in a help line under its label', async () => {
-            await renderShareLink();
-            const row = welcomeBox().closest('.checkbox-row') as HTMLElement;
-            expect(row.querySelector('.choice-help')).toHaveTextContent('So you can start new projects from it.');
-            expect(row.querySelector('.checkbox-row-detail')).toBeNull();
-        });
-
-        // Walk F231: an option on what is saved comes after the details it saves.
-        it('comes after the name and description', async () => {
-            await renderShareLink();
-            const description = screen.getByTestId('share-description');
-            expect(description.compareDocumentPosition(welcomeBox()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-        });
-
-        it('is ticked by default for a storefront not yet shared, and unticked sends addToWelcome:false', async () => {
-            await renderShareLink();
-            expect(welcomeBox().checked).toBe(true);
-
-            fireEvent.click(welcomeBox());
-            mockRequest.mockResolvedValueOnce(answer({ ...SAVED, onList: false }));
-            await click(SAVE_AND_COPY);
-
-            expect(mockRequest).toHaveBeenLastCalledWith('saveDemoPackage', expect.objectContaining({ addToWelcome: false }));
-        });
-
-        it('says what is true for a saved storefront whose card is off the list, and a change is a save', async () => {
-            await renderShareLink(answer({ ...PREVIEW, saved: true, onList: false }));
-            expect(welcomeBox().checked).toBe(false);
-            expect(button('Copy Link')).toBeInTheDocument();
-
-            fireEvent.click(welcomeBox());
-
-            expect(button(SAVE_AND_COPY)).toBeInTheDocument();
-        });
-    });
-
-    describe('the undo', () => {
-        it('is not offered before anything was saved', async () => {
-            await renderShareLink();
-            expect(screen.queryByRole('button', { name: 'Remove the Details from My Repository' })).not.toBeInTheDocument();
-        });
-
-        it('removes the details and the card, says what it undid, and the button goes back to saving', async () => {
-            await renderShareLink(answer({ ...PREVIEW, saved: true, onList: true }));
-            mockRequest.mockResolvedValueOnce(answer(REMOVED));
-
-            await click('Remove the Details from My Repository');
-
-            expect(mockRequest).toHaveBeenLastCalledWith('removeDemoPackage');
-            expect(screen.getByTestId('share-removed')).toHaveTextContent(
-                'The details are out of your repository and the card is off your Welcome step.',
-            );
-            expect(screen.getByTestId('share-removed')).toHaveClass('dialog-note');
-            expect(button(SAVE_AND_COPY)).toBeInTheDocument();
-            expect(screen.queryByRole('button', { name: 'Remove the Details from My Repository' })).not.toBeInTheDocument();
-        });
-
-        it('is offered for a card on the list even when the file is not ours', async () => {
-            await renderShareLink(answer({ ...PREVIEW, saved: false, onList: true }));
-            expect(button('Remove the Details from My Repository')).toBeInTheDocument();
-        });
+    // EDS-72 (owner: Share Demo is not the place for it): the Welcome box and the undo moved to
+    // Save as Package on the dashboard.
+    it('has no Welcome box and no undo, even for a storefront already on the Welcome step', async () => {
+        await renderShareLink(answer({ ...PREVIEW, saved: true, onList: true }));
+        // Positive control: the form rendered.
+        expect(screen.getByTestId('share-link')).toHaveTextContent('Repository');
+        expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+        expect(screen.getByTestId('share-link-form')).not.toHaveTextContent('Welcome');
+        expect(screen.queryByRole('button', { name: /Remove/ })).not.toBeInTheDocument();
     });
 
     describe('the file form', () => {

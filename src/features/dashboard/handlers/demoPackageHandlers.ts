@@ -180,13 +180,18 @@ function cardFor(
     };
 }
 
-/** Put the card on the SC's list, or keep it off; answers whether it is on. */
+/**
+ * Put the card on the SC's list (true), take it off (false), or leave the list exactly as it is
+ * (undefined: Share Demo's Send a Link, which has no say over the Welcome step since EDS-72).
+ * Answers whether the card is on.
+ */
 async function placeCard(
-    wanted: boolean,
+    wanted: boolean | undefined,
     description: SharedDemoDescription,
     storefront: OwnStorefront,
     repoOperations: Pick<GitHubRepoOperations, 'getRepository'>,
 ): Promise<boolean> {
+    if (wanted === undefined) return isOnList(storefront);
     if (!wanted) {
         if (isOnList(storefront)) await forgetAddedDemo(storefront);
         return false;
@@ -219,9 +224,9 @@ export const handleSaveDemoPackage: MessageHandler<SaveDemoPackageRequest> = asy
     }
 
     // The card on the SC's own Welcome step: the same row a colleague's add builds,
-    // from the description just written (or meant to be), never re-read. Unticked
-    // in the Share dialog, the card stays off, or comes off if it was there.
-    const onList = await placeCard(data?.addToWelcome !== false, description, storefront, repoOperations);
+    // from the description just written (or meant to be), never re-read. Save as Package
+    // asks for it; false takes it off; Send a Link says nothing and the list stays as it is.
+    const onList = await placeCard(data?.addToWelcome, description, storefront, repoOperations);
 
     // Record what is ours to undo: the file's sha when we wrote it (empty when the
     // file was not ours to write).
