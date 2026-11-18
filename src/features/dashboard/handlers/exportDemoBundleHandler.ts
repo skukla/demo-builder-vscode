@@ -67,9 +67,21 @@ function extensionVersion(): string {
     return vscode.extensions?.getExtension('AdobeDemoSystem.adobe-demo-builder')?.packageJSON?.version || 'unknown';
 }
 
+/**
+ * The settings export's answer, read as the bundle's (walk F236): Share Demo draws its result from
+ * the path, and a dismissed save dialog is `cancelled`, as the bundle's own dialog answers.
+ */
+function asBundleResult(answer: HandlerResponse): HandlerResponse {
+    if (!answer.success) return answer;
+    const written = answer.data as { success?: boolean; filePath?: string } | undefined;
+    if (!written?.success || !written.filePath) return { success: true, data: { cancelled: true } satisfies ExportDemoBundleResult };
+    return { success: true, data: { path: written.filePath, fileCount: 1, parts: ['setup'] } satisfies ExportDemoBundleResult };
+}
+
 /** The setup part on its own is the settings file the projects list imports today. */
 async function setupOnly(context: HandlerContext, project: Project, providedPath: string | undefined, packNote?: string): Promise<HandlerResponse> {
-    if (!providedPath && context.panel) return exportProjectSettings(context, project);
+    // The window shows where the file went (walk F236), so the export's own pop-up stays quiet.
+    if (!providedPath && context.panel) return asBundleResult(await exportProjectSettings(context, project, { announce: false }));
     const written = await exportProjectSettingsToFile(project, { path: providedPath, globalState: context.context.globalState });
     return { success: true, data: { path: written.path, fileCount: 1, parts: ['setup'], ...(packNote ? { packNote } : {}) } satisfies ExportDemoBundleResult };
 }
@@ -132,4 +144,20 @@ export const handleExportDemoBundle: MessageHandler<ExportDemoBundleRequest> = a
         context.logger.error(`[Export] bundle failed: ${(error as Error).message}`);
         return { success: false, error: (error as Error).message };
     }
+};
+
+/**
+ * Reveal in Finder, on Share Demo's result once Save File wrote the file (walk F236): shows the
+ * file in the operating system's file browser, through VS Code's own `revealFileInOS`. Only an
+ * existing file at an absolute path; anything else is refused, since there is nothing to show.
+ */
+export const FILE_GONE = 'That file is no longer there.';
+
+export const handleRevealFile: MessageHandler<{ path?: string }> = async (_context, data): Promise<HandlerResponse> => {
+    const target = data?.path;
+    if (typeof target !== 'string' || !path.isAbsolute(target) || !fs.existsSync(target)) {
+        return { success: false, error: FILE_GONE, code: ErrorCode.INVALID_OPERATION };
+    }
+    await vscode.commands.executeCommand('revealFileInOS', vscode.Uri.file(target));
+    return { success: true };
 };

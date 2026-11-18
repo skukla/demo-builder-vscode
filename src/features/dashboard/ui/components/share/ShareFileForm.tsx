@@ -16,7 +16,7 @@ import { ShareChecks } from './ShareChecks';
 import type { ShareDatapackFix } from './useShareDatapack';
 import { FILE_FAILED, type UseShareFile } from './useShareFile';
 import { CheckboxRow } from '@/core/ui/components/selection/CheckboxRow';
-import type { DemoPackageCheck, ExportDemoBundleResult } from '@/types/webviewRequests';
+import type { DemoPackageCheck } from '@/types/webviewRequests';
 
 const FILE_COPY = {
     whatFile: 'What to Include',
@@ -27,12 +27,6 @@ const FILE_COPY = {
     storefrontHeadless: 'This project has no storefront of its own.',
     nothingTicked: 'Select at least one part.',
 } as const;
-
-function savedLine(saved: ExportDemoBundleResult): string {
-    const what = (saved.parts ?? []).join(' and ');
-    const count = saved.fileCount ?? 0;
-    return `Saved ${what} (${count.toLocaleString('en-US')} ${count === 1 ? 'file' : 'files'}) to ${saved.path ?? ''}`;
-}
 
 /** The file's own check: the datapack's. The repository and published pages are the link's concern. */
 function datapackOnly(checks: DemoPackageCheck[]): DemoPackageCheck[] {
@@ -77,7 +71,6 @@ export function ShareFileForm({ isEds, file, checks, fix }: ShareFileFormProps):
                 />
             </div>
             {file.nothing ? <p className="export-part-note">{FILE_COPY.nothingTicked}</p> : null}
-            {file.saved ? <p className="dialog-note" data-testid="export-saved">{savedLine(file.saved)}</p> : null}
             {file.error ? <p className="dialog-problem text-negative" data-testid="export-error">{FILE_FAILED} {file.error}</p> : null}
         </div>
     );

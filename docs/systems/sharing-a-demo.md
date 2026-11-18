@@ -265,7 +265,11 @@ bottom, the form shows (walk F230, 2026-11-18, laid out the way the link form is
   demo's description file inside). On a headless project the storefront row is off and
   locked, and says the project has none.
 
-**Save File** in the footer saves the ticked parts; with nothing ticked it is off. It asks
+**Save File** in the footer saves the ticked parts; with nothing ticked it is off. Once the
+file is written the window becomes the result (walk F236): a large green check, **File Saved**,
+the file and the folder it is in, and **Reveal in Finder** (Reveal in File Explorer on Windows),
+which shows the file through VS Code's own `revealFileInOS` (the `revealFile` handler). Dismissing
+the save dialog leaves the form as it was. It asks
 nothing more: before 2026-11-18 it asked a VS Code pop-up ("Your teammates can't use this
 datapack's data. Share it?") whose other answer saved the same file anyway, so with the notice
 already on screen a second question would only repeat it. A file saved without the share still

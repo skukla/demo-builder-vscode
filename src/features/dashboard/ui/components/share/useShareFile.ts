@@ -30,6 +30,8 @@ export interface UseShareFile {
     saved?: ExportDemoBundleResult;
     error?: string;
     save: () => void;
+    /** Shows the saved file in the operating system's file browser (walk F236). */
+    reveal: () => void;
 }
 
 /**
@@ -59,5 +61,9 @@ export function useShareFile(isEds: boolean): UseShareFile {
             .catch((failure: Error) => setError(failure.message))
             .finally(() => setBusy(false));
     }, [setup, storefront]);
-    return { setup, setSetup, storefront, setStorefront, nothing: !setup && !storefront, busy, saved, error, save };
+    const savedPath = saved?.path;
+    const reveal = useCallback((): void => {
+        if (savedPath) void webviewClient.request('revealFile', { path: savedPath });
+    }, [savedPath]);
+    return { setup, setSetup, storefront, setStorefront, nothing: !setup && !storefront, busy, saved, error, save, reveal };
 }

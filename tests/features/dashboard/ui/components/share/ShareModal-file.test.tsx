@@ -193,7 +193,7 @@ describe('ShareModal: the file step', () => {
             expect(sent('exportDemoBundle')).toEqual([
                 ['exportDemoBundle', { setup: true, storefront: true }],
             ]);
-            expect(screen.getByTestId('export-saved')).toBeInTheDocument();
+            expect(screen.getByTestId('result-body')).toHaveTextContent('File Saved');
         });
     });
 });

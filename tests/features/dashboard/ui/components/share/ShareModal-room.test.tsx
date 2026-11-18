@@ -47,13 +47,13 @@ describe('ShareModal: room for its notes from the first frame', () => {
         expect(pressed.querySelector('[data-testid="export-file-form"]')).toBeNull();
     });
 
-    it("reserves only the file form, with its two lines: nothing ticked, and what Save File wrote", async () => {
+    it("reserves only the file form, with its two lines: nothing ticked, and why Save File failed", async () => {
         await renderShareFile();
         expect(reserved()).toHaveLength(1);
         const file = reserved()[0];
 
         expect(within(file).getByText('Select at least one part.')).toBeInTheDocument();
-        expect(within(file).getByTestId('export-saved')).toBeInTheDocument();
+        expect(within(file).getByTestId('export-error')).toBeInTheDocument();
         expect(file.querySelector('[data-testid="share-link"]')).toBeNull();
     });
 });

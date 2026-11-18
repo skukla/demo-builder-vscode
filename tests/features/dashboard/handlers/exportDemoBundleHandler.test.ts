@@ -88,9 +88,16 @@ describe('handleExportDemoBundle', () => {
     });
 
     it('with setup alone hands over to the settings export: the save dialog from the webview, a credential-free file for an agent', async () => {
+        mockSettingsDialog.mockResolvedValueOnce({ success: true, data: { success: true, filePath: '/Users/steve/kukla-bodea.json' } });
         const fromDialog = await handleExportDemoBundle(contextFor(edsProject(dir), true), { setup: true, storefront: false });
-        expect(mockSettingsDialog).toHaveBeenCalledTimes(1);
-        expect(fromDialog).toMatchObject({ success: true });
+        // Walk F236: the window says where it went, so the settings export's own pop-up stays quiet,
+        // and its answer reads as the bundle's, which the window's result is drawn from.
+        expect(mockSettingsDialog).toHaveBeenCalledWith(expect.anything(), expect.anything(), { announce: false });
+        expect(fromDialog).toEqual({ success: true, data: { path: '/Users/steve/kukla-bodea.json', fileCount: 1, parts: ['setup'] } });
+
+        mockSettingsDialog.mockResolvedValueOnce({ success: true, data: { success: false, error: 'cancelled' } });
+        const dismissed = await handleExportDemoBundle(contextFor(edsProject(dir), true), { setup: true, storefront: false });
+        expect(dismissed).toEqual({ success: true, data: { cancelled: true } });
 
         const agent = contextFor(edsProject(dir), false);
         const headless = await handleExportDemoBundle(agent, { setup: true, storefront: false, path: 'out.json' });

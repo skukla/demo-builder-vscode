@@ -34,7 +34,7 @@ import {
     handleRefreshBlockLibrary,
     handleRepublishContent,
 } from './edsContentHandlers';
-import { handleExportDemoBundle } from './exportDemoBundleHandler';
+import { handleExportDemoBundle, handleRevealFile } from './exportDemoBundleHandler';
 import { sendDemoStatusUpdate } from './meshStatusHelpers';
 import {
     handleOpenBrowser,
@@ -483,6 +483,7 @@ export const dashboardHandlers = defineHandlers({
     getShareDatapackCheck: handleGetShareDatapackCheck,
     // Export, "Send a file": one bundle of the ticked parts (setup, storefront).
     exportDemoBundle: handleExportDemoBundle,
+    revealFile: handleRevealFile, // its result's Reveal in Finder (walk F236)
 
     // "Change source" for a project built on an added demo: the Add a demo package
     // dialog in its change mode probes with the wizard's own handler, then

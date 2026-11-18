@@ -32,6 +32,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { SHARE_COPY } from './shareCopy';
 import { ShareFileForm } from './ShareFileForm';
 import { buttonLabel, ShareLinkForm } from './ShareLinkForm';
+import { revealLabel, ShareResult } from './ShareResult';
 import { useShareDatapack, type ShareDatapackFix } from './useShareDatapack';
 import { useShareFile, type UseShareFile } from './useShareFile';
 import { useShareLink, type UseShareLink } from './useShareLink';
@@ -232,9 +233,12 @@ function linkRooms(flow: UseShareLink): UseShareLink[] {
     ];
 }
 
-/** The file form at its tallest: "Select at least one part." and what Save File wrote, two lines. */
+/**
+ * The file form at its tallest: "Select at least one part." and why Save File failed, two lines.
+ * What it wrote is the result window's (walk F236), not a line here.
+ */
 function fileRoom(file: UseShareFile): UseShareFile {
-    return { ...file, nothing: true, saved: { path: REASON_ROOM, fileCount: 1000, parts: ['setup', 'storefront'] } };
+    return { ...file, nothing: true, error: REASON_ROOM };
 }
 
 interface WindowProps extends Omit<ShareModalProps, 'isOpen'> {
@@ -282,6 +286,19 @@ function ShareWindow({ isEds, onClose, read }: WindowProps): React.ReactElement 
                 <StepBody>
                     <FormChoice form={form} onChange={setForm} />
                 </StepBody>
+            </StepsWindow>
+        );
+    }
+    if (form === 'file' && file.saved?.path) {
+        // Saved: the window is the result (walk F236), with Close and Reveal in Finder.
+        return (
+            <StepsWindow
+                key="saved"
+                title={SHARE_COPY.title}
+                actionButtons={[{ label: revealLabel(), variant: 'accent', onPress: file.reveal }]}
+                onClose={onClose}
+            >
+                <ShareResult path={file.saved.path} />
             </StepsWindow>
         );
     }

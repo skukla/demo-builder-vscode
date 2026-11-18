@@ -13,6 +13,7 @@
  */
 
 import { act, fireEvent, screen, within } from '@testing-library/react';
+import { revealLabel } from '@/features/dashboard/ui/components/share/ShareResult';
 import {
     answer,
     button,
@@ -406,7 +407,10 @@ describe('ShareModal', () => {
     });
 
     describe('the file form', () => {
-        it('ticks setup and storefront by default, saves one bundle through the host, and reports what and where', async () => {
+        // Walk F236 (owner: "the success state is terrible"): a grey line under the boxes left the
+        // window looking as it did before. The window becomes the house result: the large mark,
+        // File Saved, the file and its folder, and Reveal in Finder.
+        it('ticks setup and storefront by default, saves one bundle through the host, and shows the result', async () => {
             await renderShareFile();
             expect(partBox('Setup').checked).toBe(true);
             expect(partBox('Storefront').checked).toBe(true);
@@ -417,19 +421,31 @@ describe('ShareModal', () => {
             await click('Save File');
 
             expect(mockRequest).toHaveBeenLastCalledWith('exportDemoBundle', { setup: true, storefront: true });
-            expect(screen.getByTestId('export-saved')).toHaveTextContent(
-                'Saved setup and storefront (813 files) to /Users/steve/bodea-demo-bundle.zip',
-            );
-            expect(screen.getByTestId('export-saved')).toHaveClass('dialog-note');
+            const result = screen.getByTestId('result-body');
+            expect(result).toHaveTextContent('File Saved');
+            expect(result).toHaveTextContent('bodea-demo-bundle.zip in steve');
+            expect(screen.queryByTestId('export-file-form')).not.toBeInTheDocument();
+            expect(footerLabels()).toEqual(['Close', revealLabel()]);
+
+            mockRequest.mockResolvedValueOnce({ success: true });
+            await click(revealLabel());
+            expect(mockRequest).toHaveBeenLastCalledWith('revealFile', { path: '/Users/steve/bodea-demo-bundle.zip' });
         });
 
         it('sends only the ticked parts and refuses none', async () => {
             await renderShareFile();
             fireEvent.click(partBox('Storefront'));
+            fireEvent.click(partBox('Setup'));
+            expect(button('Save File')).toHaveAttribute('aria-disabled', 'true');
+            fireEvent.click(partBox('Setup'));
             mockRequest.mockResolvedValueOnce(answer({ path: '/p/x.json', fileCount: 1, parts: ['setup'] }));
             await click('Save File');
             expect(mockRequest).toHaveBeenLastCalledWith('exportDemoBundle', { setup: true, storefront: false });
+        });
 
+        it('says when nothing is ticked', async () => {
+            await renderShareFile();
+            fireEvent.click(partBox('Storefront'));
             fireEvent.click(partBox('Setup'));
             expect(button('Save File')).toHaveAttribute('aria-disabled', 'true');
             expect(screen.getByTestId('export-file-form')).toHaveTextContent('Select at least one part.');
@@ -448,7 +464,8 @@ describe('ShareModal', () => {
             await renderShareFile();
             mockRequest.mockResolvedValueOnce(answer({ cancelled: true }));
             await click('Save File');
-            expect(screen.queryByTestId('export-saved')).not.toBeInTheDocument();
+            expect(screen.queryByTestId('result-body')).not.toBeInTheDocument();
+            expect(screen.getByTestId('export-file-form')).toBeInTheDocument();
         });
     });
 
