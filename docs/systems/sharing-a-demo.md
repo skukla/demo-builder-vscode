@@ -259,7 +259,7 @@ bottom, the form shows (walk F230, 2026-11-18, laid out the way the link form is
   (`getShareDatapackCheck`), both behind the window's opening wait. The link form's other
   checks are not shown here: the file carries the code itself. A check that cannot be read
   shows nothing, and never holds the file up.
-- **What to Include**, the two parts as checkbox rows, each with its line under it:
+- The two parts, as checkbox rows with no heading over them, each with its line under it:
   **Setup** ("Your Commerce, Adobe, GitHub and DA.live settings. Never a credential.") and
   **Storefront** ("The storefront's code and content site.", the repository's code with the
   demo's description file inside). On a headless project the storefront row is off and

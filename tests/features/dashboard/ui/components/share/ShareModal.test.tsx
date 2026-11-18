@@ -58,7 +58,9 @@ describe('ShareModal', () => {
         it('opens under its own title with only the two ways to hand over, as cards', async () => {
             await renderShare();
             expect(screen.getByRole('heading', { name: 'Share Demo' })).toBeInTheDocument();
-            expect(screen.getByTestId('share-form')).toHaveTextContent('How to Share');
+            // Walk F233: no heading over the cards; the title and the cards say it. Named for screen readers.
+            expect(screen.getByTestId('share-form')).not.toHaveTextContent('How to Share');
+            expect(screen.getByRole('group', { name: 'How to Share' })).toBeInTheDocument();
             const link = screen.getByTestId('share-form-link');
             const file = screen.getByTestId('share-form-file');
             // Each card names its way and says, at once, who it is for.
@@ -108,7 +110,7 @@ describe('ShareModal', () => {
 
         it('Next on the file card shows the file form alone, with Back, Close and Save File', async () => {
             await renderShareFile();
-            expect(screen.getByText('What to Include')).toBeInTheDocument();
+            expect(screen.getByTestId('export-file-form')).toBeInTheDocument();
             expect(screen.queryByTestId('share-form')).not.toBeInTheDocument();
             expect(footerLabels()).toEqual(['Back', 'Close', 'Save File']);
         });
@@ -406,7 +408,6 @@ describe('ShareModal', () => {
     describe('the file form', () => {
         it('ticks setup and storefront by default, saves one bundle through the host, and reports what and where', async () => {
             await renderShareFile();
-            expect(screen.getByText('What to Include')).toBeInTheDocument();
             expect(partBox('Setup').checked).toBe(true);
             expect(partBox('Storefront').checked).toBe(true);
             mockRequest.mockResolvedValueOnce(

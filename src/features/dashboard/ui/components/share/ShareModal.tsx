@@ -38,7 +38,6 @@ import { useShareLink, type UseShareLink } from './useShareLink';
 import { ChoiceCard } from '@/core/ui/components/selection/ChoiceCard';
 import { ConfirmActionWindow } from '@/core/ui/components/ui/ConfirmActionDialog';
 import type { ActionButton, ModalWait } from '@/core/ui/components/ui/Modal';
-import { SectionLabel } from '@/core/ui/components/ui/SectionLabel';
 import { StepsWindow } from '@/core/ui/components/ui/StepsDialog';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
 import { WAIT_STAGES } from '@/core/utils/waitStages';
@@ -84,8 +83,8 @@ export interface ShareModalProps {
 function FormChoice({ form, onChange }: { form: ShareForm; onChange: (form: ShareForm) => void }): React.ReactElement {
     return (
         <div data-testid="share-form">
-            <SectionLabel>{SHARE_COPY.how}</SectionLabel>
-            <div className="intflow-kind-choices">
+            {/* No heading over the cards (walk F233): the title and the cards say it. */}
+            <div className="intflow-kind-choices" role="group" aria-label={SHARE_COPY.how}>
                 <ChoiceCard
                     name={SHARE_COPY.link}
                     description={SHARE_COPY.linkWhy}

@@ -1,8 +1,9 @@
 /**
  * Share Demo's file step, fixed the way the link step was (owner, 2026-11-18, walk F230):
  *
- * - the two parts are house checkbox rows, each with its line as the row's quieter detail, under
- *   the "What to Include" label;
+ * - the two parts are house checkbox rows, each with its help line under it, with no heading over
+ *   them (walk F233: the faintest text in the window was heading brighter rows); the group keeps
+ *   "What to Include" as its name for screen readers;
  * - Save File holds only its own width, not the link step's longest label;
  * - a datapack only the SC can see is the link step's amber notice with Share Datapack, at the top
  *   of the file step, read from the same checks (the storefront preview for an Edge Delivery
@@ -51,10 +52,11 @@ beforeEach(resetShareMocks);
 
 describe('ShareModal: the file step', () => {
     describe('what to include', () => {
-        it('puts the two parts under the section label as house checkbox rows, each with its line', async () => {
+        it('shows the two parts as house checkbox rows, each with its line, with no heading over them', async () => {
             await renderShareFile();
 
-            expect(within(form()).getByText('What to Include')).toHaveClass('section-label');
+            expect(within(form()).queryByText('What to Include')).not.toBeInTheDocument();
+            expect(within(form()).getByRole('group', { name: 'What to Include' })).toBeInTheDocument();
             const rows = form().querySelectorAll('.checkbox-row');
             expect(rows).toHaveLength(2);
             expect(rows[0]).toHaveTextContent('Setup');
@@ -113,7 +115,7 @@ describe('ShareModal: the file step', () => {
             await renderShareFile({}, answer(AFTER_SHARE));
 
             expect(screen.queryByTestId('package-check-datapack')).not.toBeInTheDocument();
-            expect(within(form()).getByText('What to Include')).toBeInTheDocument();
+            expect(partBox('Setup')).toBeInTheDocument();
         });
 
         it('shares from the file step, reads again, and the notice goes with the ticks kept', async () => {

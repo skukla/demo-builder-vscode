@@ -16,7 +16,6 @@ import { ShareChecks } from './ShareChecks';
 import type { ShareDatapackFix } from './useShareDatapack';
 import { FILE_FAILED, type UseShareFile } from './useShareFile';
 import { CheckboxRow } from '@/core/ui/components/selection/CheckboxRow';
-import { SectionLabel } from '@/core/ui/components/ui/SectionLabel';
 import type { DemoPackageCheck, ExportDemoBundleResult } from '@/types/webviewRequests';
 
 const FILE_COPY = {
@@ -61,8 +60,8 @@ export function ShareFileForm({ isEds, file, checks, fix }: ShareFileFormProps):
     return (
         <div className="export-file-form" data-testid="export-file-form">
             <ShareChecks checks={datapackOnly(checks)} fix={fix} />
-            <SectionLabel>{FILE_COPY.whatFile}</SectionLabel>
-            <div className="export-parts">
+            {/* No heading over the boxes (walk F233): small and grey, it read fainter than the rows it headed. */}
+            <div className="export-parts" role="group" aria-label={FILE_COPY.whatFile}>
                 <CheckboxRow
                     label={FILE_COPY.setup}
                     help={FILE_COPY.setupWhat}
