@@ -198,6 +198,21 @@ describe('handleGetShareDatapackCheck', () => {
         expect(mockAccess).toHaveBeenCalledWith(expect.objectContaining({ panel: undefined }), 'library');
     });
 
+    // Walk F240: a file names a custom integration's repository, not its code, so the file step
+    // warns about a private one as the link step does.
+    it("adds a custom integration's check: a file carries only where its code lives", async () => {
+        repoOperations.getRepository.mockResolvedValue({ fullName: 'robin/erp-sync', isPrivate: true, defaultBranch: 'main' });
+        const { context } = contextFor(headless({
+            appBuilderComponents: { 'erp-sync': { kind: 'integration', status: 'deployed', name: 'ERP Sync', source: { owner: 'robin', repo: 'erp-sync' } } },
+        }));
+
+        const res = await handleGetShareDatapackCheck(context);
+
+        expect((res.data as ShareDatapackChecks).checks).toEqual([
+            { id: 'custom-app', ok: false, message: "The ERP Sync integration's code is private. Colleagues will need access to it.", repository: 'robin/erp-sync' },
+        ]);
+    });
+
     it('answers no checks for a project with no pack, asking no store', async () => {
         const { context } = contextFor(headless());
 

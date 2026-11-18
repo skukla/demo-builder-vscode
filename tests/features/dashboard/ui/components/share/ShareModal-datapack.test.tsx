@@ -55,7 +55,7 @@ describe('ShareModal: the datapack notice and its fix', () => {
         const missing: DemoPackageCheck = {
             id: 'datapack',
             ok: false,
-            message: "The sample data this demo uses (bodea) isn't available to colleagues yet.",
+            message: "The sample data this demo uses isn't available to colleagues yet.",
         };
         await renderShareLink(answer({ ...PREVIEW, checks: [missing] }));
         expect(within(notice()).queryByRole('button')).not.toBeInTheDocument();

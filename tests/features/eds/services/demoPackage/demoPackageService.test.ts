@@ -309,7 +309,7 @@ describe('packageChecks', () => {
         };
         const project = edsProject({
             datapack: { name: 'bodea', version: 'main' },
-            appBuilderComponents: { 'erp-sync': { kind: 'integration', status: 'deployed', source: { owner: 'robin', repo: 'erp-sync' } } },
+            appBuilderComponents: { 'erp-sync': { kind: 'integration', status: 'deployed', name: 'ERP Sync', source: { owner: 'robin', repo: 'erp-sync' } } },
         });
 
         const checks = await packageChecks(project, OWN, { indexFound: false }, { repoOps, datapackAvailability: async () => ({ where: 'missing' }), logger });
@@ -317,8 +317,9 @@ describe('packageChecks', () => {
         expect(checks).toEqual([
             { id: 'repository', ok: false, message: "This storefront's code is private. Colleagues will need access to it, or make it public." },
             { id: 'index', ok: false, message: 'Colleagues would start with an empty site.', action: 'republish' },
-            { id: 'datapack', ok: false, message: "The sample data this demo uses (bodea) isn't available to colleagues yet." },
-            { id: 'custom-app', ok: false, message: "The erp-sync integration's code is private. Colleagues will need access to it.", repository: 'robin/erp-sync' },
+            // Walk F240: names, never codes. A missing pack has no name to give, so it names none.
+            { id: 'datapack', ok: false, message: "The sample data this demo uses isn't available to colleagues yet." },
+            { id: 'custom-app', ok: false, message: "The ERP Sync integration's code is private. Colleagues will need access to it.", repository: 'robin/erp-sync' },
         ]);
     });
 

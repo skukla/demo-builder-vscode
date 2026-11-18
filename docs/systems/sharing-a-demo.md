@@ -260,7 +260,7 @@ bottom, the form shows (walk F230, 2026-11-18, laid out the way the link form is
   checks are not shown here: the file carries the code itself. A check that cannot be read
   shows nothing, and never holds the file up.
 - The two parts, as checkbox rows with no heading over them, each with its line under it:
-  **Setup** ("Your Commerce, Adobe, GitHub and DA.live settings.") and
+  **Setup** ("Your Commerce, Adobe, GitHub, DA.live and integration settings.": the integrations the project uses and their settings, and a custom integration's repository, never its code) and
   **Storefront** ("The storefront's code and content site.", the repository's code with the
   demo's description file inside). On a headless project the storefront row is off and
   locked, and says the project has none.

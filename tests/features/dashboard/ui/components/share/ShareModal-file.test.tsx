@@ -61,7 +61,7 @@ describe('ShareModal: the file step', () => {
             expect(rows).toHaveLength(2);
             expect(rows[0]).toHaveTextContent('Setup');
             expect(rows[0].querySelector('.choice-help')).toHaveTextContent(
-                'Your Commerce, Adobe, GitHub and DA.live settings.'
+                'Your Commerce, Adobe, GitHub, DA.live and integration settings.'
             );
             expect(rows[1]).toHaveTextContent('Storefront');
             expect(rows[1].querySelector('.choice-help')).toHaveTextContent(
@@ -109,6 +109,20 @@ describe('ShareModal: the file step', () => {
             expect(form().firstElementChild).toBe(notice());
             // A file carries the storefront's code, so the repository and index checks are the link's.
             expect(screen.queryByTestId('package-check-index')).not.toBeInTheDocument();
+        });
+
+        // Walk F240: a file names a custom integration's repository, not its code, so a private
+        // one is a warning here too, as on the link step.
+        it("also warns about a custom integration's private code", async () => {
+            const privateApp = {
+                id: 'custom-app' as const,
+                ok: false,
+                message: "The ERP Sync integration's code is private. Colleagues will need access to it.",
+                repository: 'robin/erp-sync',
+            };
+            await renderShareFile({}, answer({ ...AFTER_SHARE, checks: [...AFTER_SHARE.checks, privateApp] }));
+
+            expect(screen.getByTestId('package-check-custom-app')).toHaveTextContent("The ERP Sync integration's code is private.");
         });
 
         it('shows nothing when the pack needs nothing', async () => {

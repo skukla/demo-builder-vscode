@@ -23,15 +23,19 @@ import type { DemoPackageCheck } from '@/types/webviewRequests';
 const FILE_COPY = {
     whatFile: 'What to Include',
     setup: 'Setup',
-    setupWhat: 'Your Commerce, Adobe, GitHub and DA.live settings.',
+    setupWhat: 'Your Commerce, Adobe, GitHub, DA.live and integration settings.',
     storefront: 'Storefront',
     storefrontWhat: "The storefront's code and content site.",
     storefrontHeadless: 'This project has no storefront of its own.',
 } as const;
 
-/** The file's own check: the datapack's. The repository and published pages are the link's concern. */
-function datapackOnly(checks: DemoPackageCheck[]): DemoPackageCheck[] {
-    return checks.filter((check) => check.id === 'datapack');
+/**
+ * The file's own checks: the datapack's, and each custom integration's, since the file names
+ * their repositories rather than carrying their code (walk F240). The repository and published
+ * pages are the link's concern: the file carries the storefront's code and content.
+ */
+function fileChecks(checks: DemoPackageCheck[]): DemoPackageCheck[] {
+    return checks.filter((check) => check.id === 'datapack' || check.id === 'custom-app');
 }
 
 export interface ShareFileFormProps {
@@ -54,7 +58,7 @@ export interface ShareFileFormProps {
 export function ShareFileForm({ isEds, file, checks, fix }: ShareFileFormProps): React.ReactElement {
     return (
         <div className="export-file-form" data-testid="export-file-form">
-            <ShareChecks checks={datapackOnly(checks)} fix={fix} />
+            <ShareChecks checks={fileChecks(checks)} fix={fix} />
             {/* No heading over the boxes (walk F233): small and grey, it read fainter than the rows it headed. */}
             <div className="export-parts" role="group" aria-label={FILE_COPY.whatFile}>
                 <CheckboxRow

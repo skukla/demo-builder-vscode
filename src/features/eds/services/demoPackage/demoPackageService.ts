@@ -270,7 +270,8 @@ function datapackCheckFor(pack: DatapackLocation, found: DatapackWhereabouts | u
             share: { pack: { name: pack.name, version: pack.version }, displayName: shown },
         };
     }
-    return { id: 'datapack', ok: false, message: `The sample data this demo uses (${shown}) isn't available to colleagues yet.` };
+    // Missing: no store has it, so there is no name to give, and never the code (walk F240).
+    return { id: 'datapack', ok: false, message: "The sample data this demo uses isn't available to colleagues yet." };
 }
 
 /**
@@ -326,17 +327,32 @@ export async function packageChecks(
               },
     );
     checks.push(...(await datapackChecks(project, deps.datapackAvailability)));
+    checks.push(...(await customIntegrationChecks(project, deps)));
+    return checks;
+}
+
+/**
+ * Whether colleagues can read each custom integration's code. The link and the file both name
+ * its repository, never carry its code, so both of Share Demo's steps show this (walk F240). By
+ * the name the SC gave it, never its id.
+ */
+export async function customIntegrationChecks(
+    project: Project,
+    deps: Pick<PackageCheckDeps, 'repoOps' | 'logger'>,
+): Promise<PackageCheck[]> {
+    const checks: PackageCheck[] = [];
     for (const [id, state] of Object.entries(project.appBuilderComponents ?? {})) {
         if (state.kind !== 'integration' || getAppBuilderComponentEntry(id) || !state.source) continue;
         const fullName = `${state.source.owner}/${state.source.repo}`;
+        const name = state.name ?? id;
         const custom = await readRepository(deps.repoOps, state.source.owner, state.source.repo, deps.logger);
         checks.push(
             custom && !custom.isPrivate
-                ? { id: 'custom-app', ok: true, message: `Colleagues can add the ${id} integration.`, repository: fullName }
+                ? { id: 'custom-app', ok: true, message: `Colleagues can add the ${name} integration.`, repository: fullName }
                 : {
                       id: 'custom-app',
                       ok: false,
-                      message: `The ${id} integration's code is private. Colleagues will need access to it.`,
+                      message: `The ${name} integration's code is private. Colleagues will need access to it.`,
                       repository: fullName,
                   },
         );

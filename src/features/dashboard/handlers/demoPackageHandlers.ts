@@ -20,6 +20,7 @@ import { packReadsFor } from '@/features/data-installer/handlers/recordedPackHan
 import { availabilityOf } from '@/features/data-installer/services/recordedPack';
 import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import {
+    customIntegrationChecks,
     datapackChecks,
     describeProject,
     ownStorefrontOf,
@@ -142,7 +143,10 @@ function checkDeps(context: HandlerContext): PackageCheckDeps {
 export const handleGetShareDatapackCheck: MessageHandler = async (context) => {
     const project = await context.stateManager.getCurrentProject();
     if (!project) return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
-    const answer: ShareDatapackChecks = { checks: await datapackChecks(project, datapackLookup(context)) };
+    // With each custom integration's: a file names its repository, not its code (walk F240).
+    const deps = checkDeps(context);
+    const checks = [...(await datapackChecks(project, deps.datapackAvailability)), ...(await customIntegrationChecks(project, deps))];
+    const answer: ShareDatapackChecks = { checks };
     return { success: true, data: answer };
 };
 
