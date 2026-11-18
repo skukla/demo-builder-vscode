@@ -33,21 +33,21 @@ Send a Link loses its **Add to My Welcome Step** box (owner: Share Demo is not t
 - After creation, `project.demo` is read by the on-open source check, Change Source, the
   boilerplate base and the storefront report; `templateOwner/Repo` metadata by the update check.
 
-## Decisions (owner)
+## Decisions (owner, 2026-11-18: all four as recommended)
 
-1. **What a reset of an imported project restores.** Recommended: the project as it was imported.
+1. **What a reset of an imported project restores.** Decided: the project as it was imported.
    The import's commit in the project's own repository is recorded (`importedFrom.commit`), and
    reset puts the code back to it. The files are already in that repository's history, so no
    template repository is needed and the colleague's custom code survives. Rejected: resetting to
    the brand the demo was built on (throws the sender's code away).
-2. **The wizard on an import.** Recommended: the Welcome step shows only the demo being imported,
+2. **The wizard on an import.** Decided: the Welcome step shows only the demo being imported,
    chosen and fixed (no packages grid), under the project name; the title stays Import Project.
-3. **What the imported project records as its demo.** Recommended: no `project.demo` (there is no
+3. **What the imported project records as its demo.** Decided: no `project.demo` (there is no
    card); `selectedPackage` keeps the brand the sender built on (the setup's own, which
    `setupForCard` overwrites today), so updates, the boilerplate base and the report read it as a
    brand project; `importedFrom` records the import (bundle name, sender's repository for
    provenance, the import commit).
-4. **Save as Package's window.** Recommended: Name and Description (prefilled as the link step's
+4. **Save as Package's window.** Decided, on the Share row: Name and Description (prefilled as the link step's
    are), **Save as Package**; once saved, the window is the house result ("Package Saved",
    "Scratch 1028 is on your Welcome step"). A project already saved shows **Remove Package**,
    which takes the card off the Welcome step and the description file out (the link step's undo,
@@ -57,7 +57,7 @@ Send a Link loses its **Add to My Welcome Step** box (owner: Share Demo is not t
 
 ### 1. Save as Package, and Send a Link without the box (small; dashboard only)
 
-- Dashboard Share row (or Build row; decide on the mockup): **Save as Package**, opening a Steps
+- Dashboard Share row, beside Share Demo: **Save as Package**, opening a Steps
   window. It calls `saveDemoPackage` with `addToWelcome: true`; Remove Package calls
   `removeDemoPackage`. Agents: `save_demo_package` already does this; its description says so.
 - Send a Link: the box goes. Its save writes the description file and leaves the card as it is
