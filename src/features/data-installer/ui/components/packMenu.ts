@@ -20,8 +20,9 @@ export interface PackMenuRow {
 
 /**
  * The menu's upper section: what any pack offers, then what the SC's own library pack adds. No row
- * marks a pack as Demo Builder's (owner, 2026-11-18, walk F226, replacing 2026-11-14): the mark makes
- * a pack look official to every SC, and the store checks only that the pack is the caller's own.
+ * marks a pack as Demo Builder's (owner, 2026-11-18, walk F226, replacing 2026-11-14): an SC should not
+ * see an action meant for the datapack maintainer. The store also refuses anyone not on its list of
+ * Demo Builder datapack owners (`DatapackStoreWriter.updateTeam`).
  */
 export function packRows(detail: DatapackDetail, undoable: boolean): PackMenuRow[] {
     const rows: PackMenuRow[] = [{ key: 'save-file', label: 'Save as File', icon: 'saveFile' }];

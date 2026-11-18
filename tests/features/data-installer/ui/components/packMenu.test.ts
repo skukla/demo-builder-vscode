@@ -54,7 +54,7 @@ describe('packRows', () => {
     });
 
     // Owner, 2026-11-18 (walk F226, replacing 2026-11-14): no row marks a pack as Demo Builder's; the
-    // mark makes a pack look official to every SC, and the store checks only that it is the caller's own.
+    // mark is the datapack maintainer's job; the store also refuses anyone not on its list of owners.
     it("offers no mark row, on an own Demo Builder pack or an own other one", () => {
         expect(labels(packRows(makeDetail({ store: 'library', mine: true, team: true }), false))).toEqual(['Save as File', 'Share']);
         expect(labels(packRows(makeDetail({ store: 'library', mine: true }), false))).toEqual(['Save as File', 'Share']);

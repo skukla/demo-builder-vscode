@@ -1,7 +1,7 @@
 /**
  * DatapackCatalogView — no screen marks a datapack as Demo Builder's (owner, 2026-11-18, walk F226,
- * replacing 2026-11-14). The mark makes a pack look official to every SC, and the store checks only that
- * the pack is the caller's own, so an SC must not be able to set it from a screen. Neither the Datapack
+ * replacing 2026-11-14). The mark is the datapack maintainer's job, so an SC does not see it; the store also
+ * refuses anyone not on its list of Demo Builder datapack owners. Neither the Datapack
  * Library nor a project's Datapacks offers a mark row, on an own Demo Builder pack or an own other pack.
  */
 
