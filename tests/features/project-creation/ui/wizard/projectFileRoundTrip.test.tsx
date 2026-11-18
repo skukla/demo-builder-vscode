@@ -12,6 +12,8 @@
  *   - credentials: never in the file (D24); the SC enters them again;
  *   - the storefront repository and DA.live site: the sender's, carried as
  *     provenance only; the receiver creates their own, after signing in;
+ *   - the Adobe org, project and workspace: the sender's, travelling in the file;
+ *     the receiver signs in and chooses their own (F280);
  *   - `commerce` and `aiPrompts`: they travel in the file, but creation takes
  *     neither as an input (no creation path writes `commerce`; saved prompts are
  *     not created with a project).
@@ -74,20 +76,14 @@ describe('export then import: the creation wire equals the original project', ()
         expect(wire.commerceStoreStructure).toStrictEqual(original.commerceStoreStructure);
     });
 
-    it('keeps the Adobe org, project and workspace, ids and names', () => {
-        expect(wire.adobe).toStrictEqual({
-            organization: 'ORG@AdobeOrg',
-            organizationName: 'Example Org',
-            projectId: 'p-123',
-            projectName: '833BronzeShark',
-            projectTitle: 'Bodea Console Project',
-            workspace: 'w-456',
-            workspaceName: 'Stage',
-            workspaceTitle: 'Stage Workspace',
-        });
-    });
-
     describe('what does not round-trip, by design', () => {
+        it('the Adobe project: the sender’s travels in the file, the receiver chooses their own (F280)', () => {
+            expect(imported.adobe).toMatchObject({ projectId: 'p-123', workspaceId: 'w-456' });
+            expect(wire.adobe?.organization).toBeUndefined();
+            expect(wire.adobe?.projectId).toBeUndefined();
+            expect(wire.adobe?.workspace).toBeUndefined();
+        });
+
         it('the storefront: the sender’s repo is provenance, never the new project’s', () => {
             expect(imported.source?.storefront).toStrictEqual({
                 githubRepo: 'someone/bodea-demo',

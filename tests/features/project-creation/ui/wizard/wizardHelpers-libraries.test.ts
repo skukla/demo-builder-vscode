@@ -18,7 +18,6 @@ import {
     getEnabledWizardSteps,
     getNextButtonText,
     getWizardTitle,
-    initializeAdobeContextFromImport,
 } from '@/features/project-creation/ui/wizard/wizardHelpers';
 import { editChoicesOf } from '@/features/project-creation/ui/wizard/editChanges';
 import type { CustomBlockLibrary, InstalledBlockLibrary } from '@/types/blockLibraries';
@@ -172,23 +171,6 @@ describe('computeStateUpdatesForBackwardNav', () => {
         });
 
         expect(Object.keys(updates)).toEqual(['currentStep']);
-    });
-});
-
-describe('initializeAdobeContextFromImport', () => {
-    it('should return nothing when the import carries no Adobe section at all', () => {
-        expect(initializeAdobeContextFromImport({} as ImportedSettings)).toStrictEqual({});
-    });
-
-    it('should rebuild only the parts the import actually names', () => {
-        const imported = {
-            adobe: { orgId: 'org-1', workspaceId: 'ws-1' },
-        } as ImportedSettings;
-
-        expect(initializeAdobeContextFromImport(imported)).toEqual({
-            org: { id: 'org-1', code: '', name: '' },
-            workspace: { id: 'ws-1', name: '', title: undefined },
-        });
     });
 });
 

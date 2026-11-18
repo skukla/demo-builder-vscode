@@ -227,6 +227,16 @@ describe('create_project_from_file — a headless file reaches creation whole', 
         expect(JSON.stringify(state)).not.toContain('sender-ws');
     });
 
+    it("refuses, naming what to select, when no workspace is chosen — never falls back to the file's (F280)", async () => {
+        authManager.getCurrentWorkspace.mockResolvedValueOnce(undefined);
+
+        const res = await create();
+
+        expect(JSON.stringify(res)).toMatch(/select_project → select_workspace/);
+        expect(JSON.stringify(res)).not.toContain('sender-ws');
+        expect(executeProjectCreation).not.toHaveBeenCalled();
+    });
+
     it('hands off to Adobe sign-in when the file names integrations and Adobe is signed out', async () => {
         authManager.isAuthenticated.mockResolvedValueOnce(false);
 

@@ -325,11 +325,11 @@ each item's own file; what has already landed against an item is in its
 | `EDS-69` | fix | [A storefront delete carries on when AEM refuses the sign-in](2026-10-28-delete-carries-on-when-aem-refuses-the-sign-in.md) | — | high | active |
 | `EDS-70` | question | [Could one Adobe credential replace our separate DA.live and publishing sign-ins?](2026-11-03-eds-service-credential-question.md) | — | med | backlog |
 | `EDS-71` | feature | [The DA.live block library without Universal Editor's `component-definition.json`](2026-11-08-block-library-without-universal-editor.md) | — | high | planned |
-| `EDS-72` | fix | [Importing a demo file gives the SC the project, not a template to build one from](2026-11-18-import-file-creates-the-project.md) | — | high | backlog |
+| `EDS-72` | fix | [Importing a demo file gives the SC the project, not a template to build one from](2026-11-18-import-file-creates-the-project.md) | — | high | active |
 | `EDS-73` | fix | [Deleting a storefront leaves its AEM Configuration Service site behind](2026-11-18-delete-leaves-config-service-site.md) | — | med | backlog |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | built |
 
-### app-builder  (130)
+### app-builder  (131)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -462,6 +462,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-84` | feature | [The integration catalog row lives outside the extension](2026-11-04-integration-catalog-row-outside-the-extension.md) | AB-85 | med | backlog |
 | `AB-85` | fix | [Five generic paths treat every bound system as an ERP](2026-11-04-generic-paths-treat-every-system-as-an-erp.md) | — | high | backlog |
 | `AB-86` | feature | [Bulk selection on the Integrations screen](2026-11-05-integrations-bulk-selection.md) | — | med | backlog |
+| `AB-87` | fix | [Deleting a project leaves its mesh and App Builder integrations deployed](2026-11-18-delete-leaves-adobe-deployments.md) | — | med | backlog |
 | `PL-24` | feature | [Component updates cannot follow an environment-variable rename](2026-08-30-env-var-rename-migration.md) | — | med | built |
 
 ### data-installer  (17)
@@ -605,8 +606,8 @@ each item's own file; what has already landed against an item is in its
 | `PL-100` | fix | [A project name that starts with a number loses it, and nothing says why](2026-11-17-project-name-drops-leading-number.md) | — | low | backlog |
 | `PL-101` | feature | [What a run left to finish: one list, each item with its fix](2026-11-17-what-a-run-left-to-finish.md) | _before the beta.153 cut (owner, 2026-11-17)_ | high | backlog |
 | `PL-102` | fix | [Failure text a person reads, in plain words, everywhere outside the datapack windows](2026-11-17-plain-failure-wording-everywhere.md) | — | med | backlog |
-| `PL-103` | chore | [One Adobe sign-in handler for a screen's Sign In button](2026-11-18-one-screen-sign-in-handler.md) | — | med | backlog |
-| `PL-104` | chore | [Make the drifted doors of 13 user actions agree](2026-11-18-entry-point-drift-fixes.md) | — | high | backlog |
+| `PL-103` | chore | [One Adobe sign-in handler for a screen's Sign In button](2026-11-18-one-screen-sign-in-handler.md) | — | med | active |
+| `PL-104` | chore | [Make the drifted doors of 13 user actions agree](2026-11-18-entry-point-drift-fixes.md) | — | high | built |
 
 <!-- END GENERATED registry -->
 
@@ -755,7 +756,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — built
 
-*354 item(s) sit outside the A–G chain.*
+*356 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 

@@ -5,7 +5,6 @@ import { filterStepsForStack, WizardStepWithCondition } from '../stepFiltering';
 import {
     getEnabledWizardSteps,
     initializeComponentsFromImport,
-    initializeAdobeContextFromImport,
     initializeProjectName,
     getFirstEnabledStep,
 } from '../wizardHelpers';
@@ -250,7 +249,6 @@ function computeInitialState(
 
     // CREATE/IMPORT MODE
     const initialComponents = initializeComponentsFromImport(importedSettings, componentDefaults);
-    const adobeContext = initializeAdobeContextFromImport(importedSettings);
     const initialProjectName = initializeProjectName(importedSettings, existingProjectNames);
     const wizardMode = importedSettings ? 'import' : 'create';
     // The title only when the slug is the source's own: "Bodea Demo" over a folder
@@ -279,9 +277,9 @@ function computeInitialState(
         componentConfigs: importedSettings?.configs || {},
         adobeAuth: { isAuthenticated: false, isChecking: false },
         components: initialComponents,
-        adobeOrg: adobeContext.org,
-        adobeProject: adobeContext.project,
-        adobeWorkspace: adobeContext.workspace,
+        // No Adobe org, project or workspace, whatever an import's file says (F280):
+        // they are the sender's, and creating into that workspace replaced the
+        // sender's mesh. Sign-in decides the org; the SC chooses the project.
         // The same seeding edit mode runs (PL-56d): an import used to open with
         // no integrations, no mesh and no backend whatever the file said.
         ...(importedSettings ? choicesFromSettings(importedSettings) : {}),

@@ -8,7 +8,9 @@
  * a different Adobe context. These tests pin all three.
  */
 
+import { isIntegrationsComplete } from '@/features/project-creation/ui/steps/tileStatus';
 import { buildProjectConfig } from '@/features/project-creation/ui/wizard/wizardHelpers';
+import type { WizardState } from '@/types/webview';
 import type { ImportedSettings, WizardStepDefinition } from '@/types/wizard';
 import { editProjectWith, renderWizard, stateFor } from './useWizardState.testUtils';
 
@@ -183,16 +185,44 @@ describe('the Adobe context an edit restores', () => {
         });
     });
 
-    it('rebuilds the Adobe context from imported settings too', () => {
-        const state = stateFor({
-            importedSettings: {
-                adobe: { orgId: 'org-2', projectId: 'proj-2', workspaceId: 'ws-2' },
-            },
-        });
+});
 
-        expect(state.adobeOrg).toEqual({ id: 'org-2', code: '', name: '' });
-        expect(state.adobeProject).toEqual({ id: 'proj-2', name: '', title: undefined });
-        expect(state.adobeWorkspace).toEqual({ id: 'ws-2', name: '', title: undefined });
+describe('an import or copy brings no Adobe project (F280)', () => {
+    // The file names the SENDER's Console project and workspace. Opening with them
+    // chosen deployed the receiver's mesh into the sender's workspace, replacing
+    // that demo's mesh. The org goes too: sign-in decides it, as for a new project.
+    const SENDER_ADOBE = {
+        adobe: {
+            orgId: 'org-2',
+            orgName: 'Sender Org',
+            projectId: 'proj-2',
+            projectName: 'sender-proj',
+            workspaceId: 'ws-2',
+            workspaceName: 'Stage',
+        },
+    };
+
+    it('opens with no Adobe org, project or workspace chosen', () => {
+        const state = stateFor({ importedSettings: SENDER_ADOBE });
+
+        expect(state.wizardMode).toBe('import');
+        expect(state.adobeOrg).toBeUndefined();
+        expect(state.adobeProject).toBeUndefined();
+        expect(state.adobeWorkspace).toBeUndefined();
+    });
+
+    it('holds Continue on Integrations until the receiver chooses a project', () => {
+        const opened = stateFor({
+            importedSettings: { ...SENDER_ADOBE, selectedPackage: 'citisignal', selectedStack: 'eds-paas' },
+        });
+        const signedIn: WizardState = {
+            ...opened,
+            adobeAuth: { isAuthenticated: true, isChecking: false },
+            adobeOrg: { id: 'org-mine', code: '', name: 'Mine' },
+            selectedAppBuilderComponents: ['eds-commerce-mesh'],
+        };
+
+        expect(isIntegrationsComplete(signedIn, [], [])).toBe(false);
     });
 });
 

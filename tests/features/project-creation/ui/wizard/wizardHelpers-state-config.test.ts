@@ -3,7 +3,6 @@
  *
  * Tests for state initialization and config-building helpers:
  * - initializeComponentsFromImport
- * - initializeAdobeContextFromImport
  * - generateUniqueProjectName
  * - initializeProjectName
  * - buildProjectConfig
@@ -11,7 +10,6 @@
 
 import {
     initializeComponentsFromImport,
-    initializeAdobeContextFromImport,
     generateUniqueProjectName,
     initializeProjectName,
     buildProjectConfig,
@@ -98,65 +96,6 @@ describe('wizardHelpers - state & config', () => {
                 integrations: [],
                 appBuilder: [],
             });
-        });
-    });
-
-    describe('initializeAdobeContextFromImport', () => {
-        it('should return full Adobe context when all fields present', () => {
-            const imported: ImportedSettings = {
-                adobe: {
-                    orgId: 'org-123',
-                    orgName: 'My Org',
-                    projectId: 'proj-456',
-                    projectName: 'My Project',
-                    workspaceId: 'ws-789',
-                    workspaceName: 'Production',
-                },
-            };
-
-            const result = initializeAdobeContextFromImport(imported);
-
-            expect(result).toEqual({
-                org: { id: 'org-123', code: '', name: 'My Org' },
-                project: { id: 'proj-456', name: 'My Project' },
-                workspace: { id: 'ws-789', name: 'Production' },
-            });
-        });
-
-        it('should return empty object when no imported settings', () => {
-            expect(initializeAdobeContextFromImport(null)).toStrictEqual({});
-            expect(initializeAdobeContextFromImport(undefined)).toStrictEqual({});
-        });
-
-        it('should return partial context when some fields missing', () => {
-            const imported: ImportedSettings = {
-                adobe: {
-                    orgId: 'org-123',
-                    // Missing projectId and workspaceId
-                },
-            };
-
-            const result = initializeAdobeContextFromImport(imported);
-
-            expect(result).toEqual({
-                org: { id: 'org-123', code: '', name: '' },
-            });
-        });
-
-        it('should use empty string for missing names', () => {
-            const imported: ImportedSettings = {
-                adobe: {
-                    orgId: 'org-123',
-                    // orgName missing
-                    projectId: 'proj-456',
-                    // projectName missing
-                },
-            };
-
-            const result = initializeAdobeContextFromImport(imported);
-
-            expect(result.org?.name).toBe('');
-            expect(result.project?.name).toBe('');
         });
     });
 

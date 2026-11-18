@@ -142,7 +142,7 @@ export function useAuthStatus({
             // Check if org changed after auth
             // Clear project/workspace if authenticated org differs from:
             // 1. Pre-auth org (for re-auth scenario)
-            // 2. Imported/initial org in state (for first auth with imported settings)
+            // 2. The org already in state (an Edit's own; an import has none, F280)
             // IMPORTANT: Only compare when we have an actual newOrgId (auth complete)
             // Skip comparison when newOrgId is undefined (still checking)
             const newOrgId = authData.organization?.id;

@@ -47,6 +47,7 @@ import {
 } from '../../services/appBuilderComponentSelection';
 import { meshComponentForStack } from './tileStatus';
 import { useProjectBuilder } from './useProjectBuilder';
+import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
 import { IntegrationCard } from '@/core/ui/components/integrations/IntegrationCard';
 import type { CardAction, IntegrationCardModel } from '@/core/ui/components/integrations/integrationCardModel.types';
 import { StepAreaShell } from '@/core/ui/components/layout/StepAreaShell';
@@ -137,6 +138,20 @@ function DestinationLine({
                 </>
             )}
         </div>
+    );
+}
+
+/**
+ * An imported demo's ask for its own Adobe project (F280). An import or copy opens
+ * with none — the file's is the sender's, and deploying there replaced the sender's
+ * mesh — so until one is chosen this sits above the Adobe Project line.
+ */
+function ImportProjectNotice(): React.ReactElement {
+    return (
+        <InlineNotice title="Choose an Adobe Project" testId="import-adobe-project-notice">
+            Imported demos don&apos;t bring an Adobe project. Choose one or create a new one for this
+            demo&apos;s integrations.
+        </InlineNotice>
     );
 }
 
@@ -293,6 +308,9 @@ export function IntegrationsStep({
     // deployed yet, so a status would read the same on every card.
     const cards = useMemo(() => toIntegrationCards(rows), [rows]);
     const rowsById = useMemo(() => new Map(rows.map((row) => [row.id, row])), [rows]);
+    // Shared across every row by construction, so the first one speaks for the surface.
+    const destinationUnset = rows[0]?.needsSetup ?? true;
+    const showImportNotice = cards.length > 0 && state.wizardMode === 'import' && destinationUnset;
 
     const onRemoveRow = useCallback(
         (row: IntegrationRow): void => {
@@ -365,12 +383,11 @@ export function IntegrationsStep({
             >
                 {notice}
                 {cards.length === 0 && <EmptyState onAdd={openAdd} />}
+                {showImportNotice && <ImportProjectNotice />}
                 {cards.length > 0 && (
                     <DestinationLine
                         state={state}
-                        // Shared across every row by construction, so the first
-                        // one speaks for the surface.
-                        needsSetup={rows[0]?.needsSetup ?? true}
+                        needsSetup={destinationUnset}
                         onOpenDestination={openDestination}
                     />
                 )}

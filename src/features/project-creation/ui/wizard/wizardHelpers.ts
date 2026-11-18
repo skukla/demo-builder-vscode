@@ -249,53 +249,6 @@ export function initializeComponentsFromImport(
 }
 
 /**
- * Adobe context initialization result
- */
-export interface InitialAdobeContext {
-    org?: { id: string; code: string; name: string };
-    project?: { id: string; name: string; title?: string };
-    workspace?: { id: string; name: string; title?: string };
-}
-
-/**
- * Build initial Adobe context from imported settings.
- *
- * @param importedSettings - Settings from import/copy operation
- * @returns Adobe context with org, project, and workspace
- */
-export function initializeAdobeContextFromImport(
-    importedSettings: ImportedSettings | null | undefined,
-): InitialAdobeContext {
-    const result: InitialAdobeContext = {};
-
-    if (importedSettings?.adobe?.orgId) {
-        result.org = {
-            id: importedSettings.adobe.orgId,
-            code: '',
-            name: importedSettings.adobe.orgName || '',
-        };
-    }
-
-    if (importedSettings?.adobe?.projectId) {
-        result.project = {
-            id: importedSettings.adobe.projectId,
-            name: importedSettings.adobe.projectName || '',
-            title: importedSettings.adobe.projectTitle,
-        };
-    }
-
-    if (importedSettings?.adobe?.workspaceId) {
-        result.workspace = {
-            id: importedSettings.adobe.workspaceId,
-            name: importedSettings.adobe.workspaceName || '',
-            title: importedSettings.adobe.workspaceTitle,
-        };
-    }
-
-    return result;
-}
-
-/**
  * Generate a unique project name that doesn't conflict with existing names.
  * Uses lowercase-hyphen format: "name-copy", "name-copy-2", etc.
  *
