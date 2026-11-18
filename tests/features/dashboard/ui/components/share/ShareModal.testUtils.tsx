@@ -150,7 +150,7 @@ export function partBox(label: 'Setup' | 'Storefront'): HTMLInputElement {
 
 /** The Welcome box, a house checkbox row, found by its label (its quiet line follows in the name). */
 export function welcomeBox(): HTMLInputElement {
-    return screen.getByRole('checkbox', { name: /^Show on Welcome Step/ }) as HTMLInputElement;
+    return screen.getByRole('checkbox', { name: /^Add to My Welcome Step/ }) as HTMLInputElement;
 }
 
 export function nameInput(): HTMLInputElement {

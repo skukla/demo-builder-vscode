@@ -65,13 +65,13 @@ export function ShareFileForm({ isEds, file, checks, fix }: ShareFileFormProps):
             <div className="export-parts">
                 <CheckboxRow
                     label={FILE_COPY.setup}
-                    detail={FILE_COPY.setupWhat}
+                    help={FILE_COPY.setupWhat}
                     isSelected={file.setup}
                     onChange={() => file.setSetup(!file.setup)}
                 />
                 <CheckboxRow
                     label={FILE_COPY.storefront}
-                    detail={isEds ? FILE_COPY.storefrontWhat : FILE_COPY.storefrontHeadless}
+                    help={isEds ? FILE_COPY.storefrontWhat : FILE_COPY.storefrontHeadless}
                     isSelected={file.storefront}
                     isDisabled={!isEds}
                     onChange={() => file.setStorefront(!file.storefront)}

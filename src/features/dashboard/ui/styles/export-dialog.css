@@ -54,15 +54,6 @@
         line-height: 1.4;
     }
 
-    .export-link-text {
-        font-family: var(--vscode-editor-font-family, monospace);
-        font-size: 13px;
-        padding: 4px 8px;
-        border-radius: 4px;
-        background-color: var(--spectrum-global-color-gray-100);
-        overflow-wrap: anywhere;
-    }
-
     .export-section-text {
         margin: 0;
         font-size: 13px;

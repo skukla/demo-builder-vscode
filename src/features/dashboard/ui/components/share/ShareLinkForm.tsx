@@ -2,17 +2,18 @@
  * The Share dialog's "Send a link" form, once the storefront has been read.
  *
  * Top to bottom (walk F228): any check that needs the SC first, since it applies
- * before the link leaves; the repository as a labelled fact (`FactList`), with what
- * became of the press (its button is the window's footer button) under it; the
- * Welcome box with one quiet line on what it does; the name and description,
- * always shown (walk F229); then the undo with what became of that under it. What the link does is said on step 1, on its
+ * before the link leaves; the repository as the read-only field Edit Demo uses, its
+ * label above like the fields under it (walk F231), with what became of the press
+ * (its button is the window's footer button) under it; the name and description,
+ * always shown (walk F229); the Welcome box after them, an option on what is saved,
+ * its help line under it (walk F231); then the undo with what became of that under it. What the link does is said on step 1, on its
  * card. The button names the write when the press will make one (owner,
  * 2026-10-22: a copy button must not silently write). The checks are the ones
  * Save as demo package showed: each an amber notice, its title the extension's
  * when the check has one, with its fix (walk F227); a pack only the SC can see
  * offers Share Datapack (walk F229); the notices are `ShareChecks`, which the file form
  * shows too, for the datapack alone (walk F230). The Welcome box is the house
- * checkbox row. The link stays plain text, not a copy-on-click value: the footer
+ * checkbox row. The link is not a copy-on-click value: the footer
  * button copies it, and saves the details first when they are missing, which a
  * second copy beside it would skip. Outcomes of a press are note lines beside
  * the thing they are about (dialog design rules).
@@ -27,7 +28,6 @@ import { SHARE_COPY } from './shareCopy';
 import type { ShareDatapackFix } from './useShareDatapack';
 import type { UseShareLink } from './useShareLink';
 import { CheckboxRow } from '@/core/ui/components/selection/CheckboxRow';
-import { Fact, FactList } from '@/core/ui/components/ui/FactList';
 import { Spinner } from '@/core/ui/components/ui/Spinner';
 import type { DemoPackagePreview, RemoveDemoPackageResult } from '@/types/webviewRequests';
 
@@ -114,19 +114,15 @@ export function ShareLinkForm({
     return (
         <div className="export-link" data-testid="share-link">
             <ShareChecks checks={preview.checks} fix={fix} />
-            <FactList>
-                <Fact label={SHARE_COPY.repository}>
-                    <code className="export-link-text">{preview.link}</code>
-                </Fact>
-            </FactList>
+            <TextField label={SHARE_COPY.repository} value={preview.link} isReadOnly width="100%" />
             <PressNotes flow={flow} />
+            <Details flow={flow} />
             <CheckboxRow
                 label={SHARE_COPY.welcome}
-                detail={SHARE_COPY.welcomeWhy}
+                help={SHARE_COPY.welcomeWhy}
                 isSelected={flow.welcome}
                 onChange={() => flow.setWelcome(!flow.welcome)}
             />
-            <Details flow={flow} />
             <RemoveNotes flow={flow} />
             {flow.canRemove ? (
                 <div className="share-remove-row">

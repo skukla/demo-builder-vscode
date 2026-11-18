@@ -17,6 +17,16 @@ describe('CheckboxRow', () => {
         expect(screen.getByText("Tailspin's own store")).toBeInTheDocument();
     });
 
+    // Walk F231: a sentence explaining the box sits on its own line under the name, as help
+    // text, where a detail is a word or two beside it.
+    it('shows a help sentence on its own line under the name', () => {
+        render(<CheckboxRow label="Add to My Welcome Step" help="So you can start new projects from it." isSelected onChange={jest.fn()} />);
+
+        const help = screen.getByText('So you can start new projects from it.');
+        expect(help).toHaveClass('checkbox-row-help');
+        expect(screen.getByRole('checkbox', { name: /^Add to My Welcome Step/ })).toBeInTheDocument();
+    });
+
     it('shows some-but-not-all when asked', () => {
         render(<CheckboxRow label="Bodea" isSelected={false} isIndeterminate onChange={jest.fn()} />);
 

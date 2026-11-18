@@ -213,24 +213,23 @@ they get your later changes. Edge Delivery projects only. Top to bottom, the for
   datapack with the same handler (`share-library-datapack`, which the `share_datapack` tool
   also runs). The button shows it is busy while it runs; once shared, the storefront is read
   again and the notice goes. If the share fails, the notice's line says why.
-- **Repository**, the link to your storefront's repository.
-- **Show on Welcome Step**, ticked by default (it was always on before the merge), with
-  the line "Adds it to your own Welcome step, to build new projects from." beside it.
-  Ticked, the save also puts the card on your own Welcome step, the way Isle5 is one, so you
-  can build new projects from it. Unticked, the save writes the file only, and takes your
-  card off the list if it was there. For a demo already shared, the box shows where its
-  card is now.
+- **Repository**, the address of your storefront's repository, as a read-only field.
 - **Name** (required) and **Description**, always shown. They are
   prefilled from the description file when it is the one Demo Builder wrote, otherwise from
   the brand or demo the project was built on (the project's own title for a Starter build).
+- **Add to My Welcome Step**, ticked by default (it was always on before the merge), with
+  the line "So you can start new projects from it." under it. Ticked, the save also puts the card on your own Welcome step, the way Isle5 is one, so you
+  can build new projects from it. Unticked, the save writes the file only, and takes your
+  card off the list if it was there. For a demo already shared, the box shows where its
+  card is now.
 - **Remove the Details from My Repository**, once there is something of yours to undo. It
   takes the file out (only when it is ours) and the card off your list. The storefront is
   untouched.
 
 The footer button copies the link. A link carries nothing itself, so while your repository
-lacks the description file the button reads **Save Details and Copy Link**: it writes the
+lacks the description file the button reads **Save and Copy Link**: it writes the
 file from what the project already holds, then copies. Once the file is there it reads
-**Copy Link** and only copies. It reads **Save Details and Copy Link** again after you change
+**Copy Link** and only copies. It reads **Save and Copy Link** again after you change
 the name, the description or the box, because the next press will write.
 
 Nothing else about the repository changes: it is not marked as a GitHub template. A project
@@ -260,7 +259,7 @@ bottom, the form shows (walk F230, 2026-11-18, laid out the way the link form is
   (`getShareDatapackCheck`), both behind the window's opening wait. The link form's other
   checks are not shown here: the file carries the code itself. A check that cannot be read
   shows nothing, and never holds the file up.
-- **What to Include**, the two parts as checkbox rows, each with its line beside it:
+- **What to Include**, the two parts as checkbox rows, each with its line under it:
   **Setup** ("Your Commerce, Adobe, GitHub and DA.live settings. Never a credential.") and
   **Storefront** ("The storefront's code and content site.", the repository's code with the
   demo's description file inside). On a headless project the storefront row is off and

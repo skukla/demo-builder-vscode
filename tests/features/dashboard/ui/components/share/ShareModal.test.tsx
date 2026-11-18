@@ -4,9 +4,10 @@
  * the house flow Add a Demo uses (owner, 2026-11-18, walk F228): step 1 asks how
  * the demo travels, as two choice cards with a line on each, with Next; step 2 is
  * the chosen form, with Back. The link form is the checks that need the SC first,
- * then the repository as a labelled fact, the "Show on Welcome Step" box with its
- * line, the name and description (always shown, walk F229), and the undo. The button says whether the
- * press will write: "Save Details and Copy Link" until the details are in the
+ * then the repository as a read-only field, the name and description (always shown,
+ * walk F229), the "Add to My Welcome Step" box with its help line under it (walk F231),
+ * and the undo. The button says whether the
+ * press will write: "Save and Copy Link" until the details are in the
  * repository (and again after an edit), then "Copy Link". The file form is
  * unchanged from Export.
  */
@@ -37,7 +38,7 @@ import {
 
 const LINK_LINE = 'For colleagues with access to your repository. Includes later changes.';
 const FILE_LINE = 'For colleagues without access. A single zip file, with no later changes.';
-const SAVE_AND_COPY = 'Save Details and Copy Link';
+const SAVE_AND_COPY = 'Save and Copy Link';
 
 const footer = (): HTMLElement => document.querySelector('.modal-footer-actions') as HTMLElement;
 const body = (): HTMLElement => document.querySelector('.modal-body') as HTMLElement;
@@ -158,23 +159,24 @@ describe('ShareModal', () => {
     it('prints no middle dot anywhere in the link form', async () => {
         await renderShareLink();
         // Positive control: the form rendered the text it is searched for.
-        expect(screen.getByTestId('share-link-form')).toHaveTextContent(LINK);
+        expect(screen.getByTestId('share-link-form')).toHaveTextContent('Repository');
         expect(screen.getByTestId('share-link-form').textContent).not.toContain('·');
     });
 
-    it('shows the repository as a labelled fact', async () => {
+    // Walk F231 (owner): a label beside a code-font address read as debug output. It is
+    // the read-only field Edit Demo uses, its label above like Name and Description.
+    it('shows the repository as a read-only field, its label above, in the body font', async () => {
         await renderShareLink();
-        const facts = screen.getByTestId('share-link').querySelector('.fact-list') as HTMLElement;
-        expect(facts).not.toBeNull();
-        expect(within(facts).getByText('Repository').tagName).toBe('DT');
-        expect(within(facts).getByText(LINK).closest('dd')).not.toBeNull();
+        const repository = screen.getByRole('textbox', { name: 'Repository' }) as HTMLInputElement;
+        expect(repository.value).toBe(LINK);
+        expect(repository).toHaveAttribute('readonly');
+        expect(screen.getByTestId('share-link').querySelector('code')).toBeNull();
     });
 
     describe('the link and its button', () => {
         it('a storefront that already carries its details: the button only copies', async () => {
             await renderShareLink(answer({ ...PREVIEW, saved: true, onList: true }));
-            const link = screen.getByTestId('share-link');
-            expect(link).toHaveTextContent(LINK);
+            expect((screen.getByRole('textbox', { name: 'Repository' }) as HTMLInputElement).value).toBe(LINK);
             expect(screen.queryByRole('button', { name: SAVE_AND_COPY })).not.toBeInTheDocument();
 
             await click('Copy Link');
@@ -267,7 +269,7 @@ describe('ShareModal', () => {
             const allOk = PREVIEW.checks.map((check) => ({ ...check, ok: true }));
             await renderShareLink(answer({ ...PREVIEW, checks: allOk }));
             // Positive control: the form itself rendered.
-            expect(screen.getByTestId('share-link')).toHaveTextContent(LINK);
+            expect(screen.getByTestId('share-link')).toHaveTextContent('Repository');
             expect(screen.queryByText('Before Sharing')).not.toBeInTheDocument();
             expect(screen.queryByTestId('package-check-index')).not.toBeInTheDocument();
         });
@@ -330,19 +332,26 @@ describe('ShareModal', () => {
         });
     });
 
-    describe('"Show on Welcome Step"', () => {
+    describe('"Add to My Welcome Step"', () => {
         it('is the house checkbox row', async () => {
             await renderShareLink();
             expect(welcomeBox().closest('.checkbox-row')).not.toBeNull();
         });
 
-        // Walk F229 (owner): the box was unclear; one quiet line says what it does.
-        it('says in one quiet line what it does', async () => {
+        // Walk F229 (owner): the box was unclear; one quiet line says what it does. Walk F231:
+        // that line sits under the label as help text, not run on after it.
+        it('says what it does in a help line under its label', async () => {
             await renderShareLink();
             const row = welcomeBox().closest('.checkbox-row') as HTMLElement;
-            expect(row.querySelector('.checkbox-row-detail')).toHaveTextContent(
-                'Adds it to your own Welcome step, to build new projects from.',
-            );
+            expect(row.querySelector('.checkbox-row-help')).toHaveTextContent('So you can start new projects from it.');
+            expect(row.querySelector('.checkbox-row-detail')).toBeNull();
+        });
+
+        // Walk F231: an option on what is saved comes after the details it saves.
+        it('comes after the name and description', async () => {
+            await renderShareLink();
+            const description = screen.getByTestId('share-description');
+            expect(description.compareDocumentPosition(welcomeBox()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
         });
 
         it('is ticked by default for a storefront not yet shared, and unticked sends addToWelcome:false', async () => {

@@ -38,6 +38,17 @@
         color: var(--spectrum-global-color-gray-600);
     }
 
+    /* A sentence on what the box does (walk F231): its own line under the name, lined up
+       with it, as a form field's help text sits. A detail run on after the name read as
+       improvised once it was a sentence. */
+    .checkbox-row-help {
+        display: block;
+        margin-top: 2px;
+        font-size: 12px;
+        line-height: 1.4;
+        color: var(--spectrum-global-color-gray-700);
+    }
+
     /* "Select All" over a list (`selection/SelectAllRow`): a thin rule under it, so it reads as
        a control over the boxes, as a table's header checkbox does, not one more of them
        (owner, 2026-11-03: "it gets lost"). */
