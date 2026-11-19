@@ -6,7 +6,7 @@ needs: []
 value: med
 status: gated
 layer: F
-waiting-on: Mod Agent access
+waiting-on: an evaluation of the Stardust skills (2026-11-19), which may replace Mod Agent access
 ---
 # EDS site-scraping capability for Demo Builder
 
@@ -15,6 +15,24 @@ waiting-on: Mod Agent access
 *The item in one paragraph. Moved off the index 2026-08-26, which carried a second copy that drifted from this file.*
 
 Scrape client URLs → working EDS blocks at 90–95% fidelity. Two workflows. **Re-measured 2026-08-23: the Playwright workflow is FULLY SHIPPED** — all six scraping skills generate into every EDS project, `@playwright/mcp` is wired via ai-defaults (which superseded the item's global-prerequisite step with a better per-project mechanism), and the palette command exists (`openModernizationAgent.ts`). What remains is only the Mod Agent path: Phase 1.5 (GitHub OAuth to install AEM Code Connector/Sync) + Phase 2 subagents, **still gated on Mod Agent access** (request filed 2026-05-28).
+
+## 2026-11-19: the Stardust skills may lift the gate
+
+The owner passed on (2026-11-19) that the Experience Modernization Agent's skills are published at
+https://stardust.style/ and can be installed however we want, best with GitHub Copilot or any LLM
+setup that can also edit the GitHub repository. They redesign, fix, or migrate a site to EDS: "half
+of our demo battles". The agent's own console and its access-request channel stay outside this public
+repository.
+
+That changes what this item waits on: the skills, not Mod Agent access, are what Phase 2 needs. Next:
+
+1. Read what the Stardust skills are (format, install method, the tools they expect) and whether they
+   install per project like the six scraping skills, through the AI bundle's ai-defaults
+   (`ai-context-authoring`: all four seams, and an `AI_CONTEXT_VERSION` bump).
+2. Try one on a scratch EDS project with Copilot, which this extension already drives, and record what
+   it changed in the storefront repository.
+3. Decide with the owner: ship them in every EDS project's bundle, offer them as an add-on, or point to
+   them from the palette command (`openModernizationAgent.ts`).
 
 ## Shipped so far
 
