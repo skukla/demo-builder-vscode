@@ -141,6 +141,47 @@ describe('template sync', () => {
         expect(TemplateSyncServiceCtor).not.toHaveBeenCalled();
     });
 
+    it('applies an explicitly selected source reset without attempting a merge', async () => {
+        const ctx = makeCtx();
+        const project = edsProject();
+        mockSyncWithTemplate.mockResolvedValueOnce({
+            success: true,
+            strategy: 'reset',
+            syncedCommit: 'reset-head',
+        });
+
+        const res = await applyUpdatesHeadless(
+            { ...emptySelections(), template: [{ project, sourceReset: true }] },
+            ctx,
+        );
+
+        expect(mockSyncWithTemplate.mock.calls).toStrictEqual([[project, { strategy: 'reset' }]]);
+        expect(mockUpdateLastSyncedCommit).toHaveBeenCalledWith(project, 'reset-head', ctx.stateManager);
+        expect(res.template).toStrictEqual({ successCount: 1, failCount: 0, errors: [] });
+    });
+
+    it('does not record a source reset that failed or fall back to merging it', async () => {
+        const project = edsProject();
+        mockSyncWithTemplate.mockResolvedValueOnce({
+            success: false,
+            strategy: 'reset',
+            error: 'Could not fetch the template.',
+        });
+
+        const res = await applyUpdatesHeadless(
+            { ...emptySelections(), template: [{ project, sourceReset: true }] },
+            makeCtx(),
+        );
+
+        expect(mockSyncWithTemplate.mock.calls).toStrictEqual([[project, { strategy: 'reset' }]]);
+        expect(mockUpdateLastSyncedCommit).not.toHaveBeenCalled();
+        expect(res.template).toStrictEqual({
+            successCount: 0,
+            failCount: 1,
+            errors: ['demo: Could not fetch the template.'],
+        });
+    });
+
     it.each([
         ['its error', { success: false, error: 'merge aborted' }, 'demo: merge aborted'],
         ['Unknown error when it has none', { success: false }, 'demo: Unknown error'],

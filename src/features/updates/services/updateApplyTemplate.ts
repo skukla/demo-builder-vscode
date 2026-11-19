@@ -110,10 +110,12 @@ export async function applyTemplate(
     const succeededPaths = new Set<string>();
     if (items.length === 0) return { result, succeededPaths };
     const svc = new TemplateSyncService(getGitHubServices(ctx.secrets), ctx.logger, ctx.commandManager, resolveByomOverlayConfig);
-    for (const { project } of items) {
+    for (const { project, sourceReset } of items) {
         onProgress?.(S.updatingTemplate.label, project.name);
         try {
-            const outcome = await syncTemplateHeadless(svc, project, ctx, policy, questions);
+            const outcome: ClashOutcome = sourceReset
+                ? { kind: 'settled', result: await svc.syncWithTemplate(project, { strategy: 'reset' }) }
+                : await syncTemplateHeadless(svc, project, ctx, policy, questions);
             if (outcome.kind === 'clash') {
                 recordClash(result, outcome);
                 continue;

@@ -519,7 +519,9 @@ that tested version with its fixes put back, and is never reset to the bare temp
 its way through a conflict is `reset_project`. A storefront built from a colleague's demo that the
 colleague has since reset to its template is counted in `summary.templateSourceReset` and left out
 of `confirm:true`: applying it replaces the storefront with the reset, so `includeSourceReset: true`
-only when the user chose it (2026-11-03).
+only when the user chose it (2026-11-03). That selected row uses the shared template reset
+directly, not a merge from the old source version; the storefront's configuration files stay
+preserved. The Updates window runs the same reset when the user ticks that row.
 
 `finish_storefront_update` (EDS-57) previews the same way: without `confirm` it returns the
 kept clash's files, the ones still carrying conflict markers, and the diff that would go
