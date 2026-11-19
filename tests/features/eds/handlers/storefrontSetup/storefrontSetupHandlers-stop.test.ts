@@ -192,7 +192,7 @@ describe('handleStartStorefrontSetup — stopped', () => {
             expect.objectContaining({
                 phase: 'cancelling',
                 stage: OPERATION_STAGES.stoppingCreation.label,
-                message: 'Then deleting what it made',
+                message: 'Waiting for the current step',
             })
         );
         expect(context.sendMessage).not.toHaveBeenCalledWith(

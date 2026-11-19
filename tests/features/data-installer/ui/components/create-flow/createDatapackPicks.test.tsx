@@ -218,7 +218,7 @@ describe('selecting the items', () => {
         await press(row('Cart Rules'));
 
         expect(screen.getByText('Reading cart rules')).toBeInTheDocument();
-        expect(screen.getByText('From Commerce')).toBeInTheDocument();
+        expect(screen.getByText('Querying Commerce')).toBeInTheDocument();
         expect(button('Next')).toHaveAttribute('aria-disabled', 'false');
 
         await press(row('Products'));

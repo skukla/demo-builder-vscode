@@ -139,7 +139,7 @@ describe('ProjectsBatchModal: one project, by name', () => {
         });
         const wait = screen.getByRole('dialog', { name: 'Reset A?' });
         expect(within(wait).getByText('From A')).toBeInTheDocument();
-        expect(within(wait).queryByText('From each selected project')).toBeNull();
+        expect(within(wait).queryByText('Querying selected projects')).toBeNull();
         expect(within(wait).getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
     });
 

@@ -127,14 +127,14 @@ describe('StepContentArea', () => {
                 isActive: true,
                 progress: progressOf({
                     currentOperation: 'Installing components',
-                    message: 'Running npm install for each',
+                    message: 'Installing dependencies',
                     position: { index: 4, total: 9 },
                     startedAt,
                 }),
             });
 
             expect(screen.getByText('Installing components (4 of 9)')).toBeInTheDocument();
-            expect(screen.getByText('Running npm install for each')).toBeInTheDocument();
+            expect(screen.getByText('Installing dependencies')).toBeInTheDocument();
             expect(screen.getByText('Usually under a minute · 1 minute, 5 seconds')).toBeInTheDocument();
         });
 

@@ -240,10 +240,10 @@ describe('a datapack step named for its pack', () => {
 });
 
 // Walk F205 (owner, 2026-11-17): a step's second line names what the step works on, as its
-// neighbours do ("Live pages from before the reset"); "The live site serves every demo page" read
+// neighbours do ("Removing old pages from the CDN"); "The live site serves every demo page" read
 // as a claim.
 describe('the copied-pages check', () => {
     it('names what it checks, in the voice of the steps around it', () => {
-        expect(RESET_STAGES.checkingCopiedPages.detail).toBe('Each demo page on the live site');
+        expect(RESET_STAGES.checkingCopiedPages.detail).toBe('Verifying live pages');
     });
 });

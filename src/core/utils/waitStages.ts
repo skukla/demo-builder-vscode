@@ -26,7 +26,7 @@ export type WaitStage = Omit<OperationStage, 'detail'> & { readonly detail?: str
 
 const FEW_SECONDS = 'Usually a few seconds';
 const ABOUT_A_MINUTE = 'Usually about a minute';
-const FROM_COMMERCE = 'From Commerce';
+const FROM_COMMERCE = 'Querying Commerce';
 
 export const WAIT_STAGES = {
     // The check before an action that overwrites or removes: it reads the edits the action would lose
@@ -46,7 +46,7 @@ export const WAIT_STAGES = {
     readingCatalogViews: {
         label: 'Reading catalog views',
         expectation: FEW_SECONDS,
-        detail: 'From Adobe Commerce Optimizer',
+        detail: 'Querying Adobe Commerce Optimizer',
     },
     readingErpCatalog: { label: 'Reading the catalog', expectation: FEW_SECONDS, detail: FROM_COMMERCE },
     readingProducts: { label: 'Reading products', expectation: FEW_SECONDS, detail: FROM_COMMERCE },
@@ -58,7 +58,7 @@ export const WAIT_STAGES = {
     readingProjectsDemoData: {
         label: 'Reading demo data',
         expectation: FEW_SECONDS,
-        detail: 'From each selected project',
+        detail: 'Querying selected projects',
     },
     readingProjects: { label: 'Reading projects', expectation: FEW_SECONDS },
     // One project is read as one (owner, release test 2.7, 2026-11-16); its name goes on the line under.
@@ -69,14 +69,14 @@ export const WAIT_STAGES = {
     readingAdobeServices: {
         label: 'Reading Adobe services',
         expectation: 'Usually a few minutes',
-        detail: "Your organization's APIs",
+        detail: 'Listing organization APIs',
     },
     readingDemo: { label: 'Reading the demo', expectation: FEW_SECONDS },
     checkingSharedDemo: { label: 'Checking the shared demo', expectation: FEW_SECONDS },
     checkingAiSetup: {
         label: 'Checking the AI setup',
         expectation: FEW_SECONDS,
-        detail: 'Files and MCP servers',
+        detail: 'Checking files and MCP servers',
     },
     // The datapack flyout: its own load, then each menu row's work.
     readingPack: { label: 'Reading the datapack', expectation: FEW_SECONDS },

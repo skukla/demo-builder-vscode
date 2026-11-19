@@ -295,7 +295,7 @@ describe('runDeleteBatch', () => {
                 path: a.path,
                 state: 'running',
                 message: 'Deleting the repository',
-                step: "The storefront's GitHub repository",
+                step: "Deleting GitHub repository",
                 expectation: 'Usually a few seconds',
             },
             { path: a.path, state: 'done' },

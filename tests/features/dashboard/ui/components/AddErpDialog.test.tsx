@@ -247,7 +247,7 @@ describe('AddErpDialog — before and without the store', () => {
         expect(screen.getAllByRole('progressbar')).toHaveLength(1);
         // The wait says what it reads (dialog design rules, owner 2026-11-08).
         expect(screen.getByText('Reading the catalog')).toBeInTheDocument();
-        expect(screen.getByText('From Commerce')).toBeInTheDocument();
+        expect(screen.getByText('Querying Commerce')).toBeInTheDocument();
         expect(screen.queryByLabelText(/^ERP Name/)).toBeNull();
         expect(screen.queryByRole('button', { name: ADD_ERP_COPY.add })).toBeNull();
         expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();

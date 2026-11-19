@@ -20,7 +20,7 @@ export const DATAPACK_STAGES = {
     verifyingDemoData: {
         label: 'Verifying demo data',
         expectation: 'Usually under a minute',
-        detail: 'In Commerce',
+        detail: 'Checking Commerce records',
     },
     // Each order's returns are closed inside its own work, after its note (`wipeOrderRun.closeOrder`).
     closingOrders: { label: 'Closing orders', expectation: 'A few seconds each' },
@@ -51,6 +51,6 @@ export const DATAPACK_STAGES = {
     refreshingErp: {
         label: 'Refreshing the ERP',
         expectation: 'Usually a few minutes',
-        detail: 'From Commerce',
+        detail: 'Reading Commerce data',
     },
 } as const;

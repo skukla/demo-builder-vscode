@@ -538,7 +538,7 @@ describe('Modal: a wait shows nothing else, and says what it waits for', () => {
 
         const wait = container.ownerDocument.querySelector('.modal-wait') as HTMLElement;
         expect(wait).toHaveTextContent('Reading demo data');
-        expect(wait).toHaveTextContent('From Commerce');
+        expect(wait).toHaveTextContent('Querying Commerce');
         expect(wait).toHaveTextContent('Usually a few seconds');
     });
 

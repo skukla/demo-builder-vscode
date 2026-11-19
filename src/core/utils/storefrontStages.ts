@@ -21,14 +21,14 @@ export const STOREFRONT_STAGES = {
     publishingSettings: {
         label: STOREFRONT_JOBS.publishingSettings,
         expectation: 'Usually about 10 seconds',
-        detail: 'config.json, which the storefront reads',
+        detail: 'Uploading settings',
     },
     // The Configuration Service entry Repair Site Configuration writes again. Measured
     // from one reset (2026-10-16): 13 seconds, an Admin API key made on the way.
     updatingSiteConfig: {
         label: STOREFRONT_JOBS.updatingSiteConfig,
         expectation: 'Usually under a minute',
-        detail: "The site's Configuration Service entry",
+        detail: 'Updating Configuration Service',
     },
     // Republish's steps between the code and the pages. Measured in two resets of the
     // scratch storefront (2026-10-16), which run the same calls: the permissions in
@@ -36,12 +36,12 @@ export const STOREFRONT_STAGES = {
     settingSitePermissions: {
         label: STOREFRONT_JOBS.settingSitePermissions,
         expectation: 'Usually a few seconds',
-        detail: 'Your access to edit the site in DA.live',
+        detail: 'Granting DA.live access',
     },
     clearingCache: {
         label: STOREFRONT_JOBS.clearingCache,
         expectation: 'Usually a few seconds',
-        detail: 'So the live site serves the new pages',
+        detail: 'Purging CDN cache',
     },
     // A republish after the store changed (EDS-44): the config, then the old store's
     // product pages out, the catalog menu swapped, the new store's product pages warmed
@@ -49,31 +49,31 @@ export const STOREFRONT_STAGES = {
     removingProductPages: {
         label: STOREFRONT_JOBS.removingProductPages,
         expectation: 'Usually under a minute',
-        detail: "Finding the old store's pages",
+        detail: 'Finding product pages',
     },
     // Republish refreshes the catalog menu, or swaps it after a store change. Measured
     // from one reset (2026-10-16): 47 seconds for 11 category pages.
     updatingCatalogMenu: {
         label: STOREFRONT_JOBS.updatingCatalogMenu,
         expectation: 'Usually under a minute',
-        detail: 'A page per category, keeping your edits',
+        detail: 'Updating category pages',
     },
     // Configure's Republish with block library work pending (EDS-39): the libraries
     // unticked go first, then the ones ticked, then the DA.live block list follows.
     removingBlockLibraries: {
         label: 'Removing libraries from the site',
         expectation: 'Usually under a minute',
-        detail: 'Their blocks, out of the storefront',
+        detail: 'Removing library blocks',
     },
     addingBlockLibraries: {
         label: 'Adding block libraries',
         expectation: 'Usually under a minute',
-        detail: 'Copying their blocks into the storefront',
+        detail: 'Copying library blocks',
     },
     publishingBlockList: {
         label: STOREFRONT_JOBS.publishingBlockList,
         expectation: 'Usually under a minute',
-        detail: "So DA.live lists the storefront's blocks",
+        detail: 'Publishing block list pages',
     },
 
     // Sync Storefront (progress vocabulary slice 2, owner 2026-10-16): save, push,
@@ -84,34 +84,34 @@ export const STOREFRONT_STAGES = {
     savingChanges: {
         label: 'Saving your changes',
         expectation: 'Usually a few seconds',
-        detail: 'Committing your storefront changes',
+        detail: 'Committing changes',
     },
     mergingChanges: {
         label: 'Merging their work in',
         expectation: 'Usually a few seconds',
-        detail: "Work on GitHub that you don't have yet",
+        detail: 'Merging remote changes',
     },
     waitingForMerge: {
         label: 'Waiting for your merge',
         expectation: 'Until you finish merging',
-        detail: 'Resolve each conflict in Source Control',
+        detail: 'Resolve conflicts in Source Control',
     },
     finishingMerge: {
         label: 'Finishing the merge',
         expectation: 'Usually a few seconds',
-        detail: 'Your changes on top of theirs',
+        detail: 'Completing merge',
     },
     pushingToGitHub: {
         label: 'Pushing to GitHub',
         expectation: 'Usually a few seconds',
-        detail: 'Sending your commit to the repository',
+        detail: 'Pushing commit',
     },
     // Republish's step too, where it publishes the whole code tree: about a second in
     // two resets of the scratch storefront (2026-10-16), which make the same call.
     publishingCode: {
         label: STOREFRONT_JOBS.publishingCode,
         expectation: 'Usually a few seconds',
-        detail: 'So the live site runs the new code',
+        detail: 'Publishing code',
     },
 
     // Refresh Blocks, then the block list above. Measured from six library-only runs
@@ -120,12 +120,12 @@ export const STOREFRONT_STAGES = {
     buildingBlockLibrary: {
         label: STOREFRONT_JOBS.buildingBlockLibrary,
         expectation: 'Usually under a minute',
-        detail: 'The blocks DA.live offers its authors',
+        detail: 'Creating block pages',
     },
     applyingDaLiveSettings: {
         label: STOREFRONT_JOBS.applyingDaLiveSettings,
         expectation: 'Usually a few seconds',
-        detail: "This site's DA.live editor settings",
+        detail: 'Writing editor settings',
     },
 
     // The wizard's storefront setup, before the work it shares with Reset (whose steps
@@ -138,12 +138,12 @@ export const STOREFRONT_STAGES = {
     settingUpRepository: {
         label: 'Setting up the repository',
         expectation: 'Usually under a minute',
-        detail: 'Your repository, from the template',
+        detail: 'Creating from template',
     },
     settingUpCode: {
         label: 'Setting up the code',
         expectation: 'Usually under a minute',
-        detail: 'Content source, blocks, inspector tags',
+        detail: 'Configuring content source',
     },
 
     // Deleting a project: the storefront taken down (`storefrontTeardown.ts`), its
@@ -154,22 +154,22 @@ export const STOREFRONT_STAGES = {
     takingPagesOffSite: {
         label: 'Unpublishing pages',
         expectation: 'Usually about a minute',
-        detail: 'So the live site stops serving them',
+        detail: 'Removing pages from the CDN',
     },
     clearingDaLiveContent: {
         label: STOREFRONT_JOBS.clearingContent,
         expectation: 'Usually under a minute',
-        detail: "The site's documents in DA.live",
+        detail: 'Deleting DA.live documents',
     },
     clearingSiteSettings: {
         label: 'Deleting DA.live settings',
         expectation: 'Usually a few seconds',
-        detail: 'DA.live permissions and configuration',
+        detail: 'Deleting permissions and configuration',
     },
     deletingRepository: {
         label: 'Deleting the repository',
         expectation: 'Usually a few seconds',
-        detail: "The storefront's GitHub repository",
+        detail: 'Deleting GitHub repository',
     },
     // AEM's own copy of the code, one file at a time once the repository is gone
     // (EDS-67, `storefrontCodeRemoval.ts`). Measured 2026-11-18 from the Debug Logs: about
@@ -179,18 +179,18 @@ export const STOREFRONT_STAGES = {
     removingSiteCode: {
         label: "Deleting the site's code",
         expectation: 'Usually a few minutes',
-        detail: 'So the live site stops running it',
+        detail: 'Removing code from the CDN',
     },
     removingProjectFiles: {
         label: 'Deleting project files',
         expectation: 'Usually a few seconds',
-        detail: "The project's folder on this computer",
+        detail: 'Deleting project folder',
     },
     // Site Access's "check access": a poll of about two minutes (`waitForConfigAccess`
     // sleeps 30s, 30s, 45s). The checks it has made are a count, on the line under it.
     waitingForSiteAccess: {
         label: 'Waiting for site access',
         expectation: 'Up to about two minutes',
-        detail: 'Checking the admin role has landed',
+        detail: 'Verifying admin role',
     },
 } as const satisfies Record<string, { label: string; expectation: string; detail: string }>;
