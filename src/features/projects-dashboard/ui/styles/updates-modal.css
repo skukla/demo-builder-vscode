@@ -77,6 +77,14 @@
         transition: border-color var(--spectrum-global-animation-duration-300) ease;
     }
 
+    /* The list while it runs is one height whatever it holds (owner, 2026-11-19): the window holds
+       the height it opens at, so a short first list made a short window, and the result's mark and
+       outcome then squeezed the cards to a sliver. This opens it tall enough for the cards to
+       scroll and for the result to fit. */
+    .updates-run-list {
+        height: min(360px, 45vh);
+    }
+
     .updates-group--running {
         border-color: var(--spectrum-global-color-blue-500);
     }

@@ -32,6 +32,7 @@ import { ResultBody } from '@/core/ui/components/feedback/ResultBody';
 import { StepStatusIcon, type StepStatus } from '@/core/ui/components/feedback/StepStatusIcon';
 import { WorkRow } from '@/core/ui/components/feedback/WorkRow';
 import { useAutoScroll } from '@/core/ui/hooks/useAutoScroll';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { localCopyRowId, type PendingUpdateRow, type UpdateRowState, type UpdateRowStatus } from '@/types/pendingUpdates';
 import type { OperationProgressPayload, OperationPrompt } from '@/types/webviewPayloads';
 
@@ -59,14 +60,19 @@ export function waitingLine(count: number): string {
     return count === 1 ? '1 update pending' : `${count} updates pending`;
 }
 
-/** What one row says beside its name: what it is doing while it runs, else its detail. */
-function lineOf(row: PendingUpdateRow, state: UpdateRowState, step: string | undefined): string {
-    return state === 'running' && step ? step : row.detail;
+/**
+ * What one row says under its name: while it runs, the step the run is on, as the Prerequisites
+ * step says what it is doing ("Updating add-ons"); else its detail. The step's item ("Demo Builder
+ * Blocks in Tailspin") is not repeated, since the row's name already says it (owner, 2026-11-19).
+ */
+function lineOf(row: PendingUpdateRow, state: UpdateRowState, stage: string | undefined): string {
+    return state === 'running' && stage ? stage : row.detail;
 }
 
 /** What the running row is told: the step it is on, or the question it is asking. */
 interface Live {
-    step?: string;
+    /** The step the run is on ("Updating your local copy"). */
+    stage?: string;
     question?: OperationPrompt;
     onTyped: (values: Record<string, string>) => void;
 }
@@ -103,12 +109,12 @@ function RunRow({ row, statuses, live }: { row: PendingUpdateRow; statuses: RowS
     const status = statuses[row.id];
     const state = status?.state ?? 'waiting';
     const asking = state === 'running' ? live.question : undefined;
-    const detail = lineOf(row, state, asking ? undefined : live.step);
+    const detail = lineOf(row, state, asking ? undefined : live.stage);
     return <Step label={row.label} detail={detail} status={status} asking={asking} onTyped={live.onTyped} />;
 }
 
 const LOCAL_COPY_LINE: Partial<Record<UpdateRowState, string>> = {
-    running: 'Bringing it up to GitHub',
+    running: OPERATION_STAGES.updatingLocalCopy.label,
     done: 'Up to date with GitHub',
 };
 
@@ -208,9 +214,9 @@ function RunningList({ rows, statuses, progress, onTyped }: Omit<RunViewProps, '
 
     const running = progress?.state !== 'failed' && progress?.state !== 'succeeded';
     const question = running ? progress?.prompt : undefined;
-    const live: Live = { step: progress?.step, question, onTyped };
+    const live: Live = { stage: progress?.stage, question, onTyped };
     return (
-        <div ref={containerRef} className="updates-group-list scroll-fade scroll-fade--capped">
+        <div ref={containerRef} className="updates-group-list updates-run-list scroll-fade scroll-fade--capped">
             {question && !now && <RunQuestion prompt={question} onTyped={onTyped} />}
             {groups.map((group, index) => (
                 <RunGroup key={group.key} group={group} statuses={statuses} live={live} cardRef={createItemRef(index)} />

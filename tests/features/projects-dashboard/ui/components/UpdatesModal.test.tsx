@@ -192,7 +192,8 @@ describe('UpdatesModal', () => {
 
         expect(screen.getByRole('dialog', { name: 'Applying Updates' })).not.toHaveAttribute('data-status');
         expect(screen.queryByRole('checkbox')).toBeNull();
-        expect(screen.getByText('Demo Builder Blocks in Tailspin')).toBeInTheDocument();
+        expect(screen.getByText('Updating add-ons')).toBeInTheDocument();
+        expect(screen.queryByText('Demo Builder Blocks in Tailspin')).toBeNull();
         expect(screen.getByText('1.0.0 → 1.1.0')).toBeInTheDocument();
         expect(Array.from(container.querySelectorAll('.work-row')).map((r) => r.getAttribute('data-state'))).toEqual([
             'done',
@@ -373,7 +374,7 @@ describe('UpdatesModal', () => {
         ) as HTMLElement;
         const step = Array.from(tailspin.querySelectorAll('.work-row')).at(-1) as HTMLElement;
         expect(step).toHaveTextContent('Your Local Copy');
-        expect(step).toHaveTextContent('Bringing it up to GitHub');
+        expect(step).toHaveTextContent('Updating your local copy');
         expect(tailspin.querySelector('.updates-run-header [role="progressbar"]')).not.toBeNull();
     });
 
