@@ -23,8 +23,8 @@ import { failedRow, forgetTried, recordOutcome, rememberTried, triedRow } from '
 import { forgetKeptRows, watchKeptRows, type KeptRow } from './fixEndedNotice';
 import { questionsInModal, stopRunningDemos } from './updateQuestionsInModal';
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import { classifyTransience } from '@/core/errors';
 import { createNonSwitchingStateManager } from '@/core/state/workingProjectStateManager';
-import { retryCanHelp } from '@/core/utils/fixWithAi';
 import { UPDATES_OPERATION_ID } from '@/core/utils/operationIds';
 import { notYetPlain, plain, plainLine, type PlainText } from '@/core/utils/plainText';
 import { narrateOutcomeToModal } from '@/core/vscode/operationProgress';
@@ -104,9 +104,10 @@ function rowTellerFor(context: HandlerContext, shownId: (id: string) => string =
         tell: (id, state, message) => {
             if (state === 'failed' || state === 'skipped') notApplied++;
             recordOutcome(shownId(id), state, message);
-            // Read off the raw words, before they are made plain: can a retry help? (owner, 2026-11-19)
+            // Read off the raw words, before they are made plain, by the one classifier the automatic
+            // retries use: can a retry help? (owner, 2026-11-19)
             const raw = message ?? '';
-            const retry = state === 'failed' ? { retryable: retryCanHelp(raw) } : {};
+            const retry = state === 'failed' ? { retryable: classifyTransience(raw).retryable } : {};
             // An update's line is not yet typed at its source (PL-102 slice 3).
             void tellScreen(context, { id: shownId(id), state, ...(message ? { message: notYetPlain(message) } : {}), ...retry });
         },

@@ -127,7 +127,7 @@ describe("a row's reason on screen", () => {
 describe('whether a retry can help a failed row', () => {
     it('says so for a failure where nothing answered, and not for one a retry cannot fix', async () => {
         mockApplyUpdatesHeadless.mockImplementation(async (sel: UpdateSelections, _ctx, _report, options) => {
-            options.onItem('template', sel.template[0], { state: 'failed', message: 'GitHub did not respond in time.' });
+            options.onItem('template', sel.template[0], { state: 'failed', message: 'The request to GitHub timed out.' });
             options.onItem('template', sel.template[0], { state: 'failed', message: 'repository lacks the necessary blob to perform 3-way merge' });
             return applied();
         });

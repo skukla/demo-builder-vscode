@@ -3,20 +3,7 @@
  * 2026-11-19: a merge that cannot find its files left the SC with a Retry that would fail again).
  */
 
-import { failedButtonLabel, retryCanHelp, RETRIES_BEFORE_FIX } from '@/core/utils/fixWithAi';
-
-describe('retryCanHelp', () => {
-    it('says yes for nothing answering, a busy or failing server, a rate limit', () => {
-        for (const raw of ['GitHub did not respond in time.', 'connect ETIMEDOUT', 'answered 503', 'HTTP 429 Too Many Requests']) {
-            expect(retryCanHelp(raw)).toBe(true);
-        }
-    });
-
-    it('says no for a failure that would happen the same way again', () => {
-        expect(retryCanHelp('repository lacks the necessary blob to perform 3-way merge')).toBe(false);
-        expect(retryCanHelp('merge conflicts')).toBe(false);
-    });
-});
+import { failedButtonLabel, RETRIES_BEFORE_FIX } from '@/core/utils/fixWithAi';
 
 describe('failedButtonLabel', () => {
     it('offers Retry until retrying has not helped, when a retry can help', () => {
