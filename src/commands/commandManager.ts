@@ -498,7 +498,6 @@ export class CommandManager {
             }
             try {
                 await auth.logout();
-                void vscode.window.showInformationMessage('Signed out of Adobe.');
             } catch {
                 void vscode.window.showWarningMessage('Adobe sign-out did not complete.');
             }
