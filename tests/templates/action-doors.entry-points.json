@@ -186,6 +186,7 @@
                 "handler:showProjectDashboard",
                 "tool:open_view",
                 "tool:reload_window",
+                "tool:report_demo_builder_issue",
                 "tool:set_setting"
             ]
         },

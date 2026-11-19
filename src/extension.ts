@@ -68,6 +68,7 @@ import { registerLifecycleTools } from '@/features/ai/server/lifecycleTools';
 import { withProjectChangeNotice } from '@/features/ai/server/projectChangeNotice';
 import { registerProjectStatusTool } from '@/features/ai/server/projectStatusTool';
 import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
+import { registerReportIssueTool } from '@/features/ai/server/reportIssueTool';
 import { registerResetProjectTool } from '@/features/ai/server/resetProjectTool';
 import { registerSettingsTools } from '@/features/ai/server/settingsTools';
 import { registerSiteTools } from '@/features/ai/server/siteTools';
@@ -839,6 +840,11 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                 registerLifecycleTools(mcpServer, connCtxFactory, (url) =>
                     Promise.resolve(vscode.env.openExternal(vscode.Uri.parse(url))),
                 );
+                registerReportIssueTool(mcpServer, {
+                    openUrl: (url) => Promise.resolve(vscode.env.openExternal(vscode.Uri.parse(url))),
+                    loadProjects: loadAllProjects,
+                    version: String(context.extension.packageJSON.version ?? ''),
+                });
             },
         };
         const server = new InExtensionMcpServer(socketPath, projectsDir, logger, mcpServerOptions);

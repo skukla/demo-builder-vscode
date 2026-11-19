@@ -523,6 +523,13 @@ only when the user chose it (2026-11-03). That selected row uses the shared temp
 directly, not a merge from the old source version; the storefront's configuration files stay
 preserved. The Updates window runs the same reset when the user ticks that row.
 
+`report_demo_builder_issue` (Report to Demo Builder, 2026-11-19) is what an agent uses when it finds
+the cause of a failure in Demo Builder itself, instead of changing Demo Builder's own code: it opens a
+GitHub issue draft on the public repository's new-issue page, every text value from the SC's project
+manifests taken out unless it is Demo Builder's own public word (`demoBuilderIssue.ts`), and posts
+nothing; the SC reads it and submits. Requires `confirm:true`. Fix with AI's prompt points the agent at
+it.
+
 `finish_storefront_update` (EDS-57) previews the same way: without `confirm` it returns the
 kept clash's files, the ones still carrying conflict markers, and the diff that would go
 live. With `confirm:true` it raises the consent dialog, then checks the fix (still the

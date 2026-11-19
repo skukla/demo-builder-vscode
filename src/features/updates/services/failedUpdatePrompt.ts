@@ -30,7 +30,8 @@ export function failedUpdatePrompt(row: PendingUpdateRow, message: string): stri
         'Find the cause: read what Demo Builder logged with read_debug_logs, and look at the project ' +
             'and its storefront repository. Fix it there, in the project or its storefront, then apply ' +
             'the update with apply_updates. If the cause is in Demo Builder itself, do not change Demo ' +
-            "Builder's own code: say so, so it can be reported. Tell me what you found, what you " +
+            "Builder's own code: tell me, and offer to report it with report_demo_builder_issue, which " +
+            'opens a draft on GitHub for me to read and submit. Tell me what you found, what you ' +
             "changed, and whether the update applied. I will press Check Again in the Updates window when you're done.",
     ].join('\n');
 }

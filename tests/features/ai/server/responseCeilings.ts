@@ -42,6 +42,13 @@ export interface Ceiling {
 }
 
 export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
+    report_demo_builder_issue: {
+        bytes: 400,
+        why:
+            '`{opened, next}`: two fixed sentences. The draft goes to the browser in the issue link, ' +
+            'never into the response (2026-11-19).',
+    },
+
     get_agent_trace: {
         bytes: 50_000,
         why:

@@ -290,6 +290,7 @@ export const TOOL_NARRATION: Record<string, string> = {
     install_prerequisite: 'Installing the required tool',
     sign_in: 'Opening sign-in',
     open_url: 'Opening the page in your browser',
+    report_demo_builder_issue: 'Drafting a Demo Builder report',
     open_view: 'Opening the Demo Builder view',
     reload_window: 'Restarting the editor window',
 
