@@ -13,10 +13,10 @@
  * @module features/data-installer/runRows
  */
 
-import type { PlainText } from '@/core/utils/plainText';
 import { inInstallOrder } from './services/demoBuilderEngine/installOrder';
 import { type DataTypeStatus, FINISHING_STOP, type JobStanding, REPLACE_STOP, SAVE_STOP } from './types';
 import { dataTypeLabel } from './ui/dataTypeLabel';
+import { notYetPlain, plain, type PlainText } from '@/core/utils/plainText';
 import type { OperationRow } from '@/types/webviewPayloads';
 
 /** What a run's rows are named and ordered by: an import's, or a save's. */
@@ -72,7 +72,7 @@ function rowOf(kind: string, source: RunSource, words: RunWords): OperationRow {
             ? {
                   ...row,
                   status: 'error',
-                  problem: { text: source.reason ?? 'Stopped', failed: true },
+                  problem: { text: source.reason ? notYetPlain(source.reason) : plain('Stopped'), failed: true },
               }
             : { ...row, status: 'pending', line: 'Not run' };
     }

@@ -63,6 +63,7 @@ import type {
     UpdatesView,
 } from '@/features/projects-dashboard/ui/hooks/useUpdatesModal';
 import type { OperationProgressPayload } from '@/types/webviewPayloads';
+import { plain } from '@/core/utils/plainText';
 
 const ROWS: PendingUpdateRow[] = [
     {
@@ -207,9 +208,9 @@ describe('UpdatesModal', () => {
         const c = running(
             {
                 extension: { id: 'extension', state: 'done' },
-                'blockLibrary:0': { id: 'blockLibrary:0', state: 'failed', message: 'Demo Builder Blocks: rate limited' },
+                'blockLibrary:0': { id: 'blockLibrary:0', state: 'failed', message: plain('Demo Builder Blocks: rate limited') },
             },
-            { state: 'succeeded', warning: '1 update did not apply.' },
+            { state: 'succeeded', warning: plain('1 update did not apply.') },
         );
         render(<UpdatesModal controls={c} />);
 
@@ -224,8 +225,8 @@ describe('UpdatesModal', () => {
     // it was grey.
     it("says why a row was left alone in the warning's orange, not a failure's red", () => {
         const c = running(
-            { 'blockLibrary:0': { id: 'blockLibrary:0', state: 'skipped', message: 'Not updated — your blocks were kept.' } },
-            { state: 'succeeded', warning: '1 update did not apply.' },
+            { 'blockLibrary:0': { id: 'blockLibrary:0', state: 'skipped', message: plain('Not updated — your blocks were kept.') } },
+            { state: 'succeeded', warning: plain('1 update did not apply.') },
         );
         render(<UpdatesModal controls={c} />);
 
@@ -237,7 +238,7 @@ describe('UpdatesModal', () => {
         const c = running(
             {
                 extension: { id: 'extension', state: 'done' },
-                'blockLibrary:0': { id: 'blockLibrary:0', state: 'done', message: 'One block left out.' },
+                'blockLibrary:0': { id: 'blockLibrary:0', state: 'done', message: plain('One block left out.') },
             },
             { state: 'succeeded' },
         );
@@ -253,9 +254,9 @@ describe('UpdatesModal', () => {
         const c = running(
             {
                 extension: { id: 'extension', state: 'done' },
-                'blockLibrary:0': { id: 'blockLibrary:0', state: 'done', message: 'Updated by your AI.' },
+                'blockLibrary:0': { id: 'blockLibrary:0', state: 'done', message: plain('Updated by your AI.') },
             },
-            { state: 'succeeded', warning: '1 update did not apply.' },
+            { state: 'succeeded', warning: plain('1 update did not apply.') },
         );
         render(<UpdatesModal controls={c} />);
 
@@ -264,7 +265,7 @@ describe('UpdatesModal', () => {
     });
 
     it('says why a run failed outright, and offers the logs', () => {
-        const c = running({}, { state: 'failed', error: 'This list of updates is out of date. Check for updates again.' });
+        const c = running({}, { state: 'failed', error: plain('This list of updates is out of date. Check for updates again.') });
         render(<UpdatesModal controls={c} />);
 
         expect(screen.getByRole('dialog', { name: "Couldn't Apply the Updates" })).toHaveAttribute('data-status', 'error');
@@ -274,8 +275,8 @@ describe('UpdatesModal', () => {
 
     it('says a failed run\'s reason once when a row already says it', () => {
         const c = running(
-            { extension: { id: 'extension', state: 'failed', message: 'The download failed.' } },
-            { state: 'failed', error: 'The download failed.' },
+            { extension: { id: 'extension', state: 'failed', message: plain('The download failed.') } },
+            { state: 'failed', error: plain('The download failed.') },
         );
         render(<UpdatesModal controls={c} />);
 
@@ -284,8 +285,8 @@ describe('UpdatesModal', () => {
 
     it('keeps a failed run\'s reason above the list when no row says the same', () => {
         const c = running(
-            { extension: { id: 'extension', state: 'failed', message: 'The download failed.' } },
-            { state: 'failed', error: 'The run stopped.' },
+            { extension: { id: 'extension', state: 'failed', message: plain('The download failed.') } },
+            { state: 'failed', error: plain('The run stopped.') },
         );
         const { container } = render(<UpdatesModal controls={c} />);
 
@@ -381,7 +382,7 @@ describe('UpdatesModal', () => {
                 'localCopy:/p/tailspin': {
                     id: 'localCopy:/p/tailspin',
                     state: 'skipped',
-                    message: 'Left as it is — it has commits GitHub does not have.',
+                    message: plain('Left as it is — it has commits GitHub does not have.'),
                 },
             },
             { state: 'succeeded' },
@@ -487,7 +488,7 @@ describe('UpdatesModal', () => {
         });
 
         it('says how many above the list, and offers Back to Updates beside Close', async () => {
-            const c = ended(2, { state: 'succeeded', warning: '1 update did not apply.' });
+            const c = ended(2, { state: 'succeeded', warning: plain('1 update did not apply.') });
             const { container } = render(<UpdatesModal controls={c} />);
 
             const list = container.querySelector('.updates-group-list') as HTMLElement;
@@ -572,9 +573,9 @@ describe('UpdatesModal', () => {
             const c = running(
                 {
                     extension: { id: 'extension', state: 'done' },
-                    'blockLibrary:0': { id: 'blockLibrary:0', state: 'failed', message: 'Demo Builder Blocks: rate limited' },
+                    'blockLibrary:0': { id: 'blockLibrary:0', state: 'failed', message: plain('Demo Builder Blocks: rate limited') },
                 },
-                { state: 'succeeded', warning: '1 update did not apply.' },
+                { state: 'succeeded', warning: plain('1 update did not apply.') },
             );
             const { container } = render(<UpdatesModal controls={c} />);
 

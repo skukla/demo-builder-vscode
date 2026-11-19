@@ -35,6 +35,7 @@ jest.mock('@/features/eds/ui/components/GitHubAppInstallDialog', () => ({
 
 // Below the mock on purpose: `jest.mock` hoists above this file's imports only.
 import { StepContentArea } from '@/features/project-creation/ui/steps/projectCreationStepContent';
+import { plain } from '@/core/utils/plainText';
 
 const BASE = {
     phase: 'creating' as const,
@@ -216,7 +217,7 @@ describe('StepContentArea', () => {
             renderContent({
                 isCompleted: true,
                 showGenericError: true,
-                progress: progressOf({ error: 'boom' }),
+                progress: progressOf({ error: plain('boom') }),
             });
 
             expect(screen.getByText('Project Creation Failed')).toBeInTheDocument();
@@ -240,7 +241,7 @@ describe('StepContentArea', () => {
                 isEdit: true,
                 isCompleted: true,
                 showGenericError: true,
-                progress: progressOf({ error: 'boom' }),
+                progress: progressOf({ error: plain('boom') }),
             });
 
             expect(screen.getByText('Saving Changes Failed')).toBeInTheDocument();
@@ -251,7 +252,7 @@ describe('StepContentArea', () => {
         it('shows the failure with its reason as a detail line', () => {
             const { container } = renderContent({
                 showGenericError: true,
-                progress: progressOf({ error: 'npm ERR! network timeout' }),
+                progress: progressOf({ error: plain('npm ERR! network timeout') }),
             });
 
             expect(screen.getByText('Project Creation Failed')).toBeInTheDocument();

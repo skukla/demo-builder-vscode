@@ -48,6 +48,7 @@ import { undoLastSaveHandlers } from './undoLastSave';
 import { updateDatapackHandlers } from './updateDatapack';
 import { TransientStateManager } from '@/core/state/transientStateManager';
 import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
+import { notYetPlain, plain } from '@/core/utils/plainText';
 import { handleBackgroundOperation, pushOperationProgress } from '@/core/vscode/operationProgress';
 import { handleAnswerOperationPrompt } from '@/core/vscode/operationPrompt';
 import { ErrorCode } from '@/types/errorCodes';
@@ -272,7 +273,11 @@ async function settleBeforeReset(
     }
     if ('response' in settled && settled.response.code === ErrorCode.CHANGES_NOT_SAVED) {
         // A window closed during the save handed it to a notification, which has to hear the end.
-        void pushOperationProgress({ id: DATAPACK_OPERATION_ID, state: 'failed', error: settled.response.error ?? 'Your changes could not be saved.' });
+        void pushOperationProgress({
+            id: DATAPACK_OPERATION_ID,
+            state: 'failed',
+            error: settled.response.error ? notYetPlain(settled.response.error) : plain('Your changes could not be saved.'),
+        });
     }
     return settled;
 }

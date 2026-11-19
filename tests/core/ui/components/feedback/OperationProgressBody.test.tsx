@@ -12,6 +12,7 @@ import React from 'react';
 import { OperationProgressBody, keepsRows, progressFrame } from '@/core/ui/components/feedback/OperationProgressBody';
 import type { OperationRow } from '@/types/webviewPayloads';
 import { SAVE_WRITING } from '../../../../helpers/operationRowFixtures';
+import { plain } from '@/core/utils/plainText';
 
 const STARTED = 1_000_000;
 
@@ -92,7 +93,7 @@ describe('OperationProgressBody, a run with rows', () => {
 
     it('CONTROL: a run that ends with a warning keeps its rows', () => {
         const ended = ROWS.map((row) => ({ ...row, status: 'success' as const, line: 'Done' }));
-        render(<OperationProgressBody failed={false} succeeded onTyped={jest.fn()} successMessage="Saved, with a gap." progress={{ id: 'x', state: 'succeeded', warning: 'Saved, with a gap.', rows: ended }} />);
+        render(<OperationProgressBody failed={false} succeeded onTyped={jest.fn()} successMessage="Saved, with a gap." progress={{ id: 'x', state: 'succeeded', warning: plain('Saved, with a gap.'), rows: ended }} />);
 
         expect(screen.getByText('Products')).toBeInTheDocument();
     });
@@ -102,7 +103,7 @@ describe('OperationProgressBody, a run with rows', () => {
     it('keeps the rows of a run that ends with a problem on one row and no warning', () => {
         const ended: OperationRow[] = [
             { kind: 'categories', label: 'Categories', status: 'success', line: 'Done' },
-            { kind: 'products', label: 'Products', status: 'warning', problem: { text: '3 products had no price', failed: false } },
+            { kind: 'products', label: 'Products', status: 'warning', problem: { text: plain('3 products had no price'), failed: false } },
         ];
         render(<OperationProgressBody failed={false} succeeded onTyped={jest.fn()} successMessage="Saved a new version of My Luma." progress={{ id: 'x', state: 'succeeded', rows: ended, tookMs: 240_000 }} />);
 
@@ -116,10 +117,10 @@ describe('OperationProgressBody, a run with rows', () => {
     it('ends with a row carrying its problem and no closing sentence under the rows', () => {
         const ended: OperationRow[] = [
             { kind: 'products', label: 'Products', status: 'success', line: 'Done' },
-            { kind: 'settings', label: 'Website Settings', status: 'warning', problem: { text: '1 list setting needs resetting in the Commerce Admin.', failed: false } },
+            { kind: 'settings', label: 'Website Settings', status: 'warning', problem: { text: plain('1 list setting needs resetting in the Commerce Admin.'), failed: false } },
         ];
         const { container } = render(
-            <OperationProgressBody failed={false} succeeded onTyped={jest.fn()} successMessage="Some of it needs the Commerce Admin. Cleared My Luma." progress={{ id: 'x', state: 'succeeded', warning: 'Some of it needs the Commerce Admin.', rows: ended, tookMs: 240_000 }} />,
+            <OperationProgressBody failed={false} succeeded onTyped={jest.fn()} successMessage="Some of it needs the Commerce Admin. Cleared My Luma." progress={{ id: 'x', state: 'succeeded', warning: plain('Some of it needs the Commerce Admin.'), rows: ended, tookMs: 240_000 }} />,
         );
 
         expect(screen.queryByText('Some of it needs the Commerce Admin. Cleared My Luma.')).not.toBeInTheDocument();
@@ -130,7 +131,7 @@ describe('OperationProgressBody, a run with rows', () => {
 
     it('CONTROL: a warning no row carries still says itself under the rows', () => {
         const ended = ROWS.map((row) => ({ ...row, status: 'success' as const, line: 'Done' }));
-        render(<OperationProgressBody failed={false} succeeded onTyped={jest.fn()} successMessage="Saved, with a gap." progress={{ id: 'x', state: 'succeeded', warning: 'Saved, with a gap.', rows: ended }} />);
+        render(<OperationProgressBody failed={false} succeeded onTyped={jest.fn()} successMessage="Saved, with a gap." progress={{ id: 'x', state: 'succeeded', warning: plain('Saved, with a gap.'), rows: ended }} />);
 
         expect(screen.getByText('Saved, with a gap.')).toBeInTheDocument();
     });
@@ -154,7 +155,7 @@ describe('OperationProgressBody, how it ended', () => {
     });
 
     it('draws a failure red, its reason centred under the outcome', () => {
-        const { container } = render(<OperationProgressBody failed succeeded={false} onTyped={jest.fn()} ending={{ status: 'error', outcome: "Couldn't Republish" }} progress={{ id: 'x', state: 'failed', error: 'Adobe refused this.' }} />);
+        const { container } = render(<OperationProgressBody failed succeeded={false} onTyped={jest.fn()} ending={{ status: 'error', outcome: "Couldn't Republish" }} progress={{ id: 'x', state: 'failed', error: plain('Adobe refused this.') }} />);
 
         expect(container.querySelector('.result-mark')).toHaveAttribute('data-status', 'error');
         expect(screen.getByText("Couldn't Republish")).toHaveClass('result-outcome');
@@ -207,7 +208,7 @@ describe('OperationProgressBody, a run whose rows are steps with rows under them
     // held. It takes the stopped step's line instead, once, red.
     it('ends a failed run on its steps, the reason on the stopped step in place of its line', () => {
         const stopped: OperationRow[] = [SAVE_WRITING[0] as OperationRow, { kind: 'save', label: 'Save My Luma', status: 'error', line: 'Stopped' }];
-        const { container } = render(<OperationProgressBody failed succeeded={false} onTyped={jest.fn()} progress={{ id: 'x', state: 'failed', error: 'My Luma could not be saved.', rows: stopped }} />);
+        const { container } = render(<OperationProgressBody failed succeeded={false} onTyped={jest.fn()} progress={{ id: 'x', state: 'failed', error: plain('My Luma could not be saved.'), rows: stopped }} />);
 
         expect(screen.queryByText('Stopped')).not.toBeInTheDocument();
         expect(screen.getAllByText('My Luma could not be saved.')).toHaveLength(1);
@@ -216,8 +217,8 @@ describe('OperationProgressBody, a run whose rows are steps with rows under them
     });
 
     it('CONTROL: a failure a row already says is not said again', () => {
-        const stopped: OperationRow[] = [{ kind: 'save', label: 'Save My Luma', status: 'error', problem: { text: 'Commerce refused.', failed: true } }];
-        render(<OperationProgressBody failed succeeded={false} onTyped={jest.fn()} progress={{ id: 'x', state: 'failed', error: 'My Luma could not be saved.', rows: stopped }} />);
+        const stopped: OperationRow[] = [{ kind: 'save', label: 'Save My Luma', status: 'error', problem: { text: plain('Commerce refused.'), failed: true } }];
+        render(<OperationProgressBody failed succeeded={false} onTyped={jest.fn()} progress={{ id: 'x', state: 'failed', error: plain('My Luma could not be saved.'), rows: stopped }} />);
 
         expect(screen.getByText('Commerce refused.')).toBeInTheDocument();
         expect(screen.queryByText('My Luma could not be saved.')).not.toBeInTheDocument();
@@ -226,7 +227,7 @@ describe('OperationProgressBody, a run whose rows are steps with rows under them
     it('keeps the rows of a run that succeeded with a problem on a nested row', () => {
         const [exported, save] = SAVE_WRITING as [OperationRow, OperationRow];
         const ended: OperationRow[] = [
-            { ...exported, types: [{ kind: 'products', label: 'Products', status: 'warning', problem: { text: '3 products had no price', failed: false } }] },
+            { ...exported, types: [{ kind: 'products', label: 'Products', status: 'warning', problem: { text: plain('3 products had no price'), failed: false } }] },
             { ...save, status: 'success', line: 'Saved' },
         ];
 

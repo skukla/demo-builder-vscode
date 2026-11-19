@@ -502,7 +502,9 @@ meant.
 > [ADR-023](../architecture/adr/023-error-handling.md) · Enforced by
 > `tests/sop/user-facing-errors.test.ts` against a shrink-only ledger, and by
 > `tests/sop/no-debug-logs-sentence.test.ts`, which fails on any on-screen sentence naming Debug
-> Logs (the Open Debug Logs button and the channel's name excepted).
+> Logs (the Open Debug Logs button and the channel's name excepted), and by
+> `tests/sop/plain-text-debt.test.ts`: `notYetPlain`, which still lets untyped text reach a person,
+> has a ceiling that only falls (PL-102 slices 3 to 6 take it to zero).
 
 > **Convention.** A progress notification's title is an "-ing" verb and its object, and
 > says nothing else: "Deploying API Mesh", never "Demo Builder", never "Loading…", never
@@ -2071,7 +2073,7 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 22 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 72 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 73 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, agent coverage (import cycles moved to an enforcer suite on 2026-10-08)
 

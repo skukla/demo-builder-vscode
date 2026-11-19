@@ -31,6 +31,7 @@ import type { AddedDemo, BundleImportResult } from './projectFile';
 import type { ViewMode } from './viewMode';
 import type { ComponentSelection, CreationProgress, ThemeMode, UnifiedProgress } from './webview';
 import type { EditProjectConfig, ProjectSeed, WizardStepDefinition } from './wizard';
+import type { PlainText } from '@/core/utils/plainText';
 import type { ProjectDisplayName } from '@/core/utils/projectDisplayName';
 
 /**
@@ -467,7 +468,7 @@ export interface OperationRow {
     /** Where it stands: "Waiting", "Reading", "2,046 Products", "Done", "Not run". */
     line?: string;
     /** What is wrong with it: red when it failed, orange when it went in with a problem. */
-    problem?: { text: string; failed: boolean };
+    problem?: { text: PlainText; failed: boolean };
     /** Rows nested under it, small (`StepRows`): the data types under the import's Install step. */
     types?: OperationRow[];
 }
@@ -480,18 +481,18 @@ export interface OperationProgressPayload {
     position?: OperationPosition;
     step?: string;
     expectation?: string;
-    error?: string;
+    error?: PlainText;
     /** What a run that succeeded could not do, for the SC to read before the modal closes. */
-    warning?: string;
+    warning?: PlainText;
     /** What a run that succeeded leaves the SC to know; shown as a plain success, not a warning. */
-    note?: string;
+    note?: PlainText;
     /** A success's own title, in place of the operation's `successTitle` ("No Changes to Save"). */
     title?: string;
     /**
      * What a run that succeeded left to know, one line each, listed under its result (an
      * EDS reset's page notes). A run that carries them waits to be read.
      */
-    details?: string[];
+    details?: PlainText[];
     /**
      * The parts of a run that succeeded that changed something, one row each under its
      * result: the step, what it changed, what it leaves by hand. A run that carries them
@@ -630,7 +631,8 @@ export type CreationProgressPayload = CreationProgress;
 
 /** `creationFailed` — terminal failure detail (the progress sentinel's sibling). */
 export interface CreationFailedPayload {
-    error: string;
+    /** Why creation stopped, in plain words (PL-102). */
+    error: PlainText;
     isTimeout?: boolean;
     elapsed?: string;
     /** The one special-cased type; `useGitHubAppPreflight` opens the install dialog on it. */

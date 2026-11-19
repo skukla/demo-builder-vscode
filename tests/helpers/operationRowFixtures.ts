@@ -4,6 +4,7 @@
  */
 
 import type { OperationRow } from '@/types/webviewPayloads';
+import { plain } from '@/core/utils/plainText';
 
 /** A step with rows nested under it: the import's Install step, one data type working. */
 export const STEP_WITH_TYPES: OperationRow = {
@@ -23,7 +24,7 @@ export const FAILED_STEP: OperationRow = {
     kind: 'verify',
     label: 'Verify the Import',
     status: 'error',
-    problem: { text: 'Commerce did not answer.', failed: true },
+    problem: { text: plain('Commerce did not answer.'), failed: true },
 };
 
 /** A save's two steps as it writes (Phase 7b): the export done, its save row spinning. */

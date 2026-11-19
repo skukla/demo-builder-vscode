@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { vscode } from '@/core/ui/utils/vscode-api';
+import { plain } from '@/core/utils/plainText';
 import type { WizardState } from '@/types/webview';
 import type { CreationFailedPayload, CreationProgressPayload } from '@/types/webviewPayloads';
 
@@ -74,7 +75,7 @@ export function useMessageListeners({ setState }: UseMessageListenersProps): voi
                     ? {
                           ...prev.creationProgress,
                           currentOperation: 'Failed',
-                          error: failedData.error || 'Project creation failed',
+                          error: failedData.error || plain('Project creation failed'),
                       }
                     : undefined,
             }));

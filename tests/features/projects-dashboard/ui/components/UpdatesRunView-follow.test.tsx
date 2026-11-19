@@ -19,6 +19,7 @@ import { groupsOf } from '@/features/projects-dashboard/ui/components/updateGrou
 import { AI_HAS_IT } from '@/features/projects-dashboard/ui/components/UpdateRowFix';
 import type { PendingUpdateRow } from '@/types/pendingUpdates';
 import type { OperationProgressPayload } from '@/types/webviewPayloads';
+import { plain } from '@/core/utils/plainText';
 
 /** Three projects, one update each. */
 const ROWS: PendingUpdateRow[] = ['Scratch 1028', 'Bodea', 'Scratch 1028 C'].map((title, i) => ({
@@ -192,8 +193,8 @@ describe("the running step says where it is among its project's steps", () => {
 
     it('draws no local copy step the run ended without reaching', () => {
         const statuses: RowStatuses = {
-            'blockLibrary:t0': { id: 'blockLibrary:t0', state: 'failed', message: 'No.' },
-            'blockLibrary:t1': { id: 'blockLibrary:t1', state: 'failed', message: 'No.' },
+            'blockLibrary:t0': { id: 'blockLibrary:t0', state: 'failed', message: plain('No.') },
+            'blockLibrary:t1': { id: 'blockLibrary:t1', state: 'failed', message: plain('No.') },
             [COPY]: { id: COPY, state: 'waiting' },
         };
         render(
@@ -251,7 +252,7 @@ describe("the running step says where it is among its project's steps", () => {
 // update that did not apply, once the run has ended.
 describe('an update that did not apply carries its button once the run ends', () => {
     const FAILED: RowStatuses = {
-        'blockLibrary:0': { id: 'blockLibrary:0', state: 'failed', message: 'Could not merge.' },
+        'blockLibrary:0': { id: 'blockLibrary:0', state: 'failed', message: plain('Could not merge.') },
     };
     const ENDED = { state: 'succeeded', warning: '1 update did not apply.' } as OperationProgressPayload;
     const fixing = (fixes: RowFixControls['fixes']): RowFixControls => ({

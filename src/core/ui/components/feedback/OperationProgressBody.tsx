@@ -25,6 +25,7 @@ import { useRunClock } from '@/core/ui/hooks/useRunClock';
 import { cn } from '@/core/ui/utils/classNames';
 import { resultOutcome } from '@/core/ui/utils/resultWords';
 import { endStatus, endsClean, type RunEnding } from '@/core/ui/utils/runEnding';
+import type { PlainText } from '@/core/utils/plainText';
 import { PREPARING, rowsLines } from '@/core/utils/runStage';
 import { stageLine } from '@/core/utils/stageLine';
 import type { OperationChange, OperationPrompt, OperationProgressPayload, OperationRow } from '@/types/webviewPayloads';
@@ -101,7 +102,7 @@ export function OperationProgressBody({
         return prompt.title ? <LeadText>{prompt.message}</LeadText> : null;
     }
     if (failed) {
-        return <EndView ending={ending} message={progress?.error} rows={progress?.rows} tookMs={progress?.tookMs} failed />;
+        return <EndView ending={ending} message={progress?.error} reason={progress?.error} rows={progress?.rows} tookMs={progress?.tookMs} failed />;
     }
     if (succeeded) return <SuccessEnd ending={ending} message={successMessage} progress={progress} />;
     // A run that sends its parts as rows says the one under way, centred, step to step: one
@@ -178,7 +179,7 @@ function rowsSayAProblem(rows: readonly OperationRow[]): boolean {
  * A failed run's rows as it ended, its reason on the row that stopped when no row says it: red, in
  * place of that row's line, so it takes the room the line held rather than a line under the rows.
  */
-function withReason(rows: OperationRow[], reason: string | undefined): OperationRow[] {
+function withReason(rows: OperationRow[], reason: PlainText | undefined): OperationRow[] {
     if (!reason || rowsSayAProblem(rows)) return rows;
     const at = rows.findIndex((row) => row.status === 'error');
     if (at < 0) return rows;
@@ -194,9 +195,11 @@ function withReason(rows: OperationRow[], reason: string | undefined): Operation
  * held, and no closing sentence repeats it (decisions Phase 1b, J1-3d growth, owner 2026-11-11). A
  * sentence no row can carry still says itself.
  */
-function EndView({ ending, message, outcome, rows, tookMs, failed = false }: {
+function EndView({ ending, message, reason, outcome, rows, tookMs, failed = false }: {
     ending: RunOutcome;
     message?: string;
+    /** A failed run's reason, in plain words: the row that stopped can carry it. */
+    reason?: PlainText;
     /** The run's rows as it ended, when they have something to read. */
     rows?: OperationRow[];
     /** A success's lines and changes; none on a failure, whose reason is the message. */
@@ -208,7 +211,7 @@ function EndView({ ending, message, outcome, rows, tookMs, failed = false }: {
 }): React.ReactElement {
     const { details, changes } = outcome ?? {};
     const hasRows = Boolean(rows && rows.length > 0);
-    const shown = rows && failed ? withReason(rows, message) : rows;
+    const shown = rows && failed ? withReason(rows, reason) : rows;
     const lead = shown && hasRows && rowsSayAProblem(shown) ? undefined : message;
     return (
         <div data-testid="operation-end">

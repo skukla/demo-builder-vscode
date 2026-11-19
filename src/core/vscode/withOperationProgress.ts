@@ -29,12 +29,17 @@ import { withProgressRegister } from './progressRegister';
 import { withPhaseSinks } from '@/core/utils/agentPhaseChannel';
 import { detailFor, expectationFor } from '@/core/utils/operationStages';
 import { withStepSink } from '@/core/utils/operationStepChannel';
+import { COULDNT_TELL, notYetPlain } from '@/core/utils/plainText';
 import { stageLine, stepUnder } from '@/core/utils/stageLine';
 import type { OperationChange, OperationOffer, OperationPosition, OperationProgressPayload, OperationRow } from '@/types/webviewPayloads';
 
 /** What an operation answers when it ends. */
 export interface OperationOutcome {
     success: boolean;
+    /**
+     * Why it did not finish. Not yet typed at its source (PL-102 slice 4): `endOf` takes it to the
+     * window through `notYetPlain`. A producer may already hand a `PlainText` (a string).
+     */
     error?: string;
     /** What a run that succeeded could not do, for the SC to act on; the modal's success view says it. */
     warning?: string;
@@ -88,20 +93,24 @@ export async function withOperationProgress<T extends OperationOutcome>(
     return runInModal(options.id, run);
 }
 
-/** The modal's last word: the reason on failure, a success's warning, note and changes when it has them. */
+/**
+ * The modal's last word: the reason on failure, a success's warning, note and changes when it has
+ * them. The window's fields are plain words (PL-102); an outcome's are not yet typed at their source,
+ * so they come through `notYetPlain`, the counted debt, here and nowhere else.
+ */
 function endOf(id: string, result: OperationOutcome): OperationProgressPayload {
     const rows = result.rows?.length ? { rows: result.rows } : {};
     if (!result.success) {
-        return { id, state: 'failed', error: result.error ?? 'The operation did not finish.', ...rows };
+        return { id, state: 'failed', error: result.error ? notYetPlain(result.error) : COULDNT_TELL, ...rows };
     }
     return {
         id,
         state: 'succeeded',
         ...rows,
-        ...(result.warning ? { warning: result.warning } : {}),
-        ...(result.note ? { note: result.note } : {}),
+        ...(result.warning ? { warning: notYetPlain(result.warning) } : {}),
+        ...(result.note ? { note: notYetPlain(result.note) } : {}),
         ...(result.title ? { title: result.title } : {}),
-        ...(result.details?.length ? { details: result.details } : {}),
+        ...(result.details?.length ? { details: result.details.map(notYetPlain) } : {}),
         ...(result.changes?.length ? { changes: result.changes } : {}),
         ...(result.offer ? { offer: result.offer } : {}),
     };

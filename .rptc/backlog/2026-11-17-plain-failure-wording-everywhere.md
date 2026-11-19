@@ -116,6 +116,9 @@ Every decision is settled. The research's six-slice order supersedes the four st
   raw `detail` field beside the plain one, the cast ban, the fallback line, every sentence that sends a
   person to Debug Logs removed; then the progress windows, the wizard's creation failure and the
   Updates window. Plan: `.rptc/plans/plain-failure-wording/overview.md`.
+- **Built 2026-11-19 (slices 1 and 2):** `bb12f00d6` and the slice 2 commit. `OperationOutcome` and
+  `ResultBody` typing moved to slices 4 and 5 (plan doc). `notYetPlain` debt: 15 uses, ceiling in
+  `tests/sop/plain-text-debt.test.ts`.
 - **After beta.153: slices 3 to 6. Do not close this item until they are built.** Provider translators
   (the mesh rewrite, the Adobe explain functions, `formatGitHubError` wired in), `HandlerResponse.error`
   and `SimpleResult.error` area by area (about 450 sites), StatusDisplay, InlineNotice and a typed

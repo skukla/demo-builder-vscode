@@ -66,6 +66,7 @@ jest.mock('@/core/ui/hooks/useOperationProgress', () => ({
 
 // The mocks hoist above this import; the component must bind to them, not the real ones.
 import { OperationProgressModal } from '@/core/ui/components/feedback/OperationProgressModal';
+import { plain } from '@/core/utils/plainText';
 
 const OPERATION = {
     id: 'republish:bodea',
@@ -374,7 +375,7 @@ describe('the end of a run', () => {
 
     // An ending's outcome sits under the mark, and the sentence under it (walk F222).
     it("shows a success's note as the sentence under its outcome", () => {
-        progress = { id: OPERATION.id, state: 'succeeded', note: 'Added Demo Team Block Collection (9 blocks).' };
+        progress = { id: OPERATION.id, state: 'succeeded', note: plain('Added Demo Team Block Collection (9 blocks).') };
         renderModal();
 
         expect(document.querySelector('.result-mark')).toHaveAttribute('data-status', 'success');
@@ -382,7 +383,7 @@ describe('the end of a run', () => {
     });
 
     it("marks a failure red, with its reason under it", () => {
-        progress = { id: OPERATION.id, state: 'failed', error: 'Adobe refused this.' };
+        progress = { id: OPERATION.id, state: 'failed', error: plain('Adobe refused this.') };
         renderModal();
 
         expect(screen.getByRole('dialog', { name: 'Bodea' })).not.toHaveAttribute('data-status');
@@ -393,7 +394,7 @@ describe('the end of a run', () => {
 
     // A failure has a reason to read and a Retry to press, so it waits.
     it('leaves a failure on screen', async () => {
-        progress = { id: OPERATION.id, state: 'failed', error: 'Adobe refused this.' };
+        progress = { id: OPERATION.id, state: 'failed', error: plain('Adobe refused this.') };
         const { onClose } = renderModal();
 
         await act(async () => {
@@ -409,7 +410,7 @@ describe('the end of a run', () => {
         progress = {
             id: OPERATION.id,
             state: 'succeeded',
-            rows: [{ kind: 'products', label: 'Products', status: 'warning', problem: { text: '3 products had no price', failed: false } }],
+            rows: [{ kind: 'products', label: 'Products', status: 'warning', problem: { text: plain('3 products had no price'), failed: false } }],
         };
         const { onClose } = renderModal();
 

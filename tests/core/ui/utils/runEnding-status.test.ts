@@ -73,14 +73,14 @@ const CASES: Record<CaseName, RunEnding> = {
 };
 
 const NAMES = Object.keys(CASES) as CaseName[];
-const NOTE = "Content kept: the demo's pages can't be reached.";
+const NOTE = plain("Content kept: the demo's pages can't be reached.");
 
 function progressOf(name: CaseName): OperationProgressPayload {
-    if (name === 'failed') return { id: 'x', state: 'failed', error: 'Adobe refused this.' };
+    if (name === 'failed') return { id: 'x', state: 'failed', error: plain('Adobe refused this.') };
     return {
         id: 'x',
         state: 'succeeded',
-        ...(name === 'warning' ? { warning: 'Something did not finish.' } : {}),
+        ...(name === 'warning' ? { warning: plain('Something did not finish.') } : {}),
     };
 }
 
@@ -100,7 +100,7 @@ describe('the progress window', () => {
                 kind: 'products',
                 label: 'Products',
                 status: 'warning',
-                problem: { text: 'Commerce refused 3 rows.', failed: false },
+                problem: { text: plain('Commerce refused 3 rows.'), failed: false },
             };
             return {
                 ...base,
@@ -115,7 +115,7 @@ describe('the progress window', () => {
                 ],
             };
         }
-        if (name === 'note') return { ...base, note: 'Saved to My Luma.', rows: [done] };
+        if (name === 'note') return { ...base, note: plain('Saved to My Luma.'), rows: [done] };
         return { ...base, rows: [done] };
     }
 
@@ -196,9 +196,9 @@ describe('the Updates window', () => {
         if (name === 'warning') return { extension: { id: 'extension', state: 'done' } };
         const blocks = (() => {
             if (name === 'problem' || name === 'failed')
-                return { id: 'blocks', state: 'failed' as const, message: 'Rate limited' };
+                return { id: 'blocks', state: 'failed' as const, message: plain('Rate limited') };
             if (name === 'note')
-                return { id: 'blocks', state: 'done' as const, message: 'Something to know.' };
+                return { id: 'blocks', state: 'done' as const, message: plain('Something to know.') };
             return { id: 'blocks', state: 'done' as const };
         })();
         return { extension: { id: 'extension', state: 'done' }, blocks };

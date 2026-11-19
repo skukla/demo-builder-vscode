@@ -1,3 +1,4 @@
+import type { PlainText } from '@/core/utils/plainText';
 /**
  * The Updates modal's wire shapes (PL-80): what Check for Updates found, as rows the
  * projects list draws, and what the SC asked to apply.
@@ -81,8 +82,8 @@ export type UpdateRowState = 'waiting' | 'running' | 'done' | 'failed' | 'skippe
 export interface UpdateRowStatus {
     id: string;
     state: UpdateRowState;
-    /** Done: what to know, when there is something. Failed or skipped: why. */
-    message?: string;
+    /** Done: what to know, when there is something. Failed or skipped: why. Plain words (PL-102). */
+    message?: PlainText;
 }
 
 /**

@@ -7,6 +7,7 @@ import type { ProjectDatapack } from './datapack';
 import type { ErrorCode } from './errorCodes';
 import type { AddedDemo, BundleImportResult, ImportedFrom } from './projectFile';
 import type { OperationPosition, PrerequisitePluginState, GitHubUser } from './webviewPayloads';
+import type { PlainText } from '@/core/utils/plainText';
 
 export type ThemeMode = 'light' | 'dark';
 
@@ -332,7 +333,7 @@ export interface CreationProgress {
     /** Line 2: what the step is doing now. */
     message: string;
     logs: string[];
-    error?: string;
+    error?: PlainText;
     /** The step's place in the run, "(3 of 9)", when the run's steps are known. */
     position?: OperationPosition;
     /** When the run began, in ms since the epoch: the screen's clock counts from it. */

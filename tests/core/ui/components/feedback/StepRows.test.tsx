@@ -8,6 +8,7 @@ import { render, screen } from '@testing-library/react';
 import React from 'react';
 import { StepRows } from '@/core/ui/components/feedback/StepRows';
 import { FAILED_STEP, STEP_WITH_TYPES } from '../../../../helpers/operationRowFixtures';
+import { plain } from '@/core/utils/plainText';
 
 jest.mock('@/core/ui/components/feedback/StepStatusIcon', () => ({
     StepStatusIcon: ({ status }: { status: string }) => <span data-testid="icon">{status}</span>,
@@ -64,7 +65,7 @@ describe('StepRows', () => {
                     {
                         ...FAILED_STEP,
                         status: 'warning',
-                        problem: { text: 'Some skipped.', failed: false },
+                        problem: { text: plain('Some skipped.'), failed: false },
                     },
                 ]}
                 columns={1}

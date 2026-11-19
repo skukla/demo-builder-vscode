@@ -28,6 +28,7 @@ import { ORDERS, WEBSITE_SETTINGS } from './clearCheck';
 import type { WipePlan } from './wipePlan';
 import type { WipeOutcome } from './wipeRun';
 import { DATAPACK_STAGES as S } from '@/core/utils/datapackStages';
+import { notYetPlain } from '@/core/utils/plainText';
 import type { ReportStage } from '@/core/vscode/withOperationProgress';
 import type { OperationRow } from '@/types/webviewPayloads';
 
@@ -99,7 +100,7 @@ const warned = (row: OperationRow, text: string): OperationRow => ({
     kind: row.kind,
     label: row.label,
     status: 'warning',
-    problem: { text, failed: false },
+    problem: { text: notYetPlain(text), failed: false },
 });
 
 /** "1 order needs closing in the Commerce Admin.", "2 list settings need resetting in the Commerce Admin." */
@@ -181,7 +182,7 @@ export function clearRun(
             rows.map((row, i) => {
                 if (i < at) return done(row);
                 return i === at
-                    ? { kind: row.kind, label: row.label, status: 'error', problem: { text: reason, failed: true } }
+                    ? { kind: row.kind, label: row.label, status: 'error', problem: { text: notYetPlain(reason), failed: true } }
                     : { kind: row.kind, label: row.label, status: 'pending', line: 'Not run' };
             }),
         ended: (outcome, leftInStore) => {

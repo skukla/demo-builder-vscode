@@ -45,7 +45,7 @@ Everything else in these slices is the real thing: typed, cast-proof, translated
    executors' own failures throw `PlainError` where they are this extension's sentences.
 3. **Updates**: `UpdateRowStatus.message` is `PlainText`. F295's one-entry table moves into the core
    `plainFailure()`.
-4. **ResultBody**: `outcome` and the string lines are `PlainText`.
+4. **ResultBody**: moved to slice 5 (see below).
 
 ## Checks
 
@@ -53,11 +53,32 @@ Test first per slice; the full gate (`checks` tool) before each commit; `notYetP
 Debug Logs check both start at their measured counts and may only fall. The visual baseline is owed
 before push (no layout change is intended).
 
+## What was built, and where it differs from the plan (2026-11-19)
+
+Slice 1 as planned (`bb12f00d6`). Slice 2 types what the windows SHOW: the progress payload's
+`error`, `warning`, `note`, `details` and a row's `problem`; `UpdateRowStatus.message`; the wizard's
+`CreationFailedPayload.error` and `CreationProgress.error`. The catch-all says the fallback line; the
+wizard's catch reads a `PlainError`'s sentence first. Two changes from the plan, both moved to after
+the release:
+
+- **`OperationOutcome` stays untyped.** Typing it pulls in the same untyped producers as the handler
+  errors (the App Builder runners' `GuardableResult`, the ERP services), which is slice 4. Outcomes
+  reach the window through `notYetPlain` in one place, `endOf`. Its `detail` field (raw words for
+  agents) lands with slice 4, when `error` becomes plain.
+- **`ResultBody` stays untyped.** Typing its outcome and lines ripples into every dialog's props; its
+  outcome is mostly a title we write. Moved to slice 5 with StatusDisplay and InlineNotice.
+
+Found while building: the debt function's "no answer" rule matched a sentence of ours ("…Commerce did
+not answer. Fill ERPs from Commerce again to retry.") and swapped it whole. `notYetPlain` now
+translates only text that is raw for certain (network codes, the git merge message); the broad rule
+stays in `plainFailure`, which only ever sees text that would otherwise show the fallback. Datapack
+row reasons keep their walked wording, through `notYetPlain`. Debt at the end of slice 2: 15 uses.
+
 ## After beta.153 (slices 3 to 6, PL-102 open until done)
 
 3. Provider translators: the mesh rewrite, the Adobe explain functions, `formatGitHubError` wired in
-   (owner decision 4). 4. `HandlerResponse.error` and `SimpleResult.error` area by area, each with its
+   (owner decision 4). 4. `OperationOutcome`, `HandlerResponse.error` and `SimpleResult.error` area by area, each with its
    raw `detail`; agent text that reaches a person in plain words (owner decision 5); `notYetPlain` calls
-   fall to zero. 5. StatusDisplay, InlineNotice, a typed VS Code notification wrapper, Show Details for
+   fall to zero. 5. ResultBody, StatusDisplay, InlineNotice, a typed VS Code notification wrapper, Show Details for
    the raw text (owner decision 3, mockup first). 6. The words check widened to the whole tree; the
    user-facing-errors rule and its ledger retired; the convention in the handbook.

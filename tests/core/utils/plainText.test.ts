@@ -38,6 +38,13 @@ describe('plainFailure', () => {
 });
 
 describe('notYetPlain (the debt)', () => {
+    // Found 2026-11-19: a broad "did not answer" rule swapped this whole sentence and lost the retry.
+    it('never swaps a sentence of ours that mentions an answer', () => {
+        const ours = 'ERP prices answered 500: Commerce did not answer. Fill ERPs from Commerce again to retry.';
+        expect(notYetPlain(ours)).toBe(ours);
+        expect(plainFailure('Commerce did not respond')).toBe('No answer came in time.');
+    });
+
     it('translates what it knows and passes the rest through as it was', () => {
         expect(notYetPlain(BLOB)).toBe(MERGE_LINE);
         expect(notYetPlain('This list of updates is out of date.')).toBe('This list of updates is out of date.');

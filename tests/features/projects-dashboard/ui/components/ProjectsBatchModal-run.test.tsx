@@ -19,6 +19,7 @@ import type { OperationPrompt } from '@/types/webviewPayloads';
 import { deleteQuestions, resetQuestions } from '../../../../helpers/projectsBatchFixtures';
 import { createProjectsDashboardProject } from '../../testUtils';
 import { asDisplayName } from '@/core/utils/projectDisplayName';
+import { plain } from '@/core/utils/plainText';
 
 const DELETE: PrepareEnvelope = {
     success: true,
@@ -328,7 +329,7 @@ describe('ProjectsBatchModal: the run', () => {
         await push('projectsBatchRow', { path: '/p/a', state: 'done' });
         await push('projectsBatchRow', { path: '/p/b', state: 'failed', message: 'GitHub refused the delete.' });
         await push('projectsBatchRow', { path: '/p/c', state: 'done' });
-        await push('operationProgress', { id: ID, state: 'succeeded', warning: '1 project not deleted.' });
+        await push('operationProgress', { id: ID, state: 'succeeded', warning: plain('1 project not deleted.') });
 
         const dialog = screen.getByRole('dialog', { name: 'Projects' });
         expect(dialog).toHaveAttribute('data-size', 'L');
@@ -382,7 +383,7 @@ describe('ProjectsBatchModal: the run', () => {
 
     it('a run some projects did not finish ends on the warning', async () => {
         await running();
-        await push('operationProgress', { id: ID, state: 'succeeded', warning: '1 project not deleted.' });
+        await push('operationProgress', { id: ID, state: 'succeeded', warning: plain('1 project not deleted.') });
 
         expect(screen.getByText("Couldn't Delete")).toHaveClass('result-outcome');
         expect(document.querySelector('.result-mark')).toHaveAttribute('data-status', 'warning');
@@ -390,7 +391,7 @@ describe('ProjectsBatchModal: the run', () => {
 
     it('a failed run says why under the outcome, above the rows, and offers the logs', async () => {
         await running();
-        await push('operationProgress', { id: ID, state: 'failed', error: 'Projects are already being reset or deleted.' });
+        await push('operationProgress', { id: ID, state: 'failed', error: plain('Projects are already being reset or deleted.') });
 
         expect(screen.getByText("Couldn't Delete")).toHaveClass('result-outcome');
         expect(document.querySelector('.result-mark')).toHaveAttribute('data-status', 'error');
@@ -480,7 +481,7 @@ describe('ProjectsBatchModal: one project, its words by name', () => {
 
         it('a run that did not go through says which project it could not', async () => {
             await runningOne(action);
-            await push('operationProgress', { id: ID, state: 'failed', error: 'GitHub refused.' });
+            await push('operationProgress', { id: ID, state: 'failed', error: plain('GitHub refused.') });
 
             const dialog = screen.getByRole('dialog', { name: 'Kukla Luma' });
             expect(within(dialog).getByText(words.failedOutcome)).toHaveClass('result-outcome');

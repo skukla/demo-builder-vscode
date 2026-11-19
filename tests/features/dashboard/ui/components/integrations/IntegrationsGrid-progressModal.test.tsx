@@ -19,6 +19,7 @@ import {
 } from './IntegrationsGrid.testUtils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { OperationProgressPayload } from '@/types/webviewPayloads';
+import { plain } from '@/core/utils/plainText';
 
 const NOT_DEPLOYED = { 'custom-app': { ...DEPLOYED_INTEGRATION, status: 'not-deployed' as const } };
 const DEPLOYING = { 'custom-app': { ...DEPLOYED_INTEGRATION, status: 'deploying' as const } };
@@ -161,7 +162,7 @@ describe('the progress modal', () => {
         renderGrid({ appBuilderComponents: NOT_DEPLOYED });
         await startDeploy(user);
 
-        push({ id: 'custom-app', state: 'succeeded', warning: 'Prices were not published.' });
+        push({ id: 'custom-app', state: 'succeeded', warning: plain('Prices were not published.') });
 
         expect(markIn(screen.getByRole('dialog', { name: 'custom-app' }))).toHaveAttribute('data-status', 'warning');
         const result = (): HTMLElement => screen.getByRole('dialog', { name: 'custom-app' });
@@ -187,7 +188,7 @@ describe('the progress modal', () => {
         push({
             id: 'custom-app',
             state: 'succeeded',
-            note: 'Demo data loaded. Prices are still being published and will finish by themselves in a few minutes.',
+            note: plain('Demo data loaded. Prices are still being published and will finish by themselves in a few minutes.'),
         });
 
         const result = (): HTMLElement => screen.getByRole('dialog', { name: 'custom-app' });
@@ -217,7 +218,7 @@ describe('the progress modal', () => {
         push({
             id: 'custom-app',
             state: 'succeeded',
-            details: ['Removed 49 product pages.'],
+            details: [plain('Removed 49 product pages.')],
             changes: [{ label: 'Product attributes', lines: ['Added erp_owner to the attribute set Default', 'By hand: Check the PDP.'] }],
             tookMs: 72000,
         });
@@ -244,7 +245,7 @@ describe('the progress modal', () => {
         renderGrid({ appBuilderComponents: NOT_DEPLOYED });
         const modal = await startDeploy(user);
 
-        push({ id: 'custom-app', state: 'failed', error: 'Adobe refused this.' });
+        push({ id: 'custom-app', state: 'failed', error: plain('Adobe refused this.') });
 
         expect(markIn(screen.getByRole('dialog', { name: 'custom-app' }))).toHaveAttribute('data-status', 'error');
         expect(within(modal).getByTestId('operation-end')).toHaveTextContent('Adobe refused this.');
@@ -254,7 +255,7 @@ describe('the progress modal', () => {
         const user = setupUser();
         renderGrid({ appBuilderComponents: NOT_DEPLOYED });
         const modal = await startDeploy(user);
-        push({ id: 'custom-app', state: 'failed', error: 'Adobe refused this.' });
+        push({ id: 'custom-app', state: 'failed', error: plain('Adobe refused this.') });
         getClient().postMessage.mockClear();
 
         await user.click(within(modal).getByRole('button', { name: 'Retry' }));
@@ -292,7 +293,7 @@ describe('the progress modal', () => {
         renderGrid({ appBuilderComponents: NOT_DEPLOYED });
         const modal = await startDeploy(user);
 
-        push({ id: 'custom-app', state: 'failed', error: 'boom' });
+        push({ id: 'custom-app', state: 'failed', error: plain('boom') });
         await user.click(within(modal).getByRole('button', { name: 'Open Debug Logs' }));
 
         expect(getClient().postMessage).toHaveBeenCalledWith('openDebugLogs', {});
@@ -318,7 +319,7 @@ describe('the progress modal', () => {
         const user = setupUser();
         renderGrid({ appBuilderComponents: NOT_DEPLOYED });
         const modal = await startDeploy(user);
-        push({ id: 'custom-app', state: 'failed', error: 'boom' });
+        push({ id: 'custom-app', state: 'failed', error: plain('boom') });
 
         await user.click(within(modal).getByRole('button', { name: 'Close' }));
 

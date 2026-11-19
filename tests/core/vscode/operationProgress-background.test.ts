@@ -35,6 +35,7 @@ import {
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { BackgroundOperationRequest } from '@/types/webviewRequests';
 import { createMockHandlerContext } from '../../helpers/handlerContextTestHelpers';
+import { plain } from '@/core/utils/plainText';
 
 const ID = 'erp-integration';
 const TITLE = 'Redeploying ERP integration';
@@ -149,7 +150,7 @@ describe('Run in background', () => {
     it("says a success's warning in a warning notification that stays, under the result's words", async () => {
         await runningInBackground();
 
-        await pushOperationProgress({ id: ID, state: 'succeeded', warning: 'Prices were not published.' });
+        await pushOperationProgress({ id: ID, state: 'succeeded', warning: plain('Prices were not published.') });
 
         await expect(mockProgressEnded).resolves.toBeUndefined();
         expect(mockShowWarning).toHaveBeenCalledWith(`${DONE}. Prices were not published.`);
@@ -164,7 +165,7 @@ describe('Run in background', () => {
             warnedTitle: "Couldn't Reset Projects",
         });
 
-        await pushOperationProgress({ id: ID, state: 'succeeded', warning: '1 project not reset.' });
+        await pushOperationProgress({ id: ID, state: 'succeeded', warning: plain('1 project not reset.') });
 
         expect(mockShowWarning).toHaveBeenCalledWith("Couldn't Reset Projects. 1 project not reset.");
     });
@@ -175,7 +176,7 @@ describe('Run in background', () => {
         await pushOperationProgress({
             id: ID,
             state: 'succeeded',
-            note: 'Demo data loaded. Prices are still being published and will finish by themselves in a few minutes.',
+            note: plain('Demo data loaded. Prices are still being published and will finish by themselves in a few minutes.'),
         });
 
         await expect(mockProgressEnded).resolves.toBeUndefined();
@@ -190,7 +191,7 @@ describe('Run in background', () => {
         mockShowWarning.mockResolvedValue('Open Debug Logs');
         await runningInBackground();
 
-        await pushOperationProgress({ id: ID, state: 'failed', error: 'Adobe refused this.' });
+        await pushOperationProgress({ id: ID, state: 'failed', error: plain('Adobe refused this.') });
         await mockProgressEnded;
         await Promise.resolve();
 

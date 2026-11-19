@@ -11,6 +11,7 @@ import { cleanupFailedCreation } from './creationFailureCleanup';
 import { projectNameProblem } from './creationNameCheck';
 import { runCreation } from './creationRun';
 import { classifyTransience, extractErrorMessage } from '@/core/errors';
+import { notYetPlain, plain, plainLine, plainName, plainOf, type PlainText } from '@/core/utils/plainText';
 import { GitHubAppNotInstalledError } from '@/features/eds/services/types';
 import { ErrorCode } from '@/types/errorCodes';
 import { HandlerContext } from '@/types/handlers';
@@ -39,8 +40,8 @@ function countSelectedComponents(components?: {
  */
 async function sendValidationFailure(
     context: HandlerContext,
-    errorSummary: string,
-    errorDetail: string,
+    errorSummary: PlainText,
+    errorDetail: PlainText,
 ): Promise<{ success: boolean }> {
     const progress: CreationProgressPayload = {
         currentOperation: 'Failed',
@@ -106,11 +107,11 @@ async function reportCreationError(
             progress: 0,
             message: '',
             logs: [],
-            error: `The AEM Code Sync GitHub App must be installed to enable Edge Delivery Services.`,
+            error: plain('The AEM Code Sync GitHub App must be installed to enable Edge Delivery Services.'),
         };
         await context.sendMessage('creationProgress', ghProgress);
         const failed: CreationFailedPayload = {
-            error: `GitHub App Required: The AEM Code Sync app is not installed on ${error.owner}/${error.repo}.`,
+            error: plainLine`GitHub App Required: The AEM Code Sync app is not installed on ${plainName(`${error.owner}/${error.repo}`)}.`,
             isTimeout: false,
             elapsed: elapsedStr,
             errorType: 'GITHUB_APP_NOT_INSTALLED',
@@ -136,13 +137,16 @@ async function reportCreationError(
     const cancelledCode = (error as { code?: string } | undefined)?.code === ErrorCode.CANCELLED;
     const isCancelled = cancelledCode || extractErrorMessage(error).includes('cancelled by user');
     const timedOut = classifyTransience(error).kind === 'timeout';
+    // What the SC reads (PL-102): a PlainError's own sentence, else the thrown text through the
+    // counted debt (creation's executors throw this extension's sentences; slice 4 types them).
+    const shownError = plainOf(error) ?? notYetPlain(errorMessage);
 
     const terminal: CreationProgressPayload = {
         currentOperation: isCancelled ? 'Cancelled' : 'Failed',
         progress: 0,
         message: '',
         logs: [],
-        error: errorMessage,
+        error: shownError,
     };
     await context.sendMessage('creationProgress', terminal);
 
@@ -151,7 +155,7 @@ async function reportCreationError(
     // a dead send found by the 2026-08-21 channel inventory.
     if (!isCancelled) {
         const failed: CreationFailedPayload = {
-            error: errorMessage,
+            error: shownError,
             isTimeout: timedOut,
             elapsed: elapsedStr,
         };

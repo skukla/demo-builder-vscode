@@ -73,11 +73,11 @@ const CASES: Record<CaseName, RunEnding> = {
 const NAMES = Object.keys(CASES) as CaseName[];
 
 function progressOf(name: CaseName): OperationProgressPayload {
-    if (name === 'failed') return { id: 'x', state: 'failed', error: 'Adobe refused this.' };
+    if (name === 'failed') return { id: 'x', state: 'failed', error: plain('Adobe refused this.') };
     return {
         id: 'x',
         state: 'succeeded',
-        ...(name === 'warning' ? { warning: 'Something did not finish.' } : {}),
+        ...(name === 'warning' ? { warning: plain('Something did not finish.') } : {}),
     };
 }
 
@@ -96,7 +96,7 @@ describe('the progress window (a run with rows, a datapack save)', () => {
                     kind: 'products',
                     label: 'Products',
                     status: 'error',
-                    problem: { text: 'Stopped', failed: true },
+                    problem: { text: plain('Stopped'), failed: true },
                 },
             ];
         }
@@ -107,7 +107,7 @@ describe('the progress window (a run with rows, a datapack save)', () => {
                     kind: 'products',
                     label: 'Products',
                     status: 'warning',
-                    problem: { text: 'Something to know.', failed: false },
+                    problem: { text: plain('Something to know.'), failed: false },
                 },
             ];
         }

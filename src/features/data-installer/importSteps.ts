@@ -22,6 +22,7 @@ import { REPLACING, SAVING, FINISHING, runRows, type RunSource } from './runRows
 import { STORE_CONFIG_KIND } from './services/datapackCatalog';
 import { ENGINE_PHASES, FINISHING_STOP, type InstallCheck, type JobStanding, LINKING_OPTIONS, PREPARING_UNINSTALL, REPLACE_STOP, SAVE_STOP } from './types';
 import { dataTypeLabel } from './ui/dataTypeLabel';
+import { notYetPlain, plain, plainLine } from '@/core/utils/plainText';
 import type { OperationRow } from '@/types/webviewPayloads';
 
 /** One step: a row, and Install's data types under it (`OperationRow.types`). */
@@ -61,7 +62,7 @@ const waiting = (running: boolean | undefined): Pick<OperationRow, 'status' | 'l
     running ? { status: 'pending', line: 'Waiting' } : { status: 'pending', line: 'Not run' };
 const failed = (reason: string | undefined): Pick<OperationRow, 'status' | 'problem'> => ({
     status: 'error',
-    problem: { text: reason ?? 'Stopped', failed: true },
+    problem: { text: reason ? notYetPlain(reason) : plain('Stopped'), failed: true },
 });
 
 /**
@@ -203,10 +204,10 @@ function checkedLine(
             status: 'success',
             line: `${count} products match the datapack`,
         };
-    const differ = check.productsDiffer?.toLocaleString('en-US') ?? 'some';
+    const differ = check.productsDiffer ?? plain('some');
     return {
         status: 'warning',
-        problem: { text: `${differ} of ${count} products differ from the datapack`, failed: false },
+        problem: { text: plainLine`${differ} of ${check.checked} products differ from the datapack`, failed: false },
     };
 }
 

@@ -7,6 +7,7 @@ import { ProjectCreationStep } from '@/features/project-creation/ui/steps/Projec
 import { WizardState } from '@/types/webview';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
+import { plain } from '@/core/utils/plainText';
 
 // Mock vscode API
 const mockPostMessage = jest.fn();
@@ -66,7 +67,7 @@ describe('ProjectCreationStep', () => {
             progress: 50,
             message: 'Failed to install dependencies',
             logs: ['npm install failed'],
-            error: 'npm ERR! network timeout',
+            error: plain('npm ERR! network timeout'),
         },
     };
 

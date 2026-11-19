@@ -51,6 +51,7 @@ import { ProjectCreationStep } from '@/features/project-creation/ui/steps/Projec
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 import { press, settle } from '../../../../helpers/reactSettle';
+import { plain } from '@/core/utils/plainText';
 
 const stateWith = (progress: WizardState['creationProgress']): WizardState =>
     ({
@@ -138,7 +139,7 @@ describe('useCreationProgressPhase (through ProjectCreationStep)', () => {
             const { container } = await renderStep(
                 progressOf({
                     currentOperation: 'Installing dependencies',
-                    error: 'npm ERR! network timeout',
+                    error: plain('npm ERR! network timeout'),
                 })
             );
 

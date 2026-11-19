@@ -29,7 +29,7 @@ import {
     forwardToBackgroundNotice,
     openBackgroundNotice,
 } from './operationBackgroundNotice';
-import { COULDNT_TELL } from '@/core/utils/plainText';
+import { COULDNT_TELL, notYetPlain } from '@/core/utils/plainText';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse, MessageHandler } from '@/types/handlers';
 import { toError } from '@/types/typeGuards';
@@ -163,7 +163,8 @@ export function narrateOutcomeToModal<P extends { progress?: 'modal' }>(
                 await pushOperationProgress(
                     result.success
                         ? { id, state: 'succeeded' }
-                        : { id, state: 'failed', error: result.error ?? 'The operation did not finish.' },
+                        // A handler's error is not yet typed at its source (PL-102 slice 4).
+                        : { id, state: 'failed', error: result.error ? notYetPlain(result.error) : COULDNT_TELL },
                 );
             }
             return result;

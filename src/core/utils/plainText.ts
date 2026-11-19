@@ -49,14 +49,14 @@ export function plainName(name: string): PlainText {
     return translated(name);
 }
 
-/** A sentence written here with plain pieces in it: plainLine`Couldn't open ${plainName(title)}.` */
-export function plainLine(
-    strings: TemplateStringsArray,
-    ...parts: readonly PlainText[]
-): PlainText {
-    return translated(
-        strings.reduce((line, piece, i) => `${line}${piece}${i < parts.length ? parts[i] : ''}`, ''),
-    );
+/**
+ * A sentence written here with plain pieces and counts in it:
+ * plainLine`Couldn't open ${plainName(title)}.`, plainLine`${3} of ${10} products differ.`
+ * A count is written as the SC reads numbers ("1,200").
+ */
+export function plainLine(strings: TemplateStringsArray, ...parts: ReadonlyArray<PlainText | number>): PlainText {
+    const said = (part: PlainText | number): string => (typeof part === 'number' ? part.toLocaleString('en-US') : part);
+    return translated(strings.reduce((line, piece, i) => `${line}${piece}${i < parts.length ? said(parts[i]) : ''}`, ''));
 }
 
 /** Plain lines as one paragraph, a space between. */
@@ -73,6 +73,14 @@ export const NO_ANSWER =
 
 export const NO_ANSWER_IN_TIME = plain('No answer came in time.');
 
+/**
+ * Only a library's or a network's own words, never a phrase a sentence of ours might contain: these
+ * translate text `notYetPlain` would otherwise pass through, so a match must be raw for certain. "did
+ * not answer" is not here: "Commerce did not answer. Fill ERPs from Commerce again to retry." is a
+ * sentence of ours, and swapping it lost the retry (found 2026-11-19).
+ */
+const RAW_NO_ANSWER = /ETIMEDOUT|ECONNRESET|ECONNREFUSED|fetch failed|socket hang up/u;
+
 /** Raw words whose meaning is known, in plain words. The first that matches says it. */
 const KNOWN: ReadonlyArray<readonly [RegExp, PlainText]> = [
     // git's 3-way apply without the file versions the change was made from (walk F295).
@@ -82,7 +90,7 @@ const KNOWN: ReadonlyArray<readonly [RegExp, PlainText]> = [
             "Couldn't merge the changes: the versions of the files the changes were made from aren't available.",
         ),
     ],
-    [NO_ANSWER, NO_ANSWER_IN_TIME],
+    [RAW_NO_ANSWER, NO_ANSWER_IN_TIME],
 ];
 
 function textOf(raw: unknown): string {
@@ -117,7 +125,9 @@ export function plainOf(error: unknown): PlainText | undefined {
  * {@link COULDNT_TELL}. Unknown text is never passed through; log it where it is caught.
  */
 export function plainFailure(raw: unknown): PlainText {
-    return plainOf(raw) ?? knownPlain(raw) ?? COULDNT_TELL;
+    const said = plainOf(raw) ?? knownPlain(raw);
+    if (said) return said;
+    return NO_ANSWER.test(textOf(raw)) ? NO_ANSWER_IN_TIME : COULDNT_TELL;
 }
 
 /**

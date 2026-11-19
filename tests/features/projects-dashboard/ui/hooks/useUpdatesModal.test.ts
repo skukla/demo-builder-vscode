@@ -20,6 +20,7 @@ import type {
     UpdateRowStatus,
 } from '@/types/pendingUpdates';
 import type { OperationProgressPayload } from '@/types/webviewPayloads';
+import { plain } from '@/core/utils/plainText';
 
 const row = (id: string, overrides: Partial<PendingUpdateRow> = {}): PendingUpdateRow => ({
     id,
@@ -184,7 +185,7 @@ describe('useUpdatesModal', () => {
     it("follows each row's status and the run's progress as they are pushed", async () => {
         const { result } = await applying();
 
-        await push('updateRowStatus', { id: 'template:0', state: 'failed', message: 'Bodea: merge conflicts' });
+        await push('updateRowStatus', { id: 'template:0', state: 'failed', message: plain('Bodea: merge conflicts') });
         await push('operationProgress', { id: UPDATES_OPERATION_ID, state: 'running', stage: 'Updating add-ons', step: 'Lib A' });
 
         expect(result.current.statuses['template:0']).toEqual({ id: 'template:0', state: 'failed', message: 'Bodea: merge conflicts' });
@@ -323,7 +324,7 @@ async function endedWithAFailure() {
     const failed: UpdateRowStatus = {
         id: 'template:0',
         state: 'failed',
-        message: 'Could not merge.',
+        message: plain('Could not merge.'),
     };
     await act(async () => webviewClientHandlers.get('updateRowStatus')?.(failed));
     mockRequest.mockClear();

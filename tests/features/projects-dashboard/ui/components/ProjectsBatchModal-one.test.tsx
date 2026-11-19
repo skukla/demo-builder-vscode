@@ -15,6 +15,7 @@ import {
 } from './ProjectsBatchModal.testUtils';
 import { resetQuestions } from '../../../../helpers/projectsBatchFixtures';
 import { asDisplayName } from '@/core/utils/projectDisplayName';
+import { plain } from '@/core/utils/plainText';
 
 const ID = PROJECTS_BATCH_OPERATION_ID;
 
@@ -79,7 +80,7 @@ describe('ProjectsBatchModal: one project running', () => {
             state: 'failed',
             message: 'git clone failed',
         });
-        await push('operationProgress', { id: ID, state: 'failed', error: 'git clone failed' });
+        await push('operationProgress', { id: ID, state: 'failed', error: plain('git clone failed') });
 
         expect(screen.getByText('git clone failed')).toHaveClass('work-row-problem');
     });

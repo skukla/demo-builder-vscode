@@ -25,6 +25,7 @@ import { questionsInModal, stopRunningDemos } from './updateQuestionsInModal';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createNonSwitchingStateManager } from '@/core/state/workingProjectStateManager';
 import { UPDATES_OPERATION_ID } from '@/core/utils/operationIds';
+import { notYetPlain, plain, plainLine, type PlainText } from '@/core/utils/plainText';
 import { narrateOutcomeToModal } from '@/core/vscode/operationProgress';
 import { withOperationProgress, type OperationOutcome, type ReportStage } from '@/core/vscode/withOperationProgress';
 import { integrationUpdateProbe, updateIntegrationPairFor } from '@/features/dashboard/handlers/integrationUpdateHandlers';
@@ -102,7 +103,8 @@ function rowTellerFor(context: HandlerContext, shownId: (id: string) => string =
         tell: (id, state, message) => {
             if (state === 'failed' || state === 'skipped') notApplied++;
             recordOutcome(shownId(id), state, message);
-            void tellScreen(context, { id: shownId(id), state, ...(message ? { message } : {}) });
+            // An update's line is not yet typed at its source (PL-102 slice 3).
+            void tellScreen(context, { id: shownId(id), state, ...(message ? { message: notYetPlain(message) } : {}) });
         },
         notApplied: () => notApplied,
     };
@@ -237,14 +239,14 @@ async function applyOnFreshCheck(
 }
 
 /** What a ticked row that dropped out of the fresh check says. */
-function goneLine({ row, why }: GoneRow): string {
+function goneLine({ row, why }: GoneRow): PlainText {
     if (why === 'newer') {
-        const who = row.kind === 'adobeMcp' ? 'Adobe' : 'Demo Builder';
-        return `${who} released a newer version. You'll see it next time you check.`;
+        const who = row.kind === 'adobeMcp' ? plain('Adobe') : plain('Demo Builder');
+        return plainLine`${who} released a newer version. You'll see it next time you check.`;
     }
-    if (STOREFRONT_KINDS.has(row.kind)) return 'Demo Builder skipped this because the storefront already has it.';
-    if (row.kind === 'extension') return 'Demo Builder skipped this because it is already on this version.';
-    return 'Demo Builder skipped this because the project already has it.';
+    if (STOREFRONT_KINDS.has(row.kind)) return plain('Demo Builder skipped this because the storefront already has it.');
+    if (row.kind === 'extension') return plain('Demo Builder skipped this because it is already on this version.');
+    return plain('Demo Builder skipped this because the project already has it.');
 }
 
 /** One run: the check, the ids to apply from it, and how the screen knows its rows. */
@@ -285,7 +287,7 @@ async function applyTicked(
         // A step of its own, but not an update: told without counting toward "did not apply".
         onLocalCopy: (project, outcome) => {
             const message = lineOf(outcome);
-            void tellScreen(context, { id: localCopyRowId(project.path), state: outcome.state, ...(message ? { message } : {}) });
+            void tellScreen(context, { id: localCopyRowId(project.path), state: outcome.state, ...(message ? { message: notYetPlain(message) } : {}) });
         },
         // Ahead of it, so the project's steps are counted with it from the first.
         onLocalCopyAhead: (project) => void tellScreen(context, { id: localCopyRowId(project.path), state: 'waiting' }),

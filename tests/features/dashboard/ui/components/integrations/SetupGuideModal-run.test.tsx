@@ -15,6 +15,7 @@ import type { IntegrationCardModel } from '@/features/dashboard/ui/components/in
 import { DONE_COPY, APPLY_COPY, STATUS_COPY, SetupGuideModal } from './SetupGuideModal.testUtils';
 import type { SetupChecklistItem } from '@/types/appBuilderComponents';
 import type { OperationProgressPayload } from '@/types/webviewPayloads';
+import { plain } from '@/core/utils/plainText';
 
 /** Tailspin's warehouse step after an undo, 2026-10-26. */
 const WAREHOUSE: SetupChecklistItem = {
@@ -118,14 +119,14 @@ describe('Apply runs in the guide', () => {
     it('says why when the run stops', async () => {
         await renderGuide();
         fireEvent.click(screen.getByRole('button', { name: APPLY_COPY.apply }));
-        push({ id: 'erp-integration', state: 'failed', error: 'Commerce answered 403.' });
+        push({ id: 'erp-integration', state: 'failed', error: plain('Commerce answered 403.') });
         expect(says()).toBe(`${STATUS_COPY.applyFailed}Commerce answered 403.`);
     });
 
     it("ignores another integration's progress", async () => {
         await renderGuide();
         fireEvent.click(screen.getByRole('button', { name: APPLY_COPY.apply }));
-        push({ id: 'something-else', state: 'failed', error: 'Not this one.' });
+        push({ id: 'something-else', state: 'failed', error: plain('Not this one.') });
         expect(within(pane()).queryByText('Not this one.')).not.toBeInTheDocument();
     });
 });

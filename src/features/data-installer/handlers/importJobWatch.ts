@@ -16,7 +16,6 @@
 
 import { removalLine } from '../importSteps';
 import { plainFailure } from '../plainFailure';
-import { type PlainText } from '@/core/utils/plainText';
 import { announceDatapacksChanged } from '../services/datapackChanges';
 import type { DatapackEngine } from '../services/datapackEngine';
 import { nodeRecordFiles } from '../services/demoBuilderEngine/installRecord';
@@ -32,6 +31,7 @@ import { TransientStateManager } from '@/core/state/transientStateManager';
 import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
 import { OPERATION_STAGES, detailFor, expectationFor } from '@/core/utils/operationStages';
 import { packStage } from '@/core/utils/packStage';
+import { notYetPlain, plainJoin, type PlainText } from '@/core/utils/plainText';
 import { pushOperationProgress } from '@/core/vscode/operationProgress';
 import type { DatapackId } from '@/types/datapack';
 import { ErrorCode } from '@/types/errorCodes';
@@ -77,6 +77,12 @@ function datapackStage(
 export function datapackProgressLine(record: ImportJobRecord): string {
     const { stage, step } = datapackStage(record, record.perType, record.detail);
     return step ? `${stage}: ${step}` : stage;
+}
+
+/** What the SC must still know after a success: the lines left to know, else the note, in plain words. */
+function toKnowOf(result: { scLines?: PlainText[]; note?: string }): PlainText | undefined {
+    if (result.scLines?.length) return plainJoin(result.scLines);
+    return result.note ? notYetPlain(result.note) : undefined;
 }
 
 /**
@@ -153,7 +159,7 @@ async function watchAndRecord(
         // lines left to know when the run names them (an Admin step left), never the whole note, which
         // the result window and Activity hold (owner walk, 2026-11-16: a notification that read like a
         // report). Else the note, as before.
-        const toKnow = result.scLines?.length ? result.scLines.join(' ') : result.note;
+        const toKnow = toKnowOf(result);
         const kept = toKnow ? { note: toKnow } : {};
         await pushOperationProgress(
             result.outcome === 'success'

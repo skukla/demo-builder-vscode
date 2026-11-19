@@ -15,6 +15,7 @@ import {
 import { deleteQuestions } from '../../../../helpers/projectsBatchFixtures';
 import { asDisplayName } from '@/core/utils/projectDisplayName';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { plain } from '@/core/utils/plainText';
 
 const ID = PROJECTS_BATCH_OPERATION_ID;
 const DELETE: PrepareEnvelope = {
@@ -139,7 +140,7 @@ describe('ProjectsBatchModal: what a row ends with takes its working line', () =
         expect(rowOf('A').querySelector('.work-row-problem')).not.toHaveClass('work-row-problem--whole');
 
         await push('projectsBatchRow', { path: '/p/b', state: 'done' });
-        await push('operationProgress', { id: ID, state: 'failed', error: 'git clone failed' });
+        await push('operationProgress', { id: ID, state: 'failed', error: plain('git clone failed') });
 
         expect(rowOf('A').querySelector('.work-row-problem')).toHaveClass('work-row-problem--whole');
     });
