@@ -131,7 +131,7 @@ describe('the code is published to a site that exists', () => {
             error: expect.stringContaining('config for site not found'),
         });
         expect(sentTypes(context)).not.toContain('storefront-setup-github-app-required');
-        expect(messages(context)).not.toMatch(/Site configuration complete/);
+        expect(messages(context)).not.toMatch(/Publishing code/);
     });
 });
 
@@ -176,7 +176,7 @@ describe('a 401 right after the site gained its admin', () => {
 
         expect(result).toBeNull();
         expect(services.helixService.previewCode).toHaveBeenCalledTimes(3);
-        expect(messages(context)).toMatch(/Site configuration complete/);
+        expect(messages(context)).toMatch(/Publishing code/);
     });
 
     it('still fails the run, with the 401, when it never clears', async () => {

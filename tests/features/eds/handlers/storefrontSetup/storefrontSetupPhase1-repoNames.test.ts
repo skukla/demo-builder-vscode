@@ -169,7 +169,6 @@ describe('the repo the SC TYPED (existingRepo)', () => {
         const { context } = await run(typed('acme-corp/storefront-demo'));
 
         expect(sentPayloads(context).at(-1)).toMatchObject({
-            message: 'Repository ready',
             progress: 15,
         });
     });
@@ -181,7 +180,8 @@ describe('the repo the SC TYPED (existingRepo)', () => {
 
         const { context } = await run(typed('acme-corp/storefront-demo'));
 
-        expect(sentPayloads(context).map((p) => p.message)).not.toContain('Repository ready');
+        // The ready push is the one at 15; it carries no words of its own (line 2 stays).
+        expect(sentPayloads(context).map((p) => p.progress)).not.toContain(15);
     });
 });
 
@@ -207,7 +207,6 @@ describe('the reset path', () => {
         );
 
         expect(sentPayloads(context).at(-1)).toMatchObject({
-            message: 'Repository ready',
             progress: 15,
         });
     });
@@ -300,8 +299,8 @@ describe('creating a brand-new repo', () => {
 
         expect(sentPayloads(context).map((p) => p.message)).toEqual([
             'Creating the repository: brand-new',
-            'Waiting for repository content',
-            'Repository ready',
+            'Copying template',
+            undefined, // the ready push moves progress on and leaves line 2 as it is
         ]);
         expect(sentPayloads(context)[0]).toEqual({
             phase: 'repository',
@@ -309,7 +308,7 @@ describe('creating a brand-new repo', () => {
             progress: 5,
         });
         expect(sentPayloads(context)[1]).toMatchObject({
-            message: 'Waiting for repository content',
+            message: 'Copying template',
             progress: 10,
             repoOwner: 'skukla',
             repoName: 'brand-new',

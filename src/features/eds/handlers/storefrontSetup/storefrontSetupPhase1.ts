@@ -130,7 +130,7 @@ async function announcePinAndComplete(
     if (edsConfig.codePatchSource && edsConfig.codePatches) {
         await context.sendMessage('storefront-setup-progress', {
             phase: 'repository',
-            message: 'Pinning to verified canonical state',
+            message: 'Selecting template version',
             progress: 12,
         } satisfies StorefrontSetupProgressPayload);
     }
@@ -145,7 +145,6 @@ async function announcePinAndComplete(
     );
     await context.sendMessage('storefront-setup-progress', {
         phase: 'repository',
-        message: 'Repository ready',
         progress: 15,
         ...repoInfo,
     } satisfies StorefrontSetupProgressPayload);
@@ -344,7 +343,6 @@ async function executePhaseExistingRepo(
 
     await context.sendMessage('storefront-setup-progress', {
         phase: 'repository',
-        message: 'Repository ready',
         progress: 15,
         ...repoInfo,
     } satisfies StorefrontSetupProgressPayload);
@@ -470,7 +468,7 @@ async function executePhaseNewRepo(
 
     await context.sendMessage('storefront-setup-progress', {
         phase: 'repository',
-        message: 'Waiting for repository content',
+        message: 'Copying template',
         progress: 10,
         ...repoInfo,
     } satisfies StorefrontSetupProgressPayload);

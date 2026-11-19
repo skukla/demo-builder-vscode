@@ -173,7 +173,7 @@ describe('checkGitHubAppForExistingRepo', () => {
             await checkGitHubAppForExistingRepo(context, outer404(), REPO_INFO);
 
             // ALL progress messages, not the first: this function opens with
-            // "Verifying GitHub App installation", which sentPayload would
+            // "Verifying AEM Code Sync", which sentPayload would
             // return and which would pass this assertion for the wrong reason.
             const messages = (context.sendMessage as unknown as jest.Mock).mock.calls
                 .filter((c) => c[0] === 'storefront-setup-progress')
@@ -646,7 +646,7 @@ describe('checkGitHubAppForExistingRepo — pausing for the App, not failing', (
             .map((c) => c[1] as { phase: string; message: string; progress: number });
         expect(progress[progress.length - 1]).toMatchObject({
             phase: 'storefront-code',
-            message: expect.stringContaining('resuming'),
+            message: 'Resuming',
             progress: 28,
         });
     });

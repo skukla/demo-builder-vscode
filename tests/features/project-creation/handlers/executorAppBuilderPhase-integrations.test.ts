@@ -128,7 +128,7 @@ describe('executeAppBuilderIntegrationsPhase', () => {
         expect(progressTracker).toHaveBeenCalledWith(
             OPERATION_STAGES.deployingIntegrations.label,
             expect.any(Number),
-            'Enabling API access'
+            'Enabling APIs'
         );
     });
 
@@ -349,7 +349,7 @@ describe('executeAppBuilderIntegrationsPhase', () => {
 
             // Nothing to file it under, so the screen keeps the phase's own two lines.
             expect(progressTracker.mock.calls.map((call) => call[2])).toStrictEqual([
-                'Enabling API access',
+                'Enabling APIs',
                 'Deploying ERP Sync',
             ]);
         });
@@ -377,7 +377,7 @@ describe('executeAppBuilderIntegrationsPhase', () => {
                 position: { index: 2, total: 2 },
             }));
             expect(agent).toStrictEqual([
-                'Deploying integrations (2 of 2) — Enabling API access',
+                'Deploying integrations (2 of 2) — Enabling APIs',
                 'Deploying integrations (2 of 2) — Deploying ERP Sync',
                 `Deploying integrations (2 of 2) — ${INTEGRATION_ENTRY.name}: ${OPERATION_STAGES.deployingApp.label}`,
             ]);

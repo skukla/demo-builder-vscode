@@ -116,10 +116,10 @@ describe('creationReporter', () => {
         const progress = creationReporter(send, STARTED_AT);
         progress.numberFrom(creationSteps(edsConfig()));
 
-        progress.report(S.preparingProject.label, 5, 'Removing existing project data');
+        progress.report(S.preparingProject.label, 5, 'Removing previous files');
 
         expect(sent(send)[0].position).toBeUndefined();
-        expect(reportPhase).toHaveBeenCalledWith('Preparing the project — Removing existing project data');
+        expect(reportPhase).toHaveBeenCalledWith('Preparing the project — Removing previous files');
     });
 
     it('numbers nothing until the run knows its steps', () => {

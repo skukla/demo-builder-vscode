@@ -290,7 +290,8 @@ describe('executePhaseBundleRepo', () => {
         const lines = (context.sendMessage as jest.Mock).mock.calls.map(
             ([, payload]) => payload.message
         );
-        expect(lines[lines.length - 1]).toBe('Repository ready');
+        // The ready push carries no words: line 2 keeps what it said.
+        expect(lines[lines.length - 1]).toBeUndefined();
     });
 
     it("carries the sender's patches release into what setup reports, for creation to record", async () => {

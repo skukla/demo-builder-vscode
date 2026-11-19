@@ -52,7 +52,7 @@ export async function executePhaseCodeSync(
 
     await context.sendMessage('storefront-setup-progress', {
         phase: 'code-sync',
-        message: 'Verifying code synchronization',
+        message: 'Verifying code sync',
         progress: 40,
     } satisfies StorefrontSetupProgressPayload);
 
@@ -111,7 +111,7 @@ export async function executePhaseCodeSync(
 
     await context.sendMessage('storefront-setup-progress', {
         phase: 'site-config',
-        message: 'Site configuration complete',
+        message: 'Publishing code',
         progress: 49,
     } satisfies StorefrontSetupProgressPayload);
 
@@ -335,7 +335,6 @@ async function confirmCodeSync(
         );
         await context.sendMessage('storefront-setup-progress', {
             phase: 'site-config',
-            message: 'AEM Code Sync verified',
             progress: 48,
         } satisfies StorefrontSetupProgressPayload);
         return null;

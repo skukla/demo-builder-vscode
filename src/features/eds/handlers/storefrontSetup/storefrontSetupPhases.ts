@@ -152,7 +152,7 @@ async function runConfigCodeSyncPhases(
                 );
                 await context.sendMessage('storefront-setup-progress', {
                     phase: 'code-sync',
-                    message: 'Resuming setup',
+                    message: 'Resuming',
                     progress: 40,
                 } satisfies StorefrontSetupProgressPayload);
             },

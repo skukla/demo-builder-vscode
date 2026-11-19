@@ -234,7 +234,7 @@ async function createOrRebuild(
 
     // ===== PROJECT INITIALIZATION =====
 
-    progressTracker(OPERATION_STAGES.settingUpProject.label, 10, 'Creating project directory structure');
+    progressTracker(OPERATION_STAGES.settingUpProject.label, 10, 'Creating folders');
 
     const componentsDir = path.join(projectPath, 'components');
     await fsPromises.mkdir(componentsDir, { recursive: true });
@@ -242,7 +242,7 @@ async function createOrRebuild(
 
     context.logger.debug(`[Project Creation] Created directory: ${projectPath}`);
 
-    progressTracker(OPERATION_STAGES.settingUpProject.label, 15, 'Initializing project configuration');
+    progressTracker(OPERATION_STAGES.settingUpProject.label, 15, 'Writing settings');
 
     const project: import('@/types/base').Project = buildInitialProject(
         typedConfig,
@@ -288,7 +288,7 @@ async function createOrRebuild(
 
     // ===== LOAD COMPONENT DEFINITIONS =====
 
-    progressTracker(OPERATION_STAGES.loadingComponents.label, 20, 'Preparing component definitions');
+    progressTracker(OPERATION_STAGES.loadingComponents.label, 20, 'Reading components');
 
     const registryManager = componentRegistryFrom(context);
     const registry = await registryManager.loadRegistry();

@@ -215,7 +215,7 @@ export function applyProgress(
         // keeps counting the whole run.
         stage: data.stage,
         position: data.position,
-        message: data.message,
+        message: data.message ?? prev.message,
         subMessage: data.subMessage,
         progress: data.progress,
         startedAt: data.startedAt ?? prev.startedAt,

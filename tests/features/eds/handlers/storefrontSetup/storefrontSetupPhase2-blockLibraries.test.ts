@@ -276,7 +276,6 @@ describe('executePhaseHelixConfig — inspector tagging', () => {
         );
         expect(progressPushes(sendMessage)).toContainEqual({
             phase: 'storefront-code',
-            message: 'Inspector tagging installed',
             progress: 28,
         });
     });
@@ -293,7 +292,7 @@ describe('executePhaseHelixConfig — inspector tagging', () => {
         const { sendMessage } = await runPhase({});
 
         expect(progressPushes(sendMessage)).not.toContainEqual(
-            expect.objectContaining({ message: 'Inspector tagging installed' }),
+            expect.objectContaining({ progress: 28 }),
         );
     });
 

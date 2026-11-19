@@ -238,7 +238,7 @@ export async function syncEdsConfigToRemote(
     }
 
     // Republish's step for the same job (progress vocabulary, owner 2026-10-16).
-    progressTracker(OPERATION_STAGES.publishingSettings.label, 92, 'Pushing config.json to GitHub');
+    progressTracker(OPERATION_STAGES.publishingSettings.label, 92, 'Uploading settings');
 
     const repoUrl = typedConfig.edsConfig?.repoUrl;
     if (!repoUrl) {

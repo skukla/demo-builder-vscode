@@ -891,7 +891,8 @@ export interface StorefrontSetupProgressPayload {
     stage?: string;
     /** The step's place in the run, "(4 of 7)". */
     position?: OperationPosition;
-    message: string;
+    /** Line 2. Left out, the screen keeps the line it shows (a push that only moves progress on). */
+    message?: string;
     subMessage?: string;
     /** When the run began, in ms since the epoch: the screen's clock counts from it. */
     startedAt?: number;

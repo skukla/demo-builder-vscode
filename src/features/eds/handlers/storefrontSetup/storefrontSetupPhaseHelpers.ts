@@ -45,7 +45,7 @@ export async function checkGitHubAppForExistingRepo(
         phase: 'storefront-code',
         // Part of setting up the repository, whatever its phase has always said.
         stage: OPERATION_STAGES.settingUpRepository.label,
-        message: 'Verifying GitHub App installation',
+        message: 'Verifying AEM Code Sync',
         progress: 28,
     } satisfies StorefrontSetupProgressPayload);
 
@@ -249,7 +249,7 @@ export async function pauseForGitHubApp(
     await context.sendMessage('storefront-setup-progress', {
         phase: options.phase,
         ...(options.stage ? { stage: options.stage } : {}),
-        message: 'AEM Code Sync verified — resuming setup',
+        message: 'Resuming',
         progress: options.progress,
     } satisfies StorefrontSetupProgressPayload);
     return null;

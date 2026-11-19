@@ -143,10 +143,10 @@ export async function executePhaseBundleRepo(
         );
     }
     // One push for every line of the step; the last carries the repository it made.
-    const say = (message: string, progress: number, made?: RepoInfo): Promise<void> =>
+    const say = (message: string | undefined, progress: number, made?: RepoInfo): Promise<void> =>
         context.sendMessage('storefront-setup-progress', {
             phase: 'repository',
-            message,
+            ...(message ? { message } : {}),
             progress,
             ...made,
         } satisfies StorefrontSetupProgressPayload);
@@ -180,6 +180,6 @@ export async function executePhaseBundleRepo(
     context.logger.info(
         `[Storefront Setup] Repository created from the imported demo: ${created.fullName} at ${created.commit}`,
     );
-    await say('Repository ready', 15, repoInfo);
+    await say(undefined, 15, repoInfo);
     return null;
 }

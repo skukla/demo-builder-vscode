@@ -75,7 +75,7 @@ export const CREATION_STAGES = {
     installingDatapack: {
         label: 'Installing the datapack',
         expectation: 'Usually a few minutes',
-        detail: 'Into Commerce',
+        detail: 'Checking for conflicts',
     },
     removingDatapack: {
         label: 'Uninstalling the datapack',

@@ -201,7 +201,7 @@ describe('executePhaseHelixConfig — progress', () => {
         expect(progressPushes(sendMessage)).toEqual([
             {
                 phase: 'storefront-code',
-                message: 'Configuring Edge Delivery Services',
+                message: 'Configuring content source',
                 progress: 20,
             },
             {
@@ -212,12 +212,12 @@ describe('executePhaseHelixConfig — progress', () => {
             },
             {
                 phase: 'storefront-code',
-                message: 'Preparing inspector tagging',
+                message: 'Adding inspector tags',
                 progress: 27,
             },
             {
+                // Done: progress moves on, line 2 keeps what it said.
                 phase: 'storefront-code',
-                message: 'Edge Delivery Services configured',
                 progress: 35,
             },
         ]);

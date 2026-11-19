@@ -131,7 +131,7 @@ describe("the step creation shows for it", () => {
         await syncEdsConfigToRemote(createMockHandlerContext(), createMockProject(), readyConfig(), true, EDS_PATH, progress);
 
         const step = OPERATION_STAGES.publishingSettings.label;
-        expect(progress).toHaveBeenCalledWith(step, 92, 'Pushing config.json to GitHub');
+        expect(progress).toHaveBeenCalledWith(step, 92, 'Uploading settings');
         expect(progress).toHaveBeenCalledWith(step, 94, 'Waiting for the CDN');
     });
 });
