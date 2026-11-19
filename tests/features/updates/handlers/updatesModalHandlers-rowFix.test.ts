@@ -59,6 +59,10 @@ describe('fixUpdateWithAi', () => {
         expect(request.prompt).toContain('- What it said: GitHub is missing part of the history.');
         expect(request.prompt).toContain('read_debug_logs');
         expect(request.prompt).toContain('apply_updates');
+        // The chat acts on the project the failure is about, not whichever is open, and fixes the
+        // project, never Demo Builder's own code (owner walk, 2026-11-19).
+        expect(request.aboutProject).toBe('Bodea');
+        expect(request.prompt).toContain("do not change Demo Builder's own code");
     });
 
     it('refuses a row the run did not fail, and opens nothing', async () => {

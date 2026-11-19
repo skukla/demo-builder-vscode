@@ -160,7 +160,8 @@ export class TemplateSyncService {
         if (options.strategy === 'reset') {
             const refusal = templateResetRefusal(project); // one rule with the clash question (F249)
             if (refusal) return failure('reset', refusal);
-            return this.resetRepository(target, preserveFiles);
+            // Installed block libraries stay, as a merge leaves them (owner walk, 2026-11-19).
+            return this.resetRepository(target, [...preserveFiles, ...blockLibraryFolders(project)]);
         }
 
         // The base of the merge: the template version the storefront last matched.

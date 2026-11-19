@@ -106,7 +106,7 @@ export interface TemplateSyncTarget {
 export interface Checkout {
     tempDir: string;
     repoDir: string;
-    backups: Map<string, string>;
+    backups: Map<string, Buffer>;
     /** The SC's branch the result is pushed to. */
     branch: string;
 }

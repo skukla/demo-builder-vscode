@@ -242,6 +242,29 @@ describe("a colleague's template update leaves a block library's folders to the 
         expect(originFile(CATALOG)).toBe('catalog menu, version 2');
     }, REAL_GIT_TIMEOUT_MS);
 
+    // A replace (a reset source, or "Use the update" on a clash) keeps the library's folders as a
+    // merge does: the project still lists the library installed (owner walk, 2026-11-19).
+    it("keeps the library's block through a replace, and takes the colleague's other files", async () => {
+        const { c1 } = setUp();
+        const { svc } = service();
+
+        const result = await svc.syncWithTemplate(project(colleagueTrack(c1), [library]), { strategy: 'reset' });
+
+        expect(result.success).toBe(true);
+        expect(originFile('other.js')).toBe('colleague change');
+        expect(originFile(CATALOG)).toBe('catalog menu, version 2');
+    }, REAL_GIT_TIMEOUT_MS);
+
+    it("CONTROL: with no library recorded, a replace takes the colleague's copy of the block", async () => {
+        const { c1 } = setUp();
+        const { svc } = service();
+
+        const result = await svc.syncWithTemplate(project(colleagueTrack(c1)), { strategy: 'reset' });
+
+        expect(result.success).toBe(true);
+        expect(originFile(CATALOG)).toBe('catalog menu, version 1');
+    }, REAL_GIT_TIMEOUT_MS);
+
     it('CONTROL: with no library recorded, the two copies clash', async () => {
         const { c1 } = setUp();
         const { svc } = service();

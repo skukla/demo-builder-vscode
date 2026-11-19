@@ -9,6 +9,7 @@
  * @module features/updates/services/fixWithAi
  */
 
+import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { buildClashPrompt, clashForPrompt, type ClashForPrompt } from '@/features/updates/services/clashPrompt';
 import { openLocalCopy } from '@/features/updates/services/localStorefrontRefresh';
@@ -21,6 +22,8 @@ export interface FixWithAiRequest {
     prompt: string;
     fresh: true;
     attachFiles: string[];
+    /** The one project the clash is in, by the name the SC sees, so the chat acts on it (walk F300). */
+    aboutProject?: string;
 }
 
 /**
@@ -44,7 +47,8 @@ export async function openFixWithAi(
     }
     if (items.length === 0) return false;
     const attachFiles = items.flatMap((item) => item.files.map((file) => `${item.storefrontPath}/${file.path}`));
-    await open({ prompt: buildClashPrompt(items), fresh: true, attachFiles });
+    const about = projects.length === 1 ? { aboutProject: getProjectDisplayName(projects[0]) } : {};
+    await open({ prompt: buildClashPrompt(items), fresh: true, attachFiles, ...about });
     ctx.logger.info(`[Updates] Opened Fix with AI on ${items.length} kept clash(es)`);
     return true;
 }

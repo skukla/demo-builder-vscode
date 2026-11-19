@@ -193,7 +193,12 @@ export const handleApplyUpdates: MessageHandler<ApplyUpdatesRequest> = narrateOu
 export const handleFixUpdateWithAi: MessageHandler<FixUpdateWithAiRequest> = async (context, payload) => {
     const failed = failedRow(typeof payload?.id === 'string' ? payload.id : '');
     if (!failed) return { success: false, error: 'This update has no failure to fix.' };
-    await vscode.commands.executeCommand('demoBuilder.openInClaude', { prompt: failedUpdatePrompt(failed.row, failed.message), fresh: true });
+    // Named, so the chat acts on the project the failure is about, not whichever is open (walk F300).
+    await vscode.commands.executeCommand('demoBuilder.openInClaude', {
+        prompt: failedUpdatePrompt(failed.row, failed.message),
+        fresh: true,
+        aboutProject: failed.row.group.title,
+    });
     context.logger.info(`[Updates] Opened Fix with AI on ${failed.row.label} in ${failed.row.group.title}`);
     return { success: true };
 };

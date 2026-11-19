@@ -87,6 +87,12 @@ export type OpenInClaudeArg =
            * from the prompt, which names them, since its command line attaches nothing.
            */
           attachFiles?: string[];
+          /**
+           * The project the prompt is about, by the name the SC sees, when it may not be the open one
+           * (Fix with AI on an update for JustRite while Scratch 1028 is open, owner walk 2026-11-19):
+           * the preamble names it in place of the open project.
+           */
+          aboutProject?: string;
       };
 
 /** Said when the SC asks to pick an earlier chat and none exist yet. */
@@ -113,7 +119,14 @@ const NO_EARLIER_CHATS = 'There are no earlier chats to pick from yet.';
  * With no resolvable project the original wording is kept verbatim — the agent is
  * told to resolve the project itself, which is correct when we do not know it.
  */
-export function buildRehomePrefix(currentProjectName?: string): string {
+export function buildRehomePrefix(currentProjectName?: string, aboutProject?: string): string {
+    if (aboutProject) {
+        const about = sanitizeTemplateValue(aboutProject);
+        return (
+            `This request is about the demo project "${about}", which may not be the open one: act on ` +
+            `"${about}" by name, and do not switch the open project. Address the request below.\n\n`
+        );
+    }
     if (!currentProjectName) {
         return (
             'Before responding, call the get_current_project tool to re-confirm the active demo ' +
@@ -182,7 +195,7 @@ export class OpenInClaudeCommand extends BaseCommand {
         // Only the prompt matters now — any project arg is ignored. The home Chat
         // always launches at the projects root so one session addresses any
         // project by name via the in-extension MCP tools.
-        const { prompt, fresh, pickPast, attachFiles } = normalizeArg(arg);
+        const { prompt, fresh, pickPast, attachFiles, aboutProject } = normalizeArg(arg);
         const cwd = resolveProjectsRoot();
 
         this.logger.info(
@@ -200,7 +213,7 @@ export class OpenInClaudeCommand extends BaseCommand {
         try {
             const { launch } = descriptor;
             if (launch.kind === 'vscode-chat') {
-                await this.openVsCodeChat(prompt, currentProjectName, { fresh, pickPast, attachFiles });
+                await this.openVsCodeChat(prompt, currentProjectName, { fresh, pickPast, attachFiles, aboutProject });
             } else if (pickPast) {
                 await this.launchPastChatPicker(launch, cwd, permissions);
             } else {
@@ -209,7 +222,7 @@ export class OpenInClaudeCommand extends BaseCommand {
                     launch,
                     cwd,
                     prompt,
-                    currentProjectName,
+                    (text) => buildRehomePrefix(currentProjectName, aboutProject) + text,
                     fresh,
                     permissions,
                 );
@@ -235,7 +248,7 @@ export class OpenInClaudeCommand extends BaseCommand {
     private async openVsCodeChat(
         prompt: string | undefined,
         currentProjectName: string | undefined,
-        { fresh, pickPast, attachFiles }: { fresh: boolean; pickPast: boolean; attachFiles: string[] },
+        { fresh, pickPast, attachFiles, aboutProject }: { fresh: boolean; pickPast: boolean; attachFiles: string[]; aboutProject?: string },
     ): Promise<void> {
         if (pickPast) {
             await vscode.commands.executeCommand('workbench.action.chat.focusAgentSessionsViewer');
@@ -245,7 +258,7 @@ export class OpenInClaudeCommand extends BaseCommand {
         if (fresh) {
             await vscode.commands.executeCommand('workbench.action.chat.newChat');
         }
-        const query = prompt ? buildRehomePrefix(currentProjectName) + prompt : undefined;
+        const query = prompt ? buildRehomePrefix(currentProjectName, aboutProject) + prompt : undefined;
         const attached = attachFiles.length ? { attachFiles: attachFiles.map((file) => vscode.Uri.file(file)) } : {};
         await vscode.commands.executeCommand(
             'workbench.action.chat.open',
@@ -353,7 +366,8 @@ export class OpenInClaudeCommand extends BaseCommand {
         launch: TerminalLaunch,
         cwd: string,
         prompt: string | undefined,
-        currentProjectName: string | undefined,
+        /** The prompt with the preamble that says which project it is about. */
+        rehome: (text: string) => string,
         fresh: boolean,
         permissions: AgentPermissions,
     ): Promise<void> {
@@ -399,7 +413,7 @@ export class OpenInClaudeCommand extends BaseCommand {
             if (prompt) {
                 // Reuse case: claude is already at its REPL (a CONTINUED conversation)
                 // — re-home it to the active project, then inject the prompt.
-                this.injectPromptViaBracketedPaste(buildRehomePrefix(currentProjectName) + prompt);
+                this.injectPromptViaBracketedPaste(rehome(prompt));
                 this.maybeShowClipboardFallbackTip(descriptor.displayName);
             }
             return;
@@ -426,7 +440,7 @@ export class OpenInClaudeCommand extends BaseCommand {
             {
                 prompt,
                 fresh,
-                rehome: (text) => buildRehomePrefix(currentProjectName) + text,
+                rehome,
                 permissions,
             },
             CONVERSATION_PROBES,
@@ -532,13 +546,15 @@ function normalizeArg(arg: OpenInClaudeArg | undefined): {
     fresh: boolean;
     pickPast: boolean;
     attachFiles: string[];
+    aboutProject?: string;
 } {
-    const payload = arg as { prompt?: string; fresh?: boolean; pickPast?: boolean; attachFiles?: unknown } | undefined;
+    const payload = arg as { prompt?: string; fresh?: boolean; pickPast?: boolean; attachFiles?: unknown; aboutProject?: unknown } | undefined;
     const files = Array.isArray(payload?.attachFiles) ? payload.attachFiles : [];
     return {
         prompt: payload?.prompt,
         fresh: payload?.fresh === true,
         pickPast: payload?.pickPast === true,
         attachFiles: files.filter((file): file is string => typeof file === 'string'),
+        ...(typeof payload?.aboutProject === 'string' ? { aboutProject: payload.aboutProject } : {}),
     };
 }

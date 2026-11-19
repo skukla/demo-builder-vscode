@@ -523,7 +523,8 @@ describe('temp dir and preserved-file plumbing', () => {
         await service().syncWithTemplate(edsProject(), { strategy: 'reset' });
 
         expect(mockMkdir).toHaveBeenCalledWith(REPO_DIR, { recursive: true });
-        expect(mockWriteFile).toHaveBeenCalledWith(`${REPO_DIR}/fstab.yaml`, 'MOUNTS', 'utf-8');
+        // Written back as read, bytes and all (no text encoding), so an image in a kept folder survives.
+        expect(mockWriteFile).toHaveBeenCalledWith(`${REPO_DIR}/fstab.yaml`, 'MOUNTS');
     });
 
     it('a file that cannot be restored is warned about and the sync still completes', async () => {

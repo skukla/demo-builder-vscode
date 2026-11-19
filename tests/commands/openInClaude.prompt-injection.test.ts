@@ -370,3 +370,19 @@ describe('OpenInClaudeCommand', () => {
         });
     });
 });
+
+// Fix with AI on an update for JustRite while Scratch 1028 is open (owner walk, 2026-11-19): the
+// preamble names the project the request is about, never the open one.
+describe('a request about another project', () => {
+    it('names that project and says not to switch the open one', () => {
+        const prefix = buildRehomePrefix('scratch-1028', 'JustRite');
+
+        expect(prefix).toContain('"JustRite"');
+        expect(prefix).toContain('do not switch the open project');
+        expect(prefix).not.toContain('scratch-1028');
+    });
+
+    it('CONTROL: with none named, the open project is stated as before', () => {
+        expect(buildRehomePrefix('scratch-1028')).toContain('The active demo project is now "scratch-1028"');
+    });
+});
