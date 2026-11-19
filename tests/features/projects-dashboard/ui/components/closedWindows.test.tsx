@@ -40,6 +40,7 @@ const CLOSED_UPDATES: UpdatesModalControls = {
     remaining: 0,
     back: jest.fn(),
     rechecking: false,
+    rowFix: { fixes: {}, retry: jest.fn(), fixWithAi: jest.fn(), checkAgain: jest.fn() },
 };
 
 describe('closed windows open no dialog', () => {

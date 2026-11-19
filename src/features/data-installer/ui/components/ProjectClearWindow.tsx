@@ -25,7 +25,7 @@
 
 import { DialogContainer, Text } from '@adobe/react-spectrum';
 import React, { useMemo, useState } from 'react';
-import { FIX_WITH_AI, FIX_WITH_AI_HINT, saveFirstLabel, withoutSavingLabel } from '../../datapackWords';
+import { saveFirstLabel, withoutSavingLabel } from '../../datapackWords';
 import { CLEAR_DEMO_DATA, clearLabel, clearLead, clearTitle } from '../clearDemoDataWords';
 import { renderDataInstallerFailure } from '../dataInstallerFailure';
 import { type ProjectClear, useProjectClear } from '../hooks/useProjectClear';
@@ -33,13 +33,13 @@ import { type RemovalAnswer, type SwitchChanges, useSwitchChanges } from '../hoo
 import { JobSummaryWindow } from './job/JobSummaryWindow';
 import { RecordsWindow } from './job/RecordsWindow';
 import { SaveChangesBody } from './job/SaveChangesBody';
-import { failedButtonLabel } from './packMenu';
 import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
 import { SaveFirstWindow } from '@/core/ui/components/feedback/SaveFirstWindow';
 import type { ActionButton } from '@/core/ui/components/ui/Modal';
 import { StepsWindow } from '@/core/ui/components/ui/StepsDialog';
 import type { TreeListNode } from '@/core/ui/components/ui/TreeList';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { FIX_WITH_AI, FIX_WITH_AI_HINT, failedButtonLabel } from '@/core/utils/fixWithAi';
 import { WAIT_STAGES } from '@/core/utils/waitStages';
 import type { ClearCheck } from '@/types/demoDataWipe';
 

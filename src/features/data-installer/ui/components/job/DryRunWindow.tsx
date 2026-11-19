@@ -10,11 +10,12 @@
  */
 
 import React from 'react';
-import { FIX_WITH_AI, FIX_WITH_AI_HINT, INSTALL } from '../../../datapackWords';
+import { INSTALL } from '../../../datapackWords';
 import { datapackResultWords } from '../datapackResultWords';
 import type { ResultContent } from '../importResult';
 import type { ActionButton } from '@/core/ui/components/ui/Modal';
 import { ResultWindow } from '@/core/ui/components/ui/ResultDialog';
+import { FIX_WITH_AI, FIX_WITH_AI_HINT } from '@/core/utils/fixWithAi';
 
 export interface DryRunWindowProps {
     result: ResultContent;

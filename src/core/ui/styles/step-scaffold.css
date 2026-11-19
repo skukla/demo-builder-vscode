@@ -3,8 +3,9 @@
  * step layout, containers, text buttons, content blocks, instructions and images.
  *
  * FEATURE-SCOPED (ADR-017 §6, §3 as amended 2026-09-09: reach, not global).
- * Imported by THREE entries — `wizard`, `configure` and `dataInstaller` — which is
- * the union of what these ten families reach. Four of them
+ * Imported by FOUR entries — `wizard`, `configure`, `dataInstaller` and, since 2026-11-19,
+ * `projectsList` (`.btn-compact` on the Updates run's row buttons) — which is the union of
+ * what these ten families reach. Four of them
  * (`.container-*`, `.btn-*`, `.content-*`, `.section-*`) reach only wizard and
  * configure; giving each its exact reach would have meant a sheet per family.
  *

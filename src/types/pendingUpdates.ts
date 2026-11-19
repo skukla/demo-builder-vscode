@@ -111,6 +111,22 @@ export interface ApplyUpdatesResponse {
     remaining?: number;
 }
 
+/** `fixUpdateWithAi` — open the SC's AI on an update the run could not apply, by its row id. */
+export interface FixUpdateWithAiRequest {
+    id: string;
+}
+
+/** `checkUpdateRows` — Check Again: whether these rows' updates are still waiting. */
+export interface CheckUpdateRowsRequest {
+    ids: string[];
+}
+
+/** `checkUpdateRows`'s answer: the ids still waiting; every other row was told done. */
+export interface CheckUpdateRowsResponse {
+    success: true;
+    data: { waiting: string[] };
+}
+
 /** `recheckUpdates` — the rows of a fresh Check for Updates; empty when nothing waits. */
 export interface RecheckUpdatesResponse {
     success: true;

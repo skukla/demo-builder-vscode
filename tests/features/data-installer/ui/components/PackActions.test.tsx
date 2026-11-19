@@ -17,7 +17,7 @@ import { press, settle } from '../../../../helpers/reactSettle';
 // Below the mocks on purpose: they hoist above these imports.
 import type { DatapackDetail } from '@/features/data-installer/types';
 import { DatapackDetailPanel } from '@/features/data-installer/ui/components/DatapackDetailPanel';
-import { RETRIES_BEFORE_FIX } from '@/features/data-installer/ui/components/importResult';
+import { RETRIES_BEFORE_FIX } from '@/core/utils/fixWithAi';
 import { PackActions } from '@/features/data-installer/ui/components/PackActions';
 import type { HeldFailure } from '@/features/data-installer/ui/hooks/useProjectHolding';
 import { SHARE_CONSENT } from '@/features/data-installer/shareWording';

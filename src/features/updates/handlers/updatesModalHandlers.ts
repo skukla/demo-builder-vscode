@@ -19,6 +19,7 @@
  */
 
 import * as vscode from 'vscode';
+import { failedRow, forgetTried, recordOutcome, rememberTried, triedRow } from './failedUpdateRows';
 import { forgetKeptRows, watchKeptRows, type KeptRow } from './fixEndedNotice';
 import { questionsInModal, stopRunningDemos } from './updateQuestionsInModal';
 import { ServiceLocator } from '@/core/di/serviceLocator';
@@ -29,6 +30,7 @@ import { withOperationProgress, type OperationOutcome, type ReportStage } from '
 import { integrationUpdateProbe, updateIntegrationPairFor } from '@/features/dashboard/handlers/integrationUpdateHandlers';
 import { findAllUpdates, type FoundUpdates } from '@/features/updates/services/allUpdates';
 import { ExtensionUpdater } from '@/features/updates/services/extensionUpdater';
+import { failedUpdatePrompt } from '@/features/updates/services/failedUpdatePrompt';
 import { openFixWithAi } from '@/features/updates/services/fixWithAi';
 import {
     matchFresh,
@@ -49,6 +51,9 @@ import type { HandlerContext, HandlerResponse, MessageHandler } from '@/types/ha
 import {
     localCopyRowId,
     type ApplyUpdatesRequest,
+    type CheckUpdateRowsRequest,
+    type CheckUpdateRowsResponse,
+    type FixUpdateWithAiRequest,
     type PendingUpdateRow,
     type RecheckUpdatesResponse,
     type UpdateRowState,
@@ -96,6 +101,7 @@ function rowTellerFor(context: HandlerContext, shownId: (id: string) => string =
     return {
         tell: (id, state, message) => {
             if (state === 'failed' || state === 'skipped') notApplied++;
+            recordOutcome(shownId(id), state, message);
             void tellScreen(context, { id: shownId(id), state, ...(message ? { message } : {}) });
         },
         notApplied: () => notApplied,
@@ -112,6 +118,7 @@ function rowTellerFor(context: HandlerContext, shownId: (id: string) => string =
 export function presentUpdates(found: FoundUpdates): PendingUpdateRow[] {
     // Another list: the last run's ids would name its rows.
     forgetKeptRows();
+    forgetTried();
     const rows = rowsOf(found);
     shown = { found, rows };
     return rows;
@@ -155,6 +162,8 @@ export const handleApplyUpdates: MessageHandler<ApplyUpdatesRequest> = narrateOu
         shown = undefined;
         applying = true;
         forgetKeptRows();
+        // Kept by the id the screen shows, so Fix with AI and Check Again can find each row.
+        rememberTried(presented ? presented.rows.filter((row) => payload?.ids?.includes(row.id)) : tickedRows);
         // The run saves every project it updates; none of them may become the open one.
         const runContext = { ...context, stateManager: createNonSwitchingStateManager(context.stateManager) };
         try {
@@ -169,6 +178,43 @@ export const handleApplyUpdates: MessageHandler<ApplyUpdatesRequest> = narrateOu
     },
     () => UPDATES_OPERATION_ID,
 );
+
+/**
+ * `fixUpdateWithAi`: Fix with AI on an update the run could not apply (owner, 2026-11-19). Only
+ * the row's id is read from the request; the prompt is built from the run's own record.
+ */
+export const handleFixUpdateWithAi: MessageHandler<FixUpdateWithAiRequest> = async (context, payload) => {
+    const failed = failedRow(typeof payload?.id === 'string' ? payload.id : '');
+    if (!failed) return { success: false, error: 'This update has no failure to fix.' };
+    await vscode.commands.executeCommand('demoBuilder.openInClaude', { prompt: failedUpdatePrompt(failed.row, failed.message), fresh: true });
+    context.logger.info(`[Updates] Opened Fix with AI on ${failed.row.label} in ${failed.row.group.title}`);
+    return { success: true };
+};
+
+/**
+ * `checkUpdateRows`: Check Again, as Prerequisites' Recheck (owner, 2026-11-19). Checks whether
+ * each update is still waiting, and applies nothing: one no longer listed has been applied (by the
+ * SC's AI, say) and its row is told done; the ids still listed are answered.
+ */
+export const handleCheckUpdateRows: MessageHandler<CheckUpdateRowsRequest, CheckUpdateRowsResponse> = async (
+    context,
+    payload,
+) => {
+    const rows = (payload?.ids ?? []).map(triedRow).filter((row): row is PendingUpdateRow => row !== undefined);
+    // Rows this window's runs never tried (the extension restarted): nothing known to check, so
+    // they stand as they are.
+    if (rows.length === 0) return { success: true, data: { waiting: payload?.ids ?? [] } };
+    const found = await findAllUpdates(context, integrationUpdateProbe(context));
+    const { shownIdOf, gone } = matchFresh(rows, rowsOf(found));
+    for (const { row, why } of gone) {
+        const status: UpdateRowStatus = why === 'newer'
+            ? { id: row.id, state: 'skipped', message: goneLine({ row, why }) }
+            : { id: row.id, state: 'done' };
+        recordOutcome(row.id, status.state, status.message);
+        void tellScreen(context, status);
+    }
+    return { success: true, data: { waiting: [...shownIdOf.values()] } };
+};
 
 /** The check the screen showed is gone: check again, say which rows dropped out, apply the rest. */
 async function applyOnFreshCheck(

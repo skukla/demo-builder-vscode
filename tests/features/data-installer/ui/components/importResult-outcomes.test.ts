@@ -15,10 +15,8 @@
  */
 
 import type { DataTypeStatus, ImportJobRecord } from '@/features/data-installer/types';
-import {
-    resolveResult,
-    RETRIES_BEFORE_FIX,
-} from '@/features/data-installer/ui/components/importResult';
+import { RETRIES_BEFORE_FIX } from '@/core/utils/fixWithAi';
+import { resolveResult } from '@/features/data-installer/ui/components/importResult';
 import { jobRecord, PACK_NAME, recordOnlySources } from './importResult.testUtils';
 import { plain } from '@/features/data-installer/plainFailure';
 

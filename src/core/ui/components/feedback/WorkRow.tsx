@@ -54,6 +54,11 @@ export interface WorkRowProps {
      * end (owner walk, 2026-11-16: a failed install's reason was cut short and could not be read).
      */
     whole?: boolean;
+    /**
+     * What the SC can do about it, at the row's right, as the Prerequisites step puts Install beside
+     * a missing tool: the Updates window's Retry, Fix with AI and Check Again (owner, 2026-11-19).
+     */
+    action?: React.ReactNode;
 }
 
 /** A row's note: red when it failed, the house's orange warning line on a warning row, else grey. */
@@ -85,7 +90,7 @@ function SecondLine({ detail, dense, problem, whole }: Pick<WorkRowProps, 'detai
 }
 
 /** One row: icon and name, then the detail and what to read under it. */
-export function WorkRow({ status, label, detail, note, why, state, children, time, dense = false, problem, whole }: WorkRowProps): React.ReactElement {
+export function WorkRow({ status, label, detail, note, why, state, children, time, dense = false, problem, whole, action }: WorkRowProps): React.ReactElement {
     return (
         <div className={dense ? 'work-row work-row--dense' : 'work-row'} data-state={state}>
             <span className="work-row-icon">
@@ -98,6 +103,7 @@ export function WorkRow({ status, label, detail, note, why, state, children, tim
                 {note && <Note note={note} status={status} why={why} />}
                 {children}
             </div>
+            {action && <div className="work-row-action">{action}</div>}
         </div>
     );
 }

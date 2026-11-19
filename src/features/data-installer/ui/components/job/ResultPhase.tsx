@@ -7,12 +7,12 @@
  */
 
 import React from 'react';
-import { FIX_WITH_AI, FIX_WITH_AI_HINT } from '../../../datapackWords';
 import type { DatapackJob } from '../../hooks/useDatapackJob';
 import type { ResultContent } from '../importResult';
 import type { JobKind } from './datapackJob';
 import { JobResultWindow } from './JobResultWindow';
 import type { ActionButton } from '@/core/ui/components/ui/Modal';
+import { FIX_WITH_AI, FIX_WITH_AI_HINT } from '@/core/utils/fixWithAi';
 
 /**
  * An end's one action beside Close (rule 16): Retry, or Fix with AI. Retry only on this window's own

@@ -203,7 +203,7 @@ describe('useUpdatesModal', () => {
             title: 'Applying Updates',
             doneTitle: 'Updates Applied',
             failedTitle: "Couldn't Apply the Updates",
-            warnedTitle: "Some updates didn't apply",
+            warnedTitle: "Some Updates Didn't Apply",
         });
         expect(result.current.view).toEqual({ phase: 'closed' });
     });
@@ -293,5 +293,129 @@ describe('useUpdatesModal', () => {
             expect(result.current.view.phase).toBe('applying');
             expect(result.current.remaining).toBe(1);
         });
+    });
+});
+
+const fixRow = (id: string): PendingUpdateRow => ({
+    id,
+    kind: 'template',
+    group: { key: '/p/justrite', title: 'JustRite' },
+    label: `Update ${id}`,
+    detail: 'Source was reset.',
+    ticked: true,
+});
+const FIX_ROWS = [fixRow('template:0'), fixRow('integration:0')];
+
+/** What each request answers, by message type. */
+function answerFix(byType: Record<string, unknown>): void {
+    mockRequest.mockImplementation(
+        async (type: string) => byType[type] ?? { success: true, data: { rows: null } }
+    );
+}
+
+/** Rows shown, applied, and the first told failed: the run has ended with one to fix. */
+async function endedWithAFailure() {
+    const onApplied = jest.fn();
+    const hook = renderHook(() => useUpdatesModal(onApplied));
+    const shown: ShowUpdatesPayload = { rows: FIX_ROWS };
+    await act(async () => webviewClientHandlers.get('showUpdates')?.(shown));
+    act(() => hook.result.current.apply());
+    const failed: UpdateRowStatus = {
+        id: 'template:0',
+        state: 'failed',
+        message: 'Could not merge.',
+    };
+    await act(async () => webviewClientHandlers.get('updateRowStatus')?.(failed));
+    mockRequest.mockClear();
+    return { ...hook, onApplied };
+}
+
+// Fixed in place, as Prerequisites installs a missing tool (owner, 2026-11-19): Retry runs that one
+// update again in the window, Fix with AI opens the SC's AI on it, and Check Again asks whether it
+// is still waiting.
+describe('fixing an update that did not apply', () => {
+    beforeEach(() => {
+        answerFix({ applyUpdates: { success: true } });
+    });
+
+    it('Retry runs only that update again, in this window, and counts the try', async () => {
+        const { result } = await endedWithAFailure();
+
+        act(() => result.current.rowFix.retry('template:0'));
+
+        expect(mockRequest).toHaveBeenCalledWith('applyUpdates', {
+            ids: ['template:0'],
+            rows: [FIX_ROWS[0]],
+            id: UPDATES_OPERATION_ID,
+            progress: 'modal',
+        });
+        expect(result.current.statuses['template:0']).toEqual({
+            id: 'template:0',
+            state: 'waiting',
+        });
+        expect(result.current.rowFix.fixes['template:0']).toMatchObject({
+            retries: 1,
+            withAi: false,
+        });
+        expect(result.current.view.phase).toBe('applying');
+    });
+
+    it('Fix with AI asks the extension by the row id, and offers Check Again once the AI has it', async () => {
+        answerFix({ fixUpdateWithAi: { success: true } });
+        const { result } = await endedWithAFailure();
+
+        act(() => result.current.rowFix.fixWithAi('template:0'));
+
+        expect(mockRequest).toHaveBeenCalledWith('fixUpdateWithAi', { id: 'template:0' });
+        await waitFor(() => expect(result.current.rowFix.fixes['template:0']?.withAi).toBe(true));
+    });
+
+    it("keeps the extension's refusal where the button is when the AI did not open", async () => {
+        answerFix({
+            fixUpdateWithAi: { success: false, error: 'This update has no failure to fix.' },
+        });
+        const { result } = await endedWithAFailure();
+
+        act(() => result.current.rowFix.fixWithAi('template:0'));
+
+        await waitFor(() =>
+            expect(result.current.rowFix.fixes['template:0']).toMatchObject({
+                withAi: false,
+                problem: 'This update has no failure to fix.',
+            })
+        );
+    });
+
+    it('Check Again sends the row back to Fix with AI when its update is still waiting', async () => {
+        answerFix({
+            fixUpdateWithAi: { success: true },
+            checkUpdateRows: { success: true, data: { waiting: ['template:0'] } },
+        });
+        const { result } = await endedWithAFailure();
+        act(() => result.current.rowFix.fixWithAi('template:0'));
+        await waitFor(() => expect(result.current.rowFix.fixes['template:0']?.withAi).toBe(true));
+
+        act(() => result.current.rowFix.checkAgain('template:0'));
+        expect(result.current.rowFix.fixes['template:0']?.checking).toBe(true);
+
+        expect(mockRequest).toHaveBeenCalledWith('checkUpdateRows', { ids: ['template:0'] });
+        await waitFor(() =>
+            expect(result.current.rowFix.fixes['template:0']).toMatchObject({
+                checking: false,
+                withAi: false,
+            })
+        );
+    });
+
+    it('a new list forgets what was being fixed', async () => {
+        answerFix({ fixUpdateWithAi: { success: true } });
+        const { result } = await endedWithAFailure();
+        act(() => result.current.rowFix.fixWithAi('template:0'));
+        await waitFor(() => expect(result.current.rowFix.fixes['template:0']?.withAi).toBe(true));
+
+        const shown: ShowUpdatesPayload = { rows: FIX_ROWS };
+        await act(async () => webviewClientHandlers.get('showUpdates')?.(shown));
+
+        expect(result.current.rowFix.fixes).toStrictEqual({});
     });
 });

@@ -14,8 +14,9 @@ import {
     runningRowOf,
     UpdatesRunView,
 } from '@/features/projects-dashboard/ui/components/UpdatesRunView';
-import type { RowStatuses } from '@/features/projects-dashboard/ui/hooks/useUpdatesModal';
+import type { RowFixControls, RowStatuses } from '@/features/projects-dashboard/ui/hooks/useUpdatesModal';
 import { groupsOf } from '@/features/projects-dashboard/ui/components/updateGroups';
+import { AI_HAS_IT } from '@/features/projects-dashboard/ui/components/UpdateRowFix';
 import type { PendingUpdateRow } from '@/types/pendingUpdates';
 import type { OperationProgressPayload } from '@/types/webviewPayloads';
 
@@ -30,6 +31,9 @@ const ROWS: PendingUpdateRow[] = ['Scratch 1028', 'Bodea', 'Scratch 1028 C'].map
 }));
 
 const PROGRESS = { state: 'running' } as OperationProgressPayload;
+
+/** No row being fixed: the run's own buttons are its own suite's. */
+const ROW_FIX: RowFixControls = { fixes: {}, retry: jest.fn(), fixWithAi: jest.fn(), checkAgain: jest.fn() };
 
 /** Row i running, the ones before it done, the rest waiting. */
 function at(i: number): RowStatuses {
@@ -62,7 +66,7 @@ function view(statuses: RowStatuses) {
             statuses={statuses}
             progress={PROGRESS}
             onTyped={jest.fn()}
-            remaining={0}
+            remaining={0} rowFix={ROW_FIX}
         />
     );
 }
@@ -142,7 +146,7 @@ describe("the running step says where it is among its project's steps", () => {
                 statuses={statuses}
                 progress={{ state: 'running', stage: 'Updating add-ons' } as OperationProgressPayload}
                 onTyped={jest.fn()}
-                remaining={0}
+                remaining={0} rowFix={ROW_FIX}
             />,
         );
 
@@ -161,7 +165,7 @@ describe("the running step says where it is among its project's steps", () => {
             [COPY]: { id: COPY, state: 'running' },
         };
         const { container } = render(
-            <UpdatesRunView rows={TWO} statuses={statuses} progress={PROGRESS} onTyped={jest.fn()} remaining={0} />,
+            <UpdatesRunView rows={TWO} statuses={statuses} progress={PROGRESS} onTyped={jest.fn()} remaining={0} rowFix={ROW_FIX} />,
         );
 
         expect(rowsOf(container)[2]).toHaveTextContent('Step 3/3: Updating your local copy');
@@ -174,7 +178,7 @@ describe("the running step says where it is among its project's steps", () => {
                 statuses={at(0)}
                 progress={{ state: 'running', stage: 'Updating add-ons' } as OperationProgressPayload}
                 onTyped={jest.fn()}
-                remaining={0}
+                remaining={0} rowFix={ROW_FIX}
             />,
         );
 
@@ -196,8 +200,7 @@ describe("the running step says where it is among its project's steps", () => {
                 statuses={statuses}
                 progress={{ state: 'succeeded' } as OperationProgressPayload}
                 onTyped={jest.fn()}
-                remaining={0}
-                ending={{ outcome: "Didn't Apply", status: 'warning' }}
+                remaining={0} rowFix={ROW_FIX}
             />,
         );
 
@@ -219,7 +222,7 @@ describe("the running step says where it is among its project's steps", () => {
             position: { index: 2, total: 4, name: 'Justrite ERP' },
         } as OperationProgressPayload;
         const { container } = render(
-            <UpdatesRunView rows={TWO} statuses={statuses} progress={progress} onTyped={jest.fn()} remaining={0} />,
+            <UpdatesRunView rows={TWO} statuses={statuses} progress={progress} onTyped={jest.fn()} remaining={0} rowFix={ROW_FIX} />,
         );
 
         const row = rowsOf(container)[1];
@@ -235,9 +238,63 @@ describe("the running step says where it is among its project's steps", () => {
             position: { index: 1, total: 2, name: 'ERP Integration' },
         } as OperationProgressPayload;
         const { container } = render(
-            <UpdatesRunView rows={ROWS.slice(0, 1)} statuses={at(0)} progress={progress} onTyped={jest.fn()} remaining={0} />,
+            <UpdatesRunView rows={ROWS.slice(0, 1)} statuses={at(0)} progress={progress} onTyped={jest.fn()} remaining={0} rowFix={ROW_FIX} />,
         );
 
         expect(rowsOf(container)[0]).toHaveTextContent('Installing dependencies: ERP Integration');
     });
 });
+
+// Fixed in place, as Prerequisites installs a missing tool (owner, 2026-11-19): the button on an
+// update that did not apply, once the run has ended.
+describe('an update that did not apply carries its button once the run ends', () => {
+    const FAILED: RowStatuses = {
+        'blockLibrary:0': { id: 'blockLibrary:0', state: 'failed', message: 'Could not merge.' },
+    };
+    const ENDED = { state: 'succeeded', warning: '1 update did not apply.' } as OperationProgressPayload;
+    const fixing = (fixes: RowFixControls['fixes']): RowFixControls => ({
+        fixes,
+        retry: jest.fn(),
+        fixWithAi: jest.fn(),
+        checkAgain: jest.fn(),
+    });
+    const draw = (rowFix: RowFixControls, progress = ENDED) =>
+        render(<UpdatesRunView rows={ROWS.slice(0, 1)} statuses={FAILED} progress={progress} onTyped={jest.fn()} remaining={0} rowFix={rowFix} />);
+
+    it('offers Retry first, and presses it for that row', () => {
+        const rowFix = fixing({});
+        draw(rowFix);
+
+        screen.getByRole('button', { name: 'Retry' }).click();
+
+        expect(rowFix.retry).toHaveBeenCalledWith('blockLibrary:0');
+        expect(screen.getByText('Could not merge.')).toHaveClass('work-row-why');
+    });
+
+    it('offers Fix with AI once retrying has not helped', () => {
+        const rowFix = fixing({ 'blockLibrary:0': { retries: 2, withAi: false, checking: false } });
+        draw(rowFix);
+
+        screen.getByRole('button', { name: 'Fix with AI' }).click();
+
+        expect(rowFix.fixWithAi).toHaveBeenCalledWith('blockLibrary:0');
+    });
+
+    it('offers Check Again while the AI has it, saying so in place of why it failed', () => {
+        const rowFix = fixing({ 'blockLibrary:0': { retries: 2, withAi: true, checking: false } });
+        draw(rowFix);
+
+        screen.getByRole('button', { name: 'Check Again' }).click();
+
+        expect(rowFix.checkAgain).toHaveBeenCalledWith('blockLibrary:0');
+        expect(screen.getByText(AI_HAS_IT)).not.toHaveClass('work-row-why');
+        expect(screen.queryByText('Could not merge.')).toBeNull();
+    });
+
+    it('offers nothing while a run is still going', () => {
+        draw(fixing({}), PROGRESS);
+
+        expect(screen.queryByRole('button')).toBeNull();
+    });
+});
+

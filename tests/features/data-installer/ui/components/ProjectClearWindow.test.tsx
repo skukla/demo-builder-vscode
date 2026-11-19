@@ -19,7 +19,7 @@ import {
     press,
     sent,
 } from './ProjectClearWindow.testUtils';
-import { RETRIES_BEFORE_FIX } from '@/features/data-installer/ui/components/importResult';
+import { RETRIES_BEFORE_FIX } from '@/core/utils/fixWithAi';
 import type { ClearCheck } from '@/types/demoDataWipe';
 import { ErrorCode } from '@/types/errorCodes';
 

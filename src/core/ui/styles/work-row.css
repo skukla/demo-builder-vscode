@@ -59,6 +59,17 @@
         line-height: 20px;
     }
 
+    /* What the SC can do about a row, at its right (`WorkRow`'s action): the text takes the room
+       between, so the button keeps its place whatever the row says. */
+    .work-row-text:has(+ .work-row-action) {
+        flex: 1;
+    }
+
+    .work-row-action {
+        flex: none;
+        margin-left: 12px;
+    }
+
     /* Where the row stands, under its name (owner, 2026-11-04): the label's grey and size, so the
        name leads and every row is the same two lines. */
     .work-row-detail {

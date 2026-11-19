@@ -120,6 +120,7 @@ function controls(view: UpdatesView, ticked: string[] = []): jest.Mocked<Updates
         remaining: 0,
         back: jest.fn(),
         rechecking: false,
+        rowFix: { fixes: {}, retry: jest.fn(), fixWithAi: jest.fn(), checkAgain: jest.fn() },
     };
 }
 
@@ -213,10 +214,9 @@ describe('UpdatesModal', () => {
         render(<UpdatesModal controls={c} />);
 
         expect(screen.getByText('Demo Builder Blocks: rate limited')).toHaveClass('work-row-why');
-        // Walk F222: "Updates" as the title, the outcome under the large mark.
-        expect(screen.getByRole('dialog', { name: 'Updates' })).not.toHaveAttribute('data-status');
-        expect(screen.getByText("Some updates didn't apply")).toHaveClass('result-outcome');
-        expect(document.querySelector('.result-mark')).toHaveAttribute('data-status', 'warning');
+        // The run ends in place, as Prerequisites does (owner, 2026-11-19): the outcome is the title.
+        expect(screen.getByRole('dialog', { name: "Some Updates Didn't Apply" })).toHaveAttribute('data-status', 'warning');
+        expect(document.querySelector('.result-mark')).toBeNull();
         expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
     });
 
@@ -243,9 +243,7 @@ describe('UpdatesModal', () => {
         );
         render(<UpdatesModal controls={c} />);
 
-        expect(screen.getByRole('dialog', { name: 'Updates' })).toBeInTheDocument();
-        expect(screen.getByText('Applied')).toHaveClass('result-outcome');
-        expect(document.querySelector('.result-mark')).toHaveAttribute('data-status', 'success');
+        expect(screen.getByRole('dialog', { name: 'Updates Applied' })).toHaveAttribute('data-status', 'success');
         expect(screen.getByText('One block left out.')).toHaveClass('work-row-note');
     });
 
@@ -261,7 +259,7 @@ describe('UpdatesModal', () => {
         );
         render(<UpdatesModal controls={c} />);
 
-        expect(screen.getByText('Applied')).toHaveClass('result-outcome');
+        expect(screen.getByRole('dialog', { name: 'Updates Applied' })).toHaveAttribute('data-status', 'success');
         expect(screen.getByText('Updated by your AI.')).toHaveClass('work-row-note');
     });
 
@@ -269,10 +267,8 @@ describe('UpdatesModal', () => {
         const c = running({}, { state: 'failed', error: 'This list of updates is out of date. Check for updates again.' });
         render(<UpdatesModal controls={c} />);
 
-        expect(screen.getByRole('dialog', { name: 'Updates' })).toBeInTheDocument();
-        expect(screen.getByText("Couldn't Apply")).toHaveClass('result-outcome');
-        expect(document.querySelector('.result-mark')).toHaveAttribute('data-status', 'error');
-        expect(screen.getByText('This list of updates is out of date. Check for updates again.')).toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: "Couldn't Apply the Updates" })).toHaveAttribute('data-status', 'error');
+        expect(screen.getByText('This list of updates is out of date. Check for updates again.')).toHaveClass('dialog-line');
         expect(screen.getByRole('button', { name: 'Open Debug Logs' })).toBeInTheDocument();
     });
 
@@ -293,9 +289,9 @@ describe('UpdatesModal', () => {
         );
         const { container } = render(<UpdatesModal controls={c} />);
 
-        // Under the outcome, above the list.
+        // Above the list, which stays where it was.
         const reason = screen.getByText('The run stopped.');
-        expect(reason).toHaveClass('result-reason');
+        expect(reason).toHaveClass('dialog-line');
         const list = container.querySelector('.updates-group-list') as HTMLElement;
         expect(reason.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
@@ -490,15 +486,15 @@ describe('UpdatesModal', () => {
             remaining,
         });
 
-        it('says how many under the outcome, above the list, and offers Back to Updates beside Close', async () => {
+        it('says how many above the list, and offers Back to Updates beside Close', async () => {
             const c = ended(2, { state: 'succeeded', warning: '1 update did not apply.' });
             const { container } = render(<UpdatesModal controls={c} />);
 
             const list = container.querySelector('.updates-group-list') as HTMLElement;
             const pending = screen.getByText('2 updates pending');
-            expect(pending).toHaveClass('result-reason');
+            expect(pending).toHaveClass('dialog-line');
             expect(pending.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-            expect(screen.getByText("Some updates didn't apply")).toHaveClass('result-outcome');
+            expect(screen.getByRole('dialog', { name: "Some Updates Didn't Apply" })).toBeInTheDocument();
             expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
             await user().click(screen.getByRole('button', { name: 'Back to Updates' }));
 
@@ -508,10 +504,9 @@ describe('UpdatesModal', () => {
         it('says one in the singular', () => {
             render(<UpdatesModal controls={ended(1)} />);
 
-            expect(screen.getByText('1 update pending')).toHaveClass('result-reason');
+            expect(screen.getByText('1 update pending')).toHaveClass('dialog-line');
             // The second update was never told done: one that did not apply, amber by the one rule (I3).
-            expect(screen.getByText("Some updates didn't apply")).toHaveClass('result-outcome');
-            expect(document.querySelector('.result-mark')).toHaveAttribute('data-status', 'warning');
+            expect(screen.getByRole('dialog', { name: "Some Updates Didn't Apply" })).toHaveAttribute('data-status', 'warning');
         });
 
         it('offers only Close when nothing the SC left is waiting', () => {
@@ -522,8 +517,8 @@ describe('UpdatesModal', () => {
             expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
         });
 
-        // Walk F222 (owner, 2026-11-17, over walk F134's small result): a run where every update
-        // applied keeps its window, the outcome over its rows, and only what is left to know.
+        // A run where every update applied keeps its window and its rows, the outcome in the title
+        // (owner, 2026-11-19; walk F222's large mark over the rows until then).
         const allApplied = (remaining: number) => ({
             ...running(
                 { extension: { id: 'extension', state: 'done' }, 'blockLibrary:0': { id: 'blockLibrary:0', state: 'done' } },
@@ -532,21 +527,20 @@ describe('UpdatesModal', () => {
             remaining,
         });
 
-        it("keeps a clean run in the run's window, the outcome over its rows", () => {
+        it("keeps a clean run in the run's window, the outcome in its title over its rows", () => {
             const { container } = render(<UpdatesModal controls={allApplied(0)} />);
 
-            const dialog = screen.getByRole('dialog', { name: 'Updates' });
+            const dialog = screen.getByRole('dialog', { name: 'Updates Applied' });
             expect(dialog).toHaveAttribute('data-size', 'L');
-            expect(dialog.querySelector('.result-mark')).toHaveAttribute('data-status', 'success');
-            expect(screen.getByText('Applied')).toHaveClass('result-outcome');
+            expect(dialog).toHaveAttribute('data-status', 'success');
             expect(container.querySelector('.updates-group-list')).not.toBeNull();
             expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
         });
 
-        it('says under the outcome how many updates the SC left, with Back to Updates', () => {
+        it('says above the list how many updates the SC left, with Back to Updates', () => {
             render(<UpdatesModal controls={allApplied(2)} />);
 
-            expect(screen.getByRole('dialog', { name: 'Updates' })).toHaveAttribute('data-size', 'L');
+            expect(screen.getByRole('dialog', { name: 'Updates Applied' })).toHaveAttribute('data-size', 'L');
             expect(screen.getByText('2 updates pending')).toBeInTheDocument();
             expect(screen.getByRole('button', { name: 'Back to Updates' })).toBeInTheDocument();
         });
@@ -584,7 +578,7 @@ describe('UpdatesModal', () => {
             );
             const { container } = render(<UpdatesModal controls={c} />);
 
-            expect(screen.getByRole('dialog', { name: 'Updates' })).toHaveAttribute('data-size', 'L');
+            expect(screen.getByRole('dialog', { name: "Some Updates Didn't Apply" })).toHaveAttribute('data-size', 'L');
             expect(container.querySelector('.updates-group-list')).not.toBeNull();
         });
 

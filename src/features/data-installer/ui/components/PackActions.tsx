@@ -41,12 +41,13 @@ import { useRetryInstall } from '../hooks/useRetryInstall';
 import { useUndoLastSave } from '../hooks/useUndoLastSave';
 import type { HeldSaves } from '../installedPackProps';
 import { CopyToInstallerButton } from './CopyToInstallerButton';
-import { type Asking, confirmCopy, deletable, failedButtonLabel, mainButtonLabel, packRows, removeRows, saveRows } from './packMenu';
+import { type Asking, confirmCopy, deletable, mainButtonLabel, packRows, removeRows, saveRows } from './packMenu';
 import { useLibraryRemoval } from './RemoveFromLibraryButton';
 import { useSaveDatapackFile } from './SaveDatapackFileButton';
 import { StageWait, type WaitLines } from '@/core/ui/components/feedback/StageWait';
 import { ConfirmActionDialog } from '@/core/ui/components/ui/ConfirmActionDialog';
 import { type FlyoutActionRow, FlyoutActionList } from '@/core/ui/components/ui/FlyoutActionList';
+import { failedButtonLabel } from '@/core/utils/fixWithAi';
 import { WAIT_STAGES } from '@/core/utils/waitStages';
 import type { DatapackId } from '@/types/datapack';
 

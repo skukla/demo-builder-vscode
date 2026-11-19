@@ -1196,6 +1196,6 @@ export interface BackgroundOperationRequest {
     doneTitle: string;
     /** The window's failure title: "Couldn't Install Bodea". */
     failedTitle: string;
-    /** The title the window ends on with a warning, when it is neither of those ("Some updates didn't apply"). */
+    /** The title the window ends on with a warning, when it is neither of those ("Some Updates Didn't Apply"). */
     warnedTitle?: string;
 }

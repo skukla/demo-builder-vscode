@@ -23,9 +23,11 @@
  * 2026-11-05). Built from the house pieces: the layouts' windows in one `DialogContainer` (the list a
  * Steps window, the run and how it ended the Progress layout's; step-07 Win1),
  * `CheckboxRow`, and the batch window's table classes (`projects-batch.css`).
- * How a run ended is drawn in the run's own window, at its size (owner, 2026-11-17, walk F222): the
- * title "Updates", the outcome under a large mark ("Applied", "Couldn't Apply"), and the rows under
- * it, each saying only what is left to read.
+ * A run ends in place, as the Prerequisites step does (owner, 2026-11-19): the title says how it
+ * went, with its icon ("Some Updates Didn't Apply"), the cards stay where they were, and an update
+ * that did not apply carries Retry, then Fix with AI, then Check Again (`UpdateRowFix`). It ended on
+ * the large mark of the shared result look until then (walk F222, 2026-11-17), which replaced the
+ * list the SC was reading.
  * The list and the run each hold the height they open at (rule 14).
  *
  * @module features/projects-dashboard/ui/components/UpdatesModal
@@ -44,22 +46,18 @@ import {
 import { endingRowOf, promptButtons } from './runWindowParts';
 import { groupsOf, updatesLiveSite, type RowGroup } from './updateGroups';
 import { UpdatesRunView } from './UpdatesRunView';
-import type { RunOutcome } from '@/core/ui/components/feedback/OperationProgressBody';
 import { OperationQuestion, questionTakesWindow } from '@/core/ui/components/feedback/OperationQuestion';
 import { CheckboxRow } from '@/core/ui/components/selection/CheckboxRow';
 import { LeadText } from '@/core/ui/components/ui/LeadText';
 import type { ActionButton, ModalStatus } from '@/core/ui/components/ui/Modal';
 import { ProgressWindow } from '@/core/ui/components/ui/ProgressDialog';
 import { StepsWindow } from '@/core/ui/components/ui/StepsDialog';
-import { resultOutcome } from '@/core/ui/utils/resultWords';
 import { type EndingRow, endStatus } from '@/core/ui/utils/runEnding';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { PendingUpdateRow } from '@/types/pendingUpdates';
 import type { OperationProgressPayload, OperationPrompt } from '@/types/webviewPayloads';
 
 const LIST_TITLE = 'Updates Available';
-/** What the run is about, its title once it ends (walk F222). */
-const RESULT_THING = 'Updates';
 const LIVE_SITE_SENTENCE = 'Storefront updates go to the live site.';
 const NO_ACTIONS: ActionButton[] = [];
 
@@ -216,16 +214,6 @@ function ListWindow({ rows, controls, onClose }: { rows: PendingUpdateRow[]; con
     );
 }
 
-/**
- * Once the run ended, what the body draws: the outcome under the mark, the heading's words with
- * "Updates" taken out, since an end names the thing as its title (walk F222). None while it runs.
- */
-function endingOf(progress: OperationProgressPayload | null, heading: Heading): RunOutcome | undefined {
-    if (progress?.state !== 'succeeded' && progress?.state !== 'failed') return undefined;
-    const outcome = resultOutcome(heading.title, RESULT_THING);
-    return heading.status ? { outcome, status: heading.status } : { outcome };
-}
-
 /** A task taking the window (a sign-in): its own heading, amber. */
 function taskHeading(asking: OperationPrompt): Heading {
     return { title: asking.title ?? APPLYING_TITLE, status: 'warning' };
@@ -241,16 +229,22 @@ function RunWindow({ rows, controls, onClose }: { rows: PendingUpdateRow[]; cont
     const takes = asking && questionTakesWindow(asking);
     const heading = takes ? taskHeading(asking) : runHeadingOf(controls.progress, rows, controls.statuses);
     const chrome = runChrome(controls);
-    const ending = endingOf(controls.progress, heading);
     const stream = takes ? (
         <OperationQuestion prompt={asking} onTyped={controls.onTyped} />
     ) : (
-        <UpdatesRunView rows={rows} statuses={controls.statuses} progress={controls.progress} onTyped={controls.onTyped} remaining={controls.remaining} {...(ending ? { ending } : {})} />
+        <UpdatesRunView
+            rows={rows}
+            statuses={controls.statuses}
+            progress={controls.progress}
+            onTyped={controls.onTyped}
+            remaining={controls.remaining}
+            rowFix={controls.rowFix}
+        />
     );
     return (
         <ProgressWindow
-            title={ending ? RESULT_THING : heading.title}
-            {...(!ending && heading.status ? { status: heading.status } : {})}
+            title={heading.title}
+            {...(heading.status ? { status: heading.status } : {})}
             stream={stream}
             actions={chrome.actions}
             {...(chrome.closeLabel ? { closeLabel: chrome.closeLabel } : {})}

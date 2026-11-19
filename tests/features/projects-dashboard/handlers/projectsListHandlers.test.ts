@@ -142,9 +142,10 @@ describe('projectsListHandlers', () => {
         // 28 since step-05 S2: resetProject and deleteProject left, a card's Reset and Delete open the batch window.
         // 29 since step-05 S4: takeDeleteRequest, the project dashboard's Delete arriving on its window.
         // 28 since 2026-11-16 (release test 2.7): the dashboard runs its Delete itself; takeDeleteRequest left.
-        it('should have exactly 28 handlers', () => {
+        // 30 since 2026-11-19: fixUpdateWithAi and checkUpdateRows, an update fixed in place.
+        it('should have exactly 30 handlers', () => {
             const types = getRegisteredTypes(projectsListHandlers) as Array<keyof typeof projectsListHandlers>;
-            expect(types).toHaveLength(28);
+            expect(types).toHaveLength(30);
             expect(hasHandler(projectsListHandlers, 'recheckUpdates')).toBe(true);
             expect(hasHandler(projectsListHandlers, 'takeDeleteRequest')).toBe(false);
         });

@@ -76,6 +76,9 @@ import '@/core/ui/styles/modal-text.css';
 import '@/core/ui/styles/scroll-fade.css';
 // The step bar the Updates run draws (`StepProgressBar`).
 import '@/core/ui/styles/step-progress.css';
+// `.btn-compact`, the Prerequisites step's Install size, for the Updates run's Retry, Fix with AI
+// and Check Again.
+import '@/core/ui/styles/step-scaffold.css';
 
 // Local constant - webview cannot import TIMEOUTS from extension host
 // Equivalent to TIMEOUTS.PROJECT_STATE_PERSIST_DELAY in src/core/utils/timeoutConfig.ts

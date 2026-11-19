@@ -19,6 +19,7 @@ import { FINISHING_STOP, type ImportJobRecord, type KeptRootStep, SAVE_STOP } fr
 import type { DataInstallerRequest } from '../hooks/useDataInstallerRequest';
 import type { ModalStatus } from '@/core/ui/components/ui/Modal';
 import { endStatus, endsClean, type RunEnding } from '@/core/ui/utils/runEnding';
+import { RETRIES_BEFORE_FIX } from '@/core/utils/fixWithAi';
 import { jobPurpose, jobWords } from '@/features/data-installer/datapackWords';
 import { ErrorCode } from '@/types/errorCodes';
 
@@ -62,12 +63,6 @@ export interface ResultContent {
     /** The footer's main action: run the same import again, or hand the problem to the SC's AI. */
     action?: 'retry' | 'fix';
 }
-
-/**
- * How many times Retry may be pressed on one import before the window offers Fix with AI instead:
- * a stop that comes back twice is not one a retry gets past.
- */
-export const RETRIES_BEFORE_FIX = 2;
 
 /** The store configuration, the one data type that fails without stopping the import. */
 const SETTINGS_KIND = 'store_config';

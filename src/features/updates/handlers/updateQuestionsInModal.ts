@@ -7,6 +7,7 @@
  * @module features/updates/handlers/updateQuestionsInModal
  */
 
+import { FIX_WITH_AI } from '@/core/utils/fixWithAi';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -19,7 +20,6 @@ import type { UpdateSelections } from '@/features/updates/services/updateSelecti
 import { projectsOf, selectionsWhere } from '@/features/updates/services/updateSelectionsByProject';
 import type { Project } from '@/types/base';
 
-const FIX_WITH_AI = 'Fix with AI';
 const LEAVE_IT = 'Leave It As It Is';
 const USE_THE_UPDATE = 'Use Update';
 const KEEP_FOR_LATER = 'Keep It for Later';
