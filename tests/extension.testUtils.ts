@@ -169,6 +169,7 @@ jest.mock('@/features/authentication/services/authenticationService', () => ({
     // successful Adobe sign-in.
     AuthenticationService: jest.fn().mockImplementation(() => ({
         onDidSignIn: (listener: () => void) => mockAdobeOnDidSignIn(listener),
+        onDidSignOut: (listener: () => void) => mockAdobeOnDidSignOut(listener),
         watchForcedSignIns: (watch: unknown) => mockWatchForcedSignIns(watch),
     })),
 }));
@@ -243,6 +244,8 @@ jest.mock('@/features/project-creation/services/aiBundle/globalMcpRegistration',
 export const mockOnDidSignIn = jest.fn((_listener: () => void) => ({ dispose: jest.fn() }));
 /** The Adobe sign-in signal (AuthenticationService.onDidSignIn), captured like DA.live's. */
 export const mockAdobeOnDidSignIn = jest.fn((_listener: () => void) => ({ dispose: jest.fn() }));
+/** The Adobe sign-out signal (AuthenticationService.onDidSignOut). */
+export const mockAdobeOnDidSignOut = jest.fn((_listener: () => void) => ({ dispose: jest.fn() }));
 /** The watch on every forced Adobe sign-in (AuthenticationService.watchForcedSignIns), for DA.live's sign-in. */
 export const mockWatchForcedSignIns = jest.fn((_watch: unknown) => ({ dispose: jest.fn() }));
 export const mockGetAccessToken = jest.fn();

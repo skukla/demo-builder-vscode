@@ -30,6 +30,7 @@ import { createMockExtensionContext } from '../helpers/extensionContextFake';
 const mockGetTokenStatus = jest.fn();
 const mockLogin = jest.fn();
 const mockLoginAndRestore = jest.fn();
+const mockLogout = jest.fn();
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         isSidebarInitialized: jest.fn(() => false),
@@ -38,6 +39,7 @@ jest.mock('@/core/di/serviceLocator', () => ({
             getTokenStatus: mockGetTokenStatus,
             login: mockLogin,
             loginAndRestoreProjectContext: mockLoginAndRestore,
+            logout: mockLogout,
         })),
     },
 }));
@@ -158,7 +160,7 @@ describe('CommandManager', () => {
             );
         });
 
-        it('should register all 40 commands (resetAll only in dev mode)', () => {
+        it('should register all 41 commands (resetAll only in dev mode)', () => {
             commandManager.registerCommands();
 
             // 34 → 37: `signInAdobe` (PL-5), `signInDaLive` (EDS-9) and
@@ -177,7 +179,8 @@ describe('CommandManager', () => {
             // and the palette, beside a project's Datapacks (owner, 2026-11-07).
             // 40 since demoBuilder.clearDemoData and demoBuilder.clearCommerceInstance: the
             // Command Palette's doors to the Datapacks header's two Clear windows (step 06 C5, P6-Q5).
-            expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(40);
+            // 41 since demoBuilder.signOutAdobe: Sign In's counterpart (owner, 2026-11-19).
+            expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(41);
 
             // Verify all commands are registered (in order of registration)
             const expectedCommands = [
@@ -218,6 +221,7 @@ describe('CommandManager', () => {
             'demoBuilder.signInAdobe',
             'demoBuilder.signInDaLive',
             'demoBuilder.signInGitHub',
+                'demoBuilder.signOutAdobe',
                 'demoBuilder.registerGlobalMcp',
                 'demoBuilder.migrateStorefrontNames',
                 'demoBuilder.setRecommendedZoom',
@@ -346,6 +350,39 @@ describe('CommandManager', () => {
 
                 expect(mockLogin).not.toHaveBeenCalled();
                 expect(mockLoginAndRestore).not.toHaveBeenCalled();
+            });
+
+            it('signOutAdobe signs out when signed in', async () => {
+                mockGetTokenStatus.mockResolvedValue({ isAuthenticated: true });
+                mockLogout.mockReset().mockResolvedValue(undefined);
+
+                await handlerFor('demoBuilder.signOutAdobe')();
+
+                expect(mockLogout).toHaveBeenCalledTimes(1);
+                expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
+            });
+
+            it('signOutAdobe says so, and signs nothing out, when not signed in', async () => {
+                mockGetTokenStatus.mockResolvedValue({ isAuthenticated: false });
+                mockLogout.mockReset();
+
+                await handlerFor('demoBuilder.signOutAdobe')();
+
+                expect(mockLogout).not.toHaveBeenCalled();
+                expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
+                    'Not signed in to Adobe.'
+                );
+            });
+
+            it('signOutAdobe warns when the sign-out fails', async () => {
+                mockGetTokenStatus.mockResolvedValue({ isAuthenticated: true });
+                mockLogout.mockReset().mockRejectedValue(new Error('aio failed'));
+
+                await handlerFor('demoBuilder.signOutAdobe')();
+
+                expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
+                    'Adobe sign-out did not complete.'
+                );
             });
 
             it('signInDaLive delegates to the ONE shared QuickPick flow', async () => {

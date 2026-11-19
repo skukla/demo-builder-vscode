@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- **Sign out of Adobe from the Command Palette.** Demo Builder: Sign out of Adobe ends the Adobe sign-in, so you can start again from zero. Open screens that show your sign-in, such as the wizard and the dashboard, update at once, as they now do after you sign in from anywhere else.
 - **Storefront category and product pages no longer go blank while they load.** They show a loading skeleton, in the storefront's own style, until the products arrive. Existing storefronts get it on their next update.
 - **Commerce Admin opens in the Unified Shell.** Commerce as a Cloud Service projects now open Adobe's Unified Shell by default. It opens in your own browser, signed in. Each project can choose the Classic UI on Configure, under Commerce Admin, which still opens in a private window, and the `demoBuilder.commerce.adminExperience` setting changes the default.
 - **Configure has fewer tabs.** The Project tab is gone: rename a project on the dashboard title or its card. Commerce Admin sits on the Commerce tab, and Authoring and Block Libraries share a Storefront tab.

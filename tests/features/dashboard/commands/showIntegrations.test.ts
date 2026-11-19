@@ -346,6 +346,23 @@ describe('a sign-in finished elsewhere (F303)', () => {
             undefined,
         );
     });
+
+    it('re-checks on a sign-out too', () => {
+        const authManager = createMockAuthenticationService();
+        const context = createMockHandlerContext({ authManager });
+        jest.mocked(createPanelHandlerContext).mockReturnValue(context);
+        const { command } = commandFor(null);
+        internals(command).initializeMessageHandlers({ onStreaming: jest.fn(), on: jest.fn() });
+
+        jest.mocked(authManager.onDidSignOut).mock.calls[0][0]();
+
+        expect(dispatchHandler).toHaveBeenCalledWith(
+            addIntegrationFlowHandlers,
+            context,
+            'check-auth',
+            undefined,
+        );
+    });
 });
 
 describe('disposeActivePanel', () => {

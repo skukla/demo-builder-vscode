@@ -246,6 +246,7 @@
                 "command:demoBuilder.resetAll",
                 "command:demoBuilder.resetZoom",
                 "command:demoBuilder.setRecommendedZoom",
+                "command:demoBuilder.signOutAdobe",
                 "command:demoBuilder.startDemo",
                 "command:demoBuilder.stopDemo",
                 "handler:add-shared-demo",

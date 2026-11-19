@@ -21,6 +21,7 @@ import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 const mockOnDidSignIn = jest.fn((_listener: () => void) => ({ dispose: jest.fn() }));
+const mockOnDidSignOut = jest.fn((_listener: () => void) => ({ dispose: jest.fn() }));
 
 jest.mock('@/core/utils/oneTimeTip', () => ({ showOneTimeTip: jest.fn() }));
 jest.mock('@/core/base/swapWebviewSurface', () => ({
@@ -35,6 +36,7 @@ jest.mock('@/core/di/serviceLocator', () => ({
         getAuthenticationService: jest.fn(() => ({
             isAuthenticated: jest.fn(),
             onDidSignIn: mockOnDidSignIn,
+            onDidSignOut: mockOnDidSignOut,
         })),
         getCommandExecutor: jest.fn(() => ({ execute: jest.fn() })),
     },
@@ -311,6 +313,20 @@ describe('a sign-in finished elsewhere (F303)', () => {
         expect(mockDispatchHandler).toHaveBeenCalledWith(
             projectCreationHandlers,
             expect.objectContaining({ sharedState: expect.any(Object) }),
+            'check-auth',
+            undefined,
+        );
+    });
+
+    it('re-checks on a sign-out too, so the step does not stay signed in', async () => {
+        wireUp();
+
+        mockOnDidSignOut.mock.calls[0][0]();
+        await new Promise((resolve) => setImmediate(resolve));
+
+        expect(mockDispatchHandler).toHaveBeenCalledWith(
+            projectCreationHandlers,
+            expect.anything(),
             'check-auth',
             undefined,
         );

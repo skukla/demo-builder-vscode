@@ -20,6 +20,7 @@ import {
     mockMcpServerCtor,
     mockOnDidSignIn,
     mockAdobeOnDidSignIn,
+    mockAdobeOnDidSignOut,
     mockWatchForcedSignIns,
     mockGetAccessToken,
     mockGetGitHubToken,
@@ -151,6 +152,25 @@ describe('the seams activate() hands away', () => {
 
             expect(vscode.window.setStatusBarMessage).toHaveBeenCalledWith(
                 '✅ Signed in to Adobe',
+                TIMEOUTS.STATUS_BAR_SUCCESS,
+            );
+            expect(refresh).toHaveBeenCalledTimes(1);
+            refresh.mockRestore();
+        });
+
+        it('says a sign-out happened and refreshes an open dashboard', async () => {
+            const refresh = jest
+                .spyOn(ProjectDashboardWebviewCommand, 'refreshStatus')
+                .mockResolvedValue(undefined);
+            await activate(createActivationContext());
+            await settle();
+            (vscode.window.setStatusBarMessage as jest.Mock).mockClear();
+
+            mockAdobeOnDidSignOut.mock.calls[0][0]();
+            await settle();
+
+            expect(vscode.window.setStatusBarMessage).toHaveBeenCalledWith(
+                '✅ Signed out of Adobe',
                 TIMEOUTS.STATUS_BAR_SUCCESS,
             );
             expect(refresh).toHaveBeenCalledTimes(1);

@@ -154,19 +154,20 @@ export class ShowIntegrationsCommand extends BundledPanelCommand<IntegrationsIni
                 );
             });
         }
-        // A sign-in finished anywhere re-checks the Add Integration flow's sign-in step (F303).
+        // A sign-in or sign-out finished anywhere re-checks the Add Integration flow's
+        // sign-in step (F303).
         const auth = this.createHandlerContext().authManager;
         if (auth) {
-            this.disposables.add(
-                auth.onDidSignIn(() => {
-                    void dispatchHandler(
-                        addIntegrationFlowHandlers,
-                        this.createHandlerContext(),
-                        'check-auth',
-                        undefined,
-                    );
-                }),
-            );
+            const recheck = () => {
+                void dispatchHandler(
+                    addIntegrationFlowHandlers,
+                    this.createHandlerContext(),
+                    'check-auth',
+                    undefined,
+                );
+            };
+            this.disposables.add(auth.onDidSignIn(recheck));
+            this.disposables.add(auth.onDidSignOut(recheck));
         }
     }
 

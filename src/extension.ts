@@ -481,6 +481,10 @@ export async function activate(context: vscode.ExtensionContext) {
                 showSuccessInStatusBar('Signed in to Adobe');
                 void ProjectDashboardWebviewCommand.refreshStatus();
             }),
+            authenticationService.onDidSignOut(() => {
+                showSuccessInStatusBar('Signed out of Adobe');
+                void ProjectDashboardWebviewCommand.refreshStatus();
+            }),
         );
 
         // A FORCED Adobe sign-in also ends the DA.live sign-in (measured 2026-10-28); the

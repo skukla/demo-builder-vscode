@@ -171,6 +171,11 @@
                 "command": "demoBuilder.signInGitHub",
                 "title": "Sign in to GitHub",
                 "category": "Demo Builder"
+            },
+            {
+                "command": "demoBuilder.signOutAdobe",
+                "title": "Sign out of Adobe",
+                "category": "Demo Builder"
             }
         ],
         "configuration": [

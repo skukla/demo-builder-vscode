@@ -49,6 +49,8 @@ export class AuthenticationService {
     private readonly signIn: (force: boolean) => Promise<boolean>;
     /** Who hears that a sign-in succeeded (see onDidSignIn). */
     private readonly signInListeners = new Set<() => void>();
+    /** Who hears that a sign-out finished (see onDidSignOut). */
+    private readonly signOutListeners = new Set<() => void>();
     /** What a forced sign-in is watched for (see watchForcedSignIns). */
     private readonly forcedSignInWatches = new Set<ForcedSignInWatch>();
 
@@ -234,6 +236,12 @@ export class AuthenticationService {
         return { dispose: () => this.signInListeners.delete(listener) };
     }
 
+    /** onDidSignIn's other direction: a screen showing "signed in" re-reads on a sign-out. */
+    onDidSignOut(listener: () => void): { dispose(): void } {
+        this.signOutListeners.add(listener);
+        return { dispose: () => this.signOutListeners.delete(listener) };
+    }
+
     /**
      * Watch every FORCED sign-in for what it ends elsewhere: `watch` runs just before
      * `aio auth login -f` and its answer once that sign-in succeeds, on every forced path
@@ -246,17 +254,13 @@ export class AuthenticationService {
         return { dispose: () => this.forcedSignInWatches.delete(watch) };
     }
 
-    /**
-     * Logout
-     */
+    /** Sign out: clears the aio token and every cache, then tells onDidSignOut's listeners. */
     async logout(): Promise<void> {
         try {
             await this.commandManager.execute('aio auth logout', { encoding: 'utf8' });
-
-            // Clear all caches after logout
             this.cacheManager.clearAll(); // Includes token inspection cache
             this.sdkClient.clear();
-
+            this.signOutListeners.forEach((listener) => listener());
             const stepLogger = await this.ensureStepLogger();
             stepLogger.logTemplate('adobe-auth', 'success', { item: 'Logout' });
         } catch (error) {
@@ -265,18 +269,12 @@ export class AuthenticationService {
         }
     }
 
-    /**
-     * Get cache manager instance
-     * The cached org/project, validation state and auth-status cache live here
-     */
+    /** The cached org/project, validation state and auth-status cache. */
     getCacheManager(): AuthCacheManager {
         return this.cacheManager;
     }
 
-    /**
-     * Get token manager instance
-     * Used for token inspection in handlers
-     */
+    /** Token inspection, for handlers. */
     getTokenManager(): TokenManager {
         return this.tokenManager;
     }

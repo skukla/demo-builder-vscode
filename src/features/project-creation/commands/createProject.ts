@@ -454,17 +454,17 @@ export class CreateProjectWebviewCommand extends BundledPanelCommand<WizardIniti
 
         this.disposables.add(watchWizardSettings((type, payload) => this.sendMessage(type, payload)));
 
-        // A sign-in finished anywhere (a notification's Sign In, another screen) re-checks
-        // here, so the Sign In to Adobe step does not stay "Not signed in" (F303).
+        // A sign-in or sign-out finished anywhere (a notification's Sign In, the palette)
+        // re-checks here, so the Sign In to Adobe step shows the real state (F303).
         const auth = super.createHandlerContext(this.sharedState).authManager;
         if (auth) {
-            this.disposables.add(
-                auth.onDidSignIn(() => {
-                    void this.createWizardHandlerContext().then((context) =>
-                        dispatchHandler(projectCreationHandlers, context, 'check-auth', undefined),
-                    );
-                }),
-            );
+            const recheck = () => {
+                void this.createWizardHandlerContext().then((context) =>
+                    dispatchHandler(projectCreationHandlers, context, 'check-auth', undefined),
+                );
+            };
+            this.disposables.add(auth.onDidSignIn(recheck));
+            this.disposables.add(auth.onDidSignOut(recheck));
         }
     }
 

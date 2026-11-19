@@ -486,6 +486,23 @@ export class CommandManager {
             }
         });
 
+        // Sign out of Adobe (owner, 2026-11-19): the counterpart of Sign In, so an SC can
+        // end a session and start again from zero. Clears the local aio token; the
+        // browser's Adobe session is left alone. Open screens hear it (onDidSignOut).
+        this.registerCommand('demoBuilder.signOutAdobe', async () => {
+            const auth = ServiceLocator.getAuthenticationService();
+            const status = await auth.getTokenStatus();
+            if (!status.isAuthenticated) {
+                void vscode.window.showInformationMessage('Not signed in to Adobe.');
+                return;
+            }
+            try {
+                await auth.logout();
+            } catch {
+                void vscode.window.showWarningMessage('Adobe sign-out did not complete.');
+            }
+        });
+
         // Global MCP registration (~/.claude.json) — explicit opt-in. The entry
         // points at the proxy with no pinned socket, so it discovers a running
         // extension window from any cwd (global ops like create_project work
