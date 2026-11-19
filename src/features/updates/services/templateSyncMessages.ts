@@ -28,6 +28,9 @@ export function describeTemplateConflicts(edits: readonly ClashEdit[]): string {
         + 'Nothing was changed: the storefront on GitHub is as it was.';
 }
 
+/** A storefront whose record lacks the repositories a template sync reads. */
+export const MISSING_TEMPLATE_METADATA = 'Missing required metadata: githubRepo, templateOwner, or templateRepo';
+
 export const NO_RECORDED_VERSION = 'This storefront has no recorded template version to update from; '
     + 'reset it to its template once so updates have a starting point.';
 

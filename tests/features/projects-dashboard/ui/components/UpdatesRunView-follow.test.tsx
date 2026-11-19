@@ -78,7 +78,9 @@ describe('the Updates run follows the work', () => {
 
         const cards = Array.from(container.querySelectorAll('.updates-group'));
         expect(cards).toHaveLength(3);
-        expect(cards.map((c) => c.className)).toEqual(['updates-group', 'updates-group', 'updates-group']);
+        // Prerequisites' tile, in Prerequisites' box (owner, 2026-11-19).
+        expect(cards.map((c) => c.className)).toEqual(['updates-group step-tile', 'updates-group step-tile', 'updates-group step-tile']);
+        expect(container.querySelector('.updates-run-list')).toHaveClass('step-tiles');
     });
 
     it('scrolls the running card into view when it is below the edge', () => {

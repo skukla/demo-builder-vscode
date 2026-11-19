@@ -216,7 +216,8 @@ describe('applyUpdates', () => {
         const { answer, ctx } = await presentedThenApply((rows) => rows.map((r) => r.id));
 
         expect(answer).toEqual({ success: true, warning: '1 update did not apply.' });
-        expect(statusesSent(ctx)).toEqual([{ id: 'template:0', state: 'failed', message: 'bodea: merge conflicts' }]);
+        // Without the project's name: its card says it (owner, 2026-11-19).
+        expect(statusesSent(ctx)).toEqual([{ id: 'template:0', state: 'failed', message: 'merge conflicts' }]);
     });
 
     it('installs the extension update last, from the release the check found', async () => {

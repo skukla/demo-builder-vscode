@@ -72,7 +72,7 @@ export function PrerequisitesStep({ state, setCanProceed, currentStep }: Prerequ
                 Checking required tools. Missing tools can be installed automatically.
             </Text>
 
-            <div ref={scrollContainerRef} className="prerequisites-container">
+            <div ref={scrollContainerRef} className={cn('prerequisites-container', 'step-tiles')}>
                 <Flex direction="column" gap="size-150">
                     {checks.map((check, index) => (
                         <div
@@ -80,6 +80,7 @@ export function PrerequisitesStep({ state, setCanProceed, currentStep }: Prerequ
                             ref={createItemRef(index)}
                             className={cn(
                                 'prerequisite-item',
+                                'step-tile',
                                 'prerequisite-item-grid',
                                 index !== checks.length - 1 && 'prerequisite-item-spacing',
                             )}

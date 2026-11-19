@@ -150,9 +150,7 @@
    survives (!important over plain, then later over earlier). */
 /* Prevent jarring height changes */
 .prerequisite-item {
-    padding: 12px;
-    background-color: var(--spectrum-global-color-gray-75);
-    border-radius: 4px;
+    /* The tile's fill, corners and padding are `.step-tile` (step-tiles.css). */
     width: 100%;
     overflow: hidden;
     transition: min-height var(--spectrum-global-animation-duration-600) ease, padding var(--spectrum-global-animation-duration-600) ease;

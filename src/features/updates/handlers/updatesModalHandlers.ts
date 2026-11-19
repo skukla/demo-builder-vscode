@@ -273,7 +273,7 @@ async function applyTicked(
     const onItem: ItemObserver = (_kind, entry, outcome) => {
         const id = rowOf.get(entry);
         if (!id) return;
-        rows.tell(id, outcome.state, lineOf(outcome));
+        rows.tell(id, outcome.state, withoutProjectName(lineOf(outcome), entry));
     };
     const updateContext = updateContextFor(context);
     // Down the list the SC is watching: one project at a time, as its headings run.
@@ -343,6 +343,19 @@ async function stillWaiting(context: HandlerContext, listed: PendingUpdateRow[],
 function lineOf(outcome: ItemOutcome): string | undefined {
     if (outcome.state === 'done') return outcome.note;
     return outcome.state === 'running' ? undefined : outcome.message;
+}
+
+/**
+ * A row's line without the project's name leading it ("justrite: …", "justrite (Adobe
+ * boilerplate): …"): the apply names the project for the agent's totals, and on screen the
+ * project's card already says it (owner, 2026-11-19).
+ */
+function withoutProjectName(line: string | undefined, entry: object): string | undefined {
+    const project = 'project' in entry ? entry.project : undefined;
+    const name = project && typeof project === 'object' && 'name' in project ? project.name : undefined;
+    if (!line || typeof name !== 'string') return line;
+    const lead = new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?: \\([^)]*\\))?: `);
+    return line.replace(lead, '');
 }
 
 /** A selection entry whose clash the apply kept for fixing. */

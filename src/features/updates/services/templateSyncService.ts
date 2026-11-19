@@ -41,6 +41,7 @@ import { blockLibraryFolders, putBackOwnPieces } from '@/features/updates/servic
 import { commitAndPush, withCheckout, type SyncDeps } from '@/features/updates/services/templateCheckout';
 import {
     applyTemplateChangeSince,
+    mergeFailureLine,
     readTemplateHead,
     type GitStep,
 } from '@/features/updates/services/templateMergeBase';
@@ -51,6 +52,7 @@ import {
     LABEL_SHEET_FILES,
     TEMPLATE_COMMIT,
     failure,
+    MISSING_TEMPLATE_METADATA,
     NO_RECORDED_VERSION,
     notInTemplateHistory,
 } from '@/features/updates/services/templateSyncMessages';
@@ -138,10 +140,7 @@ export class TemplateSyncService {
         const templateRepo = metadata.templateRepo as string | undefined;
 
         if (!githubRepo || !templateOwner || !templateRepo) {
-            return failure(
-                options.strategy,
-                'Missing required metadata: githubRepo, templateOwner, or templateRepo',
-            );
+            return failure(options.strategy, MISSING_TEMPLATE_METADATA);
         }
 
         const [repoOwner, repoName] = githubRepo.split('/');
@@ -279,7 +278,7 @@ export class TemplateSyncService {
             case 'not-in-template':
                 return failure('merge', notInTemplateHistory(base, target));
             case 'failed':
-                return failure('merge', `The template update could not be applied: ${outcome.reason}.`);
+                return failure('merge', mergeFailureLine(outcome.reason, this.logger));
             case 'conflicts': {
                 // The SC's repo stays exactly as it was: nothing pushed, the files named.
                 const { conflicts, restored } = outcome;

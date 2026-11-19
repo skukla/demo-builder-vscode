@@ -212,7 +212,7 @@ function RunGroup({ group, statuses, live, cardRef }: RunGroupProps) {
     const total = group.rows.length + (localCopy ? 1 : 0);
     const states = [...group.rows.map((r) => statuses[r.id]?.state ?? 'waiting'), ...(localCopy ? [localCopy.state] : [])];
     return (
-        <div ref={cardRef} className="updates-group">
+        <div ref={cardRef} className="updates-group step-tile">
             <div className="updates-group-header updates-run-header">
                 <span className="work-row-icon"><StepStatusIcon status={groupStatusOf(states)} /></span>
                 <span className="project-row-name">{group.title}</span>
@@ -285,7 +285,7 @@ function RunningList({ rows, statuses, progress, onTyped, rowFix }: Omit<RunView
     const question = running ? progress?.prompt : undefined;
     const live: Live = { stage: progress?.stage, part: partOf(progress), question, onTyped, ended: !running, rowFix };
     return (
-        <div ref={containerRef} className="updates-group-list updates-run-list scroll-fade scroll-fade--capped">
+        <div ref={containerRef} className="updates-group-list updates-run-list step-tiles scroll-fade scroll-fade--capped">
             {question && !now && <RunQuestion prompt={question} onTyped={onTyped} />}
             {groups.map((group, index) => (
                 <RunGroup key={group.key} group={group} statuses={statuses} live={live} cardRef={createItemRef(index)} />

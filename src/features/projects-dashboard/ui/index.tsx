@@ -76,6 +76,8 @@ import '@/core/ui/styles/modal-text.css';
 import '@/core/ui/styles/scroll-fade.css';
 // The step bar the Updates run draws (`StepProgressBar`).
 import '@/core/ui/styles/step-progress.css';
+// The Updates run's box of project tiles, as Prerequisites draws its tools (`.step-tiles`).
+import '@/core/ui/styles/step-tiles.css';
 // `.btn-compact`, the Prerequisites step's Install size, for the Updates run's Retry, Fix with AI
 // and Check Again.
 import '@/core/ui/styles/step-scaffold.css';

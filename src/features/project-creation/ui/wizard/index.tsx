@@ -30,6 +30,8 @@ import '@/features/data-installer/ui/styles/datapack.css';
 import '@/features/prerequisites/ui/styles/prerequisites.css';
 // The step bar Prerequisites draws (`StepProgressBar`).
 import '@/core/ui/styles/step-progress.css';
+// Prerequisites' box of tiles (`.step-tiles`, `.step-tile`).
+import '@/core/ui/styles/step-tiles.css';
 // .brand-* and .expandable-* rules, moved out of utilities.css by the CSS
 // migration. They share a sheet because `.expandable-brand-card` IS a brand card,
 // not because they could not be separated — the refusal that forced them to move

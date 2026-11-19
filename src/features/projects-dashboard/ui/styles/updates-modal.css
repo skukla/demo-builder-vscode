@@ -66,15 +66,13 @@
         position: relative;
     }
 
-    /* Each project is a card, as on the Prerequisites step (same border, corners and padding as
-       its list; owner, 2026-11-18, walk F290). The running one is marked by its spinner alone: the
-       blue outline it had at first went (owner, 2026-11-19). */
+    /* Each project is a tile in one bordered box, as the Prerequisites step draws its tools
+       (`.step-tiles`, `.step-tile`; owner, 2026-11-18, walk F290, and 2026-11-19: its cards were
+       outlined, which Prerequisites' are not). The running one is marked by its spinner alone. */
     .updates-group {
-        /* A flex column at its height cap squeezes its children; a group keeps its own. */
+        /* A flex column at its height cap squeezes its children; a group keeps its own. Its fill,
+           corners and padding are the Prerequisites tile's (`.step-tile`, owner 2026-11-19). */
         flex-shrink: 0;
-        border: 1px solid var(--spectrum-global-color-gray-400);
-        border-radius: 4px;
-        padding: 4px 12px 8px;
     }
 
     /* The list while it runs is one height whatever it holds (owner, 2026-11-19): the window holds

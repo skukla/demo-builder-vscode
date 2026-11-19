@@ -18,6 +18,7 @@
 import type { CommandResult } from '@/core/shell/types';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { TemplateSyncStepError } from '@/features/updates/services/templateSyncStepError';
+import type { Logger } from '@/types/logger';
 
 /** Run one git command in the temp clone with the given timeout. */
 export type GitStep = (command: string, timeout: number) => Promise<CommandResult>;
@@ -54,6 +55,28 @@ interface TemplateChangeRequest {
      * against (owner, 2026-10-16).
      */
     target?: string;
+}
+
+/**
+ * git's reasons an SC can be told in plain words (owner, 2026-11-19: "repository lacks the
+ * necessary blob to perform 3-way merge" reached the Updates window as it was). Each says what went
+ * wrong, not git's mechanism; the raw reason still reaches Debug Logs.
+ */
+const PLAIN_GIT_REASONS: ReadonlyArray<[RegExp, string]> = [
+    [/lacks the necessary blob/, "the versions of the files the changes were made from aren't available"],
+];
+
+/**
+ * The line an SC reads when a template merge failed: git's reason in plain words when it is a
+ * known one, else as git said it. git's own words go to the log either way.
+ *
+ * @param reason - git's reason (`gitReason`)
+ * @param logger - where git's own words go
+ */
+export function mergeFailureLine(reason: string, logger?: Pick<Logger, 'warn'>): string {
+    logger?.warn(`[TemplateSync] The merge failed: ${reason}`);
+    const plain = PLAIN_GIT_REASONS.find(([pattern]) => pattern.test(reason))?.[1];
+    return plain ? `Couldn't merge the changes: ${plain}.` : `The template update could not be applied: ${reason}.`;
 }
 
 /** git's own reason for a failure: its first error line, without the `error:` prefix. */

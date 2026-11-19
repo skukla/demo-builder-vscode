@@ -1706,7 +1706,7 @@
             "anchors": [
                 "const versions = check.nodeVersionStatus"
             ],
-            "line": 147,
+            "line": 148,
             "mutants": 1,
             "category": "other",
             "reason": "The .filter((v) => v.installed) on the next line runs only inside the block gated on shouldShowPluginDetails, which returns false unless nodeVersionStatus.every(v => v.installed) \u2014 so every entry reaching the filter is already installed and dropping the filter changes nothing. The ARROW inside it is not equivalent and is killed by a test asserting the version list on the row.",

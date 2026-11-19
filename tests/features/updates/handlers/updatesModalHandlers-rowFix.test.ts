@@ -102,3 +102,24 @@ describe('checkUpdateRows', () => {
         });
     });
 });
+
+// The project's card names it, so its row does not repeat it (owner, 2026-11-19).
+describe("a row's reason on screen", () => {
+    it("drops the project's name leading it", async () => {
+        mockApplyUpdatesHeadless.mockImplementation(async (sel: UpdateSelections, _ctx, _report, options) => {
+            options.onItem('template', sel.template[0], { state: 'failed', message: "bodea: Couldn't merge the changes." });
+            options.onItem('template', sel.template[0], { state: 'failed', message: "bodea (Adobe boilerplate): Couldn't merge." });
+            return applied();
+        });
+        const h = handlers();
+        const ctx = createMockHandlerContext();
+        const template = h.presentUpdates(found()).find((r) => r.kind === 'template');
+        await apply(h)(ctx, modal([template?.id ?? '']));
+
+        expect(statusesSent(ctx)).toEqual([
+            { id: template?.id, state: 'failed', message: "Couldn't merge the changes." },
+            { id: template?.id, state: 'failed', message: "Couldn't merge." },
+        ]);
+    });
+});
+
