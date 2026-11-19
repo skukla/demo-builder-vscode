@@ -68,16 +68,13 @@ function view(statuses: RowStatuses) {
 }
 
 describe('the Updates run follows the work', () => {
-    it('draws each project as a card and outlines the running one', () => {
+    // No outline on the running card: its spinner marks it (owner, 2026-11-19).
+    it('draws each project as a card, the running one marked only by its spinner', () => {
         const { container } = render(view(at(1)));
 
-        const cards = container.querySelectorAll('.updates-group');
+        const cards = Array.from(container.querySelectorAll('.updates-group'));
         expect(cards).toHaveLength(3);
-        expect(Array.from(cards).map((c) => c.classList.contains('updates-group--running'))).toEqual([
-            false,
-            true,
-            false,
-        ]);
+        expect(cards.map((c) => c.className)).toEqual(['updates-group', 'updates-group', 'updates-group']);
     });
 
     it('scrolls the running card into view when it is below the edge', () => {
@@ -205,5 +202,42 @@ describe("the running step says where it is among its project's steps", () => {
         );
 
         expect(screen.queryByText('Your Local Copy')).toBeNull();
+    });
+
+    // A long step says which part is in flight on its own line under the bar, in the house
+    // words for a part (`stageLine`; owner, 2026-11-19).
+    it('says which part of the step is in flight under the bar', () => {
+        const statuses: RowStatuses = {
+            'blockLibrary:t0': { id: 'blockLibrary:t0', state: 'done' },
+            'blockLibrary:t1': { id: 'blockLibrary:t1', state: 'running' },
+            [COPY]: { id: COPY, state: 'waiting' },
+        };
+        const progress = {
+            state: 'running',
+            stage: 'Updating integrations',
+            step: 'Installing dependencies',
+            position: { index: 2, total: 4, name: 'Justrite ERP' },
+        } as OperationProgressPayload;
+        const { container } = render(
+            <UpdatesRunView rows={TWO} statuses={statuses} progress={progress} onTyped={jest.fn()} remaining={0} />,
+        );
+
+        const row = rowsOf(container)[1];
+        expect(row.querySelector('[data-testid="spectrum-progressbar"]')).toHaveTextContent(/^Step 2\/3: Updating integrations$/);
+        expect(row.querySelector('.step-progress-detail')).toHaveTextContent('Installing dependencies: Justrite ERP');
+    });
+
+    it('says the part in place of the step when there is no count', () => {
+        const progress = {
+            state: 'running',
+            stage: 'Updating integrations',
+            step: 'Installing dependencies',
+            position: { index: 1, total: 2, name: 'ERP Integration' },
+        } as OperationProgressPayload;
+        const { container } = render(
+            <UpdatesRunView rows={ROWS.slice(0, 1)} statuses={at(0)} progress={progress} onTyped={jest.fn()} remaining={0} />,
+        );
+
+        expect(rowsOf(container)[0]).toHaveTextContent('Installing dependencies: ERP Integration');
     });
 });

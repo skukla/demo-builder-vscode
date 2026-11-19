@@ -31,24 +31,39 @@ export function getProgressValue(unifiedProgress: UnifiedProgress): number {
     return unifiedProgress.overall.percent;
 }
 
-/** "Step 2/3: Installing Node.js 20", then " - " and what it is doing, when it says. */
-export function stepProgressLabel(progress: UnifiedProgress): string {
+/**
+ * "Step 2/3: Installing Node.js 20", then " - " and what it is doing, when it says and it is not
+ * given its own line.
+ */
+export function stepProgressLabel(progress: UnifiedProgress, detailBelow = false): string {
     const { currentStep, totalSteps, stepName } = progress.overall;
-    const detail = progress.command?.detail ? ` - ${progress.command.detail}` : '';
+    const detail = progress.command?.detail && !detailBelow ? ` - ${progress.command.detail}` : '';
     return `Step ${currentStep}/${totalSteps}: ${stepName}${detail}`;
 }
 
+interface StepProgressBarProps {
+    progress: UnifiedProgress;
+    /**
+     * What the step is doing on a small line under the bar, not after a dash in its label: a
+     * long one, such as which part of an integration is deploying (the Updates run, owner
+     * 2026-11-19).
+     */
+    detailBelow?: boolean;
+}
+
 /** The labelled bar, faded in under the thing it is about. */
-export function StepProgressBar({ progress }: { progress: UnifiedProgress }): React.ReactElement {
+export function StepProgressBar({ progress, detailBelow = false }: StepProgressBarProps): React.ReactElement {
+    const below = detailBelow ? progress.command?.detail : undefined;
     return (
         <View marginTop="size-100" UNSAFE_className="animate-fade-in">
             <ProgressBar
-                label={stepProgressLabel(progress)}
+                label={stepProgressLabel(progress, detailBelow)}
                 value={getProgressValue(progress)}
                 maxValue={100}
                 size="S"
                 UNSAFE_className="progress-bar-spacing progress-bar-small-label progress-bar-full-width"
             />
+            {below && <div className="step-progress-detail">{below}</div>}
         </View>
     );
 }

@@ -197,6 +197,22 @@ describe('applyIntegrationUpdates', () => {
         expect(result).toEqual({ successCount: 1, failCount: 0, errors: [], applied: ['Updated from a to b.'] });
     });
 
+    // Which member is in flight goes with its step, so the Updates window can say it under the
+    // bar (owner, 2026-11-19); the pair is already the row's name.
+    it('passes on which member is deploying, with its step', async () => {
+        const ctx = makeCtx();
+        const onProgress = jest.fn();
+        const position = { index: 2, total: 2, name: 'Tailspin ERP' };
+        ctx.updateIntegrationPair.mockImplementation(async (_project, _id, report) => {
+            report('Installing dependencies', 'npm install', position);
+            return { success: true };
+        });
+
+        await applyIntegrationUpdates([pair()], ctx, onProgress);
+
+        expect(onProgress).toHaveBeenLastCalledWith(S.updatingIntegrations.label, 'Installing dependencies', position);
+    });
+
     it('a failed update is a failure in plain words, and the next pair still runs', async () => {
         const ctx = makeCtx();
         ctx.updateIntegrationPair

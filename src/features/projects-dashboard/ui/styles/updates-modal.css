@@ -67,14 +67,14 @@
     }
 
     /* Each project is a card, as on the Prerequisites step (same border, corners and padding as
-       its list), and the running one is outlined in blue (owner, 2026-11-18, walk F290). */
+       its list; owner, 2026-11-18, walk F290). The running one is marked by its spinner alone: the
+       blue outline it had at first went (owner, 2026-11-19). */
     .updates-group {
         /* A flex column at its height cap squeezes its children; a group keeps its own. */
         flex-shrink: 0;
         border: 1px solid var(--spectrum-global-color-gray-400);
         border-radius: 4px;
         padding: 4px 12px 8px;
-        transition: border-color var(--spectrum-global-animation-duration-300) ease;
     }
 
     /* The list while it runs is one height whatever it holds (owner, 2026-11-19): the window holds
@@ -82,11 +82,7 @@
        outcome then squeezed the cards to a sliver. This opens it tall enough for the cards to
        scroll and for the result to fit. */
     .updates-run-list {
-        height: min(360px, 45vh);
-    }
-
-    .updates-group--running {
-        border-color: var(--spectrum-global-color-blue-500);
+        height: min(280px, 35vh);
     }
 
     .updates-group-header {

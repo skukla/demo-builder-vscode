@@ -25,6 +25,7 @@ import type { Project } from '@/types/base';
 import type { InstalledBlockLibrary } from '@/types/blockLibraries';
 import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/types/state';
+import type { OperationPosition } from '@/types/webviewPayloads';
 
 /**
  * The pair update the integrations card's Update button runs, for any project:
@@ -35,7 +36,7 @@ import type { StateManager } from '@/types/state';
 export type IntegrationPairUpdater = (
     project: Project,
     componentId: string,
-    report: (message: string, subMessage?: string) => void,
+    report: (message: string, subMessage?: string, position?: OperationPosition) => void,
 ) => Promise<RunnerResult>;
 
 /**

@@ -30,6 +30,7 @@ import {
 import type { UpdateContext } from '@/features/updates/services/updateCore';
 import type { UpdateSelections } from '@/features/updates/services/updateSelections';
 import type { Project } from '@/types/base';
+import type { OperationPosition } from '@/types/webviewPayloads';
 
 /**
  * Where a category reports: the step from the stage table, the same names the
@@ -37,7 +38,8 @@ import type { Project } from '@/types/base';
  * under it. Until slice 8 of the progress vocabulary (2026-10-16) each item was its
  * own long message ("Updating eds-storefront in My Demo").
  */
-export type OnProgress = (stage: string, item?: string) => void;
+/** The step, the line under it, and which part of a pair is in flight when there is one. */
+export type OnProgress = (stage: string, item?: string, position?: OperationPosition) => void;
 
 export type { TemplateConflictPolicy } from '@/features/updates/services/updateClash';
 

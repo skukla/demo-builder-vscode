@@ -27,6 +27,13 @@
     width: 100%;
 }
 
+/* What the step is doing, on its own line under the bar: the bar's label, quieter. */
+.step-progress-detail {
+    font-size: 12px;
+    line-height: 16px;
+    color: var(--spectrum-global-color-gray-700);
+}
+
 /* Progress bar spacing */
 .progress-bar-spacing {
     margin-bottom: 8px;

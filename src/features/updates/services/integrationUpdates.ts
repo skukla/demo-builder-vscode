@@ -25,6 +25,7 @@ import {
 } from '@/features/app-builder/services/integrationUpdateCheck';
 import { integrationUsing, systemsUsedBy } from '@/features/components/services/appBuilderComponentLinks';
 import { emptyResult, type CategoryResult } from '@/features/updates/services/updateApplyResult';
+import type { OnProgress } from '@/features/updates/services/updateApplyTemplate';
 import type { UpdateContext } from '@/features/updates/services/updateCore';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { Project } from '@/types/base';
@@ -159,7 +160,7 @@ export function describeIntegrationUpdate(update: IntegrationPairUpdate): string
 export async function applyIntegrationUpdates(
     items: IntegrationPairUpdate[],
     ctx: UpdateContext,
-    onProgress?: (stage: string, item?: string) => void,
+    onProgress?: OnProgress,
 ): Promise<CategoryResult> {
     const stage = OPERATION_STAGES.updatingIntegrations.label;
     const result = emptyResult();
@@ -176,8 +177,10 @@ export async function applyIntegrationUpdates(
         }
         onProgress?.(stage, where);
         try {
-            const updated = await ctx.updateIntegrationPair(item.project, item.componentId, (message, subMessage) =>
-                onProgress?.(stage, `${where}: ${subMessage ?? message}`),
+            // Which part is in flight goes with its step, so the Updates window can say it under
+            // the bar ("Installing dependencies: Justrite ERP", owner 2026-11-19).
+            const updated = await ctx.updateIntegrationPair(item.project, item.componentId, (message, subMessage, position) =>
+                onProgress?.(stage, position ? message : `${where}: ${subMessage ?? message}`, position),
             );
             if (updated.success) {
                 result.successCount++;

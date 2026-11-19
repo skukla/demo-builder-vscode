@@ -34,6 +34,7 @@ import { StepStatusIcon, type StepStatus } from '@/core/ui/components/feedback/S
 import { WorkRow } from '@/core/ui/components/feedback/WorkRow';
 import { useAutoScroll } from '@/core/ui/hooks/useAutoScroll';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { stageLine } from '@/core/utils/stageLine';
 import { localCopyRowId, type PendingUpdateRow, type UpdateRowState, type UpdateRowStatus } from '@/types/pendingUpdates';
 import type { UnifiedProgress } from '@/types/webview';
 import type { OperationProgressPayload, OperationPrompt } from '@/types/webviewPayloads';
@@ -75,6 +76,8 @@ function lineOf(row: PendingUpdateRow, state: UpdateRowState, stage: string | un
 interface Live {
     /** The step the run is on ("Updating your local copy"). */
     stage?: string;
+    /** Which part of it is in flight, when it says: "Installing dependencies: Justrite ERP". */
+    part?: string;
     /** The run has ended: a local copy step it never reached is not drawn. */
     ended?: boolean;
     question?: OperationPrompt;
@@ -96,9 +99,10 @@ interface StepProps {
  * Where a running step is among its project's steps, as Prerequisites says it ("Step 2/3:
  * Updating your local copy"), for a project with more than one step (owner, 2026-11-19).
  */
-export function stepProgressOf(index: number, total: number, stepName: string): UnifiedProgress | undefined {
+export function stepProgressOf(index: number, total: number, stepName: string, part?: string): UnifiedProgress | undefined {
     if (total < 2 || index < 0) return undefined;
-    return { overall: { percent: Math.round((index / total) * 100), currentStep: index + 1, totalSteps: total, stepName } };
+    const overall = { percent: Math.round((index / total) * 100), currentStep: index + 1, totalSteps: total, stepName };
+    return part ? { overall, command: { type: 'indeterminate', detail: part, confidence: 'synthetic' } } : { overall };
 }
 
 function Step({ label, detail, status, asking, onTyped, progress }: StepProps) {
@@ -115,7 +119,7 @@ function Step({ label, detail, status, asking, onTyped, progress }: StepProps) {
             why={state === 'failed'}
             state={state}
         >
-            {progress && <StepProgressBar progress={progress} />}
+            {progress && <StepProgressBar progress={progress} detailBelow />}
             {asking && onTyped && <RunQuestion prompt={asking} onTyped={onTyped} />}
         </WorkRow>
     );
@@ -131,8 +135,11 @@ function RunRow({ row, statuses, live, place }: { row: PendingUpdateRow; statuse
     const status = statuses[row.id];
     const state = status?.state ?? 'waiting';
     const asking = state === 'running' ? live.question : undefined;
-    const detail = lineOf(row, state, asking ? undefined : live.stage);
-    const progress = state === 'running' && !asking ? stepProgressOf(place.index, place.total, detail) : undefined;
+    const stepLine = lineOf(row, state, asking ? undefined : live.stage);
+    const running = state === 'running' && !asking;
+    const progress = running ? stepProgressOf(place.index, place.total, stepLine, live.part) : undefined;
+    // With no count to show, the part in flight says more than the step's name.
+    const detail = running && live.part ? live.part : stepLine;
     return <Step label={row.label} detail={detail} status={status} asking={asking} onTyped={live.onTyped} progress={progress} />;
 }
 
@@ -173,16 +180,15 @@ interface RunGroupProps {
     cardRef?: (el: HTMLDivElement | null) => void;
 }
 
-/** One project as a card, as the Prerequisites step draws its checks; the running one is outlined. */
+/** One project as a card, as the Prerequisites step draws its checks; its spinner marks the running one. */
 function RunGroup({ group, statuses, live, cardRef }: RunGroupProps) {
     // Told ahead as waiting; one the run ended without reaching (nothing wrote) is not drawn.
     const told = statuses[localCopyRowId(group.key)];
     const localCopy = live.ended && told?.state === 'waiting' ? undefined : told;
     const total = group.rows.length + (localCopy ? 1 : 0);
     const states = [...group.rows.map((r) => statuses[r.id]?.state ?? 'waiting'), ...(localCopy ? [localCopy.state] : [])];
-    const running = states.includes('running');
     return (
-        <div ref={cardRef} className={running ? 'updates-group updates-group--running' : 'updates-group'}>
+        <div ref={cardRef} className="updates-group">
             <div className="updates-group-header updates-run-header">
                 <span className="work-row-icon"><StepStatusIcon status={groupStatusOf(states)} /></span>
                 <span className="project-row-name">{group.title}</span>
@@ -225,6 +231,14 @@ export function UpdatesRunView({ rows, statuses, progress, onTyped, remaining, e
 }
 
 /**
+ * Which part of the step is in flight, in the house words for it (`stageLine`): only when the run
+ * says which part, as an integration's redeploy does for each system it deploys.
+ */
+function partOf(progress: OperationProgressPayload | null): string | undefined {
+    return progress?.position && progress.step ? stageLine(progress.step, progress.position) : undefined;
+}
+
+/**
  * The list while it runs. It follows the work, as the Prerequisites step does: each time
  * a row starts, the list scrolls just enough to show that row's card, and in between it
  * stays where the SC put it (owner, 2026-11-18, walk F290: with several projects, the one
@@ -242,7 +256,7 @@ function RunningList({ rows, statuses, progress, onTyped }: Omit<RunViewProps, '
 
     const running = progress?.state !== 'failed' && progress?.state !== 'succeeded';
     const question = running ? progress?.prompt : undefined;
-    const live: Live = { stage: progress?.stage, question, onTyped, ended: !running };
+    const live: Live = { stage: progress?.stage, part: partOf(progress), question, onTyped, ended: !running };
     return (
         <div ref={containerRef} className="updates-group-list updates-run-list scroll-fade scroll-fade--capped">
             {question && !now && <RunQuestion prompt={question} onTyped={onTyped} />}
