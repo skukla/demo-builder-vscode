@@ -154,6 +154,20 @@ export class ShowIntegrationsCommand extends BundledPanelCommand<IntegrationsIni
                 );
             });
         }
+        // A sign-in finished anywhere re-checks the Add Integration flow's sign-in step (F303).
+        const auth = this.createHandlerContext().authManager;
+        if (auth) {
+            this.disposables.add(
+                auth.onDidSignIn(() => {
+                    void dispatchHandler(
+                        addIntegrationFlowHandlers,
+                        this.createHandlerContext(),
+                        'check-auth',
+                        undefined,
+                    );
+                }),
+            );
+        }
     }
 
     /** Dispose any active integrations panel (used by sibling surfaces on swap). */

@@ -2538,7 +2538,7 @@
             "anchors": [
                 "if (panel) {"
             ],
-            "line": 464,
+            "line": 477,
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this true calls dispose on undefined when no wizard panel is open \u2014 and that call sits inside the try whose catch is deliberately empty, so the TypeError is swallowed and disposeActivePanel still returns having done nothing. The no-panel test passes under both, because the guard and the catch cover the same case.",
@@ -2551,7 +2551,7 @@
             "anchors": [
                 "if (this.importedSettings) {"
             ],
-            "line": 481,
+            "line": 494,
             "mutants": 3,
             "category": "branch",
             "reason": "The body is a single this.logger.debug naming the import source. importedSettings is assigned on the line above and read by getInitialData from the field, never from this branch, so forcing the condition either way or emptying the block leaves the wizard's initial data identical.",
@@ -2564,7 +2564,7 @@
             "anchors": [
                 "if (this.editProject.settings?.selections) {"
             ],
-            "line": 496,
+            "line": 509,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Removing this optional read would throw only for an edit project whose settings is undefined, and EditProjectConfig declares settings as required \u2014 no caller can construct that value without deliberately defeating the type. The guard is defensive against a shape the compiler already refuses.",
