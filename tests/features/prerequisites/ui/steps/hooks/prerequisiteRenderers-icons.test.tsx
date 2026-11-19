@@ -7,8 +7,8 @@
  * thing a reader of the screen can tell apart.
  */
 
+import { getProgressValue } from '@/core/ui/components/feedback/StepProgressBar';
 import {
-    getProgressValue,
     renderPluginStatusIcon,
     shouldShowPluginDetails,
 } from '@/features/prerequisites/ui/steps/hooks/prerequisiteRenderers';

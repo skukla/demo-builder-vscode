@@ -28,6 +28,8 @@ import '@/features/data-installer/ui/styles/datapack.css';
 // migration (.rptc/plans/css-architecture-migration). The wizard is the only
 // entry whose import graph reaches PrerequisitesStep.
 import '@/features/prerequisites/ui/styles/prerequisites.css';
+// The step bar Prerequisites draws (`StepProgressBar`).
+import '@/core/ui/styles/step-progress.css';
 // .brand-* and .expandable-* rules, moved out of utilities.css by the CSS
 // migration. They share a sheet because `.expandable-brand-card` IS a brand card,
 // not because they could not be separated — the refusal that forced them to move

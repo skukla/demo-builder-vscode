@@ -1,9 +1,10 @@
-import { View, Flex, Text, Button, ProgressBar } from '@adobe/react-spectrum';
+import { View, Flex, Text, Button } from '@adobe/react-spectrum';
 import React, { useRef, useCallback, useMemo } from 'react';
 import { isMeshComponentId } from '@/core/constants';
+import { StepProgressBar } from '@/core/ui/components/feedback/StepProgressBar';
 import { StepStatusIcon } from '@/core/ui/components/feedback/StepStatusIcon';
 import { cn } from '@/core/ui/utils/classNames';
-import { getProgressValue, renderPluginStatusIcon, renderPrerequisiteMessage, shouldShowPluginDetails } from '@/features/prerequisites/ui/steps/hooks/prerequisiteRenderers';
+import { renderPluginStatusIcon, renderPrerequisiteMessage, shouldShowPluginDetails } from '@/features/prerequisites/ui/steps/hooks/prerequisiteRenderers';
 import { usePrerequisiteAutoScroll } from '@/features/prerequisites/ui/steps/hooks/usePrerequisiteAutoScroll';
 import { usePrerequisiteNavigation } from '@/features/prerequisites/ui/steps/hooks/usePrerequisiteNavigation';
 import { usePrerequisiteState } from '@/features/prerequisites/ui/steps/hooks/usePrerequisiteState';
@@ -123,19 +124,7 @@ export function PrerequisitesStep({ state, setCanProceed, currentStep }: Prerequ
                             <div className="prerequisite-expandable">
                                 {renderPrerequisiteMessage(check)}
                                 {check.status === 'checking' && check.unifiedProgress && (
-                                    <View marginTop="size-100" UNSAFE_className="animate-fade-in">
-                                        <ProgressBar
-                                            label={`Step ${check.unifiedProgress.overall.currentStep}/${check.unifiedProgress.overall.totalSteps}: ${check.unifiedProgress.overall.stepName}${
-                                                check.unifiedProgress.command?.detail
-                                                    ? ` - ${check.unifiedProgress.command.detail}`
-                                                    : ''
-                                            }`}
-                                            value={getProgressValue(check.unifiedProgress)}
-                                            maxValue={100}
-                                            size="S"
-                                            UNSAFE_className="progress-bar-spacing progress-bar-small-label progress-bar-full-width"
-                                        />
-                                    </View>
+                                    <StepProgressBar progress={check.unifiedProgress} />
                                 )}
                                 {check.plugins &&
                                     check.plugins.length > 0 &&

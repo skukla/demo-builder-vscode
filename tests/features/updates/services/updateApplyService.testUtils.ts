@@ -112,8 +112,11 @@ jest.mock('@/features/updates/services/boilerplateCheck', () => ({
 }));
 // The local storefront copy's refresh runs real git; its rules are localStorefrontRefresh.test's.
 export const mockRefreshLocalStorefronts = jest.fn();
+/** Whether a project has a local copy on disk; reads the disk for real, so faked here. */
+export const mockHasLocalCopy = jest.fn();
 jest.mock('@/features/updates/services/localStorefrontRefresh', () => ({
     refreshLocalStorefronts: (...a: unknown[]) => mockRefreshLocalStorefronts(...a),
+    hasLocalCopy: (...a: unknown[]) => mockHasLocalCopy(...a),
 }));
 jest.mock('@/features/updates/services/addonUpdateChecker', () => ({
     AddonUpdateChecker: class {

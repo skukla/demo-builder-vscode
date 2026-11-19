@@ -241,6 +241,8 @@ async function applyTicked(
             const message = lineOf(outcome);
             void tellScreen(context, { id: localCopyRowId(project.path), state: outcome.state, ...(message ? { message } : {}) });
         },
+        // Ahead of it, so the project's steps are counted with it from the first.
+        onLocalCopyAhead: (project) => void tellScreen(context, { id: localCopyRowId(project.path), state: 'waiting' }),
     });
     // A clash the SC chose to fix with AI is kept; open their AI on it (EDS-57), and leave
     // its row where the AI's finish can flip it while this run is on screen (EDS-56).

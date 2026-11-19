@@ -74,6 +74,8 @@ import '@/core/ui/styles/work-row.css';
 import '@/core/ui/styles/modal-text.css';
 // A scrolling list's fade: the Updates window, the batch window, the API picker (ADR-017 §6).
 import '@/core/ui/styles/scroll-fade.css';
+// The step bar the Updates run draws (`StepProgressBar`).
+import '@/core/ui/styles/step-progress.css';
 
 // Local constant - webview cannot import TIMEOUTS from extension host
 // Equivalent to TIMEOUTS.PROJECT_STATE_PERSIST_DELAY in src/core/utils/timeoutConfig.ts

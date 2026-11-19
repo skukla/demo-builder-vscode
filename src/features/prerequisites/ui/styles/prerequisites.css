@@ -1,12 +1,12 @@
 /**
- * .prerequisite-* and .progress-* styles.
+ * .prerequisite-* styles.
  *
  * FEATURE-SCOPED (ADR-017 §6). Imported by the `wizard` entry ALONE — the only one
  * whose graph reaches PrerequisitesStep.
  *
- * TWO FAMILIES, one sheet. `.progress-*` was appended here rather than given a
- * sheet of its own; four rules do not earn a file, and that is what keeps this
- * migration from ending in forty single-family stylesheets.
+ * The `.progress-*` rules that shared this sheet moved to core `step-progress.css` on
+ * 2026-11-19, with the bar they style (`StepProgressBar`), when the Updates run became
+ * its second user.
  *
  * Moved out of utilities.css by the CSS migration
  * (.rptc/plans/css-architecture-migration), each rule with the comment above it.
@@ -159,24 +159,4 @@
     will-change: transform;
 }
 
-/* Progress bar customizations */
-.progress-bar-small-label [class*="spectrum-ProgressBar-label"] {
-    font-size: 12px;
-    font-weight: 400;
-    color: var(--spectrum-global-color-gray-700);
-}
-
-.progress-bar-full-width {
-    width: 100%;
-    max-width: none;
-}
-
-.progress-bar-full-width [class*="spectrum-ProgressBar"] {
-    width: 100%;
-}
-
-/* Progress bar spacing */
-.progress-bar-spacing {
-    margin-bottom: 8px;
-}
 }

@@ -33,7 +33,7 @@ import {
 import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
 import { ForkSyncService } from '@/features/updates/services/forkSyncService';
 import { applyIntegrationUpdates } from '@/features/updates/services/integrationUpdates';
-import { refreshLocalStorefronts } from '@/features/updates/services/localStorefrontRefresh';
+import { hasLocalCopy, refreshLocalStorefronts } from '@/features/updates/services/localStorefrontRefresh';
 import { eachItem, watchingDone, type DescribeItem, type ItemObserver } from '@/features/updates/services/updateApplyEach';
 import { applyFinish } from '@/features/updates/services/updateApplyFinish';
 import {
@@ -72,6 +72,16 @@ export interface ApplyUpdatesOptions {
     projectOrder?: readonly string[];
     /** Told as each project's local copy starts and ends being brought up to GitHub. */
     onLocalCopy?: (project: Project, outcome: ItemOutcome) => void;
+    /**
+     * Told as a project starts when its local copy will be brought up to GitHub after its
+     * updates, so the window counts that step from the first ("Step 1/3", owner 2026-11-19).
+     */
+    onLocalCopyAhead?: (project: Project) => void;
+}
+
+/** The items in a project's selections that write its storefront on GitHub. */
+function storefrontWrites(s: UpdateSelections): Array<{ project: Project }> {
+    return [...s.template, ...s.boilerplate, ...s.blockLibrary, ...s.blockLibraryInstall];
 }
 
 /** A library kept under the `ask` setting: the core records only its name. */
@@ -294,6 +304,12 @@ interface ApplyRun {
     done?: ReadonlySet<object>;
 }
 
+/** Say ahead that a project's local copy will follow its updates: it writes a storefront it has a copy of. */
+async function tellLocalCopyAhead(s: UpdateSelections, tell: ApplyUpdatesOptions['onLocalCopyAhead']): Promise<void> {
+    const project = storefrontWrites(s)[0]?.project;
+    if (tell && project && (await hasLocalCopy(project))) tell(project);
+}
+
 /**
  * One project's updates, in its kinds' order, each added to its category's result; then
  * its local copy brought up to what they wrote.
@@ -302,6 +318,7 @@ async function applyProject(s: UpdateSelections, run: ApplyRun, into: Record<Cat
     const { ctx, onProgress, onItem } = run;
     const { questions, templateConflicts: policy } = run.options;
     const add = (key: CategoryKey, result: CategoryResult): void => mergeInto(into[key], result);
+    await tellLocalCopyAhead(s, run.options.onLocalCopyAhead);
     // Only a person is told how a kept clash reads; without one, nothing reads the row.
     const answered: DescribeItem = (result) => answeredClashOutcome(result, questions?.aiAsksFirst() ?? true);
     // First among the storefront writes: a fixed clash finishes before anything else moves the repository.
@@ -324,7 +341,7 @@ async function applyProject(s: UpdateSelections, run: ApplyRun, into: Record<Cat
         applyIntegrationUpdates(some, ctx, onProgress), onItem));
     // Every kind above that writes a storefront writes it on GitHub; the local copy agents
     // edit is brought up to it here (EDS-57). Told item by item, only what applied wrote.
-    const wrote = [...s.template, ...s.boilerplate, ...s.blockLibrary, ...s.blockLibraryInstall]
+    const wrote = storefrontWrites(s)
         .filter((item) => !run.done || run.done.has(item))
         .map((item) => item.project);
     if (wrote.length > 0) await refreshLocalStorefronts(wrote, ctx, onProgress, run.options.onLocalCopy);

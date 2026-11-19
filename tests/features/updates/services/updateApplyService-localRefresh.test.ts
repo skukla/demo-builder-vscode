@@ -10,6 +10,7 @@ import {
     emptySelections,
     installedLibrary,
     makeCtx,
+    mockHasLocalCopy,
     mockRefreshLocalStorefronts,
     resetFakes,
 } from './updateApplyService.testUtils';
@@ -111,5 +112,30 @@ describe('local storefront refresh after an apply', () => {
         await applyUpdatesHeadless(selections, makeCtx());
 
         expect(mockRefreshLocalStorefronts).toHaveBeenCalledWith([project], expect.anything(), undefined, undefined);
+    });
+
+    // Said as the project starts, so the window counts the step from the first ("Step 1/3",
+    // owner 2026-11-19), and only for a project whose storefront an update writes and that
+    // has a local copy.
+    it('says ahead which projects will have their local copy brought up to GitHub', async () => {
+        const withCopy = edsProject({ name: 'tpl', path: '/p/tpl' });
+        const noCopy = edsProject({ name: 'gone', path: '/p/gone' });
+        const component = edsProject({ name: 'cmp', path: '/p/cmp' });
+        mockHasLocalCopy.mockImplementation(async (p: { path: string }) => p.path === '/p/tpl');
+        const onLocalCopyAhead = jest.fn();
+
+        await applyUpdatesHeadless(
+            {
+                ...emptySelections(),
+                template: [{ project: withCopy }, { project: noCopy }],
+                component: [{ project: component, componentId: 'c', latestVersion: '2' }],
+            },
+            makeCtx(),
+            undefined,
+            { onLocalCopyAhead },
+        );
+
+        expect(onLocalCopyAhead.mock.calls).toEqual([[withCopy]]);
+        expect(mockHasLocalCopy).not.toHaveBeenCalledWith(component);
     });
 });

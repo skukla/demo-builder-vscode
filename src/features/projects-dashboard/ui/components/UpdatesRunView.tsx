@@ -29,11 +29,13 @@ import { ICON_OF, RunQuestion } from './runWindowParts';
 import { groupsOf, type RowGroup } from './updateGroups';
 import type { RunOutcome } from '@/core/ui/components/feedback/OperationProgressBody';
 import { ResultBody } from '@/core/ui/components/feedback/ResultBody';
+import { StepProgressBar } from '@/core/ui/components/feedback/StepProgressBar';
 import { StepStatusIcon, type StepStatus } from '@/core/ui/components/feedback/StepStatusIcon';
 import { WorkRow } from '@/core/ui/components/feedback/WorkRow';
 import { useAutoScroll } from '@/core/ui/hooks/useAutoScroll';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { localCopyRowId, type PendingUpdateRow, type UpdateRowState, type UpdateRowStatus } from '@/types/pendingUpdates';
+import type { UnifiedProgress } from '@/types/webview';
 import type { OperationProgressPayload, OperationPrompt } from '@/types/webviewPayloads';
 
 /** One icon for a project: the worst that happened, else whether it is still going. */
@@ -73,6 +75,8 @@ function lineOf(row: PendingUpdateRow, state: UpdateRowState, stage: string | un
 interface Live {
     /** The step the run is on ("Updating your local copy"). */
     stage?: string;
+    /** The run has ended: a local copy step it never reached is not drawn. */
+    ended?: boolean;
     question?: OperationPrompt;
     onTyped: (values: Record<string, string>) => void;
 }
@@ -84,9 +88,20 @@ interface StepProps {
     status: UpdateRowStatus | undefined;
     asking?: OperationPrompt;
     onTyped?: Live['onTyped'];
+    /** While it runs, where it is among its project's steps: the bar says it in place of the line. */
+    progress?: UnifiedProgress;
 }
 
-function Step({ label, detail, status, asking, onTyped }: StepProps) {
+/**
+ * Where a running step is among its project's steps, as Prerequisites says it ("Step 2/3:
+ * Updating your local copy"), for a project with more than one step (owner, 2026-11-19).
+ */
+export function stepProgressOf(index: number, total: number, stepName: string): UnifiedProgress | undefined {
+    if (total < 2 || index < 0) return undefined;
+    return { overall: { percent: Math.round((index / total) * 100), currentStep: index + 1, totalSteps: total, stepName } };
+}
+
+function Step({ label, detail, status, asking, onTyped, progress }: StepProps) {
     const state = status?.state ?? 'waiting';
     // Red only for a failure: a row left alone carries its yellow icon, and says why in the
     // warning's orange (`WorkRow`; red until 2026-10-21, grey until decisions Phase 1b, J1-3d).
@@ -95,22 +110,30 @@ function Step({ label, detail, status, asking, onTyped }: StepProps) {
         <WorkRow
             status={asking ? 'warning' : ICON_OF[state]}
             label={label}
-            detail={detail}
+            detail={progress ? '' : detail}
             note={note}
             why={state === 'failed'}
             state={state}
         >
+            {progress && <StepProgressBar progress={progress} />}
             {asking && onTyped && <RunQuestion prompt={asking} onTyped={onTyped} />}
         </WorkRow>
     );
 }
 
-function RunRow({ row, statuses, live }: { row: PendingUpdateRow; statuses: RowStatuses; live: Live }) {
+/** Where a step sits in its card: its place and how many steps the card has. */
+interface Place {
+    index: number;
+    total: number;
+}
+
+function RunRow({ row, statuses, live, place }: { row: PendingUpdateRow; statuses: RowStatuses; live: Live; place: Place }) {
     const status = statuses[row.id];
     const state = status?.state ?? 'waiting';
     const asking = state === 'running' ? live.question : undefined;
     const detail = lineOf(row, state, asking ? undefined : live.stage);
-    return <Step label={row.label} detail={detail} status={status} asking={asking} onTyped={live.onTyped} />;
+    const progress = state === 'running' && !asking ? stepProgressOf(place.index, place.total, detail) : undefined;
+    return <Step label={row.label} detail={detail} status={status} asking={asking} onTyped={live.onTyped} progress={progress} />;
 }
 
 const LOCAL_COPY_LINE: Partial<Record<UpdateRowState, string>> = {
@@ -123,8 +146,10 @@ const LOCAL_COPY_LINE: Partial<Record<UpdateRowState, string>> = {
  * its own after them, which keeps its outcome. Only a project whose updates wrote to
  * GitHub, and that has a local copy, has one.
  */
-function LocalCopyStep({ status }: { status: UpdateRowStatus }) {
-    return <Step label="Your Local Copy" detail={LOCAL_COPY_LINE[status.state] ?? ''} status={status} />;
+function LocalCopyStep({ status, place }: { status: UpdateRowStatus; place: Place }) {
+    const detail = LOCAL_COPY_LINE[status.state] ?? '';
+    const progress = status.state === 'running' ? stepProgressOf(place.index, place.total, detail) : undefined;
+    return <Step label="Your Local Copy" detail={detail} status={status} progress={progress} />;
 }
 
 /** Every row id in a project's card, its local copy last. */
@@ -150,7 +175,10 @@ interface RunGroupProps {
 
 /** One project as a card, as the Prerequisites step draws its checks; the running one is outlined. */
 function RunGroup({ group, statuses, live, cardRef }: RunGroupProps) {
-    const localCopy = statuses[localCopyRowId(group.key)];
+    // Told ahead as waiting; one the run ended without reaching (nothing wrote) is not drawn.
+    const told = statuses[localCopyRowId(group.key)];
+    const localCopy = live.ended && told?.state === 'waiting' ? undefined : told;
+    const total = group.rows.length + (localCopy ? 1 : 0);
     const states = [...group.rows.map((r) => statuses[r.id]?.state ?? 'waiting'), ...(localCopy ? [localCopy.state] : [])];
     const running = states.includes('running');
     return (
@@ -160,10 +188,10 @@ function RunGroup({ group, statuses, live, cardRef }: RunGroupProps) {
                 <span className="project-row-name">{group.title}</span>
             </div>
             <div className="updates-group-rows">
-                {group.rows.map((row) => (
-                    <RunRow key={row.id} row={row} statuses={statuses} live={live} />
+                {group.rows.map((row, index) => (
+                    <RunRow key={row.id} row={row} statuses={statuses} live={live} place={{ index, total }} />
                 ))}
-                {localCopy && <LocalCopyStep status={localCopy} />}
+                {localCopy && <LocalCopyStep status={localCopy} place={{ index: group.rows.length, total }} />}
             </div>
         </div>
     );
@@ -187,7 +215,7 @@ export function UpdatesRunView({ rows, statuses, progress, onTyped, remaining, e
             <ResultBody {...ending} lines={[failure, waiting]}>
                 <div className="updates-group-list">
                     {groupsOf(rows).map((group) => (
-                        <RunGroup key={group.key} group={group} statuses={statuses} live={{ onTyped }} />
+                        <RunGroup key={group.key} group={group} statuses={statuses} live={{ onTyped, ended: true }} />
                     ))}
                 </div>
             </ResultBody>
@@ -214,7 +242,7 @@ function RunningList({ rows, statuses, progress, onTyped }: Omit<RunViewProps, '
 
     const running = progress?.state !== 'failed' && progress?.state !== 'succeeded';
     const question = running ? progress?.prompt : undefined;
-    const live: Live = { stage: progress?.stage, question, onTyped };
+    const live: Live = { stage: progress?.stage, question, onTyped, ended: !running };
     return (
         <div ref={containerRef} className="updates-group-list updates-run-list scroll-fade scroll-fade--capped">
             {question && !now && <RunQuestion prompt={question} onTyped={onTyped} />}

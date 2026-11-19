@@ -3,7 +3,7 @@ import Pending from '@spectrum-icons/workflow/Pending';
 import React from 'react';
 import { StatusIcon } from '@/core/ui/components/feedback/StatusIcon';
 import { cn } from '@/core/ui/utils/classNames';
-import { PrerequisiteCheck, UnifiedProgress } from '@/types/webview';
+import { PrerequisiteCheck } from '@/types/webview';
 
 /**
  * Check if plugin details should be shown for a prerequisite
@@ -33,19 +33,6 @@ export function renderPluginStatusIcon(
         return <StatusIcon status="success" size="XS" marginStart="size-50" />;
     }
     return <StatusIcon status="error" size="XS" marginStart="size-50" />;
-}
-
-/**
- * Calculate progress bar value based on unified progress state
- */
-export function getProgressValue(unifiedProgress: UnifiedProgress): number {
-    if (unifiedProgress.overall.totalSteps > 1) {
-        return unifiedProgress.overall.percent;
-    }
-    if (unifiedProgress.command?.type === 'determinate' && unifiedProgress.command?.percent != null) {
-        return unifiedProgress.command.percent;
-    }
-    return unifiedProgress.overall.percent;
 }
 
 /**

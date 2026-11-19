@@ -134,6 +134,7 @@ describe('applyUpdates', () => {
     it("tells the screen each project's local copy step, without counting it as an update", async () => {
         mockApplyUpdatesHeadless.mockImplementation(async (sel: UpdateSelections, _ctx, _report, options) => {
             const [library] = sel.blockLibrary;
+            options.onLocalCopyAhead(library.project);
             options.onItem('blockLibrary', library, { state: 'done' });
             options.onLocalCopy(library.project, { state: 'running' });
             options.onLocalCopy(library.project, { state: 'skipped', message: 'Left as it is: GitHub could not be reached.' });
@@ -144,7 +145,9 @@ describe('applyUpdates', () => {
             rows.filter((r) => r.group.key === '/p/bodea' && r.kind === 'blockLibrary').map((r) => r.id),
         );
 
+        // Told ahead as waiting, so the screen counts it among the project's steps (2026-11-19).
         expect(statusesSent(ctx)).toEqual([
+            { id: 'localCopy:/p/bodea', state: 'waiting' },
             { id: 'blockLibrary:1', state: 'done' },
             { id: 'localCopy:/p/bodea', state: 'running' },
             { id: 'localCopy:/p/bodea', state: 'skipped', message: 'Left as it is: GitHub could not be reached.' },

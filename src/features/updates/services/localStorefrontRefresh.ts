@@ -155,6 +155,13 @@ async function hasGitFolder(storefrontPath: string): Promise<boolean> {
     }
 }
 
+/** Whether the project has a local storefront copy on disk as a git repository. */
+export async function hasLocalCopy(project: Project): Promise<boolean> {
+    const copy = localCopyOf(project);
+    if (!copy) return false;
+    return hasGitFolder(copy.storefrontPath);
+}
+
 /** A project's local storefront copy, ready to run git in, with its GitHub fetch URL. */
 export interface LocalCopy extends LocalRefreshRequest {
     git: GitStep;

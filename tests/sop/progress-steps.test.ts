@@ -85,6 +85,8 @@ const STEP_POSITION_BUILDERS: Record<string, string> = {
         "Deleting an Adobe project from the agent: teardownConsoleProject's four fixed steps.",
     'src/features/authentication/handlers/deleteAdobeProjectHandler.ts':
         "Deleting an Adobe project from the button: teardownConsoleProject's four fixed steps.",
+    'src/features/projects-dashboard/ui/components/UpdatesRunView.tsx':
+        "The Updates run: a project card's steps, its ticked updates then its local copy (told ahead), all known before the card runs.",
 };
 
 interface Site {
