@@ -437,6 +437,10 @@ describe('the steps it reports', () => {
             [OPERATION_STAGES.deletingRepository.label, at(6, 8), undefined],
             // EDS-67: AEM's copy of the code, once the repository is gone.
             [OPERATION_STAGES.removingSiteCode.label, at(7, 8), undefined],
+            // ...counting its files as they go, so a long removal never looks stuck.
+            [OPERATION_STAGES.removingSiteCode.label, at(7, 8), '0 of 2 files'],
+            [OPERATION_STAGES.removingSiteCode.label, at(7, 8), '1 of 2 files'],
+            [OPERATION_STAGES.removingSiteCode.label, at(7, 8), '2 of 2 files'],
             [OPERATION_STAGES.removingProjectFiles.label, at(8, 8), undefined],
         ]);
     });
@@ -444,7 +448,10 @@ describe('the steps it reports', () => {
     it('counts only the steps the SC chose', async () => {
         await deleteAnswered(context(), edsProject(), SERVICES, ['github']);
 
-        expect(mockStageReport.mock.calls.map(([stage, position]) => [stage, position])).toStrictEqual([
+        // A step's line changing ("1 of 2 files") is the same step, so each counts once.
+        const steps = mockStageReport.mock.calls.map(([stage, position]) => [stage, position]);
+        const distinct = steps.filter((step, i) => i === 0 || step[0] !== steps[i - 1][0]);
+        expect(distinct).toStrictEqual([
             [OPERATION_STAGES.deletingRepository.label, at(1, 3)],
             [OPERATION_STAGES.removingSiteCode.label, at(2, 3)],
             [OPERATION_STAGES.removingProjectFiles.label, at(3, 3)],

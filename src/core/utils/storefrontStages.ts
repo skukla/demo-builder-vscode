@@ -172,12 +172,13 @@ export const STOREFRONT_STAGES = {
         detail: "The storefront's GitHub repository",
     },
     // AEM's own copy of the code, one file at a time once the repository is gone
-    // (EDS-67, `storefrontCodeRemoval.ts`). NOT measured yet: no delete has run with
-    // this step. Four requests at once over a template's couple of hundred files is
-    // the estimate behind the expectation; replace it from the Debug Logs.
+    // (EDS-67, `storefrontCodeRemoval.ts`). Measured 2026-11-18 from the Debug Logs: about
+    // 3.5 files a second, and a B2B storefront has about 770 files AEM serves (3,482 in the
+    // repository; `.hlxignore` leaves out the rest, which are skipped), so about 4 minutes.
+    // The line under it counts the files.
     removingSiteCode: {
         label: "Deleting the site's code",
-        expectation: 'Usually under a minute',
+        expectation: 'Usually a few minutes',
         detail: 'So the live site stops running it',
     },
     removingProjectFiles: {

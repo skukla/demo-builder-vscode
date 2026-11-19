@@ -30,6 +30,9 @@ import { createMockLogger } from '../../../../helpers/loggerFake';
 const TARGET = { owner: 'acme', repo: 'site' };
 const TREE = ['scripts/aem.js', 'scripts/scripts.js', 'styles/styles.css', 'head.html'];
 
+/** A repository with no `.hlxignore`: every file is on the code bus. */
+const NO_HLXIGNORE = async (): Promise<null> => null;
+
 /** One shared timeline, so the ORDER across collaborators can be read back. */
 let calls: string[];
 
@@ -47,6 +50,7 @@ function deps(over: Partial<StorefrontRepoDeletionDeps> = {}): StorefrontRepoDel
                 calls.push('listRepoFiles');
                 return TREE.map((path) => ({ path }));
             }),
+            getFileContent: jest.fn(NO_HLXIGNORE),
         },
         deleteRepository: jest.fn(async () => {
             calls.push('deleteRepository');
@@ -126,11 +130,53 @@ describe('the order', () => {
         expect(calls.indexOf(`step ${OPERATION_STAGES.removingSiteCode.label}`)).toBe(2);
     });
 
+    it('counts the files as they go, so a long removal never looks stuck', async () => {
+        const onStepDetail = jest.fn();
+        const d = deps({ onStepDetail });
+        d.helix.deleteCode.mockRejectedValueOnce(new Error('refused'));
+
+        await deleteStorefrontRepository(TARGET, d);
+
+        const step = OPERATION_STAGES.removingSiteCode.label;
+        expect(onStepDetail.mock.calls).toEqual([
+            [step, '0 of 4 files'],
+            [step, '1 of 4 files'],
+            [step, '2 of 4 files'],
+            [step, '3 of 4 files'],
+            [step, '4 of 4 files'],
+        ]);
+    });
+
+    it("skips what the repository's .hlxignore leaves out, since AEM never copied it", async () => {
+        const tree = ['scripts/aem.js', 'scripts/x.js', 'scripts/x.d.ts', 'cypress/a.js', '.eslintrc', 'head.html'];
+        const getFileContent = jest.fn(async () => ({ content: '.*\n*.d.ts\ncypress/\n' }));
+        const d = deps({ files: { listRepoFiles: async () => tree.map((path) => ({ path })), getFileContent } });
+
+        await deleteStorefrontRepository(TARGET, d);
+
+        expect(getFileContent).toHaveBeenCalledWith('acme', 'site', '.hlxignore', 'main');
+        const removed = d.helix.deleteCode.mock.calls.map(([, , path]) => path).sort();
+        expect(removed).toEqual(['/head.html', '/scripts/aem.js', '/scripts/x.js']);
+    });
+
+    it('removes every file when .hlxignore cannot be read', async () => {
+        const d = deps({
+            files: {
+                listRepoFiles: async () => [{ path: 'scripts/aem.js' }, { path: 'scripts/x.d.ts' }],
+                getFileContent: async () => Promise.reject(new Error('GitHub 502')),
+            },
+        });
+
+        await deleteStorefrontRepository(TARGET, d);
+
+        expect(d.helix.deleteCode).toHaveBeenCalledTimes(2);
+    });
+
     it('removes no more than a few files at once', async () => {
         let inFlight = 0;
         let most = 0;
         const many = Array.from({ length: 20 }, (_, i) => ({ path: `blocks/b${i}/b${i}.js` }));
-        const d = deps({ files: { listRepoFiles: async () => [{ path: 'scripts/aem.js' }, ...many] } });
+        const d = deps({ files: { listRepoFiles: async () => [{ path: 'scripts/aem.js' }, ...many], getFileContent: NO_HLXIGNORE } });
         d.helix.deleteCode.mockImplementation(async () => {
             inFlight++;
             most = Math.max(most, inFlight);
@@ -228,7 +274,7 @@ describe('when there is no working DA.live sign-in', () => {
     it('CONTROL: a repository that is not a storefront is deleted with no sign-in at all', async () => {
         const d = deps({
             tokenProvider: null,
-            files: { listRepoFiles: async () => [{ path: 'README.md' }] },
+            files: { listRepoFiles: async () => [{ path: 'README.md' }], getFileContent: NO_HLXIGNORE },
         });
 
         const result = await deleteStorefrontRepository(TARGET, d);
@@ -242,7 +288,7 @@ describe('when there is no working DA.live sign-in', () => {
 describe('when the code cannot be removed', () => {
     it('still deletes the repository when its files cannot be listed, and says the code was not removed', async () => {
         const d = deps({
-            files: { listRepoFiles: async () => Promise.reject(new Error('GitHub 502')) },
+            files: { listRepoFiles: async () => Promise.reject(new Error('GitHub 502')), getFileContent: NO_HLXIGNORE },
             checkLive: async () => 200,
         });
 
@@ -265,7 +311,7 @@ describe('when the code cannot be removed', () => {
 
 describe('a repository that is not a storefront', () => {
     it('is deleted with no code removal and no result for it, having no scripts/aem.js', async () => {
-        const d = deps({ files: { listRepoFiles: async () => [{ path: 'README.md' }, { path: 'src/index.ts' }] } });
+        const d = deps({ files: { listRepoFiles: async () => [{ path: 'README.md' }, { path: 'src/index.ts' }], getFileContent: NO_HLXIGNORE } });
 
         const result = await deleteStorefrontRepository(TARGET, d);
 

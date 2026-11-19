@@ -354,6 +354,7 @@ async function performGitHubCleanup(
                 makeHelix: services?.makeHelix,
                 checkSignIn: services?.checkDaLiveSignIn,
                 onStep: (step) => report(step),
+                onStepDetail: (step, detail) => report(step, detail),
             },
         );
         if (deletion.kept) {
