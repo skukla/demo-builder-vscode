@@ -108,9 +108,7 @@ export async function finalizeProject(context: FinalizationContext): Promise<voi
         throw saveError;
     }
 
-    // Broken links in the copy stay on the record, in Diagnostics and the agent's answer, not on
-    // the success screen, where a line naming nothing to fix was read by nobody (walk F209).
-    await reportProjectCreated(progressTracker, project, logger, 'Project creation complete');
+    // "Project Created" is said by the run once its AI files are written (`creationLastSteps.ts`).
     logger.debug('[Project Creation] Phase 5 complete: Project finalized');
 }
 

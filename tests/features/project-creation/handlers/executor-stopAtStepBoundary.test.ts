@@ -106,6 +106,7 @@ jest.mock('@/features/project-creation/services/componentInstallationOrchestrato
 jest.mock('@/features/project-creation/services/projectFinalizationService', () => ({
     generateEnvironmentFiles: jest.fn().mockResolvedValue(undefined),
     finalizeProject: jest.fn().mockResolvedValue(undefined),
+    reportProjectCreated: jest.fn().mockResolvedValue(undefined),
     sendCompletionAndCleanup: jest.fn().mockResolvedValue(undefined),
 }));
 

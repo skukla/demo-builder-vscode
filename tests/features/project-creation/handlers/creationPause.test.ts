@@ -1,0 +1,199 @@
+/**
+ * A failed creation step pauses the run until the SC fixes it or skips it (F307).
+ *
+ * The pause is driven for real: the wizard's answer arrives through the same handler the
+ * creation screen's buttons post to, and the run's limit is the real one. Only VS Code is
+ * faked (its jest mock), for Fix with AI and the agent's modal.
+ */
+
+import * as vscode from 'vscode';
+import { startCreationLimit } from '@/features/project-creation/handlers/creationLimit';
+import {
+    CHECK_AGAIN,
+    RETRY,
+    SKIP_STEP,
+    creationFixPrompt,
+    handleCreationPauseAnswer,
+    untilDone,
+    type PauseDeps,
+} from '@/features/project-creation/handlers/creationPause';
+import type { StepFailure } from '@/features/project-creation/services/stepFailure';
+import { ErrorCode } from '@/types/errorCodes';
+import type { HandlerContext } from '@/types/handlers';
+import type { CreationPause } from '@/types/webview';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
+
+const FAILED: StepFailure = {
+    reason: 'A category already uses this web address.',
+    retryable: false,
+};
+
+/** A wizard run: a panel is open, so the creation screen asks. */
+function wizardRun(signal?: AbortSignal): {
+    deps: PauseDeps;
+    shown: Array<CreationPause | undefined>;
+} {
+    const shown: Array<CreationPause | undefined> = [];
+    const context = createMockHandlerContext({ panel: createMockWebviewPanel({ visible: true }) });
+    const deps: PauseDeps = {
+        context,
+        reporter: { pause: (pause) => shown.push(pause) },
+        signal,
+        projectName: 'Release Test',
+        step: 'Installing the datapack',
+    };
+    return { deps, shown };
+}
+
+/** A step that fails `times` times, then passes. */
+function failingStep(times: number, failure: StepFailure = FAILED): jest.Mock {
+    let left = times;
+    return jest.fn(async () => {
+        if (left === 0) return undefined;
+        left -= 1;
+        return failure;
+    });
+}
+
+/** Wait until the run is waiting for an answer, then press `answer` as the screen does. */
+async function press(context: HandlerContext, answer: string): Promise<void> {
+    for (let i = 0; i < 100 && !context.sharedState.creationPauseAnswer; i++) {
+        await new Promise((resolve) => setImmediate(resolve));
+    }
+    await expect(handleCreationPauseAnswer(context, { answer })).resolves.toEqual({
+        success: true,
+    });
+}
+
+beforeEach(() => {
+    jest.useRealTimers();
+    jest.clearAllMocks();
+});
+
+describe('untilDone in the wizard', () => {
+    it('runs a step that passes once, and shows no pause', async () => {
+        const { deps, shown } = wizardRun();
+        const step = failingStep(0);
+
+        await untilDone(deps, step);
+
+        expect(step).toHaveBeenCalledTimes(1);
+        expect(shown).toStrictEqual([]);
+    });
+
+    it('pauses on a failure, runs the step again on Check Again, and carries on once it passes', async () => {
+        const { deps, shown } = wizardRun();
+        const step = failingStep(1);
+
+        const run = untilDone(deps, step);
+        await press(deps.context, CHECK_AGAIN);
+        await run;
+
+        expect(step).toHaveBeenCalledTimes(2);
+        expect(shown).toEqual([
+            { reason: FAILED.reason, actions: ['Fix with AI', CHECK_AGAIN], canSkip: true },
+            undefined,
+        ]);
+        expect(deps.context.sharedState.creationPauseAnswer).toBeUndefined();
+    });
+
+    it('goes on without the step on Skip This Step', async () => {
+        const { deps } = wizardRun();
+        const step = failingStep(5);
+
+        const run = untilDone(deps, step);
+        await press(deps.context, SKIP_STEP);
+        await run;
+
+        expect(step).toHaveBeenCalledTimes(1);
+    });
+
+    it('offers Retry for a failure a retry can help, then Fix with AI once two retries failed', async () => {
+        const { deps, shown } = wizardRun();
+        const step = failingStep(3, { reason: 'The request timed out', retryable: true });
+
+        const run = untilDone(deps, step);
+        await press(deps.context, RETRY);
+        await press(deps.context, RETRY);
+        await press(deps.context, CHECK_AGAIN);
+        await run;
+
+        expect(shown.filter(Boolean).map((p) => p?.actions)).toEqual([
+            [RETRY],
+            [RETRY],
+            ['Fix with AI', CHECK_AGAIN],
+        ]);
+    });
+
+    it('opens the AI on Fix with AI, naming the project, the step and the reason, and keeps waiting', async () => {
+        const { deps } = wizardRun();
+        const step = failingStep(1);
+
+        const run = untilDone(deps, step);
+        await press(deps.context, 'Fix with AI');
+        expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.openInClaude', {
+            prompt: creationFixPrompt('Release Test', 'Installing the datapack', FAILED.reason),
+            fresh: true,
+        });
+        expect(step).toHaveBeenCalledTimes(1);
+
+        await press(deps.context, CHECK_AGAIN);
+        await run;
+        expect(step).toHaveBeenCalledTimes(2);
+    });
+
+    it('ends with the cancelled error when the run is stopped while it waits', async () => {
+        const controller = new AbortController();
+        const { deps } = wizardRun(controller.signal);
+
+        const run = untilDone(deps, failingStep(1));
+        for (let i = 0; i < 100 && !deps.context.sharedState.creationPauseAnswer; i++) {
+            await new Promise((resolve) => setImmediate(resolve));
+        }
+        controller.abort();
+
+        await expect(run).rejects.toMatchObject({ code: ErrorCode.CANCELLED });
+    });
+
+    it('holds the run limit while it waits, and counts again once answered', async () => {
+        const controller = new AbortController();
+        const limit = startCreationLimit(60_000, 'Project creation', controller.signal);
+        const hold = jest.spyOn(limit, 'hold');
+        const release = jest.spyOn(limit, 'release');
+        const { deps } = wizardRun(controller.signal);
+
+        const run = untilDone(deps, failingStep(1));
+        await press(deps.context, CHECK_AGAIN);
+        await run;
+        limit.stop();
+
+        expect(hold).toHaveBeenCalledTimes(1);
+        expect(release).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('untilDone under an agent', () => {
+    it('asks in a VS Code modal, and closing it skips the step', async () => {
+        const { deps } = wizardRun();
+        deps.context.panel = undefined;
+        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue(undefined);
+        const step = failingStep(5);
+
+        await untilDone(deps, step);
+
+        expect(step).toHaveBeenCalledTimes(1);
+        expect(vscode.window.showWarningMessage).toHaveBeenCalled();
+    });
+});
+
+describe('handleCreationPauseAnswer', () => {
+    it('refuses when no creation is waiting', async () => {
+        const context = createMockHandlerContext();
+
+        await expect(handleCreationPauseAnswer(context, { answer: CHECK_AGAIN })).resolves.toEqual({
+            success: false,
+            error: 'No creation is waiting for an answer.',
+        });
+    });
+});

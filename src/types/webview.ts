@@ -343,6 +343,18 @@ export interface CreationProgress {
      * (PL-101). The success screen says "N steps remaining" and offers Finish Setup.
      */
     stepsRemaining?: number;
+    /** Set while the run waits on a failed step for the SC (F307). */
+    pause?: CreationPause;
+}
+
+/** A step that failed and waits for the SC: why, and what the SC can do (F307). */
+export interface CreationPause {
+    /** Why the step failed, in plain words: line 2 while it waits. */
+    reason: string;
+    /** The main buttons, the first is the primary: Retry, or Fix with AI then Check Again. */
+    actions: string[];
+    /** Skip This Step is offered: the project is usable without this step. */
+    canSkip: boolean;
 }
 
 export interface FormValidation {

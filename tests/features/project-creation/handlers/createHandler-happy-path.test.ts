@@ -1,7 +1,6 @@
 import { handleCreateProject } from '@/features/project-creation/handlers/createHandler';
 import { validateProjectNameSecurity } from '@/core/validation/validators/ProjectNameValidator';
 import * as executor from '@/features/project-creation/handlers/executor';
-import * as promiseUtils from '@/core/utils/promiseUtils';
 import { ServiceLocator as _ServiceLocator } from '@/core/di/serviceLocator';
 import * as vscode from 'vscode';
 import * as _fs from 'fs';
@@ -12,7 +11,6 @@ import { mockWorkspace } from '../../../helpers/vscodeMockViews';
 // Mock all dependencies
 jest.mock('@/core/validation/validators/ProjectNameValidator');
 jest.mock('@/features/project-creation/handlers/executor');
-jest.mock('@/core/utils/promiseUtils');
 jest.mock('@/core/di/serviceLocator');
 jest.mock('fs', () => ({
     existsSync: jest.fn(),
@@ -56,14 +54,13 @@ describe('Project Creation - Create Handler - Happy Path', () => {
             expect(mockContext.sharedState.projectCreationAbortController).toBeUndefined(); // Cleaned up in finally
         });
 
-        it('should pass AbortController signal to withTimeout', async () => {
+        it('should pass the AbortController signal to the creation', async () => {
             await handleCreateProject(mockContext, mockConfig);
 
-            expect(promiseUtils.withTimeout).toHaveBeenCalledWith(
-                expect.any(Promise),
-                expect.objectContaining({
-                    signal: expect.any(AbortSignal),
-                })
+            expect(executor.executeProjectCreation).toHaveBeenCalledWith(
+                mockContext,
+                expect.anything(),
+                expect.any(AbortSignal),
             );
         });
     });

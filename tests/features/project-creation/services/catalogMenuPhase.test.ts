@@ -142,7 +142,7 @@ describe('executeCatalogMenuPhase', () => {
         expect(readCatalogMenuRecord(rebuilt).legacyPages).toStrictEqual([]);
     });
 
-    it('never fails creation: a site that cannot be built is swallowed, and nothing is reported as written', async () => {
+    it('never fails creation: a site that cannot be built resolves its failure, and nothing is reported as written', async () => {
         const progress = jest.fn();
         const project = storefront();
 
@@ -150,7 +150,10 @@ describe('executeCatalogMenuPhase', () => {
             executeCatalogMenuPhase(createMockHandlerContext(), project, progress, undefined, () => {
                 throw new Error('no DA.live session');
             }),
-        ).resolves.toBeUndefined();
+        ).resolves.toEqual({
+            reason: 'The catalog menu could not be added. Check that DA.live and GitHub are signed in, then try again.',
+            retryable: false,
+        });
         expect(progress).not.toHaveBeenCalled();
         expect(readCatalogMenuRecord(project)).toEqual({ legacyPages: [], links: [], navSwitch: false });
     });

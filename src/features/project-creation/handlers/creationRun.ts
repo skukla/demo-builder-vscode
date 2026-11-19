@@ -21,11 +21,11 @@
  */
 
 import { creationReporter } from './creationProgress';
-import { claimCreationStop } from './creationStop';
+import { startCreationLimit } from './creationLimit';
+import { claimCreationStop, creationCancelledError } from './creationStop';
 import { executeProjectCreation } from './executor';
 import { creationPath } from './executorPreflight';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
-import { withTimeout } from '@/core/utils/promiseUtils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { TimeoutError } from '@/core/utils/timeoutError';
 import type { HandlerContext } from '@/types/handlers';
@@ -61,19 +61,18 @@ export async function runCreation(
     });
     context.sharedState.projectCreationAbortController = controller;
     const startedAt = Date.now();
+    // The limit counts the time the run works, not the time it waits on the SC (F307).
+    const limit = startCreationLimit(TIMEOUTS.PROJECT_CREATION_OVERALL, TIMEOUT_MESSAGE, controller.signal);
     const creation = executeProjectCreation(context, config, controller.signal);
     try {
-        await withTimeout(creation, {
-            timeoutMs: TIMEOUTS.PROJECT_CREATION_OVERALL,
-            timeoutMessage: TIMEOUT_MESSAGE,
-            signal: controller.signal,
-        });
+        await Promise.race([creation, limit.expired, cancelledBy(controller.signal)]);
     } catch (error) {
         // The creation's own error: it has already ended, so there is nothing to wait for.
         if (!controller.signal.aborted && !(error instanceof TimeoutError)) throw error;
         controller.abort(); // the limit stops the steps too
         throw await afterRunningStep(context, creation, error, startedAt);
     } finally {
+        limit.stop();
         stop.release();
         if (context.sharedState.projectCreationAbortController === controller) {
             context.sharedState.projectCreationAbortController = undefined;
@@ -106,6 +105,14 @@ async function afterRunningStep(
     context.logger.warn('[Project Creation] A step was still running when the stop wait ran out');
     if (error instanceof Error) error.message += STILL_RUNNING_NOTE;
     return error;
+}
+
+/** Rejects with the cancelled error once the run is stopped. */
+function cancelledBy(signal: AbortSignal): Promise<never> {
+    return new Promise<never>((_resolve, reject) => {
+        if (signal.aborted) reject(creationCancelledError());
+        else signal.addEventListener('abort', () => reject(creationCancelledError()), { once: true });
+    });
 }
 
 /** Whether a promise settles, either way, within `ms`. */

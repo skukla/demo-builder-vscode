@@ -7,6 +7,7 @@
 import {
     generateEnvironmentFiles,
     finalizeProject,
+    reportProjectCreated,
     type FinalizationContext,
 } from '@/features/project-creation/services/projectFinalizationService';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
@@ -272,14 +273,7 @@ describe('projectFinalizationService', () => {
         it('tells the end screen how many Finish Setup steps the run left still to do', async () => {
             mockProject.finishSetup = { 'republish-code': { files: ['scripts/commerce.js'] } };
 
-            await finalizeProject({
-                setupContext: mockSetupContext,
-                projectPath: '/test/project',
-                componentDefinitions: mockComponentDefinitions,
-                progressTracker: mockProgressTracker,
-                saveProject: mockSaveProject,
-                sendMessage: mockSendMessage,
-            });
+            await reportProjectCreated(mockProgressTracker, mockProject, createMockLogger(), 'Project creation complete');
 
             expect(mockProgressTracker).toHaveBeenLastCalledWith(
                 'Project Created',
@@ -295,14 +289,7 @@ describe('projectFinalizationService', () => {
                 'republish-code': { files: ['scripts/commerce.js'], state: 'dismissed' },
             };
 
-            await finalizeProject({
-                setupContext: mockSetupContext,
-                projectPath: '/test/project',
-                componentDefinitions: mockComponentDefinitions,
-                progressTracker: mockProgressTracker,
-                saveProject: mockSaveProject,
-                sendMessage: mockSendMessage,
-            });
+            await reportProjectCreated(mockProgressTracker, mockProject, createMockLogger(), 'Project creation complete');
 
             expect(mockProgressTracker).toHaveBeenLastCalledWith('Project Created', 100, 'Project creation complete');
         });
@@ -525,7 +512,8 @@ describe('projectFinalizationService', () => {
             await finalizeProject(context);
 
             expect(mockProgressTracker).toHaveBeenCalledWith(OPERATION_STAGES.finishingProject.label, 95);
-            expect(mockProgressTracker).toHaveBeenCalledWith('Project Created', 100, 'Project creation complete');
+            // "Project Created" waits for the AI files: the run says it (`creationLastSteps.ts`, F307).
+            expect(mockProgressTracker).not.toHaveBeenCalledWith('Project Created', expect.anything(), expect.anything());
         });
 
         // Walk F209 (owner, 2026-11-17): a line on a green screen naming nothing to fix was read by
@@ -535,14 +523,7 @@ describe('projectFinalizationService', () => {
             if (!storefront) throw new Error('fixture lost its storefront');
             storefront.metadata = { ...storefront.metadata, brokenLinks: [{ link: '/fr', pages: ['/footer'] }] };
 
-            await finalizeProject({
-                setupContext: mockSetupContext,
-                projectPath: '/test/project',
-                componentDefinitions: mockComponentDefinitions,
-                progressTracker: mockProgressTracker,
-                saveProject: mockSaveProject,
-                sendMessage: mockSendMessage,
-            });
+            await reportProjectCreated(mockProgressTracker, mockProject, createMockLogger(), 'Project creation complete');
 
             expect(mockProgressTracker).toHaveBeenCalledWith('Project Created', 100, 'Project creation complete');
         });

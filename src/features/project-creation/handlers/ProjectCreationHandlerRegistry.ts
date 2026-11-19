@@ -13,6 +13,7 @@ import { addIntegrationFlowHandlers } from './addIntegrationFlowHandlers';
 // registry, so importing the barrel here was a genuine runtime cycle
 // (registry -> index -> registry) that worked on evaluation-order luck.
 import { checkGitHubApp } from './checkGitHubAppHandler';
+import { handleCreationPauseAnswer } from './creationPause';
 import { handleCreateProject } from './createHandler';
 import { handleCheckErpIntegrationHolder } from './erpIntegrationHolderHandler';
 import { handleValidate } from './validateHandler';
@@ -60,6 +61,8 @@ export const projectCreationHandlers = defineHandlers({
     finishSetup: lifecycle.handleFinishSetup,
     log: lifecycle.handleLog,
     'cancel-project-creation': lifecycle.handleCancelProjectCreation,
+    // A creation paused on a failed step: the button the SC pressed (F307).
+    'creation-pause-answer': handleCreationPauseAnswer,
     openExternal: lifecycle.handleOpenExternal,
 
     // Prerequisite handlers

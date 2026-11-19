@@ -26,6 +26,11 @@ let componentDefinitionIds: string[] = [];
 const clonedComponents: Map<string, any> = new Map();
 
 // Mock dependencies
+// The AI files step pauses the run on a failure (F307); this suite's faked file system
+// would fail it, so the step is faked here. Its own tests are in executor-orchestrationSeams.
+jest.mock('@/features/project-creation/services/aiBundle/aiBundleService', () => ({
+    generateAIContextFiles: jest.fn().mockResolvedValue(undefined),
+}));
 jest.mock('@/features/mesh/services/meshDeployment');
 jest.mock('@/features/mesh/services/meshEnvVars', () => ({
     readMeshEnvVarsFromFile: jest.fn().mockResolvedValue({}),
@@ -147,6 +152,7 @@ jest.mock('@/features/project-creation/services/meshSetupService', () => ({
 jest.mock('@/features/project-creation/services/projectFinalizationService', () => ({
     generateEnvironmentFiles: jest.fn().mockResolvedValue(undefined),
     finalizeProject: jest.fn().mockResolvedValue(undefined),
+    reportProjectCreated: jest.fn().mockResolvedValue(undefined),
     sendCompletionAndCleanup: jest.fn().mockResolvedValue(undefined),
 }));
 

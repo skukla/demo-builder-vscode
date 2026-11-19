@@ -31,6 +31,7 @@ import {
     type CatalogMenuSite,
 } from '@/features/eds/services/catalogMenu/catalogMenuStep';
 import type { ProgressReporter } from '@/features/project-creation/services/catalogPrewarmPhase';
+import { type StepFailure, stepFailureOf } from '@/features/project-creation/services/stepFailure';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -69,10 +70,10 @@ export async function executeCatalogMenuPhase(
     progressTracker: ProgressReporter,
     existingProject?: Project,
     makeSite?: (target: CatalogMenuTarget) => CatalogMenuSite,
-): Promise<void> {
+): Promise<StepFailure | undefined> {
     const { label, detail } = OPERATION_STAGES.addingCatalogMenu;
     const say = sayer(context, progressTracker, label);
-    await runCatalogMenu(context, project, say, makeSite, (target) =>
+    return runCatalogMenu(context, project, say, makeSite, (target) =>
         carryRecord(project, existingProject, target),
     undefined, () => progressTracker(label, PERCENT, detail));
 }
@@ -97,6 +98,7 @@ export async function rewriteCatalogMenuPhase(
 ): Promise<void> {
     // A swap: Republish's step for the same job after a store change.
     const say = sayer(context, progressTracker, OPERATION_STAGES.updatingCatalogMenu.label);
+    // An Edit's swap stays as it was: it shows its problem and goes on.
     await runCatalogMenu(context, project, say, makeSite, undefined, async (site) => {
         const removed = await removeCatalogMenuStep(project, site);
         if (removed !== undefined) say(removed.summary, SWAP_LINE);
@@ -130,7 +132,7 @@ function announcing(site: CatalogMenuSite, onStart: () => void): CatalogMenuSite
     };
 }
 
-/** Resolve the site, run what comes first, then the write. Never throws. */
+/** Resolve the site, run what comes first, then the write. Never throws: resolves a failure. */
 async function runCatalogMenu(
     context: HandlerContext,
     project: Project,
@@ -139,19 +141,22 @@ async function runCatalogMenu(
     beforeSite?: (target: CatalogMenuTarget) => void,
     beforeWrite?: (site: CatalogMenuSite) => Promise<void>,
     onStart?: () => void,
-): Promise<void> {
+): Promise<StepFailure | undefined> {
     try {
         const target = storefrontTarget(project);
-        if (!target) return;
+        if (!target) return undefined;
         beforeSite?.(target);
         const built = makeSite ? makeSite(target) : catalogMenuSiteFor(context, project);
-        if (!built) return;
+        if (!built) return undefined;
         const site = onStart ? announcing(built, onStart) : built;
         await beforeWrite?.(site);
-        const summary = (await applyCatalogMenuStep(project, site))?.summary;
-        if (summary !== undefined) say(summary);
+        const result = await applyCatalogMenuStep(project, site);
+        if (result?.summary !== undefined) say(result.summary);
+        return result && !result.ok ? stepFailureOf(result.summary) : undefined;
     } catch (error) {
         // Belt and braces: the step already swallows its own failures.
         context.logger.warn(`[Catalog Menu] Phase failed: ${(error as Error).message}`);
+        // The library's words stay in the log above; the SC reads the step's own.
+        return stepFailureOf('The catalog menu could not be added. Check that DA.live and GitHub are signed in, then try again.');
     }
 }

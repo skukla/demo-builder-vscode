@@ -200,6 +200,7 @@
                 "handler:cancel-project-creation",
                 "tool:cancel_project_creation",
                 "handler:copyAiPrompt",
+                "handler:creation-pause-answer",
                 "handler:datapack-save-question-answered",
                 "handler:dismiss-datapack-no-access",
                 "handler:getOperationProgress",

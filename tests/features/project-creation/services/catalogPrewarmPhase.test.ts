@@ -162,13 +162,16 @@ describe('executeCatalogPrewarmPhase', () => {
         expect(context.logger.info).not.toHaveBeenCalled();
     });
 
-    it('is NON-FATAL: a failing pre-warm warns and resolves, never rejects', async () => {
+    it('is NON-FATAL: a failing pre-warm warns and resolves its failure, never rejects', async () => {
         mockPrewarmCatalog.mockRejectedValue(new Error('helix exploded'));
         const context = makeContext();
 
         await expect(
             executeCatalogPrewarmPhase(context, PROJECT, jest.fn(), makeHelix)
-        ).resolves.toBeUndefined();
+        ).resolves.toEqual({
+            reason: 'Product pages could not be published. Check that DA.live and GitHub are signed in, then try again.',
+            retryable: false,
+        });
         expect(context.logger.warn).toHaveBeenCalledWith(expect.stringContaining('helix exploded'));
     });
 });

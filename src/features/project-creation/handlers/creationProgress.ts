@@ -27,6 +27,7 @@ import { stageLine, stepUnder } from '@/core/utils/stageLine';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 import { isEdsStackId } from '@/types/typeGuards';
+import type { CreationPause } from '@/types/webview';
 import type { CreationProgressPayload } from '@/types/webviewPayloads';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
 
@@ -67,6 +68,8 @@ export interface CreationReporter {
     report: ProgressTracker;
     /** Number each step from now on by its place in `steps`. */
     numberFrom: (steps: readonly string[]) => void;
+    /** Pause the step last reported on a failure, or take the pause down (undefined). */
+    pause: (pause?: CreationPause) => void;
 }
 
 /**
@@ -89,6 +92,12 @@ export function creationReporter(
     stop?: AbortSignal,
 ): CreationReporter {
     let steps: readonly string[] = [];
+    let last: CreationProgressPayload | undefined;
+    // One push for both: the step, and the same step paused or resumed.
+    const send = (payload: CreationProgressPayload, remember = true): void => {
+        if (remember) last = payload;
+        void sendMessage('creationProgress', payload);
+    };
     const report: ProgressTracker = (stage, progress, message, position, stepsRemaining) => {
         if (stop?.aborted) return;
         const line = stepUnder(stage, message) ?? detailFor(stage) ?? '';
@@ -102,7 +111,7 @@ export function creationReporter(
             startedAt,
             ...(stepsRemaining !== undefined ? { stepsRemaining } : {}),
         };
-        void sendMessage('creationProgress', payload);
+        send(payload);
         // ...and to an AGENT, which has no wizard screen to send to. A `create_project`
         // used to announce itself and then say nothing for two minutes (PL-59 R3).
         reportPhase(line ? `${stageLine(stage, at)} — ${line}` : stageLine(stage, at));
@@ -111,6 +120,13 @@ export function creationReporter(
         report,
         numberFrom: (list) => {
             steps = list;
+        },
+        // The same step and line 2, with the pause or without it (F307).
+        pause: (pause) => {
+            if (stop?.aborted || !last) return;
+            const { pause: _shown, ...step } = last;
+            send(pause ? { ...step, pause } : step, false);
+            if (pause) reportPhase(`${stageLine(step.currentOperation, step.position)} — ${pause.reason}`);
         },
     };
 }

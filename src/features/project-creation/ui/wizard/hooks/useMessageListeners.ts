@@ -52,6 +52,8 @@ export function useMessageListeners({ setState }: UseMessageListenersProps): voi
                     startedAt: data.startedAt,
                     // The finishing update's count of steps left to finish (PL-101).
                     stepsRemaining: data.stepsRemaining,
+                    // A failed step waiting for the SC (F307).
+                    pause: data.pause,
                 },
             }));
         });

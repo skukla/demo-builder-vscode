@@ -173,20 +173,29 @@ describe('executeSampleDataPhase', () => {
     });
 
     /** Rule 1 — the whole reason this phase is separate from the ones that throw. */
-    it('does NOT throw when the install fails', async () => {
+    // It resolves the failure instead, which the run pauses on (F307).
+    it('does NOT throw when the install fails: it resolves the reason', async () => {
         mockedInstall.mockResolvedValue({ ran: false, reason: 'the service refused' });
 
         await expect(
             executeSampleDataPhase(makeContext(), makeProject(), jest.fn())
-        ).resolves.toBeUndefined();
+        ).resolves.toEqual({ reason: 'the service refused', retryable: false });
     });
 
-    it('does NOT throw even when the install itself blows up', async () => {
+    it('does NOT throw even when the install itself blows up: it resolves the reason', async () => {
         mockedInstall.mockRejectedValue(new Error('unexpected'));
 
         await expect(
             executeSampleDataPhase(makeContext(), makeProject(), jest.fn())
-        ).resolves.toBeUndefined();
+        ).resolves.toEqual({ reason: 'unexpected', retryable: false });
+    });
+
+    it('offers Retry first for a timeout', async () => {
+        mockedInstall.mockResolvedValue({ ran: false, reason: 'The request timed out' });
+
+        await expect(
+            executeSampleDataPhase(makeContext(), makeProject(), jest.fn())
+        ).resolves.toEqual({ reason: 'The request timed out', retryable: true });
     });
 
     /**

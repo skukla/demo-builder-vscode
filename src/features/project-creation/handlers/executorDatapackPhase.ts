@@ -14,6 +14,7 @@ import { packStage } from '@/core/utils/packStage';
 import { knownPackName } from '@/features/data-installer/handlers/libraryWriter';
 import { typesLine } from '@/features/data-installer/services/datapackTypesLine';
 import { creationFailureReason, recordCreationInstall } from '@/features/data-installer/services/installFailure';
+import { type StepFailure, stepFailureOf } from '@/features/project-creation/services/stepFailure';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -25,12 +26,11 @@ import type { HandlerContext } from '@/types/handlers';
  * already validated. Runs after the config files exist, because the credentials
  * it needs are read from them.
  *
- * **This phase never throws.** Every other phase here can fail the build; this
- * one must not. A project is complete and usable without sample data, and by the
- * time an import goes wrong the instance is already partly populated — which the
- * wizard has no rollback for. Failing creation would mark a good project bad and
- * leave the mess anyway. So the outcome is reported through the progress line
- * and the build carries on; the dashboard's import modal is where a retry lives.
+ * **This phase never throws.** A project is complete and usable without sample data,
+ * and by the time an import goes wrong the instance is already partly populated, which
+ * the wizard has no rollback for. Failing creation would mark a good project bad and
+ * leave the mess anyway. So it resolves its failure instead, and the run pauses on it
+ * until the SC fixes the problem or skips the step (`creationPause.ts`, F307).
  *
  * Silence would be the worse failure — the user asked for a pack and has no
  * other way to learn it did not land — so every outcome says something.
@@ -44,14 +44,14 @@ export async function executeSampleDataPhase(
     context: HandlerContext,
     project: import('@/types/base').Project,
     progressTracker: ProgressTracker,
-): Promise<void> {
+): Promise<StepFailure | undefined> {
     if (!project.datapack) {
-        return;
+        return undefined;
     }
     await settleRecordedPack(context, project, progressTracker);
     const chosen = project.datapack;
     if (!chosen) {
-        return;
+        return undefined;
     }
 
     // Named for the pack, "Installing Frescopa" (owner, 2026-11-16); "the datapack" when unknown.
@@ -85,7 +85,9 @@ export async function executeSampleDataPhase(
             96,
             describeSampleDataResult(chosen.name, result),
         );
-        await recordOutcome(context, project, creationFailureReason(result));
+        const reason = creationFailureReason(result);
+        await recordOutcome(context, project, reason);
+        return stepFailureOf(reason);
     } catch (error) {
         // Belt and braces: installSampleData already swallows its own failures,
         // so reaching here means the wiring broke rather than the import. Still
@@ -98,6 +100,7 @@ export async function executeSampleDataPhase(
             `Datapack could not be installed \u2014 ${reason}`,
         );
         await recordOutcome(context, project, reason);
+        return stepFailureOf(reason);
     }
 }
 

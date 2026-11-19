@@ -48,6 +48,7 @@ jest.mock('@/features/project-creation/services/meshSetupService', () => ({
 jest.mock('@/features/project-creation/services/projectFinalizationService', () => ({
     generateEnvironmentFiles: jest.fn(),
     finalizeProject: jest.fn(),
+    reportProjectCreated: jest.fn().mockResolvedValue(undefined),
     sendCompletionAndCleanup: jest.fn(),
 }));
 

@@ -91,6 +91,7 @@ export function ProjectCreationStep({
                 isEdit={state.wizardMode === 'edit'}
                 stepsRemaining={progress?.stepsRemaining}
                 onFinishSetup={handleFinishSetup}
+                canSkipStep={isActive && progress?.pause?.canSkip === true}
             />
         </div>
     );

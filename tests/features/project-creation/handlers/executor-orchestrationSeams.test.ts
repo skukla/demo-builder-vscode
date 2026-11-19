@@ -18,6 +18,9 @@ jest.setTimeout(30_000);
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { handleCreationPauseAnswer } from '@/features/project-creation/handlers/creationPause';
+import type { HandlerContext } from '@/types/handlers';
+import type { CreationProgressPayload } from '@/types/webviewPayloads';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
@@ -118,6 +121,7 @@ jest.mock('@/features/project-creation/services/componentInstallationOrchestrato
 jest.mock('@/features/project-creation/services/projectFinalizationService', () => ({
     generateEnvironmentFiles: jest.fn().mockResolvedValue(undefined),
     finalizeProject: jest.fn().mockResolvedValue(undefined),
+    reportProjectCreated: jest.fn().mockResolvedValue(undefined),
     sendCompletionAndCleanup: jest.fn().mockResolvedValue(undefined),
 }));
 
@@ -184,6 +188,14 @@ function makeContext() {
         )(),
     });
     return { context, saveProject, saveProjectConfigOnly, sendMessage };
+}
+
+/** Wait until the run pauses on a failed step, then press `answer` (F307). */
+async function answerWhenPaused(context: HandlerContext, answer: string): Promise<void> {
+    for (let i = 0; i < 500 && !context.sharedState.creationPauseAnswer; i++) {
+        await new Promise((resolve) => setImmediate(resolve));
+    }
+    await expect(handleCreationPauseAnswer(context, { answer })).resolves.toEqual({ success: true });
 }
 
 /** Every `mkdir` path the run asked for. */
@@ -377,11 +389,34 @@ describe('executeProjectCreation — the AI bundle step', () => {
         const { context, saveProjectConfigOnly } = makeContext();
         (generateAIContextFiles as jest.Mock).mockRejectedValue(new Error('bundle blew up'));
 
-        await expect(executeProjectCreation(context, config())).resolves.toBeUndefined();
+        const run = executeProjectCreation(context, config());
+        await answerWhenPaused(context, 'Skip This Step');
 
+        await expect(run).resolves.toBeUndefined();
         expect(saveProjectConfigOnly).toHaveBeenCalledWith(
             expect.objectContaining({ name: 'seam-demo' })
         );
+    });
+
+    it('pauses on a failed bundle, then carries on once Check Again passes (F307)', async () => {
+        const { context, sendMessage } = makeContext();
+        (generateAIContextFiles as jest.Mock).mockRejectedValueOnce(new Error('bundle blew up'));
+
+        const run = executeProjectCreation(context, config());
+        await answerWhenPaused(context, 'Check Again');
+        await run;
+
+        const pauses = sendMessage.mock.calls
+            .map(([, payload]) => (payload as CreationProgressPayload).pause)
+            .filter(Boolean);
+        expect(pauses).toEqual([
+            {
+                reason: 'The AI files could not be written: bundle blew up',
+                actions: ['Fix with AI', 'Check Again'],
+                canSkip: true,
+            },
+        ]);
+        expect(generateAIContextFiles).toHaveBeenCalledTimes(2);
     });
 });
 

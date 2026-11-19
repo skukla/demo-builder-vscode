@@ -140,6 +140,8 @@ export interface SharedState {
 
     // Project creation control
     projectCreationAbortController?: AbortController;
+    /** Hands the wizard's answer to a creation paused on a failed step (F307). */
+    creationPauseAnswer?: (answer: string) => void;
 
     // EDS preflight control
     edsPreflightAbortController?: AbortController;

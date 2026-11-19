@@ -13,6 +13,7 @@
 import { Button, Flex } from '@adobe/react-spectrum';
 import React from 'react';
 import { getCancelButtonText } from '../helpers/buttonTextHelpers';
+import { answerPause } from './projectCreationStepContent';
 import { PageFooter } from '@/core/ui/components/layout/PageFooter';
 
 /**
@@ -48,6 +49,8 @@ export function StepFooterArea(props: {
     stepsRemaining?: number;
     /** Opens the project's dashboard with its Finish Setup guide. */
     onFinishSetup?: () => void;
+    /** A step failed and waits, and the project can do without it: Skip This Step (F307). */
+    canSkipStep?: boolean;
 }) {
     const {
         isActive,
@@ -64,6 +67,7 @@ export function StepFooterArea(props: {
         isEdit = false,
         stepsRemaining = 0,
         onFinishSetup,
+        canSkipStep = false,
     } = props;
 
     if (isActive || isStarting || isGitHubAppInstall) {
@@ -78,6 +82,13 @@ export function StepFooterArea(props: {
                     >
                         {getCancelButtonText(false, isCancelling)}
                     </Button>
+                }
+                rightContent={
+                    canSkipStep && !isCancelling && (
+                        <Button variant="secondary" onPress={() => answerPause('Skip This Step')}>
+                            Skip This Step
+                        </Button>
+                    )
                 }
                 constrainWidth={true}
             />

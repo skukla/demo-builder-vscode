@@ -17,11 +17,12 @@ import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { useRunClock } from '@/core/ui/hooks/useRunClock';
+import { vscode } from '@/core/ui/utils/vscode-api';
 import { stepsRemainingText } from '@/core/ui/utils/stepsRemaining';
 import { expectationFor } from '@/core/utils/operationStages';
 import { expectationLine, stageLine } from '@/core/utils/stageLine';
 import { GitHubAppInstallDialog } from '@/features/eds/ui/components/GitHubAppInstallDialog';
-import type { CreationProgress, WizardState } from '@/types/webview';
+import type { CreationPause, CreationProgress, WizardState } from '@/types/webview';
 
 /** Success completion content */
 function SuccessContent({
@@ -111,6 +112,32 @@ function RunningContent({ progress }: { progress: CreationProgress }) {
     );
 }
 
+/** Send the button the SC pressed on a paused step (F307). */
+export function answerPause(answer: string): void {
+    vscode.postMessage('creation-pause-answer', { answer });
+}
+
+/**
+ * A step that failed and waits for the SC (F307): the step's line, why it failed, and the
+ * buttons that run it again. Cancel and Skip This Step are in the footer.
+ */
+function PausedContent({ progress, pause }: { progress: CreationProgress; pause: CreationPause }) {
+    return (
+        <StatusDisplay
+            variant="warning"
+            title={stageLine(progress.currentOperation, progress.position)}
+            message={pause.reason}
+            actions={pause.actions.map((label, index) => ({
+                label,
+                variant: index === 0 ? 'accent' : 'secondary',
+                onPress: () => answerPause(label),
+            }))}
+            centerMessage
+            maxWidth="520px"
+        />
+    );
+}
+
 /** Main content area - renders the appropriate content for each phase */
 export function StepContentArea(props: {
     phase: StepPhase;
@@ -151,6 +178,10 @@ export function StepContentArea(props: {
                 onInstallDetected={onGitHubAppInstalled}
             />
         );
+    }
+
+    if (isActive && progress?.pause) {
+        return <PausedContent progress={progress} pause={progress.pause} />;
     }
 
     if (isActive && progress) {

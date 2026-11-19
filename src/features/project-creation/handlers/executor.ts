@@ -10,6 +10,7 @@
  * - Phase 3b App Builder integrations — `executorAppBuilderPhase`
  * - EDS metadata / config sync / content — `executorEdsPhase`
  * - Phase 5c sample data — `executorDatapackPhase`
+ * - The optional steps and the finish — `creationLastSteps`
  *
  * This file keeps `buildInitialProject` and `executeProjectCreation`, and
  * re-exports the phase modules' public functions so every existing
@@ -18,6 +19,7 @@
 
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
+import { runLastSteps } from './creationLastSteps';
 import { creationReporter, creationSteps } from './creationProgress';
 import { stepBoundary } from './creationStop';
 import {
@@ -25,7 +27,6 @@ import {
     ensureWorkspaceRuntimeReady,
 } from './executorAppBuilderPhase';
 import { loadComponentDefinitions } from './executorComponentLoading';
-import { executeSampleDataPhase } from './executorDatapackPhase';
 import { finishEditWithoutRebuild } from './executorEditApply';
 import { settleConnectionBeforeRebuild } from './executorEditConnection';
 import {
@@ -51,12 +52,9 @@ import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { componentRegistryFrom } from '@/features/components/services/componentRegistryAccess';
 import { migrateDeclaredSecrets } from '@/features/components/services/declaredSecretStore';
-import { generateAIContextFiles } from '@/features/project-creation/services/aiBundle/aiBundleService';
-import { executeCatalogMenuPhase } from '@/features/project-creation/services/catalogMenuPhase';
-import { executeCatalogPrewarmPhase } from '@/features/project-creation/services/catalogPrewarmPhase';
 import { cloneAllComponents, installAllComponents } from '@/features/project-creation/services/componentInstallationOrchestrator';
 import { fillCreationDefaults } from '@/features/project-creation/services/creationConfigDefaults';
-import { finalizeProject, generateEnvironmentFiles, sendCompletionAndCleanup } from '@/features/project-creation/services/projectFinalizationService';
+import { generateEnvironmentFiles } from '@/features/project-creation/services/projectFinalizationService';
 import { HandlerContext } from '@/types/handlers';
 import { isEdsStackId } from '@/types/typeGuards';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
@@ -414,58 +412,20 @@ async function createOrRebuild(
     step();
     await setupEdsContent(context, typedConfig, isEdsStack, progressTracker, project);
 
-    // ===== PHASE 5c: SAMPLE DATA =====
+    // ===== PHASE 5c-6: THE OPTIONAL STEPS, THEN THE FINISH =====
     //
-    // After the config files exist, because the credentials this needs are read
-    // from them. Never throws — see `executeSampleDataPhase`.
-
-    step();
-    await executeSampleDataPhase(context, project, progressTracker);
-
-    // ===== PHASE 5d: CATALOG PRE-WARMING =====
-    //
-    // AFTER sample data, because pre-warming a catalog that has not been seeded
-    // publishes nothing useful. The EDS pipeline pre-warms at its own step 8,
-    // which is correct for RESET (that flow imports data BEFORE the pipeline)
-    // and impossible for creation, where the pipeline runs during storefront
-    // setup and the datapack lands here. Never throws.
-    step();
-    await executeCatalogPrewarmPhase(context, project, progressTracker);
-
-    // ===== PHASE 5e: CATEGORY PAGES AND THE CATALOG MENU (EDS-24) =====
-    //
-    // AFTER sample data for the same reason as pre-warming: the categories the pages
-    // are written for arrive with the datapack. Acts only on a storefront that has the
-    // catalog-menu block; reset and republish run the same step. Never throws.
-    step();
-    if (isEdsStack) {
-        await executeCatalogMenuPhase(context, project, progressTracker, existingProject);
-    }
-
-    step();
-    await finalizeProject(finalizationContext);
-    await sendCompletionAndCleanup(finalizationContext);
-
-    // Phase 6: Generate AI context files (non-blocking — failure does not abort project creation)
-    try {
-        await generateAIContextFiles(projectPath, project, context.context.extensionPath);
-        // Persist the freshness stamp generateAIContextFiles set on `project`
-        // (aiContextVersion), else the activation sweep re-refreshes the bundle on every start and the freshness log reports perpetual staleness.
-        await context.stateManager.saveProjectConfigOnly(project);
-    } catch (err) {
-        // Landed hashes must survive a partial failure (Phase-4 review) — on a
-        // fresh creation there are no OLD hashes to desync, but a retried
-        // creation over an existing directory has them.
-        try {
-            await context.stateManager.saveProjectConfigOnly(project);
-        } catch {
-            /* best-effort */
-        }
-        context.logger.warn(
-            '[Project Creation] Failed to generate AI context files',
-            err instanceof Error ? err : undefined,
-        );
-    }
+    // The datapack, product pages, catalog menu and AI files: each pauses the run on a
+    // failure until the SC fixes it or skips the step (F307). See `creationLastSteps.ts`.
+    await runLastSteps({
+        context,
+        project,
+        progress,
+        signal,
+        step,
+        isEdsStack,
+        existingProject,
+        finalization: finalizationContext,
+    });
 
     // The per-project .mcp.json written in Phase 6 lets AI agents discover this
     // project's tools when launched from its directory, and it only loads those

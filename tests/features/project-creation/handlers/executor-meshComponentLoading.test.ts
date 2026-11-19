@@ -24,6 +24,11 @@ import { HandlerContext } from '@/types/handlers';
 let getComponentByIdCalls: string[] = [];
 
 // Mock ComponentManager
+// The AI files step pauses the run on a failure (F307); this suite's faked file system
+// would fail it, so the step is faked here. Its own tests are in executor-orchestrationSeams.
+jest.mock('@/features/project-creation/services/aiBundle/aiBundleService', () => ({
+    generateAIContextFiles: jest.fn().mockResolvedValue(undefined),
+}));
 jest.mock('@/features/components/services/componentManager', () => ({
     ComponentManager: jest.fn().mockImplementation(() => ({
         installComponent: jest.fn().mockResolvedValue({

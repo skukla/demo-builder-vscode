@@ -76,8 +76,10 @@ const LEDGER: Readonly<Record<string, Reason>> = {
  * literal kind (`PROJECTS_KIND`), and Manage APIs' two no-list results are one window. A result's
  * title is now the thing it is about, often a name from the SC, so the remaining runtime titles are
  * names, not outcomes.
+ * 78 -> 79 on 2026-11-19 (F307, creation pauses on a failed step): the paused step's buttons
+ * take their labels from the extension (Retry, Fix with AI, Check Again), as a question's do.
  */
-const DYNAMIC_PIN = 78;
+const DYNAMIC_PIN = 79;
 
 /**
  * The six dialog layouts (the Steps layout joined 2026-11-11) hand their caller's words on to Modal (`title={title}`). Those words are
