@@ -169,6 +169,7 @@ describe('the seams activate() hands away', () => {
             mockAdobeOnDidSignOut.mock.calls[0][0]();
             await settle();
 
+            // The same green check a sign-in gets (owner, 2026-11-19).
             expect(vscode.window.setStatusBarMessage).toHaveBeenCalledWith(
                 '✅ Signed out of Adobe',
                 TIMEOUTS.STATUS_BAR_SUCCESS,

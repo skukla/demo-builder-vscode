@@ -359,6 +359,10 @@ describe('CommandManager', () => {
                 await handlerFor('demoBuilder.signOutAdobe')();
 
                 expect(mockLogout).toHaveBeenCalledTimes(1);
+                // A notification, not a status line: the owner saw nothing (2026-11-19).
+                expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
+                    'Signed out of Adobe.'
+                );
                 expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
             });
 
