@@ -254,10 +254,12 @@ switches over and goes green before the next.
 - **2. Unknown causes:** approved. The fallback line is "Demo Builder couldn't tell what went wrong."
 - **3. Show Details:** yes. A person may see the raw text behind a Show Details control.
 - **4. `formatGitHubError`:** wire it in as the GitHub layer.
-- **1. Debug Logs** and **5. relayed agent text:** re-asked in plainer words; open. The
-  recommendation stands: keep the Open Debug Logs button, remove the sentence everywhere; and hold
-  only text an agent relays to a person (`tellUser`, the agent-failure warning) to plain words,
-  with raw words in the separate field for the agent.
+- **1. Debug Logs:** keep the Open Debug Logs button on failures; remove every sentence that sends
+  a person to Debug Logs, everywhere.
+- **5. Agent text:** any agent text that reaches a person (`tellUser`, the agent-failure warning)
+  is held to plain words; the raw words stay in the separate field for the agent.
+
+Every decision is settled; the next step is the plan.
 
 
 
