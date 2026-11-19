@@ -65,7 +65,7 @@ export class RepairSiteConfigurationCommand extends BaseCommand {
         if (!result.verified) {
             await this.showWarning(
                 `Site configuration written for ${result.site}, but the overlay did not read ` +
-                    'back. Product pages may still not load — check the Debug Logs.',
+                    'back. Product pages may still not load.',
             );
         }
 

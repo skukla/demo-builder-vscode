@@ -31,7 +31,8 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { INSTALLER_WRITES_SHOWN } from '../../installerWrites';
-import { plain, plainFailure, plainLabelled } from '../../plainFailure';
+import { plainFailure, plainLabelled } from '../../plainFailure';
+import { plain } from '@/core/utils/plainText';
 import { copyName, longestNameProblem, nameProblem } from '../../saveAsName';
 import { dataTypeLabel } from '../dataTypeLabel';
 import { useDataInstallerRequest } from '../hooks/useDataInstallerRequest';

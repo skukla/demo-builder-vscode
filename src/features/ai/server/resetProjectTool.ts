@@ -145,7 +145,10 @@ async function runHeadlessReset(ctx: HandlerContext, project: Project, args: Dat
             reset: false,
             project: project.name,
             stage: 'project-reset',
-            error: 'The reset did not finish. See Debug Logs for the cause, fix it, and call reset_project again.',
+            // The error can reach the SC in the agent-failure warning, so it is plain; what the agent
+            // does next is its own field (owner, 2026-11-19, PL-102 decision 5).
+            error: 'The reset did not finish.',
+            next: 'Read the cause with read_debug_logs, fix it, and call reset_project again.',
             // The store was touched before the failure: say what became of it.
             ...(cause instanceof FailedAfterDatapack ? { datapack: datapackStepLine(cause.removal) } : {}),
             phases,

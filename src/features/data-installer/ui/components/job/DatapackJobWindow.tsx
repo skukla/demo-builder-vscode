@@ -40,7 +40,7 @@ import {
     withoutSavingLabel,
 } from '../../../datapackWords';
 import { packLine } from '../../../packVersions';
-import { plain } from '../../../plainFailure';
+import { plain } from '@/core/utils/plainText';
 import { useDatapackJob, type DatapackJob } from '../../hooks/useDatapackJob';
 import { useRunColumns } from '../../hooks/useRunColumns';
 import { useVersionTypes } from '../../hooks/useVersionTypes';

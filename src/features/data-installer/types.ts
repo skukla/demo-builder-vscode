@@ -13,7 +13,7 @@
  * @module features/data-installer/types
  */
 
-import type { PlainText } from './plainFailure';
+import type { PlainText } from '@/core/utils/plainText';
 import type { SetupChecklistItem } from '@/types/appBuilderComponents';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 

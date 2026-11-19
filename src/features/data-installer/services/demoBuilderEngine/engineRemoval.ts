@@ -6,7 +6,8 @@
  * @module features/data-installer/services/demoBuilderEngine/engineRemoval
  */
 
-import { plainFailure, type PlainText } from '../../plainFailure';
+import { plainFailure } from '../../plainFailure';
+import { type PlainText } from '@/core/utils/plainText';
 import { plainRefusedRemovals } from '../../plainRows';
 import type { DataTypeStatus, KeptRootStep } from '../../types';
 import { installedOnAnotherInstanceLine, onAnotherInstance } from '../instanceKey';

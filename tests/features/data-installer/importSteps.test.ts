@@ -14,7 +14,7 @@ import {
 } from '@/features/data-installer/importSteps';
 import { versionLabel } from '@/features/data-installer/packVersions';
 import { FINISHING_STOP, type InstallCheck, LINKING_OPTIONS, PREPARING_UNINSTALL, REPLACE_STOP, SAVE_STOP } from '@/features/data-installer/types';
-import { plain } from '@/features/data-installer/plainFailure';
+import { plain } from '@/core/utils/plainText';
 
 const NONE_FOUND = { count: 0, examples: [] as string[] };
 

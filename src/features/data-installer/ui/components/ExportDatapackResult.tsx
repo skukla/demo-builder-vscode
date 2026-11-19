@@ -11,7 +11,8 @@
  */
 
 import React from 'react';
-import { plainFailure, plainLabelled, type PlainText } from '../../plainFailure';
+import { plainFailure, plainLabelled } from '../../plainFailure';
+import { type PlainText } from '@/core/utils/plainText';
 import { dataTypeLabel } from '../dataTypeLabel';
 import type { ResultContent } from './importResult';
 import { SaveDatapackFileButton } from './SaveDatapackFileButton';

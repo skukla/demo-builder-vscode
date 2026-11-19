@@ -990,13 +990,13 @@ async function sweepDemoBuilderNode(context: vscode.ExtensionContext): Promise<v
         if (!result.ran) return;
         if (result.nodeError) {
             void vscode.window.showWarningMessage(`Demo Builder could not prepare Node ${node}. It will try again the `
-                + 'next time VS Code starts. See Debug Logs for details.');
+                + 'next time VS Code starts.');
             return;
         }
         vscode.window.setStatusBarMessage(`$(check) Demo Builder now runs on Node ${node}`, TIMEOUTS.STATUS_BAR_SUCCESS);
         if (result.failed.length > 0) {
             void vscode.window.showWarningMessage(`Could not move ${result.failed.map((f) => f.component).join(', ')} `
-                + `to Node ${node}. They still run on their old Node. See Debug Logs for details.`);
+                + `to Node ${node}. They still run on their old Node.`);
         }
     } catch (error) {
         logger.debug(`[Node] Sweep skipped: ${(error as Error).message}`);

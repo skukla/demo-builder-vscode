@@ -78,7 +78,7 @@ const CHECKING = 'Checking for updates';
 /** Rows whose update lands in the storefront repository. */
 const STOREFRONT_KINDS = new Set(['forkSync', 'template', 'boilerplate', 'finish', 'blockLibrary', 'blockLibraryInstall']);
 const DEMO_RUNNING = 'Not updated — its demo is running.';
-const EXTENSION_FAILED = 'Not updated — details are in Debug Logs.';
+const EXTENSION_FAILED = "Not updated. Demo Builder couldn't tell what went wrong.";
 
 /** Tells the screen where one row has got to, and counts the rows that did not apply. */
 interface RowTeller {

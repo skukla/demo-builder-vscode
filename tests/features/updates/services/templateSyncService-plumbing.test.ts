@@ -235,10 +235,10 @@ describe('merge strategy — the exact git conversation', () => {
     });
 
     it.each([
-        ['reading the template head', /rev-parse template/, "Could not read the template's latest commit. See Debug Logs for details."],
-        ['listing the change', /diff-tree -r --name-only/, "Could not compare the template's versions. See Debug Logs for details."],
-        ['writing the patch', /--output=/, "Could not prepare the template's change. See Debug Logs for details."],
-        ['staging', /git add -A/, "Could not stage the template's changes. See Debug Logs for details."],
+        ['reading the template head', /rev-parse template/, "Could not read the template's latest commit."],
+        ['listing the change', /diff-tree -r --name-only/, "Could not compare the template's versions."],
+        ['writing the patch', /--output=/, "Could not prepare the template's change."],
+        ['staging', /git add -A/, "Could not stage the template's changes."],
     ])('a failure %s is reported and never pushed', async (_step, pattern, error) => {
         failOn(pattern);
 
@@ -253,7 +253,7 @@ describe('merge strategy — the exact git conversation', () => {
 
         const result = await service().syncWithTemplate(edsProject(), { strategy: 'merge' });
 
-        expect(result).toMatchObject({ success: false, error: "Could not read the template's latest commit. See Debug Logs for details." });
+        expect(result).toMatchObject({ success: false, error: "Could not read the template's latest commit." });
         expect(pushed()).toBe(false);
     });
 
@@ -350,7 +350,7 @@ describe('merge strategy — the exact git conversation', () => {
             success: false,
             strategy: 'merge',
             syncedCommit: '',
-            error: "Could not commit the template's changes. See Debug Logs for details.",
+            error: "Could not commit the template's changes.",
         });
         expect(pushed()).toBe(false);
     });
@@ -418,9 +418,9 @@ describe('reset strategy — the exact git conversation', () => {
     });
 
     it.each([
-        ['clone', /git clone/, 'Could not clone skukla/demo-storefront from GitHub. See Debug Logs for details.'],
-        ['fetch', /git fetch/, 'Could not fetch the template adobe/aem-boilerplate-commerce from GitHub. See Debug Logs for details.'],
-        ['read-tree', /git read-tree/, "Could not read the template's files. See Debug Logs for details."],
+        ['clone', /git clone/, 'Could not clone skukla/demo-storefront from GitHub.'],
+        ['fetch', /git fetch/, 'Could not fetch the template adobe/aem-boilerplate-commerce from GitHub.'],
+        ['read-tree', /git read-tree/, "Could not read the template's files."],
     ])('a failed %s is reported and never pushed', async (_step, pattern, error) => {
         failOn(pattern);
 
@@ -439,7 +439,7 @@ describe('reset strategy — the exact git conversation', () => {
             success: false,
             strategy: 'reset',
             syncedCommit: '',
-            error: "Could not commit the template's changes. See Debug Logs for details.",
+            error: "Could not commit the template's changes.",
         });
         expect(pushed()).toBe(false);
     });
@@ -453,7 +453,7 @@ describe('reset strategy — the exact git conversation', () => {
             success: false,
             strategy: 'reset',
             syncedCommit: '',
-            error: 'Could not push the update to GitHub. See Debug Logs for details.',
+            error: 'Could not push the update to GitHub.',
         });
     });
 
@@ -462,7 +462,7 @@ describe('reset strategy — the exact git conversation', () => {
 
         const result = await service().syncWithTemplate(edsProject(), { strategy: 'reset' });
 
-        expect(result.error).toBe('Could not push the update to GitHub. See Debug Logs for details.');
+        expect(result.error).toBe('Could not push the update to GitHub.');
     });
 
     it('an unexpected error gets an honest generic rather than its own text', async () => {
@@ -473,7 +473,7 @@ describe('reset strategy — the exact git conversation', () => {
 
         const result = await service().syncWithTemplate(edsProject(), { strategy: 'reset' });
 
-        expect(result.error).toBe('The template update could not finish. See Debug Logs for details.');
+        expect(result.error).toBe('The template update could not finish.');
     });
 });
 

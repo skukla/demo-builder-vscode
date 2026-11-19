@@ -200,8 +200,7 @@ export function extractMeshErrorSummary(error: string): string {
             'Mesh build failed. This is usually caused by:\n' +
             '• Invalid Commerce GraphQL endpoint URL\n' +
             '• Commerce instance not reachable from Adobe I/O\n' +
-            '• Missing or invalid API credentials\n\n' +
-            'Check the Debug logs for more details.'
+            '• Missing or invalid API credentials'
         );
     }
 
@@ -223,5 +222,5 @@ export function extractMeshErrorSummary(error: string): string {
     const cleaned = formatAdobeCliError(error);
     const lines = cleaned.split('\n').filter(isMeaningfulErrorLine);
 
-    return lines[0] || 'Mesh deployment failed. Check the Debug logs for details.';
+    return lines[0] || 'Mesh deployment failed.';
 }

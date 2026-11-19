@@ -260,7 +260,7 @@ describe('applyUpdates', () => {
 
         expect(statusesSent(ctx)).toEqual([
             { id: 'extension', state: 'running' },
-            { id: 'extension', state: 'failed', message: 'Not updated — details are in Debug Logs.' },
+            { id: 'extension', state: 'failed', message: "Not updated. Demo Builder couldn't tell what went wrong." },
         ]);
         expect(answer).toEqual({ success: true, warning: '1 update did not apply.' });
     });

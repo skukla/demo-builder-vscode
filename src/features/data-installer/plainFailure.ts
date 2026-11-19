@@ -18,27 +18,13 @@
 
 import { FINISHING_STOP, REPLACE_STOP, SAVE_STOP } from './types';
 import { dataTypeLabel } from './ui/dataTypeLabel';
+import { NO_ANSWER, NO_ANSWER_IN_TIME, translated, type PlainText } from '@/core/utils/plainText';
 
 /** Where a job can stop that is not a data type: no "while … installing" for these. */
 const NOT_A_KIND = new Set<string>([FINISHING_STOP, REPLACE_STOP, SAVE_STOP]);
 
-declare const PLAIN: unique symbol;
-
-/** Words fit for an SC's screen. Made only by {@link plainFailure} or {@link plain}. */
-export type PlainText = string & { readonly [PLAIN]: true };
-
-/** A literal, and only a literal: a string built at run time is `never` here. */
-type Literal<T extends string> = Record<never, never> extends Record<T, 1> ? never : T;
-
-const mint = (text: string): PlainText => text as PlainText;
-
-/**
- * A literal already in plain words. The compiler refuses anything but a literal, so a value built
- * from raw text has to go through {@link plainFailure}.
- */
-export function plain<T extends string>(text: Literal<T>): PlainText {
-    return mint(text);
-}
+/** This module is a translator: its own words are plain by construction. */
+const mint = translated;
 
 /** What an install was doing when it stopped, for "while products were installing". */
 export interface FailureDuring {
@@ -75,14 +61,11 @@ export function nounOf(kind: string, count: number): string {
 }
 
 const NO_REASON = 'It stopped without a reason.';
-const NO_ANSWER_IN_TIME = 'No answer came in time.';
 const SIGN_IN = "Commerce didn't accept the sign-in. Sign in to Adobe again.";
 
 /** Text that is still raw: an API route, a status code, a JSON body. */
 const LOOKS_RAW =
     /\bV1\/|\/rest\/|\bHTTP \d{3}\b|^\s*[{[]|\b(answered|status) \d{3}\b/iu;
-const NO_ANSWER =
-    /did not (respond|answer)|timed? ?out|ETIMEDOUT|ECONNRESET|ECONNREFUSED|fetch failed|socket hang up/iu;
 
 function textOf(raw: unknown): string {
     if (raw instanceof Error) return raw.message;

@@ -348,7 +348,7 @@ async function removeBoundSystemsAfter(
             deps.logger.warn(
                 `[AppBuilderComponent Runner] ${systemId} removal threw: ${toError(error).message}`,
             );
-            return { success: false, error: 'it stopped partway, and the Debug Logs say why' };
+            return { success: false, error: 'it stopped partway' };
         });
         if (!result.success) {
             deps.logger.warn(

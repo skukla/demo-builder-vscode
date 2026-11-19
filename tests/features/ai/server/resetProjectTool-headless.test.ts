@@ -223,6 +223,8 @@ describe('reset_project on a headless project', () => {
             rerunSafe: true,
         });
         expect(String(res.error)).not.toContain('could not read Username');
-        expect(String(res.error)).toContain('Debug Logs');
+        // Plain for the person who may see it; the agent's next step is its own field (PL-102).
+        expect(res.error).toBe('The reset did not finish.');
+        expect(String(res.next)).toContain('read_debug_logs');
     });
 });

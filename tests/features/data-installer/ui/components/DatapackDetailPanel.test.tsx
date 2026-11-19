@@ -21,7 +21,7 @@ import { render, screen, fireEvent, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { DatapackDetailPanel } from '@/features/data-installer/ui/components/DatapackDetailPanel';
 import type { DatapackDetail, DataItemInventory } from '@/features/data-installer/types';
-import { plain } from '@/features/data-installer/plainFailure';
+import { plain } from '@/core/utils/plainText';
 
 /** The one datapack date format (J8-2), in whatever time zone the suite runs. */
 const ONE_FORMAT = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });

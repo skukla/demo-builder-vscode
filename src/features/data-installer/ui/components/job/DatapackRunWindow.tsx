@@ -16,7 +16,7 @@
 
 import React, { useState } from 'react';
 import { type ImportStep, type StepSource } from '../../../importSteps';
-import type { PlainText } from '../../../plainFailure';
+import type { PlainText } from '@/core/utils/plainText';
 import { FINISHING, REPLACING, SAVING } from '../../../runRows';
 import type { ImportJobRecord } from '../../../types';
 import { useImportProgress } from '../../hooks/useImportProgress';

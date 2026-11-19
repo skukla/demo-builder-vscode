@@ -7,7 +7,8 @@
  * @module features/data-installer/services/demoBuilderEngine/installNote
  */
 
-import { plainFailure, type PlainText } from '../../plainFailure';
+import { plainFailure } from '../../plainFailure';
+import { type PlainText } from '@/core/utils/plainText';
 import { plainRowNote } from '../../plainRows';
 import type { SkippedRow } from './kindContext';
 

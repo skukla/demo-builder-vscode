@@ -14,7 +14,7 @@ import { makeEntry, mockRequest, resolveWith, resolveWithPage } from './Datapack
 
 // Below the mock on purpose (see useDataInstallerRequest's suite).
 import { DatapackActivityView } from '@/features/data-installer/ui/views/DatapackActivityView';
-import { plain } from '@/features/data-installer/plainFailure';
+import { plain } from '@/core/utils/plainText';
 
 describe('DatapackActivityView sources', () => {
     beforeEach(() => {

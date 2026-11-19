@@ -11,7 +11,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import type { ResultContent } from '@/features/data-installer/ui/components/importResult';
 import { JobResultWindow } from '@/features/data-installer/ui/components/job/JobResultWindow';
-import { plain } from '@/features/data-installer/plainFailure';
+import { plain } from '@/core/utils/plainText';
 
 const KEPT: ResultContent = {
     variant: 'warning',

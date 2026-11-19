@@ -5,7 +5,8 @@
  */
 
 import { CommerceReadError } from '@/features/app-builder/services/erpFillReaders';
-import { plain, plainFailure } from '@/features/data-installer/plainFailure';
+import { plainFailure } from '@/features/data-installer/plainFailure';
+import { plain } from '@/core/utils/plainText';
 import { plainRefusedRemovals, plainRowNote, plainSkipped } from '@/features/data-installer/plainRows';
 import type { SkippedRowRecord } from '@/features/data-installer/types';
 

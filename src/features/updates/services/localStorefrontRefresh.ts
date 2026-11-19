@@ -220,7 +220,7 @@ export async function refreshLocalStorefronts(
             onCopy?.(project, { state: 'done' });
         } catch (error) {
             ctx.logger.warn(`[Updates] Could not refresh the local storefront copy of ${project.name}: ${(error as Error).message}`);
-            onCopy?.(project, { state: 'skipped', message: 'Not brought up to date — details are in Debug Logs.' });
+            onCopy?.(project, { state: 'skipped', message: "Not brought up to date. Demo Builder couldn't tell what went wrong." });
         }
     }
 }

@@ -24,7 +24,8 @@
  */
 
 import { useCallback, useMemo } from 'react';
-import { plainFailure, type PlainText } from '../../plainFailure';
+import { plainFailure } from '../../plainFailure';
+import { type PlainText } from '@/core/utils/plainText';
 import { useVSCodeRequest } from '@/core/ui/hooks/useVSCodeRequest';
 import type { HandlerResponse } from '@/types/handlers';
 

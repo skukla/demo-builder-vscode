@@ -11,7 +11,7 @@
  */
 
 import React from 'react';
-import type { PlainText } from '../../plainFailure';
+import type { PlainText } from '@/core/utils/plainText';
 import type { KeptRootStep } from '../../types';
 import { type ResultContent, resultStatus } from './importResult';
 import type { ModalStatus } from '@/core/ui/components/ui/Modal';

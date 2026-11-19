@@ -15,7 +15,8 @@
  */
 
 import { removalLine } from '../importSteps';
-import { plainFailure, type PlainText } from '../plainFailure';
+import { plainFailure } from '../plainFailure';
+import { type PlainText } from '@/core/utils/plainText';
 import { announceDatapacksChanged } from '../services/datapackChanges';
 import type { DatapackEngine } from '../services/datapackEngine';
 import { nodeRecordFiles } from '../services/demoBuilderEngine/installRecord';

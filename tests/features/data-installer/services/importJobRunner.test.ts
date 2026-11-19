@@ -49,7 +49,7 @@ import { pollingStub, snap } from './importJobRunner.testUtils';
 import { watchImportJob, IMPORT_POLL, type ProgressListener } from '@/features/data-installer/services/importJobRunner';
 import type { JobStatusSnapshot } from '@/features/data-installer/types';
 import { PollingService } from '@/core/shell/pollingService';
-import { plain } from '@/features/data-installer/plainFailure';
+import { plain } from '@/core/utils/plainText';
 
 /** Runner with a scripted sequence of status responses. */
 function runWith(

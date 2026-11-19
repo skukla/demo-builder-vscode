@@ -102,7 +102,7 @@ export function describeRepoOutcome(outcome: RepoBatchOutcome): {
     if (deleted.length === 0) {
         return {
             level: 'error',
-            message: `Failed to delete all ${failed.length} repositories. Check Debug Logs for details.`,
+            message: `Failed to delete all ${failed.length} repositories.`,
         };
     }
     if (failed.length > 0) {

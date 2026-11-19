@@ -6,7 +6,7 @@
  */
 
 import React, { useCallback, useLayoutEffect } from 'react';
-import type { PlainText } from '../../plainFailure';
+import type { PlainText } from '@/core/utils/plainText';
 import { useDataInstallerRequest } from './useDataInstallerRequest';
 import type { DatapackId } from '@/types/datapack';
 

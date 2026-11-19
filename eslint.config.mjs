@@ -133,6 +133,24 @@ export default tseslint.config(
             }],
         },
     },
+    // Plain words for people (PL-102): only the plainText module makes a PlainText, and only the
+    // translator modules use its translator-only entry. A cast would let raw text through the type.
+    {
+        files: ['src/**/*.ts', 'src/**/*.tsx'],
+        ignores: ['src/core/utils/plainText.ts', 'src/features/data-installer/plainFailure.ts'],
+        rules: {
+            'no-restricted-syntax': ['error',
+                {
+                    selector: "TSAsExpression[typeAnnotation.typeName.name='PlainText'], TSTypeAssertion[typeAnnotation.typeName.name='PlainText']",
+                    message: 'Do not cast to PlainText: use plain(), plainLine(), plainName() or plainFailure() from @/core/utils/plainText.',
+                },
+                {
+                    selector: "ImportDeclaration[source.value='@/core/utils/plainText'] > ImportSpecifier[imported.name='translated']",
+                    message: 'translated() is for translator modules only; use plainFailure() or plain().',
+                },
+            ],
+        },
+    },
     {
         files: ['webview-ui/**/*.ts', 'webview-ui/**/*.tsx'],
         plugins: {

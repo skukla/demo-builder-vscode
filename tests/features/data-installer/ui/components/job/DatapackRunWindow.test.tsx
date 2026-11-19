@@ -19,7 +19,7 @@ import {
     DatapackRunWindow,
     type DatapackRunWindowProps,
 } from '@/features/data-installer/ui/components/job/DatapackRunWindow';
-import { plain } from '@/features/data-installer/plainFailure';
+import { plain } from '@/core/utils/plainText';
 
 const NONE_FOUND = { count: 0, examples: [] as string[] };
 const CHECK: InstallCheck = {

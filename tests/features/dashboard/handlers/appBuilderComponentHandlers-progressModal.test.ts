@@ -203,7 +203,7 @@ describe('a modal-hosted request always ends', () => {
         expect(mockSendOperationProgress).toHaveBeenLastCalledWith({
             id: 'erp-sync',
             state: 'failed',
-            error: 'The operation stopped unexpectedly. Details are in Debug Logs.',
+            error: "Demo Builder couldn't tell what went wrong.",
             startedAt: expect.any(Number),
             tookMs: expect.any(Number),
         });

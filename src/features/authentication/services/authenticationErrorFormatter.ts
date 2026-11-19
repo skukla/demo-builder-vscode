@@ -135,7 +135,7 @@ const MISSING_DEVELOPER_ACCESS =
     'Adobe refused this because your login is not a developer on every product ' +
     "profile this project's credential uses. An admin of this Adobe organization " +
     'can fix it in Admin Console by adding you as a developer on those product ' +
-    'profiles. Details are in Debug Logs.';
+    'profiles.';
 
 /**
  * A sentence an SC can act on for the Adobe refusals that reach a deploy or a teardown
@@ -160,7 +160,7 @@ export function explainAdobeAccessFailure(text: string): string | undefined {
     if (timedOut && /CoreConsoleAPISDK|licenses/i.test(text)) {
         return (
             "Adobe's Developer Console did not respond in time. This is on Adobe's side — " +
-            'try again in a few minutes. Details are in Debug Logs.'
+            'try again in a few minutes.'
         );
     }
     return undefined;

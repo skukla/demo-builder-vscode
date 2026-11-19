@@ -13,7 +13,7 @@
  */
 
 import { useCallback, useRef, useState } from 'react';
-import type { PlainText } from '@/features/data-installer/plainFailure';
+import type { PlainText } from '@/core/utils/plainText';
 import { useLibrarySharing } from '@/features/data-installer/ui/hooks/useLibrarySharing';
 import type { DatapackId } from '@/types/datapack';
 import type { DemoPackageCheck } from '@/types/webviewRequests';

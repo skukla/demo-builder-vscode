@@ -60,7 +60,7 @@ export function missingPagesSentence(missing: readonly string[]): string {
     const subject = count === 1 ? '1 page the source has is' : `${count} pages the source has are`;
     const named = missing.slice(0, NAMED_IN_SENTENCE).join(', ');
     const rest = count - NAMED_IN_SENTENCE;
-    const tail = rest > 0 ? `, and ${rest} more (all are in the Debug Logs)` : '';
+    const tail = rest > 0 ? `, and ${rest} more` : '';
     return `${subject} missing from this storefront: ${named}${tail}`;
 }
 

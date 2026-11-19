@@ -29,6 +29,7 @@ import {
     forwardToBackgroundNotice,
     openBackgroundNotice,
 } from './operationBackgroundNotice';
+import { COULDNT_TELL } from '@/core/utils/plainText';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse, MessageHandler } from '@/types/handlers';
 import { toError } from '@/types/typeGuards';
@@ -172,7 +173,7 @@ export function narrateOutcomeToModal<P extends { progress?: 'modal' }>(
             await pushOperationProgress({
                 id,
                 state: 'failed',
-                error: 'The operation stopped unexpectedly. Details are in Debug Logs.',
+                error: COULDNT_TELL,
             });
             throw error;
         }

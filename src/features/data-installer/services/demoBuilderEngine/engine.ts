@@ -19,7 +19,7 @@
  */
 
 import * as crypto from 'crypto';
-import type { PlainText } from '../../plainFailure';
+import type { PlainText } from '@/core/utils/plainText';
 import { plainRefusedRemovals, plainSkipped } from '../../plainRows';
 import { type DataTypeStatus, ENGINE_PHASES, FINISHING_STOP, REPLACE_STOP, type ImportStart, type InstallCheck, type JobStatusSnapshot, type KeptRootStep, type ValidationResult } from '../../types';
 import type { DatapackEngine } from '../datapackEngine';

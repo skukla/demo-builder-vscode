@@ -12,14 +12,8 @@
  * @module features/data-installer/plainRows
  */
 
-import {
-    knownMessage,
-    nounOf,
-    plainFailure,
-    type PlainText,
-    sentence,
-    statusMeaning,
-} from './plainFailure';
+import { knownMessage, nounOf, plainFailure, sentence, statusMeaning } from './plainFailure';
+import { type PlainText } from '@/core/utils/plainText';
 import type { SkipCause, SkippedRowRecord } from './types';
 
 /** What happened to the rows: not added by an install, or not deleted by an uninstall. */

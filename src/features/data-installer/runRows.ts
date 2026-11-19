@@ -13,7 +13,7 @@
  * @module features/data-installer/runRows
  */
 
-import type { PlainText } from './plainFailure';
+import type { PlainText } from '@/core/utils/plainText';
 import { inInstallOrder } from './services/demoBuilderEngine/installOrder';
 import { type DataTypeStatus, FINISHING_STOP, type JobStanding, REPLACE_STOP, SAVE_STOP } from './types';
 import { dataTypeLabel } from './ui/dataTypeLabel';

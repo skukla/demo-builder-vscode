@@ -13,7 +13,8 @@
  * @module features/data-installer/ui/components/importResult
  */
 
-import { plain, plainFailure, type PlainText } from '../../plainFailure';
+import { plainFailure } from '../../plainFailure';
+import { plain, type PlainText } from '@/core/utils/plainText';
 import type { ChangePreview } from '../../services/demoBuilderEngine/storeChanges';
 import { FINISHING_STOP, type ImportJobRecord, type KeptRootStep, SAVE_STOP } from '../../types';
 import type { DataInstallerRequest } from '../hooks/useDataInstallerRequest';

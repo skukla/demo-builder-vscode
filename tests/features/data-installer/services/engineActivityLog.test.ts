@@ -18,7 +18,7 @@ import {
     readEngineActivity,
     recordJobEnd,
 } from '@/features/data-installer/services/engineActivityLog';
-import { plain } from '@/features/data-installer/plainFailure';
+import { plain } from '@/core/utils/plainText';
 
 const PROJECT = '/projects/bodea';
 const PACK = { name: 'bodea-main', version: '1.2.0' };

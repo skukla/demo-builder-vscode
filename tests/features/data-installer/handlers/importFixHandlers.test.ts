@@ -28,7 +28,7 @@ import { DATAPACK_INSTALL_FAILURE, FAILED_PACK } from '../../../helpers/datapack
 import { createMockProject } from '../../../helpers/projectFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import type { Project } from '@/types/base';
-import { plain } from '@/features/data-installer/plainFailure';
+import { plain } from '@/core/utils/plainText';
 
 const RECORD: ImportJobRecord = {
     activationId: 'demo-builder-1',

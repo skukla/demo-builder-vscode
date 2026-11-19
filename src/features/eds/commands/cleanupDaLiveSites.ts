@@ -111,8 +111,7 @@ export async function cleanupDaLiveSitesCommand(context: vscode.ExtensionContext
                 `Possible reasons:\n` +
                 `• Organization name is incorrect\n` +
                 `• No access to this organization\n` +
-                `• Organization has no DA.live sites\n\n` +
-                `Check Debug Logs for details.`;
+                `• Organization has no DA.live sites`;
 
             vscode.window.showWarningMessage(message, 'Open Debug Logs').then(selection => {
                 if (selection === 'Open Debug Logs') {
@@ -294,7 +293,7 @@ function showDeletionResult({ deleted, failed, stillLive }: SiteDeletionOutcome)
     const plural = (n: number) => `${n} site${n !== 1 ? 's' : ''}`;
     const stillLiveNote =
         stillLive.length > 0
-            ? ` Pages may still be live for ${stillLive.join(', ')}. See Debug Logs for why.`
+            ? ` Pages may still be live for ${stillLive.join(', ')}.`
             : '';
 
     if (deleted.length > 0 && failed.length === 0) {

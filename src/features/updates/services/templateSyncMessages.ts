@@ -55,7 +55,7 @@ export function describeStepFailure(error: unknown): string {
     const sentence = error instanceof TemplateSyncStepError
         ? error.message
         : 'The template update could not finish.';
-    return `${sentence} See Debug Logs for details.`;
+    return sentence;
 }
 
 /**

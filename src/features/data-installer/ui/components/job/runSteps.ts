@@ -16,7 +16,8 @@ import {
     type UninstallSource,
     uninstallSteps,
 } from '../../../importSteps';
-import { plainFailure, type PlainText } from '../../../plainFailure';
+import { plainFailure } from '../../../plainFailure';
+import { type PlainText } from '@/core/utils/plainText';
 import type { ImportJobRecord, ImportProgressMessage } from '../../../types';
 
 /** The pack installed, as the steps name it. */

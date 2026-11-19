@@ -45,7 +45,7 @@ import { toError } from '@/types/typeGuards';
 
 /** What a person reads when the namespace cannot be read. */
 const READ_FAILED =
-    "Could not read this project's Adobe Runtime namespace. See Debug Logs for the reason.";
+    "Could not read this project's Adobe Runtime namespace.";
 
 /** The checks every read makes before touching Adobe, or the refusal. */
 async function openNamespaceRead(

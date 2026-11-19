@@ -13,7 +13,8 @@
  */
 
 import React from 'react';
-import { plainFailure, type PlainText } from '../../plainFailure';
+import { plainFailure } from '../../plainFailure';
+import { type PlainText } from '@/core/utils/plainText';
 import type { HeldFailure } from '../hooks/useProjectHolding';
 import { IntegrationStatusLabel, type IntegrationStatusLabelProps } from '@/core/ui/components/integrations/IntegrationStatusLabel';
 import { getDatapackStatusDisplay, severityToDot } from '@/core/ui/utils/statusVocabulary';

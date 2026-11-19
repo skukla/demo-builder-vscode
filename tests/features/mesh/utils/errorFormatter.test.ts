@@ -429,7 +429,7 @@ describe('extractMeshErrorSummary', () => {
 
             expect(result).toContain('Mesh build failed. This is usually caused by:');
             expect(result).toContain('Invalid Commerce GraphQL endpoint URL');
-            expect(result).toContain('Check the Debug logs for more details.');
+            expect(result).not.toContain('Debug logs');
         });
 
         it('ignores a header that is neither at the start nor at the end', () => {
@@ -438,7 +438,7 @@ describe('extractMeshErrorSummary', () => {
             // to fall through to the noise filter instead.
             const result = extractMeshErrorSummary('aio: Building Mesh with config: /usr/src/x');
 
-            expect(result).toBe('Mesh deployment failed. Check the Debug logs for details.');
+            expect(result).toBe('Mesh deployment failed.');
         });
 
         it('explains them too when the header is buried but the dump ends at the path', () => {
@@ -517,12 +517,12 @@ describe('extractMeshErrorSummary', () => {
                 '💡 hint\n\nCleaning existing artifacts\n   \nBuilding Mesh step 2',
             );
 
-            expect(result).toBe('Mesh deployment failed. Check the Debug logs for details.');
+            expect(result).toBe('Mesh deployment failed.');
         });
 
         it('falls back on an empty dump', () => {
             expect(extractMeshErrorSummary('')).toBe(
-                'Mesh deployment failed. Check the Debug logs for details.',
+                'Mesh deployment failed.',
             );
         });
     });

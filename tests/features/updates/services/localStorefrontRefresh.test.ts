@@ -277,7 +277,7 @@ describe('refreshLocalStorefronts (after an update)', () => {
         expect(ctx.logger.warn).toHaveBeenCalled();
         expect(onCopy).toHaveBeenLastCalledWith(expect.anything(), {
             state: 'skipped',
-            message: 'Not brought up to date — details are in Debug Logs.',
+            message: "Not brought up to date. Demo Builder couldn't tell what went wrong.",
         });
     });
 });

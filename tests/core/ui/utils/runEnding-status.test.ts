@@ -24,7 +24,7 @@ import {
     jobRecord,
     recordOnlySources,
 } from '../../../features/data-installer/ui/components/importResult.testUtils';
-import { plain } from '@/features/data-installer/plainFailure';
+import { plain } from '@/core/utils/plainText';
 
 describe('endStatus', () => {
     it('is green when it succeeded with no warning and no row with a problem', () => {

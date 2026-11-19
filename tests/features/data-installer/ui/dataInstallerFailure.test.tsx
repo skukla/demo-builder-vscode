@@ -10,7 +10,8 @@ import '@testing-library/jest-dom';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { renderDataInstallerFailure } from '@/features/data-installer/ui/dataInstallerFailure';
 import { ErrorCode } from '@/types/errorCodes';
-import { plain, plainFailure } from '@/features/data-installer/plainFailure';
+import { plainFailure } from '@/features/data-installer/plainFailure';
+import { plain } from '@/core/utils/plainText';
 
 jest.mock('@/core/ui/utils/WebviewClient', () => ({ webviewClient: { postMessage: jest.fn() } }));
 

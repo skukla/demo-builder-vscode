@@ -420,7 +420,7 @@ export class CommandManager {
             // Success is announced by the sign-in itself (extension.ts, onDidSignIn).
             if (!ok) {
                 void vscode.window.showWarningMessage(
-                    'Adobe sign-in did not complete. Check the Debug Logs output channel.',
+                    'Adobe sign-in did not complete.',
                 );
             }
         });
@@ -481,7 +481,7 @@ export class CommandManager {
             // A cancel is the SC's own choice; only a failure is worth a warning.
             if (!outcome.cancelled) {
                 void vscode.window.showWarningMessage(
-                    `GitHub sign-in did not complete: ${outcome.error}. Check the Debug Logs output channel.`,
+                    `GitHub sign-in did not complete: ${outcome.error}.`,
                 );
             }
         });

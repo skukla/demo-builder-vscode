@@ -483,9 +483,11 @@ meant.
 > it, and `Request failed with status code 403` does neither — it names a transport
 > detail and leaves an SC to guess which permission, which account, which site.
 > Translated means a per-provider formatter (three exist), a domain error's own message,
-> or an honest generic — "Could not reach Adobe Console. See Debug Logs for details." —
-> which is less specific and never misleading. The raw text still goes to the Debug Logs,
-> where it is useful.
+> or an honest generic — "Could not reach Adobe Console.", or when nothing says what went
+> wrong, "Demo Builder couldn't tell what went wrong." — which is less specific and never
+> misleading. No sentence sends a person to Debug Logs; the Open Debug Logs button may (owner,
+> 2026-11-19, PL-102). The raw text still goes to the Debug Logs, where it is useful. The door is
+> `src/core/utils/plainText.ts`: a field typed `PlainText` refuses raw text at compile time.
 >
 > **The rule is about WHOSE words reach the person, and that is not visible at the call
 > site.** `componentUpdater` passes its caught message straight through and is right to:
@@ -498,7 +500,9 @@ meant.
 > 67 sites predate the rule and are ledgered; the list may only shrink, because a rule
 > arriving as 67 build failures is a rule people switch off.
 > [ADR-023](../architecture/adr/023-error-handling.md) · Enforced by
-> `tests/sop/user-facing-errors.test.ts` against a shrink-only ledger.
+> `tests/sop/user-facing-errors.test.ts` against a shrink-only ledger, and by
+> `tests/sop/no-debug-logs-sentence.test.ts`, which fails on any on-screen sentence naming Debug
+> Logs (the Open Debug Logs button and the channel's name excepted).
 
 > **Convention.** A progress notification's title is an "-ing" verb and its object, and
 > says nothing else: "Deploying API Mesh", never "Demo Builder", never "Loading…", never
@@ -2067,7 +2071,7 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 22 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 71 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 72 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, agent coverage (import cycles moved to an enforcer suite on 2026-10-08)
 

@@ -36,7 +36,9 @@ Four parts. They were decided together because each one falls over without the o
 `Request failed with status code 403` names a transport detail and leaves an SC guessing
 which permission, which account, which site. Translated means a per-provider formatter
 (three exist), a domain error's own message, or an honest generic — "Could not reach
-Adobe Console. See Debug Logs for details." The raw text still goes to the Debug Logs.
+Adobe Console.", or "Demo Builder couldn't tell what went wrong." when nothing says what did.
+No sentence sends a person to Debug Logs (owner, 2026-11-19, PL-102); the raw text still goes
+there.
 
 67 sites predate this and are ledgered shrink-only. A rule arriving as 67 build failures
 is a rule people switch off.

@@ -6,7 +6,7 @@
 import type { DataTypeStatus } from '@/features/data-installer/types';
 import { SAVE_RUN, runRows, type RunSource } from '@/features/data-installer/runRows';
 import type { OperationRow } from '@/types/webviewPayloads';
-import { plain } from '@/features/data-installer/plainFailure';
+import { plain } from '@/core/utils/plainText';
 
 const source = (over: Partial<RunSource>): RunSource => ({
     perType: {},

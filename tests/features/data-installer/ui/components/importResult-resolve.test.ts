@@ -25,7 +25,8 @@ import {
 } from './importResult.testUtils';
 import { importSteps } from '@/features/data-installer/importSteps';
 import { ErrorCode } from '@/types/errorCodes';
-import { plain, plainFailure } from '@/features/data-installer/plainFailure';
+import { plainFailure } from '@/features/data-installer/plainFailure';
+import { plain } from '@/core/utils/plainText';
 
 describe('resolveResult — no action yet', () => {
     it.each([
