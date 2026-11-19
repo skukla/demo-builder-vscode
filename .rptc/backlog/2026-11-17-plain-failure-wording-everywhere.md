@@ -98,7 +98,20 @@ named (2026-11-19): "Shouldn't this be a pattern or convention that happens ever
 RPTC research pass on the whole effort was launched the same day; its output goes to
 `.rptc/research/plain-failure-wording-everywhere/research.md`.
 
+## Owner decisions, 2026-11-19 (from the research)
 
+1. **Debug Logs:** keep the Open Debug Logs button on failures; remove every sentence that sends a
+   person to Debug Logs, everywhere.
+2. **Unknown causes:** the honest fallback is "Demo Builder couldn't tell what went wrong."
+3. **Show Details:** a person may see the raw text behind a Show Details control.
+4. **`formatGitHubError`:** wire it in as the GitHub layer (it has no production caller today).
+5. **Agent text:** agent text that reaches a person (`tellUser`, the agent-failure warning) is
+   plain words; the raw words stay in a separate field for the agent.
+
+Every decision is settled. The research's six-slice order supersedes the four steps below; the plan
+comes next.
+
+## Recommendation
 
 Do it after the release, area by area, the way F221 did the data installer:
 
