@@ -178,12 +178,12 @@ export const STOREFRONT_STAGES = {
     removingSiteCode: {
         label: "Deleting the site's code",
         expectation: 'Usually under a minute',
-        detail: 'Its copy of the code on aem.live',
+        detail: 'So the live site stops running it',
     },
     removingProjectFiles: {
         label: 'Deleting project files',
         expectation: 'Usually a few seconds',
-        detail: 'Its folder on this computer',
+        detail: "The project's folder on this computer",
     },
     // Site Access's "check access": a poll of about two minutes (`waitForConfigAccess`
     // sleeps 30s, 30s, 45s). The checks it has made are a count, on the line under it.
