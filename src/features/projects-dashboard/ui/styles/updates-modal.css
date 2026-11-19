@@ -61,12 +61,24 @@
     .updates-group-list {
         display: flex;
         flex-direction: column;
-        gap: 24px;
+        gap: 8px;
+        /* The cards' offsets are measured from here, so the list can scroll one into view. */
+        position: relative;
     }
 
+    /* Each project is a card, as on the Prerequisites step (same border, corners and padding as
+       its list), and the running one is outlined in blue (owner, 2026-11-18, walk F290). */
     .updates-group {
         /* A flex column at its height cap squeezes its children; a group keeps its own. */
         flex-shrink: 0;
+        border: 1px solid var(--spectrum-global-color-gray-400);
+        border-radius: 4px;
+        padding: 4px 12px 8px;
+        transition: border-color var(--spectrum-global-animation-duration-300) ease;
+    }
+
+    .updates-group--running {
+        border-color: var(--spectrum-global-color-blue-500);
     }
 
     .updates-group-header {

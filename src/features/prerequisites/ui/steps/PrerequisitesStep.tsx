@@ -49,7 +49,7 @@ export function PrerequisitesStep({ state, setCanProceed, currentStep }: Prerequ
     } = usePrerequisiteState(scrollToTop, state.selectedStack, selectedMeshDeps);
 
     // Auto-scroll hook with actual checks (pass the shared ref)
-    const { itemRefs, resetAutoScroll } = usePrerequisiteAutoScroll(
+    const { createItemRef, resetAutoScroll } = usePrerequisiteAutoScroll(
         checks,
         setCanProceed,
         scrollContainerRef,
@@ -76,9 +76,7 @@ export function PrerequisitesStep({ state, setCanProceed, currentStep }: Prerequ
                     {checks.map((check, index) => (
                         <div
                             key={check.name}
-                            ref={(el) => {
-                                itemRefs.current[index] = el;
-                            }}
+                            ref={createItemRef(index)}
                             className={cn(
                                 'prerequisite-item',
                                 'prerequisite-item-grid',

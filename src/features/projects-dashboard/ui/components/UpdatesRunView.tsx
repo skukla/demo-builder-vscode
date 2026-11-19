@@ -23,7 +23,7 @@
  * @module features/projects-dashboard/ui/components/UpdatesRunView
  */
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import type { RowStatuses } from '../hooks/useUpdatesModal';
 import { ICON_OF, RunQuestion } from './runWindowParts';
 import { groupsOf, type RowGroup } from './updateGroups';
@@ -31,6 +31,7 @@ import type { RunOutcome } from '@/core/ui/components/feedback/OperationProgress
 import { ResultBody } from '@/core/ui/components/feedback/ResultBody';
 import { StepStatusIcon, type StepStatus } from '@/core/ui/components/feedback/StepStatusIcon';
 import { WorkRow } from '@/core/ui/components/feedback/WorkRow';
+import { useAutoScroll } from '@/core/ui/hooks/useAutoScroll';
 import { localCopyRowId, type PendingUpdateRow, type UpdateRowState, type UpdateRowStatus } from '@/types/pendingUpdates';
 import type { OperationProgressPayload, OperationPrompt } from '@/types/webviewPayloads';
 
@@ -120,11 +121,34 @@ function LocalCopyStep({ status }: { status: UpdateRowStatus }) {
     return <Step label="Your Local Copy" detail={LOCAL_COPY_LINE[status.state] ?? ''} status={status} />;
 }
 
-function RunGroup({ group, statuses, live }: { group: RowGroup; statuses: RowStatuses; live: Live }) {
+/** Every row id in a project's card, its local copy last. */
+function rowIdsOf(group: RowGroup): string[] {
+    return [...group.rows.map((r) => r.id), localCopyRowId(group.key)];
+}
+
+/** The row running now and the card it is in, so the list can keep that card in view. */
+export function runningRowOf(groups: RowGroup[], statuses: RowStatuses): { id: string; card: number } | undefined {
+    for (const [card, group] of groups.entries()) {
+        const id = rowIdsOf(group).find((rowId) => statuses[rowId]?.state === 'running');
+        if (id) return { id, card };
+    }
+    return undefined;
+}
+
+interface RunGroupProps {
+    group: RowGroup;
+    statuses: RowStatuses;
+    live: Live;
+    cardRef?: (el: HTMLDivElement | null) => void;
+}
+
+/** One project as a card, as the Prerequisites step draws its checks; the running one is outlined. */
+function RunGroup({ group, statuses, live, cardRef }: RunGroupProps) {
     const localCopy = statuses[localCopyRowId(group.key)];
     const states = [...group.rows.map((r) => statuses[r.id]?.state ?? 'waiting'), ...(localCopy ? [localCopy.state] : [])];
+    const running = states.includes('running');
     return (
-        <div className="updates-group">
+        <div ref={cardRef} className={running ? 'updates-group updates-group--running' : 'updates-group'}>
             <div className="updates-group-header updates-run-header">
                 <span className="work-row-icon"><StepStatusIcon status={groupStatusOf(states)} /></span>
                 <span className="project-row-name">{group.title}</span>
@@ -163,14 +187,33 @@ export function UpdatesRunView({ rows, statuses, progress, onTyped, remaining, e
             </ResultBody>
         );
     }
+    return <RunningList rows={rows} statuses={statuses} progress={progress} onTyped={onTyped} />;
+}
+
+/**
+ * The list while it runs. It follows the work, as the Prerequisites step does: each time
+ * a row starts, the list scrolls just enough to show that row's card, and in between it
+ * stays where the SC put it (owner, 2026-11-18, walk F290: with several projects, the one
+ * updating was below the edge and nothing on screen moved).
+ */
+function RunningList({ rows, statuses, progress, onTyped }: Omit<RunViewProps, 'remaining' | 'ending'>) {
+    const { containerRef, createItemRef, scrollToItem } = useAutoScroll();
+    const groups = groupsOf(rows);
+    const now = runningRowOf(groups, statuses);
+    const nowId = now?.id;
+    const nowCard = now?.card;
+    useEffect(() => {
+        if (nowCard !== undefined) scrollToItem(nowCard);
+    }, [nowId, nowCard, scrollToItem]);
+
+    const running = progress?.state !== 'failed' && progress?.state !== 'succeeded';
     const question = running ? progress?.prompt : undefined;
-    const rowRunning = rows.some((r) => statuses[r.id]?.state === 'running');
     const live: Live = { step: progress?.step, question, onTyped };
     return (
-        <div className="updates-group-list scroll-fade scroll-fade--capped">
-            {question && !rowRunning && <RunQuestion prompt={question} onTyped={onTyped} />}
-            {groupsOf(rows).map((group) => (
-                <RunGroup key={group.key} group={group} statuses={statuses} live={live} />
+        <div ref={containerRef} className="updates-group-list scroll-fade scroll-fade--capped">
+            {question && !now && <RunQuestion prompt={question} onTyped={onTyped} />}
+            {groups.map((group, index) => (
+                <RunGroup key={group.key} group={group} statuses={statuses} live={live} cardRef={createItemRef(index)} />
             ))}
         </div>
     );

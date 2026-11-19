@@ -1,9 +1,11 @@
 import { useEffect, useRef, useCallback } from 'react';
+import { useAutoScroll } from '@/core/ui/hooks/useAutoScroll';
 import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 import { PrerequisiteCheck } from '@/types/webview';
 
 interface UsePrerequisiteAutoScrollReturn {
-    itemRefs: React.MutableRefObject<(HTMLDivElement | null)[]>;
+    /** The ref setter for check `index`'s row. */
+    createItemRef: (index: number) => (el: HTMLDivElement | null) => void;
     resetAutoScroll: () => void;
 }
 
@@ -11,7 +13,8 @@ interface UsePrerequisiteAutoScrollReturn {
  * Hook to manage auto-scroll behavior for prerequisites list
  *
  * Handles:
- * - Auto-scroll to currently checking item
+ * - Auto-scroll to currently checking item (the shared `useAutoScroll`, which the
+ *   Updates run uses too; this hook kept its own copy of the same geometry until F290)
  * - Auto-scroll to bottom when all complete
  * - Reset scroll state when rechecking
  *
@@ -24,7 +27,7 @@ export function usePrerequisiteAutoScroll(
     setCanProceed: (value: boolean) => void,
     scrollContainerRef: React.MutableRefObject<HTMLDivElement | null>,
 ): UsePrerequisiteAutoScrollReturn {
-    const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
+    const { createItemRef, scrollToItem } = useAutoScroll({ containerRef: scrollContainerRef, delay: 0 });
     const hasAutoScrolled = useRef<boolean>(false);
 
     // Reset auto-scroll flag (used when navigating back to step)
@@ -32,38 +35,11 @@ export function usePrerequisiteAutoScroll(
         hasAutoScrolled.current = false;
     }, []);
 
-    // Auto-scroll when prerequisite status changes to 'checking'
+    // Auto-scroll when prerequisite status changes to 'checking' (the first is already in view)
     useEffect(() => {
         const checkingIndex = checks.findIndex(c => c.status === 'checking');
-
-        if (checkingIndex > 0 && itemRefs.current[checkingIndex] && scrollContainerRef.current) {
-            const container = scrollContainerRef.current;
-            const item = itemRefs.current[checkingIndex];
-
-            const itemTop = item.offsetTop;
-            const itemHeight = item.offsetHeight;
-            const containerHeight = container.clientHeight;
-            const containerScrollTop = container.scrollTop;
-
-            const isVisible = itemTop >= containerScrollTop &&
-                            (itemTop + itemHeight) <= (containerScrollTop + containerHeight);
-
-            if (!isVisible) {
-                if (itemTop + itemHeight > containerScrollTop + containerHeight) {
-                    const scrollTo = itemTop + itemHeight - containerHeight + 10;
-                    container.scrollTo({
-                        top: Math.max(0, scrollTo),
-                        behavior: 'smooth',
-                    });
-                } else if (itemTop < containerScrollTop) {
-                    container.scrollTo({
-                        top: Math.max(0, itemTop - 10),
-                        behavior: 'smooth',
-                    });
-                }
-            }
-        }
-    }, [checks, scrollContainerRef]);
+        if (checkingIndex > 0) scrollToItem(checkingIndex);
+    }, [checks, scrollToItem]);
 
     // Update canProceed and auto-scroll to bottom when all complete
     useEffect(() => {
@@ -87,7 +63,7 @@ export function usePrerequisiteAutoScroll(
     }, [checks, setCanProceed, scrollContainerRef]);
 
     return {
-        itemRefs,
+        createItemRef,
         resetAutoScroll,
     };
 }
