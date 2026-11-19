@@ -108,8 +108,19 @@ RPTC research pass on the whole effort was launched the same day; its output goe
 5. **Agent text:** agent text that reaches a person (`tellUser`, the agent-failure warning) is
    plain words; the raw words stay in a separate field for the agent.
 
-Every decision is settled. The research's six-slice order supersedes the four steps below; the plan
-comes next.
+Every decision is settled. The research's six-slice order supersedes the four steps below.
+
+## Split across two releases (owner, 2026-11-19)
+
+- **In beta.153: slices 1 and 2.** The core plain-words door (no pass-through of unknown text) with a
+  raw `detail` field beside the plain one, the cast ban, the fallback line, every sentence that sends a
+  person to Debug Logs removed; then the progress windows, the wizard's creation failure and the
+  Updates window. Plan: `.rptc/plans/plain-failure-wording/overview.md`.
+- **After beta.153: slices 3 to 6. Do not close this item until they are built.** Provider translators
+  (the mesh rewrite, the Adobe explain functions, `formatGitHubError` wired in), `HandlerResponse.error`
+  and `SimpleResult.error` area by area (about 450 sites), StatusDisplay, InlineNotice and a typed
+  wrapper for VS Code notifications, then the words check widened to the whole tree and the
+  user-facing-errors rule and its ledger retired.
 
 ## Recommendation
 
