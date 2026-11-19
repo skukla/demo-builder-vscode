@@ -3,7 +3,7 @@ id: PL-102
 kind: fix
 area: platform
 needs: []
-value: med
+value: high
 status: backlog
 ---
 
@@ -80,7 +80,25 @@ the data installer still listed in `tests/sop/user-facing-errors.ledger.json` (`
 - `src/features/authentication/services/authenticationErrorFormatter.ts:163`
 - `src/commands/repairSiteConfiguration.ts:67`
 
-## Recommendation
+## 2026-11-19: it happened again, and the owner widened it
+
+On the Updates window (walk F294/F295) a failed template update showed git's own words, "justrite:
+The template update could not be applied: repository lacks the necessary blob to perform 3-way
+merge." The user-facing-errors SOP could not see it: git's reason travelled as an ordinary string
+(`templateMergeBase.ts` `gitReason` → `templateSyncService.ts` → the row status), several steps
+from any `error:` field, so the shape scan has nothing to match. Only a branded type would have
+refused it.
+
+F295 fixed that one message with a one-entry table (`mergeFailureLine` in `templateMergeBase.ts`)
+and dropped the leading project name from Updates rows. That is a one-off and belongs inside this
+item's door once it exists.
+
+The owner then asked that this be a convention everywhere, the wizard and the project dashboard
+named (2026-11-19): "Shouldn't this be a pattern or convention that happens everywhere?" A full
+RPTC research pass on the whole effort was launched the same day; its output goes to
+`.rptc/research/plain-failure-wording-everywhere/research.md`.
+
+
 
 Do it after the release, area by area, the way F221 did the data installer:
 
