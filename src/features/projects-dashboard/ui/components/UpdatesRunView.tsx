@@ -33,6 +33,7 @@ import { StepStatusIcon, type StepStatus } from '@/core/ui/components/feedback/S
 import { WorkRow } from '@/core/ui/components/feedback/WorkRow';
 import { useAutoScroll } from '@/core/ui/hooks/useAutoScroll';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { plainJoin } from '@/core/utils/plainText';
 import { stageLine } from '@/core/utils/stageLine';
 import { localCopyRowId, type PendingUpdateRow, type UpdateRowState, type UpdateRowStatus } from '@/types/pendingUpdates';
 import type { UnifiedProgress } from '@/types/webview';
@@ -137,16 +138,36 @@ interface Place {
     total: number;
 }
 
-function RunRow({ row, statuses, live, place }: { row: PendingUpdateRow; statuses: RowStatuses; live: Live; place: Place }) {
-    const status = statuses[row.id];
+/** The project's local copy, when this row is the update it follows (its last step). */
+interface LocalCopyPart {
+    status: UpdateRowStatus;
+    place: Place;
+}
+
+/**
+ * A row's status with its local copy folded in: running while the copy is brought up to GitHub,
+ * and left alone, saying why, when the copy was left as it is. A failed update keeps its own.
+ */
+function withLocalCopy(own: UpdateRowStatus | undefined, copy: UpdateRowStatus | undefined, id: string): UpdateRowStatus | undefined {
+    if (!copy || own?.state === 'failed') return own;
+    if (copy.state === 'running') return { id, state: 'running' };
+    if ((copy.state !== 'skipped' && copy.state !== 'failed') || !copy.message) return own;
+    return { id, state: 'skipped', message: own?.message ? plainJoin([own.message, copy.message]) : copy.message };
+}
+
+function RunRow({ row, statuses, live, place, localCopy }: { row: PendingUpdateRow; statuses: RowStatuses; live: Live; place: Place; localCopy?: LocalCopyPart }) {
+    const copyRunning = localCopy?.status.state === 'running';
+    const status = withLocalCopy(statuses[row.id], localCopy?.status, row.id);
     const state = status?.state ?? 'waiting';
-    const asking = state === 'running' ? live.question : undefined;
-    const stepLine = lineOf(row, state, asking ? undefined : live.stage);
+    const asking = state === 'running' && !copyRunning ? live.question : undefined;
+    const stage = asking ? undefined : live.stage;
+    const stepLine = copyRunning ? OPERATION_STAGES.updatingLocalCopy.label : lineOf(row, state, stage);
     const running = state === 'running' && !asking;
-    const progress = running ? stepProgressOf(place.index, place.total, stepLine, live.part) : undefined;
+    const at = copyRunning && localCopy ? localCopy.place : place;
+    const progress = running ? stepProgressOf(at.index, at.total, stepLine, copyRunning ? undefined : live.part) : undefined;
     // With no count to show, the part in flight says more than the step's name.
-    const detail = running && live.part ? live.part : stepLine;
-    const fixable = live.ended && state === 'failed' && live.rowFix ? live.rowFix : undefined;
+    const detail = running && live.part && !copyRunning ? live.part : stepLine;
+    const fixable = live.ended && statuses[row.id]?.state === 'failed' && live.rowFix ? live.rowFix : undefined;
     return (
         <Step
             label={row.label}
@@ -155,7 +176,7 @@ function RunRow({ row, statuses, live, place }: { row: PendingUpdateRow; statuse
             asking={asking}
             onTyped={live.onTyped}
             progress={progress}
-            action={fixable && <UpdateRowFix id={row.id} controls={fixable} />}
+            action={fixable && <UpdateRowFix id={row.id} controls={fixable} retryable={statuses[row.id]?.retryable === true} />}
             noteInstead={fixable && noteWhileFixing(fixOf(fixable, row.id))}
         />
     );
@@ -167,20 +188,16 @@ function noteWhileFixing(fix: { withAi: boolean; problem?: string }): string | u
     return fix.withAi ? AI_HAS_IT : undefined;
 }
 
-const LOCAL_COPY_LINE: Partial<Record<UpdateRowState, string>> = {
-    running: OPERATION_STAGES.updatingLocalCopy.label,
-    done: 'Up to date with GitHub',
-};
+/** The updates that write the storefront on GitHub, which the local copy is brought up to after. */
+const WRITES_STOREFRONT = new Set(['template', 'boilerplate', 'blockLibrary', 'blockLibraryInstall']);
 
 /**
- * The project's local copy, brought up to what its updates wrote on GitHub: a step of
- * its own after them, which keeps its outcome. Only a project whose updates wrote to
- * GitHub, and that has a local copy, has one.
+ * The row the local copy is a step of (owner, 2026-11-19: "Your Local Copy" is the last part of an
+ * update, not a row of its own): the project's last update that writes the storefront, else its last.
  */
-function LocalCopyStep({ status, place }: { status: UpdateRowStatus; place: Place }) {
-    const detail = LOCAL_COPY_LINE[status.state] ?? '';
-    const progress = status.state === 'running' ? stepProgressOf(place.index, place.total, detail) : undefined;
-    return <Step label="Your Local Copy" detail={detail} status={status} progress={progress} />;
+export function localCopyHost(rows: readonly PendingUpdateRow[]): number {
+    for (let i = rows.length - 1; i >= 0; i--) if (WRITES_STOREFRONT.has(rows[i].kind)) return i;
+    return rows.length - 1;
 }
 
 /** Every row id in a project's card, its local copy last. */
@@ -210,6 +227,7 @@ function RunGroup({ group, statuses, live, cardRef }: RunGroupProps) {
     const told = statuses[localCopyRowId(group.key)];
     const localCopy = live.ended && told?.state === 'waiting' ? undefined : told;
     const total = group.rows.length + (localCopy ? 1 : 0);
+    const host = localCopyHost(group.rows);
     const states = [...group.rows.map((r) => statuses[r.id]?.state ?? 'waiting'), ...(localCopy ? [localCopy.state] : [])];
     return (
         <div ref={cardRef} className="updates-group step-tile">
@@ -219,9 +237,15 @@ function RunGroup({ group, statuses, live, cardRef }: RunGroupProps) {
             </div>
             <div className="updates-group-rows">
                 {group.rows.map((row, index) => (
-                    <RunRow key={row.id} row={row} statuses={statuses} live={live} place={{ index, total }} />
+                    <RunRow
+                        key={row.id}
+                        row={row}
+                        statuses={statuses}
+                        live={live}
+                        place={{ index, total }}
+                        {...(localCopy && index === host ? { localCopy: { status: localCopy, place: { index: group.rows.length, total } } } : {})}
+                    />
                 ))}
-                {localCopy && <LocalCopyStep status={localCopy} place={{ index: group.rows.length, total }} />}
             </div>
         </div>
     );

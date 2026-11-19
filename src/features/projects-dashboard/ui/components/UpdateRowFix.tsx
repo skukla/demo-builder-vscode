@@ -1,8 +1,9 @@
 /**
  * The button on an update that did not apply, once the run has ended (owner, 2026-11-19): fixed in
  * place, as the Prerequisites step puts Install beside a missing tool, in the same compact button.
- * Retry runs that update again in the window; once retrying has not helped it is Fix with AI (the
- * Data Installer's rule, `failedButtonLabel`), which opens the SC's AI on it; then Check Again, as
+ * Retry runs that update again in the window, for a failure a retry can help (nothing answered, a
+ * busy server); once retrying has not helped, or straight away for any other failure (owner,
+ * 2026-11-19), it is Fix with AI (`failedButtonLabel`), which opens the SC's AI on it; then Check Again, as
  * Prerequisites' Recheck, asks whether it is still waiting.
  *
  * @module features/projects-dashboard/ui/components/UpdateRowFix
@@ -28,12 +29,15 @@ export function fixOf(controls: RowFixControls, id: string): RowFix {
 export function UpdateRowFix({
     id,
     controls,
+    retryable,
 }: {
     id: string;
     controls: RowFixControls;
+    /** Whether a retry can help this failure; a failure it cannot help offers Fix with AI at once. */
+    retryable: boolean;
 }): React.ReactElement {
     const fix = fixOf(controls, id);
-    const label = fix.withAi ? CHECK_AGAIN : failedButtonLabel(fix.retries);
+    const label = fix.withAi ? CHECK_AGAIN : failedButtonLabel(fix.retries, retryable);
     const onPress = (): void => {
         if (fix.withAi) controls.checkAgain(id);
         else if (label === FIX_WITH_AI) controls.fixWithAi(id);

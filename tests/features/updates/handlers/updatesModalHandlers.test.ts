@@ -217,7 +217,7 @@ describe('applyUpdates', () => {
 
         expect(answer).toEqual({ success: true, warning: '1 update did not apply.' });
         // Without the project's name: its card says it (owner, 2026-11-19).
-        expect(statusesSent(ctx)).toEqual([{ id: 'template:0', state: 'failed', message: 'merge conflicts' }]);
+        expect(statusesSent(ctx)).toEqual([{ id: 'template:0', state: 'failed', message: 'merge conflicts', retryable: false }]);
     });
 
     it('installs the extension update last, from the release the check found', async () => {
@@ -260,7 +260,7 @@ describe('applyUpdates', () => {
 
         expect(statusesSent(ctx)).toEqual([
             { id: 'extension', state: 'running' },
-            { id: 'extension', state: 'failed', message: "Not updated. Demo Builder couldn't tell what went wrong." },
+            { id: 'extension', state: 'failed', message: "Not updated. Demo Builder couldn't tell what went wrong.", retryable: false },
         ]);
         expect(answer).toEqual({ success: true, warning: '1 update did not apply.' });
     });

@@ -117,8 +117,28 @@ describe("a row's reason on screen", () => {
         await apply(h)(ctx, modal([template?.id ?? '']));
 
         expect(statusesSent(ctx)).toEqual([
-            { id: template?.id, state: 'failed', message: "Couldn't merge the changes." },
-            { id: template?.id, state: 'failed', message: "Couldn't merge." },
+            { id: template?.id, state: 'failed', message: "Couldn't merge the changes.", retryable: false },
+            { id: template?.id, state: 'failed', message: "Couldn't merge.", retryable: false },
+        ]);
+    });
+});
+
+// Retry only where a second try can get past it; anything else goes to Fix with AI (owner, 2026-11-19).
+describe('whether a retry can help a failed row', () => {
+    it('says so for a failure where nothing answered, and not for one a retry cannot fix', async () => {
+        mockApplyUpdatesHeadless.mockImplementation(async (sel: UpdateSelections, _ctx, _report, options) => {
+            options.onItem('template', sel.template[0], { state: 'failed', message: 'GitHub did not respond in time.' });
+            options.onItem('template', sel.template[0], { state: 'failed', message: 'repository lacks the necessary blob to perform 3-way merge' });
+            return applied();
+        });
+        const h = handlers();
+        const ctx = createMockHandlerContext();
+        const template = h.presentUpdates(found()).find((r) => r.kind === 'template');
+        await apply(h)(ctx, modal([template?.id ?? '']));
+
+        expect(statusesSent(ctx)).toEqual([
+            expect.objectContaining({ state: 'failed', retryable: true }),
+            expect.objectContaining({ state: 'failed', retryable: false }),
         ]);
     });
 });

@@ -359,7 +359,9 @@ describe('UpdatesModal', () => {
 
     // After a project's updates, its local copy is brought up to GitHub: one more step
     // in its panel that keeps its outcome (owner, 2026-10-21: a stage line vanished).
-    it("shows the local copy as a step in its project's panel, the project running until it ends", () => {
+    // The local copy is the last step of the update it follows, not a row of its own (owner,
+    // 2026-11-19): the update's row runs again for it, its bar saying the step.
+    it('brings the local copy up to date as the last step of its update, not a row of its own', () => {
         const c = running({
             'blockLibrary:0': { id: 'blockLibrary:0', state: 'done' },
             'localCopy:/p/tailspin': { id: 'localCopy:/p/tailspin', state: 'running' },
@@ -369,13 +371,15 @@ describe('UpdatesModal', () => {
         const tailspin = Array.from(container.querySelectorAll('.updates-group')).find((p) =>
             p.textContent?.includes('Tailspin'),
         ) as HTMLElement;
-        const step = Array.from(tailspin.querySelectorAll('.work-row')).at(-1) as HTMLElement;
-        expect(step).toHaveTextContent('Your Local Copy');
-        expect(step).toHaveTextContent('Updating your local copy');
+        const rows = Array.from(tailspin.querySelectorAll('.work-row'));
+        expect(rows).toHaveLength(1);
+        expect(rows[0]).toHaveAttribute('data-state', 'running');
+        expect(rows[0]).toHaveTextContent('Updating your local copy');
+        expect(screen.queryByText('Your Local Copy')).toBeNull();
         expect(tailspin.querySelector('.updates-run-header [role="progressbar"]')).not.toBeNull();
     });
 
-    it('keeps the local copy step once it ends, with why when it was left as it is', () => {
+    it("says on the update's row why the local copy was left as it is", () => {
         const c = running(
             {
                 'blockLibrary:0': { id: 'blockLibrary:0', state: 'done' },
@@ -389,7 +393,7 @@ describe('UpdatesModal', () => {
         );
         render(<UpdatesModal controls={c} />);
 
-        expect(screen.getByText('Your Local Copy')).toBeInTheDocument();
+        expect(screen.queryByText('Your Local Copy')).toBeNull();
         expect(screen.getByText('Left as it is — it has commits GitHub does not have.')).toHaveClass('text-notice');
     });
 

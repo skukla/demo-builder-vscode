@@ -84,6 +84,8 @@ export interface UpdateRowStatus {
     state: UpdateRowState;
     /** Done: what to know, when there is something. Failed or skipped: why. Plain words (PL-102). */
     message?: PlainText;
+    /** Failed: whether a retry can help (nothing answered, a busy server); else Fix with AI at once. */
+    retryable?: boolean;
 }
 
 /**

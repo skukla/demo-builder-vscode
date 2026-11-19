@@ -22,10 +22,24 @@ export const FIX_WITH_AI_HINT = 'Opens your AI assistant on this problem';
 export const RETRIES_BEFORE_FIX = 2;
 
 /**
- * The main button on a failure: Retry, then Fix with AI once retries have not helped.
+ * Failures a second try can get past: nothing answered, it took too long, the other side was busy
+ * or had a problem of its own. Anything else (a merge that cannot find its files) fails the same
+ * way again, so it goes to Fix with AI at once (owner, 2026-11-19).
+ */
+const PASSING = /did not (respond|answer)|timed? ?out|ETIMEDOUT|ECONNRESET|ECONNREFUSED|fetch failed|socket hang up|\b429\b|too many requests|rate limit|\b50[0-4]\b|busy|temporarily/iu;
+
+/** Whether a retry can help a failure, read off its raw words (read before they are made plain). */
+export function retryCanHelp(raw: string): boolean {
+    return PASSING.test(raw);
+}
+
+/**
+ * The main button on a failure: Retry, then Fix with AI once retries have not helped. A failure a
+ * retry cannot help offers Fix with AI at once.
  *
  * @param retries - tries since, all failed
+ * @param retryable - whether a retry can help this failure (`retryCanHelp`); true when unknown
  */
-export function failedButtonLabel(retries: number): string {
-    return retries < RETRIES_BEFORE_FIX ? 'Retry' : FIX_WITH_AI;
+export function failedButtonLabel(retries: number, retryable = true): string {
+    return retryable && retries < RETRIES_BEFORE_FIX ? 'Retry' : FIX_WITH_AI;
 }

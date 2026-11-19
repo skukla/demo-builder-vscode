@@ -153,15 +153,17 @@ describe("the running step says where it is among its project's steps", () => {
             />,
         );
 
-        const [first, second, copy] = rowsOf(container);
+        // Two updates and the local copy are three steps; the copy has no row of its own (2026-11-19).
+        const [first, second, ...more] = rowsOf(container);
         expect(first).toHaveTextContent('Step 1/3: Updating add-ons');
         expect(first.querySelector('[data-testid="spectrum-progressbar"]')).toHaveAttribute('aria-valuenow', '0');
         expect(first.querySelector('.work-row-detail')).toBeNull();
         expect(second).not.toHaveTextContent('Step');
-        expect(copy).toHaveTextContent('Your Local Copy');
+        expect(more).toHaveLength(0);
     });
 
-    it('says the local copy as the last step', () => {
+    // On the update it follows: the last that writes the storefront (owner, 2026-11-19).
+    it('says the local copy as the last step, on the update it follows', () => {
         const statuses: RowStatuses = {
             'blockLibrary:t0': { id: 'blockLibrary:t0', state: 'done' },
             'blockLibrary:t1': { id: 'blockLibrary:t1', state: 'done' },
@@ -171,7 +173,10 @@ describe("the running step says where it is among its project's steps", () => {
             <UpdatesRunView rows={TWO} statuses={statuses} progress={PROGRESS} onTyped={jest.fn()} remaining={0} rowFix={ROW_FIX} />,
         );
 
-        expect(rowsOf(container)[2]).toHaveTextContent('Step 3/3: Updating your local copy');
+        const [first, second] = rowsOf(container);
+        expect(second).toHaveTextContent('Step 3/3: Updating your local copy');
+        expect(second).toHaveAttribute('data-state', 'running');
+        expect(first).toHaveAttribute('data-state', 'done');
     });
 
     it('gives a project with one step no count, only the step', () => {
@@ -261,12 +266,22 @@ describe('an update that did not apply carries its button once the run ends', ()
         fixWithAi: jest.fn(),
         checkAgain: jest.fn(),
     });
-    const draw = (rowFix: RowFixControls, progress = ENDED) =>
-        render(<UpdatesRunView rows={ROWS.slice(0, 1)} statuses={FAILED} progress={progress} onTyped={jest.fn()} remaining={0} rowFix={rowFix} />);
+    /** The failed row, told whether a retry can help it (the extension reads that off the raw words). */
+    const draw = (rowFix: RowFixControls, progress = ENDED, retryable = false) =>
+        render(
+            <UpdatesRunView
+                rows={ROWS.slice(0, 1)}
+                statuses={{ 'blockLibrary:0': { ...FAILED['blockLibrary:0'], retryable } }}
+                progress={progress}
+                onTyped={jest.fn()}
+                remaining={0}
+                rowFix={rowFix}
+            />,
+        );
 
-    it('offers Retry first, and presses it for that row', () => {
+    it('offers Retry first for a failure a retry can help, and presses it for that row', () => {
         const rowFix = fixing({});
-        draw(rowFix);
+        draw(rowFix, ENDED, true);
 
         screen.getByRole('button', { name: 'Retry' }).click();
 
@@ -274,9 +289,19 @@ describe('an update that did not apply carries its button once the run ends', ()
         expect(screen.getByText('Could not merge.')).toHaveClass('work-row-why');
     });
 
+    // A merge that cannot find its files fails the same way again (owner, 2026-11-19).
+    it('offers Fix with AI at once for a failure a retry cannot help', () => {
+        const rowFix = fixing({});
+        draw(rowFix);
+
+        expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
+        screen.getByRole('button', { name: 'Fix with AI' }).click();
+        expect(rowFix.fixWithAi).toHaveBeenCalledWith('blockLibrary:0');
+    });
+
     it('offers Fix with AI once retrying has not helped', () => {
         const rowFix = fixing({ 'blockLibrary:0': { retries: 2, withAi: false, checking: false } });
-        draw(rowFix);
+        draw(rowFix, ENDED, true);
 
         screen.getByRole('button', { name: 'Fix with AI' }).click();
 
