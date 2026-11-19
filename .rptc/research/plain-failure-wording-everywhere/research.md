@@ -249,7 +249,17 @@ switches over and goes green before the next.
 5. **Agent text meant to be relayed:** should it be held to the same plain-words type (`tellUser`
    already is in spirit)?
 
-## Gaps
+## Owner answers, 2026-11-19
+
+- **2. Unknown causes:** approved. The fallback line is "Demo Builder couldn't tell what went wrong."
+- **3. Show Details:** yes. A person may see the raw text behind a Show Details control.
+- **4. `formatGitHubError`:** wire it in as the GitHub layer.
+- **1. Debug Logs** and **5. relayed agent text:** re-asked in plainer words; open. The
+  recommendation stands: keep the Open Debug Logs button, remove the sentence everywhere; and hold
+  only text an agent relays to a person (`tellUser`, the agent-failure warning) to plain words,
+  with raw words in the separate field for the agent.
+
+
 
 - The provider translators listed as "not examined" were not read.
 - Material Design guidance could not be fetched; the current Microsoft Writing Style Guide error page
