@@ -4,7 +4,7 @@ kind: fix
 area: platform
 needs: []
 value: low
-status: built
+status: shipped
 ---
 
 # The wizard's two config warnings should reach the log channel
@@ -19,3 +19,4 @@ bad saved file leaves a trace someone can read.
 ## Shipped so far
 
 - 2026-10-03  Built 2026-10-03: the two warnings live in wizardHelpers.buildProjectConfig (not useWizardState.ts), which now takes a warning sink; the wizard hands it WebviewClient.log, which BaseWebviewCommand writes to Debug Logs; the extension-host MCP caller keeps the console default.
+- 2026-11-20  Released in v1.0.0-beta.152 (c4f3bd94a); found at the beta.153 reconcile

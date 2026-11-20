@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-1
 needs: AB-1
 value: low
-status: built
+status: shipped
 layer: F
 ---
 # Promote a shell-built custom app to a GitHub repo
@@ -110,3 +110,4 @@ the dashboard action first; add the MCP tool later (see the `mcp-tool-authoring`
 - 2026-10-04  2026-10-05 Built to the owner's live check: first real Save to GitHub and its undo not yet run.
 - 2026-10-18  test(ai): keep the response-size suite under its 750-line limit (`5bbec3f7b`)
 - 2026-10-18  feat(ai): an agent can save an app to GitHub, and undo it (`b70b7c88c`)
+- 2026-11-20  Released in v1.0.0-beta.153

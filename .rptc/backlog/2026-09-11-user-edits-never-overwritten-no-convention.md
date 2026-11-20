@@ -5,7 +5,7 @@ area: platform
 parent: PL-30
 needs: []
 value: high
-status: built
+status: shipped
 layer: G
 ---
 
@@ -81,3 +81,4 @@ compared against an independent list of what matters.
 - 2026-10-03  Reconciled 2026-10-03: step 1's candidate defect is answered — homeAiContextWriter.ts is outside the hash-and-skip seam on purpose (no manifest; a banner says it is rewritten every activation). Record it as a ledgered exception rather than a bypass.
 - 2026-10-03  2026-10-03 (staged): the seam already had an enforcer (tests/templates/ai-bundle-coherence.test.ts) but it checked only three named writers; it now reads every file in aiBundle/, so a direct write needs a written reason — homeAiContextWriter, mcpConfigWriter (.gitignore append), globalMcpRegistration and aiDefaultsInstaller are the 4 recorded exceptions, pinned so the count only falls. No handbook convention written yet.
 - 2026-10-03  Reconciled 2026-10-03 (second pass): the 'uncommitted / staged' wording above is stale: the work is committed (6817f5486, f0b4705e3, b7bc129d2, 844afae69) and on feature/erp-integration.
+- 2026-11-20  Released in v1.0.0-beta.152 (b7bc129d2, 844afae69); found at the beta.153 reconcile

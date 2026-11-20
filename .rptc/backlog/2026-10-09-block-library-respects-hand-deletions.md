@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: med
-status: built
+status: shipped
 ---
 
 # A block library install put back block entries the SC had deleted
@@ -90,3 +90,4 @@ entry installed before 2026-10-09 and deleted later can still come back once.
 - 2026-10-09  fix(eds): a block library update keeps deleted block folders and stripped examples out (`36edd839e`)
 - 2026-10-09  docs(backlog): EDS-36 logs the folder and example commit (`f3dd6227e`)
 - 2026-10-09  docs(backlog): EDS-36 logs its commit (`1b61ee00d`)
+- 2026-11-20  Released in v1.0.0-beta.153

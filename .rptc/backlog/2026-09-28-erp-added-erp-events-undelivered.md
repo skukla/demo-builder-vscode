@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-16
 needs: []
 value: high
-status: built
+status: shipped
 ---
 
 # Events from an added ERP never reach the integration
@@ -37,3 +37,4 @@ workspace accepts. Decide with a measurement, then redeploy Contoso and prove on
 - 2026-09-28  Built and live on Bodea (2026-09-28): demo-erp main 7671773 (6434366 signs event posts with a publishing credential; 7671773 keeps a list-valued event's shape), Demo Builder 2d829598a (an added ERP is deployed with EVENTS_WEBHOOK_URL = the integration's ingestion URL and EVENTS_AUTH_* from the integration's workspace credential, through the same deploy-env path as ERP_SCREEN_KEY; never in the manifest or logs), integration 38a418d (contract vendored). Contoso price list activated 14:00:51: event delivered 14:00:51, price 1500 in Kukla Studios' catalog by 14:01:03; deactivated 14:01:22: removed by 14:01:34. The hourly publish (:05) did not run in between.
 - 2026-09-28  docs(backlog): AB-16i proven live; the stock event fix recorded (`bcb26b0c5`)
 - 2026-09-28  docs(backlog): AB-16i records the measured cause and the chosen shape (`f1b879ea8`)
+- 2026-11-20  Released in v1.0.0-beta.153

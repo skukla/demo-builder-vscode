@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: med
-status: built
+status: shipped
 ---
 
 # Commerce test data cleanup tools
@@ -99,3 +99,4 @@ So the shape is TWO generic tools over the whole REST surface, not per-entity to
 - 2026-10-02  docs(backlog): AB-29 — the REST tools used end to end; what is left is owner choices (`65e3ca268`)
 - 2026-10-02  Owner 2026-10-02: marked built (ACCS); the PaaS admin-token path is filed when a PaaS demo needs it
 - 2026-10-02  docs(backlog): AB-26m replaced by the Data Map (AB-16k); AB-29 built — owner decisions 2026-10-02 (`8a0578a91`)
+- 2026-11-20  Released in v1.0.0-beta.153

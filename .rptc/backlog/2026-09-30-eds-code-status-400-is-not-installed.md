@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: high
-status: built
+status: shipped
 ---
 
 # An inner code status 400 can mean "the App is not on this repository", and the check calls it installed
@@ -66,3 +66,4 @@ Not a hook or a scan: it is one code path, and the fix is the phase-3 classifica
 - 2026-10-03  Reconciled 2026-10-03 (second pass): the comment at githubAppService.ts (inner 200 and 400 'mean installed') is still wrong and will mislead until the fix lands.
 - 2026-10-03  2026-10-03 (worktree night2-b, uncommitted): an inner 400 is now 'undetermined', not installed; storefront setup decides by the code POST's x-error and pauses for the App (EDS-20's pause, ended by re-publishing the code) when it says 'github bot not installed', Republish words that refusal with the install link; live check left for the owner.
 - 2026-10-03  fix(eds,ai): setup waits for the Code Sync App instead of assuming it; teardown explains a read-only project; create_project takes a store scope (EDS-23, AB-18, AI-11) (`24d4902ae`)
+- 2026-11-20  Released in v1.0.0-beta.153

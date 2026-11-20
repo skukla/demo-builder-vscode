@@ -4,7 +4,7 @@ kind: fix
 area: platform
 needs: []
 value: med
-status: built
+status: shipped
 parent: PL-11
 ---
 
@@ -19,3 +19,4 @@ nothing and says which checks only see tracked files. Measure which six first.
 ## Shipped so far
 
 - 2026-10-03  Built 2026-10-03: measured 16 suites reading tracked files only (not six); all now list through architectureScan.workingTreeFiles (tracked plus untracked-not-ignored, existing on disk) or git grep --untracked, each proven by a planted untracked file that the old listing missed and the suite now fails on; tooling-registry stays tracked-only by its own stated reason.
+- 2026-11-20  Released in v1.0.0-beta.152 (c4f3bd94a); found at the beta.153 reconcile

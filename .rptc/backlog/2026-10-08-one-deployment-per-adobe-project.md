@@ -4,7 +4,7 @@ kind: fix
 area: app-builder
 needs: []
 value: med
-status: built
+status: shipped
 ---
 # One deployment per Adobe project
 
@@ -181,3 +181,4 @@ after "Refresh registrations", and Apps > App Management lists one app.
 - 2026-10-08  fix(app-builder): name what a removal checks, and say why Adobe refused a delete (`cb5c45420`)
 - 2026-10-08  docs(backlog): AB-69 logs cb5c45420 (`c1ba61c66`)
 - 2026-10-19  Reassessed 2026-10-19 (loop): the built scope is on the branch; one browser check remains, in the walkthrough queue
+- 2026-11-20  Released in v1.0.0-beta.153

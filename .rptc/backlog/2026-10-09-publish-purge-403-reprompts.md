@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: med
-status: built
+status: shipped
 ---
 
 # Publish and cache purge give up on an expired session that preview recovers from
@@ -47,3 +47,4 @@ on a 403 for preview and publish alike. It has no way to prompt, so it was left.
 ## Shipped so far
 - 2026-10-09  fix(eds): publish, bulk publish and cache purge re-prompt on a refused session (`e3dd47a54`)
 - 2026-10-09  docs(backlog): EDS-34 built, logs its commit (`9c06ced5c`)
+- 2026-11-20  Released in v1.0.0-beta.153

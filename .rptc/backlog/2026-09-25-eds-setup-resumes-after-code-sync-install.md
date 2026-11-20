@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: high
-status: built
+status: shipped
 ---
 
 # Setup resumes when the install dialog detects AEM Code Sync, instead of demanding a Retry
@@ -73,3 +73,4 @@ what `createRepoFromSource` does today when the name already exists.
 
 - 2026-09-25  fix(eds): setup waits for AEM Code Sync inside the run and resumes where it paused (`b920b2936`)
 - 2026-09-25  refactor(eds): the install dialog's "site not registered" screen was unreachable; delete it (`058e89e4b`)
+- 2026-11-20  Released in v1.0.0-beta.153

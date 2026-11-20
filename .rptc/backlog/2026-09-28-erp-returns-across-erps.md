@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-16
 needs: []
 value: med
-status: built
+status: shipped
 ---
 
 # Returns across several ERPs
@@ -47,3 +47,4 @@ credit memo per ERP. A refusing ERP's piece stays open with Re-send.
 - 2026-10-02  docs(returns): R-T1 answered live — Commerce has a return save event; storefront returns are off on Tailspin (`8d94bf06a`)
 - 2026-10-02  chore(sop): register the order-to-return rehearsal as a manual, non-scheduled script (`8a662c3fa`)
 - 2026-10-02  feat(setup): the ERP integration's demo setup guide switches on storefront returns, and checks it (`f04395ef9`)
+- 2026-11-20  Released in v1.0.0-beta.153

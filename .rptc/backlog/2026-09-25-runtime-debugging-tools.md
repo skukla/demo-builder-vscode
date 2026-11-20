@@ -4,7 +4,7 @@ kind: feature
 area: ai
 needs: []
 value: high
-status: built
+status: shipped
 ---
 
 # Runtime debugging from the agent surface — the three gaps the ERP validation measured
@@ -54,6 +54,7 @@ shows the recorded run of an invoked action.
 - 2026-09-25  docs(report): the Runtime debugging tools shipped and proven live; AB-31 built (`b415af03c`)
 - 2026-09-25  fix(ai): read_runtime_activation takes an action's lines from activation logs (`45e815a43`)
 - 2026-09-25  fix(ai): a successful direct invoke says its log lines were not kept (`9633e6729`)
+- 2026-11-20  Released in v1.0.0-beta.153
 
 ## Built (2026-09-25, same day)
 

@@ -4,7 +4,7 @@ kind: fix
 area: platform
 needs: []
 value: low
-status: built
+status: shipped
 ---
 
 # The hooks resolve a shell edit's path against the wrong folder when the command starts with `cd`
@@ -51,3 +51,4 @@ path exists in both folders at different sizes.
 
 - 2026-10-18  docs(backlog): EDS-53 built; PL-83 records the hooks resolving shell paths in the wrong folder (`a93155cb4`)
 - 2026-10-19  fix(hooks): a shell edit after a leading cd is checked in the folder it writes (`e02d5791b`)
+- 2026-11-20  Released in v1.0.0-beta.153

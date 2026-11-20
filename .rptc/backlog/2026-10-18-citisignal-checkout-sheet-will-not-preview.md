@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: med
-status: built
+status: shipped
 ---
 
 # CitiSignal's checkout label sheet will not preview on a copy
@@ -95,3 +95,4 @@ Related: [[EDS-40]], which moved sheet copying to DA.live's native JSON document
 - 2026-10-17  docs(backlog): EDS-53 records why CitiSignal's checkout sheet will not preview (`3c28a2001`)
 - 2026-10-18  fix(eds): template label files no longer hide the copied sheets (`3d4804ab1`)
 - 2026-10-17  docs(backlog): EDS-53 records why CitiSignal's checkout sheet will not preview (`ffce66d8e`)
+- 2026-11-20  Fix released in v1.0.0-beta.152 (3d4804ab1). A live preview of the checkout sheet on a CitiSignal copy was not re-checked

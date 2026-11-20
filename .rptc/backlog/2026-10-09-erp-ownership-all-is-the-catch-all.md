@@ -4,7 +4,7 @@ kind: fix
 area: app-builder
 needs: []
 value: high
-status: built
+status: shipped
 ---
 
 # ERP ownership: the ERP on "everything" is the catch-all
@@ -61,3 +61,4 @@ the extension was proven by its suites only.
 ## Shipped so far
 
 - 2026-10-09  fix(erp): an ERP on everything is the catch-all for products no other ERP claims (`5d1a60d89`)
+- 2026-11-20  Released in v1.0.0-beta.153

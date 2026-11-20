@@ -4,7 +4,7 @@ kind: feature
 area: ai
 needs: []
 value: high
-status: built
+status: shipped
 ---
 
 # Ownership reconcile: adding or removing an ERP leaves no products behind
@@ -101,3 +101,4 @@ live: add and remove with the pass, and the integration's old-owner discontinue 
 - 2026-10-09  Live remove of Kukla ERP (human surface) completed with 'Tailspin ERP owns every product again', but the 278 products Tailspin owned again stayed discontinued (an import never resets a status). Fixed both sides: extension pass restores sellable (7c47869b9); integration restores at the owner (commerce-erp-integration ad1f4c3 on feature/ownership-reconcile, not pushed or deployed yet). Owner-side next: F5, then Load demo data on Tailspin to restore the 278.
 - 2026-10-09  Integration owner-side restore (commerce-erp-integration ad1f4c3, contract v21 51dc746) pushed to main and deployed to Tailspin via update_integration. Tailspin ERP redeployed at demo-erp 89a3ad0 (order page shows the next step; v21).
 - 2026-10-09  fix(integrations): removing an ERP takes it off its integration's systems list (`b000fd5b5`)
+- 2026-11-20  Released in v1.0.0-beta.153

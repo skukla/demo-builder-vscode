@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: med
-status: built
+status: shipped
 ---
 
 # An integration's settings live on its tile, not on Configure Project
@@ -36,3 +36,4 @@ Plan: `.rptc/plans/integration-settings-on-tile/overview.md`.
 
 - 2026-09-18  feat(integrations): an integration's settings live on its tile, not Configure Project (`807c5b704`)
 - 2026-09-18  test(ai): configure_project suites share one setup file (`fb9db3d75`)
+- 2026-11-20  Released in v1.0.0-beta.153

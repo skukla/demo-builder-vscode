@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: med
-status: built
+status: shipped
 ---
 
 # One Commerce instance runs one ERP integration
@@ -92,3 +92,4 @@ store and needs the owner's go-ahead.
 
 - 2026-10-15  feat(app-builder): one ERP integration per Commerce instance (`85b7abbef`)
 - 2026-10-15  fix(app-builder): say why the ERP integration is unavailable in a banner (`bf20bae50`)
+- 2026-11-20  Released in v1.0.0-beta.153

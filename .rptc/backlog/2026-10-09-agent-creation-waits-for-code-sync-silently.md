@@ -4,7 +4,7 @@ kind: fix
 area: ai
 needs: []
 value: med
-status: built
+status: shipped
 ---
 
 # Agent-run project creation waited for the AEM Code Sync App and told nobody
@@ -52,3 +52,4 @@ Not fixed here, recorded:
 ## Shipped so far
 - 2026-10-09  fix(ai): a creation waiting for the Code Sync App now asks the user in VS Code (`b84f00a66`)
 - 2026-10-09  docs(backlog): AI-14 logs its commit (`2508721d8`)
+- 2026-11-20  Released in v1.0.0-beta.153

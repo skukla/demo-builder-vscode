@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: med
-status: built
+status: shipped
 ---
 
 # The sign-in status says DA.live is signed in when the sign-in has expired
@@ -30,3 +30,4 @@ answer for both. Test: an expired stored token reads as not authenticated.
 ## Shipped so far
 
 - 2026-10-19  fix(ai): get_auth_status asks DA.live whether the stored sign-in still works (`604743e70`)
+- 2026-11-20  Released in v1.0.0-beta.153

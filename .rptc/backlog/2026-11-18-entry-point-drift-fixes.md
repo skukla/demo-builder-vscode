@@ -4,7 +4,7 @@ kind: chore
 area: platform
 needs: []
 value: high
-status: built
+status: shipped
 ---
 
 # Make the drifted doors of 13 user actions agree
@@ -68,3 +68,4 @@ Read 2026-11-18 (F269); every entry point is now assigned in
 - 2026-11-18  fix(conventions): agent project creation shares the wizard's limit and stop; Manage APIs refuses unknown integrations (PL-104 fixes 14, 15) (`a45e5f6e3`)
 - 2026-11-18  fix(conventions): every user action has one path, and every entry point is assigned to one (PL-104) (`b1c60f137`)
 - 2026-11-18  feat(conventions): every user action's entry points are listed and checked; Sign In Again is a fresh sign-in (F250, F251) (`cee5790b1`)
+- 2026-11-20  Released in v1.0.0-beta.153

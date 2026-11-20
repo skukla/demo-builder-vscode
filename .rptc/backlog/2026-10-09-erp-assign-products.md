@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: high
-status: built
+status: shipped
 ---
 
 # Assign products to an ERP, and put erp_owner in every attribute set
@@ -72,3 +72,4 @@ with and without the project's Store header), and confirm the bulk status's oper
 - 2026-10-19  feat(erp): Assign products opens on its frame, with less to read (`cc3b3b895`)
 - 2026-10-19  fix(erp): Assign products renders its table, and Add another ERP links to it (`f73534681`)
 - 2026-10-19  feat(erp): Assign products as a table of the store's own products, and lighter ERP menus (`75fb01457`)
+- 2026-11-20  Released in v1.0.0-beta.153

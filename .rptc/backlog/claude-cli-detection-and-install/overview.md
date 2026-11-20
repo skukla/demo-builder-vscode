@@ -5,7 +5,7 @@ area: ai
 parent: AI-4
 needs: [PR-1]
 value: med
-status: built
+status: shipped
 layer: F
 ---
 # Engine-aware AI launch + detection + opt-in install (Claude wired, Codex placeholders)
@@ -426,3 +426,4 @@ Acceptance criteria:
 ## Shipped so far
 
 - 2026-10-03  Small fix built 2026-10-03: Open in Claude Code asks the command executor whether claude is installed (present answer cached for the session) and, if not, shows a plain message with a link to https://claude.com/code and opens no terminal; the AI badge turns yellow 'Claude Code not installed' on both verify paths; the engine registry, Codex placeholders and install button still wait on PR-1.
+- 2026-11-20  Small fix released in v1.0.0-beta.152 (c4f3bd94a); found at the beta.153 reconcile

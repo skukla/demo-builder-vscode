@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: high
-status: built
+status: shipped
 ---
 
 # The Code Sync sub-step leaves the Storefront area; setup is the one place the App is asked about
@@ -50,3 +50,4 @@ demand a Retry from the start.
 ## Shipped so far
 
 - 2026-09-25  fix(eds): the Code Sync sub-step leaves the Storefront area; setup is the one place the App is asked about (`f5e337672`)
+- 2026-11-20  Released in v1.0.0-beta.153

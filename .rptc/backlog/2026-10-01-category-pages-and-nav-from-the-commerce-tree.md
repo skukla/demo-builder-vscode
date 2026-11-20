@@ -4,7 +4,7 @@ kind: feature
 area: eds
 needs: []
 value: high
-status: built
+status: shipped
 waiting-on: the owner watching the first real run on Tailspin
 ---
 
@@ -197,3 +197,4 @@ before anyone can see it.
 - 2026-10-22  2026-10-22 revised (owner, uncommitted): category pages at each category's own address (/signs), not /categories/; authored pages there kept by /authored-category-pages.json, published before any category path; menu links /{cleaned url path}. S0 measured on scratch-1022-b: the overlay wins on preview.
 - 2026-10-23  feat(eds): every known fix reaches every storefront; the report is a window (`c75b52793`)
 - 2026-10-25  feat(eds): write the catalog line the storefront's block reads, "Commerce:" since this change (`4126b81cd`)
+- 2026-11-20  Released in v1.0.0-beta.153

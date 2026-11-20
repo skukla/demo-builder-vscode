@@ -4,7 +4,7 @@ kind: feature
 area: ai
 needs: []
 value: high
-status: built
+status: shipped
 ---
 
 # A demo-data authoring skill: an SC's agent builds and loads the demo data from a brief
@@ -58,3 +58,4 @@ service owns DATAPACKS (published sample data); this is the authoring side that 
 - 2026-10-01  2026-10-01, owner: two purposes, kept apart — SHARING finished work is the datapack (DI-1/DI-3); THIS item is an agent working Commerce data without hitting walls. Learned from the Tailspin tree restructure, for this item: (1) a read-only visibility check — productSearch once per customer group beside a Catalog Service lookup by SKU — names permissions vs stock vs feed in one call; the 'stuck index' was B2B category permissions for most of a day; (2) a new category is invisible on a B2B website until a shared catalog grants it — the skill must grant and verify per group (EDS-24 has the measurements); (3) write_commerce_rest's 'requires confirm' refusal and an expired Adobe session both answer as plain text, so a script read both as success — tool answers that refuse must be marked errors; (4) category product links went one call each (25 calls, ~15 min) — prove the bulk route for categories/{id}/products.
 - 2026-10-04  2026-10-04 loop (night 4): built the always-on author-commerce-data skill (plan before writing, order of operations, silent create failures as rules, bulk loads + status poll, B2B category grants, per-customer-group visibility table, 'Error: wrote nothing', the undo list); AI_CONTEXT_VERSION 36. run_commerce_rest, write_commerce_rest and run_commerce_query now mark every 'Error:' answer isError (owner note 3 — only the confirm refusal did). Plan: .rptc/plans/demo-data-authoring/overview.md. Owner live check: paste a brief in a scratch ACCS project and watch the agent follow the skill.
 - 2026-10-04  feat(eds,ai): adopt an empty org repository, explain GitHub org refusals, and a skill for building catalog data (`dd6784bb0`)
+- 2026-11-20  Released in v1.0.0-beta.153

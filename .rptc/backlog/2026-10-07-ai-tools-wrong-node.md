@@ -4,7 +4,7 @@ kind: fix
 area: ai
 needs: []
 value: med
-status: built
+status: shipped
 ---
 
 # The AI tools install and run on whatever Node is first on the PATH
@@ -49,3 +49,4 @@ ERP install the same minute ran "npm install with Node 24" through fnm (`ensureF
 - 2026-10-07  fix(ai): the AI tools update runs on the same Node as their install (`8c4f266bf`)
 - 2026-10-07  docs(ai): the dropins server lists 20 tools; AI-13 built and proven live (`5ec5d633b`)
 - 2026-10-07  docs(backlog): AI-13 logs the update-path fix (`15a3cac37`)
+- 2026-11-20  Released in v1.0.0-beta.153

@@ -4,7 +4,7 @@ kind: fix
 area: app-builder
 needs: []
 value: med
-status: built
+status: shipped
 ---
 
 # An update whose deploy failed then says "already up to date"
@@ -51,3 +51,4 @@ Run Redeploy (button or `redeploy_integration`) after an update whose deploy fai
 
 - 2026-10-09  fix(integrations): an update whose deploy failed is finished by the next update (`35fcc97f7`)
 - 2026-10-09  docs(backlog): file AB-71, an update whose deploy failed then says up to date (`ec32d2197`)
+- 2026-11-20  Released in v1.0.0-beta.153

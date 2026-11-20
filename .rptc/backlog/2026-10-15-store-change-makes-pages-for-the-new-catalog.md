@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: med
-status: built
+status: shipped
 ---
 
 # Changing the store in Configure makes pages for the new catalog
@@ -32,3 +32,4 @@ Related: EDS-27 (new categories get pages), EDS-24 (category pages at setup).
 ## Shipped so far
 
 - 2026-10-15  feat(eds): a store change replaces the storefront's product and category pages (`54e5d35f3`)
+- 2026-11-20  Released in v1.0.0-beta.153

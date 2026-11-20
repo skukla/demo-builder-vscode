@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: med
-status: built
+status: shipped
 ---
 
 # The new-category offer reads the SAVED store, before it is published
@@ -43,3 +43,4 @@ codes instead of the saved ones. Check against the auto-add path too
 ## Shipped so far
 
 - 2026-10-19  fix(eds): the new-category check waits while a store change awaits its republish (`8ab77044c`)
+- 2026-11-20  Released in v1.0.0-beta.153

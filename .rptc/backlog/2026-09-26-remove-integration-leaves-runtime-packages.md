@@ -4,7 +4,7 @@ kind: fix
 area: app-builder
 needs: []
 value: med
-status: built
+status: shipped
 ---
 
 # Removing an integration reports Runtime packages left behind in a workspace it then deletes
@@ -36,3 +36,4 @@ workspace) or the warning says what is actually true.
 - 2026-09-26  test(dashboard): the runtimePackageHandlers suites share their setup (`7f5b729c1`)
 - 2026-09-27  feat(app-builder): a removal's own workspace takes its Runtime leftovers with it (`0bd170f23`)
 - 2026-09-27  docs(backlog): deleting a workspace removes its namespace ~11 minutes later (`29b9653f1`)
+- 2026-11-20  Released in v1.0.0-beta.153

@@ -3,7 +3,7 @@ id: PL-35
 kind: fix
 area: eds
 value: med
-status: built
+status: shipped
 needs: []
 ---
 
@@ -51,3 +51,4 @@ fixture has to supply a brand and stack these suites do not currently set.
 ## Shipped so far
 
 - 2026-10-03  The stand-in was never called: both dashboard suites mock resetEdsProjectWithUI, the only thing their handler calls, so the fake and its edsResetService mock were deleted (a throwing probe passed 13/13 before the delete); the real function's own suite covers the daLiveSite fallback.
+- 2026-11-20  Released in v1.0.0-beta.152 (b7bc129d2); found at the beta.153 reconcile, where the tool saw no trailer

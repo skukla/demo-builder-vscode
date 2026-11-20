@@ -4,7 +4,7 @@ kind: fix
 area: app-builder
 needs: []
 value: high
-status: built
+status: shipped
 parent: AB-26
 ---
 
@@ -54,3 +54,4 @@ which entry each belongs to.
 ## Shipped so far
 
 - 2026-10-02  fix(erp): a reset follows an undo that outruns 60 seconds (AB-61) (`4aa7df983`)
+- 2026-11-20  Released in v1.0.0-beta.153

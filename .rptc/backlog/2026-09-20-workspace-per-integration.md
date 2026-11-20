@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-9
 needs: []
 value: high
-status: built
+status: shipped
 ---
 
 # Every integration and system gets its own Adobe workspace
@@ -514,3 +514,4 @@ and re-adding an integration — no migration code ships.
 - 2026-10-28  fix(integrations): filtering keeps the selected project in view (`507291f05`)
 - 2026-10-28  docs(release-test): row 4.28 passes (`78ea55502`)
 - 2026-10-28  fix(ui): integration names wrap; destination modal title stays short (`f58270feb`)
+- 2026-11-20  Released in v1.0.0-beta.153

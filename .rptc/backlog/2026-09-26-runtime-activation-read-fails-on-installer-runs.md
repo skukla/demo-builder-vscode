@@ -4,7 +4,7 @@ kind: fix
 area: ai
 needs: []
 value: med
-status: built
+status: shipped
 ---
 
 # read_runtime_activation cannot read the App Management installer's runs
@@ -26,3 +26,4 @@ through the running dev host with `mcp-live-probe`.
 ## Shipped so far
 
 - 2026-09-26  2356ed280: a sequence component Runtime did not keep (activation get 404) reads as 'not recorded' and the read goes on. Proven live: the installer run 3d2cecc4 that failed this morning now reads, answering its 409 already-current.
+- 2026-11-20  Released in v1.0.0-beta.153

@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-9
 needs: []
 value: high
-status: built
+status: shipped
 ---
 
 # A Commerce product profile the SC is not a developer on locks them out of their own project
@@ -68,3 +68,4 @@ extension cannot tear it down.
 - 2026-09-20  Verified 2026-09-20, NOT just taken on word: a create+delete round trip in Bodea's CURRENT project returned HTTP 200 in 3s and removed the Runtime namespace too. But the read-only project from 2026-09-17 still holds both undeleted spike workspaces — the condition was moved away from, not shown fixed. Keep this item.
 - 2026-10-03  Reconciled 2026-10-03 (second pass): fix step 2 relied on PL-61, which is dropped (2026-10-03). Step 1 is partly done by c8f8e30ae (beta.148) for deploys, not teardown.
 - 2026-10-03  2026-10-03 (worktree night2-b, uncommitted): the read-only-project and missing-licence refusals now read in plain words on workspace delete (removal, move, delete_workspace), Console project teardown and a removal's Commerce clean-up, via explainMissingDeveloperAccess beside c8f8e30ae's helper; fix step 2 dropped with PL-61.
+- 2026-11-20  Released in v1.0.0-beta.153

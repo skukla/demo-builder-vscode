@@ -4,7 +4,7 @@ kind: fix
 area: app-builder
 needs: []
 value: low
-status: built
+status: shipped
 ---
 
 # add_integration's answer names the catalog entry, not the name the SC gave
@@ -17,3 +17,4 @@ should carry the display name the add stored. Check the button path's toast for 
 ## Shipped so far
 
 - 2026-09-26  2e037d232: the answer carries the progress title's name (Northwind ERP Integration). Tested; not yet seen live (needs an add).
+- 2026-11-20  Released in v1.0.0-beta.153

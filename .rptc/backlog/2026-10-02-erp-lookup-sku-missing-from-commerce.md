@@ -5,7 +5,7 @@ area: app-builder
 parent: AB-26
 needs: []
 value: low
-status: built
+status: shipped
 ---
 
 # The ERP lookup fails on a SKU Commerce does not have
@@ -39,3 +39,4 @@ no longer has.
 - 2026-10-02  fix(lookup): a SKU Commerce lacks no longer fails the lookup with several ERPs, commerce-erp-integration main 3b13fe2; not yet deployed to Tailspin
 - 2026-10-02  deployed to Tailspin with f63574a (2026-10-02 05:13Z)
 - 2026-10-02  docs(backlog): file AB-54, the ERP lookup failing on a SKU Commerce lacks (`e9d9b4a9e`)
+- 2026-11-20  Released in v1.0.0-beta.153

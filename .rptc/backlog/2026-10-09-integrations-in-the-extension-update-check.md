@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: med
-status: built
+status: shipped
 ---
 
 # Integrations in the extension update check
@@ -61,3 +61,4 @@ Integrations card badge (unchanged, same `updateAvailable`).
 
 - 2026-10-09  feat(updates): integration updates in the startup check and Check for Updates (`8cf36fb43`)
 - 2026-10-11  fix(updates): the update check on load never opens a browser to sign in (`5c67dc0cd`)
+- 2026-11-20  Released in v1.0.0-beta.153

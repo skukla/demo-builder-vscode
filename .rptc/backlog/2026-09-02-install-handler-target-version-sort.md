@@ -3,7 +3,7 @@ id: PL-36
 kind: fix
 area: prerequisites
 value: med
-status: built
+status: shipped
 needs: []
 ---
 
@@ -49,3 +49,4 @@ rather than in the nodeVersions suite.
 - 2026-09-24  The loop stopped on the owner's word (2026-09-24) before any work on this item; the pickup note above stands as the staleness check for whoever picks it up next
 - 2026-10-03  Test added in installHandler-plugins.test.ts: out-of-order missing versions must run their install steps in numeric order; it fails against both a bare .sort() and no sort (2026-10-03, uncommitted on loop/2026-10-03-overnight).
 - 2026-10-03  Reconciled 2026-10-03 (second pass): the 'uncommitted / staged' wording above is stale: the work is committed (6817f5486, f0b4705e3, b7bc129d2, 844afae69) and on feature/erp-integration.
+- 2026-11-20  Released in v1.0.0-beta.152 (6817f5486); found at the beta.153 reconcile

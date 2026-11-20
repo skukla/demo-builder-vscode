@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: high
-status: built
+status: shipped
 ---
 
 # Prepare this store: the ERP setup steps the extension can apply, not only check
@@ -71,3 +71,4 @@ SC's setup time goes. AB-74 and AB-75 only help the multi-ERP case.
 - 2026-10-10  Merge branch 'feature/prepare-this-store' into integration/2026-10-11 (`d6c3d9016`)
 - 2026-10-10  test(dashboard): the ERP card's menu test expects Prepare this store (`18c21cd7f`)
 - 2026-10-19  fix(erp): removing the ERP integration undoes its store setup first (`0ad0de345`)
+- 2026-11-20  Released in v1.0.0-beta.153

@@ -4,7 +4,7 @@ kind: chore
 area: eds
 needs: []
 value: med
-status: built
+status: shipped
 ---
 
 # The storefront pipeline's warnings travel one route, not one each
@@ -41,3 +41,4 @@ A new pipeline warning is then one line in its step.
 - 2026-10-20  refactor(eds): the storefront pipeline's warnings travel one route (`3d8461a9c`)
 - 2026-10-20  style(tests): prettier on the pipeline and reset suites EDS-55 is about to change (`a5f45826e`)
 - 2026-10-20  refactor(eds): MissingPagesResult is no longer named outside its file (`6aae05e17`)
+- 2026-11-20  Released in v1.0.0-beta.153

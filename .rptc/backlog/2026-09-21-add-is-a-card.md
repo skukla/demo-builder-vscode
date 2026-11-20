@@ -4,7 +4,7 @@ kind: feature
 area: platform
 needs: []
 value: low
-status: built
+status: shipped
 ---
 
 # Adding something is a card, everywhere
@@ -80,3 +80,4 @@ Filed 2026-09-21.
 - 2026-10-03  feat: adding an integration is a card; UI tests span two VS Code surfaces (PL-62, PL-66) (`0f4d01ba2`)
 - 2026-10-04  Finished the last two grids (night4-b, staged, uncommitted). Your Projects: the header 'New' button is gone; a 'New project' card is the last cell of the grid AND the list, and opens the SAME New / Copy from existing / Import from file menu (owner decision 2026-10-05). AddCard gained a menu variant: the card holds one Spectrum ActionButton that fills it (MenuTrigger only attaches to a Spectrum pressable). Prompt library: '+ New prompt' was the same job, so it is now the shared AddCard ('New prompt'); its own .prompt-new-tile CSS rule deleted; it now steps aside while a search is on (same rule as every grid; one test pinned the old behaviour and was changed on purpose). add-card.css now reaches projectsList and aiOverview too (stylesheet-bundles test green). A one-line AddCard is now named by its text, not an aria-label (an aria-label made it answer every label query on the AI screen). Menu-open tests ran unchanged through the card. Gate green (31,457 tests). Not done: webview-visual-baseline + a visual look (CSS changed on three surfaces) — needs the owner.
 - 2026-10-04  feat: save a blank-starter app to GitHub; adding is a card on every grid (`79f8ed297`)
+- 2026-11-20  Released in v1.0.0-beta.153

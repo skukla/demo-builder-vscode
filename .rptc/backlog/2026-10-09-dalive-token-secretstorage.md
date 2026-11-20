@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: med
-status: built
+status: shipped
 ---
 
 # The DA.live access token sat in plaintext globalState
@@ -51,3 +51,4 @@ and stays.
 
 - 2026-10-09  fix(eds): keep the DA.live token in SecretStorage, not globalState (`2d5f8f496`)
 - 2026-10-09  docs(backlog): EDS-35 built, logs its commit (`6bf22878c`)
+- 2026-11-20  Released in v1.0.0-beta.153
