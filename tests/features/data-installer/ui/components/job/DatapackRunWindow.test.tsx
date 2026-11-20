@@ -97,7 +97,7 @@ describe('an install while it runs', () => {
         const shown = renderRun({ record });
 
         // Line 1 the job, line 2 the type and its count (owner, 2026-11-16).
-        expect(shown.getByText('Installing in Commerce')).toBeInTheDocument();
+        expect(shown.getByText('Step 1/2: Installing in Commerce')).toBeInTheDocument();
         expect(shown.getByText('Products, 450 of 2,046')).toBeInTheDocument();
     });
 
@@ -109,7 +109,7 @@ describe('an install while it runs', () => {
         };
         const shown = renderRun({ record });
 
-        expect(shown.getByText('Installing in Commerce')).toBeInTheDocument();
+        expect(shown.getByText('Step 1/2: Installing in Commerce')).toBeInTheDocument();
         expect(shown.getByText('Products: linking product options, 2,044 of 2,046')).toBeInTheDocument();
     });
 
@@ -130,7 +130,7 @@ describe('an install while it runs', () => {
         });
 
         expect(shown.queryByTestId('import-run')).toBeNull();
-        expect(shown.getByText('Saving Your Changes')).toBeInTheDocument();
+        expect(shown.getByText('Step 1/4: Saving Your Changes')).toBeInTheDocument();
         expect(shown.getByText('Saving to the library')).toBeInTheDocument();
     });
 });
@@ -285,7 +285,7 @@ describe('an uninstall', () => {
             uninstalling: { saves: true, savedTo: 'My Luma' },
         });
 
-        expect(shown.getByText('Uninstalling from Commerce')).toBeInTheDocument();
+        expect(shown.getByText('Step 2/2: Uninstalling from Commerce')).toBeInTheDocument();
         expect(shown.getByText('Products, 12 of 40')).toBeInTheDocument();
         expect(shown.queryByText(/^Install /u)).toBeNull();
     });
