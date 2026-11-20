@@ -88,30 +88,44 @@ export function isJustCreatedSelection(
     return Boolean(createdRepo && selectedRepo && createdRepo.fullName === selectedRepo.fullName);
 }
 
+/** What the reset control shows: the tick, and the house banner (`InlineNotice`) under it. */
+export interface ResetOptionView {
+    checked: boolean;
+    locked: boolean;
+    tone: 'info' | 'warn' | 'none';
+    /** The banner's bold first line; empty when there is no banner. */
+    title: string;
+    /** The line under it. */
+    detail: string;
+}
+
+/** No banner, the tick off and locked. */
+const SILENT: ResetOptionView = { checked: false, locked: true, tone: 'none', title: '', detail: '' };
+
+/** "a", "a and b", "a, b and c". */
+function listed(items: string[]): string {
+    if (items.length < 2) return items.join('');
+    return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
+}
+
 /**
  * Decide the reset control's appearance from what the repo actually contains.
  *
- * The control stays rendered in every state — including its notice row — so the
- * layout never reflows as readiness resolves. That was already true of the
- * warning row and is worth keeping: a step that jumps as you look at it reads
- * as broken.
+ * The notice is the house banner (owner, 2026-11-20): a bold line naming the
+ * condition, then what happens or what to do. It slides open under the tick and
+ * closes when there is nothing to say.
  */
 export function describeResetOption(
     readiness: RepoReadinessState | undefined,
     resetToTemplate: boolean,
     disabled: boolean,
     unusable = false,
-): { checked: boolean; locked: boolean; tone: 'info' | 'warn' | 'none'; message: string } {
+): ResetOptionView {
     // Nothing to say while the repo is unusable for a DIFFERENT reason. Its own
-    // notice is already on screen, and "Setup cannot complete without a reset"
-    // would be a false promise here — the reset clones `--branch main`, which is
-    // exactly what this repo does not have. Two amber lines competing, one of
-    // them wrong.
-    if (unusable) {
-        return { checked: false, locked: true, tone: 'none' as const, message: '' };
-    }
-
-    if (disabled) return { checked: false, locked: true, tone: 'none', message: '' };
+    // notice is already on screen, and telling the SC to tick Reset would be a
+    // false promise here — the reset clones `--branch main`, which is exactly
+    // what this repo does not have. Two amber banners competing, one of them wrong.
+    if (unusable || disabled) return SILENT;
 
     if (readiness?.kind === 'empty') {
         // Nothing to lose, so nothing to consent to. Shown as done, not asked.
@@ -119,7 +133,8 @@ export function describeResetOption(
             checked: true,
             locked: true,
             tone: 'info',
-            message: 'This repository is empty — it will be set up from the template.',
+            title: 'This repository is empty.',
+            detail: 'It will be set up from the template.',
         };
     }
 
@@ -128,18 +143,17 @@ export function describeResetOption(
             checked: resetToTemplate,
             locked: false,
             tone: 'warn',
-            message:
-                `Missing ${readiness.missing.join(', ')}. ` +
-                'Setup cannot complete without a reset.',
+            title: "This repository isn't a storefront.",
+            detail: `It is missing ${listed(readiness.missing)}. Tick Reset to set it up from the template.`,
         };
     }
 
+    if (!resetToTemplate) return { ...SILENT, locked: false };
     return {
-        checked: resetToTemplate,
+        checked: true,
         locked: false,
-        tone: resetToTemplate ? 'warn' : 'none',
-        message: resetToTemplate
-            ? 'This will delete and recreate the repository with the selected template content.'
-            : '',
+        tone: 'warn',
+        title: 'Everything in this repository will be replaced.',
+        detail: 'It is deleted and made again from the template.',
     };
 }

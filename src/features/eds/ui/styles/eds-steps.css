@@ -143,24 +143,24 @@
 }
 
 /* ========== Reset Warning Animation ========== */
-/* 
- * Smooth fade in/out transition for the "Reset to template" warning message.
- * Used in both GitHub and DA.live steps when the reset checkbox is toggled.
- */
-@layer theme {
-.reset-warning-container {
-    /* Fixed height container prevents layout jump during animation */
-}
-}
-
-/* The warning collapses its own height when unchecked (rather than reserving a
-   permanent empty line), reclaiming vertical space; it animates open on check. */
+/* The banner under the "Reset to template" tick collapses its own height when there is
+   nothing to say (rather than reserving permanent empty room) and animates open. The cap
+   only has to clear the banner's tallest wrap, at the narrowest wizard column: it is the
+   house InlineNotice since 2026-11-20, two lines of text and its padding. */
 @layer theme {
 .reset-warning-visible {
-    max-height: 3em;
+    max-height: 12em;
     opacity: 1;
     overflow: hidden;
     transition: max-height var(--spectrum-global-animation-duration-200) ease-out, opacity var(--spectrum-global-animation-duration-200) ease-out;
+}
+}
+
+/* The banner's own bottom margin is for a banner above content; here the section's
+   padding and rule already sit under it. */
+@layer theme {
+.reset-warning-visible > .inline-notice {
+    margin: 0;
 }
 }
 
