@@ -16,6 +16,7 @@ import type { StepRunner } from './creationPause';
 import type { CreationReporter } from './creationProgress';
 import { executeSampleDataPhase } from './executorDatapackPhase';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { recordSkippedSteps } from '@/core/utils/skippedSteps';
 import { generateAIContextFiles } from '@/features/project-creation/services/aiBundle/aiBundleService';
 import { executeCatalogMenuPhase } from '@/features/project-creation/services/catalogMenuPhase';
 import { executeCatalogPrewarmPhase } from '@/features/project-creation/services/catalogPrewarmPhase';
@@ -73,6 +74,8 @@ export async function runLastSteps(run: LastStepsRun): Promise<void> {
     }
 
     step();
+    // What the SC skipped becomes a Finish Setup step, with the tile that runs it (F307).
+    recordSkippedSteps(project, runStep.skipped ?? []);
     await finalizeProject(finalization);
     await runStep(OPERATION_STAGES.finishingProject.label, () => writeAiFiles(run));
     await reportProjectCreated(

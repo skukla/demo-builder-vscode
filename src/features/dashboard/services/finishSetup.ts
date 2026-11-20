@@ -8,6 +8,9 @@
  *   Demo Builder can do it (Republish), so it is applicable; its Check looks at those files.
  * - **Set the Root Category** — the one Admin step a datapack can leave, from the pack's install
  *   record (`recordedRootStep`), with any Skip or Mark as Done the SC gave it on the project.
+ * - **Republish the Storefront** and **Reset the Storefront** — storefront steps the SC skipped
+ *   when a creation or Edit paused on them (F307, `skippedSteps.ts`). The button runs them and
+ *   clears the step, so neither has a Check.
  *
  * Pure: the caller reads the install record and hands its step in.
  *
@@ -15,6 +18,7 @@
  */
 
 import { isLeftToDo } from '@/core/ui/components/integrations/setupLeftToDo';
+import { SKIPPED_REPUBLISH_STEP, SKIPPED_RESET_STEP } from '@/core/utils/skippedSteps';
 import { rootStepItem } from '@/features/data-installer/services/demoBuilderEngine/packRootCheck';
 import { PACK_ROOT_STEP_ID, type PackRootStep } from '@/features/data-installer/services/demoBuilderEngine/packRootStep';
 import { REPUBLISH_CODE_STEP } from '@/features/eds/services/storefront/codeStepRecord';
@@ -50,6 +54,47 @@ function codeStep(record: FinishSetupRecord | undefined): SetupChecklistItem | u
     };
 }
 
+/** What a skipped-steps item says, and the tile that runs them. */
+interface SkippedItemText {
+    id: string;
+    title: string;
+    tile: string;
+    why: (steps: string) => string;
+}
+
+const SKIPPED_ITEMS: readonly SkippedItemText[] = [
+    {
+        id: SKIPPED_REPUBLISH_STEP,
+        title: 'Republish the Storefront',
+        tile: 'Republish',
+        why: (steps) => `Skipped while the project was set up: ${steps}. Republish runs them.`,
+    },
+    {
+        id: SKIPPED_RESET_STEP,
+        title: 'Reset the Storefront',
+        tile: 'Reset',
+        why: () => "The storefront's pages were not copied while the project was set up. Reset copies them.",
+    },
+];
+
+/** A skipped-steps item, from its record; nothing when the record names no step. */
+function skippedItem(text: SkippedItemText, record: FinishSetupRecord | undefined): SetupChecklistItem | undefined {
+    const steps = record?.skipped;
+    if (!steps || steps.length === 0) return undefined;
+    return {
+        id: text.id,
+        title: text.title,
+        why: text.why(steps.join(', ')),
+        where: `Project Dashboard > ${text.tile}`,
+        path: ['Project Dashboard', text.tile],
+        then: `This step finishes when ${text.tile} does.`,
+        state: record.state ?? 'open',
+        checkState: 'unchecked',
+        checkable: false,
+        applicable: true,
+    };
+}
+
 /** The datapack's root step, with the SC's Skip or Mark as Done from the project laid over it. */
 function rootStep(step: PackRootStep, record: FinishSetupRecord | undefined): SetupChecklistItem {
     // The guide's rail names a step by its label: the pack's "Root category" read as a noun
@@ -71,8 +116,10 @@ export function finishSetupOf(
 ): SetupChecklistItem[] {
     const records = project.finishSetup ?? {};
     const code = codeStep(records[REPUBLISH_CODE_STEP]);
+    const skipped = SKIPPED_ITEMS.flatMap((text) => skippedItem(text, records[text.id]) ?? []);
     return [
         ...(code ? [code] : []),
+        ...skipped,
         ...(packRoot ? [rootStep(packRoot, records[PACK_ROOT_STEP_ID])] : []),
     ];
 }
@@ -84,7 +131,8 @@ function due(items: SetupChecklistItem[], id: string): boolean {
 
 /**
  * The steps as the dashboard shows them: the list, how many remain, and which tile's fix is due
- * (Republish for the code, Manage Commerce for the root category).
+ * (Republish for the code and skipped storefront steps, Reset for skipped pages, Manage
+ * Commerce for the root category).
  *
  * @param items - the steps, from {@link finishSetupOf}
  * @returns undefined when no run left a step
@@ -95,6 +143,8 @@ export function finishSetupStatus(items: SetupChecklistItem[]): FinishSetupStatu
         items,
         remaining: items.filter(isLeftToDo).length,
         ...(due(items, REPUBLISH_CODE_STEP) ? { republishDue: true as const } : {}),
+        ...(due(items, SKIPPED_REPUBLISH_STEP) ? { republishSkipped: true as const } : {}),
+        ...(due(items, SKIPPED_RESET_STEP) ? { resetDue: true as const } : {}),
         ...(due(items, PACK_ROOT_STEP_ID) ? { adminDue: true as const } : {}),
     };
 }

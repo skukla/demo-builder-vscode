@@ -95,7 +95,7 @@ describe('the persisted mesh view of the shared table', () => {
         ['update-declined', 'Update needed', 'yellow', 'warning'],
         ['config-incomplete', 'Incomplete', 'yellow', 'warning'],
         ['error', 'Deploy failed', 'red', 'error'],
-        ['not-deployed', 'Not deployed', 'gray', 'neutral'],
+        ['not-deployed', 'Not deployed', 'yellow', 'warning'],
     ])('%s → %s', (status, text, color, variant) => {
         expect(getMeshStatusDisplay(status)).toEqual({ text, color, variant });
     });

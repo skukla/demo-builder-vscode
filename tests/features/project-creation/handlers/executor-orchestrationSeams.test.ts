@@ -448,11 +448,11 @@ describe('executeProjectCreation — a step that ended the run now pauses it (F3
         expect(finalizeProject).toHaveBeenCalled();
     });
 
-    it('lets a step after the code be skipped, and finishes the project without it', async () => {
-        const { context, sendMessage } = makeContext();
-        (generateEnvironmentFiles as jest.Mock).mockRejectedValueOnce(
-            new Error('The settings files could not be written.'),
-        );
+    it('lets a step after the code be skipped, and leaves it in Finish Setup with the tile that runs it', async () => {
+        const { context, sendMessage, saveProjectConfigOnly } = makeContext();
+        (executeCatalogMenuPhase as jest.Mock).mockResolvedValueOnce({
+            reason: 'The catalog menu could not be added.',
+        });
 
         const run = executeProjectCreation(context, config());
         await answerWhenPaused(context, 'Skip This Step');
@@ -460,13 +460,37 @@ describe('executeProjectCreation — a step that ended the run now pauses it (F3
 
         expect(pausesSent(sendMessage)).toEqual([
             {
-                reason: 'The settings files could not be written.',
+                reason: 'The catalog menu could not be added.',
                 actions: ['Fix with AI', 'Check Again'],
                 canSkip: true,
             },
         ]);
-        expect(generateEnvironmentFiles).toHaveBeenCalledTimes(1);
         expect(finalizeProject).toHaveBeenCalled();
+        // The project the run saved, as the AI files step saves it after the finish.
+        const saved = saveProjectConfigOnly.mock.calls.at(-1)?.[0] as { finishSetup?: unknown };
+        expect(saved.finishSetup).toStrictEqual({
+            'skipped-republish': { skipped: ['Adding the catalog menu'] },
+        });
+    });
+
+    it('offers no Skip This Step for the settings files, which no button rewrites', async () => {
+        const { context, sendMessage } = makeContext();
+        (generateEnvironmentFiles as jest.Mock).mockRejectedValueOnce(
+            new Error('The settings files could not be written.'),
+        );
+
+        const run = executeProjectCreation(context, config());
+        await answerWhenPaused(context, 'Check Again');
+        await run;
+
+        expect(pausesSent(sendMessage)).toEqual([
+            {
+                reason: 'The settings files could not be written.',
+                actions: ['Fix with AI', 'Check Again'],
+                canSkip: false,
+            },
+        ]);
+        expect(generateEnvironmentFiles).toHaveBeenCalledTimes(2);
     });
 });
 

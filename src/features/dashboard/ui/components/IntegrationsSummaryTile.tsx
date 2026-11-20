@@ -66,7 +66,7 @@ const SEVERITY: SeverityRank[] = [
     { status: 'stale', variant: 'warning' },
     { status: 'config-incomplete', variant: 'warning' },
     { status: 'deploying', variant: 'info' },
-    { status: 'not-deployed', variant: 'neutral' },
+    { status: 'not-deployed', variant: 'warning' },
     { status: 'deployed', variant: 'success' },
 ];
 

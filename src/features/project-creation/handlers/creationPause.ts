@@ -58,17 +58,19 @@ export interface PauseDeps {
     step: string;
     /** Whether the project can go on without the step: Skip This Step. Default true. */
     canSkip?: boolean;
+    /** Told when the SC skips the step. */
+    onSkip?: () => void;
 }
 
 /**
  * Runs one step until it passes, or the SC skips it. Creation and Edit take one, so a
  * step pauses the same way wherever it runs.
  */
-export type StepRunner = (
-    step: string,
-    attempt: () => Promise<StepFailure | undefined>,
-    canSkip?: boolean,
-) => Promise<void>;
+export interface StepRunner {
+    (step: string, attempt: () => Promise<StepFailure | undefined>, canSkip?: boolean): Promise<void>;
+    /** The steps the SC skipped so far, for the project's Finish Setup (`skippedSteps.ts`). */
+    readonly skipped?: readonly string[];
+}
 
 /**
  * A run that cannot pause: each step runs once. A failure the step only reported goes
@@ -85,8 +87,15 @@ export const RUN_ONCE: StepRunner = async (_step, attempt) => {
  * @param run - the run, without the step
  * @returns the runner
  */
-export function stepRunner(run: Omit<PauseDeps, 'step' | 'canSkip'>): StepRunner {
-    return (step, attempt, canSkip = true) => untilDone({ ...run, step, canSkip }, attempt);
+export function stepRunner(run: Omit<PauseDeps, 'step' | 'canSkip' | 'onSkip'>): StepRunner {
+    const skipped: string[] = [];
+    const runner = (
+        step: string,
+        attempt: () => Promise<StepFailure | undefined>,
+        canSkip = true,
+    ): Promise<void> =>
+        untilDone({ ...run, step, canSkip, onSkip: () => skipped.push(step) }, attempt);
+    return Object.assign(runner, { skipped });
 }
 
 /**
@@ -128,6 +137,7 @@ export async function untilDone(
         const answer = await waitForAnswer(deps, failure, retries);
         if (answer === SKIP_STEP) {
             deps.context.logger.info(`[Project Creation] ${deps.step} skipped`);
+            deps.onSkip?.();
             return;
         }
     }

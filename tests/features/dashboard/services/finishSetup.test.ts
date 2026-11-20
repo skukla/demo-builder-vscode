@@ -149,3 +149,47 @@ describe('finishSetupStatus', () => {
         }
     });
 });
+
+describe('the storefront steps an SC skipped (F307)', () => {
+    const SKIPPED = createMockProject({
+        finishSetup: {
+            'skipped-republish': { skipped: ['Publishing the settings', 'Warming product pages'] },
+            'skipped-reset': { skipped: ['Copying the content'] },
+        },
+    });
+
+    it('lists Republish the Storefront and Reset the Storefront, each naming the tile that runs it', () => {
+        const items = finishSetupOf(SKIPPED, undefined);
+
+        expect(items.map((item) => [item.id, item.title, item.where, item.state, item.checkable])).toStrictEqual([
+            ['skipped-republish', 'Republish the Storefront', 'Project Dashboard > Republish', 'open', false],
+            ['skipped-reset', 'Reset the Storefront', 'Project Dashboard > Reset', 'open', false],
+        ]);
+        expect(items[0].why).toBe(
+            'Skipped while the project was set up: Publishing the settings, Warming product pages. Republish runs them.',
+        );
+    });
+
+    it('dots Republish and Reset while they are open', () => {
+        expect(finishSetupStatus(finishSetupOf(SKIPPED, undefined))).toMatchObject({
+            remaining: 2,
+            republishSkipped: true,
+            resetDue: true,
+        });
+    });
+
+    it('dots neither once the SC marked them done', () => {
+        const done = createMockProject({
+            finishSetup: {
+                'skipped-republish': { skipped: ['Publishing the settings'], state: 'done' },
+                'skipped-reset': { skipped: ['Copying the content'], state: 'done' },
+            },
+        });
+
+        const status = finishSetupStatus(finishSetupOf(done, undefined));
+
+        expect(status).toMatchObject({ remaining: 0 });
+        expect(status).not.toHaveProperty('republishSkipped');
+        expect(status).not.toHaveProperty('resetDue');
+    });
+});

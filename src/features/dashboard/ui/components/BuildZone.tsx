@@ -19,6 +19,19 @@ const NEEDS_RESET_STATUS: DashboardTileStatus = {
     testId: 'reset-tile-dot',
 };
 
+/** The Reset tile's dot when the storefront's pages were skipped while the project was set up (F307). */
+const PAGES_SKIPPED_STATUS: DashboardTileStatus = {
+    variant: 'warning',
+    tooltip: "Reset needed — the storefront's pages were not copied while the project was set up",
+    testId: 'reset-tile-dot',
+};
+
+/** The Reset tile's dot: skipped pages say so first, then a storefront behind; else none. */
+function resetStatus(pagesSkipped: boolean, needsReset: boolean): DashboardTileStatus | undefined {
+    if (pagesSkipped) return PAGES_SKIPPED_STATUS;
+    return needsReset ? NEEDS_RESET_STATUS : undefined;
+}
+
 /**
  * Edit — reopens the creation wizard: which brand, stack, components and block
  * libraries the demo HAS. Configure, beside it, changes their VALUES.
@@ -71,6 +84,7 @@ export function BuildZone({
     handleResetProject,
     handleDeleteProject,
     needsReset = false,
+    pagesSkipped = false,
 }: {
     canEdit: boolean;
     isMeshActionDisabled: boolean;
@@ -81,6 +95,8 @@ export function BuildZone({
     handleDeleteProject: () => void;
     /** The storefront is behind how Demo Builder builds storefronts now. */
     needsReset?: boolean;
+    /** Reset the Storefront is in Finish Setup: the pages were skipped (F307). */
+    pagesSkipped?: boolean;
 }): React.ReactElement {
     return (
         <DashboardZone id="build" title="Build" compact>
@@ -114,7 +130,7 @@ export function BuildZone({
                     onPress={handleResetProject}
                     action="reset"
                     tooltip="Put the demo back to how it was first set up"
-                    status={needsReset ? NEEDS_RESET_STATUS : undefined}
+                    status={resetStatus(pagesSkipped, needsReset)}
                 />
                 <DashboardTile
                     label="Delete"

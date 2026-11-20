@@ -47,6 +47,7 @@ import type { ProgressTracker } from './shared';
 import { getAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import { withPhaseSinks } from '@/core/utils/agentPhaseChannel';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { recordSkippedSteps } from '@/core/utils/skippedSteps';
 import { addWithSteps, refuseAdd } from '@/features/dashboard/handlers/appBuilderComponentAdd';
 import { runGuards } from '@/features/dashboard/handlers/appBuilderComponentGuards';
 import type { GuardableResult } from '@/features/dashboard/handlers/appBuilderComponentOperation';
@@ -184,6 +185,8 @@ async function applyInPlace(
     // it kept on purpose is a note, not a warning, as the batch reset says it (owner walk Q6).
     const ending = await applyPackageChange(context, project, config, packageChange, progressTracker);
     warnings.push(...ending.warnings);
+    // What the SC skipped becomes a Finish Setup step, with the tile that runs it (F307).
+    recordSkippedSteps(project, runStep.skipped ?? []);
     project.lastModified = new Date();
     await context.stateManager.saveProject(project);
     if (warnings.length > 0) void vscode.window.showWarningMessage(warnings.join(' '));

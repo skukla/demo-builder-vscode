@@ -93,6 +93,7 @@ import React from 'react';
 import type { OpeningTile } from '../hooks/useDashboardActions';
 import type { MeshStatus, StatusDisplay } from '../hooks/useDashboardStatus';
 import { BuildZone } from './BuildZone';
+import { finishSetupDots } from './finishSetupDots';
 import { IntegrationsSummaryTile } from './IntegrationsSummaryTile';
 import { OpenZone } from './OpenZone';
 import { ShareZone } from './ShareZone';
@@ -192,24 +193,6 @@ export interface ActionGridProps {
      * Republish for the code, Manage Commerce for the root category.
      */
     finishSetup?: FinishSetupStatus;
-}
-
-/** Republish's hover while Republish the Code is open: why the dot is there. */
-const CODE_STEP_TOOLTIP =
-    'Republish needed — the live site does not serve the latest storefront code yet';
-
-/** Which tiles a Finish Setup step dots, and the Republish hover that says why. */
-function finishSetupDots(finishSetup: FinishSetupStatus | undefined): {
-    republishDue: boolean;
-    republishTooltip?: string;
-    adminDue: boolean;
-} {
-    const republishDue = finishSetup?.republishDue === true;
-    return {
-        republishDue,
-        ...(republishDue ? { republishTooltip: CODE_STEP_TOOLTIP } : {}),
-        adminDue: finishSetup?.adminDue === true,
-    };
 }
 
 /**
@@ -332,6 +315,7 @@ export function ActionGrid({
                 handleResetProject={handleResetProject}
                 handleDeleteProject={handleDeleteProject}
                 needsReset={needsReset}
+                pagesSkipped={steps.resetDue}
             />
             <ShareZone
                 handleShareDemo={handleShareDemo}

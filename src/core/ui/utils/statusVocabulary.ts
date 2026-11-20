@@ -45,7 +45,9 @@ export interface StatusDisplayEntry {
 }
 
 const STATUS_DISPLAY: Record<DisplayStatus, StatusDisplayEntry> = {
-    'not-deployed': { label: 'Not deployed', severity: 'neutral' },
+    // Amber, not grey: a project's integration that is not deployed is a fix to make, and
+    // its card's Deploy makes it (owner, 2026-11-19: every dot has an action).
+    'not-deployed': { label: 'Not deployed', severity: 'warning' },
     deploying: { label: 'Deploying', severity: 'info' },
     deployed: { label: 'Deployed', severity: 'success' },
     // "Update NEEDED", not "available". A stale deployment is not an offer — the

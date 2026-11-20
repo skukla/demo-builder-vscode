@@ -393,6 +393,10 @@ export interface FinishSetupStatus {
     remaining: number;
     /** Republish the Code is still to do: the Republish tile wears its dot. */
     republishDue?: true;
+    /** Republish the Storefront (skipped steps, F307) is still to do: Republish wears its dot. */
+    republishSkipped?: true;
+    /** Reset the Storefront (skipped pages, F307) is still to do: Reset wears its dot. */
+    resetDue?: true;
     /** Set the Root Category is still to do: Manage Commerce wears its dot. */
     adminDue?: true;
 }

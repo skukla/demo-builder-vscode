@@ -41,6 +41,7 @@ import { replaceStoreScopePages, type StoreScopeReport } from './storeScopePages
 import { createStoreScopePagesDeps } from './storeScopePagesDeps';
 import { whileRunning } from '@/core/state/projectWorkRunning';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { clearRepublishedSteps } from '@/core/utils/skippedSteps';
 import { checkCodeStep } from '@/features/dashboard/services/finishSetupChecks';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
@@ -238,6 +239,14 @@ async function replaceStorePages(
  * when the project has no such step; never throws, because the republish has succeeded whatever
  * this finds.
  */
+/** Republish ran the steps the SC skipped at setup (F307), so their Finish Setup step is done. */
+async function clearSkippedSteps({ project, persist, logger }: RepublishContentParams): Promise<void> {
+    if (!clearRepublishedSteps(project)) return;
+    await persist(project).catch((error: Error) =>
+        logger.warn(`[Republish] Could not save the finished skipped steps: ${error.message}`),
+    );
+}
+
 async function recheckCodeStep(params: RepublishContentParams): Promise<void> {
     const { project, githubFiles, persist, logger } = params;
     try {
@@ -368,6 +377,7 @@ async function runRepublish(params: RepublishContentParams): Promise<RepublishCo
         step(S.checkingSettings.label);
         const cdnVerified = await verifyConfigOnCdn(repoOwner, repoName, logger);
         await recheckCodeStep(params);
+        if (configResult.success) await clearSkippedSteps(params);
         return { success: true, cdnVerified, ...sentences };
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
