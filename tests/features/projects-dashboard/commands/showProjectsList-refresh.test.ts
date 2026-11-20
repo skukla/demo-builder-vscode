@@ -327,13 +327,37 @@ describe('ShowProjectsListCommand — reloading when a project file changes', ()
         expect(pattern.pattern).toBe('*/.demo-builder.json');
     });
 
-    it('reloads on a create, a change and a delete', () => {
+    it('reloads on a create, a change and a delete of the file, and a delete of the folder', () => {
         const { watcher, listeners } = wireWithWatcher();
 
-        expect(watcher.onDidCreate).toHaveBeenCalled();
-        expect(watcher.onDidChange).toHaveBeenCalled();
-        expect(watcher.onDidDelete).toHaveBeenCalled();
-        expect(listeners).toHaveLength(3);
+        expect(watcher.onDidCreate).toHaveBeenCalledTimes(1);
+        expect(watcher.onDidChange).toHaveBeenCalledTimes(1);
+        expect(watcher.onDidDelete).toHaveBeenCalledTimes(2);
+        expect(listeners).toHaveLength(4);
+    });
+
+    // Deleting a project removes its whole folder, and the file watcher hears only the
+    // folder go: an agent's delete left the project on the list (owner, 2026-11-20).
+    it("watches the projects root's folders for a project removed whole", () => {
+        process.env.DEMO_BUILDER_PROJECTS_DIR = '/root/projects';
+        try {
+            wireWithWatcher();
+        } finally {
+            delete process.env.DEMO_BUILDER_PROJECTS_DIR;
+        }
+
+        const pattern = (vscode.workspace.createFileSystemWatcher as jest.Mock).mock.calls[1][0];
+        expect(pattern.baseUri.fsPath).toBe('/root/projects');
+        expect(pattern.pattern).toBe('*');
+    });
+
+    it('reloads when a project folder is removed', () => {
+        const { listeners, refresh } = wireWithWatcher();
+
+        listeners[3]();
+        jest.advanceTimersByTime(TIMEOUTS.UI.PROJECT_LIST_SETTLE);
+
+        expect(refresh).toHaveBeenCalledTimes(1);
     });
 
     it('reloads once after a burst of writes, not once per write', () => {
@@ -369,7 +393,7 @@ describe('ShowProjectsListCommand — reloading when a project file changes', ()
         (command as unknown as { disposables: { dispose: () => void } }).disposables.dispose();
         jest.advanceTimersByTime(TIMEOUTS.UI.PROJECT_LIST_SETTLE);
 
-        expect(watcher.dispose).toHaveBeenCalled();
+        expect(watcher.dispose).toHaveBeenCalledTimes(2);
         expect(refresh).not.toHaveBeenCalled();
     });
 });
