@@ -233,7 +233,7 @@ describe('Delete asks in a dialog, every time', () => {
 
         await press(row('Delete'));
         expect(screen.getByRole('heading', { name: 'Delete Bodea?' })).toBeInTheDocument();
-        expect(screen.getByText(/is deleted from your library\. This can't be undone\./)).toBeInTheDocument();
+        expect(screen.getByText(/will be deleted from your library\. This can't be undone\./)).toBeInTheDocument();
         expect(mockRequest).not.toHaveBeenCalled();
 
         // Rule 20: red is for deleting.
@@ -250,7 +250,7 @@ describe('Delete asks in a dialog, every time', () => {
         await press(row('Delete'));
 
         expect(screen.getByText(WARNING)).toBeInTheDocument();
-        expect(screen.getByText(/is deleted from your library\. This can't be undone\./)).toBeInTheDocument();
+        expect(screen.getByText(/will be deleted from your library\. This can't be undone\./)).toBeInTheDocument();
     });
 
     it('keeps the pack when cancelled', async () => {
@@ -464,7 +464,7 @@ describe('Delete on a pack of saves', () => {
         renderSaves();
 
         await press(row('Delete'));
-        expect(screen.getByText(/is deleted from your library\. This can't be undone\./)).toBeInTheDocument();
+        expect(screen.getByText(/will be deleted from your library\. This can't be undone\./)).toBeInTheDocument();
         await press(confirmButton('Delete'));
 
         expect(mockRequest).toHaveBeenCalledWith(

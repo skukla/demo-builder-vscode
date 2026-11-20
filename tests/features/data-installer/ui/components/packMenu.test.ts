@@ -125,18 +125,18 @@ describe('confirmCopy', () => {
             title: 'Delete Bodea?',
             actionLabel: 'Delete',
             actionVariant: 'negative',
-            children: ["Bodea is deleted from your library. This can't be undone.", 'shared warning'],
+            children: ["Bodea will be deleted from your library. This can't be undone.", 'shared warning'],
         });
         const saves = makeDetail({ id: { name: 'my-luma', version: '20261109-185605' }, shared: false });
         expect(confirmCopy('remove', saves).children).toEqual([
-            "Bodea is deleted from your library. This can't be undone.",
+            "Bodea will be deleted from your library. This can't be undone.",
             undefined,
         ]);
     });
 
     it('says the people it was shared with lose it, only when it is shared', () => {
         expect(confirmCopy('remove', makeDetail({ shared: true })).children).toEqual([
-            "Bodea is deleted from your library. People you shared it with can no longer install it. This can't be undone.",
+            "Bodea will be deleted from your library. People you shared it with can no longer install it. This can't be undone.",
             undefined,
         ]);
     });

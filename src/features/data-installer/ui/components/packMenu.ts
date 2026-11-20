@@ -82,7 +82,7 @@ export function shareConfirmCopy(name: string): ConfirmCopy {
 /** Delete's sentence: what goes, who else loses it when it is shared, and that it is for good. */
 export function deleteSentence(name: string, shared: boolean | undefined): string {
     const others = shared ? ' People you shared it with can no longer install it.' : '';
-    return `${name} is deleted from your library.${others} This can't be undone.`;
+    return `${name} will be deleted from your library.${others} This can't be undone.`;
 }
 
 /** What a dialog asks. The title of a closed one is never drawn. */
