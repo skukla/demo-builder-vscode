@@ -96,6 +96,8 @@ whether `npx skills add` brings Impeccable.
 
 - Six new Demo Builder skills — verified shipped; see the sub-part marked ✅ below
 - 2026-10-03  Parked 2026-10-03 (owner): stays waiting on Mod Agent access.
+- 2026-11-19  docs(backlog): EDS-3 records what the AEM Modernization skills would let the Demo Builder MCP do (`b6078d04b`)
+- 2026-11-19  docs(backlog): EDS-3 gains the Stardust skills, which may lift its wait on Mod Agent access (`374158071`)
 
 ## Provenance
 

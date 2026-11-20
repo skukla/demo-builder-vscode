@@ -4,7 +4,7 @@ kind: fix
 area: platform
 needs: []
 value: high
-status: backlog
+status: active
 ---
 
 # Failure text a person reads, in plain words, everywhere outside the datapack windows
@@ -138,3 +138,7 @@ Do it after the release, area by area, the way F221 did the data installer:
 3. Extend the words SOP from the data installer to the whole tree, and change the user-facing-errors
    SOP's honest generic so it no longer sends anyone to Debug Logs.
 4. Burn down the ledger in section 3 as part of the same pass.
+
+## Shipped so far
+
+- 2026-11-19  feat(errors): the windows show only plain words (PL-102 slice 2) (`cb2eaeee4`)

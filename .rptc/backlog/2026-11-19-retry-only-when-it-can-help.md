@@ -4,7 +4,7 @@ kind: feature
 area: platform
 needs: []
 value: med
-status: backlog
+status: active
 ---
 
 # Retry only when it can help; Fix with AI when it cannot, everywhere
@@ -63,3 +63,7 @@ retries already use (a timeout or the network: retryable; sign-in or unknown: no
 Build it with PL-102 slice 4, area by area, after beta.153: the flag added to the failure shapes as
 they are typed, each screen's Retry switched to `failedButtonLabel`, and a rule check that fails on a
 Retry label offered without it.
+
+## Shipped so far
+
+- 2026-11-19  refactor(errors): one answer to "can a retry help?"; file the convention for everywhere (PL-106) (`b187ef26d`)
