@@ -81,22 +81,11 @@ export function runStage(steps: readonly OperationRow[], job?: StepJob): RunStag
     const working = steps.find((s) => s.status === 'checking');
     // Before any step is under way, the job of the first one to come: "Installing in Commerce" from the
     // first frame, not "Starting" (owner walk, 2026-11-16).
-    if (!working) return { label: withStep(steps, steps.find((s) => s.status === 'pending'), firstJob(steps, job)) };
-    const job1 = job?.(working) ?? working.label;
+    if (!working) return { label: firstJob(steps, job) };
+    const label = job?.(working) ?? working.label;
     const type = working.types?.find((t) => t.status === 'checking');
-    const detail = type ? typeLine(type) : stepLine(working, job1);
-    const label = withStep(steps, working, job1);
+    const detail = type ? typeLine(type) : stepLine(working, label);
     return detail ? { label, detail } : { label };
-}
-
-/**
- * Line 1 with where the run has got to, as Prerequisites and the Updates run say it: "Step 1/2:
- * Installing in Commerce" (owner, 2026-11-20). A run of one step names no count.
- */
-function withStep(steps: readonly OperationRow[], step: OperationRow | undefined, label: string): string {
-    const at = step ? steps.indexOf(step) : -1;
-    if (steps.length < 2 || at < 0 || label === PREPARING) return label;
-    return `Step ${at + 1}/${steps.length}: ${label}`;
 }
 
 /** A step's verb as its job: "Export from Commerce" is done as "Exporting from Commerce". */
@@ -143,7 +132,7 @@ export function rowsLines(rows: readonly OperationRow[], stage: string | undefin
     // read the window's own title.
     if (gerundJob(working.label) && !typeWorking && saysAJob(working.line)) {
         const acted = working.label.slice(working.label.indexOf(' ') + 1);
-        return { label: withStep(rows, working, working.line as string), detail: acted };
+        return { label: working.line as string, detail: acted };
     }
     return runStage(rows, (row) => gerundJob(row.label) ?? stage);
 }

@@ -26,7 +26,7 @@ describe('runStage', () => {
             step({ kind: 'finishing', label: 'Verify Installation', line: 'Waiting' }),
         ];
 
-        expect(runStage(steps, JOBS)).toEqual({ label: 'Step 1/2: Installing in Commerce', detail: 'Products, 1,200 of 2,046' });
+        expect(runStage(steps, JOBS)).toEqual({ label: 'Installing in Commerce', detail: 'Products, 1,200 of 2,046' });
     });
 
     it('names the type alone before it has a count', () => {
@@ -55,7 +55,7 @@ describe('runStage', () => {
         const verifying = [step({ status: 'success' }), step({ kind: 'finishing', label: 'Verify Installation', status: 'checking', line: 'Checking the products' })];
 
         expect(runStage(preparing, JOBS)).toEqual({ label: 'Uninstalling from Commerce', detail: 'Preparing to uninstall' });
-        expect(runStage(verifying, JOBS)).toEqual({ label: 'Step 2/2: Verifying Installation', detail: 'Checking the products' });
+        expect(runStage(verifying, JOBS)).toEqual({ label: 'Verifying Installation', detail: 'Checking the products' });
     });
 
     it('uses the step\'s own label when the host names no job, and its line on line 2', () => {
@@ -75,16 +75,6 @@ describe('runStage', () => {
         expect(runStage([step({ line: 'Waiting' })], JOBS)).toEqual({ label: 'Installing in Commerce' });
         expect(runStage([step({ line: 'Waiting' })])).toEqual({ label: 'Preparing' });
     });
-
-    // Owner, 2026-11-20: where the run has got to, as Prerequisites and the Updates run say it.
-    it('names the step and how many there are when the run has several, and no count for one', () => {
-        const waiting = [step({ line: 'Waiting' }), step({ kind: 'finishing', label: 'Verify Installation', line: 'Waiting' })];
-        const one = [step({ status: 'checking', line: 'Installing 3 of 10' })];
-
-        expect(runStage(waiting, JOBS)).toEqual({ label: 'Step 1/2: Installing in Commerce' });
-        expect(runStage(one, JOBS).label).toBe('Installing in Commerce');
-        expect(runStage([step({ line: 'Waiting' }), step({ line: 'Waiting' })]).label).toBe('Preparing');
-    });
 });
 
 // Owner walk, 2026-11-16: a datapack save read "Reading from Commerce / Reading your selection", then
@@ -97,13 +87,13 @@ describe('rowsLines, the shared progress window', () => {
     it('says the export as its job, and the data type under way with its count on line 2', () => {
         const rows = [exporting([{ kind: 'categories', label: 'Categories', status: 'checking', line: '1 of 1' }]), save()];
 
-        expect(rowsLines(rows, 'Reading from Commerce')).toEqual({ label: 'Step 1/2: Exporting from Commerce', detail: 'Categories, 1 of 1' });
+        expect(rowsLines(rows, 'Reading from Commerce')).toEqual({ label: 'Exporting from Commerce', detail: 'Categories, 1 of 1' });
     });
 
     it('puts a step line that already says its job first, and what it acts on under it', () => {
         const rows = [{ ...exporting([]), status: 'success' as const, line: 'Exported' }, save({ status: 'checking', line: 'Saving to My Datapacks' })];
 
-        expect(rowsLines(rows, 'Saving the datapack')).toEqual({ label: 'Step 2/2: Saving to My Datapacks', detail: 'Release Save Test' });
+        expect(rowsLines(rows, 'Saving the datapack')).toEqual({ label: 'Saving to My Datapacks', detail: 'Release Save Test' });
     });
 
     // Walk F196 (2026-11-17): an Update's save step is labelled "Update Release Save Test 2", so line 1
@@ -111,7 +101,7 @@ describe('rowsLines, the shared progress window', () => {
     it('puts the save step\'s own job first when the step is an Update', () => {
         const rows = [{ ...exporting([]), status: 'success' as const, line: 'Exported' }, save({ label: 'Update Release Save Test 2', status: 'checking', line: 'Saving to My Datapacks' })];
 
-        expect(rowsLines(rows, 'Saving the datapack')).toEqual({ label: 'Step 2/2: Saving to My Datapacks', detail: 'Release Save Test 2' });
+        expect(rowsLines(rows, 'Saving the datapack')).toEqual({ label: 'Saving to My Datapacks', detail: 'Release Save Test 2' });
     });
 
     it('takes the run\'s stage for a step whose label has no verb it knows, and when no step is under way', () => {
