@@ -406,7 +406,7 @@ included, and opening on the version the demo uses (`DatapackCatalogGrid`):
   2026-11-09: it leaves the library for good, where Uninstall can be undone by installing; a bare
   verb since J8-3) on a pack of saves deletes it whole, every version and each one's settings layer
   (`delete-library-datapack` with `everyVersion`); on a named version, that version and its layer.
-  It asks "Delete My Luma?", "Permanently deletes it.", naming no version, with a red Delete. It is
+  It asks "Delete My Luma?", "My Luma is deleted from your library. This can't be undone." (with "People you shared it with can no longer install it." between them when it is shared), naming no version, with a red Delete. It is
   offered on the SC's own library datapack and never on a Demo Builder datapack, its owner's
   included; agents can still delete one (`delete_library_datapack`, with `everyVersion` for a pack
   of saves, as the screen does). The storage is unchanged: each

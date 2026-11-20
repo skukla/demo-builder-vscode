@@ -79,6 +79,12 @@ export function shareConfirmCopy(name: string): ConfirmCopy {
     return { title: `Share ${name}?`, actionLabel: 'Share', actionVariant: 'accent', children: SHARE_CONSENT };
 }
 
+/** Delete's sentence: what goes, who else loses it when it is shared, and that it is for good. */
+export function deleteSentence(name: string, shared: boolean | undefined): string {
+    const others = shared ? ' People you shared it with can no longer install it.' : '';
+    return `${name} is deleted from your library.${others} This can't be undone.`;
+}
+
 /** What a dialog asks. The title of a closed one is never drawn. */
 export function confirmCopy(asking: Asking, detail: DatapackDetail, sharedInFile?: string): ConfirmCopy {
     const name = detail.displayName;
@@ -100,13 +106,14 @@ export function confirmCopy(asking: Asking, detail: DatapackDetail, sharedInFile
             children: 'Other people can no longer see or install it.',
         };
     }
-    // "Permanently" is the warning, as a word in the sentence (dialog design rules; review 2026-11-10).
-    // The SC never sees a version (overview Phase 7). Red: deleting is what red is for (rule 20).
+    // Names the thing and what follows, as real software does; "Permanently deletes it." made the SC
+    // look back at the title for "it" (owner, 2026-11-20). The SC never sees a version (overview
+    // Phase 7). Red: deleting is what red is for (rule 20).
     return {
         title: `Delete ${name}?`,
         actionLabel: 'Delete',
         actionVariant: 'negative',
-        children: ['Permanently deletes it.', sharedInFile],
+        children: [deleteSentence(name, detail.shared), sharedInFile],
     };
 }
 

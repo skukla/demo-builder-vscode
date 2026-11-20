@@ -118,17 +118,25 @@ describe('confirmCopy', () => {
         });
     });
 
-    // Overview Phase 7: the SC never sees a version, so the Delete line names none.
-    it('deletes in red, saying "Permanently deletes it." with no version, plus the shared warning', () => {
-        expect(confirmCopy('remove', makeDetail(), 'shared warning')).toEqual({
+    // Overview Phase 7: the SC never sees a version, so the Delete line names none. Owner, 2026-11-20:
+    // the sentence names the datapack and says what follows, as real software does.
+    it('deletes in red, naming the datapack and no version, plus the file warning', () => {
+        expect(confirmCopy('remove', makeDetail({ shared: false }), 'shared warning')).toEqual({
             title: 'Delete Bodea?',
             actionLabel: 'Delete',
             actionVariant: 'negative',
-            children: ['Permanently deletes it.', 'shared warning'],
+            children: ["Bodea is deleted from your library. This can't be undone.", 'shared warning'],
         });
-        const saves = makeDetail({ id: { name: 'my-luma', version: '20261109-185605' } });
+        const saves = makeDetail({ id: { name: 'my-luma', version: '20261109-185605' }, shared: false });
         expect(confirmCopy('remove', saves).children).toEqual([
-            'Permanently deletes it.',
+            "Bodea is deleted from your library. This can't be undone.",
+            undefined,
+        ]);
+    });
+
+    it('says the people it was shared with lose it, only when it is shared', () => {
+        expect(confirmCopy('remove', makeDetail({ shared: true })).children).toEqual([
+            "Bodea is deleted from your library. People you shared it with can no longer install it. This can't be undone.",
             undefined,
         ]);
     });
