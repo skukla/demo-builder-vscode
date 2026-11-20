@@ -261,6 +261,10 @@ export async function installProducts(ctx: KindContext, rows: readonly ProductRo
         done: 0,
         single: (product) => createSingle(ctx, kind, product),
     };
+    // "0 of N" at once, as every other kind says it (`startRowCount`): the first count otherwise came
+    // only when Commerce confirmed a whole import call, so a small pack's Products sat on its bare name
+    // until it was done (owner, 2026-11-20). Reporting only.
+    if (run.total > 0) ctx.progress?.(productsLine(0, run.total, run.noun, false));
     // Through the Import API where the row converts without loss (`productImportRows.ts`), the rest by
     // the bulk queue: the pack stays in its own form, only the route differs.
     const look = importRowLookups(lk);

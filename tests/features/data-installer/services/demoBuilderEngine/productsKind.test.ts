@@ -264,6 +264,26 @@ describe('installProducts', () => {
         });
     });
 
+    // Owner, 2026-11-20: Products sat on its bare name until Commerce confirmed the whole pack.
+    it('says "0 of N products" before it sends anything, as every other kind does', async () => {
+        const ctx = await storeContext();
+        const lines: string[] = [];
+        const counting = { ...ctx, progress: (line: string) => lines.push(line) };
+
+        await installProducts(counting, parseProductRows([VR_RACK]));
+
+        expect(lines[0]).toBe('0 of 1 products');
+    });
+
+    it('CONTROL: says no count when every product is already in the store', async () => {
+        const ctx = await storeContext({ 'products/vrrack': { id: 12, sku: 'vrrack' } });
+        const lines: string[] = [];
+
+        await installProducts({ ...ctx, progress: (line: string) => lines.push(line) }, parseProductRows([VR_RACK]));
+
+        expect(lines).toStrictEqual([]);
+    });
+
     // Walk F187 (owner, 2026-11-16): recorded, marked adopted, so a save follows it and no removal takes it.
     it('leaves a product the store already has alone, and records it as the store\'s', async () => {
         const ctx = await storeContext({ 'products/vrrack': { id: 12, sku: 'vrrack' } });
