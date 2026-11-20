@@ -103,7 +103,9 @@ describe('ProjectsBatchModal: Delete Selected', () => {
         const one = prepared([{ path: '/p/a', name: asDisplayName('A'), repo: { name: 'me/a', ticked: false } }]);
         await openOn('delete', one);
 
-        expect(await screen.findByRole('dialog', { name: 'Delete A?' })).toBeInTheDocument();
+        const dialog = await screen.findByRole('dialog', { name: 'Delete A?' });
+        // No table of names for one project, so not extra-wide (owner, 2026-11-20).
+        expect(dialog).not.toHaveAttribute('data-wide');
         expect(screen.getByRole('button', { name: 'Delete' })).toHaveAttribute('data-variant', 'negative');
         expect(screen.getByText('Project files are removed from this machine. You can also delete me/a online.')).toBeInTheDocument();
     });

@@ -75,6 +75,11 @@ function subjectOf(view: Exclude<BatchView, { phase: 'closed' }>): BatchSubject 
     return batchSubject(view.action, view.rows.map((row) => row.name));
 }
 
+/** Extra-wide for a delete of several projects, whose table and rows carry names in columns. */
+function widensFor(subject: BatchSubject): boolean {
+    return subject.action === 'delete' && subject.count !== 1;
+}
+
 /** The save question over the questions as answered; absent outside them. */
 function saveQuestionOfView(controls: ProjectsBatchControls): SaveQuestion | undefined {
     const { view, choices } = controls;
@@ -225,8 +230,9 @@ function QuestionsWindow({ controls, view }: { controls: ProjectsBatchControls; 
             ready={view.phase === 'asking'}
             waiting={waitOf(view)}
             // Delete's table holds up to three columns of names: extra-wide, so a name stays on
-            // one line, as the run that follows is (owner, 2026-11-05). Reset's one column fits large.
-            wide={subjectOf(view).action === 'delete'}
+            // one line, as the run that follows is (owner, 2026-11-05). Reset's one column fits
+            // large, and so does one project's delete, which has no table (owner, 2026-11-20).
+            wide={widensFor(subjectOf(view))}
             closeLabel={closeLabelOf(controls)}
             actionButtons={actionsOf(controls)}
             onClose={controls.close}
@@ -253,7 +259,7 @@ function RunWindow({ controls, view, onClose }: { controls: ProjectsBatchControl
             closeLabel={closeLabelOf(controls)}
             hideClose={asking ? !cancels(asking) : false}
             asksUnderRows
-            wide={subjectOf(view).action === 'delete'}
+            wide={widensFor(subjectOf(view))}
             onClose={onClose}
         />
     );

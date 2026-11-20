@@ -71,6 +71,18 @@ describe('ProjectsBatchModal: one project running', () => {
         expect(dialog.querySelector('.work-row')).toBeNull();
     });
 
+    it('drops its row when it finishes with nothing to read', async () => {
+        await running(['A'], 'Reset');
+        await push('projectsBatchRow', { path: '/p/a', ...COPYING });
+
+        await push('projectsBatchRow', { path: '/p/a', state: 'done' });
+        await push('operationProgress', { id: ID, state: 'succeeded' });
+
+        const dialog = screen.getByRole('dialog');
+        expect(within(dialog).getByTestId('result-body')).toBeInTheDocument();
+        expect(dialog.querySelector('.work-row')).toBeNull();
+    });
+
     it('keeps its row when the run ends with something to read', async () => {
         await running(['A'], 'Reset');
         await push('projectsBatchRow', { path: '/p/a', ...COPYING });

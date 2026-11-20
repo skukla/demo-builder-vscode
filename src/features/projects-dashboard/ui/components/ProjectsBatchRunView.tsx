@@ -10,7 +10,8 @@
  * One project under way with nothing asked is the progress window's three rows instead, centred
  * (`OneRunning`, owner 2026-11-15). Once it ends, the outcome sits over the rows under its large mark
  * (the shared `ResultBody`), with "Took …" under them, and only a row with something to read keeps a
- * line under its name (owner, 2026-11-17, walk F222).
+ * line under its name (owner, 2026-11-17, walk F222). One project that finished with nothing to read
+ * has no row at all (owner, 2026-11-20).
  *
  * @module features/projects-dashboard/ui/components/ProjectsBatchRunView
  */
@@ -212,9 +213,21 @@ export function ProjectsBatchRunView({ rows, order, statuses, timings, progress,
         </div>
     );
     if (!ended || !ending) return list;
+    const took = progress?.tookMs === undefined ? {} : { tookMs: progress.tookMs };
+    // One project that finished with nothing to read has no row: under the large mark it only
+    // repeated the outcome, the name and the time (owner, 2026-11-20). A row with a problem or
+    // where its changes were saved stays (walk F222).
+    if (rows.length === 1 && saysNothing(statuses[rows[0].path])) {
+        return <ResultBody {...ending} lines={[failure]} {...took} />;
+    }
     return (
-        <ResultBody {...ending} lines={[failure]} {...(progress?.tookMs === undefined ? {} : { tookMs: progress.tookMs })}>
+        <ResultBody {...ending} lines={[failure]} {...took}>
             {list}
         </ResultBody>
     );
+}
+
+/** A project that finished with no warning and no line of its own. */
+function saysNothing(status: BatchRowStatuses[string]): boolean {
+    return status?.state === 'done' && !status.message && (status.warnings?.length ?? 0) === 0;
 }
