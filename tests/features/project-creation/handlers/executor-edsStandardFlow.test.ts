@@ -149,6 +149,13 @@ jest.mock('@/features/project-creation/services/meshSetupService', () => ({
     shouldConfigureExistingMesh: jest.fn().mockReturnValue(false),
 }));
 
+// The storefront content copy calls DA.live over the network. On CI that call fails, and a failed
+// step pauses the run for an answer (F307), so the test waited out its 30 s timeout (beta.153 cut,
+// 2026-11-20). Content is not this suite's subject; its own suite is executorEdsContent.test.ts.
+jest.mock('@/features/project-creation/services/edsContentSetup', () => ({
+    ensureEdsContent: jest.fn().mockResolvedValue(true),
+}));
+
 jest.mock('@/features/project-creation/services/projectFinalizationService', () => ({
     generateEnvironmentFiles: jest.fn().mockResolvedValue(undefined),
     finalizeProject: jest.fn().mockResolvedValue(undefined),
