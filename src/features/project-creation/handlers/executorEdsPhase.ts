@@ -14,6 +14,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import type { ProgressTracker } from './shared';
 import { COMPONENT_IDS } from '@/core/constants';
+import { andList } from '@/core/utils/andList';
 import { parseGitHubUrl } from '@/core/utils/githubUrlParser';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { catalogMenuSiteFor } from '@/features/ai/server/storefrontPages';
@@ -24,6 +25,7 @@ import { syncConfigToRemote } from '@/features/eds/services/configSyncService';
 import { readPatchesRelease } from '@/features/eds/services/patches/lkgReader';
 import { writeBrokenLinks } from '@/features/eds/services/storefront/brokenLinksRecord';
 import { replaceFinishSetup } from '@/features/eds/services/storefront/codeStepRecord';
+import { otherProjectsPublishingTo } from '@/features/eds/services/storefront/sharedRepoProjects';
 import { recordStorefrontBuilt } from '@/features/eds/services/storefront/storefrontChanges';
 import { readRepoBoilerplate } from '@/features/eds/services/storefront/storefrontOrigin';
 import { extractConfigParamsFromConfigs } from '@/features/eds/services/storefrontConfigParams';
@@ -250,6 +252,21 @@ export async function syncEdsConfigToRemote(
     const repoInfo = parseGitHubUrl(repoUrl);
     if (!repoInfo) {
         context.logger.warn('[Phase 5] Could not parse repo URL, skipping config sync');
+        return;
+    }
+
+    // A repository another project here already uses keeps its config.json: the file holds one
+    // Commerce endpoint, and pushing this project's pointed the other's live storefront away from
+    // its API mesh (owner, 2026-11-20: an agent's create onto Scratch 1028's repository did).
+    const sharing = await otherProjectsPublishingTo(
+        context.stateManager,
+        `${repoInfo.owner}/${repoInfo.repo}`,
+        project.path,
+    );
+    if (sharing.length > 0) {
+        context.logger.info(
+            `[Phase 5] Left config.json in ${repoInfo.owner}/${repoInfo.repo} as it is: ${andList(sharing)} also uses the repository`,
+        );
         return;
     }
 
