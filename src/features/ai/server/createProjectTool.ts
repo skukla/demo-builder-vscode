@@ -30,6 +30,7 @@ import * as path from 'path';
 import { z } from 'zod';
 import { getAdobeTarget, runWithAdobeTarget } from './adobeTargetStore';
 import { isOrgMismatchError, orgMismatchResult } from './adobeTools';
+import { untilAgentHearsBack } from './continueProjectCreationTool';
 import { resolvePackage } from './createProjectPackage';
 import { asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
@@ -440,25 +441,29 @@ async function createHeadless(
     const { adobe } = resolved;
 
     const config = await creationConfig(args, adobe, packages);
-    try {
-        // Run creation under the stored session org context so any `aio` work
-        // targets the selected org/workspace via env (no global mutation). The
-        // wizard's run: its 30-minute limit and its stop (PL-104 fix 14).
-        await runWithAdobeTarget(() => runCreation(ctx, config));
-    } catch (err) {
-        // Undo what the failed creation built, as the wizard does (owner, 2026-10-16).
-        await cleanupFailedCreation(ctx, config);
-        if (isOrgMismatchError(err)) return orgMismatchResult(leanOrg(adobe?.org));
-        return asText({ created: false, error: err instanceof Error ? err.message : String(err) });
-    }
-    return asText({
-        created: true,
-        name: args.projectName,
-        path: path.join(projectsDir(), args.projectName),
-        // Not the block tools or sync_storefront: both need an Edge Delivery storefront.
-        hint: 'Operate on it by name with the project tools (get_project_status, start_demo, update_project_config, …).',
-        ...args.report,
-    });
+    const ended = (async () => {
+        try {
+            // Run creation under the stored session org context so any `aio` work
+            // targets the selected org/workspace via env (no global mutation). The
+            // wizard's run: its 30-minute limit and its stop (PL-104 fix 14).
+            await runWithAdobeTarget(() => runCreation(ctx, config));
+        } catch (err) {
+            // Undo what the failed creation built, as the wizard does (owner, 2026-10-16).
+            await cleanupFailedCreation(ctx, config);
+            if (isOrgMismatchError(err)) return orgMismatchResult(leanOrg(adobe?.org));
+            return asText({ created: false, error: err instanceof Error ? err.message : String(err) });
+        }
+        return asText({
+            created: true,
+            name: args.projectName,
+            path: path.join(projectsDir(), args.projectName),
+            // Not the block tools or sync_storefront: both need an Edge Delivery storefront.
+            hint: 'Operate on it by name with the project tools (get_project_status, start_demo, update_project_config, …).',
+            ...args.report,
+        });
+    })();
+    // A failed step pauses the run; the agent hears "paused" and answers (F307).
+    return untilAgentHearsBack(ctx, args.projectName, ended);
 }
 
 /** The part of a seed storefront setup reads, in the payload's own field names. */
@@ -652,38 +657,42 @@ async function createEds(
             ...bundleImportOf(complete.bundleImport),
         },
     });
-    try {
-        // The boundary between setup and creation: a stop that arrived after setup ended
-        // ends the run here, as a stopped creation (F275).
-        stepBoundary(args.stopSignal)();
-        await runWithAdobeTarget(() => runCreation(capturing, config));
-    } catch (err) {
-        // Undo what the failed creation built, as the wizard does (owner, 2026-10-16).
-        // The storefront it provisioned first stays, as it does in the wizard.
-        await cleanupFailedCreation(capturing, config);
-        if (isOrgMismatchError(err)) return orgMismatchResult(leanOrg(adobe?.org));
-        return asText({
-            created: false,
-            stage: 'project-creation',
-            error: err instanceof Error ? err.message : String(err),
-            phases: toPhaseTimeline(events),
-            rerunSafe: true,
-            hint:
-                'The storefront was provisioned but project finalization failed. Call create_project again ' +
-                'with adoptExisting:true, which uses the repository and site this run made.',
-        });
-    }
+    const ended = (async () => {
+        try {
+            // The boundary between setup and creation: a stop that arrived after setup ended
+            // ends the run here, as a stopped creation (F275).
+            stepBoundary(args.stopSignal)();
+            await runWithAdobeTarget(() => runCreation(capturing, config));
+        } catch (err) {
+            // Undo what the failed creation built, as the wizard does (owner, 2026-10-16).
+            // The storefront it provisioned first stays, as it does in the wizard.
+            await cleanupFailedCreation(capturing, config);
+            if (isOrgMismatchError(err)) return orgMismatchResult(leanOrg(adobe?.org));
+            return asText({
+                created: false,
+                stage: 'project-creation',
+                error: err instanceof Error ? err.message : String(err),
+                phases: toPhaseTimeline(events),
+                rerunSafe: true,
+                hint:
+                    'The storefront was provisioned but project finalization failed. Call create_project again ' +
+                    'with adoptExisting:true, which uses the repository and site this run made.',
+            });
+        }
 
-    return asText({
-        created: true,
-        name: args.projectName,
-        path: path.join(projectsDir(), args.projectName),
-        repoUrl,
-        ...(caveats?.length ? { caveats } : {}),
-        phases: toPhaseTimeline(events),
-        hint: 'Operate on it by name (list_blocks, sync_storefront, …).',
-        ...args.report,
-    });
+        return asText({
+            created: true,
+            name: args.projectName,
+            path: path.join(projectsDir(), args.projectName),
+            repoUrl,
+            ...(caveats?.length ? { caveats } : {}),
+            phases: toPhaseTimeline(events),
+            hint: 'Operate on it by name (list_blocks, sync_storefront, …).',
+            ...args.report,
+        });
+    })();
+    // A failed step pauses the run; the agent hears "paused" and answers (F307).
+    return untilAgentHearsBack(capturing, args.projectName, ended);
 }
 
 /**
@@ -816,7 +825,7 @@ export function registerCreateProjectTool(
             annotations: { readOnlyHint: false, destructiveHint: false },
             title: 'Create Project',
             description:
-                "Create a new Demo Builder project headlessly from a package + stack. The package is a shipped brand id, an added demo's id (added:owner/repo, from list_demo_packages), or a colleague's demo given as link (probed and added first). EDS stacks also provision a GitHub repo + DA.live content. storeScope sets the store codes at creation, as configure_project does. Can pause for the user mid-run (a new repo needs the AEM Code Sync GitHub App, which only they can install): they are prompted in VS Code and the call resumes by itself, up to 30 minutes — tell them, and do not retry while it runs. A step the project can live without (the datapack install, product pages, the catalog menu, AI files) that fails also pauses: the user is asked in VS Code to fix it and check again, or skip it. An ACCS stack records the session's Adobe organization, as the wizard does: sign in and select_org first. Requires confirm:true",
+                "Create a new Demo Builder project headlessly from a package + stack. The package is a shipped brand id, an added demo's id (added:owner/repo, from list_demo_packages), or a colleague's demo given as link (probed and added first). EDS stacks also provision a GitHub repo + DA.live content. storeScope sets the store codes at creation, as configure_project does. Can pause for the user mid-run (a new repo needs the AEM Code Sync GitHub App, which only they can install): they are prompted in VS Code and the call resumes by itself, up to 30 minutes — tell them, and do not retry while it runs. A step that fails pauses the creation: the call answers paused:true with the step, the reason and its answers, every step before it done. Fix the cause, then answer with continue_project_creation. An ACCS stack records the session's Adobe organization, as the wizard does: sign in and select_org first. Requires confirm:true",
             inputSchema: {
                 projectName: z.string().describe('Name for the new project'),
                 package: z

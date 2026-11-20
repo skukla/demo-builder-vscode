@@ -21,8 +21,9 @@
  * (`creationLimit.ts`).
  *
  * In the wizard the question is on the creation screen. Under an agent there is no
- * screen, so it is asked as a VS Code modal, as the agent's other questions are, and the
- * agent's phase line says what the run is waiting for.
+ * screen: `create_project` answers "paused" with the step, the reason and the answers,
+ * the run waits, and the agent answers with `continue_project_creation`
+ * (`creationAgentPause.ts`). The agent's phase line says what the run is waiting for.
  *
  * @module features/project-creation/handlers/creationPause
  */
@@ -32,7 +33,6 @@ import { creationLimitOf } from './creationLimit';
 import type { CreationReporter } from './creationProgress';
 import { creationCancelledError } from './creationStop';
 import { FIX_WITH_AI, failedButtonLabel } from '@/core/utils/fixWithAi';
-import { askDuringOperation } from '@/core/vscode/operationPrompt';
 import {
     type StepFailure,
     stepFailureOfError,
@@ -140,34 +140,48 @@ function actionsFor(failure: StepFailure, retries: number): string[] {
         : [FIX_WITH_AI, CHECK_AGAIN];
 }
 
-/** Wait for Retry, Check Again or Skip This Step, the limit held meanwhile. */
+/**
+ * Wait for Retry, Check Again or Skip This Step, the limit held meanwhile. The wizard's
+ * creation screen asks; with no screen, the agent that started the run is told and
+ * answers through `continue_project_creation`. A run nobody can answer does not wait:
+ * it goes on as a run that cannot pause would (`RUN_ONCE`).
+ */
 async function waitForAnswer(
     deps: PauseDeps,
     failure: StepFailure,
     retries: number,
 ): Promise<string> {
+    const { panel, sharedState } = deps.context;
+    if (!panel && !sharedState.onCreationPause) {
+        if (failure.error !== undefined) throw failure.error;
+        return SKIP_STEP;
+    }
+    const actions = actionsFor(failure, retries);
+    const pause: CreationPause = {
+        reason: failure.reason,
+        // An agent is the AI: it fixes the problem itself, then says Check Again.
+        actions: panel ? actions : actions.filter((action) => action !== FIX_WITH_AI),
+        canSkip: deps.canSkip ?? true,
+    };
     const limit = creationLimitOf(deps.signal);
     limit?.hold();
     try {
-        return deps.context.panel
-            ? await askInWizard(deps, {
-                  reason: failure.reason,
-                  actions: actionsFor(failure, retries),
-                  canSkip: deps.canSkip ?? true,
-              })
-            : await askAgentsUser(deps, failure, retries);
+        return await ask(deps, pause);
     } finally {
         limit?.release();
     }
 }
 
-/** The wizard's creation screen asks; Fix with AI opens the AI and keeps waiting. */
-async function askInWizard(deps: PauseDeps, pause: CreationPause): Promise<string> {
+/** Show the pause and wait; Fix with AI opens the AI and keeps waiting. */
+async function ask(deps: PauseDeps, pause: CreationPause): Promise<string> {
+    const answer = nextAnswer(deps);
     deps.reporter.pause(pause);
+    deps.context.sharedState.onCreationPause?.({ ...pause, step: deps.step });
     try {
-        for (;;) {
-            const answer = await nextWizardAnswer(deps);
-            if (answer !== FIX_WITH_AI) return answer;
+        for (let next = answer; ; next = nextAnswer(deps)) {
+            const pressed = await next;
+            if (pressed === SKIP_STEP && !pause.canSkip) continue;
+            if (pressed !== FIX_WITH_AI) return pressed;
             await openFixWithAi(deps, pause.reason);
         }
     } finally {
@@ -176,8 +190,8 @@ async function askInWizard(deps: PauseDeps, pause: CreationPause): Promise<strin
     }
 }
 
-/** The next button the SC presses, or the cancelled error when the run is stopped. */
-function nextWizardAnswer({ context, signal }: PauseDeps): Promise<string> {
+/** The next answer given, or the cancelled error when the run is stopped. */
+function nextAnswer({ context, signal }: PauseDeps): Promise<string> {
     return new Promise<string>((resolve, reject) => {
         if (signal?.aborted) {
             reject(creationCancelledError());
@@ -186,29 +200,6 @@ function nextWizardAnswer({ context, signal }: PauseDeps): Promise<string> {
         signal?.addEventListener('abort', () => reject(creationCancelledError()), { once: true });
         context.sharedState.creationPauseAnswer = resolve;
     });
-}
-
-/**
- * Under an agent: a VS Code modal. Closing it skips the step, which never removes
- * anything; the agent's cancel_project_creation still stops the run.
- */
-async function askAgentsUser(
-    deps: PauseDeps,
-    failure: StepFailure,
-    retries: number,
-): Promise<string> {
-    const again = actionsFor(failure, retries)[0] === RETRY ? RETRY : CHECK_AGAIN;
-    const answer = await askDuringOperation(
-        {
-            title: `${deps.step} Failed`,
-            message: `${failure.reason} Fix it, then ${again}. The project is created without this step if you skip it.`,
-            dismiss: SKIP_STEP,
-        },
-        again,
-        SKIP_STEP,
-    );
-    if (deps.signal?.aborted) throw creationCancelledError();
-    return answer === again ? again : SKIP_STEP;
 }
 
 /**

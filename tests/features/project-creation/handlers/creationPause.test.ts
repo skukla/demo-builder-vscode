@@ -176,16 +176,45 @@ describe('untilDone in the wizard', () => {
 });
 
 describe('untilDone under an agent', () => {
-    it('asks in a VS Code modal, and closing it skips the step', async () => {
+    it('tells the agent the step, why and its answers, leaving Fix with AI out, and runs again on its answer', async () => {
         const { deps } = wizardRun();
         deps.context.panel = undefined;
-        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue(undefined);
-        const step = failingStep(5);
+        const heard: unknown[] = [];
+        deps.context.sharedState.onCreationPause = (pause) => heard.push(pause);
+        const step = failingStep(1);
 
-        await untilDone(deps, step);
+        const run = untilDone(deps, step);
+        await press(deps.context, CHECK_AGAIN);
+        await run;
 
-        expect(step).toHaveBeenCalledTimes(1);
-        expect(vscode.window.showWarningMessage).toHaveBeenCalled();
+        expect(heard).toStrictEqual([
+            { reason: FAILED.reason, actions: [CHECK_AGAIN], canSkip: true, step: 'Installing the datapack' },
+        ]);
+        expect(step).toHaveBeenCalledTimes(2);
+        expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
+    });
+
+    it('waits on for a skip a step that cannot be skipped', async () => {
+        const { deps } = wizardRun();
+        deps.context.panel = undefined;
+        deps.context.sharedState.onCreationPause = () => undefined;
+        const step = failingStep(1);
+
+        const run = untilDone({ ...deps, canSkip: false }, step);
+        await press(deps.context, SKIP_STEP);
+        await press(deps.context, CHECK_AGAIN);
+        await run;
+
+        expect(step).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not wait when nobody can answer: a reported failure goes by, a thrown one ends the run', async () => {
+        const { deps } = wizardRun();
+        deps.context.panel = undefined;
+        const error = new Error('mesh failed');
+
+        await expect(untilDone(deps, failingStep(5))).resolves.toBeUndefined();
+        await expect(untilDone(deps, caught(() => Promise.reject(error)))).rejects.toBe(error);
     });
 });
 

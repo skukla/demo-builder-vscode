@@ -10,6 +10,7 @@ import type { CustomBlockLibrary } from './blockLibraries';
 import type { ComponentSelection } from './components';
 import type { Logger } from './logger';
 import type { StateManager } from './state';
+import type { CreationPauseNotice } from './webview';
 import type { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
 import type { ErrorLogger } from '@/core/logging/errorLogger';
 import type { StepLogger } from '@/core/logging/stepLogger';
@@ -142,6 +143,11 @@ export interface SharedState {
     projectCreationAbortController?: AbortController;
     /** Hands the wizard's answer to a creation paused on a failed step (F307). */
     creationPauseAnswer?: (answer: string) => void;
+    /**
+     * Told when a creation with no wizard screen pauses: an agent's `create_project`,
+     * which then answers "paused" while the run waits (F307).
+     */
+    onCreationPause?: (pause: CreationPauseNotice) => void;
 
     // EDS preflight control
     edsPreflightAbortController?: AbortController;

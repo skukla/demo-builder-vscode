@@ -1611,6 +1611,14 @@
     "why": "step-07 U1 (owner 2026-11-14): judges that the agent calls restore_datapack with to: original (not Undo Last Save) and offers to save unsaved changes first. Writes to the store, so the battery stops at the consent."
   },
   {
+    "id": "continue-paused-creation",
+    "prompt": "The summit-demo creation stopped on the mesh step. I fixed the mesh settings, carry on.",
+    "expect": [
+      "continue_project_creation"
+    ],
+    "why": "Added 2026-11-19 with the tool (F307): a failed step pauses an agent's creation and create_project answers paused:true. Judges that the agent answers the paused run with Check Again instead of starting a new creation or cancelling it."
+  },
+  {
     "id": "stop-running-creation",
     "prompt": "Stop the summit-demo project you're creating, I picked the wrong package.",
     "expect": [

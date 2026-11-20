@@ -199,6 +199,7 @@
                 "handler:cancel",
                 "handler:cancel-project-creation",
                 "tool:cancel_project_creation",
+                "tool:continue_project_creation",
                 "handler:copyAiPrompt",
                 "handler:creation-pause-answer",
                 "handler:datapack-save-question-answered",

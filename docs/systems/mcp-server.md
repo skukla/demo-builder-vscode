@@ -694,6 +694,15 @@ the run was handed (`adoptExisting`) is never removed. The 30-minute limit cover
 creation step, not storefront setup before it, which has its own 30-minute wait for the
 AEM Code Sync GitHub App; Stop ends that wait.
 
+A step that fails pauses the creation rather than ending it (F307), as the wizard's
+creation screen does. The call answers `paused: true` with the step, the reason and the
+answers it can give (`Retry` or `Check Again`, and `Skip This Step` once the project's
+code is on disk), every step before it done, while the run waits. The agent fixes the
+cause with its tools and answers with `continue_project_creation`, which hands the answer
+to the run (`creationAgentPause.ts`) and waits for the next pause or the end, answering as
+`create_project` would. The run's 30-minute limit does not count while it waits.
+`cancel_project_creation` stops a paused run like a running one.
+
 ### Creating from an exported file (2026-10-03)
 
 `create_project_from_file` takes an absolute PATH to a file `export_project_settings`

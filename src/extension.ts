@@ -48,6 +48,7 @@ import { registerCommerceRestWriteTool } from '@/features/ai/server/commerceRest
 import { registerComponentRequirementsTool } from '@/features/ai/server/componentRequirementsTool';
 import { registerConfigureProjectTool } from '@/features/ai/server/configureProjectTool';
 import { registerContentAuthoringTools } from '@/features/ai/server/contentAuthoringTools';
+import { registerContinueProjectCreationTool } from '@/features/ai/server/continueProjectCreationTool';
 import { registerCopyProjectTool } from '@/features/ai/server/copyProjectTool';
 import { registerCreateProjectFromFileTool } from '@/features/ai/server/createProjectFromFileTool';
 import { registerCreateProjectTool } from '@/features/ai/server/createProjectTool';
@@ -797,6 +798,7 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                 registerAdobeTools(mcpServer, connCtxFactory);
                 registerCreateProjectTool(mcpServer, connCtxFactory);
                 registerCancelProjectCreationTool(mcpServer, connCtxFactory);
+                registerContinueProjectCreationTool(mcpServer);
                 registerCreateProjectFromFileTool(mcpServer, connCtxFactory);
                 registerCopyProjectTool(mcpServer, connCtxFactory);
                 registerCurrentProjectTool(mcpServer, connCtxFactory, scopedProjectDir);

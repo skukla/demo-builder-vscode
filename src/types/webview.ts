@@ -357,6 +357,11 @@ export interface CreationPause {
     canSkip: boolean;
 }
 
+/** A pause as an agent hears it: the step it is on, as well as why and the answers. */
+export interface CreationPauseNotice extends CreationPause {
+    step: string;
+}
+
 export interface FormValidation {
     isValid: boolean;
     message?: string;
