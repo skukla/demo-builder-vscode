@@ -319,8 +319,7 @@ async function createOrRebuild(
     // Runtime-less workspace is healed rather than orphaning a mesh at app-deploy)
 
     // Before the code is on disk there is no project to keep: these steps cannot be
-    // skipped (F307). From the mesh on, a skipped step leaves a dot on the dashboard
-    // tile that runs it (`skippedSteps.ts`), so the SC is never left without the fix.
+    // skipped (F307). From the mesh on, the dashboard can run each one again.
     step();
     await runStep(S.makingWorkspace.label, caught(() => ensureWorkspaceRuntimeReady(context, typedConfig)), false);
 
@@ -401,8 +400,7 @@ async function createOrRebuild(
     };
 
     step();
-    // Not skippable: no button rewrites the settings files, and the demo cannot run without them.
-    await runStep(S.writingConfigFiles.label, caught(() => generateEnvironmentFiles(finalizationContext)), false);
+    await runStep(S.writingConfigFiles.label, caught(() => generateEnvironmentFiles(finalizationContext)));
 
     // Populate componentConfigs for mesh from the generated .env file
     await populateMeshComponentConfigs(context, project);

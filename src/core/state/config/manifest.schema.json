@@ -1801,13 +1801,6 @@
             "type": "string"
           },
           "description": "Republish the Code: the repository paths the live site did not serve as committed."
-        },
-        "skipped": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Republish or Reset the Storefront: the steps the SC skipped (F307, `skippedSteps.ts`)."
         }
       },
       "description": "One Finish Setup step's saved state (PL-101): a setup step's record, and the files a code step is about."

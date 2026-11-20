@@ -39,24 +39,3 @@ describe('Build zone — the Reset tile wears the "Needs reset" dot', () => {
         expect(screen.queryByText('Needs reset')).not.toBeInTheDocument();
     });
 });
-
-describe('the dots for storefront steps skipped while the project was set up (F307)', () => {
-    const SKIPPED = { items: [], remaining: 2, republishSkipped: true as const, resetDue: true as const };
-
-    it('dots Reset, saying the pages were not copied, ahead of a storefront that is behind', () => {
-        render(<ActionGrid {...edsProps} needsReset finishSetup={SKIPPED} />);
-
-        expect(screen.getByTestId('reset-tile-dot')).toHaveAttribute('data-variant', 'warning');
-        expect(
-            screen.getByText("Reset needed — the storefront's pages were not copied while the project was set up"),
-        ).toBeInTheDocument();
-    });
-
-    it('dots Republish, saying steps were skipped', () => {
-        render(<ActionGrid {...edsProps} finishSetup={SKIPPED} />);
-
-        expect(
-            screen.getByText('Republish needed — steps were skipped while the project was set up'),
-        ).toBeInTheDocument();
-    });
-});

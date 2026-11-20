@@ -62,11 +62,11 @@ describe('deriveIntegrationCard — failure reason', () => {
 // deriveIntegrationCard — status matrix
 // ---------------------------------------------------------------------------
 describe('deriveIntegrationCard — status matrix', () => {
-    it('not-deployed: amber dot (a fix to make, F307), "Not deployed", Deploy LEADS the menu', () => {
+    it('not-deployed: neutral dot, "Not deployed", Deploy LEADS the menu', () => {
         const model = deriveIntegrationCard(integration({ status: 'not-deployed' }));
 
         expect(model.status).toBe('not-deployed');
-        expect(model.dotVariant).toBe('warning');
+        expect(model.dotVariant).toBe('neutral');
         expect(model.statusLabel).toBe('Not deployed');
         // The status verb is a kebab item like every other verb, and it leads:
         // on a card that needs something, that something is the first item.

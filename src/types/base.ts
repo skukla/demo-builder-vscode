@@ -323,8 +323,6 @@ export interface SetupStepRecord {
 export interface FinishSetupRecord extends SetupStepRecord {
     /** Republish the Code: the repository paths the live site did not serve as committed. */
     files?: string[];
-    /** Republish or Reset the Storefront: the steps the SC skipped (F307, `skippedSteps.ts`). */
-    skipped?: string[];
 }
 
 /** What a setup check concluded. */

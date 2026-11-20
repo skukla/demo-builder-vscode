@@ -83,7 +83,7 @@ describe('deriveMeshCard — status matrix', () => {
         expect(model.menuActions[0]).toBe('sign-in');
     });
 
-    it('not-deployed: amber dot (a fix to make, F307), Deploy LEADS the menu', () => {
+    it('not-deployed: neutral dot, Deploy LEADS the menu', () => {
         const model = deriveMeshCard(
             display({ color: 'gray', text: 'Not deployed' }),
             'not-deployed',
@@ -92,7 +92,7 @@ describe('deriveMeshCard — status matrix', () => {
         );
 
         expect(model.status).toBe('not-deployed');
-        expect(model.dotVariant).toBe('warning');
+        expect(model.dotVariant).toBe('neutral');
         expect(model.menuActions[0]).toBe('deploy');
     });
 

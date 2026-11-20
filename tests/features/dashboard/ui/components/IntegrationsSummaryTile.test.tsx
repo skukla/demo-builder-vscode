@@ -118,7 +118,7 @@ describe('IntegrationsSummaryTile', () => {
 
     describe('worst-status dot (most alarming wins)', () => {
         it.each([
-            [['deployed', 'not-deployed'], 'warning'],
+            [['deployed', 'not-deployed'], 'neutral'],
             [['not-deployed', 'deploying'], 'info'],
             [['deploying', 'stale'], 'warning'],
             [['stale', 'error'], 'error'],
