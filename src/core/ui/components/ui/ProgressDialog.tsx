@@ -1,10 +1,10 @@
 /**
- * The Progress layout: a run, then how it ended, in one window that never changes size
- * (`docs/development/sop/dialog-design.md`). Small from start to finish; the size of a list
- * when it shows its steps as rows. While it runs it shows the wait, or the rows, and Close;
- * once it ends the title names the thing and the body is the shared `ResultBody`: the large mark
- * where the spinner was, the outcome under it, then the lines left to read and the rows (owner,
- * 2026-11-17, walk F222). A streamed run draws its own ending in its stream (`OperationProgressBody`
+ * The Progress layout: a run, then how it ended (`docs/development/sop/dialog-design.md`). Small
+ * from start to finish; the size of a list when it shows its steps as rows. While it runs it shows
+ * the wait, or the rows, and Close; once it ends the title names the thing and the body is the
+ * shared `ResultBody`: the large mark where the spinner was, the outcome under it, then the lines
+ * left to read and the rows (owner, 2026-11-17, walk F222). A result with a list keeps the run's
+ * window; a clean one (`endedClean`) is a small window of its own (owner, 2026-11-20). A streamed run draws its own ending in its stream (`OperationProgressBody`
  * does it with the same `ResultBody`), so for it `status` is only a question's icon in the title.
  *
  * Every end waits for Close, a clean one included (owner, 2026-11-17, walk F195). The
@@ -79,6 +79,12 @@ export interface ProgressDialogProps {
     asksUnderRows?: boolean;
     /** A list of names that cannot be broken (Delete's projects): wider than large. */
     wide?: boolean;
+    /**
+     * The run ended clean, with no list left to read: its result is a small window of its own,
+     * whatever size the run took (owner, 2026-11-20, over walk F222's "a result keeps the run's
+     * size"; the jump at the end is accepted). A result with a list keeps the run's window.
+     */
+    endedClean?: boolean;
     onClose: () => void;
 }
 
@@ -153,12 +159,13 @@ export function ProgressWindow({
     hideClose = false,
     asksUnderRows = false,
     wide = false,
+    endedClean = false,
     onClose,
 }: Omit<ProgressDialogProps, 'isOpen'>): React.ReactElement {
     const lines = React.Children.toArray(children);
     const streamed = stream !== undefined;
     const ended = !streamed && status !== undefined && !waiting;
-    const listed = Boolean(rows) || streamed;
+    const listed = (Boolean(rows) || streamed) && !endedClean;
     let footer: ActionButton[] | undefined;
     if (streamed) footer = actions;
     else if (ended) footer = resultActionButtons(action);
@@ -166,12 +173,14 @@ export function ProgressWindow({
     if (ended) ending = { status, outcome: outcome ?? title, lines };
     return (
         <ProgressFrame
+            // A clean end is a new, small window: its own key, so the run's held height goes with it.
+            key={endedClean ? 'result' : 'run'}
             title={title}
             status={streamed ? status : undefined}
             size={sizeOf(listed, asksUnderRows)}
             wide={listed && wide}
             streamed={streamed}
-            // The run's box holds for its result: a window never shrinks from its run to its end.
+            // The run's box holds for a result with a list; a clean end is its own small window.
             holdSize={streamed ? closeLabel === 'Run in Background' : listed}
             waiting={listed ? false : waiting}
             onClose={onClose}

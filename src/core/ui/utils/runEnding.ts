@@ -1,8 +1,8 @@
 /**
  * The one rule for whether a run ended clean: nothing to read under its outcome but its sentence, so
- * the rows of a run of one thing are left out (owner, 2026-11-10, walk F134; plan step-03 S1). It no
- * longer changes the window's size: a result keeps the run's window (owner, 2026-11-17, walk F222,
- * over "a clean finish ends small").
+ * the rows of a run of one thing are left out (owner, 2026-11-10, walk F134; plan step-03 S1). A
+ * clean end is also a small window of its own (owner, 2026-11-20, over walk F222's "a result keeps
+ * the run's window").
  *
  * Four windows decided this on their own until 2026-11-12 (the import, the Updates run, the projects
  * batch run and the progress window) and disagreed: the progress window looked only at the run's

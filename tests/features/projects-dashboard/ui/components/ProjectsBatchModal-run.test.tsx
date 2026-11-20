@@ -310,14 +310,15 @@ describe('ProjectsBatchModal: the run', () => {
 
     // Walk F222 (owner, 2026-11-17, over walk F134's small result): a run over several projects keeps
     // its window and its rows under the outcome; a row with nothing to read carries no line.
-    it('keeps a run where every project went through in its window, its rows lineless, and Took', async () => {
+    // Owner, 2026-11-20: every project went through with nothing to say, so the result is small.
+    it('ends a run where every project went through in a small window, no rows, and Took', async () => {
         const { user, onClosed } = await running();
         for (const path of ['/p/a', '/p/b', '/p/c']) await push('projectsBatchRow', { path, state: 'done' });
         await push('operationProgress', { id: ID, state: 'succeeded', tookMs: 125_000 });
 
         const dialog = screen.getByRole('dialog', { name: 'Projects' });
-        expect(dialog).toHaveAttribute('data-size', 'L');
-        expect(dialog.querySelectorAll('.work-row')).toHaveLength(3);
+        expect(dialog).toHaveAttribute('data-size', 'S');
+        expect(dialog.querySelectorAll('.work-row')).toHaveLength(0);
         expect(within(dialog).queryByText('Finished')).toBeNull();
         expect(within(dialog).getByText('Took 2 minutes, 5 seconds')).toBeInTheDocument();
         await user.click(screen.getByRole('button', { name: 'Close' }));

@@ -44,16 +44,16 @@ beforeEach(() => {
 });
 
 describe('ProjectsBatchModal: how the run ends', () => {
-    it("keeps a clean end in the run's window, its rows under the outcome, until Close, which refreshes the list", async () => {
+    // Owner, 2026-11-20: a clean end is a small window of its own; a list of green ticks adds nothing.
+    it('ends a clean run in a small window with no rows, until Close, which refreshes the list', async () => {
         const { onClosed, user } = await running();
         for (const path of ['/p/a', '/p/b']) await push('projectsBatchRow', { path, state: 'done' });
         await push('operationProgress', { id: ID, state: 'succeeded' });
         const dialog = screen.getByRole('dialog', { name: 'Projects' });
-        expect(dialog).toHaveAttribute('data-size', 'L');
+        expect(dialog).toHaveAttribute('data-size', 'S');
         expect(within(dialog).getByText('Deleted')).toHaveClass('result-outcome');
         expect(dialog.querySelector('.result-mark')).toHaveAttribute('data-status', 'success');
-        expect(within(dialog).getByText('A')).toBeInTheDocument();
-        expect(within(dialog).getByText('B')).toBeInTheDocument();
+        expect(dialog.querySelector('.work-row')).toBeNull();
 
         await glance();
 
@@ -72,7 +72,10 @@ describe('ProjectsBatchModal: how the run ends', () => {
         await glance();
 
         expect(onClosed).not.toHaveBeenCalled();
-        expect(screen.getByRole('dialog', { name: 'Projects' })).toBeInTheDocument();
+        const dialog = screen.getByRole('dialog', { name: 'Projects' });
+        // A row with a line to read keeps the list, at the run's size.
+        expect(dialog).toHaveAttribute('data-size', 'L');
+        expect(dialog.querySelectorAll('.work-row')).toHaveLength(2);
     });
 });
 

@@ -76,6 +76,13 @@ describe('StepsDialog', () => {
         expect(dialog()).toHaveAttribute('data-size', 'L');
     });
 
+    it('is small when no step holds a list or a form (compact), and never wide', () => {
+        renderSteps({ compact: true, wide: true });
+
+        expect(dialog()).toHaveAttribute('data-size', 'S');
+        expect(document.querySelector('.modal-wide')).toBeNull();
+    });
+
     it('holds the height it measured, in every axis, for as long as it is open', () => {
         renderSteps();
 

@@ -532,22 +532,37 @@ describe('UpdatesModal', () => {
             remaining,
         });
 
-        it("keeps a clean run in the run's window, the outcome in its title over its rows", () => {
+        // Owner, 2026-11-20: a clean end is a small window of its own, the thing as the title and the
+        // outcome under its mark; the cards have nothing left to say.
+        it('ends a clean run in a small window of its own, "Applied" under the mark, with no cards', () => {
             const { container } = render(<UpdatesModal controls={allApplied(0)} />);
 
-            const dialog = screen.getByRole('dialog', { name: 'Updates Applied' });
-            expect(dialog).toHaveAttribute('data-size', 'L');
-            expect(dialog).toHaveAttribute('data-status', 'success');
-            expect(container.querySelector('.updates-group-list')).not.toBeNull();
+            const dialog = screen.getByRole('dialog', { name: 'Updates' });
+            expect(dialog).toHaveAttribute('data-size', 'S');
+            expect(screen.getByText('Applied')).toHaveClass('result-outcome');
+            expect(container.querySelector('.updates-group-list')).toBeNull();
             expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
         });
 
-        it('says above the list how many updates the SC left, with Back to Updates', () => {
+        it('says under the outcome how many updates the SC left, with Back to Updates', () => {
             render(<UpdatesModal controls={allApplied(2)} />);
 
-            expect(screen.getByRole('dialog', { name: 'Updates Applied' })).toHaveAttribute('data-size', 'L');
+            expect(screen.getByRole('dialog', { name: 'Updates' })).toHaveAttribute('data-size', 'S');
             expect(screen.getByText('2 updates pending')).toBeInTheDocument();
             expect(screen.getByRole('button', { name: 'Back to Updates' })).toBeInTheDocument();
+        });
+
+        it('CONTROL: keeps the cards, large, when every update applied but a card has a note', () => {
+            const c = running(
+                {
+                    extension: { id: 'extension', state: 'done' },
+                    'blockLibrary:0': { id: 'blockLibrary:0', state: 'done', message: plain('One block left out.') },
+                },
+                { state: 'succeeded' },
+            );
+            render(<UpdatesModal controls={c} />);
+
+            expect(screen.getByRole('dialog', { name: 'Updates Applied' })).toHaveAttribute('data-size', 'L');
         });
 
         // Walk F195 (owner, 2026-11-17): a clean end waits for Close.

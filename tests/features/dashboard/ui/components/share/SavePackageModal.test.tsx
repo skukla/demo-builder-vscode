@@ -79,6 +79,8 @@ describe('SavePackageModal', () => {
         expect(result).toHaveTextContent('Bodea by Steve is on your Welcome step.');
         expect(screen.queryByTestId('share-name')).not.toBeInTheDocument();
         expect(footerLabels()).toEqual(['Close']);
+        // A success is a small window of its own (owner, 2026-11-20).
+        expect(screen.getByRole('dialog')).toHaveAttribute('data-size', 'S');
     });
 
     // Walk F244: a package file that is not ours is kept, and the result says so in a second line.
@@ -104,6 +106,7 @@ describe('SavePackageModal', () => {
         expect(result).toHaveTextContent("Couldn't Save the Package");
         expect(result).toHaveTextContent('GitHub refused the write.');
         expect(footerLabels()).toEqual(['Close', 'Try Again']);
+        expect(screen.getByRole('dialog')).toHaveAttribute('data-size', 'L');
 
         mockRequest.mockResolvedValueOnce(answer(SAVED));
         await click('Try Again');

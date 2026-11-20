@@ -209,6 +209,8 @@ describe('ShareModal: the file step', () => {
                 ['exportDemoBundle', { setup: true, storefront: true }],
             ]);
             expect(screen.getByTestId('result-body')).toHaveTextContent('File Saved');
+            // A success is a small window of its own (owner, 2026-11-20).
+            expect(screen.getByRole('dialog')).toHaveAttribute('data-size', 'S');
         });
     });
 });

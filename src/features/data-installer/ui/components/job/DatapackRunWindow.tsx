@@ -2,9 +2,10 @@
  * The run, its own window (step 03, S4; the prototype's `RunWindow`): the centred lines while it
  * runs, then how it ended in the same window, at the same size (owner, 2026-11-17, walk F222, over
  * "a clean end leaves for the small result"): the datapack as the title, the outcome under a large
- * mark (`ResultBody`), the lines left to read, and, when it ended with a problem, each step's final
- * state with the problem on its row (rules 15, 16). The window is held at its tallest state from the
- * first frame (`reserve`), so it never grows (rule 14).
+ * mark (`ResultBody`), the lines left to read. The window is small, as the question before it
+ * (owner, 2026-11-20), and held at its tallest state from the first frame (`reserve`), so it never
+ * grows (rule 14). An end with a problem lists each step's final state with the problem on its row
+ * (rules 15, 16), in a new window at a list's size.
  *
  * A switch (S6) draws its Save Your Changes and Uninstall rows before its job is recorded
  * (`switching`), the save's stage on the first while the start waits on it (walk F129), and holds
@@ -16,7 +17,6 @@
 
 import React, { useState } from 'react';
 import { type ImportStep, type StepSource } from '../../../importSteps';
-import type { PlainText } from '@/core/utils/plainText';
 import { FINISHING, REPLACING, SAVING } from '../../../runRows';
 import type { ImportJobRecord } from '../../../types';
 import { useImportProgress } from '../../hooks/useImportProgress';
@@ -41,6 +41,7 @@ import type { ActionButton, ModalStatus } from '@/core/ui/components/ui/Modal';
 import { StepsWindow } from '@/core/ui/components/ui/StepsDialog';
 import { useRunClock } from '@/core/ui/hooks/useRunClock';
 import { promptAnswerLabels, promptCloseLabel } from '@/core/ui/utils/promptButtons';
+import type { PlainText } from '@/core/utils/plainText';
 import { runStage } from '@/core/utils/runStage';
 import type { OperationPrompt } from '@/types/webviewPayloads';
 
@@ -224,8 +225,15 @@ export function DatapackRunWindow(props: DatapackRunWindowProps): React.ReactEle
         if (question) question.answer(question.prompt.dismiss);
         if (!question?.prompt.dismiss) onClose();
     };
+    // Small from the question through the run to a clean result: the run is three centred lines, and
+    // the window grew from the small question to a large box around them (owner, 2026-11-20). An end
+    // that lists its steps (a problem) is a new window at a list's size: its own key, so the held
+    // height of the small one does not carry over.
+    const listsSteps = Boolean(ended?.run);
     return (
         <StepsWindow
+            key={listsSteps ? 'steps' : 'run'}
+            compact={!listsSteps}
             title={question?.prompt.title ?? title}
             {...statusFor(question)}
             reserve={RUN_RESERVE}

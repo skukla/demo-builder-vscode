@@ -12,8 +12,8 @@
  * next step, which wait to be read. A failure
  * stays: the reason, Retry, and the Debug Logs where the full detail went.
  *
- * Its window keeps the height it opens at for every state, its result included (`ProgressDialog`;
- * owner, 2026-11-11, and 2026-11-17, walk F222, over "a clean finish ends small"). A question is its
+ * Its window keeps the height it opens at for every state but a clean success, which is a small
+ * window of its own (`ProgressDialog`; owner, 2026-11-11, 2026-11-17 walk F222, and 2026-11-20). A question is its
  * title (`progressFrame`); an end names the thing in the title and draws the outcome in the body,
  * under a large mark (`ResultBody`).
  *
@@ -33,6 +33,7 @@
 
 import React, { useCallback, useRef } from 'react';
 import {
+    keepsRows,
     OperationProgressBody,
     progressEnding,
     progressFrame,
@@ -146,6 +147,11 @@ function nextStepOf(
 ): ProgressModalNextStep | undefined {
     if (next) return next;
     return progress?.offer && offerStep ? offerStep(progress.offer) : undefined;
+}
+
+/** A success with no rows to keep and no list of what it changed: its result is small. */
+function endedClean(progress: OperationProgressPayload | null | undefined, succeeded: boolean): boolean {
+    return succeeded && !keepsRows(progress) && (progress?.changes ?? []).length === 0;
 }
 
 /** No question and no outcome yet: the work is under way. */
@@ -287,12 +293,14 @@ export function OperationProgressModal({
         ending: progressEnding(progress),
     });
 
-    // Every end stays in the run's window, at its size (owner, 2026-11-17, walk F222, over "a clean
-    // finish ends small"): the thing as the title, the outcome under its mark in the body.
+    // The thing as the title, the outcome under its mark in the body (walk F222). A clean success,
+    // with no rows or changes left to read, is a small window of its own (owner, 2026-11-20); any
+    // other end stays in the run's window.
     const above = subjectLine(operation.subject, running, frame);
     return (
         <ProgressDialog
             isOpen
+            endedClean={endedClean(progress, succeeded)}
             title={frame.title}
             {...titleStatus(frame)}
             closeLabel={closeLabelFor(failed || succeeded, prompt)}

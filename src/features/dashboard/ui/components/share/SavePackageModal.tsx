@@ -76,6 +76,9 @@ function PackageForm({ preview, onClose }: { preview: DemoPackagePreview; onClos
         return (
             <StepsWindow
                 key={flow.outcome.kind}
+                // A success is a small window of its own (owner, 2026-11-20); its own key already
+                // makes it a new window, so the form's held height does not carry over.
+                compact={flow.outcome.kind === 'saved' || flow.outcome.kind === 'removed'}
                 title={SAVE_PACKAGE_COPY.title}
                 actionButtons={outcomeButtons(flow.outcome, flow)}
                 onClose={onClose}

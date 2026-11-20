@@ -37,8 +37,8 @@ jest.mock('@adobe/react-spectrum', () => ({
 // its buttons and its dismiss affordance. Buttons carry their label, which is what a guard
 // supplies.
 jest.mock('@/core/ui/components/ui/Modal', () => ({
-    Modal: ({ title, status, actionButtons = [], closeLabel, onClose, children }: any) => (
-        <div role="dialog" aria-label={title} data-status={status}>
+    Modal: ({ title, status, size, actionButtons = [], closeLabel, onClose, children }: any) => (
+        <div role="dialog" aria-label={title} data-status={status} data-size={size}>
             {children}
             <button onClick={onClose}>{closeLabel}</button>
             {actionButtons.map((button: any) => (
@@ -514,5 +514,49 @@ describe('a next step the run offered', () => {
         await user().click(screen.getByRole('button', { name: 'Assign Products' }));
         expect(onClose).toHaveBeenCalledTimes(1);
         expect(onPress).toHaveBeenCalledTimes(1);
+    });
+});
+
+// Owner, 2026-11-20, over walk F222's "a result keeps the run's size": a clean success, with no rows
+// to keep and no list of changes, is a small window of its own; a result with a list to read, or a
+// failure, keeps the run's window.
+describe('how big its result is', () => {
+    const size = (): string | null => screen.getByRole('dialog').getAttribute('data-size');
+
+    it('ends a clean success small', () => {
+        progress = { id: OPERATION.id, state: 'succeeded' };
+
+        renderModal();
+
+        expect(size()).toBe('S');
+        expect(screen.getByText('Republished')).toHaveClass('result-outcome');
+    });
+
+    it('runs at the size of a list', () => {
+        progress = { id: OPERATION.id, state: 'running', stage: 'Publishing pages' };
+
+        renderModal();
+
+        expect(size()).toBe('M');
+    });
+
+    it("CONTROL: keeps the run's window for a success whose rows have a problem to read", () => {
+        progress = {
+            id: OPERATION.id,
+            state: 'succeeded',
+            rows: [{ kind: 'pages', label: 'Pages', status: 'warning', problem: { text: plain('3 pages not published.'), failed: false } }],
+        };
+
+        renderModal();
+
+        expect(size()).toBe('M');
+    });
+
+    it("CONTROL: keeps the run's window for a failure", () => {
+        progress = { id: OPERATION.id, state: 'failed', error: plain('The publish failed.') };
+
+        renderModal();
+
+        expect(size()).toBe('M');
     });
 });

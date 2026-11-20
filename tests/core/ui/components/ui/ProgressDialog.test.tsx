@@ -182,10 +182,22 @@ describe('ProgressDialog', () => {
             expect(onPress).toHaveBeenCalledTimes(1);
         });
 
-        it('keeps a medium window for its result', () => {
+        it('keeps a medium window for a result with a list', () => {
             renderProgress({ stream, title: 'Pages' });
 
             expect(screen.getByRole('dialog')).toHaveAttribute('data-size', 'M');
+        });
+
+        // Owner, 2026-11-20: a clean result is a small window of its own, whatever the run took.
+        it('ends small when it ended clean, even where its run was large and wide', () => {
+            const { rerender } = renderProgress({ stream, asksUnderRows: true, wide: true, closeLabel: 'Run in Background' });
+            expect(screen.getByRole('dialog')).toHaveAttribute('data-size', 'L');
+
+            rerender({ stream, asksUnderRows: true, wide: true, title: 'Pages', endedClean: true });
+
+            expect(screen.getByRole('dialog')).toHaveAttribute('data-size', 'S');
+            expect(screen.getByRole('dialog')).not.toHaveClass('modal-wide');
+            expect(screen.getByTestId('stream')).toBeInTheDocument();
         });
 
         it('waits for Close after it ended clean with nothing to read', () => {

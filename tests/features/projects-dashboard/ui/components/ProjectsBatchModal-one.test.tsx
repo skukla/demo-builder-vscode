@@ -83,7 +83,23 @@ describe('ProjectsBatchModal: one project running', () => {
         expect(dialog.querySelector('.work-row')).toBeNull();
     });
 
-    it('keeps its row when the run ends with something to read', async () => {
+    // Owner, 2026-11-20: the row repeated the outcome, the name and the time even when it had
+    // something to say; what it says goes under the outcome instead (over walk F222's row).
+    it('says where its changes were saved under the outcome, with no row', async () => {
+        await running(['A'], 'Reset');
+        await push('projectsBatchRow', { path: '/p/a', ...COPYING });
+
+        await push('projectsBatchRow', { path: '/p/a', state: 'done', message: 'Saved to Release Save Test 2.' });
+        await push('operationProgress', { id: ID, state: 'succeeded' });
+
+        const dialog = screen.getByRole('dialog');
+        expect(within(dialog).getByText('Saved to Release Save Test 2.')).toHaveClass('result-reason');
+        expect(dialog.querySelector('.work-row')).toBeNull();
+        // A clean end is a small window of its own (owner, 2026-11-20).
+        expect(dialog).toHaveAttribute('data-size', 'S');
+    });
+
+    it('says a failure\'s reason under the outcome, once, with no row', async () => {
         await running(['A'], 'Reset');
         await push('projectsBatchRow', { path: '/p/a', ...COPYING });
 
@@ -94,7 +110,8 @@ describe('ProjectsBatchModal: one project running', () => {
         });
         await push('operationProgress', { id: ID, state: 'failed', error: plain('git clone failed') });
 
-        expect(screen.getByText('git clone failed')).toHaveClass('work-row-problem');
+        expect(screen.getByText('git clone failed')).toHaveClass('result-reason');
+        expect(document.querySelector('.work-row')).toBeNull();
     });
 
     it('CONTROL: several projects keep a row each', async () => {
@@ -109,18 +126,20 @@ describe('ProjectsBatchModal: one project running', () => {
 });
 
 // A finished row's warning ran into where its changes were saved, on the one line a problem gets,
-// so "Saved to My We.Cafe." was cut off behind the warning (live run 6, 2026-11-15).
-describe('ProjectsBatchModal: a finished row with a warning and a save', () => {
-    it('says where the changes were saved on a line of its own, under the warning', async () => {
+// so "Saved to My We.Cafe." was cut off behind the warning (live run 6, 2026-11-15). One project
+// has no row now (owner, 2026-11-20): both lines sit under the outcome, each its own.
+describe('ProjectsBatchModal: one project finished with a warning and a save', () => {
+    it('says the warning, then where the changes were saved, each on its own line', async () => {
         await running(['A'], 'Reset');
         const warning = 'Category pages not published (HTTP 503). Republish to try again.';
 
         await push('projectsBatchRow', { path: '/p/a', state: 'done', warnings: [warning], message: 'Saved to My We.Cafe.' });
         await push('operationProgress', { id: ID, state: 'succeeded' });
 
-        expect(screen.getByText(warning)).toHaveClass('work-row-problem');
+        const warned = screen.getByText(warning);
         const saved = screen.getByText('Saved to My We.Cafe.');
-        expect(saved).not.toHaveClass('work-row-problem');
-        expect(saved).not.toHaveClass('text-notice');
+        expect(warned).not.toBe(saved);
+        expect(warned.compareDocumentPosition(saved) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        expect(document.querySelector('.work-row')).toBeNull();
     });
 });

@@ -205,6 +205,8 @@ function ShareWindow({ isEds, onClose, read }: WindowProps): React.ReactElement 
         return (
             <StepsWindow
                 key="saved"
+                // A success is a small window of its own (owner, 2026-11-20).
+                compact
                 title={SHARE_COPY.title}
                 actionButtons={[{ label: revealLabel(), variant: 'accent', onPress: file.reveal }]}
                 onClose={onClose}

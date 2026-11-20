@@ -45,19 +45,23 @@ import {
 } from '../hooks/useUpdatesModal';
 import { endingRowOf, promptButtons } from './runWindowParts';
 import { groupsOf, updatesLiveSite, type RowGroup } from './updateGroups';
-import { UpdatesRunView } from './UpdatesRunView';
+import { UpdatesRunView, waitingLine } from './UpdatesRunView';
 import { OperationQuestion, questionTakesWindow } from '@/core/ui/components/feedback/OperationQuestion';
+import { ResultBody } from '@/core/ui/components/feedback/ResultBody';
 import { CheckboxRow } from '@/core/ui/components/selection/CheckboxRow';
 import { LeadText } from '@/core/ui/components/ui/LeadText';
 import type { ActionButton, ModalStatus } from '@/core/ui/components/ui/Modal';
 import { ProgressWindow } from '@/core/ui/components/ui/ProgressDialog';
 import { StepsWindow } from '@/core/ui/components/ui/StepsDialog';
-import { type EndingRow, endStatus } from '@/core/ui/utils/runEnding';
+import { resultOutcome } from '@/core/ui/utils/resultWords';
+import { type EndingRow, endsClean, endStatus } from '@/core/ui/utils/runEnding';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { PendingUpdateRow } from '@/types/pendingUpdates';
 import type { OperationProgressPayload, OperationPrompt } from '@/types/webviewPayloads';
 
 const LIST_TITLE = 'Updates Available';
+/** What a clean end is about: its title, with the outcome ("Applied") under the mark. */
+const UPDATES_THING = 'Updates';
 const LIVE_SITE_SENTENCE = 'Storefront updates go to the live site.';
 const NO_ACTIONS: ActionButton[] = [];
 
@@ -229,6 +233,30 @@ function RunWindow({ rows, controls, onClose }: { rows: PendingUpdateRow[]; cont
     const takes = asking && questionTakesWindow(asking);
     const heading = takes ? taskHeading(asking) : runHeadingOf(controls.progress, rows, controls.statuses);
     const chrome = runChrome(controls);
+    // Every update applied with nothing to read on a card: the cards have nothing left to say, so the
+    // result is a small window of its own, the thing as the title and the outcome under its mark
+    // (owner, 2026-11-20). A card with a note, or an update that did not apply (with its button,
+    // walk F294), keeps the cards in place.
+    if (!takes && heading.status === 'success' && endsClean({ succeeded: true, rows: endingRowsOf(rows, controls.statuses) })) {
+        const waiting = controls.remaining > 0 ? waitingLine(controls.remaining) : undefined;
+        const took = controls.progress?.tookMs;
+        return (
+            <ProgressWindow
+                title={UPDATES_THING}
+                stream={
+                    <ResultBody
+                        status="success"
+                        outcome={resultOutcome(APPLIED_TITLE, UPDATES_THING)}
+                        lines={[waiting]}
+                        {...(took === undefined ? {} : { tookMs: took })}
+                    />
+                }
+                actions={chrome.actions}
+                endedClean
+                onClose={onClose}
+            />
+        );
+    }
     const stream = takes ? (
         <OperationQuestion prompt={asking} onTyped={controls.onTyped} />
     ) : (

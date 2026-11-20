@@ -221,6 +221,31 @@ describe('an install that ended with a problem, on its steps', () => {
     });
 });
 
+// Owner, 2026-11-20: the run grew from its small question to a large window around three centred
+// lines. Small through the run and a clean end; an end that lists its steps opens at a list's size.
+describe('the window size', () => {
+    const size = () => document.querySelector('[data-size]')?.getAttribute('data-size');
+
+    it('is small while it runs', () => {
+        renderRun({ record: RECORD });
+
+        expect(size()).toBe('S');
+    });
+
+    it('stays small for a clean end', () => {
+        renderRun({ ended: { variant: 'success', title: 'Luma Installed', finished: true } });
+
+        expect(size()).toBe('S');
+    });
+
+    it('is large for an end that lists its steps', () => {
+        const run: ImportJobRecord = { ...RECORD, outcome: 'partial', stoppedAt: 'products', perType: { products: 'error' } };
+        renderRun({ ended: { variant: 'error', title: "Couldn't Install Luma", run } });
+
+        expect(size()).toBe('L');
+    });
+});
+
 // Step 03, S7 (decisions J5-2): an uninstall is drawn as steps, never a spinner.
 describe('an uninstall', () => {
     const UNINSTALL = {

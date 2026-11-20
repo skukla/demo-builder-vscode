@@ -1,7 +1,7 @@
 /**
  * The Steps layout: one window that goes Form, Running, Result without changing size
  * (`docs/development/sop/dialog-design.md`; owner, 2026-11-11). Large, so a list of rows and a form
- * of fields both fit; its title says the step it is on, with the status icon once it ends.
+ * of fields both fit; small (`compact`) when no step holds either. Its title says the step it is on.
  *
  * A window never changes height once on screen. The caller passes the step it shows and, as
  * `reserve`, the steps it may show next; they are drawn hidden in the same grid cell, so the
@@ -59,6 +59,12 @@ export interface StepsDialogProps {
     hideClose?: boolean;
     /** Wider than L, for a step whose items cannot be broken (an 18-name type list). */
     wide?: boolean;
+    /**
+     * Every step is the progress window's centred lines, a question or a result: no list and no
+     * form, so the window is small, as the Progress layout is without rows (owner, 2026-11-20: the
+     * datapack run grew from its small question to a large window holding three centred lines).
+     */
+    compact?: boolean;
     onClose: () => void;
 }
 
@@ -73,6 +79,20 @@ export interface StepsDialogProps {
  */
 const LOADING = { label: 'Loading' };
 
+/** The window's size: small for a wait or a compact window, else large, or wider for unbreakable items. */
+function frameOf(small: boolean, wide: boolean): { size: 'S' | 'L'; wide: boolean } {
+    return small ? { size: 'S', wide: false } : { size: 'L', wide };
+}
+
+/** The buttons: none while it waits or reads, only the way out. */
+function buttonsOf(
+    quiet: boolean,
+    startButtons: ActionButton[],
+    actionButtons: ActionButton[],
+): { startButtons: ActionButton[]; actionButtons: ActionButton[] } {
+    return quiet ? { startButtons: [], actionButtons: [] } : { startButtons, actionButtons };
+}
+
 export function StepsWindow({
     title,
     status,
@@ -85,6 +105,7 @@ export function StepsWindow({
     closeLabel = 'Close',
     hideClose = false,
     wide = false,
+    compact = false,
     onClose,
 }: Omit<StepsDialogProps, 'isOpen'>): React.ReactElement {
     const [late, setLate] = useState(false);
@@ -117,15 +138,13 @@ export function StepsWindow({
         <Modal
             title={title}
             status={reading ? undefined : status}
-            size={reading ? 'S' : 'L'}
-            wide={!reading && wide}
+            {...frameOf(reading || compact, wide)}
             lockHeight={locked}
             measuring={reading ? !pending : !locked}
             onClose={onClose}
             closeLabel={closeLabel}
             hideClose={hideClose}
-            startButtons={waiting || reading ? [] : startButtons}
-            actionButtons={waiting || reading ? [] : actionButtons}
+            {...buttonsOf(Boolean(waiting) || reading, startButtons, actionButtons)}
         >
             {reading && (
                 <div className="modal-wait">

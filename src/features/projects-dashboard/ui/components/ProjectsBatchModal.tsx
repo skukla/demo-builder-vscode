@@ -28,7 +28,7 @@ import { batchSubject, confirmTitle, endThing, endTitle, PROJECTS_KIND, runLabel
 import type { BatchView, ProjectsBatchControls } from '../hooks/useProjectsBatch';
 import { BatchDeleteQuestions } from './BatchDeleteQuestions';
 import { BatchResetQuestions } from './BatchResetQuestions';
-import { ProjectsBatchRunView } from './ProjectsBatchRunView';
+import { everyRowSaysNothing, ProjectsBatchRunView } from './ProjectsBatchRunView';
 import { endingRowOf, promptButtons } from './runWindowParts';
 import { BatchSaveTable } from '@/core/ui/components/feedback/BatchSaveTable';
 import { OperationQuestion, questionTakesWindow } from '@/core/ui/components/feedback/OperationQuestion';
@@ -126,6 +126,16 @@ export function runStatus(controls: Pick<ProjectsBatchControls, 'view' | 'progre
     if (view.phase !== 'running' || (progress?.state !== 'succeeded' && progress?.state !== 'failed')) return undefined;
     const rows = view.rows.map((row) => endingRowOf(statuses[row.path]));
     return endStatus({ succeeded: progress.state === 'succeeded', warning: progress.warning, rows });
+}
+
+/**
+ * A clean end with no list left to read (owner, 2026-11-20): one project that succeeded, whose
+ * lines sit under its outcome, or several that all finished with nothing to say. Its result is a
+ * small window of its own.
+ */
+function endedClean(controls: ProjectsBatchControls, view: Extract<BatchView, { phase: 'running' }>): boolean {
+    if (!hasEnded(controls) || runStatus(controls) !== 'success') return false;
+    return view.rows.length === 1 || everyRowSaysNothing(view.rows, controls.statuses);
 }
 
 /** The title's icon: a question's, or a confirm's (both are dangerous: amber). An end's is the body's mark. */
@@ -260,6 +270,7 @@ function RunWindow({ controls, view, onClose }: { controls: ProjectsBatchControl
             hideClose={asking ? !cancels(asking) : false}
             asksUnderRows
             wide={widensFor(subjectOf(view))}
+            endedClean={endedClean(controls, view)}
             onClose={onClose}
         />
     );

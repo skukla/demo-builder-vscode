@@ -1024,17 +1024,18 @@ check says so and names the file.
 > (`ResultDialog`) and Guide (`GuideDialog`), all in `core/ui/components/ui/`. The component owns the
 > width, the spacing, the kinds of text, the button order and how the window ends; a caller passes
 > words and actions, and has no prop for a size, a margin or a class. Confirm is small, and so is
-> Progress unless it shows rows; a result keeps the size of the run it ends, and one no run came
-> before is small; Cancel stands beside a button that commits and Close everywhere else; the
+> Progress unless it shows rows; a result is small, and keeps the size of the run it ends only when
+> it has a list to read (owner, 2026-11-20); Cancel stands beside a button that commits and Close everywhere else; the
 > button that loses the SC's changes is outline, the dangerous one red. Every result is drawn the
 > wizard's way, in the one shared body (`ResultBody`): the title names the thing ("Release Save
 > Test 2", or the kind, "Projects", when there is no one thing), and the body has a large status
 > mark centred where the run's spinner was, the outcome under it in bold ("Up to Date",
 > "Couldn't Install"), one reason centred under that or several lines left-aligned in the capped
 > scroll, and "Took …" for a long run. No status icon goes in a result's title, and the next step
-> is always a footer button. This replaced "status in the title" for results and "a clean finish
-> ends small" (owner, 2026-11-17, walk F222: a title that carries the outcome "combines a title
-> with a result").
+> is always a footer button. This replaced "status in the title" for results (owner, 2026-11-17,
+> walk F222: a title that carries the outcome "combines a title with a result"); F222's "a result
+> keeps the run's size" was itself replaced by the small clean result (owner, 2026-11-20: the jump
+> at the end is accepted).
 > *Why:* the owner, 2026-11-10: the inventory in `.rptc/research/modal-conventions-audit/` found the
 > rules written down and drawn differently in nearly every window, because each window assembled
 > `Modal` on the spot. A rule a component owns cannot drift window by window.

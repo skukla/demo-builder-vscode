@@ -47,8 +47,8 @@ form, confirm, progress, result) shows one at a time.
 |---|---|---|---|
 | **Form** | `FormDialog` | Fields, then the actions | medium; large or extra-wide when a list needs columns |
 | **Confirm** | `ConfirmActionDialog` | A question as the title, as few short sentences as it takes, Cancel and the action | small (400); the run's width when a run follows in the same window |
-| **Progress** | `ProgressDialog` | A spinner, what is happening, how far, and the time. One project's run moves these lines from step to step, as the wizard does (a datapack install, switch, update, restore or uninstall: "Installing Products", "1,200 of 2,046"); only a run over several projects shows a row per project (`WorkRow`). How it ended is drawn in the same window (`ResultBody`) | small from start to finish; a run shown as rows keeps the box its rows need, its result included |
-| **Result** | `ResultDialog` | The thing as the title; in the body the large status mark, the outcome under it, then only what is left to know or do (`ResultBody`) | small when no run came before it; a run's result keeps the run's window |
+| **Progress** | `ProgressDialog` | A spinner, what is happening, how far, and the time. One project's run moves these lines from step to step, as the wizard does (a datapack install, switch, update, restore or uninstall: "Installing Products", "1,200 of 2,046"); only a run over several projects shows a row per project (`WorkRow`). How it ended is drawn in the same window (`ResultBody`) | small from start to finish; a run shown as rows keeps the box its rows need, and its result too when the result has a list to read |
+| **Result** | `ResultDialog` | The thing as the title; in the body the large status mark, the outcome under it, then only what is left to know or do (`ResultBody`) | small; a run's result keeps the run's window only when it has a list to read |
 | **Guide** | `GuideDialog` | Steps with their state, one step open (the demo setup guide; a pack's setup step is a guide of one) | large |
 
 ## Rules
@@ -108,10 +108,12 @@ close it" convention (owner, 2026-11-17, walk F195). "Projects" over "Reset" wit
 stays until closed, as "My Luma" over "Installed" and "Your changes are saved in Version History."
 does. No window closes itself on a timer.
 
-**A result keeps the run's window** (owner, 2026-11-17, walk F222, replacing "a clean finish ends
-small" of 2026-11-16). The window does not shrink from its run to its result: the large mark takes
-the place the run's spinner held (`.result-body` holds at least the room of the run's three centred
-lines), and a window shown as rows keeps its size.
+**A clean result is small** (owner, 2026-11-20, replacing walk F222's "a result keeps the run's
+window" of 2026-11-17). A run that ends cleanly, with no list left to read, ends in a small window
+of its own: the mark, the outcome, a line or two, and Took. The jump from a large run to the small
+result is accepted. A result with a list to read keeps the run's window: a failure that lists its
+steps, several projects where a row has a line, Updates with a card that has a note or a button. A
+run of one thing (a datapack, one project) runs small too, so it asks, runs and ends small.
 
 **Every run ends where it ran; only problem lines show.** A run ends in its own window (owner,
 2026-11-07, generalising the Updates run's rule of 2026-10-21; again 2026-11-17, walk F222). A run

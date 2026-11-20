@@ -10,8 +10,8 @@
  * One project under way with nothing asked is the progress window's three rows instead, centred
  * (`OneRunning`, owner 2026-11-15). Once it ends, the outcome sits over the rows under its large mark
  * (the shared `ResultBody`), with "Took …" under them, and only a row with something to read keeps a
- * line under its name (owner, 2026-11-17, walk F222). One project that finished with nothing to read
- * has no row at all (owner, 2026-11-20).
+ * line under its name (owner, 2026-11-17, walk F222). One project's end has no row at all: what it
+ * has to say sits under the outcome (owner, 2026-11-20).
  *
  * @module features/projects-dashboard/ui/components/ProjectsBatchRunView
  */
@@ -214,10 +214,15 @@ export function ProjectsBatchRunView({ rows, order, statuses, timings, progress,
     );
     if (!ended || !ending) return list;
     const took = progress?.tookMs === undefined ? {} : { tookMs: progress.tookMs };
-    // One project that finished with nothing to read has no row: under the large mark it only
-    // repeated the outcome, the name and the time (owner, 2026-11-20). A row with a problem or
-    // where its changes were saved stays (walk F222).
-    if (rows.length === 1 && saysNothing(statuses[rows[0].path])) {
+    // One project's end has no row: under the large mark it repeated the outcome, the name and the
+    // time, and what it had to say sits under the outcome instead (owner, 2026-11-20, over walk
+    // F222's row for a project with something to read).
+    if (rows.length === 1) {
+        return <ResultBody {...ending} lines={[failure, ...oneProjectLines(statuses[rows[0].path])]} {...took} />;
+    }
+    // Several that all finished with nothing to say: a list of green ticks adds nothing, and the
+    // result is a small window (owner, 2026-11-20).
+    if (progress?.state === 'succeeded' && everyRowSaysNothing(rows, statuses)) {
         return <ResultBody {...ending} lines={[failure]} {...took} />;
     }
     return (
@@ -227,7 +232,21 @@ export function ProjectsBatchRunView({ rows, order, statuses, timings, progress,
     );
 }
 
-/** A project that finished with no warning and no line of its own. */
-function saysNothing(status: BatchRowStatuses[string]): boolean {
-    return status?.state === 'done' && !status.message && (status.warnings?.length ?? 0) === 0;
+/** Every project finished, with no warning and no line of its own ("Saved to …" is a line). */
+export function everyRowSaysNothing(rows: BatchRunRow[], statuses: BatchRowStatuses): boolean {
+    return rows.every((row) => {
+        const status = statuses[row.path];
+        return status?.state === 'done' && !status.message && (status.warnings?.length ?? 0) === 0;
+    });
+}
+
+/**
+ * What one project's ended run has to say, under the outcome: a failure's reason, or a finish's
+ * warnings, then where its changes were saved.
+ */
+function oneProjectLines(status: BatchRowStatuses[string]): Array<string | undefined> {
+    const state = status?.state ?? 'waiting';
+    const problem = problemOf(state, status);
+    if (problem?.failed) return [problem.text];
+    return [problem?.text, state === 'done' ? status?.message : undefined];
 }

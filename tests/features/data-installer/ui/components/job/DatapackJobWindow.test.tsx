@@ -236,7 +236,8 @@ describe('Install', () => {
 
         expect(await heading('Bodea')).toBeInTheDocument();
         expect(screen.getByText('Installed')).toHaveClass('result-outcome');
-        expect(screen.getByRole('dialog')).toHaveAttribute('data-size', 'L');
+        // Small, as the question and the run before it (owner, 2026-11-20).
+        expect(screen.getByRole('dialog')).toHaveAttribute('data-size', 'S');
         expect(screen.queryByTestId('import-run')).not.toBeInTheDocument();
         // Walk F195 (owner, 2026-11-17): every result waits for Close.
         await act(async () => {
