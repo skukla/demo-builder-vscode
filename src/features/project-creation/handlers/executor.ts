@@ -20,6 +20,7 @@
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import { runLastSteps } from './creationLastSteps';
+import { caught, stepRunner } from './creationPause';
 import { creationReporter, creationSteps } from './creationProgress';
 import { stepBoundary } from './creationStop';
 import {
@@ -48,7 +49,8 @@ import { ProgressTracker } from './shared';
 import { COMPONENT_IDS } from '@/core/constants';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { whileRunning } from '@/core/state/projectWorkRunning';
-import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
+import { RESET_STAGES } from '@/core/utils/resetStages';
 import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { componentRegistryFrom } from '@/features/components/services/componentRegistryAccess';
 import { migrateDeclaredSecrets } from '@/features/components/services/declaredSecretStore';
@@ -209,7 +211,9 @@ async function createOrRebuild(
 
     step();
     // An Edit that changed nothing, or only integrations, is not a rebuild (PL-75).
-    if (await finishEditWithoutRebuild(context, typedConfig, progressTracker)) return;
+    // One runner for every step that can pause on its failure (F307).
+    const runStep = stepRunner({ context, reporter: progress, signal, projectName: typedConfig.projectName });
+    if (await finishEditWithoutRebuild(context, typedConfig, progressTracker, undefined, runStep)) return;
     await handlePortConflicts(context, typedConfig, progressTracker); // the port is free
     await refuseSecondErpIntegration(context, typedConfig); // one ERP integration per instance (AB-78)
 
@@ -232,7 +236,7 @@ async function createOrRebuild(
 
     // ===== PROJECT INITIALIZATION =====
 
-    progressTracker(OPERATION_STAGES.settingUpProject.label, 10, 'Creating folders');
+    progressTracker(S.settingUpProject.label, 10, 'Creating folders');
 
     const componentsDir = path.join(projectPath, 'components');
     await fsPromises.mkdir(componentsDir, { recursive: true });
@@ -240,7 +244,7 @@ async function createOrRebuild(
 
     context.logger.debug(`[Project Creation] Created directory: ${projectPath}`);
 
-    progressTracker(OPERATION_STAGES.settingUpProject.label, 15, 'Writing settings');
+    progressTracker(S.settingUpProject.label, 15, 'Writing settings');
 
     const project: import('@/types/base').Project = buildInitialProject(
         typedConfig,
@@ -286,7 +290,7 @@ async function createOrRebuild(
 
     // ===== LOAD COMPONENT DEFINITIONS =====
 
-    progressTracker(OPERATION_STAGES.loadingComponents.label, 20, 'Reading components');
+    progressTracker(S.loadingComponents.label, 20, 'Reading components');
 
     const registryManager = componentRegistryFrom(context);
     const registry = await registryManager.loadRegistry();
@@ -314,8 +318,10 @@ async function createOrRebuild(
     // deploy workspace if it lacks one, BEFORE any deploy, so a selected/imported
     // Runtime-less workspace is healed rather than orphaning a mesh at app-deploy)
 
+    // Before the code is on disk there is no project to keep: these steps cannot be
+    // skipped (F307). From the mesh on, the dashboard can run each one again.
     step();
-    await ensureWorkspaceRuntimeReady(context, typedConfig);
+    await runStep(S.makingWorkspace.label, caught(() => ensureWorkspaceRuntimeReady(context, typedConfig)), false);
 
     // ===== EDIT MODE: PREPARE ATOMIC COMPONENT SWAP =====
     // In edit mode, install components to a temp directory first.
@@ -340,9 +346,9 @@ async function createOrRebuild(
     };
 
     step();
-    await cloneAllComponents(installationContext);
+    await runStep(S.downloadingComponents.label, caught(() => cloneAllComponents(installationContext)), false);
     step();
-    await installAllComponents(installationContext);
+    await runStep(S.installingComponents.label, caught(() => installAllComponents(installationContext)), false);
 
     // ===== EDIT MODE: ATOMIC COMPONENT SWAP =====
 
@@ -358,7 +364,7 @@ async function createOrRebuild(
     // ===== PHASE 3: MESH CONFIGURATION =====
 
     step();
-    await executeMeshPhase(
+    await runStep(S.deployingMesh.label, caught(() => executeMeshPhase(
         context,
         setupContext,
         project,
@@ -367,12 +373,14 @@ async function createOrRebuild(
         progressTracker,
         isEditMode,
         existingProject,
-    );
+    )));
 
     // ===== PHASE 3b: APP BUILDER INTEGRATIONS =====
 
     step();
-    await executeAppBuilderIntegrationsPhase(context, project, typedConfig, progressTracker);
+    await runStep(S.deployingIntegrations.label, caught(() =>
+        executeAppBuilderIntegrationsPhase(context, project, typedConfig, progressTracker),
+    ));
 
     // ===== PHASE 4-5: FINALIZATION =====
     //
@@ -392,7 +400,7 @@ async function createOrRebuild(
     };
 
     step();
-    await generateEnvironmentFiles(finalizationContext);
+    await runStep(S.writingConfigFiles.label, caught(() => generateEnvironmentFiles(finalizationContext)));
 
     // Populate componentConfigs for mesh from the generated .env file
     await populateMeshComponentConfigs(context, project);
@@ -400,17 +408,19 @@ async function createOrRebuild(
     // ===== PHASE 5: SYNC EDS CONFIG TO REMOTE + PHASE 5b: EDS CONTENT SETUP =====
 
     step();
-    await syncEdsConfigToRemote(
+    await runStep(S.publishingSettings.label, caught(() => syncEdsConfigToRemote(
         context,
         project,
         typedConfig,
         isEdsStack,
         edsComponentPath,
         progressTracker,
-    );
+    )));
 
     step();
-    await setupEdsContent(context, typedConfig, isEdsStack, progressTracker, project);
+    await runStep(RESET_STAGES.copyingContent.label, () =>
+        setupEdsContent(context, typedConfig, isEdsStack, progressTracker, project),
+    );
 
     // ===== PHASE 5c-6: THE OPTIONAL STEPS, THEN THE FINISH =====
     //
@@ -420,7 +430,7 @@ async function createOrRebuild(
         context,
         project,
         progress,
-        signal,
+        runStep,
         step,
         isEdsStack,
         existingProject,

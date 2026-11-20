@@ -11,8 +11,9 @@ import { cleanupFailedCreation } from './creationFailureCleanup';
 import { projectNameProblem } from './creationNameCheck';
 import { runCreation } from './creationRun';
 import { classifyTransience, extractErrorMessage } from '@/core/errors';
-import { notYetPlain, plain, plainLine, plainName, plainOf, type PlainText } from '@/core/utils/plainText';
+import { plain, plainLine, plainName, type PlainText } from '@/core/utils/plainText';
 import { GitHubAppNotInstalledError } from '@/features/eds/services/types';
+import { creationErrorText } from '@/features/project-creation/services/stepFailure';
 import { ErrorCode } from '@/types/errorCodes';
 import { HandlerContext } from '@/types/handlers';
 import type { CreationFailedPayload, CreationProgressPayload } from '@/types/webviewPayloads';
@@ -125,10 +126,6 @@ async function reportCreationError(
         return;
     }
 
-    // Read off the RAW error. The central hierarchy this used to go through added a
-    // guessed code and a userMessage that was the same string anyway on the default
-    // path -- `AppError.from` set userMessage to the message it was handed.
-    const errorMessage = extractErrorMessage(error);
     // THE ERROR ITSELF, not its cause. The retired `AppError.from` WRAPPED the original
     // and set `cause` to it, so `appError.cause.message` was the original's message.
     // Reading `error.cause` after the wrapper is gone looks equivalent and is not — it
@@ -137,9 +134,8 @@ async function reportCreationError(
     const cancelledCode = (error as { code?: string } | undefined)?.code === ErrorCode.CANCELLED;
     const isCancelled = cancelledCode || extractErrorMessage(error).includes('cancelled by user');
     const timedOut = classifyTransience(error).kind === 'timeout';
-    // What the SC reads (PL-102): a PlainError's own sentence, else the thrown text through the
-    // counted debt (creation's executors throw this extension's sentences; slice 4 types them).
-    const shownError = plainOf(error) ?? notYetPlain(errorMessage);
+    // What the SC reads (PL-102), said as the paused screen says it.
+    const shownError = creationErrorText(error);
 
     const terminal: CreationProgressPayload = {
         currentOperation: isCancelled ? 'Cancelled' : 'Failed',

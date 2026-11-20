@@ -37,6 +37,7 @@ import {
     askSwitchInDialog,
     planDatapackChange,
 } from '@/features/project-creation/handlers/executorEditDatapack';
+import type { StepRunner } from '@/features/project-creation/handlers/creationPause';
 import { executeSampleDataPhase } from '@/features/project-creation/handlers/executorDatapackPhase';
 import {
     executeCatalogMenuPhase,
@@ -185,6 +186,25 @@ describe('applyDatapackChange', () => {
         // The old categories are gone: their pages come out before the new ones go in.
         expect(rewriteCatalogMenuPhase).toHaveBeenCalledWith(context, project, progress);
         expect(executeCatalogMenuPhase).not.toHaveBeenCalled();
+    });
+
+    it('runs the import, the warming and the menu each as a step that can pause (F307)', async () => {
+        const { context, project, progress } = setup();
+        (rewriteCatalogMenuPhase as jest.Mock).mockResolvedValueOnce({ reason: 'No menu block' });
+        const steps: Array<[string, unknown]> = [];
+        const recording: StepRunner = async (step, attempt) => {
+            steps.push([step, (await attempt())?.reason]);
+        };
+
+        await applyDatapackChange(
+            context, project, toNew, { changes: true, removeOld: true }, progress, false, recording,
+        );
+
+        expect(steps).toStrictEqual([
+            ['Installing the datapack', undefined],
+            ['Warming product pages', undefined],
+            ['Adding the catalog menu', 'No menu block'],
+        ]);
     });
 
     // Step-05 R1: a removal that took everything clears the old pack on the project and saves it.

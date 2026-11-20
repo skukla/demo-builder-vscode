@@ -44,6 +44,7 @@ import {
     applyDestinationChange,
     planDestinationChange,
 } from '@/features/project-creation/handlers/executorEditDestination';
+import { RUN_ONCE, type StepRunner } from '@/features/project-creation/handlers/creationPause';
 import { finishEditWithoutRebuild } from '@/features/project-creation/handlers/executorEditApply';
 import {
     applyPackageChange,
@@ -205,6 +206,22 @@ describe('finishEditWithoutRebuild — an integration added', () => {
         expect(progress).not.toHaveBeenCalledWith('Project Created', 100, expect.any(String));
     });
 
+    it('hands a failed add to the step runner, and a skip finishes the Edit without it (F307)', async () => {
+        const { context, stateManager, progress, ask, project } = setup();
+        (addWithSteps as jest.Mock).mockResolvedValueOnce({ success: false, error: 'deploy failed' });
+        const steps: Array<[string, unknown]> = [];
+        // Runs each step once and answers Skip This Step to any failure.
+        const skipping: StepRunner = async (step, attempt) => {
+            steps.push([step, (await attempt())?.reason]);
+        };
+
+        expect(await finishEditWithoutRebuild(context, ADD_ERP, progress, ask, skipping)).toBe(true);
+
+        expect(steps).toStrictEqual([['Deploying integrations', 'deploy failed']]);
+        expect(stateManager.saveProject).toHaveBeenCalledWith(project);
+        expect(progress).toHaveBeenLastCalledWith('Project Created', 100, expect.any(String));
+    });
+
     it("fails the Finish with the screen's own refusal, and adds nothing", async () => {
         const { context, progress, ask } = setup();
         (refuseAdd as jest.Mock).mockReturnValueOnce({ success: false, error: 'is already added' });
@@ -321,7 +338,7 @@ describe('finishEditWithoutRebuild — the datapack changed', () => {
         const asked = (planDatapackChange as jest.Mock).mock.calls[0][2] as (p: unknown, c: unknown) => unknown;
         void asked(project, undefined);
         expect(ask.switchDatapack).toHaveBeenCalledWith(project, undefined, context.context.globalState);
-        expect(applyDatapackChange).toHaveBeenCalledWith(context, project, NEW_PACK, plan, progress, false);
+        expect(applyDatapackChange).toHaveBeenCalledWith(context, project, NEW_PACK, plan, progress, false, RUN_ONCE);
         // Nothing of Adobe's is touched for a datapack: no sign-in check, no add.
         expect(runGuards).not.toHaveBeenCalled();
         expect(addWithSteps).not.toHaveBeenCalled();
@@ -448,6 +465,7 @@ describe('finishEditWithoutRebuild — the package changed on Edge Delivery', ()
             { changes: true, removeOld: false },
             progress,
             true,
+            RUN_ONCE,
         );
         expect(applyPackageChange).toHaveBeenCalledWith(context, project, NEW_PACKAGE, { resets: true }, progress);
         expect(order).toStrictEqual(['datapack', 'reset']);

@@ -29,6 +29,7 @@ import { readRepoBoilerplate } from '@/features/eds/services/storefront/storefro
 import { extractConfigParamsFromConfigs } from '@/features/eds/services/storefrontConfigParams';
 import { resolveTemplateCommitSha } from '@/features/eds/services/templateCommitResolver';
 import { ensureEdsContent } from '@/features/project-creation/services/edsContentSetup';
+import { type StepFailure, stepFailureOf } from '@/features/project-creation/services/stepFailure';
 import type { HandlerContext } from '@/types/handlers';
 import type { ProjectImportedFrom } from '@/types/projectFile';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
@@ -344,9 +345,9 @@ export async function setupEdsContent(
     progressTracker: ProgressTracker,
     /** Receives the copy's broken links, recorded on the project. */
     project?: import('@/types/base').Project,
-): Promise<void> {
+): Promise<StepFailure | undefined> {
     if (!isEdsStack || !typedConfig.edsConfig?.contentSource || !typedConfig.edsConfig?.repoUrl) {
-        return;
+        return undefined;
     }
 
     // B2B-readiness advisory (proceed-and-warn): a B2B-code storefront against a
@@ -406,8 +407,14 @@ export async function setupEdsContent(
             context.logger.info('[Phase 5b] Storefront content populated and published');
             if (project) await context.stateManager.saveProject(project);
         }
+        return undefined;
     } catch (error) {
+        // It used to end here on a log line, and the run said "Project Created" over a
+        // storefront with no pages. Now the run pauses on it (F307).
         context.logger.warn(`[Phase 5b] Content setup failed: ${(error as Error).message}`);
-        context.logger.warn('[Phase 5b] Run EDS Reset from the dashboard to populate content');
+        return stepFailureOf(CONTENT_NOT_COPIED);
     }
 }
+
+const CONTENT_NOT_COPIED =
+    "The storefront's pages could not be copied. Check that DA.live and GitHub are signed in, then try again.";

@@ -89,17 +89,18 @@ export async function executeCatalogMenuPhase(
  * @param project - The project, with its new datapack in place
  * @param progressTracker - The wizard's progress reporter
  * @param makeSite - Site seam; production builds it from this call's clients
+ * @returns why the menu could not be written; undefined when it was, or had nothing to do
  */
 export async function rewriteCatalogMenuPhase(
     context: HandlerContext,
     project: Project,
     progressTracker: ProgressReporter,
     makeSite?: (target: CatalogMenuTarget) => CatalogMenuSite,
-): Promise<void> {
+): Promise<StepFailure | undefined> {
     // A swap: Republish's step for the same job after a store change.
     const say = sayer(context, progressTracker, OPERATION_STAGES.updatingCatalogMenu.label);
-    // An Edit's swap stays as it was: it shows its problem and goes on.
-    await runCatalogMenu(context, project, say, makeSite, undefined, async (site) => {
+    // An Edit's swap pauses on its problem, as creation's write does (F307).
+    return runCatalogMenu(context, project, say, makeSite, undefined, async (site) => {
         const removed = await removeCatalogMenuStep(project, site);
         if (removed !== undefined) say(removed.summary, SWAP_LINE);
     });

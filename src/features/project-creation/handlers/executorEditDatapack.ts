@@ -12,8 +12,10 @@
  */
 
 import * as vscode from 'vscode';
+import { RUN_ONCE, type StepRunner } from './creationPause';
 import { executeSampleDataPhase } from './executorDatapackPhase';
 import type { ProgressTracker } from './shared';
+import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
 import { installedByDemoBuilder } from '@/features/data-installer/services/buildDatapackEngine';
 import { dropStaleFailure } from '@/features/data-installer/services/installFailure';
 import { type NameMemory, rememberedPackName } from '@/features/data-installer/services/packNames';
@@ -124,8 +126,8 @@ function datapackNotChanged(removal: DatapackRemoval, name: string): string | un
 /**
  * Carry out the plan: remove the old pack's data when asked to, record the new
  * choice (which may be none), then the steps creation runs after its import.
- * None of them throws: a project is usable whatever its sample data did, and each
- * step says on the progress line what happened. A removal that did not take all
+ * None of them throws: a project is usable whatever its sample data did. A failed
+ * step pauses the Edit until the SC fixes it or skips it (F307). A removal that did not take all
  * the old data stops here, the old pack still recorded, and the rest of the Edit
  * goes on (owner Q1).
  *
@@ -136,6 +138,8 @@ function datapackNotChanged(removal: DatapackRemoval, name: string): string | un
  * @param progressTracker - the wizard's progress screen
  * @param storefrontResetFollows - a package change resets the storefront next, and
  *   the reset warms the catalog and writes the category pages itself
+ * @param runStep - runs each step after the import: in a wizard Edit, a failed one
+ *   pauses until the SC fixes it or skips it (F307)
  * @returns why the datapack was not changed, for the Edit's warnings; undefined when it was
  */
 export async function applyDatapackChange(
@@ -145,6 +149,7 @@ export async function applyDatapackChange(
     plan: DatapackPlan,
     progressTracker: ProgressTracker,
     storefrontResetFollows = false,
+    runStep: StepRunner = RUN_ONCE,
 ): Promise<string | undefined> {
     if (!plan.changes) return undefined;
     if (plan.removeOld) {
@@ -160,14 +165,21 @@ export async function applyDatapackChange(
     dropStaleFailure(project);
     await context.stateManager.saveProject(project);
     if (!project.datapack) return undefined;
-    await executeSampleDataPhase(context, project, progressTracker);
+    await runStep(S.installingDatapack.label, () =>
+        executeSampleDataPhase(context, project, progressTracker),
+    );
     if (storefrontResetFollows) return undefined;
-    await executeCatalogPrewarmPhase(context, project, progressTracker);
+    await runStep(S.warmingProductPages.label, () =>
+        executeCatalogPrewarmPhase(context, project, progressTracker),
+    );
     if (!isEdsProject(project)) return undefined;
     // With the old data gone, its categories are too: Reset's removal of the pages
     // Demo Builder wrote comes first, so none is left for a category that no longer
     // exists. With it kept, the old categories still stand and the write only adds.
-    if (plan.removeOld) await rewriteCatalogMenuPhase(context, project, progressTracker);
-    else await executeCatalogMenuPhase(context, project, progressTracker);
+    await runStep(S.addingCatalogMenu.label, () =>
+        plan.removeOld
+            ? rewriteCatalogMenuPhase(context, project, progressTracker)
+            : executeCatalogMenuPhase(context, project, progressTracker),
+    );
     return undefined;
 }

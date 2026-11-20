@@ -12,11 +12,10 @@
  * @module features/project-creation/handlers/creationLastSteps
  */
 
-import { type PauseDeps, untilDone } from './creationPause';
+import type { StepRunner } from './creationPause';
 import type { CreationReporter } from './creationProgress';
 import { executeSampleDataPhase } from './executorDatapackPhase';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
-import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { generateAIContextFiles } from '@/features/project-creation/services/aiBundle/aiBundleService';
 import { executeCatalogMenuPhase } from '@/features/project-creation/services/catalogMenuPhase';
 import { executeCatalogPrewarmPhase } from '@/features/project-creation/services/catalogPrewarmPhase';
@@ -35,7 +34,8 @@ export interface LastStepsRun {
     context: HandlerContext;
     project: Project;
     progress: CreationReporter;
-    signal?: AbortSignal;
+    /** Runs each step: a failed one pauses until the SC fixes it or skips it. */
+    runStep: StepRunner;
     /** The run's step boundary: a stopped run ends here. */
     step: () => void;
     isEdsStack: boolean;
@@ -50,38 +50,31 @@ export interface LastStepsRun {
  * @throws the cancelled error when the run is stopped
  */
 export async function runLastSteps(run: LastStepsRun): Promise<void> {
-    const { context, project, progress, step, finalization } = run;
-    const pausing = (name: string): PauseDeps => ({
-        context,
-        reporter: progress,
-        signal: run.signal,
-        projectName: getProjectDisplayName(project),
-        step: name,
-    });
+    const { context, project, progress, step, runStep, finalization } = run;
 
     // After the config files exist, because the credentials the install needs are read from them.
     step();
-    await untilDone(pausing(OPERATION_STAGES.installingDatapack.label), () =>
+    await runStep(OPERATION_STAGES.installingDatapack.label, () =>
         executeSampleDataPhase(context, project, progress.report),
     );
 
     // After sample data: warming a catalog that has not been seeded publishes nothing useful.
     step();
-    await untilDone(pausing(OPERATION_STAGES.warmingProductPages.label), () =>
+    await runStep(OPERATION_STAGES.warmingProductPages.label, () =>
         executeCatalogPrewarmPhase(context, project, progress.report),
     );
 
     // After sample data too: the categories the pages are written for arrive with the datapack.
     step();
     if (run.isEdsStack) {
-        await untilDone(pausing(OPERATION_STAGES.addingCatalogMenu.label), () =>
+        await runStep(OPERATION_STAGES.addingCatalogMenu.label, () =>
             executeCatalogMenuPhase(context, project, progress.report, run.existingProject),
         );
     }
 
     step();
     await finalizeProject(finalization);
-    await untilDone(pausing(OPERATION_STAGES.finishingProject.label), () => writeAiFiles(run));
+    await runStep(OPERATION_STAGES.finishingProject.label, () => writeAiFiles(run));
     await reportProjectCreated(
         progress.report,
         project,

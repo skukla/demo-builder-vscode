@@ -11,7 +11,9 @@ import { startCreationLimit } from '@/features/project-creation/handlers/creatio
 import {
     CHECK_AGAIN,
     RETRY,
+    RUN_ONCE,
     SKIP_STEP,
+    caught,
     creationFixPrompt,
     handleCreationPauseAnswer,
     untilDone,
@@ -184,6 +186,36 @@ describe('untilDone under an agent', () => {
 
         expect(step).toHaveBeenCalledTimes(1);
         expect(vscode.window.showWarningMessage).toHaveBeenCalled();
+    });
+});
+
+describe('caught — a step that throws, read as one that fails', () => {
+    it('turns the error into the failure the run pauses on, the error kept', async () => {
+        const error = new Error('The request timed out');
+
+        await expect(caught(() => Promise.reject(error))()).resolves.toStrictEqual({
+            reason: 'The request timed out',
+            retryable: true,
+            error,
+        });
+    });
+
+    it('lets a stopped run end, rather than pausing it', async () => {
+        const stopped = Object.assign(new Error('cancelled'), { code: ErrorCode.CANCELLED });
+
+        await expect(caught(() => Promise.reject(stopped))()).rejects.toBe(stopped);
+    });
+});
+
+describe('RUN_ONCE — where nothing can pause', () => {
+    it('ends with the error a step threw', async () => {
+        const error = new Error('mesh failed');
+
+        await expect(RUN_ONCE('Deploying the mesh', caught(() => Promise.reject(error)))).rejects.toBe(error);
+    });
+
+    it('goes on past a failure the step only reported, as before', async () => {
+        await expect(RUN_ONCE('Installing the datapack', async () => FAILED)).resolves.toBeUndefined();
     });
 });
 

@@ -8,7 +8,11 @@
  * the catalog menu, the AI files) showed their failure for a moment on line 2 and the run
  * ended on a clean "Project Created".
  *
- * Now such a step waits on its failure. The steps already done stay done. The buttons
+ * Now such a step waits on its failure, and so does every other step of a creation and
+ * of an Edit (owner, 2026-11-19: "Shouldn't they be allowed to continue?"). Until then a
+ * step the project needs ended the run, and the run deleted everything already built.
+ * Skip This Step is offered once the project's code is on disk: from there the
+ * dashboard can run any step again. The steps already done stay done. The buttons
  * follow the rule for retrying (`fixWithAi.ts`): Retry while a retry can help, otherwise
  * Fix with AI, which opens the SC's AI on the problem, and Check Again. Retry and Check
  * Again run the step again; once it passes, the run carries on from the next step. Skip
@@ -29,7 +33,11 @@ import type { CreationReporter } from './creationProgress';
 import { creationCancelledError } from './creationStop';
 import { FIX_WITH_AI, failedButtonLabel } from '@/core/utils/fixWithAi';
 import { askDuringOperation } from '@/core/vscode/operationPrompt';
-import type { StepFailure } from '@/features/project-creation/services/stepFailure';
+import {
+    type StepFailure,
+    stepFailureOfError,
+} from '@/features/project-creation/services/stepFailure';
+import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext } from '@/types/handlers';
 import type { CreationPause } from '@/types/webview';
 
@@ -48,6 +56,56 @@ export interface PauseDeps {
     /** The project's name and the step, for the AI's prompt. */
     projectName: string;
     step: string;
+    /** Whether the project can go on without the step: Skip This Step. Default true. */
+    canSkip?: boolean;
+}
+
+/**
+ * Runs one step until it passes, or the SC skips it. Creation and Edit take one, so a
+ * step pauses the same way wherever it runs.
+ */
+export type StepRunner = (
+    step: string,
+    attempt: () => Promise<StepFailure | undefined>,
+    canSkip?: boolean,
+) => Promise<void>;
+
+/**
+ * A run that cannot pause: each step runs once. A failure the step only reported goes
+ * by, as it always did; one it threw ends the run with that error.
+ */
+export const RUN_ONCE: StepRunner = async (_step, attempt) => {
+    const failure = await attempt();
+    if (failure?.error !== undefined) throw failure.error;
+};
+
+/**
+ * The step runner for one run: every step pauses on its failure.
+ *
+ * @param run - the run, without the step
+ * @returns the runner
+ */
+export function stepRunner(run: Omit<PauseDeps, 'step' | 'canSkip'>): StepRunner {
+    return (step, attempt, canSkip = true) => untilDone({ ...run, step, canSkip }, attempt);
+}
+
+/**
+ * A step that throws, as one that resolves its failure. A stopped run's error still
+ * ends the run.
+ *
+ * @param work - the step
+ * @returns the step's attempt
+ */
+export function caught(work: () => Promise<unknown>): () => Promise<StepFailure | undefined> {
+    return async () => {
+        try {
+            await work();
+            return undefined;
+        } catch (error) {
+            if ((error as { code?: unknown } | undefined)?.code === ErrorCode.CANCELLED) throw error;
+            return stepFailureOfError(error);
+        }
+    };
 }
 
 /**
@@ -95,7 +153,7 @@ async function waitForAnswer(
             ? await askInWizard(deps, {
                   reason: failure.reason,
                   actions: actionsFor(failure, retries),
-                  canSkip: true,
+                  canSkip: deps.canSkip ?? true,
               })
             : await askAgentsUser(deps, failure, retries);
     } finally {

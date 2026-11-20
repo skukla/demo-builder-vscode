@@ -140,6 +140,7 @@ import {
 } from '@/features/project-creation/services/componentInstallationOrchestrator';
 import {
     finalizeProject,
+    generateEnvironmentFiles,
     sendCompletionAndCleanup,
 } from '@/features/project-creation/services/projectFinalizationService';
 import {
@@ -208,6 +209,7 @@ beforeEach(() => {
     (generateAIContextFiles as jest.Mock).mockResolvedValue(undefined);
     (cloneAllComponents as jest.Mock).mockResolvedValue(undefined);
     (finalizeProject as jest.Mock).mockResolvedValue(undefined);
+    (generateEnvironmentFiles as jest.Mock).mockResolvedValue(undefined);
 });
 
 describe('executeProjectCreation — the progress it reports', () => {
@@ -266,6 +268,9 @@ describe('executeProjectCreation — an Edit finished without the rebuild (PL-75
         expect(finishEditWithoutRebuild).toHaveBeenCalledWith(
             context,
             expect.objectContaining({ editProjectPath: EDIT_PATH, editChanges: [] }),
+            expect.any(Function),
+            undefined,
+            // The run's step runner: an Edit's steps pause as creation's do (F307).
             expect.any(Function),
         );
         expect(handlePortConflicts).not.toHaveBeenCalled();
@@ -417,6 +422,51 @@ describe('executeProjectCreation — the AI bundle step', () => {
             },
         ]);
         expect(generateAIContextFiles).toHaveBeenCalledTimes(2);
+    });
+});
+
+/** The pauses the creation screen was sent, in order. */
+function pausesSent(sendMessage: jest.Mock): unknown[] {
+    return sendMessage.mock.calls
+        .map(([, payload]) => (payload as CreationProgressPayload).pause)
+        .filter(Boolean);
+}
+
+describe('executeProjectCreation — a step that ended the run now pauses it (F307)', () => {
+    it('offers no Skip This Step before the code is on disk, and runs the step again on Retry', async () => {
+        const { context, sendMessage } = makeContext();
+        (cloneAllComponents as jest.Mock).mockRejectedValueOnce(new Error('The request timed out'));
+
+        const run = executeProjectCreation(context, config());
+        await answerWhenPaused(context, 'Retry');
+        await run;
+
+        expect(pausesSent(sendMessage)).toEqual([
+            { reason: 'The request timed out', actions: ['Retry'], canSkip: false },
+        ]);
+        expect(cloneAllComponents).toHaveBeenCalledTimes(2);
+        expect(finalizeProject).toHaveBeenCalled();
+    });
+
+    it('lets a step after the code be skipped, and finishes the project without it', async () => {
+        const { context, sendMessage } = makeContext();
+        (generateEnvironmentFiles as jest.Mock).mockRejectedValueOnce(
+            new Error('The settings files could not be written.'),
+        );
+
+        const run = executeProjectCreation(context, config());
+        await answerWhenPaused(context, 'Skip This Step');
+        await run;
+
+        expect(pausesSent(sendMessage)).toEqual([
+            {
+                reason: 'The settings files could not be written.',
+                actions: ['Fix with AI', 'Check Again'],
+                canSkip: true,
+            },
+        ]);
+        expect(generateEnvironmentFiles).toHaveBeenCalledTimes(1);
+        expect(finalizeProject).toHaveBeenCalled();
     });
 });
 
