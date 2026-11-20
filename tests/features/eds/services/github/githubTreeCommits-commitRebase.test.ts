@@ -29,6 +29,8 @@ interface RouteState {
     heads: Array<{ commitSha: string; treeSha: string }>;
     /** Ref-update outcomes in order; an Error is thrown, undefined succeeds. */
     refResults: Array<Error | undefined>;
+    /** The entries change nothing: GitHub answers the tree it was built on. */
+    unchanged?: boolean;
 }
 
 /** Route the operations' four requests through one steerable implementation. */
@@ -45,7 +47,8 @@ function stubGitHub(state: RouteState) {
         }
         if (route.includes('/git/trees')) {
             treeBases.push(options.base_tree);
-            return Promise.resolve({ data: { sha: `tree-from-${String(options.base_tree)}` } });
+            const sha = state.unchanged ? String(options.base_tree) : `tree-from-${String(options.base_tree)}`;
+            return Promise.resolve({ data: { sha } });
         }
         if (route.includes('/git/commits')) {
             return Promise.resolve({ data: { sha: `commit-on-${String(options.tree)}` } });
@@ -78,6 +81,19 @@ describe('commitTreeToBranch', () => {
 
         expect(treeBases).toEqual(['tree-1']);
         expect(sha).toBe('commit-on-tree-from-tree-1');
+    });
+
+    // Owner, 2026-11-20: a repository adopted as it was gained a commit that changed nothing.
+    it('makes no commit when the entries change nothing, and answers the head as it was', async () => {
+        stubGitHub({ heads: [{ commitSha: 'head-1', treeSha: 'tree-1' }], refResults: [undefined], unchanged: true });
+        const ops = new GitHubTreeCommits(tokenService);
+
+        const sha = await ops.commitTreeToBranch('me', 'shop', 'main', ENTRIES, 'chore: x');
+
+        expect(sha).toBe('head-1');
+        const routes = mockRequest.mock.calls.map(([route]) => String(route));
+        expect(routes.some((route) => route.includes('/git/commits'))).toBe(false);
+        expect(routes.some((route) => route.includes('/git/refs/heads/'))).toBe(false);
     });
 
     it('rebuilds on the NEW head when the branch moved, not on the stale one', async () => {

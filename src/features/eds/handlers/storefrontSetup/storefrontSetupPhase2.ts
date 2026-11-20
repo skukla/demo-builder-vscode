@@ -227,6 +227,12 @@ async function pushFstabToGitHub(
         repoInfo.repoName,
         'fstab.yaml',
     );
+    // Already pointing at this site: nothing to write. A repository adopted as it was gained a
+    // commit that changed nothing (owner, 2026-11-20).
+    if (existingFstab?.content === fstabContent) {
+        logger.info('[Storefront Setup] fstab.yaml already points at this content source');
+        return;
+    }
     await githubFileOps.createOrUpdateFile(
         repoInfo.repoOwner,
         repoInfo.repoName,

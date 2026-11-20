@@ -84,6 +84,24 @@ describe('executePhaseHelixConfig — fstab.yaml', () => {
         );
     });
 
+    // Owner, 2026-11-20: a repository adopted as it was gained a commit that changed nothing.
+    it('leaves it alone when it already points at this content source', async () => {
+        const fileOps = makeFileOps({
+            getFileContent: jest.fn().mockResolvedValue({ sha: 'existing-sha', content: 'mock-fstab' }),
+        });
+        const { promise } = runPhase({ fileOps });
+        await promise;
+
+        expect(fileOps.createOrUpdateFile).not.toHaveBeenCalledWith(
+            'me',
+            'shop',
+            'fstab.yaml',
+            expect.anything(),
+            expect.anything(),
+            expect.anything(),
+        );
+    });
+
     it('updates the existing file in place when the repo already has one', async () => {
         const fileOps = makeFileOps({
             getFileContent: jest.fn().mockResolvedValue({ sha: 'existing-sha', content: 'old' }),

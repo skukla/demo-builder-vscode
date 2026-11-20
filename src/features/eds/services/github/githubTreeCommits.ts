@@ -223,7 +223,8 @@ export class GitHubTreeCommits extends GitHubAuthenticatedOperations {
      * @param branch - Branch to commit onto
      * @param treeEntries - Files to write (paths not listed keep the branch's content)
      * @param message - Commit message
-     * @returns The SHA of the commit the branch now points at
+     * @returns The SHA of the commit the branch now points at; the head as it was when the entries
+     *   change nothing, since then no commit is made
      */
     async commitTreeToBranch(
         owner: string,
@@ -237,6 +238,9 @@ export class GitHubTreeCommits extends GitHubAuthenticatedOperations {
         for (let attempt = 1; attempt <= COMMIT_REBASE_ATTEMPTS; attempt++) {
             const { treeSha, commitSha } = await this.getBranchInfo(owner, repo, branch);
             const newTreeSha = await this.createTree(owner, repo, treeEntries, treeSha);
+            // Nothing would change: no commit. An empty one landed in a repository adopted as it
+            // was, where the files were already right (owner, 2026-11-20).
+            if (newTreeSha === treeSha) return commitSha;
             const newCommitSha = await this.createCommit(
                 owner,
                 repo,
