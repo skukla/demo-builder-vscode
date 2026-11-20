@@ -164,6 +164,19 @@ describe('getLinkedEdsProjects', () => {
         });
     }
 
+    // Owner, 2026-11-20: "Kept the GitHub repository: scratch-1028 also uses it." named the folder.
+    it('names each project as the SC knows it: its title, else its folder name', async () => {
+        const storefront = (repo: string) => ({
+            [COMPONENT_IDS.EDS_STOREFRONT]: createEdsComponentInstance({ githubRepo: repo, daLiveOrg: 'org', daLiveSite: 'site' }),
+        });
+        const titled = createMockProject({ name: 'scratch-1028', title: 'Scratch 1028', path: '/p/a', componentInstances: storefront('o/a') });
+        const untitled = createMockProject({ name: 'scratch-1028-c', title: undefined, path: '/p/b', componentInstances: storefront('o/b') });
+
+        const result = await getLinkedEdsProjects(stateManagerWithProjects([titled, untitled]));
+
+        expect(result.map((p) => p.name)).toEqual(['Scratch 1028', 'scratch-1028-c']);
+    });
+
     it('should return all EDS projects with metadata', async () => {
         const edsProject1 = createMockProject({
             name: 'eds-project-1',

@@ -10,6 +10,7 @@
  */
 
 import { COMPONENT_IDS } from '@/core/constants';
+import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import type { Project } from '@/types/base';
 import type { StateManager } from '@/types/state';
 
@@ -35,7 +36,10 @@ export interface EdsProjectMetadata {
  * Project info with EDS metadata for management commands
  */
 export interface EdsProjectInfo {
-    /** Project name */
+    /**
+     * The project as the SC knows it (its title, else its folder name): every caller shows it, as
+     * "Kept the GitHub repository: Scratch 1028 also uses it." (owner, 2026-11-20: names, not codes).
+     */
     name: string;
     /** Project path */
     path: string;
@@ -118,7 +122,7 @@ export async function getLinkedEdsProjects(
             const metadata = extractEdsMetadata(project);
             if (metadata) {
                 edsProjects.push({
-                    name: project.name,
+                    name: getProjectDisplayName(project),
                     path: project.path,
                     metadata,
                 });
