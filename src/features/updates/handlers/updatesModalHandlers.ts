@@ -358,7 +358,7 @@ function lineOf(outcome: ItemOutcome): string | undefined {
 }
 
 /**
- * A row's line without the project's name leading it ("justrite: …", "justrite (Adobe
+ * A row's line without the project's name leading it ("acme: …", "acme (Adobe
  * boilerplate): …"): the apply names the project for the agent's totals, and on screen the
  * project's card already says it (owner, 2026-11-19).
  */

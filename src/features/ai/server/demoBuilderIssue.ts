@@ -50,7 +50,7 @@ function escapeRegExp(text: string): string {
 
 /**
  * The text with every demo detail taken out: the names given, longest first so a repository
- * "owner/justrite" goes before "justrite"; then addresses, emails, tokens and paths.
+ * "owner/acme" goes before "acme"; then addresses, emails, tokens and paths.
  *
  * @param known - names, folders, repositories and codes from the SC's projects
  */

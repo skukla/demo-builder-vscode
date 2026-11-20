@@ -89,7 +89,7 @@ export type OpenInClaudeArg =
           attachFiles?: string[];
           /**
            * The project the prompt is about, by the name the SC sees, when it may not be the open one
-           * (Fix with AI on an update for JustRite while Scratch 1028 is open, owner walk 2026-11-19):
+           * (Fix with AI on an update for Acme while Scratch 1028 is open, owner walk 2026-11-19):
            * the preamble names it in place of the open project.
            */
           aboutProject?: string;

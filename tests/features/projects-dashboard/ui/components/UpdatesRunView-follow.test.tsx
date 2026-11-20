@@ -227,7 +227,7 @@ describe("the running step says where it is among its project's steps", () => {
             state: 'running',
             stage: 'Updating integrations',
             step: 'Installing dependencies',
-            position: { index: 2, total: 4, name: 'Justrite ERP' },
+            position: { index: 2, total: 4, name: 'Acme ERP' },
         } as OperationProgressPayload;
         const { container } = render(
             <UpdatesRunView rows={TWO} statuses={statuses} progress={progress} onTyped={jest.fn()} remaining={0} rowFix={ROW_FIX} />,
@@ -235,7 +235,7 @@ describe("the running step says where it is among its project's steps", () => {
 
         const row = rowsOf(container)[1];
         expect(row.querySelector('[data-testid="spectrum-progressbar"]')).toHaveTextContent(/^Step 2\/3: Updating integrations$/);
-        expect(row.querySelector('.step-progress-detail')).toHaveTextContent('Installing dependencies: Justrite ERP');
+        expect(row.querySelector('.step-progress-detail')).toHaveTextContent('Installing dependencies: Acme ERP');
     });
 
     it('says the part in place of the step when there is no count', () => {

@@ -9,7 +9,7 @@ status: active
 
 # Retry only when it can help; Fix with AI when it cannot, everywhere
 
-Filed 2026-11-19 from the beta.153 release walk (F298). The owner, on a failed JustRite template
+Filed 2026-11-19 from the beta.153 release walk (F298). The owner, on a failed Acme template
 update that offered Retry: "I was expecting to see Fix with AI here since even I don't even know what
 next steps to take." Then: "Shouldn't this fix by kind decision be a convention that applies to the
 entire codebase?" Yes; built for the Updates window only, before the release.

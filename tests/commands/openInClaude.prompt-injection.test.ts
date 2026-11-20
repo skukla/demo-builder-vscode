@@ -371,13 +371,13 @@ describe('OpenInClaudeCommand', () => {
     });
 });
 
-// Fix with AI on an update for JustRite while Scratch 1028 is open (owner walk, 2026-11-19): the
+// Fix with AI on an update for Acme while Scratch 1028 is open (owner walk, 2026-11-19): the
 // preamble names the project the request is about, never the open one.
 describe('a request about another project', () => {
     it('names that project and says not to switch the open one', () => {
-        const prefix = buildRehomePrefix('scratch-1028', 'JustRite');
+        const prefix = buildRehomePrefix('scratch-1028', 'Acme');
 
-        expect(prefix).toContain('"JustRite"');
+        expect(prefix).toContain('"Acme"');
         expect(prefix).toContain('do not switch the open project');
         expect(prefix).not.toContain('scratch-1028');
     });

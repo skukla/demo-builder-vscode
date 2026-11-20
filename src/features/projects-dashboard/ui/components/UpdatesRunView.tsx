@@ -76,7 +76,7 @@ function lineOf(row: PendingUpdateRow, state: UpdateRowState, stage: string | un
 interface Live {
     /** The step the run is on ("Updating your local copy"). */
     stage?: string;
-    /** Which part of it is in flight, when it says: "Installing dependencies: Justrite ERP". */
+    /** Which part of it is in flight, when it says: "Installing dependencies: Acme ERP". */
     part?: string;
     /** The run has ended: a local copy step it never reached is not drawn. */
     ended?: boolean;

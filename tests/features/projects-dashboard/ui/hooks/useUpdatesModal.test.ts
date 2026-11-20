@@ -300,7 +300,7 @@ describe('useUpdatesModal', () => {
 const fixRow = (id: string): PendingUpdateRow => ({
     id,
     kind: 'template',
-    group: { key: '/p/justrite', title: 'JustRite' },
+    group: { key: '/p/acme', title: 'Acme' },
     label: `Update ${id}`,
     detail: 'Source was reset.',
     ticked: true,

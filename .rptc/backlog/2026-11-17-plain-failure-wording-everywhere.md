@@ -82,7 +82,7 @@ the data installer still listed in `tests/sop/user-facing-errors.ledger.json` (`
 
 ## 2026-11-19: it happened again, and the owner widened it
 
-On the Updates window (walk F294/F295) a failed template update showed git's own words, "justrite:
+On the Updates window (walk F294/F295) a failed template update showed git's own words, "acme:
 The template update could not be applied: repository lacks the necessary blob to perform 3-way
 merge." The user-facing-errors SOP could not see it: git's reason travelled as an ordinary string
 (`templateMergeBase.ts` `gitReason` → `templateSyncService.ts` → the row status), several steps

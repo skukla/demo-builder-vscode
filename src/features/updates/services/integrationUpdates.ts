@@ -178,7 +178,7 @@ export async function applyIntegrationUpdates(
         onProgress?.(stage, where);
         try {
             // Which part is in flight goes with its step, so the Updates window can say it under
-            // the bar ("Installing dependencies: Justrite ERP", owner 2026-11-19).
+            // the bar ("Installing dependencies: Acme ERP", owner 2026-11-19).
             const updated = await ctx.updateIntegrationPair(item.project, item.componentId, (message, subMessage, position) =>
                 onProgress?.(stage, position ? message : `${where}: ${subMessage ?? message}`, position),
             );
