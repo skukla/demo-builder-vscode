@@ -5,7 +5,7 @@
  * @module features/data-installer/ui/components/packMenu
  */
 
-import { INSTALL, INSTALL_NEWER, RESTORE, UPDATE } from '../../datapackWords';
+import { DELETE, INSTALL, INSTALL_NEWER, RESTORE, UPDATE } from '../../datapackWords';
 import { SHARE_CONSENT } from '../../shareWording';
 import type { DatapackDetail } from '../../types';
 import type { ConfirmActionDialogProps } from '@/core/ui/components/ui/ConfirmActionDialog';
@@ -62,7 +62,7 @@ export function removeRows(removesData: boolean, deletes: boolean): PackMenuRow[
         ...(removesData ? [{ key: 'remove-data', label: 'Uninstall', icon: 'uninstall' }] : []),
         // Delete, not Remove (owner, 2026-11-09, walk F118): it leaves the library for good, where
         // Uninstall takes a demo's data out of its store and an install puts it back.
-        ...(deletes ? [{ key: 'remove', label: 'Delete', icon: 'delete' }] : []),
+        ...(deletes ? [{ key: 'remove', label: DELETE, icon: 'delete' }] : []),
     ];
 }
 
@@ -110,8 +110,8 @@ export function confirmCopy(asking: Asking, detail: DatapackDetail, sharedInFile
     // look back at the title for "it" (owner, 2026-11-20). The SC never sees a version (overview
     // Phase 7). Red: deleting is what red is for (rule 20).
     return {
-        title: `Delete ${name}?`,
-        actionLabel: 'Delete',
+        title: `${DELETE} ${name}?`,
+        actionLabel: DELETE,
         actionVariant: 'negative',
         children: [deleteSentence(name, detail.shared), sharedInFile],
     };

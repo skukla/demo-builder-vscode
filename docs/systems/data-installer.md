@@ -409,7 +409,7 @@ included, and opening on the version the demo uses (`DatapackCatalogGrid`):
   Pressing it first asks the delete door without `confirm`, which writes nothing and answers who
   uses the datapack (`data.inUse`: the projects by name, and whether the open one is among them; a
   spinner on the Delete row meanwhile). When any project uses it, a small window says so in place of
-  the question ("My Luma", "In Use", "Scratch 1028 uses it. Uninstall it here first."), with
+  the question ("My Luma", "Couldn't Delete", "Scratch 1028 uses it. Uninstall it here first."), with
   Uninstall beside Close when the open demo is the one (owner, 2026-11-20). Otherwise
   it asks "Delete My Luma?", "My Luma will be deleted from your library. This can't be undone." (with "People you shared it with can no longer install it." between them when it is shared), naming no version, with a red Delete. It is
   offered on the SC's own library datapack and never on a Demo Builder datapack, its owner's

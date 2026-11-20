@@ -278,7 +278,7 @@ describe('Delete asks in a dialog, every time', () => {
         await press(row('Delete'));
 
         expect(screen.queryByRole('heading', { name: 'Delete Bodea?' })).toBeNull();
-        expect(screen.getByText('In Use')).toHaveClass('result-outcome');
+        expect(screen.getByText("Couldn't Delete")).toHaveClass('result-outcome');
         expect(screen.getByText('Scratch 1028 uses it. Uninstall it here first.')).toBeInTheDocument();
         await press(within(screen.getByRole('dialog')).getByRole('button', { name: 'Uninstall' }));
         expect(onRemoveData).toHaveBeenCalledTimes(1);

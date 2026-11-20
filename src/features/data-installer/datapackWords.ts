@@ -26,6 +26,9 @@ export const INSTALL = 'Install';
 /** The button that takes a datapack's data out of Commerce. */
 export const UNINSTALL = 'Uninstall';
 
+/** The button that takes the SC's own datapack out of the library, for good. */
+export const DELETE = 'Delete';
+
 /**
  * The button that puts the demo's datapack back to a previous state (J4-2; J9, owner 2026-11-14:
  * "Restore means go back to a previous state"): its last save or its original.

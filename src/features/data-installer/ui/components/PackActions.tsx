@@ -32,6 +32,7 @@
  */
 
 import React, { useCallback, useLayoutEffect, useState } from 'react';
+import { DELETE, UNINSTALL } from '../../datapackWords';
 import { INSTALLER_WRITES_SHOWN } from '../../installerWrites';
 import { isSavedVersion } from '../../packVersions';
 import type { DatapackDetail } from '../../types';
@@ -213,9 +214,10 @@ export function PackActions({
 }
 
 /**
- * Delete refused before it asks: the datapack as the title, "In Use" under the amber mark, who uses
- * it and where to uninstall it; Uninstall beside Close when the open demo is the one (owner,
- * 2026-11-20, mockup 2a and 2b).
+ * Delete refused before it asks: the datapack as the title, "Couldn't Delete" under the amber mark
+ * (every result's "Couldn't <action>", the shared action word), who uses it and where to uninstall
+ * it; Uninstall beside Close when the open demo is the one (owner, 2026-11-20, mockup 2a and 2b; "In
+ * Use" was a word of its own).
  */
 function InUseWindow({
     name,
@@ -230,13 +232,13 @@ function InUseWindow({
 }): React.JSX.Element {
     const uninstall =
         inUse?.open && onUninstall
-            ? { label: 'Uninstall', onPress: () => { onClose(); onUninstall(); } }
+            ? { label: UNINSTALL, onPress: () => { onClose(); onUninstall(); } }
             : undefined;
     return (
         <ResultDialog
             isOpen={inUse !== undefined}
             title={name}
-            outcome="In Use"
+            outcome={`Couldn't ${DELETE}`}
             status="warning"
             {...(uninstall ? { action: uninstall } : {})}
             onClose={onClose}
