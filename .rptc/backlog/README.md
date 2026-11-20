@@ -498,7 +498,7 @@ each item's own file; what has already landed against an item is in its
 | `PR-1` | epic | [Reframe prerequisites: extension-wide tools vs project-shape requirements (Path A)](2026-06-11-prereqs-architecture-reframe.md) | — | low | backlog |
 | `PR-1a` | feature | └ [Node versions in one place: one register, one resolver, one runner](2026-10-07-node-versions-in-one-place.md) | — | med | active |
 
-### platform  (110)
+### platform  (114)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -612,6 +612,10 @@ each item's own file; what has already landed against an item is in its
 | `PL-104` | chore | [Make the drifted doors of 13 user actions agree](2026-11-18-entry-point-drift-fixes.md) | — | high | shipped |
 | `PL-105` | chore | [After beta.153 ships: clear out the owner's unused demo resources](2026-11-18-post-release-cloud-cleanup.md) | — | low | backlog |
 | `PL-106` | feature | [Retry only when it can help; Fix with AI when it cannot, everywhere](2026-11-19-retry-only-when-it-can-help.md) | — | med | active |
+| `PL-107` | fix | [Four periodic checks have no recorded run since at least October](2026-11-20-periodic-checks-unrun-since-october.md) | — | high | backlog |
+| `PL-108` | feature | [Build the nine accepted reflect proposals that are Demo Builder's](2026-11-20-build-nine-accepted-reflect-proposals.md) | — | med | backlog |
+| `PL-109` | fix | [The record scan should take a second or two](2026-11-20-hygiene-scan-in-two-seconds.md) | — | low | backlog |
+| `PL-110` | fix | [Remove the router's pre-filter entries for the rules that moved to the plugin](2026-11-20-retire-router-rules-moved-to-plugin.md) | — | low | backlog |
 
 <!-- END GENERATED registry -->
 
@@ -760,7 +764,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — shipped
 
-*360 item(s) sit outside the A–G chain.*
+*364 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 

@@ -171,7 +171,8 @@ Let `N` = new beta number, `PREV` = current one.
    ```
 
 9. **Close what shipped in the backlog.** Record any commit trailer not yet logged:
-   `node "$(git config dev-pipeline.root)/lib/backlog.mjs" unlogged --write`. Then run the toolbox
+   the plugin's `backlog` tool with `["unlogged", "--write"]` (running `backlog.mjs` with node is
+   refused). Then run the toolbox
    tool `backlog_ship` with `["--tag", "v1.0.0-beta.<N>"]` to see which items the tag contains, and
    again with `["--tag", "v1.0.0-beta.<N>", "--write"]` to mark them shipped. Reconcile what it
    reports as partial or without evidence: file the remainder as its own item, or reword it as
