@@ -11,7 +11,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { contractProblem, releaseArgs, releaseProblems, trackOf } from './releaseChecks.mjs';
+import { contractProblem, highestVersion, releaseArgs, releaseProblems, trackOf } from './releaseChecks.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_LIST = join(HERE, '../../../src/core/releases/releasedRepos.ts');
@@ -70,7 +70,11 @@ function erpProblem(repo, repoPath, version) {
     if (repo === ERP_SYSTEM) return contractProblem(repo, own, contractAt(ERP_INTEGRATION, 'main'));
     // An alpha is a rehearsal, so the other half's main will do: no SC gets either.
     if (trackOf(version) === 'alpha') return contractProblem(repo, own, contractAt(ERP_SYSTEM, 'main'));
-    const newest = tryGh('api', `repos/${ERP_SYSTEM}/releases/latest`, '--jq', '.tag_name');
+    // Not releases/latest: it leaves prereleases out, and every component is on the beta track.
+    const published = '[.[] | select(.draft | not) | .tag_name]';
+    const tags = tryGh('api', `repos/${ERP_SYSTEM}/releases`, '--jq', published);
+    const highest = tags ? highestVersion(JSON.parse(tags)) : undefined;
+    const newest = highest ? `v${highest}` : undefined;
     return contractProblem(repo, own, newest ? contractAt(ERP_SYSTEM, newest) : undefined);
 }
 
