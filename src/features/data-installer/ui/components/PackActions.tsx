@@ -35,6 +35,7 @@ import React, { useCallback, useLayoutEffect, useState } from 'react';
 import { INSTALLER_WRITES_SHOWN } from '../../installerWrites';
 import { isSavedVersion } from '../../packVersions';
 import type { DatapackDetail } from '../../types';
+import { inUseLine, type PackInUse, useDeleteCheck } from '../hooks/useDeleteCheck';
 import { useLibrarySharing } from '../hooks/useLibrarySharing';
 import type { HeldFailure } from '../hooks/useProjectHolding';
 import { useRetryInstall } from '../hooks/useRetryInstall';
@@ -47,6 +48,7 @@ import { useSaveDatapackFile } from './SaveDatapackFileButton';
 import { StageWait, type WaitLines } from '@/core/ui/components/feedback/StageWait';
 import { ConfirmActionDialog } from '@/core/ui/components/ui/ConfirmActionDialog';
 import { type FlyoutActionRow, FlyoutActionList } from '@/core/ui/components/ui/FlyoutActionList';
+import { ResultDialog } from '@/core/ui/components/ui/ResultDialog';
 import { failedButtonLabel } from '@/core/utils/fixWithAi';
 import { WAIT_STAGES } from '@/core/utils/waitStages';
 import type { DatapackId } from '@/types/datapack';
@@ -121,6 +123,7 @@ export function PackActions({
     const [asking, setAsking] = useState<Asking>(null);
     const saveFile = useSaveDatapackFile(detail.id, library ? 'library' : 'installer');
     const removal = useLibraryRemoval(detail.id, onRemoved, isSavedVersion(detail.id.version));
+    const deleteCheck = useDeleteCheck(detail.id, isSavedVersion(detail.id.version));
     const sharing = useLibrarySharing(detail.id, detail.shared, onSharingChanged);
     // Undo opens the window once its job is accepted, straight on its run.
     const openRun = useCallback((id: DatapackId): void => onImport?.(id, 'run'), [onImport]);
@@ -145,6 +148,8 @@ export function PackActions({
         else if (key === 'remove-data') onRemoveData?.();
         else if (key === 'update-pack') saves?.onUpdate?.();
         else if (key === 'save-as-new') saves?.onSaveAsNew();
+        // Delete asks who uses the datapack first, and says so in place of the question (owner, 2026-11-20).
+        else if (key === 'remove') deleteCheck.start(() => setAsking('remove'));
         else if (isAsked(key)) setAsking(key);
     };
     const confirm = (): void => {
@@ -159,7 +164,12 @@ export function PackActions({
         ...saveRows(saves),
         ...packRows(detail, undoTo !== undefined),
         // Both take something away; only Delete is for good, so only it is red (owner, 2026-11-17).
-        ...removeRows(onRemoveData !== undefined, deletable(detail)).map((row) => ({ ...row, removes: true, danger: row.key === 'remove' })),
+        ...removeRows(onRemoveData !== undefined, deletable(detail)).map((row) => ({
+            ...row,
+            removes: true,
+            danger: row.key === 'remove',
+            pending: row.key === 'remove' && deleteCheck.checking,
+        })),
     ];
     return (
         <>
@@ -192,7 +202,47 @@ export function PackActions({
                 onConfirm={confirm}
                 onClose={doneAsking}
             />
+            <InUseWindow
+                name={detail.displayName}
+                inUse={deleteCheck.inUse}
+                onUninstall={onRemoveData}
+                onClose={deleteCheck.dismiss}
+            />
         </>
+    );
+}
+
+/**
+ * Delete refused before it asks: the datapack as the title, "In Use" under the amber mark, who uses
+ * it and where to uninstall it; Uninstall beside Close when the open demo is the one (owner,
+ * 2026-11-20, mockup 2a and 2b).
+ */
+function InUseWindow({
+    name,
+    inUse,
+    onUninstall,
+    onClose,
+}: {
+    name: string;
+    inUse: PackInUse | undefined;
+    onUninstall: (() => void) | undefined;
+    onClose: () => void;
+}): React.JSX.Element {
+    const uninstall =
+        inUse?.open && onUninstall
+            ? { label: 'Uninstall', onPress: () => { onClose(); onUninstall(); } }
+            : undefined;
+    return (
+        <ResultDialog
+            isOpen={inUse !== undefined}
+            title={name}
+            outcome="In Use"
+            status="warning"
+            {...(uninstall ? { action: uninstall } : {})}
+            onClose={onClose}
+        >
+            {inUse ? inUseLine(inUse) : null}
+        </ResultDialog>
     );
 }
 

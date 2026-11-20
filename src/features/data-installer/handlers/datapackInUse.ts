@@ -12,6 +12,7 @@
  */
 
 import { loadOtherProjects } from '@/core/state/otherProjects';
+import { andList } from '@/core/utils/andList';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
@@ -48,8 +49,34 @@ async function projectsWith(context: HandlerContext, name: string): Promise<Proj
     return [open, ...others].filter((project): project is Project => project?.datapack?.name === name);
 }
 
-/** The refusal a delete gives when projects use what it would delete. */
+/** Who uses a datapack: the projects by name, and whether the open project is one of them. */
+export interface DatapackUsers {
+    users: string[];
+    /** The open project uses it: the screen offers Uninstall beside the refusal. */
+    open: boolean;
+}
+
+/**
+ * The projects that use a datapack, or one save of it, and whether the open one does.
+ *
+ * @param version - one save; undefined matches any
+ */
+export async function datapackUsers(context: HandlerContext, name: string, version?: string): Promise<DatapackUsers> {
+    const open = await context.stateManager.getCurrentProject();
+    const using = (await projectsWith(context, name)).filter(
+        (project) => version === undefined || project.datapack?.version === version,
+    );
+    return {
+        users: using.map((project) => getProjectDisplayName(project)),
+        open: using.some((project) => project.path === open?.path),
+    };
+}
+
+/**
+ * The refusal a delete gives when projects use what it would delete: who, and what to do. It said
+ * "deleted" twice until the owner read it on 2026-11-20.
+ */
 export function inUseRefusal(users: readonly string[], what: 'save' | 'datapack'): string {
-    const who = users.length === 1 ? `${users[0]} uses` : `${users.join(', ')} use`;
-    return `${who} this ${what}, so it can't be deleted. Uninstall it there first.`;
+    const who = users.length === 1 ? `${users[0]} uses` : `${andList(users)} use`;
+    return `${who} this ${what}. Uninstall it there first.`;
 }

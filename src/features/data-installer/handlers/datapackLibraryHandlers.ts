@@ -39,7 +39,7 @@ import { myLayerVersions } from '../services/settingsLayer';
 import { sharedInFileWarningFor } from '../services/sharedInFiles';
 import { SHARE_CONSENT } from '../shareWording';
 import { resolveDataInstallerAccess } from './dataInstallerHandlers';
-import { inUseRefusal, projectsUsing } from './datapackInUse';
+import { datapackUsers, inUseRefusal } from './datapackInUse';
 import { failure, installerEchoRefusal, installerWriteRefusal } from './datapackZipHandlers';
 import { packReadsFor } from './recordedPackHandlers';
 import type { DatapackId, DatapackStoreName } from '@/types/datapack';
@@ -201,10 +201,26 @@ async function refuseDemoBuilderPack(context: HandlerContext, name: string | und
     }
 }
 
+/** The refusal when projects use what a delete names, with who uses it for the screen; none when nothing does. */
+async function inUseAnswer(
+    context: HandlerContext,
+    name: string,
+    version: string | undefined,
+    what: 'save' | 'datapack',
+): Promise<HandlerResponse | undefined> {
+    const inUse = await datapackUsers(context, name, version);
+    if (inUse.users.length === 0) return undefined;
+    return { success: false, error: inUseRefusal(inUse.users, what), code: ErrorCode.INVALID_OPERATION, data: { inUse } };
+}
+
 /** Delete every version of the SC's own pack, and each one's settings layer (`everyVersion`). */
 async function deleteEveryVersion(context: HandlerContext, payload: DeleteLibraryDatapackPayload): Promise<HandlerResponse> {
     const name = payload.datapackName;
     if (!name) return { success: false, error: 'Name the datapack to delete.' };
+    // A datapack a project uses is never deleted: that project would be stranded (Phase 2). Said
+    // before the confirm, so the screen's check can say it before it asks (owner, 2026-11-20).
+    const inUse = await inUseAnswer(context, name, undefined, 'datapack');
+    if (inUse) return inUse;
     if (payload.confirm !== true) {
         return {
             success: false,
@@ -212,9 +228,6 @@ async function deleteEveryVersion(context: HandlerContext, payload: DeleteLibrar
             code: ErrorCode.INVALID_OPERATION,
         };
     }
-    // A datapack a project uses is never deleted: that project would be stranded (Phase 2).
-    const users = await projectsUsing(context, name);
-    if (users.length > 0) return { success: false, error: inUseRefusal(users, 'datapack'), code: ErrorCode.INVALID_OPERATION };
     const access = await resolveDataInstallerAccess(context, 'library');
     if (!access.ok) return access.response;
     try {
@@ -255,6 +268,10 @@ export const datapackLibraryHandlers = defineHandlers({
                 error: 'Name the datapack and its version to delete.',
             };
         }
+        // The save a project uses is never deleted: that project would be stranded (Phase 2). Said
+        // before the confirm, so the screen's check can say it before it asks (owner, 2026-11-20).
+        const inUse = await inUseAnswer(context, id.name, id.version, 'save');
+        if (inUse) return inUse;
         const warning = await sharedWarning(context, id);
         if (payload?.confirm !== true) {
             return {
@@ -264,9 +281,6 @@ export const datapackLibraryHandlers = defineHandlers({
                 ...(warning ? { data: { sharedInFile: warning } } : {}),
             };
         }
-        // The save a project uses is never deleted: that project would be stranded (Phase 2).
-        const users = await projectsUsing(context, id.name, id.version);
-        if (users.length > 0) return { success: false, error: inUseRefusal(users, 'save'), code: ErrorCode.INVALID_OPERATION };
         const access = await resolveDataInstallerAccess(context, 'library');
         if (!access.ok) return access.response;
         try {

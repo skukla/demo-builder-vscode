@@ -10,6 +10,7 @@
  * @module features/eds/ui/steps/repoSelectionInline.helpers
  */
 
+import { andList } from '@/core/utils/andList';
 import type { GitHubRepoItem } from '@/types/webview';
 
 /** Repository creation state tracking. */
@@ -102,12 +103,6 @@ export interface ResetOptionView {
 /** No banner, the tick off and locked. */
 const SILENT: ResetOptionView = { checked: false, locked: true, tone: 'none', title: '', detail: '' };
 
-/** "a", "a and b", "a, b and c". */
-function listed(items: string[]): string {
-    if (items.length < 2) return items.join('');
-    return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
-}
-
 /**
  * Decide the reset control's appearance from what the repo actually contains.
  *
@@ -144,7 +139,7 @@ export function describeResetOption(
             locked: false,
             tone: 'warn',
             title: "This repository isn't a storefront.",
-            detail: `It is missing ${listed(readiness.missing)}. Tick Reset to set it up from the template.`,
+            detail: `It is missing ${andList(readiness.missing)}. Tick Reset to set it up from the template.`,
         };
     }
 

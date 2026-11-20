@@ -78,8 +78,10 @@ const LEDGER: Readonly<Record<string, Reason>> = {
  * names, not outcomes.
  * 78 -> 79 on 2026-11-19 (F307, creation pauses on a failed step): the paused step's buttons
  * take their labels from the extension (Retry, Fix with AI, Check Again), as a question's do.
+ * 79 -> 80 on 2026-11-20 (Delete checks who uses a datapack first): the In Use window's title is the
+ * datapack's name (`ResultDialog.title` in `PackActions`), the SC's own words.
  */
-const DYNAMIC_PIN = 79;
+const DYNAMIC_PIN = 80;
 
 /**
  * The six dialog layouts (the Steps layout joined 2026-11-11) hand their caller's words on to Modal (`title={title}`). Those words are

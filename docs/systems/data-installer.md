@@ -406,7 +406,12 @@ included, and opening on the version the demo uses (`DatapackCatalogGrid`):
   2026-11-09: it leaves the library for good, where Uninstall can be undone by installing; a bare
   verb since J8-3) on a pack of saves deletes it whole, every version and each one's settings layer
   (`delete-library-datapack` with `everyVersion`); on a named version, that version and its layer.
-  It asks "Delete My Luma?", "My Luma will be deleted from your library. This can't be undone." (with "People you shared it with can no longer install it." between them when it is shared), naming no version, with a red Delete. It is
+  Pressing it first asks the delete door without `confirm`, which writes nothing and answers who
+  uses the datapack (`data.inUse`: the projects by name, and whether the open one is among them; a
+  spinner on the Delete row meanwhile). When any project uses it, a small window says so in place of
+  the question ("My Luma", "In Use", "Scratch 1028 uses it. Uninstall it here first."), with
+  Uninstall beside Close when the open demo is the one (owner, 2026-11-20). Otherwise
+  it asks "Delete My Luma?", "My Luma will be deleted from your library. This can't be undone." (with "People you shared it with can no longer install it." between them when it is shared), naming no version, with a red Delete. It is
   offered on the SC's own library datapack and never on a Demo Builder datapack, its owner's
   included; agents can still delete one (`delete_library_datapack`, with `everyVersion` for a pack
   of saves, as the screen does). The storage is unchanged: each

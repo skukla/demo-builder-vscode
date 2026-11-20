@@ -234,7 +234,8 @@ describe('Delete asks in a dialog, every time', () => {
         await press(row('Delete'));
         expect(screen.getByRole('heading', { name: 'Delete Bodea?' })).toBeInTheDocument();
         expect(screen.getByText(/will be deleted from your library\. This can't be undone\./)).toBeInTheDocument();
-        expect(mockRequest).not.toHaveBeenCalled();
+        // Only the check so far, which writes nothing: no confirm.
+        expect(mockRequest.mock.calls).toEqual([['delete-library-datapack', { datapackName: 'bodea', version: 'main' }]]);
 
         // Rule 20: red is for deleting.
         expect(confirmButton('Delete')).toHaveClass('modal-button-negative');
@@ -259,8 +260,42 @@ describe('Delete asks in a dialog, every time', () => {
         await press(row('Delete'));
         await press(screen.getByRole('button', { name: 'Cancel' }));
 
-        expect(mockRequest).not.toHaveBeenCalled();
+        // The check alone went out, which writes nothing.
+        expect(mockRequest.mock.calls.every(([, payload]) => (payload as { confirm?: boolean }).confirm !== true)).toBe(true);
         expect(screen.queryByText(WARNING)).not.toBeInTheDocument();
+    });
+
+    // Owner, 2026-11-20: it asked "will be deleted" and then said a demo used it. The check comes first.
+    it('says the open demo uses it, in place of the question, with Uninstall beside Close', async () => {
+        const onRemoveData = jest.fn();
+        mockRequest.mockResolvedValue({
+            success: false,
+            error: 'Scratch 1028 uses this datapack. Uninstall it there first.',
+            data: { inUse: { users: ['Scratch 1028'], open: true } },
+        });
+        renderActions({ detail: OWN, onRemoveData });
+
+        await press(row('Delete'));
+
+        expect(screen.queryByRole('heading', { name: 'Delete Bodea?' })).toBeNull();
+        expect(screen.getByText('In Use')).toHaveClass('result-outcome');
+        expect(screen.getByText('Scratch 1028 uses it. Uninstall it here first.')).toBeInTheDocument();
+        await press(within(screen.getByRole('dialog')).getByRole('button', { name: 'Uninstall' }));
+        expect(onRemoveData).toHaveBeenCalledTimes(1);
+    });
+
+    it('names the other demos that use it, with Close alone', async () => {
+        mockRequest.mockResolvedValue({
+            success: false,
+            error: 'x',
+            data: { inUse: { users: ['Scratch 1028 C', 'Kukla Luma'], open: false } },
+        });
+        renderActions({ detail: OWN, onRemoveData: jest.fn() });
+
+        await press(row('Delete'));
+
+        expect(screen.getByText('Scratch 1028 C and Kukla Luma use it. Uninstall it there first.')).toBeInTheDocument();
+        expect(within(screen.getByRole('dialog')).queryByRole('button', { name: 'Uninstall' })).toBeNull();
     });
 
     it('says why when the library refuses', async () => {
@@ -303,9 +338,10 @@ describe('while a row works, the flyout waits', () => {
 
     it('stays waiting once a pack is removed, as the flyout closes', async () => {
         const props = renderActions({ detail: OWN });
-        const finish = pendingRequest();
 
+        // The check before the question answers at once (nothing uses it); the delete itself waits.
         await press(row('Delete'));
+        const finish = pendingRequest();
         await press(confirmButton('Delete'));
         expect(waiting()).toBeInTheDocument();
 

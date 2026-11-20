@@ -91,6 +91,35 @@ describe('the save a project on this machine uses is never deleted', () => {
         expect(result.error).toContain('scratch-1028 uses this datapack');
         expect(deletes()).toHaveLength(0);
     });
+
+    // Owner, 2026-11-20: the screen asked "will be deleted. This can't be undone." and only then said
+    // it could not be. The check without confirm says who uses it, so the screen says it first.
+    it('says who uses it on the check without confirm, and whether the open project does', async () => {
+        library.findDatapacks.mockResolvedValue({ items: [row(OWN, '20261029-183005', true)], count: 1 });
+        const context = contextFor(projectUsing());
+
+        const result = await remove(context, { datapackName: OWN, everyVersion: true });
+
+        expect(result).toStrictEqual({
+            success: false,
+            error: 'scratch-1028 uses this datapack. Uninstall it there first.',
+            code: 'INVALID_OPERATION',
+            data: { inUse: { users: ['scratch-1028'], open: true } },
+        });
+        expect(deletes()).toHaveLength(0);
+    });
+
+    it('says another project uses it, not the open one', async () => {
+        const context = contextFor(null);
+        (context.stateManager.getAllProjects as jest.Mock).mockResolvedValue([{ path: '/p/other', name: 'other' }]);
+        (context.stateManager.loadProjectFromPath as jest.Mock).mockResolvedValue(
+            createMockProject({ name: 'other-demo', path: '/p/other', datapack: { name: OWN, version: '20261029-183005', store: 'library' } }),
+        );
+
+        const result = await remove(context, { datapackName: OWN, version: '20261029-183005' });
+
+        expect(result.data).toStrictEqual({ inUse: { users: ['other-demo'], open: false } });
+    });
 });
 
 describe("the pack's settings layer (datapack-engine step 09): a version takes its layer of the same version with it", () => {

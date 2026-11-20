@@ -13,6 +13,7 @@
 
 import React from 'react';
 import { renderMenuIcon } from '@/core/ui/components/ui/menuIcons';
+import { Spinner } from '@/core/ui/components/ui/Spinner';
 
 /** One action in the list. */
 export interface FlyoutActionRow {
@@ -24,6 +25,11 @@ export interface FlyoutActionRow {
     removes?: boolean;
     /** There is no way back: the danger colour. Implies `removes`. */
     danger?: boolean;
+    /**
+     * A quick check runs before the row's action (Delete asking who uses a datapack, owner
+     * 2026-11-20): a small spinner in the icon's place, and the row cannot be pressed again.
+     */
+    pending?: boolean;
 }
 
 export interface FlyoutActionListProps {
@@ -73,9 +79,11 @@ function ActionRow({
                     row.danger ? 'integration-panel-action is-danger' : 'integration-panel-action'
                 }
                 onClick={() => onAction(row.key)}
+                disabled={row.pending}
+                aria-busy={row.pending ? true : undefined}
             >
                 <span className="integration-panel-action-icon" aria-hidden="true">
-                    {renderMenuIcon(row.icon)}
+                    {row.pending ? <Spinner size="S" /> : renderMenuIcon(row.icon)}
                 </span>
                 {row.label}
             </button>
