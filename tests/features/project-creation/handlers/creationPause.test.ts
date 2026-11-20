@@ -94,21 +94,35 @@ describe('untilDone in the wizard', () => {
 
         expect(step).toHaveBeenCalledTimes(2);
         expect(shown).toEqual([
-            { reason: FAILED.reason, actions: ['Fix with AI', CHECK_AGAIN], canSkip: true },
+            { reason: FAILED.reason, actions: ['Fix with AI', CHECK_AGAIN], canSkip: false },
             undefined,
         ]);
         expect(deps.context.sharedState.creationPauseAnswer).toBeUndefined();
     });
 
-    it('goes on without the step on Skip This Step', async () => {
-        const { deps } = wizardRun();
+    it('offers Skip This Step only once a fix attempt has failed too, then goes on without the step', async () => {
+        const { deps, shown } = wizardRun();
         const step = failingStep(5);
 
         const run = untilDone(deps, step);
+        await press(deps.context, CHECK_AGAIN);
         await press(deps.context, SKIP_STEP);
         await run;
 
-        expect(step).toHaveBeenCalledTimes(1);
+        expect(step).toHaveBeenCalledTimes(2);
+        expect(shown.filter(Boolean).map((pause) => pause?.canSkip)).toStrictEqual([false, true]);
+    });
+
+    it('ignores a skip before a fix attempt, and keeps waiting', async () => {
+        const { deps } = wizardRun();
+        const step = failingStep(1);
+
+        const run = untilDone(deps, step);
+        await press(deps.context, SKIP_STEP);
+        await press(deps.context, CHECK_AGAIN);
+        await run;
+
+        expect(step).toHaveBeenCalledTimes(2);
     });
 
     it('offers Retry for a failure a retry can help, then Fix with AI once two retries failed', async () => {
@@ -188,7 +202,7 @@ describe('untilDone under an agent', () => {
         await run;
 
         expect(heard).toStrictEqual([
-            { reason: FAILED.reason, actions: [CHECK_AGAIN], canSkip: true, step: 'Installing the datapack' },
+            { reason: FAILED.reason, actions: [CHECK_AGAIN], canSkip: false, step: 'Installing the datapack' },
         ]);
         expect(step).toHaveBeenCalledTimes(2);
         expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();

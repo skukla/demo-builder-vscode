@@ -41,7 +41,7 @@ describe('an agent creation that pauses', () => {
         const { context, attempt, ended } = agentRun(1);
 
         await expect(untilPausedOrEnded(context, 'agent-demo', ended)).resolves.toStrictEqual({
-            paused: { reason: FAILED.reason, actions: [CHECK_AGAIN], canSkip: true, step: 'Deploying the mesh' },
+            paused: { reason: FAILED.reason, actions: [CHECK_AGAIN], canSkip: false, step: 'Deploying the mesh' },
         });
         await expect(answerPausedCreation('agent-demo', CHECK_AGAIN)).resolves.toStrictEqual({
             ended: 'created',
@@ -61,13 +61,17 @@ describe('an agent creation that pauses', () => {
         });
     });
 
-    it('refuses an answer the pause did not offer, and keeps waiting for one it did', async () => {
-        const { context, ended } = agentRun(1);
+    it('refuses a skip before a fix attempt, then takes it once Check Again failed too', async () => {
+        const { context, ended } = agentRun(5);
         await untilPausedOrEnded(context, 'agent-demo', ended);
 
-        await expect(answerPausedCreation('agent-demo', 'Retry')).resolves.toStrictEqual({
-            error: 'Retry is not an answer to this step. Answer one of: Check Again, Skip This Step.',
+        await expect(answerPausedCreation('agent-demo', 'Skip This Step')).resolves.toStrictEqual({
+            error: 'Skip This Step is not an answer to this step. Answer one of: Check Again.',
         });
+        await expect(answerPausedCreation('agent-demo', CHECK_AGAIN)).resolves.toHaveProperty(
+            'paused.canSkip',
+            true,
+        );
         await expect(answerPausedCreation('agent-demo', 'Skip This Step')).resolves.toStrictEqual({
             ended: 'created',
         });

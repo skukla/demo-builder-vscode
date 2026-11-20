@@ -68,7 +68,7 @@ describe('continue_project_creation', () => {
             name: 'agent-demo',
             step: 'Writing settings files',
             reason: 'The settings files could not be written.',
-            answers: ['Check Again', 'Skip This Step'],
+            answers: ['Check Again'],
             hint: expect.stringContaining('continue_project_creation'),
         });
 

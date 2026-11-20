@@ -395,6 +395,7 @@ describe('executeProjectCreation — the AI bundle step', () => {
         (generateAIContextFiles as jest.Mock).mockRejectedValue(new Error('bundle blew up'));
 
         const run = executeProjectCreation(context, config());
+        await answerWhenPaused(context, 'Check Again');
         await answerWhenPaused(context, 'Skip This Step');
 
         await expect(run).resolves.toBeUndefined();
@@ -418,7 +419,7 @@ describe('executeProjectCreation — the AI bundle step', () => {
             {
                 reason: 'The AI files could not be written: bundle blew up',
                 actions: ['Fix with AI', 'Check Again'],
-                canSkip: true,
+                canSkip: false,
             },
         ]);
         expect(generateAIContextFiles).toHaveBeenCalledTimes(2);
@@ -448,24 +449,22 @@ describe('executeProjectCreation — a step that ended the run now pauses it (F3
         expect(finalizeProject).toHaveBeenCalled();
     });
 
-    it('lets a step after the code be skipped, and finishes the project without it', async () => {
+    it('lets a step after the code be skipped once a fix attempt failed too, and finishes without it', async () => {
         const { context, sendMessage } = makeContext();
-        (generateEnvironmentFiles as jest.Mock).mockRejectedValueOnce(
-            new Error('The settings files could not be written.'),
-        );
+        const failed = new Error('The settings files could not be written.');
+        (generateEnvironmentFiles as jest.Mock).mockRejectedValueOnce(failed).mockRejectedValueOnce(failed);
 
         const run = executeProjectCreation(context, config());
+        await answerWhenPaused(context, 'Check Again');
         await answerWhenPaused(context, 'Skip This Step');
         await run;
 
+        const pause = { reason: failed.message, actions: ['Fix with AI', 'Check Again'] };
         expect(pausesSent(sendMessage)).toEqual([
-            {
-                reason: 'The settings files could not be written.',
-                actions: ['Fix with AI', 'Check Again'],
-                canSkip: true,
-            },
+            { ...pause, canSkip: false },
+            { ...pause, canSkip: true },
         ]);
-        expect(generateEnvironmentFiles).toHaveBeenCalledTimes(1);
+        expect(generateEnvironmentFiles).toHaveBeenCalledTimes(2);
         expect(finalizeProject).toHaveBeenCalled();
     });
 });

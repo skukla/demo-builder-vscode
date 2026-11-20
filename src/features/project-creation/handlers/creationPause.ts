@@ -11,8 +11,10 @@
  * Now such a step waits on its failure, and so does every other step of a creation and
  * of an Edit (owner, 2026-11-19: "Shouldn't they be allowed to continue?"). Until then a
  * step the project needs ended the run, and the run deleted everything already built.
- * Skip This Step is offered once the project's code is on disk: from there the
- * dashboard can run any step again. The steps already done stay done. The buttons
+ * Skip This Step is offered once the project's code is on disk, and only after one Retry
+ * or Check Again has failed as well: fixing it is the normal path, and going on without a
+ * step the rare one, there so an SC is never blocked from a demo (owner, 2026-11-19).
+ * The steps already done stay done. The buttons
  * follow the rule for retrying (`fixWithAi.ts`): Retry while a retry can help, otherwise
  * Fix with AI, which opens the SC's AI on the problem, and Check Again. Retry and Check
  * Again run the step again; once it passes, the run carries on from the next step. Skip
@@ -161,7 +163,9 @@ async function waitForAnswer(
         reason: failure.reason,
         // An agent is the AI: it fixes the problem itself, then says Check Again.
         actions: panel ? actions : actions.filter((action) => action !== FIX_WITH_AI),
-        canSkip: deps.canSkip ?? true,
+        // Only once a fix attempt has failed too: a run should finish properly, and going on
+        // without a step is the rare way out, so no SC is ever blocked (owner, 2026-11-19).
+        canSkip: (deps.canSkip ?? true) && retries > 0,
     };
     const limit = creationLimitOf(deps.signal);
     limit?.hold();
