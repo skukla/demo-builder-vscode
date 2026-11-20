@@ -179,7 +179,7 @@ async function waitForAnswer(
 /** Show the pause and wait; Fix with AI opens the AI and keeps waiting. */
 async function ask(deps: PauseDeps, pause: CreationPause): Promise<string> {
     const answer = nextAnswer(deps);
-    deps.reporter.pause(pause);
+    deps.reporter.pause(pause, deps.step);
     deps.context.sharedState.onCreationPause?.({ ...pause, step: deps.step });
     try {
         for (let next = answer; ; next = nextAnswer(deps)) {

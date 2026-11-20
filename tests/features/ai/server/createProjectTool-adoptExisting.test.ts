@@ -63,6 +63,28 @@ describe('create_project — adoptExisting', () => {
         });
     });
 
+    // The wizard's Reset to Template: the repository is wiped and made again from the
+    // template, and the site's content is copied fresh (owner, 2026-11-20: an agent can
+    // do whatever an SC can).
+    it("resets the named repository to the template, as the wizard's Reset to Template does", async () => {
+        await toolServer().call({ ...EDS, resetExisting: true });
+
+        expect(setupConfig()).toMatchObject({
+            repoMode: 'existing',
+            existingRepo: 'steve/my-repo',
+            resetToTemplate: true,
+        });
+        expect(setupConfig().selectedSite).toBeUndefined();
+        expect(capturedWizardState().edsConfig).toMatchObject({ resetToTemplate: true });
+    });
+
+    it('refuses adoptExisting and resetExisting together: one keeps the repository, one wipes it', async () => {
+        const res = await toolServer().call({ ...EDS, adoptExisting: true, resetExisting: true });
+
+        expect(res.error).toContain('not both');
+        expect(storefrontSetup).not.toHaveBeenCalled();
+    });
+
     it('tells a failed run how to retry on what it already made', async () => {
         storefrontSetup.mockResolvedValueOnce({ success: false, error: 'Repository name already exists' });
 

@@ -670,7 +670,9 @@ as made, so it is never removed. A storefront provisioned before the failure sta
 it does in the wizard. A re-run uses it by passing `adoptExisting:true`: the repository
 (`githubOwner`/`repoName`) and DA.live site (`daLiveOrg`/`daLiveSite`) are taken as they
 are, the wizard's "use existing" choice for both, with no reset of the code and no new
-copy of the content. The same flag rebuilds a deleted project whose storefront survived.
+copy of the content. The same flag rebuilds a deleted project whose storefront survived. `resetExisting:true` is
+the wizard's Reset to Template instead: the named repository is wiped and made again from
+the template, and the site's content is copied fresh. The two are refused together.
 
 The creation step itself runs through `runCreation` (`creationRun.ts`), the function the
 wizard's `create-project` handler calls too, so every door has the same 30-minute limit

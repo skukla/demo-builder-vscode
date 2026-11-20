@@ -150,11 +150,13 @@ describe('create_project — registered schema', () => {
             'confirm',
             'daLiveOrg',
             'daLiveSite',
+            'datapack',
             'githubOwner',
             'link',
             'package',
             'projectName',
             'repoName',
+            'resetExisting',
             'stack',
             'storeScope',
         ]);

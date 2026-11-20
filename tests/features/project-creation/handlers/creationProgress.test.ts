@@ -179,4 +179,33 @@ describe('creationReporter', () => {
         ]);
         expect(reportPhase).toHaveBeenCalledTimes(1);
     });
+
+    // A step can fail before it reports anything; the pause still names it, numbered,
+    // and keeps naming it once the SC answers (F307 live check, 2026-11-20).
+    it('pauses on the step that failed, not the one that last reported', () => {
+        const send = jest.fn();
+        const progress = creationReporter(send, STARTED_AT);
+        progress.numberFrom(creationSteps(edsConfig({ datapack: { name: 'Citisignal', version: '1.0.0' } })));
+        progress.report(S.publishingSettings.label, 90, 'Uploading settings');
+        const pause = { reason: 'The datapack could not be installed.', actions: ['Check Again'], canSkip: false };
+
+        progress.pause(pause, S.installingDatapack.label);
+        progress.pause(undefined);
+
+        const [, paused, resumed] = sent(send);
+        expect(paused).toMatchObject({ currentOperation: S.installingDatapack.label, pause });
+        expect(paused.position?.index).toBeGreaterThan(sent(send)[0].position?.index ?? 0);
+        expect(resumed.currentOperation).toBe(S.installingDatapack.label);
+        expect(resumed.pause).toBeUndefined();
+    });
+
+    it('pauses on the step last reported when it is that step', () => {
+        const send = jest.fn();
+        const progress = creationReporter(send, STARTED_AT);
+        progress.report(S.copyingContent.label, 80, '40 of 103 files');
+
+        progress.pause({ reason: 'No.', actions: ['Retry'], canSkip: false }, S.copyingContent.label);
+
+        expect(sent(send)[1]).toMatchObject({ currentOperation: S.copyingContent.label, message: '40 of 103 files' });
+    });
 });

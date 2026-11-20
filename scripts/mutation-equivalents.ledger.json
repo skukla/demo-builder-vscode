@@ -8273,7 +8273,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 255,
+            "line": 256,
             "mutants": 1,
             "category": "block",
             "reason": "Stryker empties the catch, so a throwing validateToken leaves githubOk unassigned instead of false. Both readings are falsy at the 'if (!githubOk)' below, so the tool returns the same needsAuth:'github' handoff and calls the same collaborators either way. The only difference is the variable's binding, which nothing observes; a test asserting it would have to reach inside the function. Re-anchored 2026-10-19 (225 -> 226): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-11-04 (226 -> 252): unchanged code, moved when ACCS creations began recording the Adobe organization (F11).",
@@ -8286,7 +8286,7 @@
             "anchors": [
                 "} catch {"
             ],
-            "line": 270,
+            "line": 271,
             "mutants": 1,
             "category": "block",
             "reason": "Stryker empties the catch, so a throwing isAuthenticated leaves daLiveOk unassigned instead of false. Both readings are falsy at the 'if (!daLiveOk)' below, so the tool returns the same needsAuth:'dalive' handoff and calls the same collaborators either way. The only difference is the variable's binding, which nothing observes; a test asserting it would have to reach inside the function. Re-anchored 2026-10-19 (240 -> 241): unchanged code, moved when agents got their own working project (AI-15). Re-anchored 2026-11-04 (241 -> 267): unchanged code, moved when ACCS creations began recording the Adobe organization (F11).",

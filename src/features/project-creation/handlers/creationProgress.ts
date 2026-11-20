@@ -68,8 +68,11 @@ export interface CreationReporter {
     report: ProgressTracker;
     /** Number each step from now on by its place in `steps`. */
     numberFrom: (steps: readonly string[]) => void;
-    /** Pause the step last reported on a failure, or take the pause down (undefined). */
-    pause: (pause?: CreationPause) => void;
+    /**
+     * Pause on a failed step, or take the pause down (undefined). The step is named
+     * because it can fail before it reports anything.
+     */
+    pause: (pause?: CreationPause, stage?: string) => void;
 }
 
 /**
@@ -98,6 +101,11 @@ export function creationReporter(
         if (remember) last = payload;
         void sendMessage('creationProgress', payload);
     };
+    const onStep = (from: CreationProgressPayload, stage: string): CreationProgressPayload => {
+        const at = stepPosition(steps, stage);
+        const { position: _was, ...rest } = from;
+        return { ...rest, currentOperation: stage, message: detailFor(stage) ?? '', ...(at ? { position: at } : {}) };
+    };
     const report: ProgressTracker = (stage, progress, message, position, stepsRemaining) => {
         if (stop?.aborted) return;
         const line = stepUnder(stage, message) ?? detailFor(stage) ?? '';
@@ -121,9 +129,11 @@ export function creationReporter(
         numberFrom: (list) => {
             steps = list;
         },
-        // The same step and line 2, with the pause or without it (F307).
-        pause: (pause) => {
+        // The failed step and line 2, with the pause or without it (F307). A step that
+        // failed before reporting is put on screen first, so the pause names it.
+        pause: (pause, stage) => {
             if (stop?.aborted || !last) return;
+            if (stage && stage !== last.currentOperation) last = onStep(last, stage);
             const { pause: _shown, ...step } = last;
             send(pause ? { ...step, pause } : step, false);
             if (pause) reportPhase(`${stageLine(step.currentOperation, step.position)} — ${pause.reason}`);

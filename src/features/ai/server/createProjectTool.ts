@@ -74,6 +74,7 @@ import {
     type ProjectConfigSource,
 } from '@/features/project-creation/ui/wizard/wizardHelpers';
 import { NO_GUEST_PRODUCTS_WARNING, warnsOfNoProducts } from '@/types/commerceStore';
+import type { ProjectDatapack } from '@/types/datapack';
 import type { DemoPackage, Storefront } from '@/types/demoPackages';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
@@ -315,6 +316,8 @@ interface CreateArgs {
     storeScope?: StoreScope;
     /** EDS: the repository and DA.live site already exist; use them as they are. */
     adoptExisting?: boolean;
+    /** EDS: the repository exists; reset it to the template, as the wizard's Reset to Template. */
+    resetExisting?: boolean;
     /** Added to a successful answer (what a file brought, what is still needed). */
     report?: Record<string, unknown>;
 }
@@ -513,6 +516,28 @@ function stoppedDuringSetup(setupRes: HandlerResponse, events: CapturedEvent[]) 
 }
 
 /** EDS creation path: provision the storefront (captured), then create the project. */
+
+/**
+ * The wizard's repository choice, for an agent: a new repository; one used as it is
+ * (adoptExisting, with the site's content kept); or one reset to the template
+ * (resetExisting, with the site's content copied fresh, as the wizard's Reset to Template).
+ */
+function repoChoice(
+    args: { repoName?: string; daLiveSite?: string; adoptExisting?: boolean; resetExisting?: boolean },
+    githubOwner: string,
+): Pick<StorefrontSetupStartPayload['edsConfig'], 'repoMode' | 'existingRepo' | 'selectedSite' | 'resetToTemplate'> {
+    if (args.resetExisting) {
+        return { repoMode: 'existing', existingRepo: `${githubOwner}/${args.repoName}`, resetToTemplate: true };
+    }
+    if (args.adoptExisting) {
+        return {
+            repoMode: 'existing',
+            existingRepo: `${githubOwner}/${args.repoName}`,
+            selectedSite: { id: args.daLiveSite ?? '', name: args.daLiveSite ?? '' },
+        };
+    }
+    return { repoMode: 'new' };
+}
 async function createEds(
     ctx: HandlerContext,
     args: CreateArgs & {
@@ -563,13 +588,7 @@ async function createEds(
         // The wizard's "use existing" choice for both: the repository is used as it
         // is (no reset to the template) and the site's content is not copied over
         // again, because a selected site with no reset keeps its content.
-        ...(args.adoptExisting
-            ? {
-                  repoMode: 'existing' as const,
-                  existingRepo: `${githubOwner}/${args.repoName}`,
-                  selectedSite: { id: args.daLiveSite, name: args.daLiveSite },
-              }
-            : { repoMode: 'new' as const }),
+        ...repoChoice(args, githubOwner),
         githubOwner,
         daLiveOrg: args.daLiveOrg,
         daLiveSite: args.daLiveSite,
@@ -736,6 +755,8 @@ interface CreationRequest {
     storeScope?: StoreScope;
     /** EDS: the repository and DA.live site already exist; use them as they are. */
     adoptExisting?: boolean;
+    /** EDS: the repository exists; reset it to the template, as the wizard's Reset to Template. */
+    resetExisting?: boolean;
     seed?: CreationSeed;
     /** A demo bundle the project is made from (EDS-72); Edge Delivery only. */
     importedFrom?: ImportedFrom;
@@ -809,6 +830,34 @@ async function resolveAndCreate(ctx: HandlerContext, request: CreationRequest, s
         : createHeadless(ctx, args, pkg, packages);
 }
 
+/** An optional text input as the creation takes it: absent or empty is none. */
+function textOrNone(value: unknown): string | undefined {
+    return value ? String(value) : undefined;
+}
+
+/**
+ * The datapack an agent chose for its new project, checked as the wizard's step would
+ * hand it; and the repository choice, which may not both keep and wipe the repository.
+ */
+function datapackChoice(
+    raw: unknown,
+    adoptExisting?: boolean,
+    resetExisting?: boolean,
+): { datapack?: ProjectDatapack } | { error: string } {
+    if (adoptExisting === true && resetExisting === true) {
+        return {
+            error: 'Pass adoptExisting or resetExisting, not both: one keeps the repository as it is, the other wipes it.',
+        };
+    }
+    if (!raw) return {};
+    const { name, version, store } = raw as { name?: string; version?: string; store?: string };
+    if (!name || !version) return { error: 'datapack needs a name and a version, from find_datapacks.' };
+    if (store !== undefined && store !== 'library' && store !== 'installer') {
+        return { error: `datapack.store is library or installer, not ${store}.` };
+    }
+    return { datapack: { name, version, ...(store ? { store } : {}) } };
+}
+
 /**
  * Register `create_project`.
  * @param server     McpServer (typed `any`; see registerProjectTools docstring).
@@ -859,11 +908,27 @@ export function registerCreateProjectTool(
                     .describe(
                         'EDS only: the repo (githubOwner/repoName) and DA.live site (daLiveOrg/daLiveSite) already exist — use them as they are, code and content untouched, instead of creating them. For rebuilding a deleted project whose storefront survived.',
                     ),
+                resetExisting: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "EDS only: the repo (githubOwner/repoName) already exists — wipe it and make it again from the demo's template, and copy the site's content fresh, as the wizard's Reset to Template does. Replaces all of the repo's code; confirm with the user.",
+                    ),
                 accsEndpoint: z
                     .string()
                     .optional()
                     .describe(
                         "EDS + ACCS only: Adobe Commerce Cloud GraphQL endpoint (default: an added demo's own, when its package names one)",
+                    ),
+                datapack: z
+                    .object({
+                        name: z.string().describe('Datapack name from find_datapacks'),
+                        version: z.string().describe('Its version from find_datapacks'),
+                        store: z.string().optional().describe('library or installer (default), as find_datapacks names it'),
+                    })
+                    .optional()
+                    .describe(
+                        "The datapack the new project installs into its store, as the wizard's Datapacks step chooses (default: none)",
                     ),
                 // The same input configure_project takes (AI-11), so the demo's codes
                 // need not be published first and corrected after.
@@ -889,6 +954,8 @@ export function registerCreateProjectTool(
             }
             const scope = parseStoreScope(stackId, args?.storeScope);
             if ('error' in scope) return asText(scope);
+            const datapack = datapackChoice(args?.datapack, args?.adoptExisting, args?.resetExisting);
+            if ('error' in datapack) return asText(datapack);
             if (args?.confirm !== true) {
                 return asText({
                     error: 'create_project requires confirm:true — it installs dependencies and, for EDS, creates a real GitHub repo + DA.live content. Ask the user to confirm.',
@@ -900,13 +967,15 @@ export function registerCreateProjectTool(
                 pkgId,
                 stackId,
                 link,
-                repoName: args.repoName ? String(args.repoName) : undefined,
-                githubOwner: args.githubOwner ? String(args.githubOwner) : undefined,
-                daLiveOrg: args.daLiveOrg ? String(args.daLiveOrg) : undefined,
-                daLiveSite: args.daLiveSite ? String(args.daLiveSite) : undefined,
-                accsEndpoint: args.accsEndpoint ? String(args.accsEndpoint) : undefined,
+                repoName: textOrNone(args.repoName),
+                githubOwner: textOrNone(args.githubOwner),
+                daLiveOrg: textOrNone(args.daLiveOrg),
+                daLiveSite: textOrNone(args.daLiveSite),
+                accsEndpoint: textOrNone(args.accsEndpoint),
                 storeScope: scope.storeScope,
                 ...(args.adoptExisting === true ? { adoptExisting: true } : {}),
+                ...(args.resetExisting === true ? { resetExisting: true } : {}),
+                ...(datapack.datapack ? { seed: { datapack: datapack.datapack } } : {}),
             });
         },
     );
