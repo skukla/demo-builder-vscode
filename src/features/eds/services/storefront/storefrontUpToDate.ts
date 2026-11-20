@@ -23,7 +23,7 @@ import { prepareSmart404Handler, type Pdp404InstallResult } from '../pdp/pdp404H
 import { type BlockOutcome, withEagerRedirect, withRecoveryHandler } from '../pdp/pdp404Page';
 import { cleanDelayedJs, writeHeadBlocks } from './storefrontCodeBlocks';
 import { runStorefrontRepairs, type StorefrontRepair, type StorefrontRepairFiles } from './storefrontRepairs';
-import type { GitHubFileOperations } from '@/features/eds/services/github/githubFileOperations';
+import type { GitHubFileOperations, RepoFileAccess } from '@/features/eds/services/github/githubFileOperations';
 import type { Logger } from '@/types/logger';
 
 /** The commit message every repair write carries. */
@@ -166,7 +166,7 @@ const INSPECTOR_INIT = 'scripts/demo-inspector-init.js';
  *   (`storefrontChanges.ts`).
  */
 export async function bringStorefrontUpToDate(
-    githubFileOps: GitHubFileOperations,
+    githubFileOps: RepoFileAccess,
     repoOwner: string,
     repoName: string,
     overlayUrl: string | undefined,

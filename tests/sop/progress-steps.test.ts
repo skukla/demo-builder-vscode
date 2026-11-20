@@ -75,18 +75,18 @@ const POSITION_WRITER = 'src/core/utils/stageLine.ts';
 const STEP_POSITION_BUILDERS: Record<string, string> = {
     'src/core/utils/numberedSteps.ts':
         'stepPosition: the index of a step in the list of steps the run reports, known before it starts.',
-    'src/features/eds/services/reset/edsResetUI.ts':
-        "The reset service's own step number and step total (executeEdsReset's fixed list of steps).",
+    'src/features/eds/services/reset/edsResetRun.ts':
+        "The one storefront reset, for the button and the agent: executeEdsReset's own step number and step total (its fixed list of steps).",
     'src/features/prerequisites/handlers/installHandler.ts':
         "A prerequisite install's steps from prerequisites.json, counted as they run, total known up front.",
     'src/features/dashboard/handlers/aiHandlers.ts':
         "Regenerate AI Files' four or five steps, the total fixed by whether the project needs AI tooling.",
-    'src/features/ai/server/edsResetTool.ts':
-        "The agent's reset: the same step number and total the button's reset shows (executeEdsReset).",
     'src/features/ai/server/adobeResourceTools.ts':
         "Deleting an Adobe project from the agent: teardownConsoleProject's four fixed steps.",
     'src/features/authentication/handlers/deleteAdobeProjectHandler.ts':
         "Deleting an Adobe project from the button: teardownConsoleProject's four fixed steps.",
+    'src/features/projects-dashboard/ui/components/UpdatesRunView.tsx':
+        "The Updates run: a project card's steps, its ticked updates then its local copy (told ahead), all known before the card runs.",
 };
 
 interface Site {

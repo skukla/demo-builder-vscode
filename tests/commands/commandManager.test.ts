@@ -29,6 +29,8 @@ import { createMockExtensionContext } from '../helpers/extensionContextFake';
 // not the flow itself — is what these tests pin.
 const mockGetTokenStatus = jest.fn();
 const mockLogin = jest.fn();
+const mockLoginAndRestore = jest.fn();
+const mockLogout = jest.fn();
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         isSidebarInitialized: jest.fn(() => false),
@@ -36,6 +38,8 @@ jest.mock('@/core/di/serviceLocator', () => ({
         getAuthenticationService: jest.fn(() => ({
             getTokenStatus: mockGetTokenStatus,
             login: mockLogin,
+            loginAndRestoreProjectContext: mockLoginAndRestore,
+            logout: mockLogout,
         })),
     },
 }));
@@ -156,7 +160,7 @@ describe('CommandManager', () => {
             );
         });
 
-        it('should register all 38 commands (resetAll only in dev mode)', () => {
+        it('should register all 41 commands (resetAll only in dev mode)', () => {
             commandManager.registerCommands();
 
             // 34 → 37: `signInAdobe` (PL-5), `signInDaLive` (EDS-9) and
@@ -171,7 +175,12 @@ describe('CommandManager', () => {
             // 38 since AI-4b added demoBuilder.pickAiChat.
             // 37 since EDS-64 removed demoBuilder.storefrontReport: Diagnostics and the
             // get_storefront_report tool carry what it said (owner, 2026-10-23).
-            expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(37);
+            // 38 since demoBuilder.showDatapackLibrary: the Datapack Library, from the sidebar
+            // and the palette, beside a project's Datapacks (owner, 2026-11-07).
+            // 40 since demoBuilder.clearDemoData and demoBuilder.clearCommerceInstance: the
+            // Command Palette's doors to the Datapacks header's two Clear windows (step 06 C5, P6-Q5).
+            // 41 since demoBuilder.signOutAdobe: Sign In's counterpart (owner, 2026-11-19).
+            expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(41);
 
             // Verify all commands are registered (in order of registration)
             const expectedCommands = [
@@ -183,6 +192,9 @@ describe('CommandManager', () => {
                 // the grid section of).
                 'demoBuilder.showIntegrations',
                 'demoBuilder.showDataInstaller',
+                'demoBuilder.showDatapackLibrary',
+                'demoBuilder.clearDemoData',
+                'demoBuilder.clearCommerceInstance',
                 'demoBuilder.loadProject',
                 'demoBuilder.startDemo',
                 'demoBuilder.stopDemo',
@@ -209,6 +221,7 @@ describe('CommandManager', () => {
             'demoBuilder.signInAdobe',
             'demoBuilder.signInDaLive',
             'demoBuilder.signInGitHub',
+                'demoBuilder.signOutAdobe',
                 'demoBuilder.registerGlobalMcp',
                 'demoBuilder.migrateStorefrontNames',
                 'demoBuilder.setRecommendedZoom',
@@ -283,39 +296,49 @@ describe('CommandManager', () => {
             beforeEach(() => {
                 mockGetTokenStatus.mockReset();
                 mockLogin.mockReset().mockResolvedValue(true);
+                mockLoginAndRestore.mockReset().mockResolvedValue(true);
                 mockDaLivePick.mockReset().mockResolvedValue({ success: true });
+                // The Sign In runs behind the browser notice, which hands the task a cancel token.
                 (vscode.window.withProgress as jest.Mock).mockImplementation(
-                    async (_o: unknown, fn: () => Promise<unknown>) => fn()
+                    async (_o: unknown, fn: (p: unknown, t: unknown) => Promise<unknown>) =>
+                        fn({ report: jest.fn() }, { onCancellationRequested: jest.fn() })
                 );
             });
 
-            it('signInAdobe logs in un-forced when not signed in', async () => {
+            it('signInAdobe runs the one Sign In (never forced) when not signed in', async () => {
                 mockGetTokenStatus.mockResolvedValue({ isAuthenticated: false });
 
                 await handlerFor('demoBuilder.signInAdobe')();
 
-                expect(mockLogin).toHaveBeenCalledWith(false);
+                expect(mockLogin).toHaveBeenCalledWith();
+                expect(mockLoginAndRestore).not.toHaveBeenCalled();
             });
 
-            it('signInAdobe offers a FORCED re-login when already signed in', async () => {
-                // force=true is the org-switch recovery; an un-forced login on a
-                // valid session succeeds without changing anything, which is the
-                // silent no-op this branch exists to avoid.
+            it('signInAdobe offers a fresh sign-in when already signed in', async () => {
+                // "Sign In Again" renews the same account: a forced sign-in through the
+                // one Sign In, not the org switch (owner, 2026-11-18: "just because I
+                // want to sign in again doesn't mean I want to switch the org"). An
+                // un-forced login on a valid session succeeds without changing anything,
+                // which is the silent no-op this branch exists to avoid.
                 mockGetTokenStatus.mockResolvedValue({
                     isAuthenticated: true,
                     expiresInMinutes: 420,
                 });
                 (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue(
-                    'Sign in again'
+                    'Sign In Again'
                 );
 
                 await handlerFor('demoBuilder.signInAdobe')();
 
                 expect(mockLogin).toHaveBeenCalledWith(true);
+                expect(mockLoginAndRestore).not.toHaveBeenCalled();
+                expect((vscode.window.withProgress as jest.Mock).mock.calls[0][0].title).toBe(
+                    'Signing In to Adobe in Your Browser'
+                );
                 // Humanized, not raw: 420 minutes reads "7h", because "~420 min"
                 // makes the reader do the arithmetic (owner, first live use).
                 expect(
-                    (vscode.window.showInformationMessage as jest.Mock).mock.calls[0][0]
+                    (vscode.window.showInformationMessage as jest.Mock).mock.calls[0][1].detail
                 ).toContain('7h');
             });
 
@@ -326,6 +349,43 @@ describe('CommandManager', () => {
                 await handlerFor('demoBuilder.signInAdobe')();
 
                 expect(mockLogin).not.toHaveBeenCalled();
+                expect(mockLoginAndRestore).not.toHaveBeenCalled();
+            });
+
+            it('signOutAdobe signs out when signed in', async () => {
+                mockGetTokenStatus.mockResolvedValue({ isAuthenticated: true });
+                mockLogout.mockReset().mockResolvedValue(undefined);
+
+                await handlerFor('demoBuilder.signOutAdobe')();
+
+                expect(mockLogout).toHaveBeenCalledTimes(1);
+                // Only the green check says it (extension.ts, onDidSignOut): no notification
+                // as well (owner, 2026-11-19).
+                expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
+                expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
+            });
+
+            it('signOutAdobe says so, and signs nothing out, when not signed in', async () => {
+                mockGetTokenStatus.mockResolvedValue({ isAuthenticated: false });
+                mockLogout.mockReset();
+
+                await handlerFor('demoBuilder.signOutAdobe')();
+
+                expect(mockLogout).not.toHaveBeenCalled();
+                expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
+                    'Not signed in to Adobe.'
+                );
+            });
+
+            it('signOutAdobe warns when the sign-out fails', async () => {
+                mockGetTokenStatus.mockResolvedValue({ isAuthenticated: true });
+                mockLogout.mockReset().mockRejectedValue(new Error('aio failed'));
+
+                await handlerFor('demoBuilder.signOutAdobe')();
+
+                expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
+                    'Adobe sign-out did not complete.'
+                );
             });
 
             it('signInDaLive delegates to the ONE shared QuickPick flow', async () => {

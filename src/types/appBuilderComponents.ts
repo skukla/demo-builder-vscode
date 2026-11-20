@@ -87,12 +87,12 @@ export type SetupCheck =
     | 'card-payments-enabled';
 
 /**
- * A setup step's fix that is settings: the `path` = `value` rows the demo setup's Apply writes
+ * A setup step's setup that is settings: the `path` = `value` rows the demo setup's Apply writes
  * through `PUT /V1/system/config` (AB-77). `scope: 'website'` is resolved to the project's
  * website code when applied; `'default'` writes the default scope. A second catalog entry
  * declares its own in JSON alone, with no code.
  */
-export interface SetupConfigFixItem {
+export interface ConfigSetupItem {
     /** The setting's path, e.g. `catalog/price/scope`. */
     path: string;
     /** The value Commerce stores: a string, as the API takes it ("1" for Yes). */
@@ -104,37 +104,37 @@ export interface SetupConfigFixItem {
     values?: Record<string, string>;
 }
 
-/** A fix that is settings alone (see `SetupConfigFixItem`). */
-export interface SetupConfigFix {
+/** A setup that is settings alone (see `ConfigSetupItem`). */
+export interface ConfigSetupSpec {
     kind: 'config';
-    items: SetupConfigFixItem[];
+    items: ConfigSetupItem[];
     /** What stays by hand after the settings are written, said in the preview and the result. */
     manual?: string;
 }
 
 /**
- * The fixes that need code: each a handler in `storePreparation/` implementing the same
- * preview / apply / undo contract as the config fix, so the engine drives them alike.
+ * The setups that need code: each a handler in `storePreparation/` implementing the same
+ * preview / apply / undo contract as the config setup, so the engine drives them alike.
  * - `create-erp-attributes`: `erp_owner` and `brand` as Text Fields, then `erp_owner` into
  *   every attribute set the products use (AB-74's fix).
  * - `erp-warehouse-in-website-stock`: a source per ERP, a stock for the website, linked.
  * - `company-shared-catalogs`: a custom shared catalog per company the check finds without one.
  */
-export type SetupFixHandler = 'create-erp-attributes' | 'erp-warehouse-in-website-stock' | 'company-shared-catalogs';
+export type SetupHandler = 'create-erp-attributes' | 'erp-warehouse-in-website-stock' | 'company-shared-catalogs';
 
-/** A fix a named handler applies (see `SetupFixHandler`). */
-export interface SetupHandlerFix {
+/** A setup a named handler applies (see `SetupHandler`). */
+export interface HandlerSetupSpec {
     kind: 'handler';
-    handler: SetupFixHandler;
+    handler: SetupHandler;
 }
 
 /**
  * Something Demo Builder can DO about a setup step, offered as a confirmed action beside the
  * check (AB-74, generalized by AB-77): either settings declared as data, or a named handler.
- * Every fix previews before it writes, records what it changed on the component
+ * Every setup previews before it writes, records what it changed on the component
  * (`storePreparation`) and can be undone step by step.
  */
-export type SetupFix = SetupConfigFix | SetupHandlerFix;
+export type SetupSpec = ConfigSetupSpec | HandlerSetupSpec;
 
 /** How a system is known in its integration's list of systems (see `listedAs`). */
 export interface SystemListing {
@@ -183,8 +183,8 @@ export interface SetupStep {
     icon?: SetupStepIcon;
     /** A check Demo Builder can run; absent = the SC marks it done. */
     check?: SetupCheck;
-    /** What Demo Builder can do itself when the check finds the step undone (AB-74). */
-    fix?: SetupFix;
+    /** What Demo Builder sets up itself when the check finds the step undone (AB-74): the demo setup's Apply. */
+    setup?: SetupSpec;
     /**
      * Only some demos need it (card payments, 2026-10-02). Still listed, checked and marked,
      * but an open optional step is not left to do: it counts in no "steps left" (`isLeftToDo`).
@@ -219,12 +219,12 @@ export interface SetupChecklistItem {
     checkState?: SetupCheckState;
     /** Demo Builder can check this one itself. */
     checkable: boolean;
-    /** What Demo Builder can do about it itself (see `SetupStep`). */
-    fix?: SetupFix;
-    /** Demo Builder can apply this one itself (the demo setup's Apply, AB-77): it declares a fix. Set on every item `setupChecklistOf` builds. */
+    /** What Demo Builder sets up itself (see `SetupStep`). */
+    setup?: SetupSpec;
+    /** Demo Builder can apply this one itself (the demo setup's Apply, AB-77): it declares a setup. Set on every item `setupChecklistOf` builds. */
     applicable?: boolean;
-    /** Demo Builder applied the fix and recorded it, so it can be undone (AB-74, AB-77). */
-    fixApplied?: boolean;
+    /** Demo Builder applied the setup and recorded it, so it can be undone (AB-74, AB-77). */
+    setupApplied?: boolean;
 }
 
 /** A pre-built appBuilderComponent catalog entry. */

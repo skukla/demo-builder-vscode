@@ -38,7 +38,7 @@ TRIAGE = os.path.join(HERE, 'triage.json')
 # A UI verb at the start of a handler name: navigation and display, which an
 # agent has no business calling. Crude on purpose; `exclusions` is the precise list.
 UI = re.compile(r'^(navigate|open|show|close|select|toggle|set|focus|scroll|'
-                r'dismiss|cancel|back|goto|view|expand|collapse|copy)', re.I)
+                r'dismiss|cancel|back|goto|view|expand|collapse)', re.I)
 
 
 def norm(name):

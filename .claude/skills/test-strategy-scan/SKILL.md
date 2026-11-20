@@ -13,7 +13,7 @@ release-cut procedure that runs them together and — the load-bearing part — 
 which of their numbers mean something.
 
 ## When to use
-- At a release cut, alongside `codebase-sweep` and `dream`.
+- At a release cut, alongside `codebase-sweep` and `/dev-pipeline:reflect`.
 - Before starting a large test refactor, to pick the lane worth working.
 - When someone asks whether the suite is testing the right things.
 

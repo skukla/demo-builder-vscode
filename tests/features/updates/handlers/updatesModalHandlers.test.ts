@@ -15,7 +15,7 @@ import {
     bodea,
     found,
     handlers,
-    justrite,
+    tailspin,
     mockApplyUpdatesHeadless,
     mockExecuteCommand,
     mockFindAllUpdates,
@@ -43,7 +43,7 @@ describe('presentUpdates', () => {
         const rows = h.presentUpdates(found());
 
         expect(rows.map((r) => [r.group.title, r.label])).toEqual([
-            ['JustRite', 'Demo Builder Blocks'],
+            ['Tailspin', 'Demo Builder Blocks'],
             ['Bodea', 'EDS template'],
             ['Bodea', 'Demo Builder Blocks'],
         ]);
@@ -80,7 +80,7 @@ describe('applyUpdates', () => {
         });
         const h = handlers();
         const ctx = createMockHandlerContext();
-        (ctx.stateManager.getCurrentProject as jest.Mock).mockResolvedValue(createMockProject({ name: 'justrite', path: '/p/justrite' }));
+        (ctx.stateManager.getCurrentProject as jest.Mock).mockResolvedValue(createMockProject({ name: 'tailspin', path: '/p/tailspin' }));
         const rows = h.presentUpdates(found());
 
         await apply(h)(ctx, modal(rows.map((r) => r.id)));
@@ -105,7 +105,7 @@ describe('applyUpdates', () => {
         );
         expect(options.onItem).toEqual(expect.any(Function));
         // One project at a time, in the order the SC sees them: the open project first.
-        expect(options.projectOrder.filter((key: string) => key.startsWith('/p/'))).toEqual(['/p/justrite', '/p/bodea']);
+        expect(options.projectOrder.filter((key: string) => key.startsWith('/p/'))).toEqual(['/p/tailspin', '/p/bodea']);
         expect(answer).toEqual({ success: true });
     });
 
@@ -134,9 +134,10 @@ describe('applyUpdates', () => {
     it("tells the screen each project's local copy step, without counting it as an update", async () => {
         mockApplyUpdatesHeadless.mockImplementation(async (sel: UpdateSelections, _ctx, _report, options) => {
             const [library] = sel.blockLibrary;
+            options.onLocalCopyAhead(library.project);
             options.onItem('blockLibrary', library, { state: 'done' });
             options.onLocalCopy(library.project, { state: 'running' });
-            options.onLocalCopy(library.project, { state: 'skipped', message: 'Left as it is — GitHub could not be reached.' });
+            options.onLocalCopy(library.project, { state: 'skipped', message: 'Left as it is: GitHub could not be reached.' });
             return applied();
         });
 
@@ -144,10 +145,12 @@ describe('applyUpdates', () => {
             rows.filter((r) => r.group.key === '/p/bodea' && r.kind === 'blockLibrary').map((r) => r.id),
         );
 
+        // Told ahead as waiting, so the screen counts it among the project's steps (2026-11-19).
         expect(statusesSent(ctx)).toEqual([
+            { id: 'localCopy:/p/bodea', state: 'waiting' },
             { id: 'blockLibrary:1', state: 'done' },
             { id: 'localCopy:/p/bodea', state: 'running' },
-            { id: 'localCopy:/p/bodea', state: 'skipped', message: 'Left as it is — GitHub could not be reached.' },
+            { id: 'localCopy:/p/bodea', state: 'skipped', message: 'Left as it is: GitHub could not be reached.' },
         ]);
         expect(answer).toEqual({ success: true });
     });
@@ -213,7 +216,8 @@ describe('applyUpdates', () => {
         const { answer, ctx } = await presentedThenApply((rows) => rows.map((r) => r.id));
 
         expect(answer).toEqual({ success: true, warning: '1 update did not apply.' });
-        expect(statusesSent(ctx)).toEqual([{ id: 'template:0', state: 'failed', message: 'bodea: merge conflicts' }]);
+        // Without the project's name: its card says it (owner, 2026-11-19).
+        expect(statusesSent(ctx)).toEqual([{ id: 'template:0', state: 'failed', message: 'merge conflicts', retryable: false }]);
     });
 
     it('installs the extension update last, from the release the check found', async () => {
@@ -224,6 +228,7 @@ describe('applyUpdates', () => {
                 latest: '1.1.0',
                 releaseInfo: {
                     version: '1.1.0',
+                    tag: 'v1.1.0',
                     downloadUrl: 'https://github.com/x.vsix',
                     releaseNotes: '',
                     publishedAt: '',
@@ -247,7 +252,7 @@ describe('applyUpdates', () => {
                 hasUpdate: true,
                 current: '1.0.0',
                 latest: '1.1.0',
-                releaseInfo: { version: '1.1.0', downloadUrl: 'https://github.com/x.vsix', releaseNotes: '', publishedAt: '', isPrerelease: false },
+                releaseInfo: { version: '1.1.0', tag: 'v1.1.0', downloadUrl: 'https://github.com/x.vsix', releaseNotes: '', publishedAt: '', isPrerelease: false },
             },
         });
 
@@ -255,7 +260,7 @@ describe('applyUpdates', () => {
 
         expect(statusesSent(ctx)).toEqual([
             { id: 'extension', state: 'running' },
-            { id: 'extension', state: 'failed', message: 'Not updated — details are in Debug Logs.' },
+            { id: 'extension', state: 'failed', message: "Not updated. Demo Builder couldn't tell what went wrong.", retryable: false },
         ]);
         expect(answer).toEqual({ success: true, warning: '1 update did not apply.' });
     });
@@ -282,10 +287,10 @@ describe('applyUpdates', () => {
 // a fresh check: the run has just changed storefronts, so the list it started from is stale.
 describe('applyUpdates: what the SC left unticked', () => {
     const otherOrgPair = {
-        project: justrite,
+        project: tailspin,
         componentId: 'erp-integration',
         members: ['erp-integration'],
-        label: 'ERP Integration and Justrite ERP',
+        label: 'ERP Integration and Tailspin ERP',
         otherOrg: true,
     };
 

@@ -4,14 +4,14 @@
  * on a shared Commerce some of that changes settings every website shares. Before the project
  * exists nothing can read its store, so Review names the steps from the catalog; the run
  * checks each first and leaves one already done as it is. The Integrations screen's add reads
- * the store instead (`PrepareOnAddDialog`).
+ * the store instead (`PrepareOnAddConfirm`, in the Add Integration flow's window).
  *
  * Pure: the catalog is handed in.
  *
  * @module features/project-creation/ui/steps/reviewStorePreparation
  */
 
-import { preparesStoreOnAdd, reachesEveryWebsite } from '@/features/app-builder/services/storePreparation/fixReach';
+import { preparesStoreOnAdd, reachesEveryWebsite } from '@/features/app-builder/services/storePreparation/setupReach';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { WizardState } from '@/types/webview';
 
@@ -45,10 +45,10 @@ export function storePreparationOnReview(
     const adding = (state.selectedAppBuilderComponents ?? []).filter((id) => !before.has(id));
     const entry = catalog.find((candidate) => adding.includes(candidate.id) && preparesStoreOnAdd(candidate));
     if (!entry) return undefined;
-    const fixed = (entry.setupSteps ?? []).filter((step) => step.fix);
+    const fixed = (entry.setupSteps ?? []).filter((step) => step.setup);
     return {
         name: entry.name,
         steps: fixed.map((step) => step.label ?? step.title),
-        everyWebsite: fixed.filter((step) => step.fix && reachesEveryWebsite(step.fix)).map((step) => step.label ?? step.title),
+        everyWebsite: fixed.filter((step) => step.setup && reachesEveryWebsite(step.setup)).map((step) => step.label ?? step.title),
     };
 }

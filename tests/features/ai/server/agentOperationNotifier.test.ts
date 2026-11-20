@@ -55,7 +55,7 @@ import {
     phaseLine,
 } from '@/features/ai/server/agentOperationNotifier';
 import { alertCopyFor } from '@/features/ai/server/agentAlertCopy';
-import { asText } from '@/features/ai/server/mcpToolResult';
+import { asRawText, asText } from '@/features/ai/server/mcpToolResult';
 import { reportHandBack } from '@/core/utils/agentPhaseChannel';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
@@ -90,7 +90,7 @@ describe('createAgentOperationNotifier', () => {
         });
 
         expect(mockShowWarningMessage).toHaveBeenCalledWith(
-            'Agent · Waiting for you: install the AEM Code Sync GitHub App on acme/shop. ' +
+            'Agent: Waiting for you: install the AEM Code Sync GitHub App on acme/shop. ' +
                 'The run resumes by itself once it is installed.',
             'Install App',
         );
@@ -130,7 +130,7 @@ describe('createAgentOperationNotifier', () => {
         await new Promise((resolve) => setImmediate(resolve));
 
         expect(mockShowWarningMessage.mock.calls[0]).toStrictEqual([
-            'Agent · Waiting for you: approve the sign-in in your browser. ' +
+            'Agent: Waiting for you: approve the sign-in in your browser. ' +
                 'The run resumes by itself once you have.',
         ]);
         expect(mockOpenExternal).not.toHaveBeenCalled();
@@ -159,6 +159,20 @@ describe('createAgentOperationNotifier', () => {
         expect(mockShowWarningMessage).not.toHaveBeenCalled();
     });
 
+    // Walk F149 (2026-11-16): an agent's Commerce write flashed "Changing Commerce records — done"
+    // while the SC ran a datapack check, and read as the check's. The flash opens "Agent:", as
+    // every agent notice does (`agentNotice.ts`).
+    it('says the finished call was the agent\'s', async () => {
+        const notifier = createAgentOperationNotifier(logger);
+
+        await notifier('sync_storefront', async () => ({ ok: true }));
+
+        expect(mockSetStatusBarMessage).toHaveBeenCalledWith(
+            '$(check) Agent: Pushing the storefront to GitHub — done',
+            expect.any(Number)
+        );
+    });
+
     // VS Code renders "title: phase", so a colon in the title made two
     // (owner, 2026-09-19).
     it('titles the card without a colon or ellipsis of its own', async () => {
@@ -167,7 +181,7 @@ describe('createAgentOperationNotifier', () => {
         await notifier('sync_storefront', async () => ({ ok: true }));
 
         expect(mockWithProgress).toHaveBeenCalledWith(
-            expect.objectContaining({ title: 'Agent · Pushing the storefront to GitHub' }),
+            expect.objectContaining({ title: 'Agent: Pushing the storefront to GitHub' }),
             expect.any(Function)
         );
     });
@@ -182,7 +196,7 @@ describe('createAgentOperationNotifier', () => {
         });
 
         expect(mockWithProgress).toHaveBeenCalledWith(
-            expect.objectContaining({ title: 'Agent · Deleting the Stage workspace' }),
+            expect.objectContaining({ title: 'Agent: Deleting the Stage workspace' }),
             expect.any(Function)
         );
         expect(mockSetStatusBarMessage).toHaveBeenCalledWith(
@@ -212,8 +226,18 @@ describe('createAgentOperationNotifier', () => {
         await notifier('republish', async () => asText({ needsAuth: 'github', message: 'for the agent' }));
 
         expect(mockShowWarningMessage).toHaveBeenCalledWith(
-            'Agent · Republishing the storefront is waiting on you: Sign in to GitHub.'
+            'Agent: Republishing the storefront is waiting on you: Sign in to GitHub.'
         );
+        expect(mockSetStatusBarMessage).not.toHaveBeenCalled();
+    });
+
+    it('says nothing when the call only asked the agent something', async () => {
+        const notifier = createAgentOperationNotifier(logger);
+
+        await notifier('uninstall_datapack', async () => ({ ...asText({ error: 'You changed 1 thing.', code: 'CHANGES_NEED_ANSWER' }), isError: true }));
+        await notifier('uninstall_datapack', async () => ({ ...asRawText('uninstall_datapack requires confirm:true to proceed.'), isError: true }));
+
+        expect(mockShowWarningMessage).not.toHaveBeenCalled();
         expect(mockSetStatusBarMessage).not.toHaveBeenCalled();
     });
 
@@ -223,7 +247,7 @@ describe('createAgentOperationNotifier', () => {
         await notifier('republish', async () => asText({ success: false, error: 'CDN said no' }));
 
         expect(mockShowWarningMessage).toHaveBeenCalledWith(
-            'Agent · Republishing the storefront failed: CDN said no'
+            'Agent: Republishing the storefront failed: CDN said no'
         );
         expect(mockSetStatusBarMessage).not.toHaveBeenCalled();
     });
@@ -327,7 +351,7 @@ describe('createAgentConsentGate', () => {
         await gate('delete_project', { confirm: true });
 
         expect(consentTitle(mockShowWarningMessage.mock.calls[0])).toBe(
-            'Agent · Delete this project?'
+            'Agent: Delete this project?'
         );
     });
 
@@ -384,7 +408,7 @@ describe('createAgentConsentGate', () => {
         await gate('some_unwritten_tool', { confirm: true });
 
         expect(consentTitle(mockShowWarningMessage.mock.calls[0])).toBe(
-            'Agent · some_unwritten_tool?'
+            'Agent: some_unwritten_tool?'
         );
     });
 

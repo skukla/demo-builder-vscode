@@ -28,8 +28,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useOperationProgress } from '@/core/ui/hooks/useOperationProgress';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { UPDATES_OPERATION_ID } from '@/core/utils/operationIds';
+import type { HandlerResponse } from '@/types/handlers';
 import type {
     ApplyUpdatesResponse,
+    CheckUpdateRowsRequest,
+    CheckUpdateRowsResponse,
+    FixUpdateWithAiRequest,
     PendingUpdateRow,
     RecheckUpdatesResponse,
     ShowUpdatesPayload,
@@ -37,9 +41,14 @@ import type {
     UpdateRowStatus,
 } from '@/types/pendingUpdates';
 import type { OperationProgressPayload } from '@/types/webviewPayloads';
+import type { BackgroundOperationRequest } from '@/types/webviewRequests';
 
 /** The run's title: the modal's while it runs, and the notification's on handover. */
-export const APPLYING_TITLE = 'Applying updates';
+export const APPLYING_TITLE = 'Applying Updates';
+/** How the run ends, in the window's titles and the notification's when it ran in the background. */
+export const APPLIED_TITLE = 'Updates Applied';
+export const NOT_APPLIED_TITLE = "Couldn't Apply the Updates";
+export const SOME_NOT_APPLIED_TITLE = "Some Updates Didn't Apply";
 
 /** What the modal shows. */
 export type UpdatesView =
@@ -49,6 +58,30 @@ export type UpdatesView =
 
 /** Each applying row's status, by row id. */
 export type RowStatuses = Readonly<Record<string, UpdateRowStatus>>;
+
+/**
+ * Where fixing one update that did not apply has got to (owner, 2026-11-19: fixed in place, as
+ * Prerequisites installs a missing tool): Retry, then Fix with AI once retrying has not helped,
+ * then Check Again once the AI has it.
+ */
+export interface RowFix {
+    /** Retries pressed, all failed. */
+    retries: number;
+    /** Fix with AI opened the SC's AI on it, so Check Again is offered. */
+    withAi: boolean;
+    /** Check Again is asking. */
+    checking: boolean;
+    /** Why Fix with AI did not open. */
+    problem?: string;
+}
+
+/** Fixing the updates that did not apply, a row at a time. */
+export interface RowFixControls {
+    fixes: Readonly<Record<string, RowFix>>;
+    retry: (id: string) => void;
+    fixWithAi: (id: string) => void;
+    checkAgain: (id: string) => void;
+}
 
 export interface UpdatesModalControls {
     view: UpdatesView;
@@ -73,10 +106,14 @@ export interface UpdatesModalControls {
     back: () => void;
     /** Whether that check is running. */
     rechecking: boolean;
+    /** Once the run has ended: fixing what did not apply, in place. */
+    rowFix: RowFixControls;
 }
 
 const CLOSED: UpdatesView = { phase: 'closed' };
 const NO_STATUSES: RowStatuses = {};
+const NO_FIXES: Readonly<Record<string, RowFix>> = {};
+const NO_FIX: RowFix = { retries: 0, withAi: false, checking: false };
 
 /** Whether the run has ended, either way. */
 function hasEnded(progress: OperationProgressPayload | null): boolean {
@@ -101,12 +138,17 @@ export function useUpdatesModal(onApplied: () => void): UpdatesModalControls {
     const [run, setRun] = useState(0);
     const [remaining, setRemaining] = useState(0);
     const [rechecking, setRechecking] = useState(false);
+    const [fixes, setFixes] = useState<Readonly<Record<string, RowFix>>>(NO_FIXES);
+    const fixRow = useCallback((id: string, change: (fix: RowFix) => RowFix) => {
+        setFixes((previous) => ({ ...previous, [id]: change(previous[id] ?? NO_FIX) }));
+    }, []);
     const applying = view.phase === 'applying';
     const progress = useOperationProgress(applying ? UPDATES_OPERATION_ID : null, run, false);
 
     const openOn = useCallback((rows: PendingUpdateRow[] | null | undefined) => {
         if (!rows || rows.length === 0) return;
         setTicked(new Set(rows.filter((r) => r.ticked).map((r) => r.id)));
+        setFixes(NO_FIXES);
         setView({ phase: 'list', rows });
     }, []);
 
@@ -115,8 +157,9 @@ export function useUpdatesModal(onApplied: () => void): UpdatesModalControls {
         [openOn],
     );
     useEffect(() => {
-        webviewClient.request<TakeUpdatesRequestResponse>('takeUpdatesRequest').then(
-            (response) => openOn(response.data.rows),
+        // An answer with no data opens nothing (as the Delete hand-off, step-05 S4), never a throw.
+        webviewClient.request<TakeUpdatesRequestResponse | null | undefined>('takeUpdatesRequest').then(
+            (response) => openOn(response?.data?.rows),
             () => undefined,
         );
     }, [openOn]);
@@ -155,6 +198,7 @@ export function useUpdatesModal(onApplied: () => void): UpdatesModalControls {
         const rows = view.rows.filter((r) => ticked.has(r.id) && !r.lockedReason);
         const ids = rows.map((r) => r.id);
         setStatuses(waitingAll(rows));
+        setFixes(NO_FIXES);
         setRemaining(0);
         setRun((previous) => previous + 1);
         setView({ phase: 'applying', rows });
@@ -165,6 +209,48 @@ export function useUpdatesModal(onApplied: () => void): UpdatesModalControls {
                 onApplied();
             }, onApplied);
     }, [view, ticked, onApplied]);
+
+    // Retry: the one update again, in this window; the other rows keep where they ended, and so
+    // does what the first run said is still waiting.
+    const retry = useCallback(
+        (id: string) => {
+            const row = view.phase === 'applying' ? view.rows.find((r) => r.id === id) : undefined;
+            if (!row) return;
+            fixRow(id, (fix) => ({ ...fix, retries: fix.retries + 1, withAi: false }));
+            setStatuses((previous) => ({ ...previous, [id]: { id, state: 'waiting' } }));
+            setRun((previous) => previous + 1);
+            webviewClient
+                .request<ApplyUpdatesResponse | undefined>('applyUpdates', { ids: [id], rows: [row], id: UPDATES_OPERATION_ID, progress: 'modal' })
+                .then(onApplied, onApplied);
+        },
+        [view, fixRow, onApplied],
+    );
+
+    const fixWithAi = useCallback(
+        (id: string) => {
+            const request: FixUpdateWithAiRequest = { id };
+            webviewClient.request<HandlerResponse>('fixUpdateWithAi', request).then(
+                (answer) => fixRow(id, (fix) => (answer?.success === false ? { ...fix, problem: answer.error } : { ...fix, withAi: true, problem: undefined })),
+                () => undefined,
+            );
+        },
+        [fixRow],
+    );
+
+    // Check Again: whether the update is still waiting. One gone is told done by a row status; one
+    // still waiting goes back to Fix with AI.
+    const checkAgain = useCallback(
+        (id: string) => {
+            fixRow(id, (fix) => ({ ...fix, checking: true }));
+            const request: CheckUpdateRowsRequest = { ids: [id] };
+            webviewClient.request<CheckUpdateRowsResponse>('checkUpdateRows', request).then(
+                (answer) => fixRow(id, (fix) => ({ ...fix, checking: false, withAi: !(answer?.data?.waiting ?? [id]).includes(id) && fix.withAi })),
+                () => fixRow(id, (fix) => ({ ...fix, checking: false })),
+            );
+        },
+        [fixRow],
+    );
+    const rowFix = useMemo(() => ({ fixes, retry, fixWithAi, checkAgain }), [fixes, retry, fixWithAi, checkAgain]);
 
     const back = useCallback(() => {
         setRechecking(true);
@@ -193,13 +279,20 @@ export function useUpdatesModal(onApplied: () => void): UpdatesModalControls {
         if (applying && progress?.prompt && !hasEnded(progress)) {
             answer(undefined);
         } else if (applying && !hasEnded(progress)) {
-            webviewClient.postMessage('backgroundOperation', { id: UPDATES_OPERATION_ID, title: APPLYING_TITLE });
+            const request: BackgroundOperationRequest = {
+                id: UPDATES_OPERATION_ID,
+                title: APPLYING_TITLE,
+                doneTitle: APPLIED_TITLE,
+                failedTitle: NOT_APPLIED_TITLE,
+                warnedTitle: SOME_NOT_APPLIED_TITLE,
+            };
+            webviewClient.postMessage('backgroundOperation', request);
         }
         setView(CLOSED);
     }, [applying, progress, answer]);
 
     return useMemo(
-        () => ({ view, ticked, toggle, toggleGroup, apply, close, statuses, progress, answer, onTyped, remaining, back, rechecking }),
-        [view, ticked, toggle, toggleGroup, apply, close, statuses, progress, answer, onTyped, remaining, back, rechecking],
+        () => ({ view, ticked, toggle, toggleGroup, apply, close, statuses, progress, answer, onTyped, remaining, back, rechecking, rowFix }),
+        [view, ticked, toggle, toggleGroup, apply, close, statuses, progress, answer, onTyped, remaining, back, rechecking, rowFix],
     );
 }

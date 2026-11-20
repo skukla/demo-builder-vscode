@@ -5,7 +5,7 @@ description: Out-of-band periodic pass over the CODEBASE — run the duplication
 
 # codebase-sweep — second-order curation of the code
 
-`dream` audits the INSTRUCTIONS given to the agent. This does the same job for the
+`/dev-pipeline:reflect` (which replaced `dream`) audits the INSTRUCTIONS given to the agent. This does the same job for the
 CODE, and exists for the same reason: a session doing the work splits its budget
 between the task and noticing, and it can only see what it touched. Cross-cutting
 duplication is invisible from inside a feature.
@@ -30,7 +30,7 @@ schedules.
 
 ## When NOT to use
 - A single feature you are actively building — that is `reuse-first` at write time.
-- Instructions, memory, CLAUDE.md staleness — that is `dream`.
+- Instructions, memory, CLAUDE.md staleness — that is `/dev-pipeline:reflect`.
 - "Can I delete this symbol?" — that is `dead-code-scan` directly.
 
 ## Procedure
@@ -104,6 +104,18 @@ files and is simply a layout utility doing its job. Same scan, opposite verdicts
 Second signal: a class named after a component appearing in files that are NOT
 that component (`choice-card-name` in two files plus `ChoiceCard.tsx`) — consumers
 reimplementing its internals instead of using it.
+
+### Compare the doors (added 2026-11-18)
+
+`tests/templates/action-doors.ledger.json` lists every audited action's doors, and
+`action-doors.test.ts` fails on a new or stale one every run. What it cannot judge is
+whether two doors AGREE. At a sweep, for each ledger action with more than one door,
+put the doors' pre-flight checks, defaults and after-steps side by side
+(`call-path-audit` step 3), and count the "as the button / wizard does" comments per
+door file (`grep -rnE "as the (button|wizard|window|batch) does" src`): a rising count
+is drift starting. Each difference is a surface adaptation (say so in the door's
+`reason`) or a finding. The ledger's `drift` and `lead` rows are the open ones, tracked
+in PL-104.
 
 ### Triage rules
 
@@ -198,6 +210,11 @@ One file: `.rptc/research/codebase-sweep-<date>/sweep.md`.
 
 Rejected candidates are not filler: without them the next sweep re-litigates the
 same nine groups from scratch.
+
+## After the sweep
+
+Answer each proposal through `/dev-pipeline:resolve-findings` (fix, contest, escalate or
+decline), so every decision is recorded once and the next sweep does not re-argue it.
 
 ## Verify
 1. Every finding names real file:line pairs — open one and confirm before proposing.

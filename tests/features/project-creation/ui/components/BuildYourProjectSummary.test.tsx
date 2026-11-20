@@ -34,9 +34,9 @@ const GROUPS: SummaryGroup[] = [
 ];
 
 describe('BuildYourProjectSummary', () => {
-    it('renders the "Your project" title', () => {
+    it('renders the "Your Project" title', () => {
         renderWithProvider(<BuildYourProjectSummary architectureLabel="Edge Delivery + ACCS" groups={GROUPS} />);
-        expect(screen.getByText('Your project')).toBeInTheDocument();
+        expect(screen.getByText('Your Project')).toBeInTheDocument();
     });
 
     it('renders the architecture label when provided', () => {

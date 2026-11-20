@@ -72,7 +72,7 @@ const PREVIEW: ErpAssignPreview = {
     toWrite: 2,
     examples: ['ACC-1', 'ACC-2'],
     alreadyTagged: 1,
-    movedFrom: [{ name: 'Justrite ERP', count: 2 }],
+    movedFrom: [{ name: 'Tailspin ERP', count: 2 }],
     outsideSets: { count: 0, sets: [] },
     unknownSkus: [],
 };
@@ -87,7 +87,7 @@ function setup(p = project()) {
 beforeEach(() => {
     jest.clearAllMocks();
     mockGuard.mockResolvedValue(undefined);
-    mockPlan.mockResolvedValue({ preview: PREVIEW, toWrite: [row('ACC-1', 'justrite'), row('ACC-2', '')], value: 'accuform' });
+    mockPlan.mockResolvedValue({ preview: PREVIEW, toWrite: [row('ACC-1', 'tailspin'), row('ACC-2', '')], value: 'accuform' });
     mockWrite.mockResolvedValue(BULK);
     mockApply.mockResolvedValue({ status: 'applied', erps: [{ erp: 'demo-erp-2', name: 'Accuform ERP', ownsNow: 2 }], unowned: 0, notes: [], fills: [] });
 });
@@ -114,7 +114,7 @@ describe('assignErpProducts', () => {
         expect(saved.appBuilderComponents?.['demo-erp-2']?.erpAssignment).toEqual({
             at: expect.any(String),
             value: 'accuform',
-            previous: [{ sku: 'ACC-1', value: 'justrite' }, { sku: 'ACC-2', value: '' }],
+            previous: [{ sku: 'ACC-1', value: 'tailspin' }, { sku: 'ACC-2', value: '' }],
         });
         // Only the products written are sent, to whichever ERPs own them now (owner, 2026-10-19:
         // moving one product re-sent every ERP's every product).
@@ -136,10 +136,10 @@ describe('assignErpProducts', () => {
     });
 
     it("refuses an ERP whose rule is not erp_owner, writing nothing", async () => {
-        mockPlan.mockResolvedValue({ refusal: 'Justrite ERP owns every product no other ERP claims.' });
+        mockPlan.mockResolvedValue({ refusal: 'Tailspin ERP owns every product no other ERP claims.' });
         const { context } = setup();
         const result = await handleAssignErpProducts(context, { id: 'erp-integration', erp: 'demo-erp-2', selection: SELECTION, confirm: true });
-        expect(result).toMatchObject({ success: false, error: 'Justrite ERP owns every product no other ERP claims.' });
+        expect(result).toMatchObject({ success: false, error: 'Tailspin ERP owns every product no other ERP claims.' });
         expect(mockWrite).not.toHaveBeenCalled();
     });
 
@@ -169,7 +169,7 @@ describe('getErpAssignOptions', () => {
 });
 
 describe('undoErpAssignment', () => {
-    const RECORD = { at: '2026-10-09T10:00:00Z', value: 'accuform', previous: [{ sku: 'ACC-1', value: 'justrite' }, { sku: 'ACC-2', value: '' }] };
+    const RECORD = { at: '2026-10-09T10:00:00Z', value: 'accuform', previous: [{ sku: 'ACC-1', value: 'tailspin' }, { sku: 'ACC-2', value: '' }] };
 
     it('refuses when there is nothing to undo', async () => {
         const { context } = setup();
@@ -180,7 +180,7 @@ describe('undoErpAssignment', () => {
     });
 
     it('without confirm, says what it would put back', async () => {
-        mockPlanUndo.mockResolvedValue({ restore: [{ sku: 'ACC-1', value: 'justrite' }], changedSince: ['ACC-2'] });
+        mockPlanUndo.mockResolvedValue({ restore: [{ sku: 'ACC-1', value: 'tailspin' }], changedSince: ['ACC-2'] });
         const { context } = setup(project({ erpAssignment: RECORD }));
         const result = await handleUndoErpAssignment(context, { id: 'erp-integration', erp: 'demo-erp-2' });
         expect(result).toStrictEqual({
@@ -191,12 +191,12 @@ describe('undoErpAssignment', () => {
     });
 
     it('with confirm, puts the recorded values back, drops the record, and runs the pass', async () => {
-        mockPlanUndo.mockResolvedValue({ restore: [{ sku: 'ACC-1', value: 'justrite' }], changedSince: ['ACC-2'] });
+        mockPlanUndo.mockResolvedValue({ restore: [{ sku: 'ACC-1', value: 'tailspin' }], changedSince: ['ACC-2'] });
         const { context, p } = setup(project({ erpAssignment: RECORD }));
         const result = await handleUndoErpAssignment(context, { id: 'erp-integration', erp: 'demo-erp-2', confirm: true });
 
         expect(mockPlanUndo).toHaveBeenCalledWith(COMMERCE, RECORD);
-        expect(mockWrite).toHaveBeenCalledWith(COMMERCE, [{ sku: 'ACC-1', value: 'justrite' }], expect.any(Object));
+        expect(mockWrite).toHaveBeenCalledWith(COMMERCE, [{ sku: 'ACC-1', value: 'tailspin' }], expect.any(Object));
         const saved = (context.stateManager.saveProject as jest.Mock).mock.calls[0][0] as Project;
         expect(saved.appBuilderComponents?.['demo-erp-2']).not.toHaveProperty('erpAssignment');
         // Only the products put back, to whichever ERPs own them again.

@@ -9,7 +9,7 @@ status: built
 
 # Republish says "No publishable pages found" when the DA.live sign-in has expired
 
-Filed 2026-10-05 from the first EDS-24 run on Justrite. Republish (`sync_content`) answered
+Filed 2026-10-05 from the first EDS-24 run on Tailspin. Republish (`sync_content`) answered
 "No publishable pages found. Ensure the site has content in DA.live." The site had content;
 the DA.live sign-in had expired. The Debug Logs show the truth one line above the error:
 

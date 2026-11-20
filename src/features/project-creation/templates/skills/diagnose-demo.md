@@ -17,12 +17,12 @@ distinguishes causes; the sections below say how to read each answer.
 |---|---|---|
 | Product page renders empty or 404s (EDS) | `get_site_access` | **Start here, not with scope.** A refused Configuration Service write leaves a storefront that builds, pushes and browses fine — and cannot serve a single product page. From outside it looks exactly like an empty catalog |
 | …site config is healthy, pages still empty | `get_store_structure` | Now scope is worth checking: the project can point at a website or store view that has no products, or does not exist |
-| Catalog is empty everywhere | `get_store_structure`, then "Reading an empty catalog" below | A scope that resolves is not necessarily a scope with products in it — and an import that SUCCEEDED can still read as empty |
+| Catalog is empty everywhere | `get_store_structure`, then "Reading an empty catalog" below | A scope that resolves is not necessarily a scope with products in it — and an install that SUCCEEDED can still read as empty |
 | Site serves old content after an edit | `sync_storefront` | Pushing is not publishing; see "Pushed is not published" |
 | Your change is not on the site — did work get lost? | `git log` in the storefront | Git is the record, not the rendered page. See "Is your work still there?" — check it BEFORE concluding anything, and before re-applying anything |
 | Mesh behaves unexpectedly | `check_mesh` | Reports both deployed AND up-to-date — they differ |
 | A setting change had no effect | `get_project` | Compare what is saved against what you expected to save |
-| A whole FEATURE seems absent | `get_settings` | Two keys are functional gates rather than preferences — the Data Installer surface does not exist without `dataInstaller.enabled` + `apiBaseUrl`. "Off" and "broken" look identical until you look |
+| A whole FEATURE seems absent | `get_settings` | Some keys are functional gates rather than preferences: the Data Installer's own packs are listed only when `dataInstaller.apiBaseUrl` is set, `dataInstaller.enabled` is on, and it answers. Datapacks themselves need no setup. "Off" and "broken" look identical until you look |
 | Setup fails before anything runs | `check_prerequisites` | Needs a stack id. Reports per tool whether it is installed and at what version |
 | EDS publishing silently fails | `check_github_app` | The AEM Code Sync app not being installed on the repo is silent everywhere else |
 | A repo will not serve a storefront | `check_repo_readiness` | Returns a verdict, or `undetermined` WITH a reason — which is a different answer from "not ready" |
@@ -80,8 +80,8 @@ catalog is empty" while the catalog was fine.
 
 ## Reading an empty catalog
 
-An import that reported success can still show you nothing, and the reason is not
-that the import lied.
+An install that reported success can still show you nothing, and the reason is not
+that the install lied.
 
 **`GET /V1/categories` returns only the DEFAULT store group's subtree.** On an
 instance with several roots — Default, plus one per brand — a pack's categories
@@ -89,20 +89,29 @@ land under their own root and are invisible through that endpoint. The per-type
 `success` is telling the truth; the read is what is narrow. Use
 `GET /V1/categories/list`, the flat search, to see what is actually there.
 
-**A root category is assigned by hand, in the Admin, after the import.** The
-service creates the category tree; it does not attach it to a store. Until
-someone does, the storefront has a catalog it cannot see. This is the step most
-often missing when "the import worked and the site is empty".
+**A store shows only the categories under its root, and no API can change a
+store's root.** Demo Builder puts a pack's categories under the store's
+root when no other store shares it. When another store shares it, the pack keeps
+a root of its own and the install asks the SC to set it in the Admin; "Skip for
+now" leaves that step open, and the install's note names it (Stores > All Stores >
+the store > Root Category). A pack the Data Installer service installed, before
+Demo Builder installed packs itself, created the category tree without attaching
+it to a store at all. Either way, until someone sets it, the storefront has a catalog it cannot see.
+This is the step most often missing when "the install worked and the site is empty".
 
 So, in order:
 
 1. `get_store_structure` — is the configured scope real?
 2. If scope is fine, check the flat category list rather than the tree.
 3. If the categories exist but the store shows none, the root category has not
-   been assigned. That is an Admin step; say so rather than re-importing.
+   been assigned. That is an Admin step: give the user the store and the value,
+   rather than reinstalling. Running `install_datapack` again afterwards only
+   re-checks it and marks it done.
+4. Set but the storefront still shows nothing: Catalog Service can lag behind the
+   store; on an Edge Delivery storefront, `republish` rebuilds the catalog menu.
 
-Re-importing does not fix this and costs minutes. It is the wrong instinct here
-precisely because the import was never the problem.
+Reinstalling does not fix this and costs minutes. It is the wrong instinct here
+precisely because the install was never the problem.
 
 ## Is your work still there?
 

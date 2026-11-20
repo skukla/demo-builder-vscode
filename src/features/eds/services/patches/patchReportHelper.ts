@@ -158,12 +158,18 @@ export function addMissingOnSource(report: PatchReport, path: string): void {
     report.missingOnSource.add(path);
 }
 
+/** The block library's own docs pages: for authors, not the storefront a demo shows (walk F209). */
+const LIBRARY_DOCS = '/docs/library/';
+
 /**
  * Record `link` as broken: the source has no such page either. The pages
- * carrying it come from `linkedFrom`, sorted, so the record is stable.
+ * carrying it come from `linkedFrom`, sorted, so the record is stable. A link only
+ * the block library's docs pages carry is left out, and those pages are not named.
  */
 export function addBrokenLink(report: PatchReport, link: string): void {
-    const pages = [...(report.linkedFrom?.get(link) ?? [])].sort();
+    const carriers = [...(report.linkedFrom?.get(link) ?? [])];
+    const pages = carriers.filter((page) => !page.startsWith(LIBRARY_DOCS)).sort();
+    if (carriers.length > 0 && pages.length === 0) return;
     report.brokenLinks ??= [];
     report.brokenLinks.push({ link, pages });
 }

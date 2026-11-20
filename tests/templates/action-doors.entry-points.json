@@ -1,0 +1,566 @@
+{
+    "_what": "Every entry point a person or an agent can use, assigned. A VS Code command, a webview message type (every handler map, every direct registration, the sidebar) and an MCP tool are read out of src/ by tests/templates/entryPointScan.ts; tests/templates/action-doors-coverage.test.ts fails on any not assigned here, and on any assigned here that no longer exists. A descriptor tool ({ tool, type } row) is the same entry point as its handler type, so it is covered by that type and not listed. Companion of action-doors.ledger.json, whose action ids `actions` names.",
+    "_rules": [
+        "Each entry point is in exactly one place: a bucket's `members`, `forwards`, or `actions`.",
+        "`actions` maps an entry point to the action rows (action-doors.ledger.json) whose spine it reaches. Its file is then one of that row's doors, checked both ways there.",
+        "`forwards` maps an entry point whose whole job is to run another listed entry point to that target. The target must be enumerated, and a command target's id must appear in a file that registers the forwarder.",
+        "A `read` entry point whose own declaration says it writes (`readOnly: false`, `readOnlyHint: false`) fails, and so does a declared-read-only tool or descriptor type placed in `write` or `actions`.",
+        "`drift` marks an assigned entry point that disagrees with another door of the same job; it names its fix, and counts toward action-doors.ledger.json `exemptionCeiling`.",
+        "`sharedNames`: a message type registered by several maps with DIFFERENT implementations is two doors under one name. Each needs a reason; one that becomes a single implementation is stale.",
+        "A new entry point: add it here in the change that registers it. A write with a second entry point doing the same job gets an action row instead of `write`."
+    ],
+    "buckets": {
+        "read": {
+            "why": "Answers with data or a status, and writes nothing an SC owns.",
+            "members": [
+                "command:demoBuilder.checkForUpdates",
+                "command:demoBuilder.diagnostics",
+                "command:demoBuilder.showBuildInfo",
+                "command:demoBuilder.viewStatus",
+                "handler:checkUpdateRows",
+                "handler:check-api-mesh",
+                "handler:check-auth",
+                "handler:check-dalive-auth",
+                "handler:check-datapack-service",
+                "handler:check-demo-data",
+                "handler:check-erp-integration-holder",
+                "handler:check-github-app",
+                "handler:check-github-auth",
+                "handler:check-prerequisites",
+                "handler:check-recorded-datapack",
+                "handler:check-repo-readiness",
+                "handler:check-store-view-products",
+                "handler:checkCompatibility",
+                "handler:count-datapack-export-items",
+                "handler:find-datapacks",
+                "handler:followErpOrder",
+                "handler:get-components-data",
+                "handler:get-datapack-activity",
+                "handler:get-datapack-detail",
+                "handler:get-datapack-import-status",
+                "handler:get-datapack-import-target",
+                "handler:get-datapack-line",
+                "handler:get-datapack-records",
+                "handler:get-datapack-removal-changes",
+                "handler:get-datapack-removal-scope",
+                "handler:get-datapack-setup-step",
+                "handler:get-github-repos",
+                "handler:get-projects",
+                "handler:get-store-structure",
+                "handler:get-workspaces",
+                "handler:getAppBuilderInstallStatus",
+                "handler:getContext",
+                "handler:getDemoPackagePreview",
+                "handler:getErpAssignOptions",
+                "handler:getErpDemoControls",
+                "handler:getErpOwnershipOptions",
+                "handler:getErpSettings",
+                "handler:getErpStatus",
+                "handler:getFinishSetup",
+                "handler:getIntegrationSettings",
+                "handler:getProjectUrls",
+                "handler:getProjects",
+                "handler:getSetupChecklist",
+                "handler:getShareDatapackCheck",
+                "handler:getSiteAccess",
+                "handler:list-ai-prompts",
+                "handler:list-datapack-data-types",
+                "handler:list-datapack-export-items",
+                "handler:list-datapack-import-scopes",
+                "handler:list-installed-datapacks",
+                "handler:list-org-console-apis",
+                "handler:listConsoleApis",
+                "handler:listRuntimeActivations",
+                "handler:listRuntimePackages",
+                "handler:loadDependencies",
+                "handler:lookupErpRecord",
+                "handler:open-datapack-zip",
+                "handler:prepareProjectsBatch",
+                "handler:preview-datapack-changes",
+                "handler:probe-shared-demo",
+                "handler:readErpApi",
+                "handler:readRuntimeActivation",
+                "handler:recheckUpdates",
+                "handler:requestStatus",
+                "handler:validate",
+                "handler:validate-datapack-import",
+                "handler:validateSelection",
+                "handler:verify-ai-setup",
+                "handler:verify-datapack-install",
+                "handler:waitForSiteAccess",
+                "tool:find_storefront_name_mismatches",
+                "tool:get_agent_trace",
+                "tool:get_auth_status",
+                "tool:get_block_authoring_shape",
+                "tool:get_commerce_endpoints",
+                "tool:get_component_config",
+                "tool:get_component_requirements",
+                "tool:get_content_access",
+                "tool:get_current_project",
+                "tool:get_demo_package_preview",
+                "tool:get_project",
+                "tool:get_project_status",
+                "tool:get_settings",
+                "tool:get_site_access",
+                "tool:get_storefront_report",
+                "tool:list_adobe_projects",
+                "tool:list_blocks",
+                "tool:list_components",
+                "tool:list_content",
+                "tool:list_dalive_sites",
+                "tool:list_demo_packages",
+                "tool:list_event_providers",
+                "tool:list_github_repos",
+                "tool:list_orgs",
+                "tool:list_projects",
+                "tool:list_stacks",
+                "tool:list_workspaces",
+                "tool:read_debug_logs",
+                "tool:read_page",
+                "tool:read_published_page",
+                "tool:run_commerce_query",
+                "tool:run_commerce_rest",
+                "tool:validate_component_selection"
+            ]
+        },
+        "navigate": {
+            "why": "Opens a screen, panel, file, setting, terminal or web page; changes no project.",
+            "members": [
+                "command:demoBuilder.clearCommerceInstance",
+                "command:demoBuilder.clearDemoData",
+                "command:demoBuilder.configureProject",
+                "command:demoBuilder.createProject",
+                "command:demoBuilder.loadProject",
+                "command:demoBuilder.manageSiteAccess",
+                "command:demoBuilder.navigate",
+                "command:demoBuilder.newAiChat",
+                "command:demoBuilder.openAi",
+                "command:demoBuilder.openAiExperience",
+                "command:demoBuilder.openBrowser",
+                "command:demoBuilder.openComponent",
+                "command:demoBuilder.openDaLiveBookmarkletSetup",
+                "command:demoBuilder.openInClaude",
+                "command:demoBuilder.openModernizationAgent",
+                "command:demoBuilder.pickAiChat",
+                "command:demoBuilder.showDataInstaller",
+                "command:demoBuilder.showDatapackLibrary",
+                "command:demoBuilder.showDebugLogs",
+                "command:demoBuilder.showIntegrations",
+                "command:demoBuilder.showLogs",
+                "command:demoBuilder.showProjectDashboard",
+                "command:demoBuilder.showProjectsList",
+                "command:demoBuilder.showPromptsPicker",
+                "command:demoBuilder.showSidebar",
+                "command:demoBuilder.toggleSidebar",
+                "handler:configure",
+                "handler:editProject",
+                "handler:finishSetup",
+                "handler:navigate",
+                "handler:navigateBack",
+                "handler:open-block-library-settings",
+                "handler:open-configure",
+                "handler:open-dalive-login",
+                "handler:open-eds-settings",
+                "handler:open-setting",
+                "handler:openAemAssets",
+                "handler:openAi",
+                "handler:openBrowser",
+                "handler:openDaLive",
+                "handler:openDataInstaller",
+                "handler:openDebugLogs",
+                "handler:openDevConsole",
+                "handler:openErpScreen",
+                "handler:openExternal",
+                "handler:openHelp",
+                "handler:openInClaude",
+                "handler:openIntegrations",
+                "handler:openLiveSite",
+                "handler:openLogs",
+                "handler:openProject",
+                "handler:openSettings",
+                "handler:openSiteAccess",
+                "handler:openSiteAccessLink",
+                "handler:openTools",
+                "handler:revealFile",
+                "handler:selectProject",
+                "handler:showProjectDashboard",
+                "tool:open_view",
+                "tool:reload_window",
+                "tool:report_demo_builder_issue",
+                "tool:set_setting"
+            ]
+        },
+        "session": {
+            "why": "A screen's or an agent session's own plumbing: handshake, logging, cancel, the progress window and its prompts, a selection held in memory. No user action of its own.",
+            "members": [
+                "handler:answerOperationPrompt",
+                "handler:backToProject",
+                "handler:backgroundOperation",
+                "handler:cancel",
+                "handler:cancel-project-creation",
+                "tool:cancel_project_creation",
+                "tool:continue_project_creation",
+                "handler:copyAiPrompt",
+                "handler:creation-pause-answer",
+                "handler:datapack-save-question-answered",
+                "handler:dismiss-datapack-no-access",
+                "handler:getOperationProgress",
+                "handler:log",
+                "handler:ready",
+                "handler:select-project",
+                "handler:select-workspace",
+                "handler:setViewModeOverride",
+                "handler:storefront-setup-cancel",
+                "handler:takeClearRequest",
+                "handler:takeUpdatesRequest",
+                "handler:use-bundle-setup",
+                "tool:select_org",
+                "tool:select_project",
+                "tool:select_workspace"
+            ]
+        },
+        "internal": {
+            "why": "`demoBuilder._internal.*`: flags the extension's own modules pass each other. Not in the palette; no person or agent reaches them.",
+            "members": [
+                "command:demoBuilder._internal.configChanged",
+                "command:demoBuilder._internal.demoStarted",
+                "command:demoBuilder._internal.demoStopped",
+                "command:demoBuilder._internal.initializeFileHashes",
+                "command:demoBuilder._internal.markMeshNotificationShown",
+                "command:demoBuilder._internal.markRestartNotificationShown",
+                "command:demoBuilder._internal.markStorefrontNotificationShown",
+                "command:demoBuilder._internal.meshActionTaken",
+                "command:demoBuilder._internal.registerProgrammaticWrites",
+                "command:demoBuilder._internal.restartActionTaken",
+                "command:demoBuilder._internal.shouldShowMeshNotification",
+                "command:demoBuilder._internal.shouldShowRestartNotification",
+                "command:demoBuilder._internal.shouldShowStorefrontNotification",
+                "command:demoBuilder._internal.storefrontActionTaken"
+            ]
+        },
+        "write": {
+            "why": "Changes something (a project, a cloud resource, a file, a setting) and has no action row yet, so its doors have not been compared. Listed so it cannot appear unseen; giving it a row is the call-path-audit's job, and a second entry point doing the same job is the reason to.",
+            "members": [
+                "command:demoBuilder.migrateStorefrontNames",
+                "command:demoBuilder.refreshBlockLibrary",
+                "command:demoBuilder.registerGlobalMcp",
+                "command:demoBuilder.resetAiOnboarding",
+                "command:demoBuilder.resetAll",
+                "command:demoBuilder.resetZoom",
+                "command:demoBuilder.setRecommendedZoom",
+                "command:demoBuilder.signOutAdobe",
+                "command:demoBuilder.startDemo",
+                "command:demoBuilder.stopDemo",
+                "handler:add-shared-demo",
+                "handler:addAppBuilderComponent",
+                "handler:addConsoleApis",
+                "handler:addContentReader",
+                "handler:addErp",
+                "handler:addErpOwnerToAttributeSets",
+                "handler:addSiteAdmin",
+                "handler:assignErpProducts",
+                "handler:build-datapack-from-export",
+                "handler:change-demo-source",
+                "handler:check-datapack-setup-step",
+                "handler:checkFinishSetupSteps",
+                "handler:checkIntegrationUpdates",
+                "handler:checkSetupSteps",
+                "handler:clear-commerce-instance",
+                "handler:clear-dalive-auth",
+                "handler:clear-demo-data",
+                "handler:continue-prerequisites",
+                "handler:copy-library-datapack-to-installer",
+                "handler:copyFromExisting",
+                "handler:create-adobe-project",
+                "handler:create-adobe-workspace",
+                "handler:delete-ai-prompt",
+                "handler:delete-library-datapack",
+                "handler:deleteUndeclaredRuntimeCode",
+                "handler:deployAppBuilderComponent",
+                "handler:discover-store-structure",
+                "handler:edit-added-demo",
+                "handler:endErpDowntime",
+                "handler:ensure-mesh-api-subscribed",
+                "handler:exportDemoBundle",
+                "handler:exportProject",
+                "handler:exportProjectSettings",
+                "handler:fix-datapack-import-with-ai",
+                "handler:fixUpdateWithAi",
+                "handler:forget-added-demo",
+                "handler:import-storefront-zip",
+                "handler:importFromFile",
+                "handler:install-prerequisite",
+                "handler:installAppBuilderComponent",
+                "handler:invokeRuntimeAction",
+                "handler:load-datapack-zip",
+                "handler:loadErpDemoData",
+                "handler:mark-team-datapack",
+                "handler:offer-save-block-library-defaults",
+                "handler:prepareCommerceStore",
+                "handler:prepareFinishSetupChecks",
+                "handler:prepareSetupChecks",
+                "handler:promoteAppBuilderComponent",
+                "handler:redeployAppBuilderComponent",
+                "handler:refresh-block-library",
+                "handler:refreshBlockLibrary",
+                "handler:regenerate-ai-files",
+                "handler:reinstallAppBuilderComponent",
+                "handler:removeContentReader",
+                "handler:removeDemoPackage",
+                "handler:removeErpOwnerFromAttributeSets",
+                "handler:removeSiteAdmin",
+                "handler:rename-adobe-project",
+                "handler:rename-library-datapack",
+                "handler:renameAppBuilderComponent",
+                "handler:repairSiteConfiguration",
+                "handler:resetErpRecords",
+                "handler:restore-datapack",
+                "handler:save-ai-prompt",
+                "handler:save-datapack-zip",
+                "handler:save-store-changes-to-pack",
+                "handler:saveDemoPackage",
+                "handler:saveIntegrationSettings",
+                "handler:setCommerceConfig",
+                "handler:setConsoleApis",
+                "handler:setErpAppearance",
+                "handler:setErpSettings",
+                "handler:setFinishSetupStep",
+                "handler:setProjectDestination",
+                "handler:setProjectPinned",
+                "handler:setSetupStep",
+                "handler:share-library-datapack",
+                "handler:start-datapack-export",
+                "handler:startErpDowntime",
+                "handler:undo-last-save",
+                "handler:undoCommerceStorePreparation",
+                "handler:undoErpAssignment",
+                "handler:unpromoteAppBuilderComponent",
+                "handler:update-datapack",
+                "handler:updateAppBuilderComponent",
+                "handler:writeErpApi",
+                "tool:add_shared_demo",
+                "tool:change_demo_source",
+                "tool:configure_project",
+                "tool:copy_project",
+                "tool:create_adobe_project",
+                "tool:create_adobe_workspace",
+                "tool:delete_adobe_workspace",
+                "tool:delete_event_provider",
+                "tool:delete_github_repo",
+                "tool:delete_page",
+                "tool:edit_added_demo",
+                "tool:edit_project",
+                "tool:export_demo_bundle",
+                "tool:finish_storefront_update",
+                "tool:forget_added_demo",
+                "tool:migrate_storefront_name",
+                "tool:publish_page",
+                "tool:remove_demo_package",
+                "tool:rename_adobe_project",
+                "tool:repair_site_configuration",
+                "tool:save_demo_package",
+                "tool:set_content_reader",
+                "tool:set_current_project",
+                "tool:set_site_admin",
+                "tool:update_project_config",
+                "tool:write_commerce_rest",
+                "tool:write_page"
+            ]
+        }
+    },
+    "forwards": {
+        "handler:createProject": "command:demoBuilder.createProject",
+        "handler:newAiChat": "command:demoBuilder.newAiChat",
+        "handler:openAiChat": "command:demoBuilder.openAiExperience",
+        "handler:openDatapackLibrary": "command:demoBuilder.showDatapackLibrary",
+        "handler:pickAiChat": "command:demoBuilder.pickAiChat",
+        "handler:restartDemo": "command:demoBuilder.restartDemo",
+        "handler:showPrompts": "command:demoBuilder.showPromptsPicker",
+        "handler:startDemo": "command:demoBuilder.startDemo",
+        "handler:stopDemo": "command:demoBuilder.stopDemo",
+        "tool:connect_dalive": "command:demoBuilder.openDaLiveBookmarkletSetup"
+    },
+    "actions": {
+        "command:demoBuilder.cleanupDaLiveSites": [
+            "dalive-teardown-token"
+        ],
+        "command:demoBuilder.configure": [
+            "restart-demo"
+        ],
+        "command:demoBuilder.deployMesh": [
+            "mesh-deploy",
+            "republish-storefront-settings"
+        ],
+        "command:demoBuilder.manageGitHubRepos": [
+            "github-sign-in",
+            "token-write"
+        ],
+        "command:demoBuilder.repairSiteConfiguration": [
+            "republish-storefront-settings"
+        ],
+        "command:demoBuilder.restartDemo": [
+            "restart-demo"
+        ],
+        "command:demoBuilder.signInAdobe": [
+            "adobe-sign-in"
+        ],
+        "command:demoBuilder.signInDaLive": [
+            "dalive-sign-in",
+            "token-write"
+        ],
+        "command:demoBuilder.signInGitHub": [
+            "github-sign-in",
+            "token-write"
+        ],
+        "command:demoBuilder.syncStorefront": [
+            "sync-storefront"
+        ],
+        "handler:applyUpdates": [
+            "apply-updates"
+        ],
+        "handler:authenticate": [
+            "adobe-sign-in"
+        ],
+        "handler:create-github-repo": [
+            "create-github-repo"
+        ],
+        "handler:create-project": [
+            "create-project",
+            "storefront-reset"
+        ],
+        "handler:delete-adobe-project": [
+            "delete-console-project"
+        ],
+        "handler:delete-api-mesh": [
+            "mesh-delete"
+        ],
+        "handler:deploy-api-mesh": [
+            "mesh-deploy",
+            "republish-storefront-settings"
+        ],
+        "handler:deployMesh": [
+            "mesh-deploy",
+            "republish-storefront-settings"
+        ],
+        "handler:github-change-account": [
+            "github-sign-in",
+            "token-write"
+        ],
+        "handler:github-oauth": [
+            "github-sign-in",
+            "token-write"
+        ],
+        "handler:open-commerce-admin": [
+            "open-commerce-admin"
+        ],
+        "handler:openAdminPanel": [
+            "open-commerce-admin"
+        ],
+        "handler:removeAppBuilderComponent": [
+            "mesh-delete"
+        ],
+        "handler:renameProject": [
+            "rename-project"
+        ],
+        "handler:republish-storefront": [
+            "republish-storefront-settings"
+        ],
+        "handler:republishContent": [
+            "republish-storefront"
+        ],
+        "handler:reset-datapack": [
+            "datapack-job"
+        ],
+        "handler:runProjectsBatch": [
+            "storefront-reset",
+            "headless-reset",
+            "delete-project"
+        ],
+        "handler:save-configuration": [
+            "restart-demo",
+            "republish-storefront-settings"
+        ],
+        "handler:start-datapack-import": [
+            "datapack-job"
+        ],
+        "handler:store-dalive-token-with-org": [
+            "dalive-sign-in",
+            "token-write"
+        ],
+        "handler:storefront-setup-start": [
+            "create-github-repo"
+        ],
+        "handler:switchOrg": [
+            "adobe-sign-in"
+        ],
+        "handler:syncStorefront": [
+            "sync-storefront"
+        ],
+        "tool:apply_updates": [
+            "apply-updates"
+        ],
+        "tool:cleanup_dalive_site": [
+            "dalive-teardown-token"
+        ],
+        "tool:create_github_repo": [
+            "create-github-repo"
+        ],
+        "tool:create_project": [
+            "create-project"
+        ],
+        "tool:create_project_from_file": [
+            "create-project"
+        ],
+        "tool:delete_adobe_project": [
+            "delete-console-project"
+        ],
+        "tool:delete_project": [
+            "delete-project",
+            "dalive-teardown-token"
+        ],
+        "tool:open_url": [
+            "open-commerce-admin"
+        ],
+        "tool:promote_block_to_library": [
+            "sync-storefront"
+        ],
+        "tool:remove_block_from_library": [
+            "sync-storefront"
+        ],
+        "tool:republish": [
+            "republish-storefront"
+        ],
+        "tool:reset_project": [
+            "storefront-reset",
+            "headless-reset"
+        ],
+        "tool:sign_in": [
+            "adobe-sign-in",
+            "github-sign-in",
+            "dalive-sign-in"
+        ],
+        "tool:sync_storefront": [
+            "sync-storefront"
+        ]
+    },
+    "drift": {},
+    "sharedNames": {
+        "cancel": "Each screen's own Cancel: Configure (handleCancelConfigure), the wizard (handleCancel) and the AI panel (openAi.ts). One name, three screens.",
+        "clear-commerce-instance": "The agent descriptor's map builds the window's request from the agent's answers, then calls importHandlers['clear-commerce-instance'] (dataInstallerDescriptors.ts:201-204): an adapter in front of the one handler.",
+        "createProject": "The sidebar button runs demoBuilder.createProject; the projects list has its own handler. Both open the wizard.",
+        "discover-store-structure": "Configure's handleDiscoverStoreStructureAndPersist saves what it finds to the project; the wizard's and the agent's handleDiscoverStoreStructure only answer it. One name, a read and a write.",
+        "editProject": "Dashboard: the current project (projectManagementHandlers). Projects list: a project by path (projectsListLifecycle). Audit row 20 pattern.",
+        "log": "The wizard's handleLog and BaseWebviewCommand's direct `log` registration, for the wizard and every other panel.",
+        "open-block-library-settings": "One body, `openCustomBlockLibrarySettings` (blockLibrarySettings.ts, walk F271): the wizard registers it directly, Configure's map wraps it in the handler signature, so the scan sees two names.",
+        "openAdminPanel": "Dashboard: the current project. Projects list: a project by path. Both call openCommerceAdmin (open-commerce-admin row, PL-104 fix 9).",
+        "openBrowser": "Dashboard: the current project. Projects list: a project by path.",
+        "openDaLive": "Dashboard: the current project. Projects list: a project by path.",
+        "openExternal": "Configure validates http/https and throws; the wizard's also lets a data: URL through (wizardLifecycleHandlers.ts:187). Both validate.",
+        "openHelp": "The sidebar button and the projects list, each opening help.",
+        "openLiveSite": "Dashboard: the current project. Projects list: a project by path.",
+        "openSettings": "The sidebar button (workbench settings, `demoBuilder`) and the projects list's own handler.",
+        "renameProject": "Dashboard: the current project. Projects list: a project by path. Both call renameProjectCore (rename-project row).",
+        "startDemo": "Dashboard: the current project. Projects list: a project by path. Both run demoBuilder.startDemo.",
+        "stopDemo": "Dashboard: the current project. Projects list: a project by path. Both run demoBuilder.stopDemo."
+    }
+}

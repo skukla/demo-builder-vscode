@@ -65,6 +65,7 @@ jest.mock('@/features/eds/ui/components/GitHubAppInstallDialog', () => ({
 // Below the mocks on purpose: `jest.mock` hoists above the imports of this file,
 // so the step must be imported after them to bind to the stubs.
 import { ProjectCreationStep } from '@/features/project-creation/ui/steps/ProjectCreationStep';
+import { plain } from '@/core/utils/plainText';
 
 /** The GitHub user an EDS config is signed in as, where a test needs one. */
 const githubAuth = (login: string): EDSConfig['githubAuth'] => ({
@@ -358,7 +359,7 @@ describe('useGitHubAppPreflight (through ProjectCreationStep)', () => {
                                 progress: 50,
                                 message: 'Failed',
                                 logs: [],
-                                error: 'boom',
+                                error: plain('boom'),
                             },
                         })}
                         updateState={jest.fn()}

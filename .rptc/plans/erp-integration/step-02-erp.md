@@ -1,10 +1,10 @@
 # Step 02 — The ERP repository
 
 A public repository (`skukla/…`, name at plan review), a plain App Builder app in the demo's
-project and workspace (`kind: system`, decision 13), built to Adobe's App Builder standards with our tooling (decision 16). Nishant Kapoor's
-`agilent-erp-mock` (Apache-2.0) is the reference: its `lib/db.js`, `pricing.js`,
+project and workspace (`kind: system`, decision 13), built to Adobe's App Builder standards with our tooling (decision 16). Person A's
+`client-a-erp-mock` (Apache-2.0) is the reference: its `lib/db.js`, `pricing.js`,
 `order-payload.js`, `sequence.js`, `write-back.js` are READ first and carried over only
-where they meet the bar (paging, error handling, no credentials in code, tests); the Agilent
+where they meet the bar (paging, error handling, no credentials in code, tests); the Client A
 CSV, the two hard-coded companies, the configurator and the quotes do not come over.
 
 ## Layout (runtime manifest at the root, so the spine can rename its package)
@@ -94,6 +94,6 @@ Two facts learned by deploying, both now pinned in code and tests:
    flyout's "Open ERP" should use the org-qualified form
    `#/@<orgSlug>/custom-apps/?localDevUrl=…` when the org slug is known (verify in step 05).
 
-Credit: the request-parsing helper is adapted from `agilent-erp-mock` by **Nishant Kapoor** (the
-repository is hosted under jogosset; its package.json declares Apache-2.0, there is no LICENSE
+Credit: the request-parsing helper is adapted from `client-a-erp-mock` by **Person A** (the
+repository is hosted under org-f; its package.json declares Apache-2.0, there is no LICENSE
 file). `NOTICE` names him and Adobe (the shell loader is the generator template's, unchanged).

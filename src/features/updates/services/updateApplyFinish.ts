@@ -15,17 +15,17 @@ import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { sanitizeErrorForLogging } from '@/core/validation/SensitiveDataRedactor';
 import { finishClash, leaveClash, type FinishOutcome } from '@/features/updates/services/pendingClashFinish';
 import { createFinishDeps } from '@/features/updates/services/pendingClashFinishDeps';
-import { emptyResult, type CategoryResult } from '@/features/updates/services/updateApplyResult';
+import { emptyResult, whenItGoesLiveSentence, type CategoryResult } from '@/features/updates/services/updateApplyResult';
 import type { OnProgress, UpdateQuestions } from '@/features/updates/services/updateApplyTemplate';
 import type { UpdateContext } from '@/features/updates/services/updateCore';
 import type { UpdateSelections } from '@/features/updates/services/updateSelections';
 import type { Project } from '@/types/base';
 
 /** What happens next to a fix that is not finished, by the SC's answer. */
-const NEXT: Record<'fix' | 'later', string> = {
-    fix: 'the AI is having another go. Nothing goes live until you approve it',
-    later: 'the fix waits in Check for Updates',
-};
+function nextFor(answer: 'fix' | 'later', questions: UpdateQuestions): string {
+    if (answer === 'later') return 'the fix waits in Check for Updates.';
+    return `the AI is having another go. ${whenItGoesLiveSentence(questions.aiAsksFirst())}`;
+}
 
 const WHICH: Record<'template' | 'boilerplate', string> = {
     template: 'update',
@@ -49,8 +49,8 @@ async function settleUnfinished(
         return;
     }
     // An agent gets the reason to act on; a person gets what happens next (owner, 2026-10-24).
-    const next = questions ? NEXT[answer] : `not finished yet, because ${reason}`;
-    result.errors.push(`${name}: ${next}.`);
+    const next = questions ? nextFor(answer, questions) : `not finished yet, because ${reason}.`;
+    result.errors.push(`${name}: ${next}`);
     const storefrontPath = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.path;
     // A clash still kept, so the SC's AI can be opened on it again (the boundary does that).
     (result.clashes ??= []).push({

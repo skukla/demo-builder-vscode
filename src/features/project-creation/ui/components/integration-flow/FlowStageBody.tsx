@@ -17,7 +17,10 @@ import { CatalogStage, type UnavailableEntries } from './stages/CatalogStage';
 import { CustomStage } from './stages/CustomStage';
 import { DestinationStage } from './stages/DestinationStage';
 import { KindStage } from './stages/KindStage';
+import type { CreatableEntity } from './useEntityCreate';
 import type { UseIntegrationFlowReturn } from './useIntegrationFlow';
+import type { ApiAccessOption } from '@/core/ui/components/selection/ApiAccessPicker';
+import type { ReportOutcome } from '@/core/ui/components/ui/DialogOutcome';
 import {
     isPrebuiltIntegration,
     isSeedIntegration,
@@ -28,12 +31,11 @@ import type { AdobeAuthSessionState, WizardState } from '@/types/webview';
 /** Stable empty selection (avoids the inline-array re-render gotcha). */
 const EMPTY_IDS: string[] = [];
 
-/** flow stage id → DestinationStage view, for the four destination stages. */
+/** flow stage id → DestinationStage view, for the three destination stages. */
 const DEST_VIEWS = {
     'dest-signin': 'signin',
     'dest-project': 'project',
     'dest-workspace': 'workspace',
-    'dest-summary': 'summary',
 } as const;
 
 /** What the stage bodies read off the journey's inputs (see the modal's props). */
@@ -42,9 +44,10 @@ interface StageBodyInputs {
     updateState: (updates: Partial<WizardState>) => void;
     meshComponent?: AppBuilderComponentCatalogEntry;
     catalog: AppBuilderComponentCatalogEntry[];
-    onSignIn?: () => Promise<unknown>;
     /** Catalog entries that cannot be added here, and what to do instead. */
     unavailable?: UnavailableEntries;
+    /** Starts a user-initiated Adobe sign-in, for a destination read refused for want of one. */
+    onSignIn?: () => Promise<unknown>;
 }
 
 /**
@@ -56,12 +59,24 @@ interface StageBodyInputs {
 export function FlowStageBody({
     flow,
     props,
+    apis,
+    onOutcome,
+    onWaiting,
+    onNew,
 }: {
     flow: UseIntegrationFlowReturn;
     props: StageBodyInputs;
+    /** The org's APIs, read by the dialog: the api-access stage's list. */
+    apis: ApiAccessOption[];
+    /** The dialog's title and footer, which take a destination stage's outcomes. */
+    onOutcome: ReportOutcome;
+    /** Tells the dialog a destination list's silent wait is on. */
+    onWaiting: (waiting: boolean) => void;
+    /** A destination list's New: opens the create window for a project or workspace. */
+    onNew: (entity: CreatableEntity) => void;
 }): React.ReactElement {
     const { stage, draft } = flow;
-    const { state, updateState, meshComponent, catalog, onSignIn, unavailable } = props;
+    const { state, updateState, meshComponent, catalog, unavailable, onSignIn } = props;
 
     // The catalog prop is the stack-filtered MIXED list: derived meshes, authored
     // integrations, the blank shell, and SEEDS. Only finished integrations belong
@@ -146,8 +161,7 @@ export function FlowStageBody({
         // stage is terminal), so this is unconditionally the picker.
         return (
             <ApiPickerStage
-                onSignIn={onSignIn}
-                componentIds={selectedIds}
+                apis={apis}
                 selected={draft.selectedApis ?? EMPTY_IDS}
                 onToggle={flow.toggleApi}
             />
@@ -162,7 +176,10 @@ export function FlowStageBody({
             pendingWorkspace={draft.pendingWorkspace}
             onPendingProject={flow.setPendingProject}
             onPendingWorkspace={flow.setPendingWorkspace}
-            onPhaseRunningChange={flow.setPhaseRunning}
+            onNew={onNew}
+            onOutcome={onOutcome}
+            onWaiting={onWaiting}
+            onSignIn={onSignIn}
         />
     );
 }

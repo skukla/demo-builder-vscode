@@ -20,7 +20,7 @@ describe('SearchableList - Display Customization', () => {
         it('shows item count when loaded', () => {
             renderWithProviders(<SearchableList {...defaultProps} />);
 
-            // When not filtering, shows just count (not "Showing X of Y")
+            // When not filtering, shows just count (not "X of Y")
             expect(screen.getByText('4 items')).toBeInTheDocument();
         });
 
@@ -30,7 +30,7 @@ describe('SearchableList - Display Customization', () => {
                 <SearchableList {...defaultProps} items={singleItem} filteredItems={singleItem} />
             );
 
-            // When not filtering, shows just count (not "Showing X of Y")
+            // When not filtering, shows just count (not "X of Y")
             expect(screen.getByText('1 item')).toBeInTheDocument();
         });
 
@@ -40,7 +40,7 @@ describe('SearchableList - Display Customization', () => {
                 <SearchableList {...defaultProps} searchQuery="Project" filteredItems={filtered} />
             );
 
-            expect(screen.getByText('Showing 2 of 4 items')).toBeInTheDocument();
+            expect(screen.getByText('2 of 4 items')).toBeInTheDocument();
         });
 
         it('does not show count when not loaded once', () => {
@@ -54,14 +54,14 @@ describe('SearchableList - Display Customization', () => {
                 />
             );
 
-            expect(screen.queryByText(/Showing/)).not.toBeInTheDocument();
+            expect(screen.queryByText(/ of \d+ items/)).not.toBeInTheDocument();
         });
     });
 
     describe('AutoFocus', () => {
         // A screen with a search filter focuses nothing on load (owner, 2026-10-01).
         it('never focuses the search on load', () => {
-            renderWithProviders(<SearchableList {...defaultProps} searchThreshold={3} />);
+            renderWithProviders(<SearchableList {...defaultProps} />);
 
             expect(screen.getByRole('searchbox')).not.toHaveFocus();
         });
@@ -88,7 +88,7 @@ describe('SearchableList - Display Customization', () => {
         it('handles empty items array', () => {
             renderWithProviders(<SearchableList {...defaultProps} items={[]} filteredItems={[]} />);
 
-            // When not filtering, shows just count (not "Showing X of Y")
+            // When not filtering, shows just count (not "X of Y")
             expect(screen.getByText('0 items')).toBeInTheDocument();
         });
 

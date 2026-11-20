@@ -177,8 +177,19 @@ async function reconcileExtras(
 ): Promise<{
     success: boolean;
     error?: string;
+    code?: ErrorCode;
     data?: { subscribed?: SubscribedApi[]; notSubscribed?: string[] };
 }> {
+    // The one guard every door shares (PL-104 fix 15): picks for an integration the
+    // project does not have would be saved and subscribed on the shared workspace.
+    // Only add checked this; Manage APIs and set_console_apis went straight here.
+    if (componentId && !project.appBuilderComponents?.[componentId]) {
+        return {
+            success: false,
+            error: `This project has no integration "${componentId}".`,
+            code: ErrorCode.CONFIG_INVALID,
+        };
+    }
     // Does this component hold a workspace of its own (AB-23)? It decides the whole
     // shape of the edit, because the danger the union protects against only exists
     // in a SHARED workspace.
@@ -361,13 +372,6 @@ export const handleAddConsoleApis: MessageHandler<{
     const { project } = loaded;
 
     const componentId = payload?.componentId;
-    if (componentId && !project.appBuilderComponents?.[componentId]) {
-        return {
-            success: false,
-            error: `This project has no integration "${componentId}".`,
-            code: ErrorCode.CONFIG_INVALID,
-        };
-    }
     const current = componentId
         ? (project.componentApiPicks?.[componentId] ?? [])
         : resolveDesiredApis(project);

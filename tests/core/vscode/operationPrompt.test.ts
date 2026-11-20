@@ -11,6 +11,7 @@
 
 import * as vscode from 'vscode';
 import { withPhaseSinks } from '@/core/utils/agentPhaseChannel';
+import { closeBackgroundNotice, openBackgroundNotice } from '@/core/vscode/operationBackgroundNotice';
 import { heldProgress, pushOperationProgress, startModalRun } from '@/core/vscode/operationProgress';
 import {
     answerOperationPrompt,
@@ -25,6 +26,7 @@ import { runWithCallTag } from '@/core/logging/callTagContext';
 import { createMockHandlerContext } from '../../helpers/handlerContextTestHelpers';
 
 const showWarning = vscode.window.showWarningMessage as jest.Mock;
+const showInfo = vscode.window.showInformationMessage as jest.Mock;
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -36,19 +38,43 @@ const settle = (): Promise<void> => new Promise((resolve) => setImmediate(resolv
 // Every other question an agent puts to the SC is a modal (its consent dialogs);
 // its sign-in request sat in a corner notification instead (2026-09-21).
 describe('an agent asks, with no modal up', () => {
-    it('asks in a VS Code modal, naming the agent, with one Cancel', async () => {
-        showWarning.mockResolvedValue('Sign In');
+    // Owner, 2026-10-30: the title is the modal's heading and the sentence sits under it.
+    it('asks in a VS Code modal, its title the heading, naming the agent, with one Cancel', async () => {
+        showWarning.mockResolvedValue({ title: 'Sign In' });
 
         const answer = await runWithCallTag(7, () =>
             askDuringOperation({ title: 'Sign in', message: 'Sign in to Adobe to continue.' }, 'Sign In', 'Cancel'),
         );
 
         expect(showWarning).toHaveBeenCalledWith(
-            'Sign in to Adobe to continue.',
-            { modal: true, detail: "Demo Builder's agent asked for this." },
-            'Sign In',
+            'Sign in',
+            { modal: true, detail: "Sign in to Adobe to continue.\n\nDemo Builder's agent asked for this." },
+            { title: 'Sign In' },
         );
         expect(answer).toBe('Sign In');
+    });
+
+    it('a routine step gets an information icon, and its dismiss answer is the close button, so no Cancel is added', async () => {
+        showInfo.mockResolvedValue({ title: 'Skip for now', isCloseAffordance: true });
+
+        const answer = await runWithCallTag(7, () =>
+            askDuringOperation(
+                { title: 'One step in the Admin', message: 'Set it, then Save.', tone: 'info', dismiss: 'Skip for now' },
+                'Open the Admin',
+                "I've Done It",
+                'Skip for now',
+            ),
+        );
+
+        expect(showWarning).not.toHaveBeenCalled();
+        expect(showInfo).toHaveBeenCalledWith(
+            'One step in the Admin',
+            { modal: true, detail: "Set it, then Save.\n\nDemo Builder's agent asked for this." },
+            { title: 'Open the Admin' },
+            { title: "I've Done It" },
+            { title: 'Skip for now', isCloseAffordance: true },
+        );
+        expect(answer).toBe('Skip for now');
     });
 
     it('answers undefined when the SC dismisses it', async () => {
@@ -108,6 +134,49 @@ describe('a modal is hosting the operation', () => {
         await expect(asking).resolves.toBe('Sign In');
     });
 
+    // Walk F162 (2026-11-16): the datapack job's status poller pushes its stage every few seconds on
+    // the same id, and the first push after the question took it off the screen, so the install
+    // waited on an answer nobody could give.
+    it('keeps the question on screen through the stage pushes made while it waits, and drops it once answered', async () => {
+        const send = jest.fn();
+        startModalRun('op-poll', send);
+        const prompt = { title: 'One step', message: 'Set it, then Save.', actions: ['Done'] };
+
+        const asking = withModalAsking('op-poll', () => askDuringOperation({ title: prompt.title, message: prompt.message }, 'Done'));
+        await settle();
+        await pushOperationProgress({ id: 'op-poll', state: 'running', stage: 'Categories 10 of 10' });
+
+        expect(send).toHaveBeenLastCalledWith(
+            'operationProgress',
+            expect.objectContaining({ stage: 'Categories 10 of 10', prompt }),
+        );
+
+        answerOperationPrompt('op-poll', 'Done');
+        await expect(asking).resolves.toBe('Done');
+        await pushOperationProgress({ id: 'op-poll', state: 'running', stage: 'Products 0 of 25' });
+
+        expect(send.mock.calls.at(-1)?.[1]).not.toHaveProperty('prompt');
+    });
+
+    // Owner walk, 2026-11-16: the window drew Skip for Now beside Cancel and a warning by a routine step,
+    // because the question's dismiss answer and tone never reached it.
+    it('hands the window the question\'s dismiss answer and its tone', async () => {
+        const send = jest.fn();
+        startModalRun('op-dismiss', send);
+
+        const asking = withModalAsking('op-dismiss', () =>
+            askDuringOperation({ title: 'One step', message: 'Set it.', tone: 'info', dismiss: 'Skip for Now' }, 'Open Admin', 'Skip for Now'),
+        );
+        await settle();
+
+        expect(send).toHaveBeenCalledWith(
+            'operationProgress',
+            expect.objectContaining({ prompt: expect.objectContaining({ tone: 'info', dismiss: 'Skip for Now' }) }),
+        );
+        answerOperationPrompt('op-dismiss', 'Skip for Now');
+        await expect(asking).resolves.toBe('Skip for Now');
+    });
+
     it('hands the answer back, so the work carries on with it', async () => {
         startModalRun('op-2', jest.fn());
         const steps: string[] = [];
@@ -123,6 +192,27 @@ describe('a modal is hosting the operation', () => {
 
         await expect(run).resolves.toBe('Cancel');
         expect(steps).toEqual(['checking', 'answered:Cancel']);
+    });
+
+    // Resets run side by side in one window (owner, 2026-11-04): a second question waits its turn
+    // rather than taking the first one's place, which left the first never answered.
+    it('asks a second question once the first is answered, and each gets its own answer', async () => {
+        const send = jest.fn();
+        startModalRun('op-q', send);
+
+        const first = withModalAsking('op-q', () => askDuringOperation({ title: 'One', message: 'First?' }, 'Yes'));
+        const second = withModalAsking('op-q', () => askDuringOperation({ title: 'Two', message: 'Second?' }, 'Go'));
+        await settle();
+        const shown = () => send.mock.calls.map(([, payload]) => payload.prompt?.title).filter(Boolean);
+        expect(shown()).toEqual(['One']);
+
+        answerOperationPrompt('op-q', 'Yes');
+        await expect(first).resolves.toBe('Yes');
+        await settle();
+        expect(shown()).toEqual(['One', 'Two']);
+
+        answerOperationPrompt('op-q', 'Go');
+        await expect(second).resolves.toBe('Go');
     });
 
     // Dismissing is an answer, not a silence: the guard reads undefined as cancelled.
@@ -176,6 +266,27 @@ describe('a modal is hosting the operation', () => {
         });
 
         expect(isAwaitingAnswer('op-5')).toBe(false);
+    });
+});
+
+// Walk F150 (2026-11-16): a run whose window was closed is narrated by a notification, which shows
+// no question. Asked there through the closed window, it would wait on nobody.
+describe('a hosted operation sent to the background', () => {
+    it('asks in a notification, since no window is left to ask in', async () => {
+        const send = jest.fn();
+        startModalRun('op-bg', send);
+        openBackgroundNotice('Installing Frescopa', { doneTitle: 'Frescopa Installed', failedTitle: "Couldn't Install Frescopa" }, { id: 'op-bg', state: 'running' }, () => true);
+        await settle();
+        showInfo.mockResolvedValueOnce('Skip for Now');
+
+        const answer = await withModalAsking('op-bg', () =>
+            askDuringOperation({ title: 'One Step in the Admin', message: 'Set the root.', tone: 'info' }, 'Open Admin', 'Skip for Now'),
+        );
+
+        expect(answer).toBe('Skip for Now');
+        expect(showInfo).toHaveBeenCalledWith('Set the root.', 'Open Admin', 'Skip for Now');
+        expect(send).not.toHaveBeenCalledWith('operationProgress', expect.objectContaining({ prompt: expect.anything() }));
+        closeBackgroundNotice('op-bg');
     });
 });
 

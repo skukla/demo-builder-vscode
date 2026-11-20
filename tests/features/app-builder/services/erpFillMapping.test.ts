@@ -177,7 +177,25 @@ describe('mappingNotes', () => {
         });
 
         expect(notes).toStrictEqual({
-            said: "Filled the integration's mapping from the ERP: website base sells under sales organization 1000; website eu sells under sales organization 2000.",
+            said: "Filled the integration's mapping from the ERP: the website base sells under sales organization 1000; the website eu sells under sales organization 2000.",
+        });
+    });
+
+    // Names, not codes (owner, 2026-11-15): each website as the Admin shows it.
+    it('names each website by its name when it has one', () => {
+        const names: Record<string, string> = { base: 'Main Website', eu: 'Europe' };
+        const notes = mappingNotes(
+            {
+                filled: [{ erp: 'demo-erp', website: 'base', salesOrg: '1000' }],
+                kept: [],
+                failed: [{ erp: 'demo-erp', website: 'eu', salesOrg: '2000', reason: 'boom.' }],
+            },
+            (code) => names[code] ?? code,
+        );
+
+        expect(notes).toStrictEqual({
+            said: "Filled the integration's mapping from the ERP: the website Main Website sells under sales organization 1000.",
+            warning: 'Demo data loaded; the mapping for the website Europe was not saved: boom. Fill ERPs from Commerce again to retry.',
         });
     });
 
@@ -199,7 +217,7 @@ describe('mappingNotes', () => {
 
         expect(notes).toStrictEqual({
             warning:
-                'Demo data loaded; the mapping for website base was not saved: boom. Fill ERPs from Commerce again to retry.',
+                'Demo data loaded; the mapping for the website base was not saved: boom. Fill ERPs from Commerce again to retry.',
         });
     });
 });

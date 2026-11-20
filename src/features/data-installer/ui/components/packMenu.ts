@@ -1,0 +1,129 @@
+/**
+ * What the flyout's actions SAY, apart from drawing them: the More menu's rows, what each confirm
+ * dialog asks, and the main button's label. Pure; `PackActions` draws them.
+ *
+ * @module features/data-installer/ui/components/packMenu
+ */
+
+import { DELETE, INSTALL, INSTALL_NEWER, RESTORE, UPDATE } from '../../datapackWords';
+import { SHARE_CONSENT } from '../../shareWording';
+import type { DatapackDetail } from '../../types';
+import type { ConfirmActionDialogProps } from '@/core/ui/components/ui/ConfirmActionDialog';
+
+/** One menu row: its icon and label. */
+export interface PackMenuRow {
+    key: string;
+    label: string;
+    icon: string;
+}
+
+/**
+ * The menu's upper section: what any pack offers, then what the SC's own library pack adds. No row
+ * marks a pack as Demo Builder's (owner, 2026-11-18, walk F226, replacing 2026-11-14): an SC should not
+ * see an action meant for the datapack maintainer. The store also refuses anyone not on its list of
+ * Demo Builder datapack owners (`DatapackStoreWriter.updateTeam`).
+ */
+export function packRows(detail: DatapackDetail, undoable: boolean): PackMenuRow[] {
+    const rows: PackMenuRow[] = [{ key: 'save-file', label: 'Save as File', icon: 'saveFile' }];
+    if (undoable) rows.push({ key: 'undo', label: 'Undo Last Save', icon: 'reset' });
+    if (detail.store === 'library' && detail.mine) {
+        rows.push({ key: 'share', label: detail.shared ? 'Stop Sharing' : 'Share', icon: 'share' });
+    }
+    return rows;
+}
+
+/**
+ * The demo's datapack's saves, under its main action (owner, 2026-11-17, walk F219): Update naming
+ * the datapack it writes into (F189), then Save As New. Moved here from the header's Save menu.
+ */
+export function saveRows(saves: { onUpdate?: () => void; into?: string } | undefined): PackMenuRow[] {
+    if (!saves) return [];
+    const asNew = { key: 'save-as-new', label: 'Save As New', icon: 'add' };
+    if (!saves.onUpdate) return [asNew];
+    const label = saves.into ? `${UPDATE} ${saves.into}` : UPDATE;
+    return [{ key: 'update-pack', label, icon: 'capture' }, asNew];
+}
+
+/**
+ * Whether the flyout offers Delete: on the SC's own library datapack, never on a Demo Builder one,
+ * its owner's included (overview Phase 7). Agents can still delete one (P4-Q8).
+ */
+export function deletable(detail: DatapackDetail): boolean {
+    return detail.store === 'library' && detail.mine === true && detail.team !== true;
+}
+
+/**
+ * The menu's lower section: what takes the demo's data out of its store, then what leaves the
+ * library. Bare verbs (J8-3, owner 2026-11-12): the datapack is the menu's subject.
+ */
+export function removeRows(removesData: boolean, deletes: boolean): PackMenuRow[] {
+    return [
+        // Uninstall, the pair of Install (owner, 2026-11-09, walk F120): "Remove Data" read as all data.
+        ...(removesData ? [{ key: 'remove-data', label: 'Uninstall', icon: 'uninstall' }] : []),
+        // Delete, not Remove (owner, 2026-11-09, walk F118): it leaves the library for good, where
+        // Uninstall takes a demo's data out of its store and an install puts it back.
+        ...(deletes ? [{ key: 'remove', label: DELETE, icon: 'delete' }] : []),
+    ];
+}
+
+/** The dialog open over the flyout, if any. */
+export type Asking = 'undo' | 'share' | 'remove' | null;
+
+export type ConfirmCopy = Pick<ConfirmActionDialogProps, 'title' | 'actionLabel' | 'actionVariant' | 'children'>;
+
+/**
+ * What Share asks, by the pack's name: the flyout's Share, and Share Demo's Share Datapack (walk
+ * F229), so the two ask the same question.
+ */
+export function shareConfirmCopy(name: string): ConfirmCopy {
+    return { title: `Share ${name}?`, actionLabel: 'Share', actionVariant: 'accent', children: SHARE_CONSENT };
+}
+
+/** Delete's sentence: what goes, who else loses it when it is shared, and that it is for good. */
+export function deleteSentence(name: string, shared: boolean | undefined): string {
+    const others = shared ? ' People you shared it with can no longer install it.' : '';
+    return `${name} will be deleted from your library.${others} This can't be undone.`;
+}
+
+/** What a dialog asks. The title of a closed one is never drawn. */
+export function confirmCopy(asking: Asking, detail: DatapackDetail, sharedInFile?: string): ConfirmCopy {
+    const name = detail.displayName;
+    if (asking === 'undo') {
+        // Blue: red is for deleting and removing only (rule 20; owner, 2026-11-12: "Too strong.").
+        return {
+            title: 'Undo Last Save?',
+            actionLabel: 'Undo',
+            actionVariant: 'accent',
+            children: `Commerce goes back to ${name} as it was before your last save. Anything you changed since is lost.`,
+        };
+    }
+    if (asking === 'share' && !detail.shared) return shareConfirmCopy(name);
+    if (asking === 'share') {
+        return {
+            title: `Stop Sharing ${name}?`,
+            actionLabel: 'Stop Sharing',
+            actionVariant: 'accent',
+            children: 'Other people can no longer see or install it.',
+        };
+    }
+    // Names the thing and what follows, as real software does; "Permanently deletes it." made the SC
+    // look back at the title for "it" (owner, 2026-11-20). The SC never sees a version (overview
+    // Phase 7). Red: deleting is what red is for (rule 20).
+    return {
+        title: `${DELETE} ${name}?`,
+        actionLabel: DELETE,
+        actionVariant: 'negative',
+        children: [deleteSentence(name, detail.shared), sharedInFile],
+    };
+}
+
+/**
+ * The main button's label: on the demo's installed version, Install Newer Version while one waits (J9-1), else
+ * Restore (J4-2); Switch to over another recorded datapack (J8-1, owner 2026-11-12); else Install.
+ */
+export function mainButtonLabel(detail: DatapackDetail, restores: boolean, switches = false, updates = false): string {
+    if (updates) return INSTALL_NEWER;
+    if (restores) return `${RESTORE} ${detail.displayName}`;
+    return switches ? `Switch to ${detail.displayName}` : INSTALL;
+}
+

@@ -26,6 +26,11 @@ let componentDefinitionIds: string[] = [];
 const clonedComponents: Map<string, any> = new Map();
 
 // Mock dependencies
+// The AI files step pauses the run on a failure (F307); this suite's faked file system
+// would fail it, so the step is faked here. Its own tests are in executor-orchestrationSeams.
+jest.mock('@/features/project-creation/services/aiBundle/aiBundleService', () => ({
+    generateAIContextFiles: jest.fn().mockResolvedValue(undefined),
+}));
 jest.mock('@/features/mesh/services/meshDeployment');
 jest.mock('@/features/mesh/services/meshEnvVars', () => ({
     readMeshEnvVarsFromFile: jest.fn().mockResolvedValue({}),
@@ -147,6 +152,7 @@ jest.mock('@/features/project-creation/services/meshSetupService', () => ({
 jest.mock('@/features/project-creation/services/projectFinalizationService', () => ({
     generateEnvironmentFiles: jest.fn().mockResolvedValue(undefined),
     finalizeProject: jest.fn().mockResolvedValue(undefined),
+    reportProjectCreated: jest.fn().mockResolvedValue(undefined),
     sendCompletionAndCleanup: jest.fn().mockResolvedValue(undefined),
 }));
 
@@ -397,8 +403,8 @@ describe('Executor - EDS Standard Flow', () => {
                 demo: {
                     kind: 'demo' as const,
                     version: 1 as const,
-                    name: 'Isle5 by Jen',
-                    source: { owner: 'jen', repo: 'isle5-demo', branch: 'demo-2026' },
+                    name: 'Isle5 by Robin',
+                    source: { owner: 'robin', repo: 'isle5-demo', branch: 'demo-2026' },
                     storefrontKind: 'eds' as const,
                 },
                 edsConfig: {
@@ -410,7 +416,7 @@ describe('Executor - EDS Standard Flow', () => {
                     daLiveOrg: 'test-org',
                     daLiveSite: 'test-site',
                     githubOwner: 'testuser',
-                    templateOwner: 'jen',
+                    templateOwner: 'robin',
                     templateRepo: 'isle5-demo',
                 },
                 components: { frontend: 'eds-storefront', dependencies: [] },
@@ -437,7 +443,7 @@ describe('Executor - EDS Standard Flow', () => {
                 (p) => p.componentInstances?.['eds-storefront']?.metadata?.githubRepo
             );
             expect(withMetadata?.componentInstances?.['eds-storefront']?.metadata).toMatchObject({
-                templateOwner: 'jen',
+                templateOwner: 'robin',
                 templateRepo: 'isle5-demo',
                 templateBranch: 'demo-2026',
             });

@@ -8,14 +8,14 @@ iteration is logged; the program overview is where the tracks are ordered.
 
 ## Goal, in the SC's words
 
-"Build my project on the demo Jen made" works the way "build it on CitiSignal" works: pick
-a card, carry on. And "let Jen build on mine" is one action on my project.
+"Build my project on the demo Robin made" works the way "build it on CitiSignal" works: pick
+a card, carry on. And "let Robin build on mine" is one action on my project.
 
 ## The experience, as accepted (2026-09-11)
 
 **Welcome step.** The grid of demos gains a plus card at the end: "Add a demo", described
 "Use a demo a colleague built, or one of your own. You'll need its link." Demos the SC has
-added before are ordinary cards ("Isle5 by Jen", "Edge Delivery").
+added before are ordinary cards ("Isle5 by Robin", "Edge Delivery").
 
 **The dialog.** Clicking the plus card opens the same dialog the Integrations area uses to
 add an integration, over the dimmed wizard. Stage 1: a list of demos added before, or a
@@ -171,7 +171,7 @@ was rejected and why. Detail in the research sections named.
   shows a project's source and nothing can repoint it. Owner asked whether to help the SC
   fork the repo. Decision: offer a fork into the SC's own account (or team org) at add
   time, ticked by default: the fork is the demo's source for this SC, projects generate
-  from it, the update check offers "Pull Jen's changes" through the fork-sync service the
+  from it, the update check offers "Pull Robin's changes" through the fork-sync service the
   extension already has (`forkSyncService.ts`), and Forget offers to delete the fork.
   Rejected: off by default (the default case keeps the exposure), always fork (a cloud write
   with no visible choice), notice-and-repoint only (a demo whose original is gone cannot
@@ -195,7 +195,7 @@ was rejected and why. Detail in the research sections named.
   TEMPLATE repo is a fork behind its parent and offers a pre-ticked fork sync per repo
   (`checkForkSyncUpdates`, `checkUpdates.ts:362`), and (2) offers each project "N changes
   behind" its template with the merge-then-reset-on-conflict apply (`templateSyncService`),
-  in one picker with one confirmation. Unforked demo: (2) against Jen's `main`. Forked demo:
+  in one picker with one confirmation. Unforked demo: (2) against Robin's `main`. Forked demo:
   (1) for the fork plus (2) per project. Never LKG pinning or patches (D4). Two obligations:
   the updater reads the template from instance metadata (`getTemplateSource`,
   `updateTypes.ts:90`), so Change source and rename self-heal must keep it and the project
@@ -203,7 +203,7 @@ was rejected and why. Detail in the research sections named.
   pre-existing P2 concern that forking sends more traffic through (filed).
 - **2026-09-11 · The Storefront area.** Accounts, namespace, Code Sync, the empty repo-name
   box and the site named after the repo are unchanged. Added: a first summary row naming
-  the demo and its frontend kind, and the existing-repo tick worded "Reset to Isle5 by Jen"
+  the demo and its frontend kind, and the existing-repo tick worded "Reset to Isle5 by Robin"
   (same for shipped brands). Rejected: a sentence under the name box (one more line to keep
   true), nothing extra (the card is far away by then).
 - **2026-09-11 · Pages, blocks and example pages.** Owner pushed back on a "copy content"
@@ -228,7 +228,7 @@ was rejected and why. Detail in the research sections named.
   Rejected: per-patch lines (five lines, no extra meaning), today's toast (written for us), a
   persistent dashboard notice (nags about something the SC cannot fix), create-only.
 
-- **2026-09-14 · No copy (step 11, D33).** Testing with Jen's AI Store: the SC deleted the
+- **2026-09-14 · No copy (step 11, D33).** Testing with Robin's AI Store: the SC deleted the
   fork the card read from, and every later create failed with "Repository not found". Talked
   through remembering the original, labels, a warning in "Manage GitHub Repositories", and a
   plain copy with rebuilt updates; each added surface. Settled instead on what was already
@@ -280,7 +280,7 @@ test that referred to a tick that no longer exists.
    (`componentInstallation.ts:84`: branch HEAD, or the latest release tag when the source
    declares one); reset deletes and re-clones (`projectResetService.ts:437`); nothing ever
    pushes it to GitHub. So for a headless added demo the fork works as the source, reset
-   re-clones it, and "Pull Jen's changes" syncs the fork; but "Share this demo" has nowhere
+   re-clones it, and "Pull Robin's changes" syncs the fork; but "Share this demo" has nowhere
    to write the description file, and the how-to cannot promise it. **Decided: Share is
    Edge Delivery only in v1.** Adding a headless demo works fully; the how-to says a headless
    demo is shared by pushing your clone to a repository yourself; headless Share is a
@@ -297,7 +297,7 @@ test that referred to a tick that no longer exists.
    Data step starts with it selected and says why; the SC can change it; shipped brands gain
    the same optional field (D26).
 4. **Integrations a demo depends on.** The description file's scope is a catalog entry's
-   fields, which carry `requiresMesh` but not "this demo needs Jen's App Builder app".
+   fields, which carry `requiresMesh` but not "this demo needs Robin's App Builder app".
    **Decided: yes.** The file may list catalog integration ids and custom-app links; the
    Integrations area starts with them added (custom ones through the existing by-link path,
    `appBuilderComponentSources`); shipped catalog entries gain the same field so the two stay

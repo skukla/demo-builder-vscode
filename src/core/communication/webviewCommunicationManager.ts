@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import * as vscode from 'vscode';
 import { getLogger } from '@/core/logging/debugLogger';
 import { sleep } from '@/core/utils/sleep';
@@ -29,11 +29,9 @@ interface CommunicationConfig {
  */
 const REQUEST_TIMEOUTS: Record<string, number> = {
     // Authentication
+    // Every screen's Sign In. Callers await it to know when the sign-in finished (the
+    // API picker re-fetches on success; the dashboard re-reads status).
     authenticate: TIMEOUTS.AUTH.SIGN_IN + TIMEOUTS.AUTH.BROWSER, // the sign-in, then a minute to finish
-    // Awaits the SAME browser sign-in as 'authenticate', then restores project context
-    // and refreshes status — so it needs at least the same budget. Callers await it to
-    // know when sign-in finished (the API picker re-fetches on success).
-    reAuthenticate: TIMEOUTS.AUTH.SIGN_IN + TIMEOUTS.AUTH.BROWSER, // the sign-in, then context restore
 
     // Data loading (wizard UI)
     // 30s was NOT enough and timed out on work that would have finished: each of
@@ -56,13 +54,22 @@ const REQUEST_TIMEOUTS: Record<string, number> = {
     // first check past the 30s default on 2026-10-01) before its Commerce reads.
     checkSetupSteps: TIMEOUTS.LONG, // 180s - credential read + up to three Commerce reads
     prepareSetupChecks: TIMEOUTS.LONG, // 180s - the same credential read, done ahead of a check
+    // The project's Finish Setup check (PL-101): GitHub and the live site, or the store.
+    checkFinishSetupSteps: TIMEOUTS.LONG, // 180s - a file read per step file, or a credential + store read
     // Add another ERP's store read: the same credential, then every product in the store.
-    // On Justrite it outran the 30s default and the dialog gave up while the read went on
+    // On Tailspin it outran the 30s default and the dialog gave up while the read went on
     // (2026-10-18).
     getErpOwnershipOptions: TIMEOUTS.LONG, // 180s - credential + the whole product list
 
     addConsoleApis: TIMEOUTS.LONG, // 180s - catalog fetch + union subscribe PUT
     setConsoleApis: TIMEOUTS.LONG, // 180s - catalog fetch + reconcile subscribe PUT
+
+    // A datapack removal's confirm reads the store's copy of everything the pack made, and a removal
+    // told to save those changes first does that, writes a new version into the library, and only
+    // then starts. Unbudgeted, the window gave up at 30s while the save went on and the removal
+    // followed it, unseen.
+    'get-datapack-removal-changes': TIMEOUTS.VERY_LONG, // 300s - reads every object the pack made
+    'reset-datapack': TIMEOUTS.EXTENDED, // 600s - that read, then the library write, then the start
 
     // Project/workspace selection (validate reachability + ack; no global aio mutation)
     'select-project': TIMEOUTS.NORMAL, // 30s - validate project reachable, then ack
@@ -95,9 +102,6 @@ const REQUEST_TIMEOUTS: Record<string, number> = {
     // "Back to updates": Check for Updates again, every project and the extension.
     recheckUpdates: TIMEOUTS.LONG, // 180s - the whole check, then its notification
 
-    // Project deletion (EDS cleanup involves multiple external APIs)
-    deleteProject: TIMEOUTS.LONG, // 180s - DA.live + GitHub + local cleanup
-
     // Adobe Console project teardown (modal think-time + registrations +
     // providers + project delete; see PROJECT_TEARDOWN's budget math)
     'delete-adobe-project': TIMEOUTS.PROJECT_TEARDOWN, // 900s
@@ -115,6 +119,15 @@ const REQUEST_TIMEOUTS: Record<string, number> = {
     getDemoPackagePreview: TIMEOUTS.LONG, // 180s - repository reads + published-page index
     saveDemoPackage: TIMEOUTS.LONG, // 180s - description file write + card
     removeDemoPackage: TIMEOUTS.LONG, // 180s - description file delete + card
+
+    // "Clear demo data" (datapack-engine step 10): the check reads every product, customer and
+    // order of the chosen websites and stores, a page of 100 at a time. Not measured live yet.
+    'check-demo-data': TIMEOUTS.LONG, // 180s - store structure + products, customers, orders, returns
+    'start-datapack-export': TIMEOUTS.EXTENDED, // 10min - answered inline; an ACO pack reads every product per store view
+    // The pack's Admin step Check (datapack-engine step 12): the sign-in, the org check, the
+    // project's Commerce credential, then the store's stores and one category. A Check pressed
+    // live showed no answer while the extension went on to record one (2026-10-30, DI-5).
+    'check-datapack-setup-step': TIMEOUTS.LONG, // 180s - credential read + two Commerce reads
 };
 
 /**
@@ -196,7 +209,7 @@ export class WebviewCommunicationManager {
             this.once('__webview_ready__', () => {
                 // Send handshake confirmation
                 this.sendRawMessage({
-                    id: uuidv4(),
+                    id: randomUUID(),
                     type: '__handshake_complete__',
                     timestamp: Date.now(),
                 });
@@ -223,7 +236,7 @@ export class WebviewCommunicationManager {
      */
     async sendMessage(type: string, payload?: unknown): Promise<void> {
         const message: Message = {
-            id: uuidv4(),
+            id: randomUUID(),
             type,
             payload,
             timestamp: Date.now(),
@@ -245,7 +258,7 @@ export class WebviewCommunicationManager {
      */
     async request<T = unknown>(type: string, payload?: unknown): Promise<T> {
         const message: Message = {
-            id: uuidv4(),
+            id: randomUUID(),
             type,
             payload,
             timestamp: Date.now(),
@@ -374,7 +387,7 @@ export class WebviewCommunicationManager {
                     if (requestTimeout) {
                         // Fire-and-forget: Don't await to avoid blocking handler
                         this.sendRawMessage({
-                            id: uuidv4(),
+                            id: randomUUID(),
                             type: '__timeout_hint__',
                             payload: {
                                 requestId: message.id,
@@ -398,7 +411,7 @@ export class WebviewCommunicationManager {
                 // If the message has an ID, send a response
                 if (message.id && message.expectsResponse) {
                     this.sendRawMessage({
-                        id: uuidv4(),
+                        id: randomUUID(),
                         type: '__response__',
                         payload: result,
                         timestamp: Date.now(),
@@ -409,7 +422,7 @@ export class WebviewCommunicationManager {
             } catch (error) {
                 if (message.id && message.expectsResponse) {
                     this.sendRawMessage({
-                        id: uuidv4(),
+                        id: randomUUID(),
                         type: '__response__',
                         payload: undefined,
                         timestamp: Date.now(),
@@ -436,7 +449,7 @@ export class WebviewCommunicationManager {
             );
             if (message.id && message.expectsResponse) {
                 this.sendRawMessage({
-                    id: uuidv4(),
+                    id: randomUUID(),
                     type: '__response__',
                     payload: undefined,
                     timestamp: Date.now(),
@@ -450,7 +463,7 @@ export class WebviewCommunicationManager {
         // Send acknowledgment for non-response messages
         if (!message.isResponse) {
             this.sendRawMessage({
-                id: uuidv4(),
+                id: randomUUID(),
                 type: '__acknowledge__',
                 timestamp: Date.now(),
                 responseToId: message.id,

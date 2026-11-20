@@ -18,31 +18,11 @@
         border-top: 1px solid var(--spectrum-global-color-gray-300);
     }
 
+    /* The file step's parts: house checkbox rows, each with its line as the detail (walk F230). */
     .export-parts {
-        list-style: none;
-        margin: 0;
-        padding: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-    }
-
-    .export-part {
         display: flex;
         flex-direction: column;
         gap: 4px;
-        font-size: 13px;
-        line-height: 1.4;
-    }
-
-    .export-part-name {
-        font-weight: 600;
-    }
-
-    .export-part-note {
-        font-size: 12px;
-        line-height: 1.4;
-        color: var(--spectrum-global-color-gray-700);
     }
 
     .export-file-form {
@@ -68,30 +48,13 @@
         line-height: 1.4;
     }
 
-    .export-link-row {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        flex-wrap: wrap;
-        max-width: 100%;
-    }
-
-    .export-link-text {
-        font-family: var(--vscode-editor-font-family, monospace);
-        font-size: 13px;
-        padding: 4px 8px;
-        border-radius: 4px;
-        background-color: var(--spectrum-global-color-gray-100);
-        overflow-wrap: anywhere;
-    }
-
     .export-section-text {
         margin: 0;
         font-size: 13px;
         line-height: 1.5;
     }
 
-    /* The name and description, opened from the quiet link. Full width, unlike
+    /* The name and description, always shown (walk F229). Full width, unlike
        the rest of the link column, which hugs its content. */
     .share-details {
         display: flex;
@@ -100,43 +63,19 @@
         gap: 12px;
     }
 
-    /* The two quiet links (Change name or description, Remove the details) sit
-       flush with the text above them; the shared class pads all four sides.
-       Two classes, because inline-controls.css is in the same layer and this
-       bundle imports it later, so a one-class rule here would lose the tie. */
-    .inline-action-link.share-details-toggle,
+    /* The quiet link (Remove the details) sits flush with the text above it; the
+       shared class pads all four sides. Two classes, because inline-controls.css is
+       in the same layer and this bundle imports it later, so a one-class rule here
+       would lose the tie. */
     .inline-action-link.share-remove {
         padding-left: 0;
     }
 
-    .demo-package-checks-title {
-        margin: 0 0 6px;
-        font-size: 13px;
-        font-weight: 600;
-    }
-
-    .demo-package-checks {
-        list-style: none;
-        margin: 0;
-        padding: 0;
+    /* The undo and, while it runs, its spinner beside it. */
+    .share-remove-row {
         display: flex;
-        flex-direction: column;
+        align-items: center;
         gap: 8px;
-    }
-
-    .demo-package-check {
-        display: flex;
-        gap: 8px;
-        align-items: baseline;
-        font-size: 13px;
-        line-height: 1.4;
-    }
-
-    .demo-package-hint {
-        display: block;
-        margin: 4px 0 0;
-        font-size: 12px;
-        line-height: 1.4;
-        color: var(--spectrum-global-color-gray-700);
     }
 }
+

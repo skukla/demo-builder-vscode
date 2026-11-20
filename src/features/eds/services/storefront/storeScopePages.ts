@@ -65,8 +65,13 @@ export interface StoreScopePagesDeps {
 export type StoreScopeReport = (stage: string, step?: string) => void;
 
 export interface StoreScopePagesResult {
-    /** One sentence for the SC: where the storefront is now, and what changed. */
+    /** One sentence for the SC: where the storefront is now, and what changed (an agent's answer). */
     sentence: string;
+    /**
+     * What the SC has to know, one line each, for the result window: only what was kept or not
+     * done (owner, 2026-11-17, walk F212: the counts were noise). Empty after a clean change.
+     */
+    lines: string[];
     counts: { categoryPages: number; productPages: number; oldProductPagesRemoved: number };
 }
 
@@ -106,12 +111,12 @@ function productSentence(publish: PrewarmResult): string | undefined {
     return undefined;
 }
 
-function sentenceOf(
+function linesOf(
     store: string,
     removal: ProductPageRemovalResult,
     categories: CatalogMenuReplacement,
     publish: PrewarmResult,
-): string {
+): string[] {
     const made = [
         categories.written > 0 ? count(categories.written, 'category page') : '',
         publish.succeeded > 0 ? count(publish.succeeded, 'product page') : '',
@@ -120,8 +125,23 @@ function sentenceOf(
         ? `Now on ${store}: ${made.join(' and ')} published.`
         : `Now on ${store}: no category or product pages were published.`;
     return [head, removedSentence(removal), keptSentence(categories.kept), categories.problem, productSentence(publish)]
-        .filter(Boolean)
-        .join(' ');
+        .filter((line): line is string => Boolean(line));
+}
+
+/** The skip an empty store gives the warm-up: nothing went wrong, so nothing is said. */
+const EMPTY_CATALOG = 'empty catalog';
+
+/** Of the full account, only what was kept or not done: the result window's lines (walk F212). */
+function problemLinesOf(
+    removal: ProductPageRemovalResult,
+    categories: CatalogMenuReplacement,
+    publish: PrewarmResult,
+): string[] {
+    const removalProblem = removal.status === 'removed' || removal.status === 'nothing' ? undefined : removal.summary;
+    const publishProblem = publish.skipped && publish.skipReason === EMPTY_CATALOG ? undefined : productSentence(publish);
+    return [removalProblem, keptSentence(categories.kept), categories.problem, publishProblem].filter(
+        (line): line is string => Boolean(line),
+    );
 }
 
 async function publishProductPages(deps: StoreScopePagesDeps, report: StoreScopeReport): Promise<PrewarmResult> {
@@ -169,8 +189,10 @@ export async function replaceStoreScopePages(
     const store = storeNameOf(project);
     try {
         report(STAGE.remove);
-        const removal = await removeProductPages(deps.site, deps.productPages);
-        if (removal.found > 0) report(STAGE.remove, itemCount(removal.found, 'page'));
+        // The count while the pages go, as the warm-up's line has it (walk F212).
+        const removal = await removeProductPages(deps.site, deps.productPages, (found) =>
+            report(STAGE.remove, `${itemCount(found, 'page')} from the old store`),
+        );
 
         report(STAGE.categories);
         const categories = await replaceCatalogMenuStep(project, deps.catalogMenu);
@@ -179,18 +201,21 @@ export async function replaceStoreScopePages(
         const publish = await publishProductPages(deps, report);
         await clearMarker(project, deps);
 
-        const sentence = sentenceOf(store, removal, categories, publish);
+        const sentence = linesOf(store, removal, categories, publish).join(' ');
+        const lines = problemLinesOf(removal, categories, publish);
         deps.logger.info(`[StoreScopePages] ${sentence}`);
         const counts = {
             categoryPages: categories.written,
             productPages: publish.succeeded,
             oldProductPagesRemoved: removal.liveRemoved,
         };
-        return { sentence, counts };
+        return { sentence, lines, counts };
     } catch (error) {
         deps.logger.error('[StoreScopePages] Replacing the pages failed', error instanceof Error ? error : undefined);
+        const failed = `The pages for ${store} could not be made: ${messageOf(error)}. Republish the storefront to try again.`;
         return {
-            sentence: `The pages for ${store} could not be made: ${messageOf(error)}. Republish the storefront to try again.`,
+            sentence: failed,
+            lines: [failed],
             counts: { categoryPages: 0, productPages: 0, oldProductPagesRemoved: 0 },
         };
     }

@@ -33,6 +33,8 @@ import type { ConfigChangedPayload, ProjectsUpdatedPayload , ProjectsListInitial
  */
 export class ShowProjectsListCommand extends BundledPanelCommand<ProjectsListInitialData> {
     protected readonly bundleName = 'projectsList';
+    /** The page load in flight, if any: a second open joins it. */
+    private loading?: Promise<void>;
 
     constructor(
         context: vscode.ExtensionContext,
@@ -126,6 +128,17 @@ export class ShowProjectsListCommand extends BundledPanelCommand<ProjectsListIni
         watcher.onDidChange(reloadSoon);
         watcher.onDidDelete(reloadSoon);
         this.disposables.add(watcher);
+        // A delete removes the project's whole folder, and the watcher above hears only
+        // the folder go, not the file in it: an agent's delete left the project listed
+        // until the SC pressed refresh (owner, 2026-11-20).
+        const folders = vscode.workspace.createFileSystemWatcher(
+            new vscode.RelativePattern(vscode.Uri.file(resolveProjectsRoot()), '*'),
+            true,
+            true,
+            false,
+        );
+        folders.onDidDelete(reloadSoon);
+        this.disposables.add(folders);
         // A creation starting or ending changes a tile with no file write to watch:
         // an Edge Delivery project has no file until its storefront is set up (PL-82).
         this.disposables.add(onWorkChanged(reloadSoon));
@@ -158,9 +171,14 @@ export class ShowProjectsListCommand extends BundledPanelCommand<ProjectsListIni
     /**
      * Open (or reveal) the projects list.
      *
+     * A second open while the page is still loading joins that load instead of loading
+     * the page again. A second load replaced the screen, and with it any Updates modal
+     * the first had opened (owner, 2026-10-30: Review, a sidebar click and closing the
+     * wizard could each land mid-load).
+     *
      * @param options - `showUpdates` opens the Updates modal on it with the rows Check for
-     *   Updates presented (PL-80): pushed to a panel already open, held for one just
-     *   created until its screen asks
+     *   Updates presented (PL-80): pushed to a panel already open, held for one still
+     *   loading until its screen asks
      */
     public async execute(options?: { showUpdates?: boolean }): Promise<void> {
         // Set context to show webview sidebar instead of tree view
@@ -172,25 +190,33 @@ export class ShowProjectsListCommand extends BundledPanelCommand<ProjectsListIni
             await sidebarProvider.setShowingProjectsList(true);
         }
 
-        // Track if this is an existing panel being revealed vs new panel creation
-        const isExistingPanel = this.communicationManager !== undefined;
-        if (options?.showUpdates && !isExistingPanel) requestUpdatesModal();
+        // No page yet, or one still loading. The new page asks for its own data after
+        // mount; pushing projectsUpdated at it as well double-renders and flickers.
+        if (this.loading || this.communicationManager === undefined) {
+            // The screen asks for a held request once its `init` arrives, and sending
+            // `init` is the load's last step, so a request held mid-load still reaches it.
+            if (options?.showUpdates) requestUpdatesModal();
+            this.loading ??= this.loadPage().finally(() => {
+                this.loading = undefined;
+            });
+            await this.loading;
+            return;
+        }
 
-        // Create or reveal panel and initialize communication
+        // An existing panel: reveal it and send it fresh data.
+        await this.createOrRevealPanel();
+        await this.refreshProjectsList();
+        await this.refreshConfig();
+        if (options?.showUpdates) {
+            await this.sendMessage('showUpdates', { rows: presentedRows() } satisfies ShowUpdatesPayload);
+        }
+    }
+
+    /** Create the panel and load its page. */
+    private async loadPage(): Promise<void> {
         await this.createOrRevealPanel();
         if (!this.communicationManager) {
             await this.initializeCommunication();
-        }
-
-        // Only send fresh data when REVEALING an existing panel
-        // New panels get data via the UI's getProjects request after mount
-        // Sending projectsUpdated on new panels causes double-render flicker
-        if (isExistingPanel) {
-            await this.refreshProjectsList();
-            await this.refreshConfig();
-            if (options?.showUpdates) {
-                await this.sendMessage('showUpdates', { rows: presentedRows() } satisfies ShowUpdatesPayload);
-            }
         }
     }
 

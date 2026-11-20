@@ -1,0 +1,326 @@
+/**
+ * The reset's optional sample-data step: whether the project's datapack can be
+ * removed (checked early, answered late), the question, and the removal itself,
+ * which reports rather than throws.
+ *
+ * Extracted from `edsResetUI` (EDS-8, 2026-10-08) so that file keeps only the
+ * reset door's orchestration.
+ *
+ * @module features/eds/services/reset/edsResetDatapack
+ */
+
+import type { DatapackRemoval } from './resetDatapackStep';
+import { createNonSwitchingStateManager } from '@/core/state/workingProjectStateManager';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { packStage } from '@/core/utils/packStage';
+import { askForDetailsDuringOperation, modalIsAsking } from '@/core/vscode/operationPrompt';
+import type { ReportStage } from '@/core/vscode/withOperationProgress';
+import { saveFirstLabel, withoutSavingLabel } from '@/features/data-installer/datapackWords';
+import { knownPackName } from '@/features/data-installer/handlers/libraryWriter';
+import { removalLine } from '@/features/data-installer/importSteps';
+import { commerceBackendOf } from '@/features/data-installer/services/commerceBackend';
+import { typesLine } from '@/features/data-installer/services/datapackTypesLine';
+import { dropStaleFailure } from '@/features/data-installer/services/installFailure';
+import type { Project } from '@/types/base';
+import { ErrorCode } from '@/types/errorCodes';
+import type { HandlerContext } from '@/types/handlers';
+
+/**
+ * Can this project's sample data actually be removed? Started early, awaited late.
+ *
+ * Returns undefined when there is no pack — nothing to ask about. Otherwise it
+ * resolves true when the project has a Commerce backend to remove the pack from.
+ *
+ * It used to resolve the project's Commerce credentials, which was the slow part of
+ * the reset dialog. The Data Installer service stopped accepting a caller's
+ * credentials on purpose (DEMOSYS-1698) and signs in with its own, so a project with
+ * no saved pair can be cleaned like any other (DI-6, 2026-10-28). The Promise shape
+ * stays because both callers hold it across a modal. **Never rejects.**
+ *
+ * Checked BEFORE the prompt rather than during the reset. Measured live
+ * 2026-08-16: the reset once asked, ran the full ~3-minute storefront reset, and only
+ * then reported it could not remove anything.
+ */
+export function beginSampleDataRemovalCheck(project: Project): Promise<boolean> | undefined {
+    if (!project.datapack) {
+        return undefined;
+    }
+    return Promise.resolve(commerceBackendOf(project) !== undefined);
+}
+
+/**
+ * Restore it — remove, then import the same pack again — reporting rather than
+ * throwing.
+ *
+ * The storefront reset is the thing the user asked for, so no outcome here may
+ * turn a good reset into a failed one. Everything is a log line.
+ *
+ * **Reported at three levels, because they mean different things.** A clean
+ * restore says nothing. A refusal (no credentials, no pack, nothing stored) is a
+ * warning. Data removed and NOT reinstalled is an ERROR: the instance is now
+ * empty, which is a worse state than the user started in and the one case where
+ * they must go and do something about it.
+ */
+/**
+ * The SC's answer about their changes, when the demo's pack is not theirs: a name to save them as
+ * a new datapack of theirs (Save As), losing them, or no answer, which keeps the data where it is.
+ */
+export type SaveAsAnswer = { saveAs: string } | 'drop' | undefined;
+
+/**
+ * Asks it. The name is required: losing the changes is its own answer, never an empty name (owner,
+ * 2026-11-04), as in Create Datapack and the Datapacks screen's removal. The reset's own question
+ * was already asked.
+ */
+export type AskSaveAsName = (asked: { sentence?: string }) => Promise<SaveAsAnswer>;
+
+/**
+ * The answer given before anything runs: a batch's save question (step-05 S1, J7-2). It goes with
+ * the first read, so a `drop` or a new name reaches the SC's own pack too, which `AskSaveAsName`
+ * is never asked about (their pack is saved into without a question). Absent: as no answer.
+ */
+export interface GivenSaveAs {
+    given: SaveAsAnswer;
+}
+
+/** How a removal's changes question is answered: asked when it comes up, or given up front. */
+export type SaveAsAnswering = AskSaveAsName | GivenSaveAs;
+
+/** The given answer as the removal's request carries it. */
+function requestOfGiven(given: SaveAsAnswer): { answer?: 'drop' | 'keep'; saveAs?: { displayName: string } } {
+    if (given === undefined) return {};
+    return given === 'drop' ? { answer: 'drop' } : { answer: 'keep', saveAs: { displayName: given.saveAs } };
+}
+
+/** The answering as a question to ask: a given answer is that answer, already chosen. */
+function askerOf(answering: SaveAsAnswering | undefined): AskSaveAsName | undefined {
+    if (answering === undefined || typeof answering === 'function') return answering;
+    return () => Promise.resolve(answering.given);
+}
+
+/**
+ * The SC's changes, before the reset removes the pack: saved into the demo's pack when it is
+ * theirs, else as a new pack under the name `askName` gets (Save As, owner 2026-11-03), else lost.
+ * A save that fails removes nothing.
+ *
+ * @returns why the pack must stay (`kept`, marked when it was for want of an answer), else the SC's
+ *   own pack the changes went into (`savedInto`), or `{}`
+ */
+async function settleBeforeReset(
+    project: Project,
+    context: HandlerContext,
+    report: ReportStage,
+    answering: SaveAsAnswering | undefined,
+): Promise<DatapackRemoval> {
+    const datapack = project.datapack;
+    if (!datapack) return {};
+    const { contextForProject, settleChangesBeforeRemoval } = await import('@/features/data-installer/handlers/removalChanges');
+    const forProject = contextForProject(context, project);
+    const request = {
+        pack: { name: datapack.name, version: datapack.version },
+        ...(datapack.store ? { source: datapack.store } : {}),
+        unanswered: 'keep' as const,
+    };
+    const given = answering !== undefined && typeof answering !== 'function' ? requestOfGiven(answering.given) : {};
+    let settled = await settleChangesBeforeRemoval(forProject, { ...request, ...given }, (stage) => report(stage));
+    // A given answer was already sent; only an unanswered read asks.
+    const askName = given.answer === undefined ? askerOf(answering) : undefined;
+    if ('response' in settled && settled.response.code === ErrorCode.CHANGES_NEED_ANSWER && askName) {
+        const asked = settled.response.data as { sentence?: string } | undefined;
+        const chosen = await askName(asked?.sentence ? { sentence: asked.sentence } : {});
+        if (chosen === undefined) {
+            context.logger.info('[EdsReset] Sample data kept: the changes in it were not answered.');
+            const kept = asked?.sentence ? `${asked.sentence} They were not answered.` : 'The changes in it were not answered.';
+            return { kept, unanswered: true };
+        }
+        const answer = chosen === 'drop' ? { answer: 'drop' as const } : { answer: 'keep' as const, saveAs: { displayName: chosen.saveAs } };
+        settled = await settleChangesBeforeRemoval(forProject, { ...request, ...answer }, (stage) => report(stage));
+    }
+    if ('response' in settled) {
+        const reason = settled.response.error ?? 'Its changes could not be saved.';
+        context.logger.error(`[EdsReset] Sample data was NOT removed: ${reason}`);
+        return { kept: reason };
+    }
+    // Into the SC's own pack: the run's row names it (owner, 2026-11-14).
+    const saved = settled.saved;
+    return saved?.displayName && saved.id.name === datapack.name ? { savedInto: saved.displayName } : {};
+}
+
+/** Whether any data type came out of the store before a removal stopped. */
+function anyRemoved(perType: Record<string, string> | undefined): boolean {
+    return Object.values(perType ?? {}).some((status) => status === 'success');
+}
+
+/**
+ * Remove the project's datapack data, its changes settled first (`settleBeforeReset`), reporting
+ * rather than throwing. A reset reads the answer for its row; a project delete and an Edit stop on
+ * it, since going on would leave the data with no record (walk F96, step-07 D2). A removal that took
+ * everything clears the project's pack (`forgetRemovedPack`); one that left part in the store on
+ * purpose keeps it. It says also whether part of the data came out before it stopped, for a reset
+ * row to say what happened to the store (review, 2026-11-13). `alsoLeaving` is Clear Demo Data's:
+ * products its wipe deletes right after, whose holds count as going.
+ *
+ * @returns why the data was not all removed and whether some was, or `{}` when it all was
+ */
+export async function removeProjectSampleDataOutcome(
+    project: Project,
+    context: HandlerContext,
+    report: ReportStage,
+    askName?: SaveAsAnswering,
+    alsoLeaving?: readonly string[],
+): Promise<DatapackRemoval> {
+    try {
+        // The SC's changes first: this door's question was already asked, and keeping the work is
+        // the likely intent. Reported, as everything here is: a save that fails removes nothing and
+        // the reset stands.
+        const settled = await settleBeforeReset(project, context, report, askName);
+        if (settled.kept !== undefined) return settled;
+        const saved = settled.savedInto ? { savedInto: settled.savedInto } : {};
+
+        // Named for the pack, "Uninstalling We.Cafe" (owner, 2026-11-16); "the datapack" when unknown.
+        const step = packStage(OPERATION_STAGES.removingDatapack, project.datapack && (await knownPackName(context, project.datapack)));
+        report(step);
+
+        const { removeSampleData } = await import(
+            '@/features/data-installer/services/projectDatapackInstall'
+        );
+        const { buildSampleDataDeps } = await import(
+            '@/features/data-installer/services/projectDatapackInstallDeps'
+        );
+
+        // The mode phrases the progress line; the poller's per-phase label comes
+        // from the runner, which knows which half of a restore is running.
+        const result = await removeSampleData(
+            project,
+            buildSampleDataDeps(
+                context,
+                project,
+                // The line under the step: what the uninstall does now and how far (walk F161), else
+                // the count of types, never its position.
+                (sd) => report(step, removalLine(sd.detail, typesLine(sd.done, sd.total, sd.processing))),
+                'remove',
+            ),
+            // Clear Demo Data's: the products its wipe deletes next count as going (step-06 C3 re-review).
+            ...(alsoLeaving ? [{ alsoLeaving: [...alsoLeaving] }] : []),
+        );
+
+        if (result.ran && result.outcome !== 'success') {
+            context.logger.error(
+                `[EdsReset] Sample data was NOT removed: ${result.reason ?? 'no reason given'}`,
+            );
+            const kept = result.reason ?? 'The datapack was not all uninstalled.';
+            return anyRemoved(result.perType) ? { kept, partly: true, ...saved } : { kept, ...saved };
+        }
+        if (!result.ran) {
+            context.logger.warn(
+                `[EdsReset] Sample data was not removed: ${result.reason ?? 'no reason given'}`,
+            );
+            // No install record and no website and store view, so nothing can have been installed:
+            // nothing to remove, and no door stops or says a line for it (owner, 2026-11-14). A pack
+            // with a record is removed where the record says (`removeSampleData`).
+            if (result.noTarget) return { noTarget: true, ...saved };
+            return { kept: result.reason ?? 'The datapack was not uninstalled.', ...saved };
+        }
+        // Part left in the store on purpose: the record still describes what Commerce holds.
+        if (result.leftInStore) return { leftInStore: true, ...(result.note ? { note: result.note } : {}), ...saved };
+        await forgetRemovedPack(project, context);
+        return saved;
+    } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        context.logger.warn(`[EdsReset] Sample data removal failed, reset stands: ${reason}`);
+        return { kept: reason };
+    }
+}
+
+/**
+ * A removal that took everything: the project stops naming the pack, by the Datapacks screen's
+ * Uninstall's rule (`settleProjectAfterJob` in `importJobWatch.ts`). Without it a reset left the
+ * project naming a pack Commerce no longer held (step-05 R1).
+ *
+ * On the object this was handed: a reset's `finally` saves the object it holds (`edsResetRun.ts`),
+ * so a clear on another copy would be written back over. Saved without making it the open project,
+ * since a batch's rows are not (`createNonSwitchingStateManager`). Never fatal: the data is out of
+ * Commerce either way, and a delete reads this module's answer to decide whether the files may go.
+ * Clear Demo Data uses it too, for a pack the service installed that its wipe took out whole
+ * (step-06 C3 review), and reads whether the save went through.
+ *
+ * @returns whether the project was saved without the pack
+ */
+export async function forgetRemovedPack(project: Project, context: HandlerContext): Promise<boolean> {
+    project.datapack = undefined;
+    dropStaleFailure(project);
+    try {
+        await createNonSwitchingStateManager(context.stateManager).saveProject(await withoutPackOnDisk(project, context));
+        return true;
+    } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        context.logger.warn(`[EdsReset] The datapack was uninstalled; the project could not be saved without it: ${reason}`);
+        return false;
+    }
+}
+
+/**
+ * What to save once a pack is forgotten. The open project: the object handed, which its screens and
+ * a reset's `finally` hold. Any other: its manifest as it is on disk NOW, with only its pack cleared,
+ * since a copy loaded earlier (Clear Commerce Instance loads every project before its removals, step
+ * 06 C4 review) would write back whatever it held. Falls back to the object handed when it cannot be read.
+ */
+async function withoutPackOnDisk(project: Project, context: HandlerContext): Promise<Project> {
+    const current = await context.stateManager.getCurrentProject();
+    if (current?.path === project.path) return project;
+    const fresh = await context.stateManager.loadProjectFromPath(project.path);
+    if (!fresh) return project;
+    fresh.datapack = undefined;
+    dropStaleFailure(fresh);
+    return fresh;
+}
+
+/** The answers, in the Datapacks screen's save question's words (`SaveFirstWindow`). */
+const SAVE = saveFirstLabel('Uninstall', true);
+const DROP = withoutSavingLabel('Uninstall');
+const NAME_LABEL = 'Save Changes As';
+const NAME_REQUIRED = 'Datapack name is required';
+
+/**
+ * In the reset's progress window: the name field, empty as Create Datapack's starts, and both
+ * answers; an empty name is asked again.
+ */
+async function askInWindow(sentence: string | undefined): Promise<SaveAsAnswer> {
+    let value = '';
+    let missing = false;
+    for (;;) {
+        const answer = await askForDetailsDuringOperation({
+            message: sentence ?? '',
+            fields: [{ id: 'name', label: NAME_LABEL, value, ...(missing ? { description: NAME_REQUIRED } : {}) }],
+            actions: [SAVE, DROP],
+        });
+        if (answer.action === DROP) return 'drop';
+        if (answer.action !== SAVE) return undefined;
+        const name = (answer.values.name ?? '').trim();
+        if (name) return { saveAs: name };
+        value = answer.values.name ?? '';
+        missing = true;
+    }
+}
+
+/** With no window to ask in: the two answers, then the name, which the box will not take empty. */
+async function askInDialogs(vscode: typeof import('vscode'), sentence: string | undefined): Promise<SaveAsAnswer> {
+    const chosen = await vscode.window.showWarningMessage(sentence ?? NAME_LABEL, { modal: true }, SAVE, DROP);
+    if (chosen === DROP) return 'drop';
+    if (chosen !== SAVE) return undefined;
+    const name = await vscode.window.showInputBox({
+        title: NAME_LABEL,
+        ignoreFocusOut: true,
+        validateInput: (typed) => (typed.trim() ? undefined : NAME_REQUIRED),
+    });
+    return name?.trim() ? { saveAs: name.trim() } : undefined;
+}
+
+/**
+ * The reset's Save As question: in its progress window when one is open, else in VS Code's dialogs.
+ *
+ * @param vscode - the VS Code API
+ */
+export function askSaveAsNameWith(vscode: typeof import('vscode')): AskSaveAsName {
+    return ({ sentence }) => (modalIsAsking() ? askInWindow(sentence) : askInDialogs(vscode, sentence));
+}

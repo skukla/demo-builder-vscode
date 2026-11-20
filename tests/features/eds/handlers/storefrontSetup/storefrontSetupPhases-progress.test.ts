@@ -39,6 +39,24 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: { QUICK: 5000 },
 }));
 
+const mockCodeServed = jest.fn().mockResolvedValue({ files: [] });
+/** The build's own fixes all landed, as on a clean creation: only the code warning can change it. */
+jest.mock('@/features/eds/handlers/storefrontSetup/storefrontSetupPhase2', () => {
+    const actual = jest.requireActual('@/features/eds/handlers/storefrontSetup/storefrontSetupPhase2');
+    return {
+        ...actual,
+        executePhaseHelixConfig: async (...args: unknown[]) => {
+            const answer = await actual.executePhaseHelixConfig(...args);
+            (args[3] as { storefrontBuildComplete?: boolean }).storefrontBuildComplete = true;
+            return answer;
+        },
+    };
+});
+jest.mock('@/features/eds/services/storefront/codeServed', () => ({
+    ...jest.requireActual('@/features/eds/services/storefront/codeServed'),
+    confirmStorefrontCodeServed: (...args: unknown[]) => mockCodeServed(...args),
+}));
+
 global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200 });
 
 // =============================================================================
@@ -360,6 +378,23 @@ describe('the result of a finished run', () => {
         expect(result.pipelineWarnings).toEqual([summary]);
     });
 
+    // Walk F208 (owner, 2026-11-17): a project that finished creation read "Needs reset". Code the
+    // site does not serve yet is fixed by Republish, which the warning says; it is no reason to
+    // reset, so it leaves the build complete.
+    it('warns of code the site does not serve without calling the build incomplete', async () => {
+        const sentence = '1 code file did not reach the live site (scripts/x.js), so it still runs the old code. Select Republish on the project dashboard to publish the code again.';
+        mockExecuteEdsPipeline.mockResolvedValue(createMockPipelineResult({ contentFilesCopied: 0, libraryPaths: [] }));
+        const run = () => executeStorefrontSetupPhases(createSetupContext(), createEdsConfig(), new AbortController().signal, undefined, SERVICES);
+        mockCodeServed.mockResolvedValueOnce({ files: ['scripts/x.js'], sentence });
+
+        const result = await run();
+
+        expect(result.pipelineWarnings).toEqual([sentence]);
+        expect(result.storefrontBuildComplete).toBe(true);
+        // PL-101: the files, for creation to save as the project's Republish the Code step.
+        expect(result.codeNotServed).toEqual(['scripts/x.js']);
+    });
+
     it('carries no such sentence when the storefront serves them all', async () => {
         mockExecuteEdsPipeline.mockResolvedValue(
             createMockPipelineResult({
@@ -377,5 +412,6 @@ describe('the result of a finished run', () => {
         );
 
         expect(result).not.toHaveProperty('pipelineWarnings');
+        expect(result).not.toHaveProperty('codeNotServed');
     });
 });

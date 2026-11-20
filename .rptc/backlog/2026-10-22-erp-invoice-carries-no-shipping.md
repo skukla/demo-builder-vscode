@@ -15,14 +15,14 @@ open item"), where nothing would bring it back up.
 
 ## What happens
 
-Measured live on Justrite, order 5000000025 (Northgate Industrial Supply, Payment on
+Measured live on Tailspin, order 5000000025 (Northgate Industrial Supply, Payment on
 Account, one sign at 21.21 plus 5.00 flat-rate shipping):
 
 | When | Northgate's credit balance | Change |
 |---|---|---|
 | Before | −29,516.64 | |
 | Order placed | −29,542.85 | −26.21 |
-| Paid in Justrite ERP (payment 7000000003, invoice 9000000014) | −29,521.64 | +21.21 |
+| Paid in Tailspin ERP (payment 7000000003, invoice 9000000014) | −29,521.64 | +21.21 |
 
 Commerce marks the order complete and paid 26.21; the company's credit is 5.00 lower
 than before the order. The ERP's invoice holds only the product lines, so its payment

@@ -12,6 +12,8 @@
  * `projectRenameService.testUtils.ts`.
  */
 
+import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
+import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import {
     renameHandlerContext,
     mockAccess,
@@ -30,6 +32,18 @@ beforeEach(() => {
 });
 
 describe('renameProjectCore', () => {
+    it('closes a screen still open on the old folder, once the folder has moved', async () => {
+        const configure = createMockWebviewPanel();
+        const getActivePanel = jest.spyOn(BaseWebviewCommand, 'getActivePanel').mockImplementation(
+            (id: string) => (id === 'demoBuilder.configureProject' ? configure : undefined),
+        );
+
+        await renameProjectCore(renameHandlerContext(), projectToRename(), 'Renamed Project');
+
+        expect(configure.dispose).toHaveBeenCalledTimes(1);
+        getActivePanel.mockRestore();
+    });
+
     // The message matters: whitespace also normalises to an empty slug, so both
     // guards refuse the same input and only the wording says which one fired.
     it('should reject an empty name', async () => {

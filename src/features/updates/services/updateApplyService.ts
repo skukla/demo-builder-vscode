@@ -33,7 +33,7 @@ import {
 import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
 import { ForkSyncService } from '@/features/updates/services/forkSyncService';
 import { applyIntegrationUpdates } from '@/features/updates/services/integrationUpdates';
-import { refreshLocalStorefronts } from '@/features/updates/services/localStorefrontRefresh';
+import { hasLocalCopy, refreshLocalStorefronts } from '@/features/updates/services/localStorefrontRefresh';
 import { eachItem, watchingDone, type DescribeItem, type ItemObserver } from '@/features/updates/services/updateApplyEach';
 import { applyFinish } from '@/features/updates/services/updateApplyFinish';
 import {
@@ -54,7 +54,6 @@ import {
 } from '@/features/updates/services/updateApplyTemplate';
 import {
     applyBlockLibraryUpdateResolved,
-    updateCommitShaWithRollback,
     type UpdateContext,
 } from '@/features/updates/services/updateCore';
 import type { UpdateSelections } from '@/features/updates/services/updateSelections';
@@ -73,6 +72,16 @@ export interface ApplyUpdatesOptions {
     projectOrder?: readonly string[];
     /** Told as each project's local copy starts and ends being brought up to GitHub. */
     onLocalCopy?: (project: Project, outcome: ItemOutcome) => void;
+    /**
+     * Told as a project starts when its local copy will be brought up to GitHub after its
+     * updates, so the window counts that step from the first ("Step 1/3", owner 2026-11-19).
+     */
+    onLocalCopyAhead?: (project: Project) => void;
+}
+
+/** The items in a project's selections that write its storefront on GitHub. */
+function storefrontWrites(s: UpdateSelections): Array<{ project: Project }> {
+    return [...s.template, ...s.boilerplate, ...s.blockLibrary, ...s.blockLibraryInstall];
 }
 
 /** A library kept under the `ask` setting: the core records only its name. */
@@ -138,7 +147,7 @@ async function applyComponents(
     const updater = new ComponentUpdater(ctx.logger, ctx.extensionPath, ctx.commandManager);
     for (const { project, items: updates } of byProject.values()) {
         for (const update of updates) {
-            if (!update.downloadUrl) continue;
+            if (!update.tag) continue;
             // Its display name, not its id: line 2 reads as a phrase (owner, 2026-10-16).
             const shown = project.componentInstances?.[update.componentId]?.name ?? update.componentId;
             onProgress?.(S.updatingComponents.label, `${shown} in ${project.name}`);
@@ -146,7 +155,7 @@ async function applyComponents(
                 await updater.updateComponent(
                     project,
                     update.componentId,
-                    update.downloadUrl,
+                    update.tag,
                     update.latestVersion,
                 );
                 result.successCount++;
@@ -199,7 +208,6 @@ async function applyAdobeMcp(
 
 async function applyAddons(
     blockLibraries: UpdateSelections['blockLibrary'],
-    inspector: UpdateSelections['inspector'],
     succeededTemplatePaths: Set<string>,
     ctx: UpdateContext,
     onProgress?: OnProgress,
@@ -241,28 +249,6 @@ async function applyAddons(
             result.errors.push(`${item.library.name}: ${sanitizeErrorForLogging(error as Error)}`);
             ctx.logger.error(
                 `[Updates] Failed to update block library "${item.library.name}"`,
-                error as Error,
-            );
-        }
-    }
-
-    for (const item of inspector) {
-        onProgress?.(S.updatingAddOns.label, `Inspector SDK in ${item.project.name}`);
-        try {
-            await updateCommitShaWithRollback(
-                item.project.installedInspectorSdk,
-                item.latestCommit,
-                () => ctx.stateManager.saveProject(item.project),
-            );
-            result.successCount++;
-            ctx.logger.info(`[Updates] Updated Inspector SDK in ${item.project.name}`);
-        } catch (error) {
-            result.failCount++;
-            result.errors.push(
-                `Inspector SDK in ${item.project.name}: ${sanitizeErrorForLogging(error as Error)}`,
-            );
-            ctx.logger.error(
-                `[Updates] Failed to update Inspector SDK in ${item.project.name}`,
                 error as Error,
             );
         }
@@ -318,6 +304,12 @@ interface ApplyRun {
     done?: ReadonlySet<object>;
 }
 
+/** Say ahead that a project's local copy will follow its updates: it writes a storefront it has a copy of. */
+async function tellLocalCopyAhead(s: UpdateSelections, tell: ApplyUpdatesOptions['onLocalCopyAhead']): Promise<void> {
+    const project = storefrontWrites(s)[0]?.project;
+    if (tell && project && (await hasLocalCopy(project))) tell(project);
+}
+
 /**
  * One project's updates, in its kinds' order, each added to its category's result; then
  * its local copy brought up to what they wrote.
@@ -326,6 +318,9 @@ async function applyProject(s: UpdateSelections, run: ApplyRun, into: Record<Cat
     const { ctx, onProgress, onItem } = run;
     const { questions, templateConflicts: policy } = run.options;
     const add = (key: CategoryKey, result: CategoryResult): void => mergeInto(into[key], result);
+    await tellLocalCopyAhead(s, run.options.onLocalCopyAhead);
+    // Only a person is told how a kept clash reads; without one, nothing reads the row.
+    const answered: DescribeItem = (result) => answeredClashOutcome(result, questions?.aiAsksFirst() ?? true);
     // First among the storefront writes: a fixed clash finishes before anything else moves the repository.
     add('finish', await eachItem('finish', s.finish, (some) => applyFinish(some, ctx, onProgress, questions), onItem));
     const succeededPaths = new Set<string>();
@@ -333,23 +328,20 @@ async function applyProject(s: UpdateSelections, run: ApplyRun, into: Record<Cat
         const applied = await applyTemplate(some, ctx, onProgress, policy, questions);
         applied.succeededPaths.forEach((path) => succeededPaths.add(path));
         return applied.result;
-    }, onItem, answeredClashOutcome));
+    }, onItem, answered));
     add('boilerplate', await eachItem('boilerplate', s.boilerplate, (some) =>
-        applyBoilerplate(some, ctx, onProgress, policy, questions), onItem, answeredClashOutcome));
+        applyBoilerplate(some, ctx, onProgress, policy, questions), onItem, answered));
     add('component', await eachItem('component', s.component, (some) => applyComponents(some, ctx, onProgress), onItem));
     add('adobeMcp', await eachItem('adobeMcp', s.adobeMcp, (some) => applyAdobeMcp(some, ctx, onProgress), onItem));
-    // Libraries first, then the Inspector SDK: one category, as the agent reads it.
     add('addon', await eachItem('blockLibrary', s.blockLibrary, (some) =>
-        applyAddons(some, [], succeededPaths, ctx, onProgress, questions), onItem, KEPT_BLOCKS));
-    add('addon', await eachItem('inspector', s.inspector, (some) =>
-        applyAddons([], some, succeededPaths, ctx, onProgress, questions), onItem));
+        applyAddons(some, succeededPaths, ctx, onProgress, questions), onItem, KEPT_BLOCKS));
     add('blockLibraryInstall', await eachItem('blockLibraryInstall', s.blockLibraryInstall, (some) =>
         applyBlockLibraryInstalls(some, ctx, onProgress), onItem));
     add('integration', await eachItem('integration', s.integration, (some) =>
         applyIntegrationUpdates(some, ctx, onProgress), onItem));
     // Every kind above that writes a storefront writes it on GitHub; the local copy agents
     // edit is brought up to it here (EDS-57). Told item by item, only what applied wrote.
-    const wrote = [...s.template, ...s.boilerplate, ...s.blockLibrary, ...s.blockLibraryInstall]
+    const wrote = storefrontWrites(s)
         .filter((item) => !run.done || run.done.has(item))
         .map((item) => item.project);
     if (wrote.length > 0) await refreshLocalStorefronts(wrote, ctx, onProgress, run.options.onLocalCopy);

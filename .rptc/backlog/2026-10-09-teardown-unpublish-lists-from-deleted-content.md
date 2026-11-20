@@ -9,7 +9,7 @@ status: built
 
 # A storefront teardown leaves its pages live when the DA.live content is already gone
 
-**What happened (2026-10-09).** Deleting the `justrite-copy` project deleted its DA.live
+**What happened (2026-10-09).** Deleting the `tailspin-copy` project deleted its DA.live
 content, but Helix refused to list the published pages (401: DA.live was not signed in), so
 nothing was unpublished. Running `cleanup_dalive_site` afterwards, signed in, answered
 `stillPublished: false` and `unpublishedPages: 0`, yet all 174 pages in the site's

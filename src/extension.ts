@@ -8,6 +8,7 @@ import { describeBuildInfo, readBuildInfo } from '@/core/build/buildInfo';
 import { registerBuildStamp } from '@/core/build/buildStampUi';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getLogger, initializeLogger } from '@/core/logging/debugLogger';
+import { configureReleaseAccess } from '@/core/releases/componentRelease';
 import { CommandExecutor } from '@/core/shell/commandExecutor';
 import { createCommandExecutorDeps } from '@/core/shell/commandExecutorDeps';
 import { demoBuilderNode } from '@/core/shell/demoBuilderNode';
@@ -20,6 +21,7 @@ import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
 import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { agentConsentRequired } from '@/core/vscode/agentConsentSetting';
 import { EnvFileWatcherService } from '@/core/vscode/envFileWatcherService';
 import { withProgressRegister } from '@/core/vscode/progressRegister';
 import { showSuccessInStatusBar } from '@/core/vscode/statusBarSuccess';
@@ -37,6 +39,7 @@ import { createAgentTraceFileSink } from '@/features/ai/server/agentTraceSink';
 import { registerAgentTraceTool } from '@/features/ai/server/agentTraceTool';
 import { registerApplyUpdatesTool } from '@/features/ai/server/applyUpdatesTool';
 import { registerAuthTools } from '@/features/ai/server/authTools';
+import { registerCancelProjectCreationTool } from '@/features/ai/server/cancelProjectCreationTool';
 import { registerCloudResourceTools } from '@/features/ai/server/cloudResourceTools';
 import { registerCommerceEndpointsTool } from '@/features/ai/server/commerceEndpointsTool';
 import { registerCommerceQueryTool } from '@/features/ai/server/commerceQueryTool';
@@ -45,6 +48,7 @@ import { registerCommerceRestWriteTool } from '@/features/ai/server/commerceRest
 import { registerComponentRequirementsTool } from '@/features/ai/server/componentRequirementsTool';
 import { registerConfigureProjectTool } from '@/features/ai/server/configureProjectTool';
 import { registerContentAuthoringTools } from '@/features/ai/server/contentAuthoringTools';
+import { registerContinueProjectCreationTool } from '@/features/ai/server/continueProjectCreationTool';
 import { registerCopyProjectTool } from '@/features/ai/server/copyProjectTool';
 import { registerCreateProjectFromFileTool } from '@/features/ai/server/createProjectFromFileTool';
 import { registerCreateProjectTool } from '@/features/ai/server/createProjectTool';
@@ -65,6 +69,7 @@ import { registerLifecycleTools } from '@/features/ai/server/lifecycleTools';
 import { withProjectChangeNotice } from '@/features/ai/server/projectChangeNotice';
 import { registerProjectStatusTool } from '@/features/ai/server/projectStatusTool';
 import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
+import { registerReportIssueTool } from '@/features/ai/server/reportIssueTool';
 import { registerResetProjectTool } from '@/features/ai/server/resetProjectTool';
 import { registerSettingsTools } from '@/features/ai/server/settingsTools';
 import { registerSiteTools } from '@/features/ai/server/siteTools';
@@ -107,6 +112,8 @@ import {
 } from '@/features/project-creation/services/aiBundle/homeAiContextWriter';
 import { registerThirdPartyToolingSettingListener } from '@/features/project-creation/services/aiBundle/thirdPartyToolingSettingListener';
 import { SidebarProvider } from '@/features/sidebar/providers/sidebarProvider';
+import { isRepoCollaborator } from '@/features/updates/services/collaboratorGate';
+import { buildGitHubHeaders } from '@/features/updates/services/githubApiClient';
 import type { McpCredentialProvider } from '@/mcp-server';
 import type { Project } from '@/types/base';
 import type { AgentWorkingProject } from '@/types/handlers';
@@ -211,6 +218,13 @@ export async function activate(context: vscode.ExtensionContext) {
             .getConfiguration('demoBuilder')
             .get<boolean>('ai.enableThirdPartyTools', true),
     );
+
+    // Who may have a component's early release, and the token its lookups carry: code reading a
+    // component's release holds neither, and without this they stay closed and anonymous.
+    configureReleaseAccess({
+        earlyAccessAllowed: () => isRepoCollaborator(context.secrets, logger),
+        headers: () => buildGitHubHeaders(context.secrets),
+    });
 
     // Name the build BEFORE anything else can fail: with several checkouts on one
     // machine, F5 binds to whichever window had focus, and "which dist/ is this?"
@@ -466,6 +480,10 @@ export async function activate(context: vscode.ExtensionContext) {
             authenticationService.onDidSignIn(() => {
                 // Said once here, so every screen that signs in says it the same way.
                 showSuccessInStatusBar('Signed in to Adobe');
+                void ProjectDashboardWebviewCommand.refreshStatus();
+            }),
+            authenticationService.onDidSignOut(() => {
+                showSuccessInStatusBar('Signed out of Adobe');
                 void ProjectDashboardWebviewCommand.refreshStatus();
             }),
         );
@@ -745,10 +763,7 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
             consentGate: createAgentConsentGate(logger),
             // Standing consent, read live — must beat the chat ask (see the
             // option's doc: headless clients auto-decline elicitation).
-            consentNotRequired: () =>
-                vscode.workspace
-                    .getConfiguration('demoBuilder')
-                    .get<boolean>('ai.requireAgentConsent', true) === false,
+            consentNotRequired: () => !agentConsentRequired(),
             trace: agentTrace,
             registerExtraTools: (connectionServer, scopedProjectDir) => {
                 // Each connection has its own working project (AI-15). A session
@@ -782,6 +797,8 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                 registerAuthTools(mcpServer, connCtxFactory);
                 registerAdobeTools(mcpServer, connCtxFactory);
                 registerCreateProjectTool(mcpServer, connCtxFactory);
+                registerCancelProjectCreationTool(mcpServer, connCtxFactory);
+                registerContinueProjectCreationTool(mcpServer);
                 registerCreateProjectFromFileTool(mcpServer, connCtxFactory);
                 registerCopyProjectTool(mcpServer, connCtxFactory);
                 registerCurrentProjectTool(mcpServer, connCtxFactory, scopedProjectDir);
@@ -829,6 +846,11 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                 registerLifecycleTools(mcpServer, connCtxFactory, (url) =>
                     Promise.resolve(vscode.env.openExternal(vscode.Uri.parse(url))),
                 );
+                registerReportIssueTool(mcpServer, {
+                    openUrl: (url) => Promise.resolve(vscode.env.openExternal(vscode.Uri.parse(url))),
+                    loadProjects: loadAllProjects,
+                    version: String(context.extension.packageJSON.version ?? ''),
+                });
             },
         };
         const server = new InExtensionMcpServer(socketPath, projectsDir, logger, mcpServerOptions);
@@ -843,20 +865,19 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
 }
 
 /**
- * Every project on disk, fully loaded.
+ * Every project on disk, fully loaded, none of them saved or made the open project.
  *
- * Shared by the upkeep sweeps below, which each need the whole set. Extracted at
- * two rather than three because the duplicate carries a SIDE EFFECT that is easy
- * to miss: `loadProjectFromPath` defaults to `persistAfterLoad: true`, so each
- * copy re-saves every project and moves `currentProject`. Two copies did that
- * twice per activation. A sweep that saves only what it changed passes
- * `persistAfterLoad: false` (the Node sweep).
+ * Shared by the upkeep sweeps below, which each need the whole set and each save only
+ * what they change (`saveProjectConfigOnly`). `loadProjectFromPath` is a read: it once
+ * opened and saved by default, and every sweep moved the open project to the last
+ * project loaded, at activation and again on a DA.live sign-in, mid-wizard (walk F206,
+ * 2026-11-17). Opening is `openProject`, which no sweep calls.
  */
-async function loadAllProjects(options: { persistAfterLoad?: boolean } = {}): Promise<Project[]> {
+async function loadAllProjects(): Promise<Project[]> {
     const summaries = await stateManager.getAllProjects();
     const projects: Project[] = [];
     for (const summary of summaries) {
-        const project = await stateManager.loadProjectFromPath(summary.path, undefined, options);
+        const project = await stateManager.loadProjectFromPath(summary.path);
         if (project) projects.push(project);
     }
     return projects;
@@ -925,9 +946,9 @@ async function sweepPublishKeyRenewals(context: vscode.ExtensionContext): Promis
 /**
  * Glue for the manifest write-back migration (see manifestFormatSweep.ts).
  *
- * persistAfterLoad: false — the sweep saves via saveProjectConfigOnly itself;
- * the default save path would also move currentProject and the recents list
- * for every migrated project.
+ * Reads each project (`loadProjectFromPath`) and saves via saveProjectConfigOnly itself;
+ * opening one would also move the open project and the recents list for every
+ * migrated project.
  */
 async function sweepManifestFormats(): Promise<void> {
     try {
@@ -935,9 +956,7 @@ async function sweepManifestFormats(): Promise<void> {
         await sweepManifestFormat({
             projectPaths: summaries.map((s) => s.path),
             loadProject: (projectPath) =>
-                stateManager.loadProjectFromPath(projectPath, undefined, {
-                    persistAfterLoad: false,
-                }),
+                stateManager.loadProjectFromPath(projectPath),
             saveProject: (project) => stateManager.saveProjectConfigOnly(project),
             log: (line) => logger.info(`[ManifestFormat] ${line}`),
         });
@@ -948,7 +967,7 @@ async function sweepManifestFormats(): Promise<void> {
 
 /**
  * Glue for the Node sweep (demoBuilderNodeSweep.ts, PR-1a step 9): loads every project the
- * careful way (persistAfterLoad: false, like the manifest sweep), saves through
+ * careful way (a read, like the manifest sweep), saves through
  * saveProjectConfigOnly, and is the one place it is shown to the SC: the shared
  * progress notification while it works, then a status-bar line, or a warning naming
  * anything that could not move.
@@ -959,7 +978,7 @@ async function sweepDemoBuilderNode(context: vscode.ExtensionContext): Promise<v
         const installer = new ComponentManager(logger, externalCommandManager);
         const registry = getComponentRegistryManager(context.extensionPath);
         const result = await sweepOntoDemoBuilderNode({
-            projects: await loadAllProjects({ persistAfterLoad: false }),
+            projects: await loadAllProjects(),
             node,
             nodeReady: async () => (await listNodeFolderMajors(externalCommandManager)).includes(node)
                 && adobeCliInstalledUnder(externalCommandManager, node),
@@ -983,13 +1002,13 @@ async function sweepDemoBuilderNode(context: vscode.ExtensionContext): Promise<v
         if (!result.ran) return;
         if (result.nodeError) {
             void vscode.window.showWarningMessage(`Demo Builder could not prepare Node ${node}. It will try again the `
-                + 'next time VS Code starts. See Debug Logs for details.');
+                + 'next time VS Code starts.');
             return;
         }
         vscode.window.setStatusBarMessage(`$(check) Demo Builder now runs on Node ${node}`, TIMEOUTS.STATUS_BAR_SUCCESS);
         if (result.failed.length > 0) {
             void vscode.window.showWarningMessage(`Could not move ${result.failed.map((f) => f.component).join(', ')} `
-                + `to Node ${node}. They still run on their old Node. See Debug Logs for details.`);
+                + `to Node ${node}. They still run on their old Node.`);
         }
     } catch (error) {
         logger.debug(`[Node] Sweep skipped: ${(error as Error).message}`);

@@ -1,7 +1,7 @@
 /**
  * DeployMeshCommand — what the user is told after the core answers.
  *
- * The command owns UX only: the lock, the deps it assembles, and the mapping
+ * The command owns UX only: the deps it assembles, and the mapping
  * from `deployMeshWithFeedback`'s result to a toast. The other five suites in
  * this family drive the whole spine with the core REAL, which is why they never
  * reach four of its five outcomes — `no-mesh`, `permission`, a raw deploy
@@ -17,7 +17,6 @@ import * as vscode from 'vscode';
 import { DeployMeshCommand } from './deployMesh.testUtils';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { deployMeshWithFeedback } from '@/features/mesh/services/deployMeshWithFeedback';
-import { meshDeployLock } from '@/features/mesh/services/meshDeployLock';
 import { republishStorefrontConfig } from '@/features/eds/services/storefront/storefrontRepublishService';
 import { ensureDaLiveAuth } from '@/features/eds/handlers/edsHelpers';
 import type { StateManager } from '@/types/state';
@@ -108,13 +107,13 @@ describe('DeployMeshCommand — result mapping', () => {
     });
 
     describe('before the core is called at all', () => {
-        it('does nothing when a deploy is already running', async () => {
-            // The lock is shared with the screen's modal path now (PL-59 phase 2).
-            jest.spyOn(meshDeployLock, 'isLocked').mockReturnValue(true);
+        it('says nothing when another deploy is already running', async () => {
+            // The lock is the deploy's own now (PL-104 fix 4); the command keeps its silence.
+            await answering({ success: false, error: 'A mesh deploy is already running.', alreadyRunning: true });
 
-            await command.execute();
-
-            expect(mockedDeploy).not.toHaveBeenCalled();
+            expect(showErrorMessage).not.toHaveBeenCalled();
+            expect(showWarningMessage).not.toHaveBeenCalled();
+            expect(mockRefreshStatus).not.toHaveBeenCalled();
         });
 
         it('warns and stops when no project is open', async () => {
@@ -201,10 +200,9 @@ describe('DeployMeshCommand — result mapping', () => {
     });
 
     describe('success', () => {
-        it('clears the mesh notification flag and shows no failure toast', async () => {
+        it('shows the success toast and no failure toast', async () => {
             await answering({ success: true });
 
-            expect(executeCommand).toHaveBeenCalledWith('demoBuilder._internal.meshActionTaken');
             expect(showSuccessMessage).toHaveBeenCalledWith('API Mesh deployed successfully');
             expect(showWarningMessage).not.toHaveBeenCalled();
             expect(showErrorMessage).not.toHaveBeenCalled();
@@ -224,10 +222,9 @@ describe('DeployMeshCommand — result mapping', () => {
             expect(showSuccessMessage).not.toHaveBeenCalled();
         });
 
-        it('still clears the mesh notification flag, because the mesh DID deploy', async () => {
+        it('shows no failure toast, because the mesh DID deploy', async () => {
             await answering({ success: true, storefrontNotRepublished: REASON });
 
-            expect(executeCommand).toHaveBeenCalledWith('demoBuilder._internal.meshActionTaken');
             expect(showErrorMessage).not.toHaveBeenCalled();
         });
 

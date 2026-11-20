@@ -16,6 +16,8 @@ import '@/core/ui/styles/index.css';
 import '@/core/ui/styles/vscode-theme.css';
 import '@/core/ui/styles/wizard.css';
 import '@/core/ui/styles/utilities.css';
+// Every enabled button shows the hand on hover, Spectrum's included.
+import '@/core/ui/styles/interaction.css';
 // .ai-* rules, moved out of utilities.css by the CSS migration. Three
 // entries reach a component using them, so all three import it.
 import '../styles/ai.css';
@@ -28,6 +30,8 @@ import '@/core/ui/styles/modal.css';
 // whose graph reaches PromptGrid, the component's one consumer.
 import '@/core/ui/styles/two-column-layout.css';
 import '@/core/ui/styles/shared-ui.css';
+// `CardActionsMenu`'s labelled "More ▾" trigger, wherever the menu renders.
+import '@/core/ui/styles/menu-trigger.css';
 // .add-card — the "New prompt" card at the prompt grid's end (PL-62). A stylesheet
 // reaches only the bundles whose entry imports it (ADR-017 §6).
 import '@/core/ui/styles/add-card.css';

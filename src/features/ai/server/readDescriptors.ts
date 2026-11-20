@@ -19,6 +19,7 @@ import { defaultShape, type ToolDescriptor } from './toolDescriptors';
 import { aiHandlers } from '@/features/dashboard/handlers/aiHandlers';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
 import { dataInstallerHandlers } from '@/features/data-installer/handlers/dataInstallerHandlers';
+import { packSource, type PackOrigin, type PackSource } from '@/features/data-installer/packSource';
 import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
 import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
 import type { HandlerResponse } from '@/types/handlers';
@@ -75,6 +76,19 @@ function leanDatapackRow(row: Record<string, unknown>): Record<string, unknown> 
         ...keep,
         ...(Array.isArray(dataTypes) ? { dataTypeCount: dataTypes.length } : {}),
     };
+}
+
+/** The four sources, in the words the Show list uses (step-07 P1). */
+const AGENT_SOURCE: Readonly<Record<PackSource, string>> = {
+    yours: 'yours',
+    team: 'demo-builder',
+    installer: 'data-installer',
+    community: 'community',
+};
+
+/** A `find_datapacks` row: lean, and marked with where it comes from. */
+function sourcedDatapackRow(row: Record<string, unknown>): Record<string, unknown> {
+    return { ...leanDatapackRow(row), source: AGENT_SOURCE[packSource(row as PackOrigin)] };
 }
 
 /**
@@ -446,6 +460,19 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         },
     },
     {
+        tool: 'get_finish_setup',
+        needsAuth: false,
+        readOnly: true,
+        description:
+            "Read what the open project still needs after it was created or reset (its Finish " +
+            'Setup): steps a run could not finish itself, e.g. republish the storefront code ' +
+            "(republish-code) or set the store's root category (pack-root-category), each done, " +
+            'dismissed (skipped) or still to do, with the last check\'s note. As saved: runs no ' +
+            'check (check_finish_setup does). An empty list means nothing is left.',
+        map: dashboardHandlers,
+        type: 'getFinishSetup',
+    },
+    {
         tool: 'list_console_apis',
         needsAuth: ['adobe'],
         readOnly: true,
@@ -647,28 +674,32 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: true,
         description:
-            'List Adobe Commerce sample-data datapacks the Data Installer holds. Returns one row ' +
-            'per (name, version) pair — the same pack appears once per version. Curated packs ' +
-            'only unless includeCommunity is set. store:"library" lists the team datapack ' +
-            'library instead (shared packs plus your own, mine:true on yours); includeLibrary ' +
-            'adds those rows after the Data Installer ones, each tagged store:"library". This ' +
-            'endpoint reports no total, so count === limit means there may be more — page with skip.',
+            "Every datapack this SC can install: Demo Builder's datapack store (store:\"library\"), then whatever the " +
+            'Data Installer adds if it answers (store:"installer"). Each row\'s source says whose it is: yours, ' +
+            'demo-builder, data-installer or community. A pack in both ' +
+            'shows once, as the store\'s. One row per (name, version). installerMissing says the Data Installer\'s packs ' +
+            'are absent: no-address (none set), turned-off (demoBuilder.dataInstaller.enabled is off), no-access (it turned this Adobe account away; an admin of the org can ' +
+            'add it to the Data Installer\'s product profile) or no-answer (down). includeInstaller:false leaves the ' +
+            'Data Installer out (installerOff says so). ' +
+            'includeCommunity:false leaves colleagues\' shared packs and non-curated Data Installer packs out. store lists one alone. ' +
+            'A pack named <pack>-settings holding only store_config is that pack\'s settings layer, not a demo. This ' +
+            'endpoint reports no total, so count === limit means there may be more; page with skip.',
         map: dataInstallerHandlers,
         type: 'find-datapacks',
-        shape: (res) => shapeRows(res, leanDatapackRow),
+        shape: (res) => shapeRows(res, sourcedDatapackRow),
         inputSchema: {
             includeCommunity: z
                 .boolean()
+                .default(true)
+                .describe("false leaves colleagues' shared packs and non-curated Data Installer packs out (default: every pack)"),
+            includeInstaller: z
+                .boolean()
                 .optional()
-                .describe('Include non-shared developer packs (default: curated only)'),
+                .describe("false leaves the Data Installer's packs out of the one list (default: ask it)"),
             store: z
                 .enum(['installer', 'library'])
                 .optional()
-                .describe('Which catalog to list (default: the Data Installer)'),
-            includeLibrary: z
-                .boolean()
-                .optional()
-                .describe('With the Data Installer list, add the library rows too'),
+                .describe('List only this one (default: the one list, the datapack store then the Data Installer)'),
             ...PAGING,
         },
     },
@@ -678,7 +709,8 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         readOnly: true,
         description:
             "One datapack's metadata plus which of its declared data types the service actually " +
-            'stores. Use before installing: a pack can declare a type it holds no item for.',
+            'stores. Use before installing: a pack can declare a type it holds no item for. settingsLayer ' +
+            'names the store configuration an install would also apply.',
         map: dataInstallerHandlers,
         type: 'get-datapack-detail',
         inputSchema: {
@@ -711,8 +743,10 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: true,
         description:
-            'Datapacks the Data Installer records as installed, and the Commerce instance each ' +
-            "went into. This is the service's own tracking, not a live check of the instance.",
+            "Datapacks recorded as installed, and the Commerce instance each went into: Demo Builder's " +
+            "own installs in the open project first (source:\"demo-builder\", with objectCount), then the " +
+            'Data Installer\'s tracking (source:"service"). Records, not a live check of the instance. ' +
+            'serviceError or engineError says why one source\'s rows are missing.',
         map: dataInstallerHandlers,
         type: 'list-installed-datapacks',
         shape: (res) => shapeRows(res, leanDatapackRow),
@@ -727,8 +761,10 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: true,
         description:
-            "The Data Installer's own request log — which packs were imported, exported or " +
-            'validated, against which instance, and when. Use to see what a previous run did.',
+            "Which packs were installed, removed, imported, exported or validated, against which " +
+            "instance, and when: Demo Builder's own runs in the open project first (source:\"demo-builder\", " +
+            'with outcome and detail), then the Data Installer\'s request log (source:"service"). Use to ' +
+            "see what a previous run did. serviceError or engineError says why one source's rows are missing.",
         map: dataInstallerHandlers,
         type: 'get-datapack-activity',
         inputSchema: {

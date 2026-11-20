@@ -3,20 +3,20 @@
  *
  * Tests for action handlers that delegate to commands or open external resources:
  * - handleConfigure: opens project configuration UI
- * - handleDeleteProject: triggers project deletion
  * - handleOpenBrowser: opens demo in browser
  */
 
 import './dashboardValidatorMocks';
 
 const mockOpenInIncognito = jest.fn().mockResolvedValue(true);
+const mockOpenPrivateBrowser = jest.fn().mockResolvedValue(true);
 jest.mock('@/core/utils/browserUtils', () => ({
     openInIncognito: (...args: unknown[]) => mockOpenInIncognito(...args),
+    openPrivateBrowser: (...args: unknown[]) => mockOpenPrivateBrowser(...args),
 }));
 import * as vscode from 'vscode';
 import {
     handleConfigure,
-    handleDeleteProject,
     handleEditProject,
     handleOpenAdminPanel,
     handleOpenBrowser,
@@ -39,6 +39,9 @@ jest.mock(
             showInformationMessage: jest.fn().mockResolvedValue(undefined),
         },
         ColorThemeKind: { Dark: 2, Light: 1 },
+        workspace: {
+            getConfiguration: jest.fn(() => ({ get: jest.fn() })),
+        },
         env: {
             openExternal: jest.fn().mockResolvedValue(true),
         },
@@ -49,8 +52,8 @@ jest.mock(
     { virtual: true }
 );
 
-// Mock projectStateSync (detectFrontendChanges)
-jest.mock('@/core/state/projectStateSync');
+// Mock frontendEnvDrift (detectFrontendChanges)
+jest.mock('@/core/state/frontendEnvDrift');
 
 // Mock authentication
 
@@ -59,11 +62,6 @@ jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(),
     },
-}));
-
-// Mock projectDeletionService to avoid deep dependency chain
-jest.mock('@/features/projects-dashboard/services/projectDeletionService', () => ({
-    deleteProject: jest.fn().mockResolvedValue({ success: true }),
 }));
 
 // Mock the projects-dashboard services barrel (dynamic-imported by the edit/
@@ -97,36 +95,6 @@ describe('Dashboard Action Handlers', () => {
 
             expect(result).toEqual({ success: true });
             expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.configureProject', '/path/to/project');
-        });
-    });
-
-    describe('handleDeleteProject', () => {
-        it('should delegate to deleteProject service with current project', async () => {
-            const { mockContext, mockProject } = setupMocks();
-            const {
-                deleteProject,
-            } = require('@/features/projects-dashboard/services/projectDeletionService');
-
-            const result = await handleDeleteProject(mockContext);
-
-            expect(result).toEqual({ success: true });
-            // Plus where it reports and the id its modal follows (PL-59).
-            expect(deleteProject).toHaveBeenCalledWith(mockContext, mockProject, undefined, {
-                progress: undefined,
-                operationId: expect.stringContaining('delete:'),
-            });
-        });
-
-        it('should return error when no project available', async () => {
-            const { mockContext } = setupMocks();
-            mockContext.stateManager.getCurrentProject = jest.fn().mockResolvedValue(null);
-
-            const result = await handleDeleteProject(mockContext);
-
-            expect(result).toEqual({
-                success: false,
-                error: 'No project found to delete',
-            });
         });
     });
 
@@ -263,6 +231,20 @@ describe('Dashboard Action Handlers', () => {
             // A private window: a normal profile's adobe.com cookies overflow the
             // Admin's header limit.
             expect(mockOpenInIncognito).toHaveBeenCalledWith(adminUrl);
+            // A button shows its own spinner, so no notification beside it (owner, 2026-10-31).
+            expect(mockOpenPrivateBrowser).not.toHaveBeenCalled();
+        });
+
+        // A link with no spinner of its own (the integration card's Open Commerce Admin) asks for
+        // the "Opening a private browser" notification while Chrome starts.
+        it('opens with the notification when the caller asks for it', async () => {
+            const { mockContext } = setupWithAdminUrl();
+
+            const result = await handleOpenAdminPanel(mockContext, { notify: true });
+
+            expect(result).toEqual({ success: true });
+            expect(mockOpenPrivateBrowser).toHaveBeenCalledWith(adminUrl);
+            expect(mockOpenInIncognito).not.toHaveBeenCalled();
         });
 
         it('should return an error and not open the browser when the URL is invalid', async () => {

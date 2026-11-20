@@ -2,8 +2,7 @@
  * ProjectDashboardWebviewCommand — the payload the dashboard is built from.
  *
  * Everything on the dashboard is decided once, here, and never recomputed: which
- * tiles exist, which URLs they open, whether the Sample Data tile is offered at
- * all. Three independent signals can each turn the mesh tile on, and a project
+ * tiles exist, which URLs they open, which pack the Datapacks tile names. Three independent signals can each turn the mesh tile on, and a project
  * can be missing any field in the chain, so the assertions below are about which
  * SIGNAL produced the answer rather than the answer alone.
  */
@@ -12,7 +11,6 @@ import * as vscode from 'vscode';
 import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
 import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
 import { loadDemoPackages } from '@/features/components/services/demoPackageLoader';
-import { isDataInstallerConfigured } from '@/features/data-installer/services/dataInstallerConfig';
 import type { Project } from '@/types/base';
 import type { DashboardInitialData } from '@/types/webviewPayloads';
 import { internals } from '../../../helpers/commandInternals';
@@ -31,9 +29,6 @@ jest.mock('@/core/config/ConfigurationLoader', () => ({
     ConfigurationLoader: jest.fn().mockImplementation(() => ({
         load: jest.fn().mockResolvedValue({ stacks: [] }),
     })),
-}));
-jest.mock('@/features/data-installer/services/dataInstallerConfig', () => ({
-    isDataInstallerConfigured: jest.fn(() => true),
 }));
 jest.mock('@/features/project-creation/services/addedDemoSettings', () => ({
     ...jest.requireActual('@/features/project-creation/services/addedDemoSettings'),
@@ -67,11 +62,11 @@ describe('ProjectDashboardWebviewCommand - getInitialData - the added demo', () 
     });
 
     it("names the demo, its source and its kind for a project built on an added demo, and nothing otherwise", async () => {
-        const demo = makeAddedDemo({ source: { owner: 'jen', repo: 'isle5-demo', branch: 'main' } });
+        const demo = makeAddedDemo({ source: { owner: 'robin', repo: 'isle5-demo', branch: 'main' } });
         const data = await initialData(createMockProject({ demo }));
         expect(data.demo).toEqual({
-            name: 'Isle5 by Jen',
-            source: { owner: 'jen', repo: 'isle5-demo', branch: 'main' },
+            name: 'Isle5 by Robin',
+            source: { owner: 'robin', repo: 'isle5-demo', branch: 'main' },
             storefrontKind: 'eds',
         });
 
@@ -79,8 +74,8 @@ describe('ProjectDashboardWebviewCommand - getInitialData - the added demo', () 
     });
 
     it("names the demo package on the Welcome step that reads from the same repository, by the card's own name, so Change source can offer to update it", async () => {
-        const demo = makeAddedDemo({ source: { owner: 'jen', repo: 'isle5-demo', branch: 'main' } });
-        (readAddedDemos as jest.Mock).mockReturnValue([{ ...demo, name: 'Isle5 (renamed on the card)', source: { owner: 'Jen', repo: 'ISLE5-demo' } }]);
+        const demo = makeAddedDemo({ source: { owner: 'robin', repo: 'isle5-demo', branch: 'main' } });
+        (readAddedDemos as jest.Mock).mockReturnValue([{ ...demo, name: 'Isle5 (renamed on the card)', source: { owner: 'Robin', repo: 'ISLE5-demo' } }]);
 
         const data = await initialData(createMockProject({ demo }));
 
@@ -88,7 +83,7 @@ describe('ProjectDashboardWebviewCommand - getInitialData - the added demo', () 
     });
 
     it('picks the card from the SAME repository among several, and names none when no card reads from it', async () => {
-        const demo = makeAddedDemo({ source: { owner: 'jen', repo: 'isle5-demo', branch: 'main' } });
+        const demo = makeAddedDemo({ source: { owner: 'robin', repo: 'isle5-demo', branch: 'main' } });
         const other = makeAddedDemo({ name: 'Another demo', source: { owner: 'sam', repo: 'other-demo' } });
         (readAddedDemos as jest.Mock).mockReturnValue([other, { ...demo, name: 'Isle5 card' }]);
 
@@ -99,6 +94,32 @@ describe('ProjectDashboardWebviewCommand - getInitialData - the added demo', () 
         const unmatched = await initialData(createMockProject({ demo }));
         expect(unmatched.demo).toBeDefined();
         expect('demoPackageName' in (unmatched.demo ?? {})).toBe(false);
+    });
+});
+
+// PL-101: the creation end screen's Finish Setup opens the dashboard on its guide, once.
+describe('ProjectDashboardWebviewCommand - opening on Finish Setup', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        vscode.window.activeColorTheme = { kind: vscode.ColorThemeKind.Dark };
+    });
+
+    it('asks the dashboard to open its Finish Setup guide when it was opened for it, and only that once', async () => {
+        const command = commandFor(createMockProject());
+        command.openOn({ openFinishSetup: true });
+
+        const first = await internals(command).getInitialData<DashboardInitialData>();
+        const again = await internals(command).getInitialData<DashboardInitialData>();
+
+        expect(first.openFinishSetup).toBe(true);
+        expect('openFinishSetup' in again).toBe(false);
+    });
+
+    it('asks nothing when the dashboard is opened plainly', async () => {
+        const command = commandFor(createMockProject());
+        command.openOn(undefined);
+
+        expect('openFinishSetup' in (await internals(command).getInitialData<DashboardInitialData>())).toBe(false);
     });
 });
 
@@ -148,7 +169,6 @@ describe('ProjectDashboardWebviewCommand - getInitialData', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         (loadDemoPackages as jest.Mock).mockResolvedValue([]);
-        (isDataInstallerConfigured as jest.Mock).mockReturnValue(true);
         (ConfigurationLoader as jest.Mock).mockImplementation(() => ({
             load: jest.fn().mockResolvedValue({ stacks: [] }),
         }));
@@ -275,10 +295,13 @@ describe('ProjectDashboardWebviewCommand - getInitialData', () => {
             expect(data.appBuilderComponents).toBeUndefined();
         });
 
-        it('offers the Sample Data tile only when the data installer is configured', async () => {
-            (isDataInstallerConfigured as jest.Mock).mockReturnValue(false);
+        it('sends no Data Installer flag: the Datapacks tile is offered to every SC', async () => {
+            expect(await initialData(createMockProject())).not.toHaveProperty('dataInstallerAvailable');
+        });
 
-            expect((await initialData(createMockProject())).dataInstallerAvailable).toBe(false);
+        // There is no automatic pack per demo to name any more (owner, 2026-11-03).
+        it('sends no pack name for the Datapacks tile', async () => {
+            expect(await initialData(createMockProject({ datapack: { name: 'my-bodea-1a2b3c', version: '1', store: 'library' } }))).not.toHaveProperty('ownDatapackName');
         });
     });
 

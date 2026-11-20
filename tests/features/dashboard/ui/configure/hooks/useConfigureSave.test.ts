@@ -18,14 +18,11 @@ import {
     useConfigureSave,
     type UseConfigureSaveProps,
 } from '@/features/dashboard/ui/configure/hooks/useConfigureSave';
-import { createMockProject } from '../../../../../helpers/projectFake';
 
 const NO_SECRETS: Record<string, Record<string, boolean>> = {};
 
 function props(overrides: Partial<UseConfigureSaveProps> = {}): UseConfigureSaveProps {
     return {
-        project: createMockProject({ name: 'bodea-demo', title: 'Bodea Demo' }),
-        projectName: 'Bodea Demo',
         configChanges: { headless: { ADOBE_COMMERCE_URL: 'https://example.com' } },
         componentSecretFlags: NO_SECRETS,
         touchedFields: new Set<string>(),
@@ -65,7 +62,7 @@ describe('useConfigureSave', () => {
         expect(result.current.isDeploying).toBe(false);
     });
 
-    it('sends only what changed, and no rename when the title is unchanged', async () => {
+    it('sends only what changed', async () => {
         // PL-76: the whole loaded map used to ride here, so a window opened before
         // another change put the old values back.
         const { result } = render();
@@ -74,33 +71,7 @@ describe('useConfigureSave', () => {
 
         expect(mockRequest).toHaveBeenCalledWith('save-configuration', {
             configChanges: { headless: { ADOBE_COMMERCE_URL: 'https://example.com' } },
-            newProjectName: undefined,
         });
-    });
-
-    it('sends the trimmed title when it changed, even by capitalisation alone', async () => {
-        const { result } = render({ projectName: '  bodea demo  ' });
-
-        await act(() => result.current.handleSave());
-
-        expect(mockRequest.mock.calls[0][1]).toMatchObject({ newProjectName: 'bodea demo' });
-    });
-
-    // The window stays open after Save. Compared with the name it OPENED with, a
-    // rename and then a rename back looked like "no change" the second time, and
-    // the project kept the first new name (owner, 2026-10-17).
-    it('sends a rename back to the opening name after an earlier rename was saved', async () => {
-        let current = props({ projectName: 'Renamed' });
-        const { result, rerender } = renderHook(() => useConfigureSave(current));
-
-        await act(() => result.current.handleSave());
-        expect(mockRequest.mock.calls[0][1]).toMatchObject({ newProjectName: 'Renamed' });
-
-        current = { ...current, projectName: 'Bodea Demo' };
-        rerender();
-        await act(() => result.current.handleSave());
-
-        expect(mockRequest.mock.calls[1][1]).toMatchObject({ newProjectName: 'Bodea Demo' });
     });
 
     it('sends the authoring experience switched back after an earlier switch was saved', async () => {
@@ -115,6 +86,23 @@ describe('useConfigureSave', () => {
         expect(mockRequest.mock.calls[1][1]).toMatchObject({
             authoringExperience: 'experience-workspace',
         });
+    });
+
+    it('sends the Commerce Admin choice only once it changed, whatever the project\'s kind', async () => {
+        let current = props({ commerceAdminExperience: 'unified-shell', initialCommerceAdminExperience: 'unified-shell' });
+        const { result, rerender } = renderHook(() => useConfigureSave(current));
+
+        await act(() => result.current.handleSave());
+        expect(mockRequest.mock.calls[0][1]).not.toHaveProperty('commerceAdminExperience');
+
+        current = { ...current, commerceAdminExperience: 'classic' };
+        rerender();
+        await act(() => result.current.handleSave());
+        expect(mockRequest.mock.calls[1][1]).toMatchObject({ commerceAdminExperience: 'classic' });
+
+        rerender();
+        await act(() => result.current.handleSave());
+        expect(mockRequest.mock.calls[2][1]).not.toHaveProperty('commerceAdminExperience');
     });
 
     it('hands what it sent to onSaved once the save succeeds, and not when it fails', async () => {
@@ -242,6 +230,46 @@ describe('useConfigureSave', () => {
         await act(() => result.current.handleSave());
 
         expect(result.current.isSaving).toBe(false);
+    });
+
+    // step-07 D6: a save that would leave a datapack in the current Commerce instance asks first.
+    describe('a save answered with the datapack question', () => {
+        beforeEach(() => {
+            mockRequest.mockResolvedValueOnce({ success: false, data: { installedDatapack: 'Luma' } });
+        });
+
+        it('holds the question, naming the datapack, and is idle again', async () => {
+            const { result } = render();
+
+            await act(() => result.current.handleSave());
+
+            expect(result.current.connectionQuestion).toBe('Luma');
+            expect(result.current.isSaving).toBe(false);
+        });
+
+        it('sends the same save again with the answer, and closes the question', async () => {
+            const { result } = render();
+            await act(() => result.current.handleSave());
+
+            await act(() => result.current.answerConnectionQuestion('uninstall'));
+
+            expect(mockRequest).toHaveBeenCalledTimes(2);
+            expect(mockRequest.mock.calls[1]).toEqual([
+                'save-configuration',
+                { ...(mockRequest.mock.calls[0][1] as object), installedDatapack: 'uninstall' },
+            ]);
+            expect(result.current.connectionQuestion).toBeUndefined();
+        });
+
+        it('Cancel: closes the question and sends nothing more', async () => {
+            const { result } = render();
+            await act(() => result.current.handleSave());
+
+            await act(() => result.current.answerConnectionQuestion());
+
+            expect(mockRequest).toHaveBeenCalledTimes(1);
+            expect(result.current.connectionQuestion).toBeUndefined();
+        });
     });
 
     it('asks the extension to close the panel on Close', () => {

@@ -18,21 +18,7 @@
  * @module features/data-installer/services/dataInstallerClient
  */
 
-import type {
-    ActivityEntry,
-    DataItem,
-    DataItemInventory,
-    DataTypeInfo,
-    DatapackDetail,
-    DatapackId,
-    DatapackSummary,
-    InstalledDatapack,
-    JobFailureReason,
-    JobStatusSnapshot,
-    OperationMode,
-    Page,
-    ServiceHealth,
-} from '../types';
+import type { ActivityEntry, DataItem, DataItemInventory, DataTypeInfo, DatapackDetail, DatapackSummary, InstalledDatapack, JobFailureReason, JobStatusSnapshot, OperationMode, Page, ServiceHealth } from '../types';
 import { DataInstallerApiError, DataInstallerInputError } from './dataInstallerErrors';
 import {
     parseActivityLog,
@@ -48,6 +34,8 @@ import {
     parseProcessorOrder,
 } from './dataInstallerParsers';
 import { DataInstallerTransport, type DataInstallerTransportDeps } from './dataInstallerTransport';
+import { rowsOfItem } from './itemParts';
+import type { DatapackId } from '@/types/datapack';
 
 /** Filters for the catalog listing. */
 export interface DatapackQuery {
@@ -79,6 +67,13 @@ export interface ActivityQuery {
     endDate?: string;
     limit?: number;
     skip?: number;
+}
+
+/** Where the next page of an item starts, or undefined after the last (or from a store that does not page). */
+function nextRowOf(body: unknown, from: number): number | undefined {
+    const next = (body as { next_row?: unknown } | null)?.next_row;
+    // Only forward: a store that answered the same row again would page forever.
+    return typeof next === 'number' && next > from ? next : undefined;
 }
 
 export class DataInstallerClient {
@@ -124,11 +119,32 @@ export class DataInstallerClient {
     }
 
     /** One stored data item, payload parsed. */
+    /**
+     * One data item's rows, a page at a time when the store pages them (2026-11-05). Demo Builder's
+     * own store answers `rows_from` with a page under App Builder's 1 MB result and `next_row`; the
+     * Data Installer, and the store before that change, ignore it and answer the whole item, which
+     * then has no `next_row`.
+     */
     async getDataItem(id: DatapackId, dataType: string): Promise<DataItem> {
-        const body = await this.transport.request('get-data-item', {
-            query: { datapack_name: id.name, data_type: dataType, version: id.version },
-        });
-        return parseDataItem(body, dataType);
+        const page = (from: number) =>
+            this.transport.request('get-data-item', {
+                query: { datapack_name: id.name, data_type: dataType, version: id.version, rows_from: from },
+            });
+        let body = await page(0);
+        const first = parseDataItem(body, dataType);
+        let next = nextRowOf(body, 0);
+        // A list's pages are lists; an Import API body's are the body with a page of its items.
+        const item = rowsOfItem(first.records);
+        if (next === undefined || !item) return first;
+        const rows: unknown[] = [...item.rows];
+        while (next !== undefined) {
+            body = await page(next);
+            const more = rowsOfItem(parseDataItem(body, dataType).records);
+            if (!more) return parseDataItem(body, dataType);
+            rows.push(...more.rows);
+            next = nextRowOf(body, next);
+        }
+        return { ...first, records: item.wrap(rows) };
     }
 
     /**

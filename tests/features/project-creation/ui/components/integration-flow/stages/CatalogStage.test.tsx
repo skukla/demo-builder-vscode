@@ -75,8 +75,8 @@ describe('CatalogStage', () => {
         const erpIntegration = getAppBuilderComponentCatalog().find((e) => e.id === 'erp-integration')!;
 
         it('names the ERP, not the integration, and says only that it is fixed once deployed', () => {
-            renderStage({ catalog: [erpIntegration], selectedId: 'erp-integration', label: 'JustRite' });
-            expect(screen.getByLabelText(/^ERP name \(optional\)/)).toHaveValue('JustRite');
+            renderStage({ catalog: [erpIntegration], selectedId: 'erp-integration', label: 'Tailspin' });
+            expect(screen.getByLabelText(/^ERP Name \(Optional\)/)).toHaveValue('Tailspin');
             expect(screen.getByText(NAME_IS_FIXED)).toBeInTheDocument();
             expect(screen.queryByText(/Adds “/)).not.toBeInTheDocument();
         });
@@ -87,9 +87,9 @@ describe('CatalogStage', () => {
         });
     });
 
-    it('an entry with no paired system keeps the plain "Name (optional)" field', () => {
+    it('an entry with no paired system keeps the plain "Name (Optional)" field', () => {
         renderStage({ selectedId: 'acme-b' });
-        expect(screen.getByLabelText(/^Name \(optional\)/)).toBeInTheDocument();
+        expect(screen.getByLabelText(/^Name \(Optional\)/)).toBeInTheDocument();
     });
 
     it('says nothing about the name before a pick', () => {
@@ -145,7 +145,7 @@ describe('CatalogStage', () => {
         expect(onPick).toHaveBeenCalledWith('acme-a');
     });
 
-    it('hides the search field at or below the threshold', () => {
+    it('shows the search field on a short catalog too', () => {
         renderStage({
             catalog: [
                 entry('acme-a', 'Widget A'),
@@ -155,7 +155,7 @@ describe('CatalogStage', () => {
                 entry('acme-e', 'Widget E'),
             ],
         });
-        expect(screen.queryByTestId('spectrum-searchfield')).not.toBeInTheDocument();
+        expect(screen.getByTestId('spectrum-searchfield')).toBeInTheDocument();
     });
 
     it('shows the search field past the threshold', () => {
@@ -225,14 +225,14 @@ describe('naming a picked entry (optional-name model, 2026-08-27)', () => {
     // the whole dialog under the SC's cursor (owner, 2026-09-21).
     it('shows the name field before a pick, disabled, saying what to do first', () => {
         renderStage();
-        const field = screen.getByLabelText(/Name \(optional\)/);
+        const field = screen.getByLabelText(/Name \(Optional\)/);
         expect(field).toBeDisabled();
-        expect(field).toHaveAttribute('placeholder', 'Pick an integration first');
+        expect(field).toHaveAttribute('placeholder', 'Select an integration first');
     });
 
     it("shows the picked entry's name as the PLACEHOLDER, empty value, no validation", () => {
         const { onLabelChange } = renderStage({ selectedId: 'acme-a' });
-        const field = screen.getByLabelText(/Name \(optional\)/);
+        const field = screen.getByLabelText(/Name \(Optional\)/);
         expect(field).toHaveValue('');
         expect(field).toHaveAttribute('placeholder', 'Widget A');
 
@@ -264,10 +264,10 @@ describe('node-version disclosure', () => {
 });
 
 // One Commerce instance runs one ERP integration (AB-78). Like the API Mesh tile once
-// a project has its mesh, the tile stays in the gallery, greyed out. The words go in a
-// banner above the gallery, never on the tile, where they would be missed (owner).
+// a project has its mesh, the tile stays in the gallery, greyed out. The words go in an
+// amber note above the gallery, never on the tile, where they would be missed (owner).
 describe('an entry that cannot be added here', () => {
-    const MESSAGE = 'JustRite already has an ERP integration on this Commerce instance. Add your ERP there instead.';
+    const MESSAGE = 'Tailspin already has an ERP integration on this Commerce instance. Add your ERP there instead.';
 
     it('greys its tile out, and leaves the others alone', () => {
         renderStage({ unavailable: { message: MESSAGE, ids: ['acme-a'] } });
@@ -276,10 +276,14 @@ describe('an entry that cannot be added here', () => {
         expect(screen.getByRole('button', { name: /Widget B/ })).toBeEnabled();
     });
 
-    it('says why and what to do in a banner above the gallery, not on the tile', () => {
+    it('says why and what to do in an amber note above the gallery, not a box and not on the tile', () => {
         renderStage({ unavailable: { message: MESSAGE, ids: ['acme-a'] } });
 
-        expect(screen.getByTestId('catalog-unavailable')).toHaveTextContent(MESSAGE);
+        const note = screen.getByTestId('catalog-unavailable');
+        expect(note).toHaveTextContent(MESSAGE);
+        expect(note).toHaveClass('intflow-catalog-note', 'text-notice');
+        expect(note).not.toHaveClass('inline-notice');
+        expect(note.parentElement?.firstElementChild).toBe(note);
         expect(screen.getByRole('button', { name: /Widget A/ })).not.toHaveTextContent(MESSAGE);
     });
 
@@ -294,16 +298,16 @@ describe('an entry that cannot be added here', () => {
     it('drops the name field when no tile can be picked', () => {
         renderStage({ unavailable: { message: MESSAGE, ids: ['acme-a', 'acme-b'] } });
 
-        expect(screen.queryByLabelText(/Name \(optional\)/)).not.toBeInTheDocument();
+        expect(screen.queryByLabelText(/Name \(Optional\)/)).not.toBeInTheDocument();
     });
 
     it('keeps the name field while another tile can still be picked — control', () => {
         renderStage({ unavailable: { message: MESSAGE, ids: ['acme-a'] } });
 
-        expect(screen.getByLabelText(/Name \(optional\)/)).toBeInTheDocument();
+        expect(screen.getByLabelText(/Name \(Optional\)/)).toBeInTheDocument();
     });
 
-    it('shows no banner when nothing listed is unavailable', () => {
+    it('shows no note when nothing listed is unavailable', () => {
         renderStage({ unavailable: { message: MESSAGE, ids: ['not-listed'] } });
 
         expect(screen.queryByTestId('catalog-unavailable')).not.toBeInTheDocument();

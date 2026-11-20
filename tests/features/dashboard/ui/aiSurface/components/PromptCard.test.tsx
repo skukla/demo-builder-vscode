@@ -271,7 +271,7 @@ describe('PromptCard', () => {
         });
     });
 
-    describe('Copy prompt kebab item', () => {
+    describe('Copy Prompt kebab item', () => {
         const USER_PROMPT = {
             id: 'user-1',
             title: 'My prompt',
@@ -286,25 +286,25 @@ describe('PromptCard', () => {
             onPinToggle: jest.fn(),
         };
 
-        it('shows a "Copy prompt" menu item in the kebab', () => {
+        it('shows a "Copy Prompt" menu item in the kebab', () => {
             renderCard({ prompt: USER_PROMPT, ...ALL_HANDLERS, onCopy: jest.fn() });
             screen.getByLabelText(/more actions/i).click();
-            expect(screen.getByText('Copy prompt')).toBeInTheDocument();
+            expect(screen.getByText('Copy Prompt')).toBeInTheDocument();
         });
 
-        it('clicking "Copy prompt" invokes onCopy with the prompt body', () => {
+        it('clicking "Copy Prompt" invokes onCopy with the prompt body', () => {
             const onCopy = jest.fn();
             renderCard({ prompt: USER_PROMPT, ...ALL_HANDLERS, onCopy });
             screen.getByLabelText(/more actions/i).click();
-            screen.getByText('Copy prompt').click();
+            screen.getByText('Copy Prompt').click();
             expect(onCopy).toHaveBeenCalledTimes(1);
             expect(onCopy).toHaveBeenCalledWith('Do something specific.');
         });
 
-        it('does NOT render "Copy prompt" when onCopy is not provided', () => {
+        it('does NOT render "Copy Prompt" when onCopy is not provided', () => {
             renderCard({ prompt: USER_PROMPT, ...ALL_HANDLERS });
             screen.getByLabelText(/more actions/i).click();
-            expect(screen.queryByText('Copy prompt')).not.toBeInTheDocument();
+            expect(screen.queryByText('Copy Prompt')).not.toBeInTheDocument();
         });
     });
 
@@ -411,7 +411,7 @@ describe('PromptCard — memoised handlers follow the current props', () => {
         );
 
         screen.getByLabelText(/more actions/i).click();
-        screen.getByText('Copy prompt').click();
+        screen.getByText('Copy Prompt').click();
 
         expect(onCopy).toHaveBeenCalledWith('Edited body.');
     });

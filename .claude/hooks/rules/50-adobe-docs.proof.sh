@@ -1,4 +1,7 @@
 #!/bin/bash
+# Markers this run's router drops go to a folder of its own, removed on exit (PL-86): in the
+# shared temp folder they outlived the run, and a later session of the same name went silent.
+PROOF_TMP="$(mktemp -d)"; export TMPDIR="$PROOF_TMP"; trap 'rm -rf "$PROOF_TMP"' EXIT
 # Proves 50-adobe-docs.rule intercepts a documentation lookup and stays out of
 # everything else.
 #

@@ -74,7 +74,7 @@ async function resolveRenameName(
         return error ? { error } : { name: payloadName.trim() };
     }
     const raw = await vscode.window.showInputBox({
-        prompt: 'New integration name',
+        prompt: 'New Integration Name',
         value: currentLabel,
         validateInput: (value) => validateRenameInput(value, takenNames),
     });

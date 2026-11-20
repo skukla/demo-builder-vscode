@@ -22,7 +22,7 @@ import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponen
 import type { WizardState } from '@/types/webview';
 import { makeFlowHarness } from './useIntegrationFlow.testUtils';
 
-// The picker fetch (list-org-console-apis) is issued by ApiPickerStage, not the
+// The picker fetch (list-org-console-apis) is issued by useOrgApis, not the
 // hook — the hook never calls webviewClient in api-edit — but the module is
 // imported transitively, so stub it to a no-op.
 

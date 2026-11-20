@@ -15,7 +15,7 @@
  * @module features/eds/services/patches/lkgReader
  */
 
-import { resolvePatchRef } from './externalPatchFetcher';
+import { UNPINNED_REF, forgetPatchRef, resolvePatchRef } from './externalPatchFetcher';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 
@@ -61,13 +61,12 @@ export async function readLkgSha(
     logger: Logger,
 ): Promise<string | undefined> {
     const filePath = source.lkgFile ?? 'last-known-good';
-    // Same ref authority as the ledger fetch (see resolvePatchRef): a release
-    // freezes ledger + LKG pointer together; the main fallback tracks both
-    // together. A hardcoded `main` here skewed the pair the day a release
-    // existed.
-    const ref = await resolvePatchRef(source.owner, source.repo, logger);
-    const url = `https://raw.githubusercontent.com/${source.owner}/${source.repo}/${ref}/${filePath}`;
     try {
+        // Same ref authority as the ledger fetch (see resolvePatchRef): a release
+        // freezes ledger + LKG pointer together. A hardcoded `main` here skewed the
+        // pair the day a release existed.
+        const ref = await resolvePatchRef(source.owner, source.repo, logger);
+        const url = `https://raw.githubusercontent.com/${source.owner}/${source.repo}/${ref}/${filePath}`;
         const response = await fetch(url, {
             signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
         });
@@ -89,4 +88,33 @@ export async function readLkgSha(
         logger.warn(`[LKG] Fetch error: ${(error as Error).message}`);
         return undefined;
     }
+}
+
+/**
+ * The release of the patches repo this session is working from: what a storefront built or
+ * updated now is built from. Undefined when it cannot be read, or the repo has no releases.
+ */
+export async function readPatchesRelease(
+    source: Pick<LkgSource, 'owner' | 'repo'>,
+    logger: Logger,
+): Promise<string | undefined> {
+    try {
+        const ref = await resolvePatchRef(source.owner, source.repo, logger);
+        return ref === UNPINNED_REF ? undefined : ref;
+    } catch (error) {
+        logger.warn(`[LKG] ${(error as Error).message}`);
+        return undefined;
+    }
+}
+
+/**
+ * The newest release as GitHub has it now, for an update check. The session's answer is dropped
+ * first, or a window left open would never hear of a new release.
+ */
+export async function readLatestPatchesRelease(
+    source: Pick<LkgSource, 'owner' | 'repo'>,
+    logger: Logger,
+): Promise<string | undefined> {
+    forgetPatchRef(source.owner, source.repo);
+    return readPatchesRelease(source, logger);
 }

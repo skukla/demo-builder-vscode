@@ -19,10 +19,14 @@ import Beaker from '@spectrum-icons/workflow/Beaker';
 import Clock from '@spectrum-icons/workflow/Clock';
 import Copy from '@spectrum-icons/workflow/Copy';
 import DataAdd from '@spectrum-icons/workflow/DataAdd';
+import DataDownload from '@spectrum-icons/workflow/DataDownload';
+import DataRemove from '@spectrum-icons/workflow/DataRemove';
+import DataUpload from '@spectrum-icons/workflow/DataUpload';
 import Delete from '@spectrum-icons/workflow/Delete';
 import Duplicate from '@spectrum-icons/workflow/Duplicate';
 import Edit from '@spectrum-icons/workflow/Edit';
 import Export from '@spectrum-icons/workflow/Export';
+import FolderOpen from '@spectrum-icons/workflow/FolderOpen';
 import Globe from '@spectrum-icons/workflow/Globe';
 import Key from '@spectrum-icons/workflow/Key';
 import MagicWand from '@spectrum-icons/workflow/MagicWand';
@@ -32,7 +36,10 @@ import PinOn from '@spectrum-icons/workflow/PinOn';
 import Play from '@spectrum-icons/workflow/Play';
 import Refresh from '@spectrum-icons/workflow/Refresh';
 import Revert from '@spectrum-icons/workflow/Revert';
+import SaveFloppy from '@spectrum-icons/workflow/SaveFloppy';
+import SelectionChecked from '@spectrum-icons/workflow/SelectionChecked';
 import Settings from '@spectrum-icons/workflow/Settings';
+import Share from '@spectrum-icons/workflow/Share';
 import Stop from '@spectrum-icons/workflow/Stop';
 import UserAdmin from '@spectrum-icons/workflow/UserAdmin';
 import React from 'react';
@@ -46,6 +53,7 @@ const MENU_ICONS: Record<string, React.ReactElement> = {
     edit: <Edit size="S" />,
     copy: <Copy size="S" />,
     duplicate: <Duplicate size="S" />,
+    /** Go back or go again: a reset, a retry, Undo Last Assignment, Undo Last Save. */
     reset: <Revert size="S" />,
     republish: <Globe size="S" />,
     export: <Export size="S" />,
@@ -68,6 +76,23 @@ const MENU_ICONS: Record<string, React.ReactElement> = {
     add: <Add size="S" />,
     /** Something unavailable for a while (a demo ERP's simulated downtime). */
     downtime: <Clock size="S" />,
+    /** Keep a copy as a file the SC chooses where to put (a datapack's Save as file). */
+    saveFile: <SaveFloppy size="S" />,
+    /** Open a file the SC picks (a datapack's Add from File). */
+    openFile: <FolderOpen size="S" />,
+    /** Put something kept into a store (a datapack's Install). */
+    install: <DataDownload size="S" />,
+    /**
+     * Take what something put into a store back out, the pair of `install` (a datapack's Uninstall).
+     * Not `delete`'s trash can: an uninstall is undone by installing again (owner, 2026-11-17).
+     */
+    uninstall: <DataRemove size="S" />,
+    /** Take what is in a store into something kept (Save store changes to this pack). */
+    capture: <DataUpload size="S" />,
+    /** Let others see and use it (a library pack's Share and Stop sharing). */
+    share: <Share size="S" />,
+    /** Pick several at once (the projects list's Select Projects). */
+    selectSeveral: <SelectionChecked size="S" />,
 };
 
 /**

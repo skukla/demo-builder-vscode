@@ -157,7 +157,7 @@ describe('registerAuthTools', () => {
         const shape = server.schema('sign_in').inputSchema as Record<string, z.ZodTypeAny>;
         // The enum IS the contract: a provider missing from it is a sign-in the
         // agent cannot ask for, and the tool has no other route to one.
-        expect((shape.provider as z.ZodEnum<[string, ...string[]]>).options).toEqual([
+        expect((shape.provider as z.ZodEnum).options).toEqual([
             'adobe',
             'github',
             'dalive',
@@ -566,9 +566,12 @@ describe('registerAuthTools', () => {
         expect(mockSetStatusBarMessage).toHaveBeenCalledTimes(1);
     });
 
-    // The outcome the agent never sees. Its client already has its answer, so
-    // the window is the only place the finished sign-in can land.
-    it('announces DA.live completion in the window after the tool has answered', async () => {
+    // The finished sign-in is announced by the sign-in flow itself, the green
+    // "Signed in to DA.live (org) as …" the palette's Sign In shows too. The tool
+    // used to post its own "$(check) … sign-in complete" after it, which, being
+    // newer, replaced the green one: an SC signing in for an agent saw a different
+    // ending (owner, 2026-11-15).
+    it('adds no completion message of its own: the sign-in flow announces it, as from the palette', async () => {
         (showDaLiveAuthQuickPick as jest.Mock).mockResolvedValueOnce({ success: true });
         const server = fakeServer();
         registerAuthTools(server, makeCtxFactory(false));
@@ -576,7 +579,8 @@ describe('registerAuthTools', () => {
         await server.call('sign_in', { provider: 'dalive', confirm: true });
 
         await settleDetachedFlow();
-        expect(mockSetStatusBarMessage).toHaveBeenCalledTimes(2);
+        expect(mockSetStatusBarMessage).toHaveBeenCalledTimes(1);
+        expect(mockSetStatusBarMessage).not.toHaveBeenCalledWith(expect.stringContaining('sign-in complete'), expect.anything());
     });
 
     it('swallows a rejected DA.live flow rather than raising an unhandled rejection', async () => {

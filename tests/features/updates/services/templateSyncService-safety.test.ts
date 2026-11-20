@@ -239,7 +239,13 @@ describe('CRITERION 3 — conflicts surface rather than resolving silently', () 
                 target: TEMPLATE_HEAD,
                 preserveFiles: expect.arrayContaining(['fstab.yaml', 'config.json']),
             },
-            error: 'Merge conflicts in 2 files (blocks/hero/hero.js, styles/styles.css); the update was not applied.',
+            edits: [
+                { file: 'blocks/hero/hero.js', whose: 'storefront' },
+                { file: 'styles/styles.css', whose: 'storefront' },
+            ],
+            error:
+                'The update stopped on 2 files that were edited (blocks/hero/hero.js, an edit made in this storefront; '
+                + 'styles/styles.css, an edit made in this storefront). Nothing was changed: the storefront on GitHub is as it was.',
         });
         expect(gitCalls().some((c) => /reset --hard HEAD/.test(c))).toBe(true);
         expect(gitCalls().some((c) => /read-tree/.test(c))).toBe(false);
@@ -262,7 +268,8 @@ describe('CRITERION 3 — conflicts surface rather than resolving silently', () 
         const result = await service().syncWithTemplate(edsProject(), { strategy: 'merge' });
 
         expect(result.error).toBe(
-            'Merge conflicts in 1 file (blocks/hero/hero.js); the update was not applied.',
+            'The update stopped on 1 file that was edited (blocks/hero/hero.js, an edit made in this storefront). '
+                + 'Nothing was changed: the storefront on GitHub is as it was.',
         );
     });
 });

@@ -3,7 +3,7 @@
  *
  * Renders the ONE section currently selected on the Configure rail. Which section that
  * is comes from {@link buildConfigureSections}; this module only knows how to draw each
- * of the five kinds.
+ * of its kinds.
  *
  * Split out of ConfigureScreen because the rail turned "render every section stacked"
  * into "render exactly one", which is a switch — and a switch inside an already
@@ -12,21 +12,19 @@
  * @module features/dashboard/ui/configure/ConfigureSectionBody
  */
 
-import { Text, Flex, Link, TextField, RadioGroup, Radio } from '@adobe/react-spectrum';
+import { Text, Flex, Link, RadioGroup, Radio } from '@adobe/react-spectrum';
 import React from 'react';
 import { BlockLibrariesSection, type BlockLibrariesSectionProps } from './BlockLibrariesSection';
 import { slicedSectionId, type ConfigureSection } from './configureSections';
 import type { ServiceGroup, UniqueField } from './configureTypes';
 import { ConfigSection } from '@/core/ui/components/forms/ConfigSection';
-import { getValidationState } from '@/core/ui/utils/validationState';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import {
     filterGroupsForSection,
     isConnectionGroup,
-    type ConnectStoreSection,
 } from '@/features/components/config/storeFieldHelpers';
 import { ServiceGroupList } from '@/features/components/ui/components/ServiceGroupList';
-import type { AuthoringExperience } from '@/types/base';
+import type { AuthoringExperience, CommerceAdminExperience } from '@/types/base';
 
 export interface ConfigureSectionBodyProps {
     /** The section to draw. */
@@ -35,13 +33,6 @@ export interface ConfigureSectionBodyProps {
     serviceGroups: ServiceGroup[];
     /** Renders one field row — the same callback shape `ServiceGroupList` takes. */
     renderFieldRow: (field: UniqueField, group: ServiceGroup) => React.ReactNode;
-    /** Project-name field state. */
-    projectName: string;
-    onProjectNameChange: (value: string) => void;
-    projectNameError?: string;
-    projectNameTouched: boolean;
-    /** The slug derived from the name, shown so the user can find it on disk. */
-    projectFolder?: string;
     /**
      * Whether store discovery can run yet (connection fields filled).
      *
@@ -53,56 +44,13 @@ export interface ConfigureSectionBodyProps {
     /** EDS authoring-experience preference. */
     authoringExperience: AuthoringExperience;
     onAuthoringExperienceChange: (value: AuthoringExperience) => void;
-    /** The block libraries choice, drawn by the Block Libraries section alone (EDS-39). */
+    /** A Cloud Service store with no Admin URL of its own: the Commerce tab offers the choice. */
+    hasAdminChoice?: boolean;
+    /** The Commerce Admin interface this project opens. */
+    commerceAdminExperience?: CommerceAdminExperience;
+    onCommerceAdminExperienceChange?: (value: CommerceAdminExperience) => void;
+    /** The block libraries choice, on the Storefront tab (EDS-39). */
     blockLibraries?: BlockLibrariesSectionProps;
-}
-
-/**
- * The Project section: the rename field, plus the "nothing to configure" note when the
- * project has no service groups at all. That note used to sit where the groups would
- * have been; with one section per tab there is no such place, and Project is the tab
- * every user lands on, so it is the one spot where the note is guaranteed to be seen.
- */
-function ProjectBody({
-    projectName,
-    onProjectNameChange,
-    projectNameError,
-    projectNameTouched,
-    projectFolder,
-    hasServiceGroups,
-}: {
-    projectName: string;
-    onProjectNameChange: (value: string) => void;
-    projectNameError?: string;
-    projectNameTouched: boolean;
-    /** The slug derived from the name, shown so the user can find it on disk. */
-    projectFolder?: string;
-    hasServiceGroups: boolean;
-}): React.ReactElement {
-    return (
-        <ConfigSection id="project-info" label="Project" showDivider={false}>
-            <TextField
-                label="Project Name"
-                value={projectName}
-                onChange={onProjectNameChange}
-                isRequired
-                width="100%"
-                validationState={getValidationState(projectNameError, projectNameTouched)}
-                errorMessage={projectNameError}
-                // The rule still holds, it just applies to the derived folder
-                // rather than to what is typed -- so say where it lands instead
-                // of dictating what to type.
-                description={
-                    projectFolder ? `Folder: ${projectFolder}` : undefined
-                }
-            />
-            {hasServiceGroups ? null : (
-                <Text UNSAFE_className="text-gray-600">
-                    No components requiring configuration were found.
-                </Text>
-            )}
-        </ConfigSection>
-    );
 }
 
 /**
@@ -121,11 +69,10 @@ function AuthoringBody({
         <ConfigSection
             id="authoring-experience"
             label="Authoring"
-            showDivider={false}
             footer={
                 <Flex marginTop="size-200">
                     <Text UNSAFE_className="text-gray-600 text-sm">
-                        DA.live & authoring settings are configured in{' '}
+                        More authoring settings are in{' '}
                         <Link
                             onPress={() => webviewClient.postMessage('open-eds-settings')}
                             UNSAFE_className="cursor-pointer"
@@ -143,8 +90,32 @@ function AuthoringBody({
                 value={value}
                 onChange={(next) => onChange(next as AuthoringExperience)}
             >
+                {/* Names alone, no line under each (owner, walk F234: "no descriptions needed"). */}
                 <Radio value="da-live-classic">DA.live Classic</Radio>
                 <Radio value="experience-workspace">Experience Workspace</Radio>
+            </RadioGroup>
+        </ConfigSection>
+    );
+}
+
+/** Which Commerce Admin this project opens, on the Commerce tab. Only which link opens changes. */
+function CommerceAdminBody({
+    value,
+    onChange,
+}: {
+    value: CommerceAdminExperience;
+    onChange: (value: CommerceAdminExperience) => void;
+}): React.ReactElement {
+    return (
+        <ConfigSection id="commerce-admin" label="Commerce Admin" showDivider={false}>
+            {/* aria-label, as Authoring's: the section heading already names it. */}
+            <RadioGroup
+                aria-label="Commerce Admin Interface"
+                value={value}
+                onChange={(next) => onChange(next as CommerceAdminExperience)}
+            >
+                <Radio value="unified-shell">Unified Shell</Radio>
+                <Radio value="classic">Classic UI</Radio>
             </RadioGroup>
         </ConfigSection>
     );
@@ -201,42 +172,21 @@ function BusinessStructureSection({
     );
 }
 
-function CommerceSubSections({
+function ConnectionSection({
     group,
     renderFieldRow,
 }: {
     group: ServiceGroup;
     renderFieldRow: (field: UniqueField, group: ServiceGroup) => React.ReactNode;
-}): React.ReactElement {
-    const parts: { section: ConnectStoreSection; label: string }[] = [
-        { section: 'connection', label: 'Connection' },
-        // Credentials get their own heading even though they usually render a
-        // single line saying nothing needs entering — because "Use my own instead"
-        // reveals two inputs, and those need somewhere to belong rather than
-        // appearing under the endpoint field they have nothing to do with.
-        { section: 'credentials', label: 'Credentials' },
-    ];
-
+}): React.ReactElement | null {
+    const sliced = filterGroupsForSection([group], 'connection')[0];
+    if (!sliced) return null;
     return (
-        <>
-            {parts.map(({ section, label }) => {
-                const sliced = filterGroupsForSection([group], section)[0];
-                if (!sliced) return null;
-                return (
-                    // No `showDivider`. Every ConfigSection header already draws its own
-                    // border-bottom, so the divider would put a SECOND rule between two
-                    // sub-sections of one tab — reading as a harder break than the tab
-                    // boundaries above it. The headings are the separation.
-                    <ConfigSection key={section} id={section} label={label}>
-                        {sliced.fields.map((field) => (
-                            <React.Fragment key={field.key}>
-                                {renderFieldRow(field, group)}
-                            </React.Fragment>
-                        ))}
-                    </ConfigSection>
-                );
-            })}
-        </>
+        <ConfigSection id="connection" label="Connection">
+            {sliced.fields.map((field) => (
+                <React.Fragment key={field.key}>{renderFieldRow(field, group)}</React.Fragment>
+            ))}
+        </ConfigSection>
     );
 }
 
@@ -250,35 +200,21 @@ export function ConfigureSectionBody({
     section,
     serviceGroups,
     renderFieldRow,
-    projectName,
-    onProjectNameChange,
-    projectNameError,
-    projectNameTouched,
-    projectFolder,
     storeStructureReady,
     authoringExperience,
     onAuthoringExperienceChange,
+    hasAdminChoice = false,
+    commerceAdminExperience = 'unified-shell',
+    onCommerceAdminExperienceChange = () => undefined,
     blockLibraries,
 }: ConfigureSectionBodyProps): React.ReactElement | null {
-    if (section.kind === 'project') {
+    if (section.kind === 'storefront') {
         return (
-            <ProjectBody
-                projectName={projectName}
-                onProjectNameChange={onProjectNameChange}
-                projectNameError={projectNameError}
-                projectNameTouched={projectNameTouched}
-                projectFolder={projectFolder}
-                hasServiceGroups={serviceGroups.length > 0}
-            />
+            <>
+                <AuthoringBody value={authoringExperience} onChange={onAuthoringExperienceChange} />
+                {blockLibraries ? <BlockLibrariesSection {...blockLibraries} /> : null}
+            </>
         );
-    }
-
-    if (section.kind === 'blockLibraries') {
-        return blockLibraries ? <BlockLibrariesSection {...blockLibraries} /> : null;
-    }
-
-    if (section.kind === 'authoring') {
-        return <AuthoringBody value={authoringExperience} onChange={onAuthoringExperienceChange} />;
     }
 
     // Business Structure is its own rail tab, so its id carries the slice suffix.
@@ -304,10 +240,14 @@ export function ConfigureSectionBody({
     // Those are now a rail tab each. The earlier note here preferred sub-sections
     // because "two tabs would have to borrow the wizard's gating, which is what
     // deadlocked PaaS" — the gating is the hazard, not the tabs, and neither tab
-    // here locks. Connection keeps its Credentials sub-section, because that pair
-    // is part of reaching the instance rather than a third task.
+    // here locks.
     if (isConnectionGroup(group.id)) {
-        return <CommerceSubSections group={group} renderFieldRow={renderFieldRow} />;
+        return (
+            <>
+                <ConnectionSection group={group} renderFieldRow={renderFieldRow} />
+                {hasAdminChoice ? <CommerceAdminBody value={commerceAdminExperience} onChange={onCommerceAdminExperienceChange} /> : null}
+            </>
+        );
     }
 
     // One group in, so `ServiceGroupList` gives it showDivider={false} — right, because

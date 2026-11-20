@@ -36,10 +36,10 @@ const CLASH: PendingClash = {
     fixes: false,
     keptAt: '2026-10-21T00:00:00.000Z',
 };
-const STOREFRONT = '/p/justrite/components/eds-storefront';
-const justrite = createMockProject({
-    name: 'justrite',
-    title: 'JustRite',
+const STOREFRONT = '/p/tailspin/components/eds-storefront';
+const tailspin = createMockProject({
+    name: 'tailspin',
+    title: 'Tailspin',
     componentInstances: { 'eds-storefront': { id: 'eds-storefront', name: 'EDS Storefront', status: 'ready', path: STOREFRONT } },
 });
 
@@ -53,32 +53,39 @@ function ctx(): UpdateContext {
     };
 }
 
-function asking(answer: UnfinishedAnswer): jest.Mocked<UpdateQuestions> {
+function asking(answer: UnfinishedAnswer, aiAsksFirst = true): jest.Mocked<UpdateQuestions> {
     return {
         onClash: jest.fn(),
         onUnfinished: jest.fn().mockResolvedValue(answer),
         replaceLibraryBlocks: jest.fn(),
+        aiAsksFirst: jest.fn(() => aiAsksFirst),
     };
 }
 
-const finish = (questions?: UpdateQuestions, c = ctx()) => applyFinish([{ project: justrite, clash: CLASH }], c, undefined, questions);
+const finish = (questions?: UpdateQuestions, c = ctx()) => applyFinish([{ project: tailspin, clash: CLASH }], c, undefined, questions);
 
 beforeEach(() => jest.clearAllMocks());
 
 describe('applyFinish', () => {
     it('reports a finished fix as applied, with any fix that could not be put back', async () => {
-        finishMock.mockResolvedValue({ kind: 'finished', commit: 'c'.repeat(40), files: CLASH.files, notes: ['A Demo Builder fix could not be put back: x (y).'] });
+        finishMock.mockResolvedValue({
+            kind: 'finished',
+            commit: 'c'.repeat(40),
+            files: CLASH.files,
+            notes: ['A Demo Builder fix could not be put back: x (y).'],
+            localCopyClean: true,
+        });
 
         const result = await finish();
 
-        expect(finishMock).toHaveBeenCalledWith(justrite, { finishDeps: true });
+        expect(finishMock).toHaveBeenCalledWith(tailspin, { finishDeps: true });
         expect(result).toEqual({
             successCount: 1,
             failCount: 0,
             errors: [],
             applied: [
-                'JustRite: the Adobe boilerplate update fixed with AI is finished and live.',
-                'JustRite: A Demo Builder fix could not be put back: x (y).',
+                'Tailspin: the Adobe boilerplate update fixed with AI is finished and live.',
+                'Tailspin: A Demo Builder fix could not be put back: x (y).',
             ],
         });
     });
@@ -88,7 +95,7 @@ describe('applyFinish', () => {
 
         const result = await finish();
 
-        expect(result.errors).toEqual(['JustRite: a newer version came out, so the fix was dropped. Check for updates again.']);
+        expect(result.errors).toEqual(['Tailspin: a newer version came out, so the fix was dropped. Check for updates again.']);
     });
 
     it('asks about a fix that is not ready, and keeps it for the AI on Fix with AI', async () => {
@@ -97,13 +104,21 @@ describe('applyFinish', () => {
 
         const result = await finish(questions);
 
-        expect(questions.onUnfinished).toHaveBeenCalledWith(justrite, 'blocks/header/header.js still has conflict markers');
-        expect(result.errors).toEqual(['JustRite: the AI is having another go. Nothing goes live until you approve it.']);
+        expect(questions.onUnfinished).toHaveBeenCalledWith(tailspin, 'blocks/header/header.js still has conflict markers');
+        expect(result.errors).toEqual(['Tailspin: the AI is having another go. Your AI asks you before anything goes live.']);
         // keptIn is what makes the boundary open the SC's AI on it again.
         expect(result.clashes).toEqual([
-            { project: 'JustRite', projectName: 'justrite', track: 'boilerplate', files: CLASH.files, keptIn: STOREFRONT },
+            { project: 'Tailspin', projectName: 'tailspin', track: 'boilerplate', files: CLASH.files, keptIn: STOREFRONT },
         ]);
         expect(leaveMock).not.toHaveBeenCalled();
+    });
+
+    it('says the fix goes live as soon as the AI finishes when approvals are off', async () => {
+        finishMock.mockResolvedValue({ kind: 'not-fixed', reason: 'x' });
+
+        const result = await finish(asking('fix', false));
+
+        expect(result.errors).toEqual(['Tailspin: the AI is having another go. It goes live as soon as your AI finishes.']);
     });
 
     it('keeps the fix for later without reopening the AI', async () => {
@@ -111,7 +126,7 @@ describe('applyFinish', () => {
 
         const result = await finish(asking('later'));
 
-        expect(result.errors).toEqual(['JustRite: the fix waits in Check for Updates.']);
+        expect(result.errors).toEqual(['Tailspin: the fix waits in Check for Updates.']);
         expect(result.clashes?.[0]).not.toHaveProperty('keptIn');
         expect(leaveMock).not.toHaveBeenCalled();
     });
@@ -122,8 +137,8 @@ describe('applyFinish', () => {
 
         const result = await finish(asking('leave'), c);
 
-        expect(leaveMock).toHaveBeenCalledWith(justrite, c);
-        expect(result.errors).toEqual(['JustRite: the fix was dropped. The update will be offered again.']);
+        expect(leaveMock).toHaveBeenCalledWith(tailspin, c);
+        expect(result.errors).toEqual(['Tailspin: the fix was dropped. The update will be offered again.']);
         expect(result.clashes).toBeUndefined();
     });
 
@@ -132,7 +147,7 @@ describe('applyFinish', () => {
 
         const result = await finish();
 
-        expect(result.errors).toEqual(['JustRite: not finished yet, because x.']);
+        expect(result.errors).toEqual(['Tailspin: not finished yet, because x.']);
         expect(leaveMock).not.toHaveBeenCalled();
     });
 

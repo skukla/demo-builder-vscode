@@ -23,6 +23,9 @@ function defaultAuthManager() {
     return poolUnits({
         getTokenStatus: jest.fn(async () => ({ isAuthenticated: true })),
         getCachedOrganization: jest.fn(),
+        // The token's org, read when a reset gives an ACCS project the org it lacks (F11). No
+        // org by default, as `adobeAuthUnitsFake` answers: the reset then records nothing.
+        getOrganizationsSdkOnly: jest.fn(async () => []),
     });
 }
 

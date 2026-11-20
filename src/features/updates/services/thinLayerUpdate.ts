@@ -19,7 +19,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { COMPONENT_IDS } from '@/core/constants';
-import type { GitHubFileOperations } from '@/features/eds/services/github/githubFileOperations';
+import type { RepoFileAccess } from '@/features/eds/services/github/githubFileOperations';
 import {
     applyCodePatches,
     CodePatchCriticalError,
@@ -58,6 +58,26 @@ export const THIN_LAYER_RESET_REFUSED =
     "This storefront is Adobe's tested boilerplate plus Demo Builder's fixes. Resetting it to the "
     + 'bare template would remove the fixes, so that is not offered. Reset the project instead: it '
     + "rebuilds the code at the tested version with every fix (this replaces your own code edits).";
+
+/**
+ * An imported project's code came from the sender's storefront (EDS-72): the brand it records is only
+ * what that code was built on, so resetting it to the brand's bare template would throw the sender's
+ * work away (walk F249). A merge still brings the template's later changes and keeps the code.
+ */
+export const IMPORTED_RESET_REFUSED =
+    "This storefront was imported, so its own code is the source. Resetting it to the brand's template "
+    + "would remove the imported code, so that is not offered. Reset the project instead: it puts the "
+    + 'code back to how it was imported.';
+
+/**
+ * Why a storefront update may not reset this project's code to its template, or nothing when it may.
+ * The one rule: the clash question asks it before offering a reset, and the sync service before running
+ * one, so neither can offer what the other refuses.
+ */
+export function templateResetRefusal(project: Project): string | undefined {
+    if (project.importedFrom) return IMPORTED_RESET_REFUSED;
+    return isThinLayerProject(project) ? THIN_LAYER_RESET_REFUSED : undefined;
+}
 
 export const TESTED_VERSION_UNREADABLE =
     'Could not read the tested boilerplate version from the patches repository, so nothing was '
@@ -118,20 +138,35 @@ export function patchesNotPutBack(results: readonly CodePatchResult[]): string[]
 }
 
 /**
+ * The product-page overlay's address for a storefront: the project row's, then the user's
+ * `demoBuilder.byom.*` settings, stamped with the storefront's org and site. In VS Code this is
+ * `resolveByomOverlayConfig`, which both resets use; outside it (the patch canary) the row's.
+ */
+export type OverlayResolver = (fromConfig: string | undefined, org: string, site: string) => string | undefined;
+
+const ROW_OVERLAY: OverlayResolver = (fromConfig) => fromConfig;
+
+/**
  * Put back the 404 handling and Quick Edit if an update left them out, and run the storefront
  * repairs creation and reset run. Each checks for its own markers first, so a storefront that
  * already has them is untouched.
+ *
+ * The overlay goes through `resolveOverlay`, as a reset's does. Without it every update saw the
+ * overlay as off: no first-visit script in 404.html, so Demo Builder's old copy stayed in
+ * delayed.js and the Adobe boilerplate update failed on it (Tailspin, 2026-10-30).
  *
  * @returns one plain line per piece that could not be put back
  */
 export async function restoreDemoBuilderPieces(
     project: Project,
-    fileOps: GitHubFileOperations,
+    fileOps: RepoFileAccess,
     logger: Logger,
+    resolveOverlay: OverlayResolver = ROW_OVERLAY,
 ): Promise<string[]> {
     const extracted = extractResetParams(project);
     if (!extracted.success) return [];
-    const { repoOwner, repoName, byomOverlayUrl, daLiveOrg, daLiveSite } = extracted.params;
+    const { repoOwner, repoName, daLiveOrg, daLiveSite } = extracted.params;
+    const byomOverlayUrl = resolveOverlay(extracted.params.byomOverlayUrl, daLiveOrg, daLiveSite);
     const { smart404 } = await bringStorefrontUpToDate(
         fileOps, repoOwner, repoName, byomOverlayUrl, logger, daLiveOrg, daLiveSite,
     );

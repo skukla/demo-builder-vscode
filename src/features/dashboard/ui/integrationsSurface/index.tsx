@@ -22,6 +22,8 @@ import '@/core/ui/styles/tokens.css';
 import '@/core/ui/styles/index.css';
 import '@/core/ui/styles/vscode-theme.css';
 import '@/core/ui/styles/utilities.css';
+// Every enabled button shows the hand on hover, Spectrum's included.
+import '@/core/ui/styles/interaction.css';
 // .ai-* rules, moved out of utilities.css by the CSS migration. Three
 // entries reach a component using them, so all three import it.
 import '../styles/ai.css';
@@ -45,6 +47,8 @@ import '@/core/ui/styles/add-card.css';
 import '@/core/ui/styles/modal.css';
 // The shared UI vocabulary — 19 small families. Seven of the eight entries.
 import '@/core/ui/styles/shared-ui.css';
+// `CardActionsMenu`'s labelled "More ▾" trigger, wherever the menu renders.
+import '@/core/ui/styles/menu-trigger.css';
 // .integrations-* — this surface's own shell and grid.
 import '../styles/integrations.css';
 // .choice-* — project-creation's option cards, rendered here too.
@@ -53,6 +57,8 @@ import '@/features/project-creation/ui/styles/choice-cards.css';
 import '@/core/ui/styles/drawer.css';
 // .inline-notice-*, .inline-rename-* — two small shared components.
 import '@/core/ui/styles/inline-controls.css';
+// A scrolling list's fade: the Updates window, the batch window, the API picker (ADR-017 §6).
+import '@/core/ui/styles/scroll-fade.css';
 
 const container = document.getElementById('root');
 if (!container) {

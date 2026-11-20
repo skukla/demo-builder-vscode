@@ -1,0 +1,32 @@
+# Routes a hand-typed `npm run gate` to the pipeline's `checks` tool.
+#
+# Reflect proposal 2 (2026-11-16, owner accepted): sessions typed `npm run gate` by
+# hand 448 times in 11 sessions while the toolbox's `checks` tool runs the very same
+# command (`.pipeline.yaml`: `checks: [npm run gate]`) and reports pass or fail per
+# check. Once per session: the first hand-typed gate is stopped with the pointer, and
+# a repeat runs, so nothing that genuinely needs the shell is blocked. `npm run
+# gate:docs` is a different command and is left alone.
+rule_id=gate-via-checks
+rule_once=1
+
+rule_match() {
+    [ "$1" = "Bash" ] || return 1
+    # `npm run gate` as a whole command word: followed by the end, a space, or a shell
+    # separator, never by `:` (gate:docs) or more letters.
+    case " $2 " in
+        *"npm run gate "*|*"npm run gate;"*|*"npm run gate&"*|*"npm run gate|"*|*"npm run gate)"*|*"npm run gate>"*) return 0 ;;
+    esac
+    return 1
+}
+
+rule_message() {
+    cat <<'MSG'
+You typed `npm run gate` by hand. Run it through the pipeline's `checks` tool
+instead (mcp__plugin_dev-pipeline_pipeline__checks): it runs exactly this command
+(`.pipeline.yaml` checks: [npm run gate]) and says pass or fail for each check, with
+the failing output, so nothing has to be read back from a file.
+
+Shown once per session. If you need the shell form (a background run, a redirect to
+a file), repeat the command and it will run.
+MSG
+}

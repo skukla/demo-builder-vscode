@@ -29,7 +29,7 @@ import { asRawText, asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getMeshEndpoint } from '@/core/state/appBuilderComponentState';
-import { detectFrontendChanges } from '@/core/state/projectStateSync';
+import { detectFrontendChanges } from '@/core/state/frontendEnvDrift';
 import {
     buildStatusPayload,
     deriveMeshStatus,

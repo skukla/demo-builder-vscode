@@ -134,14 +134,19 @@ export function clause(text: string): string {
  * `warning` when a write failed (the run's warning; the fill still stands).
  *
  * @param report - what the step did
+ * @param nameOf - a website's name for its code; the code when not given
  * @returns the sentences, each absent when there is nothing to say
  */
-export function mappingNotes(report: ErpMappingReport): { said?: string; warning?: string } {
+export function mappingNotes(
+    report: ErpMappingReport,
+    nameOf: (websiteCode: string) => string = (code) => code,
+): { said?: string; warning?: string } {
+    // Each website by its name, as the Admin shows it (owner, 2026-11-15).
     const filled = report.filled.map(
-        (row) => `website ${row.website} sells under sales organization ${row.salesOrg}`,
+        (row) => `the website ${nameOf(row.website)} sells under sales organization ${row.salesOrg}`,
     );
     const failed = report.failed ?? [];
-    const websites = failed.map((row) => row.website).join(', ');
+    const websites = failed.map((row) => nameOf(row.website)).join(', ');
     return {
         ...(filled.length
             ? { said: `Filled the integration's mapping from the ERP: ${filled.join('; ')}.` }
@@ -149,7 +154,7 @@ export function mappingNotes(report: ErpMappingReport): { said?: string; warning
         ...(failed.length
             ? {
                   warning:
-                      `Demo data loaded; the mapping for website ${websites} was not saved: ` +
+                      `Demo data loaded; the mapping for the website ${websites} was not saved: ` +
                       `${clause(failed[0].reason)}. Fill ERPs from Commerce again to retry.`,
               }
             : {}),

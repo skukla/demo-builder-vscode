@@ -14,14 +14,12 @@ import {
     handleImportFromFile,
     handleCopyFromExisting,
     handleExportProject,
-    handleDeleteProject,
     handleStartDemo,
     handleStopDemo,
     handleOpenBrowser,
     handleOpenLiveSite,
     handleOpenDaLive,
     handleOpenAdminPanel,
-    handleResetProject,
     handleEditProject,
     handleRenameProject,
     handleOpenHelp,
@@ -29,6 +27,7 @@ import {
     handleOpenAiForProject,
     handleSetProjectPinned,
 } from './dashboardHandlers';
+import { handlePrepareProjectsBatch, handleRunProjectsBatch } from './projectsBatchHandlers';
 import { handleSetViewModeOverride } from '@/core/handlers/viewModeHandler';
 import {
     handleBackgroundOperation,
@@ -36,7 +35,12 @@ import {
     handleOpenDebugLogs,
 } from '@/core/vscode/operationProgress';
 import { handleAnswerOperationPrompt } from '@/core/vscode/operationPrompt';
-import { handleApplyUpdates, handleRecheckUpdates } from '@/features/updates/handlers/updatesModalHandlers';
+import {
+    handleApplyUpdates,
+    handleCheckUpdateRows,
+    handleFixUpdateWithAi,
+    handleRecheckUpdates,
+} from '@/features/updates/handlers/updatesModalHandlers';
 import { handleTakeUpdatesRequest } from '@/features/updates/handlers/updatesModalRequest';
 import { defineHandlers } from '@/types/handlers';
 
@@ -61,8 +65,11 @@ export const projectsListHandlers = defineHandlers({
     copyFromExisting: handleCopyFromExisting,
     exportProject: handleExportProject,
 
-    // Project deletion handler
-    deleteProject: handleDeleteProject,
+    // Reset and Delete, one project's or the selected ones': the questions' rows, then the run.
+    prepareProjectsBatch: handlePrepareProjectsBatch,
+    runProjectsBatch: handleRunProjectsBatch,
+    // A screen opened by the project dashboard's Delete asks, once mounted, which project's
+    // Delete window to open (step-05 S4).
 
     // Demo control handlers
     startDemo: handleStartDemo,
@@ -71,9 +78,6 @@ export const projectsListHandlers = defineHandlers({
     openLiveSite: handleOpenLiveSite,
     openDaLive: handleOpenDaLive,
     openAdminPanel: handleOpenAdminPanel,
-
-    // Project reset handler
-    resetProject: handleResetProject,
 
     // Project edit handler
     editProject: handleEditProject,
@@ -102,6 +106,8 @@ export const projectsListHandlers = defineHandlers({
     takeUpdatesRequest: handleTakeUpdatesRequest,
     // "Back to updates" after a run: Check for Updates again, for what is still waiting.
     recheckUpdates: handleRecheckUpdates,
+    fixUpdateWithAi: handleFixUpdateWithAi,
+    checkUpdateRows: handleCheckUpdateRows,
 
     // The progress modal a reset narrates into (PL-59): where a reopened modal
     // asks how far the run got, and how a closed one hands over to a

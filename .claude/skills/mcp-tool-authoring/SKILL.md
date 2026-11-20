@@ -94,7 +94,7 @@ fields, and the dialog shows these and nothing else, because it answers one ques
 
 | Field | Is |
 |---|---|
-| `action` | completes "Agent · ___?" (the one prefix every agent notification carries, `agentNotice.ts`) |
+| `action` | completes "Agent: ___?" (the one prefix every agent notification carries, `agentNotice.ts`) |
 | `consequence` | ONE sentence: what changes, and name the blast radius |
 | `target` | argument keys naming WHICH thing, in reading order |
 
@@ -269,6 +269,14 @@ Extension-host changes need **F5**; Cmd+R reloads only the webview.
 To check a bundle, grep the **tool-name string literal**, never the registration function —
 esbuild renames identifiers, so `grep registerContentAuthoringTools dist/extension.js` returns
 0 on a perfectly good build.
+
+**A new parameter reaches an agent only after the AGENT restarts.** Agent clients read the tool
+list once per session and validate calls against that copy. After a window reload the server
+takes the new field, but a session that started before it still sends it the old way: on
+2026-11-05 `save_datapack_zip` gained `dataTypes`, the reloaded server accepted it, and the agent's
+session, holding the old schema, sent the array as a string and got `Expected array, received
+string`. Not a server bug. Test a new field with `mcp-live-probe` (it reads the live list), or in a
+new agent session, and say so when you hand the tool to someone mid-session.
 
 ## What else moves (the checklist)
 

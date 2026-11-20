@@ -14,6 +14,9 @@
 import { decodeImsUserId } from './imsTokenClaims';
 import type { AdobeProject } from './types';
 
+/** What a delete of a project the signed-in person did not create answers, at every door. */
+export const NOT_PROJECT_OWNER_MESSAGE = 'You can only delete Adobe projects you created.';
+
 /** The narrow token surface this module needs from AuthenticationService. */
 export interface OwnershipAuthService {
     getTokenManager(): {

@@ -181,7 +181,6 @@ beforeEach(() => {
         success: true,
         projectDeleted: true,
         items: [],
-        shouldClearConsoleSelection: true,
     });
 });
 
@@ -361,7 +360,6 @@ describe('delete_adobe_project', () => {
                 { kind: 'workspace', id: 'w1', outcome: 'skipped' },
                 { kind: 'project', id: 'p1', label: 'Doomed', outcome: 'failed', error: 'in use' },
             ],
-            shouldClearConsoleSelection: false,
         });
         const out = await serve()('delete_adobe_project', {
             ...ARGS,
@@ -460,7 +458,7 @@ describe('delete_adobe_project', () => {
                 step: 2,
                 totalSteps: 5,
             });
-            return { success: true, projectDeleted: true, items: [], shouldClearConsoleSelection: true };
+            return { success: true, projectDeleted: true, items: [] };
         });
         const seen: string[] = [];
 

@@ -124,7 +124,7 @@ and watch paths stay as they are; nothing is hosted inside the extension (ruled 
 | 04 | **Library API**: list (shared + mine), get, promote (owner or allowlisted curator), delete own. Owner is the IMS email the guard already validates. | One registry, two visibilities | Yes |
 | 05 | **Install route**: copy a pack into the Data Installer and the extension's existing import takes over. Direct install over the bulk REST route is the fallback, not the default. **BUILT 2026-10-01 on `feature/datapack-zip`, in the extension rather than the service**: "Copy to the Data Installer" in a library pack's flyout and `copy_library_datapack_to_installer` read the pack from the library and write it into the Data Installer (create + add items; no promote), with the name echo and no overwrite; Import follows in the same flyout. Unit-tested; **the write into the Data Installer has not been run live** — it would leave a pack in the shared catalog, so it waits for the owner's word. Cannot be undone from the extension. | Does install stay the proven path? | Yes |
 | 06 | **Extension**: the catalog shows library and own packs from our store beside the Data Installer's; export targets our store (`ExportDatapackModal`, `start_datapack_export`); a second `apiBaseUrl`-shaped setting for the store, read in one place like `dataInstallerConfig.ts`. Agent surface gets the same reads and the same confirm-gated writes (`mcp-tool-authoring`). **Mostly DONE 2026-10-01 on `feature/datapack-zip`** (plan `.rptc/plans/datapack-zip/` there): the setting `demoBuilder.datapackStore.apiBaseUrl`; both stores in the Data Installer screen's catalog, tagged Library / Yours from a `mine` flag the store now answers; a library pack's flyout saves it as a file and removes your own; datapack files load into either store; agent tools for all of it. **Still open:** export into our store, which waits on export itself (step 03). | Human surface = agent surface | Yes, except export |
-| 07 | **Seed**: export the rebuilt Justrite setup (tree, grants to catalogs 1/15/16, Northgate and Harbor with contract prices) as the first library pack; install it onto a fresh scope; delete it; confirm zero. | Round trip to zero | — |
+| 07 | **Seed**: export the rebuilt Tailspin setup (tree, grants to catalogs 1/15/16, Northgate and Harbor with contract prices) as the first library pack; install it onto a fresh scope; delete it; confirm zero. | Round trip to zero | — |
 
 ## Open questions (file as `question` items when they block a step)
 
@@ -135,7 +135,7 @@ and watch paths stay as they are; nothing is hosted inside the extension (ruled 
   B2B website an ungranted category is invisible to guests (EDS-24's measurement). If import
   does not grant, step 05 has to, after the push.
 - **Packs bring their own root and do not merge** (`docs/systems/data-installer.md`). A pack
-  exported from Justrite re-creates its tree; adding to an existing tree is not what a pack does.
+  exported from Tailspin re-creates its tree; adding to an existing tree is not what a pack does.
 - **The name.** "accs-discovery" also holding the datapack library is cosmetic; the README says
   what the service is.
 

@@ -25,18 +25,26 @@
  *
  * ## Shared infrastructure, and what that changes
  *
- * The datapack catalog holds entries other teams depend on, and an EXPORT writes
- * into it. So `start_datapack_export` takes a name echo as well as a confirm,
- * the same bar `delete_github_repo` uses — the risk is not losing your own work.
+ * A save (`create_datapack`, `save_store_changes_to_pack`) writes a new
+ * version into the datapack library, never into the Data Installer's shared
+ * catalog (D7: agents have no Data Installer destination). When it names a
+ * datapack it takes a name echo (`confirmName`) as well as a confirm, the same
+ * bar `delete_github_repo` uses.
  *
  * @module features/ai/server/dataInstallerDescriptors
  */
 
 import { z } from 'zod';
+import { CLEAR_CHANGES_DESCRIPTION, type InstanceAnswerArgs, instanceClearRequest } from './datapackAnswerArgs';
 import { AGENT_PAGE_SIZE } from './projectors';
 import type { ToolDescriptor } from './toolDescriptors';
 import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
-import type { HandlerResponse } from '@/types/handlers';
+import { PICKABLE_KINDS, PICK_FIELDS } from '@/features/data-installer/pickableKinds';
+import { ErrorCode } from '@/types/errorCodes';
+import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
+
+/** Agents cannot take the Demo Builder mark off (owner, 2026-11-14); the screen can. */
+const DEMO_BUILDER_UNMARK_REFUSAL = "Demo Builder datapacks can't be unmarked by an agent.";
 
 /**
  * The datapack an import/reset/export names.
@@ -46,10 +54,49 @@ import type { HandlerResponse } from '@/types/handlers';
  * earlier draft of this schema said otherwise and taught an agent to make a call
  * that always fails; the live probe caught it on the second invocation.
  */
+/**
+ * Which store holds a pack, for the two step-05 rows: the preview reads the pack from it, and the
+ * save reads the installed version's own rows from it, so products the store already had are kept
+ * in the new version.
+ */
+const PACK_SOURCE = z.enum(['installer', 'library']).optional().describe('Which store holds the pack: installer or library. Omitted: the preview and the check read the installer, the save tries the library then the installer');
+
 const DATAPACK_ID = {
     datapackName: z.string().describe('Datapack name from find_datapacks'),
     version: z.string().describe('Datapack version, e.g. main (required — there is no "latest")'),
 };
+
+/**
+ * What a save from the store picks (datapack-engine step 14), as the service's export `selections`:
+ * `{<kind>: {<field>: [ids]}}`, each kind's field in `pickableKinds.ts`. The ids are the ones
+ * list_datapack_export_items answers.
+ */
+/** Save As: a new datapack of the user's, by the name they gave (`demoPack.ts`). */
+const SAVE_AS = z
+    .object({ displayName: z.string().min(1).describe('The name the user gave the new datapack, e.g. My Bodea') })
+    .optional()
+    .describe("Save As: a new datapack of the user's under this name, which the project then uses. Needed when the project's pack is not theirs");
+
+const SELECTIONS = z
+    .record(z.string(), z.record(z.string(), z.array(z.union([z.string(), z.number()]))))
+    .optional()
+    .describe(
+        `Things to pick from the store for a save with no datapack (refused with one), as {kind: {field: [ids]}} with ids from list_datapack_export_items: ${PICKABLE_KINDS.map((kind) => `${kind} by ${PICK_FIELDS[kind]}`).join(', ')}`,
+    );
+
+/**
+ * Whole data types to save (step-07 E2): each is listed inside the save, so an agent need not page
+ * list_datapack_export_items to send every id. Refused, as selections are, with a datapack.
+ */
+const WHOLE_KINDS = z
+    .array(z.enum(PICKABLE_KINDS))
+    .optional()
+    .describe(
+        'Data types to save whole, for a save with no datapack (refused with one): every item of each is listed inside the save, so no ids are needed; send ids in selections for the rest',
+    );
+
+/** The export fields only an ACO pack (aco:true) takes: a save from the store refuses them. */
+const ACO_ONLY = ' (with aco only; a save from the store refuses it)';
 
 /**
  * Where the data lands, and which parts of it.
@@ -70,7 +117,10 @@ const IMPORT_TARGET = {
     dataTypes: z
         .array(z.string())
         .min(1)
-        .describe('Data types to include, from list_datapack_data_types. At least one'),
+        .describe(
+            'Data types to include, from list_datapack_data_types. At least one. An install writes only these ' +
+                'and what they need, and leaves the rest of the pack alone',
+        ),
     // Optional, and safe to omit: the handler falls back to the scope the
     // PROJECT recorded. Omitting them used to mean the SERVICE's base/default —
     // a scope nobody chose — which is how an agent could import, and reset,
@@ -92,9 +142,19 @@ const IMPORT_TARGET = {
             'Store VIEW code, from list_datapack_import_scopes. Omit to use the project’s; ' +
                 'send with websiteCode to override',
         ),
-    // Which store holds the pack (DI-5). The service installs only from its own catalog; Demo
-    // Builder's engine reads either, so a library pack is installed without copying it first.
-    source: z.enum(['installer', 'library']).optional().describe('Which store holds the pack: installer (default) or library. A library pack needs the demo-builder engine'),
+    // Which store holds the pack (DI-5). Demo Builder installs from either, its own copy first, so a
+    // library pack is installed without copying it to the Data Installer.
+    source: z.enum(['installer', 'library']).optional().describe("Which store holds the pack: installer (default) or library. Demo Builder installs either, reading its own store's copy first"),
+};
+
+/** An agent's call that waits on the job it started rather than polling it (`importJobWait.ts`). */
+const WAIT_FOR_JOB = {
+    waitSeconds: z
+        .number()
+        .min(0)
+        .max(45)
+        .optional()
+        .describe('Wait up to this many seconds (at most 45) for the job to end, its progress shown; the answer then carries job'),
 };
 
 /**
@@ -113,7 +173,7 @@ function pageExportItems(res: HandlerResponse, args: Record<string, unknown>): s
     if (!res.success) return JSON.stringify(res);
 
     const page = res.data as
-        | { items?: unknown[]; totalCount?: number; excludedCount?: number }
+        | { items?: unknown[]; totalCount?: number; excludedCount?: number; inPackCount?: number }
         | undefined;
     const items = page?.items ?? [];
     const limit = Math.max(1, Math.trunc(Number(args.limit) || AGENT_PAGE_SIZE));
@@ -126,8 +186,25 @@ function pageExportItems(res: HandlerResponse, args: Record<string, unknown>): s
         // fabricated-envelope mistake.
         ...(page?.totalCount !== undefined ? { totalCount: page.totalCount } : {}),
         ...(page?.excludedCount !== undefined ? { excludedCount: page.excludedCount } : {}),
+        // Demo Builder's engine: left off `items` because the pack being saved holds them.
+        ...(page?.inPackCount !== undefined ? { inPackCount: page.inPackCount } : {}),
     });
 }
+
+/**
+ * `clear_commerce_instance`'s call, handed to `clear-commerce-instance` as the handler reads it: the
+ * tool takes each project's answer as `changes` (keep or drop) and `saveAs` (a name), by project
+ * path, the words reset, delete and Clear Demo Data use; the handler takes one answer per path, as the
+ * window's batch save question gives it (`instanceClearRequest`, datapackAnswerArgs). Looked up at
+ * call time, so the handler map stays the one the window reaches.
+ */
+const INSTANCE_CLEAR_TOOL = defineHandlers({
+    'clear-commerce-instance': (context: HandlerContext, args?: InstanceAnswerArgs) =>
+        importHandlers['clear-commerce-instance'](context, instanceClearRequest(args)),
+});
+
+/** Answers by project path, as an instance check's `instance.projects` names each project. */
+const PROJECT_PATH = z.string().min(1);
 
 export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
     // ── reads ───────────────────────────────────────────────────────────────
@@ -136,9 +213,10 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: true,
         description:
-            'Which Commerce instance an import would land on, derived from the current project, ' +
+            'Which Commerce instance an install would land on, derived from the current project, ' +
             'plus the datapack the project was created to hold and the website/store-view scope ' +
-            'it recorded. Answers; does not decide.',
+            'it recorded. installFailed (reason, retries) when the install of that datapack at creation ' +
+            'did not succeed: install it again with install_datapack. Answers; does not decide.',
         map: importHandlers,
         type: 'get-datapack-import-target',
     },
@@ -147,8 +225,8 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: true,
         description:
-            "The websites and store views an import can be scoped to on this project's instance. " +
-            'An empty list is normal — it means the import lands on the default.',
+            "The websites and store views an install can be scoped to on this project's instance. " +
+            'An empty list is normal — it means the install lands on the default.',
         map: importHandlers,
         type: 'list-datapack-import-scopes',
     },
@@ -157,10 +235,26 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: true,
         description:
-            'Progress of the running or most recent datapack import/reset. Poll this after ' +
-            'start_datapack_import — that call returns as soon as the job starts, not when it ends.',
+            'Progress of the running or most recent datapack install or uninstall: its purpose (install, switch, ' +
+            'uninstall, restore or undo), its outcome (watching while it runs), ' +
+            "each data type's state, and while products go in or come out a count as detail (\"450 of 2,046 products\"). " +
+            'With waitSeconds (up to 45) it answers when the job ends or the wait is up, showing progress as it goes: ' +
+            'call it with waitSeconds 45 while outcome is watching, rather than polling quickly. A pack of 2,000 ' +
+            'products takes several minutes. Once ended: timings gives the seconds each data type took, and skipped ' +
+            'every skipped row with its whole reason, fifty at a time (skippedTotal; ask for more with skippedFrom). ' +
+            'An install that wrote products ends with check: the store checked against the ' +
+            'pack, as verify_datapack_install answers it; check.verdict "differs" means the data is not what the pack says.',
         map: importHandlers,
         type: 'get-datapack-import-status',
+        inputSchema: {
+            waitSeconds: z
+                .number()
+                .min(0)
+                .max(45)
+                .optional()
+                .describe('Wait up to this many seconds (at most 45) for the job to end, its progress shown; omit to answer at once'),
+            skippedFrom: z.number().int().min(0).optional().describe('Where in the skipped rows to start (default 0): the next page of fifty'),
+        },
     },
     {
         tool: 'list_datapack_export_items',
@@ -168,19 +262,21 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         readOnly: true,
         description:
             'What this Commerce instance holds for one data type, to choose from before exporting. ' +
-            'Paged — totalCount reports how many exist.',
+            "Paged — totalCount reports how many exist. It reads the project's own store, scoped to its website (products, customers, cart rules), its " +
+            `root category (categories) or its customers (companies), for one of: ${PICKABLE_KINDS.join(', ')}; ` +
+            "each item's id is what selections names it by. Commerce's own (the Default set, its five groups, " +
+            'the public catalog) is counted in excludedCount. Items the pack being saved already holds (the ' +
+            "pack named, else the project's own when Demo Builder installed it) are left off, counted in " +
+            'inPackCount: what is left is what was added by hand. A save from a pack takes everything the demo ' +
+            'uses on its own and takes no selections, so this list is for a save with no pack. ' +
+            'Send only dataType (and datapackName with version for a pack named).',
         map: importHandlers,
         type: 'list-datapack-export-items',
         inputSchema: {
-            ...DATAPACK_ID,
+            datapackName: z.string().optional().describe('The pack being saved, whose items are left off; omit for the project\'s own'),
+            version: z.string().optional().describe('That pack\'s version'),
+            source: PACK_SOURCE,
             dataType: z.string().describe('The single data type to enumerate'),
-            // Required for the same reason as the import's: `prepareExport`
-            // refuses without it ("A Commerce instance is required.").
-            commerceInstance: z.string().describe('Source Commerce instance id'),
-            dataTypes: z
-                .array(z.string())
-                .min(1)
-                .describe('Data types the export would cover; at least one, same as start'),
             limit: z
                 .number()
                 .optional()
@@ -197,9 +293,12 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         // thing, without writing".
         readOnly: true,
         description:
-            'Dry-run an import: same guard, same credentials, same request body as the real thing, ' +
-            'without writing. Run this before start_datapack_import. A refusal comes back as ' +
-            'valid:false with a reason, not as an error.',
+            'Dry run: try an install with the same guard, same credentials, same request body as the real thing, ' +
+            'without writing. Run this before install_datapack. A refusal comes back as ' +
+            "valid:false with a reason, not as an error. It also reads the pack's rows and names each kind " +
+            'whose rows Commerce could not take. To fix what a reason names in the pack: ' +
+            'save_datapack_zip, correct the rows, add_datapack_from_file, then run this again; ' +
+            'install only when the user asks.',
         map: importHandlers,
         type: 'validate-datapack-import',
         inputSchema: { ...DATAPACK_ID, ...IMPORT_TARGET },
@@ -208,26 +307,255 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         // a request is well-formed — the opposite of why it exists.
     },
 
-    // ── writes ──────────────────────────────────────────────────────────────
+    // ── installing again, and saving the store back (datapack-engine step 05) ──
     {
-        tool: 'start_datapack_import',
+        tool: 'preview_datapack_changes',
+        needsAuth: ['adobe'],
+        // Reads the pack and the project's store; writes nothing to either, nor to the record.
+        readOnly: true,
+        description:
+            'What installing a datapack again would change in this project\'s store: by data kind, how many ' +
+            'things Demo Builder made would be updated to the pack, added, removed, or kept because they were ' +
+            'changed in the Admin, with a few names each. A kind with installsWith is no data type of its own ' +
+            '(attribute_options go in with product_attributes): an install asks for that one instead. ' +
+            'Writes nothing. installed:false means Demo Builder ' +
+            'never installed the pack here, so every row would be new. root (a pack with a root category of its ' +
+            "own) says where it would go: under the store's own root, or a root of its own with one Admin step. " +
+            'settings names what an install would change in the store configuration, by path with old and new value, and ' +
+            'settings.layer the settings layer they come from (a library pack named <pack>-settings). ' +
+            'With added:true it also answers added: by data kind, how many things the user added by hand in the Admin ' +
+            'since the install, with a few names each, which save_store_changes_to_pack would take into the pack (keep ' +
+            'counts what they changed); another demo\'s records on the same instance are not counted.',
+        map: importHandlers,
+        type: 'preview-datapack-changes',
+        inputSchema: {
+            ...DATAPACK_ID,
+            source: PACK_SOURCE,
+            dataTypes: z.array(z.string()).optional().describe('The kinds an install would be asked for; the answer then covers these and what they need, as the install does. All the pack holds when omitted'),
+            added: z.boolean().optional().describe('Also count what was added by hand since the install, as a save would take it; reads more of the store'),
+        },
+    },
+    {
+        tool: 'verify_datapack_install',
+        needsAuth: ['adobe'],
+        // Reads the pack and the project's store; opens the store with no recorder, so writes nothing.
+        readOnly: true,
+        description:
+            'Check that the store holds what a datapack says, after installing it: for each product the pack ' +
+            'made (all it holds when Demo Builder has no record of installing it), that it is in the store, that a ' +
+            'configurable has its options and children, that each select value is the option the pack names, and ' +
+            'that its price matches. Answers verdict (matches or differs), checked, compared (how many values, prices ' +
+            'and configurables it actually compared: a match that compared nothing is no proof), and per finding a count and up ' +
+            'to 20 examples: missing, configurablesWithoutOptions, configurablesDiffer, valuesDiffer, pricesDiffer. ' +
+            'Writes nothing. Run it after install_datapack succeeds: an install can report success with ' +
+            'products whose sizes or options are wrong.',
+        map: importHandlers,
+        type: 'verify-datapack-install',
+        inputSchema: { ...DATAPACK_ID, source: PACK_SOURCE },
+    },
+    {
+        tool: 'save_store_changes_to_pack',
         needsAuth: ['adobe'],
         readOnly: false,
         description:
-            'Import a datapack into a live Commerce instance. Returns an activationId as soon as ' +
-            'the job starts — poll get_datapack_import_status for the outcome. Validate first.',
+            'Save the store\'s copy of the datapack this project uses into the datapack library, with the categories, ' +
+            'set, attributes and quantities its products need: Save or Save As New. Without saveAs (Save) it is the NEW latest save of ' +
+            'the pack the project uses, only when that pack is the user\'s own (the save before it is kept for undo_last_save; ' +
+            'older saves are deleted); when it is not (a Demo Builder datapack such as ' +
+            'Bodea, or a colleague\'s), nothing is written and the answer has data.needsName: ' +
+            'ask the user for a name, then call again with saveAs.displayName (Save As), which makes a NEW pack of ' +
+            'theirs (the screen\'s Save As New); a name the user already has for one of their datapacks is refused (ask for another). Either way the ' +
+            'project then uses the new save. Everything the demo uses goes in on its own, what was added by hand in the ' +
+            'Admin included, so a save from a pack is refused with selections or wholeKinds: send selections only for a save with no ' +
+            'datapack, and wholeKinds likewise (every item of a data type, listed inside the save). No pack named: the project\'s when ' +
+            'Demo Builder installed it, else none, and the version holds only what is picked (a store Demo Builder ' +
+            'did not fill; send saveAs). The pack installed is never changed, and nothing picked is ever removed with it; ' +
+            'undo_last_save goes back to the save before it. Store configuration a pack does not hold ' +
+            'itself go to a settings layer beside the new save, not into it (settingsLayer). Answers the pack saved into and its new ' +
+            'save, unnamed (ids kept because the store could not name them) and, for a save of picks alone, leftOut (what the store has, of ' +
+            'products, gift cards, categories, cart rules, customers and companies, that the version does not ' +
+            'hold); its message says both. A version the install would refuse is not saved, and the message says ' +
+            'why. Nothing in Commerce changes.',
+        map: importHandlers,
+        type: 'save-store-changes-to-pack',
+        // Gated twice, as uninstall_datapack is: the row refuses before dispatch, and the same flag
+        // satisfies the handler's own confirm check.
+        confirm: true,
+        inputSchema: {
+            datapackName: z.string().optional().describe("The pack installed, from find_datapacks. Omit for the project's"),
+            version: z.string().optional().describe('Its version, e.g. main (required with datapackName)'),
+            source: PACK_SOURCE,
+            selections: SELECTIONS,
+            wholeKinds: WHOLE_KINDS,
+            saveAs: SAVE_AS,
+        },
+    },
+
+    // ── clearing a demo's websites (datapack-engine step 10; datapack-simplification step 06) ──
+    {
+        tool: 'check_demo_data',
+        needsAuth: ['adobe'],
+        readOnly: true, // reads the store structure, the project's websites' products, categories, customers, cart rules, orders and returns, the companies, catalogs, groups, attribute sets, attributes and settings they use, the records, and the ERP integration's erp/status and erp/settings (GETs)
+        description:
+            "What clearing every website this project uses (its own and every website its datapack was installed to) would do in its Commerce instance, " +
+            "planned as if this project's datapack were already uninstalled: clear_demo_data uninstalls it first, so what it installed counts as removed. " +
+            "data.datapack names it (only a pack Demo Builder installed; a pack the service installed has no record, is not uninstalled, and what it put in is cleared with the rest; the project stops naming it once a clearing ends with nothing refused, unread or kept). " +
+            "What another project's datapack lists is kept. Answers data.websites; data.rows, one per data type " +
+            '(products, categories, customers, companies, shared catalogs, cart rules, customer groups, attribute sets, attributes, website settings, ' +
+            'orders, returns), each with its count and what happens ("12 removed", "3 closed", ' +
+            '"2 set back to the default value"); data.records, every record of each type by name, removed and kept (kept: what another ' +
+            "project's datapack lists, or a website not chosen uses; no reasons); data.total; and data.token, which clear_demo_data needs. " +
+            "Each record counts under its own type: a shared catalog's customer group under customer groups, a company's customers under customers. " +
+            'Orders are closed, never deleted; orders Commerce can neither cancel nor refund and orders already closed are not listed. ' +
+            'A type Commerce did not answer is in data.unread: slow (data.problem names it; check again before clearing), refused or strange ' +
+            '(left alone; the clearing runs for the rest). When another local project uses one of these websites, data.warning names it: ' +
+            'tell the user; they may still clear. When an ERP integration (in any local project) sends these websites\' orders to an ERP, ' +
+            'data.erp says its ERP is brought in line with Commerce after the clearing; data.erp.held says why it will not be. ' +
+            'Large stores answer long lists. Writes nothing. ' +
+            'That is websites omitted (Clear Demo Data). Clear Commerce Instance instead clears whole websites of the instance, whoever put the data there: ' +
+            "websites [] answers data.websites, each website's code and name with the local projects using it (projects); " +
+            'website codes answer the same list for clearing those websites, its token starting instance-, with data.instance.projects: each project on them, ' +
+            'its datapack uninstalled first (datapack, with changes: asks means its changes need an answer) or why it keeps its data (kept). ' +
+            'That instance check is what clear_commerce_instance needs; an instance list can be large (every record of every chosen website).',
+        map: importHandlers,
+        type: 'check-demo-data',
+        inputSchema: {
+            websites: z
+                .array(z.string().min(1))
+                .optional()
+                .describe("Omit for this project's websites; [] for the instance's websites with the projects using each; website codes for the instance check clear_commerce_instance needs"),
+        },
+    },
+    {
+        tool: 'clear_demo_data',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        description:
+            "Clear this project's websites of everything check_demo_data listed. When data.datapack named one, it uninstalls this project's datapack first, as uninstall_datapack does: " +
+            "changes the user made in it are saved first (into the user's own pack; a pack not theirs needs changes:\"keep\" with saveAs, or changes:\"drop\", " +
+            'else it answers code CHANGES_NEED_ANSWER and clears nothing, before anything runs). A save or uninstall that fails clears nothing and the project keeps naming its pack; ' +
+            "after a full uninstall the project names no datapack. Then it deletes those products, categories, customers, cart rules " +
+            "(their coupons with them), companies, shared catalogs (their customer groups with them), customer groups, attribute sets and attributes, sets those websites' settings to the default value, " +
+            'takes the shared products and cart rules off these websites, cancels or refunds their orders (closing them, never deleting) and closes their ' +
+            "returns, those an ERP integration sends to an ERP included; then that integration's ERP is brought in line with Commerce and " +
+            "filled again, in the same call. When that step fails or is held, data.erp.broughtInLine is false and data.erp.problem says why; " +
+            "the orders stay closed. Cannot be undone, except the datapack, which installing it again puts back. Show the user check_demo_data's list and ask first. Needs the token from that check; " +
+            'refused while that check named a type Commerce was too slow to answer (check again). If the store would now clear anything the list did not hold, nothing more is written and the ' +
+            "new list comes back as data. Never touches what another project's install records list, what this project's datapack uninstall left in Commerce on purpose (the note says so), " +
+            "anything a website not chosen also uses, Commerce's own customer groups and attributes, the public catalog, the Default attribute set, stocks, the default settings or another website's. " +
+            "The note starts with what became of the datapack. Answers data.leftOpen (orders left open " +
+            'with a note, to finish in the Commerce Admin) and data.listSettings (list settings only the Admin can set back). A partial failure says what finished; running it again picks up what is left.',
+        map: importHandlers,
+        type: 'clear-demo-data',
+        confirm: true, // gated twice, as uninstall_datapack is: the row, then the handler's own check
+        inputSchema: {
+            token: z.string().describe("check_demo_data's token"),
+            changes: z.enum(['keep', 'drop']).optional().describe(CLEAR_CHANGES_DESCRIPTION),
+            saveAs: SAVE_AS,
+        },
+    },
+    {
+        tool: 'clear_commerce_instance',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        description:
+            "Clear whole websites of this project's Commerce instance, whoever put the data there (the screen's Clear Commerce Instance): everything the instance " +
+            'check (check_demo_data with website codes) listed. Show the user that list, its projects and what each loses, and ask first; understood:true says the ' +
+            'user understood. First it uninstalls the datapack of each project the list names with one, in turn, as uninstall_datapack does: ' +
+            "changes in the user's own pack are saved into it; changes in a pack not theirs need an answer by project path, changes {path: \"keep\"} with " +
+            'saveAs {path: name} (a new datapack of theirs) or changes {path: "drop"} (lost; drop loses changes in the user\'s own pack too). A project with ' +
+            'unanswered changes in a pack not theirs answers code CHANGES_NEED_ANSWER naming it, and nothing is cleared. A save or uninstall that fails stops ' +
+            'there, before anything is cleared; running it again with the same token skips the packs already out. Then it clears as clear_demo_data does, ' +
+            "held to the list: what a kept project's datapack lists stays, and the projects that keep their data are named in the note. Cannot be undone, except " +
+            'the datapacks: each can be installed again from the library. Needs the token from that instance check; refused while that check named a type ' +
+            'Commerce was too slow to answer (check again).',
+        map: INSTANCE_CLEAR_TOOL,
+        type: 'clear-commerce-instance',
+        confirm: true, // gated twice: the row, then the handler's own confirm and understood
+        inputSchema: {
+            token: z.string().describe('The token of check_demo_data called with website codes'),
+            understood: z.literal(true).describe('true: the user read the list and understood it cannot be undone, except the datapacks'),
+            changes: z
+                .record(PROJECT_PATH, z.enum(['keep', 'drop']))
+                .optional()
+                .describe("By project path, for a project whose datapack is uninstalled first: keep saves the user's changes as a new datapack named by saveAs; drop loses them, in the user's own pack too. Left out, changes in the user's own pack are saved into it"),
+            saveAs: z
+                .record(PROJECT_PATH, z.string().min(1))
+                .optional()
+                .describe('By project path, with changes keep: the name the user gave the new datapack, e.g. My Bodea'),
+        },
+    },
+
+    // ── writes ──────────────────────────────────────────────────────────────
+    {
+        tool: 'install_datapack',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        description:
+            'Install a datapack into a live Commerce instance. Returns an activationId once the job starts. ' +
+            'With waitSeconds (up to 45) it waits for the job to end, showing its progress, and the answer carries ' +
+            'the outcome as job. A small pack ends inside the wait; a large one (2,000 products) takes several ' +
+            'minutes: then call get_datapack_import_status with waitSeconds 45 until outcome is no longer watching. ' +
+            'Validate first. ' +
+            'Only the dataTypes named install, with what they need. ' +
+            'A kind left out is left alone: not installed, not removed, not put back. ' +
+            'Installing a pack again updates and removes what it made before, of the kinds named, and keeps what was ' +
+            'changed in the Admin; the outcome\'s note says what it took out and what it kept, and preview_datapack_changes ' +
+            'says it beforehand. What Commerce will not take out stays, named in the note with its reason. A pack\'s store_config rows are written last, and the note names each ' +
+            'setting set, by path, with its old and new value. A pack holding no ' +
+            'store_config also gets its settings layer, the newest library pack named <pack>-settings, written after ' +
+            'its data and removed with it, if dataTypes names all the pack holds or store_config; the note says when not. ' +
+            'A path a pack may not set stops the install before any write, by path, ' +
+            'and a setting Commerce refuses leaves the data installed and is named in the note. A pack\'s own root category goes under the ' +
+            "store's root when no other store shares it; when one does, the install asks the user for the one " +
+            'Admin step (no API can change a store\'s root), and the note names it if skipped. Running it ' +
+            'again re-checks that step and marks it done once set. Under the store\'s root, a pack category ' +
+            'whose url key the store already uses in the same place stops the install before any write. ' +
+            "Every kind's rows are checked before any write. A row Commerce refuses is skipped and the rest " +
+            'go in; the note names each skipped row and why, and every row that needed it. Every kind still ' +
+            'reads success, so read the note. Sign-in, throttling, a Commerce error or no answer stop it; ' +
+            'running it again carries on and counts anything made without an answer as the pack\'s. ' +
+            "Installing another pack over the one the project uses (Demo Builder installed it) is a switch (the screen's " +
+            'Switch), and installing another version of that pack works the same way: the pack in use is uninstalled first, ' +
+            'in the same job, as uninstall_datapack uninstalls it, then this one installs; an uninstall that fails installs ' +
+            'nothing (stoppedAt replacing) and the project keeps naming the old pack, else it names the new one. Changes ' +
+            "the user made since it was installed are saved into the user's own pack first; when the old pack is not " +
+            'theirs, this names the changes and installs nothing until changes answers: keep saves them as a new pack ' +
+            'named by saveAs, drop loses them. Ask the user. Installing the same version again uninstalls nothing.',
         map: importHandlers,
         type: 'start-datapack-import',
         confirm: true,
-        inputSchema: { ...DATAPACK_ID, ...IMPORT_TARGET },
+        inputSchema: {
+            ...DATAPACK_ID,
+            ...IMPORT_TARGET,
+            ...WAIT_FOR_JOB,
+            changes: z
+                .enum(['keep', 'drop'])
+                .optional()
+                .describe("Only when this uninstalls the project's pack first (a switch, or another version of it): the user's changes to it since install, keep saves them first (into their own pack, or as saveAs), drop loses them"),
+            saveAs: SAVE_AS,
+        },
     },
     {
-        tool: 'reset_datapack',
+        tool: 'uninstall_datapack',
         needsAuth: ['adobe'],
         readOnly: false,
         description:
-            "Remove a datapack's data from the Commerce instance so the project can be reused. " +
-            'Cannot be undone. Returns an activationId; poll get_datapack_import_status.',
+            "Uninstall a datapack: take its data out of the Commerce instance so the project can be reused (the screen's Uninstall). " +
+            'Cannot be undone. Returns an activationId; with waitSeconds (up to 45) it waits for the uninstall to end, ' +
+            'showing its progress, and carries the outcome as job; else follow with get_datapack_import_status. ' +
+            'It takes everything the install record lists, whatever dataTypes names (it may be omitted). A category, set, company, shared catalog or customer group the pack made ' +
+            "that holds things it did not make is kept (a kept company with its admin and its catalog), and " +
+            "the outcome's note says which; store configuration it set, its settings layer's included, is put back " +
+            "first, unless changed since, and the note names each by path. The project stops naming the pack only once an uninstall " +
+            'finishes having taken everything out; what Commerce will not take back stays, named in the note with its reason, and uninstalling again tries it again. A pack Demo Builder has no install record of ' +
+            '(one the Data Installer service installed) is refused and nothing is uninstalled by name; check_demo_data then ' +
+            'clear_demo_data clears what that install left. If the user changed anything the pack made ' +
+            'since it was installed, this names the changes and uninstalls nothing until changes answers: keep ' +
+            "saves them first, into the user's own pack or as a new one named by saveAs (the answer says which; " +
+            'if the save fails nothing is uninstalled), drop loses them. When changes is omitted and the setting ' +
+            'demoBuilder.dataInstaller.changesOnRemoval is save, it saves without asking. Ask the user; ' +
+            'preview_datapack_changes shows them beforehand (keep).',
         map: importHandlers,
         type: 'reset-datapack',
         // Gated TWICE, and that is not redundant. The handler has always required
@@ -235,39 +563,145 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         // and the same flag satisfies the handler's own check, so the two agree
         // rather than compete. If either were removed the other would still hold.
         confirm: true,
-        inputSchema: { ...DATAPACK_ID, ...IMPORT_TARGET },
+        inputSchema: {
+            ...DATAPACK_ID,
+            ...IMPORT_TARGET,
+            ...WAIT_FOR_JOB,
+            dataTypes: z.array(z.string()).min(1).optional().describe('May be omitted: an uninstall takes everything the install record lists'),
+            changes: z.enum(['keep', 'drop']).optional().describe("The user's changes since install: keep saves them first (into their own pack, or as saveAs), drop loses them"),
+            saveAs: SAVE_AS,
+        },
     },
     {
-        tool: 'start_datapack_export',
+        tool: 'undo_last_save',
         needsAuth: ['adobe'],
         readOnly: false,
         description:
-            'Capture data from a Commerce instance into a datapack. **Writes into the SHARED ' +
-            'catalog other teams depend on** — requires confirm:true and confirmName equal to the ' +
-            'datapack name. List what it would contain first.',
+            "Undo the last save of the project's own datapack: Commerce goes back to the save before it. The datapack must " +
+            "be the one this project uses and one of the user's own in My Datapacks (not a Demo Builder datapack), with an earlier save " +
+            'to go back to; otherwise this refuses and nothing changes. One job, as install_datapack over the pack in use: ' +
+            'the last save is uninstalled and the one before it installed, onto the website and store view the pack is ' +
+            'installed to. Changes made in the Admin since are lost, never saved. Only once the job succeeds is the last ' +
+            'save deleted from My Datapacks, with its store configuration; a job that fails deletes nothing and the project ' +
+            'keeps the last save. Returns an activationId; with waitSeconds (up to 45) it waits for the job to end and ' +
+            'carries the outcome as job; else follow with get_datapack_import_status. Ask the user first.',
+        map: importHandlers,
+        type: 'undo-last-save',
+        // Gated twice, as uninstall_datapack is: the row, then the handler's own check.
+        confirm: true,
+        inputSchema: {
+            datapackName: z.string().describe("The project's datapack, by its name from find_datapacks (one of yours)"),
+            ...WAIT_FOR_JOB,
+        },
+    },
+    {
+        tool: 'restore_datapack',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        description:
+            "Restore the project's datapack: put Commerce back to a previous state of it, losing what was changed in the " +
+            "Admin since (the screen's Restore). The datapack must be the one this project uses, installed by Demo Builder; " +
+            'otherwise this refuses and nothing changes. A Demo Builder datapack (or a Data Installer pack) goes back to the ' +
+            "version installed, as it ships; a newer version is update_datapack's, not this. One of the user's own in My " +
+            "Datapacks goes back to to:'lastSaved' (the save installed, throwing away unsaved edits) or to:'original' (its " +
+            "first save, kept for good); without to it starts nothing and answers the question (data.asks, data.own with " +
+            "lastSaved and original as versions, data.changes): ask the user which, then call again with to. to:'original' " +
+            "over unsaved edits needs changes: 'keep' saves them into the datapack first, 'drop' loses them; without it " +
+            'nothing starts (CHANGES_NEED_ANSWER). It checks Commerce first: when nothing would change it answers ' +
+            'data.upToDate and starts nothing. Otherwise it is one job: what is installed is uninstalled by its install ' +
+            'record and the point installed, onto the website and store view it is installed to. Returns an activationId and ' +
+            'target (the version restored); with waitSeconds (up to 45) it waits for the job to end and carries the outcome ' +
+            'as job; else follow with get_datapack_import_status. Ask the user first, naming the point.',
+        map: importHandlers,
+        type: 'restore-datapack',
+        // Gated twice, as uninstall_datapack is: the row, then the handler, which starts only with confirm.
+        // The row's flag satisfies it, so an agent always asks the user.
+        confirm: true,
+        inputSchema: {
+            datapackName: z.string().describe("The project's datapack, by its name from get_datapack_import_target"),
+            to: z
+                .enum(['lastSaved', 'original'])
+                .optional()
+                .describe("The user's own datapack only: back to its last save, or its original (first save)"),
+            changes: z
+                .enum(['keep', 'drop'])
+                .optional()
+                .describe("to:'original' over unsaved edits only: save them into the datapack first, or lose them"),
+            ...WAIT_FOR_JOB,
+        },
+    },
+    {
+        tool: 'update_datapack',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        description:
+            "Update the project's datapack: apply what a newer version of it changed, keeping every record the user " +
+            "edited in the Admin since the install (the screen's Update). The newer version is the library's newest save " +
+            "of the datapack (the user's own or a Demo Builder one), when newer than the one installed; with none, it " +
+            'finishes data types an earlier update left out, or ones an update that stopped did not finish. It checks Commerce ' +
+            'first: with nothing to write it answers data.upToDate (and data.movesTo when a newer version writes nothing: call ' +
+            'again confirmed to move the project onto it; nothing is written without that). dataTypes picks which data types to update (default: every type that ' +
+            'changed); a type left out stays on the older version and can be updated later, since a datapack is built ' +
+            'out additively. One job, nothing uninstalled and nothing saved: the newer version is written over the one ' +
+            'installed, in place. Returns an activationId and target (the version installed); with waitSeconds (up to ' +
+            '45) it waits for the job to end and carries the outcome as job; else follow with get_datapack_import_status. ' +
+            'Ask the user first.',
+        map: importHandlers,
+        type: 'update-datapack',
+        // Gated twice: the row, then the handler, which starts only with confirm (the row's flag).
+        confirm: true,
+        inputSchema: {
+            datapackName: z.string().describe("The project's datapack, by its name from get_datapack_import_target"),
+            dataTypes: z
+                .array(z.string())
+                .optional()
+                .describe('The data types to update, by code; default every type the newer version changed'),
+            ...WAIT_FOR_JOB,
+        },
+    },
+    {
+        tool: 'create_datapack',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        description:
+            "Capture data from this project's Commerce store into a datapack: saves what is picked in selections, and every item of each data type in wholeKinds, " +
+            "into the datapack library, with the project's pack when Demo Builder installed it; the same save as " +
+            'save_store_changes_to_pack (Save, or Save As New with saveAs), answering the same way. Send selections and/or wholeKinds, ' +
+            "saveAs and confirm. Nothing goes into the Data Installer's shared catalog. aco:true (an Adobe Commerce Optimizer pack) is refused in this release: ACO " +
+            'datapacks arrive with ACO support.',
         map: importHandlers,
         type: 'start-datapack-export',
         confirm: true,
         inputSchema: {
-            ...DATAPACK_ID,
-            commerceInstance: z.string().describe('Source Commerce instance id'),
-            dataTypes: z.array(z.string()).min(1).describe('Data types to capture; at least one'),
+            datapackName: z.string().optional().describe(`Datapack name to write${ACO_ONLY}`),
+            version: z.string().optional().describe(`Datapack version to write${ACO_ONLY}`),
+            dataTypes: z
+                .array(z.string())
+                .min(1)
+                .optional()
+                .describe(`ACO kinds to capture; omit for all five${ACO_ONLY}`),
+            selections: SELECTIONS,
+            wholeKinds: WHOLE_KINDS,
+            saveAs: SAVE_AS,
+            aco: z.boolean().optional().describe('Refused in this release: ACO datapacks arrive with ACO support'),
+            storeViews: z
+                .array(z.string())
+                .optional()
+                .describe('With aco: the store view codes to make it for; omit for every one'),
             confirmName: z
                 .string()
                 .optional()
-                .describe('Must equal datapackName exactly — guards a write to the shared catalog'),
+                .describe(`Must equal datapackName exactly${ACO_ONLY}`),
         },
-        // The echo is checked BEFORE dispatch, like delete_github_repo's. A
-        // confirm alone is the bar for "your own project"; this writes somewhere
-        // other people read.
+        // The echo is checked BEFORE dispatch, like delete_github_repo's: an ACO pack is written
+        // under the name sent. A call naming no pack is a save from the store, which needs none.
         preflight: (args) =>
-            args.confirmName === args.datapackName
+            args.datapackName === undefined || args.confirmName === args.datapackName
                 ? undefined
                 : {
                       error:
-                          `start_datapack_export writes "${String(args.datapackName)}" into the shared ` +
-                          `datapack catalog. To proceed, call again with confirmName:"${String(args.datapackName)}".`,
-                      sharedCatalog: true,
+                          `create_datapack writes "${String(args.datapackName)}" into My Datapacks. ` +
+                          `To proceed, call again with confirmName:"${String(args.datapackName)}".`,
                   },
     },
 
@@ -280,8 +714,10 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
         // Writes a local file and nothing else: the store is only read.
         readOnly: false,
         description:
-            'Save a datapack from the Data Installer or the datapack library as a zip file in the ' +
-            'project — one file to keep, send, or load into a store later.',
+            "Save a datapack from the Data Installer or the datapack library as a zip file in the project (the screen's Save as File) — " +
+            'one file to keep, send, or load into a store later. A pack holding no store_config ' +
+            'carries its settings layer (the library pack named <pack>-settings) as a second section; ' +
+            'settingsLayer says so, and settingsLayerNote when the library could not be asked.',
         map: importHandlers,
         type: 'save-datapack-zip',
         inputSchema: {
@@ -290,80 +726,188 @@ export const DATA_INSTALLER_DESCRIPTORS: ToolDescriptor[] = [
             path: z
                 .string()
                 .describe(
-                    'Where to write the file, inside the project. A path not ending in .zip is a folder ' +
-                        '(made if missing) and gets <name>-<version>.datapack.zip',
+                    'Where to write the file, inside the project; folders it names are made if missing. ' +
+                        'A path not ending in .zip is a folder and gets <name>-<version>.datapack.zip',
+                ),
+            dataTypes: z
+                .array(z.string())
+                .min(1)
+                .optional()
+                .describe(
+                    'Save only these data types (get_datapack lists them); omit to save all. Use it to leave ' +
+                        'out an item the store cannot return, such as one too large to send',
                 ),
         },
     },
     {
-        tool: 'open_datapack_zip',
+        tool: 'build_datapack_from_export',
+        needsAuth: [],
+        // Reads and writes files inside the project and nothing else: no store, no Commerce.
+        readOnly: false,
+        description:
+            'Build a datapack file from a Commerce product export (the CSV System > Data Transfer > Export writes, ' +
+            'or the same table as JSON): products, gift cards, the categories they name, and stock. An export ' +
+            'defines no attributes, so name basePath, a datapack file (save_datapack_zip makes one) whose ' +
+            'attributes, attribute sets and other kinds the new pack keeps; its products and stock are replaced ' +
+            'by the export\'s, and its categories kept when it has them. Without one, categories hang from a root ' +
+            'named <displayName> Catalog and products keep Commerce\'s own fields; leftOutAttributes names the rest. ' +
+            'SKUs are kept as exported. unmatchedOptions names each select value that matches no option of the base ' +
+            "pack's attribute (an install would refuse that row or set another option): fix those before loading it. The pack is checked with " +
+            "the install's own checks first and not written if it would be refused. Load it with add_datapack_from_file.",
+        map: importHandlers,
+        type: 'build-datapack-from-export',
+        inputSchema: {
+            exportPath: z.string().describe('The export file, inside the project'),
+            path: z
+                .string()
+                .optional()
+                .describe(
+                    'Where to write the pack, inside the project (default the project folder); a path not ending in .zip is a folder and gets <name>-<version>.datapack.zip',
+                ),
+            datapackName: z.string().describe('The new pack name: letters, digits, - and _'),
+            version: z.string().describe('The new pack version, e.g. main'),
+            displayName: z.string().describe('The name SCs see, e.g. Luma'),
+            description: z.string().optional().describe('One line about the pack'),
+            basePath: z
+                .string()
+                .optional()
+                .describe('A datapack file, inside the project, whose attributes, sets and other kinds the new pack keeps'),
+            importForm: z
+                .boolean()
+                .optional()
+                .describe(
+                    "Carry the products in Commerce's import form (the Data Installer's product_export kind): installed through the Import API, about twice as fast; a reinstall leaves the products already there as they are",
+                ),
+        },
+    },
+    {
+        tool: 'read_datapack_file',
         needsAuth: [],
         readOnly: true,
         description:
-            'Say what a datapack zip file holds — name, version, data types — without writing anything. ' +
-            'Run before load_datapack_zip.',
+            'Say what a datapack zip file holds — name, version, data types, and any settings layer by path — ' +
+            'without writing anything. Run before add_datapack_from_file.',
         map: importHandlers,
         type: 'open-datapack-zip',
         inputSchema: { path: z.string().describe('The datapack file, inside the project') },
     },
     {
-        tool: 'load_datapack_zip',
+        tool: 'add_datapack_from_file',
         needsAuth: ['adobe'],
         readOnly: false,
         description:
-            'Write the pack in a datapack zip file into the datapack library (default) or the Data Installer. ' +
-            'Into the Data Installer, which other teams share, it needs confirmName equal to the pack ' +
-            'name and never updates an existing pack. This does not install anything into Commerce.',
+            "Add the pack in a datapack zip file to My Datapacks, the user's own datapack library (the screen's Add from File; " +
+            "Install from File is this, then install_datapack). It is private to the user until shared. A settings layer " +
+            'in the file goes into My Datapacks with it; settingsLayer says what became of it. A file whose layer holds a path a ' +
+            'pack may not set is refused before any write. This does not install anything into Commerce.',
         map: importHandlers,
         type: 'load-datapack-zip',
         confirm: true,
         inputSchema: {
             path: z.string().describe('The datapack file, inside the project'),
-            target: z.enum(['installer', 'library']).optional().describe('Which store to write it into (default library)'),
             update: z
                 .boolean()
                 .optional()
-                .describe('Library only: replace the data types this file carries in a pack that already exists'),
-            confirmName: z
+                .describe("Replace the data types this file carries in a datapack of yours that already exists (the screen's Replace)"),
+            saveAs: z
                 .string()
                 .optional()
-                .describe('Data Installer only: must equal the pack name (open_datapack_zip reports it)'),
+                .describe(
+                    "The screen's Keep Both, for a file whose datapack you already have: add it as a new datapack of yours under this name " +
+                        '(the screen offers "My Luma 2", then "My Luma 3"), leaving the one already there as it is. Never with update; a name you already have is refused, and so is any name while My Datapacks cannot be read',
+                ),
         },
+        // D7 (owner, 2026-11-10): agents get no Data Installer destination, which fails for our accounts;
+        // the screen hides it too (`INSTALLER_WRITES_SHOWN`). Forced, so a session holding the old schema
+        // cannot send target "installer" past it.
+        argDefaults: { target: 'library' },
     },
     {
         tool: 'delete_library_datapack',
         needsAuth: ['adobe'],
         readOnly: false,
         description:
-            'Delete one of your own packs from the datapack library — the undo of ' +
-            "load_datapack_zip. Cannot be undone. The library only lets a pack's owner delete " +
-            "it; the Data Installer's shared catalog is never touched.",
+            "Delete one of your own datapacks from My Datapacks (the screen's Delete). Cannot be undone. A datapack of saves is " +
+            'deleted whole, as the screen does: send everyVersion:true and no version. A version names one version alone. ' +
+            "A datapack a project uses is refused, and so is a Demo Builder datapack, as on the screen. Only a pack's owner " +
+            "can delete it; the Data Installer's shared catalog is " +
+            'never touched. When you shared the pack in a project file, the answer carries `warning` (without confirm, ' +
+            '`sharedInFile`): anyone who has not created that project yet gets the pack it was made from instead. Each version ' +
+            'takes your settings layer of the same version with it (`settingsLayerDeleted: true`).',
         map: importHandlers,
         type: 'delete-library-datapack',
-        // Gated twice, as reset_datapack is: the row refuses before dispatch, and the
+        // Gated twice, as uninstall_datapack is: the row refuses before dispatch, and the
         // same flag satisfies the handler's own confirm check.
         confirm: true,
-        inputSchema: { ...DATAPACK_ID },
+        inputSchema: {
+            datapackName: z.string().describe('Your datapack, by its name from find_datapacks'),
+            version: z.string().optional().describe('One version to delete, e.g. main; omit with everyVersion'),
+            everyVersion: z.boolean().optional().describe('true: delete every version (every save) of the datapack, as the screen does'),
+            keepSettingsLayer: z
+                .boolean()
+                .optional()
+                .describe(
+                    'true: leave your settings layer of the same version. When removing what add_datapack_from_file added, always send it, ' +
+                        'and delete a layer the load created (settingsLayer.outcome created) by its own id in a call of its own',
+                ),
+        },
     },
     {
-        tool: 'copy_library_datapack_to_installer',
+        tool: 'rename_datapack',
         needsAuth: ['adobe'],
         readOnly: false,
         description:
-            "Copy a datapack library pack into the Data Installer's catalog, for the Data Installer " +
-            'service to install. Not needed to install it here: start_datapack_import takes ' +
-            'source:"library". **Writes into the SHARED catalog** — needs confirm:true and ' +
-            'confirmName equal to the pack name, never overwrites an existing pack, and cannot be ' +
-            'undone from the extension.',
+            'Rename one of your own datapack library packs: every version takes the new display ' +
+            "name (its datapackName, from find_datapacks, never changes). Answers how many versions were renamed.",
         map: importHandlers,
-        type: 'copy-library-datapack-to-installer',
+        type: 'rename-library-datapack',
+        // Gated twice, as delete_library_datapack is: the row refuses before dispatch, and the
+        // same flag satisfies the handler's own confirm check.
         confirm: true,
         inputSchema: {
-            ...DATAPACK_ID,
-            confirmName: z
-                .string()
-                .optional()
-                .describe('Must equal datapackName — guards a write to the shared catalog'),
+            datapackName: z.string().describe('The library pack name from find_datapacks'),
+            displayName: z.string().describe('The new name everyone sees for the pack'),
         },
+    },
+    {
+        tool: 'share_datapack',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        description:
+            "Share one of your own datapacks in My Datapacks, or stop sharing it (the screen's Share and Stop Sharing): every version. " +
+            'Shared, everyone using Demo Builder can see and install it under Community Datapacks, and a colleague can ' +
+            'create a project from a file that names it; stopped, only you can. Its settings layer goes with it. Answers how many versions changed. ' +
+            "Ask the user first. export_project_settings's packNote says when the project's pack is private.",
+        map: importHandlers,
+        type: 'share-library-datapack',
+        confirm: true, // gated twice, as rename_datapack is: the row, then the handler's own check
+        inputSchema: {
+            datapackName: z.string().describe('The library pack name from find_datapacks (one of yours)'),
+            shared: z.boolean().describe('true to share it with everyone with access to the library, false to stop sharing'),
+        },
+    },
+    {
+        tool: 'mark_demo_builder_datapack',
+        needsAuth: ['adobe'],
+        readOnly: false,
+        description:
+            "Mark one of your own datapacks in Demo Builder's datapack store as a Demo Builder datapack: every " +
+            'version. A marked datapack is listed under Demo Builder Datapacks; any other shared one under ' +
+            'Community Datapacks. A marked datapack cannot be deleted, and an agent cannot take the mark off: ' +
+            'demoBuilder:false is refused. It does not share the datapack: share_datapack does that. The store refuses ' +
+            'anyone not on its list of Demo Builder datapack owners. Ask the user first.',
+        map: importHandlers,
+        type: 'mark-team-datapack',
+        confirm: true,
+        inputSchema: {
+            datapackName: z.string().describe('The pack name from find_datapacks (one of yours)'),
+            demoBuilder: z.boolean().describe('true to mark it as a Demo Builder datapack; false is refused for agents'),
+        },
+        // Unmarking would reopen the Delete a Demo Builder datapack refuses (owner, 2026-11-14,
+        // "Close it"). No screen reaches the handler since walk F226; the refusal is here, before dispatch.
+        preflight: (args) =>
+            args.demoBuilder === false
+                ? { success: false, error: DEMO_BUILDER_UNMARK_REFUSAL, code: ErrorCode.INVALID_OPERATION }
+                : undefined,
     },
 ];

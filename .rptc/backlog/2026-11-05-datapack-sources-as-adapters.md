@@ -1,0 +1,93 @@
+---
+id: DI-12
+kind: feature
+area: data-installer
+needs: []
+value: med
+status: active
+---
+
+# Datapack sources as adapters, and one setting for either or both
+
+Filed 2026-11-05, after beta.153's release walk. The owner's aim: the Datapacks feature is the glass
+over whichever data source is on, each source an adapter, so an SC sees little difference between
+a pack from Demo Builder's store and one from the Data Installer. Both sources may be on at once,
+and it should be easy to read which are.
+
+Research, with all 62 decision points measured: `.rptc/research/datapack-source-adapters/research.md`.
+
+## Two parts
+
+1. **One descriptor per source, not adapter classes.** Following the house conventions (handbook §4,
+   rows over classes; ADR-025's one-descriptor seam, as `agentEngine.ts` does for agents): a
+   `DatapackSourceDescriptor` per source, and every catalog row and detail carries what it allows
+   (share, rename, remove, save changes, update from a file, undo a load) and its owner and
+   visibility text. The webview reads those instead of naming a store. Routing stays one client and
+   one access function; installing already sits behind `DatapackEngine`.
+2. **One setting for the sources.** A "Datapack Sources" group. At least one working source must
+   power the feature, and Demo Builder's store is the only place an SC can save a pack until the
+   Data Installer's owners accept outside writes, so the store is always on and the Data Installer
+   keeps its checkbox (owner, 2026-11-05). The engine stops being a choice the SC makes.
+
+## The service engine: delete it once nothing is lost (owner, 2026-11-05)
+
+The owner's condition: delete it as long as no functionality is lost. Checked the same day against
+`.rptc/research/datapack-engine/service-parity-import-delete.md`. Nothing that WORKS today is lost
+(the code records the service ignoring our Commerce credentials since 2026-10-27, so it installs
+nothing for us), but two things exist only on the service's side on paper:
+
+1. **`product_export` and `customers_export`**, the bulk forms of products and customers. Demo
+   Builder's engine installs 19 of the service's 21 data types and refuses these two. Luma's
+   products exist only as `product_export`, and DI-8 says Venia's do too. So the deletion waits on
+   [[DI-8]], which is itself gated on the owner reading those items from the service's database.
+2. **Removing a pack the service installed.** Ours refuses a pack it has no record of. Clear Demo
+   Data covers products, categories, customers and cart rules; the rest has no route either way
+   while the service refuses our credentials.
+
+Not checked live: whether the service's export, behind the service engine's Create route, still
+works today. Check it before deleting that route. Reading the service's job history for the
+Activity tab is not part of the engine and stays.
+
+**2026-11-06: the engine part done, in reduced scope.** Deleted: the service engine (the service
+installing into and removing from Commerce for us), the `demoBuilder.dataInstaller.engine` setting,
+and the service's own Create route (it exported a store into its shared catalog with the service's
+Commerce access). Both conditions above had been met first: `product_export` and `customers_export`
+install natively (DI-8), and a pack the service installed points to Clear Demo Data. The export check
+was answered by reading the code rather than live: Save As captures what is picked from any store,
+one Demo Builder never installed into included, and Select All Data takes a whole store, so the
+service's export did nothing Save As then Copy does not.
+
+Kept, at the owner's word (2026-11-06): **Copy to the Data Installer**, because packs an SC makes
+are meant to reach the Data Installer one day, now shown beside Import on a library pack whenever the
+Data Installer is on rather than only under the service engine; and **installing a pack only the
+Data Installer holds**, which Demo Builder already does by reading it (`readPackItems`). Checking a
+pack against the service's rules belongs at the copy, before anything is sent (plan s33).
+
+The owner's note: this split between the two sources is to be reconsidered when part 1, the
+sources as adapters, is built.
+
+**2026-11-06: Copy to the Data Installer, for part 1.** Our accounts cannot write to the Data
+Installer, so the button is off for now (`COPY_TO_INSTALLER_SHOWN` in `PackActions.tsx`, a stopgap
+for beta.153), and its agent tool says plainly when the service refuses. The owner asked that part 1
+decide the lasting shape:
+- Copy shows from the target source's own ability to take a pack (its descriptor's "accepts
+  writes", false for the Data Installer today), replacing the code switch.
+- Copy has no undo: Demo Builder cannot delete a pack from the Data Installer, and a copy never
+  replaces one. Part 1 includes that removal, or says why it cannot be done (rule 1, whatever can be
+  done can be undone).
+- The format check a pack passes on its way in (`installerForm.ts`: gift cards to the Default set,
+  counts as numbers, data types it has no schema for refused before any write) is the Data
+  Installer source's own rule, and belongs with that source.
+
+## Size
+
+About 4.5 to 5.5 working days, plus review between parts; the engine answer moves it by a day. The
+breakdown is in the research.
+
+Not for beta.153: the release behaves sensibly with both sources on.
+
+## Shipped so far
+
+- 2026-11-06  feat(datapacks): Demo Builder installs every datapack itself (`7b6091474`)
+- 2026-11-06  feat(datapacks): a pack copied to the Data Installer goes in its format, or not at all (`5b9742dc4`)
+- 2026-11-07  fix(datapacks): hide Copy to the Data Installer until we can write to it (`8b7b425f8`)

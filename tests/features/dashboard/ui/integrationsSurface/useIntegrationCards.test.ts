@@ -165,15 +165,15 @@ describe('useIntegrationCards', () => {
             kind: 'integration',
             status: 'deployed',
             source: { owner: 'skukla', repo: 'commerce-erp-integration' },
-            workspace: { id: '1', name: 'JustriteERP1', title: 'Justrite ERP' },
+            workspace: { id: '1', name: 'TailspinERP1', title: 'Tailspin ERP' },
         };
         const input = source({
             components: { 'erp-integration': erp },
-            destination: { projectTitle: 'Kukla Justrite', workspaceTitle: 'Production' },
+            destination: { projectTitle: 'Kukla Tailspin', workspaceTitle: 'Production' },
         });
         const { result } = renderHook(() => useIntegrationCards(input));
 
         const step = result.current[0].setupChecklist?.find((item) => item.id === 'app-management-listing');
-        expect(step?.enter).toStrictEqual(['Kukla Justrite', 'Justrite ERP']);
+        expect(step?.enter).toStrictEqual(['Kukla Tailspin', 'Tailspin ERP']);
     });
 });

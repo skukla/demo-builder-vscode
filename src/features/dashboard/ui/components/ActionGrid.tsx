@@ -9,32 +9,32 @@
  *
  *  - Open (cards): where you go to use the project. Start/Stop + Restart
  *    (non-EDS), Open in Browser, Author Content (EDS), Manage Commerce,
- *    Integrations, each saying where it leads. Every one opens a surface; none
- *    changes the project.
- *    Integrations moved up from Build on 2026-10-06 (owner): it is a
- *    destination of the same weight as the other three.
+ *    Integrations, Datapacks, each saying where it leads. Every one opens a
+ *    surface; none changes the project.
+ *    Integrations moved up from Build on 2026-10-06 and Datapacks on 2026-11-05
+ *    (owner): each is a destination of the same weight as the others.
  *  - Storefront (EDS only): keeping the site itself in shape. Republish (the
  *    remedy carrying the drift dot), Sync Storefront, Refresh Blocks, Site Access.
  *  - Build: what the demo contains. Edit (what it HAS), Configure (their
- *    values), Datapacks and AEM Assets (the products, then their images), then
+ *    values), AEM Assets (the products' images), then
  *    — set apart — Reset (a "Needs reset" dot when the storefront is behind how
  *    Demo Builder builds storefronts now) and Delete.
  *  - Share: moving a demo between people. Share Demo (one dialog, a link or a
- *    file, since 2026-10-22), Change Source (only for a project built on an
- *    added demo).
+ *    file, since 2026-10-22), Save as Package (EDS only, since EDS-72: the card
+ *    on the SC's own Welcome step), Change Source (only for a project built on
+ *    an added demo).
  *
  * AEM Assets and Dev Console sat beside the Open cards until Integrations made
  * a fourth card and they ran past the content band (owner, 2026-10-06). They
  * were never one job: AEM Assets prepares demo data (images for SKUs), so it
- * joined Datapacks in Build; Dev Console shows how an integration works, which
+ * went to Build; Dev Console shows how an integration works, which
  * each integration card's Open already does at THAT integration's workspace —
  * the dashboard link reached only the project's main one — so it left the
  * dashboard.
  *
- * Storefront, Build and Share are compact lists, where a status dot sits
- * beside the label with its word ("Needed", "Error") rather than in a corner.
- * An Open card with a status shows the dot and word as its second line, in
- * place of its description.
+ * A status is a dot and nothing else on the surface, and its words are on hover
+ * (owner, 2026-11-01). Storefront, Build and Share are compact lists, where the dot
+ * sits right after the label; on an Open card it sits beside the title.
  *
  * (Logs moved to the sidebar Logs utility; Rename is inline on the dashboard
  * title / project card name. Deploy Mesh retired in ADR-011 D3 Step 08 — the
@@ -90,6 +90,7 @@
  */
 
 import React from 'react';
+import type { OpeningTile } from '../hooks/useDashboardActions';
 import type { MeshStatus, StatusDisplay } from '../hooks/useDashboardStatus';
 import { BuildZone } from './BuildZone';
 import { IntegrationsSummaryTile } from './IntegrationsSummaryTile';
@@ -97,6 +98,7 @@ import { OpenZone } from './OpenZone';
 import { ShareZone } from './ShareZone';
 import { StorefrontZone } from './StorefrontZone';
 import type { AppBuilderComponentState } from '@/types/base';
+import type { FinishSetupStatus } from '@/types/webviewPayloads';
 
 /**
  * Props for the ActionGrid component
@@ -112,23 +114,13 @@ export interface ActionGridProps {
     isStopDisabled: boolean;
     /** Whether mesh-related actions (Configure) should be disabled */
     isMeshActionDisabled: boolean;
-    /**
-     * Whether to offer the Sample Data tile. The Data Installer needs BOTH
-     * `dataInstaller.enabled` and a usable `apiBaseUrl`; without the URL the
-     * surface refuses every request, so a tile is an invitation to a dead end.
-     * Decided host-side (`isDataInstallerConfigured`) — these are settings, and
-     * the webview cannot read them.
-     *
-     * Defaults to hidden. An undefined flag means the host did not say, and
-     * offering a surface we have not confirmed is the failure this prop exists
-     * to prevent.
-     */
-    dataInstallerAvailable?: boolean;
     appBuilderComponents?: Record<string, AppBuilderComponentState>;
     hasMesh?: boolean;
     meshStatus?: MeshStatus;
     /** Whether browser is currently opening */
     isOpeningBrowser: boolean;
+    /** The tile whose private Chrome window is opening; its icon is a spinner meanwhile. */
+    openingTile?: OpeningTile;
     /**
      * The artifact's own status, rendered INSIDE the zone that owns it — the
      * runtime line in Primary for non-EDS, the publish line in Storefront for
@@ -181,6 +173,11 @@ export interface ActionGridProps {
     /** Handler for the Share Demo tile: the one dialog for a link or a file */
     handleShareDemo: () => void;
     /**
+     * Handler for the Save as Package tile (EDS-72): the card on the SC's own Welcome step, to
+     * build new projects from. Shown only for an EDS project, whose storefront the card builds from.
+     */
+    handleSavePackage?: () => void;
+    /**
      * Handler for the Change Demo Source tile. Present only for a
      * project built on an added demo: it points the project at another copy
      * of that demo (the notice offers the same door when the source is gone).
@@ -190,6 +187,29 @@ export interface ActionGridProps {
     handleResetProject: () => void;
     /** Handler for Delete button */
     handleDeleteProject: () => void;
+    /**
+     * What a run left to finish (PL-101): the tile that fixes an open step wears its dot,
+     * Republish for the code, Manage Commerce for the root category.
+     */
+    finishSetup?: FinishSetupStatus;
+}
+
+/** Republish's hover while Republish the Code is open: why the dot is there. */
+const CODE_STEP_TOOLTIP =
+    'Republish needed — the live site does not serve the latest storefront code yet';
+
+/** Which tiles a Finish Setup step dots, and the Republish hover that says why. */
+function finishSetupDots(finishSetup: FinishSetupStatus | undefined): {
+    republishDue: boolean;
+    republishTooltip?: string;
+    adminDue: boolean;
+} {
+    const republishDue = finishSetup?.republishDue === true;
+    return {
+        republishDue,
+        ...(republishDue ? { republishTooltip: CODE_STEP_TOOLTIP } : {}),
+        adminDue: finishSetup?.adminDue === true,
+    };
 }
 
 /**
@@ -220,9 +240,9 @@ export function ActionGrid({
     isStopDisabled,
     isMeshActionDisabled,
     isOpeningBrowser,
+    openingTile = null,
     demoStatus,
     handleRestartDemo,
-    dataInstallerAvailable,
     appBuilderComponents,
     hasMesh,
     meshStatus,
@@ -241,16 +261,19 @@ export function ActionGrid({
     needsReset = false,
     handleEditProject,
     handleShareDemo,
+    handleSavePackage,
     handleChangeDemoSource,
     handleResetProject,
     handleDeleteProject,
+    finishSetup,
 }: ActionGridProps): React.ReactElement {
     // Edit gating mirrors the kebab's Edit: non-EDS only while stopped, EDS always.
     const canEdit = Boolean(handleEditProject) && (isEds || !isRunning);
 
     // Which fix is due, from the status named where the state is decided.
     const needsRestart = demoStatus?.remedy === 'restart';
-    const needsRepublish = demoStatus?.remedy === 'republish';
+    const steps = finishSetupDots(finishSetup);
+    const needsRepublish = demoStatus?.remedy === 'republish' || steps.republishDue;
     // Extracted rather than inlined: a 4-operand && chain in JSX trips the
     // complex-expression SOP scan (tests/sop/complex-expressions.test.ts).
     const canRestart = !isEds && isRunning && Boolean(handleRestartDemo);
@@ -268,6 +291,7 @@ export function ActionGrid({
                 isStartDisabled={isStartDisabled}
                 isStopDisabled={isStopDisabled}
                 isOpeningBrowser={isOpeningBrowser}
+                openingTile={openingTile}
                 lifecycleDot={lifecycleDot}
                 statusText={demoStatus?.text}
                 canRestart={canRestart}
@@ -279,6 +303,7 @@ export function ActionGrid({
                 handleOpenLiveSite={handleOpenLiveSite}
                 handleOpenDaLive={handleOpenDaLive}
                 handleOpenAdminPanel={handleOpenAdminPanel}
+                adminStepDue={steps.adminDue}
                 integrations={
                     <IntegrationsSummaryTile
                         appBuilderComponents={appBuilderComponents}
@@ -291,6 +316,7 @@ export function ActionGrid({
             {isEds && (
                 <StorefrontZone
                     needsRepublish={needsRepublish}
+                    republishTooltip={steps.republishTooltip}
                     handleRepublishContent={handleRepublishContent}
                     handleSyncStorefront={handleSyncStorefront}
                     handleRefreshBlockLibrary={handleRefreshBlockLibrary}
@@ -300,7 +326,6 @@ export function ActionGrid({
             <BuildZone
                 canEdit={canEdit}
                 isMeshActionDisabled={isMeshActionDisabled}
-                dataInstallerAvailable={dataInstallerAvailable}
                 handleEditProject={handleEditProject}
                 handleConfigure={handleConfigure}
                 handleOpenAemAssets={handleOpenAemAssets}
@@ -308,7 +333,11 @@ export function ActionGrid({
                 handleDeleteProject={handleDeleteProject}
                 needsReset={needsReset}
             />
-            <ShareZone handleShareDemo={handleShareDemo} handleChangeDemoSource={handleChangeDemoSource} />
+            <ShareZone
+                handleShareDemo={handleShareDemo}
+                handleSavePackage={isEds ? handleSavePackage : undefined}
+                handleChangeDemoSource={handleChangeDemoSource}
+            />
             </div>
         </div>
     );

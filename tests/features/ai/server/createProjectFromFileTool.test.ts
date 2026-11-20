@@ -13,6 +13,7 @@
  * is a `ProjectFile`.
  */
 
+import AdmZip from 'adm-zip';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -31,6 +32,14 @@ import {
     registerCreateProjectFromFileTool,
     storefrontSetup,
 } from './createProjectTool.testUtils';
+
+jest.mock('@/features/data-installer/services/recordedPack', () => ({
+    ...jest.requireActual('@/features/data-installer/services/recordedPack'),
+    checkRecordedPack: jest.fn(),
+}));
+import { checkRecordedPack } from '@/features/data-installer/services/recordedPack';
+
+const mockedCheck = checkRecordedPack as jest.MockedFunction<typeof checkRecordedPack>;
 
 const TOOL = 'create_project_from_file';
 
@@ -73,7 +82,7 @@ const V2_EDS: ProjectFile = {
     configs: {
         'adobe-commerce-accs': { ACCS_GRAPHQL_ENDPOINT: 'https://accs.example/graphql' },
     },
-    datapack: { name: 'citisignal', version: '1.2.0' },
+    datapack: { name: 'acme-demo-1a2b3c', version: '20261029-183000', store: 'library' as const, origin: { name: 'citisignal', version: '1.2.0', store: 'installer' as const } },
 };
 
 let dir: string;
@@ -92,6 +101,7 @@ function toolServer() {
 
 beforeEach(() => {
     jest.clearAllMocks();
+    mockedCheck.mockResolvedValue({ verdict: 'unknown' });
     defaultStorefrontSetup();
     dir = fs.mkdtempSync(path.join(os.tmpdir(), 'project-file-'));
 });
@@ -171,9 +181,11 @@ describe('create_project_from_file — a headless file reaches creation whole', 
 
         expect(res).toMatchObject({ created: true, name: 'new-demo' });
         expect(buildProjectConfig).toHaveBeenCalledTimes(1);
-        expect(executeProjectCreation).toHaveBeenCalledWith(expect.anything(), {
-            projectName: 'assembled',
-        });
+        expect(executeProjectCreation).toHaveBeenCalledWith(
+            expect.anything(),
+            { projectName: 'assembled' },
+            expect.any(AbortSignal),
+        );
     });
 
     it('hands creation the integrations, the mesh, the custom sources and the API picks', async () => {
@@ -213,6 +225,16 @@ describe('create_project_from_file — a headless file reaches creation whole', 
         expect(state.adobeWorkspace).toMatchObject({ id: 'ws-1' });
         expect(state.adobeOrg).toMatchObject({ id: 'org-1' });
         expect(JSON.stringify(state)).not.toContain('sender-ws');
+    });
+
+    it("refuses, naming what to select, when no workspace is chosen — never falls back to the file's (F280)", async () => {
+        authManager.getCurrentWorkspace.mockResolvedValueOnce(undefined);
+
+        const res = await create();
+
+        expect(JSON.stringify(res)).toMatch(/select_project → select_workspace/);
+        expect(JSON.stringify(res)).not.toContain('sender-ws');
+        expect(executeProjectCreation).not.toHaveBeenCalled();
     });
 
     it('hands off to Adobe sign-in when the file names integrations and Adobe is signed out', async () => {
@@ -297,7 +319,8 @@ describe('create_project_from_file — an Edge Delivery file', () => {
         const state = capturedWizardState();
         expect(state.selectedBlockLibraries).toEqual(['isle5']);
         expect(state.customBlockLibraries).toEqual(V2_EDS.customBlockLibraries);
-        expect(state.datapack).toEqual({ name: 'citisignal', version: '1.2.0' });
+        // Whole: a library pack read back as a Data Installer one could not be installed.
+        expect(state.datapack).toEqual({ name: 'acme-demo-1a2b3c', version: '20261029-183000', store: 'library' as const, origin: { name: 'citisignal', version: '1.2.0', store: 'installer' as const } });
         expect(state.componentConfigs).toEqual(V2_EDS.configs);
     });
 
@@ -314,9 +337,7 @@ describe('create_project_from_file — an Edge Delivery file', () => {
         const res = await create();
 
         expect(res).toMatchObject({ created: true, name: 'new-storefront' });
-        expect(res.stillNeeded.credentials).toEqual([
-            { component: 'adobe-commerce-accs', key: 'ACCS_OAUTH_CLIENT_SECRET' },
-        ]);
+        expect(res.stillNeeded.credentials).toStrictEqual([]);
         expect(res.fromFile.applied).toEqual([
             'package',
             'stack',
@@ -335,5 +356,110 @@ describe('create_project_from_file — the registered schema', () => {
 
         expect(def.needsAuth).toEqual(['github', 'dalive']);
         expect(def.annotations).toEqual({ readOnlyHint: false, destructiveHint: false });
+    });
+});
+
+// Step 07: the answer says plainly what happens to a pack that can't be read, before and after
+// confirm, from the same check the build acts on.
+describe('create_project_from_file — the datapack, said plainly', () => {
+    const FALLBACK_NOTE = "The acme-demo-1a2b3c pack this project uses can't be read: its owner has deleted it or not shared it. You can continue with CitiSignal, the pack it was made from; their changes won't be included.";
+
+    beforeEach(() => {
+        mockedCheck.mockResolvedValue({
+            verdict: 'fallback',
+            pack: { name: 'citisignal', version: '1.2.0', store: 'installer' },
+            displayName: 'CitiSignal',
+            note: FALLBACK_NOTE,
+        });
+    });
+
+    it('says it before confirm, having asked about the pack the file names', async () => {
+        const filePath = write('storefront.project.demo-builder.json', V2_EDS);
+
+        const res = await toolServer().call({ projectName: 'new-storefront', filePath, repoName: 'r', daLiveOrg: 'o', daLiveSite: 's' });
+
+        expect(mockedCheck).toHaveBeenCalledWith(expect.anything(), V2_EDS.datapack);
+        expect(res.datapackNote).toBe(FALLBACK_NOTE);
+        expect(executeProjectCreation).not.toHaveBeenCalled();
+    });
+
+    it("says nothing when the file names no datapack, and asks nothing", async () => {
+        const filePath = write('demo.json', V1_HEADLESS);
+
+        const res = await toolServer().call({ projectName: 'new-demo', filePath });
+
+        expect(res).not.toHaveProperty('datapackNote');
+        expect(mockedCheck).not.toHaveBeenCalled();
+    });
+});
+
+// EDS-72: Import from File's agent door takes a demo bundle and creates the PROJECT from it,
+// through the same storefront setup the wizard runs: no template repository, no card.
+describe('create_project_from_file — a demo bundle', () => {
+    const RECEIVER = { repoName: 'my-repo', daLiveOrg: 'me', daLiveSite: 'mine' };
+
+    function bundle(parts: { setup?: ProjectFile; storefront?: boolean } = { setup: V2_EDS, storefront: true }): string {
+        const zip = new AdmZip();
+        if (parts.setup) zip.addFile('sent-demo-bundle/setup.demo-builder.json', Buffer.from(JSON.stringify(parts.setup)));
+        if (parts.storefront) {
+            for (const name of ['scripts/scripts.js', '404.html', 'head.html']) {
+                zip.addFile(`sent-demo-bundle/storefront/${name}`, Buffer.from('x'));
+            }
+        }
+        const file = path.join(dir, 'sent-demo-bundle.zip');
+        zip.writeZip(file);
+        return file;
+    }
+
+    it('hands storefront setup the bundle and creation the import, with the setup decided as a file decides it', async () => {
+        const filePath = bundle();
+
+        const res = await toolServer().call({ projectName: 'new-storefront', filePath, confirm: true, ...RECEIVER });
+
+        expect(res).toMatchObject({ created: true });
+        const payload = storefrontSetup.mock.calls[0][1];
+        expect(payload.edsConfig.bundleSource).toStrictEqual({ bundlePath: filePath });
+        expect(payload.selectedPackage).toBe('citisignal');
+        expect(capturedWizardState().importedFrom).toStrictEqual({
+            bundleName: 'Sent Storefront',
+            bundlePath: filePath,
+            sourceRepository: 'sender/their-repo',
+        });
+        expect(capturedWizardState().selectedBlockLibraries).toEqual(['isle5']);
+    });
+
+    it("records the commit setup pushed the bundle's files as, for Reset", async () => {
+        storefrontSetup.mockImplementation(async (ctx: { sendMessage: (t: string, d?: unknown) => Promise<void> }) => {
+            await ctx.sendMessage('storefront-setup-complete', {
+                message: 'Done',
+                githubRepo: 'https://github.com/me/my-repo',
+                bundleImport: { commit: 'import-commit' },
+            });
+            return { success: true };
+        });
+
+        await toolServer().call({ projectName: 'new-storefront', filePath: bundle(), confirm: true, ...RECEIVER });
+
+        expect(capturedWizardState().edsConfig.bundleImport).toStrictEqual({ commit: 'import-commit' });
+    });
+
+    it('refuses a bundle with no setup, or with no storefront, before creating anything', async () => {
+        const noSetup = await toolServer().call({ projectName: 'x', filePath: bundle({ storefront: true }), confirm: true, ...RECEIVER });
+        expect(noSetup.error).toMatch(/no project setup/);
+
+        const noStorefront = await toolServer().call({ projectName: 'x', filePath: bundle({ setup: V2_EDS }), confirm: true, ...RECEIVER });
+        expect(noStorefront.error).toMatch(/no storefront/);
+
+        expect(storefrontSetup).not.toHaveBeenCalled();
+        expect(executeProjectCreation).not.toHaveBeenCalled();
+    });
+
+    it('CONTROL: a project file names no bundle', async () => {
+        const filePath = write('storefront.project.demo-builder.json', V2_EDS);
+
+        await toolServer().call({ projectName: 'new-storefront', filePath, confirm: true, ...RECEIVER });
+
+        expect(storefrontSetup.mock.calls[0][1].edsConfig).not.toHaveProperty('bundleSource');
+        expect(capturedWizardState()).not.toHaveProperty('importedFrom');
     });
 });

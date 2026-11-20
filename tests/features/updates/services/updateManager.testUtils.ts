@@ -160,7 +160,14 @@ export function createMockReleasesArray(options?: {
  * Creates a mock project with components
  */
 export function createUpdateManagerProject(
-    components: { id: string; version: string; repoUrl?: string; path?: string; name?: string }[]
+    components: {
+        id: string;
+        version: string;
+        repoUrl?: string;
+        path?: string;
+        name?: string;
+        type?: string;
+    }[]
 ): any {
     const componentInstances: any = {};
     const componentVersions: any = {};
@@ -171,6 +178,7 @@ export function createUpdateManagerProject(
             ...(comp.repoUrl && { repoUrl: comp.repoUrl }),
             ...(comp.path && { path: comp.path }),
             ...(comp.name && { name: comp.name }),
+            ...(comp.type && { type: comp.type }),
         };
         componentVersions[comp.id] = { version: comp.version };
     });

@@ -95,10 +95,10 @@ describe('useProjectBuilder — a rename is built from the current render', () =
         const { result, rerender, updateState, stateRef } = setup({ selectedAppBuilderComponents: [PAIR] });
         rerender({ state: { ...stateRef.current, componentConfigs: { [PAIR]: { ERP_BASE_URL: 'x' } } } });
 
-        act(() => result.current.onRenamePairedSystem(PAIR, 'Justrite'));
+        act(() => result.current.onRenamePairedSystem(PAIR, 'Tailspin'));
 
         expect(updateState.mock.calls[0][0].componentConfigs).toStrictEqual({
-            [PAIR]: { ERP_BASE_URL: 'x', ERP_DISPLAY_NAME: 'Justrite ERP' },
+            [PAIR]: { ERP_BASE_URL: 'x', ERP_DISPLAY_NAME: 'Tailspin ERP' },
         });
     });
 });

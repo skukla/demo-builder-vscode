@@ -69,8 +69,10 @@ const COMMAND_BUTTONS = new Map<string, CommandButton>(Object.entries({
     },
     openAiChat: { label: 'Open AI chat', command: 'demoBuilder.openAiExperience' },
     showPrompts: { label: 'Show prompts', command: 'demoBuilder.showPromptsPicker' },
+    // The Datapack Library: every pack, no project (owner, 2026-11-07).
+    openDatapackLibrary: { label: 'Open the Datapack Library', command: 'demoBuilder.showDatapackLibrary' },
     newAiChat: { label: 'New AI chat', command: 'demoBuilder.newAiChat' },
-    pickAiChat: { label: 'Pick an earlier AI chat', command: 'demoBuilder.pickAiChat' },
+    pickAiChat: { label: 'Select an Earlier AI Chat', command: 'demoBuilder.pickAiChat' },
 }));
 
 /**

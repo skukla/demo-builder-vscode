@@ -1,8 +1,8 @@
 import * as aioConfig from '@adobe/aio-lib-core-config';
 import type { AuthCacheManager } from './authCacheManager';
 import { AuthenticationErrorFormatter } from './authenticationErrorFormatter';
+import type { RejectedTokens } from './rejectedTokens';
 import { getLogger } from '@/core/logging/debugLogger';
-import { withTimeout } from '@/core/utils/promiseUtils';
 import { SingleFlight } from '@/core/utils/singleFlight';
 import { formatMinutes } from '@/core/utils/timeFormatting';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -25,92 +25,6 @@ export interface StoredTokenConfig {
  * fnm warnings and emoji noise — to exercise a date comparison.
  */
 export type TokenConfigReader = () => StoredTokenConfig | undefined;
-
-/**
- * Attempt a SILENT IMS token refresh; resolves the refreshed stored token, or
- * undefined when no refresh is possible (no refresh credentials, network down).
- * Injectable for the same reason as {@link TokenConfigReader}.
- */
-export type SilentTokenRefresh = () => Promise<StoredTokenConfig | undefined>;
-
-/**
- * How much life a stored token needs before it counts as usable: ten minutes,
- * the same floor `aio-lib-ims`'s own `getTokenIfValid` applies.
- */
-const IMS_TOKEN_VALIDITY_FLOOR_MS = 10 * 60 * 1000;
-
-/**
- * The real refresh: the refresh-token exchange the `aio` CLI performs on every
- * invocation, which is why the CLI never asks anyone to re-login while this
- * extension did. With a live refresh token it mints a new access token and
- * persists it exactly where the CLI looks for it.
- *
- * Measured 2026-08-27: with the stored access token 30+ minutes expired, the
- * context still held a refresh token valid for ~14 DAYS, and the exchange
- * restored the session in ~2s with no interaction — while the extension,
- * reading only the stored expiry, declared the user signed out and parked a
- * deploy on a Sign In prompt nobody saw. The owner's question was "why would
- * I need to log in?", and the answer was: you didn't.
- *
- * WHY THIS CALLS THE EXCHANGE AND NOT `getToken`. It used to call
- * `getToken('cli')` behind a precheck on the LOCAL refresh-token expiry, and
- * a comment here called that precheck load-bearing. A local expiry is a CLAIM,
- * not proof: when IMS rejects a refresh token the machine still believes in
- * (revoked, org changed, password reset), `getToken`'s chain falls through to
- * `_generateToken`, which runs the login plugins and OPENS A BROWSER. On
- * 2026-09-02 that is what a project-load auth check did — an unrequested
- * sign-in page, with no prompt in front of it. Read out of the library's own
- * `src/token-helper.js`; the fallback cannot be switched off by any option.
- *
- * So the middle step is called on its own. `Ims#getAccessToken` with a refresh
- * token does exactly the silent exchange and REJECTS instead of escalating to
- * a human. A rejection returns undefined, and the caller's prompt path takes
- * over — the human chooses, from a notification they can see.
- *
- * Dynamic import: aio-lib-ims is heavy and this path runs only when the
- * stored token is already unusable.
- */
-export const refreshStoredToken: SilentTokenRefresh = async () => {
-    const ims = await import('@adobe/aio-lib-ims');
-    const stored = await ims.context.get('cli');
-    const config = stored?.data;
-    const refreshToken = config?.refresh_token;
-
-    // The library's own validity floor (`getTokenIfValid`): a token counts as
-    // usable only with at least ten minutes left. Matching it means this decides
-    // the same way the CLI would, rather than sending a nearly-dead token to IMS.
-    const refreshable =
-        typeof refreshToken?.token === 'string' &&
-        (refreshToken.expiry ?? 0) > Date.now() + IMS_TOKEN_VALIDITY_FLOOR_MS;
-    if (!config || !refreshable) {
-        return undefined;
-    }
-
-    const minted = await new ims.Ims(config.env).getAccessToken(
-        refreshToken.token as string,
-        config.client_id,
-        config.client_secret,
-        config.scope,
-    );
-    if (typeof minted?.access_token?.token !== 'string') {
-        return undefined;
-    }
-
-    // Persist the way the library's `_persistTokens` does, so the CLI and every
-    // later read of the stored config see the refreshed token instead of
-    // re-exchanging on each check. A rotated refresh token is written too when
-    // IMS returned one; failing to store either is not worth failing the refresh
-    // that already succeeded.
-    try {
-        await ims.context.set('cli.access_token', minted.access_token, stored?.local);
-        if (minted.refresh_token) {
-            await ims.context.set('cli.refresh_token', minted.refresh_token, stored?.local);
-        }
-    } catch {
-        // Left unstored: the caller still gets the live token for this session.
-    }
-    return minted.access_token;
-};
 
 /**
  * The real read: the same library, and the same key, the CLI itself uses.
@@ -165,12 +79,13 @@ export class TokenManager {
      * @param cacheManager - Optional cache manager for token caching
      * @param logger - Optional logger for dependency injection (defaults to getLogger())
      * @param readTokenConfig - Optional reader override; tests inject a fake store
+     * @param rejected - The tokens Adobe refused this session (walk F247): one of them is signed out
      */
     constructor(
         cacheManager?: AuthCacheManager,
         logger?: Logger,
         private readonly readTokenConfig: TokenConfigReader = readStoredTokenConfig,
-        private readonly silentRefresh: SilentTokenRefresh = refreshStoredToken,
+        private readonly rejected?: RejectedTokens,
     ) {
         this.logger = logger ?? getLogger();
         this.cacheManager = cacheManager;
@@ -248,42 +163,26 @@ export class TokenManager {
             return { valid: false, expiresIn: 0 };
         }
 
-        const first = this.classifyStoredToken(tokenData);
-        if (first.valid) {
-            this.cacheManager?.setCachedTokenInspection(first);
-            return first;
+        // An expired token is answered as signed out, and the caller's Sign In
+        // prompt takes over. There is deliberately no silent refresh: the CLI's
+        // tokens belong to Adobe's `aio-cli-console-auth` app, and IMS refuses a
+        // refresh-token exchange for it without the app's client secret, which
+        // only Adobe's login service holds (measured 2026-11-15: `invalid
+        // client_id`, then `invalid client_secret` with the token's own id). The
+        // exchange that lived here failed on every call from 2026-09-02 until it
+        // was removed. The library call that DOES renew, `getToken`, gets there by
+        // opening a browser, which a background check must never do.
+        const verdict = this.classifyStoredToken(tokenData);
+        // Adobe refused this token though it has time left (walk F247): signed out, so Sign In
+        // takes over instead of every action failing behind a "signed in".
+        if (verdict.valid && verdict.token && this.rejected?.has(verdict.token)) {
+            this.logger.debug('[Token] Adobe refused this sign-in; answering signed out');
+            return { valid: false, expiresIn: verdict.expiresIn };
         }
-
-        // An unusable stored token is NOT "signed out" yet: the aio CLI itself
-        // silently refreshes via the context's stored refresh credentials on
-        // every run, which is why `aio` never re-prompts while this read did
-        // (a deploy parked on a Sign In prompt for a token the library could
-        // revive — 2026-08-27). Ask the library before asking a human.
-        const refreshed = await this.trySilentRefresh();
-        if (!refreshed) {
-            return first;
+        if (verdict.valid) {
+            this.cacheManager?.setCachedTokenInspection(verdict);
         }
-        const second = this.classifyStoredToken(refreshed);
-        if (second.valid) {
-            this.logger.info('[Token] Silent IMS refresh restored the session');
-            this.cacheManager?.setCachedTokenInspection(second);
-            return second;
-        }
-        return first;
-    }
-
-    /** The refresh attempt, timeout-bound so it can never become the next hang. */
-    private async trySilentRefresh(): Promise<StoredTokenConfig | undefined> {
-        try {
-            this.logger.info('[Token] Stored token unusable — attempting silent IMS refresh');
-            return await withTimeout(this.silentRefresh(), {
-                timeoutMs: TIMEOUTS.NORMAL,
-                timeoutMessage: 'IMS silent refresh timed out',
-            });
-        } catch (error) {
-            this.logger.debug(`[Token] Silent refresh unavailable: ${toError(error).message}`);
-            return undefined;
-        }
+        return verdict;
     }
 
     /** Classify one stored token by the semantic rules (corruption, length, expiry). */
@@ -333,12 +232,49 @@ export class TokenManager {
         }
 
         const expiresIn = Math.floor((expiry - now) / 1000 / 60);
+        if (expiry <= now + TIMEOUTS.AUTH.CLI_MIN_TOKEN_LIFE) {
+            // The CLI would sign in through the browser for this token, unasked.
+            this.logger.debug(
+                `[Token] Token expires in ${formatMinutes(expiresIn)}, too soon for the Adobe CLI`,
+            );
+            return { valid: false, expiresIn, token };
+        }
         this.logger.debug(`[Token] Token valid, expires in ${formatMinutes(expiresIn)}`);
 
-        // Caching is the CALLER's job (fetchTokenInspection): classify runs on
-        // both the stored and the refreshed token, and only the accepted one
-        // may land in the cache.
+        // Caching is the caller's job (fetchTokenInspection), so this stays a
+        // pure verdict.
         return { valid: true, expiresIn, token };
+    }
+
+    /**
+     * Adobe refused the stored token (walk F247): remember it, and forget the cached "signed in".
+     */
+    markStoredTokenRejected(): void {
+        let token: string | undefined;
+        try {
+            token = this.readTokenConfig()?.token;
+        } catch {
+            return;
+        }
+        if (!token || !this.rejected) return;
+        this.rejected.mark(token);
+        this.cacheManager?.clearTokenInspectionCache();
+        this.cacheManager?.clearAuthStatusCache();
+        this.logger.warn('[Token] Adobe no longer accepts the stored sign-in; it counts as signed out until a new one');
+    }
+
+    /**
+     * Whether Adobe already refused the stored token (walk F276). A plain sign-in would hand that
+     * token straight back, so Sign In goes to the forced one instead.
+     */
+    isStoredTokenRejected(): boolean {
+        if (!this.rejected) return false;
+        try {
+            const token = this.readTokenConfig()?.token;
+            return Boolean(token && this.rejected.has(token));
+        } catch {
+            return false;
+        }
     }
 
     /**

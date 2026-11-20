@@ -1,0 +1,262 @@
+/**
+ * The `b2b_companies` kind (datapack-engine step 08): a pack's company, made over REST with its
+ * admin and the whole address block, and taken back by its id.
+ *
+ * The row is Bodea's, contact details replaced. The store's copy is the captured `GET company/21`
+ * and its admin the captured `GET customers/44`. The searches, the hierarchy and the POST's answer
+ * are not captured; each is built here in the shape of those bodies.
+ */
+
+import { filterBy } from '@/features/data-installer/services/demoBuilderEngine/b2bReads';
+import {
+    COMPANY_KIND,
+    companyMembers,
+    companyPackForm,
+    installCompanies,
+    parseCompanyRows,
+    removeCompany,
+    updateCompany,
+} from '@/features/data-installer/services/demoBuilderEngine/companiesKind';
+import { CUSTOMER_KIND } from '@/features/data-installer/services/demoBuilderEngine/customerKinds';
+import type { CommerceCompanyHierarchyNode, CommerceCountryInfo } from '@/types/commerceWire';
+import { BODEA_COMPANY_ROW, CATALOG_14, COMPANY_21, COMPANY_27_DB08, CREATE_COMPANY_QUERY, CUSTOMER_44 } from '../../../../helpers/commerceB2bFixtures';
+import { fakeContext, page } from './demoBuilderEngine.testUtils';
+
+const ADMIN = 'admin.altura@example.com';
+const byName = page('company', filterBy('company_name', 'Altura'));
+const byEmail = page('company', filterBy('company_email', 'office.altura@example.com'));
+const adminSearch = page('customers/search', filterBy('email', ADMIN));
+const CATALOGS = page('sharedCatalog');
+const PUBLIC = { id: 1, name: 'Default (General)', customer_group_id: 1, type: 1 };
+
+/**
+ * `GET directory/countries/US`, trimmed. NOT captured: no code in this repo or the service reads
+ * it. Typed to `CommerceCountryInfo`, whose field names are Magento's RegionInformationInterface
+ * as the storefront's GraphQL `country.available_regions { id code name }` reads them.
+ */
+const US_REGIONS: CommerceCountryInfo = {
+    id: 'US',
+    available_regions: [
+        { id: '12', code: 'CA', name: 'California' },
+        { id: '57', code: 'TX', name: 'Texas' },
+    ],
+};
+
+/** Bodea's company row with its region named another way. */
+function withRegion(region: Record<string, unknown>) {
+    const input = BODEA_COMPANY_ROW.variables.input;
+    return { ...BODEA_COMPANY_ROW, variables: { input: { ...input, legal_address: { ...input.legal_address, region } } } };
+}
+
+async function store(parts: { companies?: unknown[]; admins?: unknown[] } = {}) {
+    const ctx = await fakeContext(
+        {
+            [byName]: { items: parts.companies ?? [] },
+            [byEmail]: { items: [] },
+            [adminSearch]: { items: parts.admins ?? [] },
+            [CATALOGS]: { items: [PUBLIC, CATALOG_14] },
+            'directory/countries/US': US_REGIONS,
+        },
+        (call) => (call.path === 'customers' ? { ...CUSTOMER_44, id: 60 } : { ...COMPANY_21, id: 30 }),
+    );
+    ctx.session.websiteId = 3;
+    ctx.session.storeId = 4;
+    return ctx;
+}
+
+describe('installCompanies', () => {
+    it('makes the company with its admin, its whole address and the public catalog\'s group, and records it', async () => {
+        const ctx = await store({ admins: [{ ...CUSTOMER_44, id: 52, email: ADMIN, website_id: 3 }] });
+
+        await installCompanies(ctx, parseCompanyRows([BODEA_COMPANY_ROW]));
+
+        expect(ctx.sent).toEqual([
+            {
+                method: 'POST',
+                path: 'company',
+                body: {
+                    company: {
+                        company_name: 'Altura',
+                        legal_name: 'Altura',
+                        company_email: 'office.altura@example.com',
+                        street: ['1 Demo Way'],
+                        city: 'Springfield',
+                        country_id: 'US',
+                        region_id: 12,
+                        postcode: '12345',
+                        telephone: '5550100',
+                        super_user_id: 52,
+                        status: 1,
+                        customer_group_id: 1,
+                        extension_attributes: { quote_config: { is_quote_enabled: true }, is_purchase_order_enabled: true },
+                    },
+                },
+            },
+        ]);
+        expect(ctx.recorder.created).toEqual([{ kind: COMPANY_KIND, id: '30', key: 'Altura', previous: { superUserId: 52 } }]);
+    });
+
+    // Owner, 2026-10-30: Commerce makes a company Pending Approval (0) when no status is sent
+    // (COMPANY_27_DB08), and only an Active company's buyers can sign in and buy.
+    it('makes the company Active when the pack row names no status', async () => {
+        const ctx = await store({ admins: [{ ...CUSTOMER_44, id: 52, email: ADMIN, website_id: 3 }] });
+
+        await installCompanies(ctx, parseCompanyRows([BODEA_COMPANY_ROW]));
+
+        expect((ctx.sent[0].body as { company: { status?: number } }).company.status).toBe(1);
+    });
+
+    it("sends the pack row's own status when it carries one", async () => {
+        const ctx = await store({ admins: [{ ...CUSTOMER_44, id: 52, email: ADMIN, website_id: 3 }] });
+
+        await installCompanies(ctx, parseCompanyRows([{ ...BODEA_COMPANY_ROW, status: 0 }]));
+
+        expect((ctx.sent[0].body as { company: { status?: number } }).company.status).toBe(0);
+    });
+
+    it('makes the admin first when the store has no customer by that email, and records it as a customer', async () => {
+        const ctx = await store();
+
+        await installCompanies(ctx, parseCompanyRows([BODEA_COMPANY_ROW]));
+
+        expect(ctx.sent.map((c) => `${c.method} ${c.path}`)).toEqual(['POST customers', 'POST company']);
+        // Made through the Import API (this store refuses `POST customers`), which the fake runs as its create.
+        expect(ctx.sent[0].body).toEqual({ customer: { email: ADMIN, firstname: 'Alex', lastname: 'Altura' } });
+        expect((ctx.imports[0] as { source: { entity: string } }).source.entity).toBe('customer_composite');
+        expect(ctx.recorder.created.map((o) => [o.kind, o.id, o.key])).toEqual([
+            [CUSTOMER_KIND, '60', ADMIN],
+            [COMPANY_KIND, '30', 'Altura'],
+        ]);
+    });
+
+    // Walk F190 (owner, 2026-11-16): recorded, marked adopted, so a save follows it and no removal takes it.
+    it('leaves a company the store has by that name, recording it as the store\'s', async () => {
+        const ctx = await store({ companies: [{ id: 5, company_name: 'Altura' }] });
+
+        await installCompanies(ctx, parseCompanyRows([BODEA_COMPANY_ROW]));
+
+        expect(ctx.sent).toStrictEqual([]);
+        expect(ctx.recorder.created).toStrictEqual([{ kind: 'b2b_companies', id: '5', key: 'Altura', adopted: true }]);
+    });
+
+    it("drops the source store's company id from its quote settings", async () => {
+        const ctx = await store({ admins: [{ ...CUSTOMER_44, email: ADMIN }] });
+        const row = { ...BODEA_COMPANY_ROW, extension_attributes: { quote_config: { company_id: '21', is_quote_enabled: true } } };
+
+        await installCompanies(ctx, parseCompanyRows([row]));
+
+        expect((ctx.sent[0].body as { company: { extension_attributes: unknown } }).company.extension_attributes).toEqual({ quote_config: { is_quote_enabled: true } });
+    });
+
+    it('refuses a company whose address names no region at all, before anything is sent', () => {
+        expect(() => parseCompanyRows([withRegion({})])).toThrow(/companies/);
+    });
+
+    // The service's company schema asks for `region_code` ("prefer region_code (e.g. CA, TX, NY)",
+    // `config/schemas/b2b_companies.json`). The country read is NOT captured: see US_REGIONS.
+    describe('a region named by code or by name', () => {
+        it.each([
+            [{ region_code: 'ca' }, 12],
+            [{ region: 'Texas' }, 57],
+            [{ region_code: 'TX', region: 'Texas', region_id: 12 }, 12],
+        ])("sends the region's id for %j, read from the country unless the row has it", async (region, id) => {
+            const ctx = await store({ admins: [{ ...CUSTOMER_44, id: 52, email: ADMIN, website_id: 3 }] });
+
+            await installCompanies(ctx, parseCompanyRows([withRegion(region)]));
+
+            expect((ctx.sent[0].body as { company: { region_id?: number } }).company.region_id).toBe(id);
+        });
+
+        it('stops, naming it, at a region the country does not have, before the admin is made', async () => {
+            const ctx = await store();
+
+            await expect(installCompanies(ctx, parseCompanyRows([withRegion({ region_code: 'ZZ' })]))).rejects.toThrow('Commerce has no region ZZ in US.');
+            expect(ctx.sent).toStrictEqual([]);
+        });
+    });
+});
+
+describe('the store\'s copy', () => {
+    it("reads the captured company back in the pack's form, its admin by name and email, no ids", async () => {
+        const ctx = await fakeContext({ 'customers/44': CUSTOMER_44 });
+
+        expect(await companyPackForm(ctx.get, COMPANY_21)).toEqual({
+            query: CREATE_COMPANY_QUERY,
+            status: COMPANY_21.status,
+            variables: {
+                input: {
+                    company_name: 'Example Studios',
+                    company_email: 'company@example.com',
+                    legal_name: 'Example Studios, LLC',
+                    legal_address: { street: ['1 Demo Way'], city: 'Springfield', country_id: 'US', postcode: '12345', telephone: '5550100', region: { region_id: 44 } },
+                    company_admin: { email: 'buyer@example.com', firstname: 'Test', lastname: 'Buyer' },
+                },
+            },
+            extension_attributes: {
+                is_purchase_order_enabled: false,
+                is_company_address_book_enabled: false,
+                is_custom_shipping_address_allowed: false,
+                quote_config: { is_quote_enabled: true },
+            },
+        });
+    });
+});
+
+describe("the store's status in the pack's form", () => {
+    it("keeps the store's status beside the create call, never inside the GraphQL input the service sends", async () => {
+        const ctx = await fakeContext({ 'customers/44': CUSTOMER_44 });
+
+        const form = (await companyPackForm(ctx.get, COMPANY_27_DB08)) as { status?: number; variables: { input: Record<string, unknown> } };
+
+        expect(form.status).toBe(0);
+        expect(form.variables.input).not.toHaveProperty('status');
+    });
+});
+
+describe('removal and update', () => {
+    it('is taken back by its id', async () => {
+        const ctx = await fakeContext({});
+
+        await removeCompany(ctx.send, '30');
+
+        expect(ctx.sent).toEqual([{ method: 'DELETE', path: 'company/30', body: undefined }]);
+    });
+
+    it("is brought up to the pack by PUTting the store's whole copy back with the pack's fields over it", async () => {
+        const ctx = await fakeContext({ 'company/21': COMPANY_21 });
+        const input = { ...BODEA_COMPANY_ROW.variables.input, company_name: 'Example Studios', telephone: undefined };
+        const row = { ...BODEA_COMPANY_ROW, variables: { input: { ...input, legal_address: { ...input.legal_address, city: 'Shelbyville' } } } };
+
+        await updateCompany(ctx, '21', row);
+
+        const [{ method, path, body }] = ctx.sent;
+        expect([method, path]).toEqual(['PUT', 'company/21']);
+        // The fields Commerce requires on a PUT (live 2026-09-29) all travel: group, rep, admin, address.
+        expect((body as { company: unknown }).company).toMatchObject({
+            id: 21,
+            city: 'Shelbyville',
+            customer_group_id: 19,
+            sales_representative_id: 1,
+            super_user_id: 44,
+            region_id: 12,
+            extension_attributes: { quote_config: { company_id: '21', is_quote_enabled: true }, is_purchase_order_enabled: true },
+        });
+    });
+});
+
+describe('companyMembers', () => {
+    it("lists the customers anywhere in the company's tree, not its teams", async () => {
+        const tree: CommerceCompanyHierarchyNode[] = [
+            { structure_id: 1, entity_id: 44, entity_type: 'customer', children: [{ entity_id: 7, entity_type: 'team', children: [{ entity_id: 61, entity_type: 'customer' }] }] },
+        ];
+        const ctx = await fakeContext({ 'hierarchy/21': tree });
+
+        expect(await companyMembers(ctx.get, '21')).toEqual([44, 61]);
+    });
+
+    it('refuses an answer in any other shape, so a removal cannot read it as empty', async () => {
+        const ctx = await fakeContext({ 'hierarchy/21': { message: 'unexpected' } });
+
+        await expect(companyMembers(ctx.get, '21')).rejects.toThrow(/shape/);
+    });
+});

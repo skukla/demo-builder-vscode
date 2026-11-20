@@ -5,7 +5,7 @@ Item: [[EDS-13a]]. Decisions: D16 reversed, D18 and D28 amended, D33 new (all 20
 
 ## Why (owner, 2026-09-14)
 
-Found while testing with Jen's AI Store. With "Keep my own copy" ticked, the card read from a
+Found while testing with Robin's AI Store. With "Keep my own copy" ticked, the card read from a
 fork in the SC's account (`skukla/aistore`). The SC deleted that fork with "Manage GitHub
 Repositories", and every later "create a new repository" failed about 0.2s in with
 "Repository not found": creation reads the card's source first, and the card had no record
@@ -258,7 +258,7 @@ New cases (failing first):
 | Remove offers a delete only for an existing, owned zip repository | the five handler cases above |
 | A project row never carries `createdFromZip` | the wizardHelpers and change-source cases |
 | Gate green | `npm run gate`, pre-push |
-| Live: link add makes nothing on GitHub | dev host: add `https://github.com/sayurihanki/aistore`; card source is `sayurihanki/aistore`; the SC's repository list is unchanged |
+| Live: link add makes nothing on GitHub | dev host: add `https://github.com/org-j/aistore`; card source is `org-j/aistore`; the SC's repository list is unchanged |
 | Live: zip Remove | dev host, owner confirms each cloud write first: add from a zip; Remove offers the delete; delete the repository on GitHub; Remove offers "Remove" only |
 | Live: agent | `mcp-live-probe` reads `add_shared_demo`'s schema (no `keepCopy`) and a refused `forget_added_demo` on a link card |
 

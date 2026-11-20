@@ -18,7 +18,7 @@ import {
     storefrontReturnsEnabled,
     websiteNamer,
 } from './setupConfigChecks';
-import { warehouseFor } from './storePreparation/warehouseFix';
+import { warehouseFor } from './storePreparation/warehouseSetup';
 import { andList } from '@/core/utils/andList';
 import type { SetupCheck } from '@/types/appBuilderComponents';
 
@@ -167,8 +167,8 @@ const websitesOf = (stock: StockRow): string[] =>
  * be assigned to Default Stock", Adobe's "Add a stock"; Commerce refused the link on Bodea the
  * same day), so a website sells from the ERP's warehouse only through a stock of its own.
  *
- * Told the project's ERPs, EACH needs its own, which is what the fix makes (`warehouseFix`).
- * Without them it asks only whether any warehouse is sold: on Justrite (2026-10-26) that
+ * Told the project's ERPs, EACH needs its own, which is what the fix makes (`warehouseSetup`).
+ * Without them it asks only whether any warehouse is sold: on Tailspin (2026-10-26) that
  * answered Done with Test ERP just added and no warehouse of its own, so the fix that would
  * make one was never offered.
  */

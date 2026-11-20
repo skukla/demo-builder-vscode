@@ -23,7 +23,7 @@ import type { ErpOwnedProductRow, ErpOwnsEntry } from '@/types/erpOwnership';
 
 const WEBSITES = [
     { code: 'base', name: 'Main Website' },
-    { code: 'justrite', name: 'Justrite' },
+    { code: 'tailspin', name: 'Tailspin' },
     { code: 'evo', name: 'Evo' },
 ];
 
@@ -33,15 +33,15 @@ function row(over: Partial<ErpOwnedProductRow> & Pick<ErpOwnedProductRow, 'sku'>
 
 const PRODUCTS: ErpOwnedProductRow[] = [
     row({ sku: 'A', websiteCodes: ['base'], attributes: { erp_owner: 'acme' } }),
-    row({ sku: 'B', websiteCodes: ['justrite'], attributes: {} }),
-    row({ sku: 'C', websiteCodes: ['justrite', 'evo'], attributes: { erp_owner: 'brand-b' } }),
+    row({ sku: 'B', websiteCodes: ['tailspin'], attributes: {} }),
+    row({ sku: 'C', websiteCodes: ['tailspin', 'evo'], attributes: { erp_owner: 'brand-b' } }),
 ];
 
 describe('ownsSettingsOf — the erp/erps values a rule saves', () => {
     it('writes the mode and the one key the mode reads, nothing else', () => {
-        expect(ownsSettingsOf({ mode: 'websites', websites: ['justrite', 'evo'] })).toStrictEqual({
+        expect(ownsSettingsOf({ mode: 'websites', websites: ['tailspin', 'evo'] })).toStrictEqual({
             structure_owns: 'websites',
-            structure_owns_websites: 'justrite,evo',
+            structure_owns_websites: 'tailspin,evo',
         });
         expect(ownsSettingsOf({ mode: 'attribute', attribute: 'erp_owner=brand-b' })).toStrictEqual({
             structure_owns: 'attribute',
@@ -53,8 +53,8 @@ describe('ownsSettingsOf — the erp/erps values a rule saves', () => {
 
 describe('ownsRuleOf — the rule an ERP holds, read off its resolved settings', () => {
     it('reads each mode with its list, and an unset mode as "all"', () => {
-        expect(ownsRuleOf({ structure_owns: 'websites', structure_owns_websites: 'justrite, evo' }))
-            .toStrictEqual({ mode: 'websites', websites: ['justrite', 'evo'] });
+        expect(ownsRuleOf({ structure_owns: 'websites', structure_owns_websites: 'tailspin, evo' }))
+            .toStrictEqual({ mode: 'websites', websites: ['tailspin', 'evo'] });
         expect(ownsRuleOf({ structure_owns: 'attribute', structure_owns_attribute: 'erp_owner=acme' }))
             .toStrictEqual({ mode: 'attribute', attribute: 'erp_owner=acme' });
         // The sources mode was deleted (AB-70): an entry still carrying it reads as "all".
@@ -66,40 +66,40 @@ describe('ownsRuleOf — the rule an ERP holds, read off its resolved settings',
 });
 
 describe('ownersAcross — who owns each product, by the integration\'s precedence', () => {
-    const JUSTRITE: ErpOwnsEntry = { erp: 'justrite', owns: { mode: 'all' } };
+    const TAILSPIN: ErpOwnsEntry = { erp: 'tailspin', owns: { mode: 'all' } };
     const ACCUFORM: ErpOwnsEntry = { erp: 'accuform', owns: { mode: 'attribute', attribute: 'erp_owner=accuform' } };
     const STORE: ErpOwnedProductRow[] = [
         row({ sku: 'tagged', websiteCodes: ['base'], attributes: { erp_owner: 'accuform' } }),
         row({ sku: 'untagged', websiteCodes: ['base'], attributes: {} }),
-        row({ sku: 'other-tag', websiteCodes: ['evo'], attributes: { erp_owner: 'justrite' } }),
+        row({ sku: 'other-tag', websiteCodes: ['evo'], attributes: { erp_owner: 'tailspin' } }),
     ];
 
     it('an ERP on everything is the catch-all: it owns what no product rule claims, and never competes for a tagged product', () => {
-        expect(ownersAcross(STORE, [JUSTRITE, ACCUFORM])).toStrictEqual(
+        expect(ownersAcross(STORE, [TAILSPIN, ACCUFORM])).toStrictEqual(
             new Map([
                 ['tagged', ['accuform']],
-                ['untagged', ['justrite']],
-                ['other-tag', ['justrite']],
+                ['untagged', ['tailspin']],
+                ['other-tag', ['tailspin']],
             ]),
         );
-        expect(ownedSkusAcross(STORE, [JUSTRITE, ACCUFORM], 'justrite')).toStrictEqual(new Set(['untagged', 'other-tag']));
-        expect(ownedSkusAcross(STORE, [JUSTRITE, ACCUFORM], 'accuform')).toStrictEqual(new Set(['tagged']));
+        expect(ownedSkusAcross(STORE, [TAILSPIN, ACCUFORM], 'tailspin')).toStrictEqual(new Set(['untagged', 'other-tag']));
+        expect(ownedSkusAcross(STORE, [TAILSPIN, ACCUFORM], 'accuform')).toStrictEqual(new Set(['tagged']));
     });
 
     it('a website rule comes last: it owns only what no product rule and no catch-all took', () => {
         const byWebsite: ErpOwnsEntry = { erp: 'evo', owns: { mode: 'websites', websites: ['evo'] } };
-        expect(ownersAcross(STORE, [JUSTRITE, byWebsite])).toStrictEqual(
+        expect(ownersAcross(STORE, [TAILSPIN, byWebsite])).toStrictEqual(
             new Map([
-                ['tagged', ['justrite']],
-                ['untagged', ['justrite']],
-                ['other-tag', ['justrite']],
+                ['tagged', ['tailspin']],
+                ['untagged', ['tailspin']],
+                ['other-tag', ['tailspin']],
             ]),
         );
-        const narrowed: ErpOwnsEntry = { erp: 'justrite', owns: { mode: 'websites', websites: ['base'] } };
+        const narrowed: ErpOwnsEntry = { erp: 'tailspin', owns: { mode: 'websites', websites: ['base'] } };
         expect(ownersAcross(STORE, [narrowed, ACCUFORM, byWebsite])).toStrictEqual(
             new Map([
                 ['tagged', ['accuform']],
-                ['untagged', ['justrite']],
+                ['untagged', ['tailspin']],
                 ['other-tag', ['evo']],
             ]),
         );
@@ -138,7 +138,7 @@ describe('overlapsIn — the products two rules both claim', () => {
 
 describe('describeOwns — the rule in the fill\'s words', () => {
     it('says the rule in the fill\'s words', () => {
-        expect(describeOwns({ mode: 'websites', websites: ['justrite'] })).toBe('products sold on justrite');
+        expect(describeOwns({ mode: 'websites', websites: ['tailspin'] })).toBe('products sold on tailspin');
         expect(describeOwns({ mode: 'attribute', attribute: 'erp_owner=brand-b' })).toBe('products whose erp_owner is brand-b');
         expect(describeOwns({ mode: 'all' })).toBe('every product');
     });
@@ -161,12 +161,12 @@ describe('existingRulesToChange — only a website-rule ERP needs the catch-all 
     });
 
     it('an ERP on everything is given the websites left over when the new ERP is split by website, since the catch-all comes before a website rule', () => {
-        expect(existingRulesToChange({ websites: WEBSITES, erps }, { mode: 'websites', websites: ['justrite'] }))
+        expect(existingRulesToChange({ websites: WEBSITES, erps }, { mode: 'websites', websites: ['tailspin'] }))
             .toStrictEqual([{ erp: 'acme', owns: { mode: 'websites', websites: ['base', 'evo'] } }]);
     });
 
     it('with no website left over it is left on everything (the new ERP then owns nothing, and the pass says so)', () => {
-        expect(existingRulesToChange({ websites: WEBSITES, erps }, { mode: 'websites', websites: ['base', 'justrite', 'evo'] }))
+        expect(existingRulesToChange({ websites: WEBSITES, erps }, { mode: 'websites', websites: ['base', 'tailspin', 'evo'] }))
             .toStrictEqual([]);
     });
 
@@ -175,7 +175,7 @@ describe('existingRulesToChange — only a website-rule ERP needs the catch-all 
             { erp: 'acme', owns: { mode: 'all' } },
             { erp: 'other', owns: { mode: 'websites', websites: ['evo'] } },
         ];
-        expect(existingRulesToChange({ websites: WEBSITES, erps: two }, { mode: 'websites', websites: ['justrite'] }))
+        expect(existingRulesToChange({ websites: WEBSITES, erps: two }, { mode: 'websites', websites: ['tailspin'] }))
             .toStrictEqual([{ erp: 'acme', owns: { mode: 'websites', websites: ['base'] } }]);
     });
 });
@@ -184,7 +184,7 @@ describe('rulesAfterAdd and countOwnedAfterAdd — what the dialog counts is wha
     const erps = [{ erp: 'acme', owns: { mode: 'all' as const } }];
 
     it('the rules once the new ERP is added: the existing ones, narrowed where needed, and the new one', () => {
-        const added: ErpOwnsEntry = { erp: 'brand-b', owns: { mode: 'websites', websites: ['justrite'] } };
+        const added: ErpOwnsEntry = { erp: 'brand-b', owns: { mode: 'websites', websites: ['tailspin'] } };
         expect(rulesAfterAdd({ websites: WEBSITES, erps }, added)).toStrictEqual([
             { erp: 'acme', owns: { mode: 'websites', websites: ['base', 'evo'] } },
             added,
@@ -196,20 +196,20 @@ describe('rulesAfterAdd and countOwnedAfterAdd — what the dialog counts is wha
     it('counts what the new ERP would own across every rule, not what its rule alone matches', () => {
         // By attribute: only the tagged product, whatever the catch-all holds.
         expect(countOwnedAfterAdd(PRODUCTS, { websites: WEBSITES, erps }, { erp: 'brand-b', owns: { mode: 'attribute', attribute: 'erp_owner=brand-b' } })).toBe(1);
-        // By website: justrite's two, once the catch-all is narrowed to base and evo.
-        expect(countOwnedAfterAdd(PRODUCTS, { websites: WEBSITES, erps }, { erp: 'brand-b', owns: { mode: 'websites', websites: ['justrite'] } })).toBe(2);
+        // By website: tailspin's two, once the catch-all is narrowed to base and evo.
+        expect(countOwnedAfterAdd(PRODUCTS, { websites: WEBSITES, erps }, { erp: 'brand-b', owns: { mode: 'websites', websites: ['tailspin'] } })).toBe(2);
         // By website with nothing left over: the catch-all keeps everything, so the new ERP would own nothing.
-        expect(countOwnedAfterAdd(PRODUCTS, { websites: WEBSITES, erps }, { erp: 'brand-b', owns: { mode: 'websites', websites: ['base', 'justrite', 'evo'] } })).toBe(0);
+        expect(countOwnedAfterAdd(PRODUCTS, { websites: WEBSITES, erps }, { erp: 'brand-b', owns: { mode: 'websites', websites: ['base', 'tailspin', 'evo'] } })).toBe(0);
         // Beside a specific rule the product keeps its tagged owner: C is brand-b's, not a website ERP's.
         const specific = [{ erp: 'acme', owns: { mode: 'attribute' as const, attribute: 'erp_owner=acme' } }, { erp: 'brand-b', owns: { mode: 'attribute' as const, attribute: 'erp_owner=brand-b' } }];
         expect(countOwnedAfterAdd(PRODUCTS, { websites: WEBSITES, erps: specific }, { erp: 'evo', owns: { mode: 'websites', websites: ['evo'] } })).toBe(0);
-        expect(countOwnedAfterAdd(PRODUCTS, { websites: WEBSITES, erps: specific }, { erp: 'evo', owns: { mode: 'websites', websites: ['justrite'] } })).toBe(1);
+        expect(countOwnedAfterAdd(PRODUCTS, { websites: WEBSITES, erps: specific }, { erp: 'evo', owns: { mode: 'websites', websites: ['tailspin'] } })).toBe(1);
     });
 });
 
 describe('ownsProblem — a rule that cannot be saved', () => {
     it('a list mode with nothing ticked, an attribute without code=value', () => {
-        expect(ownsProblem({ mode: 'websites', websites: [] })).toBe('Tick at least one website.');
+        expect(ownsProblem({ mode: 'websites', websites: [] })).toBe('Select at least one website.');
         expect(ownsProblem({ mode: 'attribute', attribute: 'erp_owner' })).toBe('The attribute is code=value, e.g. erp_owner=acme.');
         expect(ownsProblem({ mode: 'websites', websites: ['base'] })).toBeUndefined();
         expect(ownsProblem({ mode: 'all' })).toBeUndefined();

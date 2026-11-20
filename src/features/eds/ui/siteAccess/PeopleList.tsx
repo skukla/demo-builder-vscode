@@ -67,7 +67,7 @@ export function PeopleList({ rows, canGive, onGive, onRemove }: PeopleListProps)
             {rows.map((row) => (
                 <PersonRow key={row.email} row={row} onRemove={onRemove} />
             ))}
-            {canGive ? <AddCard name="Give access" onOpen={onGive} cardClassName="integration-row" /> : null}
+            {canGive ? <AddCard name="Give Access" onOpen={onGive} cardClassName="integration-row" /> : null}
         </div>
     );
 }

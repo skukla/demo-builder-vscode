@@ -1,5 +1,6 @@
 import { View, Text, Flex, Heading, Divider } from '@adobe/react-spectrum';
 import React, { useMemo } from 'react';
+import { chosenDatapackName } from './datapackName';
 import { hasRequiredReviewData } from './reviewPredicates';
 import {
     buildComponentInfoList,
@@ -8,6 +9,7 @@ import {
     reviewStorePreparation,
     StorePreparationNotice,
 } from './reviewStepHelpers';
+import { reviewStoreScope } from './reviewStoreScope';
 import { COMPONENT_IDS, isMeshComponentId } from '@/core/constants';
 import { ContentColumn } from '@/core/ui/components/layout/ContentColumn';
 import { useCanProceed } from '@/core/ui/hooks/useCanProceed';
@@ -78,7 +80,7 @@ function LabelValue({
                     )}
                 </Flex>
                 {subItems && subItems.length > 0 && (
-                    <Text UNSAFE_className="description-text">{subItems.join(' · ')}</Text>
+                    <Text UNSAFE_className="description-text">{subItems.join(', ')}</Text>
                 )}
             </Flex>
         </Flex>
@@ -117,7 +119,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 /** Derive GitHub repo display info from EDS config */
 function deriveGithubRepoInfo(
     edsConfig: WizardState['edsConfig'],
-): { fullName: string; mode: string } | null {
+): { fullName: string; mode?: string } | null {
     if (!edsConfig) return null;
 
     const owner =
@@ -126,17 +128,10 @@ function deriveGithubRepoInfo(
     if (!repoName) return null;
 
     const fullName = owner ? `${owner}/${repoName}` : repoName;
-    const isExisting = edsConfig.repoMode === 'existing';
-    const willReset = isExisting && edsConfig.resetToTemplate;
-
-    let mode = 'New repository';
-    if (isExisting && willReset) {
-        mode = 'Reset to template';
-    } else if (isExisting) {
-        mode = 'Existing repository';
-    }
-
-    return { fullName, mode };
+    // Only a reset is said: it replaces what is in the repository. New or existing is not, since New
+    // creates the repository at once and selects it as an existing one (EDS-18; walk F203).
+    const willReset = edsConfig.repoMode === 'existing' && edsConfig.resetToTemplate === true;
+    return willReset ? { fullName, mode: 'Reset to template' } : { fullName };
 }
 
 /**
@@ -171,15 +166,24 @@ function resolveDisplayName(title?: string, name?: string): string | undefined {
 function ProjectConfigSection({
     packageName,
     stackName,
+    datapackName,
+    scope,
 }: {
     packageName?: string;
     stackName?: string;
+    /** The datapack the project gets, as its card named it (owner, 2026-11-16). */
+    datapackName?: string;
+    /** Where it writes in Commerce, by name (walk F211). */
+    scope: ReturnType<typeof reviewStoreScope>;
 }) {
-    if (!packageName && !stackName) return <View />;
+    if (!packageName && !stackName && !datapackName && !scope.website) return <View />;
     return (
-        <Section title="PROJECT CONFIGURATION">
+        <Section title="Project Configuration">
             {packageName && <LabelValue label="Package" value={packageName} />}
             {stackName && <LabelValue label="Architecture" value={stackName} />}
+            {datapackName && <LabelValue label="Datapack" value={datapackName} />}
+            {scope.website && <LabelValue label="Website" value={scope.website} />}
+            {scope.storeView && <LabelValue label="Store View" value={scope.storeView} />}
         </Section>
     );
 }
@@ -196,7 +200,7 @@ function AdobeIOSection({
 }) {
     if (!orgName && !projectName && !workspaceName) return <View />;
     return (
-        <Section title="ADOBE I/O">
+        <Section title="Adobe I/O">
             {orgName && <LabelValue label="Organization" value={orgName} />}
             {projectName && <LabelValue label="Project" value={projectName} />}
             {workspaceName && <LabelValue label="Workspace" value={workspaceName} />}
@@ -231,17 +235,17 @@ function EdsSection({
     daLiveInfo,
     aemAssetsEnabled,
 }: {
-    githubRepoInfo: { fullName: string; mode: string } | null;
+    githubRepoInfo: { fullName: string; mode?: string } | null;
     daLiveInfo: { org: string; site: string; mode: string } | null;
     aemAssetsEnabled: boolean;
 }) {
     return (
-        <Section title="EDGE DELIVERY SERVICES">
+        <Section title="Edge Delivery Services">
             {githubRepoInfo && (
                 <LabelValue
                     label="GitHub Repository"
                     value={githubRepoInfo.fullName}
-                    subItems={[githubRepoInfo.mode]}
+                    {...(githubRepoInfo.mode ? { subItems: [githubRepoInfo.mode] } : {})}
                 />
             )}
             {daLiveInfo && (
@@ -390,7 +394,7 @@ export function ReviewStep({
                 <div data-span-columns={
                     !adobeOrgName && !adobeProjectName && !adobeWorkspaceName ? 'true' : undefined
                 }>
-                    <ProjectConfigSection packageName={packageName} stackName={stackName} />
+                    <ProjectConfigSection packageName={packageName} stackName={stackName} datapackName={chosenDatapackName(state)} scope={reviewStoreScope(state)} />
                 </div>
                 {(adobeOrgName || adobeProjectName || adobeWorkspaceName) && (
                     <AdobeIOSection

@@ -96,7 +96,7 @@ describe('readProjectFile', () => {
 });
 
 describe('readSharedDemoDescription', () => {
-    const valid = { kind: 'demo', version: 1, name: 'Isle5 by Jen' };
+    const valid = { kind: 'demo', version: 1, name: 'Isle5 by Robin' };
 
     it('reads a minimal description with no warnings', () => {
         expect(readSharedDemoDescription(JSON.stringify(valid))).toEqual({

@@ -46,9 +46,10 @@ jest.mock('@/core/shell/rateLimiter', () => ({
 // shape `fileWatcher`'s suite uses.
 
 import { pollingStub, snap } from './importJobRunner.testUtils';
-import { watchImportJob, IMPORT_POLL } from '@/features/data-installer/services/importJobRunner';
+import { watchImportJob, IMPORT_POLL, type ProgressListener } from '@/features/data-installer/services/importJobRunner';
 import type { JobStatusSnapshot } from '@/features/data-installer/types';
 import { PollingService } from '@/core/shell/pollingService';
+import { plain } from '@/core/utils/plainText';
 
 /** Runner with a scripted sequence of status responses. */
 function runWith(
@@ -58,7 +59,7 @@ function runWith(
         failureReason?: { error: string };
         graceMs?: number;
         abortSignal?: AbortSignal;
-        onProgress?: (perType: JobStatusSnapshot['perType']) => void;
+        onProgress?: ProgressListener;
     } = {}
 ) {
     let call = 0;
@@ -145,6 +146,39 @@ describe('watchImportJob', () => {
      * "Importing" for the whole run, sometimes minutes. This callback is the
      * only new thing needed: the push and the render hang off it.
      */
+    it('carries the engine\'s one line about what it kept onto the result (step 05)', async () => {
+        const { promise } = runWith([
+            snap({ categories: 'processing' }),
+            snap({ categories: 'success', products: 'success' }, { note: 'Kept 2 items changed in the Admin.' }),
+        ]);
+
+        const result = await promise;
+
+        expect(result.outcome).toBe('success');
+        expect(result.note).toBe('Kept 2 items changed in the Admin.');
+    });
+
+    // 2026-11-06: the engine checks the store against the pack at the end of an install.
+    it("carries the engine's install check and timings onto the result", async () => {
+        const none = { count: 0, examples: [] };
+        const check = {
+            verdict: 'matches' as const,
+            checked: 2,
+            compared: { values: 2, prices: 2, configurables: 0 },
+            missing: none,
+            configurablesWithoutOptions: none,
+            configurablesDiffer: none,
+            valuesDiffer: none,
+            pricesDiffer: none,
+        };
+        const { promise } = runWith([snap({ categories: 'success', products: 'success' }, { check, timings: { products: 4.2 } })]);
+
+        const result = await promise;
+
+        expect(result.check).toEqual(check);
+        expect(result.timings).toEqual({ products: 4.2 });
+    });
+
     describe('progress reporting', () => {
         it('reports each poll as it happens, not once at the end', async () => {
             const seen: Array<Record<string, string>> = [];
@@ -179,6 +213,47 @@ describe('watchImportJob', () => {
                 categories: 'success',
                 products: 'success',
             });
+        });
+
+        it('hands on the engine\'s count for the type in progress, and nothing when it has none', async () => {
+            const details: Array<string | undefined> = [];
+            const { promise } = runWith(
+                [
+                    snap({ categories: 'success', products: 'processing' }, { detail: '450 of 2,046 products' }),
+                    snap({ categories: 'success', products: 'success' }),
+                ],
+                { onProgress: (_perType, detail) => details.push(detail) }
+            );
+
+            await promise;
+
+            expect(details[0]).toBe('450 of 2,046 products');
+            expect(details.at(-1)).toBeUndefined();
+        });
+
+        // The import window says what the engine is doing between data types (owner, 2026-11-07).
+        it('hands on what the engine is doing while no one type is', async () => {
+            const phases: Array<string | undefined> = [];
+            const { promise } = runWith(
+                [
+                    snap({ categories: 'success', products: 'processing' }, { phase: 'Checking the products against the datapack' }),
+                    snap({ categories: 'success', products: 'success' }),
+                ],
+                { onProgress: (_perType, _detail, phase) => phases.push(phase) }
+            );
+
+            await promise;
+
+            expect(phases[0]).toBe('Checking the products against the datapack');
+            expect(phases.at(-1)).toBeUndefined();
+        });
+
+        // The window's rows and its main action read these off the finished job.
+        it('hands on where the job stopped, whether a retry can help, and what the SC reads', async () => {
+            const said = { stoppedAt: 'products', retryable: true, scLines: [plain('Kept 2 things.')], searchDelay: 'Soon.', rowNotes: { categories: plain('Commerce refused 1.') } };
+            const { promise } = runWith([snap({ categories: 'success', products: 'error' }, said)]);
+
+            expect(await promise).toMatchObject(said);
         });
 
         /** An empty map is "not started", not progress. Reporting it would blank the line. */
@@ -287,6 +362,15 @@ describe('watchImportJob', () => {
             const { promise } = runWith([snap(perType)], { failureReason: { error: 'The store has no customer group Platinum Buyer.' } });
 
             expect(await promise).toMatchObject({ outcome, reason: 'The store has no customer group Platinum Buyer.' });
+        });
+
+        // Every type went in and the work after them stopped: the engine says so with stoppedAt.
+        it('every type done but the job stopped while finishing → partial, with its reason', async () => {
+            const { promise } = runWith([snap({ categories: 'success', products: 'success' }, { stoppedAt: 'finishing' })], {
+                failureReason: { error: 'Commerce answered 503.' },
+            });
+
+            expect(await promise).toMatchObject({ outcome: 'partial', stoppedAt: 'finishing', reason: 'Commerce answered 503.' });
         });
 
         it('asks for no reason when every kind succeeded', async () => {

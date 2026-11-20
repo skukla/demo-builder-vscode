@@ -7,6 +7,7 @@
 import React from 'react';
 import type { ProjectActions } from './ProjectActionsMenu';
 import { ProjectCard } from './ProjectCard';
+import type { ListSelection } from './ProjectSelectBox';
 import type { Project } from '@/types/base';
 
 export interface ProjectsGridProps {
@@ -24,6 +25,8 @@ export interface ProjectsGridProps {
     addCard?: React.ReactNode;
     /** Bundled action callbacks passed to each card's menu */
     actions?: ProjectActions;
+    /** While selecting: every tile shows its box, and a click ticks it. */
+    selection?: ListSelection;
 }
 
 /**
@@ -35,6 +38,7 @@ export function ProjectsGrid({
     onSelectProject,
     actions = {},
     addCard,
+    selection,
 }: ProjectsGridProps) {
     return (
         <div data-testid="projects-grid" className="projects-grid">
@@ -45,6 +49,9 @@ export function ProjectsGrid({
                     isRunning={project.path === runningProjectPath}
                     onSelect={onSelectProject}
                     actions={actions}
+                    selection={
+                        selection && { selected: selection.selected.has(project.path), onToggle: selection.onToggle }
+                    }
                 />
             ))}
             {addCard}

@@ -8,7 +8,7 @@
  * fills every blank setting from the brand package and then the catalog when
  * the settings screen mounts. An agent's `create_project` never mounts that
  * screen, so its projects were saved with none of those defaults. Found live
- * on JustRite (2026-10-06): "Product Images from AEM Assets" defaults to
+ * on Tailspin (2026-10-06): "Product Images from AEM Assets" defaults to
  * Enabled, Configure displayed Enabled, and the storefront published
  * `commerce-assets-enabled: false` — every product image broken.
  *

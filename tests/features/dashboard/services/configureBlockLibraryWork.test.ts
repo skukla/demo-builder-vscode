@@ -359,7 +359,7 @@ describe('applyPendingBlockLibraryWork', () => {
 
         // A named stage each, with the library as its step.
         expect(onProgress.mock.calls).toEqual([
-            ['Removing block libraries', 'My Blocks'],
+            ['Removing libraries from the site', 'My Blocks'],
             ['Adding block libraries', DEMO_TEAM.name],
         ]);
     });

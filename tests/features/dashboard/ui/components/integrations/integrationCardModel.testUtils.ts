@@ -56,7 +56,7 @@ const FAKE_CATALOG: Record<string, AppBuilderComponentCatalogEntry> = {
                 title: 'Set the catalog price scope to Website',
                 why: 'w',
                 where: 'Admin',
-                fix: { kind: 'config', items: [{ path: 'catalog/price/scope', value: '1', scope: 'default' }] },
+                setup: { kind: 'config', items: [{ path: 'catalog/price/scope', value: '1', scope: 'default' }] },
             },
         ],
     },

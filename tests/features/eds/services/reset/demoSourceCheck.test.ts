@@ -24,16 +24,16 @@ import { createMockStateManager } from '../../../../helpers/stateManagerFake';
 
 const mockRename = renameAddedDemoSource as jest.MockedFunction<typeof renameAddedDemoSource>;
 
-const REPO = { fullName: 'jen/isle5-demo', defaultBranch: 'main' };
+const REPO = { fullName: 'robin/isle5-demo', defaultBranch: 'main' };
 
 function project(overrides: Partial<Project> = {}): Project {
     const eds = edsStorefrontInstance();
     return createMockProject({
-        demo: makeAddedDemo({ contentSource: { org: 'jen', site: 'isle5-content', indexPath: '/full-index.json' } }),
+        demo: makeAddedDemo({ contentSource: { org: 'robin', site: 'isle5-content', indexPath: '/full-index.json' } }),
         componentInstances: {
             [COMPONENT_IDS.EDS_STOREFRONT]: {
                 ...eds,
-                metadata: { ...eds.metadata, templateOwner: 'jen', templateRepo: 'isle5-demo' },
+                metadata: { ...eds.metadata, templateOwner: 'robin', templateRepo: 'isle5-demo' },
             },
         },
         ...overrides,
@@ -68,28 +68,44 @@ describe('checkDemoSource', () => {
 
         const check = await checkDemoSource(project(), ops, context(), okFetch);
 
-        expect(ops.getRepository).toHaveBeenCalledWith('jen', 'isle5-demo');
+        expect(ops.getRepository).toHaveBeenCalledWith('robin', 'isle5-demo');
         expect(okFetch).toHaveBeenCalledWith(
-            'https://main--isle5-content--jen.aem.live/full-index.json',
+            'https://main--isle5-content--robin.aem.live/full-index.json',
             expect.objectContaining({ method: 'GET' }),
         );
-        expect(check).toEqual({ reachable: true, message: '', contentReachable: true });
+        expect(check).toEqual({ reachable: true, checked: true, message: '', contentReachable: true });
     });
 
-    it("refuses in a sentence that names whose demo it is when the repository can't be read", async () => {
-        const check = await checkDemoSource(
-            project(),
-            repoOps(Promise.reject(new Error('404'))),
-            context(),
-            okFetch,
-        );
+    // The error `GitHubRepoOperations.getRepository` throws for a 404, its status riding along.
+    const notFound = () => Object.assign(new Error('Repository not found'), { status: 404 });
+
+    it("refuses in a sentence that names whose demo it is when GitHub says the repository is gone", async () => {
+        const check = await checkDemoSource(project(), repoOps(Promise.reject(notFound())), context(), okFetch);
 
         expect(check).toEqual({
             reachable: false,
+            checked: true,
             contentReachable: false,
-            message: "The Isle5 by Jen demo's repository can't be reached. Reset and updates are unavailable until it is.",
+            message: "The Isle5 by Robin demo's repository can't be reached. Reset and updates are unavailable until it is.",
         });
         expect(okFetch).not.toHaveBeenCalled();
+    });
+
+    // Owner, 2026-11-05: a dropped network one night showed Tailspin's "can't be reached" notice,
+    // gone the next morning. A read that failed says it could not check, and nothing more.
+    it.each([
+        ['a network failure', new Error('getaddrinfo ENOTFOUND api.github.com')],
+        ['a sign-in GitHub refused', Object.assign(new Error('Bad credentials'), { status: 401 })],
+        ['a GitHub outage', Object.assign(new Error('Server Error'), { status: 502 })],
+    ])('says it could not check, not that the source is gone, on %s', async (_what, error) => {
+        const check = await checkDemoSource(project(), repoOps(Promise.reject(error)), context(), okFetch);
+
+        expect(check).toEqual({
+            reachable: false,
+            checked: false,
+            contentReachable: false,
+            message: "Couldn't check the Isle5 by Robin demo's repository. Try again in a moment.",
+        });
     });
 
     it('follows a rename into the row, the instance metadata and the remembered setting, and saves', async () => {
@@ -98,21 +114,21 @@ describe('checkDemoSource', () => {
 
         const check = await checkDemoSource(
             p,
-            repoOps(Promise.resolve({ ...REPO, fullName: 'jen/isle5-2026' })),
+            repoOps(Promise.resolve({ ...REPO, fullName: 'robin/isle5-2026' })),
             ctx,
             okFetch,
         );
 
-        expect(check.renamedTo).toBe('jen/isle5-2026');
-        expect(p.demo?.source).toEqual({ owner: 'jen', repo: 'isle5-2026' });
+        expect(check.renamedTo).toBe('robin/isle5-2026');
+        expect(p.demo?.source).toEqual({ owner: 'robin', repo: 'isle5-2026' });
         expect(p.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata).toMatchObject({
-            templateOwner: 'jen',
+            templateOwner: 'robin',
             templateRepo: 'isle5-2026',
         });
         expect(ctx.stateManager.saveProject).toHaveBeenCalledWith(p);
         expect(mockRename).toHaveBeenCalledWith(
-            { owner: 'jen', repo: 'isle5-demo' },
-            { owner: 'jen', repo: 'isle5-2026' },
+            { owner: 'robin', repo: 'isle5-demo' },
+            { owner: 'robin', repo: 'isle5-2026' },
         );
     });
 
@@ -121,7 +137,7 @@ describe('checkDemoSource', () => {
 
         const check = await checkDemoSource(
             p,
-            repoOps(Promise.resolve({ ...REPO, fullName: 'Jen/Isle5-Demo' })),
+            repoOps(Promise.resolve({ ...REPO, fullName: 'Robin/Isle5-Demo' })),
             context(),
             okFetch,
         );
@@ -135,18 +151,18 @@ describe('checkDemoSource', () => {
 
         expect(check.reachable).toBe(true);
         expect(check.contentReachable).toBe(false);
-        expect(check.contentMessage).toBe("The Isle5 by Jen demo's pages can't be reached right now.");
+        expect(check.contentMessage).toBe("The Isle5 by Robin demo's pages can't be reached right now.");
     });
 
     it('reads the demo\'s own index path when the row states one', async () => {
         const p = project({
-            demo: makeAddedDemo({ contentSource: { org: 'jen', site: 'isle5', indexPath: '/en/query-index.json' } }),
+            demo: makeAddedDemo({ contentSource: { org: 'robin', site: 'isle5', indexPath: '/en/query-index.json' } }),
         });
 
         await checkDemoSource(p, repoOps(Promise.resolve(REPO)), context(), okFetch);
 
         expect(okFetch).toHaveBeenCalledWith(
-            'https://main--isle5--jen.aem.live/en/query-index.json',
+            'https://main--isle5--robin.aem.live/en/query-index.json',
             expect.anything(),
         );
     });
@@ -161,6 +177,7 @@ describe('checkDemoSource', () => {
         const ops = repoOps(Promise.resolve(REPO));
         expect(await checkDemoSource(project({ demo: undefined }), ops, context(), goneFetch)).toEqual({
             reachable: true,
+            checked: true,
             message: '',
             contentReachable: true,
         });

@@ -25,27 +25,81 @@ describe('SearchHeader', () => {
         jest.clearAllMocks();
     });
 
-    describe('search field visibility', () => {
-        it('should show search field when totalCount > threshold', () => {
+    // A dialog cuts a count of what the SC can see (dialog design rules). The buttons have to stay.
+    describe('hideCount', () => {
+        it('says no count, and keeps the row its buttons live on when there is no search field', () => {
             renderWithProvider(
                 <SearchHeader
                     {...defaultProps}
-                    totalCount={6}
-                    filteredCount={6}
-                    searchThreshold={5}
+                    totalCount={2}
+                    filteredCount={2}
+                    itemNoun="project"
+                    alwaysShowCount
+                    hideCount
+                    action={<button type="button">New</button>}
+                />
+            );
+
+            expect(screen.queryByText(/2 projects/)).toBeNull();
+            expect(screen.getByRole('button', { name: 'New' })).toBeInTheDocument();
+        });
+
+        it('draws no empty row under a search field, and no count while filtering', () => {
+            const { container } = renderWithProvider(
+                <SearchHeader
+                    {...defaultProps}
+                    searchQuery="a"
+                    filteredCount={3}
+                    itemNoun="project"
+                    alwaysShowCount
+                    hideCount
+                />
+            );
+
+            expect(container.querySelector('.search-header-count-row')).toBeNull();
+            expect(screen.queryByText(/3 of 10/)).toBeNull();
+        });
+
+        it('CONTROL: without it the count is there', () => {
+            renderWithProvider(<SearchHeader {...defaultProps} totalCount={2} filteredCount={2} itemNoun="project" alwaysShowCount />);
+
+            expect(screen.getByText('2 projects')).toBeInTheDocument();
+        });
+    });
+
+    describe('search field visibility', () => {
+        it('keeps the search field on an empty list when asked to', () => {
+            renderWithProvider(
+                <SearchHeader {...defaultProps} totalCount={0} filteredCount={0} alwaysShowSearch />,
+            );
+
+            expect(screen.getByRole('searchbox')).toBeInTheDocument();
+        });
+
+        it('CONTROL: without it an empty list has no search field', () => {
+            renderWithProvider(<SearchHeader {...defaultProps} totalCount={0} filteredCount={0} />);
+
+            expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
+        });
+
+        it('should show search field on a short list', () => {
+            renderWithProvider(
+                <SearchHeader
+                    {...defaultProps}
+                    totalCount={1}
+                    filteredCount={1}
                 />
             );
 
             expect(screen.getByPlaceholderText(/type to filter/i)).toBeInTheDocument();
         });
 
-        it('should hide search field when totalCount <= threshold', () => {
+        it('should hide search field when there is nothing to filter', () => {
             renderWithProvider(
                 <SearchHeader
                     {...defaultProps}
-                    totalCount={5}
-                    filteredCount={5}
-                    searchThreshold={5}
+                    totalCount={0}
+                    filteredCount={0}
                 />
             );
 
@@ -114,7 +168,7 @@ describe('SearchHeader', () => {
                 />
             );
 
-            expect(screen.getByText('Showing 3 of 10 items')).toBeInTheDocument();
+            expect(screen.getByText('3 of 10 items')).toBeInTheDocument();
         });
 
         it('should use singular noun when count is 1', () => {
@@ -274,7 +328,7 @@ describe('SearchHeader', () => {
                 />
             );
 
-            expect(screen.getByText('Showing 3 of 10 items')).toBeInTheDocument();
+            expect(screen.getByText('3 of 10 items')).toBeInTheDocument();
             expect(screen.queryByText('1 integration, 1 system')).not.toBeInTheDocument();
         });
     });
@@ -289,8 +343,8 @@ describe('SearchHeader', () => {
 
     describe('what counts as filtering', () => {
         it('treats a whitespace-only query as no filter', () => {
-            // Without the trim, spaces alone flip the count line to "Showing X
-            // of Y" while every item is still listed.
+            // Without the trim, spaces alone flip the count line to "X of Y"
+            // while every item is still listed.
             renderWithProvider(
                 <SearchHeader
                     {...defaultProps}
@@ -302,20 +356,56 @@ describe('SearchHeader', () => {
             );
 
             expect(screen.getByText('10 items')).toBeInTheDocument();
-            expect(screen.queryByText(/Showing/)).not.toBeInTheDocument();
+            expect(screen.queryByText('10 of 10 items')).not.toBeInTheDocument();
+        });
+    });
+
+    describe('typing in the filter moves nothing (owner, 2026-10-31)', () => {
+        // "Showing 1 of 12 datapacks" took room from the Data Installer's buttons and cut
+        // their labels. The count now holds the width of its longest form from the start.
+        it('holds the longest count while unfiltered, and the same while filtered', () => {
+            const props = { ...defaultProps, totalCount: 12, itemNoun: 'datapack', alwaysShowCount: true };
+            const { container, rerender } = renderWithProvider(
+                <SearchHeader {...props} searchQuery="" filteredCount={12} />
+            );
+            const held = () => container.querySelector('.search-header-count')?.getAttribute('data-longest');
+            expect(held()).toBe('12 of 12 datapacks');
+
+            rerender(
+                <Provider theme={defaultTheme} colorScheme="light">
+                    <SearchHeader {...props} searchQuery="zz" filteredCount={1} />
+                </Provider>
+            );
+
+            expect(screen.getByText('1 of 12 datapacks')).toBeInTheDocument();
+            expect(held()).toBe('12 of 12 datapacks');
+        });
+
+        it('holds a longer custom count line when there is one', () => {
+            const { container } = renderWithProvider(
+                <SearchHeader
+                    {...defaultProps}
+                    totalCount={2}
+                    filteredCount={2}
+                    alwaysShowCount
+                    countText="1 integration, 1 system"
+                />
+            );
+            expect(container.querySelector('.search-header-count')?.getAttribute('data-longest')).toBe(
+                '1 integration, 1 system'
+            );
         });
     });
 
     describe('where the action buttons live', () => {
         // showSearch decides the header's SHAPE: with a search field the buttons
         // sit in the search row, without one they move down beside the count.
-        it('puts the refresh button on the count row when the list is below the threshold', () => {
+        it('puts the refresh button on the count row when the list is empty', () => {
             renderWithProvider(
                 <SearchHeader
                     {...defaultProps}
-                    totalCount={3}
-                    filteredCount={3}
-                    searchThreshold={5}
+                    totalCount={0}
+                    filteredCount={0}
                     onRefresh={jest.fn()}
                     alwaysShowCount={true}
                 />
@@ -332,13 +422,52 @@ describe('SearchHeader', () => {
                     {...defaultProps}
                     totalCount={10}
                     filteredCount={10}
-                    searchThreshold={5}
                     onRefresh={jest.fn()}
                     alwaysShowCount={true}
                 />
             );
 
             expect(screen.getAllByLabelText('Refresh list')).toHaveLength(1);
+        });
+    });
+
+    // A list in selection mode says what is selected where the count was (the projects list).
+    describe('countLead', () => {
+        it("takes the count's place at the row's start, filtering or not", () => {
+            const { container } = render(
+                <SearchHeader
+                    searchQuery="a"
+                    onSearchQueryChange={jest.fn()}
+                    totalCount={10}
+                    filteredCount={3}
+                    itemNoun="project"
+                    hasLoadedOnce
+                    alwaysShowCount
+                    countLead={<span data-testid="lead">1 of 3 selected</span>}
+                    countTrailing={<span data-testid="trailing">Done</span>}
+                />
+            );
+
+            expect(screen.queryByText('3 of 10 projects')).toBeNull();
+            const row = container.querySelector('.search-header-count-row');
+            expect(row?.firstElementChild).toBe(screen.getByTestId('lead'));
+            expect(screen.getByTestId('trailing')).toBeInTheDocument();
+        });
+
+        it('leaves the count alone when absent — control', () => {
+            render(
+                <SearchHeader
+                    searchQuery="a"
+                    onSearchQueryChange={jest.fn()}
+                    totalCount={10}
+                    filteredCount={3}
+                    itemNoun="project"
+                    hasLoadedOnce
+                    alwaysShowCount
+                />
+            );
+
+            expect(screen.getByText('3 of 10 projects')).toBeInTheDocument();
         });
     });
 
@@ -352,7 +481,6 @@ describe('SearchHeader', () => {
                     filteredCount={2}
                     hasLoadedOnce
                     alwaysShowCount
-                    searchThreshold={0}
                     countTrailing={<span data-testid="trailing">context</span>}
                 />
             );
@@ -369,7 +497,6 @@ describe('SearchHeader', () => {
                     filteredCount={2}
                     hasLoadedOnce
                     alwaysShowCount
-                    searchThreshold={0}
                 />
             );
 

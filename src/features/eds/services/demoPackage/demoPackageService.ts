@@ -28,16 +28,19 @@ import {
     PAAS_WEBSITE_CODE,
 } from '@/core/config/envVarKeys';
 import { COMPONENT_IDS } from '@/core/constants';
+import { FULL_COMMIT_SHA } from '@/core/utils/commitSha';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { lookupComponentConfigValue } from '@/features/components/services/envVarHelpers';
 import { resolveStorefrontForProject } from '@/features/components/services/storefrontResolver';
 import { readBoilerplateBase } from '@/features/updates/services/boilerplateBase';
 import type { Project } from '@/types/base';
+import type { DatapackLocation, DatapackWhereabouts } from '@/types/datapack';
 import type { DaLiveContentSource, DemoIntegrations, DemoPackage } from '@/types/demoPackages';
 import type { Logger } from '@/types/logger';
 import { SHARED_DEMO_FILE_VERSION, type SharedDemoBuiltWith, type SharedDemoDescription } from '@/types/projectFile';
 import { getEdsDaLiveTarget, getEdsRepoParts } from '@/types/typeGuards';
+import type { DemoPackageCheck } from '@/types/webviewRequests';
 
 /** The storefront the project owns, as the file and the checks need it. */
 export interface OwnStorefront {
@@ -156,7 +159,9 @@ export function describeProject(
         ...(configDefaults ? { configDefaults } : {}),
         ...(pkg?.configFlags && Object.keys(pkg.configFlags).length ? { configFlags: pkg.configFlags } : {}),
         ...(requiresMesh !== undefined ? { requiresMesh } : {}),
-        ...(project.datapack ? { datapack: { name: project.datapack.name, version: project.datapack.version } } : {}),
+        // Whole: the store says where a colleague's creation reads it, and the pack it was made
+        // from is what they get if they cannot read this one (step 07).
+        ...(project.datapack ? { datapack: project.datapack } : {}),
         ...(integrations ? { integrations } : {}),
         ...(blockLibraries?.length ? { blockLibraries } : {}),
         contentSource,
@@ -186,7 +191,11 @@ function builtWithOf(
     // now, which the next colleague should start from, rather than the creation record.
     const adobe = readBoilerplateBase(project);
     const base = adobe ? { template: adobe.template, lkg: adobe.commit } : {};
-    return { ...carried, ...base, ...(boilerplate ? { boilerplate } : {}), extension };
+    // The patches release creation or the last update recorded, so a colleague's import is offered
+    // every release published since (walk F255).
+    const release = metadata.patchesRelease;
+    const patchesRelease = typeof release === 'string' && release ? { patchesRelease: release } : {};
+    return { ...carried, ...base, ...patchesRelease, ...(boilerplate ? { boilerplate } : {}), extension };
 }
 
 function withoutExtension(builtWith: SharedDemoBuiltWith): Omit<SharedDemoBuiltWith, 'extension'> {
@@ -202,7 +211,10 @@ function fromCatalog(
     if (!catalog) return {};
     const storefront = catalog.storefront;
     const { templateOwner, templateRepo, codePatchSource, codePatches } = storefront ?? {};
-    const lkg = metadata.lkgSource && typeof metadata.lastSyncedCommit === 'string' ? metadata.lastSyncedCommit : undefined;
+    // The template commit the code last matched, with or without a patches layer (walk F254), so a
+    // colleague's import counts Adobe's updates from there.
+    const synced = metadata.lastSyncedCommit;
+    const lkg = typeof synced === 'string' && FULL_COMMIT_SHA.test(synced) ? synced : undefined;
     return {
         package: catalog.package.id,
         ...(templateOwner && templateRepo ? { template: { owner: templateOwner, repo: templateRepo } } : {}),
@@ -212,22 +224,20 @@ function fromCatalog(
     };
 }
 
-/** One thing a colleague's add will need, checked, in a sentence the SC reads. */
-export interface PackageCheck {
-    id: 'repository' | 'index' | 'datapack' | 'custom-app';
-    ok: boolean;
-    message: string;
-    /** The door that fixes it, when one exists on the dashboard. */
-    action?: 'republish';
-    /** For a custom-app check: the repository the sentence is about. */
-    repository?: string;
-}
+/**
+ * One thing a colleague's add will need, checked, in a sentence the SC reads: the shape the Share
+ * dialog reads, one type for both sides of the channel.
+ */
+export type PackageCheck = DemoPackageCheck;
 
 export interface PackageCheckDeps {
     repoOps: Pick<GitHubRepoOperations, 'getRepository'>;
     fetchImpl?: typeof fetch;
-    /** Is this datapack in the datapack service? Undefined when the service cannot be asked. */
-    datapackExists?: (name: string) => Promise<boolean | undefined>;
+    /**
+     * Where a colleague would find this datapack, asked of both stores by name AND version.
+     * Undefined when a store could not be asked.
+     */
+    datapackAvailability?: (pack: DatapackLocation) => Promise<DatapackWhereabouts | undefined>;
     logger: Logger;
 }
 
@@ -246,6 +256,44 @@ export async function resolveOwnContentSource(
         indexFound: index.found,
         ...(index.pageCount !== undefined ? { pageCount: index.pageCount } : {}),
     };
+}
+
+/**
+ * What colleagues get of the sample data, by where the pack is; nothing when it could not be asked.
+ * A pack that was found is named by the name the store shows, never its code (walk F227).
+ */
+function datapackCheckFor(pack: DatapackLocation, found: DatapackWhereabouts | undefined): PackageCheck | undefined {
+    if (found === undefined) return undefined;
+    const shown = found.displayName ?? pack.name;
+    if (found.where === 'installer' || found.where === 'library-shared') {
+        return { id: 'datapack', ok: true, message: `Colleagues can install the same sample data (${shown}).` };
+    }
+    if (found.where === 'library-yours-only') {
+        return {
+            id: 'datapack',
+            ok: false,
+            title: "Colleagues Can't Use This Demo's Data Yet",
+            message: `${shown} is only visible to you.`,
+            // Its fix (walk F229): Share Datapack shares the pack the project records.
+            share: { pack: { name: pack.name, version: pack.version }, displayName: shown },
+        };
+    }
+    // Missing: no store has it, so there is no name to give, and never the code (walk F240).
+    return { id: 'datapack', ok: false, message: "The sample data this demo uses isn't available to colleagues yet." };
+}
+
+/**
+ * The datapack's check alone: none when the project records no pack or no store could be asked.
+ * The preview's checks include it; Share Demo's file step reads it on its own for a project with
+ * no storefront to preview (walk F230), so both steps say the same by one rule.
+ */
+export async function datapackChecks(
+    project: Project,
+    availability: PackageCheckDeps['datapackAvailability'],
+): Promise<PackageCheck[]> {
+    if (!project.datapack || !availability) return [];
+    const check = datapackCheckFor(project.datapack, await availability(project.datapack));
+    return check ? [check] : [];
 }
 
 /**
@@ -286,33 +334,33 @@ export async function packageChecks(
                   action: 'republish',
               },
     );
-    if (project.datapack && deps.datapackExists) {
-        const exists = await deps.datapackExists(project.datapack.name);
-        if (exists === false) {
-            checks.push({
-                id: 'datapack',
-                ok: false,
-                message: `The sample data this demo uses (${project.datapack.name}) isn't available to colleagues yet.`,
-            });
-        } else if (exists === true) {
-            checks.push({
-                id: 'datapack',
-                ok: true,
-                message: `Colleagues can install the same sample data (${project.datapack.name}).`,
-            });
-        }
-    }
+    checks.push(...(await datapackChecks(project, deps.datapackAvailability)));
+    checks.push(...(await customIntegrationChecks(project, deps)));
+    return checks;
+}
+
+/**
+ * Whether colleagues can read each custom integration's code. The link and the file both name
+ * its repository, never carry its code, so both of Share Demo's steps show this (walk F240). By
+ * the name the SC gave it, never its id.
+ */
+export async function customIntegrationChecks(
+    project: Project,
+    deps: Pick<PackageCheckDeps, 'repoOps' | 'logger'>,
+): Promise<PackageCheck[]> {
+    const checks: PackageCheck[] = [];
     for (const [id, state] of Object.entries(project.appBuilderComponents ?? {})) {
         if (state.kind !== 'integration' || getAppBuilderComponentEntry(id) || !state.source) continue;
         const fullName = `${state.source.owner}/${state.source.repo}`;
+        const name = state.name ?? id;
         const custom = await readRepository(deps.repoOps, state.source.owner, state.source.repo, deps.logger);
         checks.push(
             custom && !custom.isPrivate
-                ? { id: 'custom-app', ok: true, message: `Colleagues can add the ${id} integration.`, repository: fullName }
+                ? { id: 'custom-app', ok: true, message: `Colleagues can add the ${name} integration.`, repository: fullName }
                 : {
                       id: 'custom-app',
                       ok: false,
-                      message: `The ${id} integration's code is private. Colleagues will need access to it.`,
+                      message: `The ${name} integration's code is private. Colleagues will need access to it.`,
                       repository: fullName,
                   },
         );

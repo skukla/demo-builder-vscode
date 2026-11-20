@@ -15,7 +15,7 @@ import {
     mockReaddir,
     mockRm,
     run,
-} from './projectResetService-resetWithUI.testUtils';
+} from './projectResetService-answered.testUtils';
 
 const ERP_INTEGRATION = {
     kind: 'integration' as const,
@@ -31,7 +31,7 @@ const citisignal = () => ({
 
 beforeEach(installResetDefaults);
 
-describe('resetProjectWithUI — which folders a reset keeps', () => {
+describe('the answered reset — which folders a reset keeps', () => {
     it('a mesh app is NOT an integration: its folder goes and it is rebuilt', async () => {
         const project = createResetProject({
             appBuilderComponents: {

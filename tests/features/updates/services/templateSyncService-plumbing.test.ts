@@ -8,6 +8,7 @@
  * URL, the temp-dir cleanup, the metadata guards, and what each result carries.
  */
 
+import { _clearExternalPatchCacheForTests } from '@/features/eds/services/patches/externalPatchFetcher';
 import {
     BASE_SHA,
     PATCH_FILE,
@@ -234,10 +235,10 @@ describe('merge strategy — the exact git conversation', () => {
     });
 
     it.each([
-        ['reading the template head', /rev-parse template/, "Could not read the template's latest commit. See Debug Logs for details."],
-        ['listing the change', /diff-tree -r --name-only/, "Could not compare the template's versions. See Debug Logs for details."],
-        ['writing the patch', /--output=/, "Could not prepare the template's change. See Debug Logs for details."],
-        ['staging', /git add -A/, "Could not stage the template's changes. See Debug Logs for details."],
+        ['reading the template head', /rev-parse template/, "Could not read the template's latest commit."],
+        ['listing the change', /diff-tree -r --name-only/, "Could not compare the template's versions."],
+        ['writing the patch', /--output=/, "Could not prepare the template's change."],
+        ['staging', /git add -A/, "Could not stage the template's changes."],
     ])('a failure %s is reported and never pushed', async (_step, pattern, error) => {
         failOn(pattern);
 
@@ -252,7 +253,7 @@ describe('merge strategy — the exact git conversation', () => {
 
         const result = await service().syncWithTemplate(edsProject(), { strategy: 'merge' });
 
-        expect(result).toMatchObject({ success: false, error: "Could not read the template's latest commit. See Debug Logs for details." });
+        expect(result).toMatchObject({ success: false, error: "Could not read the template's latest commit." });
         expect(pushed()).toBe(false);
     });
 
@@ -319,7 +320,10 @@ describe('merge strategy — the exact git conversation', () => {
                 target: TEMPLATE_HEAD,
                 preserveFiles: expect.arrayContaining(['fstab.yaml', 'config.json']),
             },
-            error: 'Merge conflicts in 1 file (blocks/hero/hero.js); the update was not applied.',
+            edits: [{ file: 'blocks/hero/hero.js', whose: 'storefront' }],
+            error:
+                'The update stopped on 1 file that was edited (blocks/hero/hero.js, an edit made in this storefront). '
+                + 'Nothing was changed: the storefront on GitHub is as it was.',
         });
         expect(mockRm).toHaveBeenCalledWith(TEMP_DIR, { recursive: true, force: true });
     });
@@ -346,7 +350,7 @@ describe('merge strategy — the exact git conversation', () => {
             success: false,
             strategy: 'merge',
             syncedCommit: '',
-            error: "Could not commit the template's changes. See Debug Logs for details.",
+            error: "Could not commit the template's changes.",
         });
         expect(pushed()).toBe(false);
     });
@@ -386,7 +390,7 @@ describe('reset strategy — the exact git conversation', () => {
             {
                 repoOwner: 'skukla',
                 repoName: 'demo-storefront',
-                templateOwner: 'jen',
+                templateOwner: 'robin',
                 templateRepo: 'isle5-demo',
                 repoBranch: 'trunk',
                 templateBranch: 'demo-2026',
@@ -414,9 +418,9 @@ describe('reset strategy — the exact git conversation', () => {
     });
 
     it.each([
-        ['clone', /git clone/, 'Could not clone skukla/demo-storefront from GitHub. See Debug Logs for details.'],
-        ['fetch', /git fetch/, 'Could not fetch the template adobe/aem-boilerplate-commerce from GitHub. See Debug Logs for details.'],
-        ['read-tree', /git read-tree/, "Could not read the template's files. See Debug Logs for details."],
+        ['clone', /git clone/, 'Could not clone skukla/demo-storefront from GitHub.'],
+        ['fetch', /git fetch/, 'Could not fetch the template adobe/aem-boilerplate-commerce from GitHub.'],
+        ['read-tree', /git read-tree/, "Could not read the template's files."],
     ])('a failed %s is reported and never pushed', async (_step, pattern, error) => {
         failOn(pattern);
 
@@ -435,7 +439,7 @@ describe('reset strategy — the exact git conversation', () => {
             success: false,
             strategy: 'reset',
             syncedCommit: '',
-            error: "Could not commit the template's changes. See Debug Logs for details.",
+            error: "Could not commit the template's changes.",
         });
         expect(pushed()).toBe(false);
     });
@@ -449,7 +453,7 @@ describe('reset strategy — the exact git conversation', () => {
             success: false,
             strategy: 'reset',
             syncedCommit: '',
-            error: 'Could not push the update to GitHub. See Debug Logs for details.',
+            error: 'Could not push the update to GitHub.',
         });
     });
 
@@ -458,7 +462,7 @@ describe('reset strategy — the exact git conversation', () => {
 
         const result = await service().syncWithTemplate(edsProject(), { strategy: 'reset' });
 
-        expect(result.error).toBe('Could not push the update to GitHub. See Debug Logs for details.');
+        expect(result.error).toBe('Could not push the update to GitHub.');
     });
 
     it('an unexpected error gets an honest generic rather than its own text', async () => {
@@ -469,7 +473,7 @@ describe('reset strategy — the exact git conversation', () => {
 
         const result = await service().syncWithTemplate(edsProject(), { strategy: 'reset' });
 
-        expect(result.error).toBe('The template update could not finish. See Debug Logs for details.');
+        expect(result.error).toBe('The template update could not finish.');
     });
 });
 
@@ -519,7 +523,8 @@ describe('temp dir and preserved-file plumbing', () => {
         await service().syncWithTemplate(edsProject(), { strategy: 'reset' });
 
         expect(mockMkdir).toHaveBeenCalledWith(REPO_DIR, { recursive: true });
-        expect(mockWriteFile).toHaveBeenCalledWith(`${REPO_DIR}/fstab.yaml`, 'MOUNTS', 'utf-8');
+        // Written back as read, bytes and all (no text encoding), so an image in a kept folder survives.
+        expect(mockWriteFile).toHaveBeenCalledWith(`${REPO_DIR}/fstab.yaml`, 'MOUNTS');
     });
 
     it('a file that cannot be restored is warned about and the sync still completes', async () => {
@@ -535,6 +540,42 @@ describe('temp dir and preserved-file plumbing', () => {
 });
 
 describe('updateLastSyncedCommit', () => {
+    afterEach(() => _clearExternalPatchCacheForTests());
+
+    function thinLayerProject() {
+        const project = edsProject();
+        const instance = project.componentInstances!['eds-storefront'];
+        instance.metadata = {
+            ...instance.metadata,
+            lkgSource: { owner: 'skukla', repo: 'eds-demo-patches', lkgFile: 'b2b/last-known-good' },
+        };
+        return project;
+    }
+
+    it('records the patches release a thin-layer storefront moved to, as its version', async () => {
+        global.fetch = jest.fn().mockResolvedValue({
+            ok: true,
+            status: 200,
+            json: async () => ({ tag_name: 'v1.2.0' }),
+        });
+        const project = thinLayerProject();
+
+        await service().updateLastSyncedCommit(project, 'abc1234567', { saveProject: jest.fn() });
+
+        expect(project.componentInstances!['eds-storefront'].metadata).toMatchObject({
+            patchesRelease: 'v1.2.0',
+        });
+    });
+
+    it('leaves the version alone when the release cannot be read', async () => {
+        global.fetch = jest.fn().mockRejectedValue(new Error('offline'));
+        const project = thinLayerProject();
+
+        await service().updateLastSyncedCommit(project, 'abc1234567', { saveProject: jest.fn() });
+
+        expect(project.componentInstances!['eds-storefront'].metadata).not.toHaveProperty('patchesRelease');
+    });
+
     it('writes the commit onto the EDS metadata and saves the project', async () => {
         const project = edsProject();
         const saveProject = jest.fn().mockResolvedValue(undefined);

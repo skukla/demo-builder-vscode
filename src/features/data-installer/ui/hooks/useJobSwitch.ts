@@ -1,0 +1,94 @@
+/**
+ * What a switch or an uninstall adds to a datapack job (step 03, S6 and S7): the press, the save
+ * question's answers, the save's stage and where the save went. Split out of `useDatapackJob`.
+ *
+ * @module features/data-installer/ui/hooks/useJobSwitch
+ */
+
+import { type Dispatch, useEffect } from 'react';
+import { replacedName } from '../../switchWords';
+import type { JobEvent } from '../components/job/datapackJob';
+import type { JobReadsArgs, useJobReads } from './useJobReads';
+import type { useJobStart } from './useJobStart';
+import { type SwitchChanges, useSavingStage } from './useSwitchChanges';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { ErrorCode } from '@/types/errorCodes';
+
+/** A switch's or an uninstall's part of the job: the SC's changes and the save question's answers. */
+export interface JobSwitch {
+    changes: SwitchChanges;
+    /** The held datapack, as a switch's run's Uninstall row names it. */
+    heldName?: string;
+    /** The held datapack by its name alone, for a sentence: the Switch question's line (walk F146). */
+    heldTitle?: string;
+    /** The save's stage while the start waits on it. */
+    savingStage?: string;
+    /** Where the save made first went, once the SC chose to save: the run's Save Your Changes says it. */
+    savedTo?: string;
+    /** Switch or Uninstall pressed: the save question, or the run. */
+    press: () => void;
+    /** The save question answered. */
+    answer: (saves: boolean) => void;
+}
+
+/** The message asking for the one-time tip about the setting (webview only; agents never send it). */
+const SAVE_QUESTION_ANSWERED = 'datapack-save-question-answered';
+
+/**
+ * Where a save made first goes: the datapack it went into, by its real name (`savesInto`), so its
+ * own name typed in another case still reads as the library names it (review, 2026-11-14); the held
+ * datapack's name when nothing was read to name it by.
+ */
+function savedToOf(
+    starts: ReturnType<typeof useJobStart>,
+    changes: SwitchChanges,
+    name: string | undefined,
+) {
+    if (!starts.savesFirst) return undefined;
+    return changes.savesInto.trim() || name;
+}
+
+/** What a switch or an uninstall adds: the press, the save question's answers, the save's stage. */
+export function useJobSwitch(
+    args: JobReadsArgs,
+    checks: ReturnType<typeof useJobReads>,
+    starts: ReturnType<typeof useJobStart>,
+    dispatch: Dispatch<JobEvent>,
+): JobSwitch {
+    const { changes } = checks;
+    // Sent with no answer (nothing had changed when read), the host found changes in a pack not the
+    // SC's: ask the save question over what is there now, never drop them (C3 review, 2026-11-13).
+    const refused = starts.start.failure?.code === ErrorCode.CHANGES_NEED_ANSWER;
+    const { reread } = changes;
+    useEffect(() => {
+        if (!refused) return;
+        reread();
+        dispatch({ type: 'needs-answer' });
+    }, [refused, reread, dispatch]);
+    const savingStage = useSavingStage(starts.savesFirst && starts.start.loading);
+    const held = checks.target.value?.datapack;
+    // As the run's Uninstall row names it: "Luma", or "Luma, eds-compatible" for a named version.
+    const heldTitle = held ? (checks.target.value?.heldName ?? held.name) : undefined;
+    const heldName = held && heldTitle ? replacedName(held, heldTitle) : undefined;
+    const savedTo = savedToOf(
+        starts,
+        changes,
+        args.kind === 'uninstall' ? args.displayName : heldName,
+    );
+    return {
+        changes,
+        ...(heldName ? { heldName } : {}),
+        ...(heldTitle ? { heldTitle } : {}),
+        ...(savingStage ? { savingStage } : {}),
+        ...(savedTo ? { savedTo } : {}),
+        press: () => {
+            const next = changes.onSwitch();
+            if (next === 'ask') dispatch({ type: 'save-first' });
+            else starts.startWith(next);
+        },
+        answer: (saves) => {
+            webviewClient.postMessage(SAVE_QUESTION_ANSWERED);
+            starts.startWith(changes.answer(saves));
+        },
+    };
+}

@@ -1,5 +1,10 @@
 /**
- * create_project_from_file — start a project from an exported project file.
+ * create_project_from_file — start a project from an exported project file, or
+ * from a demo bundle (Send a File's zip, EDS-72).
+ *
+ * A bundle's setup decides as a project file does, and storefront setup makes the
+ * project's own repository from the bundle's storefront, as the projects list's
+ * Import from File does: no template repository and no Welcome card.
  *
  * The agent's counterpart to the projects list's Import. That door opens a file
  * picker and then the wizard; this one takes a PATH, reads the file through the
@@ -38,9 +43,18 @@ import { storeScopeSchema } from './storeScope';
 import { ACCS_GRAPHQL_ENDPOINT, SECRET_ENV_KEYS } from '@/core/config/envVarKeys';
 import { readProjectFile, type ReadProjectFileResult } from '@/core/state/projectFileReader';
 import { getStackById } from '@/features/components/services/demoPackageLoader';
+import { packReadsFor } from '@/features/data-installer/handlers/recordedPackHandlers';
+import { checkRecordedPack } from '@/features/data-installer/services/recordedPack';
+import {
+    classifyZipStorefront,
+    importedFromBundle,
+    readStorefrontZip,
+} from '@/features/eds/services/storefront/zipStorefrontImport';
 import { integrationStateFromSettings } from '@/features/project-creation/ui/wizard/integrationStateFromSettings';
+import { recordableDatapack, storeOf, type ProjectDatapack } from '@/types/datapack';
 import type { HandlerContext } from '@/types/handlers';
-import type { ProjectFile } from '@/types/projectFile';
+import type { Logger } from '@/types/logger';
+import type { ImportedFrom, ProjectFile } from '@/types/projectFile';
 
 /** A project file is a few kilobytes; anything near this is not one. */
 const MAX_PROJECT_FILE_BYTES = 1024 * 1024;
@@ -67,6 +81,43 @@ async function readFileAt(filePath: string): Promise<ReadOk | { error: string }>
     return read.ok ? read : { error: read.error };
 }
 
+/** A demo bundle read for creation: its setup, as a project file is read, and the import it makes. */
+interface BundleRead {
+    read: ReadOk;
+    importedFrom: ImportedFrom;
+}
+
+/**
+ * Read a demo bundle (a `.zip`, EDS-72): its setup decides the project and its storefront becomes
+ * the project's own repository. Both parts are required: a storefront alone is Add a Demo
+ * Package's job (`add_shared_demo` with zipPath), and setup alone is a project file.
+ */
+async function readBundleAt(filePath: string, logger: Logger): Promise<BundleRead | { error: string }> {
+    let unpacked;
+    try {
+        unpacked = readStorefrontZip(filePath);
+    } catch (error) {
+        return { error: `${filePath} could not be read as a zip: ${(error as Error).message}` };
+    }
+    if (unpacked.setupError) return { error: `The bundle's setup file could not be read: ${unpacked.setupError}` };
+    if (!unpacked.setup) {
+        return { error: 'This zip has no project setup. For a storefront alone, use add_shared_demo with zipPath.' };
+    }
+    if ((await classifyZipStorefront(unpacked.files, logger)).kind !== 'storefront') {
+        return { error: 'This bundle has no storefront. Export it with its storefront, or import its setup file instead.' };
+    }
+    return { read: { ok: true, file: unpacked.setup }, importedFrom: importedFromBundle(unpacked.setup, filePath) };
+}
+
+/** A bundle at an absolute path, read with the call's own logger. */
+async function readBundleOrRefuse(
+    filePath: string,
+    ctxFactory: () => HandlerContext,
+): Promise<BundleRead | { error: string }> {
+    if (!path.isAbsolute(filePath)) return { error: 'filePath must be an absolute path to a demo bundle.' };
+    return readBundleAt(filePath, ctxFactory().logger);
+}
+
 /** The file's selections as creation inputs. */
 function seedFrom(file: ProjectFile): CreationSeed {
     const { datapack } = file;
@@ -77,8 +128,9 @@ function seedFrom(file: ProjectFile): CreationSeed {
         customBlockLibraries: file.customBlockLibraries,
         ...integrationStateFromSettings(file),
         // Creation records a datapack by name AND version; a file naming no
-        // version is reported as not applied rather than guessed at.
-        datapack: datapack?.version ? { name: datapack.name, version: datapack.version } : undefined,
+        // version is reported as not applied rather than guessed at. The store and the
+        // pack it was made from are kept: they say where to install it from.
+        datapack: recordableDatapack(datapack),
         storeDiscoveryData: file.commerceStoreStructure,
     };
 }
@@ -203,6 +255,22 @@ function wouldCreate(file: ProjectFile, seed: CreationSeed, origin: ProjectFileO
 }
 
 /**
+ * What creation will do with the file's datapack, said plainly when it is not simply "install
+ * it" (step 07): the same check the build's own settle step runs (`settleArrivingPack`), so the
+ * answer and the build agree. Nothing when the pack installs as named, or a store could not be
+ * asked.
+ */
+async function datapackNote(ctx: HandlerContext, pack: ProjectDatapack | undefined): Promise<{ datapackNote?: string }> {
+    if (!pack) return {};
+    const check = await checkRecordedPack(packReadsFor(ctx), pack);
+    if (check.verdict === 'fallback' || check.verdict === 'none') return { datapackNote: check.note };
+    if (check.verdict === 'readable' && storeOf(pack) === 'library' && !check.mine && !check.shared) {
+        return { datapackNote: `Copies ${check.displayName} into My Datapacks, then installs it from there.` };
+    }
+    return {};
+}
+
+/**
  * Create a project from a project file already read through `readProjectFile`.
  * The second half of `create_project_from_file`, and all of `copy_project` after it
  * has found the source: one checking, consent and creation path for both.
@@ -219,6 +287,8 @@ export async function createFromProjectFile(
     args: any,
     read: ReadOk,
     origin: ProjectFileOrigin,
+    /** A demo bundle the project is made from (EDS-72); absent for a project file or a copy. */
+    importedFrom?: ImportedFrom,
 ) {
     const { file } = read;
     if (!file.selectedStack) {
@@ -230,13 +300,16 @@ export async function createFromProjectFile(
     const scope = parseStoreScope(file.selectedStack, args?.storeScope);
     if ('error' in scope) return asText(scope);
     const seed = seedFrom(file);
+    const ctx = ctxFactory();
+    const note = await datapackNote(ctx, seed.datapack);
     if (args?.confirm !== true) {
         return asText({
             error: `${origin.toolName} requires confirm:true — it installs dependencies, deploys the integrations the project names and, for EDS, creates a real GitHub repo + DA.live content. Ask the user to confirm.`,
             wouldCreate: wouldCreate(file, seed, origin),
+            ...note,
         });
     }
-    return runProjectCreation(ctxFactory(), {
+    return runProjectCreation(ctx, {
         projectName: String(args.projectName).trim(),
         pkgId: file.selectedPackage,
         stackId: file.selectedStack,
@@ -247,6 +320,7 @@ export async function createFromProjectFile(
         accsEndpoint: text(args.accsEndpoint) ?? endpointFrom(file, file.selectedStack),
         storeScope: scope.storeScope,
         seed,
+        ...(importedFrom ? { importedFrom } : {}),
         report: {
             [origin.reportKey]: {
                 sourceProject: origin.sourceProject,
@@ -259,6 +333,7 @@ export async function createFromProjectFile(
                     : {}),
                 applied: appliedFrom(file, seed),
                 notApplied: notAppliedFrom(file, seed),
+                ...note,
             },
             stillNeeded: {
                 credentials: credentialsNeeded(file.selectedStack, seed),
@@ -285,13 +360,20 @@ export function registerCreateProjectFromFileTool(
             annotations: { readOnlyHint: false, destructiveHint: false },
             title: 'Create Project From File',
             description:
-                'Create a new project from an exported project file (what export_project_settings writes). ' +
+                'Create a new project from an exported project file or a demo bundle zip. ' +
+                'The project file is what export_project_settings writes; the bundle is what export_demo_bundle ' +
+                'writes, and creates the project from its own storefront code, in a new repository of yours, ' +
+                'with no template and no Welcome card. ' +
                 'The file decides the package, stack, addons, ' +
-                'settings, integrations and mesh; sign-ins, the Adobe workspace and credentials are ' +
+                'settings, integrations, mesh and datapack; sign-ins, the Adobe workspace and credentials are ' +
                 "always yours, and the answer lists what is still needed. An Edge Delivery file also " +
-                'needs your own repoName, daLiveOrg and daLiveSite. Requires confirm:true',
+                'needs your own repoName, daLiveOrg and daLiveSite. The datapack is installed from the store the file ' +
+                "names; when it can't be read, the pack it was made from (or none) is installed instead, a colleague's " +
+                "own demo pack is first copied into My Datapacks, and datapackNote says which. Requires confirm:true",
             inputSchema: {
-                filePath: z.string().describe('Absolute path to the exported project file'),
+                filePath: z
+                    .string()
+                    .describe('Absolute path to the exported project file, or to a demo bundle (.zip)'),
                 ...NEW_PROJECT_FIELDS,
             },
         },
@@ -302,13 +384,17 @@ export function registerCreateProjectFromFileTool(
             if (!projectName || !filePath) {
                 return asText({ error: 'projectName and filePath are both required.' });
             }
-            const read = await readFileAt(filePath);
-            if ('error' in read) return asText({ error: read.error });
-            return createFromProjectFile(ctxFactory, args, read, {
-                toolName: 'create_project_from_file',
-                reportKey: 'fromFile',
-                sourceProject: read.file.source.project,
-            });
+            const bundle = filePath.toLowerCase().endsWith('.zip');
+            const opened = bundle ? await readBundleOrRefuse(filePath, ctxFactory) : await readFileAt(filePath);
+            if ('error' in opened) return asText({ error: opened.error });
+            const { read, importedFrom } = 'read' in opened ? opened : { read: opened, importedFrom: undefined };
+            return createFromProjectFile(
+                ctxFactory,
+                args,
+                read,
+                { toolName: 'create_project_from_file', reportKey: 'fromFile', sourceProject: read.file.source.project },
+                importedFrom,
+            );
         },
     );
 }

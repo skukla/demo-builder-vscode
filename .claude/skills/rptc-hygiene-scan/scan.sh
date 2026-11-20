@@ -172,7 +172,11 @@ import json, os, re, subprocess, sys
 
 rptc = os.path.abspath(sys.argv[1])
 repo = os.path.dirname(rptc)
-cli = os.path.join(repo, '.claude', 'skills', 'backlog-item', 'backlog.mjs')
+# The backlog CLI is the dev-pipeline plugin's; the installer records its folder in
+# this clone's git config.
+root = subprocess.run(['git', '-C', repo, 'config', '--get', 'dev-pipeline.root'],
+                      capture_output=True, text=True).stdout.strip()
+cli = os.path.join(root, 'lib', 'backlog.mjs')
 try:
     raw = subprocess.run(['node', cli, 'list', '--json'], capture_output=True,
                          text=True, timeout=30, cwd=repo)
@@ -337,6 +341,7 @@ echo "== 7. Finished items whose own body still names work =="
 # Advisory: a sentence about remaining work needs a child item or a rewording,
 # never a deletion. The CLI prints its own control line.
 REPO_ROOT="$(cd "$(dirname "$RPTC")" && pwd)"
-if ! (cd "$REPO_ROOT" && node .claude/skills/backlog-item/backlog.mjs leftovers); then
+PIPELINE_ROOT="$(git -C "$REPO_ROOT" config --get dev-pipeline.root)"
+if ! (cd "$REPO_ROOT" && node "$PIPELINE_ROOT/lib/backlog.mjs" leftovers); then
     echo "  control: 0 items read  ⚠️  CHECK BROKEN — backlog.mjs leftovers did not run"
 fi

@@ -14,6 +14,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { selectedEntry } from './executorAppBuilderPhase';
 import type { ProgressTracker } from './shared';
+import { loadOtherProjects } from '@/core/state/otherProjects';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -23,7 +24,6 @@ import {
 } from '@/features/app-builder/services/erpIntegrationOnSameCommerce';
 import { getAppBuilderComponentCatalog } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { bringsSystem } from '@/features/components/services/appBuilderComponentLinks';
-import { loadOtherProjects } from '@/features/dashboard/handlers/replaceDeployedElsewhere';
 import type { HandlerContext } from '@/types/handlers';
 import { getProjectFrontendPort, getComponentConfigPort } from '@/types/typeGuards';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
@@ -111,7 +111,7 @@ export async function cleanupOrphanedDirectory(
             context.logger.debug(
                 `[Project Creation] Found ${existingFiles.length} files, cleaning up`,
             );
-            progressTracker(OPERATION_STAGES.preparingProject.label, 5, 'Removing existing project data');
+            progressTracker(OPERATION_STAGES.preparingProject.label, 5, 'Removing previous files');
             await fs.rm(projectPath, { recursive: true, force: true });
         } else {
             await fs.rmdir(projectPath);

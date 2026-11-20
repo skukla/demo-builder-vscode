@@ -32,10 +32,10 @@ Status: **in progress**. Items 1 to 6 built (2026-10-27/28); 7, the live run, to
 7. **First live run**, on the owner's go, each step separately: dry run, install, a look in the
    Admin and storefront, remove, back to zero.
    - **Where** (owner, 2026-10-27; the only ACCS instance there is): website
-     `justrite_test_website`, store view `justrite_test_store_us`, on the sandbox instance every
-     local project uses. Not `justrite`, whose live demo shares the instance.
-   - **Its store shares Justrite's root category (119).** So the pack must bring its own root, or
-     its categories would show in Justrite's tree.
+     `tailspin_test_website`, store view `tailspin_test_store_us`, on the sandbox instance every
+     local project uses. Not `tailspin`, whose live demo shares the instance.
+   - **Its store shares Tailspin's root category (119).** So the pack must bring its own root, or
+     its categories would show in Tailspin's tree.
    - **Pack: Frescopa `main`**, 64 rows, every kind installable: 3 attributes, 1 assignment, 9
      categories under its own root "Frescopa", 25 products (simple and bundle) on the test
      website only, one stock link (Default Stock, already there) and 25 quantities.

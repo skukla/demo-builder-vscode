@@ -2,7 +2,7 @@
     "name": "adobe-demo-builder",
     "displayName": "Adobe Demo Builder",
     "description": "Create and manage Adobe Commerce demos with ease",
-    "version": "1.0.0-beta.152",
+    "version": "1.0.0-beta.153",
     "publisher": "skukla",
     "engines": {
         "vscode": "^1.84.0"
@@ -58,8 +58,18 @@
                 "category": "Demo Builder"
             },
             {
-                "command": "demoBuilder.showDataInstaller",
-                "title": "Open Data Installer",
+                "command": "demoBuilder.showDatapackLibrary",
+                "title": "Open Datapack Library",
+                "category": "Demo Builder"
+            },
+            {
+                "command": "demoBuilder.clearDemoData",
+                "title": "Clear Demo Data",
+                "category": "Demo Builder"
+            },
+            {
+                "command": "demoBuilder.clearCommerceInstance",
+                "title": "Clear Commerce Instance",
                 "category": "Demo Builder"
             },
             {
@@ -161,6 +171,11 @@
                 "command": "demoBuilder.signInGitHub",
                 "title": "Sign in to GitHub",
                 "category": "Demo Builder"
+            },
+            {
+                "command": "demoBuilder.signOutAdobe",
+                "title": "Sign out of Adobe",
+                "category": "Demo Builder"
             }
         ],
         "configuration": [
@@ -189,10 +204,15 @@
                             "beta",
                             "early-access"
                         ],
+                        "enumItemLabels": [
+                            "Stable",
+                            "Beta",
+                            "Early Access"
+                        ],
                         "enumDescriptions": [
-                            "Production releases only",
-                            "Beta prereleases (testing)",
-                            "Alpha preview builds — honored only for repository collaborators; others fall back to beta"
+                            "Releases only.",
+                            "Releases and beta prereleases, for testing.",
+                            "Alpha preview builds, for repository collaborators only; everyone else gets Beta."
                         ],
                         "default": "stable",
                         "description": "Update channel: stable (production), beta (testing), or early-access (collaborator-only alpha preview; falls back to beta if you are not a repository collaborator)"
@@ -206,6 +226,13 @@
                             "debug",
                             "trace"
                         ],
+                        "enumItemLabels": [
+                            "Error",
+                            "Warning",
+                            "Info",
+                            "Debug",
+                            "Trace"
+                        ],
                         "default": "debug",
                         "description": "Log level for Demo Builder Debug Logs channel: debug (normal) or trace (verbose with stack traces)"
                     },
@@ -215,6 +242,10 @@
                             "cards",
                             "rows"
                         ],
+                        "enumItemLabels": [
+                            "Cards",
+                            "Rows"
+                        ],
                         "default": "cards",
                         "description": "Default view mode for the projects list: cards (grid layout) or rows (list layout)"
                     },
@@ -223,6 +254,10 @@
                         "enum": [
                             "cards",
                             "rows"
+                        ],
+                        "enumItemLabels": [
+                            "Cards",
+                            "Rows"
                         ],
                         "default": "cards",
                         "description": "Default view mode for a project's integrations screen: cards (grid layout) or rows (list layout)"
@@ -234,13 +269,37 @@
                             "deleteAll",
                             "localOnly"
                         ],
+                        "enumItemLabels": [
+                            "Ask Each Time",
+                            "Tick Repository and Site",
+                            "This Computer Only"
+                        ],
                         "enumDescriptions": [
-                            "Show selection dialog for each deletion",
-                            "Automatically delete all external resources",
-                            "Only delete local project, skip external resources"
+                            "Ask which outside resources to delete each time.",
+                            "Start with the GitHub repository and DA.live site ticked; you still confirm.",
+                            "Delete only the project on this computer; leave its GitHub repository and DA.live site."
                         ],
                         "default": "ask",
-                        "description": "How to handle external EDS resources (GitHub repo, DA.live site) when deleting a project."
+                        "description": "How to handle external EDS resources (GitHub repo, DA.live site) when deleting a project. A project's datapack is never touched by this setting: tick \"Uninstall Datapack\" to uninstall it from Commerce."
+                    }
+                }
+            },
+            {
+                "title": "Commerce Admin",
+                "properties": {
+                    "demoBuilder.commerce.adminExperience": {
+                        "type": "string",
+                        "enum": [
+                            "unified-shell",
+                            "classic"
+                        ],
+                        "enumItemLabels": [
+                            "Unified Shell",
+                            "Classic UI"
+                        ],
+                        "default": "unified-shell",
+                        "description": "Which Commerce Admin opens for a Commerce as a Cloud Service project. Unified Shell opens in your browser, and Classic UI in a private window. Each project can choose differently on its Configure screen.",
+                        "order": 1
                     }
                 }
             },
@@ -263,8 +322,8 @@
                             "DA.live Classic",
                             "Experience Workspace"
                         ],
-                        "default": "da-live-classic",
-                        "description": "How new storefronts are edited. DA.live Classic opens the da.live document editor. Experience Workspace opens the newer visual canvas. Each project can choose differently on its Configure screen.",
+                        "default": "experience-workspace",
+                        "description": "How storefronts are edited. DA.live Classic opens the da.live document editor. Experience Workspace opens the newer visual canvas. Each project can choose differently on its Configure screen.",
                         "order": 2
                     },
                     "demoBuilder.daLive.IMSOrgId": {
@@ -306,7 +365,7 @@
                             "description": "GitHub repository URL (e.g., https://github.com/owner/repo)"
                         },
                         "default": [],
-                        "description": "Custom block libraries to include for new EDS projects. Each entry is a public GitHub repository URL containing a blocks/ directory."
+                        "description": "Block libraries Demo Builder offers alongside its own, for a storefront to tick in the wizard or on Configure. Listing one adds it to the choices, not to any storefront. Each entry is a public GitHub repository URL containing a blocks/ directory."
                     },
                     "demoBuilder.blockLibraries.syncBehavior": {
                         "type": "string",
@@ -315,10 +374,15 @@
                             "enabled",
                             "disabled"
                         ],
+                        "enumItemLabels": [
+                            "Ask First",
+                            "Automatic",
+                            "Off"
+                        ],
                         "enumDescriptions": [
-                            "Prompt before applying upstream library updates or promoting local changes to a library",
-                            "Apply library updates automatically when newer commits are detected; allow promotion actions without an extra confirmation",
-                            "Never touch block library remotes — promotion actions are hidden and library updates are skipped (the storefront stays on the install-time block files)"
+                            "Ask before applying a library's updates or promoting your changes to a library.",
+                            "Apply library updates when newer commits arrive, and promote changes without an extra confirmation.",
+                            "Never change a block library: promotion is hidden and updates are skipped, so the storefront keeps the blocks it was installed with."
                         ],
                         "default": "ask",
                         "description": "How to handle two-way block library sync: applying upstream library updates to your storefront and promoting your local block changes back to the library repo."
@@ -328,32 +392,42 @@
             {
                 "title": "Sample Data",
                 "properties": {
-                    "demoBuilder.dataInstaller.enabled": {
-                        "type": "boolean",
-                        "default": true,
-                        "description": "Enable the Data Installer surface for browsing and installing Adobe Commerce sample-data datapacks. When off, the panel and its AI tools report the feature as unavailable."
-                    },
-                    "demoBuilder.dataInstaller.engine": {
+                    "demoBuilder.dataInstaller.changesOnRemoval": {
+                        "order": 3,
                         "type": "string",
                         "enum": [
-                            "service",
-                            "demo-builder"
+                            "ask",
+                            "save"
+                        ],
+                        "enumItemLabels": [
+                            "Ask Each Time",
+                            "Save Without Asking"
                         ],
                         "enumDescriptions": [
-                            "The Data Installer service installs and removes datapacks.",
-                            "Demo Builder installs and removes datapacks itself, over the project's own Commerce access."
+                            "Ask \"Save Your Changes First?\" each time.",
+                            "Save your changes to your own datapack first, without asking."
                         ],
-                        "default": "demo-builder",
-                        "description": "What installs and removes datapacks. Demo Builder's own by default; the Data Installer service still provides the catalog either way. A pack is always removed by the one that installed it."
+                        "default": "ask",
+                        "description": "What happens to your changes in a datapack before it is uninstalled, switched, reset, deleted or cleared. Ask shows Save Your Changes First? each time. Save saves your changes to your own datapack without asking; someone else's datapack still asks, because a new datapack needs a name."
                     },
                     "demoBuilder.dataInstaller.apiBaseUrl": {
                         "scope": "machine",
+                        "order": 1,
                         "type": "string",
                         "default": "",
-                        "format": "uri",
-                        "description": "Data Installer API base URL, without a trailing action segment. Required — set this to your deployment. There is no default: this repository is public, and a bundled endpoint would ship to every user. Must be https."
+                        "pattern": "^(https://\\S*)?$",
+                        "patternErrorMessage": "Must start with https://, or be empty.",
+                        "description": "Data Installer API base URL, without a trailing action segment. Optional: when set, the Data Installer's datapacks are listed too; empty lists only Demo Builder's. There is no default: this repository is public, and a bundled endpoint would ship to every user. Must be https."
+                    },
+                    "demoBuilder.dataInstaller.enabled": {
+                        "scope": "machine",
+                        "order": 2,
+                        "type": "boolean",
+                        "default": true,
+                        "description": "Use the Data Installer at the address above: list its datapacks beside Demo Builder's, which Demo Builder installs. Untick to keep the address and list only Demo Builder's datapacks."
                     },
                     "demoBuilder.datapackStore.apiBaseUrl": {
+                        "order": 4,
                         "scope": "machine",
                         "type": "string",
                         "default": "https://285361-249darkllama-stage.adobeioruntime.net/api/v1/web/datapack-store",
@@ -390,9 +464,9 @@
                             "full"
                         ],
                         "enumItemLabels": [
-                            "Ask first",
+                            "Ask First",
                             "Auto",
-                            "Full access"
+                            "Full Access"
                         ],
                         "enumDescriptions": [
                             "The agent asks before running tools or editing files.",
@@ -519,7 +593,7 @@
         "watch:all": "node esbuild.config.js --watch",
         "vscode:prepublish": "npm run compile",
         "pretest": "npm run compile && npm run lint",
-        "lint": "eslint \"src/**/*.{ts,tsx}\" \"tests/**/*.{ts,tsx}\"",
+        "lint": "eslint --cache --cache-location node_modules/.cache/eslint/ --cache-strategy content \"src/**/*.{ts,tsx}\" \"tests/**/*.{ts,tsx}\"",
         "format": "prettier --write \"src/**/*.{ts,tsx}\" \"tests/**/*.{ts,tsx}\"",
         "format:check": "prettier --check \"src/**/*.{ts,tsx}\" \"tests/**/*.{ts,tsx}\"",
         "test": "node --max-old-space-size=4096 node_modules/.bin/jest --forceExit",
@@ -547,6 +621,7 @@
         "validate:convention-proofs": "node scripts/convention-proofs.mjs",
         "validate:tsc-blindspots": "node scripts/check-tsc-blindspots.js",
         "validate:source-duplication": "node scripts/check-source-duplication.mjs",
+        "ledger": "python3 scripts/ledger.py",
         "gate": "npm run lint && npx tsc --noEmit && npm run typecheck:tests && npm run validate:tsc-blindspots && npm run validate:test-file-sizes && npx jest --no-coverage && npm run validate:source-duplication && bash .claude/skills/dead-code-scan/scan.sh src",
         "gate:docs": "npx jest --no-coverage tests/sop tests/hooks tests/templates tests/features/ai/server/toolPromptCoverage.test.ts",
         "analyze": "ANALYZE=true npm run compile:webview",
@@ -559,7 +634,7 @@
         "mesh:delete": "aio api-mesh delete --autoConfirmAction",
         "mesh:status": "aio api-mesh get --active",
         "hooks": "node scripts/hooks.js",
-        "hooks:git": "git config core.hooksPath .githooks && echo \"git hooks on (.githooks) — turn off: git config --unset core.hooksPath\"",
+        "hooks:git": "if git config --get dev-pipeline.root >/dev/null; then echo \"git hooks are the dev-pipeline plugin's (they run .githooks after their own) — left as they are\"; else git config core.hooksPath .githooks && echo \"git hooks on (.githooks) — turn off: git config --unset core.hooksPath\"; fi",
         "docs:check": "node scripts/hooks.js coverage",
         "data-installer:drift": "node scripts/dataInstallerDrift.js",
         "eds:drift": "node scripts/edsDrift.js",
@@ -585,6 +660,7 @@
         "docs:adr-check": "node scripts/generate-adr-index.mjs --check",
         "health": "node scripts/healthSnapshot.mjs",
         "patches:released": "node scripts/patchesReleased.mjs",
+        "components:ci": "node scripts/componentCi.mjs",
         "health:write": "node scripts/healthSnapshot.mjs --write",
         "codemod:selftest": "node scripts/codemod/selftest.mjs",
         "test:electron": "node tests/electron/runTest.js",
@@ -599,7 +675,6 @@
         "@testing-library/jest-dom": "^6.9.1",
         "@testing-library/react": "^16.3.0",
         "@testing-library/user-event": "^14.6.1",
-        "@types/adm-zip": "^0.5.7",
         "@types/jest": "^30.0.0",
         "@types/mocha": "^10.0.10",
         "@types/node": "^24.3.1",
@@ -644,25 +719,26 @@
     "dependencies": {
         "@adobe/aio-lib-console": "^5.4.2",
         "@adobe/aio-lib-core-config": "^5.0.1",
-        "@adobe/aio-lib-ims": "^7.0.2",
         "@adobe/react-spectrum": "^3.46.0",
-        "@modelcontextprotocol/sdk": "1.29.0",
+        "@modelcontextprotocol/sdk": "1.32.2",
         "@octokit/core": "^6.1.6",
         "@octokit/plugin-retry": "^7.2.1",
-        "@types/uuid": "^10.0.0",
-        "adm-zip": "^0.5.16",
+        "adm-zip": "^0.6.1",
         "ajv": "^8.20.0",
         "async-mutex": "^0.5.0",
-        "axios": "^1.6.0",
-        "crypto-js": "^4.2.0",
         "execa": "^5.1.1",
         "ignore": "^7.0.14",
         "react": "^18.3.1",
         "react-dom": "^18.3.1",
         "sanitize-html": "^2.17.4",
         "semver": "^7.5.4",
-        "uuid": "^13.0.0",
         "yaml": "^2.3.4",
-        "zod": "^3.23.0"
+        "zod": "^4.6.7"
+    },
+    "overrides": {
+        "brace-expansion@1": "1.1.22",
+        "js-yaml@3": "3.15.2",
+        "minimatch@>=7 <11.0.1": "11.0.8",
+        "glob@>=9 <14.0.2": "14.0.6"
     }
 }

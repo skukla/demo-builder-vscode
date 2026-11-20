@@ -150,7 +150,7 @@ describe('handleCheckIntegrationUpdates', () => {
                 ],
             },
         });
-        expect(mockCheckComponentSource).toHaveBeenCalledWith('/p/demo-erp', 'main');
+        expect(mockCheckComponentSource).toHaveBeenCalledWith('/p/demo-erp', 'main', undefined);
         expect(mockProject.appBuilderComponents?.['demo-erp']?.updateAvailable?.commit).toBe('abc123');
         expect(mockContext.stateManager.saveProject).toHaveBeenCalledWith(mockProject);
         expect(mockSendSnapshot).toHaveBeenCalledTimes(1);
@@ -320,15 +320,15 @@ describe('handleUpdateAppBuilderComponent', () => {
 
     it("passes the runner's refusal through, with the row in error", async () => {
         const { mockContext } = setup(pairProject());
-        mockUpdate.mockResolvedValue({ success: false, error: 'The integration folder has changes of its own (a.js).' });
+        mockUpdate.mockResolvedValue({ success: false, error: 'The folder has changes of its own (a.js).' });
 
         const result = await handleUpdateAppBuilderComponent(mockContext, { id: 'erp-integration' });
 
-        expect(result).toMatchObject({ success: false, error: 'The integration folder has changes of its own (a.js).' });
+        expect(result).toMatchObject({ success: false, error: 'The folder has changes of its own (a.js).' });
         expect(mockSendStatus).toHaveBeenLastCalledWith(
             'erp-integration',
             'error',
-            'The integration folder has changes of its own (a.js).',
+            'The folder has changes of its own (a.js).',
         );
     });
 
@@ -342,20 +342,16 @@ describe('handleUpdateAppBuilderComponent', () => {
         expect(mockUpdate).not.toHaveBeenCalled();
     });
 
-    it('refuses an undeployed integration, a mesh, an unknown id and a missing id', async () => {
+    it('refuses an undeployed integration, an unknown id and a missing id', async () => {
         const { mockContext } = setup({
             appBuilderComponents: {
                 broken: deployed({ status: 'not-deployed' }),
-                mesh: deployed({ kind: 'mesh' }),
             },
         });
 
         await expect(handleUpdateAppBuilderComponent(mockContext, { id: 'broken' })).resolves.toMatchObject({
             success: false,
             code: ErrorCode.INVALID_OPERATION,
-        });
-        await expect(handleUpdateAppBuilderComponent(mockContext, { id: 'mesh' })).resolves.toMatchObject({
-            code: ErrorCode.PROJECT_NOT_FOUND,
         });
         await expect(handleUpdateAppBuilderComponent(mockContext, { id: 'nope' })).resolves.toMatchObject({
             code: ErrorCode.PROJECT_NOT_FOUND,

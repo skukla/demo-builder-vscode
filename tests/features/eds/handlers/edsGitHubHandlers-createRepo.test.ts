@@ -42,14 +42,14 @@ describe('handleCreateGitHubRepo', () => {
     it('passes the added-demo flag through, so the source is checked before generating', async () => {
         const result = await handleCreateGitHubRepo(ctx(), {
             repoName: 'new-demo',
-            templateOwner: 'jen',
+            templateOwner: 'robin',
             templateRepo: 'isle5-demo',
             fromAddedDemo: true,
         });
         expect(mockCreate).toHaveBeenCalledWith(
             services,
             { newRepoName: 'new-demo', isPrivate: false, fromAddedDemo: true },
-            'jen',
+            'robin',
             'isle5-demo',
             expect.anything(),
         );

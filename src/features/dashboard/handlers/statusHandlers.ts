@@ -3,25 +3,26 @@
  *
  * The dashboard's status pipeline: `requestStatus` (the status payload plus the
  * on-open check orchestration, including the AI-context freshness wiring) and
- * the two authentication handlers (`reAuthenticate`, `switchOrg`) that end in a
- * status refresh. Extracted from `dashboardHandlers.ts` for the 500-line handler
- * cap; the parent re-exports everything here so import sites are unchanged.
+ * the org switch (`switchOrg`), which ends in a status refresh. A screen's Sign In
+ * is the shared `authenticate` handler; the dashboard re-reads status itself after.
+ * Extracted from `dashboardHandlers.ts` for the 500-line handler cap; the parent
+ * re-exports everything here so import sites are unchanged.
  */
 
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { adobeSignInRestored, askToSignInOnce } from '../services/adobeSignInPrompt';
 import { buildStatusPayload, deriveMeshStatus } from '../services/dashboardStatusService';
-import { withBrowserSignInNotice } from '@/core/auth/browserSignInNotice';
 import { AI_CONTEXT_VERSION } from '@/core/constants';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell/orgContextEnv';
 import { getMeshEndpoint } from '@/core/state/appBuilderComponentState';
-import { detectFrontendChanges } from '@/core/state/projectStateSync';
+import { detectFrontendChanges } from '@/core/state/frontendEnvDrift';
 import { verifyAiSetup } from '@/features/ai/aiSetupVerifier';
 import { agentCliStatus } from '@/features/ai/engine/activeEngine';
 import { detectMcpDrift } from '@/features/ai/mcpDriftDetector';
 import { handleForcedOrgSwitch } from '@/features/authentication/handlers/orgSwitchHandler';
+import { signInToAdobe } from '@/features/authentication/handlers/signInToAdobe';
 import {
     handleRegenerateAiFiles,
     logAiVerification,
@@ -35,6 +36,7 @@ import { createMcpHealthCheck } from '@/features/dashboard/services/onOpenChecks
 import { createMeshVerifyCheck } from '@/features/dashboard/services/onOpenChecks/meshVerifyCheck';
 import { runOnOpenChecks } from '@/features/dashboard/services/onOpenChecks/orchestrator';
 import { createOrgContextCheck } from '@/features/dashboard/services/onOpenChecks/orgContextCheck';
+import { projectFinishSetup } from '@/features/dashboard/services/projectFinishSetup';
 import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import {
     applicableMcpPackages,
@@ -126,6 +128,7 @@ export async function postStatusUpdate(
         project,
         frontendConfigChanged,
         meshComponent ? { status: meshStatus, endpoint: meshEndpoint } : undefined,
+        await projectFinishSetup(project, context.logger),
     );
 
     panel.webview.postMessage({
@@ -177,9 +180,10 @@ export const handleRequestStatus: MessageHandler = async (context) => {
         createOrgContextCheck({
             authManager: ServiceLocator.getAuthenticationService(),
             stateManager: () => ServiceLocator.getStateManager(),
-            // An expired sign-in asks, once per expiry; the browser opens on a yes only.
+            // An expired sign-in asks, once per expiry; the browser opens on a yes only,
+            // through the one Sign In, and the dashboard then re-reads its status.
             onSignedOut: () =>
-                askToSignInOnce(askAdobeSignIn, () => handleReAuthenticate(context)),
+                askToSignInOnce(askAdobeSignIn, () => signInThenRefresh(context)),
             onSignedIn: adobeSignInRestored,
         }),
         createMcpHealthCheck({
@@ -263,55 +267,11 @@ export const handleRequestStatus: MessageHandler = async (context) => {
     return { success: true, data: statusData };
 };
 
-/**
- * Handle 'reAuthenticate' message - Re-authenticate with Adobe
- *
- * Called when user clicks "Sign in" link after session expired (needs-auth status).
- * Always a fresh, forced sign-in (see the call). Uses loginAndRestoreProjectContext to
- * restore full project context after login,
- * then requests a status refresh to update the mesh status display.
- */
-export const handleReAuthenticate: MessageHandler = async (context) => {
-    context.logger.debug('[Dashboard] handleReAuthenticate called');
-
-    const project = await context.stateManager.getCurrentProject();
-    if (!project) {
-        return { success: false, error: 'No project available', code: ErrorCode.PROJECT_NOT_FOUND };
-    }
-
-    const authManager = ServiceLocator.getAuthenticationService();
-
-    context.logger.info('[Dashboard] Starting Adobe sign-in from re-authenticate link');
-    // The browser opens on the other side of this call — telegraph it, exactly as
-    // ensureAdobeIOAuth does. Without it the click looks inert until a browser
-    // window appears unannounced.
-    //
-    // FORCED (`aio auth login -f`): this link only shows after Adobe has refused the
-    // sign-in, and a normal login reuses the saved one while its own expiry says it is
-    // good. A colleague on beta.149, 2026-10-27: Adobe answered 401 ErrInvalidOauthToken
-    // hours before that expiry, so every press "succeeded" in five seconds with no
-    // browser, and the dashboard stayed on "Not Checked".
-    const loginSuccess = await withBrowserSignInNotice(() =>
-        authManager.loginAndRestoreProjectContext(
-            {
-                organization: project.adobe?.organization,
-                projectId: project.adobe?.projectId,
-                workspace: project.adobe?.workspace,
-            },
-            true,
-        ),
-    );
-
-    if (!loginSuccess) {
-        context.logger.warn('[Dashboard] Sign-in failed or cancelled');
-        return { success: false, error: 'Sign-in failed or cancelled' };
-    }
-
-    context.logger.info('[Dashboard] Sign-in successful, refreshing status');
-
-    // Trigger status refresh by calling handleRequestStatus
-    return handleRequestStatus(context);
-};
+/** The prompt's yes: the one Sign In, then the status re-read a sign-in leaves due. */
+async function signInThenRefresh(context: HandlerContext): Promise<void> {
+    const { success } = await signInToAdobe(ServiceLocator.getAuthenticationService(), context.logger, 'person');
+    if (success) await handleRequestStatus(context);
+}
 
 /**
  * Handle 'switchOrg' message — the DASHBOARD's org-switch: forced sign-in, then

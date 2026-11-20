@@ -75,18 +75,24 @@ export const TIMEOUTS = {
         /** Minimum loading indicator display (prevents flash-of-content) */
         MIN_LOADING: 1500,
 
+        /**
+         * How long Chrome usually takes to show a private window after `open` returns. `open`
+         * answers once Chrome is launched, two or three seconds before its window shows, and
+         * macOS reports no "window is up" without asking the SC to let the extension control
+         * Chrome. A private-window open waits this long so whatever shows it working (a
+         * button's spinner, the "Opening a private browser" notification) lasts until the
+         * window is likely there (owner, 2026-10-31). An estimate, not a signal.
+         */
+        BROWSER_START: 3000,
+
         /** Fallback timeout for MutationObserver-based focus management */
         FOCUS_FALLBACK: 1000,
 
         /**
-         * How long a finished operation's modal shows its result before closing
-         * itself (owner, 2026-09-20: "show success, then auto-close").
-         *
-         * Long enough to register a tick and a line of text, and no longer: at 3s
-         * it "sits too long" (owner, 2026-09-20, watching a real republish). The
-         * SC has been looking at this window for the whole run, so the result is
-         * a confirmation rather than something to read from cold. A failure never
-         * auto-closes — only a success, where there is nothing to act on.
+         * How long the GitHub app dialog shows "installed" before moving on to the
+         * next step (owner, 2026-09-20: at 3s it "sits too long"). Result windows
+         * no longer close themselves: every one waits for Close (owner, 2026-11-17,
+         * walk F195).
          */
         RESULT_GLANCE: 1500,
 
@@ -133,6 +139,14 @@ export const TIMEOUTS = {
 
         /** Full OAuth flow with callback (2 minutes) */
         OAUTH: 120000,
+
+        /**
+         * The least life a token must have left for the Adobe CLI to use it (10 minutes). Under
+         * that, aio-lib-ims `getTokenIfValid` (token-helper.js) treats the token as absent and
+         * any `aio` command signs in through the browser without asking. The extension calls a
+         * token valid only above this margin, so its own Sign In prompt asks first (2026-11-16).
+         */
+        CLI_MIN_TOKEN_LIFE: 600000,
     },
 
     // =========================================================================
@@ -282,6 +296,57 @@ export const TIMEOUTS = {
      */
     COMMERCE_BULK_MAX: 10 * 60 * 1000,
 
+    /**
+     * How often a datapack job's record is read while an agent's call waits on it (owner,
+     * 2026-11-05: the wait replaces blind polling), and the longest such a wait may be: 45 s.
+     * The MCP client library's default limit on one call is 60 s (`DEFAULT_REQUEST_TIMEOUT_MSEC`),
+     * so a 60 s wait timed out in a client on the default, measured live 2026-11-06.
+     */
+    /**
+     * The pause between tries at Demo Builder's datapack store list (owner, 2026-11-17, walk F215):
+     * a one-off 5xx answered normally a moment later, so three tries a second apart hide it.
+     */
+    DATAPACK_STORE_RETRY: 1000,
+
+    /**
+     * The longest the dashboard's Datapacks tile waits, the first time, for the library read that
+     * remembers a pack's newest save (walk F218): its name must show at once (F69), so a slow library
+     * costs the dot until the next draw, never the line.
+     */
+    DATAPACK_LINE_NEWEST_WAIT: 3000,
+
+    DATAPACK_JOB_WAIT_POLL: 2000,
+    DATAPACK_JOB_WAIT_MAX: 45 * 1000,
+
+    /**
+     * How long the Import window waits for its comparison of the store with a pack the project has
+     * (owner, 2026-11-08): 5 minutes. Measured 58 s for Luma's 12 data types on a live store; the
+     * webview's default of 30 s gave up on every one.
+     */
+    DATAPACK_IMPORT_COMPARE: 5 * 60 * 1000,
+
+    /**
+     * How long the Import window waits for a start or a removal that saves the SC's changes first
+     * (walk F105, 2026-11-09): 10 minutes. The save runs before the request answers and took 1 min 28 s
+     * for Luma on a live store (3 min 17 s before walk F90's fixes); the webview's default of 30 s gave
+     * up on it and said "Couldn't Start the Import" over an import that then ran.
+     */
+    DATAPACK_SAVE_THEN_WRITE: 10 * 60 * 1000,
+
+    /**
+     * How long Undo Last Save waits for its job to be accepted (Phase 2, 2026-11-12): 2 minutes. The
+     * handler reads the datapack's saves, the install record and the earlier save's data types, and
+     * checks the import, before it answers; nothing is saved first. A first estimate, not measured.
+     */
+    DATAPACK_UNDO_START: 2 * 60 * 1000,
+
+    /**
+     * How long Restore waits for its check, and its job to be accepted (Phase 3/5, 2026-11-12): 5
+     * minutes, as `DATAPACK_IMPORT_COMPARE`. The check is that same comparison of the store with the
+     * pack installed (58 s for Luma on a live store), then the start; nothing is saved first.
+     */
+    DATAPACK_RESTORE_START: 5 * 60 * 1000,
+
     /** Startup update check delay (10 seconds) */
     STARTUP_UPDATE_CHECK_DELAY: 10000,
 
@@ -381,6 +446,15 @@ export const TIMEOUTS = {
 
     /** Complete project creation workflow (30 minutes) */
     PROJECT_CREATION_OVERALL: 30 * 60 * 1000,
+
+    /**
+     * After a stop or the 30-minute limit, how long creation waits for the step that was
+     * running to end before it cleans up anyway (5 minutes). Cleanup waits so it sees what
+     * that step made; the bound is for a step that never ends. The longest single steps
+     * (a mesh deploy, 3 minutes by `MESH_DEPLOY_TOTAL`; a datapack install, a few minutes)
+     * fit inside it.
+     */
+    PROJECT_CREATION_STOP_GRACE: 5 * 60 * 1000,
 
     /** State settling before DOM operations (100ms) */
     UI_UPDATE_DELAY: 100,

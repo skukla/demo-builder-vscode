@@ -28,7 +28,7 @@ finish drops, among others:
 1. **`appBuilderComponents`**, each integration's record, including its Adobe workspace.
    `ensureComponentWorkspace` then finds no workspace (`app-builder/services/componentWorkspace.ts:163-164`)
    and **creates a new Adobe workspace** for every integration, then deploys into it. The old
-   workspace stays deployed and is no longer tracked. An Edit on Justrite would do this to
+   workspace stays deployed and is no longer tracked. An Edit on Tailspin would do this to
    the ERP integration and its ERP.
 2. **`aiFileHashes`**, the record that protects hand edits. With no recorded hash the writer
    treats every AI file as unmodified and overwrites it (`generatedFileWriter.ts:183-185`).

@@ -47,7 +47,10 @@ import type { UnavailableEntries } from '@/features/project-creation/ui/componen
 import type { WizardState } from '@/types/webview';
 import { PACKAGES, STACKS, baseState } from './IntegrationsStep.testUtils';
 
-const MESSAGE = 'JustRite already has an ERP integration on this Commerce instance. Add your ERP there instead.';
+/** The window on screen now: a taller stage opens a new one (step-07 Win3); never hold an old one. */
+const currentDialog = (): HTMLElement => screen.getByRole('dialog');
+
+const MESSAGE = 'Tailspin already has an ERP integration on this Commerce instance. Add your ERP there instead.';
 const UNAVAILABLE: UnavailableEntries = { message: MESSAGE, ids: ['erp-integration'] };
 
 async function renderStep(state: WizardState, unavailable?: UnavailableEntries, notice?: React.ReactNode): Promise<void> {
@@ -70,10 +73,9 @@ async function renderStep(state: WizardState, unavailable?: UnavailableEntries, 
 /** Open Add Integration on the pre-built gallery. */
 async function openGallery(): Promise<HTMLElement> {
     await press(screen.getByRole('button', { name: 'Add Integration' }));
-    const dialog = screen.getByRole('dialog');
-    await press(within(dialog).getByRole('button', { name: /Pre-built integration/ }));
-    await press(within(dialog).getByRole('button', { name: 'Continue' }));
-    return dialog;
+    await press(within(currentDialog()).getByRole('button', { name: /Pre-Built Integration/ }));
+    await press(within(currentDialog()).getByRole('button', { name: 'Continue' }));
+    return currentDialog();
 }
 
 beforeEach(() => {
@@ -97,21 +99,21 @@ describe('IntegrationsStep — an instance that already has an ERP integration',
     it('greys the ERP integration out under a banner saying what to do instead', async () => {
         await renderStep(baseState(), UNAVAILABLE);
 
-        const dialog = await openGallery();
+        await openGallery();
 
-        expect(within(dialog).getByRole('button', { name: /ERP Integration/ })).toBeDisabled();
-        expect(within(dialog).getByTestId('catalog-unavailable')).toHaveTextContent(MESSAGE);
+        expect(within(currentDialog()).getByRole('button', { name: /ERP Integration/ })).toBeDisabled();
+        expect(within(currentDialog()).getByTestId('catalog-unavailable')).toHaveTextContent(MESSAGE);
         // Its only tile is out, so there is nothing to name.
-        expect(within(dialog).queryByLabelText(/Name \(optional\)/)).not.toBeInTheDocument();
+        expect(within(currentDialog()).queryByLabelText(/Name \(Optional\)/)).not.toBeInTheDocument();
     });
 
     it('leaves it pickable when nothing is unavailable — control', async () => {
         await renderStep(baseState());
 
-        const dialog = await openGallery();
+        await openGallery();
 
-        expect(within(dialog).getByRole('button', { name: /ERP Integration/ })).toBeEnabled();
-        expect(within(dialog).queryByTestId('catalog-unavailable')).not.toBeInTheDocument();
+        expect(within(currentDialog()).getByRole('button', { name: /ERP Integration/ })).toBeEnabled();
+        expect(within(currentDialog()).queryByTestId('catalog-unavailable')).not.toBeInTheDocument();
     });
 
     it('shows the line it is given above the results', async () => {

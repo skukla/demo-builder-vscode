@@ -16,8 +16,10 @@
  */
 
 import type { CommandResult } from '@/core/shell/types';
+import { knownPlain } from '@/core/utils/plainText';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { TemplateSyncStepError } from '@/features/updates/services/templateSyncStepError';
+import type { Logger } from '@/types/logger';
 
 /** Run one git command in the temp clone with the given timeout. */
 export type GitStep = (command: string, timeout: number) => Promise<CommandResult>;
@@ -54,6 +56,19 @@ interface TemplateChangeRequest {
      * against (owner, 2026-10-16).
      */
     target?: string;
+}
+
+/**
+ * The line an SC reads when a template merge failed: git's reason in plain words when its meaning
+ * is known (`knownPlain`, the core translations; walk F295), else as git said it until the update
+ * errors are typed (PL-102 slice 4). git's own words go to the log either way.
+ *
+ * @param reason - git's reason (`gitReason`)
+ * @param logger - where git's own words go
+ */
+export function mergeFailureLine(reason: string, logger?: Pick<Logger, 'warn'>): string {
+    logger?.warn(`[TemplateSync] The merge failed: ${reason}`);
+    return knownPlain(reason) ?? `The template update could not be applied: ${reason}.`;
 }
 
 /** git's own reason for a failure: its first error line, without the `error:` prefix. */

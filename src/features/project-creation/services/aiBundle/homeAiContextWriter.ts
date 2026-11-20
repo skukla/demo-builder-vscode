@@ -36,7 +36,7 @@ import * as path from 'path';
 import { escapeMarkdown, sanitizeTemplateValue } from '../sanitization';
 import { generateHomeClaudeSettings } from './claudeSettingsWriter';
 import { buildDemoBuilderMcpEntry, resolveNodePath, type McpServerEntry } from './mcpConfigWriter';
-import { DEMO_BUILDER_SKILLS } from './skillsWriter';
+import { DEMO_BUILDER_SKILLS, RENAMED_AWAY_SKILLS } from './skillsWriter';
 import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
 
 interface McpConfig {
@@ -139,6 +139,10 @@ export async function ensureHomeAiContext(
                 await fsPromises.writeFile(path.join(skillDir, 'SKILL.md'), content, 'utf-8');
                 await fsPromises.rm(path.join(skillsDir, `${name}.md`), { force: true });
             }),
+            // A renamed skill's old guide names tools that no longer exist (v66).
+            ...RENAMED_AWAY_SKILLS.map((name) =>
+                fsPromises.rm(path.join(skillsDir, name, 'SKILL.md'), { force: true }),
+            ),
         ]);
     } catch (err) {
         // Best-effort: the home AI context is a convenience, never a hard

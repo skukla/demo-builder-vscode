@@ -14,21 +14,21 @@ export const ADOBE_PROJECT_STAGES = {
     findingWorkspaces: {
         label: 'Finding workspaces',
         expectation: 'Usually a few seconds',
-        detail: 'Its workspaces in Developer Console',
+        detail: 'Querying Developer Console',
     },
     checkingCredentials: {
         label: 'Checking credentials',
         expectation: 'Usually a few seconds',
-        detail: "Each workspace's I/O Events credentials",
+        detail: 'Checking I/O Events credentials',
     },
     removingEventSetup: {
-        label: 'Removing event setup',
+        label: 'Deleting event setup',
         expectation: 'Usually under a minute',
-        detail: 'Its event registrations and providers',
+        detail: 'Deleting registrations and providers',
     },
     deletingAdobeProject: {
         label: 'Deleting the project',
         expectation: 'Usually a few seconds',
-        detail: 'The project, in Adobe Developer Console',
+        detail: 'Deleting from Developer Console',
     },
 } as const;

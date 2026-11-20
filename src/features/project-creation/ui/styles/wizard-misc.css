@@ -58,8 +58,6 @@
 
 .animate-pulse { animation: pulse 2s infinite; }
 
-.animate-fade-in { animation: fadeIn var(--spectrum-global-animation-duration-600) ease; }
-
 .animate-slide-down { animation: slide-down var(--spectrum-global-animation-duration-600) ease; }
 
 /* ===========================================

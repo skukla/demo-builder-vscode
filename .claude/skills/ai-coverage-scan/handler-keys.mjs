@@ -30,7 +30,11 @@ import fs from 'fs';
  */
 export function handlerKeys(src) {
     const keys = [];
-    const START = /export const \w+ = defineHandlers\(\{/g;
+    // ANY call, not only `export const X = defineHandlers({`: a factory returns its map
+    // (`createDemoDataHandlers`, whose `return defineHandlers({` hid `check-demo-data` and
+    // `clear-demo-data` until 2026-11-14), and a map can be wrapped
+    // (`announcingChanges(defineHandlers({`) or held in a non-exported const.
+    const START = /\bdefineHandlers\(\{/g;
     let m;
 
     while ((m = START.exec(src)) !== null) {
@@ -135,6 +139,21 @@ if (process.argv.includes('--self-test')) {
             name: 'quoted and bare keys both count',
             src: `export const z = defineHandlers({ 'kebab-one': f, bareTwo: g });`,
             expect: ['kebab-one', 'bareTwo'],
+        },
+        {
+            name: 'a map a factory returns, a wrapped map and a non-exported const all count',
+            src: `export function createX(deps) {
+                const plans = { project: new Map() };
+                return defineHandlers({ 'check-x': (c) => check(deps, c), 'clear-x': f });
+            }
+            export const w = wrap(wrap(defineHandlers({ ...other, wrapped: g })));
+            const inner = defineHandlers({ hidden: h });`,
+            expect: ['check-x', 'clear-x', 'wrapped', 'hidden'],
+        },
+        {
+            name: 'a name merely containing defineHandlers is not a map',
+            src: `export const y = redefineHandlers({ notAKey: f });`,
+            expect: [],
         },
     ];
     let failed = 0;

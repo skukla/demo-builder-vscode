@@ -13,8 +13,6 @@ export interface LoadingDisplayProps {
     helperText?: string;
     /** Optional progress percentage (0-100). When provided, shows determinate progress circle */
     progress?: number;
-    /** Additional CSS class for the container */
-    className?: string;
     /**
      * Hold each of the three rows to exactly one line, so nothing moves as the
      * lines change: text that does not fit ends in an ellipsis (the full text is
@@ -22,6 +20,18 @@ export interface LoadingDisplayProps {
      * whose lines change every few seconds.
      */
     steady?: boolean;
+    /**
+     * With `steady`, hold no blank rows: rows 2 and 3 appear when they have something on them. For
+     * a dialog's wait, where a blank row left the spinner sitting high (owner, 2026-11-02).
+     */
+    noBlankRows?: boolean;
+    /**
+     * Centre the spinner and its message, at any size. Large is always centred; medium is
+     * left-aligned for a loading row unless this is set. A job dialog's wait is medium and
+     * centred: the large spinner is for a whole page, panel or the progress window, and
+     * dominated a short dialog (owner, 2026-10-31).
+     */
+    centered?: boolean;
 }
 
 /**
@@ -65,17 +75,18 @@ export function LoadingDisplay({
     subMessage,
     helperText,
     progress,
-    className,
     steady = false,
+    noBlankRows = false,
+    centered = false,
 }: LoadingDisplayProps) {
-    // Center display for large size, left-align for smaller sizes
-    const shouldCenter = size === 'L';
+    // Centred for the large size, or when asked (a job dialog's medium wait); a loading row
+    // left-aligns.
+    const shouldCenter = size === 'L' || centered;
     const hasDeterminateProgress = progress !== undefined && progress >= 0;
 
     // Text size by circle size. Written as literals AT each use below rather
     // than assigned here: a className the bundle scan cannot read is a class it
     // cannot check a stylesheet for (ADR-017 §6).
-    const textSizeClass = { L: 'text-lg', M: 'text-base', S: '' }[size];
 
     // Container props based on centering
     const containerProps = shouldCenter
@@ -91,9 +102,9 @@ export function LoadingDisplay({
     // For small size with no sub-message, use horizontal layout
     if (size === 'S' && !subMessage) {
         return (
-            <Flex gap="size-200" alignItems="center" UNSAFE_className={className}>
+            <Flex gap="size-200" alignItems="center">
                 <ProgressCircle size={size} isIndeterminate={true} aria-label={message} />
-                <Text UNSAFE_className={cn(textSizeClass, 'font-medium')}>{message}</Text>
+                <Text UNSAFE_className="font-medium">{message}</Text>
             </Flex>
         );
     }
@@ -105,7 +116,6 @@ export function LoadingDisplay({
                 direction="column"
                 gap="size-200"
                 {...containerProps}
-                UNSAFE_className={className}
             >
                 <ProgressCircle
                     size={size}
@@ -113,38 +123,74 @@ export function LoadingDisplay({
                     isIndeterminate={!hasDeterminateProgress}
                     aria-label={message}
                 />
-                <Flex
-                    direction="column"
-                    gap="size-50"
-                    alignItems={shouldCenter ? 'center' : 'start'}
-                    UNSAFE_className={steady ? 'w-full' : undefined}
-                >
-                    <Text UNSAFE_className={cn(textSizeClass, 'font-medium', steady && 'loading-display-row')}>
-                        {rowText(message, steady)}
-                    </Text>
-                    {/* Always render sub-message row to prevent layout shift */}
-                    <Text
-                        UNSAFE_className={cn('text-sm', 'text-gray-600', steady && 'loading-display-row')}
-                        minHeight="size-200"
-                    >
-                        {subMessage ? rowText(subMessage, steady) : '\u00A0'}
-                    </Text>
-                    {(helperText || steady) && (
-                        <Text
-                            // No 'italic': that class is defined in no
-                            // stylesheet, so this line has never rendered
-                            // italic. Asking for it again would be a look
-                            // nobody has reviewed — found when the class came
-                            // out of a variable and the bundle scan could read
-                            // it (2026-09-19).
-                            UNSAFE_className={cn('text-xs', 'text-gray-500', steady && 'loading-display-row')}
-                            marginTop="size-100"
-                        >
-                            {helperText ? rowText(helperText, steady) : '\u00A0'}
-                        </Text>
-                    )}
-                </Flex>
+                <LoadingRows
+                    size={size}
+                    message={message}
+                    subMessage={subMessage}
+                    helperText={helperText}
+                    steady={steady}
+                    noBlankRows={noBlankRows}
+                    shouldCenter={shouldCenter}
+                />
             </Flex>
         </div>
+    );
+}
+
+/**
+ * The words under the spinner. Only the rows there is something to say on, so the spinner and its
+ * words are centred as they stand: a blank row kept for words that never come left the spinner
+ * sitting high (owner, 2026-11-01). `steady` holds all three, for a run whose lines change. Moved
+ * out of `LoadingDisplay` unchanged (2026-11-04) to keep that function within the complexity limit.
+ */
+function LoadingRows({
+    size,
+    message,
+    subMessage,
+    helperText,
+    steady,
+    noBlankRows,
+    shouldCenter,
+}: Pick<LoadingDisplayProps, 'size' | 'message' | 'subMessage' | 'helperText'> & {
+    steady: boolean;
+    noBlankRows: boolean;
+    shouldCenter: boolean;
+}): React.ReactElement | null {
+    if (!(message || subMessage || helperText || steady)) return null;
+    return (
+        <Flex
+            direction="column"
+            gap="size-50"
+            alignItems={shouldCenter ? 'center' : 'start'}
+            UNSAFE_className={steady ? 'w-full' : undefined}
+        >
+            {(message || steady) && (
+                <Text UNSAFE_className={cn(size === 'L' && 'text-lg', size === 'M' && 'text-base', 'font-medium', steady && 'loading-display-row')}>
+                    {rowText(message, steady)}
+                </Text>
+            )}
+            {(subMessage || (steady && !noBlankRows)) && (
+                <Text
+                    UNSAFE_className={cn('text-sm', 'text-gray-600', steady && 'loading-display-row')}
+                    minHeight="size-200"
+                >
+                    {subMessage ? rowText(subMessage, steady) : '\u00A0'}
+                </Text>
+            )}
+            {(helperText || (steady && !noBlankRows)) && (
+                <Text
+                    // No 'italic': that class is defined in no
+                    // stylesheet, so this line has never rendered
+                    // italic. Asking for it again would be a look
+                    // nobody has reviewed — found when the class came
+                    // out of a variable and the bundle scan could read
+                    // it (2026-09-19).
+                    UNSAFE_className={cn('text-xs', 'text-gray-500', steady && 'loading-display-row')}
+                    marginTop="size-100"
+                >
+                    {helperText ? rowText(helperText, steady) : '\u00A0'}
+                </Text>
+            )}
+        </Flex>
     );
 }

@@ -32,7 +32,6 @@
 
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { liveAddBuilder } from './liveAddBuilder';
-import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { AddIntegrationFlowModal } from '@/features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal';
 import { buildReservedIds } from '@/features/project-creation/ui/components/integration-flow/instanceId';
 import {
@@ -81,6 +80,8 @@ export interface AddIntegrationFlowAdapterProps {
      * sends it (owner, 2026-10-22). Without this it is sent at once.
      */
     onConfirmAdd?: (target: { id: string; name: string; payload: AddAppBuilderComponentRequestPayload }) => void;
+    /** The confirmation the finished add waits on, shown in the flow's own window (`AddIntegrationFlowModal`). */
+    confirmation?: React.ReactNode;
     /**
      * A destination was chosen (mode `destination`). The move itself belongs to
      * the SCREEN, which hosts the progress modal it narrates into — this only
@@ -106,6 +107,7 @@ export function AddIntegrationFlowAdapter({
     onAddStarted,
     onConfirmAdd,
     onDestinationChosen,
+    confirmation,
 }: AddIntegrationFlowAdapterProps): React.ReactElement {
     // Read through a ref: the builder callbacks below are memoised once.
     const onAddStartedRef = useRef(onAddStarted);
@@ -272,14 +274,6 @@ export function AddIntegrationFlowAdapter({
     // instance, so the gallery greys it out the way it does an added mesh.
     const erpHolder = useErpIntegrationHolder(isOpen && mode === 'add' ? ASK_ABOUT_OPEN_PROJECT : undefined);
 
-    // The DASHBOARD webview registers `reAuthenticate` (not the wizard's
-    // `authenticate`); it awaits the browser sign-in and returns when done, so the
-    // picker can re-fetch straight after.
-    const signIn = useCallback(
-        () => webviewClient.request('reAuthenticate').catch(() => undefined),
-        [],
-    );
-
     return (
         <AddIntegrationFlowModal
             isOpen={isOpen}
@@ -293,7 +287,7 @@ export function AddIntegrationFlowAdapter({
             blankComponent={blankComponent}
             reservedIds={reservedIds}
             builder={builder}
-            onSignIn={signIn}
+            confirmation={confirmation}
         />
     );
 }

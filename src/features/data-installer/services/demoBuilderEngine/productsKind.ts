@@ -2,8 +2,9 @@
  * The `products` kind: each product the store lacks, made with this store's ids, and removed
  * again by its SKU (DI-5; catalog spec §8).
  *
- * Rows arrive in the order the export wrote them, simple and virtual before the configurable,
- * grouped and bundle products that name them, so a child exists before its parent is made.
+ * Products go through Commerce's bulk queue in two waves (`bulkProducts.ts`): everything that
+ * links nothing, then the configurable, bundle and grouped products that link them, so a child
+ * exists before its parent is made whatever order the pack holds them in.
  *
  * Where this deliberately differs from the service: a SKU the store already has is left alone
  * and never recorded, so removal cannot delete it. The service posts every row, which
@@ -12,17 +13,24 @@
  * Not handled here: images. A row names image files by path, and nothing in a pack carries
  * the files; the service sends the paths as they are, and so does this.
  *
- * Endpoints (spec §8): `GET products/{sku}`, `POST products`, `DELETE products/{sku}`.
+ * Endpoints (spec §8): `GET products` filtered to the pack's SKUs, `POST V1/async/bulk/products`
+ * (and `POST products` for a row the queue did not finish), `DELETE products/{sku}`.
  *
  * @module features/data-installer/services/demoBuilderEngine/productsKind
  */
 
 import { z } from 'zod';
-import { deleteIfPresent, type KindContext, readOrNull } from './kindContext';
+import { adoptedRow } from './adoptedObjects';
+import { BULK_WAIT, type BulkRun, type BulkWait, createProductsInBulk, productIdsInStore, type ProductToMake } from './bulkProducts';
+import { amountsForStore, withoutAmounts } from './giftCardAmounts';
+import { deleteIfPresent, type KindContext, MissingNameError } from './kindContext';
+import { createOne } from './pendingCreates';
+import { type ExportRow, importProductRows, productsLine } from './productExportKind';
+import { additionalAsCustom, importRowLookups, importRowOf } from './productImportRows';
+import { GIFT_CARD_KIND, PRODUCT_KIND, PRODUCT_KINDS } from './productKinds';
 import { isNumeric, type ProductLookups, productLookups } from './productLookups';
+import { tryRow } from './refusedRows';
 import type { CommerceSend } from '@/types/commerceWire';
-
-export const PRODUCT_KIND = 'products';
 
 /** Inputs whose values a pack writes as option labels. */
 const OPTION_INPUTS = new Set(['select', 'multiselect']);
@@ -45,7 +53,9 @@ const productSchema = z
         type_id: z.string(),
         attribute_set_id: z.union([z.string(), z.number()]),
         custom_attributes: z.array(z.object({ attribute_code: z.string(), value: z.unknown() })).optional(),
-        extension_attributes: z.record(z.unknown()).optional(),
+        /** Code → value, an export form the service turns into custom attributes (`additionalAsCustom`). */
+        additional_attributes: z.record(z.string(), z.unknown()).optional(),
+        extension_attributes: z.record(z.string(), z.unknown()).optional(),
         tier_prices: z
             .array(z.object({ customer_group_id: z.union([z.string(), z.number()]) }).passthrough())
             .optional(),
@@ -61,13 +71,31 @@ type CustomAttribute = NonNullable<ProductRow['custom_attributes']>[number];
 export function parseProductRows(records: unknown): ProductRow[] {
     const parsed = rowsSchema.safeParse(records);
     if (!parsed.success) {
-        throw new Error(`The pack's products are not in the shape Commerce takes: ${parsed.error.issues[0]?.message}`);
+        throw new Error(`The datapack's products are not in the shape Commerce takes: ${parsed.error.issues[0]?.message}`);
     }
     return parsed.data.map((row) => row.product);
 }
 
 const labels = (value: unknown): string[] =>
     (Array.isArray(value) ? value : String(value).split(',')).map((v) => String(v).trim()).filter(Boolean);
+
+/**
+ * The option id for one value: by label (or the option's own id) first, and a number Commerce has no
+ * option for kept as it was, an id from the store the pack came from. A number used to be taken as an
+ * id outright, so Luma's size "32" set option 32 where its option was "Size 32" (2026-11-06).
+ */
+async function optionOf(lk: ProductLookups, code: string, label: string): Promise<string> {
+    if (!isNumeric(label)) return lk.optionId(code, label);
+    try {
+        return await lk.optionId(code, label);
+    } catch (error) {
+        if (error instanceof MissingNameError) return label;
+        throw error;
+    }
+}
+
+/** A yes/no attribute's words, as Commerce's import file writes them, and the number REST takes. */
+const YES_NO: Record<string, string> = { yes: '1', no: '0' };
 
 /**
  * A custom attribute's value with labels and url keys turned into this store's ids, or null
@@ -82,11 +110,21 @@ async function customAttribute(
     if (code === 'category_ids') {
         return { attribute_code: code, value: await Promise.all(labels(value).map((key) => (isNumeric(key) ? key : lk.categoryId(key)))) };
     }
-    if (value === null || value === undefined || isNumeric(value) || typeof value === 'boolean') return attr;
-    const input = (await lk.attribute(code)).frontend_input ?? '';
+    if (value === null || value === undefined || typeof value === 'boolean') return attr;
+    let input: string;
+    try {
+        input = (await lk.attribute(code)).frontend_input ?? '';
+    } catch (error) {
+        // A number on an attribute that cannot be read goes as it is, as every number used to.
+        if (isNumeric(value)) return attr;
+        throw error;
+    }
+    // A yes/no written as a word, as the Import API takes it; REST takes only 1 or 0 (live, 2026-11-06, Venia).
+    const word = typeof value === 'string' ? YES_NO[value.trim().toLowerCase()] : undefined;
+    if (input === 'boolean' && word !== undefined) return { attribute_code: code, value: word };
     if (!OPTION_INPUTS.has(input)) return attr;
     try {
-        const ids = await Promise.all(labels(value).map((label) => (isNumeric(label) ? label : lk.optionId(code, label))));
+        const ids = await Promise.all(labels(value).map((label) => optionOf(lk, code, label)));
         return { attribute_code: code, value: ids.join(',') };
     } catch (error) {
         if (!LAYOUT_FIELDS.has(code)) throw error;
@@ -108,7 +146,7 @@ async function configurableOptions(lk: ProductLookups, options: ConfigurableOpti
             const attributeId = isNumeric(code) ? code : String((await lk.attribute(code)).attribute_id);
             const values = await Promise.all(
                 (option.values ?? []).map(async (v) => ({
-                    value_index: Number(isNumeric(v.value_index) ? v.value_index : await lk.optionId(code, String(v.value_index))),
+                    value_index: Number(await optionOf(lk, code, String(v.value_index))),
                 })),
             );
             return { ...option, attribute_id: attributeId, values };
@@ -117,7 +155,8 @@ async function configurableOptions(lk: ProductLookups, options: ConfigurableOpti
 }
 
 /** The extension attributes, on this store's website and with this store's ids. */
-async function extensionAttributes(lk: ProductLookups, ext: Record<string, unknown>, websiteId: number): Promise<Record<string, unknown>> {
+async function extensionAttributes(lk: ProductLookups, row: ProductRow, websiteId: number): Promise<Record<string, unknown>> {
+    const ext = row.extension_attributes ?? {};
     const out: Record<string, unknown> = { ...ext, website_ids: [websiteId] };
     const links = ext.category_links as Array<{ category_id: string | number; position?: number }> | undefined;
     if (links) {
@@ -129,21 +168,21 @@ async function extensionAttributes(lk: ProductLookups, ext: Record<string, unkno
     if (options) out.configurable_product_options = await configurableOptions(lk, options);
     const children = ext.configurable_product_links as Array<string | number> | undefined;
     if (children) out.configurable_product_links = await Promise.all(children.map((c) => (isNumeric(c) ? Number(c) : lk.productId(String(c)))));
-    const amounts = ext.giftcard_amounts as Array<Record<string, unknown>> | undefined;
-    if (amounts) {
-        const id = (await lk.attribute('giftcard_amounts')).attribute_id;
-        out.giftcard_amounts = amounts.map((a) => ({ ...a, attribute_id: Number(id), website_id: 0 }));
-    }
+    const amounts = await amountsForStore(lk, ext, row.custom_attributes ?? []);
+    if (amounts) out.giftcard_amounts = amounts;
     return out;
 }
+
 
 /** The body Commerce is sent for one row. */
 export async function toCommerceProduct(
     lk: ProductLookups,
-    row: ProductRow,
+    whole: ProductRow,
     websiteId: number,
     leftAtDefault: LeftAtDefault = () => undefined,
 ): Promise<{ product: unknown }> {
+    const { additional_attributes: _asCustom, ...rest } = whole;
+    const row: ProductRow = { ...rest, custom_attributes: additionalAsCustom(whole) };
     const setName = String(row.attribute_set_id);
     const tiers = await Promise.all(
         (row.tier_prices ?? []).map(async (tier) => ({
@@ -157,18 +196,45 @@ export async function toCommerceProduct(
             ...row,
             attribute_set_id: isNumeric(setName) ? Number(setName) : await lk.setId(setName),
             custom_attributes: (
-                await Promise.all((row.custom_attributes ?? []).map((a) => customAttribute(lk, a, leftAtDefault)))
+                await Promise.all(withoutAmounts(row.custom_attributes ?? []).map((a) => customAttribute(lk, a, leftAtDefault)))
             ).filter((a): a is CustomAttribute => a !== null),
-            extension_attributes: await extensionAttributes(lk, row.extension_attributes ?? {}, websiteId),
+            extension_attributes: await extensionAttributes(lk, row, websiteId),
             tier_prices: tiers,
         },
     };
 }
 
-/** Make each product the store lacks, in the pack's order, and record it. */
-export async function installProducts(ctx: KindContext, rows: readonly ProductRow[]): Promise<void> {
+/** Products that link others, made in a second wave once the ones they link exist. */
+const LINKING_TYPES = new Set(['configurable', 'bundle', 'grouped']);
+
+/** The rows in waves: everything that links nothing, then everything that links (`bulkProducts.ts`). */
+function waves(rows: readonly ProductRow[]): ProductRow[][] {
+    const leaves = rows.filter((row) => !LINKING_TYPES.has(row.type_id));
+    const parents = rows.filter((row) => LINKING_TYPES.has(row.type_id));
+    return [leaves, parents].filter((wave) => wave.length > 0);
+}
+
+/** One product on its own through `POST products`: a row the bulk queue did not finish, or a batch it refused. */
+async function createSingle(ctx: KindContext, kind: string, product: ProductToMake): Promise<void> {
+    // Step 14 item 3: a product Commerce refuses is skipped, and the install carries on.
+    const made = await tryRow(ctx, { kind, key: product.sku }, () =>
+        createOne(ctx, { kind, key: product.sku, id: product.sku }, async () => {
+            await ctx.send('POST', 'products', product.body);
+            return { kind, id: product.sku };
+        }),
+    );
+    if (made) ctx.log(`created product ${product.sku}`);
+}
+
+/**
+ * Make each product the store lacks and record it, through the bulk queue (`bulkProducts.ts`).
+ *
+ * @param kind - the kind it is recorded under: `products`, or `giftcards` for a pack's gift cards
+ * @param wait - how a batch is waited on (injected for tests)
+ */
+export async function installProducts(ctx: KindContext, rows: readonly ProductRow[], kind = PRODUCT_KIND, wait: BulkWait = BULK_WAIT): Promise<void> {
     const websiteId = ctx.session.websiteId;
-    if (websiteId === undefined) throw new Error('The install target names no website, so the pack\'s products have nowhere to be sold.');
+    if (websiteId === undefined) throw new Error('The install target names no website, so the datapack\'s products have nowhere to be sold.');
     const lk = productLookups(ctx);
     const told = new Set<string>();
     const leftAtDefault: LeftAtDefault = (code, value) => {
@@ -177,16 +243,68 @@ export async function installProducts(ctx: KindContext, rows: readonly ProductRo
         told.add(key);
         ctx.log(`left ${code} "${value}" at the store's default: the store does not offer it`);
     };
-    for (const row of rows) {
-        if (ctx.recorder.has(PRODUCT_KIND, row.sku)) continue;
-        if (await readOrNull(ctx.get, `products/${encodeURIComponent(row.sku)}`)) {
-            ctx.log(`left ${row.sku} alone: the store already has it`);
-            continue;
+    // On the record at all, made here or the store's own (walk F187): handled already.
+    const onRecord = new Set(ctx.recorder.created.filter((o) => PRODUCT_KINDS.includes(o.kind)).map((o) => o.id));
+    const todo = rows.filter((row) => !onRecord.has(row.sku));
+    const there = await productIdsInStore(ctx.get, todo.map((row) => row.sku));
+    const known = (ctx.session.productIds ??= new Map());
+    for (const [sku, id] of there) known.set(sku, id);
+    const fresh = todo.filter((row) => !there.has(row.sku.toLowerCase()));
+    const had = todo.filter((row) => there.has(row.sku.toLowerCase()));
+    for (const row of had) ctx.log(`left ${row.sku} alone: the store already has it`);
+    // Walk F187: the store's own, on the record (one write) so a save follows them; no removal takes them.
+    if (had.length > 0) await ctx.recorder.confirm([], had.map((row) => adoptedRow(kind, row.sku, row.sku)));
+    const run: BulkRun = {
+        kind,
+        noun: kind === GIFT_CARD_KIND ? 'gift cards' : 'products',
+        total: fresh.length,
+        done: 0,
+        single: (product) => createSingle(ctx, kind, product),
+    };
+    // "0 of N" at once, as every other kind says it (`startRowCount`): the first count otherwise came
+    // only when Commerce confirmed a whole import call, so a small pack's Products sat on its bare name
+    // until it was done (owner, 2026-11-20). Reporting only.
+    if (run.total > 0) ctx.progress?.(productsLine(0, run.total, run.noun, false));
+    // Through the Import API where the row converts without loss (`productImportRows.ts`), the rest by
+    // the bulk queue: the pack stays in its own form, only the route differs.
+    const look = importRowLookups(lk);
+    const bySku = new Map(rows.map((row) => [row.sku.toLowerCase(), row]));
+    for (const wave of waves(fresh)) {
+        const viaImport: ExportRow[] = [];
+        const prepared: ProductToMake[] = [];
+        for (const row of wave) {
+            // A row naming something the store lacks, or a row that was skipped, is skipped too, whichever
+            // route it would take: every row is checked by building its record first.
+            const body = await tryRow(ctx, { kind, key: row.sku }, () => toCommerceProduct(lk, row, websiteId, leftAtDefault));
+            if (!body) {
+                run.total -= 1;
+                continue;
+            }
+            const converted = kind === PRODUCT_KIND ? await importRowOf(look, row, bySku) : undefined;
+            if (converted) viaImport.push(converted);
+            else prepared.push({ sku: row.sku, body });
         }
-        await ctx.send('POST', 'products', await toCommerceProduct(lk, row, websiteId, leftAtDefault));
-        await ctx.recorder.record({ kind: PRODUCT_KIND, id: row.sku });
-        ctx.log(`created product ${row.sku}`);
+        await importWave(ctx, run, viaImport, LINKING_TYPES.has(wave[0].type_id));
+        await createProductsInBulk(ctx, run, prepared, wait);
     }
+}
+
+/**
+ * One wave's converted rows through the Import API, counted in the run's progress, then their ids
+ * learned for a parent the bulk queue makes that links them by id.
+ */
+async function importWave(ctx: KindContext, run: BulkRun, rows: readonly ExportRow[], parents: boolean): Promise<void> {
+    if (rows.length === 0) return;
+    await importProductRows(ctx, rows, {
+        skipKind: run.kind,
+        parents,
+        onDone: (count) => {
+            run.done += count;
+            ctx.progress?.(productsLine(run.done, run.total, run.noun, parents));
+        },
+    });
+    const known = (ctx.session.productIds ??= new Map());
+    for (const [sku, id] of await productIdsInStore(ctx.get, rows.map((r) => r.sku))) known.set(sku, id);
 }
 
 /** Take back one product this engine made. */

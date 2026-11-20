@@ -72,6 +72,22 @@ export interface ProcessCleanupOptions {
     gracefulTimeout?: number;
 }
 
+/**
+ * Whether a process exists. Signal 0 checks without killing; EPERM means it exists as another
+ * user. Also how a datapack job learns its host is gone (walk F163, `jobRecordRead.ts`).
+ *
+ * @param pid - the process to check
+ * @returns true if it exists
+ */
+export function processExists(pid: number): boolean {
+    try {
+        process.kill(pid, 0);
+        return true;
+    } catch (error: unknown) {
+        return getErrorCode(error) !== 'ESRCH';
+    }
+}
+
 export class ProcessCleanup {
     private gracefulTimeout: number;
     private readonly checkInterval = TIMEOUTS.POLL.PROCESS_CHECK;
@@ -117,27 +133,9 @@ export class ProcessCleanup {
         return this.killWithTimeout(pid, signal);
     }
 
-    /**
-     * Check if process exists
-     *
-     * Uses signal 0 which doesn't kill but checks existence
-     *
-     * @param pid Process ID to check
-     * @returns true if process exists
-     */
+    /** Whether the process exists (`processExists`). */
     private processExists(pid: number): boolean {
-        try {
-            process.kill(pid, 0); // Signal 0 checks existence without killing
-            return true;
-        } catch (error: unknown) {
-            if (getErrorCode(error) === 'ESRCH') {
-                // Process does not exist
-                return false;
-            }
-            // Process exists but we don't have permission (EPERM)
-            // Still return true because it exists
-            return true;
-        }
+        return processExists(pid);
     }
 
     /**

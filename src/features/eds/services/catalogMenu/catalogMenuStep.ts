@@ -33,7 +33,7 @@
 
 import { authoredAddresses } from './authoredCategoryPages';
 import { isEmptyRecord, readCatalogMenuRecord, writeCatalogMenuRecord } from './catalogMenuRecord';
-import { applyCatalogMenu, removeCatalogMenu, type CategoryPageHost } from './catalogMenuService';
+import { applyCatalogMenu, NoMenuCategoriesError, removeCatalogMenu, type CategoryPageHost } from './catalogMenuService';
 import { describeBuild, describeRemoval } from './catalogMenuSummary';
 import { planCategoryPages, type CatalogCategory } from './categoryPagePlan';
 import type { MenuLine } from './navSwitch';
@@ -72,6 +72,20 @@ interface StepOutcome {
 }
 
 const failedStep = (summary: string): StepOutcome => ({ summary, ok: false, written: 0, edited: [] });
+
+/** A store with no menu categories: nothing to page, and nothing wrong. */
+const NOTHING_TO_PAGE: StepOutcome = {
+    summary: 'No category pages to publish: this store view has no menu categories.',
+    ok: true,
+    written: 0,
+    edited: [],
+};
+
+/**
+ * Why the category pages did not go up, short enough for a run's one line (rule 15; live run 6,
+ * 2026-11-15): the reason in brackets, as product pages say theirs.
+ */
+const notPublished = (error: unknown): string => `Category pages not published (${messageOf(error)}). Republish to try again.`;
 
 /**
  * What a step did, for its callers: the sentence, and whether it did everything. A
@@ -139,10 +153,10 @@ async function applyWithBlock(project: Project, site: CatalogMenuSite): Promise<
         report = await applyCatalogMenu(site, readCatalogMenuRecord(project));
     } catch (error) {
         // `applyCatalogMenu` throws only while reading — the categories, or the
-        // storefront's existing pages — before any change.
-        return failedStep(
-            `Category pages were not published: ${messageOf(error)}. Republish the storefront to try again.`,
-        );
+        // storefront's existing pages — before any change. A store with no menu categories has
+        // nothing to page: no warning (live run 6, 2026-11-15).
+        if (error instanceof NoMenuCategoriesError) return NOTHING_TO_PAGE;
+        return failedStep(notPublished(error));
     }
     const { record, ...facts } = report;
     writeCatalogMenuRecord(project, record);
@@ -176,7 +190,7 @@ async function build(project: Project, site: CatalogMenuSite): Promise<StepOutco
     try {
         return await applyWithBlock(project, site);
     } catch (error) {
-        return failedStep(`Category pages were not published: ${messageOf(error)}.`);
+        return failedStep(notPublished(error));
     }
 }
 

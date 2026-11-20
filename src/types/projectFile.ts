@@ -27,11 +27,11 @@
 
 import type { AiPrompt, Project } from '@/types/base';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
+import type { DatapackReference } from '@/types/datapack';
 import type {
     CodePatchSource,
     CustomIntegrationSource,
     DaLiveContentSource,
-    DatapackReference,
     DemoPackage,
 } from '@/types/demoPackages';
 import type {
@@ -100,6 +100,11 @@ export interface SharedDemoBuiltWith {
     codePatchSource?: CodePatchSource;
     /** The ledger's patch ids the storefront carries. */
     codePatches?: string[];
+    /**
+     * The ledger's release the storefront was last built or updated from (its `patchesRelease`),
+     * so a colleague's import is offered every release published since (F255).
+     */
+    patchesRelease?: string;
     /** Its `package.json` name and version when it was saved. */
     boilerplate?: StorefrontBoilerplate;
     /** The Demo Builder version that saved it. */
@@ -182,6 +187,49 @@ export interface RememberedDemo extends AddedDemo {
      */
     createdFromZip?: true;
 }
+
+/**
+ * A demo bundle being imported as a project (EDS-72): Import from File holds the
+ * bundle and opens the wizard on it, and storefront setup makes the project's own
+ * repository from its files. No template repository and no Welcome card.
+ */
+export interface ImportedFrom {
+    /** The demo's name as the Welcome step shows it: the setup's title, else its project. */
+    bundleName: string;
+    /** Absolute path of the bundle on this machine: storefront setup reads the files from here. */
+    bundlePath: string;
+    /** The sender's owner/repo, provenance only (the setup's `source.storefront.githubRepo`). */
+    sourceRepository?: string;
+}
+
+/** What storefront setup reports for a repository it made from a bundle (EDS-72). */
+export interface BundleImportResult {
+    /** The commit the bundle's files were pushed as: Reset puts the code back to it (decision 1). */
+    commit: string;
+    /** The sender's content site the pages were copied from, when the bundle names one. */
+    contentSource?: DaLiveContentSource;
+    /**
+     * The template commit the sender's code was built on (its description file's
+     * `builtWith.lkg`), when the bundle names one on the project's template. Creation records
+     * it as the storefront's `lastSyncedCommit`, so updates count from it (F252).
+     */
+    templateBase?: string;
+    /**
+     * The patches release the sender's code was built from (its description file's
+     * `builtWith.patchesRelease`), when it is a version of the project's ledger. Creation records
+     * it as the storefront's `patchesRelease`, so newer releases are offered (F255).
+     */
+    patchesRelease?: string;
+}
+
+/**
+ * What a project imported from a bundle records (EDS-72 decisions 1 and 3): the
+ * import, never a `demo` row. Reset reads `commit`; the rest is provenance. The
+ * template base and patches release are not kept here: they live in `lastSyncedCommit` and
+ * `patchesRelease`, where updates read them.
+ */
+export type ProjectImportedFrom = Omit<ImportedFrom, 'bundlePath'> &
+    Omit<BundleImportResult, 'templateBase' | 'patchesRelease'>;
 
 /**
  * What a project travels in. Everything the manifest persists that is not

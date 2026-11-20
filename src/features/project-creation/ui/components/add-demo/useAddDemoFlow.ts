@@ -113,10 +113,10 @@ export interface UseAddDemoFlowReturn {
     startFromBundle: () => void;
 }
 
-const PROBE_FAILED = "We couldn't read this storefront. Check the link and try again.";
-const IMPORT_FAILED = "We couldn't add this zip. Try again.";
-const ADD_FAILED = "We couldn't add this demo. Try again.";
-const CHANGE_FAILED = "We couldn't change the source. Try again.";
+// What is left to do when the host gave no reason. The dialog's title says what failed, so
+// these do not say it again.
+const PROBE_FAILED = 'Check the link and try again.';
+const TRY_AGAIN = 'Try again.';
 
 /**
  * The dialog's state machine.
@@ -209,7 +209,7 @@ export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
                 isPrivate: !makePublic,
             } satisfies ImportStorefrontZipRequest);
             if (!answer.success || !answer.result) {
-                setZipError(answer.error ?? IMPORT_FAILED);
+                setZipError(answer.error ?? TRY_AGAIN);
                 setZipConflict(answer.existing);
                 return;
             }
@@ -221,7 +221,7 @@ export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
             setDraft((d) => ({ ...d, source }));
             await probeSource(source);
         } catch (error) {
-            setZipError((error as Error).message || IMPORT_FAILED);
+            setZipError((error as Error).message || TRY_AGAIN);
         } finally {
             setImporting(false);
         }
@@ -234,7 +234,6 @@ export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
             ...buildAddedDemo(result, draft),
             ...(mode === 'add' && fromZip === result.fullName ? { createdFromZip: true } : {}),
         };
-        const failed = mode === 'change' ? CHANGE_FAILED : ADD_FAILED;
         setAdding(true);
         setAddError(undefined);
         try {
@@ -248,7 +247,7 @@ export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
                           demo,
                       } satisfies AddSharedDemoRequest);
             if (!answer.success || !answer.result) {
-                setAddError(answer.error ?? failed);
+                setAddError(answer.error ?? TRY_AGAIN);
                 setAdding(false);
                 return undefined;
             }
@@ -259,7 +258,7 @@ export function useAddDemoFlow(args: UseAddDemoFlowArgs): UseAddDemoFlowReturn {
             onClose();
             return answer.result.demo;
         } catch (error) {
-            setAddError((error as Error).message || failed);
+            setAddError((error as Error).message || TRY_AGAIN);
             setAdding(false);
             return undefined;
         }

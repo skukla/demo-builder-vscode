@@ -80,6 +80,7 @@ describe('equivalent-mutant ledger', () => {
                     entry.line !== undefined
                         ? atLine
                         : lines.filter((l) => l.trim() === anchor).length;
+                // Code moved under the entry? `npm run ledger -- list mutation <module>`, then `npm run ledger -- move mutation <index> <line>`.
                 expect({ anchor, line: entry.line, hits }).toEqual({
                     anchor,
                     line: entry.line,

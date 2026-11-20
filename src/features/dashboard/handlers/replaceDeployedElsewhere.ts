@@ -18,6 +18,7 @@
  */
 
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import { loadOtherProjects } from '@/core/state/otherProjects';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { removeAppBuilderComponent } from '@/features/app-builder/services/appBuilderRemoveRun';
@@ -40,30 +41,6 @@ import type { HandlerContext } from '@/types/handlers';
 export interface ReplaceServices {
     authManager: AuthenticationService;
     commandManager: CommandExecutor;
-}
-
-/**
- * Every local project but one, loaded without moving the current-project pointer.
- *
- * @param context - the handler context (state manager)
- * @param excludePath - the project to leave out; undefined loads them all
- * @returns the loaded projects
- */
-export async function loadOtherProjects(
-    context: HandlerContext,
-    excludePath: string | undefined,
-): Promise<Project[]> {
-    const summaries = await context.stateManager.getAllProjects();
-    const loaded = await Promise.all(
-        summaries
-            .filter((summary) => summary.path !== excludePath)
-            .map((summary) =>
-                context.stateManager.loadProjectFromPath(summary.path, undefined, {
-                    persistAfterLoad: false,
-                }),
-            ),
-    );
-    return loaded.filter((other): other is Project => other !== null);
 }
 
 /** The Adobe project as a person names it. */

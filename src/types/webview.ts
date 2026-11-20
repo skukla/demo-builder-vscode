@@ -3,9 +3,11 @@
 import type { CustomBlockLibrary } from './blockLibraries';
 import type { CommerceStoreStructure } from './commerceStore';
 import type { ComponentConfigs } from './components';
+import type { ProjectDatapack } from './datapack';
 import type { ErrorCode } from './errorCodes';
-import type { AddedDemo } from './projectFile';
+import type { AddedDemo, BundleImportResult, ImportedFrom } from './projectFile';
 import type { OperationPosition, PrerequisitePluginState, GitHubUser } from './webviewPayloads';
+import type { PlainText } from '@/core/utils/plainText';
 
 export type ThemeMode = 'light' | 'dark';
 
@@ -102,6 +104,8 @@ export interface WizardState {
     projectTitle?: string;
     selectedPackage?: string; // Selected package ID (e.g., 'citisignal', 'buildright')
     demo?: AddedDemo; // The storefront row when the selected package is an added demo (D2); cleared when a shipped brand is picked
+    /** Import from File's bundle (EDS-72): the Welcome step shows it alone, and setup makes the repository from it. */
+    importedFrom?: ImportedFrom;
     selectedBackend?: string; // Persisted Commerce backend id (e.g., 'adobe-commerce-paas'); source of truth for the backend choice + the "frontend pending" display. selectedStack stays the downstream key.
     selectedStack?: string; // Selected stack ID (e.g., 'headless-paas', 'eds-paas')
     selectedAddons?: string[]; // Selected addon IDs (e.g., ['adobe-commerce-aco'])
@@ -130,13 +134,16 @@ export interface WizardState {
     storefrontRepoValid?: boolean; // Storefront repo selection reported valid (RepoSelectionInline repository phase)
     activeBuildArea?: BuildAreaId; // Area currently focused within the build-your-project step
     /**
-     * Which datapack this project should be seeded with, if any.
+     * Which datapack this project should be seeded with, if any, and the store that
+     * holds it.
      *
-     * RECORDED here, IMPORTED from the dashboard afterwards: an import needs a
-     * reachable instance with working credentials and runs for minutes, so it
-     * does not belong inside the creation path. Optional throughout.
+     * Recorded by the Datapacks step (or seeded from an imported or copied project),
+     * then installed by creation itself, after Connection and Business Structure
+     * have settled the instance and the scope (`executeSampleDataPhase`). The step
+     * itself never imports. Optional throughout.
      */
-    datapack?: { name: string; version: string };
+    datapack?: ProjectDatapack;
+    datapackDisplayName?: string; // Transient: the chosen datapack as its card names it, for the summary and Review (owner, 2026-11-16)
     activeCommerceStep?: CommerceSectionId; // Active Commerce sub-step within the build step (footer Continue/Back walks sub-steps → areas → wizard steps)
     committedCommerceSteps?: CommerceSectionId[]; // Commerce sub-steps the user has pressed Continue past — gates the summary ✓ (a valid form alone does NOT mark a row done)
     activeStorefrontStep?: StorefrontSectionId; // Active Storefront sub-step within the build step (same footer-driven walk as Commerce)
@@ -326,13 +333,33 @@ export interface CreationProgress {
     /** Line 2: what the step is doing now. */
     message: string;
     logs: string[];
-    error?: string;
+    error?: PlainText;
     /** The step's place in the run, "(3 of 9)", when the run's steps are known. */
     position?: OperationPosition;
     /** When the run began, in ms since the epoch: the screen's clock counts from it. */
     startedAt?: number;
-    /** On the finishing update only: one line the success screen shows under its heading. */
-    note?: string;
+    /**
+     * On the finishing update only: how many Finish Setup steps the run left still to do
+     * (PL-101). The success screen says "N steps remaining" and offers Finish Setup.
+     */
+    stepsRemaining?: number;
+    /** Set while the run waits on a failed step for the SC (F307). */
+    pause?: CreationPause;
+}
+
+/** A step that failed and waits for the SC: why, and what the SC can do (F307). */
+export interface CreationPause {
+    /** Why the step failed, in plain words: line 2 while it waits. */
+    reason: string;
+    /** The main buttons, the first is the primary: Retry, or Fix with AI then Check Again. */
+    actions: string[];
+    /** Skip This Step is offered: the project is usable without this step. */
+    canSkip: boolean;
+}
+
+/** A pause as an agent hears it: the step it is on, as well as why and the answers. */
+export interface CreationPauseNotice extends CreationPause {
+    step: string;
 }
 
 export interface FormValidation {
@@ -563,6 +590,10 @@ export interface EDSConfig {
     installedBlockLibraries?: import('./blockLibraries').InstalledBlockLibrary[];
     /** Whether preflight's build step left all of Demo Builder's fixes; creation stamps it. */
     storefrontBuildComplete?: boolean;
+    /** The code files the live site did not serve after preflight; creation saves them as a Finish Setup step (PL-101). */
+    codeNotServed?: string[];
+    /** What preflight made from an imported bundle; creation records it on the project (EDS-72). */
+    bundleImport?: BundleImportResult;
     // Note: previewUrl and liveUrl are NOT stored - they are derived from githubRepo
     // by getEdsPreviewUrl() and getEdsLiveUrl() in typeGuards.ts
     /** Whether to skip content copy (e.g., when using existing content) */

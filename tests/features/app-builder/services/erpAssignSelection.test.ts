@@ -51,18 +51,18 @@ describe('listAssignableProducts', () => {
             if (requested.startsWith('products/attributes/brand')) {
                 return { options: [{ value: '', label: ' ' }, { value: '212', label: 'Accuform' }] };
             }
-            return pageWith({ 'essentials-plan': { brand: '212', erp_owner: 'justrite' } });
+            return pageWith({ 'essentials-plan': { brand: '212', erp_owner: 'tailspin' } });
         });
         const rows = await listAssignableProducts(get);
         expect(get).toHaveBeenCalledWith(expect.stringContaining('[field]=status&searchCriteria[filter_groups][0][filters][0][value]=1'));
         expect(rows.map(({ sku, attributeSetId, categoryIds, brand, owner, websiteIds }) => ({ sku, attributeSetId, categoryIds, brand, owner, websiteIds }))).toEqual([
-            { sku: 'essentials-plan', attributeSetId: 15, categoryIds: ['7'], brand: 'Accuform', owner: 'justrite', websiteIds: [2] },
+            { sku: 'essentials-plan', attributeSetId: 15, categoryIds: ['7'], brand: 'Accuform', owner: 'tailspin', websiteIds: [2] },
             { sku: 'DigiWristQuantum', attributeSetId: 16, categoryIds: ['3', '9'], brand: undefined, owner: '', websiteIds: [2] },
         ]);
     });
 
     // A move of a few products reads those, not the store (owner, 2026-10-19). The "in" filter
-    // answered 3 of 4 named SKUs, the made-up one left out, in 0.9 s on Justrite that day.
+    // answered 3 of 4 named SKUs, the made-up one left out, in 0.9 s on Tailspin that day.
     it('reads only the SKUs named, a few dozen per read, by an "in" filter', async () => {
         const get = jest.fn(async (requested: string) => (requested.startsWith('products/attributes/brand') ? { options: [] } : pageWith({})));
         const skus = Array.from({ length: 60 }, (_, index) => `SKU-${index}`);
@@ -85,9 +85,9 @@ describe('listAssignableProducts', () => {
     it('reads a free-text brand as it is stored', async () => {
         const get = jest.fn(async (requested: string) => {
             if (requested.startsWith('products/attributes/brand')) throw new Error('404');
-            return pageWith({ DigiWristQuantum: { brand: 'Justrite' } });
+            return pageWith({ DigiWristQuantum: { brand: 'Tailspin' } });
         });
-        expect((await listAssignableProducts(get))[1].brand).toBe('Justrite');
+        expect((await listAssignableProducts(get))[1].brand).toBe('Tailspin');
     });
 });
 
@@ -103,23 +103,23 @@ const row = (sku: string, extra: Partial<AssignProductRow> = {}): AssignProductR
 
 const ROWS = [
     row('ACC-100', { categoryIds: ['7'], brand: 'Accuform', owner: '' }),
-    row('ACC-200', { categoryIds: ['7'], brand: 'Accuform', owner: 'justrite' }),
+    row('ACC-200', { categoryIds: ['7'], brand: 'Accuform', owner: 'tailspin' }),
     row('ACC-300', { categoryIds: ['7'], brand: 'Accuform', owner: 'accuform' }),
     row('ACC-400', { categoryIds: ['7'], brand: 'Accuform', attributeSetId: 9 }),
-    row('JR-1', { categoryIds: ['8'], brand: 'Justrite' }),
+    row('JR-1', { categoryIds: ['8'], brand: 'Tailspin' }),
 ];
 
 describe('selections', () => {
     it('matches by category, brand without case, SKU prefix without case and a SKU list', () => {
         const skus = (selection: Parameters<typeof inSelection>[1]) => ROWS.filter((r) => inSelection(r, selection)).map((r) => r.sku);
         expect(skus({ by: 'category', categoryId: 8 })).toEqual(['JR-1']);
-        expect(skus({ by: 'brand', brand: ' justrite ' })).toEqual(['JR-1']);
+        expect(skus({ by: 'brand', brand: ' tailspin ' })).toEqual(['JR-1']);
         expect(skus({ by: 'skuPrefix', prefix: 'acc-' })).toHaveLength(4);
         expect(skus({ by: 'skus', skus: ['jr-1', 'ACC-100'] })).toEqual(['ACC-100', 'JR-1']);
     });
 
     it('refuses an empty selection in words', () => {
-        expect(selectionProblem(undefined)).toMatch(/Pick products/u);
+        expect(selectionProblem(undefined)).toMatch(/Select products/u);
         expect(selectionProblem({ by: 'skus', skus: [' '] })).toBe('Paste at least one SKU.');
         expect(selectionProblem({ by: 'brand', brand: 'Accuform' })).toBeUndefined();
     });
@@ -137,12 +137,12 @@ describe('previewAssignment', () => {
         erp: { id: 'demo-erp-2', name: 'Accuform ERP', listId: 'accuform' },
         value: 'accuform',
         owners: new Map<string, string[]>([
-            ['ACC-100', ['justrite']],
-            ['ACC-200', ['justrite']],
+            ['ACC-100', ['tailspin']],
+            ['ACC-200', ['tailspin']],
             ['ACC-300', ['accuform']],
-            ['ACC-400', ['justrite']],
+            ['ACC-400', ['tailspin']],
         ]),
-        names: new Map([['justrite', 'Justrite ERP'], ['accuform', 'Accuform ERP']]),
+        names: new Map([['tailspin', 'Tailspin ERP'], ['accuform', 'Accuform ERP']]),
         setsWithoutOwner: [{ id: 9, name: 'Gear', products: 1 }],
     };
 
@@ -155,7 +155,7 @@ describe('previewAssignment', () => {
             toWrite: 2,
             examples: ['ACC-100', 'ACC-200'],
             alreadyTagged: 1,
-            movedFrom: [{ name: 'Justrite ERP', count: 2 }],
+            movedFrom: [{ name: 'Tailspin ERP', count: 2 }],
             outsideSets: { count: 1, sets: [{ id: 9, name: 'Gear', products: 1 }] },
             unknownSkus: [],
         });

@@ -26,7 +26,7 @@ tested version, never to Adobe's untested main (`templateUpdateChecker.ts`
 A storefront added from a colleague's repository does not. Its project records the
 colleague's repository as its template and no LKG source, so its updates follow that
 repository's main (`checkForkedUpdates`) and the daily gate never reaches it. Seen on
-2026-10-20 with JustRite (`kmanns/justrite`, boilerplate 6.0.0, no LKG source) beside
+2026-10-20 with Tailspin (`org-e/tailspin`, boilerplate 6.0.0, no LKG source) beside
 Bodea and patch-canary-b2b, which follow the pointer.
 
 ## Why it is possible
@@ -48,7 +48,7 @@ Bodea and patch-canary-b2b, which follow the pointer.
 3. Its own edits do not collide with Adobe's change. Checked when Apply runs; a collision
    stops the update and names the files, never overwrites.
 
-JustRite does not qualify today: it records the boilerplate version, not the commit.
+Tailspin does not qualify today: it records the boilerplate version, not the commit.
 
 ## Recommendation (owner-approved for planning, 2026-10-20)
 
@@ -81,3 +81,8 @@ storefronts that are not forks but meet the requirements above.
 - 2026-10-20  feat(updates): find the Adobe commit a colleague's storefront was built from (`c3c454542`)
 - 2026-10-20  docs(backlog): EDS-56 owner decisions, and where the description file lives (`69fb06c64`)
 - 2026-10-20  docs(backlog): EDS-56, tested boilerplate updates for a qualifying colleague's storefront, with its plan (`ba3da9ac8`)
+- 2026-10-30  fix(updates): a storefront update no longer clashes with Demo Builder's own pieces, and a stop changes nothing (`780840113`)
+- 2026-10-30  fix(updates): the local-copy row names no file (`c1f7cf320`)
+- 2026-10-30  feat(updates): tell the SC when their AI finishes or drops a storefront fix (`d0917eba2`)
+- 2026-10-30  fix(updates): say when a fix with AI goes live by the approvals setting (`ab697244e`)
+- 2026-10-30  Merge parity/g6-update-own-pieces: an update never clashes with Demo Builder's own pieces, and a stop changes nothing (`403a18d08`)

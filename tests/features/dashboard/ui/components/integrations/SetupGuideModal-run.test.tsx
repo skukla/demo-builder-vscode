@@ -12,11 +12,12 @@ import React from 'react';
 import '@testing-library/jest-dom';
 
 import type { IntegrationCardModel } from '@/features/dashboard/ui/components/integrations/integrationCardModel';
-import { DONE_COPY, FIX_COPY, STATUS_COPY, SetupGuideModal } from './SetupGuideModal.testUtils';
+import { DONE_COPY, APPLY_COPY, STATUS_COPY, SetupGuideModal } from './SetupGuideModal.testUtils';
 import type { SetupChecklistItem } from '@/types/appBuilderComponents';
 import type { OperationProgressPayload } from '@/types/webviewPayloads';
+import { plain } from '@/core/utils/plainText';
 
-/** Justrite's warehouse step after an undo, 2026-10-26. */
+/** Tailspin's warehouse step after an undo, 2026-10-26. */
 const WAREHOUSE: SetupChecklistItem = {
     id: 'second-source',
     label: 'ERP warehouse',
@@ -25,7 +26,7 @@ const WAREHOUSE: SetupChecklistItem = {
     where: 'Admin',
     state: 'open',
     checkable: true,
-    fix: { kind: 'handler', handler: 'erp-warehouse-in-website-stock' },
+    setup: { kind: 'handler', handler: 'erp-warehouse-in-website-stock' },
     applicable: true,
 };
 
@@ -41,7 +42,7 @@ const PREVIEW = {
                 label: 'ERP warehouse',
                 title: WAREHOUSE.title,
                 state: 'applicable',
-                changes: ['Switch Test Warehouse back on', 'Add Test Warehouse to Justrite Stock'],
+                changes: ['Switch Test Warehouse back on', 'Add Test Warehouse to Tailspin Stock'],
                 rejected: [],
             },
         ],
@@ -82,7 +83,7 @@ describe('the step pane says what Apply will do', () => {
     it('reads the step from the store and says it in one sentence, before anything is pressed', async () => {
         await renderGuide();
         expect(mockRequest).toHaveBeenCalledWith('prepareCommerceStore', { id: 'erp-integration', stepIds: ['second-source'] });
-        expect(says()).toBe(`${STATUS_COPY.notSetUp}Apply will switch Test Warehouse back on and add Test Warehouse to Justrite Stock.`);
+        expect(says()).toBe(`${STATUS_COPY.notSetUp}Apply will switch Test Warehouse back on and add Test Warehouse to Tailspin Stock.`);
         expect(banner()).not.toHaveClass('inline-notice--info');
         expect(mockPostMessage).not.toHaveBeenCalled();
     });
@@ -91,11 +92,11 @@ describe('the step pane says what Apply will do', () => {
 describe('Apply runs in the guide', () => {
     it('follows the run in the pane, waits its buttons, and ends on what changed', async () => {
         const { onClose } = await renderGuide();
-        fireEvent.click(screen.getByRole('button', { name: FIX_COPY.fix }));
-        push({ id: 'erp-integration', state: 'running', stage: 'Applying the demo setup', step: 'ERP warehouse: Applying' });
+        fireEvent.click(screen.getByRole('button', { name: APPLY_COPY.apply }));
+        push({ id: 'erp-integration', state: 'running', stage: 'Applying the Demo Setup', step: 'ERP warehouse: Applying' });
         // The extension's progress words stay out of the guide: the list's mark spins instead.
         expect(says()).toBe(STATUS_COPY.applying);
-        expect(screen.getByRole('button', { name: 'Check all steps' })).toBeDisabled();
+        expect(screen.getByRole('button', { name: 'Check All Steps' })).toBeDisabled();
 
         push({
             id: 'erp-integration',
@@ -103,7 +104,7 @@ describe('Apply runs in the guide', () => {
             changes: [
                 {
                     label: 'ERP warehouse',
-                    lines: ['Switched Test Warehouse back on', 'Added Test Warehouse to Justrite Stock', 'By hand: Move the quantities.'],
+                    lines: ['Switched Test Warehouse back on', 'Added Test Warehouse to Tailspin Stock', 'By hand: Move the quantities.'],
                 },
             ],
         });
@@ -111,21 +112,21 @@ describe('Apply runs in the guide', () => {
         expect(says()).toBe(`${STATUS_COPY.done}${DONE_COPY.applied}`);
         expect(banner()).toHaveClass('inline-notice--success');
         expect(within(pane()).queryByText(/Switched Test Warehouse/)).not.toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Check all steps' })).not.toBeDisabled();
+        expect(screen.getByRole('button', { name: 'Check All Steps' })).not.toBeDisabled();
         expect(onClose).not.toHaveBeenCalled();
     });
 
     it('says why when the run stops', async () => {
         await renderGuide();
-        fireEvent.click(screen.getByRole('button', { name: FIX_COPY.fix }));
-        push({ id: 'erp-integration', state: 'failed', error: 'Commerce answered 403.' });
+        fireEvent.click(screen.getByRole('button', { name: APPLY_COPY.apply }));
+        push({ id: 'erp-integration', state: 'failed', error: plain('Commerce answered 403.') });
         expect(says()).toBe(`${STATUS_COPY.applyFailed}Commerce answered 403.`);
     });
 
     it("ignores another integration's progress", async () => {
         await renderGuide();
-        fireEvent.click(screen.getByRole('button', { name: FIX_COPY.fix }));
-        push({ id: 'something-else', state: 'failed', error: 'Not this one.' });
+        fireEvent.click(screen.getByRole('button', { name: APPLY_COPY.apply }));
+        push({ id: 'something-else', state: 'failed', error: plain('Not this one.') });
         expect(within(pane()).queryByText('Not this one.')).not.toBeInTheDocument();
     });
 });
@@ -134,8 +135,8 @@ describe('Apply runs in the guide', () => {
 describe('a run that stops on a question', () => {
     it('closes the guide and hands the run to the progress window, with the step to come back to', async () => {
         const { onClose, onAsk } = await renderGuide();
-        fireEvent.click(screen.getByRole('button', { name: FIX_COPY.fix }));
-        push({ id: 'erp-integration', state: 'running', prompt: { message: 'Sign in to Adobe?', actions: ['Sign in'] } });
+        fireEvent.click(screen.getByRole('button', { name: APPLY_COPY.apply }));
+        push({ id: 'erp-integration', state: 'running', prompt: { message: 'Sign In to Adobe?', actions: ['Sign In'] } });
         // The guide forgets the run, so its pane reads the plan again: let that read land.
         await act(async () => {});
         expect(onClose).toHaveBeenCalled();
@@ -146,8 +147,9 @@ describe('a run that stops on a question', () => {
                 message: 'prepareCommerceStore',
                 payload: { id: 'erp-integration', confirm: true, stepIds: ['second-source'] },
                 title: 'Applying ERP warehouse',
-                failureTitle: "Couldn't apply ERP warehouse",
-                successTitle: 'ERP warehouse applied',
+                thing: 'ERP warehouse',
+                failureTitle: "Couldn't Apply ERP warehouse",
+                successTitle: 'ERP warehouse Applied',
             },
             'second-source',
         );

@@ -1,33 +1,11 @@
 /**
- * SteadyHeight — a modal that walks through states must not jump between them
- * (owner, 2026-09-20).
- *
- * jsdom lays nothing out, so `scrollHeight` is 0 for everything unless it is told
- * otherwise. Each test therefore says what the content measures, the same way the
- * browser would, and asserts the FLOOR the box holds — which is the thing the SC
- * sees.
+ * SteadyHeight: a floor the caller can name, and where short content sits under it. It does not
+ * ease: a dialog's size no longer animates (owner, 2026-11-02).
  */
 
 import { render, screen } from '@testing-library/react';
 import React from 'react';
 import { SteadyHeight } from '@/core/ui/components/layout/SteadyHeight';
-
-/**
- * Make every element report `height` for `scrollHeight`, as a laid-out browser
- * would. Returns a setter so a test can change what the content measures next.
- */
-function measuringAt(height: number): (next: number) => void {
-    let current = height;
-    Object.defineProperty(HTMLElement.prototype, 'scrollHeight', {
-        configurable: true,
-        get() {
-            return current;
-        },
-    });
-    return (next: number) => {
-        current = next;
-    };
-}
 
 /** The box holding the floor: the parent of the element carrying the class. */
 function reservedBox(): HTMLElement {
@@ -36,63 +14,7 @@ function reservedBox(): HTMLElement {
     return content.parentElement;
 }
 
-afterEach(() => {
-    // @ts-expect-error — putting jsdom's own (absent) implementation back.
-    delete HTMLElement.prototype.scrollHeight;
-});
-
-it('reserves what the first state needed', () => {
-    measuringAt(400);
-
-    render(
-        <SteadyHeight>
-            <div data-testid="content">the form</div>
-        </SteadyHeight>,
-    );
-
-    expect(reservedBox()).toHaveStyle({ minHeight: '400px' });
-});
-
-it('keeps that height when a shorter state replaces it', () => {
-    const measure = measuringAt(400);
-    const { rerender } = render(
-        <SteadyHeight>
-            <div data-testid="content">the form</div>
-        </SteadyHeight>,
-    );
-
-    // The spinner: a fraction of the form's height, and the jump the SC saw.
-    measure(120);
-    rerender(
-        <SteadyHeight>
-            <div data-testid="content">checking…</div>
-        </SteadyHeight>,
-    );
-
-    expect(reservedBox()).toHaveStyle({ minHeight: '400px' });
-});
-
-it('grows for a state taller than anything before it', () => {
-    const measure = measuringAt(400);
-    const { rerender } = render(
-        <SteadyHeight>
-            <div data-testid="content">the form</div>
-        </SteadyHeight>,
-    );
-
-    measure(560);
-    rerender(
-        <SteadyHeight>
-            <div data-testid="content">a long confirmation</div>
-        </SteadyHeight>,
-    );
-
-    expect(reservedBox()).toHaveStyle({ minHeight: '560px' });
-});
-
 it('starts from a floor the caller names', () => {
-    measuringAt(0);
-
     render(
         <SteadyHeight minHeight={240}>
             <div data-testid="content">nothing measured yet</div>
@@ -106,8 +28,6 @@ it('starts from a floor the caller names', () => {
 // class the cross-bundle check cannot read, counted once per bundle. The caller's own
 // element goes inside instead, and its layout still applies to its own children.
 it('leaves the caller element, and its class, untouched inside', () => {
-    measuringAt(300);
-
     render(
         <SteadyHeight>
             <div className="datapack-import-body">
@@ -119,13 +39,11 @@ it('leaves the caller element, and its class, untouched inside', () => {
     expect(screen.getByTestId('content').parentElement).toHaveClass('datapack-import-body');
 });
 
-// The Add Integration window keeps the project list's height when the shorter
-// "Create New Project" form replaces it, and the form floated mid-window while the
-// list had started at the top (owner, 2026-10-17). A form reads from the top.
-it('centres a shorter state by default, and pins it to the top when asked', () => {
-    measuringAt(100);
+// Content shorter than a named floor: centred by default (a spinner), from the top when
+// asked (a form reads from the top).
+it('centres content shorter than its floor by default, and pins it to the top when asked', () => {
     const { unmount } = render(
-        <SteadyHeight>
+        <SteadyHeight minHeight={240}>
             <div data-testid="content">a spinner</div>
         </SteadyHeight>,
     );
@@ -133,9 +51,25 @@ it('centres a shorter state by default, and pins it to the top when asked', () =
     unmount();
 
     render(
-        <SteadyHeight align="start">
+        <SteadyHeight minHeight={240} align="start">
             <div data-testid="content">a form</div>
         </SteadyHeight>,
     );
     expect(reservedBox()).not.toHaveStyle({ justifyContent: 'center' });
+});
+
+it('never takes a height of its own: a dialog\'s size does not animate', () => {
+    const { rerender } = render(
+        <SteadyHeight>
+            <div data-testid="content">the form</div>
+        </SteadyHeight>,
+    );
+
+    rerender(
+        <SteadyHeight>
+            <div data-testid="content">the next state</div>
+        </SteadyHeight>,
+    );
+
+    expect(reservedBox().style.height).toBe('');
 });

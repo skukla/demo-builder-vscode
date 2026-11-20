@@ -46,6 +46,10 @@ const NEEDS_AUTH: Record<string, AuthProvider[] | false> = {
     // The demo setup checklist (AB-26x): marking a step is saved state only; checking reads Commerce.
     set_setup_step: false,
     check_setup_steps: ['adobe'],
+    // The project's Finish Setup (PL-101): marking a step is saved state only; checking reads
+    // the storefront repository and the live site (GitHub) or the store (Adobe sign-in).
+    set_finish_setup_step: false,
+    check_finish_setup: ['adobe', 'github'],
     set_console_apis: ['adobe'],
     set_project_destination: ['adobe'],
     deploy_integration: ['adobe'],
@@ -103,6 +107,8 @@ const INPUT_KEYS: Record<string, string[]> = {
     end_erp_downtime: ['erp', 'id'],
     set_setup_step: ['id', 'state', 'stepId'],
     check_setup_steps: ['id'],
+    set_finish_setup_step: ['state', 'stepId'],
+    check_finish_setup: ['stepId'],
     set_console_apis: ['apis', 'componentId'],
     set_project_destination: ['project', 'workspace'],
     deploy_integration: ['id', 'refreshCli'],
@@ -311,6 +317,7 @@ describe('ACTION_DESCRIPTORS — per-row contract', () => {
     describe('closed lists take exactly their own values', () => {
         it.each([
             ['set_setup_step', 'state', ['done', 'dismissed', 'open'], 'finished'],
+            ['set_finish_setup_step', 'state', ['done', 'dismissed', 'open'], 'finished'],
             ['write_erp_rest', 'method', ['POST', 'PUT', 'PATCH', 'DELETE'], 'GET'],
         ])('%s.%s', (tool, field, allowed, refused) => {
             const schema = row(tool).inputSchema![field];

@@ -22,6 +22,21 @@
    renders unstyled anywhere else — the same rule that put db-drawer-* here.
    ========================================================================== */
 /* ===========================================
+   The Show list: on the panel and in the wizard, so it lives here
+   =========================================== */
+@layer theme {
+.datapack-show {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 8px;
+    /* The size of the choice beside it, which Spectrum's own side label is not. */
+    font-size: var(--spectrum-global-dimension-font-size-100);
+    color: var(--spectrum-global-color-gray-700);
+}
+}
+
+/* ===========================================
    Datapack card
    =========================================== */
 @layer theme {
@@ -45,8 +60,8 @@
 
 @layer theme {
 .datapack-card:hover {
-    background: var(--spectrum-global-color-gray-75);
-    border-color: var(--spectrum-global-color-gray-400);
+    background: var(--spectrum-global-color-gray-100);
+    border-color: var(--spectrum-global-color-gray-500);
 }
 }
 
@@ -88,6 +103,7 @@
 @layer theme {
 .datapack-card-body {
     display: flex;
+    flex: 1;
     flex-direction: column;
     gap: var(--card-gap);
     box-sizing: border-box;
@@ -99,7 +115,6 @@
 .datapack-card-title-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: 8px;
 }
 }
@@ -113,16 +128,11 @@
 }
 }
 
+/* The card's tag is Spectrum's grey Badge, as the integration card's type label is; this only
+   keeps it from shrinking beside a long name (owner, 2026-10-31). */
 @layer theme {
 .datapack-card-tag {
-    flex-shrink: 0;
-    padding: 1px 6px;
-    border: 1px solid var(--spectrum-global-color-gray-300);
-    border-radius: 4px;
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--spectrum-global-color-gray-600);
+    flex: 0 0 auto;
 }
 }
 
@@ -130,13 +140,68 @@
 .datapack-card-version {
     align-self: flex-start;
 }
+
+/* The demo's pack, with a newer version in the library: the amber dot beside the picker. */
+.datapack-card-version--newer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* The dot is a quiet button so Spectrum's tooltip can hang on it (owner, 2026-11-07); it keeps the
+   dot's own size, so the version line does not grow (the sidebar tiles size their buttons the same way). */
+.datapack-card-newer {
+    display: inline-flex;
+    min-width: 16px;
+    height: 16px;
+    padding: 0;
+}
 }
 
 @layer theme {
-.datapack-card-types {
-    font-size: 12px;
-    line-height: 1.4;
-    color: var(--spectrum-global-color-gray-600);
+/* The version and the tags, on the card's last line: pinned to the bottom, so the tags sit in one
+   place on every card in a row however long a name runs (owner, 2026-11-05). One line: the tag
+   sits on the date's line and never drops below it (step-04 S6, J8-2); on a narrow card the date
+   gives way inside its own span, never the tag. */
+.datapack-card-version-row {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: auto;
+}
+
+.datapack-card-version-row > .datapack-card-version {
+    min-width: 0;
+}
+
+/* The date never wraps (F279): it is cut with an ellipsis on a card too narrow for it and its tags. */
+.datapack-card-date {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Two tags (Mine, Community) beside the date cut it to "Saved No…" (F285). On such a card the
+   date keeps its whole width and the tags move to their own line below it when they do not fit.
+   A one-tag card keeps the single line above. */
+.datapack-card-version-row--wrap {
+    flex-wrap: wrap;
+    row-gap: 4px;
+}
+
+.datapack-card-version-row--wrap > .datapack-card-version {
+    flex: 0 0 auto;
+}
+
+.datapack-card-tags {
+    display: flex;
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+    gap: 4px;
+    white-space: nowrap;
 }
 }
 
@@ -145,7 +210,7 @@
    selection cards rather than inventing a second selected treatment. */
 @layer theme {
 .datapack-card.is-selected {
-    border-color: var(--spectrum-global-color-blue-500);
+    border-color: var(--spectrum-global-color-blue-400);
     background: var(--spectrum-global-color-gray-75);
 }
 }

@@ -72,7 +72,7 @@ describe('ProjectsDashboard', () => {
             expect(screen.getByText('Project 3')).toBeInTheDocument();
         });
 
-        it('offers "New project" as a card (PL-62), not a header button', () => {
+        it('offers "New Project" as a card (PL-62), not a header button', () => {
             const projects = createMockProjects(2);
             renderWithProvider(
                 <ProjectsDashboard
@@ -83,7 +83,7 @@ describe('ProjectsDashboard', () => {
             );
 
             expect(
-                screen.getByRole('button', { name: 'New project' })
+                screen.getByRole('button', { name: 'New Project' })
             ).toBeInTheDocument();
         });
 
@@ -172,7 +172,7 @@ describe('ProjectsDashboard', () => {
             });
         });
 
-        it('should show "Showing X of Y projects" when filtering', async () => {
+        it('should show "X of Y projects" when filtering', async () => {
             const projects = createMockProjects(6);
             renderWithProvider(
                 <ProjectsDashboard
@@ -186,7 +186,7 @@ describe('ProjectsDashboard', () => {
             fireEvent.change(searchField, { target: { value: 'Project 1' } });
 
             await waitFor(() => {
-                expect(screen.getByText(/showing 1 of 6/i)).toBeInTheDocument();
+                expect(screen.getByText(/^1 of 6 projects$/i)).toBeInTheDocument();
             });
         });
     });

@@ -144,8 +144,26 @@ describe('AI_CONTEXT_VERSION', () => {
     // v44: the skills name `republish`, which took `sync_content`'s job (EDS-63).
     // v45: header-nav-footer names the "Commerce: All" catalog line, not "Shop the catalog".
     // v46: AGENTS.md says the smart-404 recovery script lives in 404.html, not delayed.js.
-    it('is 46 (AGENTS.md says the smart-404 script lives in 404.html)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(46);
+    // v47: import-datapack and diagnose-demo say a pack's root goes under the store's own root,
+    // and only a shared root leaves the one Admin step (datapack-engine step 12).
+    // 49: import-datapack says an import installs what is ticked, and a removal takes the whole record.
+    // 50: a project that never chose an authoring experience now links Experience Workspace.
+    // 51: update-credentials no longer names the ACCS OAuth pair.
+    // 52: datapacks come from Demo Builder's datapack store first. 53: datapack Save and Save As.
+    // 54: import-datapack no longer offers a suggested Save As name.
+    // 55: import-datapack and diagnose-demo name dataInstaller.enabled.
+    // 56: import-datapack runs verify_datapack_install after a successful install.
+    // 57: an install checks itself; import-datapack reads its check.
+    // 58: import-datapack previews before installing a pack again.
+    // 60: a save from a pack takes everything the demo uses; import-datapack picks only what it does not use.
+    // 61: importing another pack or version over the project's removes that one first.
+    // 62: the datapack skills use the Datapacks screen's words, and offer no Data Installer copy (Phase 8).
+    // 63: datapacks sends wholeKinds for a whole data type and asks preview_datapack_changes for "added" (step-07 E1, E2).
+    // 64: datapacks gains update_datapack and restore_datapack's points (step-07 U1).
+    // 65: datapacks gives Keep Both, the exact undo of a load, and check.leftOutDeleted (step-07 F1, F2).
+    // 66: six datapack tools and the guide take the Datapacks screen's words (step-07 A3, Q5).
+    it('is 66 (datapack tools and the guide take the screen\'s words, step-07 A3)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(66);
     });
 });
 

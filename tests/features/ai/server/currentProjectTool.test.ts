@@ -165,7 +165,7 @@ describe('set_current_project', () => {
         expect(res).toEqual({ currentProject: { name: 'alpha', path: '/p/alpha' }, scope: 'agent-chosen' });
         expectWithinCeiling('set_current_project', JSON.stringify(res));
         expect(working.path).toBe('/p/alpha');
-        expect(stateManager.loadProjectFromPath).toHaveBeenCalledWith('/p/alpha', undefined, { persistAfterLoad: false });
+        expect(stateManager.loadProjectFromPath).toHaveBeenCalledWith('/p/alpha');
         expect(stateManager.saveProject).not.toHaveBeenCalled();
     });
 

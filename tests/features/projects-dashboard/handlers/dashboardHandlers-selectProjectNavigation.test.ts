@@ -50,15 +50,16 @@ describe('handleSelectProject - Navigation', () => {
             );
         });
 
-        it('should execute showProjectDashboard after saveProject completes', async () => {
+        it('should execute showProjectDashboard after the project is opened', async () => {
             // Given: A valid project (plain selection → in-place, no openFolder reload)
             const project = createProjectsDashboardProject({ name: 'Order Test Project' });
             const context = createProjectsDashboardContext([project]);
             setMockWorkspaceFolder(project.path);
             const callOrder: string[] = [];
 
-            context.stateManager.saveProject.mockImplementation(async () => {
-                callOrder.push('saveProject');
+            context.stateManager.openProject.mockImplementation(async () => {
+                callOrder.push('openProject');
+                return project;
             });
             mockExecuteCommand.mockImplementation(async (cmd: string) => {
                 callOrder.push(`command:${cmd}`);
@@ -69,9 +70,9 @@ describe('handleSelectProject - Navigation', () => {
                 projectPath: project.path,
             });
 
-            // Then: saveProject should be called before showProjectDashboard
+            // Then: the project is opened (and saved) before showProjectDashboard
             expect(callOrder).toEqual([
-                'saveProject',
+                'openProject',
                 'command:demoBuilder.showProjectDashboard',
             ]);
         });
@@ -224,7 +225,7 @@ describe('handleSelectProject - Navigation', () => {
         it('reports a failure rather than throwing when the load itself rejects', async () => {
             const project = createProjectsDashboardProject({ name: 'Load Failure' });
             const context = createProjectsDashboardContext([project]);
-            context.stateManager.loadProjectFromPath.mockRejectedValue(new Error('io error'));
+            context.stateManager.openProject.mockRejectedValue(new Error('io error'));
 
             const result = await handleSelectProject(context, { projectPath: project.path });
 
@@ -235,7 +236,8 @@ describe('handleSelectProject - Navigation', () => {
         it('reports a failure when setting the current-project pointer rejects', async () => {
             const project = createProjectsDashboardProject({ name: 'Save Failure' });
             const context = createProjectsDashboardContext([project]);
-            context.stateManager.saveProject.mockRejectedValue(new Error('disk full'));
+            // Opening saves the pointer, so a save that rejects is an open that rejects.
+            context.stateManager.openProject.mockRejectedValue(new Error('disk full'));
 
             const result = await handleSelectProject(context, { projectPath: project.path });
 
@@ -260,7 +262,7 @@ describe('handleSelectProject - Navigation', () => {
             expect(mockExecuteCommand).not.toHaveBeenCalledWith(
                 'demoBuilder.showProjectDashboard',
             );
-            expect(context.stateManager.saveProject).toHaveBeenCalledWith(project);
+            expect(context.stateManager.openProject).toHaveBeenCalledWith(project.path);
         });
 
         it('holds the transition open across the navigation and closes it afterwards', async () => {

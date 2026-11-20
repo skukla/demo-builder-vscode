@@ -23,16 +23,14 @@
  */
 
 import { Link, ProgressCircle } from '@adobe/react-spectrum';
-import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
-import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import Circle from '@spectrum-icons/workflow/Circle';
 import Pending from '@spectrum-icons/workflow/Pending';
 import React from 'react';
 import { StepHeader } from './StepHeader';
 import type { GuideRun } from './useGuideRun';
+import { StatusIcon } from '@/core/ui/components/feedback/StatusIcon';
 import { isLeftToDo } from '@/core/ui/components/integrations/setupLeftToDo';
-import { CopyableText } from '@/core/ui/components/ui/CopyableText';
-import { Fact, FactList } from '@/core/ui/components/ui/FactList';
+import { SetupStepFacts } from '@/core/ui/components/ui/SetupStepFacts';
 import { cn } from '@/core/ui/utils/classNames';
 import type { SetupChecklistItem } from '@/types/appBuilderComponents';
 
@@ -47,10 +45,22 @@ interface StepListProps {
     checkingId?: string;
     /** Fade a mark in as it changes; off until a check has run, so opening does not animate. */
     animateMarks?: boolean;
+    /** The steps the last run could not check: each row's mark says so, wherever the SC is. */
+    failedIds?: ReadonlySet<string>;
+    /** The running check's steps not answered yet: drawn empty until each one answers. */
+    waitingIds?: ReadonlySet<string>;
 }
 
 /** A step's mark: a spinner while it is being checked, else its state's glyph. */
-function RailMark({ item, checking }: { item: SetupChecklistItem; checking: boolean }): React.ReactElement {
+interface RailMarkProps {
+    item: SetupChecklistItem;
+    checking: boolean;
+    failed: boolean;
+    /** Waiting for this run to reach it: empty, whatever the last check found. */
+    waiting: boolean;
+}
+
+function RailMark({ item, checking, failed, waiting }: RailMarkProps): React.ReactElement {
     if (checking) {
         return (
             <span className="setup-guide-rail-mark">
@@ -61,7 +71,7 @@ function RailMark({ item, checking }: { item: SetupChecklistItem; checking: bool
         );
     }
     // Keyed by what it shows, so a mark that changes is a new element and its fade-in plays.
-    const kind = markOf(item);
+    const kind = waiting ? 'open' : markOf(item, failed);
     return (
         <span key={kind} className="setup-guide-rail-mark" data-mark={kind} aria-hidden="true">
             {MARK_ICON[kind] ?? SKIPPED_MARK}
@@ -69,7 +79,7 @@ function RailMark({ item, checking }: { item: SetupChecklistItem; checking: bool
     );
 }
 
-type MarkKind = 'done' | 'ready' | 'unknown' | 'open' | 'dismissed';
+type MarkKind = 'done' | 'ready' | 'unknown' | 'open' | 'dismissed' | 'failed';
 
 /**
  * What a step's mark says (AB-82, the list is the at-a-glance summary Prepare's list was):
@@ -77,8 +87,10 @@ type MarkKind = 'done' | 'ready' | 'unknown' | 'open' | 'dismissed';
  * else a hollow circle for a step left to the SC, and a dash for one skipped. The hollow
  * circle was nothing until 2026-10-28 (release test row 4.19): Card payments and App
  * Management, the two by-hand steps, looked broken beside their ticked neighbours.
+ * A step the last run could not check says so first: the saved state is from before it.
  */
-function markOf(item: SetupChecklistItem): MarkKind {
+function markOf(item: SetupChecklistItem, failed: boolean): MarkKind {
+    if (failed) return 'failed';
     if (item.state === 'done') return 'done';
     if (item.state === 'dismissed') return 'dismissed';
     if (item.checkState === 'unknown') return 'unknown';
@@ -92,14 +104,23 @@ function markOf(item: SetupChecklistItem): MarkKind {
  * to the SC is a muted hollow Circle.
  */
 const MARK_ICON: Partial<Record<MarkKind, React.ReactElement>> = {
-    done: <CheckmarkCircle size="XS" UNSAFE_className="text-green-600" />,
+    done: <StatusIcon status="success" size="XS" />,
     ready: <Pending size="XS" UNSAFE_className="text-gray-600" />,
-    unknown: <AlertCircle size="XS" UNSAFE_className="text-yellow-600" />,
+    unknown: <StatusIcon status="warning" size="XS" />,
+    failed: <StatusIcon status="error" size="XS" />,
     open: <Circle size="XS" UNSAFE_className="text-gray-500" />,
 };
 
 /** Every step down the left by its short label, done ones checked; the shown one highlighted. */
-export function StepList({ items, index, onSelect, checkingId, animateMarks }: StepListProps): React.ReactElement {
+export function StepList({
+    items,
+    index,
+    onSelect,
+    checkingId,
+    animateMarks,
+    failedIds,
+    waitingIds,
+}: StepListProps): React.ReactElement {
     return (
         <ol
             className="setup-guide-rail"
@@ -122,31 +143,17 @@ export function StepList({ items, index, onSelect, checkingId, animateMarks }: S
                         )}
                         onClick={() => onSelect(i)}
                     >
-                        <RailMark item={item} checking={item.id === checkingId} />
+                        <RailMark
+                            item={item}
+                            checking={item.id === checkingId}
+                            failed={failedIds?.has(item.id) === true}
+                            waiting={waitingIds?.has(item.id) === true}
+                        />
                         <span className="setup-guide-rail-title">{item.label ?? item.title}</span>
                     </button>
                 </li>
             ))}
         </ol>
-    );
-}
-
-/** The Admin menu path as breadcrumbs, or the sentence when the catalog gives no path. */
-function WhereLine({ item }: { item: SetupChecklistItem }): React.ReactElement {
-    if (!item.path) return <span>{item.where}</span>;
-    return (
-        <span className="setup-guide-path" aria-label={item.path.join(' > ')}>
-            {item.path.map((segment, i) => (
-                <React.Fragment key={`${i}-${segment}`}>
-                    {i > 0 && (
-                        <span className="setup-guide-crumb-sep" aria-hidden="true">
-                            ›
-                        </span>
-                    )}
-                    <span className="setup-guide-crumb">{segment}</span>
-                </React.Fragment>
-            ))}
-        </span>
     );
 }
 
@@ -160,11 +167,18 @@ export interface StepProps {
      * tech, and `visibility: hidden` takes them out of the tab order.
      */
     shown?: boolean;
-    /** The integration, for the shown step's read of what Apply will do. */
-    integrationId: string;
+    /** The integration, for the shown step's read of what Apply will do; absent, no plan. */
+    integrationId?: string;
     /** The guide's run, on the shown step only (AB-82, `StepHeader`). */
     run?: GuideRun;
+    /** Check all steps is checking this step now: its banner shows the spinner. */
+    checking?: boolean;
+    /** What went wrong on this step: a check that failed, or a save. On the shown step only. */
+    problem?: string;
 }
+
+/** A notice line's room: one line of the notice's own class, never shown. */
+const NOTICE_ROOM = '\u00a0';
 
 /** The quiet link's words for each state: what pressing it will do. */
 const SKIP_OR_REOPEN = {
@@ -191,30 +205,6 @@ function SkipOrReopen({ item, busy, onSet }: StepProps): React.ReactElement | nu
     );
 }
 
-/** Where / Enter / Then / Why: labelled lines that scan as one small table. */
-function StepFacts({ item }: { item: SetupChecklistItem }): React.ReactElement {
-    return (
-        <FactList>
-            <Fact label="Where">
-                <WhereLine item={item} />
-            </Fact>
-            {item.enter && (
-                <Fact label="Enter">
-                    <div className="setup-guide-pills">
-                        {item.enter.map((value) => (
-                            <CopyableText key={value}>{value}</CopyableText>
-                        ))}
-                    </div>
-                </Fact>
-            )}
-            {item.then && <Fact label="Then">{item.then}</Fact>}
-            <Fact label="Why">
-                <span className="setup-guide-why">{item.why}</span>
-            </Fact>
-        </FactList>
-    );
-}
-
 /**
  * One step: its header (title, where it stands, one line), where, what to enter, what then,
  * why, and the quiet skip. The buttons that act on it sit in the dialog's footer (SetupGuideModal), where
@@ -228,9 +218,21 @@ export function SetupGuideStep(props: StepProps): React.ReactElement {
             data-testid={shown ? 'setup-guide-step' : undefined}
             aria-hidden={shown ? undefined : true}
         >
-            <StepHeader item={item} integrationId={props.integrationId} run={props.run} />
-            <StepFacts item={item} />
+            {/* The header and the problem are one part of the step, so 8 between them. */}
+            <div className="dialog-rows">
+                <StepHeader item={item} integrationId={props.integrationId} run={props.run} checking={props.checking} />
+                {props.problem && <p className="dialog-problem text-negative" data-testid="setup-guide-notice">{props.problem}</p>}
+            </div>
+            <SetupStepFacts item={item} />
             <SkipOrReopen {...props} />
+            {/* A notice's room, held at the step's end until one arrives under its title, so every
+                step keeps one height and the held window never scrolls for it (rules 13 and 14). One
+                line: "Couldn't check this step." and the reason fit one at the guide's width. */}
+            {props.problem ? null : (
+                <p className="dialog-problem modal-steps-ghost" aria-hidden="true">
+                    {NOTICE_ROOM}
+                </p>
+            )}
         </div>
     );
 }

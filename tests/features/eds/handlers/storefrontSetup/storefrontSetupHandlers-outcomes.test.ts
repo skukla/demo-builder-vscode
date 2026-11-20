@@ -39,7 +39,6 @@ jest.mock('@/features/eds/handlers/storefrontSetup/storefrontSetupConfigRehydrat
     rehydratePackageDerivedConfig: jest.fn((edsConfig: unknown) => edsConfig),
 }));
 
-jest.mock('@/features/eds/services/cleanupService');
 jest.mock('@/features/eds/services/configService/configurationService');
 jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
     createDaLiveTokenProvider: jest.fn(),
@@ -267,8 +266,8 @@ describe('handleStartStorefrontSetup — package settings are restored before an
         const demo = {
             kind: 'demo',
             version: 1,
-            name: 'Isle5 by Jen',
-            source: { owner: 'jen', repo: 'isle5-demo' },
+            name: 'Isle5 by Robin',
+            source: { owner: 'robin', repo: 'isle5-demo' },
             storefrontKind: 'eds',
         } as const;
         const context = createContext();
@@ -421,8 +420,8 @@ describe('handleStartStorefrontSetup — the two outcomes', () => {
         const demo = {
             kind: 'demo',
             version: 1,
-            name: 'Isle5 by Jen',
-            source: { owner: 'jen', repo: 'isle5-demo' },
+            name: 'Isle5 by Robin',
+            source: { owner: 'robin', repo: 'isle5-demo' },
             storefrontKind: 'eds',
         } as const;
         await handleStartStorefrontSetup(createContext(), payload({ demo }));
@@ -485,6 +484,36 @@ describe('handleStartStorefrontSetup — the two outcomes', () => {
         expect(messagePayload(context, 'storefront-setup-complete')?.brokenLinks).toStrictEqual(
             brokenLinks
         );
+    });
+
+    // PL-101: creation saves them as the project's Republish the Code step.
+    it('hands back the code files the live site did not serve yet', async () => {
+        mockExecutePhases.mockResolvedValue({
+            success: true,
+            repoUrl: 'https://github.com/demo-org/demo-repo',
+            codeNotServed: ['scripts/commerce.js'],
+        });
+        const context = createContext();
+
+        await handleStartStorefrontSetup(context, payload());
+
+        expect(messagePayload(context, 'storefront-setup-complete')?.codeNotServed).toStrictEqual([
+            'scripts/commerce.js',
+        ]);
+    });
+
+    // EDS-72: creation records the import's commit on the project, for Reset to restore.
+    it('hands back what it made from an imported bundle, and nothing for any other project', async () => {
+        const bundleImport = { commit: 'import-commit', contentSource: { org: 'sender', site: 'kukla-bodea', indexPath: '/query-index.json' } };
+        mockExecutePhases.mockResolvedValue({ success: true, repoUrl: 'https://github.com/demo-org/demo-repo', bundleImport });
+        const imported = createContext();
+        await handleStartStorefrontSetup(imported, payload());
+        expect(messagePayload(imported, 'storefront-setup-complete')?.bundleImport).toStrictEqual(bundleImport);
+
+        mockExecutePhases.mockResolvedValue({ success: true, repoUrl: 'https://github.com/demo-org/demo-repo' });
+        const brand = createContext();
+        await handleStartStorefrontSetup(brand, payload());
+        expect(messagePayload(brand, 'storefront-setup-complete')).not.toHaveProperty('bundleImport');
     });
 
     it('leaves broken links off the message when the run found none', async () => {

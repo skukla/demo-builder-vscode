@@ -158,7 +158,7 @@ export async function executeAppBuilderIntegrationsPhase(
     // The runner's first step per integration is the union API subscribe — surface
     // it once up front so the user sees API access being provisioned at build time
     // (the Add-Integration modal no longer subscribes anything itself).
-    progressTracker(OPERATION_STAGES.deployingIntegrations.label, 69, 'Enabling API access');
+    progressTracker(OPERATION_STAGES.deployingIntegrations.label, 69, 'Enabling APIs');
     for (const entry of entries) {
         // A copied project deploys here, into the Adobe project its original already
         // deployed to (2026-10-08): the original's same-named deployment goes first.

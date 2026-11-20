@@ -8,6 +8,7 @@ import * as _fs from 'fs';
 import { promises as fsPromises } from 'fs';
 import { GitHubAppNotInstalledError } from '@/features/eds/services/types';
 import { getActiveOrgContext } from '@/core/shell/orgContextEnv';
+import { plain, PlainError } from '@/core/utils/plainText';
 import {
     createProjectCreationContext,
     setupDefaultMocks,
@@ -93,6 +94,21 @@ describe('Project Creation - Create Handler - Errors & Cleanup', () => {
                     error: 'npm install failed',
                     isTimeout: false,
                 })
+            );
+        });
+
+        // PL-102: a failure that carries its own plain sentence shows that sentence, never the raw
+        // message it keeps for the log.
+        it("shows a PlainError's own sentence, not its raw message", async () => {
+            (executor.executeProjectCreation as jest.Mock).mockRejectedValue(
+                new PlainError(plain("Couldn't reach GitHub."), 'getaddrinfo ENOTFOUND api.github.com'),
+            );
+
+            await handleCreateProject(mockContext, mockConfig);
+
+            expect(mockContext.sendMessage).toHaveBeenCalledWith(
+                'creationFailed',
+                expect.objectContaining({ error: "Couldn't reach GitHub." }),
             );
         });
 

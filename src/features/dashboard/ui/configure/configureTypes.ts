@@ -4,6 +4,7 @@
  * Type definitions for the Configure Screen component.
  */
 
+import type { InstalledDatapackQuestion } from '@/features/dashboard/services/connectionChange';
 import type { EnvVarDefinition } from '@/types/components';
 import type { ConfigureComponentsData } from '@/types/webviewPayloads';
 
@@ -32,6 +33,8 @@ export interface ComponentInstance {
 export interface SaveConfigurationResponse {
     success: boolean;
     error?: string;
+    /** A save that would leave a datapack in the current Commerce instance asks first (step-07 D6). */
+    data?: InstalledDatapackQuestion;
 }
 
 /**

@@ -23,6 +23,7 @@ export const mockPublishSheetPaths = jest.fn();
 export const mockVerifyLibraryPreviewed = jest.fn().mockResolvedValue(true);
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     applyDaLiveOrgConfigSettings: jest.fn().mockResolvedValue(undefined),
+    resolveProjectAuthoringExperience: () => 'da-live-classic',
     publishLibraryPaths: (...args: unknown[]) => mockPublishLibraryPaths(...args),
     publishSheetPaths: (...args: unknown[]) => mockPublishSheetPaths(...args),
     verifyLibraryPreviewed: (...args: unknown[]) => mockVerifyLibraryPreviewed(...args),

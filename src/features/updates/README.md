@@ -1,6 +1,7 @@
 # Updates
 
-Pulls component and extension updates from GitHub Releases.
+Pulls extension and Headless storefront updates from GitHub Releases. A mesh, ERP or integration in a repository the
+builder owns updates to its newest release, by the integration update check.
 
 ## Check for Updates: the notification checks, the modal replaces the picker (PL-80)
 
@@ -108,10 +109,27 @@ workflow deletes them, so an edit to one stops the update on a file the storefro
 not have. Measured 2026-10-20: Adobe's change from 71a67e0 to the tested 48bed04 edits 14
 of them, and our own storefront repositories keep only `sync-from-upstream.yml`.
 
+## An update never clashes with Demo Builder's own additions (2026-10-30)
+
+Tailspin's two updates both stopped. Of the five clashing files, four were Demo Builder's
+own: the `aem-assets-sku-sanitization` patch and the Quick Edit Sidekick listener (Adobe's
+boilerplate update), and the catalog-menu block the storefront's block library had already
+updated (the colleague's update). Only `blocks/header/header.js` was somebody's edit, and it
+still stops the update (rule 2).
+
+| | |
+|---|---|
+| Set aside | before Adobe's tested boilerplate change (the thin-layer template track and the Adobe boilerplate track), every live ledger patch whose replacement is in its file verbatim, once, and Quick Edit's three marked blocks (`setAsidePieces.ts`, `withoutQuickEditWiring`). A piece comes out only when putting it back gives the same file again; anything else stays and may clash honestly |
+| Put back | after the apply, in the same commit, by the same apply creation uses. A piece whose lines Adobe removed is reported, never forced |
+| Left to the library | each installed block library's `blocks/<id>` folders are left out of every template change; the library's own update keeps them current |
+| Prepared in the clone | Demo Builder's repairs (head.html, 404.html, the old scripts out of delayed.js, Quick Edit) are written into the update's clone (`checkoutFiles.ts`, `adobeChangePrep.ts`), not GitHub. A stopped update pushes nothing; a finished one pushes once. Until 2026-10-30 they were pushed before the merge ran, so a stopped update had already changed the repository |
+| Kept for fixing | the local copy is prepared the same way, so it clashes where the clone did. The pieces go back into every other file at once, and into the clashing files when the fix is finished (`pendingClash.aside`) |
+| Said plainly | a stop names each file and whose edit it holds, made in this storefront or brought along by the colleague's demo (`clashAttribution.ts`), and says nothing changed. `apply_updates` lists it first, as top-level `stopped` and `message` |
+
 ## A colleague's storefront follows two tracks (EDS-56)
 
 A storefront added from a colleague's demo follows the colleague's repository: the
-template row, worded "Changes from kmanns/justrite". When the Adobe commit its code
+template row, worded "Changes from org-e/tailspin". When the Adobe commit its code
 started from is known, it also follows our tested boilerplate: the "Adobe boilerplate"
 row, which applies Adobe's change from that commit to the patches repo's last-known-good,
 3-way, keeping the SC's and the colleague's edits. The two are independent; one Apply
@@ -120,10 +138,12 @@ runs the colleague's first, each its own commit.
 | | |
 |---|---|
 | The base | `boilerplateBase` in the storefront's metadata, its own field: never `lastSyncedCommit` (the colleague's track) or `lkgSource` (which would make the project thin-layer) |
-| Found by | `boilerplateBase.ts`: a saved package's `builtWith.lkg`; else GitHub says the colleague's repository was made from one of our templates and its first commit has the same files as one of that template's commits (`.github` aside). JustRite: 71a67e0, the 39th commit back |
+| Found by | `boilerplateBase.ts`: a saved package's `builtWith.lkg`; else GitHub says the colleague's repository was made from one of our templates and its first commit has the same files as one of that template's commits (`.github` aside). Tailspin: 71a67e0, the 39th commit back |
 | Recorded | by the check (`boilerplateCheck.ts`), the one path, so new and existing projects get it alike |
 | Kept true | reset forgets it; after the colleague's update, their `demo.demo-builder.json` moves it forward when it is ahead (`boilerplateBaseRefresh.ts`); Share Demo's link save writes it as `builtWith.lkg`; changing the demo source keeps it (the code did not change) |
-| Never | a reset on a conflict, Demo Builder's fixes re-applied (D6), or a move backwards |
+| Fixes | Demo Builder's repairs run in the update's clone before the change, and they apply every known patch that fits (EDS-64), so D6's "no fixes re-applied" no longer holds. A fix the storefront already had is set aside around the change and put back (see above) |
+| Never | a reset on a conflict, or a move backwards |
+| A reset source | when the colleague's new commits include Demo Builder's reset commit (`RESET_TO_TEMPLATE_MESSAGE`), the source was rebuilt, not edited: the row starts unticked and says so, and `apply_updates` leaves it out unless `includeSourceReset` (owner, 2026-11-03: a colleague reset their demo three times in a day, and Tailspin was offered it ticked) |
 
 ## A clash is fixed with AI (EDS-57)
 
@@ -137,6 +157,7 @@ question: Fix with AI, Leave it as it is, or (the colleague's row only) Use the 
 | Opened | the SC's chosen engine, by the Chat command, with the files and both sides' diffs (`fixWithAi.ts`, `clashPrompt.ts`) |
 | Offered | a "Finish" row in place of its track's own row, until finished or dropped (`updateSelections.ts` `finish`, `updateApplyFinish.ts`); a fix not ready asks Fix with AI, Keep it for later, or Drop the fix |
 | Finished | `finish_storefront_update` and the Finish row (`pendingClashFinish.ts`), the one place it is pushed: still the current update, only the clashing files changed, no markers, JavaScript and JSON parse; then commit, push with the SC's token, record the version |
+| Told | when the AI's `finish_storefront_update` finishes or drops the fix, a notification (a finished one offers the live storefront), and the Updates window's row flipped when that run is still on screen (`fixEndedNotice.ts`, EDS-56) |
 | Guarded | Sync Storefront refuses while the mark is there (`keptClashMark.ts`), for the button and `sync_storefront` alike |
 | Never | the AI committing or pushing; a stale fix going out (the update moved on: dropped, copy put back) |
 
@@ -147,8 +168,8 @@ as it is.
 ## An older storefront is told to reset
 
 A fix Demo Builder makes to the storefronts it builds reaches new storefronts, and a reset's.
-Nothing here repairs an older storefront in place: an update merges code, and the Adobe
-boilerplate track re-applies none of our fixes (EDS-56 D6). Instead every storefront change an
+An update repairs only what `bringStorefrontUpToDate` covers (the known patches that fit, the
+404 and Quick Edit pieces); it does not rebuild a storefront. Instead every storefront change an
 existing storefront does not pick up by itself is listed in `STOREFRONT_CHANGES`
 (`features/eds/services/storefront/storefrontChanges.ts`), and a storefront built before any of
 them shows **Needs reset** on its project card, its dashboard (the Reset tile), its Storefront
@@ -197,8 +218,8 @@ A deployed integration and its ERPs are one more category of the startup check a
 Check for Updates (AB-73), with the Integrations screen's own rule
 (`checkIntegrationUpdates`: the GitHub branch is ahead of the clone, a fetched commit
 was never deployed, or the clone's app version differs from the one installed in
-Commerce). It runs for ALL projects, one row per pair ("Justrite: ERP Integration and
-Justrite ERP"), alongside the other project checks so the extension's own update notice
+Commerce). It runs for ALL projects, one row per pair ("Tailspin: ERP Integration and
+Tailspin ERP"), alongside the other project checks so the extension's own update notice
 does not wait on it; a project with no deployed integration costs nothing, and each
 pair costs one `git fetch` per clone.
 
@@ -218,7 +239,7 @@ so nothing under `updates/services` reaches into the dashboard's handlers.
 ## Related
 
 - [component-version-management.md](../../../docs/architecture/component-version-management.md)
-  — the floating stable-tag model that decouples component updates from extension releases
+  — how each component ships by release, independently of extension releases
 
 ## Conventions that bind this
 

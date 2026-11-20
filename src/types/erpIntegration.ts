@@ -21,6 +21,12 @@ export interface ErpIntegrationStatus {
     ledger: { entries: number };
     /** Whether `erp/detach` closes off the ERPs' orders when asked (`closeOrders`, AB-16n). */
     closesOrdersOnReset?: boolean;
+    /**
+     * Whether `erp/close-orders` exists: the orders of some stores only closed, each ERP that held
+     * one removing its documents for them (the demo-data wipe's close; integration a2556c2).
+     * Also says that action records its runs for `GET erp/close-orders?run=`.
+     */
+    closesOrdersByStore?: boolean;
     /** Whether `erp/detach` records each run for `GET erp/detach?run=` to read back (AB-61). */
     detachRuns?: boolean;
     /** Whether `erp/prices` records each run for `GET erp/prices?run=` to read back. */
@@ -38,11 +44,47 @@ export interface ErpDetachReport {
     orders?: { cleared: number; failed: unknown[] };
     closed?: {
         cancelled: number;
+        /** Refunded with an offline credit memo (the one reset rule, integration 0a10b95); absent from a deployment before it. */
+        refunded?: number;
         commented: number;
         alreadyClosed: number;
+        /** Returns set Closed (the one reset rule); absent from a deployment before it. */
+        returnsClosed?: number;
         partsRemoved: number;
         failed: Array<{ orderId: string; error: string }>;
     };
+}
+
+/** How the store close ended one order (`touched[].outcome`). */
+export type ErpStoreCloseOutcome = 'cancelled' | 'refunded' | 'refundedOpen' | 'commented' | 'alreadyClosed' | 'failed';
+
+/** One ERP's removal of the closed orders' documents (`admin/remove-orders`, demo-erp contract 23). */
+export type ErpOrdersRemoved =
+    | { removed: Partial<Record<'salesOrders' | 'shipments' | 'invoices' | 'creditMemos' | 'returnOrders' | 'payments' | 'events', number>>; notFound: string[] }
+    | 'unsupported'
+    | { failed: string };
+
+/**
+ * What `POST erp/close-orders` answers (commerce-erp-integration `actions/erp/close-orders`,
+ * `lib/close-store-orders.js`, read at 1f6de21; the shape its box test pins,
+ * `test/box/close-store-orders.test.js`). `touched[].orderId` is the order NUMBER
+ * (`increment_id`); `erpRemoved` is keyed by the ERP's list id.
+ */
+export interface ErpStoreCloseReport {
+    scope: { stores: string[]; websites: string[]; storeViewIds: number[] };
+    closed: {
+        cancelled: number;
+        refunded: number;
+        commented: number;
+        alreadyClosed: number;
+        returnsClosed: number;
+        partsRemoved: number;
+        failed: Array<{ orderId: string; error: string }>;
+    };
+    touched: Array<{ orderId: string; outcome: ErpStoreCloseOutcome }>;
+    orders: { cleared: number; failed: unknown[] };
+    holds: { released: number; failed: unknown[] };
+    erpRemoved: Record<string, ErpOrdersRemoved>;
 }
 
 /**

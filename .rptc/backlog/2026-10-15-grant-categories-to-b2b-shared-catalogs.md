@@ -15,7 +15,7 @@ Filed 2026-10-15 by the owner, from the release walk ("I want the new item").
 
 On a B2B website every category is hidden from a customer group unless a shared catalog grants
 it. Guests and General use the public shared catalog; each company's buyers use their company's.
-A website full of products can therefore show nothing to guests: measured on Justrite on
+A website full of products can therefore show nothing to guests: measured on Tailspin on
 2026-10-01, `productSearch` found 0 for guests and 49 for the two company groups (EDS-24's
 table). SCs fix this by hand in Commerce Admin today.
 

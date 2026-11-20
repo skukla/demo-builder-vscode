@@ -12,12 +12,11 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 
 import {
+    affectsDatapackList,
+    dataInstallerEnabled,
     DATA_INSTALLER_MAX_URL_LENGTH,
     actionUrl,
     fingerprintUrl,
-    isDataInstallerConfigured,
-    isDataInstallerEnabled,
-    selectedDatapackEngine,
     resolveDataInstallerBaseUrl,
     resolveDatapackStoreBaseUrl,
 } from '@/features/data-installer/services/dataInstallerConfig';
@@ -25,17 +24,11 @@ import {
 const STAGE_URL = 'https://example-namespace.adobeioruntime.net/api/v1/web/data-installer-api';
 
 /** Stub `getConfiguration` so both reads in the module see the given values. */
-function setupConfig(values: { apiBaseUrl?: unknown; enabled?: unknown; engine?: unknown }): void {
+function setupConfig(values: { apiBaseUrl?: unknown }): void {
     (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
         get: jest.fn((key: string, fallback?: unknown) => {
             if (key === 'apiBaseUrl') {
                 return 'apiBaseUrl' in values ? values.apiBaseUrl : fallback;
-            }
-            if (key === 'enabled') {
-                return 'enabled' in values ? values.enabled : fallback;
-            }
-            if (key === 'engine') {
-                return 'engine' in values ? values.engine : fallback;
             }
             return fallback;
         }),
@@ -47,52 +40,15 @@ describe('dataInstallerConfig', () => {
         jest.clearAllMocks();
     });
 
-    describe('isDataInstallerEnabled', () => {
-        it('defaults to enabled when the setting is absent', () => {
-            setupConfig({});
-            expect(isDataInstallerEnabled()).toBe(true);
-        });
-
-        it('is disabled when the setting is false', () => {
-            setupConfig({ enabled: false });
-            expect(isDataInstallerEnabled()).toBe(false);
-        });
-
-        it('treats a non-boolean setting as enabled rather than crashing', () => {
-            // Corrupted settings.json — VS Code's typed get can hand back anything.
-            setupConfig({ enabled: 'yes' });
-            expect(isDataInstallerEnabled()).toBe(true);
-        });
-    });
-
-    describe('selectedDatapackEngine', () => {
-        /**
-         * Demo Builder's own by default (owner, 2026-10-28): the service still answers the
-         * catalog, but since 2026-10-27 it ignores the Commerce credentials a caller sends, so
-         * it installs nothing for us. Choosing the service again is one setting.
-         */
-        it("is Demo Builder's own until the SC chooses otherwise", () => {
-            setupConfig({});
-            expect(selectedDatapackEngine()).toBe('demo-builder');
-        });
-
-        it('is the service when chosen', () => {
-            setupConfig({ engine: 'service' });
-            expect(selectedDatapackEngine()).toBe('service');
-        });
-
-        it('reads anything else as the default rather than guessing', () => {
-            setupConfig({ engine: 'mystery' });
-            expect(selectedDatapackEngine()).toBe('demo-builder');
-        });
-
-        it('is declared in package.json with the same two values and the same default', () => {
-            const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '../../../../package.json'), 'utf8')) as {
-                contributes: { configuration: Array<{ properties?: Record<string, { enum?: string[]; default?: unknown }> }> };
-            };
-            const setting = pkg.contributes.configuration.map((c) => c.properties?.['demoBuilder.dataInstaller.engine']).find(Boolean);
-            expect(setting).toMatchObject({ enum: ['service', 'demo-builder'], default: 'demo-builder' });
-        });
+    // The Engine setting was deleted on 2026-11-06 with the service's engine (DI-12): no migration,
+    // an old value in settings.json is simply not read.
+    it('declares no Engine setting in package.json', () => {
+        const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '../../../../package.json'), 'utf8')) as {
+            contributes: { configuration: Array<{ properties?: Record<string, unknown> }> };
+        };
+        const declared = pkg.contributes.configuration.flatMap((c) => Object.keys(c.properties ?? {}));
+        expect(declared).toContain('demoBuilder.dataInstaller.enabled');
+        expect(declared).not.toContain('demoBuilder.dataInstaller.engine');
     });
 
     describe('resolveDataInstallerBaseUrl', () => {
@@ -264,42 +220,9 @@ describe('dataInstallerConfig', () => {
     });
 });
 
-/**
- * The OFFER question, as opposed to the SERVE question `resolveDataInstallerAccess`
- * answers. Both halves have to hold: the dashboard tile used to render on
- * neither, so a user with no API URL got an invitation to a surface that
- * refused them.
- */
-describe('isDataInstallerConfigured', () => {
+describe('dataInstallerConfig, the datapack store', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-    });
-
-    it('is true when enabled and pointed at a usable URL', () => {
-        setupConfig({ enabled: true, apiBaseUrl: STAGE_URL });
-
-        expect(isDataInstallerConfigured()).toBe(true);
-    });
-
-    it('is false when switched off, even with a good URL', () => {
-        setupConfig({ enabled: false, apiBaseUrl: STAGE_URL });
-
-        expect(isDataInstallerConfigured()).toBe(false);
-    });
-
-    it('is false when enabled but no URL is configured', () => {
-        // The shipped default: `enabled` true, `apiBaseUrl` empty. This is the
-        // exact combination every beta user has until they set one, and the
-        // combination the ungated tile was wrong about.
-        setupConfig({ enabled: true, apiBaseUrl: '' });
-
-        expect(isDataInstallerConfigured()).toBe(false);
-    });
-
-    it('is false when the configured URL is not usable', () => {
-        setupConfig({ enabled: true, apiBaseUrl: 'http://insecure.example.com' });
-
-        expect(isDataInstallerConfigured()).toBe(false);
     });
 
     describe('resolveDatapackStoreBaseUrl', () => {
@@ -317,5 +240,97 @@ describe('isDataInstallerConfigured', () => {
             setupConfig({ apiBaseUrl: '  ' });
             expect(resolveDatapackStoreBaseUrl()).toEqual({ ok: false, reason: 'not-configured' });
         });
+    });
+});
+
+// VS Code's settings screen refuses to save what fails a setting's check, and `format: uri` fails an
+// empty box, so a setting whose default is empty could be set and never cleared there (owner,
+// 2026-11-05: found clearing the Data Installer's address).
+describe('a setting that defaults to empty', () => {
+    const manifest = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf8'));
+    const sections: Array<{ properties?: Record<string, { default?: unknown; format?: string; pattern?: string }> }> =
+        [manifest.contributes.configuration].flat();
+    const settings = sections.flatMap((section) => Object.entries(section.properties ?? {}));
+
+    it('can be emptied again on the settings screen', () => {
+        const unclearable = settings
+            .filter(([, setting]) => setting.default === '' && setting.format === 'uri')
+            .map(([key]) => key);
+
+        expect(unclearable).toStrictEqual([]);
+    });
+
+    it('takes an https address or nothing, for the Data Installer', () => {
+        const setting = settings.find(([key]) => key === 'demoBuilder.dataInstaller.apiBaseUrl')?.[1];
+        const check = new RegExp(setting?.pattern ?? 'no pattern');
+
+        expect(check.test('')).toBe(true);
+        expect(check.test('https://example.test/api')).toBe(true);
+        expect(check.test('http://example.test/api')).toBe(false);
+    });
+});
+
+describe('affectsDatapackList', () => {
+    const changing = (changed: string): vscode.ConfigurationChangeEvent => ({
+        affectsConfiguration: (section: string) => section === changed,
+    });
+
+    it.each([
+        'demoBuilder.dataInstaller.apiBaseUrl',
+        'demoBuilder.datapackStore.apiBaseUrl',
+    ])('follows %s', (setting) => {
+        expect(affectsDatapackList(changing(setting))).toBe(true);
+    });
+
+    it('ignores a setting the list does not read', () => {
+        expect(affectsDatapackList(changing('demoBuilder.dataInstaller.changesOnRemoval'))).toBe(false);
+    });
+});
+
+// Owner, 2026-11-05: the address is pasted once, and `enabled` turns the Data Installer on and off.
+describe('the Data Installer turned off', () => {
+    const settings = (values: Record<string, unknown>): void => {
+        (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
+            get: jest.fn((key: string, fallback?: unknown) => (key in values ? values[key] : fallback)),
+        });
+    };
+    const ADDRESS = 'https://example.test/api';
+
+    it('is not asked, though its address is kept', () => {
+        settings({ apiBaseUrl: ADDRESS, enabled: false });
+
+        expect(resolveDataInstallerBaseUrl()).toEqual({ ok: false, reason: 'turned-off' });
+    });
+
+    it('is on when the setting was never touched', () => {
+        settings({ apiBaseUrl: ADDRESS });
+
+        expect(dataInstallerEnabled()).toBe(true);
+        expect(resolveDataInstallerBaseUrl()).toEqual({ ok: true, baseUrl: ADDRESS });
+    });
+
+    it('is a setting the list follows', () => {
+        expect(affectsDatapackList({ affectsConfiguration: (section: string) => section === 'demoBuilder.dataInstaller.enabled' })).toBe(true);
+    });
+});
+
+/**
+ * The setting that replaced the save question's "Always" box (step 03, S6; decisions J2-3): its
+ * words in the glossary's terms, and nothing about a box that no longer exists.
+ */
+describe("changesOnRemoval's description", () => {
+    const manifest = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf8'));
+    const setting = (manifest.contributes.configuration as Array<{ properties: Record<string, { description: string; enumDescriptions: string[] }> }>)
+        .map((group) => group.properties['demoBuilder.dataInstaller.changesOnRemoval'])
+        .find((found) => found !== undefined)!;
+    const words = [setting.description, ...setting.enumDescriptions].join(' ');
+
+    it('names the question it answers and says datapack', () => {
+        expect(words).toContain('Save Your Changes First?');
+        expect(words).toContain('datapack');
+    });
+
+    it('says nothing of a box, a pack or a version', () => {
+        expect(words).not.toMatch(/Always do this|stop asking|\bpack\b|\bversion\b/u);
     });
 });

@@ -4,7 +4,7 @@
 **Origin**: `/rptc:research` audit of the `feature/ai-layer` AI implementation against working examples
 **Status**: Draft plan — iterating before implementation begins
 **Predecessor**: Phase 1 AI work on `feature/ai-layer` (commits `3db978c3` through `eb7df59b`)
-**Working reference**: `/Users/kukla/Documents/Clients/TEC/presentation/te-eds-mock/` — a storefront mirror built in 30 minutes using Claude Code (CLI) + Adobe's official MCPs and skills.
+**Working reference**: `/Users/kukla/Documents/Clients/CLIENT B/presentation/org-l/` — a storefront mirror built in 30 minutes using Claude Code (CLI) + Adobe's official MCPs and skills.
 
 ---
 
@@ -136,7 +136,7 @@ Demo Builder's components are configuration-driven (`components.json` declares e
 
 ### 3. AGENTS.md as Universal Context
 
-`aiContextWriter.ts` generates `AGENTS.md` instead of `.claude/CLAUDE.md`. The content mirrors today's eight sections (header, endpoints, storefront info, block libraries, Adobe I/O project, example prompts, notes for AI agents). The `CLAUDE.md` files (root and `.claude/`) are one-line pointers that import `AGENTS.md` via Claude Code's `@` syntax. This matches Adobe's pattern in `te-eds-mock` and works across Claude/Copilot/Cursor/Gemini without per-tool divergence.
+`aiContextWriter.ts` generates `AGENTS.md` instead of `.claude/CLAUDE.md`. The content mirrors today's eight sections (header, endpoints, storefront info, block libraries, Adobe I/O project, example prompts, notes for AI agents). The `CLAUDE.md` files (root and `.claude/`) are one-line pointers that import `AGENTS.md` via Claude Code's `@` syntax. This matches Adobe's pattern in `org-l` and works across Claude/Copilot/Cursor/Gemini without per-tool divergence.
 
 The pointer files include a one-line HTML comment above the import explaining the pattern so a developer inspecting the file knows why it's so short:
 
@@ -228,7 +228,7 @@ Clicking either:
 2. Opens an integrated VS Code terminal at the AI-context root (`storefront/` for EDS projects, project root otherwise)
 3. Runs `claude` in that terminal
 
-This is the harness — it puts the user one click away from the experience their `te-eds-mock` example demonstrates. No re-implementation of MCP discovery, no chat-participant work.
+This is the harness — it puts the user one click away from the experience their `org-l` example demonstrates. No re-implementation of MCP discovery, no chat-participant work.
 
 #### Behavioral details
 
@@ -846,7 +846,7 @@ Every surface touched by the pivot.
 **`/rptc:feat` grouping:**
 
 - **Cycle A** — Steps 1–5 (shipped 2026-05-19) plus Step 5b (doc cleanup of unimplemented-feature references discovered in the 2026-05-20 sync gap audit). Each generated project ships fewer files; existing projects unaffected until regenerated.
-- **Cycle B** — Steps 6a–6n + 7: install the App Builder MCP universally via `ai-defaults.json`, copy + namespace skill bundles per component via `aiSkillBundle` field on `components.json`, add type definitions, fix the consent-gated global MCP registration (`~/.claude.json` upsert), close the AI-edit → preview-URL sync loop by chaining Helix publish after `git push`, wire GitHubTokenService into the MCP's git auth, harden the PostToolUse hook (jq parser + path-with-spaces support + failure surfacing), fix the block library update bug, add multi-component repo enumeration in AGENTS.md, surface block origin libraries via `list_blocks`, add the read-only-sources note (6k), refactor sync logic into `storefrontSyncService` (vscode-free, shared between MCP and extension), add the `SyncStorefrontCommand` dashboard tile + command palette entry (6L/6m/6n), and add the `demoBuilder.ai.harness` setting. EDS projects gain Adobe's full skill agent set; future component additions ship their own bundles by declaration only. After Cycle B, the AI-edits-a-block-and-user-sees-it-on-preview loop closes end-to-end (matching the `te-eds-mock` 30-minute storefront experience) AND users have a non-AI sync surface for the same operation.
+- **Cycle B** — Steps 6a–6n + 7: install the App Builder MCP universally via `ai-defaults.json`, copy + namespace skill bundles per component via `aiSkillBundle` field on `components.json`, add type definitions, fix the consent-gated global MCP registration (`~/.claude.json` upsert), close the AI-edit → preview-URL sync loop by chaining Helix publish after `git push`, wire GitHubTokenService into the MCP's git auth, harden the PostToolUse hook (jq parser + path-with-spaces support + failure surfacing), fix the block library update bug, add multi-component repo enumeration in AGENTS.md, surface block origin libraries via `list_blocks`, add the read-only-sources note (6k), refactor sync logic into `storefrontSyncService` (vscode-free, shared between MCP and extension), add the `SyncStorefrontCommand` dashboard tile + command palette entry (6L/6m/6n), and add the `demoBuilder.ai.harness` setting. EDS projects gain Adobe's full skill agent set; future component additions ship their own bundles by declaration only. After Cycle B, the AI-edits-a-block-and-user-sees-it-on-preview loop closes end-to-end (matching the `org-l` 30-minute storefront experience) AND users have a non-AI sync surface for the same operation.
 - **Cycle C** — Steps 9–12 (shipped 2026-05-21 on `feature/ai-layer-cycle-c`): skill and MCP inspection services + handler extensions. Backend data ready for the new tab.
 - **Cycle D** — Steps 13–17: AI Configuration tab UI, Open in Claude Code action, documentation, and Adobe MCP update checker. User-visible surface lands; Adobe package updates flow through the existing unified update UI alongside extension, components, templates, block libraries, and Inspector SDK.
 - **Cycle E** — Steps E1–E7: Library Promotion. Extracts `libraryPromotionService` (atomic-tree-commit reversed) shared between the MCP `promote_block` tool and the new `PromoteBlocksCommand` dashboard action. Supports both direct push and feature-branch + PR for libraries the user owns; forks-and-PRs for third-party libraries. Conflict detection via `commitSha` comparison. All promotion surfaces honor `demoBuilder.blockLibraries.syncBehavior` (the new setting introduced in Cycle B Section 7): when set to `disabled`, the dashboard tile, command-palette entry, Explorer context menu, and Configure screen action are all hidden via `when` clauses; the service short-circuits with `PromotionDisabledError`. Closes the "edit a block in storefront → promote to library" loop with both AI and non-AI surfaces. After Cycle E, the AGENTS.md note added in Step 6k flips from "planned future feature" to documented working capability (unless `syncBehavior` is `disabled`, in which case the note documents the disabled state).
@@ -928,4 +928,4 @@ Every surface touched by the pivot.
 | Custom MCP (7 tools) + 3 external project-level MCP entries (mostly broken) | Custom MCP (7 tools, unchanged) + Adobe MCP via devDep (12 tools) + session-level Adobe MCPs (3+, authenticated) |
 | Dormant chat participant + unused settings (`mcpConfigTargets`, `externalMcpServers`, `includeBoilerplateSkills`) | None — pruned |
 | AI Setup tab: 4 verification rows ("AI Setup" framing) | AI Configuration tab: capability inventory (3 status rollups + 9 skills + 5 MCPs) |
-| User experience: unclear what's wired | User experience: "Open in Claude Code" → working storefront in 30 minutes (matches `te-eds-mock`) |
+| User experience: unclear what's wired | User experience: "Open in Claude Code" → working storefront in 30 minutes (matches `org-l`) |

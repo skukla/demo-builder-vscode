@@ -8,7 +8,7 @@
  * and therefore ends up with exactly the set it started with.
  *
  * Moved here (all specs agreed): @/core/auth/adobeAuthGuard, @/core/di, @/core/logging, @/core/utils/timeoutConfig, @/features/authentication/services/ensureProjectOrgContext, @/features/eds/handlers/edsHelpers, @/features/eds/services/daLive/daLiveAuthService, @/features/eds/services/github/githubAppService, @/types/typeGuards, vscode
- * Left inline (specs disagree):  @/features/data-installer/services/sampleDataInstall, @/features/eds/services/reset/edsResetService
+ * Left inline (specs disagree):  @/features/data-installer/services/projectDatapackInstall, @/features/eds/services/reset/edsResetService
  *
  * Extracted 2026-08-30 (lane C2). Resolving the disputed ones is a separate
  * decision, deliberately not taken here.
@@ -17,8 +17,11 @@
 import { resetEdsProjectWithUI } from '@/features/eds/services/reset/edsResetUI';
 import type { GitHubAppService } from '@/features/eds/services/github/githubAppService';
 
+// Read through an arrow, not captured: a module that imports edsHelpers while this file is still
+// loading would otherwise meet the `const` below before it is initialised. (Reset reached it that
+// way through Clear's ERP link until reset stopped offering Clear, 2026-11-12.)
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
-    ensureDaLiveAuth: mockEnsureDaLiveAuth,
+    ensureDaLiveAuth: (...args: unknown[]) => mockEnsureDaLiveAuth(...args),
     getDaLiveAuthService: jest.fn().mockReturnValue({
         getAccessToken: jest.fn().mockResolvedValue('mock-dalive-token'),
     }),
@@ -31,7 +34,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     ),
 }));
 jest.mock('@/core/auth/adobeAuthGuard', () => ({
-    ensureAdobeIOAuth: mockEnsureAdobeIOAuth,
+    ensureAdobeIOAuth: (...args: unknown[]) => mockEnsureAdobeIOAuth(...args),
 }));
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {

@@ -20,7 +20,7 @@ project, plus the few places that need a colleague-specific rule.
 | Republish / `.env` regenerate | flags from the stored row | the SC's B2B answer is one of those flags |
 | Dashboard subtitle, projects-list card | the demo's name | — |
 | AGENTS.md | the demo's name | — |
-| Update checker / template sync | UNCHANGED code: `checkForkSyncUpdates` already checks whether the project's template repo is a fork behind its parent (the SC's fork behind Jen) and offers a pre-ticked sync per repo; `TemplateUpdateChecker`'s non-thin-layer path offers each project "N changes behind" its template (Jen's `main` when unforked, the fork when forked); both in one picker, one confirmation | `getTemplateSource` (`updateTypes.ts:90`) reads instance metadata: Change source and rename self-heal must update it together with the project row, or step 01's resolver becomes what it reads |
+| Update checker / template sync | UNCHANGED code: `checkForkSyncUpdates` already checks whether the project's template repo is a fork behind its parent (the SC's fork behind Robin) and offers a pre-ticked sync per repo; `TemplateUpdateChecker`'s non-thin-layer path offers each project "N changes behind" its template (Robin's `main` when unforked, the fork when forked); both in one picker, one confirmation | `getTemplateSource` (`updateTypes.ts:90`) reads instance metadata: Change source and rename self-heal must update it together with the project row, or step 01's resolver becomes what it reads |
 | Name migration, site-config repair | resolve without overlay | — |
 | Block-library audience, inspector overrides | defaults | accepted degradation, named in docs |
 
@@ -31,7 +31,7 @@ check logs a warning and shows nothing (`templateUpdateChecker.ts:205`), nothing
 project's source. Decided 2026-09-11 (owner):
 
 - **Notice.** The dashboard shows a notice on the project (the dashboard-notice convention in
-  `spectrum-webview-ui`): "Jen's demo can't be reached. Reset and updates are unavailable
+  `spectrum-webview-ui`): "Robin's demo can't be reached. Reset and updates are unavailable
   until it is." The source is probed by the same handler as step 03, read-only.
 - **Reset refuses up front** with that sentence, before the confirmation dialog, instead of
   failing midway with git output. The check is a preflight in `extractResetParams`'s caller.

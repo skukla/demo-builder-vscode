@@ -29,7 +29,8 @@ type-erasing casts. Sequencing is at the bottom.
 > *What counts as translated:* a per-provider formatter (three exist, for Adobe IMS and
 > Console, for GitHub/DA.live/Helix, and for `aio api-mesh`), or a domain error's own
 > `userMessage`. A feature with no provider-specific knowledge uses an honest generic —
-> "Could not reach Adobe Console. See Debug Logs for details." — which is less specific
+> "Could not reach Adobe Console." (2026-11-19, PL-102: no sentence sends a person to Debug
+> Logs; it said "See Debug Logs for details." until then) — which is less specific
 > and never misleading. The raw text still goes to the Debug Logs channel, where it
 > belongs and where it is useful.
 >

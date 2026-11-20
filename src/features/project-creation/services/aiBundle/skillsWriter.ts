@@ -15,7 +15,7 @@
  *    - `update-credentials` — edit config values via configure_project (secrets stay user-entered)
  *    - `create-eds-project` — provision a new project headlessly via create_project
  *    - `diagnose-demo` — route a broken-demo symptom to the check that answers it
- *    - `import-datapack` — the six-call sample-data loop and its three traps
+ *    - `datapacks` — the six-call sample-data loop and its three traps
  *
  * 2. **Adobe skill bundles**: Adobe ships every starter-kit bundle inside the
  *    one `@adobe-commerce/commerce-extensibility-tools` package, which installs
@@ -43,11 +43,11 @@ import authorCommerceDataContent from '../../templates/skills/author-commerce-da
 import commerceBlockMapperContent from '../../templates/skills/commerce-block-mapper.md';
 import connectAuthenticatedSiteContent from '../../templates/skills/connect-authenticated-site.md';
 import createEdsProjectContent from '../../templates/skills/create-eds-project.md';
+import datapacksContent from '../../templates/skills/datapacks.md';
 import demoDataInjectorContent from '../../templates/skills/demo-data-injector.md';
 import diagnoseDemoContent from '../../templates/skills/diagnose-demo.md';
 import extendAppBuilderAppContent from '../../templates/skills/extend-app-builder-app.md';
 import headerNavFooterContent from '../../templates/skills/header-nav-footer.md';
-import importDatapackContent from '../../templates/skills/import-datapack.md';
 import refineVisualMatchContent from '../../templates/skills/refine-visual-match.md';
 import registerCustomBlockContent from '../../templates/skills/register-custom-block.md';
 import removeCustomBlockContent from '../../templates/skills/remove-custom-block.md';
@@ -94,7 +94,7 @@ const SKILL_CONTENT: Record<(typeof DEMO_BUILDER_ALWAYS_ON_SKILLS)[number], stri
     'update-credentials': updateCredentialsContent,
     'create-eds-project': createEdsProjectContent,
     'diagnose-demo': diagnoseDemoContent,
-    'import-datapack': importDatapackContent,
+    'datapacks': datapacksContent,
     'author-commerce-data': authorCommerceDataContent,
     'scrape-reference-site': scrapeReferenceSiteContent,
     'connect-authenticated-site': connectAuthenticatedSiteContent,
@@ -105,6 +105,17 @@ const SKILL_CONTENT: Record<(typeof DEMO_BUILDER_ALWAYS_ON_SKILLS)[number], stri
     'register-custom-block': registerCustomBlockContent,
     'remove-custom-block': removeCustomBlockContent,
 };
+
+/**
+ * Skill names Demo Builder used to write and no longer does, because the skill
+ * was renamed (`import-datapack` became `datapacks` in v66). An existing project
+ * still carries the old copy, naming tools that no longer exist, so every write
+ * removes it through the ADR-013 seam. There is no template to prove ownership
+ * with (the content moved), so only the recorded hash can: an unedited copy goes,
+ * an edited one is the SC's and is left and reported. The home Chat
+ * (`homeAiContextWriter`) removes the same names from its own skills directory.
+ */
+export const RENAMED_AWAY_SKILLS: readonly string[] = ['import-datapack'];
 
 export const DEMO_BUILDER_SKILLS: ReadonlyArray<{ name: string; content: string }> =
     DEMO_BUILDER_ALWAYS_ON_SKILLS.map((name) => ({
@@ -181,6 +192,9 @@ export async function writeSkillFiles(
             gatedOut.has(name) ? removeSkill(name, content) : writeSkill(name, content),
         ),
     );
+    for (const name of RENAMED_AWAY_SKILLS) {
+        await writer.remove(`.claude/skills/${name}/SKILL.md`);
+    }
 
     // aem-boilerplate-commerce skills (block-developer, content-modeler,
     // dropin-developer, project-manager, researcher, tester) — Adobe ships all

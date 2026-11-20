@@ -29,15 +29,15 @@ const BASE: BoilerplateBase = { template: B2B, commit: BASE_SHA, lkgSource: B2B_
 
 function storefront(base?: BoilerplateBase): Project {
     const project = createMockProject({
-        name: 'justrite',
-        path: '/p/justrite',
+        name: 'tailspin',
+        path: '/p/tailspin',
         componentInstances: {
             [COMPONENT_IDS.EDS_STOREFRONT]: {
                 id: COMPONENT_IDS.EDS_STOREFRONT,
                 name: 'EDS Storefront',
                 type: 'frontend',
                 status: 'ready',
-                metadata: { templateOwner: 'kmanns', templateRepo: 'justrite' },
+                metadata: { templateOwner: 'org-e', templateRepo: 'tailspin' },
             },
         },
     });
@@ -98,9 +98,9 @@ describe('checkBoilerplate', () => {
         project.demo = {
             kind: 'demo',
             version: 2,
-            name: 'Justrite',
-            contentSource: { org: 'kmanns', site: 'justrite', indexPath: '/sitemap.json' },
-            source: { owner: 'kmanns', repo: 'justrite' },
+            name: 'Tailspin',
+            contentSource: { org: 'org-e', site: 'tailspin', indexPath: '/sitemap.json' },
+            source: { owner: 'org-e', repo: 'tailspin' },
             storefrontKind: 'eds',
             builtWith: { template: B2B, lkg: BASE_SHA, extension: '1.0.0' },
         };

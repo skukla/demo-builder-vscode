@@ -100,27 +100,33 @@ function asStep(
 
 /**
  * The run's channel, with every progress push in the step shape. Everything else the
- * run sends passes through as it was.
+ * run sends passes through as it was. Once the run is stopped, progress pushes are
+ * dropped, so the screen keeps saying it is stopping while the running step finishes
+ * (F275, as creation's reporter does).
  *
  * @param context - the run's handler context
  * @param steps - every step the run will report ({@link storefrontSetupSteps})
  * @param startedAt - when the run began
+ * @param stop - the run's stop
  * @returns the context the phases run with
  */
 export function withSetupSteps(
     context: HandlerContext,
     steps: readonly string[],
     startedAt: number = Date.now(),
+    stop?: AbortSignal,
 ): HandlerContext {
     return {
         ...context,
-        sendMessage: (type: string, data?: unknown) =>
-            context.sendMessage(
+        sendMessage: async (type: string, data?: unknown) => {
+            if (type === PROGRESS && stop?.aborted) return;
+            await context.sendMessage(
                 type,
                 type === PROGRESS
                     ? asStep(data as StorefrontSetupProgressPayload, steps, startedAt)
                     : data,
-            ),
+            );
+        },
     };
 }
 

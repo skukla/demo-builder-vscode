@@ -21,6 +21,7 @@
 
 import { CATEGORY_TEMPLATE_PATH } from './categoryPagePlan';
 import { hashOf, messageOf, removeOwnedPage, type StorefrontPages } from './ownedPages';
+import { decideOwnedChange, type OwnedChange } from '@/core/utils/ownedChange';
 
 /**
  * The starter: the boilerplate's category-page recipe (its `/apparel` page, read
@@ -52,16 +53,32 @@ export async function ensureCategoryTemplate(
 ): Promise<TemplateOutcome> {
     try {
         const current = await pages.read(CATEGORY_TEMPLATE_PATH);
-        if (current !== null) {
-            if (recordedHash === undefined) return { status: 'not-ours' };
-            return hashOf(current) === recordedHash ? { status: 'kept', hash: recordedHash } : { status: 'edited' };
-        }
+        const change = decideOwnedChange({
+            recorded: recordedHash,
+            current: current === null ? undefined : hashOf(current),
+            wanted: hashOf(STARTER_CATEGORY_TEMPLATE),
+        });
+        if (change !== 'create') return existingTemplate(change, recordedHash);
         await pages.write(CATEGORY_TEMPLATE_PATH, STARTER_CATEGORY_TEMPLATE);
         const stored = await pages.read(CATEGORY_TEMPLATE_PATH);
         return { status: 'written', hash: hashOf(stored ?? STARTER_CATEGORY_TEMPLATE) };
     } catch (error) {
         return { status: 'failed', error: messageOf(error) };
     }
+}
+
+/**
+ * What a template that is already there is to Demo Builder. One still as Demo Builder left it
+ * is kept and never rewritten: `update` only means DA.live stores the starter differently from
+ * how it was sent, which is why the record is hashed from a read after the write.
+ *
+ * @param change - the shared rule's answer for the template
+ * @param recordedHash - the hash recorded when Demo Builder last wrote the starter
+ */
+function existingTemplate(change: OwnedChange, recordedHash: string | undefined): TemplateOutcome {
+    if (change === 'leave-not-ours') return { status: 'not-ours' };
+    const asLeft = change === 'unchanged' || change === 'update';
+    return asLeft && recordedHash !== undefined ? { status: 'kept', hash: recordedHash } : { status: 'edited' };
 }
 
 /**

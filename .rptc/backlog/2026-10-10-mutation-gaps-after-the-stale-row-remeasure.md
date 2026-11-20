@@ -137,3 +137,4 @@ A module is done when no decision is unpinned, not when its score is high.
 - 2026-10-10  test(dashboard): the integrations tile reports a stopped removal when nothing else on it is rankable (`5c6f52d4b`)
 - 2026-10-10  chore(overnight): the loop starts its own resource guard (`f05162268`)
 - 2026-10-11  chore(mutation): judge each test once across every redundancy report (`eccb59af9`)
+- 2026-11-16  2026-11-16 beta.153 sweep: 377 of 687 mutation rows stale (350 module changes, 27 suite only). highValueSurvivors 1274 and noCoverage 389 rose because modulesPinned went 12 to 687, not a regression. Overnight re-measure owed: npm run test:mutation:sweep -- --stale --minutes 480

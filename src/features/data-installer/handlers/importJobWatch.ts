@@ -14,21 +14,40 @@
  * @module features/data-installer/handlers/importJobWatch
  */
 
+import { removalLine } from '../importSteps';
+import { plainFailure } from '../plainFailure';
+import { announceDatapacksChanged } from '../services/datapackChanges';
 import type { DatapackEngine } from '../services/datapackEngine';
-import type { ImportRequest } from '../services/dataInstallerWriteClient';
-import { watchImportJob } from '../services/importJobRunner';
-import { IMPORT_PROGRESS_MESSAGE, type ImportJobRecord } from '../types';
-import { progressLabel, progressStep, summarizeProgress } from '../ui/importProgress';
+import { nodeRecordFiles } from '../services/demoBuilderEngine/installRecord';
+import { addUpdateBehind } from '../services/demoBuilderEngine/installRecordUpdate';
+import { type ImportJobResult, watchImportJob } from '../services/importJobRunner';
+import type { ImportRequest } from '../services/importRequest';
+import { dropStaleFailure, recordInstallEnd } from '../services/installFailure';
+import { rememberedPackName } from '../services/packNames';
+import { type DataTypeStatus, IMPORT_PROGRESS_MESSAGE, type ImportJobRecord, type JobPurpose, type ValidationResult } from '../types';
+import { progressLabel, summarizeProgress } from '../ui/importProgress';
 import { PollingService } from '@/core/shell/pollingService';
 import { TransientStateManager } from '@/core/state/transientStateManager';
 import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
-import { detailFor, expectationFor } from '@/core/utils/operationStages';
+import { OPERATION_STAGES, detailFor, expectationFor } from '@/core/utils/operationStages';
+import { packStage } from '@/core/utils/packStage';
+import { notYetPlain, plainJoin, type PlainText } from '@/core/utils/plainText';
 import { pushOperationProgress } from '@/core/vscode/operationProgress';
+import type { DatapackId } from '@/types/datapack';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 
 /** Where the in-flight/last import is recorded. One per extension host. */
 export const JOB_KEY = 'dataInstaller.import.current';
+
+/** Said for a job that ended without success and without saying why. */
+const JOB_DID_NOT_FINISH = 'The job did not finish.';
+
+/** Why a job failed, for its notification, in plain words: where it stopped and why (walk F221). */
+function noticeFailure(record: ImportJobRecord, result: Pick<ImportJobResult, 'reason' | 'stoppedAt'>): PlainText {
+    const work = record.operation === 'reset' ? 'uninstalling' : 'installing';
+    return plainFailure(result.reason ?? JOB_DID_NOT_FINISH, { kind: result.stoppedAt, work });
+}
 
 /**
  * What a datapack job shows on the SHARED progress channel, the notification the
@@ -40,10 +59,30 @@ export const JOB_KEY = 'dataInstaller.import.current';
 function datapackStage(
     record: ImportJobRecord,
     perType: ImportJobRecord['perType'],
+    detail: string | undefined,
+    name?: string,
 ): { stage: string; step: string; expectation?: string } {
-    const stage = progressStep(record.operation === 'reset' ? 'reset' : 'import');
-    const step = progressLabel(summarizeProgress(perType ?? {}, record.dataTypes)) ?? detailFor(stage) ?? '';
+    // Named for the pack when known, "Installing Frescopa" (owner, 2026-11-16).
+    const stage = packStage(record.operation === 'reset' ? OPERATION_STAGES.removingDatapack : OPERATION_STAGES.installingDatapack, name);
+    const fallback = progressLabel(summarizeProgress(perType ?? {}, record.dataTypes), detail) ?? detailFor(stage) ?? '';
+    // An uninstall says what it does now and how far, as its window does (walk F161).
+    const step = record.operation === 'reset' ? removalLine(detail, fallback) : fallback;
     return { stage, step, expectation: expectationFor(stage) };
+}
+
+/**
+ * The job's progress as one line for an agent's chat: the step, then where it has got, as the
+ * notification words it ("Installing the datapack: 450 of 2,046 products").
+ */
+export function datapackProgressLine(record: ImportJobRecord): string {
+    const { stage, step } = datapackStage(record, record.perType, record.detail);
+    return step ? `${stage}: ${step}` : stage;
+}
+
+/** What the SC must still know after a success: the lines left to know, else the note, in plain words. */
+function toKnowOf(result: { scLines?: PlainText[]; note?: string }): PlainText | undefined {
+    if (result.scLines?.length) return plainJoin(result.scLines);
+    return result.note ? notYetPlain(result.note) : undefined;
 }
 
 /**
@@ -65,7 +104,22 @@ async function watchAndRecord(
     transient: TransientStateManager,
     record: ImportJobRecord,
     engine: DatapackEngine,
+    /** The project the job started from: a reset clears its pack, an install settles its failure. */
+    projectPath: string,
+    replacement?: ImportRequest,
+    afterSuccess?: () => Promise<void>,
 ): Promise<void> {
+    // Each poll is also written to the record, so an agent reading the status sees it while it
+    // runs (owner, 2026-11-05). Writes go in order, and the outcome waits for the last of them.
+    let progressWritten: Promise<unknown> = Promise.resolve();
+    const writeProgress = (perType: ImportJobRecord['perType'], detail: string | undefined, phase: string | undefined, replacing: DataTypeStatus | undefined): void => {
+        const live = { ...record, perType, ...(detail ? { detail } : {}), ...(phase ? { phase } : {}), ...(replacing ? { replacing } : {}) };
+        progressWritten = progressWritten.then(() => transient.set(JOB_KEY, live)).catch(() => undefined);
+    };
+    // Walk F97: the project names the new pack once the one it replaces is gone, never before.
+    const named = namedOnceReplaced(context, replacement);
+    const memory = context.context?.globalState;
+    const packName = memory ? rememberedPackName(memory, record.datapackName) : undefined;
     try {
         // The engine that started the job is the one asked how it is going: only it knows.
         const result = await watchImportJob({
@@ -77,12 +131,16 @@ async function watchAndRecord(
             // Each poll goes straight to the modal. Without this the webview
             // learns nothing until the job ends, which on a fourteen-type pack
             // is minutes of an unexplained spinner.
-            onProgress: (perType) => {
+            onProgress: (perType, detail, phase, replacing) => {
                 void context.sendMessage(IMPORT_PROGRESS_MESSAGE, {
                     activationId: record.activationId,
                     operation: record.operation,
                     perType,
+                    ...(detail ? { detail } : {}),
+                    ...(phase ? { phase } : {}),
+                    ...(replacing ? { replacing } : {}),
                 });
+                void named(replacing);
                 // The SAME progress on the shared channel, so closing the modal
                 // can hand the job to a notification that keeps narrating
                 // (PL-59 R8). The modal's own view is richer — per type, with
@@ -90,17 +148,27 @@ async function watchAndRecord(
                 void pushOperationProgress({
                     id: DATAPACK_OPERATION_ID,
                     state: 'running',
-                    ...datapackStage(record, perType),
+                    ...datapackStage(record, perType, detail, packName),
                 });
+                writeProgress(perType, detail, phase, replacing);
             },
         });
+        await progressWritten;
+        await named(result.replacing);
+        // What the SC must still know or do goes with the success, for a notification to say: the
+        // lines left to know when the run names them (an Admin step left), never the whole note, which
+        // the result window and Activity hold (owner walk, 2026-11-16: a notification that read like a
+        // report). Else the note, as before.
+        const toKnow = toKnowOf(result);
+        const kept = toKnow ? { note: toKnow } : {};
         await pushOperationProgress(
             result.outcome === 'success'
-                ? { id: DATAPACK_OPERATION_ID, state: 'succeeded' }
+                ? { id: DATAPACK_OPERATION_ID, state: 'succeeded', ...kept }
                 : {
                       id: DATAPACK_OPERATION_ID,
                       state: 'failed',
-                      error: result.reason ?? 'The job did not finish.',
+                      // Plain words (walk F221); the record below keeps Commerce's for agents.
+                      error: noticeFailure(record, result),
                   },
         );
         await transient.set(JOB_KEY, {
@@ -108,16 +176,41 @@ async function watchAndRecord(
             outcome: result.outcome,
             perType: result.perType,
             ...(result.reason ? { reason: result.reason } : {}),
+            ...(result.note ? { note: result.note } : {}),
+            ...(result.keptRoot ? { keptRoot: result.keptRoot } : {}),
+            ...(result.timings ? { timings: result.timings } : {}),
+            ...(result.skipped ? { skipped: result.skipped } : {}),
+            ...(result.check ? { check: result.check } : {}),
+            ...(result.stoppedAt ? { stoppedAt: result.stoppedAt } : {}),
+            ...(result.retryable ? { retryable: true } : {}),
+            ...(result.scLines ? { scLines: result.scLines } : {}),
+            ...(result.searchDelay ? { searchDelay: result.searchDelay } : {}),
+            ...(result.rowNotes ? { rowNotes: result.rowNotes } : {}),
+            ...(result.replacing ? { replacing: result.replacing } : {}),
             ...(result.processingTimeMs !== undefined
                 ? { processingTimeMs: result.processingTimeMs }
                 : {}),
         });
+        await settleProjectAfterJob(context, record, result, projectPath);
+        if (afterSuccess && result.outcome === 'success') await runAfterSuccess(context, afterSuccess);
+        // What the store holds, and which pack the project names, may have moved: every open screen reads again.
+        announceDatapacksChanged();
     } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
         context.logger.warn(
             `[Data Installer] Stopped watching import ${record.activationId}: ${reason}`,
         );
+        await progressWritten;
         await stopWatching(transient, record, reason);
+    }
+}
+
+/** A succeeded job's follow-on work: its failure is logged, and the job stays a success. */
+async function runAfterSuccess(context: HandlerContext, afterSuccess: () => Promise<void>): Promise<void> {
+    try {
+        await afterSuccess();
+    } catch (error) {
+        context.debugLogger.debug(`[Data Installer] The work after the job could not be done: ${errorText(error)}`);
     }
 }
 
@@ -155,15 +248,31 @@ export async function runAndWatch(
     request: ImportRequest,
     spec: {
         operation: ImportJobRecord['operation'];
+        /** What the job is for, as its record carries it to the window and to agents. */
+        purpose: JobPurpose;
         begin: () => Promise<{ activationId: string }>;
+        /** What is checked before it begins: an import's rows, a removal's record. */
+        validate: () => Promise<ValidationResult>;
         /** Wording when the service refuses the request shape. */
         rejected: string;
         /** Wording when the call itself fails. */
         failed: string;
+        /** An import replacing the demo's pack: that pack, as the SC knows it (walk F97). */
+        replaces?: string;
+        /** Where the SC's changes were saved before it began (walk F105). */
+        savedAs?: string;
+        /** The pack replaced is another version of the same pack: that version, as the SC reads it. */
+        replacesVersion?: string;
+        /**
+         * Work for once the job has ENDED in success, after its record is written (Undo Last Save
+         * deletes the newest save then). Never run for a job that did not succeed; a failure inside
+         * it is logged and leaves the job's outcome as it is.
+         */
+        afterSuccess?: () => Promise<void>;
     },
 ): Promise<HandlerResponse> {
     try {
-        const verdict = await engine.validateImport(request);
+        const verdict = await spec.validate();
         if (!verdict.valid) {
             return { success: false, error: verdict.reason ?? spec.rejected };
         }
@@ -173,19 +282,28 @@ export async function runAndWatch(
             activationId: started.activationId,
             datapackName: request.id.name,
             operation: spec.operation,
+            purpose: spec.purpose,
             version: request.id.version,
             commerceInstance: request.commerceInstance,
             dataTypes: request.dataTypes,
             startedAt: new Date().toISOString(),
+            // The job runs in this host and dies with it (walk F163): readers end it when this is gone.
+            hostPid: process.pid,
             outcome: 'watching',
             perType: {},
+            ...(spec.replaces ? { replaces: spec.replaces, replacing: 'pending' as const } : {}),
+            ...(spec.savedAs ? { savedAs: spec.savedAs } : {}),
+            ...(spec.replacesVersion ? { replacesVersion: spec.replacesVersion } : {}),
         };
         const transient = new TransientStateManager(context.context);
         await transient.set(JOB_KEY, record);
 
-        await recordDatapackOnProject(context, spec.operation, request);
+        // An import is recorded at once; a reset is cleared only when it finishes (see below).
+        const startedIn = await projectPathNow(context);
+        // An import replacing the demo's pack is recorded once that pack is gone (`namedOnceReplaced`).
+        if (spec.operation !== 'reset' && !request.replaces) await recordDatapackOnProject(context, request);
 
-        void watchAndRecord(context, transient, record, engine);
+        void watchAndRecord(context, transient, record, engine, startedIn, request.replaces ? request : undefined, spec.afterSuccess);
 
         return { success: true, data: { activationId: started.activationId } };
     } catch (error) {
@@ -197,11 +315,20 @@ export async function runAndWatch(
     }
 }
 
+/** The current project's path, or '' when there is none or it cannot be read: a reset then clears nothing. */
+async function projectPathNow(context: HandlerContext): Promise<string> {
+    try {
+        return (await context.stateManager.getCurrentProject())?.path ?? '';
+    } catch {
+        return '';
+    }
+}
+
 /**
- * Record on the PROJECT which datapack its instance now holds — or no longer does.
+ * Record on the PROJECT which datapack its instance now holds.
  *
  * `project.datapack` was written only by the wizard's Sample Data step, so a pack
- * imported from this modal left no trace on the project. `confirmSampleDataRemoval`
+ * imported from this modal left no trace on the project. `beginSampleDataRemovalCheck`
  * gates on exactly that field, so reset silently never offered to remove data the
  * user had just imported. Found live 2026-08-16: an import succeeded, and the
  * following reset asked nothing.
@@ -212,35 +339,121 @@ export async function runAndWatch(
  * worth avoiding. The opposite error (recording a pack whose import then failed
  * entirely) costs one removal that reports nothing to remove.
  *
- * A reset CLEARS it: the manifest is rebuilt from the project on every write
- * (`projectConfigWriter`, "no merging needed"), so `undefined` genuinely removes
- * the field rather than leaving the old value behind.
- *
  * Never fatal. The import has already been accepted by the service by this point,
  * and failing the handler over a bookkeeping write would report a started job as
  * a failed one.
  */
-async function recordDatapackOnProject(
-    context: HandlerContext,
-    operation: ImportJobRecord['operation'],
-    request: ImportRequest,
-): Promise<void> {
+async function recordDatapackOnProject(context: HandlerContext, request: ImportRequest): Promise<void> {
     try {
         const project = await context.stateManager.getCurrentProject();
         if (!project) {
             return;
         }
-        project.datapack =
-            operation === 'reset' ? undefined : { name: request.id.name, version: request.id.version };
+        // The store travels with the pack, so a copy or an exported file installs from it too.
+        project.datapack = { name: request.id.name, version: request.id.version, store: request.source ?? 'installer' };
+        // Another pack in its place: a failed install of the old one no longer applies (step-04 S7).
+        dropStaleFailure(project);
         await context.stateManager.saveProject(project);
-        context.debugLogger.debug(
-            `[Data Installer] project datapack ${operation === 'reset' ? 'cleared' : `recorded as ${request.id.name}@${request.id.version}`}`,
-        );
+        context.debugLogger.debug(`[Data Installer] project datapack recorded as ${request.id.name}@${request.id.version}`);
     } catch (error) {
-        context.debugLogger.debug(
-            `[Data Installer] could not record the datapack on the project: ${
-                error instanceof Error ? error.message : String(error)
-            }`,
-        );
+        context.debugLogger.debug(`[Data Installer] could not record the datapack on the project: ${errorText(error)}`);
     }
 }
+
+/**
+ * For an import replacing the demo's pack (walk F97): record the new pack on the project the first
+ * time the removal of the old one is seen done. A removal that fails leaves the project naming the
+ * pack still in the store; one that is done leaves the new pack's data on the way in, which is what
+ * a project reset must then offer to remove.
+ */
+function namedOnceReplaced(context: HandlerContext, replacement: ImportRequest | undefined): (replacing: DataTypeStatus | undefined) => Promise<void> {
+    let recorded: Promise<void> | undefined;
+    return (replacing) => {
+        if (!replacement || replacing !== 'success') return recorded ?? Promise.resolve();
+        recorded ??= recordDatapackOnProject(context, replacement);
+        return recorded;
+    };
+}
+
+/**
+ * A reset that FINISHED, taking everything its pack put there, clears the project's pack.
+ *
+ * The rule (live, 2026-10-30): the project stops naming the pack only when the removal ended in
+ * success with nothing left in the store. It was cleared when the reset was ACCEPTED, so a removal
+ * that then stopped half done left a project naming no pack over a store still holding most of it,
+ * and project reset (`beginSampleDataRemovalCheck`, which gates on this field) no longer offered to
+ * finish the job. A removal that finishes but keeps containers holding the SC's things
+ * (`leftInStore`) leaves it too: those stay on the install record, and the next removal is what
+ * takes them once they are empty.
+ *
+ * Only the project the reset was started from: the SC may have opened another in the meantime. And
+ * only when the pack removed is the one the project names: a project installs one pack, then
+ * another, and names the last, so removing the first must leave the second named or project reset
+ * stops offering to remove it.
+ * The manifest is rebuilt from the project on every write (`projectConfigWriter`, "no merging
+ * needed"), so `undefined` genuinely removes the field. Never fatal: the job has ended either way.
+ */
+async function clearDatapackOnProject(context: HandlerContext, projectPath: string, removed: DatapackId): Promise<void> {
+    try {
+        const project = await context.stateManager.getCurrentProject();
+        if (!project || projectPath === '' || project.path !== projectPath) {
+            context.debugLogger.debug('[Data Installer] project datapack left as it was: the reset\'s project is no longer open');
+            return;
+        }
+        if (project.datapack?.name !== removed.name || project.datapack.version !== removed.version) {
+            context.debugLogger.debug(`[Data Installer] project datapack left as it was: ${removed.name}@${removed.version} is not the pack it names`);
+            return;
+        }
+        project.datapack = undefined;
+        dropStaleFailure(project);
+        await context.stateManager.saveProject(project);
+        context.debugLogger.debug('[Data Installer] project datapack cleared');
+    } catch (error) {
+        context.debugLogger.debug(`[Data Installer] could not clear the datapack on the project: ${errorText(error)}`);
+    }
+}
+
+/**
+ * What a job that ENDED changes on the project it started from: a reset that took everything clears
+ * the pack it names; an install settles a failed install's record of that pack (step-04 S7).
+ */
+async function settleProjectAfterJob(
+    context: HandlerContext,
+    record: ImportJobRecord,
+    result: Pick<ImportJobResult, 'outcome' | 'reason' | 'leftInStore'>,
+    projectPath: string,
+): Promise<void> {
+    const pack = { name: record.datapackName, version: record.version };
+    if (record.operation === 'reset') {
+        if (result.outcome === 'success' && !result.leftInStore) await clearDatapackOnProject(context, projectPath, pack);
+        return;
+    }
+    const failed = result.outcome === 'success' ? undefined : (result.reason ?? JOB_DID_NOT_FINISH);
+    await settleInstallFailure(context, projectPath, pack, failed);
+    // An update that did not finish (step-07 U1): its types stay on the update note, so Update offers them again.
+    if (record.purpose === 'update' && failed !== undefined) await noteUpdateLeft(context, projectPath, pack, record.dataTypes);
+}
+
+/** Put an unfinished update's types back on the install record's update note. Never fatal. */
+async function noteUpdateLeft(context: HandlerContext, projectPath: string, pack: DatapackId, types: string[]): Promise<void> {
+    try {
+        if (projectPath !== '') await addUpdateBehind(nodeRecordFiles, projectPath, pack, types);
+    } catch (error) {
+        context.debugLogger.debug(`[Data Installer] could not note the update's types as left: ${errorText(error)}`);
+    }
+}
+
+/**
+ * An install that ENDED: a success of the datapack a failed creation install named clears that
+ * failure, another failure of it bumps its retries (`installFailure.ts`). Never fatal: the job has
+ * ended either way.
+ */
+async function settleInstallFailure(context: HandlerContext, projectPath: string, pack: DatapackId, failed: string | undefined): Promise<void> {
+    try {
+        await recordInstallEnd(context.stateManager, projectPath, pack, failed, new Date());
+    } catch (error) {
+        context.debugLogger.debug(`[Data Installer] could not record the install's end on the project: ${errorText(error)}`);
+    }
+}
+
+const errorText = (error: unknown): string => (error instanceof Error ? error.message : String(error));

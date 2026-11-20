@@ -184,6 +184,21 @@ describe('sendDemoStatusUpdate', () => {
         expect(payloadFrom(postMessage).frontendConfigChanged).toBe(false);
     });
 
+    // A start or stop pushes this; the dashboard replaces its status with it, so a push that
+    // left the steps out would take the "N steps remaining" line away (PL-101).
+    it('carries the steps a run left, as every status push does', async () => {
+        const { context, postMessage } = serve(
+            createMockProject({ finishSetup: { 'republish-code': { files: ['scripts/a.js'] } } }),
+        );
+
+        await sendDemoStatusUpdate(context);
+
+        expect(payloadFrom(postMessage).finishSetup).toMatchObject({
+            remaining: 1,
+            republishDue: true,
+        });
+    });
+
     it('omits mesh entirely when the project has no mesh component', async () => {
         const { context, postMessage } = serve(createMockProject());
 

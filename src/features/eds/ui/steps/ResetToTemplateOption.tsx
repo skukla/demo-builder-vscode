@@ -1,17 +1,20 @@
 /**
  * ResetToTemplateOption
  *
- * The "Reset to template (replaces all content)" tick above the repository
- * list, with the one-line notice beneath it. What it shows is decided by
- * `describeResetOption`; this only draws that decision.
+ * The "Reset to Template (Replaces All Content)" tick above the repository
+ * list, with the house banner (`InlineNotice`) beneath it. What it shows is
+ * decided by `describeResetOption`; this only draws that decision.
+ *
+ * The banner replaced a line of small orange text (owner, 2026-11-20): the same
+ * warning every other screen draws, and readable.
  *
  * @module features/eds/ui/steps/ResetToTemplateOption
  */
 
-import { Checkbox, Flex, Text, View } from '@adobe/react-spectrum';
-import Alert from '@spectrum-icons/workflow/Alert';
+import { Checkbox, Flex } from '@adobe/react-spectrum';
 import React from 'react';
 import { describeResetOption, type RepoReadinessState } from './repoSelectionInline.helpers';
+import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
 
 /**
  * ResetToTemplateOption - reset control, presented by what the repo contains.
@@ -41,10 +44,10 @@ export function ResetToTemplateOption({
      * is the only thing asking for attention.
      */
     unusable?: boolean;
-    /** What the reset goes back to, when it is an added demo ("Reset to Isle5 by Jen"). */
+    /** What the reset goes back to, when it is an added demo ("Reset to Isle5 by Robin"). */
     templateName?: string;
 }): React.ReactElement {
-    const { checked, locked, tone, message } = describeResetOption(
+    const { checked, locked, tone, title, detail } = describeResetOption(
         readiness,
         resetToTemplate,
         disabled,
@@ -54,34 +57,17 @@ export function ResetToTemplateOption({
     return (
         <Flex direction="column" gap="size-50" UNSAFE_className="reset-to-template-top">
             <Checkbox isSelected={checked} isDisabled={locked} onChange={onResetToTemplateChange}>
-                {`Reset to ${templateName ?? 'template'} (replaces all content)`}
+                {`Reset to ${templateName ?? 'Template'} (Replaces All Content)`}
             </Checkbox>
 
-            <View marginStart="size-300" UNSAFE_className="reset-warning-container">
-                <Flex
-                    alignItems="center"
-                    gap="size-100"
-                    UNSAFE_className={
-                        tone === 'none' ? 'reset-warning-hidden' : 'reset-warning-visible'
-                    }
-                >
-                    <Alert
-                        size="S"
-                        UNSAFE_className={
-                            tone === 'info'
-                                ? 'text-blue-500 flex-shrink-0'
-                                : 'text-orange-500 flex-shrink-0'
-                        }
-                    />
-                    <Text
-                        UNSAFE_className={
-                            tone === 'info' ? 'text-xs text-blue-600' : 'text-xs text-orange-600'
-                        }
-                    >
-                        {message}
-                    </Text>
-                </Flex>
-            </View>
+            {/* Slides open under the tick and closes when there is nothing to say. */}
+            <div className={tone === 'none' ? 'reset-warning-hidden' : 'reset-warning-visible'}>
+                {tone === 'none' ? null : (
+                    <InlineNotice title={title} tone={tone === 'info' ? 'info' : 'warning'}>
+                        {detail}
+                    </InlineNotice>
+                )}
+            </div>
         </Flex>
     );
 }

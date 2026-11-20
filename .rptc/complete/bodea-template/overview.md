@@ -34,7 +34,7 @@ If starting fresh (context was cleared), re-invoke the workflow before executing
 
 ## Context
 
-Synthesize a new **Bodea** demo package from Jen's `sayurihanki/jenhankib2bbodea` storefront
+Synthesize a new **Bodea** demo package from Robin's `org-j/org-k` storefront
 (native-commerce blocks + VIP/customer-group machinery + theme; forked ~Feb 2026, one dropin
 generation behind) and the existing Custom (B2B+B2C) template (boilerplate-b2b-template +
 6 `eds-demo-patches/b2b` patches). Focus: **native commerce functionality** — simulated blocks
@@ -43,7 +43,7 @@ and client-branded cruft are dropped.
 **v2 note:** a fork architecture (`skukla/bodea-template` as a maintained fork) was approved
 and then WITHDRAWN after research into the isle5/CitiSignal history: every fork-style template
 in this system rotted (isle5: hand-sync stopped 2026-03, now 140 commits + 1 dropin major
-behind; buildright: 2–3 majors behind, never shipped; Jen's own fork: 1 generation in 5 months),
+behind; buildright: 2–3 majors behind, never shipped; Robin's own fork: 1 generation in 5 months),
 while the thin-layer LKG machinery advanced daily-green for 40+ days. ADR-006 (2026-06-10,
 owner-decided) rejected fork maintenance "by the numbers". Bodea therefore ships **thin-layer**,
 like custom/citisignal.
@@ -83,13 +83,13 @@ like custom/citisignal.
      [`../../backlog/2026-08-17-bodea-shared-catalogs-are-undifferentiated.md`](../../backlog/2026-08-17-bodea-shared-catalogs-are-undifferentiated.md).
 6. **Block scope** (unchanged from v1): native (commerce-account-hub,
    customer-segment-personalization-block, search-bar, live-block(+premium),
-   vip-member-block-real-v2, de-MCCS'd vip-hero) + native-backed (uniform-configurator, ONE of
+   vip-member-block-real-v2, de-ORG C'd vip-hero) + native-backed (uniform-configurator, ONE of
    luxury-configurator/product-configurator-luxe, guided-selling-luxe, product-teaser) +
    ~25 neutral/marketing. DROPPED: simulated trio (medal-rack-configurator,
-   product-technical-details, promo-popup) + cruft (razer-*, form-2/3/4, mccs variants,
+   product-technical-details, promo-popup) + cruft (razer-*, form-2/3/4, org-c variants,
    superseded vip prototypes, how-it-works-stats-2, AI dirs, runbooks, portability package).
 7. **Content** (unchanged): DA.live site under `skukla` matching the block-source repo name —
-   curated one-time copy of Jen's site (prune dropped-block + account pages, rewrite hosts),
+   curated one-time copy of Robin's site (prune dropped-block + account pages, rewrite hosts),
    published; account chrome via `accountContentSource: adobe-commerce/boilerplate-b2b` overlay.
    No contentPatches (we own the site).
 8. **Rollout**: package lands `hidden: true`; unhide is the release step.

@@ -196,7 +196,7 @@ describe('createOrUpdateFile', () => {
 });
 
 describe('listRepoFiles', () => {
-    const branchResponse = { data: { commit: { commit: { tree: { sha: 'tree-sha' } } } } };
+    const commitResponse = { data: { sha: 'commit-sha', commit: { tree: { sha: 'tree-sha' } } } };
     const treeResponse = {
         data: {
             tree: [
@@ -208,14 +208,14 @@ describe('listRepoFiles', () => {
     };
 
     it('reads the branch, then its tree recursively, and returns only files', async () => {
-        mockRequest.mockResolvedValueOnce(branchResponse).mockResolvedValueOnce(treeResponse);
+        mockRequest.mockResolvedValueOnce(commitResponse).mockResolvedValueOnce(treeResponse);
 
         const files = await ops().listRepoFiles('me', 'shop', 'develop');
 
-        expect(optionsSentTo('/branches/{branch}')).toEqual({
+        expect(optionsSentTo('/commits/{ref}')).toEqual({
             owner: 'me',
             repo: 'shop',
-            branch: 'develop',
+            ref: 'develop',
         });
         expect(optionsSentTo('/git/trees/{tree_sha}')).toEqual({
             owner: 'me',
@@ -230,14 +230,14 @@ describe('listRepoFiles', () => {
     });
 
     it('defaults to the main branch', async () => {
-        mockRequest.mockResolvedValueOnce(branchResponse).mockResolvedValueOnce(treeResponse);
+        mockRequest.mockResolvedValueOnce(commitResponse).mockResolvedValueOnce(treeResponse);
 
         await ops().listRepoFiles('me', 'shop');
 
-        expect(optionsSentTo('/branches/{branch}')).toEqual({
+        expect(optionsSentTo('/commits/{ref}')).toEqual({
             owner: 'me',
             repo: 'shop',
-            branch: 'main',
+            ref: 'main',
         });
     });
 

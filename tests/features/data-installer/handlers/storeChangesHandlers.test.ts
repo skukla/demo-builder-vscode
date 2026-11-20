@@ -1,0 +1,593 @@
+/**
+ * The handlers behind "What would installing again change?", the install check (2026-11-06), and Save / Save As (step 05,
+ * `.rptc/plans/datapack-save-as/`): what they hand the service, what they refuse before it is
+ * asked, and what they record on the project once a save lands.
+ *
+ * The service (`storeChanges.ts`) has its own suite; here it is mocked and its ARGUMENTS
+ * asserted, since what this layer owns is how it is called: which project, which install
+ * target, which store the new version is written into, and with no `update`.
+ */
+
+jest.mock('@/features/authentication/services/projectOrgGuard', () => ({ orgGuard: jest.fn() }));
+jest.mock('@/features/data-installer/services/demoBuilderEngine/storeChanges', () => ({
+    ...jest.requireActual('@/features/data-installer/services/demoBuilderEngine/storeChanges'),
+    previewChanges: jest.fn(),
+}));
+jest.mock('@/features/data-installer/services/demoBuilderEngine/demoAdditions', () => ({
+    ...jest.requireActual('@/features/data-installer/services/demoBuilderEngine/demoAdditions'),
+    addedSinceInstall: jest.fn(),
+}));
+jest.mock('@/features/data-installer/services/demoBuilderEngine/verifyInstall', () => ({
+    ...jest.requireActual('@/features/data-installer/services/demoBuilderEngine/verifyInstall'),
+    verifyPackInstall: jest.fn(),
+}));
+jest.mock('@/features/data-installer/services/demoBuilderEngine/saveStore', () => ({
+    ...jest.requireActual('@/features/data-installer/services/demoBuilderEngine/saveStore'),
+    saveStoreChanges: jest.fn(),
+}));
+jest.mock('@/features/data-installer/handlers/dataInstallerHandlers', () => {
+    const resolveDataInstallerAccess = jest.fn();
+    return {
+        ...jest.requireActual('@/features/data-installer/handlers/dataInstallerHandlers'),
+        resolveDataInstallerAccess,
+        // The write path's door, as it answers with the Data Installer's address set.
+        resolveDatapackAccess: (context: unknown) => resolveDataInstallerAccess(context),
+    };
+});
+jest.mock('@/features/data-installer/services/datapackStoreWriter');
+jest.mock('@/features/data-installer/services/datapackTransfer', () => ({
+    ...jest.requireActual('@/features/data-installer/services/datapackTransfer'),
+    writePackToStore: jest.fn(),
+}));
+
+// The shared wall first, then the subject: the wall's own jest.mock calls must be registered
+// before anything it mocks is loaded.
+import { makeImportHarness } from './importHandlers.testUtils';
+import { orgGuard } from '@/features/authentication/services/projectOrgGuard';
+import { resolveDataInstallerAccess } from '@/features/data-installer/handlers/dataInstallerHandlers';
+import { storeChangesHandlers } from '@/features/data-installer/handlers/storeChangesHandlers';
+import { DataInstallerClient } from '@/features/data-installer/services/dataInstallerClient';
+import { DatapackStoreWriter } from '@/features/data-installer/services/datapackStoreWriter';
+import { writePackToStore } from '@/features/data-installer/services/datapackTransfer';
+import type { DatapackFile } from '@/features/data-installer/services/datapackZip';
+import { addedSinceInstall } from '@/features/data-installer/services/demoBuilderEngine/demoAdditions';
+import { saveStoreChanges } from '@/features/data-installer/services/demoBuilderEngine/saveStore';
+import { StoreChangesError } from '@/features/data-installer/services/demoBuilderEngine/storeAccess';
+import { previewChanges } from '@/features/data-installer/services/demoBuilderEngine/storeChanges';
+import { verifyPackInstall } from '@/features/data-installer/services/demoBuilderEngine/verifyInstall';
+import type { Project } from '@/types/base';
+import { ErrorCode } from '@/types/errorCodes';
+import type { OperationProgressPayload } from '@/types/webviewPayloads';
+import { SAVE_WRITING } from '../../../helpers/operationRowFixtures';
+
+const mockedGuard = orgGuard as jest.MockedFunction<typeof orgGuard>;
+const mockedAccess = resolveDataInstallerAccess as jest.MockedFunction<typeof resolveDataInstallerAccess>;
+const mockedPreview = previewChanges as jest.MockedFunction<typeof previewChanges>;
+const mockedAdded = addedSinceInstall as jest.MockedFunction<typeof addedSinceInstall>;
+const mockedVerify = verifyPackInstall as jest.MockedFunction<typeof verifyPackInstall>;
+const mockedSave = saveStoreChanges as jest.MockedFunction<typeof saveStoreChanges>;
+const mockedWrite = writePackToStore as jest.MockedFunction<typeof writePackToStore>;
+const MockedWriter = DatapackStoreWriter as jest.MockedClass<typeof DatapackStoreWriter>;
+
+const INSTALLER = 'https://example-namespace.adobeioruntime.net/api/v1/web/data-installer-api';
+const LIBRARY = 'https://example-namespace.adobeioruntime.net/api/v1/web/datapack-store';
+
+/** An ACCS project that chose a website and store view, shaped like a persisted one. */
+const PROJECT: Partial<Project> = {
+    name: 'acme',
+    path: '/nonexistent/projects/acme',
+    componentSelections: { backend: 'adobe-commerce-accs' },
+    componentConfigs: { 'adobe-commerce-accs': { ACCS_WEBSITE_CODE: 'acme', ACCS_STORE_VIEW_CODE: 'acme_en' } },
+    datapack: { name: 'bodea', version: 'main' },
+};
+
+const ID = { datapackName: 'bodea', version: 'main' };
+
+function harness() {
+    const { context } = makeImportHarness(PROJECT);
+    return context;
+}
+
+beforeEach(() => {
+    jest.clearAllMocks();
+    mockedGuard.mockResolvedValue(undefined);
+    mockedAccess.mockImplementation(async (_context, store = 'installer') => ({
+        ok: true,
+        baseUrl: store === 'library' ? LIBRARY : INSTALLER,
+        getToken: async () => 'tok',
+        orgCode: 'ORG@AdobeOrg',
+        // A real read client: these cases never reach it, since the service is mocked.
+        client: new DataInstallerClient({ baseUrl: store === 'library' ? LIBRARY : INSTALLER, getToken: async () => 'tok' }),
+    }));
+    // The library's two reads a Save makes: whose the pack is, and what it is called.
+    jest.spyOn(DataInstallerClient.prototype, 'findDatapacks').mockResolvedValue({ items: [], count: 0 });
+    jest.spyOn(DataInstallerClient.prototype, 'getDatapackDetail').mockResolvedValue({
+        id: { name: 'bodea', version: 'main' },
+        displayName: 'Bodea',
+        shared: true,
+        dataTypes: [],
+        art: {},
+    });
+});
+
+describe('preview-datapack-changes', () => {
+    it('asks the service about this project\'s store, at the target it chose, for the pack named', async () => {
+        mockedPreview.mockResolvedValue({ installed: true, kinds: [], kept: 'Kept 1 item changed in the Admin.' });
+
+        const result = await storeChangesHandlers['preview-datapack-changes'](harness(), { ...ID, source: 'library', dataTypes: ['products'] });
+
+        expect(mockedPreview).toHaveBeenCalledWith(
+            expect.objectContaining({ projectPath: '/nonexistent/projects/acme', target: { websiteCode: 'acme', storeCode: 'acme_en' } }),
+            { name: 'bodea', version: 'main' },
+            'library',
+            ['products'],
+        );
+        expect(result).toEqual({
+            success: true,
+            data: { datapackName: 'bodea', version: 'main', installed: true, kinds: [], kept: 'Kept 1 item changed in the Admin.' },
+        });
+    });
+
+    // step-07 E1 (P4-Q3): asked for, what was added by hand since the install, from the same store.
+    it('answers what was added by hand since the install, by type, when asked, read from the store named', async () => {
+        mockedPreview.mockResolvedValue({ installed: true, kinds: [] });
+        mockedAdded.mockResolvedValue([{ kind: 'products', count: 2, names: ['Hand Tee', 'Hand Cap'] }]);
+
+        const result = await storeChangesHandlers['preview-datapack-changes'](harness(), { ...ID, source: 'library', added: true });
+
+        expect(mockedAdded).toHaveBeenCalledWith(
+            expect.objectContaining({ projectPath: '/nonexistent/projects/acme' }),
+            { name: 'bodea', version: 'main' },
+            'library',
+        );
+        expect(result).toMatchObject({ success: true, data: { added: [{ kind: 'products', count: 2, names: ['Hand Tee', 'Hand Cap'] }] } });
+    });
+
+    // Review 2026-11-14: "N added" must match what the save takes, so with no store named it reads the
+    // installed version where the save does: the store the project recorded, else library first.
+    it("counts what was added against the SC's own library datapack when no store is named", async () => {
+        mockedPreview.mockResolvedValue({ installed: true, kinds: [] });
+        mockedAdded.mockResolvedValue([]);
+        const { context } = makeImportHarness({ ...PROJECT, datapack: { name: 'bodea', version: 'main', store: 'library' } });
+
+        await storeChangesHandlers['preview-datapack-changes'](context, { ...ID, added: true });
+
+        expect(mockedAdded.mock.calls[0][2]).toBe('library');
+    });
+
+    it('leaves the store unnamed, so the save\'s own rule reads the library first, when the project records none', async () => {
+        mockedPreview.mockResolvedValue({ installed: true, kinds: [] });
+        mockedAdded.mockResolvedValue([]);
+
+        await storeChangesHandlers['preview-datapack-changes'](harness(), { ...ID, added: true });
+
+        expect(mockedAdded.mock.calls[0][2]).toBeUndefined();
+    });
+
+    it('CONTROL: reads nothing more, and answers no added, when not asked', async () => {
+        mockedPreview.mockResolvedValue({ installed: true, kinds: [] });
+
+        const result = await storeChangesHandlers['preview-datapack-changes'](harness(), ID);
+
+        expect(mockedAdded).not.toHaveBeenCalled();
+        expect(result.data).not.toHaveProperty('added');
+    });
+
+    it('refuses before reading anything when the sign-in is in another org than the store', async () => {
+        mockedGuard.mockResolvedValue({ error: 'Use "Switch IMS Org" to continue.' });
+
+        const result = await storeChangesHandlers['preview-datapack-changes'](harness(), ID);
+
+        expect(result).toMatchObject({ success: false, code: ErrorCode.ORG_MISMATCH });
+        expect(mockedPreview).not.toHaveBeenCalled();
+    });
+
+    it('refuses a store that is neither the Data Installer nor the library', async () => {
+        const result = await storeChangesHandlers['preview-datapack-changes'](harness(), { ...ID, source: 'elsewhere' });
+
+        expect(result.success).toBe(false);
+        expect(mockedPreview).not.toHaveBeenCalled();
+    });
+});
+
+describe('verify-datapack-install', () => {
+    const none = { count: 0, examples: [] };
+    const CLEAN = {
+        installed: true,
+        verdict: 'matches' as const,
+        checked: 3,
+        compared: { values: 6, prices: 3, configurables: 1 },
+        missing: none,
+        configurablesWithoutOptions: none,
+        configurablesDiffer: none,
+        valuesDiffer: none,
+        pricesDiffer: none,
+    };
+
+    it("checks this project's store, at the target it chose, against the pack from the store named", async () => {
+        mockedVerify.mockResolvedValue(CLEAN);
+
+        const result = await storeChangesHandlers['verify-datapack-install'](harness(), { ...ID, source: 'library' });
+
+        expect(mockedVerify).toHaveBeenCalledWith(
+            expect.objectContaining({ projectPath: '/nonexistent/projects/acme', target: { websiteCode: 'acme', storeCode: 'acme_en' } }),
+            { name: 'bodea', version: 'main' },
+            'library',
+        );
+        expect(result).toEqual({ success: true, data: { datapackName: 'bodea', version: 'main', ...CLEAN } });
+    });
+
+    it('reads the pack from the Data Installer when no store is named', async () => {
+        mockedVerify.mockResolvedValue(CLEAN);
+
+        await storeChangesHandlers['verify-datapack-install'](harness(), ID);
+
+        expect(mockedVerify).toHaveBeenCalledWith(expect.anything(), { name: 'bodea', version: 'main' }, 'installer');
+    });
+
+    it('refuses before reading anything when the sign-in is in another org than the store', async () => {
+        mockedGuard.mockResolvedValue({ error: 'Use "Switch IMS Org" to continue.' });
+
+        const result = await storeChangesHandlers['verify-datapack-install'](harness(), ID);
+
+        expect(result).toMatchObject({ success: false, code: ErrorCode.ORG_MISMATCH });
+        expect(mockedVerify).not.toHaveBeenCalled();
+    });
+
+    it('answers what stopped it in words, not a thrown error', async () => {
+        mockedVerify.mockRejectedValue(new StoreChangesError('Choose the website and store view to install into first.'));
+
+        const result = await storeChangesHandlers['verify-datapack-install'](harness(), ID);
+
+        expect(result).toMatchObject({ success: false, error: expect.stringContaining('Choose the website and store view') });
+    });
+});
+
+describe('save-store-changes-to-pack', () => {
+    const NEW_NAME = /^my-bodea-[0-9a-f]{6}$/u;
+    const SAVE_AS = { displayName: 'My Bodea' };
+    const VERSION = /^\d{8}-\d{6}$/u;
+    const SAVED = {
+        saved: { name: 'acme-1a2b3c', version: '20261029-183000' },
+        counts: { products: 2 },
+        readFrom: 'installer' as const,
+        sentence: 'Saved to the acme pack. Bodea is unchanged.',
+        details: [],
+        unnamed: [],
+        leftOut: [],
+    };
+
+    it('needs confirm, and asks nothing of the store without it', async () => {
+        const result = await storeChangesHandlers['save-store-changes-to-pack'](harness(), ID);
+
+        expect(result).toMatchObject({ success: false, code: ErrorCode.INVALID_OPERATION });
+        expect(mockedSave).not.toHaveBeenCalled();
+    });
+
+    it('writes the new version into the LIBRARY, never updating one that is there', async () => {
+        mockedSave.mockResolvedValue(SAVED);
+        mockedWrite.mockResolvedValue({ pack: 'created', stored: ['products'], failed: [] });
+
+        await storeChangesHandlers['save-store-changes-to-pack'](harness(), { ...ID, saveAs: SAVE_AS, confirm: true });
+
+        const [deps, target, write] = mockedSave.mock.calls[0];
+        expect(deps).toMatchObject({ projectPath: '/nonexistent/projects/acme', target: { websiteCode: 'acme', storeCode: 'acme_en' } });
+        // No store named: the service reads the installed version from the library, then the Data
+        // Installer. Save As writes a new pack under the name typed, its library name generated.
+        expect(target).toEqual({
+            pack: { name: 'bodea', version: 'main' },
+            saveAs: { id: { name: expect.stringMatching(NEW_NAME), version: expect.stringMatching(VERSION) }, displayName: 'My Bodea' },
+            picks: {},
+        });
+        const file: DatapackFile = { id: SAVED.saved, displayName: 'Bodea', items: [] };
+        await write(file);
+        expect(MockedWriter).toHaveBeenCalledWith(expect.objectContaining({ baseUrl: LIBRARY, orgCode: 'ORG@AdobeOrg' }));
+        // No `update`: the save is always a new version. `shared` follows the pack (Phase 2).
+        expect(mockedWrite).toHaveBeenCalledWith(MockedWriter.mock.instances[0], file, { shared: false });
+    });
+
+    it('passes on which store holds the installed version, when the caller names one', async () => {
+        mockedSave.mockResolvedValue(SAVED);
+
+        await storeChangesHandlers['save-store-changes-to-pack'](harness(), { ...ID, source: 'library', saveAs: SAVE_AS, confirm: true });
+
+        expect(mockedSave.mock.calls[0][1]).toMatchObject({ pack: { name: 'bodea', version: 'main' }, source: 'library' });
+    });
+
+    it("records the new pack as the project's, made from the one installed, and answers the one sentence", async () => {
+        mockedSave.mockImplementation(async (_deps, target) => ({ ...SAVED, saved: target.saveAs.id }));
+        const context = harness();
+
+        const result = await storeChangesHandlers['save-store-changes-to-pack'](context, { ...ID, saveAs: SAVE_AS, confirm: true });
+
+        const { saveAs } = mockedSave.mock.calls[0][1];
+        const saved = (context.stateManager.saveProject as jest.Mock).mock.calls[0][0] as Project;
+        expect(saved.datapack).toEqual({
+            ...saveAs.id,
+            store: 'library',
+            // The store the rows were actually read from.
+            origin: { name: 'bodea', version: 'main', store: 'installer' },
+        });
+        expect(result).toEqual({
+            success: true,
+            // A clean save ends small, with no rows (review, 2026-11-10); the agent reads the whole
+            // sentence in `data.message`. The window says the demo now uses the new pack (owner,
+            // 2026-11-09).
+            note: 'Saved as My Bodea. acme now uses it.',
+            data: {
+                datapackName: saveAs.id.name,
+                version: saveAs.id.version,
+                displayName: 'My Bodea',
+                previous: { name: 'bodea', version: 'main' },
+                counts: { products: 2 },
+                message: SAVED.sentence,
+                unnamed: [],
+                leftOut: [],
+            },
+        });
+    });
+
+    // Walk F95: a save in the background ended on whichever project was open, naming the wrong pack there.
+    it('records the new pack on the project the save started from, leaving a project opened meanwhile alone', async () => {
+        const context = harness();
+        const other: Partial<Project> = { ...PROJECT, name: 'other-demo', path: '/nonexistent/projects/other', datapack: { name: 'citisignal', version: 'main' } };
+        mockedSave.mockImplementation(async (_deps, target) => {
+            (context.stateManager.getCurrentProject as jest.Mock).mockResolvedValue(other);
+            return { ...SAVED, saved: target.saveAs.id };
+        });
+
+        await storeChangesHandlers['save-store-changes-to-pack'](context, { ...ID, saveAs: SAVE_AS, confirm: true });
+
+        const { saveAs } = mockedSave.mock.calls[0][1];
+        expect(context.stateManager.saveProject).not.toHaveBeenCalled();
+        const written = (context.stateManager.saveProjectConfigOnly as jest.Mock).mock.calls[0][0] as Project;
+        expect(written.path).toBe(PROJECT.path);
+        expect(written.datapack).toMatchObject({ name: saveAs.id.name, version: saveAs.id.version });
+        expect(other.datapack).toEqual({ name: 'citisignal', version: 'main' });
+    });
+
+    it("saves into the project's pack when it is the SC's own, keeping the pack it was first made from", async () => {
+        const own = { name: 'my-bodea-1a2b3c', version: '20261028-090000', store: 'library' as const, origin: { name: 'bodea', version: 'main' } };
+        const { context } = makeImportHarness({ ...PROJECT, datapack: own });
+        jest.spyOn(DataInstallerClient.prototype, 'findDatapacks').mockResolvedValue({
+            items: [{ id: { name: own.name, version: own.version }, displayName: 'My Bodea', shared: false, dataTypes: [], art: {}, mine: true }],
+            count: 1,
+        });
+        mockedSave.mockImplementation(async (_deps, target) => ({ ...SAVED, saved: target.saveAs.id, readFrom: 'library' }));
+
+        await storeChangesHandlers['save-store-changes-to-pack'](context, { datapackName: own.name, version: own.version, confirm: true });
+
+        expect(mockedSave.mock.calls[0][1].saveAs).toEqual({ id: { name: 'my-bodea-1a2b3c', version: expect.stringMatching(VERSION) }, displayName: 'My Bodea' });
+        const saved = (context.stateManager.saveProject as jest.Mock).mock.calls[0][0] as Project;
+        expect(saved.datapack?.origin).toEqual({ name: 'bodea', version: 'main' });
+    });
+
+    // J3-1 (owner, 2026-11-12): a save into the SC's own pack ends on "My Bodea Updated" (owner walk, 2026-11-16), wherever its
+    // window shows (an agent's save opens it too), with no line repeating it and no version named.
+    it("ends a save into the SC's own pack on where it went, with no line under it", async () => {
+        const own = { name: 'my-bodea-1a2b3c', version: '20261028-090000', store: 'library' as const };
+        const { context } = makeImportHarness({ ...PROJECT, datapack: own });
+        jest.spyOn(DataInstallerClient.prototype, 'findDatapacks').mockResolvedValue({
+            items: [{ id: { name: own.name, version: own.version }, displayName: 'My Bodea', shared: false, dataTypes: [], art: {}, mine: true }],
+            count: 1,
+        });
+        mockedSave.mockImplementation(async (_deps, target) => ({ ...SAVED, saved: target.saveAs.id, readFrom: 'library' }));
+
+        const result = await storeChangesHandlers['save-store-changes-to-pack'](context, { datapackName: own.name, version: own.version, confirm: true });
+
+        expect(result).toMatchObject({ success: true, title: 'My Bodea Updated' });
+        expect(result).not.toHaveProperty('note');
+    });
+
+    const FILE_WRITTEN: DatapackFile = { id: { name: 'x', version: '1' }, displayName: 'X', items: [] };
+
+    // Phase 2, step-02 slice 1: trimming old saves would otherwise delete the only shared versions,
+    // and colleagues would lose the pack. A save into a shared pack is created shared.
+    it.each([
+        [true, 'a shared pack stays shared'],
+        [false, 'a private pack stays private'],
+    ])('creates the new save shared=%s when it saves into the SC\'s own pack (%s)', async (shared) => {
+        const own = { name: 'my-bodea-1a2b3c', version: '20261028-090000', store: 'library' as const };
+        const { context } = makeImportHarness({ ...PROJECT, datapack: own });
+        jest.spyOn(DataInstallerClient.prototype, 'findDatapacks').mockResolvedValue({
+            items: [{ id: { name: own.name, version: own.version }, displayName: 'My Bodea', shared, dataTypes: [], art: {}, mine: true }],
+            count: 1,
+        });
+        mockedSave.mockImplementation(async (_deps, target, write) => {
+            await write(FILE_WRITTEN);
+            return { ...SAVED, saved: target.saveAs.id, readFrom: 'library' };
+        });
+
+        await storeChangesHandlers['save-store-changes-to-pack'](context, { datapackName: own.name, version: own.version, confirm: true });
+
+        expect(mockedWrite).toHaveBeenCalledWith(expect.anything(), FILE_WRITTEN, { shared });
+    });
+
+    it('creates a Save As pack private, whatever the pack it started from', async () => {
+        mockedSave.mockImplementation(async (_deps, target, write) => {
+            await write(FILE_WRITTEN);
+            return { ...SAVED, saved: target.saveAs.id };
+        });
+        const context = harness();
+
+        await storeChangesHandlers['save-store-changes-to-pack'](context, { ...ID, saveAs: SAVE_AS, confirm: true });
+
+        expect(mockedWrite).toHaveBeenCalledWith(expect.anything(), FILE_WRITTEN, { shared: false });
+    });
+
+    // Phase 2, step-02 slice 4: a save keeps the newest two saves and deletes older ones, never one
+    // a project uses and never the first save, the original (step-07 U1); a trim that fails never
+    // fails the save.
+    describe('keeping two saves and the original', () => {
+        const OWN = 'my-bodea-1a2b3c';
+        const mineRow = (version: string) => ({ id: { name: OWN, version }, displayName: 'My Bodea', shared: false, dataTypes: [], art: {}, mine: true });
+        const deleted = () => MockedWriter.mock.instances.flatMap((w) => jest.mocked(w.deleteDatapack).mock.calls.map(([id]) => id.version));
+
+        function saveInto(versions: string[], usedElsewhere?: string) {
+            const own = { name: OWN, version: versions[0], store: 'library' as const };
+            const { context } = makeImportHarness({ ...PROJECT, datapack: own });
+            if (usedElsewhere) {
+                (context.stateManager.getAllProjects as jest.Mock).mockResolvedValue([{ path: '/p/other', name: 'other' }]);
+                (context.stateManager.loadProjectFromPath as jest.Mock).mockResolvedValue({ ...PROJECT, path: '/p/other', name: 'other', datapack: { name: OWN, version: usedElsewhere, store: 'library' } });
+            }
+            jest.spyOn(DataInstallerClient.prototype, 'findDatapacks').mockResolvedValue({ items: versions.map(mineRow), count: versions.length });
+            mockedSave.mockImplementation(async (_deps, target) => ({ ...SAVED, saved: target.saveAs.id, readFrom: 'library' }));
+            return { context, own };
+        }
+
+        it('deletes every save older than the new one and the one before it, bar the original', async () => {
+            const { context, own } = saveInto(['20261110-091500', '20261108-140200', '20261105-103000', '20261101-090000']);
+            MockedWriter.prototype.deleteDatapack.mockResolvedValue('deleted');
+
+            const result = await storeChangesHandlers['save-store-changes-to-pack'](context, { datapackName: own.name, version: own.version, confirm: true });
+
+            expect(result).toMatchObject({ success: true });
+            expect(deleted().sort()).toEqual(['20261105-103000', '20261108-140200']);
+        });
+
+        it('keeps an old save another project on this machine uses', async () => {
+            const { context, own } = saveInto(['20261110-091500', '20261108-140200', '20261105-103000', '20261101-090000'], '20261105-103000');
+            MockedWriter.prototype.deleteDatapack.mockResolvedValue('deleted');
+
+            await storeChangesHandlers['save-store-changes-to-pack'](context, { datapackName: own.name, version: own.version, confirm: true });
+
+            expect(deleted()).toEqual(['20261108-140200']);
+        });
+
+        it('still answers saved when the old saves cannot be deleted', async () => {
+            const { context, own } = saveInto(['20261110-091500', '20261108-140200', '20261105-103000']);
+            MockedWriter.prototype.deleteDatapack.mockRejectedValue(new Error('library down'));
+
+            const result = await storeChangesHandlers['save-store-changes-to-pack'](context, { datapackName: own.name, version: own.version, confirm: true });
+
+            expect(result).toMatchObject({ success: true });
+        });
+
+        it('CONTROL: a Save As deletes nothing', async () => {
+            mockedSave.mockImplementation(async (_deps, target) => ({ ...SAVED, saved: target.saveAs.id }));
+
+            await storeChangesHandlers['save-store-changes-to-pack'](harness(), { ...ID, saveAs: SAVE_AS, confirm: true });
+
+            expect(deleted()).toStrictEqual([]);
+        });
+    });
+
+    // Review, 2026-11-10: "No Changes to Save" is the whole result; the agent keeps the sentence.
+    it('ends a save with nothing changed on its title alone, the sentence for the agent only', async () => {
+        mockedSave.mockImplementation(async (_deps, target) => ({ ...SAVED, saved: target.saveAs.id, sentence: 'Nothing changed.', unchanged: true as const }));
+        const context = harness();
+
+        const result = await storeChangesHandlers['save-store-changes-to-pack'](context, { ...ID, saveAs: SAVE_AS, confirm: true });
+
+        expect(result).toMatchObject({ success: true, title: 'No Changes to Save', data: { unchanged: true, message: 'Nothing changed.' } });
+        expect(result).not.toHaveProperty('note');
+        expect(result).not.toHaveProperty('rows');
+    });
+
+    it('tells the screen\'s progress window each stage, and ends it on the one sentence', async () => {
+        mockedSave.mockImplementation(async (_deps, _id, _write, report) => {
+            report?.('Reading the store');
+            return SAVED;
+        });
+        const context = harness();
+
+        await storeChangesHandlers['save-store-changes-to-pack'](context, { ...ID, saveAs: SAVE_AS, confirm: true, progress: 'modal' });
+
+        expect(context.sendMessage).toHaveBeenCalledWith('operationProgress', expect.objectContaining({ id: 'datapack-save', state: 'running', stage: 'Reading the store' }));
+        expect(context.sendMessage).toHaveBeenCalledWith(
+            'operationProgress',
+            expect.objectContaining({ id: 'datapack-save', state: 'succeeded' }),
+        );
+        const end = jest.mocked(context.sendMessage).mock.calls.map((call) => call[1] as { state?: string; rows?: unknown }).find((m) => m.state === 'succeeded');
+        expect(end?.rows).toBeUndefined();
+    });
+
+    // Walk F91, live 2026-11-09: a wrapper around the reporter passed on only the stage and step,
+    // so the rows never left the extension and the window kept its one spinner.
+    it("hands the save's rows to its window while it runs", async () => {
+        const reading = [{ kind: 'products', label: 'Products', status: 'checking' as const, line: 'Reading' }];
+        mockedSave.mockImplementation(async (_deps, _id, _write, report) => {
+            report?.('Reading from Commerce', '0 of 1 data type', undefined, reading);
+            return SAVED;
+        });
+        const context = harness();
+
+        await storeChangesHandlers['save-store-changes-to-pack'](context, { ...ID, saveAs: SAVE_AS, confirm: true, progress: 'modal' });
+
+        expect(context.sendMessage).toHaveBeenCalledWith('operationProgress', expect.objectContaining({ id: 'datapack-save', state: 'running', rows: reading }));
+    });
+
+    // Phase 7b (decisions.md): the save is two steps "so a failed write shows on its own row". A save
+    // that stops ends on the rows it stopped on, the reason the sentence under them.
+    it('ends a failed write on the save row, the reason as the sentence under the rows', async () => {
+        mockedSave.mockImplementation(async (_deps, _id, _write, report) => {
+            report?.('Saving to My Datapacks', 'Categories', undefined, SAVE_WRITING);
+            throw new StoreChangesError('Some of My Luma could not be saved to My Datapacks (categories: too large).');
+        });
+        const context = harness();
+
+        await storeChangesHandlers['save-store-changes-to-pack'](context, { ...ID, saveAs: SAVE_AS, confirm: true, progress: 'modal' });
+
+        const end = jest.mocked(context.sendMessage).mock.calls.map((call) => call[1] as OperationProgressPayload).find((m) => m.state === 'failed');
+        expect(end?.error).toBe('Some of My Luma could not be saved to My Datapacks (categories: too large).');
+        expect(end?.rows?.map((row) => [row.label, row.status, row.line])).toStrictEqual([
+            ['Export from Commerce', 'success', 'Exported'],
+            ['Save My Luma', 'error', 'Stopped'],
+        ]);
+    });
+
+    it('CONTROL: an agent\'s save that stops answers no rows', async () => {
+        mockedSave.mockImplementation(async (_deps, _id, _write, report) => {
+            report?.('Saving to My Datapacks', 'Categories', undefined, SAVE_WRITING);
+            throw new StoreChangesError('Some of My Luma could not be saved.');
+        });
+
+        const result = await storeChangesHandlers['save-store-changes-to-pack'](harness(), { ...ID, saveAs: SAVE_AS, confirm: true });
+
+        expect(result).toMatchObject({ success: false, error: 'Some of My Luma could not be saved.' });
+        expect(result).not.toHaveProperty('rows');
+    });
+
+    it('answers what stopped it in the SC\'s words, and records nothing on the project', async () => {
+        mockedSave.mockRejectedValue(new StoreChangesError('Demo Builder did not install bodea@main in this project, so there are no store changes of it to save.'));
+        const context = harness();
+
+        const result = await storeChangesHandlers['save-store-changes-to-pack'](context, { ...ID, saveAs: SAVE_AS, confirm: true });
+
+        expect(result).toMatchObject({ success: false, error: expect.stringMatching(/did not install bodea@main/) });
+        expect(context.stateManager.saveProject).not.toHaveBeenCalled();
+    });
+
+    // Owner, 2026-11-08 (F80): every demo is made from a team pack, so not even its owner saves into it.
+    it('writes nothing into a team pack, even its owner\'s, and asks for a name', async () => {
+        const team = { name: 'luma', version: 'eds-compatible', store: 'library' as const };
+        const { context } = makeImportHarness({ ...PROJECT, datapack: team });
+        jest.spyOn(DataInstallerClient.prototype, 'findDatapacks').mockResolvedValue({
+            items: [{ id: { name: team.name, version: team.version }, displayName: 'Luma', shared: false, dataTypes: [], art: {}, mine: true, team: true }],
+            count: 1,
+        });
+
+        const result = await storeChangesHandlers['save-store-changes-to-pack'](context, { datapackName: team.name, version: team.version, confirm: true });
+
+        expect(result).toMatchObject({ success: false, code: ErrorCode.INVALID_OPERATION, data: { needsName: true } });
+        expect(mockedSave).not.toHaveBeenCalled();
+    });
+
+    it("writes nothing into a pack that is not the SC's, and asks for a name", async () => {
+        const context = harness();
+
+        const result = await storeChangesHandlers['save-store-changes-to-pack'](context, { ...ID, confirm: true });
+
+        expect(result).toMatchObject({ success: false, code: ErrorCode.INVALID_OPERATION, data: { needsName: true } });
+        expect(result.data).not.toHaveProperty('suggestedName');
+        expect(mockedSave).not.toHaveBeenCalled();
+        expect(context.stateManager.saveProject).not.toHaveBeenCalled();
+    });
+
+    it('takes a blank name as no name', async () => {
+        const result = await storeChangesHandlers['save-store-changes-to-pack'](harness(), { ...ID, saveAs: { displayName: '   ' }, confirm: true });
+
+        expect(result).toMatchObject({ success: false, data: { needsName: true } });
+        expect(mockedSave).not.toHaveBeenCalled();
+    });
+});

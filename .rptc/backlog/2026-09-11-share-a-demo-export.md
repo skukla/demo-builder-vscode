@@ -37,7 +37,7 @@ Reversal: "Stop sharing" removes the file (again through the ADR-013 seam, only 
 file is ours). The project is unchanged either way.
 
 Agent surface in the same change: an action tool that does 1–3 and returns the link, so an
-agent asked "share this demo with Jen" can.
+agent asked "share this demo with Robin" can.
 
 ## Naming trap
 

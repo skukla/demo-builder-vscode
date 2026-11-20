@@ -14,7 +14,7 @@
 
 import type { MutableRefObject } from 'react';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import { preparesStoreOnAdd } from '@/features/app-builder/services/storePreparation/fixReach';
+import { preparesStoreOnAdd } from '@/features/app-builder/services/storePreparation/setupReach';
 import { copyForAdd } from '@/features/components/services/appBuilderComponentLinks';
 import type { UseProjectBuilderReturn } from '@/features/project-creation/ui/steps/useProjectBuilder';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
@@ -52,7 +52,7 @@ interface LiveAddRefs {
 /**
  * The destination an add carries: the one its own steps chose, only when the project
  * had none. Without it the add ran with no Adobe project and its workspace was made in
- * the project cached from earlier (Justrite's, 2026-10-15).
+ * the project cached from earlier (Tailspin's, 2026-10-15).
  */
 function chosenDestination(
     chosen: { project?: DestinationRef; workspace?: DestinationRef },

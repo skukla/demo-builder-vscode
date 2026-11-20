@@ -21,7 +21,7 @@ import {
 
 const nav = (list: string, extra = ''): string =>
     '<body><header></header><main>' +
-    '<div><p><a href="/">Justrite</a></p></div>' +
+    '<div><p><a href="/">Tailspin</a></p></div>' +
     `<div>${list}</div>` +
     '<div><p>Search</p></div>' +
     extra +

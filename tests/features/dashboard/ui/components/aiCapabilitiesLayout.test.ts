@@ -119,8 +119,10 @@ describe('typography matches the rest of the app', () => {
         expect(px(ruleFor('.ai-section-heading'), 'font-size')).toBeGreaterThanOrEqual(16);
     });
 
-    it('underlines the section heading, as the house header does', () => {
-        expect(ruleFor('.ai-section-heading')).toMatch(/border-bottom:\s*1px solid/);
+    // One rule per dialog, under the title (dialog design rules, owner 2026-11-02). It carried the
+    // house section header's hairline until then.
+    it('draws no rule under the section heading', () => {
+        expect(ruleFor('.ai-section-heading')).not.toMatch(/border/);
     });
 });
 

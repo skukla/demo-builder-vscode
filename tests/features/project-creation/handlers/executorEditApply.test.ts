@@ -19,7 +19,7 @@ jest.mock('@/features/project-creation/handlers/executorEditDestination', () => 
 }));
 jest.mock('@/features/project-creation/handlers/executorEditPackage', () => ({
     planPackageChange: jest.fn().mockResolvedValue({ resets: false }),
-    applyPackageChange: jest.fn().mockResolvedValue(undefined),
+    applyPackageChange: jest.fn().mockResolvedValue({ warnings: [], notes: [] }),
 }));
 jest.mock('@/features/project-creation/handlers/executorEditDatapack', () => ({
     planDatapackChange: jest.fn().mockResolvedValue({ changes: false, removeOld: false }),
@@ -44,6 +44,7 @@ import {
     applyDestinationChange,
     planDestinationChange,
 } from '@/features/project-creation/handlers/executorEditDestination';
+import { RUN_ONCE, type StepRunner } from '@/features/project-creation/handlers/creationPause';
 import { finishEditWithoutRebuild } from '@/features/project-creation/handlers/executorEditApply';
 import {
     applyPackageChange,
@@ -55,12 +56,12 @@ import { createMockHandlerContext } from '../../../helpers/handlerContextTestHel
 import { createMockProject } from '../../../helpers/projectFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
-const EDIT_PATH = '/p/justrite';
+const EDIT_PATH = '/p/tailspin';
 
 /** A project with the starter kit deployed, as Edit opens it. */
 function savedProject(): Project {
     return createMockProject({
-        name: 'justrite',
+        name: 'tailspin',
         path: EDIT_PATH,
         componentSelections: { appBuilder: ['starter-kit'], dependencies: [] },
         appBuilderComponents: {
@@ -82,16 +83,16 @@ function setup(project: Project = savedProject()) {
     const context = createMockHandlerContext({ stateManager });
     const progress = jest.fn();
     const confirm = jest.fn().mockResolvedValue(true);
-    const removeOldDatapack = jest.fn().mockResolvedValue(false);
+    const switchDatapack = jest.fn().mockResolvedValue(true);
     const leaveAdobeProject = jest.fn().mockResolvedValue(true);
     const resetStorefront = jest.fn().mockResolvedValue(true);
-    const ask = { removeIntegrations: confirm, leaveAdobeProject, removeOldDatapack, resetStorefront };
+    const ask = { removeIntegrations: confirm, leaveAdobeProject, switchDatapack, resetStorefront };
     return { context, stateManager, progress, confirm, ask, project };
 }
 
 function config(overrides: Partial<ProjectCreationConfig> = {}): ProjectCreationConfig {
     return {
-        projectName: 'justrite',
+        projectName: 'tailspin',
         editProjectPath: EDIT_PATH,
         selectedAppBuilderComponents: ['starter-kit'],
         editChanges: [],
@@ -120,6 +121,25 @@ beforeEach(() => {
 });
 
 describe('finishEditWithoutRebuild — which Edits it finishes', () => {
+    it('says the steps still left to finish on an unchanged Edit too', async () => {
+        const project = { ...savedProject(), finishSetup: { 'republish-code': { files: ['scripts/a.js'] } } };
+        const { context, progress, ask } = setup(project);
+
+        await finishEditWithoutRebuild(context, config(), progress, ask);
+
+        expect(progress).toHaveBeenLastCalledWith('Project Created', 100, 'No changes to apply', undefined, 1);
+    });
+
+    // PL-101: an Edit whose reset left steps says so on its end screen, as creation does.
+    it('tells the end screen how many Finish Setup steps the Edit left still to do', async () => {
+        const project = { ...savedProject(), finishSetup: { 'republish-code': { files: ['scripts/a.js'] } } };
+        const { context, progress, ask } = setup(project);
+
+        await finishEditWithoutRebuild(context, ADD_ERP, progress, ask);
+
+        expect(progress).toHaveBeenLastCalledWith('Project Created', 100, 'Changes applied', undefined, 1);
+    });
+
     it('saves an unchanged Edit and adds or removes nothing', async () => {
         const { context, stateManager, progress, ask } = setup();
 
@@ -184,6 +204,22 @@ describe('finishEditWithoutRebuild — an integration added', () => {
         );
 
         expect(progress).not.toHaveBeenCalledWith('Project Created', 100, expect.any(String));
+    });
+
+    it('hands a failed add to the step runner, and a skip finishes the Edit without it (F307)', async () => {
+        const { context, stateManager, progress, ask, project } = setup();
+        (addWithSteps as jest.Mock).mockResolvedValueOnce({ success: false, error: 'deploy failed' });
+        const steps: Array<[string, unknown]> = [];
+        // Runs each step once and answers Skip This Step to any failure.
+        const skipping: StepRunner = async (step, attempt) => {
+            steps.push([step, (await attempt())?.reason]);
+        };
+
+        expect(await finishEditWithoutRebuild(context, ADD_ERP, progress, ask, skipping)).toBe(true);
+
+        expect(steps).toStrictEqual([['Deploying integrations', 'deploy failed']]);
+        expect(stateManager.saveProject).toHaveBeenCalledWith(project);
+        expect(progress).toHaveBeenLastCalledWith('Project Created', 100, expect.any(String));
     });
 
     it("fails the Finish with the screen's own refusal, and adds nothing", async () => {
@@ -297,11 +333,29 @@ describe('finishEditWithoutRebuild — the datapack changed', () => {
 
         expect(await finishEditWithoutRebuild(context, NEW_PACK, progress, ask)).toBe(true);
 
-        expect(planDatapackChange).toHaveBeenCalledWith(project, ['datapack'], ask.removeOldDatapack);
-        expect(applyDatapackChange).toHaveBeenCalledWith(context, project, NEW_PACK, plan, progress, false);
+        expect(planDatapackChange).toHaveBeenCalledWith(project, ['datapack'], expect.any(Function), 'bodea');
+        // The question it hands on asks with the remembered pack names, so it names the pack.
+        const asked = (planDatapackChange as jest.Mock).mock.calls[0][2] as (p: unknown, c: unknown) => unknown;
+        void asked(project, undefined);
+        expect(ask.switchDatapack).toHaveBeenCalledWith(project, undefined, context.context.globalState);
+        expect(applyDatapackChange).toHaveBeenCalledWith(context, project, NEW_PACK, plan, progress, false, RUN_ONCE);
         // Nothing of Adobe's is touched for a datapack: no sign-in check, no add.
         expect(runGuards).not.toHaveBeenCalled();
         expect(addWithSteps).not.toHaveBeenCalled();
+        expect(progress).toHaveBeenLastCalledWith('Project Created', 100, expect.any(String));
+    });
+
+    // step-07 D2, owner Q1: only the datapack part stops; the rest of the Edit stands, with its line.
+    it("tells the SC why the datapack was not changed, and finishes the rest of the Edit", async () => {
+        const { context, progress, ask } = setup();
+        const line = "Luma couldn't be uninstalled, so the datapack is still Luma: Commerce refused 2 products.";
+        (planDatapackChange as jest.Mock).mockResolvedValueOnce({ changes: true, removeOld: true });
+        (applyDatapackChange as jest.Mock).mockResolvedValueOnce(line);
+
+        expect(await finishEditWithoutRebuild(context, NEW_PACK, progress, ask)).toBe(true);
+
+        expect(applyPackageChange).toHaveBeenCalled();
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(line);
         expect(progress).toHaveBeenLastCalledWith('Project Created', 100, expect.any(String));
     });
 
@@ -371,13 +425,35 @@ describe('finishEditWithoutRebuild — the package changed on Edge Delivery', ()
         editChanges: ['datapack', 'selectedPackage'],
     });
 
+    // Owner 2026-11-14 (item 3): the reset's caveats reach the SC with the Edit's other warnings;
+    // content kept on purpose is a note, not a warning (owner walk Q6, as the batch reset).
+    it("tells the SC what the storefront reset finished around: warnings warn, notes inform", async () => {
+        const { context, progress, ask } = setup();
+        (planPackageChange as jest.Mock).mockResolvedValueOnce({ resets: true });
+        (applyPackageChange as jest.Mock).mockResolvedValueOnce({
+            warnings: ['The code was not published.'],
+            notes: ["Content kept: the demo's pages can't be reached."],
+        });
+
+        await finishEditWithoutRebuild(context, NEW_PACKAGE, progress, ask);
+
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledWith('The code was not published.');
+        expect(vscode.window.showInformationMessage).toHaveBeenCalledWith("Content kept: the demo's pages can't be reached.");
+    });
+
     it('asks first, then resets last, and tells the datapack step the reset writes the pages', async () => {
         const { context, progress, ask, project } = setup();
         const order: string[] = [];
         (planDatapackChange as jest.Mock).mockResolvedValueOnce({ changes: true, removeOld: false });
         (planPackageChange as jest.Mock).mockResolvedValueOnce({ resets: true });
-        (applyDatapackChange as jest.Mock).mockImplementationOnce(async () => order.push('datapack'));
-        (applyPackageChange as jest.Mock).mockImplementationOnce(async () => order.push('reset'));
+        (applyDatapackChange as jest.Mock).mockImplementationOnce(async () => {
+            order.push('datapack');
+            return undefined;
+        });
+        (applyPackageChange as jest.Mock).mockImplementationOnce(async () => {
+            order.push('reset');
+            return { warnings: [], notes: [] };
+        });
 
         expect(await finishEditWithoutRebuild(context, NEW_PACKAGE, progress, ask)).toBe(true);
 
@@ -389,6 +465,7 @@ describe('finishEditWithoutRebuild — the package changed on Edge Delivery', ()
             { changes: true, removeOld: false },
             progress,
             true,
+            RUN_ONCE,
         );
         expect(applyPackageChange).toHaveBeenCalledWith(context, project, NEW_PACKAGE, { resets: true }, progress);
         expect(order).toStrictEqual(['datapack', 'reset']);

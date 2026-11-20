@@ -14,7 +14,7 @@ import { DaLiveConfigService } from '../../services/daLive/daLiveConfigService';
 import { DaLiveContentOperations } from '../../services/daLive/daLiveContentOperations';
 import { type TokenProvider } from '../../services/daLive/daLiveOrgOperations';
 import { DaLiveAuthError } from '../../services/types';
-import { getEwCanvasBranch } from '../authoringExperience';
+import { getEwCanvasBranch, resolveAuthoringExperience } from '../authoringExperience';
 import { maskEmail } from '@/core/utils/maskEmail';
 import type { AuthoringExperience } from '@/types/base';
 import type { Logger } from '@/types/logger';
@@ -73,7 +73,7 @@ export async function applyDaLiveOrgConfigSettings(
     daLiveOrg: string,
     daLiveSite: string,
     logger: Logger,
-    experience: AuthoringExperience = 'da-live-classic',
+    experience: AuthoringExperience = resolveAuthoringExperience(undefined),
 ): Promise<void> {
     try {
         const edsSettings = vscode.workspace.getConfiguration('demoBuilder.daLive');

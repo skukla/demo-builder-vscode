@@ -12,7 +12,7 @@
  */
 
 
-jest.mock('@/core/state/projectStateSync');
+jest.mock('@/core/state/frontendEnvDrift');
 
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: { getAuthenticationService: jest.fn() },

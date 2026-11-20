@@ -1,0 +1,108 @@
+/**
+ * Choosing what a pack saved from the store holds (owner, 2026-11-02: SCs select from several kinds,
+ * so going in and out of each one was the wrong shape): the kinds on the left, the shown kind's items
+ * on the right (`StoreItemsStage`), in one dialog of one size. Selections stay beside their kind.
+ *
+ * Every row shows at once and stays clickable while the store's counts are read, and a count of none
+ * greys its row out without moving anything. Only none is said: a number could not be trusted, since
+ * a kind's list leaves off what the pack being saved holds, and cart rules and companies are counted
+ * across the whole store (`storeItems.ts`). So a row with a count above none stays clickable until
+ * its list has answered, and is greyed out from then on if nothing was left to select.
+ *
+ * No intro line (decisions Phase 7b, J3-2): the window's title says what it is for. A kind ticked
+ * whole draws its items ticked from its first read (`useStorePicks`).
+ *
+ * @module features/data-installer/ui/components/create-flow/stages/StorePicksStage
+ */
+
+import React from 'react';
+import { CEILING_KINDS, type PickableKind, type StoreItemPage } from '../../../../pickableKinds';
+import { dataTypeLabel } from '../../../dataTypeLabel';
+import { type StorePicksState, isKnownEmpty } from '../useStorePicks';
+import { StoreItemsStage } from './StoreItemsStage';
+import { SelectAllRow } from '@/core/ui/components/selection/SelectAllRow';
+import { cn } from '@/core/ui/utils/classNames';
+
+const NO_PICKS: string[] = [];
+
+const digits = (n: number): string => n.toLocaleString('en-US');
+
+/**
+ * Why a row is greyed out, or how many of how many are selected once its list is read ("48 of 480
+ * selected", the projects list's words, `SelectionCount`), or "All selected" for a kind ticked whole
+ * and unread (step-07 Q3, S3-b), or that its list did not answer, or nothing.
+ */
+function noteOf(kind: PickableKind, page: StoreItemPage | null | undefined, count: number | undefined, picked: number, whole: boolean): string | undefined {
+    if (page === null) return "Couldn't be read";
+    if (isKnownEmpty(page, count)) return 'None available';
+    // Ticked whole and unread: its count, "12 of 12 selected", the same words as a read row (owner walk,
+    // 2026-11-16). A ceiling kind's count says nothing (`CEILING_KINDS`), and "All selected" stands
+    // only where no count came.
+    if (page === undefined) return whole ? wholeNote(kind, count) : undefined;
+    return picked > 0 ? `${digits(picked)} of ${digits(page.items.length)} selected` : undefined;
+}
+
+/** A kind ticked whole, unread: its count of its count, or "All selected" with no count to give. */
+function wholeNote(kind: PickableKind, count: number | undefined): string | undefined {
+    if (CEILING_KINDS.includes(kind)) return undefined;
+    return count === undefined ? 'All selected' : `${digits(count)} of ${digits(count)} selected`;
+}
+
+function KindRow({ kind, store }: { kind: PickableKind; store: StorePicksState }): React.ReactElement {
+    const picked = store.picks[kind]?.length ?? 0;
+    const ticked = picked > 0 || store.whole.has(kind);
+    const shown = kind === store.kind;
+    const note = noteOf(kind, store.reads[kind], store.counts[kind], picked, store.whole.has(kind));
+    return (
+        <li>
+            <button
+                type="button"
+                className={cn('datapack-picks-kind', shown && 'datapack-picks-kind--shown', ticked && 'datapack-picks-kind--picked')}
+                aria-current={shown ? 'true' : undefined}
+                disabled={isKnownEmpty(store.reads[kind], store.counts[kind])}
+                onClick={() => store.open(kind)}
+            >
+                {dataTypeLabel(kind)}
+                {note ? <span className="datapack-picks-note">{note}</span> : null}
+            </button>
+        </li>
+    );
+}
+
+export interface StorePicksStageProps {
+    store: StorePicksState;
+}
+
+export function StorePicksStage({ store }: StorePicksStageProps): React.ReactElement {
+    const { kind } = store;
+    return (
+        <div className="datapack-picks">
+            <ul className="datapack-picks-rail">
+                <li>
+                    <SelectAllRow
+                        everything
+                        all={store.everything.all}
+                        some={store.everything.some}
+                        onToggle={() => store.selectEverything(!store.everything.all)}
+                    />
+                </li>
+                {store.kinds.map((each) => <KindRow key={each} kind={each} store={store} />)}
+            </ul>
+            <div className="datapack-picks-pane">
+                {kind ? (
+                    <StoreItemsStage
+                        key={kind}
+                        kind={kind}
+                        answered={store.reads[kind] ?? undefined}
+                        picked={store.picks[kind] ?? NO_PICKS}
+                        whole={store.whole.has(kind)}
+                        onChange={store.setPicked}
+                        onAnswered={store.answered}
+                    />
+                ) : (
+                    <p className="datapack-export-note">Commerce has nothing to select.</p>
+                )}
+            </div>
+        </div>
+    );
+}

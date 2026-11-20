@@ -34,7 +34,7 @@
     gap: 12px;
     padding: 12px 16px;
     background-color: var(--spectrum-global-color-gray-75);
-    border: 1px solid var(--spectrum-global-color-orange-500);
+    border: 1px solid var(--spectrum-semantic-notice-color-icon);
     border-left-width: 3px;
     border-radius: 8px;
     animation: inline-notice-fade-in var(--spectrum-global-animation-duration-300) ease-out;
@@ -55,15 +55,15 @@
 /* Green for something that finished and worked (2026-10-28), drawn the way info is:
    the border and the icon, all the way round. */
 .inline-notice--success {
-    border-color: var(--spectrum-global-color-green-500);
+    border-color: var(--spectrum-semantic-positive-color-icon);
 }
 
 .inline-notice--success .inline-notice-icon {
-    color: var(--spectrum-global-color-green-600);
+    color: var(--spectrum-semantic-positive-color-icon);
 }
 
 .inline-notice-icon {
-    color: var(--spectrum-global-color-orange-600);
+    color: var(--spectrum-semantic-notice-color-icon);
     flex-shrink: 0;
     align-self: flex-start;
     margin-top: 2px;
@@ -97,11 +97,6 @@
 /* `actionBelow`: the buttons sit under the text, inside the body column. */
 .inline-notice-body > .inline-notice-actions {
     margin-top: 8px;
-}
-
-/* In-flight spinner inside the "Switching…" button — small gap before the label. */
-.inline-notice-spinner {
-    margin-right: 6px;
 }
 
 /* --------------------------------------------------------------------------
@@ -152,9 +147,19 @@
         margin-left var(--spectrum-global-animation-duration-100) ease;
 }
 
+/* The save's wait, beside the greyed name where the pencil was (walk F224): always shown while
+ * saving, unlike the pencil's slot, which needs hover or focus and the disabled input has neither. */
+.inline-rename-saving {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 6px;
+}
+
 .inline-rename:hover .inline-rename-pencil-slot,
 .inline-rename:focus-within .inline-rename-pencil-slot {
-    max-width: 44px;
+    /* Room for the whole quiet button: at 44px its hover box was cut off on the right and the
+       pencil sat off-centre in what was left (walk F225). */
+    max-width: 64px;
     margin-left: 6px;
     opacity: 1;
     pointer-events: auto;
@@ -197,7 +202,7 @@
     flex: 0 1 auto;
     font-size: 12px;
     line-height: 1.3;
-    color: var(--spectrum-global-color-red-600);
+    color: var(--spectrum-semantic-negative-color-text-small);
     overflow-wrap: anywhere;
 }
 

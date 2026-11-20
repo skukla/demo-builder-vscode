@@ -14,7 +14,7 @@ import type { RepositoryRef } from '@/types/projectFile';
 const PAGE = 100;
 /**
  * How far back the first commit is looked for. A colleague's storefront repository has a
- * few dozen commits (kmanns/justrite: 22 on 2026-10-20); one past this answers undefined.
+ * few dozen commits (org-e/tailspin: 22 on 2026-10-20); one past this answers undefined.
  */
 const MAX_PAGES = 10;
 

@@ -8,5 +8,5 @@
   storefront that does not qualify says why in one line.
 - Count-pinned tests and `docs/systems/mcp-server.md` move with them (`mcp-tool-authoring`).
 
-Done when an agent asked "what updates are waiting for JustRite?" names both kinds, and
-the report says why JustRite has no boilerplate row.
+Done when an agent asked "what updates are waiting for Tailspin?" names both kinds, and
+the report says why Tailspin has no boilerplate row.

@@ -29,15 +29,15 @@ import type { SharedDemoRead } from '@/types/webviewRequests';
 import { makeAddedDemo, makeDemoPackage } from '../../../../../helpers/demoPackageFixtures';
 
 export const STARTER = makeDemoPackage({ id: 'starter', name: 'Starter (B2B + B2C)' });
-export const JEN: AddedDemo = makeAddedDemo();
+export const ROBIN: AddedDemo = makeAddedDemo();
 
 export const READ: SharedDemoRead = {
     outcome: 'read',
-    fullName: 'jen/isle5-demo',
+    fullName: 'robin/isle5-demo',
     defaultBranch: 'main',
     isTemplate: false,
     kind: 'eds',
-    contentSource: { org: 'jen', site: 'isle5-demo', indexPath: '/full-index.json' },
+    contentSource: { org: 'robin', site: 'isle5-demo', indexPath: '/full-index.json' },
     contentPublished: { indexFound: true, pageCount: 12 },
     storeCodes: { websiteCode: 'isle5', storeCode: 'isle5_store', storeViewCode: 'isle5_us' },
     b2b: 'on',
@@ -90,6 +90,17 @@ export async function click(name: string | RegExp): Promise<void> {
 /** Type a link and Continue, with the probe answering `answer`. */
 export async function probeWith(answer: unknown): Promise<void> {
     mockRequest.mockResolvedValueOnce(answer);
-    typeLink('https://github.com/jen/isle5-demo');
+    typeLink('https://github.com/robin/isle5-demo');
     await click('Continue');
+}
+
+/** The dialog's title, by its words. */
+export function title(name: string): HTMLElement {
+    return screen.getByRole('heading', { name });
+}
+
+/** Every footer button's name, in order: the buttons follow the body, so read from the end of the dialog. */
+export function footerButtons(): string[] {
+    const footer = screen.getByRole('dialog').querySelector('.modal-footer-actions') as HTMLElement;
+    return Array.from(footer.querySelectorAll('[role="button"]')).map((b) => b.textContent ?? '');
 }

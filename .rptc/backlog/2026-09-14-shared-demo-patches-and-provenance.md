@@ -19,7 +19,7 @@ A saved demo package ("Save as demo package") records nothing about what its sto
 built from, so a project started from it is treated as a colleague's storefront: patched
 files travel frozen, later fixes never arrive, and the repository is never re-pinned. A
 colleague's storefront built from our boilerplate two versions ago takes five of our seven
-load-bearing and universal fixes exactly (live fit test on `sayurihanki/aistore`,
+load-bearing and universal fixes exactly (live fit test on `org-j/aistore`,
 2026-09-14), yet today it only gets a dry check and a caveat. And nobody records which
 boilerplate, at which version, a storefront was built on.
 

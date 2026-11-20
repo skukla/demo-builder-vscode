@@ -28,7 +28,7 @@ import {
     shapeErpRow,
     type ErpCallPayload,
 } from './erpCall';
-import { openInIncognito } from '@/core/utils/browserUtils';
+import { openPrivateBrowser } from '@/core/utils/browserUtils';
 import { validateURL } from '@/core/validation/URLValidator';
 import { catalogEntryFor } from '@/features/app-builder/services/componentEntry';
 import {
@@ -130,8 +130,10 @@ export const handleOpenErpScreen: MessageHandler<ErpCallPayload> = async (
             code: ErrorCode.CONFIG_INVALID,
         };
     }
-    // A private window: the key is in the address, and a private window keeps no history.
-    const privateWindow = await openInIncognito(link);
+    // A private window: the key is in the address, and a private window keeps no history. With
+    // the notification while Chrome starts: the card's menu item closes as it is picked, so
+    // nothing else shows it working (owner, 2026-10-31).
+    const privateWindow = await openPrivateBrowser(link);
     context.logger.debug(
         `[ERP] Opened ${systemEntry.id}'s screen (private window: ${privateWindow})`,
     );

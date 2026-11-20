@@ -100,11 +100,11 @@ describe('resolveDeployInputs', () => {
                     kind: 'system',
                     status: 'deployed',
                     source: { owner: 'skukla', repo: 'demo-erp' },
-                    name: 'Justrite ERP',
+                    name: 'Tailspin ERP',
                 },
             },
         });
-        expect(resolveDeployInputs(project, SYSTEM)).toEqual({ ERP_DISPLAY_NAME: 'Justrite ERP' });
+        expect(resolveDeployInputs(project, SYSTEM)).toEqual({ ERP_DISPLAY_NAME: 'Tailspin ERP' });
     });
 
     it('a provided var comes from the provider component that is already deployed; secrets never ride the env', () => {

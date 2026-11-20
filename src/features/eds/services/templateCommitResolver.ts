@@ -11,6 +11,7 @@
 
 import type { GitHubFileOperations } from './github/githubFileOperations';
 import { readLkgSha } from './patches/lkgReader';
+import { refOfSource } from '@/core/releases/componentRelease';
 import type { CodePatchSource } from '@/types/demoPackages';
 import type { Logger } from '@/types/logger';
 
@@ -40,7 +41,7 @@ interface TemplateCommitSource {
  */
 export async function resolveTemplateCommitSha(
     source: TemplateCommitSource,
-    githubFileOps: Pick<GitHubFileOperations, 'getLatestCommitSha'>,
+    githubFileOps: Pick<GitHubFileOperations, 'getLatestCommitSha' | 'getRefCommit'>,
     logger: Logger,
 ): Promise<string | undefined> {
     const { templateOwner, templateRepo, codePatchSource, templateBranch = 'main' } = source;
@@ -59,9 +60,14 @@ export async function resolveTemplateCommitSha(
     }
 
     try {
-        const sha =
-            (await githubFileOps.getLatestCommitSha(templateOwner, templateRepo, templateBranch)) ??
-            undefined;
+        // A template the builder owns is at its newest release, not its branch.
+        const { ref, version } = await refOfSource(
+            { owner: templateOwner, repo: templateRepo, branch: templateBranch },
+            logger,
+        );
+        const sha = version
+            ? await githubFileOps.getRefCommit(templateOwner, templateRepo, ref)
+            : ((await githubFileOps.getLatestCommitSha(templateOwner, templateRepo, ref)) ?? undefined);
         logger.debug(`[TemplateCommit] Template HEAD: ${sha?.substring(0, 7)}`);
         return sha;
     } catch (error) {

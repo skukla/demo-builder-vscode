@@ -110,14 +110,46 @@ describe('installCategories', () => {
             },
         ]);
         expect(ctx.recorder.created).toEqual([
-            { kind: CATEGORY_KIND, id: '40' },
-            { kind: CATEGORY_KIND, id: '41' },
-            { kind: CATEGORY_KIND, id: '42' },
+            { kind: CATEGORY_KIND, id: '40', key: '(root)' },
+            { kind: CATEGORY_KIND, id: '41', key: 'Products' },
+            { kind: CATEGORY_KIND, id: '42', key: 'Products/Critical Power' },
         ]);
         expect(ctx.session.rootCategory).toEqual({ id: 40, name: 'Bodea' });
     });
 
-    it('uses categories the store already has under the same parent, and records nothing for them', async () => {
+    it("sends a level's categories together, and a child only once its whole level is made", async () => {
+        const row = (name: string, path: string) => ({ category: { name, path } });
+        const pack = { root_category: { name: 'Bodea' }, categories: [row('Tools', 'Bodea/Gear'), row('Gear', 'Bodea'), row('Parts', 'Bodea'), row('Gear', 'Bodea')] };
+        const ctx = await fakeContext(
+            {
+                [childSearch(1, 'Bodea')]: NONE,
+                [childSearch(40, 'Gear')]: NONE,
+                [childSearch(40, 'Parts')]: NONE,
+                [childSearch(41, 'Tools')]: NONE,
+            },
+            numbered(),
+        );
+        const send = ctx.send;
+        const events: string[] = [];
+        ctx.send = async (method, path, body, route) => {
+            const name = (body as { category: { name: string } }).category.name;
+            events.push(`send ${name}`);
+            // Answered only once everything else waiting has run, as a real round trip is.
+            await new Promise((resolve) => setImmediate(resolve));
+            const answer = await send(method, path, body, route);
+            events.push(`made ${name}`);
+            return answer;
+        };
+
+        await installCategories(ctx, parseCategoryPack(pack));
+
+        // The second "Gear" row is the first one again: made once, as when one row found the other.
+        expect(events).toEqual(['send Bodea', 'made Bodea', 'send Gear', 'send Parts', 'made Gear', 'made Parts', 'send Tools', 'made Tools']);
+        expect(ctx.recorder.created.map((o) => o.key)).toEqual(['(root)', 'Gear', 'Parts', 'Gear/Tools']);
+    });
+
+    // Walk F187 (owner, 2026-11-16): the store's own are recorded, marked adopted, so a save follows them.
+    it('uses categories the store already has under the same parent, and records them as the store\'s', async () => {
         const ctx = await fakeContext(
             {
                 [childSearch(1, 'Bodea')]: { items: [{ id: 12, name: 'Bodea', parent_id: 1 }] },
@@ -130,7 +162,13 @@ describe('installCategories', () => {
         await installCategories(ctx, parseCategoryPack(BODEA));
 
         expect(ctx.sent.map((c) => (c.body as { category: { parent_id: number } }).category.parent_id)).toEqual([13]);
-        expect(ctx.recorder.created).toEqual([{ kind: CATEGORY_KIND, id: '40' }]);
+        expect(ctx.recorder.created).toEqual([
+            { kind: CATEGORY_KIND, id: '12', key: '(root)', adopted: true },
+            { kind: CATEGORY_KIND, id: '13', key: 'Products', adopted: true },
+            { kind: CATEGORY_KIND, id: '40', key: 'Products/Critical Power' },
+        ]);
+        expect(ctx.recorder.has(CATEGORY_KIND, '13')).toBe(false);
+        expect(ctx.recorder.has(CATEGORY_KIND, '40')).toBe(true);
     });
 
     it('does not take a same-named category under another parent for this one', async () => {
@@ -172,7 +210,7 @@ describe('installCategories', () => {
         const pack = { categories: [{ category: { name: 'Orphan', path: 'Default Category/Gone' } }] };
 
         await expect(installCategories(ctx, parseCategoryPack(pack))).rejects.toThrow(
-            'The category Orphan sits under "Default Category/Gone", which the pack does not make.',
+            'The category Orphan sits under "Default Category/Gone", which the datapack does not make.',
         );
         expect(ctx.sent).toStrictEqual([]);
     });

@@ -45,7 +45,7 @@ export async function checkGitHubAppForExistingRepo(
         phase: 'storefront-code',
         // Part of setting up the repository, whatever its phase has always said.
         stage: OPERATION_STAGES.settingUpRepository.label,
-        message: 'Verifying GitHub App installation',
+        message: 'Verifying AEM Code Sync',
         progress: 28,
     } satisfies StorefrontSetupProgressPayload);
 
@@ -56,7 +56,7 @@ export async function checkGitHubAppForExistingRepo(
         awaitRegistration: options.afterReset === true,
     });
 
-    // An inner 400 says nothing either way (EDS-23): skukla/kukla-justrite read
+    // An inner 400 says nothing either way (EDS-23): skukla/kukla-tailspin read
     // 400 before the App covered it and after. Phase 3 asks the code endpoint,
     // whose x-error does say, so this gate hands the question on instead of
     // failing a setup that may be fine.
@@ -249,7 +249,7 @@ export async function pauseForGitHubApp(
     await context.sendMessage('storefront-setup-progress', {
         phase: options.phase,
         ...(options.stage ? { stage: options.stage } : {}),
-        message: 'AEM Code Sync verified — resuming setup',
+        message: 'Resuming',
         progress: options.progress,
     } satisfies StorefrontSetupProgressPayload);
     return null;

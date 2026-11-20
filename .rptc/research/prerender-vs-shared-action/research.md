@@ -46,7 +46,7 @@ no price on B2B) rather than deploying prerender.
    price into the page and JSON-LD; Adobe's own `docs/USE-CASES.md` says not to render
    logged-in-only data such as dynamic pricing. A buyer would see the guest price flash
    before the drop-in replaces it [I]. On a B2B site whose categories are not granted to the
-   public catalog, discovery returns 0 (measured on Justrite 2026-10-01) — prerender would
+   public catalog, discovery returns 0 (measured on Tailspin 2026-10-01) — prerender would
    publish nothing; ours still publishes on first visit via the SKU lookup [V]. Ours renders
    only a template, so every price and grant is resolved for the signed-in buyer [V].
 6. **Reset and undo.** Prerender [V]: no documented uninstall; bulk unpublish is a manual

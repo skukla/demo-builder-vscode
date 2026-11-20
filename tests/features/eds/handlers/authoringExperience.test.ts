@@ -5,8 +5,8 @@
  * with a two-tier precedence:
  *   1. Per-project metadata value (if it is a recognized union member).
  *   2. Global setting demoBuilder.daLive.authoringExperience (default
- *      'da-live-classic').
- * Any unrecognized result coerces to 'da-live-classic' (fail-safe), so a
+ *      'experience-workspace').
+ * Any unrecognized result coerces to the default (fail-safe), so a
  * corrupted setting or stray metadata can never break the Author button.
  *
  * Mirrors the vscode getConfiguration mock pattern from
@@ -48,10 +48,10 @@ describe('resolveAuthoringExperience', () => {
         mockAuthoringExperienceValue = undefined;  // honor the default (UE)
     });
 
-    it('returns da-live-classic when metadata is undefined and the global setting is unset (default)', () => {
+    it('returns experience-workspace when metadata is undefined and the global setting is unset (default)', () => {
         mockAuthoringExperienceValue = undefined;
 
-        expect(resolveAuthoringExperience(undefined)).toBe('da-live-classic');
+        expect(resolveAuthoringExperience(undefined)).toBe('experience-workspace');
     });
 
     it('falls back to the global setting (experience-workspace) when metadata is undefined', () => {
@@ -72,19 +72,19 @@ describe('resolveAuthoringExperience', () => {
         expect(resolveAuthoringExperience('da-live-classic')).toBe('da-live-classic');
     });
 
-    it('coerces an unrecognized metadata value to da-live-classic (fail-safe)', () => {
+    it('coerces an unrecognized metadata value to the default (fail-safe)', () => {
         mockAuthoringExperienceValue = undefined;
 
-        expect(resolveAuthoringExperience('garbage')).toBe('da-live-classic');
+        expect(resolveAuthoringExperience('garbage')).toBe('experience-workspace');
     });
 
-    it('coerces a corrupted global setting to da-live-classic (fail-safe)', () => {
+    it('coerces a corrupted global setting to the default (fail-safe)', () => {
         // Nothing validates settings.json. A value that is not a union member
         // must never reach the Author button as-is, or it builds a URL for an
         // authoring experience that does not exist.
         mockAuthoringExperienceValue = 'ue';
 
-        expect(resolveAuthoringExperience(undefined)).toBe('da-live-classic');
+        expect(resolveAuthoringExperience(undefined)).toBe('experience-workspace');
     });
 
     it('reads from the demoBuilder.daLive configuration section', () => {

@@ -13,6 +13,20 @@ import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import { getComponentIds } from '@/types/typeGuards';
 
+/** The datapack the project names, a failed creation install of it (step-04 S7), and the steps left to finish. */
+function addDatapackFields(manifest: Record<string, unknown>, project: Project): void {
+    if (project.datapack !== undefined) {
+        manifest.datapack = project.datapack;
+    }
+    if (project.datapackInstallFailure !== undefined) {
+        manifest.datapackInstallFailure = project.datapackInstallFailure;
+    }
+    // The steps a run left for the SC (PL-101); absent when no run left any.
+    if (project.finishSetup && Object.keys(project.finishSetup).length > 0) {
+        manifest.finishSetup = project.finishSetup;
+    }
+}
+
 /**
  * Copy the project's OPTIONAL fields onto the manifest, omitting each when it
  * has nothing to say.
@@ -23,8 +37,9 @@ import { getComponentIds } from '@/types/typeGuards';
  * charging one more branch to a function already near the complexity limit.
  */
 function addOptionalManifestFields(manifest: Record<string, unknown>, project: Project): void {
-    if (project.datapack !== undefined) {
-        manifest.datapack = project.datapack;
+    addDatapackFields(manifest, project);
+    if (project.commerceAdminExperience) {
+        manifest.commerceAdminExperience = project.commerceAdminExperience;
     }
     if (project.selectedPackage !== undefined) {
         manifest.selectedPackage = project.selectedPackage;
@@ -33,6 +48,10 @@ function addOptionalManifestFields(manifest: Record<string, unknown>, project: P
     // the catalog by every post-creation lookup, so it has to travel with the project.
     if (project.demo !== undefined) {
         manifest.demo = project.demo;
+    }
+    // A project imported from a demo bundle (EDS-72): Reset restores the import's commit.
+    if (project.importedFrom !== undefined) {
+        manifest.importedFrom = project.importedFrom;
     }
     if (project.selectedStack !== undefined) {
         manifest.selectedStack = project.selectedStack;
@@ -100,6 +119,28 @@ function addOptionalManifestFields(manifest: Record<string, unknown>, project: P
     }
     if (project.pinned) {
         manifest.pinned = true;
+    }
+    addRecordsOfWhatWasDone(manifest, project);
+}
+
+/**
+ * Records a later call reads back to undo, prove or compare against.
+ *
+ * `getCurrentProject` reads the manifest on every call, so a record kept only in
+ * memory is gone by the next one. All three were, until 2026-10-29:
+ * `set_commerce_config`'s undo found nothing to undo, a Share save lost its proof
+ * of authorship (so Remove left the file), and "restart to apply" never showed.
+ */
+function addRecordsOfWhatWasDone(manifest: Record<string, unknown>, project: Project): void {
+    if (project.commerceConfigChange) {
+        manifest.commerceConfigChange = project.commerceConfigChange;
+    }
+    if (project.demoPackage) {
+        manifest.demoPackage = project.demoPackage;
+    }
+    // Cleared by Stop, so it is on disk only while the demo runs.
+    if (project.frontendEnvState) {
+        manifest.frontendEnvState = project.frontendEnvState;
     }
 }
 

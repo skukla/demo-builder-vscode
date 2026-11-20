@@ -33,9 +33,7 @@ export async function resolveProjectFromPath(
     } catch {
         return { ok: false, error: { success: false, error: 'Invalid project path' } };
     }
-    const project = await context.stateManager.loadProjectFromPath(payload.projectPath, undefined, {
-        persistAfterLoad: false,
-    });
+    const project = await context.stateManager.loadProjectFromPath(payload.projectPath);
     if (!project) {
         return { ok: false, error: { success: false, error: 'Project not found' } };
     }

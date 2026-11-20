@@ -1,0 +1,569 @@
+/**
+ * Uninstall in the job window (step 03, S7; decisions J5-1, J5-2): the check, then "Uninstall My
+ * Luma?" over what its install record lists, counted by type, with a red Uninstall and Cancel (rule
+ * 20); with unsaved changes "Save Your Changes First?" next, its verb Uninstall; then the run on
+ * the centred lines (the save's stage when saving first, then the uninstall's), titled "Uninstalling
+ * My Luma"; a clean end "My Luma Uninstalled", which waits for Close; a stop "Couldn't Uninstall My Luma"
+ * on its steps with Retry. The title names no store (the owner's J5-1; plan Q7).
+ *
+ * Ported from `ImportDatapackModal-removal.test.tsx`, `-decisions`, `.lifecycle` and
+ * `ImportDatapackModalBody-confirm.test.tsx` for what is still true of Uninstall: the read of what
+ * changed, for the pack and in its store, sent once; nothing removed before the question is
+ * answered; `confirm` sent only from the press; Cancel closes, sending nothing; the save answers
+ * riding on the removal; the setting saving into the SC's own datapack without asking; a save that
+ * failed saying nothing was uninstalled, Back returning to the question without reading again; a
+ * running removal handed to a notification named for it; the kept root's Admin step.
+ */
+
+import { act, fireEvent, screen, within } from '@testing-library/react';
+import '@testing-library/jest-dom';
+import {
+    answer,
+    mockPostMessage,
+    mockRequest,
+    press,
+    record,
+    renderWindow,
+    sends,
+    sent,
+    settle,
+    shownStep,
+} from './DatapackJobWindow.testUtils';
+import { findResult } from '../../../../../helpers/resultQueries';
+import { webviewClientHandlers } from '../../../../../helpers/webviewClientMock';
+import { DATAPACK_OPERATION_ID } from '@/core/utils/operationIds';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import type {
+    DatapackRemovalChanges,
+    DatapackRemovalScope,
+} from '@/features/data-installer/removalChanges';
+import { ErrorCode } from '@/types/errorCodes';
+
+const LUMA = { name: 'luma', version: 'v1' };
+const SCOPE: DatapackRemovalScope = {
+    kinds: [
+        { kind: 'categories', count: 21 },
+        { kind: 'products', count: 1200 },
+    ],
+};
+const KINDS = [
+    { kind: 'products', count: 2, names: ['24-MB01', '24-MB02'] },
+    { kind: 'categories', count: 1, names: ['Gear'] },
+];
+/** Changes in the SC's own datapack: saving goes into it. */
+const CHANGED_MINE: DatapackRemovalChanges = {
+    count: 3,
+    kinds: KINDS,
+    sentence: '3 items changed since install: 2 products, and the category Gear.',
+    packName: 'My Luma',
+    alwaysSave: false,
+};
+/** Changes in a datapack that is not the SC's: saving makes a new one, by a name. */
+const CHANGED_THEIRS: DatapackRemovalChanges = { ...CHANGED_MINE, packName: undefined };
+const NOTHING: DatapackRemovalChanges = { count: 0, kinds: [], alwaysSave: false };
+/** The uninstall's job, as the extension records it. */
+const UNINSTALLING = record({
+    datapackName: 'luma',
+    version: 'v1',
+    operation: 'reset',
+    purpose: 'uninstall',
+});
+
+/** The uninstall stopped: how it ended keeps its rows. */
+const STOPPED = { ...UNINSTALLING, outcome: 'error' as const, reason: 'Commerce refused the category Gear.' };
+
+const button = (name: string) => screen.getByRole('button', { name });
+const heading = (name: string) => screen.findByRole('heading', { name });
+
+function holding(
+    changes: DatapackRemovalChanges | object,
+    over: Parameters<typeof answer>[0] = {},
+    never: string[] = []
+) {
+    answer(
+        {
+            scope: { success: true, data: SCOPE },
+            changes: 'success' in changes ? changes : { success: true, data: changes },
+            ...over,
+        },
+        never
+    );
+}
+
+async function openUninstall(over: Parameters<typeof renderWindow>[0] = {}) {
+    const view = renderWindow({
+        id: LUMA,
+        displayName: 'My Luma',
+        source: 'library',
+        uninstalling: { ownNames: ['My Luma'] },
+        ...over,
+    });
+    await settle();
+    await settle();
+    await settle();
+    return view;
+}
+
+beforeEach(() => mockPostMessage.mockClear());
+
+describe('the check', () => {
+    it('reads what the record lists and what changed, for the pack in its store, once, under "Uninstall My Luma"', async () => {
+        holding(NOTHING, {}, ['get-datapack-removal-changes']);
+        await openUninstall();
+
+        expect(screen.getByRole('heading', { name: 'Uninstall My Luma' })).toBeInTheDocument();
+        expect(screen.getAllByText('Preparing to uninstall').length).toBeGreaterThan(0);
+        expect(screen.queryByRole('button', { name: 'Uninstall' })).toBeNull();
+        expect(sent('get-datapack-removal-scope')).toEqual({ datapackName: 'luma', version: 'v1', removal: true });
+        expect(sent('get-datapack-removal-changes')).toEqual({
+            datapackName: 'luma',
+            version: 'v1',
+            source: 'library',
+        });
+        expect(sends('get-datapack-removal-changes')).toBe(1);
+        expect(sends('preview-datapack-changes')).toBe(0);
+        expect(sends('reset-datapack')).toBe(0);
+    });
+
+    it('Cancel during the check closes the window and nothing is sent', async () => {
+        holding(NOTHING, {}, ['get-datapack-removal-changes']);
+        const { onClose } = await openUninstall();
+
+        await press(button('Cancel'));
+
+        expect(onClose).toHaveBeenCalledTimes(1);
+        expect(sends('reset-datapack')).toBe(0);
+    });
+});
+
+describe('the question', () => {
+    it('asks "Uninstall My Luma?" over what the record lists by type, naming no store, with Review Records, a red Uninstall and Cancel', async () => {
+        holding(NOTHING);
+        await openUninstall();
+
+        expect(await heading('Uninstall My Luma?')).toBeInTheDocument();
+        expect(document.querySelector('.modal-status-icon')).not.toBeNull();
+        const rows = within(screen.getByRole('table'))
+            .getAllByRole('row')
+            .map((row) => row.textContent);
+        expect(rows).toStrictEqual(['Categories21', 'Products1,200']);
+        expect(button('Uninstall')).toHaveClass('modal-button-negative');
+        expect(button('Cancel')).toBeInTheDocument();
+        // Walk F151 (owner, 2026-11-16): the one step that deletes can be checked first.
+        expect(button('Review Records')).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Dry Run' })).toBeNull();
+        expect(screen.queryByText(/Permanently deletes/u)).toBeNull();
+        expect(sends('reset-datapack')).toBe(0);
+    });
+
+    // Walk F191 (2026-11-17): a record that lists nothing opened a window with nothing in it.
+    it('says it removes nothing when the record lists nothing, with no empty table and no Review Records', async () => {
+        holding(NOTHING, { scope: { success: true, data: { kinds: [] } } });
+        await openUninstall();
+
+        expect(await heading('Uninstall My Luma?')).toBeInTheDocument();
+        expect(screen.getByText('Removes nothing from the store. The demo stops using My Luma.')).toBeInTheDocument();
+        expect(screen.queryByRole('table')).toBeNull();
+        expect(screen.queryByRole('button', { name: 'Review Records' })).toBeNull();
+        expect(button('Uninstall')).toBeInTheDocument();
+    });
+
+    it('CONTROL: a record that lists something shows no such line', async () => {
+        holding(NOTHING);
+        await openUninstall();
+
+        await heading('Uninstall My Luma?');
+        expect(screen.queryByText(/Removes nothing/u)).toBeNull();
+    });
+
+    // Walk F151: what it would take and what it would keep, from the install record and the
+    // uninstall's own decision, before anything is deleted.
+    it('Review Records asks for what the uninstall would take and keep, and shows both', async () => {
+        holding(NOTHING, {
+            records: {
+                success: true,
+                data: { records: { categories: ['Gear'], products: ['24-MB01'] }, kept: { categories: ['Luma'] } },
+            },
+        });
+        await openUninstall();
+        await heading('Uninstall My Luma?');
+
+        await press(button('Review Records'));
+        await settle();
+
+        expect(sent('get-datapack-records')).toEqual({ datapackName: 'luma', version: 'v1', source: 'library', removal: true });
+        expect(screen.getByRole('button', { name: /^Removed/u })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /^Kept/u })).toBeInTheDocument();
+        expect(sends('reset-datapack')).toBe(0);
+    });
+
+    it('Cancel removes nothing and closes the window', async () => {
+        holding(CHANGED_MINE);
+        const { onClose } = await openUninstall();
+        await heading('Uninstall My Luma?');
+
+        await press(button('Cancel'));
+
+        expect(onClose).toHaveBeenCalledTimes(1);
+        expect(sends('reset-datapack')).toBe(0);
+    });
+});
+
+describe('Uninstall with nothing changed', () => {
+    // C3 review (2026-11-13): with no answer, the host reads the changes again, so one made after the
+    // window read them is saved or asked about, never dropped unasked.
+    it('removes at once with no answer about changes, confirmed from the press alone, the record deciding what goes and where', async () => {
+        holding(NOTHING, { statusAfter: UNINSTALLING });
+        await openUninstall();
+        await heading('Uninstall My Luma?');
+
+        await press(button('Uninstall'));
+
+        expect(screen.queryByRole('heading', { name: 'Save Your Changes First?' })).toBeNull();
+        expect(sent('reset-datapack')).toStrictEqual({
+            datapackName: 'luma',
+            version: 'v1',
+            commerceInstance: 'inst',
+            source: 'library',
+            confirm: true,
+        });
+        const call = mockRequest.mock.calls.find(([type]) => type === 'reset-datapack');
+        expect(call?.[2]).toBe(TIMEOUTS.DATAPACK_SAVE_THEN_WRITE);
+    });
+
+    it('asks "Save Your Changes First?" over the changes read again when the host refuses for an answer, and sends the answer given', async () => {
+        holding(NOTHING);
+        await openUninstall({ uninstalling: { ownNames: [] } });
+        await heading('Uninstall My Luma?');
+        const refusal = { success: false, error: 'You changed 3 things since it was installed.', code: ErrorCode.CHANGES_NEED_ANSWER };
+        holding(CHANGED_THEIRS, { reset: refusal });
+
+        await press(button('Uninstall'));
+        await settle();
+
+        expect(await heading('Save Your Changes First?')).toBeInTheDocument();
+        expect(sends('get-datapack-removal-changes')).toBe(1);
+        await press(button('Save and Uninstall'));
+        const resets = mockRequest.mock.calls.filter(([type]) => type === 'reset-datapack').map(([, body]) => body as Record<string, unknown>);
+        expect(resets[0]).not.toHaveProperty('changes');
+        expect(resets[1]).toMatchObject({ changes: 'keep', saveAs: { displayName: 'My My Luma' } });
+    });
+
+    // Walk F152: one step, so the centred lines rather than a list of one.
+    it('runs as one step, titled "Uninstalling My Luma", and hands over to a notification named for it', async () => {
+        holding(NOTHING, { statusAfter: UNINSTALLING });
+        const { onClose } = await openUninstall();
+        await heading('Uninstall My Luma?');
+        await press(button('Uninstall'));
+
+        expect(await heading('Uninstalling My Luma')).toBeInTheDocument();
+        const shown = document.querySelector('.modal-steps > div:not(.modal-steps-ghost)') as HTMLElement;
+        expect(within(shown).queryByTestId('import-run')).toBeNull();
+        expect(within(shown).getByText('Preparing to uninstall')).toBeInTheDocument();
+        expect(within(shown).queryByText('Save Your Changes')).toBeNull();
+
+        await press(button('Run in Background'));
+
+        expect(mockPostMessage.mock.calls).toStrictEqual([
+            [
+                'backgroundOperation',
+                {
+                    id: DATAPACK_OPERATION_ID,
+                    title: 'Uninstalling My Luma',
+                    doneTitle: 'My Luma Uninstalled',
+                    failedTitle: "Couldn't Uninstall My Luma",
+                },
+            ],
+        ]);
+        expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    // Walk F192: a record listing nothing runs over no types and still ends on its result.
+    it('with nothing on the record, ends clean on "My Luma Uninstalled"', async () => {
+        holding(NOTHING, {
+            scope: { success: true, data: { kinds: [] } },
+            statusAfter: { ...UNINSTALLING, outcome: 'success', perType: {} },
+        });
+        await openUninstall();
+        await heading('Uninstall My Luma?');
+        await press(button('Uninstall'));
+
+        expect(await findResult('My Luma', 'Uninstalled')).toBeInTheDocument();
+    });
+
+    it('ends clean on "My Luma Uninstalled", which waits for Close', async () => {
+        holding(NOTHING, {
+            statusAfter: {
+                ...UNINSTALLING,
+                outcome: 'success',
+                perType: { categories: 'success', products: 'success' },
+            },
+        });
+        const { onClose } = await openUninstall();
+        await heading('Uninstall My Luma?');
+        await press(button('Uninstall'));
+
+        expect(await findResult('My Luma', 'Uninstalled')).toBeInTheDocument();
+        expect(screen.queryByTestId('import-run')).toBeNull();
+        expect(screen.queryByRole('button', { name: 'Back' })).toBeNull();
+        // Walk F195 (owner, 2026-11-17): every result waits for Close.
+        await act(async () => {
+            jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE * 3);
+        });
+        expect(onClose).not.toHaveBeenCalled();
+        await press(button('Close'));
+        expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('ends a stop as "Couldn\'t Uninstall My Luma" on its steps, the reason on the row, and Retry uninstalls again', async () => {
+        holding(NOTHING, {
+            statusAfter: {
+                ...UNINSTALLING,
+                outcome: 'error',
+                reason: 'Commerce refused the category Gear.',
+            },
+        });
+        await openUninstall();
+        await heading('Uninstall My Luma?');
+        await press(button('Uninstall'));
+
+        expect(await findResult('My Luma', "Couldn't Uninstall")).toBeInTheDocument();
+        expect(
+            within(screen.getByTestId('import-run')).getByText(
+                'Commerce refused the category Gear.'
+            )
+        ).toBeInTheDocument();
+
+        await press(button('Retry'));
+
+        const resets = mockRequest.mock.calls.filter(([type]) => type === 'reset-datapack');
+        expect(resets).toHaveLength(2);
+        // The record names what is left to take out: a save made first moved it there.
+        expect(resets[1][1]).toMatchObject({
+            datapackName: 'luma',
+            version: 'v1',
+            confirm: true,
+            changes: 'drop',
+        });
+    });
+
+    it('keeps the Admin step open when the store kept the root', async () => {
+        const keptRoot = {
+            store: 'Tailspin Test Store',
+            category: 'ZZ Root',
+            restore: 'Tailspin Catalog',
+        };
+        holding(NOTHING, { statusAfter: { ...UNINSTALLING, outcome: 'success', keptRoot } });
+        const { onClose } = await openUninstall();
+        await heading('Uninstall My Luma?');
+        await press(button('Uninstall'));
+
+        expect(await findResult('My Luma', 'One Step Left to Uninstall')).toBeInTheDocument();
+        await act(async () => {
+            jest.advanceTimersByTime(TIMEOUTS.UI.RESULT_GLANCE);
+        });
+        expect(onClose).not.toHaveBeenCalled();
+    });
+
+    it('shows a refused start verbatim, with Back to the question', async () => {
+        holding(NOTHING, { reset: { success: false, error: 'The service said no.' } });
+        await openUninstall();
+        await heading('Uninstall My Luma?');
+        await press(button('Uninstall'));
+
+        expect(await findResult('My Luma', "Couldn't Uninstall")).toBeInTheDocument();
+        expect(screen.getByText('The service said no.')).toBeInTheDocument();
+        await press(button('Back'));
+        expect(await heading('Uninstall My Luma?')).toBeInTheDocument();
+    });
+});
+
+describe('Save Your Changes First?', () => {
+    async function asked(
+        changes: DatapackRemovalChanges | object,
+        over: Parameters<typeof answer>[0] = {},
+        never: string[] = []
+    ) {
+        holding(changes, over, never);
+        const view = await openUninstall();
+        await heading('Uninstall My Luma?');
+        await press(button('Uninstall'));
+        return view;
+    }
+
+    it('asks with the changes counted by type, Uninstall Without Saving at the start, Cancel and Save and Uninstall at the end', async () => {
+        await asked(CHANGED_MINE);
+
+        expect(await heading('Save Your Changes First?')).toBeInTheDocument();
+        const rows = within(screen.getByRole('table'))
+            .getAllByRole('row')
+            .map((row) => row.textContent);
+        expect(rows).toStrictEqual(['Products2', 'Categories1']);
+        expect(button('Uninstall Without Saving').closest('.modal-footer-start')).not.toBeNull();
+        expect(button('Save and Uninstall').closest('.modal-footer-start')).toBeNull();
+        expect(sends('reset-datapack')).toBe(0);
+    });
+
+    it('Save and Uninstall keeps them, and the run shows the save starting from the press', async () => {
+        await asked(CHANGED_MINE, {}, ['reset-datapack']);
+
+        await press(button('Save and Uninstall'));
+
+        expect(sent('reset-datapack')).toMatchObject({ confirm: true, changes: 'keep' });
+        expect(sent('reset-datapack')).not.toHaveProperty('saveAs');
+        expect(await heading('Uninstalling My Luma')).toBeInTheDocument();
+        expect(shownStep().queryByTestId('import-run')).toBeNull();
+        expect(shownStep().getByText('Preparing to save')).toBeInTheDocument();
+    });
+
+    it("says each stage of the save, and ignores another operation's progress", async () => {
+        await asked(CHANGED_MINE, {}, ['reset-datapack']);
+        await press(button('Save and Uninstall'));
+        const push = (id: string, stage: string) =>
+            act(() => {
+                webviewClientHandlers.get('operationProgress')?.({ id, state: 'running', stage });
+            });
+
+        push(DATAPACK_OPERATION_ID, 'Saving to the library');
+        push('something-else', 'Deploying the mesh');
+
+        expect(shownStep().getByText('Saving Your Changes')).toBeInTheDocument();
+        expect(shownStep().getByText('Saving to the library')).toBeInTheDocument();
+        expect(screen.queryByText('Deploying the mesh')).toBeNull();
+    });
+
+    it('once its job runs, moves on from the save to the uninstall', async () => {
+        await asked(CHANGED_MINE, { statusAfter: UNINSTALLING });
+
+        await press(button('Save and Uninstall'));
+        await settle();
+
+        expect(shownStep().getByText('Preparing to uninstall')).toBeInTheDocument();
+        expect(shownStep().queryByText('Preparing to save')).toBeNull();
+    });
+
+    // Review 2026-11-14 (item 9): its own name typed in another case still names the real datapack.
+    // While it runs the centred lines say what it does now; where the save went is the ended rows'.
+    it('names the datapack by its own name when the field holds it in another case', async () => {
+        await asked(CHANGED_MINE, { statusAfter: STOPPED });
+        fireEvent.change(screen.getByRole('textbox', { name: 'Save As' }), { target: { value: ' my luma ' } });
+        await settle();
+
+        await press(button('Save and Uninstall'));
+        await settle();
+
+        expect(await findResult('My Luma', "Couldn't Uninstall")).toBeInTheDocument();
+        expect(within(screen.getByTestId('import-run')).getByText('Saved to My Luma')).toBeInTheDocument();
+    });
+
+    it('closing while it saves hands it to a notification rather than stopping it', async () => {
+        const { onClose } = await asked(CHANGED_MINE, {}, ['reset-datapack']);
+        await press(button('Save and Uninstall'));
+
+        await press(button('Run in Background'));
+
+        expect(mockPostMessage.mock.calls).toContainEqual([
+            'backgroundOperation',
+            {
+                id: DATAPACK_OPERATION_ID,
+                title: 'Uninstalling My Luma',
+                doneTitle: 'My Luma Uninstalled',
+                failedTitle: "Couldn't Uninstall My Luma",
+            },
+        ]);
+        expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('Uninstall Without Saving drops them', async () => {
+        await asked(CHANGED_MINE);
+
+        await press(button('Uninstall Without Saving'));
+
+        expect(sent('reset-datapack')).toMatchObject({ confirm: true, changes: 'drop' });
+    });
+
+    it('Cancel removes nothing, and closes the window', async () => {
+        const { onClose } = await asked(CHANGED_MINE);
+
+        await press(button('Cancel'));
+
+        expect(onClose).toHaveBeenCalledTimes(1);
+        expect(sends('reset-datapack')).toBe(0);
+    });
+
+    it('asks after a check that failed, since nothing is known', async () => {
+        await asked({ success: false, error: 'Commerce could not be read.' });
+
+        expect(await heading('Save Your Changes First?')).toBeInTheDocument();
+        expect(screen.getByText("Your changes couldn't be checked.")).toBeInTheDocument();
+    });
+
+    it('a save that failed says nothing was uninstalled, and Back returns to the question without reading again', async () => {
+        await asked(CHANGED_MINE, {
+            reset: {
+                success: false,
+                error: 'The library is not answering.',
+                code: ErrorCode.CHANGES_NOT_SAVED,
+            },
+        });
+        await press(button('Save and Uninstall'));
+
+        expect(await findResult('My Luma', "Couldn't Save Changes")).toBeInTheDocument();
+        expect(screen.getByText('Nothing was uninstalled.')).toBeInTheDocument();
+        await press(button('Back'));
+
+        expect(await heading('Uninstall My Luma?')).toBeInTheDocument();
+        expect(sends('get-datapack-removal-changes')).toBe(1);
+    });
+});
+
+describe('the setting saves without asking', () => {
+    it("saves into the SC's own datapack and uninstalls, asking nothing", async () => {
+        holding({ ...CHANGED_MINE, alwaysSave: true });
+        await openUninstall();
+        await heading('Uninstall My Luma?');
+
+        await press(button('Uninstall'));
+
+        expect(screen.queryByRole('heading', { name: 'Save Your Changes First?' })).toBeNull();
+        expect(sent('reset-datapack')).toMatchObject({ changes: 'keep' });
+        expect(sent('reset-datapack')).not.toHaveProperty('saveAs');
+    });
+});
+
+// P5-Q7 (step-07 D4): the SC's own datapack has the name box too, starting with its own name.
+describe("the SC's own datapack", () => {
+    it('starts the name box with its own name, and saves into it when untouched', async () => {
+        holding(CHANGED_MINE);
+        await openUninstall();
+        await heading('Uninstall My Luma?');
+        await press(button('Uninstall'));
+
+        expect(screen.getByRole('textbox', { name: 'Save As' })).toHaveValue('My Luma');
+        await press(button('Save and Uninstall'));
+
+        expect(sent('reset-datapack')).toMatchObject({ changes: 'keep' });
+        expect(sent('reset-datapack')).not.toHaveProperty('saveAs');
+    });
+});
+
+describe("a datapack that is not the SC's", () => {
+    it('names the new datapack "My Luma" in the question, and saves it under that name', async () => {
+        holding({ ...CHANGED_THEIRS, alwaysSave: true });
+        await openUninstall({ displayName: 'Luma', uninstalling: { ownNames: [] } });
+        await heading('Uninstall Luma?');
+        await press(button('Uninstall'));
+
+        expect(await heading('Save Your Changes First?')).toBeInTheDocument();
+        expect(screen.getByRole('textbox', { name: 'Save As' })).toHaveValue('My Luma');
+        fireEvent.change(screen.getByRole('textbox', { name: 'Save As' }), {
+            target: { value: 'Luma for Acme' },
+        });
+        await press(button('Save and Uninstall'));
+
+        expect(sent('reset-datapack')).toMatchObject({
+            changes: 'keep',
+            saveAs: { displayName: 'Luma for Acme' },
+        });
+    });
+});

@@ -19,9 +19,14 @@ import {
     failed,
     idle,
     jobRecord,
+    PACK_NAME,
     sources,
     succeeded,
 } from './importResult.testUtils';
+import { importSteps } from '@/features/data-installer/importSteps';
+import { ErrorCode } from '@/types/errorCodes';
+import { plainFailure } from '@/features/data-installer/plainFailure';
+import { plain } from '@/core/utils/plainText';
 
 describe('resolveResult — no action yet', () => {
     it.each([
@@ -37,9 +42,10 @@ describe('resolveResult — dry run', () => {
         const result = resolveResult('dryRun', sources({ dryRun: succeeded({ valid: true }) }));
 
         expect(result).toEqual({
+            thing: PACK_NAME,
             variant: 'success',
-            title: 'Dry run passed',
-            message: 'The service says this request would be accepted. Nothing has been written.',
+            title: 'Dry Run Passed',
+            message: `${PACK_NAME} can be installed here. Nothing was written.`,
         });
     });
 
@@ -51,8 +57,10 @@ describe('resolveResult — dry run', () => {
 
         expect(result).toMatchObject({
             variant: 'warning',
-            title: 'The service refused this request',
+            title: 'Dry Run Found a Problem',
             message: 'Catalog is locked',
+            // Step 03, S5: its main button is Fix with AI, as an install's problem is.
+            action: 'fix',
         });
     });
 
@@ -60,16 +68,18 @@ describe('resolveResult — dry run', () => {
         const result = resolveResult('dryRun', sources({ dryRun: failed('Request timed out') }));
 
         expect(result).toEqual({
+            thing: PACK_NAME,
             variant: 'error',
-            title: 'Dry run failed',
-            message: 'Request timed out',
+            title: 'Dry Run Failed',
+            // Walk F221: plain words, never the transport's.
+            message: 'No answer came in time.',
         });
     });
 
     it('prefers the failure over a value the request is still holding', () => {
         const stale = { ...failed<{ valid: boolean }>('Request timed out'), value: { valid: true } };
 
-        expect(resolveResult('dryRun', sources({ dryRun: stale }))?.title).toBe('Dry run failed');
+        expect(resolveResult('dryRun', sources({ dryRun: stale }))?.title).toBe('Dry Run Failed');
     });
 
     it('shows nothing while the dry run has neither answered nor failed', () => {
@@ -79,8 +89,8 @@ describe('resolveResult — dry run', () => {
 
 describe('resolveResult — start and reset', () => {
     it.each([
-        ['start', 'Import failed to start'],
-        ['reset', 'Removal failed to start'],
+        ['start', `Couldn't Install ${PACK_NAME}`],
+        ['reset', `Couldn't Uninstall ${PACK_NAME}`],
     ])('%s reports its own wording for a request that never started', (action, title) => {
         const failure = failed<{ activationId: string }>('The service is unreachable');
         const result = resolveResult(
@@ -115,7 +125,7 @@ describe('resolveResult — start and reset', () => {
             sources({ record: jobRecord(), startedActivation: ACTIVATION })
         );
 
-        expect(result).toMatchObject({ variant: 'success', title: 'Import finished' });
+        expect(result).toMatchObject({ variant: 'success', title: `${PACK_NAME} Installed` });
     });
 
     it('shows nothing while the record is still being watched', () => {
@@ -140,5 +150,78 @@ describe('resolveResult — start and reset', () => {
         const result = resolveResult('start', sources({ startedActivation: ACTIVATION }));
 
         expect(result).toBeNull();
+    });
+});
+
+describe('resolveResult — a removal that was to save the changes first (step 05)', () => {
+    const SAVED_NOTE = 'Saved to the Acme Demo pack. Bodea is unchanged.';
+
+    it('says nothing was removed when the save failed, with a way back to the confirm', () => {
+        const reset = { ...failed<{ activationId: string }>('The library is not answering.') };
+        reset.failure = { message: plain('The library is not answering.'), code: ErrorCode.CHANGES_NOT_SAVED };
+
+        expect(resolveResult('reset', sources({ reset }))).toEqual({
+            thing: PACK_NAME,
+            variant: 'error',
+            title: "Couldn't Save Changes",
+            message: 'Nothing was uninstalled.',
+            details: ['The library is not answering.'],
+            backToConfirm: true,
+        });
+    });
+
+    // Review, 2026-11-10: the failure sits on Save Your Changes, which stays; it sat on Uninstall.
+    it('an import replacing the demo\'s pack whose save failed keeps Save Your Changes, red, and runs nothing after it', () => {
+        const start = { ...failed<{ activationId: string }>('The library is not answering.') };
+        start.failure = { message: plain('The library is not answering.'), code: ErrorCode.CHANGES_NOT_SAVED };
+
+        const result = resolveResult('start', sources({ start, replacing: { name: 'Version 1.1.0', dataTypes: ['products'] } }));
+
+        // Step 03, S2: a stop is the failed title, "Couldn't Install <name>".
+        expect(result).toMatchObject({ variant: 'error', title: `Couldn't Install ${PACK_NAME}`, lead: 'Nothing was uninstalled or installed.', backToConfirm: true });
+        expect(result?.run).toMatchObject({
+            replaces: 'Version 1.1.0',
+            stoppedAt: 'saving-changes',
+            perType: { products: 'error' },
+            reason: 'The library is not answering.',
+        });
+        const run = result?.run;
+        if (!run) throw new Error('no run');
+        const steps = importSteps({ ...run, reason: plainFailure(run.reason), installing: { name: 'My Luma', version: '1' } });
+        expect(steps.map((s) => [s.label, s.status, s.problem?.text ?? s.line])).toEqual([
+            ['Save Your Changes', 'error', 'The library is not answering.'],
+            ['Uninstall Version 1.1.0', 'pending', 'Not run'],
+            ['Install My Luma, 1', 'pending', 'Not run'],
+            ['Verify Installation', 'pending', 'Not run'],
+        ]);
+    });
+
+    it('CONTROL: any other failure to start is the plain one, back to the form', () => {
+        const result = resolveResult('reset', sources({ reset: failed('The service said no.') }));
+
+        expect(result?.title).toBe(`Couldn't Uninstall ${PACK_NAME}`);
+        expect(result).not.toHaveProperty('backToConfirm');
+    });
+
+    // Step 03, S7: the run's Save Your Changes step says where they went (rule 3, a fact once).
+    it('does not repeat where the changes went on a removal that finished', () => {
+        const result = resolveResult('reset', sources({
+            reset: succeeded({ activationId: ACTIVATION, savedNote: SAVED_NOTE }),
+            record: jobRecord({ operation: 'reset', outcome: 'success', activationId: ACTIVATION }),
+            startedActivation: ACTIVATION,
+        }));
+
+        expect(result).toEqual({ thing: PACK_NAME, variant: 'success', title: `${PACK_NAME} Uninstalled`, finished: true });
+    });
+
+    it('CONTROL: an import says nothing of it, whatever an earlier removal left', () => {
+        const result = resolveResult('start', sources({
+            start: succeeded({ activationId: ACTIVATION }),
+            reset: succeeded({ activationId: 'older', savedNote: SAVED_NOTE }),
+            record: jobRecord({ outcome: 'success', activationId: ACTIVATION }),
+            startedActivation: ACTIVATION,
+        }));
+
+        expect(result).not.toHaveProperty('message');
     });
 });

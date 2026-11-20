@@ -57,7 +57,7 @@ shows it), **unverifiable** (needs a live run or an outside system).
 | Claim | Verdict | Evidence | Suggested fix |
 |---|---|---|---|
 | Header: sessions in this directory are scoped to this project; `get_current_project` reports `scope: "session-directory"` (`:75-77`) | correct | `currentProjectTool.ts:72` | keep |
-| Overview: `**Status:** stopped/running` (`:82`) | stale by design | written at generation, regenerated on activation only; real file says `stopped` (`justrite/AGENTS.md:12`). The section's own comment argues baked values rot (`:157-162`) | cut the Status line; `get_project_status` answers it live |
+| Overview: `**Status:** stopped/running` (`:82`) | stale by design | written at generation, regenerated on activation only; real file says `stopped` (`tailspin/AGENTS.md:12`). The section's own comment argues baked values rot (`:157-162`) | cut the Status line; `get_project_status` answers it live |
 | Read `diagnose-demo` first when something is wrong (`:100-102`) | correct | skill exists, always delivered (`skillsWriter.ts:95-110`) | keep |
 | Querying Commerce: call `get_commerce_endpoints`; it returns GraphQL, Catalog Service, mesh, which one the storefront uses, and headers (`:186-189`) | correct | `commerceEndpointsTool.ts:95, 168, 189-190` | keep, and ADD `run_commerce_query`, which sends the query with headers attached (`commerceQueryTool.ts:194-195`). The section still tells the agent to assemble requests itself |
 | Storefront: local path is a git clone; edit here (`:207`) | correct | `executorEdsPhase.ts` records path and repo | keep |
@@ -112,7 +112,7 @@ shows it), **unverifiable** (needs a live run or an outside system).
 | commerce-block-mapper | Phase 2 LIVE: `/products/default` customisations reach every real PDP (`:26-30`) | correct per AGENTS.md; contradicted by register-custom-block | see register-custom-block row | keep one version |
 | commerce-block-mapper | 60-75% / 85-90% fidelity (`:22`) | unverifiable | no measurement cited | mark as a rough guide, or cut the numbers |
 | connect-authenticated-site | `@playwright/mcp` lives in `<project>/.demo-builder-mcp/node_modules/` (`:18`) | correct | `aiDefaultsInstaller.ts:44` | keep |
-| connect-authenticated-site | `.scraped/` is gitignored (`:32, :48`) | wrong | Demo Builder adds only `.mcp.json`, `.claude/mcp.json`, `.claude/settings.json` (`mcpConfigWriter.ts:220-224`); a real project's `.gitignore` has nothing else. Low risk at the project root (not a git repo, checked on `justrite`), but `auth.json` is a session credential and a save inside the storefront would be auto-pushed | "save under the project root, never inside `components/`"; or add `.scraped/` to the storefront's ignore list |
+| connect-authenticated-site | `.scraped/` is gitignored (`:32, :48`) | wrong | Demo Builder adds only `.mcp.json`, `.claude/mcp.json`, `.claude/settings.json` (`mcpConfigWriter.ts:220-224`); a real project's `.gitignore` has nothing else. Low risk at the project root (not a git repo, checked on `tailspin`), but `auth.json` is a session credential and a save inside the storefront would be auto-pushed | "save under the project root, never inside `components/`"; or add `.scraped/` to the storefront's ignore list |
 | connect-authenticated-site | Playwright MCP "storage-state APIs" save `auth.json` (`:32`) | unverifiable | external package | check against the pinned `@playwright/mcp` version |
 | create-eds-project | "VS Code must be open on an existing Demo Builder project" (`:8-10`) | stale | contradicted by the same file's notes (`:104-107`) and the always-root model (`executor.ts:459-465`) | delete the sentence |
 | create-eds-project | invalid package/stack returns `validStacksForPackage` (`:25-27`) | correct | `createProjectPackage.ts:90, 106` | keep |
@@ -183,7 +183,7 @@ access, Notes on auth/consent/reset, Reporting Back, the documentation router, a
 `import-datapack`, `diagnose-demo` (after fixes), `register-custom-block`,
 `remove-custom-block`, `update-credentials` (after fixes).
 
-**Cut** (about 5 KB of a 14 KB file, measured on `justrite/AGENTS.md`):
+**Cut** (about 5 KB of a 14 KB file, measured on `tailspin/AGENTS.md`):
 - PDP Routing, 3.6 KB, a quarter of the file. Replace with three lines: product URLs route
   automatically; do not create product pages or folder mappings; if PDPs 404, read
   `diagnose-demo`. Move the four layers into `diagnose-demo` if anything.

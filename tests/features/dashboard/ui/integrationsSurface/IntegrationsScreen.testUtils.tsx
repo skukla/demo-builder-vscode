@@ -53,15 +53,12 @@ jest.mock('@/core/ui/components/layout/PageLayout', () => ({
 }));
 
 jest.mock('@/core/ui/components/navigation/SearchHeader', () => ({
-    // Mirrors the real `showSearch: totalCount > searchThreshold` so the
-    // threshold this screen passes is actually exercised. The mock used to
-    // render the field unconditionally, which made the threshold untestable.
+    // Mirrors the real `showSearch: totalCount > 0`.
     SearchHeader: ({
         totalCount,
         filteredCount,
         onSearchQueryChange,
         onRefresh,
-        searchThreshold,
         countTrailing,
         countText,
         viewMode,
@@ -71,7 +68,7 @@ jest.mock('@/core/ui/components/navigation/SearchHeader', () => ({
             <span data-testid="count-text">{countText}</span>
             <span data-testid="total-count">{totalCount}</span>
             <span data-testid="filtered-count">{filteredCount}</span>
-            {totalCount > (searchThreshold ?? 5) && (
+            {totalCount > 0 && (
                 <input
                     aria-label="Filter integrations"
                     onChange={(e) => onSearchQueryChange(e.target.value)}
@@ -82,8 +79,8 @@ jest.mock('@/core/ui/components/navigation/SearchHeader', () => ({
                 (renderViewToggle); the same gate here keeps the screen honest. */}
             {viewMode !== undefined && onViewModeChange !== undefined && (
                 <>
-                    <button aria-label="Card view" onClick={() => onViewModeChange('cards')} />
-                    <button aria-label="List view" onClick={() => onViewModeChange('rows')} />
+                    <button aria-label="Card View" onClick={() => onViewModeChange('cards')} />
+                    <button aria-label="List View" onClick={() => onViewModeChange('rows')} />
                 </>
             )}
             {countTrailing}
@@ -143,7 +140,7 @@ jest.mock('@/features/dashboard/ui/components/integrations/IntegrationsGrid', ()
                     data-testid={`card-${c.id}`}
                     data-actions={(c.menuActions ?? []).join(',')}
                 >
-                    {c.name} · {c.statusLabel}
+                    {c.name}, {c.statusLabel}
                 </div>
             ))}
             {onAdd && <button onClick={onAdd}>grid-add</button>}
@@ -208,7 +205,7 @@ export { asDisplayName };
 
 export function getClient() {
     const { webviewClient } = require('@/core/ui/utils/WebviewClient');
-    return webviewClient as { postMessage: jest.Mock; onMessage: jest.Mock };
+    return webviewClient as { postMessage: jest.Mock; onMessage: jest.Mock; request: jest.Mock };
 }
 
 /**

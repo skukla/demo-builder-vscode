@@ -30,14 +30,12 @@ export const mockUpdateLastSyncedCommit = jest.fn();
 export const mockUpdateComponent = jest.fn();
 export const mockApplyAdobeMcpUpdate = jest.fn();
 export const mockApplyBlockLibraryUpdateResolved = jest.fn();
-export const mockUpdateCommitShaWithRollback = jest.fn();
 /** The installer the block-library INSTALL core calls (EDS-28). */
 export const mockInstallBlockLibraryFiles = jest.fn();
 export const mockCheckTemplateUpdates = jest.fn();
 export const mockCheckAllProjectsForUpdates = jest.fn();
 export const mockCheckMcpUpdates = jest.fn();
 export const mockCheckBlockLibraries = jest.fn();
-export const mockCheckInspectorSdk = jest.fn();
 export const mockCheckBoilerplate = jest.fn();
 
 /** Constructor spies: what each service was BUILT with. */
@@ -81,7 +79,6 @@ jest.mock('@/features/updates/services/adobeMcpUpdateCore', () => ({
 }));
 jest.mock('@/features/updates/services/updateCore', () => ({
     applyBlockLibraryUpdateResolved: (...a: unknown[]) => mockApplyBlockLibraryUpdateResolved(...a),
-    updateCommitShaWithRollback: (...a: unknown[]) => mockUpdateCommitShaWithRollback(...a),
     installBlockLibraryFiles: (...a: unknown[]) => mockInstallBlockLibraryFiles(...a),
 }));
 jest.mock('@/features/updates/services/templateUpdateChecker', () => ({
@@ -115,8 +112,11 @@ jest.mock('@/features/updates/services/boilerplateCheck', () => ({
 }));
 // The local storefront copy's refresh runs real git; its rules are localStorefrontRefresh.test's.
 export const mockRefreshLocalStorefronts = jest.fn();
+/** Whether a project has a local copy on disk; reads the disk for real, so faked here. */
+export const mockHasLocalCopy = jest.fn();
 jest.mock('@/features/updates/services/localStorefrontRefresh', () => ({
     refreshLocalStorefronts: (...a: unknown[]) => mockRefreshLocalStorefronts(...a),
+    hasLocalCopy: (...a: unknown[]) => mockHasLocalCopy(...a),
 }));
 jest.mock('@/features/updates/services/addonUpdateChecker', () => ({
     AddonUpdateChecker: class {
@@ -124,7 +124,6 @@ jest.mock('@/features/updates/services/addonUpdateChecker', () => ({
             AddonUpdateCheckerCtor(...args);
         }
         checkBlockLibraries = (...a: unknown[]) => mockCheckBlockLibraries(...a);
-        checkInspectorSdk = (...a: unknown[]) => mockCheckInspectorSdk(...a);
     },
 }));
 
@@ -161,7 +160,6 @@ export function edsProject(overrides: Partial<Project> = {}): Project {
                 },
             },
         },
-        installedInspectorSdk: { commitSha: 'old', installedAt: '2026-01-01T00:00:00.000Z' },
         // Every storefront has Demo Builder Blocks (always included, 2026-10-15);
         // without it the check would offer to install it.
         installedBlockLibraries: [
@@ -198,7 +196,6 @@ export function emptySelections(): UpdateSelections {
         adobeMcp: [],
         blockLibrary: [],
         blockLibraryInstall: [],
-        inspector: [],
         integration: [],
     };
 }
@@ -235,7 +232,6 @@ export function resetFakes(): void {
     mockUpdateComponent.mockResolvedValue(undefined);
     mockApplyAdobeMcpUpdate.mockResolvedValue(undefined);
     mockApplyBlockLibraryUpdateResolved.mockResolvedValue([]);
-    mockUpdateCommitShaWithRollback.mockResolvedValue(undefined);
     mockInstallBlockLibraryFiles.mockResolvedValue({
         success: true,
         blocksCount: 0,
@@ -247,5 +243,4 @@ export function resetFakes(): void {
     mockCheckAllProjectsForUpdates.mockResolvedValue([]);
     mockCheckMcpUpdates.mockResolvedValue(null);
     mockCheckBlockLibraries.mockResolvedValue([]);
-    mockCheckInspectorSdk.mockResolvedValue(null);
 }

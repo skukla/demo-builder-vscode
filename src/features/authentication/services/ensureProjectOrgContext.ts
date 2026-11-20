@@ -81,7 +81,7 @@ export async function ensureProjectOrgContext(options: {
     logger.warn(`${logPrefix} Project org not reachable by the current token`);
 
     const selection = await askDuringOperation(
-        { title: 'Switch Adobe organization', message: buildPrompt(project.name, initial.currentOrg) },
+        { title: 'Switch Adobe Organization', message: buildPrompt(project.name, initial.currentOrg) },
         'Switch IMS Org',
         'Cancel',
     );
@@ -96,7 +96,7 @@ export async function ensureProjectOrgContext(options: {
     await vscode.window.withProgress(
         {
             location: vscode.ProgressLocation.Notification,
-            title: 'Switching Adobe organization',
+            title: 'Switching Adobe Organization',
             cancellable: false,
         },
         () => authManager.loginAndRestoreProjectContext(

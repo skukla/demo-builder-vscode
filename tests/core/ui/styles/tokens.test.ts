@@ -22,7 +22,7 @@
  * property the old suite could never have caught.
  */
 import { execSync } from 'child_process';
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { resolve } from 'path';
 
 const ROOT = resolve(__dirname, '../../../../');
@@ -38,7 +38,8 @@ const consumers = execSync(
     { cwd: ROOT, encoding: 'utf8' }
 )
     .split('\n')
-    .filter((f) => f && !f.includes('node_modules') && !f.endsWith('styles/tokens.css'));
+    // A file deleted in the working tree but still in the index is listed too: it no longer exists to read.
+    .filter((f) => f && !f.includes('node_modules') && !f.endsWith('styles/tokens.css') && existsSync(resolve(ROOT, f)));
 
 describe('tokens.css', () => {
     it('is wrapped in @layer theme', () => {

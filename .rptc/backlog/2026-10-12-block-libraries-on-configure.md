@@ -19,7 +19,7 @@ creation the only way to add one is Your Projects, Edit, which reopens the whole
 Configure, the screen an SC opens to change a project, has five tabs (Project, the Commerce
 connection, Business Structure, Adobe Assets, Authoring) and none of them lists libraries.
 
-It came up on the BJU project: created without Demo Builder Blocks, so its menu had no
+It came up on the CLIENT C project: created without Demo Builder Blocks, so its menu had no
 `catalog-menu` block, and Configure offered no way to add it.
 
 Two documents had it wrong, both written by the agent: the 2026-10-10 release test plan's
@@ -64,7 +64,7 @@ install at once or leave it to the update check; the first is what an SC expects
   to a sheet both entries already share and drop the import. Either is a stylesheet edit, which
   needs a resting visual capture, and the capture browser was not connected in the session that
   built this. The Configure entry's own comment says what is true.
-- **Not looked at in a browser by the builder.** The owner's check on BJU is the first look.
+- **Not looked at in a browser by the builder.** The owner's check on CLIENT C is the first look.
 - ~~**A custom library changed in VS Code settings shows only after Configure is reopened.**~~
   Fixed 2026-10-12: Configure pushes `customBlockLibraryDefaultsUpdated` when the setting
   changes, the message the wizard already followed (`useBlockLibraryChoices.ts`).

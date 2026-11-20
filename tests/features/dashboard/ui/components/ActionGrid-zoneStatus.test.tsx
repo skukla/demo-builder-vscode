@@ -2,8 +2,8 @@
  * Remedy tiles: the fix is a BUTTON in the zone, and its dot says whether you
  * need it.
  *
- * First attempt put a StatusCard row inside the zone ("Storefront · Republish
- * needed · Republish"). It dangled off the end of the tile row and broke the
+ * First attempt put a StatusCard row inside the zone ("Storefront, Republish
+ * needed, Republish"). It dangled off the end of the tile row and broke the
  * grid. The tile dot was already the established answer — IntegrationsSummaryTile
  * does exactly this — but there was no tile to hang a dot on, because both
  * remedies lived elsewhere: Republish Content in the More overflow, Restart
@@ -25,6 +25,7 @@ import React from 'react';
 import { render, screen, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { ActionGrid, defaultProps, edsProps, getZone } from './ActionGrid.testUtils';
+import type { SetupChecklistItem } from '@/types/appBuilderComponents';
 
 const stale = { color: 'yellow' as const, text: 'Republish needed', remedy: 'republish' as const };
 const published = { color: 'green' as const, text: 'Published' };
@@ -68,12 +69,12 @@ describe('Storefront zone — the Republish tile', () => {
         expect(screen.getByTestId('republish-tile-dot')).toHaveAttribute('data-variant', 'warning');
     });
 
-    it('says "Needed" beside the label, so the dot is not left to explain itself', () => {
+    it('shows the dot and no word, the words being on hover and for a screen reader', () => {
         const { container } = render(<ActionGrid {...edsProps} demoStatus={stale} />);
 
-        const status = within(getZone(container, 'storefront')).getByText('Needed');
-        expect(status).toHaveClass('dashboard-tile-status-text');
-        expect(status).toHaveAttribute('data-variant', 'warning');
+        const zone = within(getZone(container, 'storefront'));
+        expect(zone.queryByText('Needed')).not.toBeInTheDocument();
+        expect(zone.getByRole('button', { name: /^Republish, Republish needed/ })).toBeInTheDocument();
     });
 
     it('wears NO dot when the storefront is current', () => {
@@ -393,5 +394,44 @@ describe('Edit and Sync Storefront tiles', () => {
 
         (tile(container, 'sync-storefront') as HTMLElement).click();
         expect(handleSyncStorefront).toHaveBeenCalledTimes(1);
+    });
+});
+
+// PL-101: the tile that fixes a Finish Setup step wears the amber dot while the step is open, with
+// the hover saying why (ActionGrid's status placement rule).
+describe('Finish Setup steps — the dot on the tile that fixes each', () => {
+    const items: SetupChecklistItem[] = [];
+
+    it('dots Republish while Republish the Code is open, saying why on hover', () => {
+        render(
+            <ActionGrid
+                {...edsProps}
+                demoStatus={published}
+                finishSetup={{ items, remaining: 1, republishDue: true }}
+            />
+        );
+
+        expect(screen.getByTestId('republish-tile-dot')).toHaveAttribute('data-variant', 'warning');
+        expect(
+            screen.getByRole('button', { name: /^Republish, .*live site.*code/i })
+        ).toBeInTheDocument();
+    });
+
+    it('dots Manage Commerce while Set the Root Category is open, saying why on hover', () => {
+        render(
+            <ActionGrid {...defaultProps} finishSetup={{ items, remaining: 1, adminDue: true }} />
+        );
+
+        expect(screen.getByTestId('manage-commerce-dot')).toHaveAttribute('data-variant', 'warning');
+        expect(
+            screen.getByRole('button', { name: /^Manage Commerce, Root category needed/ })
+        ).toBeInTheDocument();
+    });
+
+    it('dots neither when every step is done or skipped', () => {
+        render(<ActionGrid {...edsProps} demoStatus={published} finishSetup={{ items, remaining: 0 }} />);
+
+        expect(screen.queryByTestId('republish-tile-dot')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('manage-commerce-dot')).not.toBeInTheDocument();
     });
 });

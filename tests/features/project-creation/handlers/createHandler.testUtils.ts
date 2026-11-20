@@ -1,7 +1,7 @@
 import { HandlerContext } from '@/types/handlers';
 import { validateProjectNameSecurity } from '@/core/validation/validators/ProjectNameValidator';
 import * as executor from '@/features/project-creation/handlers/executor';
-import * as promiseUtils from '@/core/utils/promiseUtils';
+import { TimeoutError } from '@/core/utils/timeoutError';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import * as vscode from 'vscode';
 import * as fs from 'fs';
@@ -101,9 +101,6 @@ export function setupDefaultMocks(): MockCommandExecutor {
     // Mock executor
     (executor.executeProjectCreation as jest.Mock).mockResolvedValue(undefined);
 
-    // Mock promiseUtils.withTimeout to just execute the promise
-    (promiseUtils.withTimeout as jest.Mock).mockImplementation(async (promise) => promise);
-
     // Mock vscode
     (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue(undefined);
     mockWorkspace.isTrusted = true;
@@ -126,8 +123,11 @@ export function mockValidationError(errorMessage: string): void {
 /**
  * Configures mocks for a timeout scenario
  */
-export function mockTimeout(timeoutMessage = 'Project creation timed out after 30 minutes'): void {
-    (promiseUtils.withTimeout as jest.Mock).mockRejectedValue(new Error(timeoutMessage));
+export function mockTimeout(): void {
+    // The run's own limit ran out (`creationLimit.ts`): the run rejects with its TimeoutError.
+    (executor.executeProjectCreation as jest.Mock).mockRejectedValue(
+        new TimeoutError('Project creation', 30 * 60 * 1000),
+    );
 }
 
 /**

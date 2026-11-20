@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Layout variants at actual size</title>
+<style>
+/* Spectrum dark, medium scale: the values the extension's windows are drawn with.
+   Window widths are Spectrum's own: S 400px, M 480px, L 640px; padding 40px. */
+:root{
+  --g50:#252525;--g75:#2f2f2f;--g100:#323232;--g200:#3e3e3e;--g300:#4a4a4a;--g400:#5a5a5a;
+  --g500:#6e6e6e;--g600:#909090;--g700:#b9b9b9;--g800:#e3e3e3;--g900:#fff;
+  --accent:#2680eb;--neg:#d7373f;--neg-text:#f76d74;--notice:#e68619;--pos:#2d9d78;
+  --font:adobe-clean,"Source Sans Pro",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#141414;color:var(--g800);font-family:var(--font);padding:32px 0 80px}
+.intro{width:1280px;margin:0 auto 24px;font-size:14px;line-height:1.5;color:var(--g700)}
+.intro h1{font-size:20px;color:var(--g900);margin:0 0 6px}
+.shot{width:1280px;margin:0 auto 48px}
+.shot h2{font-size:15px;color:var(--g900);margin:0 0 4px}
+.shot p{margin:0 0 10px;font-size:13px;color:var(--g600);max-width:90ch;line-height:1.45}
+
+/* The VS Code editor area holding the webview. */
+.frame{position:relative;width:1280px;height:820px;background:#1e1e1e;border:1px solid #2b2b2b;overflow:hidden}
+.tabs{height:35px;background:#252526;display:flex;font-size:13px;color:#969696}
+.tabs span{padding:9px 16px;border-right:1px solid #1e1e1e}
+.tabs span.on{background:#1e1e1e;color:#fff}
+.screen{position:absolute;inset:35px 0 0 0;padding:28px 40px;font-size:14px}
+.screen h1{font-size:24px;margin:0 0 4px;color:var(--g900)}
+.screen .sub{color:var(--g600);margin:0 0 20px}
+.stabs{display:flex;gap:24px;border-bottom:2px solid var(--g300);margin:0 0 16px;font-size:14px}
+.stabs span{padding:0 0 8px;color:var(--g700)}
+.stabs span.on{color:var(--g900);border-bottom:2px solid var(--g900);margin-bottom:-2px}
+.screen table{width:100%;border-collapse:collapse}
+.screen th{text-align:left;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--g600);padding:8px 12px;border-bottom:1px solid var(--g300)}
+.screen td{padding:12px;border-bottom:1px solid var(--g200)}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.tile{background:var(--g75);border:1px solid var(--g200);border-radius:4px;padding:18px;height:120px}
+.tile b{display:block;color:var(--g900);margin:0 0 6px}
+.underlay{position:absolute;inset:35px 0 0 0;background:rgba(0,0,0,.55)}
+
+/* The window: positioned as modal.css pins it, 8% from the top, centred across. */
+.dlg{position:absolute;left:50%;transform:translateX(-50%);top:calc(35px + 785px*.08);
+  background:var(--g100);border-radius:4px;padding:40px;display:flex;flex-direction:column;
+  box-shadow:0 8px 32px rgba(0,0,0,.6);max-height:calc(785px*.84)}
+.S{width:400px}.M{width:480px}.L{width:640px}
+.dlg h3{margin:0;font-size:18px;font-weight:700;color:var(--g900);line-height:1.3;display:flex;gap:10px;align-items:flex-start}
+.dlg h3 .ic{font-size:16px;margin-top:2px}
+.rule{height:2px;background:var(--g300);margin:12px 0 16px;flex:none}
+.body{flex:1 1 auto;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:16px}
+.body > *{margin:0}
+.lead{font-size:14px;line-height:1.5;max-width:60ch}
+.lead.s16{font-size:16px}
+.line{font-size:14px;line-height:1.5}
+.note{font-size:12px;line-height:1.5;color:var(--g600)}
+.prob{font-size:12px;line-height:1.5}
+.rows{display:flex;flex-direction:column;gap:8px}
+.fld label{display:block;font-size:12px;color:var(--g700);margin:0 0 4px}
+.in{height:32px;border:1px solid var(--g400);border-radius:4px;background:var(--g50);padding:6px 10px;font-size:14px;color:var(--g800)}
+.in.pick{display:flex;justify-content:space-between}
+.chk{display:flex;gap:10px;align-items:flex-start;font-size:14px}
+.box{display:inline-block;width:14px;min-width:14px;height:14px;border:2px solid var(--g600);border-radius:2px;flex:none;margin-top:3px}
+td:first-child:has(.box){width:22px}
+.box.on{background:var(--g800);border-color:var(--g800);position:relative}
+.box.on::after{content:"";position:absolute;left:3px;top:0;width:4px;height:7px;border:solid #1e1e1e;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.chk small{display:block;font-size:12px;color:var(--g600)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px 24px}
+.foot{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;margin-top:24px;flex:none}
+.foot .start{margin-right:auto;display:flex;gap:8px}
+.b{height:32px;padding:0 14px;border-radius:16px;font-size:14px;font-weight:700;display:inline-flex;align-items:center;border:2px solid var(--g300);color:var(--g800);white-space:nowrap}
+.b.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.b.neg{background:var(--neg);border-color:var(--neg);color:#fff}
+.b.quiet{border-color:transparent}
+.b.dis{opacity:.4}
+.b.sm{height:24px;padding:0 10px;font-size:12px;border-radius:12px}
+.spin{width:18px;height:18px;border:2px solid var(--g400);border-top-color:var(--accent);border-radius:50%;display:inline-block;flex:none}
+.spin.lg{width:32px;height:32px;border-width:3px}
+.wait{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;flex:1;min-height:176px;color:var(--g700)}
+.inline-wait{display:flex;gap:10px;align-items:center;font-size:14px;color:var(--g700)}
+.banner{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:4px;font-size:14px;line-height:1.45}
+.banner.err{background:rgba(215,55,63,.18);color:var(--g900)}
+.banner.err .ic{color:var(--neg-text)}
+.banner.warn{background:rgba(230,134,25,.16);color:var(--g900)}
+.banner.warn .ic{color:var(--notice)}
+.tbl{width:100%;border-collapse:collapse;font-size:14px}
+.tbl th{text-align:left;font-size:12px;color:var(--g600);font-weight:400;padding:6px 8px;border-bottom:1px solid var(--g300)}
+.tbl td{padding:8px;border-bottom:1px solid var(--g200)}
+.step{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--g200)}
+.step:last-child{border-bottom:0}
+.step .d{width:18px;flex:none;display:flex;justify-content:center;padding-top:2px}
+.step .t{font-weight:700;font-size:14px;color:var(--g900)}
+.step .s{font-size:12px;color:var(--g600)}
+.step .a{margin-left:auto;display:flex;gap:6px;flex:none}
+.ok{color:var(--pos)}.todo{color:var(--g500)}.warnc{color:var(--notice)}
+.dot{width:14px;height:14px;border:2px solid var(--g500);border-radius:50%;display:inline-block}
+.stack{display:flex;flex-direction:column}
+/* Steps: one size, the tallest stage's, held from the form to the result. */
+.fixed{height:659px}
+.amber{color:var(--notice)}
+</style></head><body>
+
+<div class="intro">
+<h1>Layout variants at actual size</h1>
+Each shot is a 1280 × 820 VS Code editor area with the webview behind the window. Windows are drawn at Spectrum's real widths (S 400, M 480, L 640), 40px padding, 18px titles, 14px body, placed 8% from the top as <code>modal.css</code> pins them. The screens behind are simplified stand-ins. Scroll down for the run, in order.
+</div>
+
+<!-- ============ 1. FORM, SIZED BY WHAT IT HOLDS ============ -->
+<div class="shot">
+<h2>1a. Form, large because it holds a table: Clear Demo Data</h2>
+<p>Size L (640). The window doesn't take a size from the caller; a table makes it large.</p>
+<div class="frame" data-bg="datapacks">
+<div class="dlg L">
+<h3>Clear Demo Data</h3><div class="rule"></div>
+<div class="body">
+<p class="lead">Choose the stores to clear. Demo Builder shows what goes before anything is removed.</p>
+<table class="tbl"><tr><th></th><th>Store</th><th>Website</th><th>Products</th></tr>
+<tr><td><span class="box on"></span></td><td>Main Store</td><td>Main Website</td><td>1,204</td></tr>
+<tr><td><span class="box"></span></td><td>Wholesale</td><td>B2B</td><td>318</td></tr>
+<tr><td><span class="box"></span></td><td>Canada Store</td><td>Canada</td><td>96</td></tr></table>
+<p class="note">Datapacks Demo Builder installed are left alone.</p>
+</div>
+<div class="foot"><span class="b">Cancel</span><span class="b neg">Clear</span></div>
+</div></div></div>
+
+<div class="shot">
+<h2>1b. Form with nothing to submit: Share</h2>
+<p>Size L (640), as Share is today. Close is the only button.</p>
+<div class="frame" data-bg="dashboard">
+<div class="dlg L">
+<h3>Share</h3><div class="rule"></div>
+<div class="body">
+<div class="fld"><label>Link</label><div class="in">github.com/acme/bodea-demo</div></div>
+<p class="note">Anyone with access to the repository can add it from their Welcome screen.</p>
+</div>
+<div class="foot"><span class="b">Close</span></div>
+</div></div></div>
+
+<!-- ============ 2. FORM THAT SHOWS A FAILURE ============ -->
+<div class="shot">
+<h2>2a. Form, saving: Integration Settings</h2>
+<p>Size M (480). While it saves, the wait sits above the buttons and Cancel becomes Run in Background.</p>
+<div class="frame" data-bg="dashboard">
+<div class="dlg M">
+<h3>Integration Settings</h3><div class="rule"></div>
+<div class="body">
+<div class="fld"><label>Sales Organization</label><div class="in">1000</div></div>
+<div class="fld"><label>Distribution Channel</label><div class="in">10</div></div>
+<div class="inline-wait"><span class="spin"></span>Saving and redeploying</div>
+</div>
+<div class="foot"><span class="b">Run in Background</span><span class="b pri dis">Save and Redeploy</span></div>
+</div></div></div>
+
+<div class="shot">
+<h2>2b. Form, failed: what the SC typed stays</h2>
+<p>Same size. The failure shows in red above the fields.</p>
+<div class="frame" data-bg="dashboard">
+<div class="dlg M">
+<h3>Integration Settings</h3><div class="rule"></div>
+<div class="body">
+<div class="banner err"><span class="ic">✕</span><span>Couldn't save the settings. The deploy didn't finish.</span></div>
+<div class="fld"><label>Sales Organization</label><div class="in">1000</div></div>
+<div class="fld"><label>Distribution Channel</label><div class="in">10</div></div>
+</div>
+<div class="foot"><span class="b">Cancel</span><span class="b pri">Save and Redeploy</span></div>
+</div></div></div>
+
+<!-- ============ 3. STEPS: INSTALL DATAPACK ============ -->
+<div class="shot">
+<h2>3a. Steps, Form: Install Datapack</h2>
+<p>Size L (640), height held at its tallest stage (the run list). Today this window is M or L for the form and drops to S for the result; with the rule it keeps one size. Bodea, main was chosen on the Datapacks screen before it opened.</p>
+<div class="frame" data-bg="datapacks">
+<div class="dlg L fixed">
+<h3>Install Bodea, main</h3><div class="rule"></div>
+<div class="body">
+<div class="grid2">
+<div class="fld"><label>Website</label><div class="in pick"><span>Main Website</span><span>⌄</span></div></div>
+<div class="fld"><label>Store View</label><div class="in pick"><span>Default Store View</span><span>⌄</span></div></div>
+</div>
+<div class="stack" style="gap:10px">
+<div class="fld"><label>Data</label></div>
+<div class="chk"><span class="box on"></span><span>Select All</span></div>
+<div class="grid2">
+<div class="chk"><span class="box on"></span><span>Attributes<small>42 to add</small></span></div>
+<div class="chk"><span class="box on"></span><span>Categories<small>86 to add</small></span></div>
+<div class="chk"><span class="box on"></span><span>Products<small>1,204 to add</small></span></div>
+<div class="chk"><span class="box on"></span><span>Customers<small>12 to add</small></span></div>
+<div class="chk"><span class="box on"></span><span>Companies<small>4 to add</small></span></div>
+<div class="chk"><span class="box on"></span><span>Cart Rules<small>6 to add</small></span></div>
+<div class="chk"><span class="box on"></span><span>Shared Catalogs<small>4 to add</small></span></div>
+<div class="chk"><span class="box on"></span><span>Store Configuration<small>3 to change</small></span></div>
+</div></div>
+</div>
+<div class="foot"><span class="b">Cancel</span><span class="b">Dry Run</span><span class="b pri">Install</span></div>
+</div></div></div>
+
+<div class="shot">
+<h2>3b. Steps, Running</h2>
+<p>Same window, same size. The run list is the tallest stage, so it sets the height; here it meets the window's cap (84% of the editor's height), so the list scrolls and the buttons stay put.</p>
+<div class="frame" data-bg="datapacks">
+<div class="dlg L fixed">
+<h3>Installing Bodea, main</h3><div class="rule"></div>
+<div class="body" style="gap:0">
+<div class="step"><span class="d ok">✓</span><div><div class="t">Attributes</div><div class="s">Installed</div></div></div>
+<div class="step"><span class="d ok">✓</span><div><div class="t">Categories</div><div class="s">Installed</div></div></div>
+<div class="step"><span class="d"><span class="spin"></span></span><div><div class="t">Products</div><div class="s">450 of 1,204 products</div></div></div>
+<div class="step"><span class="d"><span class="dot"></span></span><div><div class="t">Customers</div><div class="s">Waiting</div></div></div>
+<div class="step"><span class="d"><span class="dot"></span></span><div><div class="t">Companies</div><div class="s">Waiting</div></div></div>
+<div class="step"><span class="d"><span class="dot"></span></span><div><div class="t">Cart Rules</div><div class="s">Waiting</div></div></div>
+<div class="step"><span class="d"><span class="dot"></span></span><div><div class="t">Shared Catalogs</div><div class="s">Waiting</div></div></div>
+<div class="step"><span class="d"><span class="dot"></span></span><div><div class="t">Store Configuration</div><div class="s">Waiting</div></div></div>
+<div class="step"><span class="d"><span class="dot"></span></span><div><div class="t">Verify Installation</div><div class="s">Waiting</div></div></div>
+</div>
+<div class="foot"><span class="b">Run in Background</span></div>
+</div></div></div>
+
+<div class="shot">
+<h2>3c. Steps, Result</h2>
+<p>Same size again. The result no longer shrinks to S.</p>
+<div class="frame" data-bg="datapacks">
+<div class="dlg L fixed">
+<h3><span class="ic amber">⚠</span>Installed Bodea, main</h3><div class="rule"></div>
+<div class="body">
+<p class="lead">1,202 products, 86 categories, 12 customers and 4 companies installed. 3 store configuration values changed.</p>
+<div class="banner warn"><span class="ic">⚠</span><span>2 rows skipped</span></div>
+<div class="rows">
+<p class="line">BD-114: no option "XXL" on Size</p>
+<p class="line">BD-209: url key already used</p>
+</div>
+</div>
+<div class="foot"><span class="b">Close</span></div>
+</div></div></div>
+
+<!-- ============ 4. GUIDE WITH ACTIONS ============ -->
+<div class="shot">
+<h2>4. Guide with actions: Setup Guide</h2>
+<p>Size L (640), as today. Each step carries its own buttons; one window action sits beside Close.</p>
+<div class="frame" data-bg="dashboard">
+<div class="dlg L">
+<h3>Set Up the Store</h3><div class="rule"></div>
+<div class="body" style="gap:8px">
+<p class="lead">Three steps are done in the Admin. Check each one when it's set.</p>
+<div>
+<div class="step"><span class="d ok">✓</span><div><div class="t">Price Scope Set to Website</div><div class="s">Already set up in the store.</div></div></div>
+<div class="step"><span class="d"><span class="dot"></span></span><div><div class="t">Confirmed in ERP Order Status</div><div class="s">One step in the Admin</div></div><div class="a"><span class="b sm">Open Admin</span><span class="b sm">Check</span></div></div>
+<div class="step"><span class="d"><span class="dot"></span></span><div><div class="t">Shared Catalog per Company</div><div class="s">Not set up</div></div><div class="a"><span class="b sm">Open Admin</span><span class="b sm">Check</span></div></div>
+</div>
+</div>
+<div class="foot"><span class="b">Close</span><span class="b pri">Apply All</span></div>
+</div></div></div>
+
+<!-- ============ 5. CONFIRM WITH A WAIT ============ -->
+<div class="shot">
+<h2>5a. Confirm that reads first: Add ERP Integration</h2>
+<p>Size L (640), as today. It opens reading the store configuration.</p>
+<div class="frame" data-bg="dashboard">
+<div class="dlg L">
+<h3>Add ERP Integration</h3><div class="rule"></div>
+<div class="body"><div class="wait"><span class="spin lg"></span><span>Reading configuration</span></div></div>
+<div class="foot"><span class="b">Cancel</span><span class="b pri dis">Add and Apply</span></div>
+</div></div></div>
+
+<div class="shot">
+<h2>5b. The question, at the same size</h2>
+<p>If the read fails, the title becomes Couldn't Read the Store Configuration with Retry.</p>
+<div class="frame" data-bg="dashboard">
+<div class="dlg L">
+<h3>Add ERP Integration</h3><div class="rule"></div>
+<div class="body">
+<p class="lead">Adding it also changes this store configuration:</p>
+<div class="rows">
+<p class="line">Catalog price scope: Global → Website</p>
+<p class="line">Payment on Account: Off → On</p>
+</div>
+</div>
+<div class="foot"><span class="b">Cancel</span><span class="b pri">Add and Apply</span></div>
+</div></div></div>
+
+<!-- ============ 6. RESULT WITH ITS OWN ACTIONS ============ -->
+<div class="shot">
+<h2>6. Result with an action per line: Add from File</h2>
+<p>Size S (400), the result size. The line's button has its own wait; Close is the only window button.</p>
+<div class="frame" data-bg="datapacks">
+<div class="dlg S">
+<h3><span class="ic amber">⚠</span>Partly Loaded</h3><div class="rule"></div>
+<div class="body">
+<p class="lead">Luma, main loaded into Data Installer.</p>
+<div class="step" style="border:0;padding:0"><span class="d warnc">⚠</span><div><div class="t">Store Configuration</div><div class="s">Saved to your datapacks, not the catalog</div></div></div>
+<div><span class="b sm">Delete Store Configuration</span></div>
+</div>
+<div class="foot"><span class="b">Close</span></div>
+</div></div></div>
+
+<template id="bg-datapacks">
+<div class="tabs"><span>Bodea Demo</span><span class="on">Datapacks</span></div>
+<div class="screen">
+<h1>Datapacks</h1><p class="sub">Install sample data into Bodea Demo's store.</p>
+<div class="stabs"><span class="on">Catalog</span><span>Installed</span><span>Activity</span></div>
+<table><tr><th>Name</th><th>Version</th><th>Source</th><th>Products</th><th>Updated</th></tr>
+<tr><td>Bodea</td><td>main</td><td>Team</td><td>1,204</td><td>Nov 3</td></tr>
+<tr><td>Luma</td><td>main</td><td>Team</td><td>2,046</td><td>Oct 28</td></tr>
+<tr><td>CitiSignal</td><td>main</td><td>Team</td><td>312</td><td>Oct 20</td></tr>
+<tr><td>Carvelo</td><td>b2b</td><td>Community</td><td>540</td><td>Oct 11</td></tr>
+<tr><td>My Bodea</td><td>v2</td><td>Mine</td><td>1,210</td><td>Nov 9</td></tr></table>
+</div><div class="underlay"></div>
+</template>
+<template id="bg-dashboard">
+<div class="tabs"><span class="on">Bodea Demo</span><span>Datapacks</span></div>
+<div class="screen">
+<h1>Bodea Demo</h1><p class="sub">Edge Delivery + Adobe Commerce as a Cloud Service · Running</p>
+<div class="stabs"><span>Overview</span><span class="on">Integrations</span><span>Storefront</span></div>
+<div class="tiles">
+<div class="tile"><b>ERP Integration</b>Deployed · Acme ERP</div>
+<div class="tile"><b>API Mesh</b>Deployed</div>
+<div class="tile"><b>Add Integration</b>Browse the catalog</div>
+</div></div><div class="underlay"></div>
+</template>
+<script>
+for (const f of document.querySelectorAll('.frame')) {
+  const t = document.getElementById('bg-' + f.dataset.bg);
+  f.prepend(t.content.cloneNode(true));
+}
+</script>
+</body></html>

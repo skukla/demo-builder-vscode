@@ -116,8 +116,8 @@ export class ConfigureCommand extends BaseCommand {
                 );
                 if (selection === 'Restart Now') {
                     try {
-                        await vscode.commands.executeCommand('demoBuilder.stopDemo');
-                        await vscode.commands.executeCommand('demoBuilder.startDemo');
+                        // The one restart, for the project whose port changed (PL-104 fix 12).
+                        await vscode.commands.executeCommand('demoBuilder.restartDemo', project.path);
                     } catch (error) {
                         await this.showError(`Failed to restart demo: ${error instanceof Error ? error.message : 'Unknown error'}`);
                     }

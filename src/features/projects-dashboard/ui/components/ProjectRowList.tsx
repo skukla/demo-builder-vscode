@@ -8,6 +8,7 @@
 import React from 'react';
 import type { ProjectActions } from './ProjectActionsMenu';
 import { ProjectRow } from './ProjectRow';
+import type { ListSelection } from './ProjectSelectBox';
 import type { Project } from '@/types/base';
 
 export interface ProjectRowListProps {
@@ -25,6 +26,8 @@ export interface ProjectRowListProps {
     addCard?: React.ReactNode;
     /** Bundled action callbacks passed to each row's menu */
     actions?: ProjectActions;
+    /** While selecting: every tile shows its box, and a click ticks it. */
+    selection?: ListSelection;
 }
 
 /**
@@ -36,6 +39,7 @@ export function ProjectRowList({
     onSelectProject,
     actions = {},
     addCard,
+    selection,
 }: ProjectRowListProps) {
     return (
         <div className="project-row-list">
@@ -46,6 +50,9 @@ export function ProjectRowList({
                     isRunning={project.path === runningProjectPath}
                     onSelect={onSelectProject}
                     actions={actions}
+                    selection={
+                        selection && { selected: selection.selected.has(project.path), onToggle: selection.onToggle }
+                    }
                 />
             ))}
             {addCard}

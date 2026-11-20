@@ -584,10 +584,10 @@ describe('the add answer names what the SC named', () => {
         mockGetAppBuilderComponentCatalog.mockReturnValue(catalog);
 
         // Confirmed: the ERP integration's add prepares the store, so without it nothing deploys (2026-10-22).
-        await handleAddAppBuilderComponent(mockContext, { id: 'erp-integration', name: 'Justrite ERP', confirm: true });
+        await handleAddAppBuilderComponent(mockContext, { id: 'erp-integration', name: 'Tailspin ERP', confirm: true });
 
         const deployed = mockAddAppBuilderComponent.mock.calls[0][0];
-        expect(resolveDeployInputs(deployed, erp).ERP_DISPLAY_NAME).toBe('Justrite ERP');
+        expect(resolveDeployInputs(deployed, erp).ERP_DISPLAY_NAME).toBe('Tailspin ERP');
         expect(resolveDeployInputs(deployed, integration).INTEGRATION_DISPLAY_NAME).toBe('ERP Integration');
         // Control: the same resolver, before the add, answers the default.
         expect(resolveDeployInputs({ ...deployed, componentConfigs: {} }, erp).ERP_DISPLAY_NAME).toBe(

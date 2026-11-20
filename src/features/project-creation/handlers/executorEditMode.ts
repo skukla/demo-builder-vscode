@@ -14,6 +14,7 @@ import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import type { ProgressTracker } from './shared';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { reportProjectCreated } from '@/features/project-creation/services/projectFinalizationService';
 import type { HandlerContext } from '@/types/handlers';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
 
@@ -62,7 +63,6 @@ const REBUILT_FRESH = [
     // Only valid while the demo runs, and the rebuild stops it.
     'frontendEnvState',
     // Installed into the old component folders, which the rebuild replaces.
-    'installedInspectorSdk',
     // Statuses of what the rebuild deploys and publishes again.
     'meshStatusSummary',
     'appStatusSummary',
@@ -110,8 +110,8 @@ async function saveUnchangedEdit(
     context.logger.info('[Project Edit] Nothing changed: saving only, nothing redeployed');
     project.lastModified = new Date();
     await context.stateManager.saveProject(project);
-    // The sentinel the wizard's progress screen finishes on.
-    progressTracker('Project Created', 100, 'No changes to apply');
+    // The sentinel the wizard's progress screen finishes on, with any step still left to finish.
+    await reportProjectCreated(progressTracker, project, context.logger, 'No changes to apply');
     return true;
 }
 

@@ -12,6 +12,7 @@ import {
     buildStatusPayload,
     deriveMeshStatus,
 } from '@/features/dashboard/services/dashboardStatusService';
+import { finishSetupOf } from '@/features/dashboard/services/finishSetup';
 import { STOREFRONT_CHANGES } from '@/features/eds/services/storefront/storefrontChanges';
 import { createMockProject, edsStorefrontInstance } from '../../../helpers/projectFake';
 
@@ -162,6 +163,30 @@ describe('dashboardStatusService', () => {
                 const project = createMockProject({ created: new Date('2026-01-01T00:00:00Z') });
 
                 expect(buildStatusPayload(project, false)).not.toHaveProperty('storefrontNeedsReset');
+            });
+        });
+
+        // The dashboard's "N steps remaining" line, its guide and the tile dots read this (PL-101).
+        describe('finishSetup', () => {
+            const project = createMockProject({
+                finishSetup: { 'republish-code': { files: ['scripts/a.js'] } },
+            });
+            const steps = finishSetupOf(project, undefined);
+
+            it('carries the steps a run left, and which tile fixes the open one', () => {
+                expect(buildStatusPayload(project, false, undefined, steps).finishSetup).toStrictEqual({
+                    items: steps,
+                    remaining: 1,
+                    republishDue: true,
+                });
+            });
+
+            it('is absent when no run left a step', () => {
+                expect(buildStatusPayload(project, false, undefined, [])).not.toHaveProperty('finishSetup');
+            });
+
+            it('is absent when the caller read no steps (the agent status tool)', () => {
+                expect(buildStatusPayload(project, false)).not.toHaveProperty('finishSetup');
             });
         });
     });

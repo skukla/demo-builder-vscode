@@ -12,6 +12,7 @@ import type { CatalogMenuSite } from '@/features/eds/services/catalogMenu/catalo
 import { hashOf, type StorefrontPages } from '@/features/eds/services/catalogMenu/ownedPages';
 import {
     executeCatalogMenuPhase,
+    SWAP_LINE,
     rewriteCatalogMenuPhase,
 } from '@/features/project-creation/services/catalogMenuPhase';
 import type { Project } from '@/types/base';
@@ -25,7 +26,7 @@ import { createMockProject } from '../../../helpers/projectFake';
 
 const NAV = '<body><header></header><main><div><ul><li>Home</li></ul></div></main><footer></footer></body>';
 
-function storefront(githubRepo = 'skukla/kukla-justrite', extra: Record<string, unknown> = {}): Project {
+function storefront(githubRepo = 'skukla/kukla-tailspin', extra: Record<string, unknown> = {}): Project {
     return createMockProject({
         selectedStack: 'eds-accs',
         componentSelections: { frontend: COMPONENT_IDS.EDS_STOREFRONT },
@@ -65,7 +66,7 @@ describe('executeCatalogMenuPhase', () => {
         await executeCatalogMenuPhase(createMockHandlerContext(), project, progress, undefined, makeSite);
 
         expect(makeSite).toHaveBeenCalledWith(
-            expect.objectContaining({ repoOwner: 'skukla', repoName: 'kukla-justrite', daLiveSite: 'kukla-justrite' }),
+            expect.objectContaining({ repoOwner: 'skukla', repoName: 'kukla-tailspin', daLiveSite: 'kukla-tailspin' }),
         );
         expect(helix.published).toEqual(['/signs']);
         expect(s.pages.has('/categories/default')).toBe(true);
@@ -75,6 +76,20 @@ describe('executeCatalogMenuPhase', () => {
             97,
             expect.stringContaining('Published 1 category page.'),
         );
+    });
+
+    // Walk F207 (2026-11-17): the step said nothing until it ended, so creation's screen sat on
+    // the step before it ("Warming product pages, 49 of 49") for the 39 s it took.
+    it('says its step as it starts, before any page is written', async () => {
+        const project = storefront();
+        const s = fakeSite();
+        const helix = fakeCategoryHelix();
+        const progress = jest.fn();
+
+        await executeCatalogMenuPhase(createMockHandlerContext(), project, progress, undefined, () => siteOver(s.port, helix));
+
+        expect(progress.mock.calls[0]).toEqual([OPERATION_STAGES.addingCatalogMenu.label, 97, OPERATION_STAGES.addingCatalogMenu.detail]);
+        expect(progress).toHaveBeenCalledTimes(2);
     });
 
     it('builds nothing for a project without a storefront', async () => {
@@ -127,7 +142,7 @@ describe('executeCatalogMenuPhase', () => {
         expect(readCatalogMenuRecord(rebuilt).legacyPages).toStrictEqual([]);
     });
 
-    it('never fails creation: a site that cannot be built is swallowed, and nothing is reported as written', async () => {
+    it('never fails creation: a site that cannot be built resolves its failure, and nothing is reported as written', async () => {
         const progress = jest.fn();
         const project = storefront();
 
@@ -135,7 +150,10 @@ describe('executeCatalogMenuPhase', () => {
             executeCatalogMenuPhase(createMockHandlerContext(), project, progress, undefined, () => {
                 throw new Error('no DA.live session');
             }),
-        ).resolves.toBeUndefined();
+        ).resolves.toEqual({
+            reason: 'The catalog menu could not be added. Check that DA.live and GitHub are signed in, then try again.',
+            retryable: false,
+        });
         expect(progress).not.toHaveBeenCalled();
         expect(readCatalogMenuRecord(project)).toEqual({ legacyPages: [], links: [], navSwitch: false });
     });
@@ -179,9 +197,20 @@ describe('rewriteCatalogMenuPhase — after an Edit removed the old datapack (PL
         expect(progress).not.toHaveBeenCalledWith(OPERATION_STAGES.addingCatalogMenu.label, 97, expect.anything());
     });
 
+    // Owner, 2026-11-16: the removal's sentence stood alone while the new pages were published, so
+    // the step read as if the menu were only taken away. The line says the new one is on its way.
+    it('says the old menu came out and the new one is being built, while it is', async () => {
+        const { project, s, helix } = await withOldPack();
+        const progress = jest.fn();
+
+        await rewriteCatalogMenuPhase(createMockHandlerContext(), project, progress, () => newPack(s.port, helix));
+
+        expect(progress).toHaveBeenNthCalledWith(1, OPERATION_STAGES.updatingCatalogMenu.label, 97, SWAP_LINE);
+    });
+
     it('never removes a page the SC edited since', async () => {
         const old = '<body><main><div><h1>Signs</h1></div></main></body>';
-        const project = storefront('skukla/kukla-justrite', {
+        const project = storefront('skukla/kukla-tailspin', {
             catalogMenu: { pages: [{ path: '/signs', hash: hashOf(old) }], links: [], navSwitch: true },
         });
         const s = fakeSite({ '/nav': NAV, '/signs': `${old}<p>Edited by hand</p>` });

@@ -27,11 +27,15 @@ const CONSENT_DETAIL_VALUE_MAX = 60;
  * rendered because the dialog printed every scalar it was handed. Now that only
  * authored target keys are shown, and no tool names `confirmName` as its target
  * (the tools that require it already name the same thing properly, e.g.
- * `start_datapack_export` shows the pack rather than the echo), the entry was
+ * `create_datapack` shows the pack rather than the echo), the entry was
  * unreachable and is gone rather than left as a stub.
  */
 const CONSENT_KEY_LABELS: Record<string, string> = {
     projectName: 'Project',
+    // uninstall_datapack: "keep" or "drop" alone would not say whose changes.
+    changes: 'Your changes',
+    // delete_project and reset_project: the button's box, Uninstall Datapack.
+    removeData: 'Uninstall Datapack',
 };
 
 /** `blockId` / `block_id` → "Block id". A label, not an identifier. */
@@ -48,11 +52,30 @@ function humanizeKey(key: string): string {
 /** Arg keys whose VALUES must never reach a dialog (or anywhere else). */
 const SECRET_KEY_RE = /token|secret|password|credential|apikey|api_key/i;
 
+/** One list item as a person reads it: a scalar as itself, a flat object as its scalar values joined by "/". */
+function itemText(item: unknown): string {
+    if (item && typeof item === 'object') {
+        return Object.values(item as Record<string, unknown>)
+            .filter((v) => typeof v === 'string' || typeof v === 'number')
+            .join('/');
+    }
+    return String(item);
+}
+
+/** A value as the dialog shows it: scalars as they are, a list of scalars or flat objects joined; anything else nothing. */
+function consentValue(value: unknown): string | undefined {
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+    // A list names WHICH things: leaving it out would leave the line blank.
+    if (Array.isArray(value)) return value.map(itemText).join(', ');
+    return undefined;
+}
+
 /**
  * Render a call's args for the consent dialog — the informed half of
- * informed consent. Scalars only (an object arg is structure, not a decision
- * input), the `confirm` marker itself skipped, secret-shaped keys masked,
- * long values elided. This deliberately DOES show values where the logging
+ * informed consent. Scalars and lists of them only (an object arg is structure,
+ * not a decision input), the `confirm` marker itself skipped, secret-shaped keys
+ * masked, long values elided. This deliberately DOES show values where the logging
  * wrapper shows only keys: "publish /products/x" is the substance the user
  * is consenting to.
  */
@@ -73,17 +96,13 @@ export function renderTargetForConsent(args: unknown, keys: string[]): string {
             lines.push(`${humanizeKey(key)}: ***`);
             continue;
         }
-        if (typeof value === 'string') {
-            lines.push(
-                `${humanizeKey(key)}: ${
-                    value.length > CONSENT_DETAIL_VALUE_MAX
-                        ? `${value.slice(0, CONSENT_DETAIL_VALUE_MAX)}… (${value.length} chars)`
-                        : value
-                }`,
-            );
-        } else if (typeof value === 'number' || typeof value === 'boolean') {
-            lines.push(`${humanizeKey(key)}: ${value}`);
-        }
+        const text = consentValue(value);
+        if (text === undefined) continue;
+        lines.push(
+            `${humanizeKey(key)}: ${
+                text.length > CONSENT_DETAIL_VALUE_MAX ? `${text.slice(0, CONSENT_DETAIL_VALUE_MAX)}… (${text.length} chars)` : text
+            }`,
+        );
     }
     return lines.join('\n');
 }
@@ -112,8 +131,11 @@ export function buildConsentPrompt(
     const target = copy.target.length
         ? renderTargetForConsent(args, copy.target)
         : (fallbackTarget ?? '');
+    // What the arguments cannot name (`clear_demo_data`'s websites, from its token), then the choices
+    // the call made (`reset_project`'s Uninstall Datapack), under the target.
+    const named = [target, copy.describe?.(args) ?? '', renderTargetForConsent(args, copy.choices ?? [])].filter(Boolean).join('\n');
     return {
         title: `${agentNotice(copy.action)}?`,
-        detail: [copy.consequence, target].filter(Boolean).join('\n\n'),
+        detail: [copy.consequence, named].filter(Boolean).join('\n\n'),
     };
 }

@@ -10,7 +10,7 @@ status: built
 # Prepare this store: the ERP setup steps the extension can apply, not only check
 
 Filed 2026-10-10 after the owner pointed at Adobe's September 2026 System Configuration
-REST API and a ten-minute live test on Justrite proved it.
+REST API and a ten-minute live test on Tailspin proved it.
 
 ## What is true now
 
@@ -21,7 +21,7 @@ created by hand). Everything else is a guided Admin walk.
 
 Adobe Commerce as a Cloud Service gained `GET` and `PUT /V1/system/config` on 2026-09-08
 (developer.adobe.com/commerce/webapi/rest/saas-integrations/system-config). Measured live on
-Justrite 2026-10-10:
+Tailspin 2026-10-10:
 
 - reads at website scope answer the same rows for `scope=website` and the older
   `scope=websites` spelling the checks use, so the checks are not misreading;
@@ -65,9 +65,9 @@ SC's setup time goes. AB-74 and AB-75 only help the multi-ERP case.
 
 - 2026-10-10  feat(app-builder): prepare this store applies the ERP setup steps, with undo (`fa832c75b`)
 - 2026-10-10  fix(app-builder): setup checks read uncut, and a check that could not tell is never done (`3bd031527`)
-- 2026-10-10  Live on Justrite 2026-10-10 (owner OK), build a4daaef8e. Preview read the store right: seven steps done, two applicable. Applied erp-attributes: erp_owner added to ELEVEN attribute sets in about a minute, nothing rejected (Phones, Watches, Server, Accessories, Audio, Cables, Coolers, Plans, Power Supply, Home Internet, Gift Cards); confirmed by reading each set from Commerce; kept, undo still recorded. Card payments round trip: payment/payment_services/active at website justrite 0 to 1, read back 1, undo of that one step restored 0, read back 0, attributes step untouched. Not yet run live: the warehouse, shared-catalog and attribute-create handlers (Justrite already had them), and a full prepare-then-undo on an unprepared store.
+- 2026-10-10  Live on Tailspin 2026-10-10 (owner OK), build a4daaef8e. Preview read the store right: seven steps done, two applicable. Applied erp-attributes: erp_owner added to ELEVEN attribute sets in about a minute, nothing rejected (Phones, Watches, Server, Accessories, Audio, Cables, Coolers, Plans, Power Supply, Home Internet, Gift Cards); confirmed by reading each set from Commerce; kept, undo still recorded. Card payments round trip: payment/payment_services/active at website tailspin 0 to 1, read back 1, undo of that one step restored 0, read back 0, attributes step untouched. Not yet run live: the warehouse, shared-catalog and attribute-create handlers (Tailspin already had them), and a full prepare-then-undo on an unprepared store.
 - 2026-10-10  fix(app-builder): prepare this store decides from a fresh check, never the saved one (`9763b7719`)
-- 2026-10-10  Live on Justrite 2026-10-10, second pass. Found: with Payment on Account and Returns switched off by a raw PUT, build a4daaef8e previewed both as Done and wrote nothing (it trusted the saved check). Fixed in 9763b7719; on build b920651e2 the same cycle works: preview Will apply with 0 to 1 lines, Prepare applied both, read back 1; undo of each step restored 0 and cleared its record; store then restored to its original on by hand. Price scope: wrote its current value back (accepted, errors empty); NOT toggled on Justrite because Adobe's docs do not say what a scope flip does to existing per-website prices: toggle it on a scratch store. Final Justrite state: price scope Website, Payment on Account on, Returns on, card payments off, erp_owner in eleven sets (kept, undo recorded).
+- 2026-10-10  Live on Tailspin 2026-10-10, second pass. Found: with Payment on Account and Returns switched off by a raw PUT, build a4daaef8e previewed both as Done and wrote nothing (it trusted the saved check). Fixed in 9763b7719; on build b920651e2 the same cycle works: preview Will apply with 0 to 1 lines, Prepare applied both, read back 1; undo of each step restored 0 and cleared its record; store then restored to its original on by hand. Price scope: wrote its current value back (accepted, errors empty); NOT toggled on Tailspin because Adobe's docs do not say what a scope flip does to existing per-website prices: toggle it on a scratch store. Final Tailspin state: price scope Website, Payment on Account on, Returns on, card payments off, erp_owner in eleven sets (kept, undo recorded).
 - 2026-10-10  Merge branch 'feature/prepare-this-store' into integration/2026-10-11 (`d6c3d9016`)
 - 2026-10-10  test(dashboard): the ERP card's menu test expects Prepare this store (`18c21cd7f`)
 - 2026-10-19  fix(erp): removing the ERP integration undoes its store setup first (`0ad0de345`)

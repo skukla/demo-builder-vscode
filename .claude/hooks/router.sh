@@ -46,6 +46,8 @@ case "$payload" in
     # two-word literal rather than a bare *test* — that would drag in every path
     # with "test" in it, which is most of this repo.
     *"npm test"*|*"npm run test"*) ;;
+    # 22-gate-via-checks: a hand-typed `npm run gate` (reflect proposal 2, 2026-11-16).
+    *"npm run gate"*) ;;
     # 14-commit-backtick. NECESSARY condition for that rule: it only fires on a
     # git commit. Without this token the rule would never run and would look
     # exactly like a guard that simply never matches — the failure this

@@ -1,0 +1,93 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "array",
+  "description": "Schema for aco_categories — ACO catalog categories. Item fields follow the ACO API (camelCase: metaTags). Required: slug, source, name.",
+  "minItems": 1,
+  "items": {
+    "type": "object",
+    "properties": {
+      "slug": {
+        "type": "string",
+        "description": "Hierarchical category slug (lowercase letters, numbers, hyphens; segments separated by /)",
+        "minLength": 1,
+        "maxLength": 1024,
+        "pattern": "^[a-z0-9-]+(?:/[a-z0-9-]+)*$"
+      },
+      "source": {
+        "type": "object",
+        "description": "Catalog source (locale)",
+        "properties": {
+          "locale": {
+            "type": "string",
+            "description": "Content locale, e.g. en-US"
+          }
+        },
+        "required": ["locale"],
+        "additionalProperties": true
+      },
+      "name": {
+        "type": "string",
+        "description": "Display name of the category",
+        "minLength": 1,
+        "maxLength": 128
+      },
+      "description": {
+        "description": "Full-text description; may be null",
+        "oneOf": [
+          { "type": "string" },
+          { "type": "null" }
+        ]
+      },
+      "families": {
+        "description": "Product family identifiers; may be null",
+        "oneOf": [
+          {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          { "type": "null" }
+        ]
+      },
+      "metaTags": {
+        "type": "object",
+        "description": "Meta attributes for SEO / tags (ACO camelCase)",
+        "properties": {
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "keywords": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "additionalProperties": false
+      },
+      "images": {
+        "type": "array",
+        "description": "Category images",
+        "items": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string",
+              "description": "Image URL"
+            },
+            "label": { "type": "string" },
+            "roles": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "customRoles": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "ACO API camelCase (same meaning as custom_roles)"
+            }
+          },
+          "required": ["url", "label", "roles"],
+          "additionalProperties": false
+        }
+      }
+    },
+    "required": ["slug", "source", "name"],
+    "additionalProperties": false
+  }
+}

@@ -68,6 +68,6 @@ describe('ConfigureScreen — integrations', () => {
         });
 
         expect(railTabLabels()).not.toContain('ERP integration');
-        expect(railTabLabels()).toContain('Project');
+        expect(railTabLabels()).toContain('Adobe Commerce');
     });
 });

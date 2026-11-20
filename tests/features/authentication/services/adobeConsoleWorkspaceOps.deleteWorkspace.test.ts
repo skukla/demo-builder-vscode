@@ -40,9 +40,9 @@ describe('AdobeConsoleWorkspaceOps.deleteWorkspace', () => {
         const deletedNames = new DeletedWorkspaceNames();
         const ops = buildOps({ deleteWorkspace: jest.fn().mockResolvedValue({}) }, jest.fn(), deletedNames);
 
-        await ops.deleteWorkspace('ws-1', { ...TARGET, workspaceName: 'JustriteERP' });
+        await ops.deleteWorkspace('ws-1', { ...TARGET, workspaceName: 'TailspinERP' });
 
-        expect(deletedNames.resting('proj-1')).toEqual(['JustriteERP']);
+        expect(deletedNames.resting('proj-1')).toEqual(['TailspinERP']);
     });
 
     it('holds the name when the workspace is gone despite an error', async () => {
@@ -53,9 +53,9 @@ describe('AdobeConsoleWorkspaceOps.deleteWorkspace', () => {
             deletedNames,
         );
 
-        await ops.deleteWorkspace('ws-1', { ...TARGET, workspaceName: 'JustriteERP' });
+        await ops.deleteWorkspace('ws-1', { ...TARGET, workspaceName: 'TailspinERP' });
 
-        expect(deletedNames.resting('proj-1')).toEqual(['JustriteERP']);
+        expect(deletedNames.resting('proj-1')).toEqual(['TailspinERP']);
     });
 
     it('holds nothing when the delete failed', async () => {
@@ -66,7 +66,7 @@ describe('AdobeConsoleWorkspaceOps.deleteWorkspace', () => {
             deletedNames,
         );
 
-        await ops.deleteWorkspace('ws-1', { ...TARGET, workspaceName: 'JustriteERP' });
+        await ops.deleteWorkspace('ws-1', { ...TARGET, workspaceName: 'TailspinERP' });
 
         expect(deletedNames.resting('proj-1')).toStrictEqual([]);
     });

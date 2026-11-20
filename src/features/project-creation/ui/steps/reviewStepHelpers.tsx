@@ -6,12 +6,12 @@
  */
 
 import { Flex, Text } from '@adobe/react-spectrum';
-import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React from 'react';
 import type { ComponentData, ComponentsData } from './ReviewStep';
 import { meshComponentForStack } from './tileStatus';
 import { hasMeshInDependencies, isMeshComponentId } from '@/core/constants';
 import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
+import { StatusIcon } from '@/core/ui/components/feedback/StatusIcon';
 import { cn } from '@/core/ui/utils/classNames';
 import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { resolveIntegrationRows } from '@/features/project-creation/ui/components/integration-flow/integrationRows';
@@ -134,7 +134,7 @@ export function buildComponentInfoList(
                     <Flex gap="size-100" alignItems="center">
                         <Text UNSAFE_className="text-md">{mesh.name}</Text>
                         <Text UNSAFE_className={cn('text-md', 'text-gray-500')}>·</Text>
-                        <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />
+                        <StatusIcon status="success" />
                         <Text UNSAFE_className="text-md">Deployed</Text>
                     </Flex>
                 ) : (

@@ -119,6 +119,8 @@ const SPECTRUM_PROPS = [
     'isDisabled',
     'maxValue',
     'minValue',
+    // 2026-11-04: a project tile's selection box stays out of the tab order (the tile is the stop).
+    'excludeFromTabOrder',
 ];
 
 // Helper to filter out Spectrum-specific props
@@ -314,8 +316,10 @@ export const Checkbox: React.FC<any> = ({
 // button is the accent one is a decision, and filtering it made it unobservable.
 // Spectrum's `style` is "fill" or "outline", not a CSS object: surfaced as data-style rather
 // than handed to the DOM, which throws on a string style.
+// `isPending` is Spectrum's busy button: presses are ignored and a spinner shows (after a
+// second, in the real one). The mock marks it `aria-busy` and ignores presses at once.
 export const Button = React.forwardRef<HTMLButtonElement, any>(
-    ({ children, onPress, onClick, isDisabled, variant, style, ...props }, ref) => (
+    ({ children, onPress, onClick, isDisabled, isPending, variant, style, ...props }, ref) => (
         <button
             ref={ref}
             data-testid="spectrum-button"
@@ -323,10 +327,12 @@ export const Button = React.forwardRef<HTMLButtonElement, any>(
             data-style={typeof style === 'string' ? style : undefined}
             tabIndex={0}
             onClick={(e) => {
+                if (isPending) return;
                 onClick?.(e);
                 onPress?.(e);
             }}
             disabled={isDisabled}
+            aria-busy={isPending ? 'true' : undefined}
             {...filterSpectrumProps(props)}
         >
             {children}
@@ -721,12 +727,15 @@ export const RadioGroup: React.FC<any> = ({ children, value, onChange, label, de
     </div>
 );
 
-export const Radio: React.FC<any> = ({ children, value, selectedValue, onSelect, ...props }) => (
+// `isDisabled` disables the input, as Spectrum's own does; dropping it made a disabled
+// choice look enabled to every test (2026-10-30, the export screen's pack type).
+export const Radio: React.FC<any> = ({ children, value, selectedValue, onSelect, isDisabled, ...props }) => (
     <label data-testid="spectrum-radio" {...filterSpectrumProps(props)}>
         <input
             type="radio"
             value={value}
             checked={value === selectedValue}
+            disabled={Boolean(isDisabled)}
             onChange={() => onSelect?.(value)}
         />
         {children}
@@ -1116,9 +1125,19 @@ export const Menu: React.FC<any> = ({ children, items, onAction, ...props }) => 
     );
 };
 
-// DialogContainer mock
+// DialogContainer mock. The real one is OPEN whenever its child is a React element, whatever that
+// element renders (`isOpen: !!child`, @react-spectrum/dialog DialogContainer): a component that
+// returns null still opens it, drawing the full-screen underlay over the page. The mock marks that
+// state with `spectrum-underlay`, so a test can see a container left open with nothing in it
+// (step-07 Win1 regression, 2026-11-14: the batch and Updates windows dimmed the projects list).
+function opensContainer(children: React.ReactNode): boolean {
+    if (Array.isArray(children)) return children.some((child) => React.isValidElement(child));
+    return React.isValidElement(children);
+}
+
 export const DialogContainer: React.FC<any> = ({ children, _onDismiss, ...props }) => (
     <div data-testid="spectrum-dialog-container" {...filterSpectrumProps(props)}>
+        {opensContainer(children) ? <div data-testid="spectrum-underlay" aria-hidden="true" /> : null}
         {children}
     </div>
 );

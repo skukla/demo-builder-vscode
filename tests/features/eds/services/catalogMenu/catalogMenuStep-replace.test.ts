@@ -138,7 +138,7 @@ describe('replaceCatalogMenuStep', () => {
         const result = await replaceCatalogMenuStep(project, failing);
 
         expect(result.written).toBe(0);
-        expect(result.problem).toMatch(/^Category pages were not published: Catalog Service returned HTTP 503\./);
+        expect(result.problem).toBe('Category pages not published (Catalog Service returned HTTP 503). Republish to try again.');
     });
 
     it('a page that could not be published is the problem too', async () => {

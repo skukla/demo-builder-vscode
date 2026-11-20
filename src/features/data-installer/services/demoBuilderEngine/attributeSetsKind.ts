@@ -18,13 +18,18 @@
  */
 
 import { z } from 'zod';
-import { ATTRIBUTE_CODE, deleteIfPresent, type KindContext, segment } from './kindContext';
+import { ATTRIBUTE_CODE, deleteIfPresent, eachFewAtOnce, firstOfEach, type KindContext, MissingNameError, ownedId, segment } from './kindContext';
+import { createOne } from './pendingCreates';
+import { needsUnskipped, tryRow } from './refusedRows';
+import { counted } from './rowCount';
 import { readAllPages } from '@/features/app-builder/services/erpFillReaders';
 import { pickAttributeGroup, readSetGroups } from '@/features/app-builder/services/erpOwnerAttributeSets';
 import type { CommerceAttributeSetList, CommerceSend, CommerceSetAttribute } from '@/types/commerceWire';
 
 export const ATTRIBUTE_SET_KIND = 'attribute_sets';
 export const ASSIGNMENT_KIND = 'attribute_assign_to_set';
+/** `attributesKind`'s kind, named here so an assignment can say it needs a skipped attribute. */
+const ATTRIBUTE_KIND_NAME = 'product_attributes';
 
 /** Magento's product entity type, and the Default set every new set is copied from. */
 const PRODUCT_ENTITY_TYPE = 4;
@@ -54,7 +59,7 @@ export type AssignmentRow = z.infer<typeof assignmentRowSchema>;
 function parseRows<T>(schema: z.ZodType<T>, records: unknown, what: string): T[] {
     const parsed = z.array(schema).safeParse(records);
     if (!parsed.success) {
-        throw new Error(`The pack's ${what} are not in the shape Commerce takes: ${parsed.error.issues[0]?.message}`);
+        throw new Error(`The datapack's ${what} are not in the shape Commerce takes: ${parsed.error.issues[0]?.message}`);
     }
     return parsed.data;
 }
@@ -67,14 +72,30 @@ function groupCode(name: string): string {
     return name.toLowerCase().replace(/[^a-z0-9]+/gu, '_');
 }
 
-/** Read every set the store has into the session, once per install. Products use it too. */
-export async function loadStoreSets(ctx: KindContext): Promise<void> {
-    if (ctx.session.setIds.size > 0) return;
-    const sets = await readAllPages<NonNullable<CommerceAttributeSetList['items']>[number]>(
-        ctx.get,
-        'products/attribute-sets/sets/list',
+/** The read of a session's sets in progress, so callers at once share it. */
+const setsLoading = new WeakMap<KindContext['session'], Promise<void>>();
+
+/**
+ * Read every set the store has into the session, once per install or save. Products use it too.
+ *
+ * Callers at once share the one read (walk F90): a save turns all of a pack's products into rows at
+ * once, and each asks its set's name, so a check of the filled map alone let each start its own read
+ * of the same list, 2,048 at once on Luma, and the rows took 88 s. A failed read is forgotten, so the
+ * next caller reads again.
+ */
+export function loadStoreSets(ctx: KindContext): Promise<void> {
+    if (ctx.session.setIds.size > 0) return Promise.resolve();
+    const inFlight = setsLoading.get(ctx.session);
+    if (inFlight) return inFlight;
+    const loading = readAllPages<NonNullable<CommerceAttributeSetList['items']>[number]>(ctx.get, 'products/attribute-sets/sets/list').then((sets) => {
+        for (const set of sets) ctx.session.setIds.set(set.attribute_set_name, set.attribute_set_id);
+    });
+    setsLoading.set(ctx.session, loading);
+    loading.then(
+        () => setsLoading.delete(ctx.session),
+        () => setsLoading.delete(ctx.session),
     );
-    for (const set of sets) ctx.session.setIds.set(set.attribute_set_name, set.attribute_set_id);
+    return loading;
 }
 
 /** The group a set's pack attributes go in: one named like the set, else the house pick. */
@@ -102,50 +123,87 @@ async function createOwnGroup(ctx: KindContext, name: string, setId: number): Pr
 /** Create the sets the store lacks, each with its own group, and record them. */
 export async function installAttributeSets(ctx: KindContext, rows: readonly AttributeSetRow[]): Promise<void> {
     await loadStoreSets(ctx);
-    for (const { attributeSet, skeletonId } of rows) {
-        const name = attributeSet.attribute_set_name;
-        const existing = ctx.session.setIds.get(name);
-        if (existing !== undefined) {
-            const ours = ctx.recorder.has(ATTRIBUTE_SET_KIND, String(existing));
-            if ((await groupInSet(ctx, name, existing)) === undefined && ours) await createOwnGroup(ctx, name, existing);
-            continue;
-        }
-        const created = (await ctx.send('POST', 'products/attribute-sets', {
-            attributeSet: { entity_type_id: PRODUCT_ENTITY_TYPE, sort_order: 0, ...attributeSet },
-            skeletonId: skeletonId ?? DEFAULT_SKELETON,
-        })) as { attribute_set_id?: number } | null;
-        if (created?.attribute_set_id === undefined) throw new Error(`Commerce made no attribute set ${name}.`);
-        ctx.session.setIds.set(name, created.attribute_set_id);
-        await ctx.recorder.record({ kind: ATTRIBUTE_SET_KIND, id: String(created.attribute_set_id) });
-        ctx.log(`created attribute set ${name}`);
-        await createOwnGroup(ctx, name, created.attribute_set_id);
+    // Sets stand alone, so a few go at once: one after another, Luma's eight took eight seconds (2026-11-06).
+    await eachFewAtOnce(firstOfEach(rows, (row) => row.attributeSet.attribute_set_name), (row) =>
+        counted(ctx, ATTRIBUTE_SET_KIND, row.attributeSet.attribute_set_name, () => installAttributeSet(ctx, row)),
+    );
+}
+
+/** Use the set the store has by name, or make it with its own group, and record it. */
+async function installAttributeSet(ctx: KindContext, { attributeSet, skeletonId }: AttributeSetRow): Promise<void> {
+    const name = attributeSet.attribute_set_name;
+    // One this engine made is known by its id, renamed in the Admin or not; one the SC
+    // deleted since stays deleted (step 05).
+    const owned = ownedId(ctx.session, ATTRIBUTE_SET_KIND, name);
+    if (owned === null) return;
+    if (owned !== undefined) ctx.session.setIds.set(name, Number(owned));
+    const existing = ctx.session.setIds.get(name);
+    if (existing !== undefined) {
+        const ours = ctx.recorder.has(ATTRIBUTE_SET_KIND, String(existing));
+        if ((await groupInSet(ctx, name, existing)) === undefined && ours) await createOwnGroup(ctx, name, existing);
+        return;
     }
+    // Step 14 item 3: a set Commerce refuses is skipped, and the rows that need it with it.
+    await tryRow(ctx, { kind: ATTRIBUTE_SET_KIND, key: name }, async () => {
+        const made = await createOne(ctx, { kind: ATTRIBUTE_SET_KIND, key: name }, async () => {
+            const created = (await ctx.send('POST', 'products/attribute-sets', {
+                attributeSet: { entity_type_id: PRODUCT_ENTITY_TYPE, sort_order: 0, ...attributeSet },
+                skeletonId: skeletonId ?? DEFAULT_SKELETON,
+            })) as { attribute_set_id?: number } | null;
+            if (created?.attribute_set_id === undefined) throw new Error(`Commerce made no attribute set ${name}.`);
+            return { kind: ATTRIBUTE_SET_KIND, id: String(created.attribute_set_id) };
+        });
+        ctx.session.setIds.set(name, Number(made.id));
+        ctx.log(`created attribute set ${name}`);
+        await createOwnGroup(ctx, name, Number(made.id));
+    });
 }
 
 /** Put each attribute in its set unless it is there already, and record what was added. */
 export async function installAssignments(ctx: KindContext, rows: readonly AssignmentRow[]): Promise<void> {
     await loadStoreSets(ctx);
     const inSet = new Map<number, Set<string>>();
-    for (const row of rows) {
-        const setId = ctx.session.setIds.get(row.attributeSetId);
-        if (setId === undefined) throw new Error(`The store has no attribute set named ${row.attributeSetId}.`);
-        if (!inSet.has(setId)) {
-            const attributes = ((await ctx.get(`products/attribute-sets/${segment(setId)}/attributes`)) ?? []) as CommerceSetAttribute[];
-            inSet.set(setId, new Set(attributes.map((a) => a.attribute_code ?? '')));
-        }
-        if (inSet.get(setId)?.has(row.attributeCode)) continue;
-        const groupId = await groupInSet(ctx, row.attributeSetId, setId);
-        if (groupId === undefined) throw new Error(`The attribute set ${row.attributeSetId} has no group to put ${row.attributeCode} in.`);
+    const keyOf = (row: AssignmentRow) => `${row.attributeSetId}/${row.attributeCode}`;
+    const wanted = firstOfEach(rows, keyOf).filter((row) => ownedId(ctx.session, ASSIGNMENT_KIND, keyOf(row)) !== null);
+    // Each set's members and group are read first, once and all at once, so the assignments sent at once
+    // share them. A read that fails here is tried again by each row, which then reports it as its own.
+    await Promise.all([...new Set(wanted.map((row) => row.attributeSetId))].map((name) => readSet(ctx, name, inSet).catch(() => undefined)));
+    await eachFewAtOnce(wanted, (row) =>
+        counted(ctx, ASSIGNMENT_KIND, keyOf(row), () => tryRow(ctx, { kind: ASSIGNMENT_KIND, key: keyOf(row) }, () => assign(ctx, row, inSet))),
+    );
+}
+
+/** What a set already holds, and its group, read once; nothing for a set the store lacks. */
+async function readSet(ctx: KindContext, name: string, inSet: Map<number, Set<string>>): Promise<void> {
+    const setId = ctx.session.setIds.get(name);
+    if (setId === undefined || inSet.has(setId)) return;
+    const attributes = ((await ctx.get(`products/attribute-sets/${segment(setId)}/attributes`)) ?? []) as CommerceSetAttribute[];
+    inSet.set(setId, new Set(attributes.map((a) => a.attribute_code ?? '')));
+    await groupInSet(ctx, name, setId);
+}
+
+/** Put one attribute in its set unless it is there already, and record it. */
+async function assign(ctx: KindContext, row: AssignmentRow, inSet: Map<number, Set<string>>): Promise<void> {
+    needsUnskipped(ctx.session, ATTRIBUTE_KIND_NAME, row.attributeCode);
+    const setId = ctx.session.setIds.get(row.attributeSetId);
+    if (setId === undefined) throw new MissingNameError(ATTRIBUTE_SET_KIND, row.attributeSetId, `Commerce has no attribute set named ${row.attributeSetId}.`);
+    await readSet(ctx, row.attributeSetId, inSet);
+    if (inSet.get(setId)?.has(row.attributeCode)) return;
+    const groupId = await groupInSet(ctx, row.attributeSetId, setId);
+    if (groupId === undefined) throw new Error(`The attribute set ${row.attributeSetId} has no group to put ${row.attributeCode} in.`);
+    const id = `${setId}/${row.attributeCode}`;
+    // Keyed by the pack's name for it, which a reinstall looks it up by; the id is what removal sends.
+    await createOne(ctx, { kind: ASSIGNMENT_KIND, key: `${row.attributeSetId}/${row.attributeCode}`, id }, async () => {
         await ctx.send('POST', 'products/attribute-sets/attributes', {
             attributeSetId: setId,
             attributeGroupId: groupId,
             attributeCode: row.attributeCode,
             sortOrder: row.sortOrder ?? 0,
         });
-        inSet.get(setId)?.add(row.attributeCode);
-        await ctx.recorder.record({ kind: ASSIGNMENT_KIND, id: `${setId}/${row.attributeCode}` });
-        ctx.log(`added ${row.attributeCode} to ${row.attributeSetId}`);
-    }
+        return { kind: ASSIGNMENT_KIND, id };
+    });
+    inSet.get(setId)?.add(row.attributeCode);
+    ctx.log(`added ${row.attributeCode} to ${row.attributeSetId}`);
 }
 
 /** Take back one set this engine created; its own group goes with it. */

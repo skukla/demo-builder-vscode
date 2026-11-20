@@ -16,7 +16,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { ViewSwitcher } from '@/features/data-installer/ui/components/ViewSwitcher';
+import { ViewSwitcher, type SwitchableView } from '@/features/data-installer/ui/components/ViewSwitcher';
 
 const VIEWS = [
     { id: 'catalog', label: 'Catalog' },
@@ -24,7 +24,7 @@ const VIEWS = [
     { id: 'activity', label: 'Activity' },
 ];
 
-function renderSwitcher(activeId = 'catalog', views = VIEWS) {
+function renderSwitcher(activeId = 'catalog', views: SwitchableView[] = VIEWS) {
     const onSelect = jest.fn();
     const view = render(<ViewSwitcher views={views} activeId={activeId} onSelect={onSelect} />);
     return { ...view, onSelect };
@@ -93,6 +93,36 @@ describe('ViewSwitcher', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Catalog' }));
 
         expect(onSelect).toHaveBeenCalledWith('catalog');
+    });
+
+    it('draws a disabled view in its place but never reports it', () => {
+        // A view that can have nothing in it keeps its place, so every screen using the switch
+        // has one layout (the Clear spot check's Kept view: owner, 2026-11-11, J1-3b).
+        const { onSelect } = renderSwitcher('catalog', [
+            { id: 'catalog', label: 'Catalog' },
+            { id: 'installed', label: 'Installed', isDisabled: true },
+        ]);
+
+        const disabled = screen.getByRole('button', { name: 'Installed' });
+        expect(disabled).toBeDisabled();
+        fireEvent.click(disabled);
+
+        expect(onSelect).not.toHaveBeenCalled();
+    });
+
+    it("draws a view's marker after its label, inside its button", () => {
+        // The Clear spot check's Kept view carries the notice dot its type wears in the list beside
+        // it, so the two read as one (owner, 2026-11-11, J1-3b).
+        renderSwitcher('catalog', [
+            { id: 'catalog', label: 'Catalog' },
+            { id: 'installed', label: 'Installed', marker: <span data-testid="marker" /> },
+        ]);
+
+        const button = screen.getByRole('button', { name: 'Installed' });
+        expect(button).toContainElement(screen.getByTestId('marker'));
+        expect(screen.getByRole('button', { name: 'Catalog' })).not.toContainElement(
+            screen.getByTestId('marker')
+        );
     });
 
     it('renders nothing for a single view', () => {

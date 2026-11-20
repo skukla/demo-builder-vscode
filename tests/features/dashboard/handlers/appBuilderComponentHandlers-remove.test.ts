@@ -296,7 +296,7 @@ describe('handleRemoveAppBuilderComponent — an ERP leaving a multi-ERP integra
                     systems: ['demo-erp', 'demo-erp-2'],
                     source: { owner: 'skukla', repo: 'commerce-erp-integration' },
                 },
-                'demo-erp': { kind: 'system', status: 'deployed', name: 'Justrite ERP', usedBy: 'erp-integration', source: { owner: 'skukla', repo: 'demo-erp' } },
+                'demo-erp': { kind: 'system', status: 'deployed', name: 'Tailspin ERP', usedBy: 'erp-integration', source: { owner: 'skukla', repo: 'demo-erp' } },
                 'demo-erp-2': { kind: 'system', status: 'deployed', name: 'Kukla ERP', usedBy: 'erp-integration', catalogId: 'demo-erp', source: { owner: 'skukla', repo: 'demo-erp' } },
             },
         });
@@ -305,13 +305,13 @@ describe('handleRemoveAppBuilderComponent — an ERP leaving a multi-ERP integra
     it('applies ownership across the remaining ERPs after the removal, and says what the pass says', async () => {
         const { mockContext, mockProject } = twoErps();
         mockTestDeveloperPermissions(true);
-        mockApplyErpOwnership.mockResolvedValue({ status: 'applied', erps: [], fills: [], unowned: 0, notes: ['Justrite ERP owns every product again.'] });
+        mockApplyErpOwnership.mockResolvedValue({ status: 'applied', erps: [], fills: [], unowned: 0, notes: ['Tailspin ERP owns every product again.'] });
 
         const result = await handleRemoveAppBuilderComponent(mockContext, { id: 'demo-erp-2' });
 
         expect(mockApplyErpOwnership).toHaveBeenCalledWith(mockProject, 'erp-integration', expect.any(Object), 'remove');
         expect(mockApplyErpOwnership.mock.invocationCallOrder[0]).toBeGreaterThan(mockRemoveAppBuilderComponent.mock.invocationCallOrder[0]);
-        expect(result).toMatchObject({ success: true, data: { warning: 'Justrite ERP owns every product again.' } });
+        expect(result).toMatchObject({ success: true, data: { warning: 'Tailspin ERP owns every product again.' } });
     });
 
     it('a pass that could not run is said, and the removal stands', async () => {
@@ -348,7 +348,7 @@ describe('handleRemoveAppBuilderComponent — an ERP leaving a multi-ERP integra
 });
 
 // Removing the ERP integration undoes its store setup first, while its Commerce access stands:
-// its undo buttons and the record of old values go with it (Justrite, 2026-10-19).
+// its undo buttons and the record of old values go with it (Tailspin, 2026-10-19).
 describe("handleRemoveAppBuilderComponent — the ERP integration's store setup", () => {
     function integration() {
         return setupMocks({

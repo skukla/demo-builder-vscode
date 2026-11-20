@@ -3,13 +3,13 @@
  *
  * Every EDS project has a git clone of its storefront at the eds-storefront instance's
  * `path`, and the generated AGENTS.md tells agents to edit there. Updates commit through
- * a throwaway clone or GitHub's API and never touch it, so it falls behind: JustRite's
+ * a throwaway clone or GitHub's API and never touch it, so it falls behind: Tailspin's
  * was 11 commits behind on 2026-10-20. An agent then edits an old copy, and EDS-57's
  * clash fix would start from one.
  *
  * The rule is that nothing local is ever lost. A local change whose content already
  * equals GitHub's copy is dropped, because GitHub holds it: the extension writes
- * `config.json` both locally and through the API, which is what JustRite's uncommitted
+ * `config.json` both locally and through the API, which is what Tailspin's uncommitted
  * change was (measured: byte-for-byte GitHub's). Any other local change, or a local
  * commit GitHub does not have, leaves the copy exactly as it is, with the reason.
  *
@@ -36,7 +36,8 @@ import type { Project } from '@/types/base';
 export type LocalRefreshOutcome =
     | { kind: 'refreshed'; from: string; to: string }
     | { kind: 'current' }
-    | { kind: 'left'; reason: string };
+    /** `reason` names the file, for the log and the agent; `plain` names none, for the SC's row (owner, 2026-10-24). */
+    | { kind: 'left'; reason: string; plain?: string };
 
 export interface LocalRefreshRequest {
     /** The local copy's folder. */
@@ -47,7 +48,7 @@ export interface LocalRefreshRequest {
     branch: string;
 }
 
-const left = (reason: string): LocalRefreshOutcome => ({ kind: 'left', reason });
+const left = (reason: string, plain?: string): LocalRefreshOutcome => ({ kind: 'left', reason, ...(plain ? { plain } : {}) });
 
 /** One `git status --porcelain=v1 -z` entry: two status letters and a path. */
 interface LocalChange {
@@ -89,18 +90,18 @@ async function drop(git: GitStep, storefrontPath: string, change: LocalChange): 
     return (await git(`git checkout -- "${change.file}"`, TIMEOUTS.QUICK)).code === 0;
 }
 
-/** Clear every local change GitHub already holds; the reason when one it does not. */
-async function clearLocalChanges(git: GitStep, storefrontPath: string): Promise<string | undefined> {
+/** Clear every local change GitHub already holds; why not, with and without the file, when one it does not. */
+async function clearLocalChanges(git: GitStep, storefrontPath: string): Promise<{ reason: string; plain: string } | undefined> {
     const status = await git('git status --porcelain=v1 -z --untracked-files=all', TIMEOUTS.QUICK);
-    if (status.code !== 0) return 'its git status could not be read';
+    if (status.code !== 0) return { reason: 'its git status could not be read', plain: 'its git status could not be read' };
     const changes = parseStatus(status.stdout);
     for (const change of changes) {
         if (!(await matchesGitHub(git, change))) {
-            return `it has a local change GitHub does not have (${change.file})`;
+            return { reason: `it has a local change GitHub does not have (${change.file})`, plain: 'it has a local change GitHub does not have' };
         }
     }
     for (const change of changes) {
-        if (!(await drop(git, storefrontPath, change))) return `${change.file} could not be reset`;
+        if (!(await drop(git, storefrontPath, change))) return { reason: `${change.file} could not be reset`, plain: 'a local change could not be reset' };
     }
     return undefined;
 }
@@ -129,7 +130,7 @@ export async function refreshLocalStorefront(
     if (behind.code !== 0) return left('it has commits GitHub does not have');
 
     const unsafe = await clearLocalChanges(git, storefrontPath);
-    if (unsafe) return left(unsafe);
+    if (unsafe) return left(unsafe.reason, unsafe.plain);
     if (head === target) return { kind: 'current' };
 
     const merged = await git(`git merge --ff-only --quiet ${target}`, TIMEOUTS.NORMAL);
@@ -152,6 +153,13 @@ async function hasGitFolder(storefrontPath: string): Promise<boolean> {
     } catch {
         return false;
     }
+}
+
+/** Whether the project has a local storefront copy on disk as a git repository. */
+export async function hasLocalCopy(project: Project): Promise<boolean> {
+    const copy = localCopyOf(project);
+    if (!copy) return false;
+    return hasGitFolder(copy.storefrontPath);
 }
 
 /** A project's local storefront copy, ready to run git in, with its GitHub fetch URL. */
@@ -203,7 +211,7 @@ export async function refreshLocalStorefronts(
             const outcome = await refreshLocalStorefront(copy.git, copy);
             if (outcome.kind === 'left') {
                 ctx.logger.info(`[Updates] Local storefront copy of ${project.name} left as it is: ${outcome.reason}`);
-                onCopy?.(project, { state: 'skipped', message: `Left as it is — ${outcome.reason}.` });
+                onCopy?.(project, { state: 'skipped', message: `Left as it is: ${outcome.plain ?? outcome.reason}.` });
                 continue;
             }
             if (outcome.kind === 'refreshed') {
@@ -212,7 +220,7 @@ export async function refreshLocalStorefronts(
             onCopy?.(project, { state: 'done' });
         } catch (error) {
             ctx.logger.warn(`[Updates] Could not refresh the local storefront copy of ${project.name}: ${(error as Error).message}`);
-            onCopy?.(project, { state: 'skipped', message: 'Not brought up to date — details are in Debug Logs.' });
+            onCopy?.(project, { state: 'skipped', message: "Not brought up to date. Demo Builder couldn't tell what went wrong." });
         }
     }
 }

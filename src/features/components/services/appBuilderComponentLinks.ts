@@ -85,7 +85,7 @@ export function integrationUsing(project: Components, systemId: string, catalog:
  * (it always does), the integration did not, and the project holds no integration of
  * the kind the system comes with. Deployed on its own it runs with nothing to talk to,
  * and it has lost the name typed for it with the integration's settings — on
- * 2026-10-05 a redeploy turned "Justrite ERP" into "Acme ERP".
+ * 2026-10-05 a redeploy turned "Tailspin ERP" into "Acme ERP".
  *
  * @param project - the project
  * @param systemId - the system's `appBuilderComponents` id

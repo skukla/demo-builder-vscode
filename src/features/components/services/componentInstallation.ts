@@ -11,7 +11,9 @@
 
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import * as vscode from 'vscode';
+import * as semver from 'semver';
+import { readComponentRelease } from '@/core/releases/componentRelease';
+import { releasedRepoOf } from '@/core/releases/releasedRepos';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { nodeForInstall } from '@/core/shell/demoBuilderNode';
@@ -81,24 +83,16 @@ export class ComponentInstallation {
         // Build git clone command with options
         const cloneFlags: string[] = [];
 
-        // Determine which tag to clone:
-        // 1. Try to fetch latest release from GitHub (always up-to-date)
-        // 2. Fall back to components.json tag if GitHub API fails
+        // A repository the builder owns ships by release, so it clones its newest one. So does
+        // anything with a tag in its catalog entry, which falls back to that tag. Everything else,
+        // and an owned repository with no release yet, clones its branch.
         const fallbackTag = componentDef.source.gitOptions?.tag;
-        let cloneTag: string | undefined;
+        let cloneTag: string | undefined = fallbackTag;
 
-        if (fallbackTag) {
-            // Only fetch latest if there's a tag configured (indicates versioned component)
+        if (fallbackTag || releasedRepoOf(componentDef.source.url)) {
             const latestTag = await this.fetchLatestReleaseTag(componentDef.source.url);
-            if (latestTag) {
-                cloneTag = latestTag;
-                this.logger.debug(`[ComponentManager] Using latest release tag: ${latestTag}`);
-            } else {
-                cloneTag = fallbackTag;
-                this.logger.debug(
-                    `[ComponentManager] Using fallback tag from config: ${fallbackTag}`,
-                );
-            }
+            cloneTag = latestTag ?? fallbackTag;
+            this.logger.debug(`[ComponentManager] Cloning at tag: ${cloneTag ?? 'none, using branch'}`);
         }
 
         // SECURITY: refs and the URL are interpolated into a shell-executed
@@ -187,7 +181,7 @@ export class ComponentInstallation {
 
     /**
      * Detect component version using hybrid approach:
-     * 1. Try git tag (most accurate for releases)
+     * 1. Try git tag, when it is a version (a floating tag names a pointer)
      * 2. Fallback to package.json version
      * 3. Final fallback to commit hash
      */
@@ -205,9 +199,10 @@ export class ComponentInstallation {
             shell: DEFAULT_SHELL,
         });
 
-        if (tagResult.code === 0 && tagResult.stdout.trim()) {
+        const tagVersion = tagResult.stdout.trim().replace(/^v/, ''); // Remove 'v' prefix
+        if (tagResult.code === 0 && semver.valid(tagVersion)) {
             // On a tagged commit (e.g., "v1.0.0" or "1.0.0")
-            detectedVersion = tagResult.stdout.trim().replace(/^v/, ''); // Remove 'v' prefix
+            detectedVersion = tagVersion;
             this.logger.debug(
                 `[ComponentManager] Detected version from git tag: ${detectedVersion}`,
             );
@@ -273,54 +268,7 @@ export class ComponentInstallation {
         }
 
         const [, owner, repo] = match;
-        const channel = vscode.workspace
-            .getConfiguration('demoBuilder')
-            .get<string>('updateChannel', 'beta');
-
-        try {
-            // For stable: use /releases/latest (non-prereleases only)
-            // For beta: use /releases?per_page=10 (includes prereleases)
-            const apiUrl =
-                channel === 'stable'
-                    ? `https://api.github.com/repos/${owner}/${repo}/releases/latest`
-                    : `https://api.github.com/repos/${owner}/${repo}/releases?per_page=10`;
-
-            const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), TIMEOUTS.QUICK);
-
-            try {
-                const response = await fetch(apiUrl, { signal: controller.signal });
-                clearTimeout(timeout);
-
-                if (!response.ok) {
-                    this.logger.debug(
-                        `[ComponentManager] GitHub API returned ${response.status} for ${owner}/${repo}`,
-                    );
-                    return null;
-                }
-
-                const data = await response.json();
-
-                if (channel === 'stable') {
-                    // /releases/latest returns a single release object
-                    return data.tag_name || null;
-                } else {
-                    // /releases returns an array, find the latest (first) one
-                    const releases = Array.isArray(data) ? data : [];
-                    if (releases.length === 0) {
-                        return null;
-                    }
-                    return releases[0].tag_name || null;
-                }
-            } finally {
-                clearTimeout(timeout);
-            }
-        } catch (error) {
-            // Network error, timeout, or other failure - fall back to config tag
-            this.logger.debug(
-                `[ComponentManager] Failed to fetch latest release for ${owner}/${repo}: ${(error as Error).message}`,
-            );
-            return null;
-        }
+        const release = await readComponentRelease(`${owner}/${repo}`, this.logger);
+        return release?.tag ?? null;
     }
 }

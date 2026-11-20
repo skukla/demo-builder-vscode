@@ -103,15 +103,21 @@ export async function mapAfterFill(
     }
     onProgress?.("Filling the integration's mapping");
     try {
+        // The websites' names, read with their codes, so the notes name them (owner, 2026-11-15).
+        const names = new Map<string, string>();
         const mapping = await fillErpMapping(erp.componentId, {
             salesOrganizations: () => salesOrganizationsOf(args),
-            websiteCodes: async () => (await listWebsites(args.get)).map((site) => site.code),
+            websiteCodes: async () => {
+                const sites = await listWebsites(args.get);
+                sites.forEach((site) => names.set(site.code, site.name || site.code));
+                return sites.map((site) => site.code);
+            },
             entrySettings: () => entrySettingsOf(client, erp.listId),
             save: async (website, values) => {
                 await client.updateErpSettings(erp.listId, website, values);
             },
         });
-        const { said, warning } = mappingNotes(mapping);
+        const { said, warning } = mappingNotes(mapping, (code) => names.get(code) ?? code);
         if (said) onProgress?.(said);
         // The note is also a step, so the progress (and the Debug Logs) say it.
         if (warning) onProgress?.(warning);

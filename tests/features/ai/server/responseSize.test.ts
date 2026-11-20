@@ -63,11 +63,11 @@ const PAYLOADS: Record<string, HandlerResponse> = {
         success: true,
         result: {
             outcome: 'read',
-            fullName: 'jen/isle5-demo',
+            fullName: 'robin/isle5-demo',
             defaultBranch: 'main',
             isTemplate: false,
             kind: 'eds',
-            contentSource: { org: 'jen', site: 'isle5-demo' },
+            contentSource: { org: 'robin', site: 'isle5-demo' },
             contentPublished: { indexFound: true, pageCount: 42 },
             storeCodes: {
                 websiteCode: 'isle5',
@@ -79,7 +79,7 @@ const PAYLOADS: Record<string, HandlerResponse> = {
             description: {
                 kind: 'demo',
                 version: 1,
-                name: 'Isle5 by Jen',
+                name: 'Isle5 by Robin',
                 description: 'x'.repeat(300),
                 configDefaults: Object.fromEntries(
                     Array.from({ length: 12 }, (_, i) => [`KEY_${i}`, `value-${i}`])
@@ -340,7 +340,7 @@ describe('rows with no output safety net are classified', () => {
         'install_prerequisite',
         // Group 8. All category 2, each verified by READING the handler rather
         // than inferred from the name: `get-datapack-import-target` returns
-        // `{instance, projectName, datapack}`, `list-datapack-import-scopes`
+        // `{instance, projectName, datapack, installFailed?}`, `list-datapack-import-scopes`
         // returns `{websites}`, `get-datapack-import-status` returns the persisted
         // job record, `validate-datapack-import` returns the verdict, and the two
         // `runAndWatch` writes return `{activationId}`. They appear here only
@@ -349,12 +349,20 @@ describe('rows with no output safety net are classified', () => {
         'list_datapack_import_scopes',
         'get_datapack_import_status',
         'validate_datapack_import',
-        'start_datapack_import',
-        'reset_datapack',
+        'install_datapack',
+        'uninstall_datapack',
+        // Undo Last Save starts the same import through `startDatapackImport`: `{activationId}` too.
+        'undo_last_save',
+        // Restore starts the same import (`{activationId, target}`), or answers `{upToDate, displayName}`.
+        'restore_datapack',
+        // Update starts the same import (`{activationId, target}`), answers `{upToDate, displayName}`,
+        // or its check: a row per changed data type naming at most three records (`records` is the
+        // screen's alone, not in the agent's schema).
+        'update_datapack',
         // Same category, listed separately because it is the one that does NOT
         // go through `runAndWatch`: the export is synchronous (the service gives
         // no activation id to watch) and returns per-type outcomes inline.
-        'start_datapack_export',
+        'create_datapack',
         // AB-5 pair, both category 2 and both read before being listed:
         // `handleInstallAppBuilderComponent` returns `{installation: {status,
         // detail, at}}` and `handleGetAppBuilderInstallStatus` returns
@@ -417,17 +425,49 @@ describe('rows with no output safety net are classified', () => {
         'get_setup_checklist',
         'set_setup_step',
         'check_setup_steps',
+        // The project's Finish Setup (PL-101, `finishSetupHandlers.ts`): each returns `{items}`,
+        // one row per step a creation or reset left (at most two today), with fixed fields.
+        'get_finish_setup',
+        'set_finish_setup_step',
+        'check_finish_setup',
         // Datapack files, read before listing (`datapackZipHandlers.ts`): save answers
         // `{path, bytes, dataTypes}` (or `{cancelled}`), open answers
         // `{path, datapackName, version, displayName, dataTypes, …}` and load answers
         // `{datapackName, version, target, pack, stored, failed}` — fixed fields.
         'save_datapack_zip',
-        'open_datapack_zip',
-        'load_datapack_zip',
-        // `{datapackName, version, deleted}` on success.
+        'read_datapack_file',
+        'add_datapack_from_file',
+        // `{path, bytes, dataTypes, products, giftCards, categories}` and three short lists, at most a
+        // few dozen attribute codes and paths (`exportPackHandlers.ts`).
+        'build_datapack_from_export',
+        // `{datapackName, version, deleted}` on success; `{datapackName, deleted, versions}` with everyVersion.
         'delete_library_datapack',
-        // `{datapackName, version, target, pack, stored, failed}`, as load answers.
-        'copy_library_datapack_to_installer',
+        // HANDLER RETURNS DATA (datapack-engine step 05, read in storeChangesHandlers.ts): the
+        // preview answers `{datapackName, version, installed, kinds, kept?}`, counts and at most
+        // three names per kind; the save answers `{datapackName, version, previousVersion,
+        // counts, message}`: fixed fields, never rows.
+        'preview_datapack_changes',
+        'save_store_changes_to_pack',
+        // `{datapackName, version, installed, verdict, checked, compared}` and five findings, each a count and at
+        // most 20 examples (`verifyInstall.ts`).
+        'verify_datapack_install',
+        // HANDLER RETURNS DATA (datapack-engine step 07, read in datapackLibraryHandlers.ts):
+        // `{datapackName, displayName, versions}`, three fixed fields.
+        'rename_datapack',
+        // HANDLER RETURNS DATA (datapack-engine step 10, read in demoDataHandlers.ts): the check
+        // answers a ClearCheck, a row per type and every record by name (step 06), so it grows with
+        // the store; the clearing answers `{removed, failed, sentence, leftOpen, listSettings}`.
+        'check_demo_data',
+        'clear_demo_data',
+        // HANDLER RETURNS DATA (step 06 C6, read in demoDataInstanceClear.ts): the instance clearing
+        // answers the clearing's `{removed, failed, sentence, leftOpen, listSettings}` with its note.
+        'clear_commerce_instance',
+        // HANDLER RETURNS DATA (owner, 2026-10-30, read in datapackLibraryHandlers.ts):
+        // `{datapackName, shared, versions}`, three fixed fields.
+        'share_datapack',
+        // HANDLER RETURNS DATA (beta.153, read in datapackLibraryHandlers.ts):
+        // `{datapackName, team, versions}`, three fixed fields.
+        'mark_demo_builder_datapack',
     ];
 
     it('the set matches exactly — a new row must be classified before it ships', async () => {

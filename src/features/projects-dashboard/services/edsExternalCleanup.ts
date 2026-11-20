@@ -10,18 +10,18 @@
  *
  * Split from `projectDeletionService.ts` on 2026-10-09 (EDS-8). Its sign-in checks
  * are not the reset's: DA.live wraps the shared `ensureDaLiveAuth` guard into a
- * skipped result, and GitHub asks for a `delete_repo` session, where the reset
- * checks the Code Sync App.
+ * skipped result, and GitHub asks first and then signs in through the one GitHub
+ * sign-in (`signInToGitHub`), where the reset checks the Code Sync App.
  */
 
 import * as vscode from 'vscode';
-import type { CleanupOptions } from './deletionConfirmation';
+import { checkDaLiveWithoutAsking, refuseGitHubSignIn } from './deleteSignInRefusals';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { askDuringOperation } from '@/core/vscode/operationPrompt';
+import type { GitHubSignInTokenStore } from '@/features/eds/handlers/edsGitHubHandlers';
 import { ensureDaLiveAuth as ensureDaLiveAuthShared, getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
 import { DaLiveAuthService } from '@/features/eds/services/daLive/daLiveAuthService';
 import type { ImsTokenVerdict } from '@/features/eds/services/daLive/daLiveSignInCheck';
-import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveTokenProviders';
 import { HelixService } from '@/features/eds/services/helix/helixService';
 import type { CleanupResultItem, EdsProjectMetadata } from '@/features/eds/services/resourceCleanupHelpers';
 import type { ProductPageRemovalResult } from '@/features/eds/services/storefront/productPageRemoval';
@@ -33,10 +33,41 @@ import {
 import {
     tearDownStorefront,
     teardownSteps,
+    type StorefrontTeardownResult,
     type StorefrontTeardownTarget,
 } from '@/features/eds/services/storefront/storefrontTeardown';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
+
+/**
+ * What the SC chose to remove beside the project's files: which online resources, and the
+ * datapack's data.
+ */
+export interface CleanupOptions {
+    deleteGitHubRepo: boolean;
+    deleteDaLiveSite: boolean;
+    /** Also remove its datapack's data from Commerce, its changes saved first. Absent means keep it. */
+    removeDatapackData?: boolean;
+    /** The project being deleted: it does not count as "another project on the repository". */
+    projectPath?: string;
+    /**
+     * Set by a door with nobody to ask (the agent's `delete_project`, PL-104 fix 6): each
+     * sign-in the delete would ask for is refused instead, with the sentence saying which,
+     * and the step that needed it does not run.
+     */
+    nobodyToAsk?: true;
+}
+
+/**
+ * What the online cleanup did, beside its result rows: why it stopped, and the storefront
+ * teardown's and the site code's own results, for a caller that reports them in detail.
+ */
+export interface EdsCleanupOutcome {
+    stopped?: string;
+    storefront?: StorefrontTeardownResult;
+    siteCode?: CodeRemovalResult;
+}
+
 
 /**
  * The Helix calls the delete makes, out of a class with dozens: four for the CDN
@@ -137,8 +168,11 @@ async function ensureDaLiveAuth(
     context: HandlerContext,
     resourceName: string,
     results: CleanupResultItem[],
+    nobodyToAsk: boolean,
 ): Promise<DaLiveAuthService | null> {
-    const authResult = await ensureDaLiveAuthShared(context, '[Delete Project]');
+    const authResult = nobodyToAsk
+        ? await checkDaLiveWithoutAsking(getDaLiveAuthService(context.context))
+        : await ensureDaLiveAuthShared(context, '[Delete Project]');
 
     if (authResult.authenticated) {
         return getDaLiveAuthService(context.context);
@@ -157,8 +191,8 @@ async function ensureDaLiveAuth(
 /**
  * Delete DA.live site content and clean up config.
  *
- * @returns why the delete must stop here, when the storefront's pages are still live
- *   (EDS-65); undefined to carry on
+ * @returns `stopped`, why the delete must stop here, when the storefront's pages are still
+ *   live (EDS-65); `storefront`, the teardown's result when it ran
  */
 async function performDaLiveCleanup(
     context: HandlerContext,
@@ -167,25 +201,22 @@ async function performDaLiveCleanup(
     results: CleanupResultItem[],
     report: CleanupStepReport,
     services?: DeletionServices,
-): Promise<string | undefined> {
+): Promise<EdsCleanupOutcome> {
     const site = daLiveTarget(edsMetadata, options);
-    if (!site) return undefined;
+    if (!site) return {};
 
     report(OPERATION_STAGES.checkingRequirements.label, 'Your DA.live sign-in');
     const resourceName = `${site.daLiveOrg}/${site.daLiveSite}`;
 
     try {
-        const daLiveAuthService = await ensureDaLiveAuth(context, resourceName, results);
-        if (!daLiveAuthService) return undefined;
+        const daLiveAuthService = await ensureDaLiveAuth(context, resourceName, results, options.nobodyToAsk === true);
+        if (!daLiveAuthService) return {};
 
-        const daLiveTokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
-
-        // The same four steps the agent's cleanup runs, in the same order — the
-        // CDN unpublish lived only here until 2026-09-19 (AI-9).
+        // The DA.live session itself: the teardown runs on nothing else (PL-104 fix 7).
         const torn = await tearDownStorefront(
             site,
             {
-                tokenProvider: daLiveTokenProvider,
+                daLiveSession: daLiveAuthService,
                 logger: context.logger,
                 initKeyStore: async () => {
                     const initKeyStore =
@@ -227,7 +258,7 @@ async function performDaLiveCleanup(
             success: torn.contentDeleted,
             error: torn.error,
         });
-        return torn.stopped;
+        return { stopped: torn.stopped, storefront: torn };
     } catch (error) {
         context.logger.error('[Delete Project] DA.live cleanup failed', error as Error);
         results.push({
@@ -237,7 +268,7 @@ async function performDaLiveCleanup(
             error: (error as Error).message,
         });
     }
-    return undefined;
+    return {};
 }
 
 /**
@@ -280,15 +311,17 @@ function reportSiteCode(code: CodeRemovalResult | undefined, githubRepo: string,
  * aem.live (`deleteStorefrontRepository`: the files are listed before the repository goes).
  *
  * @returns why the delete must stop, when the repository was kept because there was no
- *   working DA.live sign-in to remove its site code with (EDS-67); undefined otherwise
+ *   working DA.live sign-in to remove its site code with (EDS-67); `siteCode`, what happened
+ *   to the code on aem.live once the repository went
  */
 async function performGitHubCleanup(
     context: HandlerContext,
     githubRepo: string,
     results: CleanupResultItem[],
     report: CleanupStepReport,
-    services?: DeletionServices,
-): Promise<string | undefined> {
+    options: { services?: DeletionServices; nobodyToAsk: boolean },
+): Promise<EdsCleanupOutcome> {
+    const { services } = options;
     report(OPERATION_STAGES.deletingRepository.label);
 
     try {
@@ -297,14 +330,16 @@ async function performGitHubCleanup(
 
         const existingToken = await tokenService.getToken();
         if (!existingToken) {
-            const authenticated = await promptGitHubAuth(tokenService, githubRepo, results);
-            if (!authenticated) return undefined;
+            const authenticated = options.nobodyToAsk
+                ? refuseGitHubSignIn(githubRepo, results)
+                : await promptGitHubAuth(tokenService, githubRepo, results, context.logger);
+            if (!authenticated) return {};
         }
 
         const [owner, repo] = githubRepo.split('/');
         if (!owner || !repo) {
             results.push({ type: 'github', name: githubRepo, success: false, error: 'Invalid repository name format' });
-            return undefined;
+            return {};
         }
 
         const deletion = await deleteStorefrontRepository(
@@ -319,33 +354,39 @@ async function performGitHubCleanup(
                 makeHelix: services?.makeHelix,
                 checkSignIn: services?.checkDaLiveSignIn,
                 onStep: (step) => report(step),
+                onStepDetail: (step, detail) => report(step, detail),
             },
         );
         if (deletion.kept) {
             // The project is kept with it, so "delete again" has something to start from.
             results.push({ type: 'github', name: githubRepo, success: false, error: deletion.kept });
-            return deletion.kept;
+            return { stopped: deletion.kept };
         }
         results.push({ type: 'github', name: githubRepo, success: true });
         context.logger.info(`[Delete Project] Deleted GitHub repository: ${githubRepo}`);
         reportSiteCode(deletion.code, githubRepo, results);
+        return { siteCode: deletion.code };
     } catch (error) {
         context.logger.error('[Delete Project] GitHub cleanup failed', error as Error);
         results.push({ type: 'github', name: githubRepo, success: false, error: (error as Error).message });
     }
-    return undefined;
+    return {};
 }
 
 /**
- * Prompt user for GitHub authentication. Returns true if authenticated.
+ * Ask the SC to sign in to GitHub, then sign in through the one GitHub sign-in
+ * (`signInToGitHub`): every scope the extension uses, and the stale-session recovery.
+ * The token it stores is the one every later GitHub call reads, so a narrower one
+ * here was what later storefront work got (PL-104 fix 2). Returns true if signed in.
  */
 async function promptGitHubAuth(
-    tokenService: { storeToken: (data: { token: string; tokenType: string; scopes: string[] }) => Promise<void> },
+    tokenService: GitHubSignInTokenStore,
     githubRepo: string,
     results: CleanupResultItem[],
+    logger: Logger,
 ): Promise<boolean> {
     const selection = await askDuringOperation(
-        { title: 'Sign in to GitHub', message: 'Sign in to GitHub to delete the repository.' },
+        { title: 'Sign In to GitHub', message: 'Sign in to GitHub to delete the repository.' },
         'Sign In',
     );
 
@@ -355,9 +396,12 @@ async function promptGitHubAuth(
     }
 
     try {
-        const session = await vscode.authentication.getSession('github', ['repo', 'delete_repo'], { createIfNone: true });
-        if (session) {
-            await tokenService.storeToken({ token: session.accessToken, tokenType: 'bearer', scopes: ['repo', 'delete_repo'] });
+        const { signInToGitHub } = await import('@/features/eds/handlers/edsGitHubHandlers');
+        const outcome = await signInToGitHub(tokenService, logger);
+        if ('error' in outcome) {
+            const error = outcome.cancelled ? 'Authentication required' : 'Authentication failed';
+            results.push({ type: 'github', name: githubRepo, success: false, skipped: true, error });
+            return false;
         }
         return true;
     } catch {
@@ -370,9 +414,10 @@ async function promptGitHubAuth(
  * Perform EDS external resource cleanup, reporting each step in the order
  * {@link edsCleanupSteps} lists them.
  *
- * @returns why the delete must stop, when the storefront's pages are still live or AEM
- *   refused the sign-in (EDS-65), or when the repository was kept for want of a working
- *   DA.live sign-in (EDS-67): the repository is then kept, and the caller keeps the project
+ * @returns `stopped`, why the delete must stop, when the storefront's pages are still live or
+ *   AEM refused the sign-in (EDS-65), or when the repository was kept for want of a working
+ *   DA.live sign-in (EDS-67): the repository is then kept, and the caller keeps the project.
+ *   Beside it, the teardown's and the site code's own results, when each ran
  */
 export async function performEdsCleanup(
     context: HandlerContext,
@@ -381,15 +426,15 @@ export async function performEdsCleanup(
     results: CleanupResultItem[],
     report: CleanupStepReport,
     services?: DeletionServices,
-): Promise<string | undefined> {
+): Promise<EdsCleanupOutcome> {
     // 1. Delete DA.live site
-    const stopped = await performDaLiveCleanup(context, edsMetadata, options, results, report, services);
-    if (stopped) return stopped;
+    const site = await performDaLiveCleanup(context, edsMetadata, options, results, report, services);
+    if (site.stopped) return site;
 
     // 2. Delete GitHub repository
     const repo = repoToDelete(edsMetadata, options);
-    if (repo) {
-        return performGitHubCleanup(context, repo, results, report, services);
-    }
-    return undefined;
+    if (!repo) return site;
+    const nobodyToAsk = options.nobodyToAsk === true;
+    const code = await performGitHubCleanup(context, repo, results, report, { services, nobodyToAsk });
+    return { ...site, ...code };
 }

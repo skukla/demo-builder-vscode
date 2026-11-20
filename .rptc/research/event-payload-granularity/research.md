@@ -85,10 +85,10 @@ All VERIFIED in `commerce-erp-integration`.
 | Question | Status |
 |---|---|
 | App config accepts `onChange` and other rules | VERIFIED (schema above) |
-| Justrite stores each app subscription as a named child with a rules list | VERIFIED per backlog item (Justrite `eventing/getEventSubscriptions`, 2026-10-02); I did not re-run it |
+| Tailspin stores each app subscription as a named child with a rules list | VERIFIED per backlog item (Tailspin `eventing/getEventSubscriptions`, 2026-10-02); I did not re-run it |
 | A rule filters live on ACCS | UNVERIFIED |
 | `onChange` works on ACCS | UNVERIFIED |
-| Product save payload carries `_origData` on Justrite | UNVERIFIED |
+| Product save payload carries `_origData` on Tailspin | UNVERIFIED |
 | `_origData` selectable as a field through our config (`field("_origData")`) | UNVERIFIED. The schema takes any field name string; whether Commerce accepts it is check 3 |
 
 ## Direction 2: ERP to Commerce
@@ -160,7 +160,7 @@ schema ("Event name must start with ..."; the regex text is cut off in the d.ts 
 ## The three live checks
 
 All three need a test subscription deployed to Commerce, which is a cloud write. Not done
-here. Owner (or owner-approved session) runs them on Justrite.
+here. Owner (or owner-approved session) runs them on Tailspin.
 
 1. **Does ACCS honour `rules` and `onChange`?**
    Run: add a TEMPORARY second subscription to `observer.catalog_product_save_commit_after`
@@ -174,11 +174,11 @@ here. Owner (or owner-approved session) runs them on Justrite.
    Neither = the rule needs `_origData` that the event lacks (go to check 3).
    Undo: remove the subscription (per the repo rule that everything done is undone).
 2. **Can app config declare rules, and does the manifest carry them?**
-   Mostly answered: schema accepts rules (VERIFIED above); Justrite stores rules per
+   Mostly answered: schema accepts rules (VERIFIED above); Tailspin stores rules per
    subscription (per backlog item). Remaining: confirm the generated manifest from this
    repo's config carries the rule through, by a local config build (no deploy). The parent
    field does not exist in lib-app 2.0.0.
-3. **Does the product save payload include `_origData` on Justrite?**
+3. **Does the product save payload include `_origData` on Tailspin?**
    Run: in Admin open System > Events > Events List, open `catalog_product_save_commit_after`
    (the page says it shows whether original data is available), or run
    `bin/magento events:info` if reachable (not on ACCS, UNVERIFIED). Then, with the test

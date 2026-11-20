@@ -10,19 +10,21 @@
  * unchanged:
  *   - statusHandlers.ts            requestStatus (status payload + on-open
  *                                  checks, incl. the AI-context freshness
- *                                  wiring) + reAuthenticate/switchOrg
+ *                                  wiring) + switchOrg
  *   - openUrlHandlers.ts           open-in-browser handlers + getProjectUrls
  *   - panelNavigationHandlers.ts   webview surface swaps (configure,
- *                                  navigateBack, openIntegrations,
- *                                  showProjectDashboard)
- *   - projectManagementHandlers.ts edit/delete/reset/rename/export
+ *                                  navigateBack,
+ *                                  openIntegrations, showProjectDashboard)
+ *   - projectManagementHandlers.ts edit/rename/export
  *   - edsContentHandlers.ts        syncStorefront/refreshBlockLibrary/
  *                                  republishContent
  */
 
 import * as vscode from 'vscode';
+import { handleGetDatapackLine } from './datapackLineHandler';
 import {
     handleGetDemoPackagePreview,
+    handleGetShareDatapackCheck,
     handleSaveDemoPackage,
     handleRemoveDemoPackage,
 } from './demoPackageHandlers';
@@ -32,7 +34,7 @@ import {
     handleRefreshBlockLibrary,
     handleRepublishContent,
 } from './edsContentHandlers';
-import { handleExportDemoBundle } from './exportDemoBundleHandler';
+import { handleExportDemoBundle, handleRevealFile } from './exportDemoBundleHandler';
 import { sendDemoStatusUpdate } from './meshStatusHelpers';
 import {
     handleOpenBrowser,
@@ -51,12 +53,10 @@ import {
 } from './panelNavigationHandlers';
 import {
     handleEditProject,
-    handleDeleteProject,
-    handleResetProject,
     handleRenameProject,
     handleExportProjectSettings,
 } from './projectManagementHandlers';
-import { handleRequestStatus, handleReAuthenticate, handleSwitchOrg } from './statusHandlers';
+import { handleRequestStatus, handleSwitchOrg } from './statusHandlers';
 import { executeCommandForWorkingProject } from '@/core/handlers/projectCommandHelper';
 import { handleSetViewModeOverride } from '@/core/handlers/viewModeHandler';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -69,6 +69,7 @@ import {
 } from '@/core/vscode/operationProgress';
 import { handleAnswerOperationPrompt } from '@/core/vscode/operationPrompt';
 import { surfaceShowsItself } from '@/core/vscode/surfaceShowsItself';
+import { handleAuthenticate } from '@/features/authentication/handlers/authenticationHandlers';
 import {
     handleAddAppBuilderComponent,
     handleDeployAppBuilderComponent,
@@ -130,6 +131,7 @@ import {
     handleListRuntimePackages,
 } from '@/features/dashboard/handlers/runtimePackageHandlers';
 import { setupHandlerMap } from '@/features/dashboard/handlers/setupHandlerMap';
+import { datapackLibraryHandlers } from '@/features/data-installer/handlers/datapackLibraryHandlers';
 import { handleAddSharedDemo } from '@/features/eds/handlers/addSharedDemoHandler';
 import { handleChangeDemoSource } from '@/features/eds/handlers/changeDemoSourceHandler';
 import {
@@ -141,6 +143,10 @@ import { deployMeshFromScreen } from '@/features/mesh/handlers/deployHandler';
 import { MESH_OPERATION_ID } from '@/features/mesh/services/deployMeshWithFeedback';
 import { handleCheckErpIntegrationHolder } from '@/features/project-creation/handlers/erpIntegrationHolderHandler';
 import {
+    handlePrepareProjectsBatch,
+    handleRunProjectsBatch,
+} from '@/features/projects-dashboard/handlers/projectsBatchHandlers';
+import {
     MessageHandler,
     defineHandlers,
     type HandlerContext,
@@ -150,7 +156,7 @@ import { isEdsProject } from '@/types/typeGuards';
 
 // Handlers moved to the sibling modules above; re-export so the import sites
 // (tests, MCP descriptors, commands) are unchanged.
-export { handleRequestStatus, handleReAuthenticate, handleSwitchOrg } from './statusHandlers';
+export { handleRequestStatus, handleSwitchOrg } from './statusHandlers';
 export {
     handleOpenBrowser,
     handleOpenLiveSite,
@@ -168,8 +174,6 @@ export {
 } from './panelNavigationHandlers';
 export {
     handleEditProject,
-    handleDeleteProject,
-    handleResetProject,
     handleRenameProject,
     handleExportProjectSettings,
 } from './projectManagementHandlers';
@@ -359,6 +363,7 @@ export const dashboardHandlers = defineHandlers({
     openIntegrations: handleOpenIntegrations,
     setViewModeOverride: handleSetViewModeOverride,
     openDataInstaller: handleOpenDataInstaller,
+    'get-datapack-line': handleGetDatapackLine,
     openSiteAccess: handleOpenSiteAccess,
     showProjectDashboard: handleShowProjectDashboard,
 
@@ -448,21 +453,20 @@ export const dashboardHandlers = defineHandlers({
     // EDS block library refresh (re-sync DA.live library from component-definition.json)
     refreshBlockLibrary: handleRefreshBlockLibrary,
 
-    // Authentication handlers
-    reAuthenticate: handleReAuthenticate,
+    authenticate: handleAuthenticate, // the one Sign In; the screen re-reads status after
     switchOrg: handleSwitchOrg,
 
-    // Project management handlers
-    deleteProject: handleDeleteProject,
+    // Project management handlers. Reset opens the projects list's batch window here, on this
+    // project, answered by the list's own handlers (step-05 S4); Delete opens the list on its
+    // one-row Delete window, since the dashboard closes when its project is deleted.
+    prepareProjectsBatch: handlePrepareProjectsBatch,
+    runProjectsBatch: handleRunProjectsBatch,
     editProject: handleEditProject,
     renameProject: handleRenameProject,
     exportProjectSettings: handleExportProjectSettings,
 
     // EDS content republish (re-push DA.live content to CDN)
     republishContent: handleRepublishContent,
-
-    // Project reset handler
-    resetProject: handleResetProject,
 
     // Adobe deploy destination (project-scoped — one target for every integration)
     setProjectDestination: handleSetProjectDestination,
@@ -473,8 +477,13 @@ export const dashboardHandlers = defineHandlers({
     getDemoPackagePreview: handleGetDemoPackagePreview,
     saveDemoPackage: handleSaveDemoPackage,
     removeDemoPackage: handleRemoveDemoPackage,
+    // Its datapack notice's Share Datapack: the Datapacks screen's own handler (walk F229).
+    'share-library-datapack': datapackLibraryHandlers['share-library-datapack'],
+    // The file step's datapack notice on a project with no storefront to preview (walk F230).
+    getShareDatapackCheck: handleGetShareDatapackCheck,
     // Export, "Send a file": one bundle of the ticked parts (setup, storefront).
     exportDemoBundle: handleExportDemoBundle,
+    revealFile: handleRevealFile, // its result's Reveal in Finder (walk F236)
 
     // "Change source" for a project built on an added demo: the Add a demo package
     // dialog in its change mode probes with the wizard's own handler, then

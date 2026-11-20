@@ -14,6 +14,7 @@ import { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClien
 import { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
 import { OrganizationValidator } from '@/features/authentication/services/organizationValidator';
 import { withTiming } from '@/features/authentication/services/performanceTracker';
+import { RejectedTokens } from '@/features/authentication/services/rejectedTokens';
 import { createSignInGate } from '@/features/authentication/services/signInGate';
 import { TokenManager } from '@/features/authentication/services/tokenManager';
 import type { AdobeOrg, AdobeProject } from '@/features/authentication/services/types';
@@ -48,6 +49,8 @@ export class AuthenticationService {
     private readonly signIn: (force: boolean) => Promise<boolean>;
     /** Who hears that a sign-in succeeded (see onDidSignIn). */
     private readonly signInListeners = new Set<() => void>();
+    /** Who hears that a sign-out finished (see onDidSignOut). */
+    private readonly signOutListeners = new Set<() => void>();
     /** What a forced sign-in is watched for (see watchForcedSignIns). */
     private readonly forcedSignInWatches = new Set<ForcedSignInWatch>();
 
@@ -72,15 +75,16 @@ export class AuthenticationService {
 
         // Initialize all submodules
         this.cacheManager = new AuthCacheManager();
-        this.tokenManager = new TokenManager(this.cacheManager);
+        // One register of refused sign-ins, read by the token check and the sign-in (walk F247).
+        const rejected = new RejectedTokens();
+        this.tokenManager = new TokenManager(this.cacheManager, undefined, undefined, rejected);
         this.sdkClient = new AdobeSDKClient(logger);
         this.organizationValidator = new OrganizationValidator(
             commandManager,
             logger,
             this.cacheManager,
         );
-        // Note: entityService will be initialized lazily when first needed
-        // because it depends on stepLogger which requires async initialization
+        // Entity services are built lazily: they need the stepLogger, which initializes async.
         this.signInDeps = {
             commandManager,
             cacheManager: this.cacheManager,
@@ -88,6 +92,8 @@ export class AuthenticationService {
             logger,
             debugLogger: this.debugLogger,
             stepLogger: () => this.ensureStepLogger(),
+            rejected,
+            storedTokenRefused: () => this.tokenManager.isStoredTokenRejected(),
             watchForcedSignIn: async () => {
                 const afters = await Promise.all([...this.forcedSignInWatches].map((watch) => watch()));
                 return async () => {
@@ -147,6 +153,8 @@ export class AuthenticationService {
                 // that had a user signing in three times to no effect.
                 async () => (await this.tokenManager.inspectToken()).valid,
                 this.savedState,
+                // Adobe refused the sign-in itself (walk F247): it counts as signed out.
+                () => this.tokenManager.markStoredTokenRejected(),
             );
 
             return stepLogger;
@@ -228,6 +236,12 @@ export class AuthenticationService {
         return { dispose: () => this.signInListeners.delete(listener) };
     }
 
+    /** onDidSignIn's other direction: a screen showing "signed in" re-reads on a sign-out. */
+    onDidSignOut(listener: () => void): { dispose(): void } {
+        this.signOutListeners.add(listener);
+        return { dispose: () => this.signOutListeners.delete(listener) };
+    }
+
     /**
      * Watch every FORCED sign-in for what it ends elsewhere: `watch` runs just before
      * `aio auth login -f` and its answer once that sign-in succeeds, on every forced path
@@ -240,17 +254,13 @@ export class AuthenticationService {
         return { dispose: () => this.forcedSignInWatches.delete(watch) };
     }
 
-    /**
-     * Logout
-     */
+    /** Sign out: clears the aio token and every cache, then tells onDidSignOut's listeners. */
     async logout(): Promise<void> {
         try {
             await this.commandManager.execute('aio auth logout', { encoding: 'utf8' });
-
-            // Clear all caches after logout
             this.cacheManager.clearAll(); // Includes token inspection cache
             this.sdkClient.clear();
-
+            this.signOutListeners.forEach((listener) => listener());
             const stepLogger = await this.ensureStepLogger();
             stepLogger.logTemplate('adobe-auth', 'success', { item: 'Logout' });
         } catch (error) {
@@ -259,18 +269,12 @@ export class AuthenticationService {
         }
     }
 
-    /**
-     * Get cache manager instance
-     * The cached org/project, validation state and auth-status cache live here
-     */
+    /** The cached org/project, validation state and auth-status cache. */
     getCacheManager(): AuthCacheManager {
         return this.cacheManager;
     }
 
-    /**
-     * Get token manager instance
-     * Used for token inspection in handlers
-     */
+    /** Token inspection, for handlers. */
     getTokenManager(): TokenManager {
         return this.tokenManager;
     }

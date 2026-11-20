@@ -2,8 +2,8 @@
  * Which deployed integrations (and their bound systems) have newer code.
  *
  * Three signals, any one is enough:
- * - the source branch on GitHub has commits the clone lacks (a fetch, which
- *   changes nothing the SC can see);
+ * - the newest release has commits the clone lacks, or for a repository the builder
+ *   does not own, its branch has (a fetch, which changes nothing the SC can see);
  * - the clone is at a commit the last good deploy did not ship
  *   (`deployedCommit`): an update moved it and its deploy failed (AB-71), so the
  *   badge stays on until the new code is live. Update reads the same rule;
@@ -22,7 +22,7 @@ import { clearUpdateAvailable, runsOlderCode } from '@/core/state/appBuilderComp
 import type { AppBuilderComponentState, Project } from '@/types/base';
 
 export interface UpdateCheckDeps {
-    checkClone: (componentPath: string, branch: string) => Promise<UpdateCheckResult>;
+    checkClone: (componentPath: string, branch: string, repoUrl?: string) => Promise<UpdateCheckResult>;
     readAppVersion?: (componentPath: string) => Promise<string | undefined>;
     /** ISO timestamp source; injectable for tests. */
     now?: () => string;
@@ -43,12 +43,18 @@ export interface IntegrationUpdateCheck {
 
 type UpdateAvailable = NonNullable<AppBuilderComponentState['updateAvailable']>;
 
-/** Deployed integrations and systems that have a clone to compare. */
-function candidates(project: Project): Array<{ id: string; state: AppBuilderComponentState; path: string }> {
+/** Deployed integrations, systems and meshes that have a clone to compare. */
+function candidates(project: Project): Array<{
+    id: string;
+    state: AppBuilderComponentState;
+    path: string;
+    repoUrl?: string;
+}> {
     return Object.entries(project.appBuilderComponents ?? {}).flatMap(([id, state]) => {
-        const path = project.componentInstances?.[id]?.path;
-        const eligible = state.kind !== 'mesh' && state.status === 'deployed' && Boolean(path);
-        return eligible && path ? [{ id, state, path }] : [];
+        const instance = project.componentInstances?.[id];
+        const path = instance?.path;
+        if (state.status !== 'deployed' || !path) return [];
+        return [{ id, state, path, repoUrl: instance.repoUrl }];
     });
 }
 
@@ -65,28 +71,33 @@ async function versionAhead(
 }
 
 function sameAnswer(a: UpdateAvailable | undefined, b: UpdateAvailable | undefined): boolean {
-    return a?.commit === b?.commit && a?.version === b?.version && Boolean(a) === Boolean(b);
+    return (
+        a?.commit === b?.commit &&
+        a?.version === b?.version &&
+        a?.release === b?.release &&
+        Boolean(a) === Boolean(b)
+    );
 }
 
 async function checkOne(
-    id: string,
-    state: AppBuilderComponentState,
-    path: string,
+    { id, state, path, repoUrl }: ReturnType<typeof candidates>[number],
     deps: UpdateCheckDeps,
 ): Promise<{ report: IntegrationUpdateReport; changed: boolean }> {
     const [clone, version] = await Promise.all([
-        deps.checkClone(path, state.source.branch ?? 'main'),
+        deps.checkClone(path, state.source.branch ?? 'main', repoUrl),
         versionAhead(state, path, deps),
     ]);
     if (clone.status === 'unknown' && !version) {
         return { report: { id, available: Boolean(state.updateAvailable), detail: clone.detail }, changed: false };
     }
     const commit = newerCommit(clone, state);
+    const release = clone.status === 'available' ? clone.version : undefined;
     const next: UpdateAvailable | undefined =
-        commit || version
+        commit || version || release
             ? {
                   ...(commit ? { commit } : {}),
                   ...(version ? { version } : {}),
+                  ...(release ? { release } : {}),
                   checkedAt: (deps.now ?? (() => new Date().toISOString()))(),
               }
             : undefined;
@@ -129,7 +140,7 @@ export async function checkIntegrationUpdates(
     deps: UpdateCheckDeps,
 ): Promise<IntegrationUpdateCheck> {
     const results = await Promise.all(
-        candidates(project).map(({ id, state, path }) => checkOne(id, state, path, deps)),
+        candidates(project).map((candidate) => checkOne(candidate, deps)),
     );
     return {
         reports: results.map((result) => result.report),

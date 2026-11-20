@@ -12,7 +12,7 @@
  * hosting is invisible through a mocked child by construction, so no number of
  * green component tests can answer this question. It has to be asked of the source.
  *
- * The incident: `ImportDatapackModal` shipped with neither host and never rendered
+ * The incident: the datapack import modal shipped with neither host and never rendered
  * once, from the day it was written through five green gates and four reports of
  * "green" — found only when a human pressed the button (fixed in 88277fbd).
  *
@@ -31,9 +31,11 @@ const SRC = path.join(__dirname, '..', '..', 'src');
 /**
  * How `core/ui/Modal` is imported, by either spelling. Not `import type`: a file that takes
  * only Modal's `ActionButton` type renders no Modal, so it has nothing to host
- * (`setupGuideFooter.ts`, 2026-10-26).
+ * (`setupGuideFooter.ts`, 2026-10-26). And `Modal` itself among the names: a file that takes only
+ * `DialogButton`, a footer-style button in a window's body, renders no window either (Share Demo's
+ * datapack notice, walk F237).
  */
-const IMPORTS_MODAL = /^import\s+(?!type\b)[^;]*from\s+['"](?:@\/core\/ui\/components\/ui\/Modal|.*\/ui\/Modal)['"]/m;
+const IMPORTS_MODAL = /^import\s+(?!type\b)\{[^}]*\bModal\b[^}]*\}\s*from\s+['"](?:@\/core\/ui\/components\/ui\/Modal|.*\/ui\/Modal)['"]/m;
 
 /** Either valid host for a Spectrum Dialog. */
 const HOSTS = /DialogContainer|DialogTrigger/;
@@ -48,7 +50,16 @@ const HOSTS = /DialogContainer|DialogTrigger/;
  */
 const HOSTED_BY_PARENT: Record<string, string> = {
     'AiCapabilitiesModal.tsx': 'DashboardDialogs.tsx',
-    'PromptEditDialog.tsx': 'AiOverviewScreen.tsx',
+    // The ERP add's "prepare the store", shown in the Add Integration flow's own container
+    // through its `confirmation` slot (owner, 2026-10-31: one window, not a second dialog).
+    'PrepareOnAddConfirm.tsx': 'AddIntegrationFlowModal.tsx',
+    // A datapack job's phases: one window at a time in the job's own container (step 03), found
+    // when the check began reading layout windows (step-07 Win5).
+    'RestorePhase.tsx': 'DatapackJobWindow.tsx',
+    'ResultPhase.tsx': 'DatapackJobWindow.tsx',
+    'RunPhase.tsx': 'DatapackJobWindow.tsx',
+    'SummaryPhase.tsx': 'DatapackJobWindow.tsx',
+    'UpdateSummary.tsx': 'DatapackJobWindow.tsx',
 };
 
 /** Every .ts/.tsx file under src/. */
@@ -117,12 +128,119 @@ describe('SOP: Modal hosting', () => {
         it('lists nothing that now hosts itself', () => {
             // An exception that stopped being needed is noise, and noise is how an
             // allowlist turns into a place things go to be forgotten.
-            const stale = modalConsumers()
+            const stale = [...modalConsumers(), ...windowScan().consumers]
                 .filter(({ name }) => HOSTED_BY_PARENT[name])
                 .filter(({ source }) => HOSTS.test(source))
                 .map(({ name }) => name);
 
             expect(stale).toStrictEqual([]);
         });
+    });
+});
+
+/**
+ * The same contract one level up (step-07 Win5). A layout's `*Window` export (`StepsWindow`,
+ * `ResultWindow`, `ConfirmActionWindow`) is its Modal WITHOUT the container, for a host that already
+ * holds one. It imports nothing from `Modal`, so the check above never saw it: a bare StepsWindow
+ * rendered nothing and passed. A component named `*Window` that renders one without a host
+ * (`SaveFirstWindow`) is a window too, transitively; any OTHER file that renders a window must host
+ * it, or be listed in `HOSTED_BY_PARENT` with the parent that does.
+ */
+const LAYOUT_DIR = path.join(SRC, 'core', 'ui', 'components', 'ui');
+
+/** A layout file: one of the six in `core/ui/components/ui` (`tests/sop/modal-layouts.test.ts`). */
+const isLayoutFile = (file: string): boolean =>
+    path.dirname(file) === LAYOUT_DIR && /Dialog\.tsx$/.test(file);
+
+/** The source without its comments, so a window NAMED in a docstring is not read as rendered. */
+const code = (source: string): string =>
+    source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|\s)\/\/.*$/gm, '$1');
+
+/** True when the source renders `<name` as an element. */
+export function rendersElement(source: string, name: string): boolean {
+    return new RegExp(`<${name}(?=[\\s>/])`).test(code(source));
+}
+
+interface Scanned {
+    file: string;
+    name: string;
+    source: string;
+}
+
+/**
+ * The windows, and the files that render one without being one.
+ *
+ * @param files - the sources to read (all of `src/` by default; a planted set in the self-test)
+ * @returns `windows`: component name to its file, layouts' exports included; `consumers`: every
+ *   other file that renders a window
+ */
+export function windowScan(files: Scanned[] = tsxSources()): {
+    windows: Map<string, string>;
+    consumers: Scanned[];
+} {
+    const windows = new Map<string, string>();
+    for (const entry of files.filter(({ file }) => isLayoutFile(file))) {
+        for (const match of entry.source.matchAll(/^export function (\w+Window)\b/gm)) {
+            windows.set(match[1], entry.file);
+        }
+    }
+    const rendersWindow = (source: string): boolean =>
+        [...windows.keys()].some((name) => rendersElement(source, name));
+    let grew = true;
+    while (grew) {
+        grew = false;
+        for (const entry of files) {
+            const component = entry.name.replace(/\.tsx$/, '');
+            const isWindow = /Window$/.test(component) && !isLayoutFile(entry.file);
+            if (!isWindow || windows.has(component) || HOSTS.test(entry.source)) continue;
+            if (rendersWindow(entry.source)) {
+                windows.set(component, entry.file);
+                grew = true;
+            }
+        }
+    }
+    const consumers = files.filter(
+        ({ file, name }) =>
+            !isLayoutFile(file) &&
+            windows.get(name.replace(/\.tsx$/, '')) !== file &&
+            rendersWindow(fs.readFileSync(file, 'utf8')),
+    );
+    return { windows, consumers };
+}
+
+/** Every .tsx file under src/, read. */
+function tsxSources(): Scanned[] {
+    return sourceFiles(SRC)
+        .filter((file) => file.endsWith('.tsx'))
+        .map((file) => ({ file, name: path.basename(file), source: fs.readFileSync(file, 'utf8') }));
+}
+
+describe('SOP: a window built on a layout is hosted', () => {
+    const { windows, consumers } = windowScan();
+
+    it('CONTROL: finds the layouts\' windows, a window built on one, and their consumers', () => {
+        expect([...windows.keys()]).toEqual(
+            expect.arrayContaining(['StepsWindow', 'ResultWindow', 'ConfirmActionWindow', 'SaveFirstWindow']),
+        );
+        expect(consumers.length).toBeGreaterThan(5);
+    });
+
+    it('hosts every window in a DialogContainer or DialogTrigger, or names the parent that does', () => {
+        const unhosted = consumers
+            .filter(({ source }) => !HOSTS.test(source))
+            .filter(({ name }) => !HOSTED_BY_PARENT[name])
+            .map(({ file }) => path.relative(SRC, file));
+
+        expect(unhosted).toStrictEqual([]);
+    });
+
+    it('gives every window built on a layout a file that renders it', () => {
+        const all = tsxSources();
+        const orphans = [...windows.entries()]
+            .filter(([, file]) => !isLayoutFile(file))
+            .filter(([name, file]) => !all.some((entry) => entry.file !== file && rendersElement(entry.source, name)))
+            .map(([name]) => name);
+
+        expect(orphans).toStrictEqual([]);
     });
 });

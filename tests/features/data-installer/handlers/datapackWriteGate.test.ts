@@ -7,7 +7,7 @@
  * (DEMOSYS-1698), so the gate stopped refusing projects that have none (DI-6).
  */
 
-import { resolveDataInstallerAccess } from '@/features/data-installer/handlers/dataInstallerHandlers';
+import { resolveDatapackAccess } from '@/features/data-installer/handlers/dataInstallerHandlers';
 import { resolveDatapackWriteAccess } from '@/features/data-installer/handlers/datapackWriteGate';
 import { DataInstallerClient } from '@/features/data-installer/services/dataInstallerClient';
 import type { Project } from '@/types/base';
@@ -18,9 +18,11 @@ import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 jest.mock('@/features/data-installer/handlers/dataInstallerHandlers', () => ({
     resolveDataInstallerAccess: jest.fn(),
+    resolveDatapackAccess: jest.fn(),
 }));
 
-const mockedAccess = jest.mocked(resolveDataInstallerAccess);
+/** What the gate opens by: the Data Installer's access when its address is set, else the store's. */
+const mockedAccess = jest.mocked(resolveDatapackAccess);
 
 const BASE_URL = 'https://example-namespace.adobeioruntime.net/api/v1/web/data-installer-api';
 const getToken = jest.fn().mockResolvedValue('tok');
@@ -43,7 +45,7 @@ function contextWith(project: Project | undefined) {
     });
 }
 
-/** The read client the gate passes on as the service's job reads. */
+/** The read client the gate passes on as the catalog's reads. */
 const READ_CLIENT = new DataInstallerClient({ baseUrl: BASE_URL, getToken });
 
 beforeEach(() => {
@@ -70,7 +72,7 @@ describe('resolveDatapackWriteAccess — the refusals, in order', () => {
     });
 
     it.each([
-        ['import', 'Open a project before importing a datapack.'],
+        ['import', 'Open a project before installing a datapack.'],
         ['export', 'Open a project before exporting.'],
     ] as const)('with no project open, the %s copy', async (write, copy) => {
         const gate = await resolveDatapackWriteAccess(contextWith(undefined), write);
@@ -79,7 +81,7 @@ describe('resolveDatapackWriteAccess — the refusals, in order', () => {
     });
 
     it.each([
-        ['import', 'This project has no Adobe Commerce backend, so there is nothing to import into.'],
+        ['import', 'This project has no Adobe Commerce backend, so there is nothing to install into.'],
         ['export', 'This project has no Adobe Commerce backend, so there is nothing to export from.'],
     ] as const)('an %s on a project with no Commerce backend names that gap', async (write, copy) => {
         const gate = await resolveDatapackWriteAccess(contextWith(projectOn('')), write);
@@ -102,8 +104,7 @@ describe('resolveDatapackWriteAccess — when every check passes', () => {
         expect(gate).toEqual({
             baseUrl: BASE_URL,
             getToken,
-            jobs: READ_CLIENT,
-            // The same read client: Demo Builder's engine reads a pack's rows through it (DI-5).
+            // The read client: the engine reads a pack's rows through it (DI-5).
             catalog: READ_CLIENT,
             project,
             backend,

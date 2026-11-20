@@ -152,7 +152,7 @@ describe('syncErpList — each added ERP with its own credential', () => {
 });
 
 /**
- * Justrite, 2026-10-22: one ERP on "all" (the rule a lone ERP holds), a second added by
+ * Tailspin, 2026-10-22: one ERP on "all" (the rule a lone ERP holds), a second added by
  * attribute. The integration reads an entry with no rule of its own, once there are several,
  * as `erp_owner=<its id>`, so the first ERP silently owned nothing and the add's pass marked its
  * products discontinued. The PUT that makes the list grow now carries the rule the lone ERP was

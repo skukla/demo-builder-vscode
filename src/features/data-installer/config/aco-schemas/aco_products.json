@@ -1,0 +1,228 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "array",
+  "description": "Schema for aco_products — ACO catalog products. Required: sku, slug, name, source, status (ENABLED|DISABLED). Nested fields may be camelCase (visibleIn, metaTags, …) to match stored API payloads.",
+  "minItems": 1,
+  "items": {
+    "type": "object",
+    "properties": {
+      "sku": {
+        "type": "string",
+        "description": "Stock Keeping Unit — unique product identifier",
+        "minLength": 1
+      },
+      "source": {
+        "type": "object",
+        "description": "Catalog source (locale)",
+        "properties": {
+          "locale": {
+            "type": "string",
+            "description": "Content locale, e.g. en-US"
+          }
+        },
+        "required": ["locale"],
+        "additionalProperties": true
+      },
+      "name": {
+        "type": "string",
+        "description": "Product name",
+        "minLength": 1
+      },
+      "slug": {
+        "type": "string",
+        "description": "URL key for the product",
+        "minLength": 1
+      },
+      "description": {
+        "description": "Main product description; may be null",
+        "oneOf": [
+          { "type": "string" },
+          { "type": "null" }
+        ]
+      },
+      "shortDescription": {
+        "description": "Short description (camelCase); may be null",
+        "oneOf": [
+          { "type": "string" },
+          { "type": "null" }
+        ]
+      },
+      "status": {
+        "type": "string",
+        "description": "Storefront visibility",
+        "enum": ["ENABLED", "DISABLED"]
+      },
+      "visibleIn": {
+        "type": "array",
+        "description": "Storefront areas where the product is visible (camelCase)",
+        "items": {
+          "type": "string",
+          "enum": ["CATALOG", "SEARCH"]
+        }
+      },
+      "metaTags": {
+        "type": "object",
+        "description": "Meta attributes for SEO (camelCase)",
+        "properties": {
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "keywords": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "additionalProperties": false
+      },
+      "attributes": {
+        "type": "array",
+        "description": "Product attribute code/value pairs; optional variantReferenceId per row for configurable variant linkage",
+        "items": {
+          "type": "object",
+          "properties": {
+            "code": { "type": "string" },
+            "values": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "variantReferenceId": {
+              "type": "string",
+              "description": "ACO configurable variant reference id"
+            }
+          },
+          "required": ["code", "values"],
+          "additionalProperties": false
+        }
+      },
+      "images": {
+        "type": "array",
+        "description": "Product images",
+        "items": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string",
+              "description": "Image URL"
+            },
+            "label": { "type": "string" },
+            "roles": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "customRoles": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          },
+          "required": ["url", "label", "roles"],
+          "additionalProperties": false
+        }
+      },
+      "links": {
+        "type": "array",
+        "description": "Related products (e.g. variant simple → configurable parent)",
+        "items": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "description": "Link type (export uses VARIANT_OF for variant simples)"
+            },
+            "sku": {
+              "type": "string",
+              "description": "Related product SKU",
+              "minLength": 1
+            }
+          },
+          "required": ["type", "sku"],
+          "additionalProperties": false
+        }
+      },
+      "routes": {
+        "type": "array",
+        "description": "Category routes for the product",
+        "items": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "Category path segment(s)"
+            },
+            "position": {
+              "type": "integer",
+              "description": "Optional position within the route"
+            }
+          },
+          "required": ["path"],
+          "additionalProperties": false
+        }
+      },
+      "configurations": {
+        "type": "array",
+        "description": "Configurable product options (parent SKU only; variant simples use links + attributes.variantReferenceId)",
+        "items": {
+          "type": "object",
+          "properties": {
+            "attributeCode": { "type": "string", "minLength": 1 },
+            "label": { "type": "string" },
+            "defaultVariantReferenceId": { "type": "string", "minLength": 1 },
+            "type": {
+              "type": "string",
+              "enum": ["SWATCH", "CONFIGURABLE"]
+            },
+            "values": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "variantReferenceId": { "type": "string", "minLength": 1 },
+                  "label": { "type": "string" },
+                  "colorHex": { "type": "string" },
+                  "imageUrl": { "type": "string" }
+                },
+                "required": ["variantReferenceId", "label"],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": ["attributeCode", "label", "defaultVariantReferenceId", "type", "values"],
+          "additionalProperties": false
+        }
+      },
+      "bundles": {
+        "type": "array",
+        "description": "Bundle product selections by group (parent SKU only; selection simples use links in_bundle)",
+        "items": {
+          "type": "object",
+          "properties": {
+            "group": { "type": "string", "minLength": 1 },
+            "required": { "type": "boolean" },
+            "multiSelect": { "type": "boolean" },
+            "defaultItemSkus": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 }
+            },
+            "items": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "sku": { "type": "string", "minLength": 1 },
+                  "qty": { "type": "number" },
+                  "userDefinedQty": { "type": "boolean" }
+                },
+                "required": ["sku", "qty", "userDefinedQty"],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": ["group", "required", "multiSelect", "items"],
+          "additionalProperties": false
+        }
+      }
+    },
+    "required": ["sku", "source", "name", "slug", "status"],
+    "additionalProperties": false
+  }
+}

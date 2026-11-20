@@ -30,7 +30,7 @@
  * @module features/data-installer/services/importJobRunner
  */
 
-import type { DataTypeStatus, JobFailureReason, JobStatusSnapshot } from '../types';
+import { type DataTypeStatus, FINISHING_STOP, type InstallCheck, type JobFailureReason, type JobStanding, type JobStatusSnapshot, type KeptRootStep, type SkippedRowRecord } from '../types';
 import type { PollingService } from '@/core/shell/pollingService';
 
 /**
@@ -42,12 +42,14 @@ import type { PollingService } from '@/core/shell/pollingService';
  * move**: raising `timeout` alone leaves `maxAttempts` binding first, and the
  * raised timeout never fires.
  *
- * 120 attempts reaches ~580s; the 600s timeout is the real bound, with the
- * attempt count kept just above it so neither silently truncates the other.
+ * An hour since 2026-11-05: Demo Builder's engine installs Luma's 2,046 products in batches that
+ * can run past the ten minutes this once allowed, and a watch that stops early leaves the record
+ * saying "still running" for a job that finished. 725 attempts reach ~3,605s, so the hour's
+ * timeout is the real bound, the attempt count kept just above it so neither truncates the other.
  */
 export const IMPORT_POLL = {
-    maxAttempts: 120,
-    timeout: 600_000,
+    maxAttempts: 725,
+    timeout: 3_600_000,
 } as const;
 
 /** How long an empty status map is treated as "still starting". */
@@ -77,8 +79,35 @@ export interface ImportJobResult {
      * and `partial`, what the engine says (Demo Builder's names the object and the cause).
      */
     reason?: string;
+    /** What the engine kept and why, in one line (Demo Builder's engine, installing again). */
+    note?: string;
+    /** A removal left part of the pack in the store on purpose (`JobStatusSnapshot.leftInStore`). */
+    leftInStore?: boolean;
+    /** The kept root's Admin step (`JobStatusSnapshot.keptRoot`). */
+    keptRoot?: KeptRootStep;
+    /** Seconds each data type took (`JobStatusSnapshot.timings`). */
+    timings?: Record<string, number>;
+    /** Every row skipped (`JobStatusSnapshot.skipped`). */
+    skipped?: SkippedRowRecord[];
+    /** The install check (`JobStatusSnapshot.check`). */
+    check?: InstallCheck;
     processingTimeMs?: number;
+    /** Where it stopped, whether a retry could help, and what the SC reads (`JobStanding`). */
+    stoppedAt?: string;
+    retryable?: boolean;
+    scLines?: JobStanding['scLines'];
+    searchDelay?: string;
+    rowNotes?: JobStanding['rowNotes'];
+    /** How removing the pack the import replaces ended (`JobStanding.replacing`). */
+    replacing?: DataTypeStatus;
 }
+
+/**
+ * Told each poll: every data type's state, the engine's count for the one in progress ("450 of
+ * 2,046 products"), what it is doing while no one type is (`JobStanding.phase`), and how removing the
+ * pack it replaces stands (`JobStanding.replacing`).
+ */
+export type ProgressListener = (perType: Record<string, DataTypeStatus>, detail?: string, phase?: string, replacing?: DataTypeStatus) => void;
 
 /** The read-client methods this needs. Narrowed so tests need no client. */
 export interface JobStatusSource {
@@ -94,11 +123,14 @@ export interface JobStatusSource {
  * and the only thing a propagated error would achieve is a wrong verdict.
  */
 function report(
-    onProgress: ((perType: Record<string, DataTypeStatus>) => void) | undefined,
+    onProgress: ProgressListener | undefined,
     perType: Record<string, DataTypeStatus>,
+    detail: string | undefined,
+    phase: string | undefined,
+    replacing?: DataTypeStatus,
 ): void {
     try {
-        onProgress?.(perType);
+        onProgress?.(perType, detail, phase, replacing);
     } catch {
         // Deliberately swallowed — see above.
     }
@@ -122,14 +154,15 @@ export async function watchImportJob(args: {
     now?: () => number;
     /**
      * Called with each poll's per-type map, so a watcher can show progress while
-     * it happens rather than only once the job ends.
+     * it happens rather than only once the job ends, and the engine's count for the
+     * type in progress when it has one ("450 of 2,046 products").
      *
      * The map was always built here — `isTerminal` needs it — and simply never
      * left, which is why the modal sat on a bare "Importing…" for minutes.
      * Never called with an empty map: that shape means "no record yet", not
      * progress.
      */
-    onProgress?: (perType: Record<string, DataTypeStatus>) => void;
+    onProgress?: ProgressListener;
 }): Promise<ImportJobResult> {
     const { client, activationId, requestedTypes, polling, abortSignal } = args;
     const graceMs = args.graceMs ?? DEFAULT_GRACE_MS;
@@ -152,7 +185,7 @@ export async function watchImportJob(args: {
             return true;
         }
 
-        report(args.onProgress, latest.perType);
+        report(args.onProgress, latest.perType, latest.detail, latest.phase, latest.replacing);
         return isTerminal(latest, requestedTypes);
     };
 
@@ -186,7 +219,8 @@ export async function watchImportJob(args: {
     }
 
     const perType = latest?.perType ?? {};
-    const outcome = classify(perType, requestedTypes);
+    // Every data type went in and the work after them stopped: never a success, though each type was.
+    const outcome = latest?.stoppedAt === FINISHING_STOP ? 'partial' : classify(perType, requestedTypes);
     // Demo Builder's engine knows why a kind failed; the service's echo, for a job that ran,
     // has nothing to say and answers no reason. Either way the screen shows what it gets.
     const reason = outcome === 'success' ? undefined : await readFailureReason(client, activationId);
@@ -194,9 +228,26 @@ export async function watchImportJob(args: {
         outcome,
         perType,
         ...(reason ? { reason } : {}),
-        ...(latest?.processingTimeMs !== undefined
-            ? { processingTimeMs: latest.processingTimeMs }
-            : {}),
+        ...(latest ? whatTheEngineSaid(latest) : {}),
+    };
+}
+
+/** The finished job's own words, each only when the engine gave it. */
+function whatTheEngineSaid(latest: JobStatusSnapshot): Omit<ImportJobResult, 'outcome' | 'perType' | 'reason'> {
+    return {
+        ...(latest.stoppedAt ? { stoppedAt: latest.stoppedAt } : {}),
+        ...(latest.retryable ? { retryable: true } : {}),
+        ...(latest.scLines ? { scLines: latest.scLines } : {}),
+        ...(latest.searchDelay ? { searchDelay: latest.searchDelay } : {}),
+        ...(latest.rowNotes ? { rowNotes: latest.rowNotes } : {}),
+        ...(latest.replacing ? { replacing: latest.replacing } : {}),
+        ...(latest.note ? { note: latest.note } : {}),
+        ...(latest.check ? { check: latest.check } : {}),
+        ...(latest.timings ? { timings: latest.timings } : {}),
+        ...(latest.skipped && latest.skipped.length > 0 ? { skipped: latest.skipped } : {}),
+        ...(latest.leftInStore ? { leftInStore: true } : {}),
+        ...(latest.keptRoot ? { keptRoot: latest.keptRoot } : {}),
+        ...(latest.processingTimeMs !== undefined ? { processingTimeMs: latest.processingTimeMs } : {}),
     };
 }
 

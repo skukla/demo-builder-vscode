@@ -33,6 +33,7 @@ const ADDED: CustomBlockLibrary = {
     source: { owner: 'acme', repo: 'new-blocks', branch: 'main' },
 };
 const CHOICES: ConfigureBlockLibraryChoices = {
+    included: [],
     native: [],
     available: [CATALOG],
     customDefaults: [MINE],
@@ -56,6 +57,7 @@ describe('useBlockLibraryChoices', () => {
         pushSettingChange([MINE, ADDED]);
 
         expect(result.current).toEqual({
+            included: [],
             native: [],
             available: [CATALOG],
             customDefaults: [MINE, ADDED],

@@ -5,7 +5,7 @@
  * decision D6, 2026-10-22), so this asks for all of them with the query the overlay's own
  * lookup sends (`accs-discovery-service/actions/lib/category-page.js`), plus `roles` so the
  * step can tell whether any category is in the menu at all. Measured 2026-10-22 against
- * the Justrite store view with guest headers: 15 categories, two roots with an empty
+ * the Tailspin store view with guest headers: 15 categories, two roots with an empty
  * `urlPath`, every one with `roles` (`active`, `show_in_menu`).
  *
  * Pure: the transport is handed in. The headers and endpoint are the caller's, built from

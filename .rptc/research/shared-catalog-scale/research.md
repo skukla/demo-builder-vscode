@@ -8,7 +8,7 @@ instance was called.
 Not to thousands. Adobe documents a hard ceiling of **1,000 customer groups** for Live Search
 (the boundaries page that covers Live Search and Catalog Service). Every shared catalog creates its
 own customer group, so one catalog per priced company caps out at 1,000 priced companies.
-JustRite's ~3,000 accounts are about three times that. Adobe also says customer groups and shared
+Tailspin's ~3,000 accounts are about three times that. Adobe also says customer groups and shared
 catalogs act as multipliers on "effective SKUs", and advises cutting them; it gives no other number.
 Commerce itself puts no documented limit on how many shared catalogs you can create. The scalable
 answer Adobe documents is ACO price books assigned per customer, but on ACCS without ACO, pricing is

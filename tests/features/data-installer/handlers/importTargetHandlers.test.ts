@@ -27,6 +27,8 @@
 
 import { importTargetHandlers } from '@/features/data-installer/handlers/importTargetHandlers';
 import type { Project } from '@/types/base';
+import type { DatapackInstallFailed } from '@/types/datapack';
+import { DATAPACK_INSTALL_FAILURE, FAILED_PACK } from '../../../helpers/datapackInstallFailureFixtures';
 import { makeTargetHarness } from './importTargetHandlers.testUtils';
 
 /** The 22-character base62 tenant id the endpoint carries. */
@@ -59,6 +61,7 @@ async function target(project: unknown) {
         projectName?: string;
         datapack?: { name: string; version: string };
         scope?: { websiteCode: string; storeCode: string };
+        installFailed?: DatapackInstallFailed;
     };
 }
 
@@ -276,5 +279,37 @@ describe('the recorded sample-data choice', () => {
         const data = await target({ name: 'demo' });
 
         expect(data.datapack).toBeUndefined();
+    });
+});
+
+/**
+ * Step-04 S7, "one read": the failed creation install rides on the same answer, so the card, the
+ * flyout and an agent learn it from the read they already make.
+ */
+describe('a failed install of the project\'s datapack', () => {
+    it('reports its reason and retries when the record names the project\'s datapack', async () => {
+        const data = await target({ ...ACCS_PROJECT, datapack: FAILED_PACK, datapackInstallFailure: DATAPACK_INSTALL_FAILURE });
+
+        expect(data.installFailed).toStrictEqual({ reason: DATAPACK_INSTALL_FAILURE.reason, retries: 0 });
+        expect(data.datapack).toStrictEqual(FAILED_PACK);
+    });
+
+    it('reports it when no instance is derivable too', async () => {
+        const data = await target({ name: 'demo', datapack: FAILED_PACK, datapackInstallFailure: DATAPACK_INSTALL_FAILURE });
+
+        expect(data.installFailed).toStrictEqual({ reason: DATAPACK_INSTALL_FAILURE.reason, retries: 0 });
+    });
+
+    it('says nothing for a record about another datapack', async () => {
+        const data = await target({ name: 'demo', datapack: { name: 'luma', version: '1.0.0' }, datapackInstallFailure: DATAPACK_INSTALL_FAILURE });
+
+        expect(data).not.toHaveProperty('installFailed');
+    });
+
+    // Property 3: projects from before the field existed.
+    it('says nothing for a project with no record', async () => {
+        const data = await target({ name: 'demo', datapack: FAILED_PACK });
+
+        expect(data).not.toHaveProperty('installFailed');
     });
 });

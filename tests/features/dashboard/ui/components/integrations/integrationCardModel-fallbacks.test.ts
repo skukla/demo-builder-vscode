@@ -11,6 +11,7 @@
  * The catalog-loader fake and the fixtures live in the shared testUtils.
  */
 
+import type { AppBuilderComponentState } from '@/types/base';
 import {
     buildIntegrationCards,
     deriveIntegrationCard,
@@ -53,6 +54,36 @@ describe('deriveIntegrationCard — what may be renamed', () => {
         });
 
         expect(model.canRename).toBe(false);
+    });
+});
+
+describe('deriveMeshCard — newer code on its branch', () => {
+    const entry = (over: Partial<AppBuilderComponentState> = {}): AppBuilderComponentState => ({
+        kind: 'mesh',
+        status: 'deployed',
+        source: { owner: 'skukla', repo: 'eds-accs-mesh', branch: 'main' },
+        ...over,
+    });
+
+    it('asks for an update and says fetching it deploys it, as an integration card does', () => {
+        const model = deriveMeshCard(
+            display({ text: 'Deployed' }),
+            'deployed',
+            entry({ updateAvailable: { commit: 'abc', checkedAt: '2026-11-01T00:00:00Z' } }),
+            false,
+            'eds-accs-mesh',
+        );
+
+        expect(model.status).toBe('stale');
+        expect(model.hasNewerCode).toBe(true);
+        expect(model.message).toBe('A newer version is available. Update fetches it and deploys it.');
+    });
+
+    it('stays deployed with nothing newer', () => {
+        const model = deriveMeshCard(display({ text: 'Deployed' }), 'deployed', entry(), false, 'eds-accs-mesh');
+
+        expect(model.status).toBe('deployed');
+        expect(model.hasNewerCode).toBe(false);
     });
 });
 

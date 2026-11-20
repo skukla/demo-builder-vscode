@@ -22,17 +22,13 @@ interface ToolDefinition {
 }
 
 function fakeServer() {
-    const tools = new Map<
-        string,
-         
-        (args: any) => Promise<{ content: Array<{ text: string }> }>
-    >();
+    const tools = new Map<string, (args: any) => Promise<{ content: Array<{ text: string }> }>>();
     const defs = new Map<string, ToolDefinition>();
     return {
         registerTool(
             name: string,
             def: unknown,
-             
+
             handler: (args: any) => Promise<{ content: Array<{ text: string }> }>
         ) {
             tools.set(name, handler);
@@ -74,6 +70,53 @@ describe('registerDiagnosticsTools (read_debug_logs)', () => {
         expect(text).toContain('last 2 of 4 lines');
         expect(text).toContain('three\nfour');
         expect(text).not.toContain('two\nthree\nfour');
+    });
+
+    // 2026-11-06: one install's timeline was read off the log file by hand; runs interleave.
+    it("reads a time window from its start, keeping a stamped line's unstamped follow-ons with it", async () => {
+        writeDebugLog([
+            '2026-11-06 09:19:00.000 [info] before',
+            '2026-11-06 09:19:03.873 [info] [Data Installer #7] start',
+            '    at a stack line',
+            '2026-11-06 09:25:10.000 [info] [Data Installer #7] middle',
+            '2026-11-06 09:31:00.000 [info] [Data Installer #7] after the window',
+        ]);
+        const server = fakeServer();
+        registerDiagnosticsTools(server, logDir);
+
+        const text = (
+            await server.text('read_debug_logs', {
+                since: '2026-11-06 09:19:03',
+                until: '2026-11-06 09:30',
+                fromStart: true,
+                lines: 2,
+            })
+        ).content[0].text;
+
+        expect(text).toContain('first 2 of 3 lines');
+        expect(text).toContain('[Data Installer #7] start\n    at a stack line');
+        expect(text).not.toContain('before');
+        expect(text).not.toContain('middle');
+    });
+
+    // 2026-11-06, live: "16:20:00" sorted after every dated stamp, and the window came back empty.
+    it("takes a bare time as that time on the log's latest day", async () => {
+        writeDebugLog([
+            '2026-11-05 09:20:00.000 [info] yesterday',
+            '2026-11-06 09:19:00.000 [info] before',
+            '2026-11-06 09:25:10.000 [info] inside',
+            '2026-11-06 09:31:00.000 [info] after',
+        ]);
+        const server = fakeServer();
+        registerDiagnosticsTools(server, logDir);
+
+        const text = (await server.text('read_debug_logs', { since: '09:20', until: '09:30' }))
+            .content[0].text;
+
+        expect(text).toContain('inside');
+        expect(text).not.toContain('yesterday');
+        expect(text).not.toContain('before');
+        expect(text).not.toContain('after');
     });
 
     it('filters case-insensitively BEFORE taking the tail', async () => {

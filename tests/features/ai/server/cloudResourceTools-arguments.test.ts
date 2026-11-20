@@ -23,8 +23,8 @@ import {
     fakeServer,
     getGitHubServicesMock,
     gh,
+    mockDaLiveAuth,
     mockDeleteAllSiteContent,
-    mockInspectToken,
     mockListOrgSites,
     registerCloudResourceTools,
     resetCloudResourceMocks,
@@ -334,7 +334,7 @@ describe('an error that is not an org mismatch', () => {
 });
 
 describe('the DA.live token provider', () => {
-    it('hands the operations a provider that reads the current IMS token', async () => {
+    it('hands the operations a provider that reads the current DA.live token', async () => {
         // Built once and captured by two long-lived operation objects, so it has
         // to READ the token each time rather than close over one.
         const s = server();
@@ -342,28 +342,16 @@ describe('the DA.live token provider', () => {
         await s.call('list_dalive_sites', { org: 'acme' });
 
         const provider = (DaLiveOrgOperations as unknown as jest.Mock).mock.calls[0][0];
-        await expect(provider.getAccessToken()).resolves.toBe('ims-token');
+        mockDaLiveAuth.getAccessToken.mockResolvedValue('a-later-da-live-token');
+        await expect(provider.getAccessToken()).resolves.toBe('a-later-da-live-token');
     });
 
-    it('hands off to Adobe auth when the authentication service is unavailable', async () => {
-        // The whole builder is wrapped: a diagnostic tool must not become the
-        // failure it was called to explain.
-        mockInspectToken.mockRejectedValue(new Error('no auth service'));
+    it('hands off to the DA.live sign-in when the session cannot be read', async () => {
+        // A diagnostic tool must not become the failure it was called to explain.
+        mockDaLiveAuth.getAccessToken.mockRejectedValue(new Error('no secret storage'));
         const s = server();
 
-        expect(await s.call('list_dalive_sites', { org: 'acme' })).toMatchObject({
-            needsAuth: 'dalive',
-        });
-    });
-
-    it('hands back null — not undefined — when the token has no value', async () => {
-        mockInspectToken.mockResolvedValue({ valid: true, expiresIn: 60 });
-        const s = server();
-
-        await s.call('list_dalive_sites', { org: 'acme' });
-
-        const provider = (DaLiveOrgOperations as unknown as jest.Mock).mock.calls[0][0];
-        await expect(provider.getAccessToken()).resolves.toBeNull();
+        expect(await s.call('list_dalive_sites', { org: 'acme' })).toMatchObject({ needsAuth: 'dalive' });
     });
 });
 

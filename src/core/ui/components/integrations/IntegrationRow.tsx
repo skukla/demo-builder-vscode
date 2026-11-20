@@ -56,7 +56,7 @@ export function IntegrationRow({
                 {model.canRename ? (
                     <InlineRenameField
                         name={model.name}
-                        label="New integration name"
+                        label="New Integration Name"
                         onRename={(newName) => onRename(model.id, newName)}
                         textClassName="integration-row-name"
                     />

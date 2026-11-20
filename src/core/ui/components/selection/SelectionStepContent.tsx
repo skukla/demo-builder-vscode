@@ -8,6 +8,10 @@
  * - List view with search/filter (delegates to SearchableList)
  *
  * Used by AdobeProjectPicker and AdobeWorkspacePicker to reduce duplication.
+ *
+ * A whole wizard screen draws its error and empty states large and centred. Hosted in a dialog
+ * (`dialogHost`), those states are the dialog's title instead (the dialog design rules), what they
+ * offer goes in its footer, its wait is silent and the list's count goes, as the SC can see it.
  */
 import {
     Flex,
@@ -17,11 +21,13 @@ import {
 } from '@adobe/react-spectrum';
 import Login from '@spectrum-icons/workflow/Login';
 import React from 'react';
+import { isSignedOut, SignedOutOutcome, type SelectionDialogHost } from './selectionDialogHost';
 import { EmptyState } from '@/core/ui/components/feedback/EmptyState';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { SearchableList } from '@/core/ui/components/navigation/SearchableList';
+import { DialogOutcomeBody, DialogWaitBody } from '@/core/ui/components/ui/DialogOutcome';
 import { ErrorCode } from '@/types/errorCodes';
 
 /**
@@ -44,6 +50,11 @@ export interface SelectionLabels {
     loadingMessage: string;
     /** Sub-message shown during loading (optional) */
     loadingSubMessage?: string;
+    /**
+     * A line under the wait for a list that is slow for a known reason ("Adobe can be slow to
+     * respond…"). The caller's: it showed over GitHub repositories when it was written here (walk F202).
+     */
+    loadingHelper?: string;
     /** Title shown when error occurs */
     errorTitle: string;
     /** Title shown when no items found */
@@ -78,11 +89,11 @@ export interface SelectionStepContentProps<T extends SelectableItem> {
     hasLoadedOnce: boolean;
     /** Error message if loading failed */
     error: string | null;
-    /** Typed failure code — ORG_MISMATCH swaps Try Again for the org recovery. */
+    /** Typed failure code — ORG_MISMATCH swaps Retry for the org recovery. */
     errorCode?: ErrorCode | null;
     /**
      * Start a FORCED sign-in to land in a different IMS org. Supplied only where the
-     * host can perform it; without it an org mismatch falls back to Try Again.
+     * host can perform it; without it an org mismatch falls back to Retry.
      */
     onSwitchOrg?: () => void;
     /** Current search query */
@@ -109,6 +120,8 @@ export interface SelectionStepContentProps<T extends SelectableItem> {
     disabledIds?: string[];
     /** Reason text shown under each disabled item, keyed by item ID */
     disabledReasons?: Record<string, string>;
+    /** Hosted in a dialog: see {@link SelectionDialogHost}. Absent on a whole wizard screen. */
+    dialogHost?: SelectionDialogHost;
 }
 
 /**
@@ -142,6 +155,7 @@ export function SelectionStepContent<T extends SelectableItem>({
     headerAction,
     disabledIds,
     disabledReasons,
+    dialogHost,
 }: SelectionStepContentProps<T>) {
     // Header with heading (headerAction is now passed to SearchableList for inline display)
     const header = labels.heading ? (
@@ -152,6 +166,14 @@ export function SelectionStepContent<T extends SelectableItem>({
 
     // State 1: Loading
     if (showLoading || (isLoading && !hasLoadedOnce)) {
+        if (dialogHost) {
+            return (
+                <DialogWaitBody
+                    lines={{ label: labels.loadingMessage, detail: labels.loadingSubMessage }}
+                    onWaiting={dialogHost.onWaiting}
+                />
+            );
+        }
         return (
             <>
                 {header}
@@ -160,7 +182,7 @@ export function SelectionStepContent<T extends SelectableItem>({
                         size="L"
                         message={labels.loadingMessage}
                         subMessage={labels.loadingSubMessage}
-                        helperText="Adobe can be slow to respond — this may take a minute"
+                        helperText={labels.loadingHelper}
                     />
                 </CenteredFeedbackContainer>
             </>
@@ -169,11 +191,26 @@ export function SelectionStepContent<T extends SelectableItem>({
 
     // State 2: Error
     if (error && !isLoading) {
+        if (dialogHost && isSignedOut(errorCode)) return <SignedOutOutcome host={dialogHost} onLoad={onLoad} />;
         // An org mismatch is NOT retryable: the token reaches exactly one org, so
         // re-running the same call fails identically. The canonical recovery is a
         // FORCED sign-in ("Switch IMS Org") — see the adobe-org-context model. Try
         // Again stays as the secondary, for the genuinely transient case.
         const isOrgMismatch = errorCode === ErrorCode.ORG_MISMATCH && onSwitchOrg;
+        if (dialogHost) {
+            const tryAgain = { label: 'Retry', onPress: onLoad };
+            return (
+                <DialogOutcomeBody
+                    onOutcome={dialogHost.onOutcome}
+                    outcome={{
+                        title: labels.errorTitle,
+                        status: 'error',
+                        lines: [error],
+                        actions: isOrgMismatch ? [tryAgain, { label: 'Switch IMS Org', onPress: onSwitchOrg }] : [tryAgain],
+                    }}
+                />
+            );
+        }
         return (
             <>
                 {header}
@@ -190,9 +227,9 @@ export function SelectionStepContent<T extends SelectableItem>({
                                       onPress: onSwitchOrg,
                                       variant: 'accent' as const,
                                   },
-                                  { label: 'Try Again', onPress: onLoad, variant: 'secondary' as const },
+                                  { label: 'Retry', onPress: onLoad, variant: 'secondary' as const },
                               ]
-                            : [{ label: 'Try Again', onPress: onLoad, variant: 'accent' as const }]
+                            : [{ label: 'Retry', onPress: onLoad, variant: 'accent' as const }]
                     }
                 />
             </>
@@ -201,6 +238,21 @@ export function SelectionStepContent<T extends SelectableItem>({
 
     // State 3: Empty
     if (items.length === 0 && !isLoading) {
+        if (dialogHost) {
+            return (
+                <DialogOutcomeBody
+                    onOutcome={dialogHost.onOutcome}
+                    // The title says it. The way on is the footer's New, so no line sends the SC to
+                    // Adobe Console, which the whole wizard screen still names.
+                    outcome={{
+                        title: labels.emptyTitle,
+                        status: 'warning',
+                        lines: [],
+                        actions: [{ label: 'New', onPress: dialogHost.onCreate }],
+                    }}
+                />
+            );
+        }
         return (
             <>
                 {header}
@@ -266,6 +318,7 @@ export function SelectionStepContent<T extends SelectableItem>({
                 searchPlaceholder={labels.searchPlaceholder}
                 refreshAriaLabel={`Refresh ${labels.itemNounPlural || labels.itemNoun + 's'}`}
                 action={headerAction}
+                hideCount={Boolean(dialogHost)}
             />
         </div>
     );

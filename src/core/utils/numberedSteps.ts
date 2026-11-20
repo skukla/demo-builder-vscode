@@ -8,6 +8,7 @@
  * @module core/utils/numberedSteps
  */
 
+import { baseStage } from './operationStages';
 import type { OperationPosition } from '@/types/webviewPayloads';
 
 /** Where a step shows: its name, the line under it, and its position. */
@@ -44,6 +45,7 @@ export function stepPosition(
     steps: readonly string[],
     stage: string,
 ): OperationPosition | undefined {
-    const index = steps.indexOf(stage) + 1;
+    // A datapack step named for its pack sits where the list names the step (`packStage`).
+    const index = steps.indexOf(baseStage(stage)) + 1;
     return index > 0 && steps.length > 1 ? { index, total: steps.length } : undefined;
 }

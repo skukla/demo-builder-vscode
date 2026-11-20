@@ -20,7 +20,7 @@ import React from 'react';
 export interface OptionalNameFieldProps {
     /** The raw typed label ('' / undefined = default in use). */
     label?: string;
-    /** The field's own label, when "Name (optional)" would not say what is named. */
+    /** The field's own label, when "Name (Optional)" would not say what is named. */
     fieldLabel?: string;
     /** What the integration will be called if the field stays empty. */
     defaultLabel: string;
@@ -45,7 +45,7 @@ export interface OptionalNameFieldProps {
  */
 export function OptionalNameField({
     label,
-    fieldLabel = 'Name (optional)',
+    fieldLabel = 'Name (Optional)',
     defaultLabel,
     onLabelChange,
     disabledHint,

@@ -16,13 +16,13 @@ import {
 
 describe('describeNoAdminRoleRemedy', () => {
     it('leads with the primary email, because reinstalling with the wrong one grants the wrong address', () => {
-        const remedy = describeNoAdminRoleRemedy('kmanns');
+        const remedy = describeNoAdminRoleRemedy('org-e');
         expect(remedy).toContain('github.com/settings/emails');
         expect(remedy.indexOf('PRIMARY')).toBeLessThan(remedy.indexOf('uninstall'));
     });
 
     it('says to uninstall the app completely, not to re-save a repository', () => {
-        const remedy = describeNoAdminRoleRemedy('kmanns');
+        const remedy = describeNoAdminRoleRemedy('org-e');
         expect(remedy).toContain('uninstall AEM Code Sync completely');
         // Measured: a repository re-add mints only a 30-minute key. A version of this
         // that omits the warning sends people down the path that cost an afternoon.
@@ -30,7 +30,7 @@ describe('describeNoAdminRoleRemedy', () => {
     });
 
     it('tells them to re-grant every repository, naming the org when it is known', () => {
-        expect(describeNoAdminRoleRemedy('kmanns')).toContain('every kmanns repository');
+        expect(describeNoAdminRoleRemedy('org-e')).toContain('every org-e repository');
         expect(describeNoAdminRoleRemedy()).toContain('every repository');
     });
 

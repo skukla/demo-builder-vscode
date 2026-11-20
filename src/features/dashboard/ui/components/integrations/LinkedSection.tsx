@@ -13,7 +13,7 @@
 import { Link } from '@adobe/react-spectrum';
 import React from 'react';
 import type { IntegrationCardModel } from './integrationCardModel';
-import { PanelRow } from './PanelRow';
+import { PanelRow } from '@/core/ui/components/ui/PanelRow';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 
 export interface LinkedSectionProps {
@@ -35,7 +35,7 @@ export function LinkedSection({
     const linked = model.linked;
     if (!linked?.cards.length) return null;
     return (
-        <PanelRow label="Connected to">
+        <PanelRow label="Connected To">
             {linked.cards.map((card) => (
                 <span
                     key={card.id}

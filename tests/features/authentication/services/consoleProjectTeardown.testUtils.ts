@@ -112,6 +112,8 @@ export function makeHarness(options: HarnessOptions = {}) {
         ),
         subscribeManagementApi: jest.fn().mockResolvedValue(undefined),
         deleteConsoleProject: jest.fn().mockResolvedValue(undefined),
+        clearConsoleSelectionIfCurrent: jest.fn().mockResolvedValue(undefined),
+        isProjectOwner: jest.fn().mockResolvedValue(true),
         createEventsClient: jest.fn(
             (auth: { accessToken: string; apiKey: string }) => clientFor(auth.apiKey),
         ),

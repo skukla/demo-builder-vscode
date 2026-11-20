@@ -57,6 +57,7 @@ describe('SidebarProvider messages', () => {
             ['newAiChat', 'demoBuilder.newAiChat', undefined],
             ['pickAiChat', 'demoBuilder.pickAiChat', undefined],
             ['showPrompts', 'demoBuilder.showPromptsPicker', undefined],
+            ['openDatapackLibrary', 'demoBuilder.showDatapackLibrary', undefined],
         ])('runs %s as %s', async (type, command, argument) => {
             await view.deliver!({ type });
 
@@ -143,6 +144,7 @@ describe('SidebarProvider messages', () => {
             'newAiChat',
             'pickAiChat',
             'showPrompts',
+            'openDatapackLibrary',
         ])('reports a failed %s instead of rejecting', async (type) => {
             await expect(view.deliver!({ type })).resolves.toBeUndefined();
 

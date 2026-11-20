@@ -14,7 +14,7 @@ import type { WizardState } from '@/types/webview';
 
 const BASE: Partial<WizardState> = {
     currentStep: 'review',
-    projectName: 'justrite',
+    projectName: 'tailspin',
     selectedStack: 'headless-paas',
     adobeAuth: { isAuthenticated: true, isChecking: false },
     componentConfigs: {},
@@ -34,7 +34,7 @@ describe('ReviewStep — the demo setup the ERP integration brings', () => {
 
         const notice = screen.getByTestId('review-store-preparation');
         expect(notice).toHaveTextContent('ERP Integration also applies its demo setup to this Commerce store');
-        expect(notice).toHaveTextContent('Price scope');
+        expect(notice).toHaveTextContent('Price Scope');
         expect(notice).toHaveTextContent('every website on this Commerce shares');
     });
 

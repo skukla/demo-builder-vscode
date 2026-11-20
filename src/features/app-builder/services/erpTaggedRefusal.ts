@@ -1,7 +1,7 @@
 /**
  * Why an undo that takes `erp_owner` out of attribute sets will not run while products
  * carry a value: Commerce would drop each one without a word. Shared by the demo setup's
- * attributes step (`erpAttributesFix`) and the agent's `remove_erp_owner_from_attribute_sets`
+ * attributes step (`erpAttributesSetup`) and the agent's `remove_erp_owner_from_attribute_sets`
  * (`erpOwnerSetsHandlers`), which said it two ways, neither naming the ERP.
  *
  * @module features/app-builder/services/erpTaggedRefusal

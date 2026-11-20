@@ -91,11 +91,62 @@ const SURFACES = [
 const THEMES = ['dark', 'light'];
 const WIDTHS = [420, 900, 1280];
 
-/** Settle time per surface. Generous on purpose; a short one reads as a diff. */
+/**
+ * The LONGEST a surface is waited for. It used to be the wait itself, 2600ms for every load, so a
+ * run of 54 loads spent two and a half minutes asleep before reading anything, and a throttled tab
+ * stretched that past half an hour (owner, 2026-11-04). A surface is now read once it has SETTLED
+ * (`settle`), which is usually well under a second; this cap is what a surface that never settles
+ * gets, and the per-cell floor still refuses one that never mounted.
+ */
 const SETTLE_MS = 2600;
 
-async function captureSurface(bundle, theme = 'dark', width = 1280) {
+/** How often a loading surface is looked at, and how many looks in a row must agree. */
+const POLL_MS = 100;
+const STEADY_POLLS = 4;
+
+/** How many surfaces load at once. Each is its own iframe with its own document, so they do not share state. */
+const CONCURRENCY = 4;
+
+/**
+ * Wait until a surface has settled: mounted, its fonts loaded, and its element count unchanged for
+ * `STEADY_POLLS` looks in a row (the fixtures answer asynchronously, so a surface grows for a few
+ * hundred milliseconds after it first paints). Capped at `SETTLE_MS`.
+ */
+async function settle(frame) {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const started = Date.now();
+    let last = -1;
+    let steady = 0;
+    while (Date.now() - started < SETTLE_MS) {
+        await wait(POLL_MS);
+        const doc = frame.contentDocument;
+        const root = doc && doc.getElementById('root');
+        if (!root || root.children.length === 0) continue;
+        const count = doc.getElementsByTagName('*').length;
+        steady = count === last ? steady + 1 : 0;
+        last = count;
+        if (steady >= STEADY_POLLS) {
+            if (doc.fonts) await doc.fonts.ready;
+            return;
+        }
+    }
+}
+
+/** Run `work` over `items`, at most `limit` at a time, keeping the results in item order. */
+async function inPool(items, limit, work) {
+    const results = new Array(items.length);
+    let next = 0;
+    const runner = async () => {
+        while (next < items.length) {
+            const i = next++;
+            results[i] = await work(items[i]);
+        }
+    };
+    await Promise.all(Array.from({ length: Math.min(limit, items.length) }, runner));
+    return results;
+}
+
+async function captureSurface(bundle, theme = 'dark', width = 1280) {
     const frame = document.createElement('iframe');
     frame.style.cssText = `width:${width}px;height:900px;border:0;position:absolute;left:-9999px`;
     // CACHE-BUST, or the browser serves the previous build and a before/after
@@ -103,7 +154,7 @@ async function captureSurface(bundle, theme = 'dark', width = 1280) {
     // `cb` to the bundle URL for the same reason.
     frame.src = `/h.html?b=${bundle}&t=${theme}&cb=${Date.now()}${Math.floor(Math.random() * 1e6)}`;
     document.body.appendChild(frame);
-    await wait(SETTLE_MS);
+    await settle(frame);
 
     const doc = frame.contentDocument;
     const win = frame.contentWindow;
@@ -203,7 +254,6 @@ function assertPropertiesCovered(cssText) {
  * that do not exist. Abort rather than report.
  */
 async function assertHarnessFaithful(sentinel) {
-    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
     // FIRST: is this even our server? `host.docker.internal:<port>` can be
     // answered by an unrelated app inside the browser container while the local
@@ -233,7 +283,7 @@ async function assertHarnessFaithful(sentinel) {
     frame.style.cssText = 'width:1280px;height:900px;border:0;position:absolute;left:-9999px';
     frame.src = `/h.html?b=dashboard&cb=ctl${Date.now()}`;
     document.body.appendChild(frame);
-    await wait(SETTLE_MS);
+    await settle(frame);
     const doc = frame.contentDocument, win = frame.contentWindow;
 
     const problems = [];
@@ -269,13 +319,12 @@ async function assertHarnessFaithful(sentinel) {
         f.style.cssText = 'width:900px;height:600px;border:0;position:absolute;left:-9999px';
         f.src = `/h.html?b=dashboard&t=${theme}&cb=ctl${theme}${Date.now()}`;
         document.body.appendChild(f);
-        await wait(SETTLE_MS);
+        await settle(f);
         const v = f.contentWindow.getComputedStyle(f.contentDocument.body).backgroundColor;
         f.remove();
         return v;
     };
-    const darkBg = await bg('dark');
-    const lightBg = await bg('light');
+    const [darkBg, lightBg] = await Promise.all([bg('dark'), bg('light')]);
     if (darkBg === lightBg) {
         problems.push(`theme switch is INERT — dark and light both render ${darkBg}`);
     }
@@ -294,14 +343,13 @@ async function assertHarnessFaithful(sentinel) {
  */
 async function capture({ surfaces = SURFACES, themes = THEMES, widths = WIDTHS, sentinel } = {}) {
     await assertHarnessFaithful(sentinel);
+    const cells = [];
+    for (const s of surfaces) for (const t of themes) for (const w of widths) cells.push([s, t, w]);
+    const lines = await inPool(cells, CONCURRENCY, ([s, t, w]) => captureSurface(s, t, w));
     const out = {};
-    for (const s of surfaces) {
-        for (const t of themes) {
-            for (const w of widths) {
-                out[`${s}@${t}@${w}`] = await captureSurface(s, t, w);
-            }
-        }
-    }
+    cells.forEach(([s, t, w], i) => {
+        out[`${s}@${t}@${w}`] = lines[i];
+    });
     await recordCapture('resting', { sentinel, surfaces, themes, widths, capture: out });
     return out;
 }
@@ -392,14 +440,13 @@ function diff(before, after) {
  * imposition has not slipped.
  */
 async function auditContrast({ surfaces = SURFACES, theme = 'dark', width = 1280 } = {}) {
-    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     const out = {};
     for (const bundle of surfaces) {
         const frame = document.createElement('iframe');
         frame.style.cssText = `width:${width}px;height:900px;border:0;position:absolute;left:-9999px`;
         frame.src = `/h.html?b=${bundle}&t=${theme}&cb=ax${Date.now()}${Math.floor(Math.random() * 1e6)}`;
         document.body.appendChild(frame);
-        await wait(SETTLE_MS);
+        await settle(frame);
 
         const doc = frame.contentDocument, win = frame.contentWindow;
         if (win.__FREEZE__) win.__FREEZE__();

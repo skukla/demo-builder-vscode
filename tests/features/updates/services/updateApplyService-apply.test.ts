@@ -22,7 +22,6 @@ import {
     mockApplyBlockLibraryUpdateResolved,
     mockSyncFork,
     mockSyncWithTemplate,
-    mockUpdateCommitShaWithRollback,
     mockUpdateComponent,
     mockUpdateLastSyncedCommit,
     resetFakes,
@@ -30,6 +29,7 @@ import {
 import * as vscode from 'vscode';
 import { OPERATION_STAGES as S } from '@/core/utils/operationStages';
 import { applyUpdatesHeadless } from '@/features/updates/services/updateApplyService';
+import { resolveByomOverlayConfig } from '@/features/eds/handlers/byomOverlay';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 
 const getConfigMock = vscode.workspace.getConfiguration as jest.Mock;
@@ -121,11 +121,13 @@ describe('template sync', () => {
             onProgress
         );
 
-        // The extension's own GitHub services for this context, handed in (EDS-49).
+        // The extension's own GitHub services for this context, handed in (EDS-49), and the
+        // overlay lookup the resets use, so the update puts the first-visit script in 404.html.
         expect(TemplateSyncServiceCtor).toHaveBeenCalledWith(
             getGitHubServices(ctx.secrets),
             ctx.logger,
-            ctx.commandManager
+            ctx.commandManager,
+            resolveByomOverlayConfig,
         );
         expect(mockSyncWithTemplate).toHaveBeenCalledWith(project, { strategy: 'merge' });
         expect(mockUpdateLastSyncedCommit).toHaveBeenCalledWith(project, 'c1', ctx.stateManager);
@@ -137,6 +139,47 @@ describe('template sync', () => {
         await applyUpdatesHeadless(emptySelections(), makeCtx());
 
         expect(TemplateSyncServiceCtor).not.toHaveBeenCalled();
+    });
+
+    it('applies an explicitly selected source reset without attempting a merge', async () => {
+        const ctx = makeCtx();
+        const project = edsProject();
+        mockSyncWithTemplate.mockResolvedValueOnce({
+            success: true,
+            strategy: 'reset',
+            syncedCommit: 'reset-head',
+        });
+
+        const res = await applyUpdatesHeadless(
+            { ...emptySelections(), template: [{ project, sourceReset: true }] },
+            ctx,
+        );
+
+        expect(mockSyncWithTemplate.mock.calls).toStrictEqual([[project, { strategy: 'reset' }]]);
+        expect(mockUpdateLastSyncedCommit).toHaveBeenCalledWith(project, 'reset-head', ctx.stateManager);
+        expect(res.template).toStrictEqual({ successCount: 1, failCount: 0, errors: [] });
+    });
+
+    it('does not record a source reset that failed or fall back to merging it', async () => {
+        const project = edsProject();
+        mockSyncWithTemplate.mockResolvedValueOnce({
+            success: false,
+            strategy: 'reset',
+            error: 'Could not fetch the template.',
+        });
+
+        const res = await applyUpdatesHeadless(
+            { ...emptySelections(), template: [{ project, sourceReset: true }] },
+            makeCtx(),
+        );
+
+        expect(mockSyncWithTemplate.mock.calls).toStrictEqual([[project, { strategy: 'reset' }]]);
+        expect(mockUpdateLastSyncedCommit).not.toHaveBeenCalled();
+        expect(res.template).toStrictEqual({
+            successCount: 0,
+            failCount: 1,
+            errors: ['demo: Could not fetch the template.'],
+        });
     });
 
     it.each([
@@ -160,7 +203,9 @@ describe('template sync', () => {
             strategy: 'merge',
             syncedCommit: '',
             conflicts: ['blocks/hero/hero.js'],
-            error: 'Merge conflicts in 1 file (blocks/hero/hero.js); the update was not applied.',
+            error:
+                'The update stopped on 1 file that was edited (blocks/hero/hero.js, an edit made in this storefront). '
+                + 'Nothing was changed: the storefront on GitHub is as it was.',
         };
 
         it('by default STOP: reported as a failure naming the file, no reset, no commit recorded', async () => {
@@ -287,10 +332,10 @@ describe('components', () => {
         project,
         componentId,
         latestVersion: '2.0.0',
-        downloadUrl: `https://x/${componentId}.zip`,
+        tag: 'v2.0.0',
     });
 
-    it('builds the updater from the context and hands it project, id, url, version', async () => {
+    it('builds the updater from the context and hands it project, id, tag, version', async () => {
         const ctx = makeCtx();
         const project = edsProject();
         const onProgress = jest.fn();
@@ -305,7 +350,7 @@ describe('components', () => {
         expect(mockUpdateComponent).toHaveBeenCalledWith(
             project,
             'mesh',
-            'https://x/mesh.zip',
+            'v2.0.0',
             '2.0.0'
         );
         expect(onProgress).toHaveBeenCalledWith(S.updatingComponents.label, 'mesh in demo');
@@ -351,12 +396,12 @@ describe('components', () => {
         expect(res.component.successCount).toBe(3);
     });
 
-    it('an item without a download URL is skipped, but its project is still saved', async () => {
+    it('an item without a release tag is skipped, but its project is still saved', async () => {
         const ctx = makeCtx();
         const project = edsProject();
 
         const res = await applyUpdatesHeadless(
-            { ...emptySelections(), component: [{ ...item(project), downloadUrl: undefined }] },
+            { ...emptySelections(), component: [{ ...item(project), tag: undefined }] },
             ctx
         );
 
@@ -368,7 +413,7 @@ describe('components', () => {
     it('a failed component is recorded with its name and project, and the rest proceed', async () => {
         const ctx = makeCtx();
         const project = edsProject();
-        mockUpdateComponent.mockRejectedValueOnce(new Error('download 404\nat stack'));
+        mockUpdateComponent.mockRejectedValueOnce(new Error('git fetch failed\nat stack'));
 
         const res = await applyUpdatesHeadless(
             {
@@ -381,7 +426,7 @@ describe('components', () => {
         expect(res.component).toEqual({
             successCount: 1,
             failCount: 1,
-            errors: ['mesh in demo: download 404'],
+            errors: ['mesh in demo: git fetch failed'],
         });
         expect(ctx.logger.error).toHaveBeenCalledTimes(1);
     });
@@ -496,55 +541,12 @@ describe('add-ons', () => {
         expect(ctx.logger.error).toHaveBeenCalledTimes(1);
     });
 
-    it('moves the Inspector SDK commit through the rollback-guarded helper, saving the project', async () => {
-        const ctx = makeCtx();
-        const project = edsProject();
-        const onProgress = jest.fn();
-        mockUpdateCommitShaWithRollback.mockImplementation(
-            async (_t: unknown, _s: string, save: () => Promise<void>) => save()
-        );
-
-        const res = await applyUpdatesHeadless(
-            { ...emptySelections(), inspector: [{ project, latestCommit: 'newsha' }] },
-            ctx,
-            onProgress
-        );
-
-        expect(mockUpdateCommitShaWithRollback).toHaveBeenCalledWith(
-            project.installedInspectorSdk,
-            'newsha',
-            expect.any(Function)
-        );
-        expect(ctx.stateManager.saveProject).toHaveBeenCalledWith(project);
-        expect(onProgress).toHaveBeenCalledWith(S.updatingAddOns.label, 'Inspector SDK in demo');
-        expect(res.addon.successCount).toBe(1);
-    });
-
-    it('a failed Inspector SDK update is recorded by project', async () => {
-        const ctx = makeCtx();
-        mockUpdateCommitShaWithRollback.mockRejectedValue(new Error('disk full'));
-
-        const res = await applyUpdatesHeadless(
-            {
-                ...emptySelections(),
-                inspector: [{ project: edsProject(), latestCommit: 'newsha' }],
-            },
-            ctx
-        );
-
-        expect(res.addon).toEqual({
-            successCount: 0,
-            failCount: 1,
-            errors: ['Inspector SDK in demo: disk full'],
-        });
-        expect(ctx.logger.error).toHaveBeenCalledTimes(1);
-    });
 });
 
 describe('totals', () => {
     it('sums successes and failures across every category', async () => {
         mockSyncFork.mockResolvedValue({ success: false, message: 'x' });
-        mockUpdateCommitShaWithRollback.mockRejectedValue(new Error('y'));
+        mockUpdateComponent.mockRejectedValue(new Error('y'));
         const project = edsProject();
 
         const res = await applyUpdatesHeadless(
@@ -553,19 +555,18 @@ describe('totals', () => {
                 template: [{ project }],
                 boilerplate: [],
                 finish: [],
-                component: [{ project, componentId: 'mesh', latestVersion: '2', downloadUrl: 'u' }],
+                component: [{ project, componentId: 'mesh', latestVersion: '2', tag: 'v2' }],
                 adobeMcp: [{ project, packageName: 'p', latestVersion: '1' }],
                 blockLibrary: [
                     { project, library: installedLibrary('Lib A'), latestCommit: 'bbb' },
                 ],
                 blockLibraryInstall: [],
-                inspector: [{ project, latestCommit: 'z' }],
                 integration: [],
             },
             makeCtx()
         );
 
-        expect(res.totalApplied).toBe(4);
+        expect(res.totalApplied).toBe(3);
         expect(res.totalFailed).toBe(2);
     });
 });

@@ -11,7 +11,9 @@ import {
     removeAttribute,
     removeAttributeOption,
 } from '@/features/data-installer/services/demoBuilderEngine/attributesKind';
-import { fakeContext } from './demoBuilderEngine.testUtils';
+import { attributePackForm } from '@/features/data-installer/services/demoBuilderEngine/packForm';
+import type { StoreAttribute } from '@/features/data-installer/services/demoBuilderEngine/productLookups';
+import { type SentCall, fakeContext } from './demoBuilderEngine.testUtils';
 
 const FABRIC = {
     attribute: {
@@ -51,7 +53,7 @@ describe('installAttributes', () => {
                 body: { attribute: { ...FABRIC.attribute, frontend_labels: [{ store_id: 1, label: 'Fabric' }] } },
             },
         ]);
-        expect(ctx.recorder.created).toEqual([{ kind: ATTRIBUTE_KIND, id: 'bodea_fabric' }]);
+        expect(ctx.recorder.created).toEqual([{ kind: ATTRIBUTE_KIND, id: 'bodea_fabric', key: 'bodea_fabric' }]);
     });
 
     it('never sends the source store\'s attribute id', async () => {
@@ -81,8 +83,36 @@ describe('installAttributes', () => {
         expect(ctx.sent).toEqual([
             { method: 'POST', path: 'products/attributes/bodea_fabric/options', body: { option: { label: 'Nylon' } } },
         ]);
-        expect(ctx.recorder.created).toEqual([{ kind: ATTRIBUTE_OPTION_KIND, id: 'bodea_fabric/51' }]);
+        expect(ctx.recorder.created).toEqual([{ kind: ATTRIBUTE_OPTION_KIND, id: 'bodea_fabric/51', key: 'bodea_fabric/Nylon' }]);
         expect(ctx.sent.some((c) => c.method === 'DELETE')).toBe(false);
+    });
+
+    // 2026-11-06: a read after each option made Luma's twelve colours take eleven seconds.
+    it('reads the options once before and once after sending all it lacks, not once per option', async () => {
+        let options: Array<{ label: string; value: string }> = [{ label: 'Canvas', value: '50' }];
+        let reads = 0;
+        const ctx = await fakeContext(
+            {
+                'products/attributes/bodea_fabric': { attribute_code: 'bodea_fabric' },
+                'products/attributes/bodea_fabric/options': () => (reads += 1, options),
+            },
+            (call) => {
+                const label = (call.body as { option: { label: string } }).option.label;
+                options = [...options, { label, value: String(50 + options.length) }];
+                return true;
+            },
+        );
+        const row = { attribute: { ...FABRIC.attribute, options: [{ label: 'Canvas' }, { label: 'Nylon' }, { label: 'Wool' }] } };
+
+        await installAttributes(ctx, parseAttributeRows([row]));
+
+        expect(ctx.sent.map((c) => (c.body as { option: { label: string } }).option.label)).toEqual(['Nylon', 'Wool']);
+        expect(reads).toBe(2);
+        expect(ctx.recorder.created.map((o) => [o.id, o.key])).toEqual([
+            ['bodea_fabric/51', 'bodea_fabric/Nylon'],
+            ['bodea_fabric/52', 'bodea_fabric/Wool'],
+        ]);
+        expect(ctx.recorder.pending).toStrictEqual([]);
     });
 
     it('fails when Commerce does not keep an option it was sent', async () => {
@@ -105,12 +135,85 @@ describe('installAttributes', () => {
         expect(ctx.sent).toStrictEqual([]);
     });
 
-    it('refuses a swatch attribute rather than half-installing it', async () => {
-        const ctx = await fakeContext();
-        const row = { attribute: { ...FABRIC.attribute, frontend_input: 'swatch_visual' } };
+});
 
-        await expect(installAttributes(ctx, parseAttributeRows([row]))).rejects.toThrow(/swatch/);
-        expect(ctx.sent).toStrictEqual([]);
+/**
+ * Swatches, in the service's two steps (`ProductAttributeImportProcessor.js` L338-352, L475-525):
+ * the attribute without its options or default, then each option through the options route,
+ * whose `value` is the swatch (a colour or a text), not an option id. The row is the service's own
+ * test row (`ProductAttributeImportProcessor.test.js` L260-306); no kept pack is known to carry one.
+ */
+describe('swatch attributes', () => {
+    const COLOR = {
+        attribute: {
+            attribute_code: 'cs_color',
+            frontend_input: 'swatch_visual',
+            default_frontend_label: 'Color',
+            default_value: '14',
+            options: [
+                { label: 'Black', value: '#1d1d1d', sort_order: 0, is_default: true },
+                { label: 'Blue', value: '#286785', sort_order: 1, is_default: false },
+            ],
+        },
+    };
+
+    it('makes the attribute without its options, records it, then adds each option with its swatch', async () => {
+        const ctx = await fakeContext();
+
+        await installAttributes(ctx, parseAttributeRows([COLOR]));
+
+        expect(ctx.sent).toEqual<SentCall[]>([
+            { method: 'POST', path: 'products/attributes', body: { attribute: { attribute_code: 'cs_color', frontend_input: 'swatch_visual', default_frontend_label: 'Color' } } },
+            { method: 'POST', path: 'products/attributes/cs_color/options', body: { option: { label: 'Black', value: '#1d1d1d', sort_order: 0, is_default: true } } },
+            { method: 'POST', path: 'products/attributes/cs_color/options', body: { option: { label: 'Blue', value: '#286785', sort_order: 1, is_default: false } } },
+        ]);
+        // Its options go with it on removal, so only the attribute is recorded.
+        expect(ctx.recorder.created).toEqual([{ kind: ATTRIBUTE_KIND, id: 'cs_color', key: 'cs_color' }]);
+    });
+
+    // F140 (owner, 2026-11-16): an attribute the store already had is every demo's on the
+    // instance, so its new options go in plain, with no swatch.
+    it('adds the options a store\'s own swatch lacks with no swatch, and records each', async () => {
+        let options = [{ label: 'Black', value: '60' }];
+        const ctx = await fakeContext(
+            {
+                'products/attributes/cs_color': { attribute_code: 'cs_color', frontend_input: 'swatch_visual' },
+                'products/attributes/cs_color/options': () => options,
+            },
+            (call) => {
+                if (call.path.endsWith('/options')) options = [...options, { label: 'Blue', value: '61' }];
+                return '61';
+            },
+        );
+
+        await installAttributes(ctx, parseAttributeRows([COLOR]));
+
+        expect(ctx.sent).toEqual<SentCall[]>([
+            { method: 'POST', path: 'products/attributes/cs_color/options', body: { option: { label: 'Blue', sort_order: 1, is_default: false } } },
+        ]);
+        expect(ctx.recorder.created).toEqual([{ kind: ATTRIBUTE_OPTION_KIND, id: 'cs_color/61', key: 'cs_color/Blue' }]);
+    });
+
+    // Commerce answers a visual swatch's `frontend_input` as `select` (test store, 2026-11-16), and a
+    // save keeps the pack's swatch input (`swatchCarry.ts`), so both forms are pinned.
+    it('reinstalls a swatch our save wrote, whichever input Commerce answered it with', async () => {
+        const stored: StoreAttribute = {
+            attribute_id: 93,
+            attribute_code: 'cs_color',
+            frontend_input: 'swatch_text',
+            is_user_defined: true,
+            options: [{ label: ' ', value: '' }, { label: 'Black', value: '60' }],
+        };
+        const asSwatch = await fakeContext();
+        const asDropdown = await fakeContext();
+
+        await installAttributes(asSwatch, parseAttributeRows([attributePackForm(stored)]));
+        await installAttributes(asDropdown, parseAttributeRows([attributePackForm({ ...stored, frontend_input: 'select' })]));
+
+        expect(asSwatch.sent.map((c) => c.path)).toEqual(['products/attributes', 'products/attributes/cs_color/options']);
+        expect(asSwatch.sent[1].body).toEqual({ option: { label: 'Black', value: 'Black', sort_order: 0, is_default: false } });
+        expect(asDropdown.sent.map((c) => c.path)).toEqual(['products/attributes']);
+        expect(asDropdown.recorder.created).toEqual([{ kind: ATTRIBUTE_KIND, id: 'cs_color', key: 'cs_color' }]);
     });
 });
 

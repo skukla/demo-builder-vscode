@@ -2,7 +2,7 @@
  * Every update waiting on this computer (PL-80): the extension's own, and each project's.
  *
  * What the Updates modal lists and what the background check counts. Projects are read
- * from disk without saving (`persistAfterLoad: false`): a check must never write a
+ * from disk without saving (`loadProjectFromPath`, a read): a check must never write a
  * project file.
  *
  * @module features/updates/services/allUpdates
@@ -53,7 +53,7 @@ export async function findAllUpdates(
 async function loadEveryProject(stateManager: HandlerContext['stateManager']): Promise<Project[]> {
     const projects: Project[] = [];
     for (const meta of await stateManager.getAllProjects()) {
-        const project = await stateManager.loadProjectFromPath(meta.path, undefined, { persistAfterLoad: false });
+        const project = await stateManager.loadProjectFromPath(meta.path);
         if (project) projects.push(project);
     }
     return projects;

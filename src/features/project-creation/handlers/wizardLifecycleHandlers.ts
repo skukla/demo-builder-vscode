@@ -11,6 +11,8 @@ import * as fsPromises from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { stopCreation } from './creationStop';
+import { creationPath } from './executorPreflight';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { swapWebviewSurface } from '@/core/base/swapWebviewSurface';
 import { openUrl } from '@/core/utils/browserUtils';
@@ -20,6 +22,7 @@ import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, HandlerContext } from '@/types/handlers';
 import { SimpleResult, DataResult } from '@/types/results';
 import { toError } from '@/types/typeGuards';
+import type { DashboardOpenOptions } from '@/types/webviewPayloads';
 
 /**
  * ready - Initial wizard ready event
@@ -50,19 +53,50 @@ export async function handleCancel(context: HandlerContext): Promise<SimpleResul
 }
 
 /**
- * cancel-project-creation - User cancels project creation
+ * cancel-project-creation - stop a running project creation
  *
- * Aborts the active project creation process if one is running.
+ * With no payload, the wizard's Cancel: aborts the creation this panel started. With a
+ * project name, stops that project's creation whichever door started it; this is how
+ * `cancel_project_creation` reaches a run, since an agent call has no panel and a fresh
+ * context each time (PL-104 fix 14).
+ *
+ * @param context - the handler context
+ * @param payload - optional: the project whose creation to stop
+ * @returns whether a creation was stopped, and a message saying so
  */
 export async function handleCancelProjectCreation(
     context: HandlerContext,
+    payload?: { projectName?: string },
 ): Promise<DataResult<{ message: string }>> {
+    const projectName = typeof payload?.projectName === 'string' ? payload.projectName.trim() : '';
+    if (projectName) return cancelCreationByName(context, projectName);
     if (context.sharedState.projectCreationAbortController) {
         context.logger.debug('[Project Creation] Cancellation requested by user');
         context.sharedState.projectCreationAbortController.abort();
-        return { success: true, data: { message: 'Project creation cancelled' } };
+        const message = 'Stopping project creation after the current step';
+        return { success: true, data: { message } };
     }
     return { success: false, data: { message: 'No active project creation to cancel' }, code: ErrorCode.PROJECT_NOT_FOUND };
+}
+
+/** Stop the creation of the named project, from any door's context. */
+function cancelCreationByName(
+    context: HandlerContext,
+    projectName: string,
+): DataResult<{ message: string }> {
+    if (stopCreation(creationPath({ projectName }))) {
+        context.logger.info(`[Project Creation] Creation of "${projectName}" stopped on request`);
+        // The run stops at its next step boundary, then cleans up (F274).
+        const message =
+            `Stopping the creation of "${projectName}" after its current step. ` +
+            'What it made is then removed.';
+        return { success: true, data: { message } };
+    }
+    return {
+        success: false,
+        data: { message: `No creation of "${projectName}" is running.` },
+        code: ErrorCode.PROJECT_NOT_FOUND,
+    };
 }
 
 
@@ -120,6 +154,19 @@ export async function handleOpenProject(context: HandlerContext): Promise<Simple
  */
 export async function handleBackToProject(_context: HandlerContext): Promise<SimpleResult> {
     await swapWebviewSurface(WIZARD_WEBVIEW_ID, 'demoBuilder.showProjectDashboard');
+    return { success: true };
+}
+
+/**
+ * finishSetup - the end screen's Finish Setup (PL-101): the new project's dashboard, opening on
+ * its Finish Setup guide. Beside View Projects, never in its place (owner, 2026-11-17).
+ */
+export async function handleFinishSetup(_context: HandlerContext): Promise<SimpleResult> {
+    const options: DashboardOpenOptions = { openFinishSetup: true };
+    await swapWebviewSurface(WIZARD_WEBVIEW_ID, {
+        id: 'demoBuilder.showProjectDashboard',
+        args: [options],
+    });
     return { success: true };
 }
 
@@ -214,6 +261,7 @@ export const lifecycleHandlers = defineHandlers({
     // Project actions
     'openProject': handleOpenProject,
     'backToProject': handleBackToProject,
+    'finishSetup': handleFinishSetup,
 
     // Utilities
     'log': handleLog,

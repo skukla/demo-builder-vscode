@@ -26,6 +26,8 @@ export interface SourceUpdateResult {
     /** The commit before and after, when known. */
     from?: string;
     to?: string;
+    /** The release moved to, for a repository that ships by release. */
+    version?: string;
 }
 
 /**
@@ -51,6 +53,8 @@ const TOOLING_OWNED = [
     /(^|\/)\.generated\//,
     /(^|\/)ext\.config\.yaml$/,
     /(^|\/)app\.config\.yaml$/,
+    // A mesh's build output: tracked, and rewritten by every deploy.
+    /^mesh\.json$/,
 ];
 
 const MAX_NAMED_FILES = 5;
@@ -73,14 +77,17 @@ function nameFiles(paths: string[]): string {
 
 const short = (sha: string): string => sha.slice(0, SHORT_SHA);
 
-/** A safe branch name, or the refusal. */
-function unsafeBranch(branch: string): string | undefined {
+/** A safe branch or tag name, or the refusal. */
+export function unsafeBranch(branch: string): string | undefined {
     return SAFE_BRANCH.test(branch) && !branch.includes('..')
         ? undefined
         : `The branch name "${branch}" cannot be used.`;
 }
 
 type FetchedHeads = { from: string; to: string } | { failure: string };
+
+/** What git prints when it cannot reach GitHub at all. */
+const OUT_OF_REACH = /could not resolve host|unable to access|network is unreachable|connection timed out/i;
 
 /**
  * Fetch `branch` from origin and read both commits: the clone's HEAD and the
@@ -95,11 +102,19 @@ async function fetchHeads(componentPath: string, branch: string, run: GitRunner)
     if (before.code !== 0) {
         return failure('read the current version', before.stderr);
     }
-    const fetched = await run(`git fetch origin ${branch}`, componentPath);
+    // A shallow clone has no history to compare, so it could never read as behind:
+    // a mesh installed from a tag was cloned that way.
+    const shallow = await run('git rev-parse --is-shallow-repository', componentPath);
+    const unshallow = shallow.stdout.trim() === 'true' ? ' --unshallow' : '';
+    const fetched = await run(`git fetch${unshallow} origin ${branch}`, componentPath);
     if (fetched.code !== 0) {
-        return failure(`fetch ${branch} from GitHub`, fetched.stderr);
+        if (OUT_OF_REACH.test(fetched.stderr)) {
+            return { failure: 'GitHub could not be reached. Check your connection, then update again.' };
+        }
+        return failure(`fetch ${branch.replace('refs/tags/', '')} from GitHub`, fetched.stderr);
     }
-    const after = await run('git rev-parse FETCH_HEAD', componentPath);
+    // Peeled to the commit: an annotated tag names a tag object, which never equals HEAD.
+    const after = await run('git rev-parse "FETCH_HEAD^{commit}"', componentPath);
     if (after.code !== 0) {
         return failure('read the fetched version', after.stderr);
     }
@@ -118,8 +133,10 @@ export interface UpdateCheckResult {
     detail?: string;
     /** The clone's own commit (what a deploy from it ships), when known. */
     from?: string;
-    /** The branch head on GitHub, when known. */
+    /** The branch head or release commit on GitHub, when known. */
     to?: string;
+    /** The newest release, for a repository that ships by release. */
+    version?: string;
 }
 
 /**
@@ -185,7 +202,7 @@ export async function fastForwardClone(
     if (edited.length > 0) {
         return {
             status: 'refused',
-            detail: `The integration folder has changes of its own (${nameFiles(edited)}). Commit or undo them, then update again.`,
+            detail: `The folder has changes of its own (${nameFiles(edited)}). Commit or undo them, then update again.`,
         };
     }
     if (changed.length > 0) {
@@ -215,7 +232,7 @@ export async function fastForwardClone(
     if (merged.code !== 0) {
         return {
             status: 'refused',
-            detail: `The integration folder has commits that ${branch} on GitHub does not, so it cannot be updated in place.`,
+            detail: `The folder has commits that ${branch.replace('refs/tags/', '')} on GitHub does not, so it cannot be updated in place.`,
             from,
             to,
         };

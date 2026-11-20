@@ -27,7 +27,7 @@ jest.mock(
 );
 
 export const mockMove = jest.fn();
-jest.mock('@/features/app-builder/services/appBuilderComponentMigration', () => ({
+jest.mock('@/features/app-builder/services/appBuilderComponentRelocation', () => ({
     moveAppBuilderComponentsToDestination: (...a: unknown[]) => mockMove(...a),
 }));
 

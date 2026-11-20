@@ -1,7 +1,7 @@
 /**
  * erpSetupTeardown — what Demo Builder set up in Commerce for the ERP integration, undone
  * before it is removed: its ERPs' product tags, erp_owner on the sets it added it to, and
- * "Prepare this store". Removing one ERP clears that ERP's own tags (Justrite, 2026-10-19:
+ * "Prepare this store". Removing one ERP clears that ERP's own tags (Tailspin, 2026-10-19:
  * the integration's removal left 139 tags, the attribute on 12 sets and the preparation, with
  * nothing left to undo them).
  *
@@ -31,14 +31,14 @@ jest.mock('@/features/app-builder/services/storePreparation/storePreparationEngi
     undoPreparation: (...a: unknown[]) => mockUndoPreparation(...a),
 }));
 jest.mock('@/features/dashboard/services/setupCheckReader', () => ({
-    erpNamesOf: () => ['Justrite ERP', 'Accuform ERP'],
-    setupCheckReader: async () => ({ read: jest.fn(), scope: { websiteCode: 'justrite' } }),
+    erpNamesOf: () => ['Tailspin ERP', 'Accuform ERP'],
+    setupCheckReader: async () => ({ read: jest.fn(), scope: { websiteCode: 'tailspin' } }),
 }));
 jest.mock('@/features/components/services/appBuilderComponentLinks', () => ({
     systemsUsedBy: (_project: unknown, id: string) => (id === 'erp-integration' ? ['demo-erp', 'demo-erp-2'] : []),
 }));
 jest.mock('@/features/app-builder/services/erpList', () => ({
-    erpListIdOf: (_project: unknown, id: string) => ({ 'demo-erp': 'justrite', 'demo-erp-2': 'accuform' } as Record<string, string>)[id],
+    erpListIdOf: (_project: unknown, id: string) => ({ 'demo-erp': 'tailspin', 'demo-erp-2': 'accuform' } as Record<string, string>)[id],
 }));
 jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
     getAppBuilderComponentCatalog: () => [],
@@ -65,7 +65,7 @@ function project() {
 }
 
 const rows = [
-    { sku: 'J1', owner: 'justrite' },
+    { sku: 'J1', owner: 'tailspin' },
     { sku: 'A1', owner: 'accuform' },
     { sku: 'O1', owner: 'someone-else' },
     { sku: 'N1', owner: '' },
@@ -89,13 +89,21 @@ describe('undoErpSetup', () => {
         // Only its own ERPs' tags; another value and an untagged product are left.
         expect(mockWrite).toHaveBeenCalledWith(COMMERCE, [{ sku: 'J1', value: '' }, { sku: 'A1', value: '' }], expect.any(Object));
         expect(mockRemoveSets).toHaveBeenCalledWith(COMMERCE.send, SETS.sets);
-        expect(mockUndoPreparation).toHaveBeenCalledWith([{ id: 'price-scope-website' }], PREPARED, expect.objectContaining({ commerce: COMMERCE, websiteCode: 'justrite' }));
+        expect(mockUndoPreparation).toHaveBeenCalledWith([{ id: 'price-scope-website' }], PREPARED, expect.objectContaining({ commerce: COMMERCE, websiteCode: 'tailspin' }));
         // In that order: a set takes its values with the attribute, and waits for no tag.
         expect(mockWrite.mock.invocationCallOrder[0]).toBeLessThan(mockRemoveSets.mock.invocationCallOrder[0]);
         expect(out).toStrictEqual({
             done: ['Cleared the erp_owner tag on 2 products.', 'Took erp_owner out of 1 attribute set.', 'Undid 1 demo setup step.'],
             failed: [],
         });
+    });
+
+    // Step 06: removing the integration runs the same undo, so it says what it kept the same way.
+    it('says what the undo kept because it changed since, beside what it undid', async () => {
+        const kept = 'Kept the shared catalog Harbor Catalog: it holds 2 products Demo Builder did not put there.';
+        mockUndoPreparation.mockResolvedValueOnce({ reports: [{ title: 'Shared catalogs', state: 'undone', rejected: [], kept }], record: undefined, checks: {} });
+        const out = await undoErpSetup(createMockHandlerContext(), project(), 'erp-integration', report);
+        expect(out?.done).toEqual(['Cleared the erp_owner tag on 2 products.', 'Took erp_owner out of 1 attribute set.', 'Undid 1 demo setup step.', kept]);
     });
 
     it('for one ERP: clears only its own tags, and leaves the sets and the preparation', async () => {

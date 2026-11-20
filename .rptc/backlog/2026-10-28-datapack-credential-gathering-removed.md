@@ -70,7 +70,7 @@ They were not removed in the same change because existing projects hold values i
 
 - **The App Builder deploy and EDS reset must keep working**: run their suites, and a live reset
   of a project with sample data.
-- **Afreen's answer on product profiles** (is it a matter of adding the service's technical account
+- **The Data Installer team's answer on product profiles** (is it a matter of adding the service's technical account
   to the store's profile?) decides whether the service can install into an SC's store again. It
   still needs no secrets from us either way.
 

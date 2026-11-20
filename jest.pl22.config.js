@@ -72,7 +72,7 @@ module.exports = {
         '**/tests/features/ai/server/realSdkRegistration.test.ts',
         '**/tests/features/ai/server/siteTools.test.ts',
         '**/tests/features/components/services/commerceCredentialStore.test.ts',
-        '**/tests/features/components/services/commerceSecretMigration.test.ts',
+        '**/tests/features/components/services/declaredSecretStore.test.ts',
         '**/tests/features/eds/handlers/daLive/daLiveAuthGuard.test.ts',
         '**/tests/features/eds/handlers/daLive/daLiveAuthPrompt-signIn.test.ts',
         '**/tests/features/eds/handlers/daLive/daLiveAuthPrompt-modalForm.test.ts',

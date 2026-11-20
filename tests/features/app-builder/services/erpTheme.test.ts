@@ -15,7 +15,7 @@ const FOUNDRY: ErpAppearance = { palette: 'bronze', logo: 'monogram', nav: 'top'
 
 describe('themeForAddedErp', () => {
     it('moves an ERP that looks like another to the first theme no other ERP uses', () => {
-        // Justrite's two ERPs both hash to foundry; the first ERP keeps it.
+        // Tailspin's two ERPs both hash to foundry; the first ERP keeps it.
         expect(themeForAddedErp(FOUNDRY, [FOUNDRY])).toBe('harbour');
     });
 

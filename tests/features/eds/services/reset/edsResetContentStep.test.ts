@@ -32,7 +32,7 @@ jest.setTimeout(5000);
 
 const OLD_LINKS = [{ link: '/old', pages: ['/index'] }];
 const NEW_LINKS = [{ link: '/new', pages: ['/about'] }];
-const CONTENT_SOURCE = { org: 'jen', site: 'isle5-content' };
+const CONTENT_SOURCE = { org: 'robin', site: 'isle5-content' };
 
 function storefrontProject(): Project {
     return createMockProject({

@@ -20,8 +20,10 @@ import {
     edsProject as makeProject,
     mockCompareCommits,
     mockGetLatestBranchCommit,
+    mockReadLatestPatchesRelease,
     mockReadLkgSha,
 } from './templateUpdateChecker.testUtils';
+import * as vscode from 'vscode';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
@@ -188,14 +190,14 @@ describe('checkForUpdates — an added demo on a branch', () => {
         const checker = new TemplateUpdateChecker(mockSecrets, mockLogger);
 
         await checker.checkForUpdates(makeProject({
-            templateOwner: 'jen',
+            templateOwner: 'robin',
             templateRepo: 'isle5-demo',
             templateBranch: 'demo-2026',
             lastSyncedCommit: OLD_SHA,
         }));
 
         expect(mockGetLatestBranchCommit).toHaveBeenCalledWith(
-            mockSecrets, 'jen', 'isle5-demo', 'demo-2026',
+            mockSecrets, 'robin', 'isle5-demo', 'demo-2026',
         );
     });
 
@@ -204,13 +206,46 @@ describe('checkForUpdates — an added demo on a branch', () => {
         const checker = new TemplateUpdateChecker(mockSecrets, mockLogger);
 
         await checker.checkForUpdates(makeProject({
-            templateOwner: 'jen',
+            templateOwner: 'robin',
             templateRepo: 'isle5-demo',
             templateBranch: 7,
             lastSyncedCommit: OLD_SHA,
         }));
 
-        expect(mockGetLatestBranchCommit).toHaveBeenCalledWith(mockSecrets, 'jen', 'isle5-demo', 'main');
+        expect(mockGetLatestBranchCommit).toHaveBeenCalledWith(mockSecrets, 'robin', 'isle5-demo', 'main');
+    });
+
+    // A colleague reset their demo three times in a day, and Tailspin was offered all of it as one
+    // ticked update to the live site (owner, 2026-11-03).
+    it('says when the source was reset to its template since it was last taken', async () => {
+        mockGetLatestBranchCommit.mockResolvedValue(NEW_SHA);
+        mockCompareCommits.mockResolvedValue({
+            ahead_by: 3,
+            commits: [
+                { commit: { message: 'chore: reset repository to template' } },
+                { commit: { message: 'chore: add blocks from 2 libraries (10 blocks)' } },
+                { commit: { message: "fix: bring the storefront up to Demo Builder's current fixes" } },
+            ],
+        });
+        const checker = new TemplateUpdateChecker(mockSecrets, mockLogger);
+
+        const result = await checker.checkForUpdates(makeProject({ templateOwner: 'robin', templateRepo: 'isle5-demo', lastSyncedCommit: OLD_SHA }));
+
+        expect(result).toMatchObject({ hasUpdates: true, commitsBehind: 3, sourceReset: true });
+    });
+
+    it('CONTROL: says nothing of a reset when the source was only edited', async () => {
+        mockGetLatestBranchCommit.mockResolvedValue(NEW_SHA);
+        mockCompareCommits.mockResolvedValue({
+            ahead_by: 1,
+            commits: [{ commit: { message: 'feat: a new hero block\n\nchore: reset repository to template is only in the body' } }],
+        });
+        const checker = new TemplateUpdateChecker(mockSecrets, mockLogger);
+
+        const result = await checker.checkForUpdates(makeProject({ templateOwner: 'robin', templateRepo: 'isle5-demo', lastSyncedCommit: OLD_SHA }));
+
+        expect(result).toMatchObject({ hasUpdates: true, commitsBehind: 1 });
+        expect(result).not.toHaveProperty('sourceReset');
     });
 });
 
@@ -243,5 +278,125 @@ describe('checkForUpdates — preconditions', () => {
             templateRepo: 'b',
         }));
         expect(result).toBeNull();
+    });
+});
+
+/**
+ * A storefront's version is the eds-demo-patches release it last merged from. A release that only
+ * changes patches leaves the tested commit where it was, so comparing commits alone offered nothing.
+ */
+describe('the patches release', () => {
+    const LKG_SOURCE = { owner: 'skukla', repo: 'eds-demo-patches', lkgFile: 'b2b/last-known-good' };
+    const thinLayer = (extra: Record<string, unknown> = {}) =>
+        makeProject({
+            templateOwner: 'adobe-commerce',
+            templateRepo: 'boilerplate-b2b-template',
+            lastSyncedCommit: OLD_SHA,
+            lkgSource: LKG_SOURCE,
+            ...extra,
+        });
+    const checker = () => new TemplateUpdateChecker(createMockSecretStorage().secrets, mockLogger);
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockReadLkgSha.mockResolvedValue(OLD_SHA);
+    });
+
+    it('offers a newer release that only changes patches', async () => {
+        mockReadLatestPatchesRelease.mockResolvedValue('v1.2.0');
+
+        const result = await checker().checkForUpdates(thinLayer({ patchesRelease: 'v1.1.5' }));
+
+        expect(result).toMatchObject({ hasUpdates: true, release: '1.2.0', commitsBehind: 0 });
+    });
+
+    it('offers nothing when the storefront is on the newest release', async () => {
+        mockReadLatestPatchesRelease.mockResolvedValue('v1.1.5');
+
+        const result = await checker().checkForUpdates(thinLayer({ patchesRelease: 'v1.1.5' }));
+
+        expect(result?.hasUpdates).toBe(false);
+    });
+
+    it('never offers an older release', async () => {
+        mockReadLatestPatchesRelease.mockResolvedValue('v1.1.4');
+
+        const result = await checker().checkForUpdates(thinLayer({ patchesRelease: 'v1.1.5' }));
+
+        expect(result?.hasUpdates).toBe(false);
+    });
+
+    it('a storefront from before versions were recorded compares by commit, and is not offered one', async () => {
+        mockReadLatestPatchesRelease.mockResolvedValue('v1.2.0');
+
+        const result = await checker().checkForUpdates(thinLayer());
+
+        expect(result?.hasUpdates).toBe(false);
+    });
+
+    it('names the release when the tested commit moved too', async () => {
+        mockReadLatestPatchesRelease.mockResolvedValue('v1.2.0');
+        mockReadLkgSha.mockResolvedValue(NEW_SHA);
+        mockCompareCommits.mockResolvedValue({ ahead_by: 3 });
+
+        const result = await checker().checkForUpdates(thinLayer({ patchesRelease: 'v1.1.5' }));
+
+        expect(result).toMatchObject({ hasUpdates: true, release: '1.2.0', commitsBehind: 3 });
+    });
+
+    // F255: a project imported from a bundle records the SENDER's release and template commit.
+    // A release published since the sender's build is offered even when the tested commit has
+    // not moved, which is the case today's release at import time would have hidden.
+    it("offers an imported storefront every release newer than the sender's", async () => {
+        mockReadLatestPatchesRelease.mockResolvedValue('v1.2.0');
+        const imported = {
+            ...thinLayer({ patchesRelease: 'v1.1.5' }),
+            importedFrom: { bundleName: 'Bodea Summit', commit: 'd'.repeat(40) },
+        };
+
+        const result = await checker().checkForUpdates(imported);
+
+        expect(result).toMatchObject({ hasUpdates: true, release: '1.2.0', commitsBehind: 0 });
+    });
+
+    it('a release it cannot read still answers by commit', async () => {
+        mockReadLatestPatchesRelease.mockResolvedValue(undefined);
+
+        const result = await checker().checkForUpdates(thinLayer({ patchesRelease: 'v1.1.5' }));
+
+        expect(result?.hasUpdates).toBe(false);
+        expect(result).not.toHaveProperty('release');
+    });
+});
+
+/** A template the builder owns ships by release, as buildright does. A push to it reaches nobody. */
+describe('a forked storefront whose template the builder owns', () => {
+    const owned = () =>
+        makeProject({ templateOwner: 'skukla', templateRepo: 'buildright-eds', lastSyncedCommit: OLD_SHA });
+    const checker = () => new TemplateUpdateChecker(createMockSecretStorage().secrets, mockLogger);
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({ get: () => 'stable' });
+    });
+
+    it('offers nothing while it has no release, whatever its branch holds', async () => {
+        global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200, json: async () => [] });
+
+        const result = await checker().checkForUpdates(owned());
+
+        expect(result?.hasUpdates).toBe(false);
+        expect(mockGetLatestBranchCommit).not.toHaveBeenCalled();
+    });
+
+    it('compares against the commit of its newest release, and names it', async () => {
+        global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200, json: async () => [{ tag_name: 'v1.1.0' }] });
+        mockGetLatestBranchCommit.mockResolvedValue(NEW_SHA);
+        mockCompareCommits.mockResolvedValue({ ahead_by: 2 });
+
+        const result = await checker().checkForUpdates(owned());
+
+        expect(mockGetLatestBranchCommit).toHaveBeenCalledWith(expect.anything(), 'skukla', 'buildright-eds', 'v1.1.0');
+        expect(result).toMatchObject({ hasUpdates: true, release: '1.1.0', commitsBehind: 2 });
     });
 });

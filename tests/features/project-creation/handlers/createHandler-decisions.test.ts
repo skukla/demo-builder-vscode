@@ -270,7 +270,7 @@ describe('Project Creation - Create Handler - Decisions', () => {
             expect(vscode.window.showInformationMessage).toHaveBeenCalledTimes(2);
             expect(vscode.window.showInformationMessage).toHaveBeenLastCalledWith(
                 expect.stringContaining('Trusted Folders'),
-                'Got it!'
+                'Got It!'
             );
         });
     });

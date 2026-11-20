@@ -1,5 +1,5 @@
 /**
- * "Which products does it own?" inside Add another ERP (AB-64): one question, two one-line
+ * "Product Ownership" inside Add another ERP (AB-64): one question, two one-line
  * choices, and one line under the group saying what the selected one means for orders. The counts live in the dialog's "After
  * adding", the one place they show (owner, 2026-10-18: each option used to carry its own count
  * and loading line). A website box still says what it alone gives, counted across every ERP's
@@ -24,10 +24,10 @@ import type { ErpOwnsMode, ErpOwnsRule } from '@/types/erpOwnership';
 
 /** Every string the picker shows, in one place. */
 export const PICKER_COPY = {
-    question: 'Which products does it own?',
-    attributeLabel: 'Products you assign to it',
+    question: 'Product Ownership',
+    attributeLabel: 'Products You Assign to It',
     attributeHelp: 'One order can include products from several ERPs.',
-    websitesLabel: 'Products sold on websites you choose',
+    websitesLabel: 'Products Sold on Websites You Choose',
     websitesHelp: 'Each order goes to one ERP.',
     noWebsites: 'The store has no websites.',
 };

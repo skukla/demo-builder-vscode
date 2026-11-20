@@ -42,6 +42,8 @@ describe('the handover channel', () => {
         const response = await importHandlers.backgroundOperation(context(), {
             id: 'datapack',
             title: 'Importing CitiSignal',
+            doneTitle: 'CitiSignal Installed',
+            failedTitle: "Couldn't Install CitiSignal",
         });
 
         expect(response).toEqual({ success: true });

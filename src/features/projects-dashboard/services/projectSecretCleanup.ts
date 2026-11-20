@@ -36,7 +36,7 @@ import {
     forgetProjectCommerceSecrets,
     reKeyProjectSecrets,
     type SecretWriter,
-} from '@/features/components/services/commerceSecretMigration';
+} from '@/features/components/services/declaredSecretStore';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { Project } from '@/types/base';
 

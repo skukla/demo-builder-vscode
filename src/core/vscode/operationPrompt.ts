@@ -35,11 +35,12 @@
 
 import { AsyncLocalStorage } from 'async_hooks';
 import * as vscode from 'vscode';
-import { heldProgress, pushOperationProgress } from './operationProgress';
+import { isInBackground } from './operationBackgroundNotice';
+import { heldProgress, holdPrompt, pushOperationProgress, releasePrompt } from './operationProgress';
 import { currentCallTag } from '@/core/logging/callTagContext';
 import { hasActivePhaseSinks, reportPhase } from '@/core/utils/agentPhaseChannel';
 import type { MessageHandler } from '@/types/handlers';
-import type { OperationPrompt, OperationPromptField } from '@/types/webviewPayloads';
+import type { OperationProgressPayload, OperationPrompt, OperationPromptField } from '@/types/webviewPayloads';
 
 /** The operation whose modal is on screen, for anything running inside it. */
 const hosting = new AsyncLocalStorage<string>();
@@ -50,8 +51,18 @@ export interface PromptAnswer {
     values: Record<string, string>;
 }
 
-/** Resolvers for questions waiting on a modal, keyed by operation id. */
-const waiting = new Map<string, (answer: PromptAnswer) => void>();
+/** One `withModalAsking` run: its questions are its own to clear when it ends. */
+interface AskingRun {
+    ended: boolean;
+}
+
+/** The run asking, for anything running inside it. */
+const asking = new AsyncLocalStorage<AskingRun>();
+
+/** The question on screen for each operation, the run that asked it, and how to answer it. */
+const waiting = new Map<string, { resolve: (answer: PromptAnswer) => void; run?: AskingRun }>();
+
+const NO_ANSWER: PromptAnswer = { action: undefined, values: {} };
 
 /**
  * Run `work` as the operation a modal is showing, so a guard anywhere inside it can
@@ -61,14 +72,23 @@ const waiting = new Map<string, (answer: PromptAnswer) => void>();
  * @param work - the operation
  */
 export async function withModalAsking<T>(id: string, work: () => Promise<T>): Promise<T> {
+    const run: AskingRun = { ended: false };
     try {
-        return await hosting.run(id, work);
+        return await hosting.run(id, () => asking.run(run, work));
     } finally {
         // A question can outlive the work that asked it: the Adobe sign-in guard
         // races its own prompt against a timeout, so the run can end with a
         // resolver still sitting here. Left behind, the next run of the same
-        // operation would answer the dead one.
-        waiting.delete(id);
+        // operation would answer the dead one. Only THIS run's: another run of the
+        // operation may be asking now (runs side by side, owner 2026-11-04), and
+        // clearing its question left it never answered. Answered as dismissed, so
+        // the questions queued behind it go on.
+        run.ended = true;
+        const open = waiting.get(id);
+        if (open?.run === run) {
+            waiting.delete(id);
+            open.resolve(NO_ANSWER);
+        }
     }
 }
 
@@ -78,6 +98,14 @@ export interface Question {
     title: string;
     /** Why, and what each answer does. It must stand alone: a notification shows only this. */
     message: string;
+    /** A routine step rather than a problem: an information icon, not a warning one. */
+    tone?: 'info';
+    /**
+     * The answer that closing the dialog means ("Skip for now"). Shown as the dialog's own close
+     * button, so VS Code adds no Cancel beside it: two buttons that both dismiss read as two
+     * different choices (owner, 2026-10-30).
+     */
+    dismiss?: string;
 }
 
 /**
@@ -91,10 +119,14 @@ export interface Question {
  * @returns the chosen action, or undefined if dismissed
  */
 export async function askDuringOperation(
-    { title, message }: Question,
+    question: Question,
     ...actions: string[]
 ): Promise<string | undefined> {
-    const id = hosting.getStore();
+    const { title, message } = question;
+    const hosted = hosting.getStore();
+    // A run sent to the background has no window to ask in: the notification narrating it shows
+    // no question, so it is asked the way an unhosted one is, and never waits on nobody.
+    const id = hosted && !isInBackground(hosted) ? hosted : undefined;
 
     if (!id) {
         // Under an agent, say what the run is waiting for — otherwise its narration
@@ -103,24 +135,33 @@ export async function askDuringOperation(
         // An agent call (every tool call carries a tag, reads included) asks the way
         // the agent's other questions do: a modal. A button press keeps the
         // notification.
-        if (currentCallTag() !== undefined) return askAsModal(message, actions);
-        return vscode.window.showWarningMessage(message, ...actions);
+        if (currentCallTag() !== undefined) return askAsModal(question, actions);
+        return question.tone === 'info'
+            ? vscode.window.showInformationMessage(message, ...actions)
+            : vscode.window.showWarningMessage(message, ...actions);
     }
 
-    return (await askInModal(id, { title, message, actions })).action;
+    const { tone, dismiss } = question;
+    return (await askInModal(id, { title, message, actions, ...(tone ? { tone } : {}), ...(dismiss ? { dismiss } : {}) })).action;
 }
 
 /**
- * The agent's question as a VS Code modal. VS Code gives every modal its own
- * Cancel, so a "Cancel" action is left out rather than shown twice; dismissing
- * answers `undefined`, as a notification's Cancel did.
+ * The agent's question as a VS Code modal: the title is its heading and the sentence sits under
+ * it, as in Demo Builder's own progress modal (owner, 2026-10-30: a paragraph with the action
+ * buried in it read badly). VS Code gives every modal its own Cancel, so a "Cancel" action is
+ * left out rather than shown twice, and a question with a `dismiss` answer shows that one as the
+ * close button instead; dismissing answers `undefined`, as a notification's Cancel did, or the
+ * `dismiss` answer.
  */
-function askAsModal(message: string, actions: string[]): Thenable<string | undefined> {
-    return vscode.window.showWarningMessage(
-        message,
-        { modal: true, detail: "Demo Builder's agent asked for this." },
-        ...actions.filter((action) => action !== 'Cancel'),
-    );
+async function askAsModal({ title, message, tone, dismiss }: Question, actions: string[]): Promise<string | undefined> {
+    const items: vscode.MessageItem[] = actions
+        .filter((action) => action !== 'Cancel')
+        .map((action) => ({ title: action, ...(action === dismiss ? { isCloseAffordance: true } : {}) }));
+    const options = { modal: true, detail: `${message}\n\nDemo Builder's agent asked for this.` };
+    const chosen = tone === 'info'
+        ? await vscode.window.showInformationMessage(title, options, ...items)
+        : await vscode.window.showWarningMessage(title, options, ...items);
+    return chosen?.title;
 }
 
 /**
@@ -139,9 +180,14 @@ function askAsModal(message: string, actions: string[]): Thenable<string | undef
  * @returns the action chosen and everything typed; no action means dismissed
  */
 export async function askForDetailsDuringOperation(prompt: {
+    /** A heading of its own, for a question that is a task (a sign-in); the window takes it. */
+    title?: string;
     message: string;
+    steps?: string[];
     fields: OperationPromptField[];
     actions: string[];
+    /** The first answer deletes or replaces something: its button is red. */
+    destructive?: boolean;
 }): Promise<PromptAnswer> {
     const id = hosting.getStore();
     if (!id) {
@@ -155,11 +201,43 @@ export function modalIsAsking(): boolean {
     return hosting.getStore() !== undefined;
 }
 
+/**
+ * Each operation's questions, one after another. A window shows one question, and an operation
+ * can ask two at once when its work runs side by side (the projects batch, owner 2026-11-04): the
+ * second took the first's place, and the first was never answered.
+ */
+const turns = new Map<string, Promise<unknown>>();
+
+/** Put the question up when the operation's earlier one is answered, and hand back its answer. */
+function askInModal(id: string, prompt: OperationPrompt): Promise<PromptAnswer> {
+    const earlier = turns.get(id) ?? Promise.resolve();
+    const run = asking.getStore();
+    const mine = earlier.then(() => askNow(id, prompt, run));
+    const settled = mine.then(
+        () => undefined,
+        () => undefined,
+    );
+    turns.set(id, settled);
+    void settled.then(() => {
+        if (turns.get(id) === settled) turns.delete(id);
+    });
+    return mine;
+}
+
+/** The stage alone, without the question it carried while one was open. */
+function withoutPrompt(payload: OperationProgressPayload): OperationProgressPayload {
+    const { prompt: _answered, ...stage } = payload;
+    return stage;
+}
+
 /** Put the question up, wait for the answer, then put the stage back. */
-async function askInModal(id: string, prompt: OperationPrompt): Promise<PromptAnswer> {
+async function askNow(id: string, prompt: OperationPrompt, run: AskingRun | undefined): Promise<PromptAnswer> {
+    // Its run ended while it waited its turn: nobody is left to read the answer.
+    if (run?.ended) return NO_ANSWER;
     const before = heldProgress(id);
     const answer = await new Promise<PromptAnswer>((resolve) => {
-        waiting.set(id, resolve);
+        waiting.set(id, { resolve, run });
+        holdPrompt(id, prompt);
         void pushOperationProgress({
             ...(before ?? { id, state: 'running' }),
             id,
@@ -168,10 +246,11 @@ async function askInModal(id: string, prompt: OperationPrompt): Promise<PromptAn
         });
     });
     waiting.delete(id);
+    releasePrompt(id);
 
-    // Back to the stage it paused on, so the modal resumes rather than holding the
-    // question after it has been answered.
-    if (before) await pushOperationProgress(before);
+    // Back to the stage it is on now (pushes while it waited moved it on), so the modal
+    // resumes rather than holding the question after it has been answered.
+    if (before) await pushOperationProgress(withoutPrompt(heldProgress(id) ?? before));
     return answer;
 }
 
@@ -186,7 +265,7 @@ export function answerOperationPrompt(
     answer?: string,
     values: Record<string, string> = {},
 ): void {
-    waiting.get(id)?.({ action: answer, values });
+    waiting.get(id)?.resolve({ action: answer, values });
 }
 
 /**
@@ -196,7 +275,10 @@ export function answerOperationPrompt(
  */
 export function withdrawQuestion(): void {
     const id = hosting.getStore();
-    if (id) waiting.get(id)?.({ action: undefined, values: {} });
+    if (!id) return;
+    // Only its own: with runs side by side the question on screen may be another's.
+    const open = waiting.get(id);
+    if (open && open.run === asking.getStore()) open.resolve(NO_ANSWER);
 }
 
 /** Whether this operation is waiting on an answer — the modal's Cancel state. */

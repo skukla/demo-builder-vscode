@@ -258,6 +258,8 @@ This does not replace either existing mechanism — it strengthens the backstop:
 
 ## Reference notes
 
+- `scripts/runtime-surfaces/deriveRuntimeSurfaces.mjs` — lives in the `skukla/eds-demo-patches`
+  repository (the producer); this repo's own copy was deleted on 2026-10-12, as the table above says.
 - `scripts/lkg-gate.sh` — deliberately does not resolve here. It lives in the
   `skukla/eds-demo-patches` repository, which is where ADR-006 puts the last-known-good
   gate; this repo is the consumer, not its host. Naming it is the point — the producer

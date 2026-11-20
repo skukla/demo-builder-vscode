@@ -10,30 +10,33 @@
  * project's current OPTIONAL extras (`added`) seed `selected` so they render
  * checked + removable. Check adds, uncheck removes; Apply posts `setConsoleApis`
  * with the FULL desired optional set (the handler subscribes the reconcile union
- * and unsubscribes anything dropped). Success closes; failure shows an inline
- * error and stays open. Apply is disabled until the set changes.
+ * and unsubscribes anything dropped). Success closes; failure is the title's
+ * outcome, in red, and stays open. Apply is disabled until the set changes.
+ *
+ * What the dialog shows follows the dialog design rules, on the Steps layout (Phase 1b): the
+ * read is the window's wait, the list and the apply follow at one height, and a failed apply is
+ * the title's outcome. A failed read and "signed out" are a small result window in its place
+ * (`ResultWindow`): the dialog's title, the outcome under the large mark, and the one way on as
+ * the action (walk F222).
  *
  * Hosting mirrors {@link AppBuilderComponentRemoveDialog}: an always-mounted
- * DialogContainer with the Modal rendered only while `isOpen`; the list owns
+ * DialogContainer with the window rendered only while `isOpen`; the list owns
  * ONE shared instance keyed by the pending row id.
  *
  * @module features/dashboard/ui/components/ManageApisModal
  */
 
-import { DialogContainer, Text } from '@adobe/react-spectrum';
+import { DialogContainer } from '@adobe/react-spectrum';
 import React, { useCallback, useEffect, useState } from 'react';
-import { renderApiCatalogFeedback } from '@/core/ui/components/feedback/ApiCatalogFeedback';
-import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
-import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { ApiAccessPicker, type ApiAccessOption } from '@/core/ui/components/selection/ApiAccessPicker';
-import { Modal } from '@/core/ui/components/ui/Modal';
-import {
-    useElapsedStage,
-    ORG_SERVICES_LOADING_STAGES,
-} from '@/core/ui/hooks/useElapsedStage';
+import type { ActionButton, ModalWait } from '@/core/ui/components/ui/Modal';
+import { ResultWindow } from '@/core/ui/components/ui/ResultDialog';
+import { StepsWindow } from '@/core/ui/components/ui/StepsDialog';
 import { useOperationProgress } from '@/core/ui/hooks/useOperationProgress';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { CONSOLE_APIS_OPERATION_ID } from '@/core/utils/operationIds';
+import { expectationFor } from '@/core/utils/operationStages';
+import { WAIT_STAGES } from '@/core/utils/waitStages';
 import type { CloudGrouping } from '@/types/adobeApis';
 import { ErrorCode } from '@/types/errorCodes';
 
@@ -83,137 +86,73 @@ export interface ManageApisModalProps {
     onClose: () => void;
 }
 
-/**
- * Reserved height for the loading/error views, so the pre-list states fill the
- * same band the list will. The dialog's height comes from `.manage-apis-body`
- * (utilities.css), which is a constant — see there for why.
- */
-const FEEDBACK_HEIGHT = '320px';
+/** Every string the dialog shows that it does not take from the extension, in one place. */
+export const MANAGE_APIS_COPY = {
+    title: (name: string) => `Manage APIs for ${name}`,
+    loadFailedTitle: "Couldn't Load Adobe APIs",
+    retry: 'Retry',
+    signInTitle: 'Sign In to Adobe',
+    signIn: 'Sign In with Adobe',
+    // Says the browser is coming before it does: an unannounced jump reads as a glitch.
+    signInBody: "Your Adobe session has ended. Sign in to manage this app's API access. Adobe sign-in will open in your browser.",
+    applyFailedTitle: "Couldn't Update API Access",
+};
 
 function toMessage(err: unknown): string {
     return err instanceof Error ? err.message : String(err);
 }
 
-/** Compact fetch states (inline, not tall-centered) around the shared picker. */
-function ManageApisBody({
-    loadingStage,
-    isLoading,
-    loadError,
-    needsSignIn,
-    onSignIn,
-    onRetry,
-    apis,
-    selected,
-    onToggle,
-}: {
-    loadingStage?: string;
-    isLoading: boolean;
-    loadError: string | null;
-    /** Render the sign-in view rather than the retryable-error view. */
-    needsSignIn?: boolean;
-    /** Start a user-initiated Adobe sign-in; resolves when it finishes. */
-    onSignIn?: () => Promise<unknown>;
-    onRetry?: () => void;
-    apis: ApiAccessOption[];
-    selected: string[];
-    onToggle: (code: string) => void;
-}): React.ReactElement {
-    // The three non-picker views are shared with the wizard's picker stage
-    // (renderApiCatalogFeedback) — same fetch, same states. Only the wrapper differs:
-    // the reserved height stops this dialog resizing when the list lands.
-    const feedback = renderApiCatalogFeedback({
-        loading: isLoading,
-        loadingStage,
-        needsSignIn,
-        error: loadError,
-        onSignIn,
-        onRetry,
-        signInPurpose: "manage this app's API access",
-    });
-    if (feedback) {
-        return (
-            <CenteredFeedbackContainer height={FEEDBACK_HEIGHT}>{feedback}</CenteredFeedbackContainer>
-        );
-    }
+/** The API rows as the shared picker takes them. */
+function toOptions(apis: ConsoleApiEntry[]): ApiAccessOption[] {
+    return apis.map((api) => ({
+        code: api.code,
+        name: api.name,
+        locked: api.managed,
+        requiresProfile: api.requiresProfile,
+        requiresReview: api.requiresReview,
+        group: api.group,
+    }));
+}
 
-    return (
-        <ApiAccessPicker
-            apis={apis}
-            selected={selected}
-            onToggle={onToggle}
-        />
-    );
+/** The read's answer, for the dialog to show. */
+interface ApiList {
+    apis: ApiAccessOption[];
+    /** The OPTIONAL extras as loaded: Apply is a no-op (disabled) until `selected` differs. */
+    initial: string[];
+    selected: string[];
+    /** A failed read, retryable. */
+    loadError: string | null;
+    /** The read failed for want of a sign-in: signing in is the way on, never a Retry. */
+    needsSignIn: boolean;
+    isLoading: boolean;
+    toggle: (code: string) => void;
+    retry: () => void;
+    signIn: () => void;
 }
 
 /**
- * The Manage-APIs modal: fetch-on-open option list, locked managed rows,
- * additive Apply against the live `addConsoleApis` handler.
+ * Read the org's APIs as the dialog opens (and again on Retry), and hold the SC's picks. Mounted
+ * per opening, so the first render already knows it is reading and prior picks cannot leak.
  */
-export function ManageApisModal({
-    isOpen,
-    componentName,
-    componentId,
-    onClose,
-}: ManageApisModalProps): React.ReactElement {
+function useApiList(componentId: string | undefined): ApiList {
     const [apis, setApis] = useState<ApiAccessOption[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
-    const [loadError, setLoadError] = useState<string | null>(null);
-    /** "Signed out" is a DIFFERENT view from a retryable failure (see ManageApisBody). */
-    const [needsSignIn, setNeedsSignIn] = useState(false);
-    /** The OPTIONAL extras: seeded from the project's existing added set, then
-        edited (check adds, uncheck removes). Managed codes are locked, never here. */
-    const [selected, setSelected] = useState<string[]>([]);
-    /** The set as loaded — Apply is a no-op (disabled) until this changes. */
     const [initial, setInitial] = useState<string[]>([]);
-    const [isApplying, setIsApplying] = useState(false);
-    // The shared progress channel, which the apply handler reports on.
-    const applying = useOperationProgress(
-        isApplying ? CONSOLE_APIS_OPERATION_ID : null,
-        isApplying ? 1 : 0,
-        false,
-    );
-    const loadingStage = useElapsedStage(isLoading, ORG_SERVICES_LOADING_STAGES);
-    /** Bumped by the error view's Retry to re-fire the fetch. */
+    const [selected, setSelected] = useState<string[]>([]);
+    const [loadError, setLoadError] = useState<string | null>(null);
+    const [needsSignIn, setNeedsSignIn] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    /** Bumped by Retry to re-fire the fetch. */
     const [reloadKey, setReloadKey] = useState(0);
-    const retry = useCallback(() => setReloadKey((key) => key + 1), []);
-    // The dashboard webview's sign-in message; resolves when the browser flow ends,
-    // so the reload lands on a signed-in session.
-    const signIn = useCallback(
-        () => webviewClient.request('reAuthenticate').catch(() => undefined),
-        [],
-    );
-    const [applyError, setApplyError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (!isOpen) return undefined;
-        // Each open starts fresh: prior picks/errors must not leak between rows.
         let cancelled = false;
-        setApis([]);
-        setSelected([]);
-        setInitial([]);
-        setLoadError(null);
-        setNeedsSignIn(false);
-        setApplyError(null);
-        setIsLoading(true);
         webviewClient
-            .request<ListConsoleApisResponse>(
-                'listConsoleApis',
-                componentId ? { componentId } : undefined,
-            )
+            .request<ListConsoleApisResponse>('listConsoleApis', componentId ? { componentId } : undefined)
             .then((res) => {
                 if (cancelled) return;
                 if (res?.success && res.data) {
-                    setApis(
-                        res.data.apis.map((api) => ({
-                            code: api.code,
-                            name: api.name,
-                            locked: api.managed,
-                            requiresProfile: api.requiresProfile,
-                            requiresReview: api.requiresReview,
-                            group: api.group,
-                        })),
-                    );
                     const added = res.data.added ?? [];
+                    setApis(toOptions(res.data.apis));
                     setSelected(added);
                     setInitial(added);
                 } else {
@@ -230,24 +169,81 @@ export function ManageApisModal({
         return () => {
             cancelled = true;
         };
-        // componentId included: the grid keeps ONE modal instance for every row, so
-        // the integration under edit can change without a remount.
-    }, [isOpen, reloadKey, componentId]);
+    }, [reloadKey, componentId]);
 
-    const handleToggle = (code: string): void => {
-        setSelected((prev) =>
-            prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code],
-        );
-    };
+    const retry = useCallback((): void => {
+        setLoadError(null);
+        setNeedsSignIn(false);
+        setIsLoading(true);
+        setReloadKey((key) => key + 1);
+    }, []);
+    const toggle = useCallback((code: string): void => {
+        setSelected((prev) => (prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]));
+    }, []);
+    // The one Sign In (`authenticate`, every screen's); resolves when the browser flow ends,
+    // so the reload lands on a signed-in session.
+    const signIn = useCallback((): void => {
+        void webviewClient.request('authenticate').catch(() => undefined).then(retry);
+    }, [retry]);
 
+    return { apis, initial, selected, loadError, needsSignIn, isLoading, toggle, retry, signIn };
+}
+
+/**
+ * The subscribe's own lines while it applies, with its stage's expectation from the stage table:
+ * it reads the workspace's credentials and can wait on Adobe for a minute (PL-59 slice 6).
+ */
+function applyingWait(stage: string | undefined, step: string | undefined): ModalWait {
+    const label = stage ?? 'Applying';
+    return { label, detail: step, expectation: expectationFor(label) };
+}
+
+/**
+ * A read with no list to show: signed out, whose one way on is signing in (never a Retry), or a
+ * failed read, whose way on is Retry. Its own small result window, in place of the steps.
+ */
+function NoListWindow({ list, title, onClose }: { list: ApiList; title: string; onClose: () => void }): React.ReactElement {
+    const signIn: ActionButton = { label: MANAGE_APIS_COPY.signIn, variant: 'accent', onPress: list.signIn };
+    const retry: ActionButton = { label: MANAGE_APIS_COPY.retry, variant: 'accent', onPress: list.retry };
+    const end = list.needsSignIn
+        ? { outcome: MANAGE_APIS_COPY.signInTitle, status: 'warning' as const, line: MANAGE_APIS_COPY.signInBody, action: signIn }
+        : { outcome: MANAGE_APIS_COPY.loadFailedTitle, status: 'error' as const, line: list.loadError, action: retry };
+    return (
+        <ResultWindow
+            title={title}
+            outcome={end.outcome}
+            status={end.status}
+            lines={[end.line]}
+            actionButtons={[end.action]}
+            onClose={onClose}
+        />
+    );
+}
+
+/**
+ * Apply the picks: sets the extras to exactly what is ticked. Success closes the dialog.
+ *
+ * @param componentId - the integration the picks belong to, when there is one
+ * @param list - the picks, as loaded and as they stand
+ * @param onClose - closes the dialog once the change went through
+ */
+function useApply(componentId: string | undefined, list: ApiList, onClose: () => void) {
+    const { selected, initial } = list;
+    const [isApplying, setIsApplying] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    // The shared progress channel, which the apply handler reports on.
+    const progress = useOperationProgress(
+        isApplying ? CONSOLE_APIS_OPERATION_ID : null,
+        isApplying ? 1 : 0,
+        false,
+    );
     // Dirty = the optional set differs from what was loaded (add OR remove).
-    const isDirty =
-        selected.length !== initial.length || selected.some((code) => !initial.includes(code));
+    const isDirty = selected.length !== initial.length || selected.some((code) => !initial.includes(code));
 
-    const handleApply = async (): Promise<void> => {
+    const run = async (): Promise<void> => {
         if (!isDirty || isApplying) return;
         setIsApplying(true);
-        setApplyError(null);
+        setError(null);
         try {
             // setConsoleApis SETS the extras to exactly `selected` — unchecked codes
             // are removed (unsubscribed on the reconcile PUT).
@@ -255,75 +251,63 @@ export function ManageApisModal({
                 apis: selected,
                 ...(componentId ? { componentId } : {}),
             });
-            if (res?.success) {
-                onClose();
-            } else {
-                setApplyError(res?.error ?? 'Could not update API access.');
-            }
+            if (res?.success) onClose();
+            else setError(res?.error ?? 'Could not update API access.');
         } catch (err) {
-            setApplyError(toMessage(err));
+            setError(toMessage(err));
         } finally {
             setIsApplying(false);
         }
     };
+    const button: ActionButton = {
+        label: 'Apply',
+        variant: 'accent',
+        onPress: () => {
+            void run();
+        },
+        isDisabled: !isDirty,
+    };
+    return { button, state: { isApplying, stage: progress?.stage, step: progress?.step, error } };
+}
+
+/**
+ * The open dialog: mounted per opening, so each starts on its wait. The Steps layout's window: it
+ * waits in the small wait window while the list is read, opens at the list's height and keeps it through the apply
+ * and its failure (rule 14); filtering the list changes what is in it, never the window.
+ */
+function ManageApisDialog({ componentName, componentId, onClose }: Omit<ManageApisModalProps, 'isOpen'>): React.ReactElement {
+    const list = useApiList(componentId);
+    const apply = useApply(componentId, list, onClose);
+    const { isApplying, stage, step, error } = apply.state;
+    if (list.needsSignIn || list.loadError) return <NoListWindow list={list} title={MANAGE_APIS_COPY.title(componentName)} onClose={onClose} />;
+    let waiting: ModalWait | false = false;
+    if (isApplying) waiting = applyingWait(stage, step);
+    else if (list.isLoading) waiting = WAIT_STAGES.readingAdobeServices;
 
     return (
-        <DialogContainer onDismiss={onClose}>
-            {isOpen && (
-                <Modal
-                    fitContent
-                    title="Manage APIs"
-                    size="L"
-                    onClose={onClose}
-                    closeLabel="Cancel"
-                    actionButtons={[
-                        {
-                            label: isApplying ? 'Applying' : 'Apply',
-                            variant: 'accent',
-                            onPress: () => {
-                                void handleApply();
-                            },
-                            isDisabled: !isDirty || isApplying,
-                        },
-                    ]}
-                >
-                    {/* A plain div, NOT Spectrum's Flex: Flex caps its width at
-                        ~450px (root CLAUDE.md gotcha), and inside a size-L dialog
-                        the API list is wider than that — so the body overflowed
-                        its own container and the modal grew a horizontal
-                        scrollbar. */}
-                    <div className="manage-apis-body">
-                        {/* While applying, the subscribe's own lines — it reads
-                            the workspace's credentials and can wait on Adobe for
-                            a minute, where this said "Applying…" on a button and
-                            nothing else (PL-59 slice 6). */}
-                        {isApplying ? (
-                            <LoadingDisplay
-                                size="L"
-                                message={applying?.stage ?? 'Applying'}
-                                subMessage={applying?.step}
-                            />
-                        ) : null}
-                        <Text>
-                            Manage Adobe API access for <strong>{componentName}</strong>.
-                        </Text>
-                        <ManageApisBody
-                            onRetry={retry}
-                            loadingStage={loadingStage}
-                            isLoading={isLoading}
-                            loadError={loadError}
-                            needsSignIn={needsSignIn}
-                            onSignIn={signIn}
-                            apis={apis}
-                            selected={selected}
-                            onToggle={handleToggle}
-                        />
-                        {applyError && (
-                            <Text UNSAFE_className="text-sm text-red-600">{applyError}</Text>
-                        )}
-                    </div>
-                </Modal>
-            )}
-        </DialogContainer>
+        <StepsWindow
+            title={error ? MANAGE_APIS_COPY.applyFailedTitle : MANAGE_APIS_COPY.title(componentName)}
+            status={error ? 'error' : undefined}
+            waiting={waiting}
+            ready={!list.isLoading}
+            closeLabel="Cancel"
+            actionButtons={[apply.button]}
+            onClose={onClose}
+        >
+            {/* A plain div, NOT Spectrum's Flex: Flex caps its width at ~450px (root CLAUDE.md
+                gotcha), and inside a size-L dialog the API list is wider than that. */}
+            <div className="manage-apis-body">
+                {error && <p className="dialog-line">{error}</p>}
+                <ApiAccessPicker apis={list.apis} selected={list.selected} onToggle={list.toggle} />
+            </div>
+        </StepsWindow>
     );
+}
+
+/**
+ * The Manage-APIs modal: fetch-on-open option list, locked managed rows,
+ * additive Apply against the live `addConsoleApis` handler.
+ */
+export function ManageApisModal({ isOpen, ...dialog }: ManageApisModalProps): React.ReactElement {
+    return <DialogContainer onDismiss={dialog.onClose}>{isOpen && <ManageApisDialog key={dialog.componentId} {...dialog} />}</DialogContainer>;
 }

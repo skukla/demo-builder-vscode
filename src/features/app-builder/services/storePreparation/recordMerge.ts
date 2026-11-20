@@ -1,6 +1,6 @@
 /**
  * One step's preparation record after it is applied AGAIN (AB-77): the store lost what Demo
- * Builder did, the fresh check said so, and the fix ran a second time. The first record is
+ * Builder did, the fresh check said so, and the setup ran a second time. The first record is
  * kept and the new one added to it, so an undo still puts back what was there before Demo
  * Builder first touched the step, and still removes everything either run created.
  *
@@ -35,11 +35,16 @@ export function mergedStepRecord(earlier: StorePreparationStepRecord | undefined
     }
     if (earlier?.kind === 'warehouse' && next.kind === 'warehouse') {
         const createdStock = earlier.createdStock ?? next.createdStock;
+        // A source's hash is of the store as the LATEST apply left it.
+        const hashes = { ...earlier.sourceFingerprints, ...next.sourceFingerprints };
+        const enabledSources = union(earlier.enabledSources ?? [], next.enabledSources ?? [], (code) => code);
         return {
             kind: 'warehouse',
             createdSources: union(earlier.createdSources, next.createdSources, (code) => code),
             ...(createdStock ? { createdStock } : {}),
             links: union(earlier.links, next.links, (link) => `${link.stockId}:${link.sourceCode}`),
+            ...(enabledSources.length > 0 ? { enabledSources } : {}),
+            ...(Object.keys(hashes).length > 0 ? { sourceFingerprints: hashes } : {}),
         };
     }
     if (earlier?.kind === 'shared-catalogs' && next.kind === 'shared-catalogs') {

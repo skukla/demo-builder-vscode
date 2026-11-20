@@ -15,7 +15,7 @@ Sending a storefront by link, so colleagues get later changes, is
 | Door | Where the SC finds it | What it does | Agent tool |
 |---|---|---|---|
 | Export | the project dashboard's **Share** row → **Export** | asks how to hand it over: **Send a link** (the storefront as a demo package) or **Send a file** (one zip, `<project>-demo-bundle.zip`, with the parts ticked: **Setup** and, for an Edge Delivery project, **Storefront**). Setup alone saves the plain project file | `export_project_settings` (the project file), `export_demo_bundle` (the zip) |
-| Import from File | the projects list's New Project menu | reads a project file or a bundle and opens the wizard filled in from it | `create_project_from_file` (takes the file's absolute path) |
+| Import from File | the projects list's New Project menu | reads a project file or a bundle and opens the wizard filled in from it. A bundle creates the PROJECT (EDS-72, owner 2026-11-18): the wizard's Welcome step shows only the imported demo, chosen and fixed, and storefront setup makes the project's own new repository from the bundle's files. No template repository and no Welcome card are made; those are Save as Package and Add a Demo Package. A zip with a storefront and no setup is refused with a pointer to Add a Demo Package. Reading the file, and any refusal with its reason, show in the list's progress window (walk F241) | `create_project_from_file` (takes the file's absolute path; a `.zip` is read as a bundle) |
 | Copy from Existing | the projects list's New Project menu | picks a project on this machine and opens the wizard filled in from it | `copy_project` (takes the source project's name) |
 | Edit | the project dashboard's **Build** row → **Edit** | reopens the wizard on the project itself | `edit_project` |
 
@@ -36,6 +36,14 @@ the wizard reads through `readProjectFile` (`src/core/state/projectFileReader.ts
 - **Edit** reads `extractSettingsFromProject`: that same file, plus two things only Edit
   keeps, because it edits the SC's own project — the setting values as they are,
   credentials included, and the project's own storefront.
+
+**A project imported from a bundle** records `importedFrom` on the project: the demo's name,
+the sender's repository (provenance only), the commit the bundle's files were pushed as and
+the content site its pages were copied from. It has no `demo` row; `selectedPackage` stays the
+brand the sender built on, so updates read it as a brand project. **Reset** puts the code back
+to the import's commit in the project's own repository (`importedProjectReset.ts`), recopies the
+recorded pages (keeps the pages when none were recorded), and `reset_project` says what it
+restored. Edit keeps the record.
 
 The two agent tools that create (`create_project_from_file`, `copy_project`) share their
 second half, `createFromProjectFile`, and end in `runProjectCreation`, the function

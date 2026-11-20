@@ -249,53 +249,6 @@ export function initializeComponentsFromImport(
 }
 
 /**
- * Adobe context initialization result
- */
-export interface InitialAdobeContext {
-    org?: { id: string; code: string; name: string };
-    project?: { id: string; name: string; title?: string };
-    workspace?: { id: string; name: string; title?: string };
-}
-
-/**
- * Build initial Adobe context from imported settings.
- *
- * @param importedSettings - Settings from import/copy operation
- * @returns Adobe context with org, project, and workspace
- */
-export function initializeAdobeContextFromImport(
-    importedSettings: ImportedSettings | null | undefined,
-): InitialAdobeContext {
-    const result: InitialAdobeContext = {};
-
-    if (importedSettings?.adobe?.orgId) {
-        result.org = {
-            id: importedSettings.adobe.orgId,
-            code: '',
-            name: importedSettings.adobe.orgName || '',
-        };
-    }
-
-    if (importedSettings?.adobe?.projectId) {
-        result.project = {
-            id: importedSettings.adobe.projectId,
-            name: importedSettings.adobe.projectName || '',
-            title: importedSettings.adobe.projectTitle,
-        };
-    }
-
-    if (importedSettings?.adobe?.workspaceId) {
-        result.workspace = {
-            id: importedSettings.adobe.workspaceId,
-            name: importedSettings.adobe.workspaceName || '',
-            title: importedSettings.adobe.workspaceTitle,
-        };
-    }
-
-    return result;
-}
-
-/**
  * Generate a unique project name that doesn't conflict with existing names.
  * Uses lowercase-hyphen format: "name-copy", "name-copy-2", etc.
  *
@@ -528,7 +481,7 @@ function validateStackLookup(
 
 /**
  * Whether the storefront's existing pages are replaced with the package's: when the SC
- * resets to the template ("replaces all content", the tick's own words) or changes the
+ * resets to the template ("Replaces All Content", the tick's own words) or changes the
  * package in an Edit. The separate tick for the site's content went with the DA.live site
  * picker (b21696992), and nothing set it since, so an Edit onto another package kept the
  * old package's pages under the new package's code (owner, 2026-10-19: Bodea over CitiSignal).
@@ -570,6 +523,9 @@ function buildProjectEdsConfig(wizardState: ProjectConfigSource) {
         ...(eds.storefrontBuildComplete !== undefined
             ? { storefrontBuildComplete: eds.storefrontBuildComplete }
             : {}),
+        ...(eds.codeNotServed?.length ? { codeNotServed: eds.codeNotServed } : {}),
+        // An imported project's commit: creation records it for Reset (EDS-72).
+        ...(eds.bundleImport ? { bundleImport: eds.bundleImport } : {}),
     };
 }
 
@@ -628,6 +584,7 @@ export type ProjectConfigSource = Pick<
     | 'storeDiscoveryData'
     | 'selectedPackage'
     | 'demo'
+    | 'importedFrom'
     | 'datapack'
     | 'selectedAppBuilderComponents'
     | 'appBuilderComponentSources'
@@ -722,6 +679,8 @@ export function buildProjectConfig(
         selectedPackage: wizardState.selectedPackage,
         // The row travels with the project (D2); absent for a shipped brand.
         demo: projectRowOf(wizardState.demo),
+        // Import from File's bundle (EDS-72); absent for every other project.
+        ...(wizardState.importedFrom ? { importedFrom: wizardState.importedFrom } : {}),
         selectedStack: wizardState.selectedStack,
         // Recorded for the dashboard to install later — never imported here.
         datapack: wizardState.datapack,

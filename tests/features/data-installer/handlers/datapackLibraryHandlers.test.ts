@@ -4,28 +4,21 @@
  * guard hands back per-store fakes so a test can see WHICH store each call reached.
  */
 
-import { resolveDataInstallerAccess } from '@/features/data-installer/handlers/dataInstallerHandlers';
-import { datapackLibraryHandlers } from '@/features/data-installer/handlers/datapackLibraryHandlers';
-import { installerEchoRefusal } from '@/features/data-installer/handlers/datapackZipHandlers';
+// The shared wall first: it owns the access-guard mock and the subject's import.
+import { STORE, datapackLibraryHandlers, mockAccess } from './datapackLibraryHandlers.testUtils';
+import { INSTALLER_WRITE_REFUSED, installerEchoRefusal } from '@/features/data-installer/handlers/datapackZipHandlers';
 import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
+import { SHARED_IN_FILES_KEY } from '@/features/data-installer/services/sharedInFiles';
 import type { DatapackDetail } from '@/features/data-installer/types';
 import type { Project } from '@/types/base';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
 
-jest.mock('@/features/data-installer/handlers/dataInstallerHandlers', () => ({
-    ...jest.requireActual('@/features/data-installer/handlers/dataInstallerHandlers'),
-    resolveDataInstallerAccess: jest.fn(),
-}));
-
-const mockAccess = resolveDataInstallerAccess as jest.Mock;
-
-const STORE = 'https://library.example.test/api/v1/web/datapack-store';
 const INSTALLER = 'https://installer.example.test/api/v1/web/data-installer-api';
-const ID = { name: 'justrite', version: 'v1' };
+const ID = { name: 'tailspin', version: 'v1' };
 const DETAIL: DatapackDetail = {
     id: ID,
-    displayName: 'Justrite B2B',
+    displayName: 'Tailspin B2B',
     shared: false,
     dataTypes: ['categories', 'customer_groups'],
     art: {},
@@ -40,6 +33,7 @@ const ROWS: Record<string, unknown> = {
 const library = {
     getDatapackDetail: jest.fn(),
     getDataItem: jest.fn(),
+    findDatapacks: jest.fn(),
 };
 let fetchMock: jest.Mock;
 
@@ -60,6 +54,7 @@ beforeEach(() => {
         dataType,
         records: ROWS[dataType],
     }));
+    library.findDatapacks.mockResolvedValue({ items: [], count: 0 });
     mockAccess.mockImplementation(async (_context: unknown, store: string) =>
         store === 'library'
             ? { ok: true, client: library, baseUrl: STORE, getToken: async () => 'tok' }
@@ -90,24 +85,24 @@ describe('delete-library-datapack', () => {
         });
 
         const result = await remove(contextFor(null, false), {
-            datapackName: 'justrite',
+            datapackName: 'tailspin',
             version: 'v1',
             confirm: true,
         });
 
         expect(mockAccess).toHaveBeenCalledWith(expect.anything(), 'library');
         const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-        expect(url).toBe(`${STORE}/delete-datapack?datapack_name=justrite&version=v1`);
+        expect(url).toBe(`${STORE}/delete-datapack?datapack_name=tailspin&version=v1`);
         expect(init.method).toBe('DELETE');
         expect(result).toEqual({
             success: true,
-            data: { datapackName: 'justrite', version: 'v1', deleted: true },
+            data: { datapackName: 'tailspin', version: 'v1', deleted: true },
         });
     });
 
     it('refuses without confirm:true, before calling anything', async () => {
         const result = await remove(contextFor(null, false), {
-            datapackName: 'justrite',
+            datapackName: 'tailspin',
             version: 'v1',
         });
 
@@ -134,7 +129,7 @@ describe('delete-library-datapack', () => {
 
         expect(result).toMatchObject({
             success: false,
-            error: 'The datapack library has no pack of yours named theirs@v1.',
+            error: 'My Datapacks has no datapack named theirs@v1.',
         });
     });
 
@@ -144,6 +139,48 @@ describe('delete-library-datapack', () => {
         });
         expect(fetchMock).not.toHaveBeenCalled();
     });
+
+    // Step 07: a pack shared in a project file is read by reference, so deleting it leaves
+    // anyone who has not yet created that project with the datapack it was made from.
+    describe('a pack shared in a project file', () => {
+        const WARNING =
+            "You shared this datapack in a project file on 27 October. Anyone who hasn't created that project yet will get Bodea instead.";
+
+        beforeEach(() => {
+            // The datapack it was made from, as the library lists it: named as the SC sees it, never by id.
+            library.findDatapacks.mockResolvedValue({
+                items: [{ id: { name: 'bodea', version: 'main' }, displayName: 'Bodea', shared: true }],
+                count: 1,
+            });
+        });
+
+        function sharedContext() {
+            const context = contextFor(null, false);
+            (context.context.globalState.get as jest.Mock).mockImplementation((key: string) =>
+                key === SHARED_IN_FILES_KEY ? { 'tailspin@v1': { at: '2026-10-27T15:00:00.000Z', originName: 'bodea' } } : undefined,
+            );
+            return context;
+        }
+
+        it('says so in the refusal without confirm, so the confirmation can show it', async () => {
+            const result = await remove(sharedContext(), { datapackName: 'tailspin', version: 'v1' });
+
+            expect(result).toMatchObject({ success: false, data: { sharedInFile: WARNING } });
+            expect(library.findDatapacks).toHaveBeenCalledWith({ datapackName: 'bodea' });
+            expect(fetchMock).not.toHaveBeenCalled();
+        });
+
+        it('deletes as before with confirm, and the answer carries the warning', async () => {
+            fetchMock.mockResolvedValue({ ok: true, status: 200, text: async () => '{"success":true}' });
+
+            const result = await remove(sharedContext(), { datapackName: 'tailspin', version: 'v1', confirm: true });
+
+            expect(result).toEqual({
+                success: true,
+                data: { datapackName: 'tailspin', version: 'v1', deleted: true, warning: WARNING },
+            });
+        });
+    });
 });
 
 describe('copy-library-datapack-to-installer', () => {
@@ -151,9 +188,9 @@ describe('copy-library-datapack-to-installer', () => {
 
     it('reads the whole pack from the library and writes it into the Data Installer', async () => {
         const result = await copy(contextFor(null, false), {
-            datapackName: 'justrite',
+            datapackName: 'tailspin',
             version: 'v1',
-            confirmName: 'justrite',
+            confirmName: 'tailspin',
         });
 
         expect(library.getDataItem.mock.calls.map((c) => c[1])).toEqual([
@@ -167,7 +204,7 @@ describe('copy-library-datapack-to-installer', () => {
         ]);
         const body = JSON.parse(String((fetchMock.mock.calls[1] as [string, RequestInit])[1].body));
         expect(body).toEqual({
-            datapack_name: 'justrite',
+            datapack_name: 'tailspin',
             version: 'v1',
             data_type: 'categories',
             data: JSON.stringify(ROWS.categories),
@@ -175,7 +212,7 @@ describe('copy-library-datapack-to-installer', () => {
         expect(result).toEqual({
             success: true,
             data: {
-                datapackName: 'justrite',
+                datapackName: 'tailspin',
                 version: 'v1',
                 target: 'installer',
                 pack: 'created',
@@ -187,13 +224,13 @@ describe('copy-library-datapack-to-installer', () => {
 
     it('refuses until the pack name is sent back, before calling either store', async () => {
         const result = await copy(contextFor(null, false), {
-            datapackName: 'justrite',
+            datapackName: 'tailspin',
             version: 'v1',
         });
 
         expect(result).toMatchObject({
             success: false,
-            error: installerEchoRefusal('justrite'),
+            error: installerEchoRefusal('tailspin'),
             data: { sharedCatalog: true },
         });
         expect(mockAccess).not.toHaveBeenCalled();
@@ -208,9 +245,9 @@ describe('copy-library-datapack-to-installer', () => {
         });
 
         const result = await copy(contextFor(null, false), {
-            datapackName: 'justrite',
+            datapackName: 'tailspin',
             version: 'v1',
-            confirmName: 'justrite',
+            confirmName: 'tailspin',
         });
 
         expect(result).toMatchObject({
@@ -229,13 +266,46 @@ describe('copy-library-datapack-to-installer', () => {
         );
 
         const result = await copy(contextFor(null, false), {
-            datapackName: 'justrite',
+            datapackName: 'tailspin',
             version: 'v1',
-            confirmName: 'justrite',
+            confirmName: 'tailspin',
         });
 
         expect(result).toBe(refusal);
         expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    // 2026-11-06: Luma's gift cards name their set "Gift Card", which the Data Installer's schema refuses.
+    it('sends a gift card in the Default set, by its number, and says so', async () => {
+        const card = { product: { sku: '243-mb04', name: 'Gift Card', type_id: 'giftcard', attribute_set_id: 'Gift Card' } };
+        library.getDatapackDetail.mockResolvedValue({ ...DETAIL, dataTypes: ['giftcards'] });
+        library.getDataItem.mockResolvedValue({ dataType: 'giftcards', records: [card] });
+
+        const result = await copy(contextFor(null, false), { datapackName: 'tailspin', version: 'v1', confirmName: 'tailspin' });
+
+        const sent = JSON.parse(String((fetchMock.mock.calls[1] as [string, RequestInit])[1].body)) as { data: string };
+        expect(JSON.parse(sent.data)).toEqual([{ product: { ...card.product, attribute_set_id: 4 } }]);
+        expect(result).toMatchObject({ success: true, data: { changed: [expect.stringContaining('1 gift card goes in the Default attribute set')] } });
+    });
+
+    it('refuses a data type the Data Installer cannot take, before anything is written, saying why', async () => {
+        library.getDatapackDetail.mockResolvedValue({ ...DETAIL, dataTypes: ['categories', 'store_config'] });
+        library.getDataItem.mockImplementation(async (_id: unknown, dataType: string) => ({ dataType, records: dataType === 'store_config' ? [] : ROWS.categories }));
+
+        const result = await copy(contextFor(null, false), { datapackName: 'tailspin', version: 'v1', confirmName: 'tailspin' });
+
+        expect(result).toMatchObject({ success: false, error: expect.stringContaining('takes no store_config data, so nothing was sent') });
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    // Owner, 2026-11-06: our accounts cannot write to the Data Installer yet; say so in plain words.
+    it.each([401, 403])('says plainly that the account cannot write to the Data Installer when it answers %i', async (status) => {
+        fetchMock.mockResolvedValueOnce({ ok: false, status, text: async () => '{"success":false,"error":"ERR1201"}' });
+
+        const result = await copy(contextFor(null, false), { datapackName: 'tailspin', version: 'v1', confirmName: 'tailspin' });
+
+        expect(result).toMatchObject({ success: false, error: INSTALLER_WRITE_REFUSED });
+        expect(sentRoutes()).toEqual([`${INSTALLER}/create-datapack`]);
     });
 
     it('refuses without a name and version', async () => {

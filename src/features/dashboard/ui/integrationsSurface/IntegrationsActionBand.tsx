@@ -80,14 +80,6 @@ export function IntegrationsActionBand({
                     searchQuery={search.searchQuery}
                     onSearchQueryChange={search.setSearchQuery}
                     searchPlaceholder="Filter integrations"
-                    // 0, matching the projects list: show the field
-                    // from the first item. Not a tuning knob — the
-                    // COUNT's position depends on it. SearchHeader
-                    // puts the count beside the refresh button when
-                    // there is no field, and on its own line beneath
-                    // the field when there is; a high threshold left
-                    // this screen rendering the no-search fallback.
-                    searchThreshold={0}
                     totalCount={cards.length}
                     filteredCount={search.visibleCards.length}
                     itemNoun="integration"
@@ -112,10 +104,8 @@ export function IntegrationsActionBand({
                         // deploy, and the add journey asks for one itself (owner).
                         (destinationLabel || cards.length > 0) && (
                             <div className="page-destination-row" data-testid="page-destination">
-                                <span className="page-destination-label">Deploys to</span>
                                 <DestinationContext
                                     project={destinationLabel}
-                                    projectOnly
                                     onChange={onChangeDestination}
                                     unsetLabel="Not chosen yet"
                                 />

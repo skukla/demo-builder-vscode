@@ -32,13 +32,19 @@
  *
  * Keys are posix-style project-relative paths (`AGENTS.md`, `.mcp.json`,
  * `.claude/skills/add-component.md`); hashes are sha-256 hex of the utf-8
- * content via `node:crypto`.
+ * content (`@/core/utils/sha256`).
+ *
+ * Both matrices are the shared rule `decideOwnedChange` (`@/core/utils/ownedChange`,
+ * datapack-engine step 04) plus this file's two policies: a write treats
+ * `leave-not-ours` as unmodified once (pre-ADR), and a removal accepts an
+ * unrecorded file that equals `currentTemplate` as provably ours.
  */
 
-import { createHash } from 'crypto';
 import { constants as fsConstants } from 'fs';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
+import { decideOwnedChange } from '@/core/utils/ownedChange';
+import { sha256 } from '@/core/utils/sha256';
 import type { Logger } from '@/types/logger';
 
 export interface GeneratedFileWriteReport {
@@ -164,24 +170,26 @@ export function createGeneratedFileWriter(
             const key = toKey(relPath);
             const absolutePath = toAbsolute(key);
             const onDisk = await readIfPresent(absolutePath);
-            const recorded = hashes[key];
+            const change = decideOwnedChange({
+                recorded: hashes[key],
+                current: fingerprint(onDisk),
+                wanted: sha256(content),
+            });
 
-            if (onDisk !== undefined && recorded !== undefined) {
-                if (sha256(onDisk) !== recorded) {
-                    // User-edited → they own it now. An event, not silence.
-                    logger.info(
-                        `[AI Bundle] Skipped ${key} — edited since last generation; leaving your version in place`,
-                    );
-                    report.skipped.push(key);
-                    return 'skipped';
-                }
-                if (onDisk === content) {
-                    // Ours and already current — no disk touch at all.
-                    return 'unchanged';
-                }
+            if (change === 'leave-edited') {
+                // User-edited → they own it now. An event, not silence.
+                logger.info(
+                    `[AI Bundle] Skipped ${key} — edited since last generation; leaving your version in place`,
+                );
+                report.skipped.push(key);
+                return 'skipped';
             }
-            // Absent, ours-and-stale, or pre-ADR (no recorded hash → treat as
-            // unmodified ONCE, per ADR-013).
+            if (change === 'unchanged') {
+                // Ours and already current — no disk touch at all.
+                return 'unchanged';
+            }
+            // Absent, ours-and-stale, or pre-ADR (`leave-not-ours`: no recorded
+            // hash → treat as unmodified ONCE, per ADR-013).
             return (await persist(absolutePath, key, content)) ? 'written' : 'skipped';
         },
 
@@ -210,20 +218,20 @@ export function createGeneratedFileWriter(
                 return 'skipped';
             }
             const onDisk = await readIfPresent(absolutePath);
+            // Proof of ownership: the recorded hash, else (unrecorded) today's
+            // template — byte-equal to it is provably ours.
+            const change = decideOwnedChange({
+                recorded: hashes[key] ?? fingerprint(currentTemplate),
+                current: fingerprint(onDisk),
+                wanted: undefined,
+            });
 
-            if (onDisk === undefined) {
+            if (change === 'gone') {
                 delete hashes[key];
                 return 'absent';
             }
 
-            const recorded = hashes[key];
-            const provablyOursByHash = recorded !== undefined && sha256(onDisk) === recorded;
-            const provablyOursByTemplate =
-                recorded === undefined &&
-                currentTemplate !== undefined &&
-                onDisk === currentTemplate;
-
-            if (!provablyOursByHash && !provablyOursByTemplate) {
+            if (change !== 'remove') {
                 logger.info(
                     `[AI Bundle] Kept ${key} — cannot prove it is ours (edited or unrecorded); not removing`,
                 );
@@ -247,6 +255,7 @@ export function createGeneratedFileWriter(
     };
 }
 
-function sha256(content: string): string {
-    return createHash('sha256').update(content, 'utf-8').digest('hex');
+/** The fingerprint of content that may not exist. */
+function fingerprint(content: string | undefined): string | undefined {
+    return content === undefined ? undefined : sha256(content);
 }

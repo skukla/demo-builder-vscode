@@ -84,15 +84,3 @@ export function brokenLinksSentence(links: readonly StorefrontBrokenLink[] | und
     const more = links.length > NAMED_LINKS ? ` and ${links.length - NAMED_LINKS} more (Diagnostics lists them all)` : '';
     return `${subject}: ${named}${more}.`;
 }
-
-/**
- * The same, in one short line for the "Project Created" screen, which has room for one.
- *
- * @param links - the copy's broken links
- * @returns "2 links in the copied content go to missing pages. Diagnostics lists them."
- */
-export function brokenLinksLine(links: readonly StorefrontBrokenLink[] | undefined): string | undefined {
-    if (!links || links.length === 0) return undefined;
-    const subject = links.length === 1 ? '1 link in the copied content goes to a missing page' : `${links.length} links in the copied content go to missing pages`;
-    return `${subject}. Diagnostics lists them.`;
-}

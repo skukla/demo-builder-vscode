@@ -1,7 +1,7 @@
 /**
- * agentProjectCleanup — the cloud half of an agent's project delete (AI-9).
+ * agentProjectCleanup — the agent's checklist for a project delete, and its answer (AI-9).
  *
- * The button offers a checklist with two boxes, both unticked: "Delete
+ * The button offers a checklist with two boxes, both unticked: "Delete GitHub
  * Repository" and "Delete DA.live Site" (which is also what unpublishes the
  * CDN). Press Enter without ticking either and it deletes locally — exactly what
  * `delete_project` has always done. The difference was never policy; the agent
@@ -11,35 +11,43 @@
  * the same setting the dialog does (`demoBuilder.cleanupBehavior`): `deleteAll`
  * ticks them, `localOnly` refuses them. One setting governs both surfaces.
  *
+ * The delete itself is the button's (`runProjectDelete`, PL-104 fix 6), run with nobody to
+ * ask; this file reads its answer back into the shape the agent is told about. Until then a
+ * second orchestration lived here (`cleanUpProjectCloud`, deleted), with its own order, stop
+ * rules and DA.live token choice, kept equal to the button's by comments that said so.
+ *
  * @module features/ai/server/agentProjectCleanup
  */
 
 import * as vscode from 'vscode';
-import { ServiceLocator } from '@/core/di/serviceLocator';
-import { reportPhase } from '@/core/utils/agentPhaseChannel';
-import { OPERATION_STAGES } from '@/core/utils/operationStages';
-import { getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
-import { firstUsableDaLiveToken } from '@/features/eds/services/daLive/daLiveTokenChain';
-import { extractEdsMetadata } from '@/features/eds/services/resourceCleanupHelpers';
-import { otherProjectsPublishingTo } from '@/features/eds/services/storefront/sharedRepoProjects';
 import {
-    deleteStorefrontRepository,
-    type CodeRemovalResult,
-} from '@/features/eds/services/storefront/storefrontCodeRemoval';
-import { tearDownStorefront } from '@/features/eds/services/storefront/storefrontTeardown';
+    extractEdsMetadata,
+    type CleanupResultItem,
+    type EdsProjectMetadata,
+} from '@/features/eds/services/resourceCleanupHelpers';
+import type { CodeRemovalResult } from '@/features/eds/services/storefront/storefrontCodeRemoval';
+import type { StorefrontTeardownResult } from '@/features/eds/services/storefront/storefrontTeardown';
+import type { ProjectDeleteRun } from '@/features/projects-dashboard/services/projectDeletionService';
 import type { Project } from '@/types/base';
-import type { HandlerContext } from '@/types/handlers';
 
 /** What the caller asked for, before the setting has its say. */
 export interface CloudCleanupRequest {
     deleteGithubRepo?: boolean;
     deleteDaLiveSite?: boolean;
+    /** Also remove its datapack's data from Commerce first, the button's Uninstall Datapack (walk F96). */
+    removeData?: boolean;
 }
 
 /** What the two boxes end up at, and why, so a tool can answer honestly. */
 export interface CloudCleanupChoice {
     deleteGithubRepo: boolean;
     deleteDaLiveSite: boolean;
+    /**
+     * Set only when the call asked for it and the setting allows it. `deleteAll` never
+     * ticks it: it writes to a store, and the button never removes the data without the SC
+     * ticking it either.
+     */
+    removeData?: true;
     /** Set when `cleanupBehavior` overrode what was asked for. */
     refusedBySetting?: string;
 }
@@ -105,7 +113,7 @@ export function resolveCloudCleanup(request: CloudCleanupRequest): CloudCleanupC
         .get<string>('cleanupBehavior', 'ask');
 
     if (behavior === 'localOnly') {
-        const asked = request.deleteGithubRepo || request.deleteDaLiveSite;
+        const asked = request.deleteGithubRepo || request.deleteDaLiveSite || request.removeData;
         return {
             deleteGithubRepo: false,
             deleteDaLiveSite: false,
@@ -115,137 +123,95 @@ export function resolveCloudCleanup(request: CloudCleanupRequest): CloudCleanupC
         };
     }
 
+    const data = request.removeData === true ? { removeData: true as const } : {};
     if (behavior === 'deleteAll') {
         return {
             deleteGithubRepo: request.deleteGithubRepo ?? true,
             deleteDaLiveSite: request.deleteDaLiveSite ?? true,
+            ...data,
         };
     }
 
     return {
         deleteGithubRepo: request.deleteGithubRepo === true,
         deleteDaLiveSite: request.deleteDaLiveSite === true,
+        ...data,
+    };
+}
+
+/** Which online result rows a delete reported, by kind. */
+function rowOf(results: CleanupResultItem[], type: CleanupResultItem['type'], name: string): CleanupResultItem | undefined {
+    return results.find((row) => row.type === type && row.name === name);
+}
+
+/** The DA.live site's outcome: the teardown's own result when it ran, else why it did not. */
+function daLiveSiteOutcome(
+    metadata: EdsProjectMetadata,
+    torn: StorefrontTeardownResult | undefined,
+    results: CleanupResultItem[],
+): CloudCleanupOutcome['daLiveSite'] {
+    if (!metadata.daLiveOrg || !metadata.daLiveSite) return undefined;
+    const name = `${metadata.daLiveOrg}/${metadata.daLiveSite}`;
+    if (torn) {
+        return {
+            name,
+            contentDeleted: torn.contentDeleted,
+            unpublishedPages: torn.unpublishedPages,
+            stillPublished: torn.stillPublished,
+            publishSummary: torn.publishSummary,
+            ...(torn.productPages ? { productPages: torn.productPages.summary } : {}),
+            error: torn.error,
+        };
+    }
+    const row = rowOf(results, 'daLive', name);
+    if (!row) return undefined;
+    // No teardown result: it did not run (a sign-in refused), or the delete failed after it.
+    return {
+        name,
+        contentDeleted: row.success,
+        stillPublished: true,
+        publishSummary: row.success
+            ? 'Whether the pages are gone was not reported, so they may still be live.'
+            : 'The storefront teardown did not run, so its pages may still be live.',
+        error: row.error,
+    };
+}
+
+/** The repository's outcome, and what happened to its code on aem.live when it went. */
+function githubRepoOutcome(
+    metadata: EdsProjectMetadata,
+    code: CodeRemovalResult | undefined,
+    results: CleanupResultItem[],
+): CloudCleanupOutcome['githubRepo'] {
+    if (!metadata.githubRepo) return undefined;
+    const row = rowOf(results, 'github', metadata.githubRepo);
+    if (!row) return undefined;
+    return {
+        name: metadata.githubRepo,
+        deleted: row.success,
+        ...(row.error ? { error: row.error } : {}),
+        ...(row.success && code ? { siteCode: agentSiteCode(code) } : {}),
     };
 }
 
 /**
- * Delete whichever cloud resources the choice names, before the local files go.
+ * The agent's answer about what the delete did online, read off the button's own delete
+ * (`runProjectDelete`, PL-104 fix 6): its result rows, and the teardown's and the site code's
+ * results. `stopped` is set only when the online cleanup is what stopped it.
  *
- * Runs the SAME storefront teardown the button runs, so an agent's delete takes
- * the pages off the CDN rather than leaving a live site with no project behind
- * it. Never throws: each resource reports its own outcome.
+ * @param project - the project deleted, for which resources it had
+ * @param run - what `runProjectDelete` returned
+ * @param results - the cleanup rows it reported
  */
-export async function cleanUpProjectCloud(
-    context: HandlerContext,
-    project: Project,
-    choice: CloudCleanupChoice,
-): Promise<CloudCleanupOutcome> {
-    const outcome: CloudCleanupOutcome = {};
+export function agentCloudOutcome(project: Project, run: ProjectDeleteRun, results: CleanupResultItem[]): CloudCleanupOutcome {
     const metadata = extractEdsMetadata(project);
-    if (!metadata) return outcome;
-
-    if (choice.deleteDaLiveSite && metadata.daLiveOrg && metadata.daLiveSite) {
-        reportPhase('Taking the storefront down');
-        const name = `${metadata.daLiveOrg}/${metadata.daLiveSite}`;
-        try {
-            // The DA.live session FIRST. Helix's admin API on a registered site accepts
-            // only that token; handed the Adobe Console token alone, as this was until
-            // 2026-10-12, it answered every unpublish "[admin] not authenticated" while
-            // the content and the repository were deleted — a live site with nothing
-            // behind it. The button and both clean-up tools already choose it this way.
-            const tokenProvider = await firstUsableDaLiveToken({
-                daLiveSession: () => getDaLiveAuthService(context.context),
-                imsTokenManager: () => ServiceLocator.getAuthenticationService().getTokenManager(),
-            });
-            if (!tokenProvider) {
-                throw new Error('Not signed in to DA.live, so the storefront could not be taken down.');
-            }
-            const { HelixService } = await import('@/features/eds/services/helix/helixService');
-            const torn = await tearDownStorefront(
-                {
-                    daLiveOrg: metadata.daLiveOrg,
-                    daLiveSite: metadata.daLiveSite,
-                    githubRepo: metadata.githubRepo,
-                },
-                {
-                    tokenProvider,
-                    logger: context.logger,
-                    // The teardown's own step names, which is what the agent's
-                    // notification shows while it waits (PL-59 R3).
-                    onStep: (step) => reportPhase(step),
-                    initKeyStore: () =>
-                        HelixService.initKeyStore(
-                            context.context.secrets,
-                            context.context.globalState,
-                        ),
-                    // The project being deleted is still on disk here, and does not count.
-                    otherProjectsOnRepo: (repo) =>
-                        otherProjectsPublishingTo(context.stateManager, repo, project.path),
-                },
-            );
-            outcome.daLiveSite = {
-                name,
-                contentDeleted: torn.contentDeleted,
-                unpublishedPages: torn.unpublishedPages,
-                stillPublished: torn.stillPublished,
-                publishSummary: torn.publishSummary,
-                ...(torn.productPages ? { productPages: torn.productPages.summary } : {}),
-                error: torn.error,
-            };
-            if (torn.stopped) return { ...outcome, stopped: torn.stopped };
-        } catch (error) {
-            outcome.daLiveSite = {
-                name,
-                contentDeleted: false,
-                stillPublished: true,
-                publishSummary: 'The storefront teardown failed before it could say; its pages may still be live.',
-                error: error instanceof Error ? error.message : String(error),
-            };
-        }
-    }
-
-    if (choice.deleteGithubRepo && metadata.githubRepo) {
-        reportPhase(OPERATION_STAGES.deletingRepository.label);
-        const [owner, repo] = metadata.githubRepo.split('/');
-        try {
-            const { getGitHubServices, tryCreateDaLiveTokenProvider } = await import(
-                '@/features/eds/handlers/edsHelpers'
-            );
-            const { repoLifecycle, fileOperations } = getGitHubServices(context.context.secrets);
-            if (!owner || !repo) {
-                throw new Error(`"${metadata.githubRepo}" is not an owner/repo pair`);
-            }
-            // The button's own path: the files listed first, then the repository, then
-            // AEM's copy of the code, on the DA.live session (EDS-67).
-            const { code, kept } = await deleteStorefrontRepository(
-                { owner, repo },
-                {
-                    files: fileOperations,
-                    deleteRepository: (o, r) => repoLifecycle.deleteRepository(o, r),
-                    tokenProvider: tryCreateDaLiveTokenProvider(context.context),
-                    logger: context.logger,
-                    onStep: (step) => reportPhase(step),
-                },
-            );
-            if (kept) {
-                // No working DA.live sign-in to remove the site code with: the repository
-                // stays, and the project with it, so "delete again" can finish (EDS-67).
-                outcome.githubRepo = { name: metadata.githubRepo, deleted: false, error: kept };
-                return { ...outcome, stopped: kept };
-            }
-            outcome.githubRepo = {
-                name: metadata.githubRepo,
-                deleted: true,
-                ...(code ? { siteCode: agentSiteCode(code) } : {}),
-            };
-        } catch (error) {
-            outcome.githubRepo = {
-                name: metadata.githubRepo,
-                deleted: false,
-                error: error instanceof Error ? error.message : String(error),
-            };
-        }
-    }
-
+    if (!metadata) return {};
+    const outcome: CloudCleanupOutcome = {};
+    const daLiveSite = daLiveSiteOutcome(metadata, run.storefront, results);
+    const githubRepo = githubRepoOutcome(metadata, run.siteCode, results);
+    const stoppedOnline = run.stopped !== undefined && (run.storefront?.stopped === run.stopped || githubRepo?.error === run.stopped);
+    if (stoppedOnline) outcome.stopped = run.stopped;
+    if (githubRepo) outcome.githubRepo = githubRepo;
+    if (daLiveSite) outcome.daLiveSite = daLiveSite;
     return outcome;
 }

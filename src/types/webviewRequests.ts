@@ -13,17 +13,20 @@
  * @module types/webviewRequests
  */
 
-import type { ComponentSettings, SetupConfigFixItem } from './appBuilderComponents';
+import type { ComponentSettings, ConfigSetupItem } from './appBuilderComponents';
 import type { AdobeConfig } from './base';
 import type { CustomBlockLibrary } from './blockLibraries';
 import type { CommerceStoreStructure, StoreViewCodes, StoreViewProducts } from './commerceStore';
 import type { ComponentConfigs, EnvVarDefinition, ServiceDefinition } from './components';
+import type { DatapackId, ProjectDatapack } from './datapack';
 import type { DaLiveContentSource } from './demoPackages';
 import type { ErpProductSelection } from './erpAssign';
 import type { ErpOwnsRule } from './erpOwnership';
 import type { ErrorCode } from './errorCodes';
 import type {
     AddedDemo,
+    BundleImportResult,
+    ImportedFrom,
     ProjectFile,
     RememberedDemo,
     SharedDemoDescription,
@@ -34,6 +37,170 @@ import type {
 import type { ViewMode, ViewModeList } from './viewMode';
 import type { GitHubRepoItem } from './webview';
 import type { GitHubUser } from './webviewPayloads';
+import type { TreeListNode } from '@/core/ui/components/ui/TreeList';
+import type { LeftOut, PickableKind, Selections } from '@/features/data-installer/pickableKinds';
+
+/**
+ * `authenticate` — a screen's Adobe sign-in. Absent fields mean the plain Sign In, which
+ * skips the browser when the session is already good. The two forced kinds are different
+ * intents (owner, 2026-11-18):
+ * - `force` is the org switch: the wizard's Switch IMS Org and "Sign In with a Different
+ *   Account", which open the account chooser. It wins when both are set.
+ * - `fresh` renews the same account (the wizard's Re-Authenticate Now): forced, through
+ *   the one Sign In, not the org switch.
+ */
+export interface AuthenticateRequest {
+    force?: boolean;
+    fresh?: boolean;
+}
+
+/**
+ * `setFinishSetupStep` — the Finish Setup guide's Mark as Done (`done`), Skip (`dismissed`) and
+ * Undo Skip (`open`) on one of the project's steps (PL-101). Checked by the handler: an agent may
+ * send anything.
+ */
+export interface SetFinishSetupStepRequest {
+    stepId?: string;
+    state?: string;
+}
+
+/**
+ * `checkFinishSetupSteps` — run one step's check (`stepId`), as the guide asks one at a time, or
+ * every step not skipped when absent (PL-101). Answers `{ items }`, the steps as the check saved them.
+ */
+export interface CheckFinishSetupStepsRequest {
+    stepId?: string;
+}
+
+/**
+ * `undo-last-save` — go back to the save before the newest of the project's own datapack (Phase 2,
+ * owner 2026-11-12). Sent by the Datapacks flyout's Undo Last Save once its dialog is confirmed, and
+ * by the agent tool. Nothing changes in Commerce unless `confirm` is true.
+ */
+export interface UndoLastSaveRequest {
+    /** The project's datapack, by its library name. */
+    datapackName?: string;
+    /** Must be true. Nothing changes in Commerce by default. */
+    confirm?: boolean;
+}
+
+/** `undo-last-save`'s `data` once the job is accepted, as `start-datapack-import` answers. */
+export interface UndoLastSaveResult {
+    activationId: string;
+}
+
+/**
+ * `fix-datapack-import-with-ai` — open the SC's AI on a datapack problem the extension recorded.
+ * Only `from` is sent: the prompt is built from the record, never from the webview. Absent, the
+ * last install's job; `dry-run`, the last Dry Run's answer; `install-failed`, the project's failed
+ * install (step-04 S8); `clear-check`, the types Clear Demo Data's newest check could not read
+ * (step 06, C2b).
+ */
+export interface FixDatapackImportWithAiRequest {
+    from?: 'dry-run' | 'install-failed' | 'clear-check';
+}
+
+/** Where Restore takes Commerce on the SC's own datapack (step-07 U1, J9-7). */
+export type RestorePoint = 'lastSaved' | 'original';
+
+/**
+ * `restore-datapack` — put Commerce back to a previous state of the datapack the project uses,
+ * losing the SC's Commerce edits made since (step-07 U1, J9; decisions "Where 'back' goes"). A Demo
+ * Builder or other datapack goes back as it ships (the version installed); the SC's own goes back to
+ * its last save or its original. Sent by the Datapacks flyout's Restore button, first without
+ * `confirm` (the check, which starts nothing), and by the agent tool.
+ */
+export interface RestoreDatapackRequest {
+    /** The project's datapack, by its name. */
+    datapackName?: string;
+    /**
+     * The SC's own datapack only. Absent: Last Saved when Commerce has unsaved edits, else the
+     * original (the only point there is then).
+     */
+    to?: RestorePoint;
+    /** Start it. Without, the check answers what the question shows. */
+    confirm?: boolean;
+    /** Original over unsaved edits only: save them into the datapack first (`keep`), or lose them (`drop`). */
+    changes?: 'keep' | 'drop';
+}
+
+/** One data type of the SC's unsaved edits, counted: what "Save Your Changes First?" lists. */
+export interface RestoreChangeCount {
+    kind: string;
+    count: number;
+}
+
+/** What Restore's question shows (J9-5 to J9-7): read by the check, which starts nothing. */
+export interface RestoreQuestion {
+    asks: true;
+    displayName: string;
+    /**
+     * The SC's own datapack: its points, by version. `lastSaved` (the save installed) only while
+     * Commerce has unsaved edits and it is not the original. Absent: one point, "as it ships".
+     */
+    own?: { lastSaved?: string; original: string };
+    /** The SC's unsaved edits by type, for the save question Original asks over them. */
+    changes?: RestoreChangeCount[];
+}
+
+/**
+ * `restore-datapack`'s `data`: up to date (nothing would change, nothing started); the question
+ * (a check); or the job accepted, as `start-datapack-import` answers, with the version it restores.
+ * Original confirmed over unsaved edits with no `changes` answers `success: false`, `code:
+ * CHANGES_NEED_ANSWER`.
+ */
+export type RestoreDatapackResult =
+    | { upToDate: true; displayName: string }
+    | RestoreQuestion
+    | { activationId: string; target: DatapackId };
+
+/**
+ * `update-datapack` — apply what a newer version of the project's datapack changed, only for the data
+ * types chosen, keeping the SC's own edits (step-07 U1, J9-2). Sent by the flyout's Update button,
+ * first without `confirm` (the check), and by the agent tool.
+ */
+export interface UpdateDatapackRequest {
+    /** The project's datapack, by its name. */
+    datapackName?: string;
+    /** The data types to update; absent, every type that changed. */
+    dataTypes?: string[];
+    /**
+     * Start it, or, when the check found nothing to write, move the project onto the newer version.
+     * Without, the check answers and writes nothing.
+     */
+    confirm?: boolean;
+    /** With `confirm`: the version the check answered for; refused when the library moved on since. */
+    version?: string;
+    /**
+     * The check names every record it would write and keep, for the screen's spot check (Review
+     * Records). Without it each type names its first few, as a preview does: an agent's answer stays
+     * bounded by the number of data types, not records.
+     */
+    records?: boolean;
+}
+
+/** One data type an update writes, as the check found it. */
+export interface UpdateTypeChange {
+    /** The data type's code, as the pack names it. */
+    type: string;
+    added: number;
+    updated: number;
+    removed: number;
+    /** The records it writes, by the datapack's name for each. */
+    changed: string[];
+    /** The records the SC edited since the install, which the update leaves as they are. */
+    kept: string[];
+}
+
+/**
+ * `update-datapack`'s `data`: up to date (nothing left to apply); what changed, by type (a check);
+ * or the job accepted, with the version it installs.
+ */
+export type UpdateDatapackResult =
+    /** `movesTo`: the newer version writes nothing here, and a confirm moves the project onto it. */
+    | { upToDate: true; displayName: string; movesTo?: string }
+    | { changes: UpdateTypeChange[]; displayName: string; target: DatapackId }
+    | { activationId: string; target: DatapackId };
 
 /**
  * `check-store-view-products` — does a guest see any products in the store view
@@ -263,9 +430,26 @@ export interface ChangeDemoSourceRequest {
 export interface DemoPackageCheck {
     id: 'repository' | 'index' | 'datapack' | 'custom-app';
     ok: boolean;
+    /** A heading for the sentence, when the screen shows it as a notice of its own (Title Case). */
+    title?: string;
     message: string;
+    /** The door that fixes it, when one exists on the dashboard. */
     action?: 'republish';
+    /** For a custom-app check: the repository the sentence is about. */
     repository?: string;
+    /**
+     * For a datapack only the SC can see: the pack Share Datapack shares, and the name the store
+     * shows for it, which its confirm asks by (walk F229).
+     */
+    share?: { pack: DatapackId; displayName: string };
+}
+
+/**
+ * `getShareDatapackCheck`: the datapack check alone, for Share Demo's file step on a project with
+ * no storefront to preview (walk F230). Empty when the project has no pack or no store could be asked.
+ */
+export interface ShareDatapackChecks {
+    checks: DemoPackageCheck[];
 }
 
 export interface DemoPackagePreview {
@@ -287,8 +471,9 @@ export interface SaveDemoPackageRequest {
     name: string;
     description: string;
     /**
-     * Put the card on the SC's own Welcome step (default true). False writes the
-     * file only, and takes an existing card off the list.
+     * Where the card on the SC's own Welcome step goes. True puts it on (Save as Package);
+     * false takes an existing card off; omitted leaves the Welcome list exactly as it is
+     * (Share Demo's Send a Link). The file is written in every case.
      */
     addToWelcome?: boolean;
 }
@@ -325,6 +510,8 @@ export interface ExportDemoBundleResult {
     fileCount?: number;
     bytes?: number;
     parts?: Array<'setup' | 'storefront'>;
+    /** The setup part names the SC's own private library pack, which teammates cannot read (owner, 2026-10-30). */
+    packNote?: string;
 }
 
 export interface RemoveDemoPackageResult {
@@ -386,7 +573,9 @@ export interface ProjectCreationConfig {
     selectedPackage?: string;
     /** The storefront row when the project is built on an added demo (D2); persisted with the project. */
     demo?: AddedDemo;
-    datapack?: { name: string; version: string };
+    /** Import from File's bundle (EDS-72): creation records the import, with setup's commit, on the project. */
+    importedFrom?: ImportedFrom;
+    datapack?: ProjectDatapack;
     selectedStack?: string;
     // Selected App Builder integration ids (Model B deploy) + custom GitHub sources
     selectedAppBuilderComponents?: string[];
@@ -452,6 +641,10 @@ export interface ProjectCreationConfig {
         installedBlockLibraries?: import('./blockLibraries').InstalledBlockLibrary[];
         /** Present when setup built the storefront: whether its fixes all landed (storefrontChanges.ts). */
         storefrontBuildComplete?: boolean;
+        /** The code files the live site did not serve after setup: saved as the Republish the Code step (PL-101). */
+        codeNotServed?: string[];
+        /** What setup made from an imported bundle: creation records it on the project (EDS-72). */
+        bundleImport?: BundleImportResult;
         // Note: previewUrl/liveUrl not stored - derived from githubRepo by typeGuards
         // Patch IDs to apply during reset (from demo-packages.json)
         patches?: string[];
@@ -594,6 +787,12 @@ export interface StorefrontSetupStartPayload {
     selectedStack?: string;
     /** The storefront row when the project is built on an added demo: the phases read it for the repo branch and the pages. */
     demo?: AddedDemo;
+    /**
+     * Set by a door with nobody to ask (the agent's creation): if the run is stopped, the
+     * cleanup of what it made refuses each sign-in it would ask for and names what it
+     * left behind instead (F275, as `delete_project` does).
+     */
+    nobodyToAsk?: true;
     edsConfig: {
         repoName: string;
         repoMode?: 'new' | 'existing';
@@ -604,6 +803,12 @@ export interface StorefrontSetupStartPayload {
         isPrivate?: boolean;
         resetToTemplate?: boolean;
         skipContent?: boolean;
+        /**
+         * Import from File's bundle (EDS-72): setup makes the project's own new
+         * repository from its files instead of from a template. Not storefront-derived:
+         * it comes from the import, so it is not in `STOREFRONT_DERIVED_FIELDS`.
+         */
+        bundleSource?: { bundlePath: string };
         // Template repository info (from stack/brand config) for GitHub reset operations
         templateOwner?: string;
         templateRepo?: string;
@@ -695,11 +900,8 @@ export interface StorefrontSetupStartPayload {
  * Payload for storefront-setup-cancel message
  */
 export interface StorefrontSetupCancelPayload {
+    /** What the webview saw the run make; it decides only whether the handler asks first. */
     partialState?: StorefrontSetupPartialState;
-    edsConfig?: {
-        daLiveOrg?: string;
-        daLiveSite?: string;
-    };
 }
 
 /**
@@ -844,7 +1046,7 @@ export interface UndoStorePreparationRequestPayload {
  * recorded on the project (`commerceConfigChange`), ignoring `items`.
  */
 export interface SetCommerceConfigRequestPayload {
-    items?: SetupConfigFixItem[];
+    items?: ConfigSetupItem[];
     confirm?: boolean;
     undo?: boolean;
 }
@@ -880,7 +1082,7 @@ export interface AddAppBuilderComponentRequestPayload {
      * The Adobe project and workspace the SC chose in the add's own destination steps,
      * sent only when the project had none. Saved before anything is made: an add that
      * left it on screen ran with no project, and its workspace was made in the project
-     * cached from earlier (Justrite's, 2026-10-15).
+     * cached from earlier (Tailspin's, 2026-10-15).
      */
     destination?: { project: DestinationRef; workspace: DestinationRef };
     /**
@@ -895,4 +1097,105 @@ export interface RenameAdobeProjectRequestPayload {
     orgId: string;
     projectId: string;
     title: string;
+}
+
+/**
+ * `save-store-changes-to-pack` (datapack-engine step 05): the pack's flyout asks for the store's
+ * copy of a pack Demo Builder installed in the open project to be saved as a new version of it
+ * in the datapack library. `preview-datapack-changes` takes the same name and version.
+ */
+export interface SaveStoreChangesRequest {
+    /**
+     * The pack installed whose store copy is saved. Omitted: the project's own pack when Demo
+     * Builder installed it, else none, and the new version holds only what is picked (step 14).
+     */
+    datapackName?: string;
+    version?: string;
+    /** Things the SC made by hand to save too, as `{<kind>: {<field>: [ids]}}` (`pickableKinds.ts`). */
+    selections?: Selections;
+    /**
+     * Kinds ticked whole: the extension lists each inside the save, under Export from Commerce, so
+     * Create reads nothing on Next (step-07 E2). With no datapack only, as `selections`.
+     */
+    wholeKinds?: PickableKind[];
+    /**
+     * Save As: a new datapack of the SC's under this name, which the demo then uses. Absent: Save,
+     * a new version of the demo's datapack, when it is the SC's (else the answer asks for a name).
+     */
+    saveAs?: { displayName: string };
+    /** Must be true: nothing is saved by default. */
+    confirm: true;
+    /** Which store holds the pack, so the save reads the installed version's own rows there. */
+    source?: 'installer' | 'library';
+    /** Started from the flyout's button, so its progress goes to the screen's progress window. */
+    progress?: 'modal';
+}
+
+/**
+ * What a save answers on success: the new version (of the demo's pack, or of a new one, `demoPack.ts`),
+ * the pack it was saved from, and one sentence.
+ */
+export interface SaveStoreChangesResult {
+    /** The pack saved into, in the library; the demo now uses it. */
+    datapackName: string;
+    version: string;
+    /** What the SC sees it called. */
+    displayName: string;
+    /** The pack installed before the save, which the save left as it was; none for a save of picks alone. */
+    previous?: { name: string; version: string };
+    /** How many of each data kind the new version holds. */
+    counts: Record<string, number>;
+    /** The one sentence the SC reads: "Saved to the Acme Demo pack. Bodea is unchanged." */
+    message: string;
+    /** Each id kept because the store could not name it, as "category 57" (step 14). */
+    unnamed: string[];
+    /** What the store has, of the kinds an SC adds by hand, that the new version does not hold (step 14). */
+    leftOut: LeftOut[];
+    /** The settings layer written beside the new version (step 09), when the pack's settings are a layer's. */
+    settingsLayer?: { datapackName: string; version: string; settings: number };
+}
+
+/**
+ * `get-datapack-records` (datapack simplification step 03, S4): the records an install of the pack
+ * puts in Commerce, for the install window's Review Records. Webview-only.
+ */
+export interface DatapackRecordsRequest {
+    datapackName: string;
+    version: string;
+    /** Which store holds the pack; the Data Installer when absent. */
+    source?: 'installer' | 'library';
+    /** An uninstall's Review Records: what it would take and keep, from the install record (walk F151). */
+    removal?: boolean;
+}
+
+/** What `get-datapack-records` answers on success. */
+export interface DatapackRecordsResult {
+    /**
+     * Each data type's records by the name the pack gives them (`keyOf`), in the pack's order. For an
+     * uninstall, what it would take out.
+     */
+    records: Record<string, string[]>;
+    /** An uninstall's: what it would keep (a root a store uses, a category holding the SC's products). */
+    kept?: Record<string, string[]>;
+    /** Products' names by SKU, for the Name column beside the SKU (walk F147). */
+    productNames?: Record<string, string>;
+    /** A type's records as a tree, for a type that nests: the pack's categories. */
+    trees?: Record<string, TreeListNode[]>;
+}
+
+/**
+ * `backgroundOperation`: the SC closed a running operation's window, so a VS Code progress
+ * notification carries it on (PL-59). It ends in the result's own words (prototype-conventions rule
+ * 21): a clean success as a notification that closes itself, a warning or a failure as one that stays.
+ */
+export interface BackgroundOperationRequest {
+    id: string;
+    /** The window's running title: the notification's while the operation goes. */
+    title: string;
+    /** The window's success title: "Bodea Installed". */
+    doneTitle: string;
+    /** The window's failure title: "Couldn't Install Bodea". */
+    failedTitle: string;
+    /** The title the window ends on with a warning, when it is neither of those ("Some Updates Didn't Apply"). */
+    warnedTitle?: string;
 }

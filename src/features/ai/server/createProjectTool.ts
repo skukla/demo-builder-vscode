@@ -30,6 +30,7 @@ import * as path from 'path';
 import { z } from 'zod';
 import { getAdobeTarget, runWithAdobeTarget } from './adobeTargetStore';
 import { isOrgMismatchError, orgMismatchResult } from './adobeTools';
+import { untilAgentHearsBack } from './continueProjectCreationTool';
 import { resolvePackage } from './createProjectPackage';
 import { asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
@@ -57,13 +58,15 @@ import {
     isMeshRequired,
 } from '@/features/components/services/demoPackageLoader';
 import { projectRowOf } from '@/features/components/services/storefrontResolver';
+import { commerceBackendOf } from '@/features/data-installer/services/commerceBackend';
 import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { mapBackendToEnvironmentType } from '@/features/eds/services/storefrontConfigParams';
 import { probeStoreViewProducts } from '@/features/eds/services/storeViewProducts';
 import { cleanupFailedCreation } from '@/features/project-creation/handlers/creationFailureCleanup';
 import { projectNameProblem } from '@/features/project-creation/handlers/creationNameCheck';
-import { executeProjectCreation } from '@/features/project-creation/handlers/executor';
+import { runCreation } from '@/features/project-creation/handlers/creationRun';
+import { claimCreationStop, stepBoundary } from '@/features/project-creation/handlers/creationStop';
 import { creationPath } from '@/features/project-creation/handlers/executorPreflight';
 import { pickStorefrontDerived } from '@/features/project-creation/ui/steps/edsConfigFromStorefront';
 import {
@@ -71,12 +74,14 @@ import {
     type ProjectConfigSource,
 } from '@/features/project-creation/ui/wizard/wizardHelpers';
 import { NO_GUEST_PRODUCTS_WARNING, warnsOfNoProducts } from '@/types/commerceStore';
+import type { ProjectDatapack } from '@/types/datapack';
 import type { DemoPackage, Storefront } from '@/types/demoPackages';
-import type { HandlerContext } from '@/types/handlers';
-import type { AddedDemo } from '@/types/projectFile';
+import { ErrorCode } from '@/types/errorCodes';
+import type { HandlerContext, HandlerResponse } from '@/types/handlers';
+import type { AddedDemo, BundleImportResult, ImportedFrom } from '@/types/projectFile';
 import type { WizardState } from '@/types/webview';
 import type { StorefrontSetupCompletePayload } from '@/types/webviewPayloads';
-import type { StorefrontSetupStartPayload } from '@/types/webviewRequests';
+import type { ProjectCreationConfig, StorefrontSetupStartPayload } from '@/types/webviewRequests';
 
 /** Project a possibly-undefined org down to the lean `{ id, name }` surfaced on a mismatch. */
 function leanOrg(
@@ -96,7 +101,7 @@ function projectsDir(): string {
  * Until 2026-09-30 `accsEndpoint` reached only the storefront's `config.json`,
  * so an agent-created project had a Commerce store scope and no Commerce
  * endpoint — the REST tools, the mesh env and the admin link all read the
- * backend's config and found nothing (AB-53, project `justrite`).
+ * backend's config and found nothing (AB-53, project `tailspin`).
  */
 function backendEndpointConfig(
     stackId: string,
@@ -140,6 +145,31 @@ const NEEDS_ADOBE = {
     message:
         'Adobe sign-in required (this project deploys an API Mesh). Use get_auth_status, then sign_in(provider:"adobe", confirm:true).',
 };
+
+const NEEDS_ADOBE_ORG = {
+    needsAuth: 'adobe',
+    message:
+        'Adobe sign-in required (an ACCS project records its Adobe organization). Use get_auth_status, then sign_in(provider:"adobe", confirm:true).',
+};
+
+const NO_SESSION_ORG = {
+    error: 'An Adobe organization is required for an ACCS project. Select one first: select_org.',
+};
+
+/**
+ * The Adobe organization an ACCS project records, as the wizard records it at its Sign-in step.
+ * Only the MCP session's (`select_org`): the machine's last selection is whatever another window
+ * chose, and recording it is the fiction a mesh-free creation is kept from.
+ */
+async function requireAdobeOrg(ctx: HandlerContext): Promise<{ org: WizardState['adobeOrg'] } | { error: unknown }> {
+    const mgr = ctx.authManager;
+    if (!mgr || !(await mgr.isAuthenticated())) return { error: NEEDS_ADOBE_ORG };
+    const stored = getAdobeTarget();
+    if (!stored?.orgId) return { error: NO_SESSION_ORG };
+    return {
+        org: { id: stored.orgId, code: stored.orgCode ?? '', name: stored.orgName ?? '' } as WizardState['adobeOrg'],
+    };
+}
 
 /** Resolve current Adobe context, or a structured handoff/precondition error. */
 async function requireAdobeWorkspace(ctx: HandlerContext): Promise<
@@ -280,10 +310,14 @@ interface CreateArgs {
     stackId: string;
     demo?: AddedDemo;
     seed?: CreationSeed;
+    /** A demo bundle the project is made from (EDS-72): setup makes the repository from its files. */
+    importedFrom?: ImportedFrom;
     /** The store scope the caller chose, already checked by `parseStoreScope` (AI-11). */
     storeScope?: StoreScope;
     /** EDS: the repository and DA.live site already exist; use them as they are. */
     adoptExisting?: boolean;
+    /** EDS: the repository exists; reset it to the template, as the wizard's Reset to Template. */
+    resetExisting?: boolean;
     /** Added to a successful answer (what a file brought, what is still needed). */
     report?: Record<string, unknown>;
 }
@@ -291,21 +325,28 @@ interface CreateArgs {
 type AdobeContext = Exclude<Awaited<ReturnType<typeof requireAdobeWorkspace>>, { error: unknown }>;
 
 /**
- * The Adobe workspace the creation deploys into, when it deploys anything: a
- * mesh the package + stack requires, or the integrations a project file names.
- * A creation that deploys nothing needs no Adobe sign-in and gets none.
+ * The Adobe context a creation records. One that deploys (a mesh the package + stack requires, or
+ * the integrations a project file names) needs the workspace it deploys into. One on ACCS that
+ * deploys nothing still records its organization, as the wizard's Sign-in step does for every
+ * ACCS project (owner, 2026-11-04: `patch-canary-b2b` was made with none, and a Commerce write on
+ * it later had no credential). Anything else needs no Adobe sign-in and gets none.
  */
 async function adobeIfDeploying(
     ctx: HandlerContext,
     args: CreateArgs,
     pkg: DemoPackage,
-): Promise<{ adobe?: AdobeContext } | { error: unknown }> {
+): Promise<{ adobe?: Partial<AdobeContext> } | { error: unknown }> {
     const deploys =
         isMeshRequired(pkg, args.stackId) ||
         (args.seed?.selectedAppBuilderComponents?.length ?? 0) > 0;
-    if (!deploys) return {};
-    const resolved = await requireAdobeWorkspace(ctx);
-    return 'error' in resolved ? resolved : { adobe: resolved };
+    if (deploys) {
+        const resolved = await requireAdobeWorkspace(ctx);
+        return 'error' in resolved ? resolved : { adobe: resolved };
+    }
+    const backend = getStackById(args.stackId)?.backend;
+    if (commerceBackendOf({ componentSelections: { backend } }) !== 'accs') return {};
+    const org = await requireAdobeOrg(ctx);
+    return 'error' in org ? org : { adobe: { org: org.org } };
 }
 
 /** A file's settings under the call's own: a value the call states wins. */
@@ -342,6 +383,54 @@ function withSeed(state: ProjectConfigSource, seed: CreationSeed | undefined): P
     };
 }
 
+/** What only an Edge Delivery creation adds: its storefront, and the endpoint its backend records. */
+interface StorefrontPart {
+    accsEndpoint?: string;
+    edsConfig: ProjectConfigSource['edsConfig'];
+}
+
+/**
+ * The creation config, assembled once for both stacks through the wizard's own
+ * `buildProjectConfig`. Built here, not by hand in each path: two hand copies drifted
+ * once already (EDS-51 was a field one of them dropped), PL-104 fix 14.
+ *
+ * @param args - the creation's ids, row, seed and scope
+ * @param adobe - the Adobe context it records, when it needs one
+ * @param packages - the demo packages, for the config's package-derived fields
+ * @param storefront - Edge Delivery only: the storefront setup made
+ * @returns the config the creation run is handed
+ */
+async function creationConfig(
+    args: CreateArgs,
+    adobe: Partial<AdobeContext> | undefined,
+    packages: DemoPackage[],
+    storefront?: StorefrontPart,
+): Promise<ProjectCreationConfig> {
+    const state: ProjectConfigSource = {
+        projectName: args.projectName,
+        selectedPackage: args.pkgId,
+        selectedStack: args.stackId,
+        // Mesh ids ride selectedAppBuilderComponents (D3) — buildProjectConfig
+        // derives the wire's dependencies list from them.
+        selectedAppBuilderComponents: await getAutoSelectedOptionalDependencies(
+            args.pkgId,
+            args.stackId,
+            packages,
+        ),
+        demo: args.demo,
+        ...importedFromOf(args.importedFrom),
+        adobeOrg: adobe?.org,
+        adobeProject: adobe?.project,
+        adobeWorkspace: adobe?.workspace,
+        componentConfigs: backendEndpointConfig(args.stackId, storefront?.accsEndpoint, args.storeScope),
+        selectedAddons: [],
+        selectedBlockLibraries: [],
+        customBlockLibraries: [],
+        ...(storefront ? { edsConfig: storefront.edsConfig } : {}),
+    };
+    return buildProjectConfig(withSeed(state, args.seed), null, packages);
+}
+
 /** Headless (non-EDS) creation path. */
 
 async function createHeadless(
@@ -354,46 +443,30 @@ async function createHeadless(
     if ('error' in resolved) return asText(resolved.error);
     const { adobe } = resolved;
 
-    const wizardState: ProjectConfigSource = {
-        projectName: args.projectName,
-        selectedPackage: args.pkgId,
-        selectedStack: args.stackId,
-        // Mesh ids ride selectedAppBuilderComponents (D3) — buildProjectConfig
-        // derives the wire's dependencies list from them.
-        selectedAppBuilderComponents: await getAutoSelectedOptionalDependencies(
-            args.pkgId,
-            args.stackId,
-            packages,
-        ),
-        demo: args.demo,
-        adobeOrg: adobe?.org,
-        adobeProject: adobe?.project,
-        adobeWorkspace: adobe?.workspace,
-        componentConfigs: backendEndpointConfig(args.stackId, undefined, args.storeScope),
-        selectedAddons: [],
-        selectedBlockLibraries: [],
-        customBlockLibraries: [],
-    };
-
-    const config = buildProjectConfig(withSeed(wizardState, args.seed), null, packages);
-    try {
-        // Run creation under the stored session org context so any `aio` work
-        // targets the selected org/workspace via env (no global mutation).
-        await runWithAdobeTarget(() => executeProjectCreation(ctx, config));
-    } catch (err) {
-        // Undo what the failed creation built, as the wizard does (owner, 2026-10-16).
-        await cleanupFailedCreation(ctx, config);
-        if (isOrgMismatchError(err)) return orgMismatchResult(leanOrg(adobe?.org));
-        return asText({ created: false, error: err instanceof Error ? err.message : String(err) });
-    }
-    return asText({
-        created: true,
-        name: args.projectName,
-        path: path.join(projectsDir(), args.projectName),
-        // Not the block tools or sync_storefront: both need an Edge Delivery storefront.
-        hint: 'Operate on it by name with the project tools (get_project_status, start_demo, update_project_config, …).',
-        ...args.report,
-    });
+    const config = await creationConfig(args, adobe, packages);
+    const ended = (async () => {
+        try {
+            // Run creation under the stored session org context so any `aio` work
+            // targets the selected org/workspace via env (no global mutation). The
+            // wizard's run: its 30-minute limit and its stop (PL-104 fix 14).
+            await runWithAdobeTarget(() => runCreation(ctx, config));
+        } catch (err) {
+            // Undo what the failed creation built, as the wizard does (owner, 2026-10-16).
+            await cleanupFailedCreation(ctx, config);
+            if (isOrgMismatchError(err)) return orgMismatchResult(leanOrg(adobe?.org));
+            return asText({ created: false, error: err instanceof Error ? err.message : String(err) });
+        }
+        return asText({
+            created: true,
+            name: args.projectName,
+            path: path.join(projectsDir(), args.projectName),
+            // Not the block tools or sync_storefront: both need an Edge Delivery storefront.
+            hint: 'Operate on it by name with the project tools (get_project_status, start_demo, update_project_config, …).',
+            ...args.report,
+        });
+    })();
+    // A failed step pauses the run; the agent hears "paused" and answers (F307).
+    return untilAgentHearsBack(ctx, args.projectName, ended);
 }
 
 /** The part of a seed storefront setup reads, in the payload's own field names. */
@@ -411,7 +484,60 @@ function seededSetup(args: CreateArgs & { accsEndpoint?: string }): Record<strin
     };
 }
 
+/** A demo bundle's part of the setup config (EDS-72): setup makes the repository from its files. */
+function bundleSourceOf(importedFrom: ImportedFrom | undefined): { bundleSource?: { bundlePath: string } } {
+    return importedFrom ? { bundleSource: { bundlePath: importedFrom.bundlePath } } : {};
+}
+
+/** The import, for creation to record (EDS-72); nothing for any other project. */
+function importedFromOf(importedFrom: ImportedFrom | undefined): { importedFrom?: ImportedFrom } {
+    return importedFrom ? { importedFrom } : {};
+}
+
+/** What setup made from a bundle, for creation to record (EDS-72); nothing for any other project. */
+function bundleImportOf(made: BundleImportResult | undefined): { bundleImport?: BundleImportResult } {
+    return made ? { bundleImport: made } : {};
+}
+
+/**
+ * The answer when the run was stopped during storefront setup (F275): setup finished its
+ * running step, started no other, and removed what it made; `left` names what it could not.
+ */
+function stoppedDuringSetup(setupRes: HandlerResponse, events: CapturedEvent[]) {
+    const { left } = (setupRes.data ?? {}) as { left?: string[] };
+    return asText({
+        created: false,
+        stopped: true,
+        stage: 'storefront-setup',
+        message: setupRes.error ?? 'Storefront setup stopped.',
+        left: left ?? [],
+        phases: toPhaseTimeline(events),
+    });
+}
+
 /** EDS creation path: provision the storefront (captured), then create the project. */
+
+/**
+ * The wizard's repository choice, for an agent: a new repository; one used as it is
+ * (adoptExisting, with the site's content kept); or one reset to the template
+ * (resetExisting, with the site's content copied fresh, as the wizard's Reset to Template).
+ */
+function repoChoice(
+    args: { repoName?: string; daLiveSite?: string; adoptExisting?: boolean; resetExisting?: boolean },
+    githubOwner: string,
+): Pick<StorefrontSetupStartPayload['edsConfig'], 'repoMode' | 'existingRepo' | 'selectedSite' | 'resetToTemplate'> {
+    if (args.resetExisting) {
+        return { repoMode: 'existing', existingRepo: `${githubOwner}/${args.repoName}`, resetToTemplate: true };
+    }
+    if (args.adoptExisting) {
+        return {
+            repoMode: 'existing',
+            existingRepo: `${githubOwner}/${args.repoName}`,
+            selectedSite: { id: args.daLiveSite ?? '', name: args.daLiveSite ?? '' },
+        };
+    }
+    return { repoMode: 'new' };
+}
 async function createEds(
     ctx: HandlerContext,
     args: CreateArgs & {
@@ -420,6 +546,8 @@ async function createEds(
         daLiveOrg?: string;
         daLiveSite?: string;
         accsEndpoint?: string;
+        /** The run's stop (F275), held by `runProjectCreation` for setup and creation both. */
+        stopSignal?: AbortSignal;
     },
     pkg: DemoPackage,
     storefront: Storefront,
@@ -460,19 +588,15 @@ async function createEds(
         // The wizard's "use existing" choice for both: the repository is used as it
         // is (no reset to the template) and the site's content is not copied over
         // again, because a selected site with no reset keeps its content.
-        ...(args.adoptExisting
-            ? {
-                  repoMode: 'existing' as const,
-                  existingRepo: `${githubOwner}/${args.repoName}`,
-                  selectedSite: { id: args.daLiveSite, name: args.daLiveSite },
-              }
-            : { repoMode: 'new' as const }),
+        ...repoChoice(args, githubOwner),
         githubOwner,
         daLiveOrg: args.daLiveOrg,
         daLiveSite: args.daLiveSite,
         templateOwner: storefront.templateOwner,
         templateRepo: storefront.templateRepo,
         contentSource: storefront.contentSource,
+        // A demo bundle: the repository is made from its files, as the wizard's import does (EDS-72).
+        ...bundleSourceOf(args.importedFrom),
     };
 
     // Phase 1: storefront setup (repo + DA.live content + Helix), reusing the
@@ -500,8 +624,11 @@ async function createEds(
             // pages, exactly as the wizard sends it.
             demo: args.demo,
             edsConfig: edsConfigInput,
+            // Stopped, setup removes what it made; nobody here can answer a sign-in.
+            nobodyToAsk: true,
         }),
     );
+    if (setupRes.code === ErrorCode.CANCELLED) return stoppedDuringSetup(setupRes, events);
     if (!setupRes.success) {
         return asText({
             created: false,
@@ -528,24 +655,8 @@ async function createEds(
     const brokenLinks = complete.brokenLinks;
 
     // Phase 2: create the project, with preflight results threaded in.
-    const wizardState: ProjectConfigSource = {
-        projectName: args.projectName,
-        selectedPackage: args.pkgId,
-        selectedStack: args.stackId,
-        // Mesh ids ride selectedAppBuilderComponents (D3), same as createHeadless.
-        selectedAppBuilderComponents: await getAutoSelectedOptionalDependencies(
-            args.pkgId,
-            args.stackId,
-            packages,
-        ),
-        demo: args.demo,
-        adobeOrg: adobe?.org,
-        adobeProject: adobe?.project,
-        adobeWorkspace: adobe?.workspace,
-        componentConfigs: backendEndpointConfig(args.stackId, args.accsEndpoint, args.storeScope),
-        selectedAddons: [],
-        selectedBlockLibraries: [],
-        customBlockLibraries: [],
+    const config = await creationConfig(args, adobe, packages, {
+        accsEndpoint: args.accsEndpoint,
         edsConfig: {
             ...edsConfigInput,
             // Every field the storefront contributes, from the wizard's one list. A
@@ -561,39 +672,46 @@ async function createEds(
             installedBlockLibraries: complete.installedBlockLibraries,
             // Stamped on THIS project by creation, as the wizard does ("Needs reset").
             storefrontBuildComplete: complete.storefrontBuildComplete,
+            // An imported project's commit, recorded for Reset as the wizard does (EDS-72).
+            ...bundleImportOf(complete.bundleImport),
         },
-    };
-
-    const config = buildProjectConfig(withSeed(wizardState, args.seed), null, packages);
-    try {
-        await runWithAdobeTarget(() => executeProjectCreation(capturing, config));
-    } catch (err) {
-        // Undo what the failed creation built, as the wizard does (owner, 2026-10-16).
-        // The storefront it provisioned first stays, as it does in the wizard.
-        await cleanupFailedCreation(capturing, config);
-        if (isOrgMismatchError(err)) return orgMismatchResult(leanOrg(adobe?.org));
-        return asText({
-            created: false,
-            stage: 'project-creation',
-            error: err instanceof Error ? err.message : String(err),
-            phases: toPhaseTimeline(events),
-            rerunSafe: true,
-            hint:
-                'The storefront was provisioned but project finalization failed. Call create_project again ' +
-                'with adoptExisting:true, which uses the repository and site this run made.',
-        });
-    }
-
-    return asText({
-        created: true,
-        name: args.projectName,
-        path: path.join(projectsDir(), args.projectName),
-        repoUrl,
-        ...(caveats?.length ? { caveats } : {}),
-        phases: toPhaseTimeline(events),
-        hint: 'Operate on it by name (list_blocks, sync_storefront, …).',
-        ...args.report,
     });
+    const ended = (async () => {
+        try {
+            // The boundary between setup and creation: a stop that arrived after setup ended
+            // ends the run here, as a stopped creation (F275).
+            stepBoundary(args.stopSignal)();
+            await runWithAdobeTarget(() => runCreation(capturing, config));
+        } catch (err) {
+            // Undo what the failed creation built, as the wizard does (owner, 2026-10-16).
+            // The storefront it provisioned first stays, as it does in the wizard.
+            await cleanupFailedCreation(capturing, config);
+            if (isOrgMismatchError(err)) return orgMismatchResult(leanOrg(adobe?.org));
+            return asText({
+                created: false,
+                stage: 'project-creation',
+                error: err instanceof Error ? err.message : String(err),
+                phases: toPhaseTimeline(events),
+                rerunSafe: true,
+                hint:
+                    'The storefront was provisioned but project finalization failed. Call create_project again ' +
+                    'with adoptExisting:true, which uses the repository and site this run made.',
+            });
+        }
+
+        return asText({
+            created: true,
+            name: args.projectName,
+            path: path.join(projectsDir(), args.projectName),
+            repoUrl,
+            ...(caveats?.length ? { caveats } : {}),
+            phases: toPhaseTimeline(events),
+            hint: 'Operate on it by name (list_blocks, sync_storefront, …).',
+            ...args.report,
+        });
+    })();
+    // A failed step pauses the run; the agent hears "paused" and answers (F307).
+    return untilAgentHearsBack(capturing, args.projectName, ended);
 }
 
 /**
@@ -637,7 +755,11 @@ interface CreationRequest {
     storeScope?: StoreScope;
     /** EDS: the repository and DA.live site already exist; use them as they are. */
     adoptExisting?: boolean;
+    /** EDS: the repository exists; reset it to the template, as the wizard's Reset to Template. */
+    resetExisting?: boolean;
     seed?: CreationSeed;
+    /** A demo bundle the project is made from (EDS-72); Edge Delivery only. */
+    importedFrom?: ImportedFrom;
     report?: Record<string, unknown>;
 }
 
@@ -666,20 +788,32 @@ export async function runProjectCreation(ctx: HandlerContext, request: CreationR
     };
     // Listed as running for the whole run, storefront included, so the projects list
     // shows the tile from the start rather than once the project file appears (PL-82).
-    const result = await whileRunning(target, 'creating', () => resolveAndCreate(building, request));
-    // The agent goes on working on what it made: its next tools act on the new project.
-    if (ctx.agentWorkingProject && (await projectExistsAt(ctx, target))) ctx.agentWorkingProject.path = target;
-    return result;
+    // Stoppable for the whole run too: storefront setup and creation join this one stop,
+    // so cancel_project_creation reaches either (F275).
+    const stop = claimCreationStop(target);
+    try {
+        const result = await whileRunning(target, 'creating', () =>
+            resolveAndCreate(building, request, stop.signal),
+        );
+        // The agent goes on working on what it made: its next tools act on the new project.
+        if (ctx.agentWorkingProject && (await projectExistsAt(ctx, target))) ctx.agentWorkingProject.path = target;
+        return result;
+    } finally {
+        stop.release();
+    }
 }
 
 /** Is there a project at this folder now (its manifest loads)? */
 async function projectExistsAt(ctx: HandlerContext, folder: string): Promise<boolean> {
-    return (await ctx.stateManager.loadProjectFromPath(folder, undefined, { persistAfterLoad: false })) !== null;
+    return (await ctx.stateManager.loadProjectFromPath(folder)) !== null;
 }
 
 /** The run itself, once the name is known to be usable. */
-async function resolveAndCreate(ctx: HandlerContext, request: CreationRequest) {
+async function resolveAndCreate(ctx: HandlerContext, request: CreationRequest, stopSignal: AbortSignal) {
     const { pkgId, stackId, link, ...rest } = request;
+    if (rest.importedFrom && !stackId.startsWith('eds-')) {
+        return asText({ error: "A demo bundle's storefront is Edge Delivery, but its setup names a headless stack." });
+    }
     const resolved = await resolvePackage(ctx, { pkgId, stackId, link });
     if ('error' in resolved) return asText(resolved.error);
     const { pkg, storefront, packages, demo } = resolved;
@@ -689,11 +823,39 @@ async function resolveAndCreate(ctx: HandlerContext, request: CreationRequest) {
     const accsEndpoint = rest.accsEndpoint ?? demo?.configDefaults?.[ACCS_GRAPHQL_ENDPOINT];
     const warned = await storeViewWarnings(ctx, stackId, accsEndpoint, rest.storeScope);
     const report = warned ? { ...rest.report, ...warned } : rest.report;
-    const args = { ...rest, report, accsEndpoint, pkgId: pkg.id, stackId, demo: projectRowOf(demo) };
+    const args = { ...rest, report, accsEndpoint, pkgId: pkg.id, stackId, demo: projectRowOf(demo), stopSignal };
 
     return stackId.startsWith('eds-')
         ? createEds(ctx, args, pkg, storefront, packages)
         : createHeadless(ctx, args, pkg, packages);
+}
+
+/** An optional text input as the creation takes it: absent or empty is none. */
+function textOrNone(value: unknown): string | undefined {
+    return value ? String(value) : undefined;
+}
+
+/**
+ * The datapack an agent chose for its new project, checked as the wizard's step would
+ * hand it; and the repository choice, which may not both keep and wipe the repository.
+ */
+function datapackChoice(
+    raw: unknown,
+    adoptExisting?: boolean,
+    resetExisting?: boolean,
+): { datapack?: ProjectDatapack } | { error: string } {
+    if (adoptExisting === true && resetExisting === true) {
+        return {
+            error: 'Pass adoptExisting or resetExisting, not both: one keeps the repository as it is, the other wipes it.',
+        };
+    }
+    if (!raw) return {};
+    const { name, version, store } = raw as { name?: string; version?: string; store?: string };
+    if (!name || !version) return { error: 'datapack needs a name and a version, from find_datapacks.' };
+    if (store !== undefined && store !== 'library' && store !== 'installer') {
+        return { error: `datapack.store is library or installer, not ${store}.` };
+    }
+    return { datapack: { name, version, ...(store ? { store } : {}) } };
 }
 
 /**
@@ -712,7 +874,7 @@ export function registerCreateProjectTool(
             annotations: { readOnlyHint: false, destructiveHint: false },
             title: 'Create Project',
             description:
-                "Create a new Demo Builder project headlessly from a package + stack. The package is a shipped brand id, an added demo's id (added:owner/repo, from list_demo_packages), or a colleague's demo given as link (probed and added first). EDS stacks also provision a GitHub repo + DA.live content. storeScope sets the store codes at creation, as configure_project does. Can pause for the user mid-run (a new repo needs the AEM Code Sync GitHub App, which only they can install): they are prompted in VS Code and the call resumes by itself, up to 30 minutes — tell them, and do not retry while it runs. Requires confirm:true",
+                "Create a new Demo Builder project headlessly from a package + stack. The package is a shipped brand id, an added demo's id (added:owner/repo, from list_demo_packages), or a colleague's demo given as link (probed and added first). EDS stacks also provision a GitHub repo + DA.live content. storeScope sets the store codes at creation, as configure_project does. Can pause for the user mid-run (a new repo needs the AEM Code Sync GitHub App, which only they can install): they are prompted in VS Code and the call resumes by itself, up to 30 minutes — tell them, and do not retry while it runs. A step that fails pauses the creation: the call answers paused:true with the step, the reason and its answers, every step before it done. Fix the cause, then answer with continue_project_creation. An ACCS stack records the session's Adobe organization, as the wizard does: sign in and select_org first. Requires confirm:true",
             inputSchema: {
                 projectName: z.string().describe('Name for the new project'),
                 package: z
@@ -746,11 +908,27 @@ export function registerCreateProjectTool(
                     .describe(
                         'EDS only: the repo (githubOwner/repoName) and DA.live site (daLiveOrg/daLiveSite) already exist — use them as they are, code and content untouched, instead of creating them. For rebuilding a deleted project whose storefront survived.',
                     ),
+                resetExisting: z
+                    .boolean()
+                    .optional()
+                    .describe(
+                        "EDS only: the repo (githubOwner/repoName) already exists — wipe it and make it again from the demo's template, and copy the site's content fresh, as the wizard's Reset to Template does. Replaces all of the repo's code; confirm with the user.",
+                    ),
                 accsEndpoint: z
                     .string()
                     .optional()
                     .describe(
                         "EDS + ACCS only: Adobe Commerce Cloud GraphQL endpoint (default: an added demo's own, when its package names one)",
+                    ),
+                datapack: z
+                    .object({
+                        name: z.string().describe('Datapack name from find_datapacks'),
+                        version: z.string().describe('Its version from find_datapacks'),
+                        store: z.string().optional().describe('library or installer (default), as find_datapacks names it'),
+                    })
+                    .optional()
+                    .describe(
+                        "The datapack the new project installs into its store, as the wizard's Datapacks step chooses (default: none)",
                     ),
                 // The same input configure_project takes (AI-11), so the demo's codes
                 // need not be published first and corrected after.
@@ -776,6 +954,8 @@ export function registerCreateProjectTool(
             }
             const scope = parseStoreScope(stackId, args?.storeScope);
             if ('error' in scope) return asText(scope);
+            const datapack = datapackChoice(args?.datapack, args?.adoptExisting, args?.resetExisting);
+            if ('error' in datapack) return asText(datapack);
             if (args?.confirm !== true) {
                 return asText({
                     error: 'create_project requires confirm:true — it installs dependencies and, for EDS, creates a real GitHub repo + DA.live content. Ask the user to confirm.',
@@ -787,13 +967,15 @@ export function registerCreateProjectTool(
                 pkgId,
                 stackId,
                 link,
-                repoName: args.repoName ? String(args.repoName) : undefined,
-                githubOwner: args.githubOwner ? String(args.githubOwner) : undefined,
-                daLiveOrg: args.daLiveOrg ? String(args.daLiveOrg) : undefined,
-                daLiveSite: args.daLiveSite ? String(args.daLiveSite) : undefined,
-                accsEndpoint: args.accsEndpoint ? String(args.accsEndpoint) : undefined,
+                repoName: textOrNone(args.repoName),
+                githubOwner: textOrNone(args.githubOwner),
+                daLiveOrg: textOrNone(args.daLiveOrg),
+                daLiveSite: textOrNone(args.daLiveSite),
+                accsEndpoint: textOrNone(args.accsEndpoint),
                 storeScope: scope.storeScope,
                 ...(args.adoptExisting === true ? { adoptExisting: true } : {}),
+                ...(args.resetExisting === true ? { resetExisting: true } : {}),
+                ...(datapack.datapack ? { seed: { datapack: datapack.datapack } } : {}),
             });
         },
     );

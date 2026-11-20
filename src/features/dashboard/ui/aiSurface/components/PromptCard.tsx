@@ -126,9 +126,9 @@ function PromptKebab({
                     <Text>Duplicate</Text>
                 </Item>
                 {onCopy ? (
-                    <Item key="copy" textValue="Copy prompt">
+                    <Item key="copy" textValue="Copy Prompt">
                         {renderMenuIcon('copy')}
-                        <Text>Copy prompt</Text>
+                        <Text>Copy Prompt</Text>
                     </Item>
                 ) : null}
                 <Item key="delete" textValue="Delete">

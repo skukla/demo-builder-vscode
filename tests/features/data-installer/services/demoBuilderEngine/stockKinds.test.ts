@@ -20,7 +20,7 @@ import {
     parseStocks,
     removeSource,
     removeStock,
-    removeStockSourceLink,
+    removeStockSourceLinks,
 } from '@/features/data-installer/services/demoBuilderEngine/stockKinds';
 import { type SentCall, fakeContext } from './demoBuilderEngine.testUtils';
 
@@ -69,7 +69,7 @@ describe('installSources', () => {
         await installSources(ctx, parseSources({ sources: [{ source: BROADWAY }] }));
 
         expect(ctx.sent).toEqual([{ method: 'POST', path: 'inventory/sources', body: { source: BROADWAY } }]);
-        expect(ctx.recorder.created).toEqual([{ kind: SOURCE_KIND, id: 'carvelo_broadway' }]);
+        expect(ctx.recorder.created).toEqual([{ kind: SOURCE_KIND, id: 'carvelo_broadway', key: 'carvelo_broadway' }]);
     });
 
     it('leaves a source the store has and uses alone', async () => {
@@ -90,7 +90,7 @@ describe('installSources', () => {
         expect(ctx.sent).toEqual([
             { method: 'PUT', path: 'inventory/sources/carvelo_broadway', body: { source: { ...off, enabled: true } } },
         ]);
-        expect(ctx.recorder.created).toEqual([{ kind: SOURCE_KIND, id: 'carvelo_broadway', previous: { enabled: false } }]);
+        expect(ctx.recorder.created).toEqual([{ kind: SOURCE_KIND, id: 'carvelo_broadway', key: 'carvelo_broadway', previous: { enabled: false } }]);
     });
 });
 
@@ -111,7 +111,7 @@ describe('installStocks', () => {
             },
         ]);
         expect(ctx.recorder.created).toEqual([
-            { kind: STOCK_KIND, id: '7', previous: { websiteCode: 'base', stockId: 1 } },
+            { kind: STOCK_KIND, id: '7', key: 'Carvelo Inventory', previous: { websiteCode: 'base', stockId: 1 } },
         ]);
     });
 
@@ -134,7 +134,7 @@ describe('installStocks', () => {
         const ctx = await fakeContext(inventory({}), () => ({}));
         ctx.session.websiteCode = 'base';
 
-        await expect(installStocks(ctx, parseStocks(CARVELO))).rejects.toThrow(/did not answer the new stock Carvelo Inventory's id/);
+        await expect(installStocks(ctx, parseStocks(CARVELO))).rejects.toThrow(/did not return the new stock Carvelo Inventory's id/);
     });
 });
 
@@ -158,15 +158,18 @@ describe('installStockSourceLinks', () => {
                 body: { links: [{ stock_id: 7, source_code: 'carvelo_broadway', priority: 3 }] },
             },
         ]);
-        expect(ctx.recorder.created).toEqual([{ kind: LINK_KIND, id: '7/carvelo_broadway' }]);
+        // Keyed by the pack's name for it (the stock's name), as a reinstall looks it up; the id is what removal sends.
+        expect(ctx.recorder.created).toEqual([{ kind: LINK_KIND, id: '7/carvelo_broadway', key: 'Carvelo Inventory/carvelo_broadway' }]);
     });
 
-    it('fails on a stock the store does not have', async () => {
+    // Step 14 item 3: skipped and named, and the rest of the pack goes on.
+    it('skips a link to a stock the store does not have, naming it', async () => {
         const ctx = await fakeContext(inventory({}));
 
-        await expect(installStockSourceLinks(ctx, parseStockSourceLinks(LINKS_PACK))).rejects.toThrow(
-            'The store has no stock named Carvelo Inventory.',
-        );
+        await installStockSourceLinks(ctx, parseStockSourceLinks(LINKS_PACK));
+
+        expect(ctx.session.skipped?.map((r) => r.reason)).toContain('Commerce has no stock named Carvelo Inventory.');
+        expect(ctx.sent).toStrictEqual([]);
     });
 });
 
@@ -181,13 +184,18 @@ describe('removal', () => {
         ]);
     });
 
-    it('deletes a stock, then puts the website back on the stock it sold from', async () => {
+    const MADE = { stock_id: 7, name: 'Carvelo Inventory', extension_attributes: { sales_channels: [{ type: 'website', code: 'base' }] } };
+
+    // The service's StocksDeleteProcessor (L1-8, L181-227): a PUT with empty sales channels, then
+    // the DELETE, "required before delete when channels are assigned" (DEMOSYS-1532).
+    it('takes the website off the stock, deletes it, then puts the website back on the stock it sold from', async () => {
         const without = { ...DEFAULT_STOCK, extension_attributes: { sales_channels: [] } };
-        const ctx = await fakeContext({ 'inventory/stocks/1': without });
+        const ctx = await fakeContext({ 'inventory/stocks/7': MADE, 'inventory/stocks/1': without });
 
         await removeStock(ctx, { kind: STOCK_KIND, id: '7', previous: { websiteCode: 'base', stockId: 1 } });
 
         expect(ctx.sent).toEqual<SentCall[]>([
+            { method: 'PUT', path: 'inventory/stocks/7', body: { stock: { name: 'Carvelo Inventory', extension_attributes: { sales_channels: [] } } } },
             { method: 'DELETE', path: 'inventory/stocks/7', body: undefined },
             {
                 method: 'PUT',
@@ -197,16 +205,25 @@ describe('removal', () => {
         ]);
     });
 
-    it('leaves the earlier stock alone when it already sells to the website again', async () => {
-        const ctx = await fakeContext({ 'inventory/stocks/1': DEFAULT_STOCK });
+    it('sends nothing for a stock already gone, and still puts the website back', async () => {
+        const without = { ...DEFAULT_STOCK, extension_attributes: { sales_channels: [] } };
+        const ctx = await fakeContext({ 'inventory/stocks/1': without });
 
         await removeStock(ctx, { kind: STOCK_KIND, id: '7', previous: { websiteCode: 'base', stockId: 1 } });
 
-        expect(ctx.sent.map((c) => c.method)).toEqual(['DELETE']);
+        expect(ctx.sent.map((c) => `${c.method} ${c.path}`)).toEqual(['PUT inventory/stocks/1']);
+    });
+
+    it('leaves the earlier stock alone when it already sells to the website again', async () => {
+        const ctx = await fakeContext({ 'inventory/stocks/7': MADE, 'inventory/stocks/1': DEFAULT_STOCK });
+
+        await removeStock(ctx, { kind: STOCK_KIND, id: '7', previous: { websiteCode: 'base', stockId: 1 } });
+
+        expect(ctx.sent.map((c) => `${c.method} ${c.path}`)).toEqual(['PUT inventory/stocks/7', 'DELETE inventory/stocks/7']);
     });
 
     it('carries on when the earlier stock has since gone', async () => {
-        const ctx = await fakeContext({});
+        const ctx = await fakeContext({ 'inventory/stocks/7': MADE });
 
         await expect(
             removeStock(ctx, { kind: STOCK_KIND, id: '7', previous: { websiteCode: 'base', stockId: 4 } }),
@@ -216,7 +233,7 @@ describe('removal', () => {
     it('takes a link it made back out', async () => {
         const ctx = await fakeContext();
 
-        await removeStockSourceLink(ctx.send, '7/carvelo_broadway');
+        await removeStockSourceLinks(ctx.send, ['7/carvelo_broadway']);
 
         expect(ctx.sent).toEqual([
             { method: 'POST', path: 'inventory/stock-source-links-delete', body: { links: [{ stock_id: 7, source_code: 'carvelo_broadway' }] } },

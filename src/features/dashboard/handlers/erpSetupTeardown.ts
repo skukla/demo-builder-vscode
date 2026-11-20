@@ -6,7 +6,7 @@
  *
  * Why here and first: the undo of each lived on the integration's card, and the record of the
  * old values on its project entry, so removing the integration took both with it and left the
- * store with changes nothing could put back (Justrite, 2026-10-19: 139 tagged products, the
+ * store with changes nothing could put back (Tailspin, 2026-10-19: 139 tagged products, the
  * attribute on 12 sets and the preparation, all orphaned). It runs before the removal, while
  * the integration's Commerce access still stands. Reuses the undo each card action runs.
  *
@@ -108,6 +108,8 @@ async function undoPrepared({ context, project, id, commerce, report, out }: Tea
     if (rejected.length > 0) out.failed.push(`Some of the demo setup was not undone (${rejected.join('; ')}).`);
     const undone = outcome.reports.filter((step) => step.state === 'undone').length;
     if (undone > 0) out.done.push(`Undid ${plural(undone, 'demo setup step', 'demo setup steps')}.`);
+    // What an undo kept because it changed since (step 06), in the step's own one line.
+    out.done.push(...outcome.reports.flatMap((step) => (step.kept ? [step.kept] : [])));
 }
 
 /**

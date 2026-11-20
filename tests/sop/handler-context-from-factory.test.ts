@@ -53,6 +53,8 @@ const BUILDERS: Record<string, string> = {
     // The same shape for the storefront setup: wraps the run's context so each progress
     // push goes out as a numbered step (progress vocabulary slice 4, 2026-10-16).
     'storefrontSetupProgress.ts': 'deriver',
+    // Hands the removal the project it was asked about (a project reset can start from the list).
+    'removalChanges.ts': 'deriver',
 };
 
 /** Every .ts/.tsx file under src/. */

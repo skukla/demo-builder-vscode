@@ -41,6 +41,7 @@ import { replaceStoreScopePages, type StoreScopeReport } from './storeScopePages
 import { createStoreScopePagesDeps } from './storeScopePagesDeps';
 import { whileRunning } from '@/core/state/projectWorkRunning';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { checkCodeStep } from '@/features/dashboard/services/finishSetupChecks';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/types/state';
@@ -65,8 +66,11 @@ export interface RepublishContentParams {
     daLiveAuthService: DaLiveAuthService;
     /** GitHub token service for the Helix Admin API. */
     githubTokenService: GitHubTokenService;
-    /** Reads the storefront repository: whether it has the catalog-menu block (EDS-24). */
-    githubFiles: Pick<GitHubFileOperations, 'getFileContent'>;
+    /**
+     * Reads the storefront repository: whether it has the catalog-menu block (EDS-24), and the
+     * head commit and files the Finish Setup code step compares the live site against (PL-101).
+     */
+    githubFiles: Pick<GitHubFileOperations, 'getFileContent' | 'getLatestCommitSha'>;
     /**
      * Where each STEP is reported as it starts, and then what it is doing, as the line
      * under it (progress vocabulary slice 3, owner 2026-10-16). Every step is a name
@@ -100,6 +104,8 @@ export interface RepublishContentResult {
     catalogMenu?: string;
     /** After a store change: the one sentence on the new store's pages (EDS-44). */
     storePages?: string;
+    /** The same, one line each, which the success window lists (walk F212). */
+    storePageLines?: string[];
 }
 
 /** The clients this pipeline built, which the catalog's page steps reuse. */
@@ -208,7 +214,7 @@ async function replaceStorePages(
     params: RepublishContentParams,
     clients: PageClients,
     step: StoreScopeReport,
-): Promise<string> {
+): Promise<{ storePages: string; storePageLines: string[] }> {
     const { project, logger } = params;
     const deps = createStoreScopePagesDeps({
         project,
@@ -221,8 +227,27 @@ async function replaceStorePages(
         helixService: clients.helixService,
         daLiveSourceOps: clients.daLiveContentOps.sourceOps,
     });
-    const { sentence } = await replaceStoreScopePages(project, deps, step);
-    return sentence;
+    const { sentence, lines } = await replaceStoreScopePages(project, deps, step);
+    return { storePages: sentence, storePageLines: lines };
+}
+
+/**
+ * After a republish that succeeded: check the project's Finish Setup step "Republish the Code",
+ * so it turns done when the site now serves its files (PL-101). Here, not at each door, so the
+ * button and the agent's `republish` both leave the step as the site is (PL-104 fix 10). Nothing
+ * when the project has no such step; never throws, because the republish has succeeded whatever
+ * this finds.
+ */
+async function recheckCodeStep(params: RepublishContentParams): Promise<void> {
+    const { project, githubFiles, persist, logger } = params;
+    try {
+        const checked = await checkCodeStep(project, githubFiles);
+        if (!checked) return;
+        project.finishSetup = checked.finishSetup;
+        await persist(project);
+    } catch (error) {
+        logger.warn(`[Republish] Could not check the code step: ${(error as Error).message}`);
+    }
 }
 
 /**
@@ -285,6 +310,9 @@ async function runRepublish(params: RepublishContentParams): Promise<RepublishCo
             logger,
             onProgress: (line) => step(S.publishingSettings.label, line),
             persist,
+            // Both doors of the full republish check the DA.live session before it starts:
+            // the button asks, the agent's tool refuses without one.
+            ensureDaLiveSession: null,
         });
         if (!configResult.success) {
             logger.warn(`[Republish] Config regeneration warning: ${configResult.error}`);
@@ -333,12 +361,13 @@ async function runRepublish(params: RepublishContentParams): Promise<RepublishCo
         const storeChanged =
             hasCatalogPagesPending(project) && configResult.success && !configResult.cdnError;
         const sentences = storeChanged
-            ? { storePages: await replaceStorePages(params, clients, step) }
+            ? await replaceStorePages(params, clients, step)
             : await refreshCatalogPages(params, clients, step, catalogMenuSite, overlayUrl);
 
         // Step 6: Verify config.json on the CDN (best-effort).
         step(S.checkingSettings.label);
         const cdnVerified = await verifyConfigOnCdn(repoOwner, repoName, logger);
+        await recheckCodeStep(params);
         return { success: true, cdnVerified, ...sentences };
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

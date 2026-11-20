@@ -1,0 +1,29 @@
+# dev-pipeline manifest. Read by the dev-pipeline plugin's freshness hook.
+# Each periodic step updates its own `last` date when it runs; do not edit by hand.
+rptc_version: 4.3.0
+checks: [npm run gate]
+artifact_dir: .rptc
+records_dir: .rptc/dream
+on_demand_plugins: [tech-case-engine]
+standards: [CLAUDE.md#what-this-extension-never-compromises-on, CLAUDE.md#words-on-screen]
+periodic:
+  reflect:        { budget: 3 releases or 30 days, last: 2026-11-16 }
+  codebase-sweep: { budget: 3 releases, last: 2026-11-16 }
+repo_hooks: .githooks
+backlog:
+  commit_trailer: required
+  areas: [ai, eds, app-builder, data-installer, prerequisites, platform]
+  layers: [A, B, C, D, E, F, G]
+  record_dirs: [.rptc/plans, .rptc/complete]
+  record_check: "bash .claude/skills/rptc-hygiene-scan/scan.sh | grep -E '^\s+(DEAD|UNINDEXED)' || true"
+  claim_files: ["src/*.ts", "src/*.tsx", "src/*/templates/*.md"]
+neighbours:
+  message: { key: "\b(?:request|postMessage|sendMessage|send|onMessage|invoke)(?:<[^()]*?>)?\(\s*'([a-z][A-Za-z0-9]*(?:-[a-z0-9]+)*)(?=')", from: "src/**/*.ts*", in: "src/**", min: 150 }
+  component-id: { json: "src/features/components/config/components.json#frontends,backends,mesh,integrations,addons,tools,services", in: "src/**", min: 10 }
+  ai-gate: { key: "export function (\w+)", from: "src/features/project-creation/services/aiBundle/aiToolingGate.ts", in: "src/**", min: 4 }
+tools:
+  compile: { run: npm run compile, about: "Build the extension and its webview bundles (the esbuild production build)" }
+  ledger: { run: python3 scripts/ledger.py, about: "List, check, add, remove or move rows of the mutation, errors and progress ledgers, keeping each file's format; --dry-run previews" }
+# Paused by the owner 2026-11-16: since 11-09 automatic reflect put 258 proposals on the ledger
+# (about 32 a day, many duplicates), more than anyone can answer. By-hand reflect is unaffected.
+auto_reflect: { enabled: false }

@@ -30,6 +30,7 @@
 
 import type { GitHubFileOperations } from './github/githubFileOperations';
 import type { GitHubTreeInput } from './types';
+import { refOfSource } from '@/core/releases/componentRelease';
 import inspectorOverrides from '@/features/eds/config/inspector-rules.json';
 import type { Logger } from '@/types/logger';
 
@@ -83,9 +84,10 @@ async function vendorSdkTreeEntries(
     githubFileOps: GitHubFileOperations,
     logger: Logger,
 ): Promise<GitHubTreeInput[]> {
-    const { owner, repo, branch, srcDir, destDir } = SDK_SOURCE;
+    const { owner, repo, srcDir, destDir } = SDK_SOURCE;
 
-    const allFiles = await githubFileOps.listRepoFiles(owner, repo, branch);
+    const { ref } = await refOfSource(SDK_SOURCE, logger);
+    const allFiles = await githubFileOps.listRepoFiles(owner, repo, ref);
 
     const sdkFiles = allFiles.filter(
         entry => entry.path.startsWith(`${srcDir}/`) && entry.path.endsWith('.js'),

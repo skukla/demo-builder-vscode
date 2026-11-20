@@ -20,6 +20,7 @@
 
 import { isStaleShaFailure, type GitHubFileOperations } from './github/githubFileOperations';
 import { replaceMarkedBlock } from './pdp/pdp404Snippet';
+import { refOfSource } from '@/core/releases/componentRelease';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { BrandAssetsConfig } from '@/types/demoPackages';
 import type { Logger } from '@/types/logger';
@@ -52,6 +53,8 @@ interface PublishContext {
     repoOwner: string;
     repoName: string;
     logger: Logger;
+    /** The ref of the source repo every file is read at: one version for the whole run. */
+    sourceRef: string;
 }
 
 /**
@@ -151,12 +154,13 @@ export function failedTargets(result: BrandAssetsPublishResult): BrandAssetResul
     return allTargets(result).filter((target) => !isCurrent(target));
 }
 
-/** Fetch one source file raw at branch HEAD. Throws on HTTP or network failure. */
+/** Fetch one source file raw at `ref`. Throws on HTTP or network failure. */
 async function fetchSourceFile(
     source: BrandAssetsConfig['source'],
     fromPath: string,
+    ref: string,
 ): Promise<string> {
-    const url = `https://raw.githubusercontent.com/${source.owner}/${source.repo}/${source.branch}/${fromPath}`;
+    const url = `https://raw.githubusercontent.com/${source.owner}/${source.repo}/${ref}/${fromPath}`;
     const response = await fetch(url, {
         signal: AbortSignal.timeout(TIMEOUTS.PREREQUISITE_CHECK),
     });
@@ -231,7 +235,7 @@ async function publishOneFile(
         return { path: file.to, installed: false, reason };
     }
     try {
-        const sourceContent = await fetchSourceFile(config.source, file.from);
+        const sourceContent = await fetchSourceFile(config.source, file.from, context.sourceRef);
         return await syncFile(
             context,
             {
@@ -316,7 +320,9 @@ export async function publishBrandAssets(
     repoName: string,
     logger: Logger,
 ): Promise<BrandAssetsPublishResult> {
-    const context: PublishContext = { githubFileOps, repoOwner, repoName, logger };
+    // Brand assets in a repository the builder owns are read at its newest release.
+    const { ref: sourceRef } = await refOfSource(config.source, logger);
+    const context: PublishContext = { githubFileOps, repoOwner, repoName, logger, sourceRef };
 
     const files: BrandAssetResult[] = [];
     for (const file of config.files) {

@@ -25,10 +25,11 @@ import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
 jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: { PREREQUISITE_CHECK: 15000 },
+    TIMEOUTS: { PREREQUISITE_CHECK: 15000, QUICK: 5000 },
 }));
 
 const SOURCE = { owner: 'skukla', repo: 'eds-demo-patches', path: 'b2b' };
+const FOREIGN = { owner: 'someone', repo: 'their-patches', path: 'b2b' };
 const LEDGER = { patches: [{ id: 'x', target: 'scripts/a.js' }] };
 
 function makeLogger(): Logger {
@@ -36,8 +37,12 @@ function makeLogger(): Logger {
 }
 
 /** Route by URL so each test reads as a scenario rather than a call sequence. */
-function routeFetch(opts: { releaseTag?: string; releaseStatus?: number }) {
+function routeFetch(opts: { releaseTag?: string; releaseStatus?: number; webTag?: string }) {
     return jest.fn().mockImplementation((url: string) => {
+        if (url.startsWith('https://github.com/')) {
+            const location = opts.webTag ? `https://github.com/x/y/releases/tag/${opts.webTag}` : null;
+            return Promise.resolve({ status: 302, headers: { get: () => location } });
+        }
         if (url.includes('api.github.com')) {
             const status = opts.releaseStatus ?? (opts.releaseTag ? 200 : 404);
             return Promise.resolve({
@@ -73,25 +78,37 @@ describe('fetchExternalPatches — release pinning', () => {
         );
     });
 
-    it('falls back to main when the repo has no published release', async () => {
-        const mock = routeFetch({});
+    // A push to a repository the builder owns reaches nobody until it is released. Falling back to
+    // main would hand an unreleased commit to any storefront whose lookup failed.
+    it('never reads main of a repository the builder owns', async () => {
+        const mock = routeFetch({ releaseStatus: 403 });
+        global.fetch = mock;
+
+        await expect(
+            fetchExternalPatches(SOURCE, 'code-patches.json', makeLogger())
+        ).rejects.toThrow(/release/i);
+
+        expect(contentUrls(mock)).toStrictEqual([]);
+    });
+
+    it('reads the web redirect when the API refuses, as a rate limit does', async () => {
+        const mock = routeFetch({ releaseStatus: 403, webTag: 'v1.1.5' });
         global.fetch = mock;
 
         await fetchExternalPatches(SOURCE, 'code-patches.json', makeLogger());
 
-        expect(contentUrls(mock)[0]).toBe(
-            'https://raw.githubusercontent.com/skukla/eds-demo-patches/main/b2b/code-patches.json'
-        );
+        expect(contentUrls(mock)[0]).toContain('/v1.1.5/b2b/');
     });
 
-    it('warns when falling back, so an unpinned channel is visible', async () => {
-        global.fetch = routeFetch({});
+    it('a repository someone else owns still reads main, and warns', async () => {
+        const mock = routeFetch({});
+        global.fetch = mock;
         const logger = makeLogger();
 
-        await fetchExternalPatches(SOURCE, 'code-patches.json', logger);
+        await fetchExternalPatches(FOREIGN, 'code-patches.json', logger);
 
+        expect(contentUrls(mock)[0]).toContain('/someone/their-patches/main/');
         const warned = (logger.warn as jest.Mock).mock.calls.map((c) => String(c[0])).join('\n');
-        expect(warned).toMatch(/release/i);
         expect(warned).toMatch(/main/);
     });
 
@@ -123,12 +140,12 @@ describe('fetchExternalPatches — release pinning', () => {
             return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(LEDGER) });
         });
         global.fetch = failing;
-        await fetchExternalPatches(SOURCE, 'code-patches.json', makeLogger());
+        await fetchExternalPatches(FOREIGN, 'code-patches.json', makeLogger());
 
         _clearExternalPatchCacheForTests.call(null); // clear only the ledger cache path
         const recovered = routeFetch({ releaseTag: 'v2.0.0' });
         global.fetch = recovered;
-        await fetchExternalPatches(SOURCE, 'code-patches.json', makeLogger());
+        await fetchExternalPatches(FOREIGN, 'code-patches.json', makeLogger());
 
         expect(contentUrls(recovered)[0]).toContain('/v2.0.0/');
     });
@@ -149,7 +166,7 @@ describe('fetchExternalPatches — release pinning', () => {
         );
         global.fetch = mock;
 
-        await fetchExternalPatches(SOURCE, 'code-patches.json', makeLogger());
+        await fetchExternalPatches(FOREIGN, 'code-patches.json', makeLogger());
 
         expect(contentUrls(mock)[0]).toContain('/main/');
     });

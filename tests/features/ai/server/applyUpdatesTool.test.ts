@@ -33,12 +33,31 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 import { callRequestsConsent } from '@/features/ai/server/inExtensionMcpServer';
+import { emptyResult, type ApplyUpdatesResult } from '@/features/updates/services/updateApplyResult';
 
 const computeMock = computeProjectUpdateSelections as jest.Mock;
 const applyMock = applyUpdatesHeadless as jest.Mock;
 const countMock = countSelections as jest.Mock;
 
-const EMPTY = { forkSync: [], template: [], boilerplate: [], finish: [], component: [], adobeMcp: [], blockLibrary: [], blockLibraryInstall: [], inspector: [], integration: [] };
+/** A whole apply result, typed to the real one: every category the tool reads is there. */
+function applyResult(overrides: Partial<ApplyUpdatesResult> = {}): ApplyUpdatesResult {
+    return {
+        forkSync: emptyResult(),
+        template: emptyResult(),
+        boilerplate: emptyResult(),
+        finish: emptyResult(),
+        component: emptyResult(),
+        adobeMcp: emptyResult(),
+        addon: emptyResult(),
+        blockLibraryInstall: emptyResult(),
+        integration: emptyResult(),
+        totalApplied: 0,
+        totalFailed: 0,
+        ...overrides,
+    };
+}
+
+const EMPTY = { forkSync: [], template: [], boilerplate: [], finish: [], component: [], adobeMcp: [], blockLibrary: [], blockLibraryInstall: [], integration: [] };
 
 function fakeServer() {
 
@@ -87,15 +106,9 @@ describe('apply_updates', () => {
         getCurrentProject.mockResolvedValue({ name: 'p', path: '/p', status: 'stopped' });
         computeMock.mockResolvedValue({ ...EMPTY, component: [{ componentId: 'mesh', latestVersion: '2.0.0' }] });
         countMock.mockReturnValue(1);
-        applyMock.mockResolvedValue({
-            forkSync: { successCount: 0, failCount: 0, errors: [] },
-            template: { successCount: 0, failCount: 0, errors: [] },
-            component: { successCount: 1, failCount: 0, errors: [] },
-            adobeMcp: { successCount: 0, failCount: 0, errors: [] },
-            addon: { successCount: 0, failCount: 0, errors: [] },
-            totalApplied: 1,
-            totalFailed: 0,
-        });
+        applyMock.mockResolvedValue(
+            applyResult({ component: { successCount: 1, failCount: 0, errors: [] }, totalApplied: 1 }),
+        );
     });
 
     it('raises the consent dialog when it is told to apply (EDS-51)', () => {
@@ -170,10 +183,9 @@ describe('apply_updates', () => {
             adobeMcp: [{ packageName: '@adobe/aem-mcp', latestVersion: '3.1.0' }],
             blockLibrary: [{ library: { name: 'Bodea blocks' } }],
             blockLibraryInstall: [{ library: { name: 'Demo Builder Blocks' } }],
-            inspector: [{ y: 1 }],
-            integration: [{ label: 'ERP Integration and Justrite ERP', otherOrg: false }],
+            integration: [{ label: 'ERP Integration and Tailspin ERP', otherOrg: false }],
         });
-        countMock.mockReturnValueOnce(9);
+        countMock.mockReturnValueOnce(8);
         const s = fakeServer();
         registerApplyUpdatesTool(s, ctxFactory);
 
@@ -182,6 +194,7 @@ describe('apply_updates', () => {
         expect(res.summary).toStrictEqual({
             forkSync: ['skukla/a-store'],
             template: 2,
+            templateSourceReset: 0,
             // A colleague's storefront's Adobe half: from its base to the tested version (EDS-56).
             boilerplate: ['adobe-commerce/boilerplate-b2b-template 71a67e0 → 48bed04'],
             // A clash kept to fix with AI, waiting to be finished (EDS-57).
@@ -191,9 +204,8 @@ describe('apply_updates', () => {
             blockLibrary: ['Bodea blocks'],
             // Reads as an INSTALL, not an update (EDS-28).
             blockLibraryInstall: ['Demo Builder Blocks: install'],
-            inspector: 1,
             // The pair by name (AB-73); an other-org pair carries the open-the-project note.
-            integration: ['ERP Integration and Justrite ERP'],
+            integration: ['ERP Integration and Tailspin ERP'],
         });
     });
 
@@ -204,12 +216,7 @@ describe('apply_updates', () => {
             errors: [],
             installed: ['Added 1 block from Demo Builder Blocks to test-storefront.'],
         };
-        applyMock.mockResolvedValueOnce({
-            forkSync: {}, template: {}, component: {}, adobeMcp: {}, addon: {},
-            blockLibraryInstall: installResult,
-            totalApplied: 1,
-            totalFailed: 0,
-        });
+        applyMock.mockResolvedValueOnce(applyResult({ blockLibraryInstall: installResult, totalApplied: 1 }));
         const s = fakeServer();
         registerApplyUpdatesTool(s, ctxFactory);
 
@@ -221,12 +228,7 @@ describe('apply_updates', () => {
 
     it("says in its description that a colleague's storefront can get the tested Adobe boilerplate, and reports it", async () => {
         const boilerplate = { successCount: 1, failCount: 0, errors: [] };
-        applyMock.mockResolvedValueOnce({
-            forkSync: {}, template: {}, boilerplate, component: {}, adobeMcp: {}, addon: {}, blockLibraryInstall: {},
-            integration: {},
-            totalApplied: 1,
-            totalFailed: 0,
-        });
+        applyMock.mockResolvedValueOnce(applyResult({ boilerplate, totalApplied: 1 }));
         const s = fakeServer();
         registerApplyUpdatesTool(s, ctxFactory);
 
@@ -234,6 +236,69 @@ describe('apply_updates', () => {
         const res = await s.call({ confirm: true });
 
         expect(res.categories.boilerplate).toStrictEqual(boilerplate);
+    });
+
+    // A colleague's demo reset since it was last taken replaces the storefront (owner, 2026-11-03).
+    it.each([
+        [undefined, 0],
+        [true, 1],
+    ])('leaves out a reset source unless includeSourceReset is %s', async (includeSourceReset, applied) => {
+        const reset = { project: { name: 'p' }, sourceReset: true };
+        computeMock.mockResolvedValue({ ...EMPTY, template: [reset] });
+        const s = fakeServer();
+        registerApplyUpdatesTool(s, ctxFactory);
+
+        expect((await s.call({})).summary).toMatchObject({ template: 1, templateSourceReset: 1 });
+        await s.call({ confirm: true, ...(includeSourceReset ? { includeSourceReset } : {}) });
+
+        expect(applyMock.mock.calls.at(-1)[0].template).toHaveLength(applied);
+    });
+
+    // Tailspin, 2026-10-30: the boilerplate update stopped on a clash, the answer led with
+    // counts, and the agent calling it read the run as done.
+    it('puts a stopped update FIRST, with the files, whose edit each holds, and that nothing was pushed', async () => {
+        const boilerplate = {
+            successCount: 0,
+            failCount: 1,
+            errors: ['Tailspin (Adobe boilerplate): The update stopped on 1 file that was edited (…).'],
+            clashes: [{
+                project: 'Tailspin',
+                projectName: 'tailspin',
+                track: 'boilerplate' as const,
+                files: ['blocks/header/header.js'],
+                edits: [{ file: 'blocks/header/header.js', whose: 'copied-demo' as const, from: 'org-e/tailspin' }],
+            }],
+        };
+        applyMock.mockResolvedValueOnce(applyResult({ boilerplate, totalFailed: 1 }));
+        const s = fakeServer();
+        registerApplyUpdatesTool(s, ctxFactory);
+
+        const res = await s.call({ confirm: true });
+
+        expect(Object.keys(res).slice(0, 2)).toEqual(['stopped', 'message']);
+        expect(res.stopped).toStrictEqual([{
+            project: 'Tailspin',
+            projectName: 'tailspin',
+            update: 'Adobe boilerplate',
+            files: ['blocks/header/header.js'],
+            edits: [{ file: 'blocks/header/header.js', whose: 'copied-demo', from: 'org-e/tailspin' }],
+            pushed: false,
+        }]);
+        expect(res.message).toBe(
+            '1 storefront update did NOT apply and changed nothing on GitHub. Tailspin (Adobe boilerplate) stopped on '
+                + 'blocks/header/header.js, an edit that came with org-e/tailspin.',
+        );
+        expect(s.definition().description).toMatch(/top-level stopped/);
+    });
+
+    it('says nothing about stopping when nothing stopped', async () => {
+        const s = fakeServer();
+        registerApplyUpdatesTool(s, ctxFactory);
+
+        const res = await s.call({ confirm: true });
+
+        expect(res).not.toHaveProperty('stopped');
+        expect(res).not.toHaveProperty('message');
     });
 
     it('refuses to apply while the demo is running', async () => {
@@ -328,15 +393,7 @@ describe('apply_updates', () => {
             report(S.syncingSourceRepos.label, 'me/a');
             report(S.syncingSourceRepos.label, 'me/b');
             report(S.updatingComponents.label, 'mesh in demo');
-            return {
-                forkSync: { successCount: 0, failCount: 0, errors: [] },
-                template: { successCount: 0, failCount: 0, errors: [] },
-                component: { successCount: 1, failCount: 0, errors: [] },
-                adobeMcp: { successCount: 0, failCount: 0, errors: [] },
-                addon: { successCount: 0, failCount: 0, errors: [] },
-                totalApplied: 1,
-                totalFailed: 0,
-            };
+            return applyResult({ component: { successCount: 1, failCount: 0, errors: [] }, totalApplied: 1 });
         });
         const s = fakeServer();
         registerApplyUpdatesTool(s, ctxFactory);
@@ -365,10 +422,10 @@ describe('apply_updates — integrations', () => {
     });
 
     const pair = (otherOrg: boolean) => ({
-        project: { name: 'Justrite', path: '/p' },
+        project: { name: 'Tailspin', path: '/p' },
         componentId: 'demo-erp',
         members: ['demo-erp'],
-        label: 'ERP Integration and Justrite ERP',
+        label: 'ERP Integration and Tailspin ERP',
         otherOrg,
     });
 
@@ -388,8 +445,8 @@ describe('apply_updates — integrations', () => {
         const res = await s.call({});
 
         expect(res.summary.integration).toStrictEqual([
-            'ERP Integration and Justrite ERP',
-            'ERP Integration and Justrite ERP (uses a different Adobe organization: open that project and update it from its Integrations screen)',
+            'ERP Integration and Tailspin ERP',
+            'ERP Integration and Tailspin ERP (uses a different Adobe organization: open that project and update it from its Integrations screen)',
         ]);
         expect(applyMock).not.toHaveBeenCalled();
         // The boundary binds the probe (the check and the guard chain's org step);
@@ -403,12 +460,7 @@ describe('apply_updates — integrations', () => {
 
     it('with confirm, hands the apply a context that can run the pair update, and reports the category', async () => {
         const integration = { successCount: 1, failCount: 0, errors: [], applied: ['Updated from a to b.'] };
-        applyMock.mockResolvedValueOnce({
-            forkSync: {}, template: {}, component: {}, adobeMcp: {}, addon: {}, blockLibraryInstall: {},
-            integration,
-            totalApplied: 1,
-            totalFailed: 0,
-        });
+        applyMock.mockResolvedValueOnce(applyResult({ integration, totalApplied: 1 }));
         const s = fakeServer();
         registerApplyUpdatesTool(s, ctxFactory);
 
@@ -424,7 +476,7 @@ describe('apply_updates — integrations', () => {
         const pairUpdate = updateIntegrationPairFor as jest.Mock;
         const outcome = { success: true, message: 'Updated from a to b.' };
         pairUpdate.mockResolvedValueOnce(outcome);
-        applyMock.mockResolvedValueOnce({ totalApplied: 0, totalFailed: 0 });
+        applyMock.mockResolvedValueOnce(applyResult());
         const ctx = ctxFactory();
         const s = fakeServer();
         registerApplyUpdatesTool(s, () => ctx);
@@ -432,7 +484,7 @@ describe('apply_updates — integrations', () => {
         const handed = applyMock.mock.calls[0][1] as {
             updateIntegrationPair: (project: unknown, id: string, report: unknown) => Promise<unknown>;
         };
-        const project = { name: 'Justrite', path: '/p' };
+        const project = { name: 'Tailspin', path: '/p' };
         const report = jest.fn();
 
         const result = await handed.updateIntegrationPair(project, 'demo-erp', report);

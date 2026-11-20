@@ -29,7 +29,13 @@
  */
 
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { installSiteFetch } from '../../../helpers/siteFetchFake';
 import type { EdsPipelineParams, EdsPipelineServices } from '@/features/eds/services/edsPipeline';
+
+// The pipeline probes the published site for missing pages. Without this, that goes to aem.live.
+beforeEach(() => {
+    installSiteFetch([]);
+});
 
 export { executeEdsPipeline } from '@/features/eds/services/edsPipeline';
 export type { EdsPipelineParams, EdsPipelineServices };

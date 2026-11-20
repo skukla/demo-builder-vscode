@@ -9,7 +9,7 @@ import { mockPostMessage } from '../../../../helpers/webviewClientMock';
 import { CATALOG, modalProps, renderAdapter, resetCaptured } from './AddIntegrationFlowAdapter.testUtils';
 import type { AppBuilderComponentCatalogEntry, SetupStep } from '@/types/appBuilderComponents';
 
-const FIX_STEP: SetupStep = { id: 'price-scope', title: 'Prices', why: 'w', where: 'Admin', fix: { kind: 'config', items: [] } };
+const FIX_STEP: SetupStep = { id: 'price-scope', title: 'Prices', why: 'w', where: 'Admin', setup: { kind: 'config', items: [] } };
 const ERP_INTEGRATION: AppBuilderComponentCatalogEntry = {
     id: 'erp-integration',
     name: 'ERP Integration',
@@ -31,14 +31,14 @@ describe('AddIntegrationFlowAdapter — the add that prepares the store', () => 
         const onConfirmAdd = jest.fn();
         renderAdapter({ catalog: [...CATALOG, ERP_INTEGRATION], onAddStarted, onConfirmAdd });
 
-        modalProps().builder.onAppBuilderComponentToggle('erp-integration', true, 'Justrite ERP');
+        modalProps().builder.onAppBuilderComponentToggle('erp-integration', true, 'Tailspin ERP');
 
         expect(mockPostMessage).not.toHaveBeenCalled();
         expect(onAddStarted).not.toHaveBeenCalled();
         expect(onConfirmAdd).toHaveBeenCalledWith({
             id: 'erp-integration',
-            name: 'Justrite ERP',
-            payload: { id: 'erp-integration', apis: undefined, name: 'Justrite ERP' },
+            name: 'Tailspin ERP',
+            payload: { id: 'erp-integration', apis: undefined, name: 'Tailspin ERP' },
         });
     });
 

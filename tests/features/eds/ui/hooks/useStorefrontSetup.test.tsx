@@ -265,8 +265,8 @@ describe('Retry', () => {
 });
 
 describe('closing the wizard', () => {
-    it('cancels a running setup with what it created and the latest DA.live site', () => {
-        const { rerender, unmount } = renderRun();
+    it('cancels a running setup with what it saw created (the run removes what it made, F275)', () => {
+        const { unmount } = renderRun();
         pushProgress({
             phase: 'repository',
             message: 'Repository ready',
@@ -275,8 +275,6 @@ describe('closing the wizard', () => {
             repoOwner: 'test-owner',
             repoName: 'test-repo',
         });
-        rerender({ state: wizardState({ edsConfig: { ...EDS, daLiveSite: 'later-site' } }) });
-
         unmount();
 
         expect(posted<StorefrontSetupCancelPayload>('storefront-setup-cancel')).toStrictEqual([
@@ -289,7 +287,6 @@ describe('closing the wizard', () => {
                     repoOwner: 'test-owner',
                     repoName: 'test-repo',
                 },
-                edsConfig: { daLiveOrg: 'test-org', daLiveSite: 'later-site' },
             },
         ]);
     });
@@ -304,7 +301,6 @@ describe('closing the wizard', () => {
         unmount();
 
         const [cancel] = posted<StorefrontSetupCancelPayload>('storefront-setup-cancel');
-        expect(cancel.edsConfig).toStrictEqual({ daLiveOrg: undefined, daLiveSite: undefined });
         expect(cancel.partialState?.phase).toBe('repository');
     });
 

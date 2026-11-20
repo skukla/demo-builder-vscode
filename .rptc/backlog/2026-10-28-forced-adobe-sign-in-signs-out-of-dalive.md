@@ -4,7 +4,7 @@ kind: fix
 area: platform
 needs: []
 value: high
-status: active
+status: built
 ---
 
 # Signing in to Adobe again also signs the SC out of DA.live, and nobody says so
@@ -50,3 +50,4 @@ again also signed you out of DA.live." with the existing DA.live sign-in as the 
 
 ## Shipped so far
 - 2026-10-28  fix(eds): a storefront delete removes the site's code, and stops when DA.live is signed out (`a2072e04f`)
+- 2026-10-31  Owner set built 2026-10-31: the forced-sign-in check and the DA.live signed-out notice are on develop (watchForcedSignIns, daLiveSignedOutNotice.ts)

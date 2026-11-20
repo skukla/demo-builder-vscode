@@ -26,17 +26,22 @@
  * arrangement. If the policy changes again, it changes in both places or in
  * neither.
  *
- * What each caller still owns: the command adds an execution lock, toasts and
- * result→UI mapping; the tool handler shapes the result into a tool response.
+ * It also owns the two things every door used to add for itself (PL-104 fix 4): one deploy
+ * at a time (`meshDeployLock`), and clearing the mesh prompt once a deploy lands
+ * (`meshActionTaken`). The palette and the screen button did both; the agent's `deploy_mesh`
+ * did neither, so an agent deploy could run beside a button deploy. What each caller still
+ * owns: the command's toasts and result→UI mapping; the tool handler's tool response.
  *
  * @module features/mesh/services/deployMeshWithFeedback
  */
 
+import * as vscode from 'vscode';
 import {
     deployMeshHeadless,
     type DeployMeshHeadlessDeps,
     type DeployMeshHeadlessResult,
 } from './deployMeshHeadless';
+import { MESH_DEPLOY_ALREADY_RUNNING, meshDeployLock } from './meshDeployLock';
 import { meshFailureForPerson } from './meshDeployWording';
 import { getProvidedEnvVars } from '@/core/state/appBuilderComponentState';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
@@ -77,6 +82,9 @@ export interface RepublishOutcome {
 /** The one mesh value the storefront config reads. */
 const STOREFRONT_READS = 'MESH_ENDPOINT';
 
+/** The core's result, or the refusal when another deploy holds the lock. */
+export type DeployMeshWithFeedbackResult = DeployMeshHeadlessResult & { alreadyRunning?: true };
+
 /** Where the deploy reports: the screen's modal when a button started it (PL-59 R1). */
 export interface DeployMeshFeedbackOptions {
     progress?: 'modal';
@@ -92,11 +100,32 @@ export interface DeployMeshFeedbackOptions {
  *
  * @param deps - project + state/logger + extension path
  * @param options - `progress: 'modal'` when started from a button
+ * One deploy at a time, whichever door started it: a second is refused with
+ * `alreadyRunning`, before anything runs. A deploy that lands clears the mesh prompt.
+ *
  * @returns the core's result; for a modal, a failure carries a person's sentence
  */
 export async function deployMeshWithFeedback(
     deps: DeployMeshWithFeedbackDeps,
     options: DeployMeshFeedbackOptions = {},
+): Promise<DeployMeshWithFeedbackResult> {
+    if (meshDeployLock.isLocked()) {
+        return { success: false, error: MESH_DEPLOY_ALREADY_RUNNING, alreadyRunning: true };
+    }
+    return meshDeployLock.run(async () => {
+        const result = await deployWithProgress(deps, options);
+        if (result.success) {
+            // The "redeploy the mesh" prompt may ask again about the next change.
+            await vscode.commands.executeCommand('demoBuilder._internal.meshActionTaken');
+        }
+        return result;
+    });
+}
+
+/** The deploy itself, reported where the SC is looking. */
+async function deployWithProgress(
+    deps: DeployMeshWithFeedbackDeps,
+    options: DeployMeshFeedbackOptions,
 ): Promise<DeployMeshHeadlessResult> {
     const inModal = options.progress === 'modal';
 

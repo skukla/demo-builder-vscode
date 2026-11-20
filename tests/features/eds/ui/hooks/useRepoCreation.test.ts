@@ -256,6 +256,22 @@ describe('useRepoCreation — the create request', () => {
         expect(result.current.repoCreationState).toStrictEqual({ isCreating: false, isCreated: true });
     });
 
+    // EDS-72: an imported project's repository is made from its bundle by setup. Creating one
+    // here would generate it from the brand's template, and setup would then use that instead.
+    it("refuses for a project imported from a bundle, and says why, before asking GitHub", async () => {
+        const { result, updateState } = setup({
+            state: { ...stateWith(edsConfigWith({})), importedFrom: { bundleName: 'Bodea Summit', bundlePath: '/x/b.zip' } },
+        });
+
+        await act(() => result.current.handleCreateRepository());
+
+        expect(mockRequest).not.toHaveBeenCalled();
+        expect(updateState).not.toHaveBeenCalled();
+        expect(result.current.repoCreationState.error).toBe(
+            'An imported project gets its repository from the imported demo when the storefront is set up.',
+        );
+    });
+
     it('refuses without a template owner, and says why', async () => {
         const { result, updateState } = setup({
             state: stateWith(edsConfigWith({ templateOwner: undefined })),

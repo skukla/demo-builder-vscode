@@ -1,10 +1,9 @@
 import { View, Flex, Text } from '@adobe/react-spectrum';
-import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
-import CloseCircle from '@spectrum-icons/workflow/CloseCircle';
 import Pending from '@spectrum-icons/workflow/Pending';
 import React from 'react';
+import { StatusIcon } from '@/core/ui/components/feedback/StatusIcon';
 import { cn } from '@/core/ui/utils/classNames';
-import { PrerequisiteCheck, UnifiedProgress } from '@/types/webview';
+import { PrerequisiteCheck } from '@/types/webview';
 
 /**
  * Check if plugin details should be shown for a prerequisite
@@ -31,22 +30,9 @@ export function renderPluginStatusIcon(
         return <Pending size="XS" marginStart="size-50" />;
     }
     if (pluginInstalled) {
-        return <CheckmarkCircle size="XS" UNSAFE_className="text-green-600" marginStart="size-50" />;
+        return <StatusIcon status="success" size="XS" marginStart="size-50" />;
     }
-    return <CloseCircle size="XS" UNSAFE_className="text-red-600" marginStart="size-50" />;
-}
-
-/**
- * Calculate progress bar value based on unified progress state
- */
-export function getProgressValue(unifiedProgress: UnifiedProgress): number {
-    if (unifiedProgress.overall.totalSteps > 1) {
-        return unifiedProgress.overall.percent;
-    }
-    if (unifiedProgress.command?.type === 'determinate' && unifiedProgress.command?.percent != null) {
-        return unifiedProgress.command.percent;
-    }
-    return unifiedProgress.overall.percent;
+    return <StatusIcon status="error" size="XS" marginStart="size-50" />;
 }
 
 /**
@@ -64,7 +50,7 @@ export function renderNodeVersionSuccess(message: string): React.ReactNode {
                     {version}
                     {component && ` (${component})`}
                 </Text>
-                <CheckmarkCircle size="XS" UNSAFE_className="text-green-600" marginStart="size-50" />
+                <StatusIcon status="success" size="XS" marginStart="size-50" />
             </Flex>
         );
     });
@@ -79,7 +65,7 @@ export function renderAioCliErrorVersions(message: string): React.ReactNode {
         return nodes.map((n, idx) => (
             <Flex key={idx} alignItems="center" marginBottom="size-50">
                 <Text UNSAFE_className={cn('animate-fade-in', 'text-sm')}>{n}</Text>
-                <CloseCircle size="XS" UNSAFE_className="text-red-600" marginStart="size-50" />
+                <StatusIcon status="error" size="XS" marginStart="size-50" />
             </Flex>
         ));
     }
@@ -101,9 +87,9 @@ export function renderPrerequisiteMessage(check: PrerequisiteCheck): React.React
                             {item.component ? ` – ${item.component}` : ''}
                         </Text>
                         {item.installed ? (
-                            <CheckmarkCircle size="XS" UNSAFE_className="text-green-600" marginStart="size-50" />
+                            <StatusIcon status="success" size="XS" marginStart="size-50" />
                         ) : (
-                            <CloseCircle size="XS" UNSAFE_className="text-red-600" marginStart="size-50" />
+                            <StatusIcon status="error" size="XS" marginStart="size-50" />
                         )}
                     </Flex>
                 ))}

@@ -16,9 +16,9 @@ status: built
 Filed 2026-09-30 from the AB-53 rebuild, where a project created through `create_project`
 reported "AEM Code Sync verified" and "Code synchronized", and then served a storefront with no
 code: `config.json`, `scripts/scripts.js` and `fstab.yaml` all 404 on
-`main--kukla-justrite--skukla.aem.live` while the DA.live pages published fine.
+`main--kukla-tailspin--skukla.aem.live` while the DA.live pages published fine.
 
-## What was measured (2026-09-30, skukla/kukla-justrite, a repo generated from a template)
+## What was measured (2026-09-30, skukla/kukla-tailspin, a repo generated from a template)
 
 - `GET admin.hlx.page/status/{owner}/{repo}/main` answered 200 with
   `code: {"status":400,"permissions":["delete","delete-forced","read","write"]}` and **no
@@ -37,7 +37,7 @@ POST says which, and it is a write.
 
 ## What the repository looked like
 
-Generated from `kmanns/justrite` by `generate-from-template` into the owner's own namespace.
+Generated from `org-e/tailspin` by `generate-from-template` into the owner's own namespace.
 The owner's AEM Code Sync installation evidently covers selected repositories, not all, so a
 newly generated repository is outside it until someone adds it on GitHub. Nothing in the
 creation path asks the person to do that for a NEW repository: the phase-1 gate runs only for

@@ -197,8 +197,10 @@ imports, and a doc describing code that is gone.
 ## 7. After committing — let the record catch up
 
 ```bash
-node .claude/skills/backlog-item/backlog.mjs unlogged --write
+node "$(git config dev-pipeline.root)/lib/backlog.mjs" unlogged --write
 ```
+
+(The dev-pipeline plugin's backlog CLI; its `backlog` toolbox tool runs the same.)
 
 One command, nothing to type. It finds commits carrying a `Backlog:` trailer
 whose sha never reached the item, writes the line, and flips a `backlog` item to

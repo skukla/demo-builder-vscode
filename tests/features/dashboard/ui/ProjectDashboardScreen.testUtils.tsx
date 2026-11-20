@@ -112,10 +112,11 @@ jest.mock('@adobe/react-spectrum', () => {
         Text: ({ children, ...props }: any) => (
             <span {...filterSpectrumProps(props)}>{children}</span>
         ),
-        Button: ({ children, onPress, variant, isDisabled, ...props }: any) => (
+        Button: ({ children, onPress, variant, isDisabled, isPending, ...props }: any) => (
             <button
-                onClick={onPress}
+                onClick={isPending ? undefined : onPress}
                 disabled={isDisabled}
+                aria-busy={isPending ? 'true' : undefined}
                 data-variant={variant}
                 data-testid="back-button"
                 {...filterSpectrumProps(props)}
@@ -214,7 +215,7 @@ jest.mock('@/features/dashboard/ui/components/AiCapabilitiesModal', () => ({
                 </div>
             ))}
             <button data-testid="ai-capabilities-modal-regenerate" onClick={() => onRegenerate()}>
-                Regenerate AI files
+                Regenerate AI Files
             </button>
             <button data-testid="ai-capabilities-modal-close" onClick={onClose}>
                 Close

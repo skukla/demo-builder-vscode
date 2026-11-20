@@ -38,7 +38,7 @@ its checks are built; running it against a real store is the owner's.
   - *Folding it into `import-datapack`.* The owner asked for the two purposes kept apart.
 - **Product intent left to the owner:** the one-sentence SC prompt ("Build the demo data for
   <brief> on the <website> site; <ERP> owns <lines>") — wording is theirs; the skill accepts any
-  brief. Whether the worked Justrite/AccuformNMC load scripts are committed as a fixture: they
+  brief. Whether the worked Tailspin/AccuformNMC load scripts are committed as a fixture: they
   live outside this repo and carry customer names, so not tonight (public repository).
 
 ## What was built

@@ -78,7 +78,7 @@ describe('aiContextWriter', () => {
                 const result = generateAgentsMd(project, STACKS);
 
                 // # is escaped by escapeMarkdown at the output boundary
-                expect(result).toContain('https://da.live/\\#/my-org/my-site');
+                expect(result).toContain('https://da.live/canvas\\#/my-org/my-site/index');
             });
 
             it('uses the Experience Workspace canvas URL when the project is set to EW', () => {

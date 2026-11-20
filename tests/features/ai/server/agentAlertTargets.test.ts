@@ -63,7 +63,10 @@ function declaredArgumentKeys(): Map<string, Set<string>> {
         for (const m of sites) {
             const name = m[1];
             if (!(name in AGENT_ALERT_COPY)) continue;
-            const window = source.slice(m.index, m.index + 2600);
+            // Up to the next registration: a fixed length (it was 2600) missed the schema of a tool
+            // whose description outgrew it, and a longer one would read the next tool's keys.
+            const next = sites.map((site) => site.index ?? 0).filter((at) => at > (m.index ?? 0)).sort((a, b) => a - b)[0];
+            const window = source.slice(m.index, next ?? source.length);
             const keys = new Set<string>();
             // `z\b`, not `z\.` — a multi-line field reads `blockId: z` then
             // `.string()` on the next line, and requiring the dot rejected it.
@@ -103,7 +106,8 @@ describe('consent targets name real arguments', () => {
         for (const [tool, copy] of entries) {
             const keys = declared.get(tool);
             if (!keys) continue;
-            for (const key of copy.target) {
+            // The choices shown beneath the target are argument keys too (reset_project, step-05 S7).
+            for (const key of [...copy.target, ...(copy.choices ?? [])]) {
                 if (!keys.has(key)) bogus.push(`${tool}: ${key}`);
             }
         }

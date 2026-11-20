@@ -136,6 +136,8 @@ cannot drift apart. A test catches this **only if it asserts the payload**
 The dashboard is minimal/dark — conform, don't invent.
 - Ambient status → `StatusCard` (colored dot + uppercase label + value) from
   `@/core/ui/components/feedback`. Actions → a `Button` or quiet `Link` (`<Link isQuiet>`).
+- **A dashboard tile's status is a dot alone; its words are the hover text** (owner, 2026-11-01). `DashboardTileStatus` has no
+  field for a word on the surface, so none can be added. The label already says what to do.
 - **No saturated/filled banners, no `InlineAlert`.** Attention uses an accent BORDER + warning
   icon (`AlertCircle`) + message text, not a `backgroundColor="static-*-400"` fill. Reference:
   `src/features/dashboard/ui/components/OrgContextNotice.tsx`.

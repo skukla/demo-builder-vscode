@@ -78,7 +78,7 @@ describe('AiOverviewScreen — decisions', () => {
 
             const dialog = screen.getByRole('dialog');
             await act(async () => {
-                fireEvent.click(within(dialog).getByRole('button', { name: /^close$/i }));
+                fireEvent.click(within(dialog).getByRole('button', { name: /^cancel$/i }));
             });
 
             expect(screen.queryByRole('heading', { name: /new prompt/i })).not.toBeInTheDocument();
@@ -95,7 +95,7 @@ describe('AiOverviewScreen — decisions', () => {
                 fireEvent.click(screen.getByTestId('ai-new-prompt-tile'));
             });
             fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'Fresh' } });
-            fireEvent.change(screen.getByLabelText(/prompt/i), { target: { value: 'Fresh body' } });
+            fireEvent.change(screen.getByLabelText(/prompt/i, { selector: 'textarea' }), { target: { value: 'Fresh body' } });
             await act(async () => {
                 fireEvent.click(screen.getByRole('button', { name: /^save$/i }));
                 await Promise.resolve();
@@ -251,7 +251,7 @@ describe('AiOverviewScreen — decisions', () => {
                 fireEvent.click(screen.getByTestId('ai-new-prompt-tile'));
             });
             fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'Gamma prompt' } });
-            fireEvent.change(screen.getByLabelText(/prompt/i), { target: { value: 'Gamma body' } });
+            fireEvent.change(screen.getByLabelText(/prompt/i, { selector: 'textarea' }), { target: { value: 'Gamma body' } });
             await act(async () => {
                 fireEvent.click(screen.getByRole('button', { name: /^save$/i }));
                 await Promise.resolve();

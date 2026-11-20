@@ -17,9 +17,9 @@ import { clearAdobeTarget } from './adobeTargetStore';
 import { agentNotice } from './agentNotice';
 import { asRawText, asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
-import { collectSignInNotices } from '@/core/auth/signInNotices';
 import { dispatchHandler } from '@/core/handlers/dispatchHandler';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { signInToAdobe } from '@/features/authentication/handlers/signInToAdobe';
 import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
 import {
     getDaLiveAuthService,
@@ -258,13 +258,11 @@ export function registerAuthTools(server: McpToolServer, ctxFactory: () => Handl
                 // identity's MCP target — otherwise list/select tools would keep
                 // targeting the previous account's org/project/workspace.
                 clearAdobeTarget();
-                // What the sign-in did besides signing in, for the agent to say: a forced
-                // sign-in (the retry a normal one falls back to) also ends the DA.live
-                // sign-in (measured 2026-10-28), and here that reaches this result rather
-                // than a dialog (`signInNotices`, `daLiveSignedOutNotice`).
-                const { result: ok, notices } = await collectSignInNotices(
-                    async () => (await ctx.authManager?.login()) ?? false,
-                );
+                // The one Sign In, in its agent mode: what the sign-in did besides signing
+                // in comes back for the agent to say. A forced sign-in (the retry a normal
+                // one falls back to) also ends the DA.live sign-in (measured 2026-10-28),
+                // and here that reaches this result rather than a dialog.
+                const { success: ok, notices } = await signInToAdobe(ctx.authManager, ctx.logger, 'agent');
                 return asText({
                     provider,
                     success: ok,
@@ -295,17 +293,10 @@ export function registerAuthTools(server: McpToolServer, ctxFactory: () => Handl
                 `$(key) ${agentNotice('DA.live sign-in requested')} — complete the prompts in this window`,
                 TIMEOUTS.STATUS_BAR_SUCCESS,
             );
-            void showDaLiveAuthQuickPick(ctx).then(
-                (res) => {
-                    if (res.success) {
-                        vscode.window.setStatusBarMessage(
-                            `$(check) ${agentNotice('DA.live sign-in complete')}`,
-                            TIMEOUTS.STATUS_BAR_SUCCESS,
-                        );
-                    }
-                },
-                () => undefined,
-            );
+            // Success is announced by the flow itself, the green line the palette's
+            // Sign In shows too (`daLiveSignedInMessage`): a message of the tool's
+            // own, being newer, replaced it (owner, 2026-11-15).
+            void showDaLiveAuthQuickPick(ctx).catch(() => undefined);
             return asText({
                 provider,
                 started: true,

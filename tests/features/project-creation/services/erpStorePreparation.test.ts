@@ -19,7 +19,7 @@ jest.mock('@/features/app-builder/services/setupChecks', () => ({
     runSetupCheck: (...a: unknown[]) => mockRunCheck(...a),
 }));
 
-import { preparesStoreOnAdd } from '@/features/app-builder/services/storePreparation/fixReach';
+import { preparesStoreOnAdd } from '@/features/app-builder/services/storePreparation/setupReach';
 import { prepareStoreOnAdd, previewStoreForAdd } from '@/features/project-creation/services/erpStorePreparation';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import type { AppBuilderComponentCatalogEntry, SetupStep } from '@/types/appBuilderComponents';
@@ -33,7 +33,7 @@ const PRICE_SCOPE: SetupStep = {
     why: 'A price the ERP grants for one website shows on that website only.',
     where: 'Stores > Configuration > Catalog > Price',
     check: 'price-scope-website',
-    fix: { kind: 'config', items: [{ path: 'catalog/price/scope', value: '1', scope: 'default' }] },
+    setup: { kind: 'config', items: [{ path: 'catalog/price/scope', value: '1', scope: 'default' }] },
 };
 const BY_HAND: SetupStep = { id: 'associate', title: 'Associate the app', label: 'Associate', why: 'w', where: 'Apps' };
 
@@ -72,7 +72,7 @@ function commerce(putAnswer: unknown = { errors: [] }) {
 
 beforeEach(() => {
     jest.clearAllMocks();
-    mockReader.mockResolvedValue({ read: jest.fn(), scope: { websiteCode: 'justrite' } });
+    mockReader.mockResolvedValue({ read: jest.fn(), scope: { websiteCode: 'tailspin' } });
     mockRunCheck.mockResolvedValue({ done: false, note: 'Prices are global' });
 });
 
@@ -94,7 +94,7 @@ describe('previewStoreForAdd', () => {
         expect(store.send).not.toHaveBeenCalled();
         // The check is told the ERPs, as the fix is: the warehouse step is made once per ERP.
         expect(mockRunCheck).toHaveBeenCalledWith('price-scope-website', expect.any(Function), {
-            websiteCode: 'justrite',
+            websiteCode: 'tailspin',
             erpNames: expect.any(Array),
         });
         expect(preview).toStrictEqual({
@@ -130,7 +130,8 @@ describe('prepareStoreOnAdd', () => {
         const state = target.appBuilderComponents?.['erp-integration'];
         expect(state?.storePreparation?.steps['price-scope']).toStrictEqual({
             kind: 'config',
-            previous: [{ path: 'catalog/price/scope', scope: 'default', stored: '0', effective: '0' }],
+            // `wrote`: what the undo compares the store with, so a setting changed since is kept (step 06).
+            previous: [{ path: 'catalog/price/scope', scope: 'default', stored: '0', effective: '0', wrote: '1' }],
         });
         expect(state?.setupSteps?.['price-scope']).toMatchObject({ lastCheck: 'failed' });
         expect(saveProject).toHaveBeenCalledWith(target);

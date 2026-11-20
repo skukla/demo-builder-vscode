@@ -149,6 +149,14 @@ const PERIODIC: readonly Instrument[] = [
         runs: 'npm run patches:released',
     },
     {
+        id: 'components:ci',
+        kind: 'npm-script',
+        cadence: 'periodic',
+        resultKind: 'gate',
+        what: 'every repository the builder owns still carries the release process: a checks job on every push, RELEASING.md, nothing else publishing',
+        runs: 'npm run components:ci',
+    },
+    {
         id: 'health',
         kind: 'npm-script',
         cadence: 'periodic',
@@ -260,7 +268,8 @@ const JUDGEMENT: readonly Instrument[] = [
         what: 'proves a user action has ONE definitive path to its ground-truth primitive',
         runs: null,
         unwiredReason:
-            'guided review, per-action; its verdicts are pinned in spine-chokepoints.test.ts',
+            'guided review, per-action; its verdicts are pinned in spine-chokepoints.test.ts ' +
+            'and its doors in tests/templates/action-doors.ledger.json',
     },
     {
         id: 'test-divergence-scan',
@@ -312,14 +321,6 @@ const JUDGEMENT: readonly Instrument[] = [
         runs: null,
         unwiredReason: 'orchestrates the others; npm run sweep is its scripted half',
     },
-    {
-        id: 'dream',
-        kind: 'skill',
-        cadence: 'periodic',
-        what: 'staleness in memory, skills and CLAUDE.md, mined from recent transcripts',
-        runs: null,
-        unwiredReason: 'reads transcripts outside the repo; proposes, never applies',
-    },
 ];
 
 /**
@@ -345,6 +346,17 @@ const MUTATION: readonly Instrument[] = [
         what: 'Stryker mutation testing over a 4-module pilot scope — the only instrument that measures whether the tests would CATCH a defect rather than whether they executed a line',
         runs: 'npm run test:mutation',
         resultKind: 'report',
+    },
+    {
+        id: 'ledger',
+        kind: 'npm-script',
+        cadence: 'on-demand',
+        what: 'lists, checks, adds, removes or re-keys rows in the mutation, errors and progress ledgers, keeping each file byte-for-byte in its own format (reflect proposal 5, 2026-11-16)',
+        runs: 'npm run ledger -- check <mutation|errors|progress>',
+        resultKind: 'gate',
+        writes: true,
+        unwiredReason:
+            'Run when code moves under a ledger row: the pipeline toolbox exposes it as the `ledger` tool, and the ledger suites name it in their failure messages.',
     },
     {
         id: 'test:mutation:focus',
@@ -508,6 +520,7 @@ const AUTHORING: readonly Instrument[] = (
     [
         ['gate', 'the inner-loop quality gate: scoped jest + tsc + eslint'],
         ['cut-release', 'the VSIX beta release process'],
+        ['component-release', 'publish a version of a component the builder owns, after every check'],
         ['worktree-setup', 'create/relocate a worktree and start the preview loop'],
         ['adobe-org-context', 'the canonical IMS org/auth model for any org guard'],
         ['eds-publish-and-config', 'Helix/DA.live/Config Service auth and scoping traps'],
@@ -529,7 +542,6 @@ const AUTHORING: readonly Instrument[] = (
         ['debug-log-triage', 'parse a pasted Debug Logs dump'],
         ['adobe-docs-lookup', 'route an Adobe docs question to the source that has it'],
         ['decompose-god-file', 'split an oversized file without breaking its public API'],
-        ['backlog-item', 'read and write the backlog through one CLI'],
         ['unattended-loop', 'the owner-away working mode'],
         ['reuse-first', 'find the house component before building a new one'],
         [
@@ -628,6 +640,20 @@ const PROGRAM_INSTRUMENTS: readonly Instrument[] = [
  * Same shape as every other ledger here: it may shrink, and each row says why.
  */
 export const NON_INSTRUMENT_SCRIPTS: Readonly<Record<string, string>> = {
+    '.rptc/plans/datapack-simplification/mockups/flow/scenario.js':
+        "the click-through prototype's scripted fake host for the Data Installer bundle; a mockup the owner clicks, not a check",
+    '.rptc/plans/datapack-simplification/mockups/flow/scenario-integrations.js':
+        "the click-through prototype's scripted fake host for the integrations bundle; a mockup the owner clicks, not a check",
+    '.rptc/plans/datapack-simplification/mockups/flow/build-j1.js':
+        "bundles the click-through prototype for the owner to open; a build step for a mockup, not a check",
+    '.rptc/plans/datapack-simplification/mockups/flow/gen-decisions.mjs':
+        "regenerates the prototype's decisions panel from prototype-feedback.md; a mockup's data step, not a check",
+    '.rptc/plans/datapack-simplification/mockups/flow/gen-journeys.mjs':
+        "regenerates journeys.md from the prototype's review steps (its --check only compares two plan files); not a check of the product",
+    '.rptc/plans/datapack-simplification/mockups/flow/log-verdict.mjs':
+        "writes one owner verdict into prototype-feedback.md during a walk; a record-keeping step, not a check",
+    '.rptc/plans/datapack-simplification/mockups/flow/steps-loader.mjs':
+        "loads the prototype's review steps for the two generators above; a helper, not a check",
     '.rptc/plans/datapack-store/step02-roundtrip.sh':
         "one-shot proof of the datapack store's step 02: a live round trip against a deployed scratch namespace",
     '.rptc/research/probe-config.mjs':
@@ -639,7 +665,7 @@ export const NON_INSTRUMENT_SCRIPTS: Readonly<Record<string, string>> = {
     '.rptc/research/consent-in-the-chat/probe-capabilities.mjs':
         'one-shot MCP capability probe; answered in AI-7',
     '.rptc/plans/several-erps/rehearse-order-to-return.sh':
-        'a manual live rehearsal of the order-to-return journey on Justrite: it places, ' +
+        'a manual live rehearsal of the order-to-return journey on Tailspin: it places, ' +
         'ships, returns and credits real orders, so it is run by a person before a showing, ' +
         'never on a schedule',
     '.rptc/complete/frontend-architecture-cleanup/update-imports.sh':

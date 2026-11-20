@@ -130,7 +130,8 @@ export function createMockProjects(count: number): Project[] {
  *
  * Matches the actual StateManager API:
  * - getAllProjects() returns { name, path, lastModified }[]
- * - loadProjectFromPath(path) returns full Project
+ * - loadProjectFromPath(path) returns full Project (a read)
+ * - openProject(path) returns the same Project (an open: read, make current, save)
  */
 export function createProjectsDashboardContext(
     projects: Project[] = []
@@ -146,6 +147,10 @@ export function createProjectsDashboardContext(
         getAllProjects: jest.fn().mockResolvedValue(projectList),
         getCurrentProject: jest.fn().mockResolvedValue(projects[0] || null),
         loadProjectFromPath: jest.fn().mockImplementation((path: string) => {
+            const project = projects.find((p) => p.path === path);
+            return Promise.resolve(project || null);
+        }),
+        openProject: jest.fn().mockImplementation((path: string) => {
             const project = projects.find((p) => p.path === path);
             return Promise.resolve(project || null);
         }),

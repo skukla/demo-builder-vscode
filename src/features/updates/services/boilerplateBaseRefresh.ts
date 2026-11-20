@@ -17,6 +17,7 @@
 import { readBoilerplateBase, writeBoilerplateBase } from './boilerplateBase';
 import type { GitHubCompareResponse } from './githubApiClient';
 import { readSharedDemoDescription } from '@/core/state/projectFileReader';
+import { FULL_COMMIT_SHA } from '@/core/utils/commitSha';
 import type { Project } from '@/types/base';
 import { SHARED_DEMO_FILE_NAME } from '@/types/projectFile';
 
@@ -27,7 +28,6 @@ export interface BaseRefreshDeps {
     compare(owner: string, repo: string, base: string, head: string): Promise<GitHubCompareResponse | null>;
 }
 
-const COMMIT_SHA = /^[0-9a-f]{40}$/;
 
 /**
  * @param project - a project whose colleague-track update just applied (the caller saves)
@@ -42,7 +42,7 @@ export async function refreshBaseFromColleague(project: Project, deps: BaseRefre
     const read = text ? readSharedDemoDescription(text) : undefined;
     const builtWith = read?.ok ? read.description.builtWith : undefined;
     const lkg = builtWith?.lkg;
-    if (!builtWith?.template || typeof lkg !== 'string' || !COMMIT_SHA.test(lkg) || lkg === base.commit) return false;
+    if (!builtWith?.template || typeof lkg !== 'string' || !FULL_COMMIT_SHA.test(lkg) || lkg === base.commit) return false;
     const sameTemplate =
         `${builtWith.template.owner}/${builtWith.template.repo}`.toLowerCase() ===
         `${base.template.owner}/${base.template.repo}`.toLowerCase();

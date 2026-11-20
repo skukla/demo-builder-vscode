@@ -1,6 +1,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { configureHandlers } from '../handlers/configureHandlers';
+import { answerConnectionChange, connectionAnswerDeps } from './configureConnectionAnswer';
 import { runConfigureRepublish } from './configureRepublishRun';
 import { storefrontPrompt } from './configureStorefrontRepublish';
 import { ProjectDashboardWebviewCommand } from './showDashboard';
@@ -11,9 +12,10 @@ import { COMPONENT_IDS } from '@/core/constants';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell/orgContextEnv';
-import { loadDeclaredSecretFlags } from '@/features/components/services/commerceSecretMigration';
+import { resolveAdminExperience } from '@/core/utils/commerceAdmin';
 import { getComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';
 import { withEnvVarKeys } from '@/features/components/services/componentTransforms';
+import { loadDeclaredSecretFlags } from '@/features/components/services/declaredSecretStore';
 import {
     applyBlockLibrarySelection,
     buildBlockLibraryChoices,
@@ -23,6 +25,7 @@ import {
     describePendingBlockLibraryWork,
     hasPendingBlockLibraryWork,
 } from '@/features/dashboard/services/configureBlockLibraryWork';
+import type { InstalledDatapackAnswer } from '@/features/dashboard/services/connectionChange';
 import { sendAuthoringExperienceUpdate } from '@/features/dashboard/services/projectPanelPushes';
 import {
     readProjectSettings,
@@ -37,10 +40,9 @@ import {
 import { markMeshUpdateDeclined } from '@/features/mesh/services/meshUpdateDecline';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import { regenerateProjectEnvFiles } from '@/features/project-creation/helpers/envFileRegeneration';
-import { handleRenameProject } from '@/features/projects-dashboard/handlers/dashboardHandlers';
-import { Project, type AuthoringExperience } from '@/types/base';
+import { Project, type AuthoringExperience, type CommerceAdminExperience } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
-import { getComponentInstanceEntries, getEdsDaLiveUrl, isEdsProject } from '@/types/typeGuards';
+import { getComponentInstanceEntries, getEdsDaLiveUrl, hasAdminExperienceChoice, isEdsProject } from '@/types/typeGuards';
 import type { ComponentConfigs } from '@/types/webview';
 import type {
     ConfigureInitialData,
@@ -64,8 +66,10 @@ const AUTHORING_EXPERIENCES: ReadonlySet<AuthoringExperience> = new Set<Authorin
 interface SaveConfigurationData extends BlockLibrarySelectionInput {
     /** Only the values the SC changed; laid over the settings as they are now (PL-76). */
     configChanges?: ComponentConfigs;
-    newProjectName?: string;
     authoringExperience?: AuthoringExperience;
+    commerceAdminExperience?: CommerceAdminExperience;
+    /** The SC's answer when the save points a project holding a datapack at another instance. */
+    installedDatapack?: InstalledDatapackAnswer;
 }
 
 export class ConfigureProjectWebviewCommand extends BundledPanelCommand<ConfigureInitialData> {
@@ -183,10 +187,6 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
         // Load existing env values from component .env files
         const existingEnvValues = await this.loadExistingEnvValues(project);
 
-        // Get existing project names for rename validation
-        const allProjects = await this.stateManager.getAllProjects();
-        const existingProjectNames = allProjects.map((p) => p.name);
-
         // Get current theme
         const theme =
             vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
@@ -206,9 +206,10 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
             project,
             componentsData,
             existingEnvValues,
-            existingProjectNames,
             isEds: isEdsProject(project),
             authoringExperience: resolveProjectAuthoringExperience(project),
+            hasAdminChoice: hasAdminExperienceChoice(project),
+            commerceAdminExperience: resolveAdminExperience(project),
             // The setting is read HERE, at the boundary; the lists are built by a
             // `vscode`-free function from the same loader the wizard's picker uses.
             blockLibraryChoices: buildBlockLibraryChoices(project, readCustomLibrarySetting()),
@@ -262,13 +263,13 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
     /** The save-configuration message body (extracted 2026-08-24, function-length pass). */
     private async handleSaveConfiguration(data: SaveConfigurationData): Promise<unknown> {
         try {
-            let project = await this.stateManager.getCurrentProject();
+            const project = await this.stateManager.getCurrentProject();
             if (!project) {
                 throw new Error('No project found');
             }
-
-            // Handle project rename if name changed (renameProjectCore moves path-keyed secrets)
-            project = await this.renameProjectIfRequested(project, data.newProjectName);
+            // A datapack in the instance this moves away from: asked first, nothing saved (step-07 D6).
+            const asked = await answerConnectionChange(project, data.configChanges ?? {}, data.installedDatapack, connectionAnswerDeps(this.createHandlerContext()));
+            if (asked) return asked;
 
             // The screen sends only what the SC changed (PL-76). Staging lays it over
             // the settings as they are now, keeps integration settings, moves secrets,
@@ -318,6 +319,10 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
                 project,
                 data.authoringExperience,
             );
+
+            if (data.commerceAdminExperience === 'unified-shell' || data.commerceAdminExperience === 'classic') {
+                project.commerceAdminExperience = data.commerceAdminExperience;
+            }
 
             await this.stateManager.saveProject(project);
 
@@ -391,39 +396,6 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
     }
 
     /**
-     * Rename the project when the save carries a new name, then re-key the
-     * path-keyed SecretStorage entries. The SecretStorage key is keyed on the
-     * project PATH, so a rename orphans it — an already-migrated secret is no
-     * longer in componentConfigs, so a missed re-key loses it from both places
-     * and the Configure field simply reads blank. Returns the (re-loaded)
-     * project. (Extracted 2026-08-24, function-length pass — body unchanged.)
-     */
-    private async renameProjectIfRequested(
-        project: Project,
-        newProjectName: string | undefined,
-    ): Promise<Project> {
-        if (!newProjectName || newProjectName === project.name) {
-            return project;
-        }
-        const renameResult = await handleRenameProject(this.createHandlerContext(), {
-            projectPath: project.path,
-            newName: newProjectName,
-        });
-        if (!renameResult.success) {
-            throw new Error(renameResult.error || 'Failed to rename project');
-        }
-        // The folder moved with the name: this screen follows it there (AI-15).
-        const newPath = renamedPathOf(renameResult.data);
-        if (newPath) this.followOwnProject(newPath);
-        // Reload project after rename (path may have changed)
-        const reloaded = await this.stateManager.getCurrentProject();
-        if (!reloaded) {
-            throw new Error('Project not found after rename');
-        }
-        return reloaded;
-    }
-
-    /**
      * Persist the EDS authoring-experience preference onto the project's EDS
      * component-instance metadata. No-op for non-EDS projects or unrecognized
      * values. Returns whether the stored value actually changed (so the caller
@@ -463,7 +435,7 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
         await vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
-                title: 'Switching author mode',
+                title: 'Switching Author Mode',
                 cancellable: false,
             },
             async (progress) => {
@@ -614,7 +586,7 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
         // An authoring-experience change shows its own progress toast (the
         // confirmation), so skip the generic "saved" toast to avoid doubling up.
         if (!contextualNotificationShown && !authoringChanged) {
-            this.showSuccessMessage('Configuration saved successfully');
+            this.showSuccessMessage('Configuration saved');
         }
     }
 
@@ -789,11 +761,10 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
         await vscode.commands.executeCommand(commandId, project?.path);
     }
 
-    /** Stop and start the demo so it reads the new `.env`; a failure is logged. */
+    /** Restart the demo so it reads the new `.env`, through the one restart; a failure is logged. */
     private async restartDemo(): Promise<void> {
         try {
-            await this.runForThisProject('demoBuilder.stopDemo');
-            await this.runForThisProject('demoBuilder.startDemo');
+            await this.runForThisProject('demoBuilder.restartDemo');
         } catch (error) {
             this.logger.error('[Configure] Failed to restart demo:', error as Error);
         }
@@ -848,8 +819,3 @@ export class ConfigureProjectWebviewCommand extends BundledPanelCommand<Configur
     }
 }
 
-/** The folder a successful rename moved the project to (`renameProjectCore`'s `data.newPath`). */
-function renamedPathOf(data: unknown): string | undefined {
-    if (typeof data !== 'object' || data === null || !('newPath' in data)) return undefined;
-    return typeof data.newPath === 'string' ? data.newPath : undefined;
-}

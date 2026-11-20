@@ -4,12 +4,14 @@
  * ADR-013's rule, applied to DA.live pages: a page is removed only when its current
  * content matches the hash recorded when Demo Builder wrote it. A page whose content
  * moved is the SC's now. The hash is taken from a read AFTER the write, so the record
- * describes what DA.live actually stores rather than what was sent.
+ * describes what DA.live actually stores rather than what was sent. The decision is the
+ * shared rule `decideOwnedChange` (`@/core/utils/ownedChange`, datapack-engine step 04).
  *
  * @module features/eds/services/catalogMenu/ownedPages
  */
 
-import { createHash } from 'crypto';
+import { decideOwnedChange } from '@/core/utils/ownedChange';
+import { sha256 } from '@/core/utils/sha256';
 
 /** The storefront's pages, by web path (`/nav`, `/categories/default`). */
 export interface StorefrontPages {
@@ -28,7 +30,7 @@ export interface StorefrontPages {
 
 /** The hash a page is recorded under: its stored source, trimmed. */
 export function hashOf(content: string): string {
-    return createHash('sha256').update(content.trim()).digest('hex');
+    return sha256(content.trim());
 }
 
 export const messageOf = (error: unknown): string => (error instanceof Error ? error.message : String(error));
@@ -50,8 +52,13 @@ export async function removeOwnedPage(
 ): Promise<OwnedPageRemoval> {
     try {
         const current = await pages.read(path);
-        if (current === null) return 'gone';
-        if (hashOf(current) !== hash) return 'edited';
+        const change = decideOwnedChange({
+            recorded: hash,
+            current: current === null ? undefined : hashOf(current),
+            wanted: undefined,
+        });
+        if (change === 'gone') return 'gone';
+        if (change !== 'remove') return 'edited';
         await pages.remove(path);
         return 'removed';
     } catch (error) {

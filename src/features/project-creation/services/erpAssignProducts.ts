@@ -3,7 +3,7 @@
  * ERP's rule through the integration, the preview, the bulk write of `erp_owner` and its undo.
  *
  * Before 2026-10-09 the SC tagged products by hand in the Commerce Admin, or an agent tagged
- * them one `PUT` at a time; at 13–23 s a product on ACCS, Accuform's 96 and Justrite's 43
+ * them one `PUT` at a time; at 13–23 s a product on ACCS, Accuform's 96 and Tailspin's 43
  * took about 35 minutes. One bulk call writes them all.
  *
  * What is written: on each product, the `erp_owner` value in the ERP's own rule, nothing
@@ -116,7 +116,7 @@ function valueOfRule(name: string, rule: ErpOwnsEntry['owns'] | undefined): { va
         refusal:
             // In the SC's words, not the attribute code (owner, 2026-10-18), and the picker's.
             `${name} owns ${owns.replace(/^products /u, 'the products ')}, not the products assigned to it. ` +
-            `To assign products to it, first change which products it owns to "Products you assign to it" in its Settings.`,
+            `To assign products to it, first change which products it owns to "Products You Assign to It" in its Settings.`,
     };
 }
 

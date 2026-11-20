@@ -13,11 +13,6 @@ jest.mock('@/core/validation/validators/ProjectNameValidator', () => ({
     validateProjectNameSecurity: jest.fn(),
 }));
 
-// Imported by the dashboardHandlers module, so it has to answer even when unused.
-jest.mock('@/features/projects-dashboard/services/projectDeletionService', () => ({
-    deleteProject: jest.fn().mockResolvedValue({ success: true }),
-}));
-
 import { HandlerContext } from '@/types/handlers';
 import { Project } from '@/types/base';
 
@@ -28,7 +23,7 @@ jest.setTimeout(5000);
 // =============================================================================
 
 
-jest.mock('@/core/state/projectStateSync');
+jest.mock('@/core/state/frontendEnvDrift');
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: { getAuthenticationService: jest.fn() },
 }));

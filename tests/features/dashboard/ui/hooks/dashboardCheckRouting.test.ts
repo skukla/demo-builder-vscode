@@ -42,16 +42,16 @@ describe('routeCheckOutcome', () => {
                     checkId: CHECK_IDS.DEMO_SOURCE,
                     status: 'warning',
                     message:
-                        "The Isle5 by Jen demo's repository can't be reached. Reset and updates are unavailable until it is.",
-                    data: { demoName: 'Isle5 by Jen', unreachable: true, contentUnreachable: true },
+                        "The Isle5 by Robin demo's repository can't be reached. Reset and updates are unavailable until it is.",
+                    data: { demoName: 'Isle5 by Robin', unreachable: true, contentUnreachable: true },
                 } as CheckOutcome<OrgContextCheckData>,
                 actions
             );
 
             expect(actions.setDemoSourceIssue).toHaveBeenCalledWith({
                 message:
-                    "The Isle5 by Jen demo's repository can't be reached. Reset and updates are unavailable until it is.",
-                data: { demoName: 'Isle5 by Jen', unreachable: true, contentUnreachable: true },
+                    "The Isle5 by Robin demo's repository can't be reached. Reset and updates are unavailable until it is.",
+                data: { demoName: 'Isle5 by Robin', unreachable: true, contentUnreachable: true },
             });
             expect(actions.setOrgMismatch).not.toHaveBeenCalled();
         });

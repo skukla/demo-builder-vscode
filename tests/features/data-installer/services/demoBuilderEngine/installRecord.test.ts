@@ -14,7 +14,9 @@ import {
     nodeRecordFiles,
     openInstallRecord,
     readInstallRecord,
+    readProjectRecords,
     removalOrder,
+    writeInstallRecord,
 } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import { NOW, PACK, PROJECT, memoryFiles } from './demoBuilderEngine.testUtils';
 
@@ -104,6 +106,157 @@ describe('openInstallRecord', () => {
     });
 });
 
+describe('the website and store view the pack was installed to', () => {
+    const TARGET = { websiteCode: 'tailspin_test_website', storeCode: 'tailspin_test_view' };
+
+    it('is written on a new record, so every later read opens the store where the pack went', async () => {
+        const files = memoryFiles();
+        const recorder = await openInstallRecord(files, PROJECT, PACK, NOW, TARGET);
+
+        await recorder.record({ kind: 'categories', id: '41' });
+
+        expect(recorder.target).toEqual(TARGET);
+        expect(stored(files)).toMatchObject({ target: TARGET });
+        expect((await readInstallRecord(files, PROJECT, PACK))?.target).toEqual(TARGET);
+    });
+
+    it('is kept as first written when the record is carried on, whatever target the re-run names', async () => {
+        const files = memoryFiles();
+        await (await openInstallRecord(files, PROJECT, PACK, NOW, TARGET)).record({ kind: 'categories', id: '41' });
+
+        const again = await openInstallRecord(files, PROJECT, PACK, NOW, { websiteCode: 'base', storeCode: 'default' });
+
+        expect(again.target).toEqual(TARGET);
+    });
+
+    it('is absent on a record written before targets were kept, which still reads', async () => {
+        const files = memoryFiles();
+        await (await openInstallRecord(files, PROJECT, PACK, NOW)).record({ kind: 'categories', id: '41' });
+
+        const again = await openInstallRecord(files, PROJECT, PACK, NOW, TARGET);
+
+        expect(again.target).toBeUndefined();
+        expect(stored(files)).not.toHaveProperty('target');
+    });
+});
+
+// step-07 D6: which Commerce instance, so a removal never reaches another one.
+describe('the Commerce instance the pack was installed to', () => {
+    it('is written on a new record, and read back', async () => {
+        const files = memoryFiles();
+        await (await openInstallRecord(files, PROJECT, PACK, NOW, undefined, 'TenantA')).record({ kind: 'categories', id: '41' });
+
+        expect(stored(files)).toMatchObject({ instance: 'TenantA' });
+        expect((await readInstallRecord(files, PROJECT, PACK))?.instance).toBe('TenantA');
+    });
+
+    it('is kept as first written when the record is carried on from another instance', async () => {
+        const files = memoryFiles();
+        await (await openInstallRecord(files, PROJECT, PACK, NOW, undefined, 'TenantA')).record({ kind: 'categories', id: '41' });
+
+        await (await openInstallRecord(files, PROJECT, PACK, NOW, undefined, 'TenantB')).record({ kind: 'categories', id: '42' });
+
+        expect(stored(files)).toMatchObject({ instance: 'TenantA' });
+    });
+
+    it('is absent on a record written before instances were kept, which still reads (rule 3)', async () => {
+        const files = memoryFiles();
+        await (await openInstallRecord(files, PROJECT, PACK, NOW)).record({ kind: 'categories', id: '41' });
+
+        expect(stored(files)).not.toHaveProperty('instance');
+        expect(await readInstallRecord(files, PROJECT, PACK)).not.toHaveProperty('instance');
+    });
+});
+
+describe('what the record keeps about each object (step 05)', () => {
+    it('keeps the pack\'s own name for an object and the two hashes a repeat install compares', async () => {
+        const files = memoryFiles();
+        const recorder = await openInstallRecord(files, PROJECT, PACK, NOW);
+        await recorder.record({ kind: 'categories', id: '41' });
+
+        await recorder.update({ kind: 'categories', id: '41', key: 'Products', fingerprint: 'store-hash', wrote: 'row-hash' });
+
+        expect(stored(files)).toMatchObject({
+            created: [{ kind: 'categories', id: '41', key: 'Products', fingerprint: 'store-hash', wrote: 'row-hash' }],
+        });
+        expect((await readInstallRecord(files, PROJECT, PACK))?.created[0]).toEqual({
+            kind: 'categories',
+            id: '41',
+            key: 'Products',
+            fingerprint: 'store-hash',
+            wrote: 'row-hash',
+        });
+    });
+
+    it('keeps what an update does not name, such as the value a setting had before', async () => {
+        const files = memoryFiles();
+        const recorder = await openInstallRecord(files, PROJECT, PACK, NOW);
+        await recorder.record({ kind: 'sources', id: 'east', previous: { enabled: false } });
+
+        await recorder.update({ kind: 'sources', id: 'east', fingerprint: 'h' });
+
+        expect(recorder.created).toEqual([{ kind: 'sources', id: 'east', previous: { enabled: false }, fingerprint: 'h' }]);
+    });
+
+    it('updates nothing it has no record of', async () => {
+        const files = memoryFiles();
+        const recorder = await openInstallRecord(files, PROJECT, PACK, NOW);
+
+        await recorder.update({ kind: 'categories', id: '41', fingerprint: 'h' });
+
+        expect(recorder.created).toStrictEqual([]);
+        expect(files.data.size).toBe(0);
+    });
+
+    it('changes several objects in one write', async () => {
+        const files = memoryFiles();
+        const recorder = await openInstallRecord(files, PROJECT, PACK, NOW);
+        await recorder.record({ kind: 'categories', id: '41' });
+        await recorder.record({ kind: 'categories', id: '42' });
+        const write = jest.spyOn(files, 'write');
+
+        await recorder.update(
+            { kind: 'categories', id: '41', fingerprint: 'a' },
+            { kind: 'categories', id: '42', fingerprint: 'b' },
+            { kind: 'categories', id: '99', fingerprint: 'not ours' },
+        );
+
+        expect(write).toHaveBeenCalledTimes(1);
+        expect(recorder.created.map((o) => o.fingerprint)).toEqual(['a', 'b']);
+    });
+
+    it('finds an object by the pack\'s name for it, so a category renamed in the Admin is still ours', async () => {
+        const recorder = await openInstallRecord(memoryFiles(), PROJECT, PACK, NOW);
+        await recorder.record({ kind: 'categories', id: '41' });
+        await recorder.update({ kind: 'categories', id: '41', key: 'Products' });
+        await recorder.record({ kind: 'products', id: 'vrrack' });
+
+        expect(recorder.byKey('categories', 'Products')?.id).toBe('41');
+        // A record from before keys were kept: an id that is its own name still answers.
+        expect(recorder.byKey('products', 'vrrack')?.id).toBe('vrrack');
+        expect(recorder.byKey('categories', 'Other')).toBeUndefined();
+    });
+});
+
+describe('writeInstallRecord', () => {
+    it('writes a whole record under its own pack, as a capture does for the new version', async () => {
+        const files = memoryFiles();
+        const next = { name: 'bodea-main', version: '1.2.0-saved-20261029-1830' };
+
+        await writeInstallRecord(files, PROJECT, {
+            format: 1,
+            pack: next,
+            engine: 'demo-builder',
+            startedAt: '2026-10-27T18:00:00.000Z',
+            created: [{ kind: 'products', id: 'vrrack', key: 'vrrack', fingerprint: 'a', wrote: 'b' }],
+        });
+
+        expect((await readInstallRecord(files, PROJECT, next))?.created).toEqual([
+            { kind: 'products', id: 'vrrack', key: 'vrrack', fingerprint: 'a', wrote: 'b' },
+        ]);
+    });
+});
+
 describe('readInstallRecord', () => {
     it('answers undefined when this engine never installed the pack', async () => {
         await expect(readInstallRecord(memoryFiles(), PROJECT, PACK)).resolves.toBeUndefined();
@@ -130,6 +283,29 @@ describe('readInstallRecord', () => {
         files.data.set(installRecordPath(PROJECT, PACK), files.data.get(installRecordPath(PROJECT, other)) ?? '');
 
         await expect(readInstallRecord(files, PROJECT, PACK)).rejects.toThrow(/written for bodea-main@9\.9\.9/);
+    });
+});
+
+describe('readProjectRecords (step 10)', () => {
+    it("reads every pack's record beside the project, so a wipe leaves everything Demo Builder made", async () => {
+        const files = memoryFiles();
+        await (await openInstallRecord(files, PROJECT, PACK, NOW)).record({ kind: 'products', id: 'BD-1' });
+        await (await openInstallRecord(files, PROJECT, { name: 'bodea-settings', version: '1' }, NOW)).record({ kind: 'categories', id: '41' });
+
+        const records = await readProjectRecords(files, PROJECT);
+
+        expect(records.map((r) => r.pack.name).sort()).toEqual(['bodea-main', 'bodea-settings']);
+        expect(records.flatMap((r) => r.created.map((o) => o.id)).sort()).toEqual(['41', 'BD-1']);
+    });
+
+    it('answers none when the project has no records', async () => {
+        expect(await readProjectRecords(memoryFiles(), PROJECT)).toStrictEqual([]);
+    });
+
+    it('refuses a record it cannot read, rather than wipe what it lists', async () => {
+        const files = memoryFiles({ [installRecordPath(PROJECT, PACK)]: '{"format":2}' });
+
+        await expect(readProjectRecords(files, PROJECT)).rejects.toThrow(InstallRecordError);
     });
 });
 
@@ -179,7 +355,101 @@ describe('nodeRecordFiles', () => {
         await expect(readInstallRecord(nodeRecordFiles, dir, PACK)).resolves.toBeUndefined();
     });
 
+    it('lists the record files in a folder, and none for a folder that is not there', async () => {
+        const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'records-'));
+        try {
+            await nodeRecordFiles.write(path.join(dir, 'a@1.json'), '{}');
+            expect(await nodeRecordFiles.list(dir)).toEqual(['a@1.json']);
+            expect(await nodeRecordFiles.list(path.join(dir, 'missing'))).toStrictEqual([]);
+        } finally {
+            await fs.rm(dir, { recursive: true, force: true });
+        }
+    });
+
     it('treats removing a record that is already gone as done', async () => {
         await expect(forgetInstallRecord(nodeRecordFiles, dir, PACK)).resolves.toBeUndefined();
+    });
+});
+
+// Step 14 item 1: a create whose answer is lost is still the pack's. Its pending entry is written
+// before the create, so a re-run or a removal can look for it.
+describe('pending entries', () => {
+    // Creates are sent a few at once: a write that finished late must not leave an older record.
+    it('writes in order, so a slow earlier write never leaves the older record on disk', async () => {
+        const files = memoryFiles();
+        const write = files.write.bind(files);
+        let releaseFirst: () => void = () => undefined;
+        let calls = 0;
+        files.write = (p, content) => {
+            calls += 1;
+            if (calls > 1) return write(p, content);
+            return new Promise<void>((resolve) => {
+                releaseFirst = () => void write(p, content).then(resolve);
+            });
+        };
+        const recorder = await openInstallRecord(files, PROJECT, PACK, NOW);
+
+        const first = recorder.record({ kind: 'categories', id: '41' });
+        const second = recorder.record({ kind: 'categories', id: '42' });
+        while (calls === 0) await Promise.resolve();
+        releaseFirst();
+        await Promise.all([first, second]);
+
+        expect(stored(files)).toMatchObject({ created: [{ id: '41' }, { id: '42' }] });
+    });
+
+    it('writes a pending entry to disk, then swaps it for the object once made', async () => {
+        const files = memoryFiles();
+        const recorder = await openInstallRecord(files, PROJECT, PACK, NOW);
+
+        await recorder.markPending([{ kind: 'products', key: 'vrrack', id: 'vrrack' }]);
+        expect(stored(files)).toMatchObject({ created: [], pending: [{ kind: 'products', key: 'vrrack', id: 'vrrack' }] });
+
+        await recorder.confirm([{ kind: 'products', key: 'vrrack', id: 'vrrack' }], [{ kind: 'products', id: 'vrrack' }]);
+        expect(stored(files)).toMatchObject({ created: [{ kind: 'products', id: 'vrrack' }] });
+        // None pending: the file is as a record written before pending entries existed.
+        expect(stored(files)).not.toHaveProperty('pending');
+        expect(recorder.pending).toStrictEqual([]);
+    });
+
+    it('keeps a pending entry when the same one is marked twice, once', async () => {
+        const recorder = await openInstallRecord(memoryFiles(), PROJECT, PACK, NOW);
+
+        await recorder.markPending([{ kind: 'categories', key: 'Bodea/Racks', find: { parentId: 2, name: 'Racks' } }]);
+        await recorder.markPending([{ kind: 'categories', key: 'Bodea/Racks', find: { parentId: 2, name: 'Racks' } }]);
+
+        expect(recorder.pending).toHaveLength(1);
+    });
+
+    it('forgets a pending entry whose create Commerce refused', async () => {
+        const files = memoryFiles();
+        const recorder = await openInstallRecord(files, PROJECT, PACK, NOW);
+        await recorder.markPending([{ kind: 'coupons', key: 'SPRING' }]);
+
+        await recorder.forgetPending([{ kind: 'coupons', key: 'SPRING' }]);
+
+        expect((await readInstallRecord(files, PROJECT, PACK))?.pending).toBeUndefined();
+    });
+
+    it('carries pending entries over when a later install opens the record', async () => {
+        const files = memoryFiles();
+        await (await openInstallRecord(files, PROJECT, PACK, NOW)).markPending([{ kind: 'customers', key: 'ann@x.test', find: { websiteId: 1 } }]);
+
+        const again = await openInstallRecord(files, PROJECT, PACK, NOW);
+
+        expect(again.pending).toEqual([{ kind: 'customers', key: 'ann@x.test', find: { websiteId: 1 } }]);
+    });
+
+    it('still reads a record an earlier version wrote, with no pending entries at all', async () => {
+        const files = memoryFiles({
+            [installRecordPath(PROJECT, PACK)]: JSON.stringify({
+                format: 1, pack: PACK, engine: 'demo-builder', startedAt: NOW(), created: [{ kind: 'products', id: 'vrrack' }],
+            }),
+        });
+
+        const recorder = await openInstallRecord(files, PROJECT, PACK, NOW);
+
+        expect(recorder.created).toEqual([{ kind: 'products', id: 'vrrack' }]);
+        expect(recorder.pending).toStrictEqual([]);
     });
 });

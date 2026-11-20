@@ -1,103 +1,80 @@
 /**
  * The Share dialog's "Send a file" form: what to include, then one bundle of
- * the ticked parts through the host's save dialog. The two parts that exist are
- * the only ones shown; a dialog is not a roadmap. Moved unchanged from the
- * Export dialog when Export and Save as demo package became one (2026-10-22).
+ * the ticked parts through the host's save dialog (Save File, in the window's footer). The two parts that exist are
+ * the only ones shown; a dialog is not a roadmap.
+ *
+ * Fixed the link step's way (owner, 2026-11-18, walk F230): a datapack only the SC can see comes
+ * first, as the link step's amber notice with Share Datapack (`ShareChecks`), since the file
+ * names the pack and colleagues cannot install its data until it is shared; then the parts, each
+ * a house checkbox row with its line under it. Nothing arrives under the boxes (walk F238):
+ * nothing ticked greys Save File, and how a save ended, saved or not, is the result window
+ * (`ShareResult`), so the window holds no room and fits the form.
  *
  * @module features/dashboard/ui/components/share/ShareFileForm
  */
 
-import { Button, Checkbox } from '@adobe/react-spectrum';
-import React, { useState } from 'react';
-import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
-import { SectionLabel } from '@/core/ui/components/ui/SectionLabel';
-import { webviewClient } from '@/core/ui/utils/vscode-api';
-import type { ExportDemoBundleRequest, ExportDemoBundleResult } from '@/types/webviewRequests';
+import React from 'react';
+import { ShareChecks } from './ShareChecks';
+import type { ShareDatapackFix } from './useShareDatapack';
+import type { UseShareFile } from './useShareFile';
+import { CheckboxRow } from '@/core/ui/components/selection/CheckboxRow';
+import type { DemoPackageCheck } from '@/types/webviewRequests';
 
 const FILE_COPY = {
-    whatFile: 'What to include',
+    whatFile: 'What to Include',
     setup: 'Setup',
-    setupWhat: 'Your Commerce, Adobe, GitHub and DA.live settings. Never a credential.',
+    setupWhat: 'Your Commerce, Adobe, GitHub, DA.live and integration settings.',
     storefront: 'Storefront',
     storefrontWhat: "The storefront's code and content site.",
     storefrontHeadless: 'This project has no storefront of its own.',
-    saveFile: 'Save file',
-    saving: 'Saving',
-    nothingTicked: 'Tick at least one part.',
-    fileFailed: "Couldn't save the file",
 } as const;
 
-/** A handler's answer: branch on `success` before reading anything else (webview-command-handler). */
-interface Answer<D> {
-    success: boolean;
-    error?: string;
-    data?: D;
+/**
+ * The file's own checks: the datapack's, and each custom integration's, since the file names
+ * their repositories rather than carrying their code (walk F240). The repository and published
+ * pages are the link's concern: the file carries the storefront's code and content.
+ */
+function fileChecks(checks: DemoPackageCheck[]): DemoPackageCheck[] {
+    return checks.filter((check) => check.id === 'datapack' || check.id === 'custom-app');
 }
 
-function savedLine(saved: ExportDemoBundleResult): string {
-    const what = (saved.parts ?? []).join(' and ');
-    return `Saved ${what} (${saved.fileCount ?? 0} files) to ${saved.path ?? ''}`;
+export interface ShareFileFormProps {
+    /** Edge Delivery project: the storefront part applies. */
+    isEds: boolean;
+    /** The form's state (`useShareFile`). */
+    file: UseShareFile;
+    /** The checks the dialog read on open; only the datapack's is shown here. */
+    checks: DemoPackageCheck[];
+    /** Share Datapack, the fix on a pack only the SC can see (`useShareDatapack`). */
+    fix: ShareDatapackFix;
 }
 
 /**
- * The file form.
+ * The file form; its Save File is the window's footer button (step-07 Win2).
  *
- * @param props.isEds - Edge Delivery project: the storefront part applies
+ * @param props - see {@link ShareFileFormProps}
  * @returns the form
  */
-export function ShareFileForm({ isEds }: { isEds: boolean }): React.ReactElement {
-    const [setup, setSetup] = useState(true);
-    const [storefront, setStorefront] = useState(isEds);
-    const [busy, setBusy] = useState(false);
-    const [saved, setSaved] = useState<ExportDemoBundleResult | undefined>();
-    const [error, setError] = useState<string | undefined>();
-    const save = (): void => {
-        setBusy(true);
-        setError(undefined);
-        webviewClient
-            .request<Answer<ExportDemoBundleResult>>('exportDemoBundle', { setup, storefront } satisfies ExportDemoBundleRequest)
-            .then((answer) => {
-                if (!answer.success || !answer.data) {
-                    setError(answer.error ?? FILE_COPY.fileFailed);
-                    return;
-                }
-                if (!answer.data.cancelled) setSaved(answer.data);
-            })
-            .catch((failure: Error) => setError(failure.message))
-            .finally(() => setBusy(false));
-    };
-    const nothing = !setup && !storefront;
+export function ShareFileForm({ isEds, file, checks, fix }: ShareFileFormProps): React.ReactElement {
     return (
         <div className="export-file-form" data-testid="export-file-form">
-            <SectionLabel>{FILE_COPY.whatFile}</SectionLabel>
-            <ul className="export-parts">
-                <li className="export-part">
-                    <Checkbox isSelected={setup} onChange={setSetup} data-testid="part-setup">
-                        {FILE_COPY.setup}
-                    </Checkbox>
-                    <span className="export-part-note">{FILE_COPY.setupWhat}</span>
-                </li>
-                <li className="export-part">
-                    <Checkbox isSelected={storefront} onChange={setStorefront} isDisabled={!isEds} data-testid="part-storefront">
-                        {FILE_COPY.storefront}
-                    </Checkbox>
-                    <span className="export-part-note">{isEds ? FILE_COPY.storefrontWhat : FILE_COPY.storefrontHeadless}</span>
-                </li>
-            </ul>
-            <Button variant="accent" onPress={save} isDisabled={busy || nothing}>
-                {busy ? FILE_COPY.saving : FILE_COPY.saveFile}
-            </Button>
-            {nothing ? <p className="export-part-note">{FILE_COPY.nothingTicked}</p> : null}
-            {saved ? (
-                <InlineNotice tone="info" title={savedLine(saved)} testId="export-saved">
-                    {''}
-                </InlineNotice>
-            ) : null}
-            {error ? (
-                <InlineNotice tone="warning" title={FILE_COPY.fileFailed} testId="export-error">
-                    {error}
-                </InlineNotice>
-            ) : null}
+            <ShareChecks checks={fileChecks(checks)} fix={fix} />
+            {/* No heading over the boxes (walk F233): small and grey, it read fainter than the rows it headed. */}
+            <div className="export-parts" role="group" aria-label={FILE_COPY.whatFile}>
+                <CheckboxRow
+                    label={FILE_COPY.setup}
+                    help={FILE_COPY.setupWhat}
+                    isSelected={file.setup}
+                    onChange={() => file.setSetup(!file.setup)}
+                />
+                <CheckboxRow
+                    label={FILE_COPY.storefront}
+                    help={isEds ? FILE_COPY.storefrontWhat : FILE_COPY.storefrontHeadless}
+                    isSelected={file.storefront}
+                    isDisabled={!isEds}
+                    onChange={() => file.setStorefront(!file.storefront)}
+                />
+            </div>
         </div>
     );
 }

@@ -31,10 +31,18 @@ import {
     type CatalogMenuSite,
 } from '@/features/eds/services/catalogMenu/catalogMenuStep';
 import type { ProgressReporter } from '@/features/project-creation/services/catalogPrewarmPhase';
+import { type StepFailure, stepFailureOf } from '@/features/project-creation/services/stepFailure';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 
 const PERCENT = 97;
+
+/**
+ * Shown while a swap builds the new menu, after the old one came out (owner, 2026-11-16): the
+ * removal's own sentence stood alone for the half minute the new pages took, so the step read as if
+ * the menu were only taken away. The removal's sentence still goes to the log.
+ */
+export const SWAP_LINE = 'Took the old catalog menu out. Building the new one.';
 
 /**
  * Edit mode rebuilds the project's component instances from scratch, which would drop
@@ -62,11 +70,12 @@ export async function executeCatalogMenuPhase(
     progressTracker: ProgressReporter,
     existingProject?: Project,
     makeSite?: (target: CatalogMenuTarget) => CatalogMenuSite,
-): Promise<void> {
-    const say = sayer(context, progressTracker, OPERATION_STAGES.addingCatalogMenu.label);
-    await runCatalogMenu(context, project, say, makeSite, (target) =>
+): Promise<StepFailure | undefined> {
+    const { label, detail } = OPERATION_STAGES.addingCatalogMenu;
+    const say = sayer(context, progressTracker, label);
+    return runCatalogMenu(context, project, say, makeSite, (target) =>
         carryRecord(project, existingProject, target),
-    );
+    undefined, () => progressTracker(label, PERCENT, detail));
 }
 
 /**
@@ -80,34 +89,51 @@ export async function executeCatalogMenuPhase(
  * @param project - The project, with its new datapack in place
  * @param progressTracker - The wizard's progress reporter
  * @param makeSite - Site seam; production builds it from this call's clients
+ * @returns why the menu could not be written; undefined when it was, or had nothing to do
  */
 export async function rewriteCatalogMenuPhase(
     context: HandlerContext,
     project: Project,
     progressTracker: ProgressReporter,
     makeSite?: (target: CatalogMenuTarget) => CatalogMenuSite,
-): Promise<void> {
+): Promise<StepFailure | undefined> {
     // A swap: Republish's step for the same job after a store change.
     const say = sayer(context, progressTracker, OPERATION_STAGES.updatingCatalogMenu.label);
-    await runCatalogMenu(context, project, say, makeSite, undefined, async (site) => {
+    // An Edit's swap pauses on its problem, as creation's write does (F307).
+    return runCatalogMenu(context, project, say, makeSite, undefined, async (site) => {
         const removed = await removeCatalogMenuStep(project, site);
-        if (removed !== undefined) say(removed.summary);
+        if (removed !== undefined) say(removed.summary, SWAP_LINE);
     });
 }
 
-/** Logs and shows one catalog menu sentence under `step`. */
+/** Logs one catalog menu sentence and shows it under `step`, or `shown` in its place. */
 function sayer(
     context: HandlerContext,
     progressTracker: ProgressReporter,
     step: string,
-): (summary: string) => void {
-    return (summary) => {
+): (summary: string, shown?: string) => void {
+    return (summary, shown = summary) => {
         context.logger.info(`[Catalog Menu] ${summary}`);
-        progressTracker(step, PERCENT, summary);
+        progressTracker(step, PERCENT, shown);
     };
 }
 
-/** Resolve the site, run what comes first, then the write. Never throws. */
+/**
+ * The site, saying the step has started once it confirms the storefront has the menu block: the
+ * step said nothing until it ended, so the screen sat on the step before it (walk F207).
+ */
+function announcing(site: CatalogMenuSite, onStart: () => void): CatalogMenuSite {
+    return {
+        ...site,
+        hasBlock: async () => {
+            const has = await site.hasBlock();
+            if (has) onStart();
+            return has;
+        },
+    };
+}
+
+/** Resolve the site, run what comes first, then the write. Never throws: resolves a failure. */
 async function runCatalogMenu(
     context: HandlerContext,
     project: Project,
@@ -115,18 +141,23 @@ async function runCatalogMenu(
     makeSite: ((target: CatalogMenuTarget) => CatalogMenuSite) | undefined,
     beforeSite?: (target: CatalogMenuTarget) => void,
     beforeWrite?: (site: CatalogMenuSite) => Promise<void>,
-): Promise<void> {
+    onStart?: () => void,
+): Promise<StepFailure | undefined> {
     try {
         const target = storefrontTarget(project);
-        if (!target) return;
+        if (!target) return undefined;
         beforeSite?.(target);
-        const site = makeSite ? makeSite(target) : catalogMenuSiteFor(context, project);
-        if (!site) return;
+        const built = makeSite ? makeSite(target) : catalogMenuSiteFor(context, project);
+        if (!built) return undefined;
+        const site = onStart ? announcing(built, onStart) : built;
         await beforeWrite?.(site);
-        const summary = (await applyCatalogMenuStep(project, site))?.summary;
-        if (summary !== undefined) say(summary);
+        const result = await applyCatalogMenuStep(project, site);
+        if (result?.summary !== undefined) say(result.summary);
+        return result && !result.ok ? stepFailureOf(result.summary) : undefined;
     } catch (error) {
         // Belt and braces: the step already swallows its own failures.
         context.logger.warn(`[Catalog Menu] Phase failed: ${(error as Error).message}`);
+        // The library's words stay in the log above; the SC reads the step's own.
+        return stepFailureOf('The catalog menu could not be added. Check that DA.live and GitHub are signed in, then try again.');
     }
 }

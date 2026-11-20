@@ -430,4 +430,13 @@ describe('ensureHomeAiContext — directories and legacy skill cleanup', () => {
             });
         }
     });
+
+    // The import-datapack guide became `datapacks` (v66); the old copy names tools that no
+    // longer exist. This surface is regenerated wholesale and its names are ours.
+    it('removes the guide a renamed skill left behind, with force', async () => {
+        await ensureHomeAiContext(PROJECTS_ROOT, EXTENSION_DIST, TEST_NODE_PATH);
+
+        const oldGuide = path.join(PROJECTS_ROOT, '.claude', 'skills', 'import-datapack', 'SKILL.md');
+        expect(fsPromises.rm).toHaveBeenCalledWith(oldGuide, { force: true });
+    });
 });

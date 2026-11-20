@@ -14,12 +14,12 @@ describe('executeCommandForWorkingProject', () => {
     it("hands the command the context's project path and leaves the current project alone", async () => {
         const context = createMockHandlerContext();
         (context.stateManager.getCurrentProject as jest.Mock).mockResolvedValue(
-            createMockProject({ name: 'justrite', path: '/projects/justrite' }),
+            createMockProject({ name: 'tailspin', path: '/projects/tailspin' }),
         );
 
         await executeCommandForWorkingProject(context, 'demoBuilder.startDemo');
 
-        expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.startDemo', '/projects/justrite');
+        expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.startDemo', '/projects/tailspin');
         expect(context.stateManager.saveProject).not.toHaveBeenCalled();
     });
 });

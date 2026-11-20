@@ -5,9 +5,15 @@
  * without `confirm` changes nothing.
  */
 
+import * as fsp from 'fs/promises';
+import * as os from 'os';
+import * as path from 'path';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
-import { makeStateManager } from '../../../helpers/stateManagerFake';
+import { createMockStateManager, makeStateManager } from '../../../helpers/stateManagerFake';
+import { ProjectConfigWriter } from '@/core/state/projectConfigWriter';
+import { ProjectFileLoader } from '@/core/state/projectFileLoader';
 import type { AppBuilderComponentState, Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext } from '@/types/handlers';
@@ -30,7 +36,7 @@ jest.mock('@/features/app-builder/services/setupChecks', () => ({
     runSetupCheck: (...a: unknown[]) => mockRunCheck(...a),
 }));
 jest.mock('@/features/dashboard/services/setupCheckReader', () => ({
-    erpNamesOf: () => ['Justrite ERP'],
+    erpNamesOf: () => ['Tailspin ERP'],
     setupCheckReader: async () => ({ read: jest.fn(), scope: { websiteCode: 'acme' } }),
 }));
 const mockPreview = jest.fn();
@@ -41,13 +47,15 @@ jest.mock('@/features/app-builder/services/storePreparation/storePreparationEngi
     applyPreparation: (...a: unknown[]) => mockApply(...a),
     undoPreparation: (...a: unknown[]) => mockUndo(...a),
 }));
-const mockConfigFix = { preview: jest.fn(), apply: jest.fn(), undo: jest.fn() };
-jest.mock('@/features/app-builder/services/storePreparation/configFix', () => ({
-    configFix: jest.fn(() => mockConfigFix),
+const mockConfigFix = { preview: jest.fn(), apply: jest.fn(), undo: jest.fn(), previewUndo: jest.fn() };
+jest.mock('@/features/app-builder/services/storePreparation/configSetup', () => ({
+    // The path rule is the real one: the handler validates with it, and a pack's settings share it.
+    SETTING_PATH: jest.requireActual('@/features/app-builder/services/storePreparation/configSetup').SETTING_PATH,
+    configSetup: jest.fn(() => mockConfigFix),
 }));
 
 // Imported after the mocks, which jest hoists above it.
-import { configFix } from '@/features/app-builder/services/storePreparation/configFix';
+import { configSetup } from '@/features/app-builder/services/storePreparation/configSetup';
 import {
     handlePrepareCommerceStore,
     handleSetCommerceConfig,
@@ -97,7 +105,7 @@ describe('prepareCommerceStore', () => {
         await deps.runCheck('payment-on-account-enabled');
         expect(mockRunCheck).toHaveBeenCalledWith('payment-on-account-enabled', expect.any(Function), {
             websiteCode: 'acme',
-            erpNames: ['Justrite ERP'],
+            erpNames: ['Tailspin ERP'],
         });
     });
 
@@ -139,7 +147,7 @@ describe('prepareCommerceStore', () => {
         const [steps, state, deps, stepIds] = mockPreview.mock.calls[0];
         expect(steps.map((s: { id: string }) => s.id)).toContain('price-scope-website');
         expect(state).toMatchObject({ kind: 'integration' });
-        expect(deps).toMatchObject({ commerce: COMMERCE, websiteCode: 'acme', erpNames: ['Justrite ERP'] });
+        expect(deps).toMatchObject({ commerce: COMMERCE, websiteCode: 'acme', erpNames: ['Tailspin ERP'] });
         expect(stepIds).toEqual(['price-scope-website']);
         expect(mockApply).not.toHaveBeenCalled();
         expect(COMMERCE.send).not.toHaveBeenCalled();
@@ -258,6 +266,30 @@ describe('undoCommerceStorePreparation', () => {
         expect(stages.map(([stage]) => stage)).not.toContain('Applying the demo setup');
         expect(endPush(context)?.changes).toStrictEqual([{ label: 'Price scope', lines: ['Took erp_owner out of the attribute set Default'] }]);
     });
+
+    // Step 06: what an undo kept is said in one line, under its step on the result screen, and
+    // on the step in the agent's answer.
+    it('shows what an undo kept under its step, and answers it on the step', async () => {
+        const KEPT = 'Kept Catalog Price Scope as it is: it was changed after Demo Builder set it.';
+        mockUndo.mockResolvedValue({ reports: [{ ...APPLIED_REPORT, state: 'undone', changes: [], kept: KEPT }], record: undefined, checks: {} });
+        const { context } = setup({ storePreparation: RECORD });
+        const result = await handleUndoCommerceStorePreparation(context, { id: 'erp-integration', confirm: true, progress: 'modal' });
+        expect(endPush(context)?.changes).toStrictEqual([{ label: 'Price scope', lines: [KEPT] }]);
+        expect(result).toMatchObject({ success: true, data: { steps: [expect.objectContaining({ id: 'price-scope-website', kept: KEPT })] } });
+    });
+
+    it('without confirm, leaves the hashes out of what it answers is recorded', async () => {
+        const warehouse: StorePreparationRecord = {
+            at: 't',
+            steps: { 'erp-warehouse': { kind: 'warehouse', createdSources: ['tailspin_warehouse'], links: [], sourceFingerprints: { tailspin_warehouse: 'a'.repeat(64) } } },
+        };
+        const { context } = setup({ storePreparation: warehouse });
+        const result = await handleUndoCommerceStorePreparation(context, { id: 'erp-integration' });
+        expect(result).toStrictEqual({
+            success: true,
+            data: { confirmed: false, at: 't', steps: [{ id: 'erp-warehouse', recorded: { kind: 'warehouse', createdSources: ['tailspin_warehouse'], links: [] } }] },
+        });
+    });
 });
 
 describe('setCommerceConfig', () => {
@@ -282,7 +314,7 @@ describe('setCommerceConfig', () => {
     it('without confirm, previews through the config fix built from the items', async () => {
         const { context, saved } = setup();
         const result = await handleSetCommerceConfig(context, { items: ITEMS });
-        expect(configFix).toHaveBeenCalledWith({ kind: 'config', items: ITEMS });
+        expect(configSetup).toHaveBeenCalledWith({ kind: 'config', items: ITEMS });
         expect(mockConfigFix.preview).toHaveBeenCalledWith({ commerce: COMMERCE, websiteCode: 'acme', erpNames: [] });
         expect(result).toStrictEqual({ success: true, data: { confirmed: false, changes: ['catalog/price/scope at the default scope: 0 → 1'] } });
         expect(saved()).toBeUndefined();
@@ -300,8 +332,44 @@ describe('setCommerceConfig', () => {
         expect(await handleSetCommerceConfig(context, { undo: true, confirm: true })).toMatchObject({ success: false, code: ErrorCode.INVALID_OPERATION });
         const recorded = setup({}, { commerceConfigChange: { at: 't', previous: PREVIOUS } });
         const result = await handleSetCommerceConfig(recorded.context, { undo: true, confirm: true });
+        // Built with no items: the record's `wrote`, not a guessed value, says what was written.
+        expect(configSetup).toHaveBeenLastCalledWith({ kind: 'config', items: [] });
         expect(mockConfigFix.undo).toHaveBeenCalledWith(expect.objectContaining({ commerce: COMMERCE }), { kind: 'config', previous: PREVIOUS });
         expect(recorded.saved()).not.toHaveProperty('commerceConfigChange');
         expect(result).toMatchObject({ success: true, data: { confirmed: true, undone: true } });
+    });
+
+    // Every call reads the project from disk (`getCurrentProject`), so the record has to be
+    // ON disk: kept only in memory, every undo after a write answered "no settings change to
+    // undo" (2026-10-10 to 2026-10-29). Real writer and loader over a temp folder.
+    it('undo works on a later call, after the project is read back from disk', async () => {
+        const dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'commerce-config-undo-'));
+        try {
+            const logger = createMockLogger();
+            const stateManager = createMockStateManager({
+                getCurrentProject: jest.fn(async () => (await new ProjectFileLoader(logger).loadProject(dir, () => [])) ?? undefined),
+                saveProject: jest.fn(async (project: Project) => new ProjectConfigWriter(logger).saveProjectConfig(project, dir)),
+            });
+            await stateManager.saveProject(createMockProject({ name: 'acme', path: dir, created: new Date('2026-10-29T00:00:00Z') }));
+            const context = createMockHandlerContext({ stateManager });
+
+            await handleSetCommerceConfig(context, { items: ITEMS, confirm: true });
+            const result = await handleSetCommerceConfig(context, { undo: true, confirm: true });
+
+            expect(mockConfigFix.undo).toHaveBeenCalledWith(expect.objectContaining({ commerce: COMMERCE }), { kind: 'config', previous: PREVIOUS });
+            expect(result).toMatchObject({ success: true, data: { confirmed: true, undone: true } });
+            expect((await stateManager.getCurrentProject())?.commerceConfigChange).toBeUndefined();
+        } finally {
+            await fsp.rm(dir, { recursive: true, force: true });
+        }
+    });
+
+    it('undo: true without confirm previews the undo as it would run, keeping what changed since', async () => {
+        mockConfigFix.previewUndo.mockResolvedValue({ changes: [], kept: 'Kept catalog/price/scope as it is: it was changed after Demo Builder set it.' });
+        const recorded = setup({}, { commerceConfigChange: { at: 't', previous: PREVIOUS } });
+        const result = await handleSetCommerceConfig(recorded.context, { undo: true });
+        expect(mockConfigFix.previewUndo).toHaveBeenCalledWith({ commerce: COMMERCE, websiteCode: 'acme', erpNames: [] }, { kind: 'config', previous: PREVIOUS });
+        expect(mockConfigFix.preview).not.toHaveBeenCalled();
+        expect(result).toStrictEqual({ success: true, data: { confirmed: false, changes: [], kept: 'Kept catalog/price/scope as it is: it was changed after Demo Builder set it.' } });
     });
 });

@@ -112,6 +112,13 @@ const CATALOG: Row[] = [
         args: ['id'],
     },
     {
+        tool: 'get_finish_setup',
+        map: dashboardHandlers,
+        type: 'getFinishSetup',
+        needsAuth: false,
+        args: null,
+    },
+    {
         tool: 'list_console_apis',
         map: dashboardHandlers,
         type: 'listConsoleApis',
@@ -172,7 +179,7 @@ const CATALOG: Row[] = [
         map: dataInstallerHandlers,
         type: 'find-datapacks',
         needsAuth: ['adobe'],
-        args: ['includeCommunity', 'store', 'includeLibrary', 'limit', 'skip'],
+        args: ['includeCommunity', 'includeInstaller', 'store', 'limit', 'skip'],
     },
     {
         tool: 'get_datapack',

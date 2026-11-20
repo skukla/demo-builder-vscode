@@ -524,6 +524,23 @@ describe('addBrokenLink', () => {
         expect(r.brokenLinks).toStrictEqual([{ link: '/gone', pages: [] }]);
     });
 
+    // Walk F209 (owner, 2026-11-17): Scratch 1028 B's only broken link was on the block library's
+    // own docs page (/docs/library/blocks/fragment), which no demo visitor sees.
+    it("leaves out a link carried only by the block library's docs pages", () => {
+        const r = createPatchReport();
+        addLinkedFrom(r, '/fragments/demo/demo-fragment', '/docs/library/blocks/fragment');
+        addBrokenLink(r, '/fragments/demo/demo-fragment');
+        expect(r.brokenLinks).toBeUndefined();
+    });
+
+    it('CONTROL: keeps a link a demo page carries too, naming only the demo page', () => {
+        const r = createPatchReport();
+        addLinkedFrom(r, '/gone', '/docs/library/blocks/fragment');
+        addLinkedFrom(r, '/gone', '/products');
+        addBrokenLink(r, '/gone');
+        expect(r.brokenLinks).toStrictEqual([{ link: '/gone', pages: ['/products'] }]);
+    });
+
     it('adds to the links already recorded rather than starting over', () => {
         const r = createPatchReport();
         addBrokenLink(r, '/gone');

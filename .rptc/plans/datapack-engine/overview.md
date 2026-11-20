@@ -96,19 +96,43 @@ layer is stored as ordinary pack rows, and when a pack carries settings itself, 
 | 01 | [The engine seam, no behaviour change](step-01-engine-seam.md) | done |
 | 02 | [The install record and the catalog kinds](step-02-catalog-kinds.md) | done, not yet live |
 | 03 | [Wire the engine together](step-03-wire-engine.md), then make it the default | in progress |
-| 04 | [One rule for "is this still as we left it?"](step-04-still-as-we-left-it.md) | to do |
-| 05 | [Capture and repeat installs](step-05-capture-and-repeat-installs.md) | to do |
-| 06 | [The setup guide's undos keep what changed since](step-06-setup-guide-undos.md) (AB-83) | to do |
-| 07 | [Each demo has its own pack, shared by reference](step-07-demo-packs.md) | to do |
-| 08 | [Customers and B2B](step-08-customers-b2b.md) | to do |
-| 09 | [Store settings, as a layer beside a pack](step-09-store-settings.md) | to do |
-| 10 | [Reset clears a demo's part of the store](step-10-wipe.md) | to do |
-| 11 | [Later, when a pack needs it](step-11-later.md) | not started |
-| 12 | [The storefront shows a pack's own categories](step-12-pack-categories-on-storefront.md), after 03's live run | to do |
-| 13 | [Publish our packs to the Data Installer, settings split off](step-13-publish-to-data-installer.md), after 09 | to do |
+| 04 | [One rule for "is this still as we left it?"](step-04-still-as-we-left-it.md) | done |
+| 05 | [Capture and repeat installs](step-05-capture-and-repeat-installs.md) | built, not yet live, including the removal's "Save my changes first" and its setting |
+| 06 | [The setup guide's undos keep what changed since](step-06-setup-guide-undos.md) (AB-83) | built, not yet live |
+| 07 | [Each demo has its own pack, shared by reference](step-07-demo-packs.md) | built, not yet live; the library's "unlisted" waits on a service deploy. Share / Stop sharing an SC's own pack, and the export question, built 2026-10-30 (owner's decision), not yet live |
+| 08 | [Customers and B2B](step-08-customers-b2b.md) | built; first live run 2026-10-30 found a shared catalog and its customer group must go or stay together, fixed, not yet re-run; companies are made Active (owner, 2026-10-30) |
+| 09 | [Store settings, as a layer beside a pack](step-09-store-settings.md) | the `store_config` kind and the layer beside a pack built (layer 2026-11-02), not yet live. First live run of the kind 2026-10-30: the preview read a website setting at the project's website, not the install's; fixed (the record now keeps its target), not yet re-run |
+| 10 | [Reset clears a demo's part of the store](step-10-wipe.md) | built 2026-10-30 (products, categories, customers; B2B left); widened the same day to a chosen set of STORES with their orders closed by the one reset rule shared with the ERP reset, and a store picker in the Data Installer ("Clear demo data"). Widened again the same day to "One action, ERP included": every order of a store an ERP integration (from any local project) serves is closed by that integration (`erp/close-orders`, which also takes them out of its ERPs), then its ERP is refilled from Commerce; the Admin website is never offered. Widened again 2026-11-02 to leave nothing behind: companies with their customers, shared catalogs with their groups, customer groups, attribute sets, attributes, and website settings set to the default's value, each only when nothing else uses it. Not yet live (the integration's close is on its branch, not deployed); open decisions listed in the step |
+| 11 | [Cart rules, coupons and gift cards](step-11-later.md) | built 2026-10-30, not yet live: cart rules (on the install target's website, groups and conditions both ways), coupons (on their rule by name, codes exact, a rule holding the SC's codes kept), gift cards (as products, recorded under `giftcards`), capture and preview for all three, and the wipe (a rule on only the chosen websites deleted, one also elsewhere taken off them). ACO kinds do not map (another backend, no read-back): recorded in PL-60. Images and `product_export` are DI-7 and DI-8 |
+| 12 | [The storefront shows a pack's own categories](step-12-pack-categories-on-storefront.md) | built 2026-10-30, not yet live: under the store's own root the pack's categories go under it (no root made, nothing to do); a shared root keeps the pack's root and the install asks for the one Admin step (Open the Admin / I've done it / Skip for now, read-only check), left open on the record and in the pack's flyout with its own Check, re-checked by a reinstall; removal keeps a root a store shows; capture keeps the pack's root. Open decisions listed in the step |
+| 13 | [Publish our packs to the Data Installer, settings split off](step-13-publish-to-data-installer.md), after 09 | to do; moved out of beta.153 (owner, 2026-11-02) |
 
 Every step is test-first, reuses before it writes (the house component, hook, client or rule that
 already does the job), and runs the `gate` skill before it is committed.
+
+**Step 10 live, 2026-10-30:** the store wipe ran end to end on `tailspin_test_store` with Tailspin's
+ERP pair deployed from the branches below: two test orders closed by the one reset rule (one
+canceled, one refunded and closed), removed from Tailspin ERP, the ERP refilled; a second and third
+wipe left the ERP's price lists flat after the seed fix.
+
+## Before beta.153 ships (owner, 2026-10-30: "I don't want to lose the merging of those branches")
+
+Live tests 1 to 5 and every other check before the cut are tracked, row by row, in
+[the beta.153 release tests](../beta-153-release-tests/overview.md).
+
+The store wipe and the ERP reset depend on code that is deployed on Tailspin but lives only on
+branches. Merge each into its repository's `main` (plain merge, no trailers), push, then let
+Demo Builder's update check offer it to SCs — merging to `main` IS releasing it to every SC with the
+ERP integration, so it goes in just before the cut, with the owner's go:
+
+| Repo | Branch | Commits | Note |
+|---|---|---|---|
+| `skukla/demo-erp` | `feature/remove-orders` | `88546bc` (admin/remove-orders, contract 23), `0deea9f` (seeded price lists rerun-safe, contract 24) | merge FIRST |
+| `skukla/commerce-erp-integration` | `feature/one-reset-rule` | `18f28a9`, `0a10b95`, `a2556c2`, `1f6de21`, `d783ab2` (one reset rule; store-scoped `erp/close-orders`; vendors contract 24) | its `contract:check` fails until demo-erp's `main` has 24 |
+
+After both: point Tailspin's four ERP component folders back at `main` (they were fast-forwarded to
+these branches from local copies on 2026-10-30) and confirm `erp/status` still answers
+`closesOrdersByStore` and `refundsOnReset`.
 
 ## Agents get every action, and every answer is lean (owner, 2026-10-28)
 
@@ -187,3 +211,20 @@ piece of UI it needs is already in the house vocabulary (`src/core/ui/components
   resumable if the window closes? (Answer before step 03 ships; first answer: record per
   item, so a re-run skips what exists.)
 - Which ACCS store to install into for live checks: a throwaway one is needed.
+
+## An import's ticks, and what a removal takes (2026-11-02)
+
+Proved by a failing test through the real engine: asking for categories alone still sent `POST
+products`, because `buildDatapackEngine` dropped the kinds asked for; and a removal's confirm named
+the ticks while the removal took all the record lists. Now an install, its dry run and its preview
+take the kinds asked for and what they need (`demoBuilderEngine/askedKinds.ts`); a kind left out is
+not installed, compared, removed or put back, and stays on the record. A removal takes the record, so
+the form says "Remove all data", the confirm names the record's kinds, and its check needs nothing of
+the pack (`validateRemoval`). The service's engine is unchanged. Finishing a removal now clears the
+project's pack only when it is the pack removed. Suites: `buildDatapackEngine-ticks.test.ts`,
+`buildDatapackEngine-removal.test.ts`, `importHandlers-removalScope.test.ts`.
+
+Not yet tried live. To prove it on the scratch store, with a pack holding categories and products:
+import with Categories ticked, check the store has no new products; import everything; import
+Categories again and check nothing changed; press Remove all data and read the confirm; check the
+store and the record are back to zero.

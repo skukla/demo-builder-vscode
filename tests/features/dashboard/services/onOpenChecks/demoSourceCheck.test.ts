@@ -17,7 +17,7 @@ import { createMockLogger } from '../../../../helpers/loggerFake';
 import { createMockProject } from '../../../../helpers/projectFake';
 
 const mockCheck = checkDemoSource as jest.MockedFunction<typeof checkDemoSource>;
-const UNREACHABLE = "The Isle5 by Jen demo's repository can't be reached. Reset and updates are unavailable until it is.";
+const UNREACHABLE = "The Isle5 by Robin demo's repository can't be reached. Reset and updates are unavailable until it is.";
 
 function ctx(withDemo: boolean): OnOpenCheckContext {
     return {
@@ -56,7 +56,7 @@ it('is ok, without reading anything, for a project not built on an added demo', 
 });
 
 it('hands the reader, the saver and the fetch to the shared check', async () => {
-    mockCheck.mockResolvedValue({ reachable: true, message: '', contentReachable: true });
+    mockCheck.mockResolvedValue({ reachable: true, checked: true, message: '', contentReachable: true });
     const context = ctx(true);
 
     const outcome = await build().run(context);
@@ -69,41 +69,55 @@ it('hands the reader, the saver and the fetch to the shared check', async () => 
     );
     expect(outcome).toEqual({
         status: 'ok',
-        data: { demoName: 'Isle5 by Jen', unreachable: false, contentUnreachable: false },
+        data: { demoName: 'Isle5 by Robin', unreachable: false, contentUnreachable: false },
     });
 });
 
-it("warns with the check's sentence when the repository does not answer", async () => {
-    mockCheck.mockResolvedValue({ reachable: false, message: UNREACHABLE, contentReachable: false });
+it("warns with the check's sentence when GitHub says the repository is gone", async () => {
+    mockCheck.mockResolvedValue({ reachable: false, checked: true, message: UNREACHABLE, contentReachable: false });
 
     const outcome = await build().run(ctx(true));
 
     expect(outcome).toEqual({
         status: 'warning',
         message: UNREACHABLE,
-        data: { demoName: 'Isle5 by Jen', unreachable: true, contentUnreachable: true },
+        data: { demoName: 'Isle5 by Robin', unreachable: true, contentUnreachable: true },
+    });
+});
+
+// Owner, 2026-11-05: a failed read is not news. No notice; the next open checks again.
+it('shows no notice when the repository could not be checked', async () => {
+    const unchecked = "Couldn't check the Isle5 by Robin demo's repository. Try again in a moment.";
+    mockCheck.mockResolvedValue({ reachable: false, checked: false, message: unchecked, contentReachable: false });
+
+    const outcome = await build().run(ctx(true));
+
+    expect(outcome).toEqual({
+        status: 'unknown',
+        message: unchecked,
+        data: { demoName: 'Isle5 by Robin', unreachable: true, contentUnreachable: true },
     });
 });
 
 it("warns with the content site's own line when only the pages are gone", async () => {
     mockCheck.mockResolvedValue({
-        reachable: true,
+        reachable: true, checked: true,
         message: '',
         contentReachable: false,
-        contentMessage: "The Isle5 by Jen demo's pages can't be reached right now.",
+        contentMessage: "The Isle5 by Robin demo's pages can't be reached right now.",
     });
 
     const outcome = await build().run(ctx(true));
 
     expect(outcome).toMatchObject({
         status: 'warning',
-        message: "The Isle5 by Jen demo's pages can't be reached right now.",
+        message: "The Isle5 by Robin demo's pages can't be reached right now.",
         data: { unreachable: false, contentUnreachable: true },
     });
 });
 
 it('skips the save, rather than failing, when no state manager is available yet', async () => {
-    mockCheck.mockResolvedValue({ reachable: true, message: '', contentReachable: true });
+    mockCheck.mockResolvedValue({ reachable: true, checked: true, message: '', contentReachable: true });
     const check = createDemoSourceCheck({ repoOperations: () => repoOperations, stateManager: () => null });
 
     await check.run(ctx(true));

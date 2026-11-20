@@ -10,7 +10,8 @@
 
 import * as vscode from 'vscode';
 import { hasAdobeWorkspaceContext, hasAdobeProjectContext } from './meshStatusHelpers';
-import { openInIncognito, openPrivateBrowser } from '@/core/utils/browserUtils';
+import { openInIncognito } from '@/core/utils/browserUtils';
+import { openCommerceAdmin, resolveAdminPanelUrl } from '@/core/utils/commerceAdmin';
 import { validateURL } from '@/core/validation/URLValidator';
 import {
     validateOrgId,
@@ -26,7 +27,6 @@ import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import { MessageHandler, HandlerContext } from '@/types/handlers';
 import {
-    getAdminPanelUrl,
     getEdsDaLiveUrl,
     getEdsLiveUrl,
     getProjectFrontendPort,
@@ -75,8 +75,9 @@ export const handleOpenLiveSite: MessageHandler = async (context, data) => {
     }
 
     // Incognito keeps the demo clean — no cached content, nobody signed in — and
-    // falls back to the normal browser where it is not available.
-    const openedIncognito = await openPrivateBrowser(url);
+    // falls back to the normal browser where it is not available. The dashboard's tile shows
+    // its own spinner until this answers, once Chrome's window is likely up (owner, 2026-10-31).
+    const openedIncognito = await openInIncognito(url);
     context.logger.debug(`[Dashboard] Opening live site: ${url} (incognito: ${openedIncognito})`);
 
     return { success: true };
@@ -110,16 +111,20 @@ export const handleOpenDaLive: MessageHandler = async (context, data) => {
 /**
  * Handle 'openAdminPanel' message - Open the Commerce admin panel in the browser
  *
- * The admin URL resolves via getAdminPanelUrl: an explicit
+ * The admin URL resolves via resolveAdminPanelUrl: an explicit
  * ADOBE_COMMERCE_ADMIN_URL (PaaS Configure field / override) wins, otherwise
  * SaaS projects derive it from the ACCS tenant endpoint. When unresolvable,
  * a notification offers a jump to Configure instead of failing.
  */
-export const handleOpenAdminPanel: MessageHandler = async (context) => {
+export const handleOpenAdminPanel: MessageHandler<{ notify?: boolean }> = async (context, payload) => {
     const project = await context.stateManager.getCurrentProject();
-    const url = getAdminPanelUrl(project);
+    // Validated before it opens (a user-supplied URL), in a private window; shared with a
+    // datapack install's "Open Admin" (`openCommerceAdmin`). No URL in the log. Answered once
+    // Chrome's window is likely up, so a button shows its spinner until then; a link with no
+    // spinner of its own asks for the notification instead (`notify`, owner 2026-10-31).
+    const opening = await openCommerceAdmin(project, { notify: payload?.notify === true });
 
-    if (!url) {
+    if (opening.outcome === 'no-url') {
         // Fire-and-forget — the notification must not block the handler response.
         void vscode.window
             .showInformationMessage('No Admin Panel URL is set for this project.', 'Open Configure')
@@ -139,26 +144,12 @@ export const handleOpenAdminPanel: MessageHandler = async (context) => {
         return { success: true };
     }
 
-    // Validate URL before opening (security: prevents malicious URL injection).
-    // http is allowed alongside https — the Configure field accepts both, and the
-    // localhost/private-IP blocks still apply (mirrors configureHandlers).
-    try {
-        validateURL(url, ['https', 'http']);
-    } catch (validationError) {
-        context.logger.error(
-            '[Dashboard] Admin panel URL validation failed',
-            validationError as Error,
-        );
+    if (opening.outcome === 'invalid') {
+        context.logger.error('[Dashboard] Admin panel URL validation failed', opening.error as Error);
         return { success: false, error: 'Invalid URL', code: ErrorCode.CONFIG_INVALID };
     }
 
-    // No URL in the log — the stored value is user-supplied and may embed credentials.
-    context.logger.debug('[Dashboard] Opening admin panel');
-    // A private window, like the live site: Commerce Admin rejects a request whose
-    // adobe.com cookies have grown too large ("400 Request Header Or Cookie Too
-    // Large"), and a normal profile collects them.
-    await openInIncognito(url);
-
+    context.logger.debug('[Dashboard] Opened admin panel');
     return { success: true };
 };
 
@@ -393,8 +384,8 @@ export const handleGetProjectUrls: MessageHandler = async (context) => {
     );
     if (daLive) urls.daLive = daLive;
 
-    // Commerce admin — the pure getter (explicit field or derived ACCS URL); no prompt.
-    const commerceAdmin = getAdminPanelUrl(project);
+    // Commerce admin: an explicit field, or the ACCS URL in the chosen interface; no prompt.
+    const commerceAdmin = resolveAdminPanelUrl(project);
     if (commerceAdmin) urls.commerceAdmin = commerceAdmin;
 
     // Developer Console — always resolvable (deep link or generic fallback).

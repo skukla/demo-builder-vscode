@@ -39,13 +39,27 @@ jest.mock('@/features/authentication/ui/steps/AdobeAuthStep', () => ({
 }));
 jest.mock('@/features/authentication/ui/components/AdobeEntityFields', () => ({
     AdobeProjectField: ({
+        state,
         selectedProjectId,
         onProjectSelect,
+        onNew,
+        dialogHost,
     }: {
+        state: { adobeProject?: { id: string } };
+        dialogHost?: { onWaiting: (waiting: boolean) => void };
         selectedProjectId?: string;
         onProjectSelect?: (p: { id: string; name: string; title?: string }) => void;
+        onNew?: () => void;
     }) => (
-        <div data-testid="project-field" data-selected={selectedProjectId ?? ''}>
+        <div
+            data-testid="project-field"
+            data-selected={selectedProjectId ?? ''}
+            // The row the real picker highlights: the pending pick, else the committed project.
+            data-shown={selectedProjectId ?? state.adobeProject?.id ?? ''}
+        >
+            <button type="button" onClick={onNew}>
+                new-project
+            </button>
             <button
                 type="button"
                 onClick={() =>
@@ -54,16 +68,33 @@ jest.mock('@/features/authentication/ui/components/AdobeEntityFields', () => ({
             >
                 pick-project
             </button>
+            <button type="button" onClick={() => dialogHost?.onWaiting(true)}>
+                list-starts-waiting
+            </button>
+            <button type="button" onClick={() => dialogHost?.onWaiting(false)}>
+                list-stops-waiting
+            </button>
         </div>
     ),
     AdobeWorkspaceField: ({
+        state,
         selectedWorkspaceId,
         onWorkspaceSelect,
+        onNew,
     }: {
+        state: { adobeWorkspace?: { id: string } };
         selectedWorkspaceId?: string;
         onWorkspaceSelect?: (ws: { id: string; name: string; title?: string }) => void;
+        onNew?: () => void;
     }) => (
-        <div data-testid="workspace-field" data-selected={selectedWorkspaceId ?? ''}>
+        <div
+            data-testid="workspace-field"
+            data-selected={selectedWorkspaceId ?? ''}
+            data-shown={selectedWorkspaceId ?? state.adobeWorkspace?.id ?? ''}
+        >
+            <button type="button" onClick={onNew}>
+                new-workspace
+            </button>
             <button
                 type="button"
                 onClick={() =>
@@ -133,7 +164,9 @@ export const APIS = [
 ];
 
 // --- phase-hook helper (DestinationStage's create/workspace flow) -------------
-export function setPhases(overrides: { phase?: string; phaseMessage?: string } = {}): void {
+export function setPhases(
+    overrides: { phase?: string; phaseMessage?: string; failedPhase?: string; error?: string; retry?: jest.Mock } = {},
+): void {
     phasesMock.mockReturnValue({
         phase: 'idle',
         phaseMessage: undefined,
@@ -175,6 +208,8 @@ interface HarnessProps {
         onAddCustomAppBuilderComponent: jest.Mock;
     };
     updateSpy: jest.Mock;
+    confirmation?: React.ReactNode;
+    onSignIn?: () => Promise<unknown>;
 }
 
 /** Hosts the modal over a REAL useState wizard state (commits re-render the tree). */
@@ -189,6 +224,8 @@ function Harness({
     onClose,
     builder,
     updateSpy,
+    confirmation,
+    onSignIn,
 }: HarnessProps): React.ReactElement {
     const [state, setState] = useState<WizardState>(() => makeState(initial));
     const updateState = useCallback(
@@ -210,6 +247,8 @@ function Harness({
             blankComponent={blankComponent}
             reservedIds={reservedIds}
             builder={builder}
+            confirmation={confirmation}
+            onSignIn={onSignIn}
         />
     );
 }
@@ -224,6 +263,10 @@ export interface RenderOptions {
     blankComponent?: AppBuilderComponentCatalogEntry;
     /** Per-suite collision domain. */
     reservedIds: Set<string>;
+    /** A confirmation the finished add waits on, shown in the flow's own window. */
+    confirmation?: React.ReactNode;
+    /** The host's Adobe sign-in, which only some hosts offer. */
+    onSignIn?: () => Promise<unknown>;
 }
 
 export function renderFlowModal(options: RenderOptions) {
@@ -252,6 +295,8 @@ export function renderFlowModal(options: RenderOptions) {
                 onClose={onClose}
                 builder={builder}
                 updateSpy={updateSpy}
+                confirmation={options.confirmation}
+                onSignIn={options.onSignIn}
             />
         </Provider>
     );

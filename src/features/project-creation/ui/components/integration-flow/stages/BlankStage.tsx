@@ -18,9 +18,9 @@
  */
 
 import React from 'react';
-import { ChoiceCard } from '../../ChoiceCard';
 import { BLANK_DEFAULT_LABEL } from '../flowStages';
 import { OptionalNameField } from '../OptionalNameField';
+import { ChoiceCard } from '@/core/ui/components/selection/ChoiceCard';
 import { SectionLabel } from '@/core/ui/components/ui/SectionLabel';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 
@@ -29,7 +29,7 @@ const SEED_DESCRIPTION_MAX = 110;
 
 /** The Blank card's copy. */
 export const BLANK_CARD_NAME = 'Blank';
-export const BLANK_CARD_DESCRIPTION = 'An empty custom integration.';
+export const BLANK_CARD_DESCRIPTION = 'An empty custom integration';
 
 function clampDescription(text: string): string {
     if (text.length <= SEED_DESCRIPTION_MAX) return text;
@@ -69,7 +69,7 @@ export function BlankStage({
     const defaultLabel = selectedSeed?.name ?? BLANK_DEFAULT_LABEL;
     return (
         <div className="intflow-blank">
-            <SectionLabel>Start from</SectionLabel>
+            <SectionLabel>Start From</SectionLabel>
             <div className="intflow-kind-choices">
                 <ChoiceCard
                     name={BLANK_CARD_NAME}
@@ -86,7 +86,7 @@ export function BlankStage({
                             description={clampDescription(seed.description)}
                             selected={seedId === seed.id}
                             disabled={alreadyAdded}
-                            note={alreadyAdded ? 'Already added — one per project' : undefined}
+                            note={alreadyAdded ? 'Already added (one per project)' : undefined}
                             onSelect={() => onSeedChange?.(seed.id)}
                         />
                     );

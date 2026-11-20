@@ -82,7 +82,7 @@ export const STOREFRONT_CHANGES: readonly StorefrontChange[] = [
         since: '2026-10-23',
         what: "Creation and reset put every live patch in the shipped ledgers into any storefront's code it fits.",
         evidence:
-            'Commit c75b52793 (2026-10-23, EDS-64). Measured on JustRite the same day: 4 of the 6 fit and were ' +
+            'Commit c75b52793 (2026-10-23, EDS-64). Measured on Tailspin the same day: 4 of the 6 fit and were ' +
             'missing, and only the build step (creation, reset) applies them.',
     },
 ];

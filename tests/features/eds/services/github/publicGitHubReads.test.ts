@@ -11,9 +11,9 @@ import { PublicReadError, publicRepoReaders } from '@/features/eds/services/gith
 const REPO_JSON = {
     id: 1035782,
     name: 'aistore',
-    full_name: 'sayurihanki/aistore',
-    html_url: 'https://github.com/sayurihanki/aistore',
-    clone_url: 'https://github.com/sayurihanki/aistore.git',
+    full_name: 'org-j/aistore',
+    html_url: 'https://github.com/org-j/aistore',
+    clone_url: 'https://github.com/org-j/aistore.git',
     default_branch: 'main',
     is_template: false,
     private: false,
@@ -33,16 +33,16 @@ function answering(byUrl: Record<string, { status: number; body?: unknown }>) {
 
 describe('publicRepoReaders — the repository', () => {
     it('reads it with no Authorization header at all', async () => {
-        const fetchImpl = answering({ '/repos/sayurihanki/aistore': { status: 200, body: REPO_JSON } });
+        const fetchImpl = answering({ '/repos/org-j/aistore': { status: 200, body: REPO_JSON } });
 
-        const repo = await publicRepoReaders(fetchImpl).repoOps.getRepository('sayurihanki', 'aistore');
+        const repo = await publicRepoReaders(fetchImpl).repoOps.getRepository('org-j', 'aistore');
 
         expect(repo).toEqual({
             id: 1035782,
             name: 'aistore',
-            fullName: 'sayurihanki/aistore',
-            htmlUrl: 'https://github.com/sayurihanki/aistore',
-            cloneUrl: 'https://github.com/sayurihanki/aistore.git',
+            fullName: 'org-j/aistore',
+            htmlUrl: 'https://github.com/org-j/aistore',
+            cloneUrl: 'https://github.com/org-j/aistore.git',
             defaultBranch: 'main',
             isTemplate: false,
             isPrivate: false,
@@ -63,9 +63,9 @@ describe('publicRepoReaders — the repository', () => {
                 owner: { login: 'adobe-commerce' },
             },
         };
-        const fetchImpl = answering({ '/repos/sayurihanki/aistore': { status: 200, body } });
+        const fetchImpl = answering({ '/repos/org-j/aistore': { status: 200, body } });
 
-        const repo = await publicRepoReaders(fetchImpl).repoOps.getRepository('sayurihanki', 'aistore');
+        const repo = await publicRepoReaders(fetchImpl).repoOps.getRepository('org-j', 'aistore');
 
         expect(repo.templateRepository).toEqual({ owner: 'adobe-commerce', repo: 'boilerplate-b2b-template' });
         expect(repo.forkParent).toBeUndefined();
@@ -78,11 +78,11 @@ describe('publicRepoReaders — the repository', () => {
             parent: { name: 'aem-boilerplate-commerce', owner: { login: 'hlxsites' } },
         };
         const forked = await publicRepoReaders(
-            answering({ '/repos/sayurihanki/aistore': { status: 200, body: fork } }),
-        ).repoOps.getRepository('sayurihanki', 'aistore');
+            answering({ '/repos/org-j/aistore': { status: 200, body: fork } }),
+        ).repoOps.getRepository('org-j', 'aistore');
         const plain = await publicRepoReaders(
-            answering({ '/repos/sayurihanki/aistore': { status: 200, body: REPO_JSON } }),
-        ).repoOps.getRepository('sayurihanki', 'aistore');
+            answering({ '/repos/org-j/aistore': { status: 200, body: REPO_JSON } }),
+        ).repoOps.getRepository('org-j', 'aistore');
 
         expect(forked.forkParent).toEqual({ owner: 'hlxsites', repo: 'aem-boilerplate-commerce' });
         expect(forked.templateRepository).toBeUndefined();
@@ -91,9 +91,9 @@ describe('publicRepoReaders — the repository', () => {
     });
 
     it("throws with GitHub's status, so the caller can tell a 404 from a rate limit", async () => {
-        const fetchImpl = answering({ '/repos/jen/private-one': { status: 404 } });
+        const fetchImpl = answering({ '/repos/robin/private-one': { status: 404 } });
 
-        const read = publicRepoReaders(fetchImpl).repoOps.getRepository('jen', 'private-one');
+        const read = publicRepoReaders(fetchImpl).repoOps.getRepository('robin', 'private-one');
 
         await expect(read).rejects.toBeInstanceOf(PublicReadError);
         await expect(read).rejects.toMatchObject({ status: 404 });
@@ -109,13 +109,13 @@ describe('publicRepoReaders — files', () => {
             type: 'file',
             encoding: 'base64',
             sha: 'abc',
-            content: Buffer.from('mountpoints:\n  /: https://content.da.live/jen/isle5/\n').toString('base64'),
+            content: Buffer.from('mountpoints:\n  /: https://content.da.live/robin/isle5/\n').toString('base64'),
         });
 
-        const file = await publicRepoReaders(fetchImpl).fileOps.getFileContent('jen', 'isle5', 'fstab.yaml');
+        const file = await publicRepoReaders(fetchImpl).fileOps.getFileContent('robin', 'isle5', 'fstab.yaml');
 
         expect(file).toEqual({
-            content: 'mountpoints:\n  /: https://content.da.live/jen/isle5/\n',
+            content: 'mountpoints:\n  /: https://content.da.live/robin/isle5/\n',
             sha: 'abc',
             path: 'fstab.yaml',
             encoding: 'base64',
@@ -125,7 +125,7 @@ describe('publicRepoReaders — files', () => {
     it('answers null for a file that is not there, as the signed-in reader does', async () => {
         const fetchImpl = contents(undefined, 404);
 
-        const file = await publicRepoReaders(fetchImpl).fileOps.getFileContent('jen', 'isle5', 'fstab.yaml');
+        const file = await publicRepoReaders(fetchImpl).fileOps.getFileContent('robin', 'isle5', 'fstab.yaml');
 
         expect(file).toBeNull();
     });
@@ -133,13 +133,13 @@ describe('publicRepoReaders — files', () => {
     it('answers null for a directory and for a file too large to inline', async () => {
         // A directory answers an ARRAY; a file over 1 MB answers with empty content.
         const directory = await publicRepoReaders(contents([{ name: 'a.js' }])).fileOps.getFileContent(
-            'jen',
+            'robin',
             'isle5',
             'fstab.yaml',
         );
         const huge = await publicRepoReaders(
             contents({ type: 'file', encoding: 'none', content: '', sha: 'x' }),
-        ).fileOps.getFileContent('jen', 'isle5', 'fstab.yaml');
+        ).fileOps.getFileContent('robin', 'isle5', 'fstab.yaml');
 
         expect(directory).toBeNull();
         expect(huge).toBeNull();

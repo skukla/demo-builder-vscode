@@ -91,7 +91,7 @@ export async function executePhaseHelixConfig(
 
     await context.sendMessage('storefront-setup-progress', {
         phase: 'storefront-code',
-        message: 'Configuring Edge Delivery Services',
+        message: 'Configuring content source',
         progress: 20,
     } satisfies StorefrontSetupProgressPayload);
 
@@ -196,7 +196,6 @@ export async function executePhaseHelixConfig(
 
     await context.sendMessage('storefront-setup-progress', {
         phase: 'storefront-code',
-        message: 'Edge Delivery Services configured',
         progress: 35,
     } satisfies StorefrontSetupProgressPayload);
 
@@ -228,6 +227,12 @@ async function pushFstabToGitHub(
         repoInfo.repoName,
         'fstab.yaml',
     );
+    // Already pointing at this site: nothing to write. A repository adopted as it was gained a
+    // commit that changed nothing (owner, 2026-11-20).
+    if (existingFstab?.content === fstabContent) {
+        logger.info('[Storefront Setup] fstab.yaml already points at this content source');
+        return;
+    }
     await githubFileOps.createOrUpdateFile(
         repoInfo.repoOwner,
         repoInfo.repoName,
@@ -299,7 +304,7 @@ async function installBlockCollectionsWithTracking(
 ): Promise<string[] | undefined> {
     await context.sendMessage('storefront-setup-progress', {
         phase: 'storefront-code',
-        message: 'Preparing inspector tagging',
+        message: 'Adding inspector tags',
         progress: 27,
     } satisfies StorefrontSetupProgressPayload);
     let inspectorEntries: GitHubTreeInput[];
@@ -415,7 +420,6 @@ async function applyStandaloneInspectorTagging(
     if (inspectorResult.success) {
         await context.sendMessage('storefront-setup-progress', {
             phase: 'storefront-code',
-            message: 'Inspector tagging installed',
             progress: 28,
         } satisfies StorefrontSetupProgressPayload);
         logger.info('[Storefront Setup] Inspector tagging installed (standalone)');

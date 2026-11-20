@@ -63,6 +63,19 @@ export function startDependencies(
     ];
 }
 
+/**
+ * The start request's config: the wizard's, plus the bundle an imported project's repository is
+ * made from (EDS-72). The bundle comes from the import, not the storefront, so it is added here
+ * at the boundary rather than carried in the storefront-derived config.
+ */
+export function startEdsConfigOf(
+    state: Pick<WizardState, 'edsConfig' | 'importedFrom'>,
+): StorefrontSetupStartPayload['edsConfig'] | undefined {
+    const edsConfig = toStartEdsConfig(state.edsConfig);
+    if (!edsConfig || !state.importedFrom) return edsConfig;
+    return { ...edsConfig, bundleSource: { bundlePath: state.importedFrom.bundlePath } };
+}
+
 export function useStorefrontSetup(
     state: WizardState,
     updateState: (updates: Partial<WizardState>) => void,
@@ -109,6 +122,10 @@ export function useStorefrontSetup(
                     installedBlockLibraries: data.installedBlockLibraries,
                     // Stamped on the project by creation ("Needs reset", storefrontChanges.ts).
                     storefrontBuildComplete: data.storefrontBuildComplete,
+                    // Saved by creation as the project's Republish the Code step (PL-101).
+                    codeNotServed: data.codeNotServed,
+                    // Recorded on an imported project by creation, for Reset (EDS-72).
+                    bundleImport: data.bundleImport,
                 },
             });
         },
@@ -125,7 +142,7 @@ export function useStorefrontSetup(
 
     const handleRetry = useCallback(() => {
         setSetupState(initialSetupState('Retrying storefront setup'));
-        const edsConfig = toStartEdsConfig(state.edsConfig);
+        const edsConfig = startEdsConfigOf({ edsConfig: state.edsConfig, importedFrom: state.importedFrom });
         if (!edsConfig) {
             setSetupState(applyIncompleteConfig);
             return;
@@ -149,6 +166,7 @@ export function useStorefrontSetup(
     }, [
         state.projectName,
         state.edsConfig,
+        state.importedFrom,
         state.demo,
         state.componentConfigs,
         state.components,
@@ -183,6 +201,7 @@ export function useStorefrontSetup(
         selectedPackage: state.selectedPackage,
         selectedStack: state.selectedStack,
         demo: state.demo,
+        importedFrom: state.importedFrom,
     });
 
     // Update running state and partialState ref when phase changes
@@ -202,12 +221,10 @@ export function useStorefrontSetup(
                 // logger the moment it receives this, which is the side that can
                 // actually persist it. A console.log here only reached the
                 // webview devtools and fired in every test that unmounted.
+                // What it made is the run's own record now (F275): the handler only
+                // asks, from this, whether to confirm.
                 vscode.postMessage('storefront-setup-cancel', {
                     partialState: partialStateRef.current,
-                    edsConfig: {
-                        daLiveOrg: edsConfigRef.current?.daLiveOrg,
-                        daLiveSite: edsConfigRef.current?.daLiveSite,
-                    },
                 } satisfies StorefrontSetupCancelPayload);
             }
         };
@@ -257,7 +274,7 @@ export function useStorefrontSetup(
         setupStartedRef.current = true;
 
         // Start setup operations with initial config
-        const edsConfig = toStartEdsConfig(initialConfigRef.current.edsConfig);
+        const edsConfig = startEdsConfigOf(initialConfigRef.current);
         if (!edsConfig) {
             setSetupState(applyIncompleteConfig);
             return;

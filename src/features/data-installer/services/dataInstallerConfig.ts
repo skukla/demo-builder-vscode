@@ -15,7 +15,7 @@
  */
 
 import * as vscode from 'vscode';
-import type { DatapackEngineId } from '../types';
+import type { ChangesOnRemoval } from '../types';
 import { validateURL } from '@/core/validation/URLValidator';
 
 /** Longest base URL we will accept from settings. */
@@ -25,45 +25,38 @@ const SETTINGS_SECTION = 'demoBuilder.dataInstaller';
 const STORE_SETTINGS_SECTION = 'demoBuilder.datapackStore';
 
 /**
- * Whether the Data Installer feature is switched on.
- *
- * Defaults to true, and treats a corrupted non-boolean setting as true rather
- * than silently disabling the feature — a broken settings.json should not look
- * like a deliberate opt-out.
+ * Whether the SC uses the Data Installer (`demoBuilder.dataInstaller.enabled`, owner, 2026-11-05):
+ * the address is pasted once, and this turns it on and off without deleting it. Anything but an
+ * explicit false reads as on, so an SC who never touched it sees no change.
  */
-export function isDataInstallerEnabled(): boolean {
-    const raw = vscode.workspace.getConfiguration(SETTINGS_SECTION).get<boolean>('enabled', true);
-    return typeof raw === 'boolean' ? raw : true;
+export function dataInstallerEnabled(): boolean {
+    return vscode.workspace.getConfiguration(SETTINGS_SECTION).get<boolean>('enabled', true) !== false;
 }
 
 /**
- * Which engine installs and removes datapacks (`demoBuilder.dataInstaller.engine`, DI-5).
- * Demo Builder's own unless the SC chooses the service (owner, 2026-10-28): the service still
- * answers the catalog, but since 2026-10-27 it ignores the Commerce credentials a caller sends,
- * so it installs nothing for us. Anything unrecognised reads as the default. A pack already
- * installed is removed by whichever engine installed it, whatever this says.
+ * What a removal does about the SC's changes when nothing answers
+ * (`demoBuilder.dataInstaller.changesOnRemoval`, step 05). Anything unrecognised reads as asking:
+ * a broken settings.json must not stop anyone being asked before their work is lost or saved.
  */
-export function selectedDatapackEngine(): DatapackEngineId {
-    const raw = vscode.workspace.getConfiguration(SETTINGS_SECTION).get<string>('engine', 'demo-builder');
-    return raw === 'service' ? 'service' : 'demo-builder';
+export function changesOnRemoval(): ChangesOnRemoval {
+    const raw = vscode.workspace.getConfiguration(SETTINGS_SECTION).get<string>('changesOnRemoval', 'ask');
+    return raw === 'save' ? 'save' : 'ask';
 }
 
 /**
- * Whether the Data Installer can actually be used: switched on AND pointed at a
- * usable API.
+ * Whether a settings change alters the datapack list: which sources it reads, or what its cards
+ * offer (whether the Data Installer is on decides Copy to the Data Installer). A screen showing the list follows these, since an SC who
+ * has just changed one has no reason to know the list needs a Refresh (owner, 2026-11-05).
  *
- * The two settings are a single question for anyone deciding whether to OFFER
- * the feature, and answering it in two places is how they drift. `resolveDataInstallerAccess`
- * asks the same pair, in the same order, to decide whether to SERVE a request —
- * it stays separate because it must say WHICH half failed, and this must not care.
- *
- * Exists because the dashboard's Sample Data tile rendered unconditionally: a
- * user with no `apiBaseUrl` got a tile that opened a surface refusing them. The
- * root `CLAUDE.md` had described the surface as absent without these two keys,
- * which was true of the request guard and false of the tile.
+ * @param event - the change
+ * @returns whether to read the list again
  */
-export function isDataInstallerConfigured(): boolean {
-    return isDataInstallerEnabled() && resolveDataInstallerBaseUrl().ok;
+export function affectsDatapackList(event: vscode.ConfigurationChangeEvent): boolean {
+    return (
+        event.affectsConfiguration(`${SETTINGS_SECTION}.apiBaseUrl`) ||
+        event.affectsConfiguration(`${SETTINGS_SECTION}.enabled`) ||
+        event.affectsConfiguration(`${STORE_SETTINGS_SECTION}.apiBaseUrl`)
+    );
 }
 
 /**
@@ -75,7 +68,7 @@ export function isDataInstallerConfigured(): boolean {
  */
 export type BaseUrlResolution =
     | { ok: true; baseUrl: string }
-    | { ok: false; reason: 'not-configured' | 'invalid-url'; fingerprint?: string };
+    | { ok: false; reason: 'not-configured' | 'turned-off' | 'invalid-url'; fingerprint?: string };
 
 /**
  * Read and validate the Data Installer base URL.
@@ -86,6 +79,7 @@ export type BaseUrlResolution =
  * @returns The validated base URL with any trailing slash removed, or why not
  */
 export function resolveDataInstallerBaseUrl(): BaseUrlResolution {
+    if (!dataInstallerEnabled()) return { ok: false, reason: 'turned-off' };
     return resolveHttpsBaseUrl(vscode.workspace.getConfiguration(SETTINGS_SECTION).get<string>('apiBaseUrl', ''));
 }
 

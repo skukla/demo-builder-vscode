@@ -33,6 +33,7 @@ import {
 } from '../../services/patches/patchReportHelper';
 import { confirmStorefrontCodeServed } from '../../services/storefront/codeServed';
 import { getDaLiveAuthService } from '../edsHelpers';
+import { codeSource, executePhaseBundleRepo, hasCodeSource, readSetupBundle } from './storefrontSetupBundle';
 import { withDemoContentSource } from './storefrontSetupDemo';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
 import { executePhaseGitHubRepo } from './storefrontSetupPhase1';
@@ -126,6 +127,10 @@ async function runConfigCodeSyncPhases(
                 signal,
                 options,
             );
+            // A step boundary (F275): a stop during the code step registers no site.
+            if (signal.aborted) throw new Error('Operation cancelled');
+            // From here the run writes the site; one it was handed is never its to remove.
+            if (!edsConfig.selectedSite) repoInfo.siteWritten = true;
             const phase3Result =
                 await executePhaseCodeSync(context, edsConfig, services, repoInfo, signal);
             if (phase3Result) {
@@ -147,7 +152,7 @@ async function runConfigCodeSyncPhases(
                 );
                 await context.sendMessage('storefront-setup-progress', {
                     phase: 'code-sync',
-                    message: 'Resuming setup',
+                    message: 'Resuming',
                     progress: 40,
                 } satisfies StorefrontSetupProgressPayload);
             },
@@ -272,18 +277,20 @@ async function runEdsPipelineWithRecovery(
             );
             if (!result.success) throw new Error(result.error || 'Content pipeline failed');
             if (result.warnings.length > 0) repoInfo.pipelineWarnings = result.warnings;
-            // After the copy, as a reset does: the code publish can miss the last
-            // commits, and a storefront whose site runs old code is not built.
-            const codeNotServed = await confirmStorefrontCodeServed(
+            // After the copy, as a reset does: the code publish can miss the last commits.
+            // The warning names Republish as the fix; it is no reason to reset, so the build
+            // stays complete (walk F208: a new project read "Needs reset").
+            const served = await confirmStorefrontCodeServed(
                 services.githubFileOps,
                 services.helixService,
                 { owner: repoInfo.repoOwner, repo: repoInfo.repoName },
                 undefined,
                 logger,
             );
-            if (codeNotServed) {
-                repoInfo.pipelineWarnings = [...(repoInfo.pipelineWarnings ?? []), codeNotServed];
-                repoInfo.storefrontBuildComplete = false;
+            if (served.sentence) {
+                repoInfo.pipelineWarnings = [...(repoInfo.pipelineWarnings ?? []), served.sentence];
+                // Saved by creation as the project's Republish the Code step (PL-101).
+                repoInfo.codeNotServed = served.files;
             }
             return { libraryPaths: result.libraryPaths };
         },
@@ -327,12 +334,16 @@ async function runEdsPipelineWithRecovery(
  */
 export async function executeStorefrontSetupPhases(
     runContext: HandlerContext,
-    edsConfig: StorefrontSetupStartPayload['edsConfig'],
+    requestedConfig: StorefrontSetupStartPayload['edsConfig'],
     signal: AbortSignal,
     options?: BlockLibraryOptions,
     servicesOverride?: Partial<SetupServices>,
 ): Promise<StorefrontSetupResult> {
     const logger = runContext.logger;
+    // A project imported from a demo bundle is made from its files (EDS-72); any other comes back as it was.
+    const read = await readSetupBundle(requestedConfig, logger);
+    if ('error' in read) return { success: false, error: read.error };
+    const { edsConfig, bundle } = read;
     /**
      * One seam for the whole bundle, rather than one per service.
      *
@@ -356,7 +367,7 @@ export async function executeStorefrontSetupPhases(
         clearsContent: wantsToResetContent,
         copiesContent: !skipContent,
     });
-    const context = withSetupSteps(runContext, steps);
+    const context = withSetupSteps(runContext, steps, Date.now(), signal);
     logger.info(
         `[Storefront Setup] Content: skipContent=${skipContent}, selectedSite=${Boolean(edsConfig.selectedSite)}, resetContent=${wantsToResetContent}`,
     );
@@ -389,14 +400,13 @@ export async function executeStorefrontSetupPhases(
             `${authenticatedLogin ? ` (authenticated as ${authenticatedLogin})` : ' (authenticated user unknown)'}`,
     );
 
-    const { templateOwner, templateRepo } = edsConfig;
-    if (!templateOwner || !templateRepo) {
+    if (!hasCodeSource(edsConfig, bundle)) {
         logger.error(
             '[Storefront Setup] Template not configured. Config:',
             JSON.stringify({
                 repoName: edsConfig.repoName,
-                templateOwner,
-                templateRepo,
+                templateOwner: edsConfig.templateOwner,
+                templateRepo: edsConfig.templateRepo,
             }),
         );
         return {
@@ -406,6 +416,7 @@ export async function executeStorefrontSetupPhases(
     }
 
     const repoInfo: RepoInfo = { repoOwner: githubOwner, repoName: edsConfig.repoName };
+    const template = codeSource(undefined, repoInfo, edsConfig);
     const effectiveBlockLibraries = options?.selectedBlockLibraries ?? [];
     const phaseOptions: BlockLibraryOptions = { ...options };
 
@@ -416,16 +427,19 @@ export async function executeStorefrontSetupPhases(
     const patchReport = createPatchReport();
 
     try {
-        const phase1Result = await executePhaseGitHubRepo(
-            context,
-            edsConfig,
-            services,
-            repoInfo,
-            signal,
-            templateOwner,
-            templateRepo,
-            patchReport,
-        );
+        if (signal.aborted) throw new Error('Operation cancelled'); // stopped before it began
+        const phase1Result = bundle
+            ? await executePhaseBundleRepo(context, edsConfig, services, repoInfo, bundle)
+            : await executePhaseGitHubRepo(
+                  context,
+                  edsConfig,
+                  services,
+                  repoInfo,
+                  signal,
+                  template.owner,
+                  template.repo,
+                  patchReport,
+              );
         if (phase1Result) return phase1Result;
 
         const { blockCollectionIds, earlyReturn } = await runConfigCodeSyncPhases(
@@ -445,8 +459,9 @@ export async function executeStorefrontSetupPhases(
             services,
             repoInfo,
             edsConfig,
-            templateOwner,
-            templateRepo,
+            // An imported project's code is its own repository's: block definitions are read there.
+            codeSource(bundle, repoInfo, edsConfig).owner,
+            codeSource(bundle, repoInfo, edsConfig).repo,
             blockCollectionIds,
             withDemoContentSource(buildLibraryContentSources(effectiveBlockLibraries), edsConfig.demo),
             wantsToResetContent,

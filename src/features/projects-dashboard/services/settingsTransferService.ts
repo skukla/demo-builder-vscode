@@ -19,6 +19,7 @@ import { showWebviewQuickPick } from '@/core/utils/quickPickUtils';
 import { writeFileAtomic } from '@/core/utils/writeFileAtomic';
 import { assertPathInsideSync } from '@/core/validation/PathSafetyValidator';
 import { askForDetailsDuringOperation, modalIsAsking } from '@/core/vscode/operationPrompt';
+import { recordSharedInFile, type SharedInFilesMemento } from '@/features/data-installer/services/sharedInFiles';
 import { getProjectDescription } from '@/features/projects-dashboard/utils/componentSummaryUtils';
 import type { Project } from '@/types/base';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
@@ -53,7 +54,7 @@ export async function pickImportFile(context: HandlerContext): Promise<vscode.Ur
             'Demo Builder settings or bundle': ['json', 'zip'],
             'All Files': ['*'],
         },
-        title: 'Import a settings file or a demo bundle',
+        title: 'Import a Settings File or a Demo Bundle',
     });
     return fileUris?.[0];
 }
@@ -169,9 +170,7 @@ export async function copySettingsFromProject(context: HandlerContext): Promise<
         const projects: Project[] = [];
 
         for (const item of projectList) {
-            const project = await context.stateManager.loadProjectFromPath(item.path, undefined, {
-                persistAfterLoad: false,
-            });
+            const project = await context.stateManager.loadProjectFromPath(item.path);
             if (project) {
                 projects.push(project);
             }
@@ -268,6 +267,7 @@ async function announceExport(projectName: string, uri: vscode.Uri): Promise<voi
 export async function exportProjectSettings(
     context: HandlerContext,
     project: Project,
+    { announce = true }: { announce?: boolean } = {},
 ): Promise<HandlerResponse> {
     try {
         // Get extension version for metadata
@@ -300,10 +300,13 @@ export async function exportProjectSettings(
         await vscode.workspace.fs.writeFile(saveUri, Buffer.from(content, 'utf8'));
 
         context.logger.info(`Exported settings to: ${saveUri.fsPath}`);
+        // The file carries a library pack by reference: deleting it later warns (step 07).
+        await recordSharedInFile(context.context.globalState, project);
 
         // A plain message, not a progress bar with a sleep in it: nothing is in
         // progress, and the SC dismisses it when they have read it.
-        void announceExport(project.name, saveUri);
+        // A caller that shows the result itself (Share Demo's window, walk F236) passes announce: false.
+        if (announce) void announceExport(project.name, saveUri);
 
         return {
             success: true,
@@ -340,11 +343,12 @@ export interface ExportSettingsToFileResult {
  *
  * The target must resolve INSIDE the project directory; traversal or writes to an
  * arbitrary location are rejected by {@link assertPathInsideSync}. Default target:
- * `<project>/<name>.project.demo-builder.json`.
+ * `<project>/<name>.project.demo-builder.json`. Given VS Code's global state, it
+ * remembers a library pack went out in the file (step 07, `sharedInFiles.ts`).
  */
 export async function exportProjectSettingsToFile(
     project: Project,
-    opts: { path?: string } = {},
+    opts: { path?: string; globalState?: SharedInFilesMemento } = {},
 ): Promise<ExportSettingsToFileResult> {
     const extension = vscode.extensions.getExtension('AdobeDemoSystem.adobe-demo-builder');
     const extensionVersion = extension?.packageJSON?.version || 'unknown';
@@ -352,6 +356,7 @@ export async function exportProjectSettingsToFile(
 
     const target = resolveExportTarget(project, opts.path);
     await writeFileAtomic(target, JSON.stringify(settings, null, 2));
+    if (opts.globalState) await recordSharedInFile(opts.globalState, project);
 
     return {
         path: target,

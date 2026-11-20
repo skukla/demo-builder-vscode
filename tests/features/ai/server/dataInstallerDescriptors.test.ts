@@ -17,25 +17,41 @@ import {
     DATA_INSTALLER_DESCRIPTORS,
 } from '@/features/ai/server/dataInstallerDescriptors';
 import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
+import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerResponse } from '@/types/handlers';
 
 const row = (tool: string) => DATA_INSTALLER_DESCRIPTORS.find((d) => d.tool === tool);
 
-it('registers the thirteen tools, and only those', () => {
+// Twenty-five since update_datapack (step-07 U1, 2026-11-14); twenty-four since Phase 8 removed copy_library_datapack_to_installer (D7, 2026-11-13); twenty-five since clear_commerce_instance (step 06 C6, 2026-11-13); twenty-four since restore_datapack (Phase 3/5, 2026-11-12); twenty-three since undo_last_save (Phase 2, 2026-11-12; twenty-two since verify_datapack_install, the count
+// in this test's name had stayed at twenty-one); twenty-one since build_datapack_from_export (2026-11-05); twenty since mark_demo_builder_datapack (beta.153); nineteen since share_datapack (owner, 2026-10-30); eighteen since datapack-engine step 10 added
+// check_demo_data and clear_demo_data (sixteen since step 07 added rename_datapack, fifteen since step 05).
+it('registers the twenty-five tools, and only those', () => {
     expect(DATA_INSTALLER_DESCRIPTORS.map((d) => d.tool).sort()).toEqual([
-        'copy_library_datapack_to_installer',
+        'add_datapack_from_file',
+        'build_datapack_from_export',
+        'check_demo_data',
+        'clear_commerce_instance',
+        'clear_demo_data',
+        'create_datapack',
         'delete_library_datapack',
         'get_datapack_import_status',
         'get_datapack_import_target',
+        'install_datapack',
         'list_datapack_export_items',
         'list_datapack_import_scopes',
-        'load_datapack_zip',
-        'open_datapack_zip',
-        'reset_datapack',
+        'mark_demo_builder_datapack',
+        'preview_datapack_changes',
+        'read_datapack_file',
+        'rename_datapack',
+        'restore_datapack',
         'save_datapack_zip',
-        'start_datapack_export',
-        'start_datapack_import',
+        'save_store_changes_to_pack',
+        'share_datapack',
+        'undo_last_save',
+        'uninstall_datapack',
+        'update_datapack',
         'validate_datapack_import',
+        'verify_datapack_install',
     ]);
 });
 
@@ -50,15 +66,23 @@ it('every row dispatches to a handler that actually exists', () => {
 
 describe('gates', () => {
     // Saving a file into the project is not gated: it changes no store and no instance.
-    it('gates exactly the six writes that reach a store or an instance', () => {
+    it('gates exactly the fourteen writes that reach a store or an instance', () => {
         const gated = DATA_INSTALLER_DESCRIPTORS.filter((d) => d.confirm).map((d) => d.tool);
         expect(gated.sort()).toEqual([
-            'copy_library_datapack_to_installer',
+            'add_datapack_from_file',
+            'clear_commerce_instance',
+            'clear_demo_data',
+            'create_datapack',
             'delete_library_datapack',
-            'load_datapack_zip',
-            'reset_datapack',
-            'start_datapack_export',
-            'start_datapack_import',
+            'install_datapack',
+            'mark_demo_builder_datapack',
+            'rename_datapack',
+            'restore_datapack',
+            'save_store_changes_to_pack',
+            'share_datapack',
+            'undo_last_save',
+            'uninstall_datapack',
+            'update_datapack',
         ]);
     });
 
@@ -80,27 +104,54 @@ describe('gates', () => {
     });
 });
 
-describe('start_datapack_export name echo', () => {
-    const preflight = () => row('start_datapack_export')!.preflight!;
+describe('create_datapack name echo', () => {
+    const preflight = () => row('create_datapack')!.preflight!;
 
     it('refuses when the echo does not match', () => {
-        const out = preflight()({ datapackName: 'shared-pack', confirmName: 'wrong' }) as {
-            error: string;
-            sharedCatalog: boolean;
-        };
+        const out = preflight()({ datapackName: 'aco-pack', confirmName: 'wrong' }) as { error: string };
 
-        expect(out.error).toMatch(/confirmName:"shared-pack"/);
-        expect(out.sharedCatalog).toBe(true);
+        expect(out.error).toMatch(/confirmName:"aco-pack"/);
     });
 
     it('refuses when no echo is given at all', () => {
         expect(preflight()({ datapackName: 'shared-pack' })).toBeDefined();
     });
 
+    // The service's export into the shared catalog was deleted on 2026-11-06 (DI-12): a named pack is the library's.
+    it('names the library it writes into, never the shared catalog', () => {
+        const out = preflight()({ datapackName: 'aco_acme', aco: true }) as { error: string };
+
+        expect(out).toEqual({ error: 'create_datapack writes "aco_acme" into My Datapacks. To proceed, call again with confirmName:"aco_acme".' });
+    });
+
     it('allows dispatch when the echo matches', () => {
         expect(
             preflight()({ datapackName: 'shared-pack', confirmName: 'shared-pack' }),
         ).toBeUndefined();
+    });
+
+    // Step 14: a save from the store names no pack and writes none to the shared catalog.
+    it('needs no echo from a call naming no pack, which writes into the demo\'s own pack', () => {
+        expect(preflight()({ selections: { products: { sku: ['VR-Rack'] } } })).toBeUndefined();
+    });
+});
+
+// Owner, 2026-11-14 ("Close it"): an agent cannot take the Demo Builder mark off, since that would
+// reopen the Delete step-07 A1 refuses. The screen can (Remove Demo Builder Mark), through the same
+// handler, so the refusal sits on the agent's tool, before dispatch, and only there.
+describe('mark_demo_builder_datapack refuses to unmark, for agents only', () => {
+    const preflight = () => row('mark_demo_builder_datapack')!.preflight!;
+
+    it('answers demoBuilder:false with the refusal, so the handler never runs', () => {
+        expect(preflight()({ datapackName: 'frescopa', demoBuilder: false, confirm: true })).toEqual({
+            success: false,
+            error: "Demo Builder datapacks can't be unmarked by an agent.",
+            code: ErrorCode.INVALID_OPERATION,
+        });
+    });
+
+    it('lets a mark through to the handler', () => {
+        expect(preflight()({ datapackName: 'frescopa', demoBuilder: true, confirm: true })).toBeUndefined();
     });
 });
 
@@ -136,6 +187,12 @@ describe('list_datapack_export_items paging', () => {
         expect(JSON.parse(shape()(page(5), {})).excludedCount).toBe(3);
     });
 
+    it("keeps inPackCount, Demo Builder's count of what the pack being saved holds already", () => {
+        const res: HandlerResponse = { success: true, data: { items: [], totalCount: 4, excludedCount: 0, inPackCount: 4 } };
+
+        expect(JSON.parse(shape()(res, {})).inPackCount).toBe(4);
+    });
+
     it('honours an explicit limit', () => {
         const out = JSON.parse(shape()(page(500), { limit: 3 }));
         expect(out.items).toHaveLength(3);
@@ -168,37 +225,50 @@ describe('list_datapack_export_items paging', () => {
 // any handler runs — which sign-in is required, whether the tool is exposed as a
 // read, and what a caller may send. Nothing else checks them.
 describe('what each row declares', () => {
-    // open_datapack_zip only reads a local file, so it is the one row with no sign-in.
+    // read_datapack_file and build_datapack_from_export only touch local files, so they need no sign-in.
     it('requires an Adobe sign-in on every row that reaches a service', () => {
+        const local = new Set(['read_datapack_file', 'build_datapack_from_export']);
         for (const d of DATA_INSTALLER_DESCRIPTORS) {
-            expect(d.needsAuth).toStrictEqual(d.tool === 'open_datapack_zip' ? [] : ['adobe']);
+            expect(d.needsAuth).toStrictEqual(local.has(d.tool) ? [] : ['adobe']);
         }
     });
 
     // readOnly is what the write-gating machinery reads. The dry run is a read;
     // the three that touch a live instance or the shared catalog are not.
-    it('exposes six reads and seven writes', () => {
+    it('exposes nine reads and sixteen writes', () => {
         const byFlag = (readOnly: boolean) =>
             DATA_INSTALLER_DESCRIPTORS.filter((d) => d.readOnly === readOnly)
                 .map((d) => d.tool)
                 .sort();
 
         expect(byFlag(true)).toEqual([
+            'check_demo_data',
             'get_datapack_import_status',
             'get_datapack_import_target',
             'list_datapack_export_items',
             'list_datapack_import_scopes',
-            'open_datapack_zip',
+            'preview_datapack_changes',
+            'read_datapack_file',
             'validate_datapack_import',
+            'verify_datapack_install',
         ]);
         expect(byFlag(false)).toEqual([
-            'copy_library_datapack_to_installer',
+            'add_datapack_from_file',
+            'build_datapack_from_export',
+            'clear_commerce_instance',
+            'clear_demo_data',
+            'create_datapack',
             'delete_library_datapack',
-            'load_datapack_zip',
-            'reset_datapack',
+            'install_datapack',
+            'mark_demo_builder_datapack',
+            'rename_datapack',
+            'restore_datapack',
             'save_datapack_zip',
-            'start_datapack_export',
-            'start_datapack_import',
+            'save_store_changes_to_pack',
+            'share_datapack',
+            'undo_last_save',
+            'uninstall_datapack',
+            'update_datapack',
         ]);
     });
 });
@@ -220,31 +290,153 @@ describe('what each row accepts', () => {
             'websiteCode',
         ].sort();
 
-        for (const tool of ['validate_datapack_import', 'start_datapack_import', 'reset_datapack']) {
-            expect(keys(tool)).toEqual(expected);
+        expect(keys('validate_datapack_import')).toEqual(expected);
+        // The start may wait on the job it began, rather than an agent polling it (2026-11-05), and
+        // answers for the changes in the pack it replaces, as a reset does (walk F97).
+        expect(keys('install_datapack')).toEqual([...expected, 'changes', 'saveAs', 'waitSeconds'].sort());
+        // Its one addition: the answer to the changes it names (step 05).
+        // And Save As's name, for changes kept when the project's pack is not the user's; and the wait.
+        expect(keys('uninstall_datapack')).toEqual([...expected, 'changes', 'saveAs', 'waitSeconds'].sort());
+    });
+
+    // Step 06 C3: clear_demo_data uninstalls the project's datapack first, so it takes the same answer
+    // about the user's changes as reset_project and delete_project, read the same way.
+    it("gives clear_demo_data the check's token and the answer about the datapack's changes", () => {
+        const schema = row('clear_demo_data')!.inputSchema!;
+
+        expect(keys('clear_demo_data')).toEqual(['changes', 'saveAs', 'token']);
+        expect(schema.changes.parse('drop')).toBe('drop');
+        expect(() => schema.changes.parse('maybe')).toThrow();
+        expect(row('clear_demo_data')!.description).toMatch(/uninstalls this project's datapack first/);
+        expect(row('clear_demo_data')!.description).toMatch(/CHANGES_NEED_ANSWER/);
+        expect(row('check_demo_data')!.description).toMatch(/as if this project's datapack were already uninstalled/);
+    });
+
+    // Restore picks its version and target from the project, so an agent names the pack, the point
+    // (its own datapack's last save or original, J9-7) and, for Original over unsaved edits, whether
+    // to save them first; and may wait. The row's gate supplies confirm. No version, no target.
+    it('gives restore_datapack the pack, the point, the save answer and the wait, nothing that could name a version', () => {
+        expect(keys('restore_datapack')).toEqual(['changes', 'datapackName', 'to', 'waitSeconds']);
+    });
+
+    // Update reads its newer version from the library; an agent names the pack and, optionally, the
+    // data types (agents keep chosen-type installs, step-03 Q2). No version, no target.
+    it('gives update_datapack the pack, the data types and the wait', () => {
+        expect(keys('update_datapack')).toEqual(['dataTypes', 'datapackName', 'waitSeconds']);
+    });
+
+    it('lets uninstall_datapack answer keep or drop, and gives an agent no way to turn on "always"', () => {
+        const schema = row('uninstall_datapack')!.inputSchema!;
+
+        expect(schema.changes.parse('keep')).toBe('keep');
+        expect(schema.changes.parse('drop')).toBe('drop');
+        expect(schema.changes.parse(undefined)).toBeUndefined();
+        expect(() => schema.changes.parse('maybe')).toThrow();
+        // Nothing reads an `alwaysSave` any more (the window's box was removed, step 03, S6): the
+        // setting is the SC's to change, in Settings.
+        expect(schema).not.toHaveProperty('alwaysSave');
+    });
+
+    // Step 03, S6 (decisions J8-1, Phase 8): the screen's Replace became Switch, so the tool says it too.
+    it('calls installing another pack over the project\'s a switch, as the screen does', () => {
+        const { description } = row('install_datapack')!;
+        const changes = row('install_datapack')!.inputSchema!.changes.description;
+
+        expect(description).toContain("the screen's Switch");
+        expect(description).not.toMatch(/\breplaces it\b/u);
+        expect(changes).not.toMatch(/^Replacing/u);
+        expect(changes).toContain('switch');
+    });
+
+    it('lets uninstall_datapack omit dataTypes, since its record decides, but not an import or a dry run', () => {
+        expect(() => row('uninstall_datapack')!.inputSchema!.dataTypes.parse(undefined)).not.toThrow();
+        expect(() => row('install_datapack')!.inputSchema!.dataTypes.parse(undefined)).toThrow();
+        expect(() => row('validate_datapack_import')!.inputSchema!.dataTypes.parse(undefined)).toThrow();
+    });
+
+    it('says what the ticks mean, for an import and for a removal', () => {
+        expect(row('install_datapack')!.description).toContain('Only the dataTypes named install, with what they need');
+        expect(row('install_datapack')!.description).toContain('A kind left out is left alone');
+        expect(row('uninstall_datapack')!.description).toContain('takes everything the install record lists, whatever dataTypes names');
+    });
+
+    it('says what uninstall_datapack does about changes, including what the setting does', () => {
+        const { description } = row('uninstall_datapack')!;
+
+        expect(description).toContain('uninstalls nothing until changes answers');
+        expect(description).toContain('demoBuilder.dataInstaller.changesOnRemoval');
+    });
+
+    // Step 03, S5: the refusal's reason is the one Dry Run's Fix with AI names, and the tool says
+    // the same fix, so an agent reaches it without the button.
+    it('tells an agent how to fix what a refused dry run names, and not to install unasked', () => {
+        const { description } = row('validate_datapack_import')!;
+
+        expect(description).toContain('save_datapack_zip, correct the rows, add_datapack_from_file');
+        expect(description).toContain('run this again');
+        expect(description).toContain('install only when the user asks');
+    });
+
+    // Overview 7b (2026-11-10): Add Unused Items is removed, and its `unused` with it.
+    it('gives the export item list a single data type to enumerate and a limit', () => {
+        expect(keys('list_datapack_export_items')).toEqual(
+            ['dataType', 'datapackName', 'limit', 'source', 'version'].sort(),
+        );
+    });
+
+    it('gives the export the picks, the Save As name, and the ACO choice with its name echo', () => {
+        expect(keys('create_datapack')).toEqual(
+            ['aco', 'confirmName', 'dataTypes', 'datapackName', 'saveAs', 'selections', 'storeViews', 'version', 'wholeKinds'].sort(),
+        );
+    });
+
+    // Step 14: what the SC added by hand goes in when picked; no pack named saves the project's, or picks alone.
+    // Save As's name makes a new pack of the user's (2026-11-03).
+    it('gives the save the picks and the Save As name, and lets it name no pack', () => {
+        expect(keys('save_store_changes_to_pack')).toEqual(['datapackName', 'saveAs', 'selections', 'source', 'version', 'wholeKinds'].sort());
+        const schema = row('save_store_changes_to_pack')!.inputSchema!;
+        expect(() => schema.datapackName.parse(undefined)).not.toThrow();
+        expect(() => schema.selections.parse({ products: { sku: ['VR-Rack'] }, cart_rules: { rule_id: [7] } })).not.toThrow();
+        expect(() => schema.selections.parse({ products: ['VR-Rack'] })).toThrow();
+        expect(schema.saveAs.parse({ displayName: 'My Bodea' })).toEqual({ displayName: 'My Bodea' });
+        expect(() => schema.saveAs.parse({ displayName: '' })).toThrow();
+    });
+
+    // step-07 E2 (S3-a): a whole data type needs no ids; an unknown one is refused before dispatch.
+    it('takes whole data types on both saves, refusing a kind that cannot be picked', () => {
+        for (const tool of ['save_store_changes_to_pack', 'create_datapack']) {
+            const schema = row(tool)!.inputSchema!;
+            expect(schema.wholeKinds.parse(['products', 'customers'])).toEqual(['products', 'customers']);
+            expect(() => schema.wholeKinds.parse(['orders'])).toThrow();
         }
     });
 
-    it('gives the export item list a single data type to enumerate, and a limit', () => {
-        expect(keys('list_datapack_export_items')).toEqual(
-            ['commerceInstance', 'dataType', 'dataTypes', 'datapackName', 'limit', 'version'].sort(),
-        );
+    // step-07 E1 (P4-Q3): the agent's changes read counts what was added by hand, when asked.
+    it('lets the preview count what was added by hand since the install', () => {
+        const preview = row('preview_datapack_changes')!;
+        expect(preview.inputSchema!.added.parse(true)).toBe(true);
+        expect(preview.description).toContain('With added:true it also answers added');
     });
 
-    it('gives the export the name echo that guards the shared catalog', () => {
-        expect(keys('start_datapack_export')).toEqual(
-            ['commerceInstance', 'confirmName', 'dataTypes', 'datapackName', 'version'].sort(),
-        );
+    // Overview 7b (2026-11-10): no picks with a datapack, so no tool points an agent at `unused`.
+    it('tells an agent picks go only with no datapack, and names no unused list', () => {
+        const save = row('save_store_changes_to_pack')!.description;
+        expect(save).toContain('selections only for a save with no datapack');
+        expect(save).not.toMatch(/unused/u);
+        expect(row('list_datapack_export_items')!.description).not.toMatch(/unused/u);
     });
 
-    it('asks the three project-derived reads for nothing at all', () => {
-        for (const tool of [
-            'get_datapack_import_target',
-            'list_datapack_import_scopes',
-            'get_datapack_import_status',
-        ]) {
+    it('asks the two project-derived reads for nothing at all', () => {
+        for (const tool of ['get_datapack_import_target', 'list_datapack_import_scopes']) {
             expect(row(tool)!.inputSchema).toBeUndefined();
         }
+    });
+
+    it('asks the status read how long it may wait, at most 45 seconds, and where the skipped rows start', () => {
+        expect(keys('get_datapack_import_status')).toEqual(['skippedFrom', 'waitSeconds']);
+        const schema = row('get_datapack_import_status')!.inputSchema!;
+        expect(schema.waitSeconds.parse(45)).toBe(45);
+        expect(() => schema.waitSeconds.parse(46)).toThrow();
     });
 
     // An empty dataTypes is a request that would do nothing, and an agent that
@@ -252,10 +444,9 @@ describe('what each row accepts', () => {
     it('requires at least one data type wherever dataTypes appears', () => {
         for (const tool of [
             'validate_datapack_import',
-            'start_datapack_import',
-            'reset_datapack',
-            'list_datapack_export_items',
-            'start_datapack_export',
+            'install_datapack',
+            'uninstall_datapack',
+            'create_datapack',
         ]) {
             const dataTypes = row(tool)!.inputSchema!.dataTypes;
 

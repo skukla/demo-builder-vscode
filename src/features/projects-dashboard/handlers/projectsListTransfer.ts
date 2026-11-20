@@ -8,8 +8,9 @@
  */
 
 import { validateProjectPath } from '@/core/validation/PathSafetyValidator';
-import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
+import { narrateOutcomeToModal, progressSurfaceOf, pushOperationProgress } from '@/core/vscode/operationProgress';
 import { withModalAsking } from '@/core/vscode/operationPrompt';
+import { offerToShareBeforeExport } from '@/features/data-installer/handlers/privatePackPrompt';
 import { importDemoBundle } from '@/features/eds/handlers/importStorefrontZipHandler';
 import {
     copySettingsFromProject,
@@ -19,19 +20,37 @@ import {
 } from '@/features/projects-dashboard/services/settingsTransferService';
 import type { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
 
+/** What the projects list sends when it starts an import in its progress window. */
+export interface ImportFromFilePayload {
+    id?: string;
+    progress?: 'modal';
+}
+
 /**
- * Import settings from a JSON file
+ * Import a settings file or a demo bundle. From the projects list it runs in that screen's progress
+ * window (walk F241, owner: "I get nothing"): the list had sent Import and never read the answer, so
+ * a refusal reached Debug Logs only, and a bundle's repository and upload showed no progress. Each
+ * step now goes to the window, a refusal ends it with the reason, and a dismissed picker ends
+ * nothing (`cancelled`).
  */
-export const handleImportFromFile: MessageHandler = async (
-    context: HandlerContext,
-): Promise<HandlerResponse> => {
-    const picked = await pickImportFile(context);
-    if (!picked) return { success: true, data: { success: false, error: 'cancelled' } };
-    // A demo bundle (Export's "Send a file") or the plain settings file.
-    return picked.fsPath.toLowerCase().endsWith('.zip')
-        ? importDemoBundle(context, picked.fsPath)
-        : importSettingsFromUri(context, picked);
-};
+export const handleImportFromFile: MessageHandler<ImportFromFilePayload> = narrateOutcomeToModal(
+    async (context, payload) => {
+        const picked = await pickImportFile(context);
+        if (!picked) return { success: true, data: { success: false, error: 'cancelled' }, cancelled: true };
+        const id = progressSurfaceOf(payload) === 'modal' ? payload?.id : undefined;
+        const report = (stage: string, step?: string): void => {
+            if (id) void pushOperationProgress({ id, state: 'running', stage, ...(step ? { step } : {}) });
+        };
+        // A demo bundle (Export's "Send a file") or the plain settings file.
+        const result = picked.fsPath.toLowerCase().endsWith('.zip')
+            ? await importDemoBundle(context, picked.fsPath, report)
+            : await importSettingsFromUri(context, picked);
+        const answer = result.data as { success?: boolean; error?: string } | undefined;
+        if (id && answer?.success === false) return { success: false, error: answer.error ?? 'The file could not be imported.' };
+        return result;
+    },
+    (payload) => payload?.id,
+);
 
 /** What the projects list sends when it starts a copy in its modal. */
 export interface CopyFromExistingPayload {
@@ -82,9 +101,7 @@ export const handleExportProject: MessageHandler<{ projectPath: string }> = asyn
         };
     }
 
-    const project = await context.stateManager.loadProjectFromPath(payload.projectPath, undefined, {
-        persistAfterLoad: false,
-    });
+    const project = await context.stateManager.loadProjectFromPath(payload.projectPath);
     if (!project) {
         return {
             success: false,
@@ -92,5 +109,7 @@ export const handleExportProject: MessageHandler<{ projectPath: string }> = asyn
         };
     }
 
+    // The file names its pack by reference: a private one is offered for sharing first, once.
+    await offerToShareBeforeExport(context, project);
     return exportProjectSettings(context, project);
 };

@@ -229,36 +229,36 @@ describe('useProjectBuilder — what an added demo seeds (D22, D29)', () => {
     const demo = {
         kind: 'demo' as const,
         version: 1,
-        name: 'Isle5 by Jen',
-        source: { owner: 'jen', repo: 'isle5-demo' },
+        name: 'Isle5 by Robin',
+        source: { owner: 'robin', repo: 'isle5-demo' },
         storefrontKind: 'eds' as const,
         blockLibraries: ['demo-team-blocks'],
-        integrations: { catalog: ['erp-sync'], custom: { 'jen-pricing': { owner: 'jen', repo: 'pricing-app', name: 'Pricing' } } },
+        integrations: { catalog: ['erp-sync'], custom: { 'robin-pricing': { owner: 'robin', repo: 'pricing-app', name: 'Pricing' } } },
     };
 
     it('pre-ticks the shipped libraries the description file names, through the availability rule', () => {
         mockDefaultLibraryIds.mockImplementation((_stack: unknown, _pkg: string, wanted?: string[]) =>
             (wanted ?? []).filter((id) => id === 'demo-team-blocks'),
         );
-        const s = setup({ selectedPackage: 'added:jen/isle5-demo', demo });
+        const s = setup({ selectedPackage: 'added:robin/isle5-demo', demo });
 
         expect(selectStack(s, 'eds-paas').selectedBlockLibraries).toEqual(['demo-team-blocks']);
-        expect(mockDefaultLibraryIds).toHaveBeenCalledWith(expect.anything(), 'added:jen/isle5-demo', ['demo-team-blocks']);
+        expect(mockDefaultLibraryIds).toHaveBeenCalledWith(expect.anything(), 'added:robin/isle5-demo', ['demo-team-blocks']);
     });
 
     it('starts the integrations the demo depends on: catalog ids as they are, custom apps by link under the by-link id', () => {
-        const s = setup({ selectedPackage: 'added:jen/isle5-demo', demo });
+        const s = setup({ selectedPackage: 'added:robin/isle5-demo', demo });
 
         const payload = selectStack(s, 'eds-paas');
 
-        expect(payload.selectedAppBuilderComponents).toEqual(expect.arrayContaining(['erp-sync', 'jen-pricing']));
+        expect(payload.selectedAppBuilderComponents).toEqual(expect.arrayContaining(['erp-sync', 'robin-pricing']));
         expect(payload.appBuilderComponentSources).toEqual({
-            'jen-pricing': { owner: 'jen', repo: 'pricing-app', name: 'Pricing' },
+            'robin-pricing': { owner: 'robin', repo: 'pricing-app', name: 'Pricing' },
         });
     });
 
     it('re-adds nothing on a same-stack re-select, so a removed integration stays removed', () => {
-        const s = setup({ selectedPackage: 'added:jen/isle5-demo', demo, selectedStack: 'eds-paas', selectedAppBuilderComponents: [] });
+        const s = setup({ selectedPackage: 'added:robin/isle5-demo', demo, selectedStack: 'eds-paas', selectedAppBuilderComponents: [] });
 
         const payload = selectStack(s, 'eds-paas');
 

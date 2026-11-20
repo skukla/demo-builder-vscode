@@ -13,12 +13,15 @@
 
 import '../../../../helpers/webviewClientMock';
 import '@testing-library/jest-dom';
+import { screen } from '@testing-library/react';
 
 // Below the mock on purpose (see useDataInstallerRequest's suite).
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { DatapackSummary } from '@/features/data-installer/types';
 
 const mockRequest = webviewClient.request as jest.Mock;
+/** What the view posts without waiting for an answer, such as a save started in the progress window. */
+const mockPost = webviewClient.postMessage as jest.Mock;
 
 /**
  * The type and payload of the most recent request.
@@ -60,13 +63,17 @@ function makeSummary(
     };
 }
 
-/** Three names across five rows — the shape the live catalog actually has. */
+/**
+ * Three names across five rows — the shape the live catalog actually has. Demo Builder's packs, so
+ * Recommended, where the list opens, draws them (step-07 P1).
+ */
+const TEAM = { store: 'library', team: true } as const;
 const CATALOG = [
-    makeSummary('bodea', 'main'),
-    makeSummary('bodea', 'tierpricingfix'),
-    makeSummary('wknd', 'main'),
-    makeSummary('wknd', 'archive_06112026'),
-    makeSummary('citisignal_new', 'main', { displayName: 'CitiSignal' }),
+    makeSummary('bodea', 'main', TEAM),
+    makeSummary('bodea', 'tierpricingfix', TEAM),
+    makeSummary('wknd', 'main', TEAM),
+    makeSummary('wknd', 'archive_06112026', TEAM),
+    makeSummary('citisignal_new', 'main', { ...TEAM, displayName: 'CitiSignal' }),
 ];
 
 function resolveWith(items: DatapackSummary[]) {
@@ -119,10 +126,9 @@ function resolveCatalogThenDetail(inventory: {
             });
         }
         // Serves two consumers that share this request: the view's own
-        // projectContext (DatapackCatalogView.tsx:102) and the import modal's
-        // target (ImportDatapackModal.tsx:149) — same shape, same request.
-        // Without an instance the modal renders "This project has no Commerce
-        // instance" rather than the type list.
+        // projectContext and the job window's target (`useJobReads`) — same
+        // shape, same request. Without an instance the window ends on "No
+        // Commerce Instance" rather than the type table.
         if (type === 'get-datapack-import-target') {
             return Promise.resolve({
                 success: true,
@@ -154,9 +160,18 @@ const INVENTORY_WITH_GAP = {
 };
 
 // Shared with the split suites.
+/** The Show list: the test stack's Picker keeps a hidden select beside its labelled button. */
+export function showSelect(): HTMLSelectElement {
+    const select = screen.getByRole('button', { name: 'Show' }).parentElement?.querySelector('select');
+    if (!select) throw new Error('The Show list has no select');
+    return select;
+}
+
 export { DatapackCatalogView } from '@/features/data-installer/ui/views/DatapackCatalogView';
+export { SOURCE_NOTICE_COPY } from '@/features/data-installer/ui/components/DatapackSourceNotice';
 export {
     mockRequest,
+    mockPost,
     requestOfType,
     lastRequest,
     makeSummary,

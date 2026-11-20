@@ -27,7 +27,7 @@ import { poolUnits } from '../../../helpers/authenticationServiceFake';
 const mockGetTokenStatus = jest.fn();
 
 const WITH_INTEGRATION = createMockProject({
-    name: 'justrite',
+    name: 'tailspin',
     path: '/p',
     appBuilderComponents: {
         'erp-integration': { kind: 'integration', status: 'deployed', source: { owner: 'skukla', repo: 'erp-integration' } },

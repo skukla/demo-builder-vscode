@@ -7,7 +7,23 @@ value: med
 status: backlog
 layer: F
 ---
-# Multi-Locale Storefront — Implementation Plan (Phase 1)
+# Multi-site: storefront and backend data
+
+## Fast follow after beta.153 (owner, 2026-11-15)
+
+"We're gonna need to do a fast follow into multi site support for both the storefront and the
+backend data." This epic now holds both halves, so they are explored together:
+
+- **Storefront**: the multi-locale plan below (Phase 1), and repoless multi-brand (Phase 2).
+- **Backend data**: datapacks across websites and store views.
+  - [[DI-15]] Several datapacks per project: the first plan of the next release; a website per
+    pack, or a translation pack on a store view, sits alongside another pack.
+  - [[DI-16]] Will a multi-site datapack still install through the Data Installer service? The
+    service puts a whole pack into one website and store view, rewriting every row to it, so a
+    pack holding several sites cannot be installed by it as one. The owner's main concern.
+
+The old title, "Multi-Locale Storefront — Implementation Plan (Phase 1)", named only the
+storefront half; the plan below keeps that name for its own scope.
 
 ## Index hook
 
@@ -467,3 +483,7 @@ single-environment assumptions — see ADR-003 for the documented seam.
 Phase 2 (repoless multi-brand, separate DA.live site per locale) is
 out of scope for this cycle."
 ```
+
+## Shipped so far
+
+- 2026-11-15  docs(backlog): multi-site fast follow holds storefront and backend data (`8d048520c`)

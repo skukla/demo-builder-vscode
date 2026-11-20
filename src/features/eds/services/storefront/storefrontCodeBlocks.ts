@@ -18,7 +18,7 @@
  * @module features/eds/services/storefront/storefrontCodeBlocks
  */
 
-import { isStaleShaFailure, type GitHubFileOperations } from '../github/githubFileOperations';
+import { isStaleShaFailure, type RepoFileAccess } from '../github/githubFileOperations';
 import {
     INSPECTOR_DELAYED_MARKER,
     INSPECTOR_DELAYED_SNIPPET,
@@ -29,7 +29,7 @@ import {
 import { eagerBlock, type PageBlock, withCurrentBlock, withoutDelayedJsHandler } from '../pdp/pdp404Page';
 import type { Logger } from '@/types/logger';
 
-type FileOps = Pick<GitHubFileOperations, 'getFileContent' | 'createOrUpdateFile'>;
+type FileOps = RepoFileAccess;
 
 /** The repository a run reads and writes. */
 interface Repo {

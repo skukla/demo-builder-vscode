@@ -35,6 +35,8 @@ const WIZARD_FIELDS: Record<keyof WizardState, Kind> = {
     projectTitle: 'screen',
     selectedPackage: 'choice',
     demo: 'choice',
+    // Only an import sets it (EDS-72); an Edit never does.
+    importedFrom: 'screen',
     selectedBackend: 'choice',
     selectedStack: 'choice',
     selectedAddons: 'choice',
@@ -54,6 +56,8 @@ const WIZARD_FIELDS: Record<keyof WizardState, Kind> = {
     storefrontRepoValid: 'screen',
     activeBuildArea: 'screen',
     datapack: 'choice',
+    // The chosen pack's name for the summary and Review: follows `datapack`, never a change of its own.
+    datapackDisplayName: 'screen',
     activeCommerceStep: 'screen',
     committedCommerceSteps: 'screen',
     activeStorefrontStep: 'screen',
@@ -129,6 +133,8 @@ const EDS_FIELDS: Record<keyof EDSConfig, Kind> = {
     brokenLinks: 'screen',
     installedBlockLibraries: 'screen',
     storefrontBuildComplete: 'screen',
+    codeNotServed: 'screen',
+    bundleImport: 'screen',
 };
 
 /**

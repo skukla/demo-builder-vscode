@@ -10,7 +10,7 @@ mainline) is newer than a storefront a colleague wants to add, what should we do
   daily last-known-good gate: it advances the pin when our patches still verify against
   Adobe's head. So "our version" = Adobe's template at the pin.
 - A colleague's storefront is at the version it was generated from, plus whatever they did.
-  Jen's is 4.0.1 against 6.0.0.
+  Robin's is 4.0.1 against 6.0.0.
 - The extension's integration contract is written the same way on any version that has the
   three canonical files. What varies with age is the storefront's own behaviour: older
   drop-ins, older blocks, bugs since fixed upstream.
@@ -26,7 +26,7 @@ mainline) is newer than a storefront a colleague wants to add, what should we do
      template", using the existing fork sync (GitHub merge-upstream). Requires [[EDS-14]]
      first: today a merge conflict falls back to a reset that overwrites the SC's work; it
      must stop and name the files instead.
-   - A repository GENERATED from the template (Jen's): there is no shared git history, so a
+   - A repository GENERATED from the template (Robin's): there is no shared git history, so a
      merge is impossible and the only mechanical path is a reset onto the current
      boilerplate, which throws away the colleague's customisations. Not offered.
      **Corrected 2026-10-20 (EDS-56):** a reset was not the only path. The 3-way apply of the
@@ -42,7 +42,7 @@ mainline) is newer than a storefront a colleague wants to add, what should we do
 
 Is "report + fix what fits + fork sync only for forks" the policy? The alternative, offering a
 reset onto the current boilerplate for generated repositories, is the one thing that
-would modernise Jen's storefront, and it is the one thing that destroys her work; I recommend
+would modernise Robin's storefront, and it is the one thing that destroys her work; I recommend
 against it. If a demo must be current, the honest route is for the colleague to regenerate
 from the template themselves and re-add.
 

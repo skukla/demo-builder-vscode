@@ -9,12 +9,14 @@
  * 2. Only the clash changed: compared with what the update applied when the clash was
  *    kept (`KeptClashRecord.applied`), the copy may differ only in the clashing files.
  *    It is measured from the commit the clash was kept on, so a commit made since still
- *    counts: the git-sync hook committed and pushed JustRite's whole update at the AI's
+ *    counts: the git-sync hook committed and pushed Tailspin's whole update at the AI's
  *    first edit (2026-10-21), and finishing then refused what was already on GitHub.
  * 3. Fixed: no conflict marker is left in those files, and each JavaScript or JSON one
  *    parses. A merge that parses can still be wrong; this catches broken code, not that.
  *
- * Then Demo Builder's fixes ride in the commit on a tested-boilerplate storefront, the
+ * Then Demo Builder's own pieces set aside around an Adobe change go back into the files that
+ * clashed (`setAsidePieces.ts`; the other files got theirs when the clash was kept), Demo
+ * Builder's fixes ride in the commit on a tested-boilerplate storefront, the
  * commit (when anything is left to commit) is pushed with the SC's token (the push the SC confirmed by applying or by the
  * agent tool's consent), and the version is recorded as the clean path records it.
  *
@@ -26,8 +28,10 @@
 import * as fsPromises from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
+import { FULL_COMMIT_SHA } from '@/core/utils/commitSha';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
+import type { CodePatch } from '@/features/eds/services/patches/codePatchRegistry';
 import {
     clearKeptClash,
     CONFLICT_MARKER_RE,
@@ -43,15 +47,16 @@ import {
     writePendingClash,
     type PendingClash,
 } from '@/features/updates/services/pendingClash';
+import { putBackOwnPieces } from '@/features/updates/services/setAsidePieces';
 import { BOILERPLATE_COMMIT, TEMPLATE_COMMIT } from '@/features/updates/services/templateSyncMessages';
 import { patchesNotPutBack, reapplyPatchesInCheckout } from '@/features/updates/services/thinLayerUpdate';
 import type { UpdateContext } from '@/features/updates/services/updateCore';
 import type { Project } from '@/types/base';
 
-const COMMIT_SHA = /^[0-9a-f]{40}$/;
 
 export type FinishOutcome =
-    | { kind: 'finished'; commit: string; files: string[]; notes: string[] }
+    /** `localCopyClean`: the copy holds nothing GitHub does not, read after the version was recorded. */
+    | { kind: 'finished'; commit: string; files: string[]; notes: string[]; localCopyClean: boolean }
     | { kind: 'not-fixed'; reason: string }
     | { kind: 'moved-on' }
     | { kind: 'nothing' }
@@ -65,6 +70,19 @@ export interface FinishDeps {
     recordTemplateVersion(project: Project, commit: string): Promise<void>;
     /** Put back the 404 handling and Quick Edit after a tested-boilerplate update; lines for what could not be. */
     restorePieces(project: Project): Promise<string[]>;
+    /** The live code patches every shipped ledger lists, to put back what a kept clash set aside. */
+    livePatches(): Promise<CodePatch[]>;
+}
+
+/** Put back what was set aside around the change and is not back yet; a line for each that cannot be. */
+async function putBackAside(copy: LocalCopy, clash: PendingClash, deps: FinishDeps): Promise<string[]> {
+    if (!clash.aside) return [];
+    const { patches: ids, quickEdit } = clash.aside;
+    const live = ids.length > 0 ? await deps.livePatches() : [];
+    const patches = live.filter((patch) => ids.includes(patch.id));
+    const gone = ids.filter((id) => !patches.some((patch) => patch.id === id));
+    const lines = await putBackOwnPieces(copy.storefrontPath, { patches, quickEdit });
+    return [...lines, ...gone.map((id) => `A Demo Builder fix could not be put back: ${id} (no ledger lists it now).`)];
 }
 
 /** Why a fixed file is not ready, or undefined when it is. */
@@ -103,7 +121,7 @@ async function checkJavaScript(file: string, text: string, ctx: UpdateContext): 
 /**
  * The same file content: equal ids, or one a shortened form of the other. Records kept
  * before ids were read in full hold git's short form, whose length git picks per repo
- * and per day (JustRite's held 9 characters and git said 8 at finishing, 2026-10-24).
+ * and per day (Tailspin's held 9 characters and git said 8 at finishing, 2026-10-24).
  */
 function sameObject(a: string | null | undefined, b: string | null | undefined): boolean {
     if (!a || !b) return a === b;
@@ -135,12 +153,12 @@ async function forget(project: Project, copy: LocalCopy | undefined): Promise<vo
  * recorded, the last commit made before it was kept.
  */
 async function keptOn(copy: LocalCopy, record: KeptClashRecord, clash: PendingClash): Promise<string | undefined> {
-    if (record.head && COMMIT_SHA.test(record.head)) return record.head;
+    if (record.head && FULL_COMMIT_SHA.test(record.head)) return record.head;
     const keptAt = new Date(clash.keptAt);
     if (Number.isNaN(keptAt.getTime())) return undefined;
     const found = await copy.git(`git rev-list -1 --first-parent --before="${keptAt.toISOString()}" HEAD`, TIMEOUTS.QUICK);
     const commit = found.stdout.trim();
-    return found.code === 0 && COMMIT_SHA.test(commit) ? commit : undefined;
+    return found.code === 0 && FULL_COMMIT_SHA.test(commit) ? commit : undefined;
 }
 
 /** The checks before a push: the reason it cannot finish, or undefined. */
@@ -162,11 +180,13 @@ async function readiness(copy: LocalCopy, clash: PendingClash, ctx: UpdateContex
 }
 
 /** Commit and push the fixed update from the local copy; the new commit's id. */
-async function commitAndPush(copy: LocalCopy, clash: PendingClash, project: Project, ctx: UpdateContext): Promise<{ commit: string; notes: string[] } | string> {
+async function commitAndPush(copy: LocalCopy, clash: PendingClash, project: Project, deps: FinishDeps): Promise<{ commit: string; notes: string[] } | string> {
+    const { ctx } = deps;
     // Our stub over the template's labels goes in the same commit, as on the clean path.
     const labels = await repairStubbedLabelFiles(checkoutLabelAccess(copy.storefrontPath, copy.git, clash.target));
+    const putBack = await putBackAside(copy, clash, deps);
     const patched = clash.fixes ? await reapplyPatchesInCheckout(copy.storefrontPath, project, ctx.logger) : [];
-    if (clash.fixes || labels.length > 0) await copy.git('git add -A', TIMEOUTS.NORMAL);
+    if (clash.fixes || labels.length > 0 || clash.aside) await copy.git('git add -A', TIMEOUTS.NORMAL);
     const message = clash.track === 'boilerplate' ? BOILERPLATE_COMMIT : TEMPLATE_COMMIT;
     // Nothing left to commit when the whole fixed update was committed already.
     const staged = (await copy.git('git diff --cached --quiet', TIMEOUTS.QUICK)).code !== 0;
@@ -178,7 +198,7 @@ async function commitAndPush(copy: LocalCopy, clash: PendingClash, project: Proj
         return 'GitHub refused the push';
     }
     const commit = (await copy.git('git rev-parse HEAD', TIMEOUTS.QUICK)).stdout.trim();
-    return { commit, notes: [...labelsPutBack(labels), ...patchesNotPutBack(patched)] };
+    return { commit, notes: [...labelsPutBack(labels), ...putBack, ...patchesNotPutBack(patched)] };
 }
 
 /** Record the version the storefront is on now, as the clean path does. */
@@ -215,7 +235,7 @@ export async function finishClash(project: Project, deps: FinishDeps): Promise<F
 
     const reason = await readiness(copy, clash, ctx);
     if (reason) return { kind: 'not-fixed', reason };
-    const pushed = await commitAndPush(copy, clash, project, ctx);
+    const pushed = await commitAndPush(copy, clash, project, deps);
     if (typeof pushed === 'string') return { kind: 'failed', reason: pushed };
 
     await clearKeptClash(copy.storefrontPath);
@@ -223,7 +243,9 @@ export async function finishClash(project: Project, deps: FinishDeps): Promise<F
     const pieces = await recordVersion(project, clash, deps);
     await ctx.stateManager.saveProject(project);
     ctx.logger.info(`[Updates] Finished the ${clash.track} update for ${project.name} (${pushed.commit.slice(0, 7)})`);
-    return { kind: 'finished', commit: pushed.commit, files: clash.files, notes: [...pushed.notes, ...pieces] };
+    const status = await copy.git('git status --porcelain', TIMEOUTS.QUICK);
+    const localCopyClean = status.code === 0 && status.stdout.trim() === '';
+    return { kind: 'finished', commit: pushed.commit, files: clash.files, notes: [...pushed.notes, ...pieces], localCopyClean };
 }
 
 /** Leave the kept clash: undo the local copy to its last commit, forget the clash, save. */

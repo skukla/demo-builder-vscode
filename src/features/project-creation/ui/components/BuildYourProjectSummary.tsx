@@ -1,9 +1,9 @@
 /**
  * BuildYourProjectSummary Component (v6 unified scaffold)
  *
- * The single persistent "Your project" summary column for the whole Build Your
+ * The single persistent "Your Project" summary column for the whole Build Your
  * Project step — the generalization of the Commerce-only `CommerceSummary`.
- * Renders a "Your project" title, a derived read-only Architecture line, then one
+ * Renders a "Your Project" title, a derived read-only Architecture line, then one
  * GROUP per area (Commerce / Storefront / Integrations), each with its heading and
  * rows. A row shows its value or a muted "Not set", with a ✓ when done+value.
  *
@@ -13,8 +13,8 @@
  * @module features/project-creation/ui/components/BuildYourProjectSummary
  */
 
-import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React from 'react';
+import { StatusIcon } from '@/core/ui/components/feedback/StatusIcon';
 import { cn } from '@/core/ui/utils/classNames';
 
 /** A single summary row: a label, an optional value, and a done flag. */
@@ -71,11 +71,7 @@ export function SummaryRowItem({
         <div className={cn('sum-row', isDone && 'done')} data-testid={testId}>
             <span className="sum-rowlabel">
                 {isDone && (
-                    <CheckmarkCircle
-                        size="XS"
-                        UNSAFE_className="text-green-600 sum-check"
-                        aria-hidden="true"
-                    />
+                    <span className="sum-check" aria-hidden="true"><StatusIcon status="success" size="XS" /></span>
                 )}
                 <span className="sum-label">{row.label}</span>
             </span>
@@ -89,7 +85,7 @@ export function SummaryRowItem({
 }
 
 /**
- * The persistent cross-area "Your project" summary column.
+ * The persistent cross-area "Your Project" summary column.
  *
  * @param props - the derived architecture label and the visible area groups
  * @returns the summary column element
@@ -100,7 +96,7 @@ export function BuildYourProjectSummary({
 }: BuildYourProjectSummaryProps) {
     return (
         <>
-            <div className="sum-title">Your project</div>
+            <div className="sum-title">Your Project</div>
             <div className="sum-arch">
                 {architectureLabel ?? <span className="empty">{ARCHITECTURE_PENDING}</span>}
             </div>

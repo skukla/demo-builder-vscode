@@ -17,6 +17,7 @@ import {
     mockGetCurrentProject,
     mockGetAllProjects,
     mockLoadProjectFromPath,
+    mockOpenProject,
     mockSaveProjectConfigOnly,
     mockSweepCommerceSecrets,
     mockSweepManifestFormat,
@@ -99,14 +100,13 @@ describe('the Node sweep activation runs', () => {
             expect(deps.node).toBe(NODE);
         });
 
-        // The default load path also moves currentProject and the recents list,
-        // once for every project the sweep reads.
+        // Opening would move the open project and the recents list, once for every
+        // project the sweep reads; it reads.
         it('loads the projects without moving the current-project pointer', async () => {
             await sweepDeps();
 
-            expect(mockLoadProjectFromPath).toHaveBeenCalledWith('/projects/demo-a', undefined, {
-                persistAfterLoad: false,
-            });
+            expect(mockLoadProjectFromPath).toHaveBeenCalledWith('/projects/demo-a');
+            expect(mockOpenProject).not.toHaveBeenCalled();
         });
 
         it('saves a moved project config-only', async () => {

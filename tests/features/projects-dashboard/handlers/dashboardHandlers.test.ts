@@ -261,7 +261,7 @@ describe('dashboardHandlers', () => {
     });
 
     describe('handleSelectProject', () => {
-        it('should load and save project in StateManager', async () => {
+        it('should open the project in StateManager', async () => {
             const project = createProjectsDashboardProject({ name: 'Selected Project' });
             const context = createProjectsDashboardContext([project]);
 
@@ -269,8 +269,8 @@ describe('dashboardHandlers', () => {
                 projectPath: project.path,
             });
 
-            expect(context.stateManager.loadProjectFromPath).toHaveBeenCalledWith(project.path);
-            expect(context.stateManager.saveProject).toHaveBeenCalledWith(project);
+            // Opening reads, makes current and saves in one call (walk F206).
+            expect(context.stateManager.openProject).toHaveBeenCalledWith(project.path);
             expect(result.success).toBe(true);
             expect(dataOf(result).project?.name).toBe('Selected Project');
         });

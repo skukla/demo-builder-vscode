@@ -42,6 +42,13 @@ export interface Ceiling {
 }
 
 export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
+    report_demo_builder_issue: {
+        bytes: 400,
+        why:
+            '`{opened, next}`: two fixed sentences. The draft goes to the browser in the issue link, ' +
+            'never into the response (2026-11-19).',
+    },
+
     get_agent_trace: {
         bytes: 50_000,
         why:
@@ -403,6 +410,21 @@ export const RESPONSE_CEILINGS: Record<string, Ceiling> = {
             'SUCCESS branch is NOT among these numbers — no project with a name mismatch exists to ' +
             'run it against, so its size is bounded by reading the shape: the same fields plus ' +
             '`lostGrants`, which scales with the site admin roster',
+    },
+    cancel_project_creation: {
+        bytes: 1_000,
+        why:
+            'Bounded by the shape, not measured live (2026-11-18, PL-104 fix 14): `stopped` and one ' +
+            'sentence naming the project, or a one-line refusal. The project name is the only part ' +
+            'that varies, and project names are short folder names',
+    },
+    continue_project_creation: {
+        bytes: 4_000,
+        why:
+            'Bounded by the shape, not measured live (2026-11-19, F307): a paused result (step, a ' +
+            'reason of one or two sentences, at most three answers, a fixed hint) or what ' +
+            'create_project answers at the end. The end answer of an Edge Delivery creation carries ' +
+            'its phase timeline, so the ceiling is create_project-sized rather than one line',
     },
 };
 

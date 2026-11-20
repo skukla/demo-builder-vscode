@@ -107,12 +107,16 @@ export async function handleCheckGitHubAuth(
     }
 }
 
+/** The three token-store calls the sign-in makes: store, check, and clear before a retry. */
+export type GitHubSignInTokenStore = Pick<GitHubTokenService, 'storeToken' | 'validateToken' | 'clearToken'>;
+
 /**
  * Sign in to GitHub through VS Code's provider, recovering from a session that
  * VS Code still caches but GitHub no longer accepts.
  *
- * ONE sign-in path, called by the webview handler below and by the
- * "Sign in to GitHub" palette command. A second copy would drift, and the
+ * ONE sign-in path, called by the webview handler below, the
+ * "Sign in to GitHub" palette command, Manage GitHub Repositories and Delete Project's
+ * repository step (PL-104 fix 2). A second copy would drift, and the
  * drifting one would be whichever nobody watched.
  *
  * @param tokenService - stores the token every GitHub call then uses
@@ -121,7 +125,7 @@ export async function handleCheckGitHubAuth(
  * @returns the GitHub login, or why there is none
  */
 export async function signInToGitHub(
-    tokenService: GitHubTokenService,
+    tokenService: GitHubSignInTokenStore,
     logger: Logger,
     options: { force?: boolean } = {},
 ): Promise<{ login: string } | { error: string; cancelled?: boolean }> {
@@ -249,7 +253,7 @@ export async function adoptExistingGitHubSession(
  * Returns the session on success, or `undefined` if the user cancelled.
  */
 async function acquireGitHubSession(
-    tokenService: GitHubTokenService,
+    tokenService: Pick<GitHubTokenService, 'storeToken'>,
     options: { forceNew: boolean; reauthDetail?: string },
 ): Promise<vscode.AuthenticationSession | undefined> {
     const session = await vscode.authentication.getSession(

@@ -19,6 +19,8 @@
  * @module features/project-creation/ui/steps/commerceSections
  */
 
+import { datapackLacksTarget } from './datapackGate';
+import { chosenDatapackName } from './datapackName';
 import { isSetInConfigure } from './editLocks';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
@@ -62,7 +64,7 @@ export const BACKEND_LABELS: Record<string, string> = {
 /** Summary-row label per Commerce sub-step (the short forms used in the summary). */
 export const ROW_LABELS: Record<CommerceSectionId, string> = {
     backend: 'Backend',
-    signin: 'Sign-in',
+    signin: 'Sign-In',
     connection: 'Connection',
     'business-structure': 'Business',
     catalog: 'Catalog',
@@ -72,7 +74,7 @@ export const ROW_LABELS: Record<CommerceSectionId, string> = {
 /** Human labels for the step/tab titles (the vertical step list nav). */
 export const SECTION_TITLES: Record<CommerceSectionId, string> = {
     backend: 'Backend',
-    signin: 'Sign in to Adobe',
+    signin: 'Sign In to Adobe',
     connection: 'Connection',
     'business-structure': 'Business Structure',
     catalog: 'Catalog',
@@ -236,20 +238,25 @@ export function commerceSectionStates(
     );
     sections.push(catalogSection(state, gated, connectionDone));
 
-    // Never gated, unlike every sub-step above it. Those read THROUGH the live
-    // Commerce connection, so each one chains on the last; this reads the pack
-    // catalog from the Data Installer service and installs nothing during the
-    // wizard at all. Locking it behind a reachable backend would gate a choice
-    // that has no dependency on one — and picking a demo before the instance
-    // exists is the ordinary case.
+    // Not chained on the connection like the sub-steps above it: choosing a datapack
+    // reads the pack catalog, not the instance. It is never locked, so the pick can always
+    // be changed or removed; a chosen datapack with no website and store view only holds
+    // Continue, since the build would skip it (datapackGate.ts).
     sections.push(sampleDataSection(state));
 
     return sections;
 }
 
-/** The Datapacks sub-step: never gated, always done. */
+/**
+ * The Datapacks sub-step: done, unless a chosen datapack has nowhere to install. Then it is
+ * still open (`upcoming`, never `locked`), so the SC can change or remove the pick; the step
+ * body says why Continue is held (owner, 2026-11-14).
+ */
 function sampleDataSection(state: WizardState): CommerceSectionState {
-    return { id: 'sample-data', status: 'done', value: state.datapack?.name ?? 'None' };
+    // By its name, not its id (owner, 2026-11-16; F284), as the Final Review names it.
+    const value = chosenDatapackName(state) ?? 'None';
+    const status = datapackLacksTarget(state) ? 'upcoming' : 'done';
+    return { id: 'sample-data', status, value };
 }
 
 /**
@@ -307,7 +314,8 @@ export function prevSubStep(
  * Whether a single Commerce sub-step's done-condition is satisfied (the per-step
  * gate used by the footer Continue): Backend → a backend is chosen; Sign in →
  * signed in; Connection → the connect form reported valid; Business Structure →
- * a store view was chosen; Catalog → always (terminal).
+ * a store view was chosen (and, with a datapack chosen, both codes for the backend);
+ * Catalog → the catalog form is not invalid; Datapacks → not blocked by datapackGate.
  *
  * @param state - Wizard state (persisted selections + validity verdicts)
  * @param stepId - The sub-step to evaluate
@@ -330,7 +338,13 @@ export function isCommerceStepComplete(
             // Not done while store discovery is still fetching the structure — a
             // persisted/auto-detected store-view choice must not unblock Continue
             // before the structure the user is confirming has loaded.
-            return state.commerceStoreViewChosen === true && state.commerceStoreLoading !== true;
+            // A chosen datapack also needs the website, read from the backend's own
+            // config: the build skips an install without both (datapackGate.ts).
+            return (
+                state.commerceStoreViewChosen === true &&
+                state.commerceStoreLoading !== true &&
+                !datapackLacksTarget(state)
+            );
         case 'catalog':
             // Was unconditionally true. With Connection no longer answering for
             // Catalog's fields, something has to — otherwise unblocking the
@@ -339,10 +353,9 @@ export function isCommerceStepComplete(
             // body has not mounted yet) stays as permissive as before.
             return state.commerceCatalogValid !== false;
         case 'sample-data':
-            // Choosing nothing is a real answer, not an unfinished one. The pack
-            // is installed from the dashboard after creation, so nothing chosen
-            // here can be required to move on.
-            return true;
+            // Choosing nothing is a real answer, not an unfinished one. A chosen
+            // datapack needs somewhere to install, or the build would skip it.
+            return !datapackLacksTarget(state);
     }
 }
 

@@ -16,8 +16,8 @@ jest.mock('@/core/di/serviceLocator', () => ({
 }));
 
 const detectFrontendChanges = jest.fn();
-jest.mock('@/core/state/projectStateSync', () => ({
-    ...jest.requireActual('@/core/state/projectStateSync'),
+jest.mock('@/core/state/frontendEnvDrift', () => ({
+    ...jest.requireActual('@/core/state/frontendEnvDrift'),
     detectFrontendChanges: (...a: unknown[]) => detectFrontendChanges(...a),
 }));
 

@@ -75,11 +75,11 @@ describe('setsWithoutOwner', () => {
     // Owner, 2026-10-22: the check's note named all twelve sets and "seems verbose". It counts
     // them; the names are in the apply's preview and its result.
     it("counts the sets missing erp_owner and their products in the check's note", () => {
-        const justrite: Array<[string, number]> = [
+        const tailspin: Array<[string, number]> = [
             ['Default', 163], ['Phones', 77], ['Watches', 23], ['Server', 15], ['Accessories', 14], ['Audio', 8],
             ['Cables', 8], ['Coolers', 5], ['Plans', 4], ['Power Supply', 4], ['Home Internet', 3], ['Gift Cards', 1],
         ];
-        expect(missingSetsNote(justrite.map(([name, products], id) => ({ id, name, products })))).toBe(
+        expect(missingSetsNote(tailspin.map(([name, products], id) => ({ id, name, products })))).toBe(
             'erp_owner is missing from 12 attribute sets, which hold 325 products. An ERP tag on those products is dropped. Demo Builder can add it.',
         );
     });

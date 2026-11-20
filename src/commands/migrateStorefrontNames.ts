@@ -101,11 +101,10 @@ export class MigrateStorefrontNamesCommand extends BaseCommand {
 
         for (const summary of summaries) {
             try {
-                // persistAfterLoad: false — we're inspecting, not editing yet.
+                // A read (loadProjectFromPath): we're inspecting, not editing yet.
                 const project = await this.stateManager.loadProjectFromPath(
                     summary.path,
                     () => [],
-                    { persistAfterLoad: false },
                 );
                 if (!project) continue;
 
@@ -157,7 +156,7 @@ export class MigrateStorefrontNamesCommand extends BaseCommand {
         await vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
-                title: 'Migrating storefront names',
+                title: 'Migrating Storefront Names',
                 cancellable: false,
             },
             async (progress) => {

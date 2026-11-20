@@ -24,11 +24,13 @@
  */
 
 import * as vscode from 'vscode';
+import { RUN_ONCE, type StepRunner } from './creationPause';
 import { integrationProgress, selectedEntry } from './executorAppBuilderPhase';
 import {
     applyDatapackChange,
     planDatapackChange,
-    type AskRemoveOldDatapack,
+    type AskSwitchDatapack,
+    askSwitchInDialog,
 } from './executorEditDatapack';
 import {
     applyDestinationChange,
@@ -50,7 +52,9 @@ import { runGuards } from '@/features/dashboard/handlers/appBuilderComponentGuar
 import type { GuardableResult } from '@/features/dashboard/handlers/appBuilderComponentOperation';
 import { removeWithCleanup } from '@/features/dashboard/handlers/appBuilderComponentRemove';
 import { confirmLeavingAdobeProject } from '@/features/dashboard/handlers/destinationHandlers';
-import { confirmSampleDataRemoval } from '@/features/eds/services/reset/edsResetSampleData';
+import type { NameMemory } from '@/features/data-installer/services/packNames';
+import { reportProjectCreated } from '@/features/project-creation/services/projectFinalizationService';
+import { stepFailureOf } from '@/features/project-creation/services/stepFailure';
 import {
     appliesInPlace,
     selectionDelta,
@@ -69,7 +73,7 @@ export type ConfirmRemoval = (names: string[]) => Promise<boolean>;
 export interface EditQuestions {
     removeIntegrations: ConfirmRemoval;
     leaveAdobeProject: AskLeaveAdobeProject;
-    removeOldDatapack: AskRemoveOldDatapack;
+    switchDatapack: (project: Project, next: string | undefined, memory?: NameMemory) => Promise<boolean>;
     resetStorefront: AskResetStorefront;
 }
 
@@ -78,13 +82,7 @@ const ASK_THE_SC: EditQuestions = {
     removeIntegrations: (names) => confirmRemovalModal(names),
     leaveAdobeProject: confirmLeavingAdobeProject,
     resetStorefront: () => confirmStorefrontReset(),
-    removeOldDatapack: (project, canRemove) =>
-        confirmSampleDataRemoval(
-            project,
-            vscode,
-            canRemove,
-            'Keep Data adds the new pack alongside.',
-        ),
+    switchDatapack: askSwitchInDialog,
 };
 
 /**
@@ -94,26 +92,37 @@ const ASK_THE_SC: EditQuestions = {
  * @param config - what Finish was given, with the changed choices (`editChanges`)
  * @param progressTracker - the wizard's progress screen
  * @param ask - the questions asked before anything runs
+ * @param runStep - runs each add, removal and datapack step; in the wizard a failed
+ *   one pauses until the SC fixes it or skips it (F307)
  * @returns true when the Edit is finished; false to run the full rebuild
- * @throws when a removal or an add fails, or the SC declines the removal
+ * @throws when the SC declines the removal, or (run once) a removal or an add fails
  */
 export async function finishEditWithoutRebuild(
     context: HandlerContext,
     config: ProjectCreationConfig,
     progressTracker: ProgressTracker,
     ask: EditQuestions = ASK_THE_SC,
+    runStep: StepRunner = RUN_ONCE,
 ): Promise<boolean> {
     if (await saveUnchangedEdit(context, config, progressTracker)) return true;
-    return applyInPlace(context, config, progressTracker, ask);
+    return applyInPlace(context, config, { progressTracker, runStep }, ask);
+}
+
+/** How the Edit's steps report and run. */
+interface EditRun {
+    progressTracker: ProgressTracker;
+    /** Runs each step: in the wizard a failed one pauses until fixed or skipped (F307). */
+    runStep: StepRunner;
 }
 
 /** Do just what the SC changed: integrations added and removed, and the datapack. */
 async function applyInPlace(
     context: HandlerContext,
     config: ProjectCreationConfig,
-    progressTracker: ProgressTracker,
+    run: EditRun,
     ask: EditQuestions,
 ): Promise<boolean> {
+    const { progressTracker, runStep } = run;
     const changes = config.editChanges;
     if (!config.editProjectPath || !changes?.length) return false;
     const project = await loadExistingProjectForEdit(config.editProjectPath, context);
@@ -141,7 +150,8 @@ async function applyInPlace(
         delta.removed,
         ask.leaveAdobeProject,
     );
-    const datapack = await planDatapackChange(project, changes, ask.removeOldDatapack);
+    const switchTo: AskSwitchDatapack = (held, next) => ask.switchDatapack(held, next, context.context.globalState);
+    const datapack = await planDatapackChange(project, changes, switchTo, config.datapack?.name);
     const packageChange = await planPackageChange(project, changes, ask.resetStorefront);
     if (delta.added.length + delta.removed.length > 0 || destination.moves) {
         const refused = await runGuards(context, project);
@@ -151,25 +161,35 @@ async function applyInPlace(
     // Removals first, so what goes is not moved; the move next, so what is added
     // deploys to the new destination.
     const removing = integrationProgress(progressTracker, OPERATION_STAGES.removingIntegrations.label);
-    const warnings = await runEach(delta.removed, removing, {
+    const warnings = await runEach(delta.removed, removing, runStep, {
+        step: OPERATION_STAGES.removingIntegrations.label,
         nameOf: (id) => getAppBuilderComponent(project, id)?.name ?? id,
         run: (id, report) => removeWithCleanup(context, project, id, report),
     });
     await applyDestinationChange(context, project, destination, progressTracker);
     warnings.push(
-        ...(await runEach(delta.added, integrationProgress(progressTracker), {
+        ...(await runEach(delta.added, integrationProgress(progressTracker), runStep, {
+            step: OPERATION_STAGES.deployingIntegrations.label,
             nameOf: (id) => selectedEntry(config, id)?.name ?? id,
             run: (id, report) => addOne(context, project, config, id, report),
         })),
     );
     // After the integrations, as in creation: a pack lands on the finished project.
-    await applyDatapackChange(context, project, config, datapack, progressTracker, packageChange.resets);
-    await applyPackageChange(context, project, config, packageChange, progressTracker);
+    // A datapack part that stopped says why; the rest of the Edit stands (owner Q1).
+    const datapackStopped = await applyDatapackChange(
+        context, project, config, datapack, progressTracker, packageChange.resets, runStep,
+    );
+    if (datapackStopped) warnings.push(datapackStopped);
+    // What the storefront reset finished around joins the Edit's warnings (owner, 2026-11-14); content
+    // it kept on purpose is a note, not a warning, as the batch reset says it (owner walk Q6).
+    const ending = await applyPackageChange(context, project, config, packageChange, progressTracker);
+    warnings.push(...ending.warnings);
     project.lastModified = new Date();
     await context.stateManager.saveProject(project);
     if (warnings.length > 0) void vscode.window.showWarningMessage(warnings.join(' '));
-    // The sentinel the wizard's progress screen finishes on.
-    progressTracker('Project Created', 100, 'Changes applied');
+    if (ending.notes.length > 0) void vscode.window.showInformationMessage(ending.notes.join(' '));
+    // The sentinel the wizard's progress screen finishes on, with what the Edit left to finish.
+    await reportProjectCreated(progressTracker, project, context.logger, 'Changes applied');
     return true;
 }
 
@@ -179,21 +199,33 @@ type Report = (stage: string, step?: string, position?: OperationPosition) => vo
 /**
  * Run an add or a removal for each id, in order, onto the wizard's progress screen
  * the way creation's integration phase reports (one step, each one's own steps under
- * its name), stopping at the first that fails.
+ * its name). One that fails pauses until the SC fixes it or skips it (F307); run
+ * once, the first that fails ends the Edit.
  *
  * @returns what they warned about, to tell the SC
  */
 async function runEach(
     ids: string[],
     progress: ReturnType<typeof integrationProgress>,
-    each: { nameOf: (id: string) => string; run: (id: string, report: Report) => Promise<GuardableResult> },
+    runStep: StepRunner,
+    each: {
+        step: string;
+        nameOf: (id: string) => string;
+        run: (id: string, report: Report) => Promise<GuardableResult>;
+    },
 ): Promise<string[]> {
     const warnings: string[] = [];
     for (const id of ids) {
-        progress.start(each.nameOf(id));
-        const result = await withPhaseSinks([progress.nested], () => each.run(id, progress.report));
-        if (!result.success) throw new Error(result.error ?? `${id}: nothing was changed.`);
-        warnings.push(...(result.warnings ?? []));
+        await runStep(each.step, async () => {
+            progress.start(each.nameOf(id));
+            const result = await withPhaseSinks([progress.nested], () => each.run(id, progress.report));
+            if (result.success) {
+                warnings.push(...(result.warnings ?? []));
+                return undefined;
+            }
+            const reason = result.error ?? `${each.nameOf(id)}: nothing was changed.`;
+            return { ...stepFailureOf(reason), reason, error: new Error(reason) };
+        });
     }
     return warnings;
 }

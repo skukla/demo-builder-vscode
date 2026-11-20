@@ -5,7 +5,7 @@
  * names 4 dropins while `head.html`'s names 18, and the start-up code loads the company
  * switcher whenever `commerce-companies-enabled` is on, a flag Demo Builder sets for B2B
  * packages. The import fails, the page never initialises, and every missing page draws blank
- * (measured on skukla/my-commerce-demo and skukla/kukla-justrite, 2026-10-15; the non-B2B
+ * (measured on skukla/my-commerce-demo and skukla/kukla-tailspin, 2026-10-15; the non-B2B
  * boilerplate renders because its start-up code needs only what its 404 map names).
  *
  * The fix reads the list from the site's own `head.html`, so nothing is hardcoded and it keeps

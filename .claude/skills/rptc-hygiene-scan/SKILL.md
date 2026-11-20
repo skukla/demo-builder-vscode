@@ -96,7 +96,7 @@ catch:
 
 | Trigger | Covers |
 |---|---|
-| **Stop hook** `rptc-record-drift.sh` | Automatic, the moment damage is done. Fires only when a turn ADDED, DELETED, MOVED something under `.rptc/{plans,backlog,complete}/` or edited the index — never on an item body edit. Reports §1–2 only, silent when clean. |
+| **The dev-pipeline plugin's turn-end record check** | Automatic, the moment damage is done. Fires only when a turn changed the shape of `.rptc/{plans,backlog,complete}/` (`backlog: record_dirs` in `.pipeline.yaml`), and runs this scan's §1–2 only (`backlog: record_check`), silent when clean. |
 | **`cut-release`** advisory block | Periodic. Runs all four sections, including the slow-drifting §3 and §4 the hook deliberately skips. |
 | **This skill, on demand** | When the backlog stops feeling trustworthy, or after a bulk edit the hook's scoping would miss. |
 
@@ -114,8 +114,8 @@ beats total coverage that gets switched off.
 ### 0. Frontmatter and references (run this FIRST — it is the cheap one)
 
 ```bash
-node .claude/skills/backlog-item/backlog.mjs check
-node .claude/skills/backlog-item/backlog.mjs stale   # advisory — read it, do not obey it
+node "$(git config dev-pipeline.root)/lib/backlog.mjs" check
+node "$(git config dev-pipeline.root)/lib/backlog.mjs" stale   # advisory — read it, do not obey it
 ```
 
 Exit 1 names every problem: missing or unknown `kind` / `area` / `value`, a
@@ -176,7 +176,7 @@ lines, i.e. a status banner, not anywhere in the body. Items routinely say "Laye
 one sub-part while staying live, and reporting those would bury the real hits. The control
 covers both directions — a banner is caught, an inline sub-part ✅ is not.
 
-Note this is a different failure from the one §4 and the `backlog-claim-drift` hook address.
+Note this is a different failure from the one §4 and the dev-pipeline plugin's turn-end claim check address.
 Those catch items that went stale *silently*. §3b catches items that announced it and were
 left anyway, which no amount of measurement finds — only reading the list.
 

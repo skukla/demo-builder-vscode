@@ -4,7 +4,8 @@
  * the AEM Code Sync GitHub App on the repository.
  *
  * Each answers null to carry on, or the result the reset stops with (the
- * project's status restored first).
+ * project's status restored first). The checks that ask are the window's asker
+ * (`edsResetUI`); `findMissingApp` is the App check every door runs (`edsResetRun`).
  *
  * Extracted from `edsResetUI` (EDS-8, 2026-10-08) so that file keeps only the
  * reset door's orchestration.
@@ -69,7 +70,7 @@ export async function checkAdobeAuth(
             projectId: project.adobe?.projectId,
             workspace: project.adobe?.workspace,
         },
-        warningMessage: 'Your Adobe sign-in has expired. Sign in to keep going.',
+        warningMessage: 'Your Adobe sign-in has expired. Sign in to continue.',
     });
 
     if (result.authenticated) return null;
@@ -82,6 +83,32 @@ export async function checkAdobeAuth(
         errorType: 'ADOBE_AUTH_REQUIRED',
         cancelled: result.cancelled,
     };
+}
+
+/**
+ * Give an ACCS project that records no Adobe organization the org its sign-in reaches (owner,
+ * 2026-11-04, F11). An agent's creation recorded none when it deployed nothing; an ACCS backend
+ * needs the org's IMS permission, and a reset puts a project back to how it was first set up,
+ * which the wizard's Sign-in step records. The token is org-bound, so its one reachable org
+ * (`getOrganizationsSdkOnly()[0]`) is the org, never the CLI's stale selection. Not knowing which
+ * org records nothing and stops nothing: the reset goes on as it did before.
+ */
+export async function recordSignedInOrg(
+    project: Project,
+    context: HandlerContext,
+    authService: AuthenticationService,
+    logPrefix: string,
+): Promise<void> {
+    if (project.adobe?.organization) return;
+    const { orgReads } = await authService.getEntityServices();
+    const org = (await orgReads.getOrganizationsSdkOnly())?.[0];
+    if (!org) {
+        context.logger.debug(`${logPrefix} resetEds: no org to record (the SDK could not say which)`);
+        return;
+    }
+    project.adobe = { ...project.adobe, organization: org.id, organizationName: org.name };
+    await context.stateManager.saveProject(project);
+    context.logger.info(`${logPrefix} resetEds: recorded the Adobe organization ${org.name}`);
 }
 
 /**
@@ -127,20 +154,25 @@ export async function checkOrgContext(
     };
 }
 
+/** The AEM Code Sync app is not on the repository: where to install it. */
+export interface MissingApp {
+    repoOwner: string;
+    repoName: string;
+    installUrl: string;
+}
+
 /**
- * Check GitHub App installation and prompt user if not installed.
- * @returns null if installed or user chose to continue, or an EdsResetResult if cancelled.
+ * Whether the AEM Code Sync GitHub App is on the repository, as every reset door asks it.
+ * @returns the install link when it is not, or null to carry on: installed, or AEM never
+ *   answered (advisory, not a gate)
  */
-export async function checkGitHubAppInstallation(
-    vscode: typeof import('vscode'),
+export async function findMissingApp(
     context: HandlerContext,
     repoOwner: string,
     repoName: string,
-    project: Project,
-    originalStatus: ProjectStatus,
     logPrefix: string,
     injectedAppService?: GitHubAppService,
-): Promise<EdsResetResult | null> {
+): Promise<MissingApp | null> {
     const { getGitHubServices } = await import('../../handlers/edsHelpers');
     const { tokenService: preCheckTokenService } = getGitHubServices(context.context.secrets);
     const { GitHubAppService } = await import('../github/githubAppService');
@@ -184,10 +216,24 @@ export async function checkGitHubAppInstallation(
     }
 
     context.logger.warn(`${logPrefix} AEM Code Sync app not installed on ${repoOwner}/${repoName}`);
+    return { repoOwner, repoName, installUrl: appService.getInstallUrl(repoOwner, repoName) };
+}
 
+/**
+ * The window's question when the App is missing: install it, or continue without it.
+ * @returns null when the SC installed it or chose to continue, or the cancelled result.
+ */
+export async function askToInstallApp(
+    vscode: typeof import('vscode'),
+    context: HandlerContext,
+    project: Project,
+    originalStatus: ProjectStatus,
+    logPrefix: string,
+    missing: MissingApp,
+): Promise<EdsResetResult | null> {
     const appWarning = await askDuringOperation(
         {
-            title: 'Install the AEM Code Sync app',
+            title: 'Install the AEM Code Sync App',
             message:
                 'The AEM Code Sync GitHub App is not installed on this repository. ' +
                 'Without it, code changes will not sync to the CDN and the site may not work correctly.',
@@ -197,12 +243,11 @@ export async function checkGitHubAppInstallation(
     );
 
     if (appWarning === 'Install App') {
-        const installUrl = appService.getInstallUrl(repoOwner, repoName);
-        await vscode.env.openExternal(vscode.Uri.parse(installUrl));
+        await vscode.env.openExternal(vscode.Uri.parse(missing.installUrl));
 
         const afterInstall = await askDuringOperation(
             {
-                title: 'Finish installing the app',
+                title: 'Finish Installing the App',
                 message: 'Once the app is installed, choose Continue to go on with the reset.',
             },
             'Continue',

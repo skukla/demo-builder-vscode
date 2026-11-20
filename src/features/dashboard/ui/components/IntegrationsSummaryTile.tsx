@@ -129,8 +129,7 @@ export function IntegrationsSummaryTile({
     // to add the first integration.
     // An Open-row card beside Open in Browser, Author Content and Manage
     // Commerce (owner, 2026-10-06): integrations are a destination of the same
-    // weight, not a line item under Build. On a card the status word replaces
-    // the description line, so the dot sits beside words, not in a far corner.
+    // weight, not a line item under Build.
     //
     // Wording comes from the SHARED vocabulary, so the tooltip cannot disagree
     // with the card the integrations surface shows for the same state.
@@ -155,7 +154,6 @@ export function IntegrationsSummaryTile({
                     ? {
                           variant: worst.variant,
                           tooltip: worst.label,
-                          label: worst.label,
                           testId: 'integrations-tile-dot',
                       }
                     : undefined

@@ -12,10 +12,10 @@ import { renameAfterEdit } from '@/features/project-creation/handlers/executorEd
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 
-const EDIT_PATH = '/p/justrite';
+const EDIT_PATH = '/p/tailspin';
 
 function config(overrides: Partial<ProjectCreationConfig> = {}): ProjectCreationConfig {
-    return { projectName: 'justrite', editProjectPath: EDIT_PATH, editChanges: [], ...overrides };
+    return { projectName: 'tailspin', editProjectPath: EDIT_PATH, editChanges: [], ...overrides };
 }
 
 describe('renameAfterEdit', () => {
@@ -27,9 +27,9 @@ describe('renameAfterEdit', () => {
         const rename = jest.fn().mockResolvedValue({ success: true });
         const context = createMockHandlerContext();
 
-        await renameAfterEdit(context, config({ editRenameTo: 'Justrite West' }), rename);
+        await renameAfterEdit(context, config({ editRenameTo: 'Tailspin West' }), rename);
 
-        expect(rename).toHaveBeenCalledWith(context, { projectPath: EDIT_PATH, newName: 'Justrite West' });
+        expect(rename).toHaveBeenCalledWith(context, { projectPath: EDIT_PATH, newName: 'Tailspin West' });
     });
 
     it('renames nothing when the Edit kept its name', async () => {

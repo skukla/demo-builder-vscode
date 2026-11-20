@@ -111,14 +111,14 @@ describe('ownershipFilter', () => {
     it('owns the products sold on the named websites (AB-64)', () => {
         const filter = ownershipFilter({
             structure_owns: 'websites',
-            structure_owns_websites: 'justrite, evo',
+            structure_owns_websites: 'tailspin, evo',
         });
         expect(filter.mode).toBe('websites');
-        expect(filter.owns({ websiteCodes: ['justrite'] })).toBe(true);
+        expect(filter.owns({ websiteCodes: ['tailspin'] })).toBe(true);
         expect(filter.owns({ websiteCodes: ['base', 'evo'] })).toBe(true);
         expect(filter.owns({ websiteCodes: ['base'] })).toBe(false);
         expect(filter.owns({})).toBe(false);
-        expect(filter.describe).toBe('products sold on justrite, evo');
+        expect(filter.describe).toBe('products sold on tailspin, evo');
     });
 
     it('owns no product, and says so, when the websites setting is blank', () => {

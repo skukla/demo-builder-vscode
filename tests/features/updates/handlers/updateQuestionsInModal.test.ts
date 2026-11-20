@@ -3,6 +3,7 @@
  * the two the shared apply asks, and whether to stop a running demo first.
  */
 
+import * as vscode from 'vscode';
 import { askDuringOperation } from '@/core/vscode/operationPrompt';
 import { questionsInModal, stopRunningDemos } from '@/features/updates/handlers/updateQuestionsInModal';
 import type { UpdateSelections } from '@/features/updates/services/updateSelections';
@@ -13,7 +14,7 @@ jest.mock('@/core/utils/sleep', () => ({ sleep: jest.fn().mockResolvedValue(unde
 
 const ask = askDuringOperation as jest.Mock;
 
-const running = createMockProject({ name: 'justrite', title: 'JustRite', path: '/p/justrite', status: 'running' });
+const running = createMockProject({ name: 'tailspin', title: 'Tailspin', path: '/p/tailspin', status: 'running' });
 const stopped = createMockProject({ name: 'bodea', title: 'Bodea', path: '/p/bodea', status: 'stopped' });
 
 function selections(): UpdateSelections {
@@ -26,12 +27,21 @@ function selections(): UpdateSelections {
         adobeMcp: [],
         blockLibrary: [],
         blockLibraryInstall: [],
-        inspector: [],
         integration: [],
     };
 }
 
-beforeEach(() => ask.mockReset());
+const getConfig = vscode.workspace.getConfiguration as jest.Mock;
+
+/** demoBuilder.ai.requireAgentConsent, as the SC set it. */
+function approvals(on: boolean): void {
+    getConfig.mockReturnValue({ get: jest.fn(() => on) });
+}
+
+beforeEach(() => {
+    ask.mockReset();
+    approvals(true);
+});
 
 
 /** A question with this heading, whose sentence contains `part`. */
@@ -55,17 +65,37 @@ describe('questionsInModal', () => {
                 title: 'The update clashes with your edits',
                 message:
                     "This update changes something that was already edited in Bodea's storefront. " +
-                    'Use AI to keep both changes. Nothing goes live until you approve it.\n' +
+                    'Use AI to keep both changes. Your AI asks you before anything goes live.\n' +
                     'Or use the update and drop those edits.',
             },
             'Fix with AI',
-            'Leave it as it is',
-            'Use the update',
+            'Leave It As It Is',
+            'Use Update',
         );
     });
 
+    // Owner, 2026-10-30: it said "Nothing goes live until you approve it" with approvals off.
+    it('says it goes live as soon as the AI finishes when approvals are off', async () => {
+        approvals(false);
+        ask.mockResolvedValue('Fix with AI');
+
+        await questionsInModal.onClash(stopped, { track: 'boilerplate', files: ['blocks/header/header.js'], canReset: false });
+
+        expect(ask.mock.calls[0][0].message).toBe(
+            "This update changes something that was already edited in Bodea's storefront. " +
+                'Use AI to keep both changes. It goes live as soon as your AI finishes.',
+        );
+    });
+
+    it('says whether the AI asks before anything goes live, from the setting, read each time', () => {
+        approvals(false);
+        expect(questionsInModal.aiAsksFirst()).toBe(false);
+        approvals(true);
+        expect(questionsInModal.aiAsksFirst()).toBe(true);
+    });
+
     it("never offers a reset on Adobe's row", async () => {
-        ask.mockResolvedValue('Leave it as it is');
+        ask.mockResolvedValue('Leave It As It Is');
 
         const answer = await questionsInModal.onClash(stopped, { track: 'boilerplate', files: ['blocks/header/header.js'], canReset: false });
 
@@ -73,16 +103,16 @@ describe('questionsInModal', () => {
         expect(ask).toHaveBeenCalledWith(
             question('The update clashes with your edits', "This update changes something that was already edited in Bodea's storefront"),
             'Fix with AI',
-            'Leave it as it is',
+            'Leave It As It Is',
         );
         expect(ask.mock.calls[0][0].message).not.toMatch(/use the update/i);
     });
 
     it.each([
-        ['Use the update', true, 'reset'],
+        ['Use Update', true, 'reset'],
         // A reset the question did not offer is never taken.
-        ['Use the update', false, 'leave'],
-        ['Leave it as it is', true, 'leave'],
+        ['Use Update', false, 'leave'],
+        ['Leave It As It Is', true, 'leave'],
         // Dismissed: nothing changes.
         [undefined, true, 'leave'],
     ])('answers %s (reset offered: %s) as %s', async (choice, canReset, expected) => {
@@ -105,14 +135,14 @@ describe('questionsInModal', () => {
                     'later from Check for Updates, or drop it and skip this update.',
             },
             'Fix with AI',
-            'Keep it for later',
-            'Drop the fix',
+            'Keep It for Later',
+            'Drop the Fix',
         );
     });
 
     it.each([
-        ['Drop the fix', 'leave'],
-        ['Keep it for later', 'later'],
+        ['Drop the Fix', 'leave'],
+        ['Keep It for Later', 'later'],
         // Dismissed: the fix is kept, nothing is lost.
         [undefined, 'later'],
     ])('answers %s as %s', async (choice, expected) => {
@@ -121,34 +151,34 @@ describe('questionsInModal', () => {
         expect(await questionsInModal.onUnfinished(stopped, 'x')).toBe(expected);
     });
 
-    it('asks whether to replace a library, and answers yes only on Replace blocks', async () => {
-        ask.mockResolvedValueOnce('Replace blocks').mockResolvedValueOnce('Keep my blocks');
+    it('asks whether to replace a library, and answers yes only on Replace Blocks', async () => {
+        ask.mockResolvedValueOnce('Replace Blocks').mockResolvedValueOnce('Keep My Blocks');
 
         expect(await questionsInModal.replaceLibraryBlocks('Demo Builder Blocks', stopped)).toBe(true);
         expect(await questionsInModal.replaceLibraryBlocks('Demo Builder Blocks', stopped)).toBe(false);
         expect(ask).toHaveBeenCalledWith(
             {
-                title: 'Replace the blocks?',
+                title: 'Replace the Blocks?',
                 message:
-                    '"Replace blocks" puts in the new versions, and any edits you made to these blocks are lost. "Keep my blocks" leaves them as they are.',
+                    '"Replace Blocks" puts in the new versions, and any edits you made to these blocks are lost. "Keep My Blocks" leaves them as they are.',
             },
-            'Replace blocks',
-            'Keep my blocks',
+            'Replace Blocks',
+            'Keep My Blocks',
         );
     });
 });
 
 describe('stopRunningDemos', () => {
     it('asks once per running project, and stops the open one before its update', async () => {
-        ask.mockResolvedValue('Stop and update');
+        ask.mockResolvedValue('Stop and Update');
         const stopDemo = jest.fn().mockResolvedValue(undefined);
 
-        const out = await stopRunningDemos(selections(), '/p/justrite', stopDemo);
+        const out = await stopRunningDemos(selections(), '/p/tailspin', stopDemo);
 
         expect(ask).toHaveBeenCalledTimes(1);
         expect(ask).toHaveBeenCalledWith(
-            { title: 'Stop the demo to update it?', message: 'JustRite is running. Stop it to update it?' },
-            'Stop and update',
+            { title: 'Stop the Demo to Update It?', message: 'Tailspin is running. Stop it to update it?' },
+            'Stop and Update',
             'Skip',
         );
         expect(stopDemo).toHaveBeenCalledTimes(1);
@@ -159,19 +189,19 @@ describe('stopRunningDemos', () => {
         ask.mockResolvedValue('Skip');
         const stopDemo = jest.fn();
 
-        const out = await stopRunningDemos(selections(), '/p/justrite', stopDemo);
+        const out = await stopRunningDemos(selections(), '/p/tailspin', stopDemo);
 
         expect(stopDemo).not.toHaveBeenCalled();
         expect(out.selections.template.map((t) => t.project.path)).toEqual(['/p/bodea']);
         expect(out.selections.component).toStrictEqual([]);
         expect(out.selections.forkSync).toHaveLength(1);
-        expect(out.skipped).toEqual(['JustRite: not updated, because its demo is running.']);
+        expect(out.skipped).toEqual(['Tailspin: not updated, because its demo is running.']);
     });
 
     it('asks nothing when no project is running', async () => {
         const quiet = { ...selections(), template: [{ project: stopped }], component: [] };
 
-        const out = await stopRunningDemos(quiet, '/p/justrite', jest.fn());
+        const out = await stopRunningDemos(quiet, '/p/tailspin', jest.fn());
 
         expect(ask).not.toHaveBeenCalled();
         expect(out.selections).toBe(quiet);

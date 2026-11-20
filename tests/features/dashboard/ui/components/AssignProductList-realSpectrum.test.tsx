@@ -32,8 +32,8 @@ const STORE: ErpAssignOptions = {
         { sku: 'ACC-3', name: 'Floor sign', attributeSetId: 4, categoryIds: ['7'], owner: 'accuform' },
         { sku: 'ACC-9', name: 'Gear tag', attributeSetId: 9, categoryIds: ['7'], owner: '' },
     ],
-    owners: { 'ACC-1': ['justrite'], 'ACC-3': ['accuform'], 'ACC-9': ['justrite'] },
-    names: { justrite: 'Justrite ERP', accuform: 'Accuform ERP' },
+    owners: { 'ACC-1': ['tailspin'], 'ACC-3': ['accuform'], 'ACC-9': ['tailspin'] },
+    names: { tailspin: 'Tailspin ERP', accuform: 'Accuform ERP' },
 };
 
 it('renders its table, headings and rows, through the real Spectrum package', () => {
@@ -57,19 +57,31 @@ it('renders its table, headings and rows, through the real Spectrum package', ()
     warn.mockRestore();
 });
 
-// While the products are read the table has no rows and says so where they will be, through
-// Spectrum's renderEmptyState, which the mock draws however it is used.
-it('renders the reading frame through the real Spectrum package', () => {
+// As tall as its rows, up to what the window holds, from every row and not the ones a filter shows.
+it('takes its height from the store\'s rows, capped by the window', () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    render(
+        <Provider theme={defaultTheme}>
+            <AssignProductList options={STORE} value="accuform" selected={new Set()} onChange={() => undefined} />
+        </Provider>,
+    );
+    expect(screen.getByRole('grid', { name: 'Products' }).style.height).toBe('min(135px, var(--assign-list-cap))');
+    warn.mockRestore();
+});
+
+// No row matches: the table says so where they would be, through Spectrum's renderEmptyState,
+// which the mock draws however it is used.
+it('renders its empty table through the real Spectrum package', () => {
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
     const empty: ErpAssignOptions = { ...STORE, categories: [], setsWithoutOwner: [], products: [], owners: {}, names: {} };
 
     render(
         <Provider theme={defaultTheme}>
-            <AssignProductList options={empty} value="" selected={new Set()} onChange={() => undefined} loading />
+            <AssignProductList options={empty} value="" selected={new Set()} onChange={() => undefined} />
         </Provider>,
     );
 
     expect(screen.getByRole('grid', { name: 'Products' })).toBeInTheDocument();
-    expect(screen.getByText(LIST_COPY.reading)).toBeInTheDocument();
+    expect(screen.getByText(LIST_COPY.nothing)).toBeInTheDocument();
     warn.mockRestore();
 });

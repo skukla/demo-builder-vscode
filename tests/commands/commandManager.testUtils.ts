@@ -86,6 +86,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 
 const mockGetTokenStatus = jest.fn();
 const mockLogin = jest.fn();
+const mockLoginAndRestore = jest.fn();
 const mockSetShowingProjectsList = jest.fn();
 const mockIsSidebarInitialized = jest.fn(() => false);
 const mockCommandExists = jest.fn();
@@ -97,6 +98,7 @@ jest.mock('@/core/di/serviceLocator', () => ({
         getAuthenticationService: () => ({
             getTokenStatus: mockGetTokenStatus,
             login: mockLogin,
+            loginAndRestoreProjectContext: mockLoginAndRestore,
         }),
     },
 }));
@@ -116,6 +118,7 @@ export {
     mockGetTokenStatus,
     mockIsSidebarInitialized,
     mockLogin,
+    mockLoginAndRestore,
     mockOpenUrl,
     mockRegisterGlobalMcp,
     mockSetShowingProjectsList,
@@ -190,7 +193,10 @@ export function resetVsCode(): void {
     (vscode.window.showWarningMessage as jest.Mock).mockReset().mockResolvedValue(undefined);
     (vscode.window.showInformationMessage as jest.Mock).mockReset().mockResolvedValue(undefined);
     (vscode.window.setStatusBarMessage as jest.Mock).mockReset();
+    // The Sign In runs behind the browser notice, which hands the task a cancel token.
     (vscode.window.withProgress as jest.Mock)
         .mockReset()
-        .mockImplementation(async (_o: unknown, fn: () => Promise<unknown>) => fn());
+        .mockImplementation(async (_o: unknown, fn: (p: unknown, t: unknown) => Promise<unknown>) =>
+            fn({ report: jest.fn() }, { onCancellationRequested: jest.fn() }),
+        );
 }

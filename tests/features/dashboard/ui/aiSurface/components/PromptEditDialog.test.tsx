@@ -37,7 +37,7 @@ function getTitleInput(): HTMLInputElement {
 }
 
 function getPromptInput(): HTMLTextAreaElement {
-    return screen.getByLabelText(/prompt/i);
+    return screen.getByLabelText(/prompt/i, { selector: 'textarea' });
 }
 
 function getSaveButton(): HTMLElement {
@@ -181,15 +181,12 @@ describe('PromptEditDialog', () => {
     });
 
     describe('cancel / close', () => {
-        it('clicking Close calls onClose without saving', () => {
+        it('clicking Cancel calls onClose without saving', () => {
             const onSave = jest.fn();
             const onClose = jest.fn();
             renderDialog({ mode: 'create', onSave, onClose });
-            // The Modal renders a "Close" button by default
-            const closeButtons = screen.getAllByRole('button', { name: /close/i });
-            // PromptEditDialog renders inside a Modal — the modal's footer Close
-            // is the one we want. There should only be one Close on screen here.
-            fireEvent.click(closeButtons[0]);
+            // The Form layout closes with Cancel, the one close on screen.
+            fireEvent.click(screen.getByRole('button', { name: /^cancel$/i }));
             expect(onClose).toHaveBeenCalledTimes(1);
             expect(onSave).not.toHaveBeenCalled();
         });
@@ -317,16 +314,16 @@ describe('PromptEditDialog', () => {
     describe('what the mode changes about the chrome', () => {
         const EXISTING: AiPrompt = { id: 'e1', title: 'T', prompt: 'P' };
 
-        it('titles the dialog "New prompt" in create mode', () => {
+        it('titles the dialog "New Prompt" in create mode', () => {
             renderDialog({ mode: 'create' });
 
-            expect(screen.getByRole('heading')).toHaveTextContent('New prompt');
+            expect(screen.getByRole('heading')).toHaveTextContent('New Prompt');
         });
 
-        it('titles the dialog "Edit prompt" in edit mode', () => {
+        it('titles the dialog "Edit Prompt" in edit mode', () => {
             renderDialog({ mode: 'edit', initialPrompt: EXISTING });
 
-            expect(screen.getByRole('heading')).toHaveTextContent('Edit prompt');
+            expect(screen.getByRole('heading')).toHaveTextContent('Edit Prompt');
         });
 
         // The PROP, not the resulting focus: jsdom has no layout and react-aria's

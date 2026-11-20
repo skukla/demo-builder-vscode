@@ -359,7 +359,7 @@ describe('deriveIntegrationCard — kindLabel + canRename', () => {
         expect(model.apis).toBeUndefined();
     });
 
-    it('blank-source match: "Custom (blank starter)" + a build-it-out caption', () => {
+    it('blank-source match: "Custom (Blank Starter)" + a build-it-out caption', () => {
         const model = deriveIntegrationCard(
             integration({
                 id: 'my-firefly-gen',
@@ -368,25 +368,25 @@ describe('deriveIntegrationCard — kindLabel + canRename', () => {
             })
         );
 
-        expect(model.kindLabel).toBe('Custom (blank starter)');
+        expect(model.kindLabel).toBe('Custom (Blank Starter)');
         // NOT "built with AI" — the shell is empty until the user builds it.
         expect(model.sourceLine).toBe('Blank starter — build it out');
         expect(model.canRename).toBe(true);
     });
 
-    it('fork mismatch: same repo under the WRONG owner is an Imported repo, not AI', () => {
+    it('fork mismatch: same repo under the WRONG owner is an Imported Repository, not AI', () => {
         const model = deriveIntegrationCard(
             integration({ id: 'my-fork', source: { owner: 'acme', repo: 'app-builder-shell' } })
         );
 
-        expect(model.kindLabel).toBe('Imported repo');
+        expect(model.kindLabel).toBe('Imported Repository');
         expect(model.sourceLine).toBe('acme/app-builder-shell');
     });
 
-    it('custom repo: "Imported repo" + mono owner/repo, renamable', () => {
+    it('custom repo: "Imported Repository" + mono owner/repo, renamable', () => {
         const model = deriveIntegrationCard(integration());
 
-        expect(model.kindLabel).toBe('Imported repo');
+        expect(model.kindLabel).toBe('Imported Repository');
         expect(model.sourceLine).toBe('acme/erp-sync');
         expect(model.canRename).toBe(true);
     });

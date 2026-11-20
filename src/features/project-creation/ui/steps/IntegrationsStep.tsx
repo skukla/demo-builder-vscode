@@ -18,10 +18,10 @@
  * is listed there as surface-agnostic, which is what this step reuses.
  *
  * ALL configuration lives in the {@link AddIntegrationFlowModal} journey: the Add
- * button opens it in `add` mode; the destination line's Set up / Change opens it
- * in `destination` mode; a card press or its Manage APIs opens it in `api-edit`
- * mode. Rename is the card's own inline pencil (the dashboard's treatment), which
- * is why there is no rename modal here any more. The ERP integration's ERP is
+ * button opens it in `add` mode; the project notice's Choose Adobe Project and the
+ * destination line's Change open it in `destination` mode; a card press or its Manage
+ * APIs opens it in `api-edit` mode. Rename is the card's own inline pencil (the
+ * dashboard's treatment), which is why there is no rename modal here any more. The ERP integration's ERP is
  * named in the card's Settings ({@link PairedSystemNameDialog}).
  *
  * The destination is rendered ONCE above the list rather than on every card —
@@ -39,7 +39,7 @@
  * @module features/project-creation/ui/steps/IntegrationsStep
  */
 
-import { ActionButton, Button } from '@adobe/react-spectrum';
+import { Button } from '@adobe/react-spectrum';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
     getSelectableAppBuilderComponents,
@@ -47,11 +47,11 @@ import {
 } from '../../services/appBuilderComponentSelection';
 import { meshComponentForStack } from './tileStatus';
 import { useProjectBuilder } from './useProjectBuilder';
+import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
 import { IntegrationCard } from '@/core/ui/components/integrations/IntegrationCard';
 import type { CardAction, IntegrationCardModel } from '@/core/ui/components/integrations/integrationCardModel.types';
 import { StepAreaShell } from '@/core/ui/components/layout/StepAreaShell';
 import { DestinationContext } from '@/core/ui/components/ui/DestinationContext';
-import { webviewClient } from '@/core/ui/utils/vscode-api';
 import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { AddIntegrationFlowModal } from '@/features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal';
 import type { FlowMode } from '@/features/project-creation/ui/components/integration-flow/flowStages';
@@ -94,53 +94,63 @@ function sameName(a: string, b: string): boolean {
 }
 
 /**
- * The destination for the whole surface, shown ONCE above the list.
+ * The chosen destination for the whole surface, shown ONCE above the list.
  *
  * It used to repeat on every card, always printing the same string — there is one
- * Adobe project and one workspace for the entire build, so three integrations
- * printed it three times. `DestinationContext`
+ * Adobe project for the entire build, so three integrations printed it three times. `DestinationContext`
  * says so in its own docstring ("one line for the whole surface, never per
  * card") and is the same control the Add-Integration modal and the dashboard's
- * integrations page already use.
- *
- * It renders nothing when either half is missing, so the uncommitted case keeps
- * its own branch rather than silently disappearing.
+ * integrations page already use. With no project chosen, {@link AdobeProjectNotice}
+ * takes its place.
  */
 function DestinationLine({
     state,
-    needsSetup,
     onOpenDestination,
 }: {
     state: WizardState;
-    /**
-     * From the resolver (`IntegrationRow.needsSetup`) — NOT recomputed here.
-     * `integrationRows.destinationCommitted` already answers this for every row,
-     * and `buildSummary` reads the same field; a second copy of the rule in this
-     * component would be a third place for it to drift.
-     */
-    needsSetup: boolean;
     onOpenDestination: () => void;
 }): React.ReactElement {
     const project = state.adobeProject;
-    const workspace = state.adobeWorkspace;
     return (
         <div className="int-destination">
-            <span className="int-destination-label">Deploys to</span>
-            {!needsSetup ? (
-                <DestinationContext
-                    project={project?.title ?? project?.name}
-                    workspace={workspace?.title ?? workspace?.name}
-                    onChange={onOpenDestination}
-                />
-            ) : (
-                <>
-                    <span className="int-destination-unset">Not set</span>
-                    <ActionButton isQuiet onPress={onOpenDestination}>
-                        Set up
-                    </ActionButton>
-                </>
-            )}
+            <DestinationContext
+                project={project?.title ?? project?.name}
+                onChange={onOpenDestination}
+            />
         </div>
+    );
+}
+
+const IMPORT_PROJECT_BODY =
+    "Imported demos don't bring an Adobe project. Choose one or create a new one for this " +
+    "demo's integrations.";
+const NEW_PROJECT_BODY =
+    "This demo's integrations deploy into an Adobe project. Choose one or create a new one.";
+
+/**
+ * The ask for an Adobe project while none is chosen, carrying its own action (F283).
+ * An import or copy opens with none — the file's is the sender's, and deploying there
+ * replaced the sender's mesh (F280) — so an import gets its own words.
+ */
+function AdobeProjectNotice({
+    isImport,
+    onChoose,
+}: {
+    isImport: boolean;
+    onChoose: () => void;
+}): React.ReactElement {
+    return (
+        <InlineNotice
+            title="Choose an Adobe Project"
+            testId="adobe-project-notice"
+            action={
+                <Button variant="secondary" onPress={onChoose}>
+                    Choose Adobe Project
+                </Button>
+            }
+        >
+            {isImport ? IMPORT_PROJECT_BODY : NEW_PROJECT_BODY}
+        </InlineNotice>
     );
 }
 
@@ -150,8 +160,7 @@ function EmptyState({ onAdd }: { onAdd: () => void }): React.ReactElement {
         <div className="int-results-empty">
             <div className="int-results-empty-title">No integrations yet.</div>
             <div className="int-results-empty-copy">
-                Add an API Mesh, a pre-built integration, or your own custom integration — each
-                deploys to a shared Adobe I/O project and workspace.
+                Add an API Mesh, a pre-built integration, or your own custom integration.
             </div>
             <div className="int-results-empty-action">
                 <Button variant="accent" onPress={onAdd}>
@@ -184,21 +193,14 @@ export function IntegrationsStep({
         onRenamePairedSystem,
     } = builder;
 
-    // The one modal, opened in 'add' (launchpad), 'destination' (row Set up/Change),
-    // or 'api-edit' (a custom/import row's APIs "Change" → re-open the picker).
+    // The one modal, opened in 'add' (launchpad), 'destination' (the notice's Choose
+    // Adobe Project, or Change), or 'api-edit' (a custom/import row's APIs "Change" →
+    // re-open the picker).
     const [modalOpen, setModalOpen] = useState(false);
     const [mode, setMode] = useState<FlowMode>('add');
     // The row being API-edited (mode 'api-edit' only) — seeds the picker with its
     // current picks; passed to the modal only in that mode.
     const [editTarget, setEditTarget] = useState<ApiEditTarget | undefined>(undefined);
-    // The WIZARD webview registers `authenticate` (the dashboard's twin is
-    // `reAuthenticate`); it resolves once the browser sign-in completes, so the API
-    // picker can re-fetch immediately after.
-    const signIn = useCallback(
-        () => webviewClient.request('authenticate', { force: false }).catch(() => undefined),
-        [],
-    );
-
     const openAdd = useCallback((): void => {
         setMode('add');
         setModalOpen(true);
@@ -306,6 +308,10 @@ export function IntegrationsStep({
     // deployed yet, so a status would read the same on every card.
     const cards = useMemo(() => toIntegrationCards(rows), [rows]);
     const rowsById = useMemo(() => new Map(rows.map((row) => [row.id, row])), [rows]);
+    // Shared across every row by construction, so the first one speaks for the surface.
+    // From the resolver (`IntegrationRow.needsSetup`) — NOT recomputed here;
+    // `buildSummary` reads the same field.
+    const destinationUnset = rows[0]?.needsSetup ?? true;
 
     const onRemoveRow = useCallback(
         (row: IntegrationRow): void => {
@@ -378,14 +384,14 @@ export function IntegrationsStep({
             >
                 {notice}
                 {cards.length === 0 && <EmptyState onAdd={openAdd} />}
-                {cards.length > 0 && (
-                    <DestinationLine
-                        state={state}
-                        // Shared across every row by construction, so the first
-                        // one speaks for the surface.
-                        needsSetup={rows[0]?.needsSetup ?? true}
-                        onOpenDestination={openDestination}
+                {cards.length > 0 && destinationUnset && (
+                    <AdobeProjectNotice
+                        isImport={state.wizardMode === 'import'}
+                        onChoose={openDestination}
                     />
+                )}
+                {cards.length > 0 && !destinationUnset && (
+                    <DestinationLine state={state} onOpenDestination={openDestination} />
                 )}
                 {cards.map((card) => {
                     // A press opens the only detail the wizard has: the API
@@ -441,7 +447,6 @@ export function IntegrationsStep({
                 blankComponent={blankComponent}
                 reservedIds={reservedIds}
                 builder={builder}
-                onSignIn={signIn}
             />
             <PairedSystemNameDialog target={settingsTarget} onClose={closeSettings} onSave={onRenamePairedSystem} />
         </>

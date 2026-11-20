@@ -13,13 +13,15 @@ import { addIntegrationFlowHandlers } from './addIntegrationFlowHandlers';
 // registry, so importing the barrel here was a genuine runtime cycle
 // (registry -> index -> registry) that worked on evaluation-order luck.
 import { checkGitHubApp } from './checkGitHubAppHandler';
+import { handleCreationPauseAnswer } from './creationPause';
 import { handleCreateProject } from './createHandler';
 import { handleCheckErpIntegrationHolder } from './erpIntegrationHolderHandler';
 import { handleValidate } from './validateHandler';
 import * as lifecycle from './wizardLifecycleHandlers';
 import * as components from '@/features/components/handlers/componentHandlers';
 import { dataInstallerHandlers } from '@/features/data-installer/handlers/dataInstallerHandlers';
-import { handleOpenDataInstallerSettings } from '@/features/data-installer/handlers/settingsHandlers';
+import { recordedPackHandlers } from '@/features/data-installer/handlers/recordedPackHandlers';
+import { handleOpenSetting } from '@/features/data-installer/handlers/settingsHandlers';
 import { handleAddSharedDemo } from '@/features/eds/handlers/addSharedDemoHandler';
 import { handleChangeDemoSource } from '@/features/eds/handlers/changeDemoSourceHandler';
 import { handleCheckRepoReadiness } from '@/features/eds/handlers/checkRepoReadinessHandler';
@@ -56,8 +58,11 @@ export const projectCreationHandlers = defineHandlers({
     cancel: lifecycle.handleCancel,
     openProject: lifecycle.handleOpenProject,
     backToProject: lifecycle.handleBackToProject,
+    finishSetup: lifecycle.handleFinishSetup,
     log: lifecycle.handleLog,
     'cancel-project-creation': lifecycle.handleCancelProjectCreation,
+    // A creation paused on a failed step: the button the SC pressed (F307).
+    'creation-pause-answer': handleCreationPauseAnswer,
     openExternal: lifecycle.handleOpenExternal,
 
     // Prerequisite handlers
@@ -88,11 +93,14 @@ export const projectCreationHandlers = defineHandlers({
     // start an import, a reset or an export. Pinned both ways in
     // sampleDataHandlerReach.test.ts.
     'find-datapacks': dataInstallerHandlers['find-datapacks'],
+    // And the second read (step 07): can an imported or copied project's recorded pack be
+    // read, and what would creation install instead? Writes nothing.
+    'check-recorded-datapack': recordedPackHandlers['check-recorded-datapack'],
 
     // The sub-step's recovery path. `apiBaseUrl` has no default, so a fresh
     // install reaches the catalog refusal before it reaches a catalog; naming the
     // setting without opening it leaves the user hunting through a settings tree.
-    'open-data-installer-settings': handleOpenDataInstallerSettings,
+    'open-setting': handleOpenSetting,
 
     // EDS handlers - GitHub
     'check-github-auth': handleCheckGitHubAuth,

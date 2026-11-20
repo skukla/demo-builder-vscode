@@ -67,7 +67,7 @@ export async function recordDestination(
     await context.stateManager.saveProject(project);
     context.logger.info(
         `[Destination] Now deploying to ${project.adobe.projectTitle ?? project.adobe.projectName}` +
-            ` · ${project.adobe.workspaceTitle ?? project.adobe.workspaceName}`,
+            `, ${project.adobe.workspaceTitle ?? project.adobe.workspaceName}`,
     );
     // Immediately after the write: `project.adobe` already names the new target,
     // every deploy after this goes there, and a header still showing the old one

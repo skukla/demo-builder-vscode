@@ -9,8 +9,8 @@ import {
     deriveGraphqlEndpoint,
     deriveAccsAdminUrl,
     deriveAccsTenantId,
+    deriveAccsUnifiedAdminUrl,
     lookupComponentConfigValue,
-    readAccsOAuthPair,
     readPaasAdminPair,
 } from '@/features/components/services/envVarHelpers';
 
@@ -69,25 +69,8 @@ describe('envVarHelpers', () => {
             ).toEqual({ username: 'admin', password: 'fake-test-pw-not-a-secret' });
         });
 
-        it('reads the ACCS OAuth pair', () => {
-            expect(
-                readAccsOAuthPair({
-                    'adobe-commerce-accs': {
-                        ACCS_OAUTH_CLIENT_ID: 'id',
-                        ACCS_OAUTH_CLIENT_SECRET: 'fake-test-secret-not-a-secret',
-                    },
-                }),
-            ).toEqual({ clientId: 'id', clientSecret: 'fake-test-secret-not-a-secret' });
-        });
 
-        it('returns nothing for half an ACCS pair', () => {
-            expect(readAccsOAuthPair({ x: { ACCS_OAUTH_CLIENT_ID: 'id' } })).toBeUndefined();
-        });
 
-        it('returns nothing for no configs at all', () => {
-            expect(readPaasAdminPair(undefined)).toBeUndefined();
-            expect(readAccsOAuthPair(undefined)).toBeUndefined();
-        });
     });
 
     /**
@@ -191,6 +174,20 @@ describe('envVarHelpers', () => {
      * rather than re-parsing the endpoint a second way — two regexes over one string
      * format is how they drift apart.
      */
+    describe('deriveAccsUnifiedAdminUrl', () => {
+        const ENDPOINT = 'https://na1-sandbox.api.commerce.adobe.com/tenant123/graphql';
+
+        it('builds the form Adobe documents, by organization and instance', () => {
+            expect(deriveAccsUnifiedAdminUrl(ENDPOINT, 'acme')).toBe(
+                'https://experience.adobe.com/#/@acme/in:tenant123/commerce/cloud-service/admin',
+            );
+        });
+
+        it('has no URL for an endpoint that is not a Cloud Service tenant', () => {
+            expect(deriveAccsUnifiedAdminUrl('https://example.com/graphql', 'acme')).toBeUndefined();
+        });
+    });
+
     describe('deriveAccsTenantId', () => {
         it('extracts the tenant id from a sandbox ACCS GraphQL endpoint', () => {
             expect(

@@ -13,14 +13,14 @@ import { packageFromAddedDemo } from '@/features/components/services/storefrontR
 import { PACKAGES, STACKS, cardFor } from './BrandGallery.testUtils';
 import { makeAddedDemo } from '../../../../helpers/demoPackageFixtures';
 
-const JEN = makeAddedDemo();
-const JEN_CARD = packageFromAddedDemo(JEN, undefined);
+const ROBIN = makeAddedDemo();
+const ROBIN_CARD = packageFromAddedDemo(ROBIN, undefined);
 
 function renderWithMenu(onForgetDemo?: (id: string) => void) {
     return render(
         <Provider theme={defaultTheme} colorScheme="light">
             <BrandGallery
-                packages={[...PACKAGES, JEN_CARD]}
+                packages={[...PACKAGES, ROBIN_CARD]}
                 stacks={STACKS}
                 onPackageSelect={jest.fn()}
                 onForgetDemo={onForgetDemo}
@@ -32,11 +32,11 @@ function renderWithMenu(onForgetDemo?: (id: string) => void) {
 describe('BrandGallery — forgetting an added demo', () => {
     it("puts a menu on the added demo's card only, and only when a handler is given", () => {
         const first = renderWithMenu(undefined);
-        expect(screen.queryByLabelText('More actions for Isle5 by Jen')).not.toBeInTheDocument();
+        expect(screen.queryByLabelText('More actions for Isle5 by Robin')).not.toBeInTheDocument();
         first.unmount();
 
         renderWithMenu(jest.fn());
-        expect(within(cardFor('Isle5 by Jen')).getByLabelText('More actions for Isle5 by Jen')).toBeInTheDocument();
+        expect(within(cardFor('Isle5 by Robin')).getByLabelText('More actions for Isle5 by Robin')).toBeInTheDocument();
         expect(within(cardFor('Active Brand')).queryByLabelText(/More actions/)).not.toBeInTheDocument();
     });
 
@@ -46,7 +46,7 @@ describe('BrandGallery — forgetting an added demo', () => {
         render(
             <Provider theme={defaultTheme} colorScheme="light">
                 <BrandGallery
-                    packages={[...PACKAGES, JEN_CARD]}
+                    packages={[...PACKAGES, ROBIN_CARD]}
                     stacks={STACKS}
                     onPackageSelect={onPackageSelect}
                     onForgetDemo={onForgetDemo}
@@ -55,12 +55,12 @@ describe('BrandGallery — forgetting an added demo', () => {
             </Provider>,
         );
 
-        screen.getByLabelText('More actions for Isle5 by Jen').click();
+        screen.getByLabelText('More actions for Isle5 by Robin').click();
         const items = screen.getAllByRole('menuitem').map((item) => item.textContent);
         expect(items).toEqual(['Edit', 'Remove']);
         screen.getByRole('menuitem', { name: 'Remove' }).click();
 
-        expect(onForgetDemo).toHaveBeenCalledWith(JEN_CARD.id);
+        expect(onForgetDemo).toHaveBeenCalledWith(ROBIN_CARD.id);
         expect(onPackageSelect).not.toHaveBeenCalled();
     });
 
@@ -70,7 +70,7 @@ describe('BrandGallery — forgetting an added demo', () => {
         render(
             <Provider theme={defaultTheme} colorScheme="light">
                 <BrandGallery
-                    packages={[...PACKAGES, JEN_CARD]}
+                    packages={[...PACKAGES, ROBIN_CARD]}
                     stacks={STACKS}
                     onPackageSelect={onPackageSelect}
                     onForgetDemo={jest.fn()}
@@ -79,10 +79,10 @@ describe('BrandGallery — forgetting an added demo', () => {
             </Provider>,
         );
 
-        screen.getByLabelText('More actions for Isle5 by Jen').click();
+        screen.getByLabelText('More actions for Isle5 by Robin').click();
         screen.getByRole('menuitem', { name: 'Edit' }).click();
 
-        expect(onEditDemo).toHaveBeenCalledWith(JEN_CARD.id);
+        expect(onEditDemo).toHaveBeenCalledWith(ROBIN_CARD.id);
         expect(onPackageSelect).not.toHaveBeenCalled();
     });
 });

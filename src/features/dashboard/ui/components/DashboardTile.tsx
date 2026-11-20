@@ -3,8 +3,10 @@
  * optional tooltip.
  *
  * THE RULE THIS COMPONENT EXISTS TO KEEP: a status dot always arrives with the
- * words explaining it. `status` carries the variant AND its tooltip in one
- * object, so a dot cannot be added without saying what it means.
+ * words explaining it, and those words live on hover, never beside the dot. `status`
+ * carries the variant AND its tooltip in one object, so a dot cannot be added without
+ * saying what it means, and it has no field for a word on the surface (owner,
+ * 2026-11-01): the tile's label already says what to do, so a word beside it was noise.
  *
  * Structural rather than conventional because convention already failed. Three
  * tiles grew a dot independently — the lifecycle tile, the remedy tiles, and the
@@ -28,17 +30,14 @@
 
 import { ActionButton, Text, Tooltip, TooltipTrigger } from '@adobe/react-spectrum';
 import React from 'react';
+import { Spinner } from '@/core/ui/components/ui/Spinner';
 import { StatusDot, type StatusDotVariant } from '@/core/ui/components/ui/StatusDot';
 import { cn } from '@/core/ui/utils/classNames';
 /** A dot and the words for it — inseparable by construction. */
 export interface DashboardTileStatus {
     variant: StatusDotVariant;
-    /** What the dot means. Replaces the idle tooltip while shown. */
+    /** What the dot means, on hover and to a screen reader. Replaces the idle tooltip while shown. */
     tooltip: string;
-    /** The short word shown beside the dot where a row has room: after the label
-     *  in a compact list, in place of the description on a card. A square tile,
-     *  or a card given no word, keeps only the corner dot. */
-    label?: string;
     testId: string;
 }
 
@@ -46,7 +45,10 @@ export interface DashboardTileProps {
     label: string;
     icon: React.ReactNode;
     onPress: () => void;
-    /** One short line under the label saying where the tile goes. Open-row cards only. */
+    /**
+     * One short line under the label: where an Open-row card goes, or, on the Datapacks row,
+     * which pack is this demo's own (step 07).
+     */
     description?: string;
     /** Shown when there is no status dot. Omit for a tile with no tooltip. */
     tooltip?: string;
@@ -55,8 +57,23 @@ export interface DashboardTileProps {
     isDisabled?: boolean;
     /** Extra tile classes, e.g. the primary zone's `--hero` modifier. */
     className?: string;
+    /**
+     * The tile's action is under way (a private Chrome window opening): a spinner takes the icon's
+     * place, at the icon's size, and presses are ignored (owner, 2026-10-31).
+     */
+    isBusy?: boolean;
     /** `data-action` hook used by tests and styling. */
     action?: string;
+}
+
+/** A name only where the visible text would not give the right one on its own. */
+function accessibleName(
+    label: string,
+    description: string | undefined,
+    status: DashboardTileStatus | undefined,
+): string | undefined {
+    if (status) return `${label}, ${status.tooltip}`;
+    return description ? label : undefined;
 }
 
 /**
@@ -73,61 +90,54 @@ export function DashboardTile({
     isDisabled,
     className,
     action,
+    isBusy = false,
 }: DashboardTileProps): React.ReactElement {
-    // A card with something to report says it on its second line — dot and word
-    // where "where this goes" usually sits — instead of a corner dot a card's
-    // width away from the title it qualifies. A corner dot is what made the
-    // integrations status read as detached once it became a card.
-    const inlineStatus = description && status?.label ? status : undefined;
+    // The SHARED dot, never a hand-rolled span: rolling its own is what once cost the integrations tile
+    // its in-progress pulse. `tile-status-dot` exempts it from the tile's blanket "no
+    // descendant backgrounds on hover" rule, which would otherwise blank it under the
+    // pointer.
+    const dot = status ? (
+        <span className="dashboard-tile-status">
+            <StatusDot variant={status.variant} className="tile-status-dot" testId={status.testId} />
+        </span>
+    ) : null;
     const button = (
         <ActionButton
-            onPress={onPress}
+            onPress={isBusy ? undefined : onPress}
             isQuiet
             isDisabled={isDisabled}
             UNSAFE_className={cn('dashboard-action-button', className)}
             data-action={action}
-            // A card's name is its title; the description line is a hint, not
-            // part of what the button is called.
-            aria-label={description ? label : undefined}
+            // A tile's name is its title; a description line is a hint, not part of what
+            // the button is called. The dot's words join it, because a screen reader
+            // cannot hover.
+            aria-label={accessibleName(label, description, status)}
+            aria-busy={isBusy || undefined}
         >
-            {icon}
-            {description ? (
-                <span className="dashboard-tile-text">
-                    <Text UNSAFE_className="icon-label">{label}</Text>
-                    {inlineStatus ? (
-                        <span className="dashboard-tile-status dashboard-tile-status--inline">
-                            <StatusDot
-                                variant={inlineStatus.variant}
-                                className="tile-status-dot"
-                                testId={inlineStatus.testId}
-                            />
-                            <span className="dashboard-tile-status-text" data-variant={inlineStatus.variant}>
-                                {inlineStatus.label}
-                            </span>
-                        </span>
-                    ) : (
-                        <Text UNSAFE_className="dashboard-tile-description">{description}</Text>
-                    )}
+            {isBusy ? (
+                <span className="dashboard-tile-busy">
+                    <Spinner size="S" aria-label="Opening" />
                 </span>
             ) : (
-                <Text UNSAFE_className="icon-label">{label}</Text>
+                icon
             )}
-            {status && !inlineStatus && (
-                // The SHARED dot, never a hand-rolled span: rolling its own is
-                // what once cost the integrations tile its in-progress pulse.
-                // `dashboard-tile-status` supplies POSITION — a corner overlay on
-                // tiles and cards, inline after the label in a compact list;
-                // `tile-status-dot` exempts the dot from the tile's blanket "no
-                // descendant backgrounds on hover" rule, which would otherwise
-                // blank it under the pointer.
-                <span className="dashboard-tile-status">
-                    <StatusDot variant={status.variant} className="tile-status-dot" testId={status.testId} />
-                    {status.label ? (
-                        <span className="dashboard-tile-status-text" data-variant={status.variant}>
-                            {status.label}
-                        </span>
-                    ) : null}
+            {description ? (
+                <span className="dashboard-tile-text">
+                    {/* Beside the title it qualifies: a corner dot, a card's width away,
+                        is what made the integrations status read as detached. */}
+                    <span className="dashboard-tile-title">
+                        <Text UNSAFE_className="icon-label">{label}</Text>
+                        {dot}
+                    </span>
+                    <Text UNSAFE_className="dashboard-tile-description">{description}</Text>
                 </span>
+            ) : (
+                <>
+                    <Text UNSAFE_className="icon-label">{label}</Text>
+                    {/* `dashboard-tile-status` positions it: a corner overlay on a
+                        square tile, right after the label in a compact list. */}
+                    {dot}
+                </>
             )}
         </ActionButton>
     );

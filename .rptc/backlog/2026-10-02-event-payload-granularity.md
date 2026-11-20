@@ -44,7 +44,7 @@ level of payload granularity that we can employ natively."
    subscriptions? The page is written for the platform generally.
 2. Can the integration's app config (`app.commerce.config.ts`, aio-commerce-lib-app's event
    declarations) declare rules and a parent event, and does the generated manifest carry them?
-3. Does `observer.catalog_product_save_commit_after` include `_origData` on Justrite? (The
+3. Does `observer.catalog_product_save_commit_after` include `_origData` on Tailspin? (The
    Admin's System > Events > Events List shows it, per the page.)
 
 ## Recommendation
@@ -54,8 +54,8 @@ it is cheap: the ERP names what changed (AB-26y); Commerce sends `_origData` or 
 `onChange` child events only if checks 1–3 pass, and only for the fields a demo story needs.
 
 ## Shipped so far
-- 2026-10-02  Checks 2026-10-02. (2) YES: aio-commerce-lib-app 2.0.0 config schema accepts per-event rules with operators regex, greaterThan, lessThan, equal, in, onChange; it has no parent field, so a rule filters the app subscription to a native event rather than defining a named child event. (1) Largely yes: GET eventing/getEventSubscriptions on Justrite shows each app subscription stored as a named child (commerce_erp_integration.observer.catalog_product_save_commit_after, parent observer.catalog_product_save_commit_after) with fields and an empty rules list. Not yet proved: that a rule filters live, and (3) whether the product save payload carries _origData; both need a test subscription deployed, so they belong to the build
-- 2026-10-02  docs(backlog): AB-60 checks — app config accepts onChange rules; Justrite stores rules per subscription (`dc54f4a2a`)
+- 2026-10-02  Checks 2026-10-02. (2) YES: aio-commerce-lib-app 2.0.0 config schema accepts per-event rules with operators regex, greaterThan, lessThan, equal, in, onChange; it has no parent field, so a rule filters the app subscription to a native event rather than defining a named child event. (1) Largely yes: GET eventing/getEventSubscriptions on Tailspin shows each app subscription stored as a named child (commerce_erp_integration.observer.catalog_product_save_commit_after, parent observer.catalog_product_save_commit_after) with fields and an empty rules list. Not yet proved: that a rule filters live, and (3) whether the product save payload carries _origData; both need a test subscription deployed, so they belong to the build
+- 2026-10-02  docs(backlog): AB-60 checks — app config accepts onChange rules; Tailspin stores rules per subscription (`dc54f4a2a`)
 - 2026-10-02  docs(backlog): AB-60 filed — event payload granularity, with three live checks; the ERP product event fix joins AB-26y (`5a3a77be9`)
 - 2026-10-04  2026-10-04 loop (night 4): research written, .rptc/research/event-payload-granularity/research.md. Commerce->ERP: fields are a snapshot, rules (six operators in lib-app 2.0.0, incl. onChange) gate sending, _origData must be added as a field; our app config can declare rules but no parent. ERP->Commerce: our design; the product receiver re-reads the ERP record by sku/erpId, so finer ERP events change the journal, not what Commerce applies — and its schema.json requires sku AND price, so a name-only event is rejected today. Recommendation unchanged. The three live checks wait for the owner (each needs a test subscription deployed).
 - 2026-10-04  feat(eds,ai): adopt an empty org repository, explain GitHub org refusals, and a skill for building catalog data (`dd6784bb0`)
@@ -74,7 +74,7 @@ it is cheap: the ERP names what changed (AB-26y); Commerce sends `_origData` or 
    subscriptions from this app (read from the library, not run). `_origData` and
    `_origData.name` pass the field-name check.
 3. **Does the product save carry `_origData` on ACCS: unknown.** `EVENTS_SCHEMA.json` lists
-   it, but that file came with the starter kit, not from Justrite. Read-only answer: Admin,
+   it, but that file came with the starter kit, not from Tailspin. Read-only answer: Admin,
    System > Events > Events List, open `catalog_product_save_commit_after`.
 
 **Correction to "What is true today".** The mock ERP already names what changed (AB-26y):

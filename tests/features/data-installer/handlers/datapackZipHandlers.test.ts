@@ -10,33 +10,28 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { resolveDataInstallerAccess } from '@/features/data-installer/handlers/dataInstallerHandlers';
 import {
+    contextFor,
     datapackZipHandlers,
     INSTALLER_UPDATE_REFUSED,
     installerEchoRefusal,
-} from '@/features/data-installer/handlers/datapackZipHandlers';
+    mockAccess,
+    storeFetch,
+    tempProject,
+    zipFile,
+} from './datapackZipHandlers.testUtils';
 import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
 import { buildDatapackZip, readDatapackZip } from '@/features/data-installer/services/datapackZip';
 import type { DatapackDetail } from '@/features/data-installer/types';
-import type { Project } from '@/types/base';
-import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockProject } from '../../../helpers/projectFake';
-import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
 
-jest.mock('@/features/data-installer/handlers/dataInstallerHandlers', () => ({
-    ...jest.requireActual('@/features/data-installer/handlers/dataInstallerHandlers'),
-    resolveDataInstallerAccess: jest.fn(),
-}));
-
-const mockAccess = resolveDataInstallerAccess as jest.Mock;
 const mockSave = vscode.window.showSaveDialog as jest.Mock;
 const mockOpen = vscode.window.showOpenDialog as jest.Mock;
 
-const ID = { name: 'justrite', version: 'v1' };
+const ID = { name: 'tailspin', version: 'v1' };
 const DETAIL: DatapackDetail = {
     id: ID,
-    displayName: 'Justrite B2B',
+    displayName: 'Tailspin B2B',
     shared: true,
     dataTypes: ['categories'],
     art: {},
@@ -52,28 +47,13 @@ const catalog = {
 let dir: string;
 let fetchMock: jest.Mock;
 
-function contextFor(project: Project | null, withPanel: boolean) {
-    const context = createMockHandlerContext(withPanel ? { panel: createMockWebviewPanel() } : {});
-    (context.stateManager.getCurrentProject as jest.Mock).mockResolvedValue(project);
-    return context;
-}
-
 function packFile(name = 'pack.datapack.zip'): string {
-    const file = path.join(dir, name);
-    fs.writeFileSync(
-        file,
-        buildDatapackZip({
-            id: ID,
-            displayName: 'Justrite B2B',
-            items: [{ dataType: 'categories', records: ROWS }],
-        })
-    );
-    return file;
+    return zipFile(dir, { id: ID, displayName: 'Tailspin B2B', items: [{ dataType: 'categories', records: ROWS }] }, name);
 }
 
 beforeEach(() => {
     jest.clearAllMocks();
-    dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'datapack-zip-')));
+    dir = tempProject('datapack-zip-');
     catalog.getDatapackDetail.mockResolvedValue(DETAIL);
     catalog.getDataItem.mockResolvedValue({ dataType: 'categories', records: ROWS });
     mockAccess.mockResolvedValue({
@@ -82,12 +62,7 @@ beforeEach(() => {
         baseUrl: STORE,
         getToken: async () => 'tok',
     });
-    fetchMock = jest.fn(async () => ({
-        ok: true,
-        status: 201,
-        text: async () => '{"success":true}',
-    }));
-    global.fetch = fetchMock as unknown as typeof fetch;
+    fetchMock = storeFetch();
 });
 
 it("is reachable through the panel's one handler map", () => {
@@ -102,7 +77,7 @@ describe('save-datapack-zip', () => {
     it('reads the pack from the named store and writes the file an agent named, inside the project', async () => {
         const result = await save(contextFor(createMockProject({ path: dir }), false), {
             source: 'library',
-            datapackName: 'justrite',
+            datapackName: 'tailspin',
             version: 'v1',
             path: 'out.zip',
         });
@@ -121,46 +96,128 @@ describe('save-datapack-zip', () => {
         });
     });
 
+    // DI-8, 2026-11-05: the Data Installer answers 400 for Luma's product_export, too large to send,
+    // so the rest of that pack could only be saved by leaving it out.
+    it('saves only the data types named, and refuses one the pack does not hold', async () => {
+        catalog.getDatapackDetail.mockResolvedValue({ ...DETAIL, dataTypes: ['categories', 'product_export'] });
+        const context = contextFor(createMockProject({ path: dir }), false);
+
+        const saved = await save(context, {
+            datapackName: 'tailspin',
+            version: 'v1',
+            path: 'out.zip',
+            dataTypes: ['categories'],
+        });
+        const refused = await save(context, {
+            datapackName: 'tailspin',
+            version: 'v1',
+            path: 'other.zip',
+            dataTypes: ['customers'],
+        });
+
+        expect(saved).toMatchObject({ success: true, data: { dataTypes: ['categories'] } });
+        expect(catalog.getDataItem.mock.calls).toEqual([[ID, 'categories']]);
+        expect(refused).toMatchObject({ success: false, error: expect.stringContaining('holds no customers') });
+        expect(fs.existsSync(path.join(dir, 'other.zip'))).toBe(false);
+    });
+
     it('names the file after the pack when an agent gives a folder', async () => {
         await save(contextFor(createMockProject({ path: dir }), false), {
-            datapackName: 'justrite',
+            datapackName: 'tailspin',
             version: 'v1',
             path: '.',
         });
 
-        expect(fs.existsSync(path.join(dir, 'justrite-v1.datapack.zip'))).toBe(true);
+        expect(fs.existsSync(path.join(dir, 'tailspin-v1.datapack.zip'))).toBe(true);
     });
 
     // Found on the first live run, 2026-10-29: `datapacks`, meant as a folder, became a file
     // named `datapacks`, which the screen's Open dialog (zip files only) cannot show.
     it('makes a folder that does not exist yet when the path does not end in .zip', async () => {
         const result = await save(contextFor(createMockProject({ path: dir }), false), {
-            datapackName: 'justrite',
+            datapackName: 'tailspin',
             version: 'v1',
             path: 'datapacks',
         });
 
-        const written = path.join(dir, 'datapacks', 'justrite-v1.datapack.zip');
+        const written = path.join(dir, 'datapacks', 'tailspin-v1.datapack.zip');
         expect(result).toMatchObject({ success: true, data: { path: written } });
         expect(fs.existsSync(written)).toBe(true);
     });
 
     it('refuses an agent path outside the project, and writes nothing', async () => {
         const result = await save(contextFor(createMockProject({ path: dir }), false), {
-            datapackName: 'justrite',
+            datapackName: 'tailspin',
             version: 'v1',
             path: path.join(os.tmpdir(), 'elsewhere.zip'),
         });
 
         expect(result.success).toBe(false);
+        expect(result.error).toMatch(/must be inside the project/);
         expect(fs.existsSync(path.join(os.tmpdir(), 'elsewhere.zip'))).toBe(false);
+    });
+
+    // Found on the live step 05 test, 2026-10-29: `exports/new.zip` failed with "[UNKNOWN]"
+    // because its folder did not exist; a folder path was already made when missing.
+    it('makes the folders a .zip path names when they do not exist yet', async () => {
+        const result = await save(contextFor(createMockProject({ path: dir }), false), {
+            datapackName: 'tailspin',
+            version: 'v1',
+            path: 'exports/2026/out.zip',
+        });
+
+        const written = path.join(dir, 'exports', '2026', 'out.zip');
+        expect(result).toMatchObject({ success: true, data: { path: written } });
+        expect(readDatapackZip(fs.readFileSync(written)).id).toEqual(ID);
+    });
+
+    it('refuses a .zip path whose missing folders lead out of the project, making none of them', async () => {
+        const outside = path.join(path.dirname(dir), `${path.basename(dir)}-outside`);
+
+        const result = await save(contextFor(createMockProject({ path: dir }), false), {
+            datapackName: 'tailspin',
+            version: 'v1',
+            path: path.join('..', path.basename(outside), 'new', 'out.zip'),
+        });
+
+        expect(result).toMatchObject({ success: false, error: expect.stringMatching(/must be inside the project/) });
+        expect(fs.existsSync(outside)).toBe(false);
+    });
+
+    it('refuses a .zip path through a link inside the project that points out of it', async () => {
+        const outside = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'datapack-linked-')));
+        fs.symlinkSync(outside, path.join(dir, 'link'));
+
+        const result = await save(contextFor(createMockProject({ path: dir }), false), {
+            datapackName: 'tailspin',
+            version: 'v1',
+            path: 'link/new/out.zip',
+        });
+
+        expect(result).toMatchObject({ success: false, error: expect.stringMatching(/must be inside the project/) });
+        expect(fs.existsSync(path.join(outside, 'new'))).toBe(false);
+    });
+
+    it('says why a save failed when the disk refused it, not the generic line', async () => {
+        fs.writeFileSync(path.join(dir, 'blocker'), 'a file, not a folder');
+
+        const result = await save(contextFor(createMockProject({ path: dir }), false), {
+            datapackName: 'tailspin',
+            version: 'v1',
+            path: 'blocker/out.zip',
+        });
+
+        expect(result).toMatchObject({
+            success: false,
+            error: expect.stringMatching(/blocker is a file, not a folder/),
+        });
     });
 
     it('asks with the save dialog from the panel, offering the pack name; cancelled when dismissed', async () => {
         mockSave.mockResolvedValue(undefined);
 
         const result = await save(contextFor(null, true), {
-            datapackName: 'justrite',
+            datapackName: 'tailspin',
             version: 'v1',
         });
 
@@ -169,7 +226,7 @@ describe('save-datapack-zip', () => {
         );
         expect(
             (mockSave.mock.calls[0][0] as { defaultUri: { fsPath: string } }).defaultUri.fsPath
-        ).toContain('justrite-v1.datapack.zip');
+        ).toContain('tailspin-v1.datapack.zip');
         expect(result).toEqual({ success: true, data: { cancelled: true } });
     });
 
@@ -178,7 +235,7 @@ describe('save-datapack-zip', () => {
         mockAccess.mockResolvedValue({ ok: false, response: refusal });
 
         const result = await save(contextFor(null, true), {
-            datapackName: 'justrite',
+            datapackName: 'tailspin',
             version: 'v1',
         });
 
@@ -187,7 +244,7 @@ describe('save-datapack-zip', () => {
     });
 
     it('refuses without a name and version, before asking anything', async () => {
-        expect(await save(contextFor(null, true), { datapackName: 'justrite' })).toMatchObject({
+        expect(await save(contextFor(null, true), { datapackName: 'tailspin' })).toMatchObject({
             success: false,
         });
         expect(mockAccess).not.toHaveBeenCalled();
@@ -207,9 +264,9 @@ describe('open-datapack-zip', () => {
             success: true,
             data: {
                 path: file,
-                datapackName: 'justrite',
+                datapackName: 'tailspin',
                 version: 'v1',
-                displayName: 'Justrite B2B',
+                displayName: 'Tailspin B2B',
                 dataTypes: ['categories'],
             },
         });
@@ -225,6 +282,26 @@ describe('open-datapack-zip', () => {
         });
 
         expect(result).toMatchObject({ success: false, error: 'This file is not a zip archive.' });
+    });
+
+    // Live, 2026-10-30: an agent's relative path was looked for in another project's folder, and
+    // the answer did not say which project, so it read like a missing file rather than a wrong project.
+    it('names the project it looked in when a relative path leads nowhere', async () => {
+        const result = await open(contextFor(createMockProject({ name: 'tailspin', path: dir }), false), {
+            path: 'live-test/zz-pack.datapack.zip',
+        });
+
+        expect(result).toMatchObject({ success: false, error: 'The project tailspin has no datapack file at live-test/zz-pack.datapack.zip.' });
+    });
+
+    it('names the project too when the folder is there and the file is not', async () => {
+        fs.mkdirSync(path.join(dir, 'live-test'));
+
+        const result = await open(contextFor(createMockProject({ name: 'tailspin', path: dir }), false), {
+            path: 'live-test/zz-pack.datapack.zip',
+        });
+
+        expect(result).toMatchObject({ success: false, error: `The project tailspin has no datapack file at ${path.join(dir, 'live-test', 'zz-pack.datapack.zip')}.` });
     });
 
     it('needs a path from an agent', async () => {
@@ -251,7 +328,7 @@ describe('load-datapack-zip', () => {
         expect(sentRoutes()).toEqual(['create-datapack', 'add-data-item']);
         const body = JSON.parse(String((fetchMock.mock.calls[1] as [string, RequestInit])[1].body));
         expect(body).toEqual({
-            datapack_name: 'justrite',
+            datapack_name: 'tailspin',
             version: 'v1',
             data_type: 'categories',
             data: JSON.stringify(ROWS),
@@ -259,7 +336,7 @@ describe('load-datapack-zip', () => {
         expect(result).toEqual({
             success: true,
             data: {
-                datapackName: 'justrite',
+                datapackName: 'tailspin',
                 version: 'v1',
                 target: 'library',
                 pack: 'created',
@@ -314,7 +391,7 @@ describe('load-datapack-zip', () => {
 
         expect(result).toMatchObject({
             success: false,
-            error: expect.stringContaining('already exists'),
+            error: expect.stringContaining('already in My Datapacks'),
         });
         expect(sentRoutes()).toEqual(['create-datapack']);
     });
@@ -342,6 +419,29 @@ describe('load-datapack-zip', () => {
         });
     });
 
+    // Review of F1/F2: a load that stored nothing left an empty datapack behind with no Delete
+    // offered, and kept the name Keep Both had taken. What it created goes before it answers.
+    it('deletes the datapack it created when no type could be stored, and says so', async () => {
+        fetchMock
+            .mockResolvedValueOnce({ ok: true, status: 201, text: async () => '{}' })
+            .mockResolvedValueOnce({ ok: false, status: 413, text: async () => '' });
+
+        const result = await load(contextFor(createMockProject({ path: dir }), false), { path: packFile() });
+
+        expect(sentRoutes()).toEqual(['create-datapack', 'add-data-item', 'delete-datapack?datapack_name=tailspin&version=v1']);
+        expect(result).toMatchObject({ success: false, error: 'No data type could be stored.', data: { pack: 'created', removed: true } });
+    });
+
+    it('CONTROL: leaves a datapack it only updated, when no type could be stored', async () => {
+        fetchMock
+            .mockResolvedValueOnce({ ok: false, status: 409, text: async () => '{}' })
+            .mockResolvedValueOnce({ ok: false, status: 413, text: async () => '' });
+
+        await load(contextFor(createMockProject({ path: dir }), false), { path: packFile(), update: true });
+
+        expect(sentRoutes()).toEqual(['create-datapack', 'add-data-item']);
+    });
+
     it('into the Data Installer, refuses until the pack name is sent back, then writes it', async () => {
         const context = contextFor(createMockProject({ path: dir }), false);
         const file = packFile();
@@ -353,7 +453,7 @@ describe('load-datapack-zip', () => {
         });
         expect(refused).toMatchObject({
             success: false,
-            error: installerEchoRefusal('justrite'),
+            error: installerEchoRefusal('tailspin'),
             data: { sharedCatalog: true },
         });
         expect(fetchMock).not.toHaveBeenCalled();
@@ -361,12 +461,24 @@ describe('load-datapack-zip', () => {
         const loaded = await load(context, {
             path: file,
             target: 'installer',
-            confirmName: 'justrite',
+            confirmName: 'tailspin',
         });
         expect(mockAccess).toHaveBeenCalledWith(expect.anything(), 'installer');
         expect(loaded).toMatchObject({
             success: true,
             data: { target: 'installer', pack: 'created' },
         });
+    });
+
+    // Into the Data Installer a file goes in its form, or not at all (`installerForm.ts`, 2026-11-06).
+    it('into the Data Installer, refuses a data type it cannot take before anything is written', async () => {
+        const context = contextFor(createMockProject({ path: dir }), false);
+        const file = path.join(dir, 'settings.datapack.zip');
+        fs.writeFileSync(file, buildDatapackZip({ id: ID, displayName: 'Tailspin B2B', items: [{ dataType: 'categories', records: ROWS }, { dataType: 'store_config', records: [] }] }));
+
+        const result = await load(context, { path: file, target: 'installer', confirmName: 'tailspin' });
+
+        expect(result).toMatchObject({ success: false, error: expect.stringContaining('takes no store_config data, so nothing was sent') });
+        expect(fetchMock).not.toHaveBeenCalled();
     });
 });

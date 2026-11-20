@@ -12,9 +12,10 @@
  * next step, which wait to be read. A failure
  * stays: the reason, Retry, and the Debug Logs where the full detail went.
  *
- * Not `layout/CenteredFeedbackContainer`: that RESERVES a minimum height and lets
- * taller content grow, and this modal must never change size (owner, 2026-09-19) —
- * so its body is one fixed height that scrolls instead (`.modal-progress-body`).
+ * Its window keeps the height it opens at for every state but a clean success, which is a small
+ * window of its own (`ProgressDialog`; owner, 2026-11-11, 2026-11-17 walk F222, and 2026-11-20). A question is its
+ * title (`progressFrame`); an end names the thing in the title and draws the outcome in the body,
+ * under a large mark (`ResultBody`).
  *
  * It also carries a QUESTION the work is paused on — an expired sign-in, a missing
  * prerequisite, a merge needing a decision — because a notification asking that
@@ -30,19 +31,22 @@
  * @module core/ui/components/feedback/OperationProgressModal
  */
 
-import { DialogContainer } from '@adobe/react-spectrum';
-import React, { useCallback, useEffect, useRef } from 'react';
-import { OperationProgressBody } from '@/core/ui/components/feedback/OperationProgressBody';
-import { Modal, type ActionButton } from '@/core/ui/components/ui/Modal';
+import React, { useCallback, useRef } from 'react';
+import {
+    keepsRows,
+    OperationProgressBody,
+    progressEnding,
+    progressFrame,
+    type ProgressFrame,
+    type RunOutcome,
+} from '@/core/ui/components/feedback/OperationProgressBody';
+import type { ModalStatus } from '@/core/ui/components/ui/Modal';
+import { ProgressDialog, type ProgressAction } from '@/core/ui/components/ui/ProgressDialog';
 import { useOperationProgress } from '@/core/ui/hooks/useOperationProgress';
+import { promptAnswerLabels, promptCloseLabel } from '@/core/ui/utils/promptButtons';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import type { OperationOffer, OperationProgressPayload } from '@/types/webviewPayloads';
-
-/** A success that says something beyond its title (a warning, a note, what it changed) waits to be read. */
-function holdsResult(progress: OperationProgressPayload | null | undefined): boolean {
-    return Boolean(progress?.warning || progress?.note || progress?.details?.length || progress?.changes?.length);
-}
+import type { OperationOffer, OperationProgressPayload, OperationPrompt } from '@/types/webviewPayloads';
+import type { BackgroundOperationRequest } from '@/types/webviewRequests';
 
 /** The operation a progress modal shows: which one, and what it is called. */
 export interface ProgressModalOperation {
@@ -50,6 +54,12 @@ export interface ProgressModalOperation {
     id: string;
     /** "-ing verb + object": the modal's title, and the notification's on handover. */
     title: string;
+    /**
+     * What it acts on, the result's title once it ends ("Storefront", "My Luma"); the kind when it
+     * acts on no one thing. The outcome under the result's mark is the result's title with this
+     * taken out (`resultOutcome`; owner, 2026-11-17, walk F222).
+     */
+    thing: string;
     /**
      * What it acts on, as its own line under a short title rather than inside a long
      * one that wraps (release test, 2026-10-28). The notification joins the two.
@@ -97,33 +107,34 @@ export interface OperationProgressModalProps {
     offerStep?: (offer: OperationOffer) => ProgressModalNextStep | undefined;
 }
 
-const CANCEL = 'Cancel';
-
 /**
  * The dismiss label. A question cannot be put in the background — nothing would be
  * left to answer it — so dismissing it IS the answer, and it says Cancel. An
  * operation that has ENDED, either way, has nothing left to narrate.
  */
-function closeLabelFor(ended: boolean, asking: boolean): string {
-    if (asking) return CANCEL;
-    return ended ? 'Close' : 'Run in background';
+function closeLabelFor(ended: boolean, prompt: OperationPrompt | undefined): string {
+    if (prompt) return promptCloseLabel(prompt);
+    return ended ? 'Close' : 'Run in Background';
 }
 
 /**
- * The answers, as the guard gave them: the one that continues the work is first. A
- * "Cancel" among them is left out: the dismiss button already says Cancel and answers
- * the same way, as nothing chosen (two Cancels side by side, 2026-10-23).
+ * The answers. The guard gives the one that continues the work first, and it is drawn last, as
+ * the dialog rules have every main button. A "Cancel" among them is left out: the dismiss button
+ * already says Cancel and answers the same way, as nothing chosen (two Cancels side by side,
+ * 2026-10-23).
  */
-function answerButtons(actions: string[], answer: (chosen: string) => void): ActionButton[] {
-    return actions.filter((label) => label !== CANCEL).map((label, index) => ({
+function answerButtons(prompt: OperationPrompt, answer: (chosen: string) => void): ProgressAction[] {
+    const main = prompt.destructive ? 'negative' : 'accent';
+    const buttons = promptAnswerLabels(prompt).map((label, index): ProgressAction => ({
         label,
-        variant: index === 0 ? 'accent' : 'secondary',
+        variant: index === 0 ? main : 'secondary',
         onPress: () => answer(label),
     }));
+    return buttons.reverse();
 }
 
 /** A success's next step, as its one button: the modal closes, then the step starts. */
-function nextStepButtons(next: ProgressModalNextStep | undefined, onClose: () => void): ActionButton[] {
+function nextStepButtons(next: ProgressModalNextStep | undefined, onClose: () => void): ProgressAction[] {
     if (!next) return [];
     return [{ label: next.action, variant: 'accent', onPress: () => { onClose(); next.onPress(); } }];
 }
@@ -138,8 +149,18 @@ function nextStepOf(
     return progress?.offer && offerStep ? offerStep(progress.offer) : undefined;
 }
 
+/** A success with no rows to keep and no list of what it changed: its result is small. */
+function endedClean(progress: OperationProgressPayload | null | undefined, succeeded: boolean): boolean {
+    return succeeded && !keepsRows(progress) && (progress?.changes ?? []).length === 0;
+}
+
+/** No question and no outcome yet: the work is under way. */
+function isRunning(prompt: OperationProgressPayload['prompt'], failed: boolean, succeeded: boolean): boolean {
+    return !prompt && !failed && !succeeded;
+}
+
 /** What a failure offers: the detail it wrote to the logs, and another go. */
-function failureButtons(failed: boolean, onRetry: () => void): ActionButton[] {
+function failureButtons(failed: boolean, onRetry: () => void): ProgressAction[] {
     if (!failed) return [];
     return [
         {
@@ -149,6 +170,30 @@ function failureButtons(failed: boolean, onRetry: () => void): ActionButton[] {
         },
         { label: 'Retry', variant: 'accent', onPress: onRetry },
     ];
+}
+
+/** A success can name itself ("No Changes to Save", walk F89) where the operation's title would not fit. */
+function successTitleOf(progress: OperationProgressPayload | null | undefined, succeeded: boolean, fallback: string): string {
+    return (succeeded && progress?.title) || fallback;
+}
+
+/** The title's icon: a question's. An end's status is the body's mark, under the thing (walk F222). */
+function titleStatus(frame: ProgressFrame): { status?: ModalStatus } {
+    return frame.outcome === undefined && frame.status ? { status: frame.status } : {};
+}
+
+/** How it ended, for the body: the mark and the outcome. None while it runs or asks. */
+function endingOf(frame: ProgressFrame): { ending?: RunOutcome } {
+    if (frame.outcome === undefined) return {};
+    return { ending: frame.status ? { outcome: frame.outcome, status: frame.status } : { outcome: frame.outcome } };
+}
+
+/**
+ * The subject's own line over the body: while it asks. While it runs the body draws it, around which
+ * it levels the spinner; once it ends the title names the thing.
+ */
+function subjectLine(subject: string | undefined, running: boolean, frame: ProgressFrame): string | undefined {
+    return running || frame.outcome !== undefined ? undefined : subject;
 }
 
 /** The progress modal for one operation. */
@@ -171,6 +216,7 @@ export function OperationProgressModal({
     // modal is where the SC is looking, and a notification beside it asks twice
     // (owner, 2026-09-20: republishing Bodea showed both at once).
     const prompt = failed || succeeded ? undefined : progress?.prompt;
+    const running = isRunning(prompt, failed, succeeded);
 
     // What the SC has typed into the question's fields, if it has any. A ref, not
     // state: every keystroke would otherwise re-render the modal around the field
@@ -214,21 +260,20 @@ export function OperationProgressModal({
     const warning = succeeded ? progress?.warning : undefined;
     const note = succeeded ? progress?.note : undefined;
     // So does a list of what the run changed (2026-10-22): it is the result, to be read.
-    const held = holdsResult(progress);
-    useEffect(() => {
-        if (!succeeded || offering || held) return undefined;
-        const timer = setTimeout(onClose, TIMEOUTS.UI.RESULT_GLANCE);
-        return () => clearTimeout(timer);
-    }, [succeeded, offering, held, onClose]);
-
     const close = useCallback((): void => {
         if (prompt) {
-            answer(undefined);
+            answer(prompt.dismiss);
+            // A dismiss answer (Skip for Now) is an answer: the run goes on here (owner walk, 2026-11-16).
+            if (prompt.dismiss) return;
         } else if (operation && !failed && !succeeded) {
-            webviewClient.postMessage('backgroundOperation', {
+            const request: BackgroundOperationRequest = {
                 id: operation.id,
                 title: operation.subject ? `${operation.title}: ${operation.subject}` : operation.title,
-            });
+                // The notification ends in the window's own result titles (rule 21).
+                doneTitle: operation.successTitle,
+                failedTitle: operation.failureTitle,
+            };
+            webviewClient.postMessage('backgroundOperation', request);
         }
         onClose();
     }, [operation, failed, succeeded, prompt, answer, onClose]);
@@ -237,40 +282,54 @@ export function OperationProgressModal({
     // this beside its own dialogs, and a container with no child still occupies
     // the dialog slot (two dismiss targets on the dashboard, 2026-09-19).
     if (!operation) return <></>;
+    const frame = progressFrame({
+        title: operation.title,
+        thing: operation.thing,
+        successTitle: successTitleOf(progress, succeeded, operation.successTitle),
+        failureTitle: operation.failureTitle,
+        prompt,
+        failed,
+        succeeded,
+        ending: progressEnding(progress),
+    });
 
+    // The thing as the title, the outcome under its mark in the body (walk F222). A clean success,
+    // with no rows or changes left to read, is a small window of its own (owner, 2026-11-20); any
+    // other end stays in the run's window.
+    const above = subjectLine(operation.subject, running, frame);
     return (
-        <DialogContainer onDismiss={close}>
-            <Modal
-                fitContent
-                title={operation.title}
-                size="M"
-                onClose={close}
-                closeLabel={closeLabelFor(failed || succeeded, Boolean(prompt))}
-                actionButtons={
-                    prompt
-                        ? answerButtons(prompt.actions, answer)
-                        : [...failureButtons(failed, onRetry), ...nextStepButtons(offering, onClose)]
-                }
-            >
-                {operation.subject && <div className="modal-progress-subject" title={operation.subject}>{operation.subject}</div>}
-                {/* One fixed height for every state, so the modal never resizes as
-                        stages come and go or it turns into a failure. */}
-                <div className="modal-progress-body">
+        <ProgressDialog
+            isOpen
+            endedClean={endedClean(progress, succeeded)}
+            title={frame.title}
+            {...titleStatus(frame)}
+            closeLabel={closeLabelFor(failed || succeeded, prompt)}
+            onClose={close}
+            actions={
+                prompt
+                    ? answerButtons(prompt, answer)
+                    : [...failureButtons(failed, onRetry), ...nextStepButtons(offering, onClose)]
+            }
+            stream={
+                <>
+                    {above ? <div className="modal-progress-subject">{above}</div> : null}
+                    {/* The window keeps the height it opened at for every state (owner,
+                        2026-11-11; `ProgressDialog`): a shorter result sits in the same box, a
+                        longer one scrolls. */}
                     <OperationProgressBody
                         prompt={prompt}
                         failed={failed}
                         succeeded={succeeded}
-                        failureTitle={operation.failureTitle}
-                        successTitle={operation.successTitle}
                         successMessage={
                             [warning, note, offering?.message].filter(Boolean).join(' ') || undefined
                         }
-                        warned={Boolean(warning)}
                         progress={progress}
                         onTyped={onTyped}
+                        subject={operation.subject}
+                        {...endingOf(frame)}
                     />
-                </div>
-            </Modal>
-        </DialogContainer>
+                </>
+            }
+        />
     );
 }

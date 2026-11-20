@@ -23,8 +23,13 @@ jest.mock('vscode', () => ({
     Uri: { parse: (value: string) => ({ value }) },
 }), { virtual: true });
 
+// Chrome's start is waited out through the shared sleep(), mocked so no test sleeps for real.
+const mockSleep = jest.fn().mockResolvedValue(undefined);
+jest.mock('@/core/utils/sleep', () => ({ sleep: (ms: number) => mockSleep(ms) }));
+
 import * as vscode from 'vscode';
-import { openInIncognito, openPrivateBrowser } from '@/core/utils/browserUtils';
+import { openInDefaultBrowser, openInIncognito, openPrivateBrowser } from '@/core/utils/browserUtils';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 const realPlatform = process.platform;
 function onPlatform(platform: NodeJS.Platform): void {
@@ -53,6 +58,28 @@ describe('openInIncognito', () => {
         expect(mockOpenExternal).not.toHaveBeenCalled();
     });
 
+    // `open` returns once Chrome is launched, two or three seconds before its window shows, so
+    // the open is not done until Chrome's usual start has passed (owner, 2026-10-31).
+    it("waits Chrome's usual start after `open` returns, before answering", async () => {
+        onPlatform('darwin');
+        const order: string[] = [];
+        mockExecFile.mockImplementation((_file, _args, callback) => { order.push('open'); callback(null, '', ''); });
+        mockSleep.mockImplementation(async () => { order.push('wait'); });
+
+        await openInIncognito('https://admin.example/');
+
+        expect(mockSleep).toHaveBeenCalledWith(TIMEOUTS.UI.BROWSER_START);
+        expect(order).toEqual(['open', 'wait']);
+    });
+
+    it('does not wait when it falls back to the default browser', async () => {
+        onPlatform('linux');
+
+        await openInIncognito('https://admin.example/');
+
+        expect(mockSleep).not.toHaveBeenCalled();
+    });
+
     it('falls back to the default browser when Chrome cannot be opened', async () => {
         onPlatform('darwin');
         mockExecFile.mockImplementation((_file, _args, callback) => callback(new Error('no Chrome')));
@@ -78,6 +105,32 @@ describe('openInIncognito', () => {
  * The notification that covers the launch. It lived in two screens' handlers,
  * written out twice; both call this now, so this is where its shape is pinned.
  */
+describe('openInDefaultBrowser', () => {
+    const UNIFIED = 'https://experience.adobe.com/#/@acme/in:tenant123/commerce/cloud-service/admin';
+    const realPlatform = process.platform;
+
+    afterEach(() => Object.defineProperty(process, 'platform', { value: realPlatform }));
+
+    it('hands macOS the address as written, as one argument', async () => {
+        Object.defineProperty(process, 'platform', { value: 'darwin' });
+        mockExecFile.mockImplementation((_file, _args, callback) => callback(null, '', ''));
+
+        await openInDefaultBrowser(UNIFIED);
+
+        expect(mockExecFile).toHaveBeenCalledWith('open', [UNIFIED], expect.any(Function));
+        expect(mockOpenExternal).not.toHaveBeenCalled();
+    });
+
+    it('falls back to VS Code when that fails', async () => {
+        Object.defineProperty(process, 'platform', { value: 'darwin' });
+        mockExecFile.mockImplementation((_file, _args, callback) => callback(new Error('no opener'), '', ''));
+
+        await openInDefaultBrowser(UNIFIED);
+
+        expect(mockOpenExternal).toHaveBeenCalledTimes(1);
+    });
+});
+
 describe('openPrivateBrowser', () => {
     it('opens incognito behind a notification that cannot be cancelled', async () => {
         onPlatform('darwin');
@@ -90,7 +143,7 @@ describe('openPrivateBrowser', () => {
         expect(mockWithProgress).toHaveBeenCalledWith(
             {
                 location: vscode.ProgressLocation.Notification,
-                title: 'Opening a private browser',
+                title: 'Opening a Private Browser',
                 cancellable: false,
             },
             expect.any(Function),

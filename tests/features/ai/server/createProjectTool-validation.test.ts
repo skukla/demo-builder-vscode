@@ -23,6 +23,11 @@ import {
     type McpToolSchema,
 } from './createProjectTool.testUtils';
 
+/** Each field as the agent receives it: the JSON schema zod 4 produces for tools/list. */
+function agentProperties(schema: z.ZodObject<z.ZodRawShape>): Record<string, { description?: string }> {
+    return (z.toJSONSchema(schema).properties ?? {}) as Record<string, { description?: string }>;
+}
+
 /** The zod SHAPE the tool declares, as a parseable object schema. */
 function schemaOf(def: McpToolSchema): z.ZodObject<z.ZodRawShape> {
     const input = def.inputSchema ?? {};
@@ -145,11 +150,13 @@ describe('create_project — registered schema', () => {
             'confirm',
             'daLiveOrg',
             'daLiveSite',
+            'datapack',
             'githubOwner',
             'link',
             'package',
             'projectName',
             'repoName',
+            'resetExisting',
             'stack',
             'storeScope',
         ]);
@@ -163,7 +170,7 @@ describe('create_project — registered schema', () => {
         expect(schema.safeParse({ projectName: 'p', package: 'k' }).success).toBe(false);
         // `package` is optional at the schema level because `link` can stand in;
         // the handler is what insists on one of the two.
-        expect(schema.safeParse({ projectName: 'p', link: 'https://github.com/jen/demo', stack: 's' }).success).toBe(true);
+        expect(schema.safeParse({ projectName: 'p', link: 'https://github.com/robin/demo', stack: 's' }).success).toBe(true);
         expect(schema.safeParse({ projectName: 1, package: 'k', stack: 's' }).success).toBe(false);
         expect(
             schema.safeParse({ projectName: 'p', package: 'k', stack: 's', confirm: 'yes' }).success,
@@ -171,7 +178,9 @@ describe('create_project — registered schema', () => {
     });
 
     it('describes every field it takes', () => {
-        for (const field of Object.values(schemaOf(def()).shape)) {
+        // Read the JSON schema the agent is sent, not the zod object: zod 4 keeps a
+        // description on the inner schema when `.optional()` or `.default()` wraps it.
+        for (const field of Object.values(agentProperties(schemaOf(def())))) {
             expect((field.description ?? '').length).toBeGreaterThan(0);
         }
     });

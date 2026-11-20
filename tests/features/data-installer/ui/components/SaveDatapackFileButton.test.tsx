@@ -13,7 +13,7 @@ import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { SaveDatapackFileButton } from '@/features/data-installer/ui/components/SaveDatapackFileButton';
 
 const mockRequest = webviewClient.request as jest.Mock;
-const ID = { name: 'justrite', version: 'v1' };
+const ID = { name: 'tailspin', version: 'v1' };
 
 function answer(response: unknown): void {
     mockRequest.mockReset();
@@ -22,20 +22,20 @@ function answer(response: unknown): void {
 
 async function saveFrom(source?: 'installer' | 'library'): Promise<void> {
     render(<SaveDatapackFileButton id={ID} {...(source ? { source } : {})} />);
-    await press(screen.getByRole('button', { name: 'Save as file' }));
+    await press(screen.getByRole('button', { name: 'Save as File' }));
     await settle();
 }
 
 it('asks the host to save the named pack from the Data Installer by default, then says where it went', async () => {
-    answer({ success: true, data: { path: '/Users/sc/justrite-v1.datapack.zip' } });
+    answer({ success: true, data: { path: '/Users/sc/tailspin-v1.datapack.zip' } });
 
     await saveFrom();
 
     expect(mockRequest.mock.calls[0].slice(0, 2)).toEqual([
         'save-datapack-zip',
-        { source: 'installer', datapackName: 'justrite', version: 'v1' },
+        { source: 'installer', datapackName: 'tailspin', version: 'v1' },
     ]);
-    expect(screen.getByText('Saved to /Users/sc/justrite-v1.datapack.zip')).toBeInTheDocument();
+    expect(screen.getByText('Saved to /Users/sc/tailspin-v1.datapack.zip')).toBeInTheDocument();
 });
 
 it('names the library when the pack lives there', async () => {
@@ -57,14 +57,31 @@ it('says nothing when the save dialog was dismissed', async () => {
 it('shows the handler refusal in its own words', async () => {
     answer({
         success: false,
-        error: 'justrite@v1 holds no data yet, so there is nothing to save.',
+        error: 'tailspin@v1 holds no data yet, so there is nothing to save.',
     });
 
     await saveFrom();
 
     expect(
         screen.getByText(
-            'The file could not be saved: justrite@v1 holds no data yet, so there is nothing to save.'
+            'The file could not be saved: tailspin@v1 holds no data yet, so there is nothing to save.'
         )
     ).toBeInTheDocument();
+});
+
+it('says the store configuration went in the file too (datapack-engine step 09)', async () => {
+    answer({ success: true, data: { path: '/Users/sc/tailspin-v1.datapack.zip', settingsLayer: { settings: 2 } } });
+
+    await saveFrom();
+
+    expect(screen.getByText('Saved to /Users/sc/tailspin-v1.datapack.zip, with its store configuration')).toBeInTheDocument();
+});
+
+it('says the file may lack them when the library could not be asked', async () => {
+    const note = "My Datapacks couldn't be read, so this datapack's store configuration, if any, is not in this file.";
+    answer({ success: true, data: { path: '/Users/sc/tailspin-v1.datapack.zip', settingsLayerNote: note } });
+
+    await saveFrom();
+
+    expect(screen.getByText(`Saved to /Users/sc/tailspin-v1.datapack.zip. ${note}`)).toBeInTheDocument();
 });

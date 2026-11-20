@@ -84,7 +84,7 @@ describe('AiOverviewScreen — unusable responses', () => {
                 fireEvent.click(screen.getByTestId('ai-new-prompt-tile'));
             });
             fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'Gamma' } });
-            fireEvent.change(screen.getByLabelText(/prompt/i), { target: { value: 'Gamma body' } });
+            fireEvent.change(screen.getByLabelText(/prompt/i, { selector: 'textarea' }), { target: { value: 'Gamma body' } });
             await act(async () => {
                 fireEvent.click(screen.getByRole('button', { name: /^save$/i }));
                 await Promise.resolve();

@@ -81,6 +81,21 @@ describe('SdkEntityFetch.trySDKFetch', () => {
         expect(result).toBeUndefined();
     });
 
+    // Walk F247: Adobe's "Oauth token is not valid" is the sign-in being turned away, not the SDK
+    // being down; it is reported so the sign-in can be renewed.
+    it("reports Adobe turning the sign-in away, and nothing else", async () => {
+        const onTokenRejected = jest.fn();
+        const turnedAway = new Error(
+            '[CoreConsoleAPISDK:ERROR_GET_ORGANIZATIONS] 401 - Unauthorized ({"title":"ErrInvalidOauthToken","status":401,"error_code":401013,"message":"Oauth token is not valid"})',
+        );
+
+        await new SdkEntityFetch(sdkClient(true), onTokenRejected).trySDKFetch(jest.fn().mockRejectedValue(turnedAway), upper, 'orgs', 0);
+        expect(onTokenRejected).toHaveBeenCalledTimes(1);
+
+        await new SdkEntityFetch(sdkClient(true), onTokenRejected).trySDKFetch(jest.fn().mockRejectedValue(new Error('gateway 502')), upper, 'orgs', 0);
+        expect(onTokenRejected).toHaveBeenCalledTimes(1);
+    });
+
     it('answers undefined when the SDK call fails with a non-Error value', async () => {
         const call = jest.fn().mockRejectedValue('plain string');
 

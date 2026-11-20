@@ -115,7 +115,7 @@ describe('ProjectDashboardScreen - Org Context (badge + banner)', () => {
         expect(screen.queryByText(/Switch IMS Org/i)).not.toBeInTheDocument();
     });
 
-    it('resolves to a yellow "Signed out" badge with Sign in (no banner) when signed out', async () => {
+    it('resolves to a yellow "Signed out" badge with Sign In (no banner) when signed out', async () => {
         // P1: when the check can't run non-interactively on open, it never opens a
         // surprise browser or shows a mismatch banner.
         renderDashboard({ hasAdobeContext: true });
@@ -127,20 +127,20 @@ describe('ProjectDashboardScreen - Org Context (badge + banner)', () => {
             expect(imsOrgBadge()).toHaveAttribute('data-color', 'yellow');
         });
         expect(imsOrgBadge()).toHaveTextContent(/Signed out/);
-        expect(screen.getByText('Sign in')).toBeInTheDocument();
+        expect(screen.getByText('Sign In')).toBeInTheDocument();
         expect(screen.queryByText(/Switch IMS Org/i)).not.toBeInTheDocument();
     });
 
-    it('requests reAuthenticate when Sign in is clicked (user-initiated)', async () => {
+    it('requests the one Sign In when Sign In is clicked (user-initiated)', async () => {
         const { webviewClient } = require('@/core/ui/utils/WebviewClient');
         renderDashboard({ hasAdobeContext: true });
 
         emitOrgSignedOut();
         advancePastOrgCheckGate();
 
-        fireEvent.click(await screen.findByText('Sign in'));
+        fireEvent.click(await screen.findByText('Sign In'));
 
-        expect(webviewClient.postMessage).toHaveBeenCalledWith('reAuthenticate');
+        expect(webviewClient.request).toHaveBeenCalledWith('authenticate');
     });
 
     it('resolves to a yellow "Not verified" badge with Verify when signed in but unconfirmed', async () => {
@@ -160,7 +160,7 @@ describe('ProjectDashboardScreen - Org Context (badge + banner)', () => {
 
         // Verify re-runs the checks; it must never start a sign-in.
         expect(webviewClient.postMessage).toHaveBeenCalledWith('requestStatus');
-        expect(webviewClient.postMessage).not.toHaveBeenCalledWith('reAuthenticate');
+        expect(webviewClient.request).not.toHaveBeenCalledWith('authenticate');
     });
 
     it('shows no IMS Org badge or banner for a project without an Adobe org', async () => {
@@ -177,14 +177,13 @@ describe('ProjectDashboardScreen - Org Context (badge + banner)', () => {
     it('renders the warning banner, names the current org, and offers a switch action on mismatch', async () => {
         await showMismatchBanner();
 
-        expect(screen.getByText(/Wrong Adobe organization/i)).toBeInTheDocument();
-        // Banner message names BOTH the current org and the project's expected org.
+        expect(screen.getByText(/Wrong Adobe Organization/i)).toBeInTheDocument();
+        // Banner message names BOTH the current org and the project's expected org, in plain
+        // words (walk F239: the owner asked for messaging that reads like an application).
         expect(
-            screen.getByText(
-                /You're signed into Org B, but this project was created in CitiSignal Org/i
-            )
+            screen.getByText("This project belongs to CitiSignal Org, but you're signed in to Org B.")
         ).toBeInTheDocument();
-        expect(screen.queryByText(/another browser tab/i)).not.toBeInTheDocument();
+        expect(screen.queryByText(/close other Adobe tabs/i)).not.toBeInTheDocument();
     });
 
     it('requests switchOrg when the switch action is clicked', async () => {
@@ -196,7 +195,10 @@ describe('ProjectDashboardScreen - Org Context (badge + banner)', () => {
         expect(webviewClient.request).toHaveBeenCalledWith('switchOrg');
     });
 
-    it('shows a disabled "Switching" button while the forced switch is in flight', async () => {
+    // A busy button, not a spinner plus "Switching" (owner, 2026-10-31): the label stays and the
+    // button ignores presses while the switch is in flight. The house DialogButton (walk F239),
+    // whose spinner shows on the blue button where Spectrum's did not.
+    it('shows the switch button busy while the forced switch is in flight', async () => {
         const { webviewClient } = require('@/core/ui/utils/WebviewClient');
         // Default request mock never resolves — the switch stays in flight.
         webviewClient.request.mockReturnValue(new Promise(() => {}));
@@ -204,11 +206,10 @@ describe('ProjectDashboardScreen - Org Context (badge + banner)', () => {
 
         fireEvent.click(screen.getByText(/Switch IMS Org/i));
 
-        const switching = await screen.findByText(/Switching/i);
-        expect(switching).toBeInTheDocument();
-        expect(switching.closest('button')).toBeDisabled();
-        // The standing "Switch IMS Org" label is gone while busy.
-        expect(screen.queryByText(/^Switch IMS Org$/i)).not.toBeInTheDocument();
+        await waitFor(() =>
+            expect(screen.getByText(/^Switch IMS Org$/i).closest('[role="button"]')).toHaveAttribute('aria-busy', 'true')
+        );
+        expect(screen.queryByText(/Switching/i)).not.toBeInTheDocument();
     });
 
     it('ignores repeated presses while a switch is already in flight', async () => {
@@ -216,10 +217,9 @@ describe('ProjectDashboardScreen - Org Context (badge + banner)', () => {
         webviewClient.request.mockReturnValue(new Promise(() => {}));
         await showMismatchBanner();
 
-        // Re-query each time: after the first press the button flips to a disabled
-        // "Switching" state — a second press must not fire the round-trip again.
-        const liveSwitchButton = () =>
-            screen.getByText(/Switch IMS Org|Switching/i).closest('button')!;
+        // Re-query each time: after the first press the button is busy, and a second press
+        // must not fire the round-trip again.
+        const liveSwitchButton = () => screen.getByText(/Switch IMS Org/i).closest('[role="button"]')!;
         fireEvent.click(liveSwitchButton());
         fireEvent.click(liveSwitchButton());
 
@@ -242,8 +242,9 @@ describe('ProjectDashboardScreen - Org Context (badge + banner)', () => {
         emitOrgMismatch();
 
         await waitFor(() => {
-            const button = screen.getByText(/Switch IMS Org/i).closest('button');
+            const button = screen.getByText(/Switch IMS Org/i).closest('[role="button"]');
             expect(button).not.toBeDisabled();
+            expect(button).not.toHaveAttribute('aria-busy');
         });
     });
 
@@ -256,7 +257,7 @@ describe('ProjectDashboardScreen - Org Context (badge + banner)', () => {
         emitOrgMismatch();
 
         await waitFor(() => {
-            expect(screen.getByText(/another browser tab/i)).toBeInTheDocument();
+            expect(screen.getByText(/close other Adobe tabs/i)).toBeInTheDocument();
         });
     });
 

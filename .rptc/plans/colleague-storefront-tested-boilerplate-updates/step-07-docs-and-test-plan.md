@@ -6,4 +6,4 @@
   corrected to name the 3-way apply.
 - `docs/CHANGELOG.md`: one entry in the SC's words.
 - Release test plan: rows for a qualifying colleague storefront (both rows, apply each,
-  conflict stops), and JustRite (no boilerplate row, report says why).
+  conflict stops), and Tailspin (no boilerplate row, report says why).

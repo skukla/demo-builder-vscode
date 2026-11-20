@@ -30,6 +30,15 @@
  *     nonces, which is the security property; the timing version would have
  *     passed on a constant
  *
+ * NOR MAY A MEASURED TIME BE CHECKED ONLY AGAINST ZERO (2026-11-06). `expect(duration)
+ * .toBeGreaterThanOrEqual(0)` proves the field is there and nothing about its value, since a
+ * difference of two clock readings is never negative. A datapack install reported coupons taking
+ * 20.1 s and then 39.2 s, time that belonged to the check and the read-back after it, while
+ * `timings.every((seconds) => seconds >= 0)` stayed green. Stub the clock and assert the value
+ * (`engine-timings.test.ts`, `commandExecutor-basic-execution.test.ts`). A floor paired with an
+ * upper bound on the next line is a different claim, "a duration and not a clock reading", and
+ * is left alone.
+ *
  * A DEADLINE IS NOT A PERFORMANCE BOUND, and the ledger below is for those. A
  * probe with a 30-second budget asserted to return inside 1 second is proving it
  * took the fast refusal path, not that the machine is quick — the 30x margin is
@@ -97,6 +106,18 @@ const INLINE_CLOCK =
     /expect\(\s*(?:Date\.now\(\)|performance\.now\(\))\s*-[^)]*\)\s*\.\s*toBeLessThan(?:OrEqual)?\(\s*[\d_.]+\s*\)/;
 const DURATION_NAME = /^(elapsed|duration|took|delta|ms|spent|.*(Elapsed|Duration|Ms|Took))$/;
 
+/** `expect(<x>).toBeGreaterThanOrEqual(0)`, or `.every((s) => s >= 0)`: a floor of zero and nothing else. */
+const ZERO_FLOOR = /expect\((.+?)\)\s*\.\s*toBeGreaterThanOrEqual\(\s*0\s*\)|\.every\(\s*\(?\s*(\w+)\s*\)?\s*=>\s*\2\s*>=\s*0\s*\)/;
+/** What a measured time is called: the floor matters only on one. */
+const TIME_WORD = /(duration|elapsed|seconds|timings|took)|\.at\b/i;
+
+/** A zero floor on a time, with no upper bound beside it to make it a claim. */
+function zeroFloorOnTime(lines: readonly string[], i: number): boolean {
+    const m = ZERO_FLOOR.exec(lines[i]);
+    if (!m || !TIME_WORD.test(m[1] ?? lines[i])) return false;
+    return ![lines[i - 1], lines[i + 1]].some((near) => near?.includes('toBeLessThan'));
+}
+
 function offenders(): { file: string; line: number; text: string }[] {
     const hits: { file: string; line: number; text: string }[] = [];
     for (const file of testFiles(TESTS)) {
@@ -105,7 +126,7 @@ function offenders(): { file: string; line: number; text: string }[] {
         if (rel === 'tests/sop/no-wall-clock-bounds.test.ts') continue;
         const lines = readFileSync(file, 'utf8').split('\n');
         lines.forEach((text, i) => {
-            let flagged = INLINE_CLOCK.test(text);
+            let flagged = INLINE_CLOCK.test(text) || zeroFloorOnTime(lines, i);
             for (const m of text.matchAll(UPPER_BOUND)) {
                 if (DURATION_NAME.test(m[1])) flagged = true;
             }
@@ -116,7 +137,7 @@ function offenders(): { file: string; line: number; text: string }[] {
     return hits;
 }
 
-describe('no wall-clock upper bounds', () => {
+describe('no wall-clock upper bounds, and no floor of zero alone', () => {
     it('CONTROL: the detector fires on a duration assertion', () => {
         const sample = '            expect(duration).toBeLessThan(50);';
         const fired = [...sample.matchAll(UPPER_BOUND)].some((m) => DURATION_NAME.test(m[1]));
@@ -135,6 +156,17 @@ describe('no wall-clock upper bounds', () => {
         const fired = [...sample.matchAll(UPPER_BOUND)].some((m) => DURATION_NAME.test(m[1]));
 
         expect(fired).toBe(false);
+    });
+
+    it('CONTROL: it fires on a time checked only against zero, in both forms', () => {
+        expect(zeroFloorOnTime(['expect(result.duration).toBeGreaterThanOrEqual(0);'], 0)).toBe(true);
+        expect(zeroFloorOnTime(['expect(Object.values(timings).every((seconds) => seconds >= 0)).toBe(true);'], 0)).toBe(true);
+    });
+
+    it('CONTROL: it does NOT fire on a floor paired with a bound, or on an index found', () => {
+        const paired = ['expect(duration).toBeGreaterThanOrEqual(0);', 'expect(duration).toBeLessThan(10_000);'];
+        expect(zeroFloorOnTime(paired, 0)).toBe(false);
+        expect(zeroFloorOnTime(['expect(envIndex).toBeGreaterThanOrEqual(0);'], 0)).toBe(false);
     });
 
     it('no test bounds a measured duration from above', () => {

@@ -12,7 +12,10 @@
  */
 
 import AdmZip from 'adm-zip';
+import semver from 'semver';
+import { FALLBACK_CONTENT_INDEX_PATH } from '../contentIndex';
 import { BUNDLE_SETUP_FILE, BUNDLE_STOREFRONT_DIR } from '../demoPackage/demoBundle';
+import { parseFstabContentSource } from '../fstabGenerator';
 import type { GitHubRepoLifecycle } from '../github/githubRepoLifecycle';
 import { pushFiles, type TreePushOps } from '../github/githubTreePush';
 import { isNeverShipped } from './neverShippedFiles';
@@ -21,19 +24,21 @@ import {
     classifyRepoForStorefront,
     type RepoReadiness,
 } from './repoStorefrontReadiness';
-import { readBoilerplate } from './storefrontProvenance';
 import { ZIP_COMMIT_MESSAGE } from './zipImportCommit';
 import { readProjectFile, readSharedDemoDescription } from '@/core/state/projectFileReader';
+import { FULL_COMMIT_SHA } from '@/core/utils/commitSha';
 import { parseIgnoreRules } from '@/core/utils/gitignoreRules';
 import { normalizeRepositoryName } from '@/core/validation/normalizers';
 import { addedDemoId } from '@/features/components/services/storefrontResolver';
+import type { DaLiveContentSource } from '@/types/demoPackages';
 import type { Logger } from '@/types/logger';
 import {
     SHARED_DEMO_FILE_NAME,
     type AddedDemo,
+    type ImportedFrom,
     type ProjectFile,
-    type RememberedDemo,
-    type StorefrontBoilerplate,
+    type RepositoryRef,
+    type SharedDemoBuiltWith,
 } from '@/types/projectFile';
 
 
@@ -149,6 +154,19 @@ export interface CreatedRepository {
     fullName: string;
     defaultBranch: string;
     fileCount: number;
+    /** The commit the files were pushed as: an imported project resets to it (EDS-72). */
+    commit: string;
+}
+
+/** How the repository is made: its name and visibility, and for a project's own repository, where and unflagged. */
+export interface CreateRepositoryOptions {
+    repoName: string;
+    isPrivate: boolean;
+    leftOut?: number;
+    /** The GitHub account or organization to create under; the signed-in account when absent. */
+    namespace?: string;
+    /** Flag it a template (the default): false for a project's own repository (EDS-72). */
+    template?: boolean;
 }
 
 export interface CreateRepositoryDeps {
@@ -167,28 +185,31 @@ const count = (n: number): string => n.toLocaleString('en-US');
 /**
  * The unpacked storefront becomes a repository in the SC's own account (D28):
  * created public unless asked otherwise, the files pushed as one commit, the
- * repository flagged a template. Shared by the dialog's zip door and the
- * projects list's bundle import.
+ * repository flagged a template. Shared by the dialog's zip door and storefront
+ * setup for a project imported from a bundle, which makes the project's own
+ * repository: in the project's namespace, not flagged (EDS-72).
  *
  * @param deps - GitHub operations and a logger
  * @param files - Repository-relative path → bytes
- * @param opts - The repository's name and visibility
- * @returns The repository, as created
+ * @param opts - The repository's name, visibility, namespace and template flag
+ * @returns The repository, as created, with the commit pushed
  */
 export async function createRepositoryFromZip(
     deps: CreateRepositoryDeps,
     files: Map<string, Buffer>,
-    opts: { repoName: string; isPrivate: boolean; leftOut?: number },
+    opts: CreateRepositoryOptions,
 ): Promise<CreatedRepository> {
     deps.logger.info(
         `[Zip] Creating ${opts.repoName} (${opts.isPrivate ? 'private' : 'public'}): ${files.size} files`,
     );
-    const leftOut = opts.leftOut ? ` · ${count(opts.leftOut)} left out` : '';
+    const leftOut = opts.leftOut ? `, ${count(opts.leftOut)} left out` : '';
     deps.onProgress?.(
         'Creating the repository',
-        `${opts.repoName} · ${count(files.size)} files${leftOut}`,
+        `${opts.repoName}, ${count(files.size)} files${leftOut}`,
     );
-    const repository = await deps.repoOps.createEmptyRepository(opts.repoName, opts.isPrivate);
+    const repository = opts.namespace
+        ? await deps.repoOps.createEmptyRepository(opts.repoName, opts.isPrivate, opts.namespace)
+        : await deps.repoOps.createEmptyRepository(opts.repoName, opts.isPrivate);
     const [owner, repo] = repository.fullName.split('/');
     await deps.repoOps.waitForContent(owner, repo);
     const pushed = await pushFiles(
@@ -204,10 +225,12 @@ export async function createRepositoryFromZip(
                 `${count(p.done)} of ${count(p.total)}`,
             ),
     );
-    deps.onProgress?.('Finishing up', 'Marking it as a template');
-    await deps.repoOps.setTemplateFlag(owner, repo, true);
+    if (opts.template !== false) {
+        deps.onProgress?.('Finishing up', 'Marking it as a template');
+        await deps.repoOps.setTemplateFlag(owner, repo, true);
+    }
     deps.logger.info(
-        `[Zip] ${repository.fullName}: ${pushed.fileCount} files pushed, marked as a template`,
+        `[Zip] ${repository.fullName}: ${pushed.fileCount} files pushed${opts.template !== false ? ', marked as a template' : ''}`,
     );
     return {
         owner,
@@ -215,40 +238,76 @@ export async function createRepositoryFromZip(
         fullName: repository.fullName,
         defaultBranch: repository.defaultBranch || 'main',
         fileCount: pushed.fileCount,
+        commit: pushed.commitSha,
     };
 }
 
 /**
- * The card for the Welcome step, from the description file the zip carried,
- * pointed at the repository just created and recorded as made from the zip, so
- * Remove can offer to delete it. Absent when the zip had no valid
- * description file; the caller probes the repository instead.
+ * The sender's content site a bundle names (EDS-72): the description file Export writes into
+ * the storefront (with the index it resolved), else the site its `fstab.yaml` mounts, read at
+ * the usual index. Nothing when it names neither: the project then starts with no pages.
  */
-export function cardFromZip(
+export function contentSourceOfZip(files: Map<string, Buffer>): DaLiveContentSource | undefined {
+    const description = files.get(SHARED_DEMO_FILE_NAME);
+    const read = description ? readSharedDemoDescription(description.toString('utf-8')) : undefined;
+    if (read?.ok && read.description.contentSource) return read.description.contentSource;
+    const fstab = files.get('fstab.yaml');
+    const mounted = fstab ? parseFstabContentSource(fstab.toString('utf-8')) : undefined;
+    return mounted ? { ...mounted, indexPath: FALLBACK_CONTENT_INDEX_PATH } : undefined;
+}
+
+/** The description file's record of what the sender's storefront was built from, when it has one. */
+function builtWithOfZip(files: Map<string, Buffer>): SharedDemoBuiltWith | undefined {
+    const description = files.get(SHARED_DEMO_FILE_NAME);
+    const read = description ? readSharedDemoDescription(description.toString('utf-8')) : undefined;
+    return read?.ok ? read.description.builtWith : undefined;
+}
+
+/** Whether a description's repository is absent (taken to mean the project's) or names `expected`. */
+function isSameRepository(named: RepositoryRef | undefined, expected: RepositoryRef): boolean {
+    return !named || (named.owner === expected.owner && named.repo === expected.repo);
+}
+
+/**
+ * The template commit a bundle's storefront was built on (F252): the description file's
+ * `builtWith.lkg`, when it is a commit and on `template` (a description naming no template is
+ * taken to mean the project's). Nothing otherwise: an older sender wrote no `builtWith`.
+ */
+export function templateBaseOfZip(files: Map<string, Buffer>, template: RepositoryRef): string | undefined {
+    const builtWith = builtWithOfZip(files);
+    if (!builtWith?.lkg || !FULL_COMMIT_SHA.test(builtWith.lkg)) return undefined;
+    return isSameRepository(builtWith.template, template) ? builtWith.lkg : undefined;
+}
+
+/**
+ * The patches release a bundle's storefront was built from (F255): the description file's
+ * `builtWith.patchesRelease`, when it is a version and of `ledger`, the project's patches repo (a
+ * description naming no ledger is taken to mean the project's). Nothing for a project with no
+ * ledger, or a sender that recorded no release.
+ */
+export function patchesReleaseOfZip(
     files: Map<string, Buffer>,
-    created: CreatedRepository,
-): RememberedDemo | undefined {
-    const bytes = files.get(SHARED_DEMO_FILE_NAME);
-    if (!bytes) return undefined;
-    const read = readSharedDemoDescription(bytes.toString('utf-8'));
-    if (!read.ok) return undefined;
-    return {
-        ...read.description,
-        source: { owner: created.owner, repo: created.repo, branch: created.defaultBranch },
-        storefrontKind: 'eds',
-        ...boilerplateOfZip(files),
-        createdFromZip: true,
-    };
+    ledger: RepositoryRef | undefined,
+): string | undefined {
+    const builtWith = builtWithOfZip(files);
+    const release = builtWith?.patchesRelease;
+    if (!ledger || !release || !semver.valid(release)) return undefined;
+    return isSameRepository(builtWith.codePatchSource, ledger) ? release : undefined;
 }
 
 /**
- * What a zip's storefront was built on, from its own `package.json` (EDS-13f
- * decision 4: a zip has no GitHub record, so its files are the only witness).
- * A spreadable field: nothing when the zip names no boilerplate.
+ * What Import from File records of a bundle it makes a project from (EDS-72): the demo's name
+ * as the wizard shows it (the setup's title, else its project), the bundle's path for storefront
+ * setup to read, and the sender's repository as provenance. Shared by the projects list's door
+ * and the agent's (`create_project_from_file`).
  */
-export function boilerplateOfZip(files: Map<string, Buffer>): { boilerplate?: StorefrontBoilerplate } {
-    const boilerplate = readBoilerplate(files.get('package.json')?.toString('utf-8'));
-    return boilerplate ? { boilerplate } : {};
+export function importedFromBundle(setup: ProjectFile, bundlePath: string): ImportedFrom {
+    const sourceRepository = setup.source.storefront?.githubRepo;
+    return {
+        bundleName: setup.title ?? setup.source.title ?? setup.source.project,
+        bundlePath,
+        ...(sourceRepository ? { sourceRepository } : {}),
+    };
 }
 
 /**

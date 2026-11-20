@@ -268,6 +268,8 @@ function toLinkedCard(model: IntegrationCardModel): LinkedCard {
     };
 }
 
+const NEWER_VERSION_MESSAGE = 'A newer version is available. Update fetches it and deploys it.';
+
 /** What every card face shows for a component: status, label, dot and message. */
 function deriveFace(
     entry: IdentifiedAppBuilderComponent,
@@ -352,8 +354,8 @@ function deriveInstallation(
 
 /**
  * kindLabel / source-line / apis facet. Catalog id → 'Pre-built' (+ its
- * requiredApis); a blank-entry source → 'Custom (blank starter)' (the shell
- * instancing path); anything else → 'Imported repo' with a mono owner/repo.
+ * requiredApis); a blank-entry source → 'Custom (Blank Starter)' (the shell
+ * instancing path); anything else → 'Imported Repository' with a mono owner/repo.
  * `renamable`: a pre-built one only when its name comes from an input (the ERP
  * integration, AB-16o) — the rename sets that input, so a redeploy keeps it.
  */
@@ -391,13 +393,13 @@ function deriveKindFacet(entry: IdentifiedAppBuilderComponent): {
             // out yourself (with AI, in-project, later). Labelling a freshly-added
             // shell as already AI-built described the intended workflow as though
             // it had happened (reported 2026-07-31).
-            kindLabel: 'Custom (blank starter)',
+            kindLabel: 'Custom (Blank Starter)',
             sourceLine: 'Blank starter — build it out',
             renamable: true,
         };
     }
     return {
-        kindLabel: 'Imported repo',
+        kindLabel: 'Imported Repository',
         sourceLine: formatSourceLine(entry.source),
         renamable: true,
     };
@@ -430,9 +432,7 @@ function resolveCardMessage(
     if (override?.message) {
         return override.message;
     }
-    if (status === 'stale' && entry.updateAvailable) {
-        return 'A newer version is available. Update fetches it and deploys it.';
-    }
+    if (status === 'stale' && entry.updateAvailable) return NEWER_VERSION_MESSAGE;
     return status === 'error' ? entry.error : undefined;
 }
 
@@ -750,7 +750,7 @@ const COMMERCE_SCOPE_PARTS: {
     { label: 'Website', keys: [ACCS_WEBSITE_CODE, PAAS_WEBSITE_CODE], list: 'websites' },
     { label: 'Store', keys: [ACCS_STORE_CODE, PAAS_STORE_CODE], list: 'storeGroups' },
     {
-        label: 'Store view',
+        label: 'Store View',
         keys: [ACCS_STORE_VIEW_CODE, PAAS_STORE_VIEW_CODE],
         list: 'storeViews',
     },
@@ -790,6 +790,16 @@ function deriveCommerceScope(
     return parts.length > 0 ? parts : undefined;
 }
 
+/** What a mesh card says under its status: why it failed, or that newer code waits. */
+function meshMessage(
+    status: CardStatus,
+    entry: AppBuilderComponentState | undefined,
+    hasNewerCode: boolean,
+): string | undefined {
+    if (status === 'stale' && hasNewerCode) return NEWER_VERSION_MESSAGE;
+    return status === 'error' ? entry?.error : undefined;
+}
+
 /**
  * Derive the mesh peer card. The status label is ALWAYS the live
  * `statusDisplay.text` (the retired badge's vocabulary, unchanged), and every
@@ -803,7 +813,9 @@ export function deriveMeshCard(
     meshComponentId?: string,
     storeStructure?: CommerceStoreStructure,
 ): IntegrationCardModel {
-    const cardStatus = toMeshCardStatus(status);
+    const hasNewerCode = Boolean(meshEntry?.updateAvailable);
+    const settled = toMeshCardStatus(status);
+    const cardStatus = settled === 'deployed' && hasNewerCode ? 'stale' : settled;
     const shared = getStatusDisplay(cardStatus);
     const label = shared?.label ?? '';
     const dot = severityToDot(shared?.severity ?? 'neutral');
@@ -825,7 +837,8 @@ export function deriveMeshCard(
         dotVariant: dot,
         // The label is the live status text; the REASON comes off the persisted
         // entry, so an errored mesh can still explain itself after a reload.
-        message: cardStatus === 'error' ? meshEntry?.error : undefined,
+        message: meshMessage(cardStatus, meshEntry, hasNewerCode),
+        hasNewerCode,
         url: meshEntry?.endpoint,
         urlLabel: 'Endpoint',
         // The mesh has no display name to change (canRename false) and no API

@@ -14,7 +14,7 @@ jest.mock('@/core/di/serviceLocator', () => ({
     },
 }));
 
-jest.mock('@/core/state/projectStateSync');
+jest.mock('@/core/state/frontendEnvDrift');
 
 import './dashboardValidatorMocks';
 import * as vscode from 'vscode';

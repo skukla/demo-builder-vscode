@@ -40,7 +40,7 @@ export function erpNamesOf(project: Project, integrationId: string): string[] {
  *
  * UNCUT and unbounded, unlike the agent tool's `sendRest`: that one cuts an answer at
  * 30,000 characters and pages a search at 20, which is right for a chat answer and fatal
- * for a check that parses the body (Justrite 2026-10-10: `products/attribute-sets/<id>/attributes`
+ * for a check that parses the body (Tailspin 2026-10-10: `products/attribute-sets/<id>/attributes`
  * answers more than that, and the attribute-set check died mid-JSON). The error lines keep
  * `sendRest`'s words, which the checks match on.
  */

@@ -3,7 +3,7 @@
  *
  * Feature-local by intent, per `reuse-first`. What was considered and rejected:
  *
- *   - `project-creation/ui/components/ChoiceCard` — the wizard's card primitive is
+ *   - `core/ui/components/selection/ChoiceCard` — the wizard's card primitive is
  *     a `<button>`, and this card must host a version `Picker`. A control inside a
  *     button is invalid HTML and unreachable by keyboard, so the primitive cannot
  *     be extended to cover this.
@@ -25,13 +25,18 @@
  * @module features/data-installer/ui/components/DatapackCard
  */
 
-import { Item, Picker } from '@adobe/react-spectrum';
+import { ActionButton, Badge, Item, Picker, Text, Tooltip, TooltipTrigger } from '@adobe/react-spectrum';
 import React, { useCallback, useState } from 'react';
+import { packSource, type PackSource } from '../../packSource';
+import { datapackDay, isSavedVersion, savedAt, shownVersion, versionChanged, versionChoices } from '../../packVersions';
 import type { DatapackGroup } from '../../services/datapackCatalog';
-import type { DatapackArt, DatapackId, DatapackStoreName, DatapackSummary } from '../../types';
+import type { DatapackArt, DatapackSummary } from '../../types';
+import { InstallFailedLine } from './FailedHealthLine';
 import { SelectionCheck } from '@/core/ui/components/ui/SelectionCheck';
+import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import { useActivateOnKey } from '@/core/ui/hooks/useActivateOnKey';
 import { cn } from '@/core/ui/utils/classNames';
+import type { DatapackId, DatapackStoreName } from '@/types/datapack';
 
 export interface DatapackCardProps {
     /** Every version of one datapack, already ordered by the catalog service. */
@@ -68,6 +73,18 @@ export interface DatapackCardProps {
      * was not, and then needed a link to point back at it.
      */
     isInstalled?: boolean;
+    /**
+     * The amber dot's words, present only on the demo's own pack while Update is waiting: "Newer
+     * version available" (J9-1, `updateWaiting`). The
+     * house amber dot beside the date, the dashboard's "due" mark, says this on hover in Spectrum's
+     * tooltip, as the dashboard's dots do (owner, 2026-11-07: a browser `title` never showed here).
+     */
+    newer?: string;
+    /**
+     * The demo's datapack failed to install (step-04 S8, J6-1): the error dot and "Install failed"
+     * under the name. The caller drops `isInstalled`, so there is no check and no border.
+     */
+    installFailed?: boolean;
 }
 
 /**
@@ -85,13 +102,15 @@ export function DatapackCard({
     onOpen,
     selected,
     isInstalled,
+    newer,
+    installFailed,
 }: DatapackCardProps): React.JSX.Element {
     // Checked for PRESENCE: `false` means selectable-and-unselected, which is
     // still a radio. Truthiness here would silently make every unselected card
     // in a choice grid announce itself as a button.
     const choosing = selected !== undefined;
     const version = selectVersion(group, selectedVersion);
-    const typeCount = version?.dataTypes.length ?? 0;
+    const tags = cardTags(group);
 
     const handleOpen = useCallback(
         (): void => onOpen({ name: group.name, version: selectedVersion }, group.store),
@@ -114,7 +133,7 @@ export function DatapackCard({
             role={choosing ? 'radio' : 'button'}
             {...(choosing ? { 'aria-checked': selected } : {})}
             tabIndex={0}
-            aria-label={`${group.displayName}, version ${selectedVersion}`}
+            aria-label={`${group.displayName}, ${shownVersion(selectedVersion)}`}
             // `is-selected` is the accent border, and the project's pack earns it
             // for the same reason a chosen card does: it is the one that matters
             // in this grid. The two never conflict — a wizard card that is both
@@ -140,15 +159,16 @@ export function DatapackCard({
                         Integrations card renders it inline for the same kind of
                         reason (its corner holds a button).
 
-                        It takes the tag's slot: the two never need to be read at
-                        once, and side by side in a row this narrow they wrap the
-                        title. */}
-                    {isInstalled ? (
-                        <SelectionCheck testId="datapack-card-project-check" />
-                    ) : (
-                        renderTag(cardTag(group))
-                    )}
+                        The tags live on the version line (owner, 2026-11-05): beside a
+                        name that wrapped, they moved with it. */}
+                    {isInstalled ? <SelectionCheck testId="datapack-card-project-check" /> : null}
+                    {/* The wizard's chosen card wears it too, as every other wizard choice card does
+                        (owner, 2026-11-16). One check when a card is both. */}
+                    {selected && !isInstalled ? <SelectionCheck testId="datapack-card-selected-check" /> : null}
                 </div>
+                {installFailed ? <InstallFailedLine /> : null}
+                {/* Two tags may move below the date, which stays whole (F285); one stays beside it. */}
+                <div className={cn('datapack-card-version-row', tags.length > 1 && 'datapack-card-version-row--wrap')}>
                 {/* Containment: the picker's press must not bubble to the card,
                     or choosing a version would also open the flyout — the
                     conflicting-nested-action problem the integrations grid hit.
@@ -156,25 +176,71 @@ export function DatapackCard({
                     and its options are the parts that escape. */}
                 {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- containment only; interaction lives on the child Picker (InlineRenameField precedent) */}
                 <span
-                    className="datapack-card-version"
+                    className={newer ? 'datapack-card-version datapack-card-version--newer' : 'datapack-card-version'}
                     onClick={stopPropagation}
                     onKeyDown={stopPropagation}
                 >
-                    <Picker
-                        aria-label={`Version of ${group.displayName}`}
-                        selectedKey={selectedVersion}
-                        onSelectionChange={(key) => onVersionChange(String(key))}
-                    >
-                        {group.versions.map((candidate) => (
-                            <Item key={candidate.id.version}>{candidate.id.version}</Item>
-                        ))}
-                    </Picker>
+                    <VersionChoice group={group} selectedVersion={selectedVersion} onVersionChange={onVersionChange} />
+                    {newer ? <NewerMark said={newer} /> : null}
                 </span>
-                <span className="datapack-card-types">
-                    {typeCount} {typeCount === 1 ? 'data type' : 'data types'}
-                </span>
+                {/* No count of data types (owner, 2026-11-05: the tile was crowded); the flyout
+                    names them. */}
+                <CardTags tags={tags} />
+                </div>
             </div>
         </div>
+    );
+}
+
+/**
+ * The versions to choose from (`versionChoices`): the named ones (`main`, `eds-compatible`), each a
+ * variant, and the pack's saves as one, the save on show (owner, 2026-11-09, walk F99). With fewer
+ * than two there is nothing to choose (step-07 P4, P4-Q2): a save says which save it is, and a named
+ * version says when it last changed, "Updated Nov 6, 9:15 AM".
+ */
+function VersionChoice({ group, selectedVersion, onVersionChange }: Pick<DatapackCardProps, 'group' | 'selectedVersion' | 'onVersionChange'>): React.JSX.Element {
+    const summaryOf = (version: string): DatapackSummary | undefined => group.versions.find((candidate) => candidate.id.version === version);
+    const changed = (version: string): string | undefined => {
+        const summary = summaryOf(version);
+        return summary && !isSavedVersion(version) ? versionChanged(summary) : undefined;
+    };
+    const choices = versionChoices(group.versions.map((candidate) => candidate.id.version), selectedVersion);
+    if (choices.length < 2) {
+        return <span className="datapack-card-date text-sm text-gray-700">{changed(selectedVersion) ?? savedDayOr(selectedVersion)}</span>;
+    }
+    return (
+        <Picker aria-label={`Version of ${group.displayName}`} selectedKey={selectedVersion} onSelectionChange={(key) => onVersionChange(String(key))}>
+            {choices.map((version) => (
+                <Item key={version} textValue={shownVersion(version)}>
+                    <Text>{shownVersion(version)}</Text>
+                    {changed(version) ? <Text slot="description">{changed(version)}</Text> : null}
+                </Item>
+            ))}
+        </Picker>
+    );
+}
+
+/**
+ * A save as the card's date line says it: the day alone, "Saved Nov 17", as F169 did for "Updated"
+ * (F279, owner's walk 2026-11-18: the time wrapped beside two tags). The flyout keeps the time.
+ */
+function savedDayOr(version: string): string {
+    const at = savedAt(version);
+    return at ? `Saved ${datapackDay(at)}` : shownVersion(version);
+}
+
+/**
+ * The amber dot beside the version, saying what is newer on hover and on focus. A quiet button,
+ * because Spectrum's tooltip needs a focusable trigger; pressing it does nothing more.
+ */
+function NewerMark({ said }: { said: string }): React.JSX.Element {
+    return (
+        <TooltipTrigger delay={300}>
+            <ActionButton isQuiet aria-label={said} UNSAFE_className="datapack-card-newer">
+                <StatusDot variant="warning" />
+            </ActionButton>
+            <Tooltip>{said}</Tooltip>
+        </TooltipTrigger>
     );
 }
 
@@ -236,23 +302,48 @@ function initial(displayName: string): string {
     return displayName.trim().charAt(0).toUpperCase() || '?';
 }
 
-/** Keep a nested control's events inside the control. */
 /**
- * The one word beside the title, if any: where the pack lives and whose it is. A
- * library pack always says so, because only the Data Installer's can be installed
- * from the flyout; a Data Installer pack says only when it is not curated.
+ * The words for where a pack comes from, one per source, each matching its Show choice. A team pack
+ * said nothing until 2026-11-09 (owner, walk F86): beside Mine, Data Installer and Community it read
+ * as unlabelled. It says Demo Builder, whose it is, as Mine and Community say (step-04 S6, J8-2,
+ * owner 2026-11-12); the source's key stays `team`.
  */
-function cardTag(group: DatapackGroup): string | undefined {
-    if (group.store === 'library') {
-        return group.mine ? 'Yours' : 'Library';
-    }
-    return group.shared ? undefined : 'Community';
+const CARD_TAG: Record<PackSource, string> = {
+    yours: 'Mine',
+    team: 'Demo Builder',
+    installer: 'Data Installer',
+    community: 'Community',
+};
+
+/**
+ * One word per fact (owner, 2026-11-05): where it comes from, then Community when everyone can see
+ * it. The SC's own shared pack is both Mine and Community; "Shared" said the same as Community.
+ */
+export function cardTags(group: DatapackGroup): string[] {
+    const source = packSource(group);
+    const tags = [CARD_TAG[source]];
+    if (source === 'yours' && group.shared) tags.push('Community');
+    return tags;
 }
 
-function renderTag(tag: string | undefined): React.JSX.Element | null {
-    return tag ? <span className="datapack-card-tag">{tag}</span> : null;
+/**
+ * Spectrum's grey badges, as the integration card's type label ("ERP") and a setup step's
+ * "Optional" draw theirs (owner, 2026-10-31). Grey, not blue: blue on these cards means selected.
+ */
+function CardTags({ tags }: { tags: string[] }): React.JSX.Element | null {
+    if (tags.length === 0) return null;
+    return (
+        <span className="datapack-card-tags">
+            {tags.map((tag) => (
+                <Badge key={tag} variant="neutral" UNSAFE_className="datapack-card-tag">
+                    {tag}
+                </Badge>
+            ))}
+        </span>
+    );
 }
 
+/** Keep a nested control's events inside the control. */
 function stopPropagation(event: React.SyntheticEvent): void {
     event.stopPropagation();
 }

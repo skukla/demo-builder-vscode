@@ -109,7 +109,7 @@ async function pickOwner(
 
 async function askRepoName(suggested: string): Promise<string | undefined> {
     const raw = await vscode.window.showInputBox({
-        title: 'Name the new repository',
+        title: 'Name the New Repository',
         value: suggested,
         ignoreFocusOut: true,
         validateInput: (value) =>

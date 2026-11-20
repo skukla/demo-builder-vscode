@@ -16,18 +16,36 @@
  */
 
 import { z } from 'zod';
-import { ATTRIBUTE_CODE, deleteIfPresent, type KindContext, readOrNull, segment } from './kindContext';
+import { sameText } from './b2bReads';
+import { ATTRIBUTE_CODE, deleteIfPresent, eachFewAtOnce, firstOfEach, type KindContext, ownedId, readOrNull, segment } from './kindContext';
+import { certainlyNotMade, createOne } from './pendingCreates';
+import type { PendingObject } from './pendingRecord';
+import { tryRow } from './refusedRows';
+import { counted } from './rowCount';
+import { SWATCH_INPUTS } from './swatchCarry';
 import type { CommerceSend } from '@/types/commerceWire';
 
 export const ATTRIBUTE_KIND = 'product_attributes';
 /** An option added to an attribute the store already had; id is `<code>/<option id>`. */
 export const ATTRIBUTE_OPTION_KIND = 'attribute_options';
 
-/** Swatch options need a second write the first live install must prove (spec §1 step 6). */
-const SWATCH_INPUTS = new Set(['swatch_visual', 'swatch_text']);
+/**
+ * Kinds counted on their own that are no data type of their own: an option goes in with its
+ * attribute, so a preview counts it apart and an install asks for the attribute (live, 2026-11-07:
+ * an agent copied the preview's kinds into an import, which refused `attribute_options`).
+ */
+export const INSTALLS_WITH: Readonly<Record<string, string>> = { [ATTRIBUTE_OPTION_KIND]: ATTRIBUTE_KIND };
+
+/*
+ * Swatch attributes are made in the service's two steps (spec §1 step 6;
+ * `ProductAttributeImportProcessor.js` L338-352, L475-525): the attribute without its options or
+ * default, then each option through the options route, its `value` the swatch (a colour or a
+ * text). The service says Commerce does not store the swatch when options come with the create.
+ * Run on the test store 2026-11-16: the attribute read back with `swatch_input_type: VISUAL`.
+ */
 
 const optionSchema = z
-    .object({ label: z.string(), value: z.unknown().optional(), sort_order: z.unknown().optional() })
+    .object({ label: z.string(), value: z.unknown().optional(), sort_order: z.unknown().optional(), is_default: z.unknown().optional() })
     .passthrough();
 
 const rowSchema = z.object({
@@ -53,40 +71,72 @@ interface StoreOption {
 export function parseAttributeRows(records: unknown): AttributeRow[] {
     const parsed = z.array(rowSchema).safeParse(records);
     if (!parsed.success) {
-        throw new Error(`The pack's product attributes are not in the shape Commerce takes: ${parsed.error.issues[0]?.message}`);
+        throw new Error(`The datapack's product attributes are not in the shape Commerce takes: ${parsed.error.issues[0]?.message}`);
     }
     return parsed.data;
 }
 
 /** Create what the store lacks, record it, and leave what it has alone. */
 export async function installAttributes(ctx: KindContext, rows: readonly AttributeRow[]): Promise<void> {
-    for (const row of rows) {
-        const code = row.attribute.attribute_code;
-        if (SWATCH_INPUTS.has(row.attribute.frontend_input)) {
-            throw new Error(`The attribute ${code} is a swatch, which Demo Builder does not install yet.`);
-        }
-        const existing = await readOrNull<object>(ctx.get, `products/attributes/${segment(code)}`);
-        if (existing && !ctx.recorder.has(ATTRIBUTE_KIND, code)) {
-            await addMissingOptions(ctx, code, row.attribute.options ?? []);
-            continue;
-        }
-        if (!existing) await createAttribute(ctx, row);
-    }
+    // Attributes stand alone, so a few go at once; one attribute's options still go one by one.
+    await eachFewAtOnce(firstOfEach(rows, (row) => row.attribute.attribute_code), (row) =>
+        counted(ctx, ATTRIBUTE_KIND, row.attribute.attribute_code, () => installAttribute(ctx, row)),
+    );
 }
+
+async function installAttribute(ctx: KindContext, row: AttributeRow): Promise<void> {
+    const code = row.attribute.attribute_code;
+    // One this engine made and the SC deleted since stays deleted (step 05).
+    if (ownedId(ctx.session, ATTRIBUTE_KIND, code) === null) return;
+    const existing = await readOrNull<object>(ctx.get, `products/attributes/${segment(code)}`);
+    if (existing && !ctx.recorder.has(ATTRIBUTE_KIND, code)) {
+        // No swatch data on an attribute the store already had: it is every demo's on the instance
+        // (owner, F140). Its new options go in plain; a pack that wants swatches brings its own
+        // attribute, which this engine makes.
+        await addMissingOptions(ctx, code, row.attribute.options ?? []);
+        return;
+    }
+    // Step 14 item 3: an attribute Commerce refuses is skipped, and the rows that need it with it.
+    if (!existing) await tryRow(ctx, { kind: ATTRIBUTE_KIND, key: code }, () => createAttribute(ctx, row));
+}
+
+/** Whether a row is a swatch, made in two steps. */
+const isSwatch = (input: string | undefined): boolean => SWATCH_INPUTS.has(input ?? '');
 
 async function createAttribute(ctx: KindContext, row: AttributeRow): Promise<void> {
     // An id from the store the pack was exported from means nothing here (the service strips it too).
-    const { attribute_id: _sourceId, ...attribute } = row.attribute;
+    const { attribute_id: _sourceId, ...whole } = row.attribute;
+    const swatch = isSwatch(whole.frontend_input);
+    // A swatch's default names an option not made yet (the service drops it too).
+    const { options: _later, default_value: _default, ...withoutOptions } = whole;
+    const attribute = swatch ? withoutOptions : whole;
     const labels = attribute.frontend_labels?.map((l) => ({ ...l, store_id: ctx.session.storeId }));
-    await ctx.send('POST', 'products/attributes', {
-        attribute: { ...attribute, ...(labels ? { frontend_labels: labels } : {}) },
+    const code = attribute.attribute_code;
+    await createOne(ctx, { kind: ATTRIBUTE_KIND, key: code, id: code }, async () => {
+        await ctx.send('POST', 'products/attributes', {
+            attribute: { ...attribute, ...(labels ? { frontend_labels: labels } : {}) },
+        });
+        return { kind: ATTRIBUTE_KIND, id: code };
     });
-    await ctx.recorder.record({ kind: ATTRIBUTE_KIND, id: attribute.attribute_code });
     ctx.log(`created attribute ${attribute.attribute_code}`);
+    if (!swatch) return;
+    // Its options go with it on removal, so they are not recorded one by one.
+    for (const option of whole.options ?? []) await sendOption(ctx, whole.attribute_code, swatchOption(option));
 }
 
-function sameLabel(a: string | undefined, b: string): boolean {
-    return (a ?? '').trim().toLowerCase() === b.trim().toLowerCase();
+/** The service's body for one swatch option (`_addSwatchOptions`, L475-525). */
+function swatchOption(option: PackOption): Record<string, unknown> {
+    return {
+        label: option.label,
+        value: option.value === undefined ? '' : String(option.value),
+        sort_order: option.sort_order ?? 0,
+        is_default: option.is_default === true || option.is_default === 'true',
+        ...(Array.isArray(option.store_labels) ? { store_labels: option.store_labels } : {}),
+    };
+}
+
+function sendOption(ctx: KindContext, code: string, option: Record<string, unknown>): Promise<unknown> {
+    return ctx.send('POST', `products/attributes/${segment(code)}/options`, { option });
 }
 
 async function readOptions(ctx: KindContext, code: string): Promise<StoreOption[]> {
@@ -97,16 +147,41 @@ async function readOptions(ctx: KindContext, code: string): Promise<StoreOption[
  * Add the pack's options an existing attribute lacks, matched by label. The new option's id is
  * read back by label rather than taken from the POST's answer, whose shape no live answer in
  * this repo records.
+ *
+ * @param input - the row's `frontend_input`, given only for an attribute this engine made: a swatch
+ *   option keeps its `value`, which is the swatch; any other option's `value` is the source store's
+ *   option id and is dropped
  */
-async function addMissingOptions(ctx: KindContext, code: string, options: readonly PackOption[]): Promise<void> {
+export async function addMissingOptions(ctx: KindContext, code: string, options: readonly PackOption[], input?: string): Promise<void> {
     const have = await readOptions(ctx, code);
-    const missing = options.filter((o) => !have.some((h) => sameLabel(h.label, o.label)));
+    const missing = firstOfEach(
+        options.filter((o) => !have.some((h) => sameText(h.label, o.label))),
+        (o) => o.label.trim().toLowerCase(),
+    );
+    const pendingOf = (option: PackOption): PendingObject => ({ kind: ATTRIBUTE_OPTION_KIND, key: `${code}/${option.label}` });
+    // Each sent in turn (one attribute's options are not sent at once), each pending first; then one read
+    // for all their ids. A read after each send made Luma's twelve colours take eleven seconds (2026-11-06).
+    const sent: PackOption[] = [];
     for (const option of missing) {
         const { value: _sourceValue, ...body } = option;
-        await ctx.send('POST', `products/attributes/${segment(code)}/options`, { option: body });
-        const added = (await readOptions(ctx, code)).find((h) => sameLabel(h.label, option.label));
+        const posted = await tryRow(ctx, pendingOf(option), async () => {
+            await ctx.recorder.markPending([pendingOf(option)]);
+            try {
+                await sendOption(ctx, code, isSwatch(input) ? swatchOption(option) : body);
+            } catch (error) {
+                if (certainlyNotMade(error)) await ctx.recorder.forgetPending([pendingOf(option)]);
+                throw error;
+            }
+            return true;
+        });
+        if (posted) sent.push(option);
+    }
+    if (sent.length === 0) return;
+    const now = await readOptions(ctx, code);
+    for (const option of sent) {
+        const added = now.find((h) => sameText(h.label, option.label));
         if (!added?.value) throw new Error(`Commerce did not keep the option "${option.label}" on ${code}.`);
-        await ctx.recorder.record({ kind: ATTRIBUTE_OPTION_KIND, id: `${code}/${added.value}` });
+        await ctx.recorder.confirm([pendingOf(option)], [{ kind: ATTRIBUTE_OPTION_KIND, id: `${code}/${added.value}`, key: pendingOf(option).key }]);
         ctx.log(`added option "${option.label}" to ${code}`);
     }
 }

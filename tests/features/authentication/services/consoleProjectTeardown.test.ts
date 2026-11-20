@@ -36,7 +36,6 @@ describe('teardownConsoleProject', () => {
 
             expect(result.success).toBe(true);
             expect(result.projectDeleted).toBe(true);
-            expect(result.shouldClearConsoleSelection).toBe(true);
             const skipped = result.items.filter(
                 (item) => item.kind === 'workspace' && item.outcome === 'skipped'
             );
@@ -151,14 +150,13 @@ describe('teardownConsoleProject', () => {
             expect(result.items).toEqual(expected);
         });
 
-        it('should report success, projectDeleted, and shouldClearConsoleSelection', async () => {
+        it('should report success and projectDeleted', async () => {
             const harness = makeHappyHarness();
 
             const result = await teardownConsoleProject(harness.deps, TARGET);
 
             expect(result.success).toBe(true);
             expect(result.projectDeleted).toBe(true);
-            expect(result.shouldClearConsoleSelection).toBe(true);
         });
 
         it('should not subscribe when events access is already granted', async () => {

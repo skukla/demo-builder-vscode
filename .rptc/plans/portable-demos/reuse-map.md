@@ -120,7 +120,7 @@ New: the storefront flow's stage ids and copy; the `add` card variant. Two gener
 | Integrations the demo names (D29) | `useProjectBuilder.onAppBuilderComponentToggle`; `appBuilderComponentSources` + `buildCustomIntegrationEntry` for custom links; `selectedAppBuilderComponents` as the single mesh authority | use as is: the row's list is replayed through the same handlers |
 | The datapack the demo names (D26) | `SampleDataStep.tsx` + `project.datapack` | add to it: a preselected value and one line of copy |
 | Storefront summary "Demo" row | `storefrontSummaryGroup` (`buildSummary.ts:69`) | add to it: one row |
-| "Reset to Isle5 by Jen" tick wording | `ResetToTemplateOption.tsx` | add to it: interpolate the demo name |
+| "Reset to Isle5 by Robin" tick wording | `ResetToTemplateOption.tsx` | add to it: interpolate the demo name |
 | Headless clone | `executorComponentLoading.ts:73` → `componentInstallation.ts:86` | use as is |
 | Template identity on the instance | `populateEdsMetadata` (`executorEdsPhase.ts:72`) | use as is (no `lkgSource` for a colleague's repo) |
 
@@ -134,7 +134,7 @@ New: two GitHub calls (fork, template flag) and the check-only mode of the patch
 | Reset refuses up front when the source is unreachable | the preflight site `edsResetUI.ts:380` (params extracted BEFORE the first modal) | add to it: one reachability check there, using the step-D probe's metadata call |
 | Reset completion gains the caveat list | `edsResetUI.ts:304–334` (warning/error surfacing), the patch toast (`patchReportHelper.ts:138` `formatUnappliedMessage`) | add to it: the consequence list rides the same `showWarningMessage` |
 | Update check | `checkForkSyncUpdates` (`checkUpdates.ts:362`), `TemplateUpdateChecker` (non-thin-layer path `:200`), `templateSyncService.ts` | use as is (D19) |
-| Dashboard notice "Jen's demo can't be reached" | `OrgContextNotice.tsx` (the dashboard's actionable banner over `feedback/InlineNotice`, shown only on a mismatch, with a recovery action) | make it shared: a `SourceUnreachableNotice` in the same shape, or `OrgContextNotice`'s wrapper made generic if the two are one job |
+| Dashboard notice "Robin's demo can't be reached" | `OrgContextNotice.tsx` (the dashboard's actionable banner over `feedback/InlineNotice`, shown only on a mismatch, with a recovery action) | make it shared: a `SourceUnreachableNotice` in the same shape, or `OrgContextNotice`'s wrapper made generic if the two are one job |
 | Rename self-heal | `storefrontNameMigration.ts` / `storefrontNameMigrationForProject.ts` (self-healing stored names on load) | add to it: the same pass compares GitHub's `full_name` and rewrites the row + instance metadata + the remembered setting |
 | "Change source" | the step-E dialog opened on stage 1; `InlineRenameField` is NOT it (that renames, this repoints) | add to it: a dashboard action (`ActionGrid.tsx`, `ProjectActionsMenu.tsx` via `CardActionsMenu`) that opens the same dialog with a `mode` |
 | "Keep my current content" on reset when the site is gone | `skipContent` + the reset's consent flow (`edsResetUI.ts:405`, `:626` `showWarningMessage` choices) | add to it: one more offered choice |

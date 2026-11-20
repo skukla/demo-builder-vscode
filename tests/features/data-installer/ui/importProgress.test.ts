@@ -20,8 +20,7 @@
  * Strict TDD: written BEFORE the module exists.
  */
 
-import { OPERATION_STAGES } from '@/core/utils/operationStages';
-import { summarizeProgress, progressLabel, progressStep } from '@/features/data-installer/ui/importProgress';
+import { summarizeProgress, progressLabel } from '@/features/data-installer/ui/importProgress';
 import type { DataTypeStatus } from '@/features/data-installer/types';
 
 const REQUESTED = ['attribute_sets', 'categories', 'products', 'customers'];
@@ -137,35 +136,42 @@ describe('summarizeProgress', () => {
 // The line under the step, in the words every datapack surface uses (progress
 // vocabulary slice 5, owner 2026-10-16): the count of types, then the ones in flight.
 describe('progressLabel', () => {
-    it('counts the types and names the ones in flight, in human words', () => {
-        const label = progressLabel({ done: 5, total: 14, processing: ['customer_groups'], percent: 36 });
+    const line = (perType: Record<string, DataTypeStatus>, requested: string[]) =>
+        progressLabel(summarizeProgress(perType, requested));
+    const FOURTEEN = Array.from({ length: 14 }, (_, n) => (n === 5 ? 'customer_groups' : `type_${n}`));
+    const firstFive = Object.fromEntries(FOURTEEN.slice(0, 5).map((type): [string, DataTypeStatus] => [type, 'success']));
 
-        expect(label).toBe('5 of 14 data types: Customer groups');
+    it('counts the types and names the one in flight, in human words', () => {
+        expect(line({ ...firstFive, customer_groups: 'processing' }, FOURTEEN)).toBe('5 of 14 data types: Customer Groups');
     });
 
-    /** Between types there is nothing being processed, but a count still holds. */
-    it('falls back to the count alone when nothing is processing', () => {
-        const label = progressLabel({ done: 5, total: 14, processing: [], percent: 36 });
-
-        expect(label).toBe('5 of 14 data types');
+    it('says the engine\'s count in place of the type\'s name while that type is in flight', () => {
+        const counted = (perType: Record<string, DataTypeStatus>, requested: string[]) =>
+            progressLabel(summarizeProgress(perType, requested), '450 of 2,046 products');
+        expect(counted({ products: 'processing' }, ['products'])).toBe('450 of 2,046 products');
+        expect(counted({ ...firstFive, customer_groups: 'processing' }, FOURTEEN)).toBe('5 of 14 data types: 450 of 2,046 products');
+        // Between polls nothing is in flight, so a count left over names nothing: the next type it is.
+        expect(counted(firstFive, FOURTEEN)).toBe('5 of 14 data types: Customer Groups');
     });
 
-    /** Before the first poll lands there is nothing honest to say. */
+    it('names the next type between polls, never a bare count', () => {
+        expect(line(firstFive, FOURTEEN)).toBe('5 of 14 data types: Customer Groups');
+    });
+
+    it('says only the name of a single type, whatever state it is in', () => {
+        expect(line({}, ['categories'])).toBe('Categories');
+        expect(line({ categories: 'processing' }, ['categories'])).toBe('Categories');
+        expect(line({ categories: 'success' }, ['categories'])).toBe('Categories');
+    });
+
+    it('says the job is finishing when every type is done and it has not closed', () => {
+        const all = Object.fromEntries(FOURTEEN.map((type): [string, DataTypeStatus] => [type, 'success']));
+
+        expect(line(all, FOURTEEN)).toBe('Finishing up');
+    });
+
     it('says nothing at all before the job reports anything', () => {
-        expect(progressLabel({ done: 0, total: 14, processing: [], percent: 0 })).toBeUndefined();
+        expect(line({}, FOURTEEN)).toBeUndefined();
     });
 });
 
-// The step on line 1: the stage table's, so the modal, creation and the notification
-// it hands over to name the same job the same way.
-describe('progressStep', () => {
-    it("names an import by the table's datapack step", () => {
-        expect(progressStep('import')).toBe(OPERATION_STAGES.installingDatapack.label);
-    });
-
-    // "Removing", not "Resetting": the button reads "Remove data", and a project
-    // RESET restores the pack. The `reset` operation id is the wire, not the wording.
-    it('names a removal as removing, never as importing', () => {
-        expect(progressStep('reset')).toBe(OPERATION_STAGES.removingDatapack.label);
-    });
-});

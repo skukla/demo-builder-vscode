@@ -27,22 +27,14 @@ jest.mock('@adobe/react-spectrum', () => ({
             {children}
         </div>
     ),
-    // Tagged so a test can count the LINES the dialog body renders — an extra
-    // empty one and a consequence rendered as bare text both read identically to
-    // getByText, and both are wrong.
-    Text: ({ children, ...props }: any) => (
-        <span data-testid="dialog-line" {...props}>
-            {children}
-        </span>
-    ),
 }));
 
 jest.mock('@/core/ui/components/ui/Modal', () => ({
-    Modal: ({ title, actionButtons = [], onClose, children }: any) => (
-        <div role="dialog" aria-label={title}>
+    Modal: ({ title, status, actionButtons = [], onClose, closeLabel, children }: any) => (
+        <div role="dialog" aria-label={title} data-status={status}>
             <h2>{title}</h2>
             {children}
-            <button onClick={onClose}>Close</button>
+            <button onClick={onClose}>{closeLabel ?? 'Close'}</button>
             {actionButtons.map((b: any, i: number) => (
                 <button
                     key={i}
@@ -88,34 +80,40 @@ describe('AppBuilderComponentRemoveDialog', () => {
         expect(screen.getByRole('dialog')).toBeInTheDocument();
         // The card's name, not the id: "erp-integration" meant nothing to the person
         // clicking (owner, 2026-09-21).
-        expect(screen.getByRole('dialog', { name: 'Remove ERP sync' })).toBeInTheDocument();
+        // The title is the question, amber (dialog design rules).
+        expect(screen.getByRole('dialog', { name: 'Remove ERP sync?' })).toHaveAttribute('data-status', 'warning');
         // Says it leaves Adobe, not just this screen.
-        expect(screen.getByTestId('dialog-line')).toHaveTextContent(
-            'ERP sync will be undeployed from Adobe and removed from this project.',
+        expect(document.querySelector('.dialog-line')).toHaveTextContent(
+            'Undeploys ERP sync from Adobe and removes it from this project.',
         );
     });
 
-    it('renders the extra consequence as its OWN line when one is supplied', () => {
+    it('adds each extra consequence as its own line when any are supplied', () => {
         // The mesh is the case that needs it: removing it also strips MESH_ENDPOINT
         // from the storefront config, which the generic warning does not say.
         render(
             <AppBuilderComponentRemoveDialog
                 isOpen
                 componentName="API Mesh"
-                consequence="This also removes MESH_ENDPOINT from the storefront config."
+                consequences={['Your storefront loses its API Mesh endpoint.', 'It also goes from the config.']}
                 onConfirm={jest.fn()}
                 onClose={jest.fn()}
             />
         );
 
-        const lines = screen.getAllByTestId('dialog-line');
-        expect(lines).toHaveLength(2);
-        expect(lines[1]).toHaveTextContent('This also removes MESH_ENDPOINT');
+        // Counted, not just found: an extra empty line and a consequence run into the first both
+        // read the same to getByText, and both are wrong.
+        const lines = Array.from(document.querySelectorAll('.dialog-rows > .dialog-line'));
+        expect(lines.map((line) => line.textContent)).toEqual([
+            'Undeploys API Mesh from Adobe and removes it from this project.',
+            'Your storefront loses its API Mesh endpoint.',
+            'It also goes from the config.',
+        ]);
     });
 
-    it('renders ONE line when the teardown reaches no further than itself', () => {
-        // Without the guard the second line still renders, empty — a blank gap under
-        // the warning on every component that has no extra consequence.
+    it('ends the sentence cleanly when the teardown reaches no further than itself', () => {
+        // Without the guard the sentence ends in a stray comma on every component
+        // that has no extra consequence.
         render(
             <AppBuilderComponentRemoveDialog
                 isOpen
@@ -125,7 +123,9 @@ describe('AppBuilderComponentRemoveDialog', () => {
             />
         );
 
-        expect(screen.getAllByTestId('dialog-line')).toHaveLength(1);
+        const lines = document.querySelectorAll('.dialog-rows > .dialog-line');
+        expect(lines).toHaveLength(1);
+        expect(lines[0].textContent).toMatch(/this project\.$/);
     });
 
     it('fires onConfirm (the consumer posts removeAppBuilderComponent) then closes on confirm', async () => {
@@ -173,7 +173,7 @@ describe('AppBuilderComponentRemoveDialog', () => {
             />
         );
 
-        await user.click(screen.getByRole('button', { name: /close/i }));
+        await user.click(screen.getByRole('button', { name: /^cancel$/i }));
 
         expect(onConfirm).not.toHaveBeenCalled();
         expect(onClose).toHaveBeenCalledTimes(1);

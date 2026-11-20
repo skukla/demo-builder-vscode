@@ -1,0 +1,82 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "array",
+  "description": "Schema for aco_metadata — Adobe Commerce Optimizer (ACO) catalog attribute metadata. Each array item matches the ACO API wire format (camelCase). Top-level API parameters (e.g. data_type on the request) remain snake_case.",
+  "minItems": 1,
+  "items": {
+    "type": "object",
+    "properties": {
+      "code": {
+        "type": "string",
+        "description": "Attribute code (required)"
+      },
+      "source": {
+        "type": "object",
+        "description": "Source of the entity (required), e.g. catalog locale",
+        "properties": {
+          "locale": {
+            "type": "string",
+            "description": "Content locale, e.g. en-US"
+          }
+        },
+        "required": ["locale"],
+        "additionalProperties": true
+      },
+      "visibleIn": {
+        "type": "array",
+        "description": "Where the attribute is visible on the storefront (required). PRODUCT_DETAIL: Product Detail Page. PRODUCT_LISTING: Product Listing Page. SEARCH_RESULTS: Search Results Page. PRODUCT_COMPARE: Product Compare Page.",
+        "items": {
+          "type": "string",
+          "enum": [
+            "PRODUCT_DETAIL",
+            "PRODUCT_LISTING",
+            "SEARCH_RESULTS",
+            "PRODUCT_COMPARE"
+          ]
+        }
+      },
+      "label": {
+        "type": "string",
+        "description": "Label displayed in user interfaces (required)"
+      },
+      "dataType": {
+        "type": "string",
+        "description": "Attribute data type (required)",
+        "enum": ["TEXT", "DECIMAL", "INTEGER", "BOOLEAN"]
+      },
+      "searchTypes": {
+        "type": "array",
+        "description": "Search behaviors for this attribute (required; may be empty). AUTOCOMPLETE, CONTAINS, STARTS_WITH.",
+        "items": {
+          "type": "string",
+          "enum": ["AUTOCOMPLETE", "CONTAINS", "STARTS_WITH"]
+        }
+      },
+      "filterable": {
+        "type": "boolean",
+        "description": "Whether the attribute can filter products"
+      },
+      "sortable": {
+        "type": "boolean",
+        "description": "Whether the attribute can sort products"
+      },
+      "searchable": {
+        "type": "boolean",
+        "description": "Whether the attribute can be used in search"
+      },
+      "searchWeight": {
+        "type": "number",
+        "description": "Weight for searchable attributes (higher returned first)"
+      }
+    },
+    "required": [
+      "code",
+      "source",
+      "visibleIn",
+      "label",
+      "dataType",
+      "searchTypes"
+    ],
+    "additionalProperties": false
+  }
+}

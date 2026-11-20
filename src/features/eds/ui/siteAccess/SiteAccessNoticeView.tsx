@@ -52,7 +52,7 @@ export function SiteAccessNoticeView({
                         ))}
                         {notice.offerWait && (
                             <Button variant="accent" isDisabled={isBusy} onPress={onWait}>
-                                I&apos;ve done that — check access
+                                Check Access
                             </Button>
                         )}
                         {notice.offerRepair && (

@@ -1,6 +1,6 @@
 /**
- * Import-time data type dependencies — the resolver behind partial-import
- * selection.
+ * Import-time data type dependencies: the resolver behind a partial install
+ * (`askedKinds.ts`).
  *
  * The load-bearing claim of this whole module is NEGATIVE, so it is pinned
  * first: the export catalogue's `depends_on` edges do not describe an import.
@@ -14,14 +14,7 @@
  * than fetched.
  */
 
-import {
-    IMPORT_DEPENDENCIES,
-    blockedBy,
-    deselectType,
-    missingDependencies,
-    selectType,
-    withDependencies,
-} from '@/features/data-installer/ui/importDependencies';
+import { IMPORT_DEPENDENCIES, withDependencies } from '@/features/data-installer/ui/importDependencies';
 
 /**
  * The import processor order, measured live 2026-08-17 via
@@ -111,158 +104,6 @@ describe('withDependencies', () => {
         const selected = ['products'];
         withDependencies(selected, ALL);
         expect(selected).toEqual(['products']);
-    });
-});
-
-describe('blockedBy', () => {
-    it('names the selected types that still need this one', () => {
-        expect(blockedBy('customer_groups', ['products', 'customer_groups'])).toEqual(['products']);
-    });
-
-    it('reports every dependent, not just the first', () => {
-        const out = blockedBy('customer_groups', ['products', 'customers', 'customer_groups']);
-        expect(out.sort()).toEqual(['customers', 'products']);
-    });
-
-    it('is empty when nothing selected depends on it', () => {
-        expect(blockedBy('customer_groups', ['customer_groups', 'categories'])).toStrictEqual([]);
-    });
-
-    it('never reports the type as blocking itself', () => {
-        expect(blockedBy('products', ['products'])).toStrictEqual([]);
-    });
-
-    it('does not let a self-referencing map make a type block its own removal', () => {
-        // The map is hand-written, so a typo CAN name a type as its own dependency.
-        // Reading that literally would disable the checkbox permanently.
-        expect(blockedBy('a', ['a'], { a: ['a'] })).toStrictEqual([]);
-    });
-});
-
-describe('missingDependencies', () => {
-    it('reports a dependency the pack does not contain', () => {
-        // The case auto-selection cannot fix and the user must know about
-        // BEFORE importing, not after products fails.
-        const pack = ['products', 'attribute_sets', 'customer_groups'];
-
-        expect(missingDependencies(['products'], pack)).toEqual(['categories']);
-    });
-
-    it('is empty when every dependency is present', () => {
-        expect(missingDependencies(['products'], ALL)).toStrictEqual([]);
-    });
-
-    it('reports nothing for a type the map does not name at all', () => {
-        // Most of the 21 types have no entry. Absence has to read as "needs
-        // nothing", not as a dependency the pack can never satisfy.
-        expect(missingDependencies(['categories'], ALL)).toStrictEqual([]);
-    });
-
-    it('only considers SELECTED types', () => {
-        // `coupons` is in the pack but unselected, so its missing `cart_rules`
-        // is not the user's problem yet.
-        const pack = ['products', 'attribute_sets', 'categories', 'customer_groups', 'coupons'];
-
-        expect(missingDependencies(['products'], pack)).toStrictEqual([]);
-    });
-
-    it('de-duplicates a dependency two selected types share', () => {
-        const pack = ['products', 'customers', 'attribute_sets', 'categories'];
-
-        // products and customers both need customer_groups, which is absent.
-        expect(missingDependencies(['products', 'customers'], pack)).toEqual(['customer_groups']);
-    });
-});
-
-/**
- * Ticking and unticking, with provenance.
- *
- * Unticking has to undo what ticking did and nothing more, which means the
- * selection has to remember WHO chose each type. Without that, "clear the
- * dependencies" is wrong half the time: it either strands types nobody picked,
- * or it throws away a choice the user made before the dependency was borrowed.
- */
-describe('selectType', () => {
-    const empty = { selected: [], auto: [] };
-
-    it('records what it added as auto, and the click itself as the user’s', () => {
-        const out = selectType(empty, 'products', ALL);
-
-        expect(out.selected).toContain('products');
-        expect([...out.auto].sort()).toEqual(['attribute_sets', 'categories', 'customer_groups']);
-        expect(out.auto).not.toContain('products');
-    });
-
-    it('does not claim a type the user had already ticked', () => {
-        const mine = { selected: ['categories'], auto: [] };
-
-        const out = selectType(mine, 'products', ALL);
-
-        // categories was the user's before products borrowed it.
-        expect(out.auto).not.toContain('categories');
-        expect([...out.auto].sort()).toEqual(['attribute_sets', 'customer_groups']);
-    });
-
-    it('only claims what the pack can offer', () => {
-        const out = selectType(empty, 'products', ['products', 'categories']);
-
-        expect(out.auto).toEqual(['categories']);
-    });
-});
-
-describe('deselectType', () => {
-    it('drops the type and the dependencies it brought', () => {
-        const after = selectType({ selected: [], auto: [] }, 'products', ALL);
-
-        const out = deselectType(after, 'products');
-
-        expect(out.selected).toStrictEqual([]);
-        expect(out.auto).toStrictEqual([]);
-    });
-
-    it('keeps a dependency the user owned', () => {
-        const after = selectType({ selected: ['categories'], auto: [] }, 'products', ALL);
-
-        const out = deselectType(after, 'products');
-
-        expect(out.selected).toEqual(['categories']);
-    });
-
-    it('keeps a dependency another selected type still needs', () => {
-        const one = selectType({ selected: [], auto: [] }, 'products', ALL);
-        const two = selectType(one, 'customers', ALL);
-
-        const out = deselectType(two, 'products');
-
-        // customers still needs customer_groups; products leaving cannot strip it.
-        expect(out.selected).toContain('customer_groups');
-        expect(out.selected).toContain('customers');
-        expect(out.selected).not.toContain('products');
-    });
-
-    it('keeps the provenance of a dependency that survives the removal', () => {
-        // customer_groups stays because customers needs it, and it is still the
-        // SYSTEM's — unticking customers next has to be able to take it away too.
-        const one = selectType({ selected: [], auto: [] }, 'products', ALL);
-        const two = selectType(one, 'customers', ALL);
-
-        const out = deselectType(two, 'products');
-
-        expect(out.auto).toEqual(['customer_groups']);
-    });
-
-    it('refuses while something selected still needs the type', () => {
-        const after = selectType({ selected: [], auto: [] }, 'products', ALL);
-
-        const out = deselectType(after, 'categories');
-
-        expect(out.selected).toEqual(after.selected);
-    });
-
-    it('is a no-op for a type that was never selected', () => {
-        const state = { selected: ['categories'], auto: [] };
-
-        expect(deselectType(state, 'products').selected).toEqual(['categories']);
     });
 });
 

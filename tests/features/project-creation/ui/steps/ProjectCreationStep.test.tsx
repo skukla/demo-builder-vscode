@@ -7,6 +7,7 @@ import { ProjectCreationStep } from '@/features/project-creation/ui/steps/Projec
 import { WizardState } from '@/types/webview';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
+import { plain } from '@/core/utils/plainText';
 
 // Mock vscode API
 const mockPostMessage = jest.fn();
@@ -66,7 +67,7 @@ describe('ProjectCreationStep', () => {
             progress: 50,
             message: 'Failed to install dependencies',
             logs: ['npm install failed'],
-            error: 'npm ERR! network timeout',
+            error: plain('npm ERR! network timeout'),
         },
     };
 
@@ -210,7 +211,7 @@ describe('ProjectCreationStep', () => {
 
             // Wait for async pre-flight checks and phase transition to 'completed'
             await waitFor(() => {
-                expect(screen.getByText('Project Created Successfully')).toBeInTheDocument();
+                expect(screen.getByText('Project Created')).toBeInTheDocument();
             });
         });
 
@@ -230,7 +231,7 @@ describe('ProjectCreationStep', () => {
 
             // Component doesn't show percentages - shows success message instead
             await waitFor(() => {
-                expect(screen.getByText('Project Created Successfully')).toBeInTheDocument();
+                expect(screen.getByText('Project Created')).toBeInTheDocument();
             });
         });
 
@@ -588,7 +589,7 @@ describe('ProjectCreationStep', () => {
 
             // Wait for async pre-flight checks to complete and transition to completed phase
             await waitFor(() => {
-                expect(screen.getByText('Project Created Successfully')).toBeInTheDocument();
+                expect(screen.getByText('Project Created')).toBeInTheDocument();
             });
         });
 

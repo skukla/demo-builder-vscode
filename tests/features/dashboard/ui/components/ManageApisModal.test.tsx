@@ -92,11 +92,25 @@ describe('ManageApisModal', () => {
     });
 
     describe('list fetch states', () => {
-        it('shows a compact loading state while the fetch is pending', () => {
+        // From the first frame: the state mounts per opening, so nothing is drawn before the wait
+        // and the wait keeps no bigger box (the first frame used to set it, 672px).
+        it('is the wait, with no words, while the fetch is pending', () => {
             mockRequest(() => new Promise(() => {}));
             renderModal();
 
-            expect(screen.getByText(/loading adobe apis/i)).toBeInTheDocument();
+            expect(screen.getByRole('progressbar')).toBeInTheDocument();
+            expect(screen.queryByText(/loading adobe apis/i)).not.toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /^apply/i })).not.toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+        });
+
+        it('names the integration in the title, not in a line under it', async () => {
+            mockRequest(() => Promise.resolve({ success: true, data: { apis: ORG_APIS } }));
+            renderModal();
+            await flush();
+
+            expect(screen.getByText('Manage APIs for erp-sync')).toBeInTheDocument();
+            expect(screen.queryByText(/Manage Adobe API access/)).not.toBeInTheDocument();
         });
 
         it('shows an inline error when the fetch reports failure — modal stays open', async () => {
@@ -237,8 +251,11 @@ describe('ManageApisModal', () => {
             fireEvent.click(applyButton());
             await flush();
 
-            const busy = screen.getByRole('button', { name: /applying/i });
-            expect(busy).toHaveAttribute('aria-disabled', 'true');
+            // The dialog is the wait: nothing but the spinner and the way out (owner, 2026-11-01).
+            expect(screen.getByRole('progressbar')).toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: 'Apply' })).not.toBeInTheDocument();
+            expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
         });
 
         it("shows the subscribe's own stage and step once it reports them, and a plain Applying before", async () => {
@@ -312,30 +329,25 @@ describe('ManageApisModal', () => {
             fireEvent.click(applyButton());
             await flush();
 
-            expect(screen.getByText(/needs a product profile/i)).toBeInTheDocument();
+            // The title is the outcome, in red; the reason is plain body text over the list.
+            expect(screen.getByText("Couldn't Update API Access")).toBeInTheDocument();
+            expect(document.querySelector('.modal-status-icon')).not.toBeNull();
+            expect(screen.getByText(/needs a product profile/i)).not.toHaveClass('text-negative');
+            expect(screen.getByRole('checkbox', { name: /firefly/i })).toBeInTheDocument();
             expect(onClose).not.toHaveBeenCalled();
         });
     });
 
-    // The loading/error views use the house centered treatment (LoadingDisplay /
-    // StatusDisplay in a CenteredFeedbackContainer) rather than a small inline
-    // spinner, which collapsed this size-L modal to a sliver (reported 2026-07-31).
-    describe('loading and failure use the standard centered views', () => {
-        it('shows the centered loading view with the time expectation', async () => {
-            getClient().request.mockReturnValue(new Promise(() => {}));
-            renderModal();
-            await flush();
-
-            expect(screen.getByText('Loading Adobe APIs')).toBeInTheDocument();
-            expect(screen.getByText('The first load can take a few minutes')).toBeInTheDocument();
-        });
-
+    // A failed read is the outcome under the large mark, the dialog's title above it (walk F222).
+    describe('a failed read', () => {
         it('offers a Retry on failure that re-fires the fetch', async () => {
             getClient().request.mockResolvedValue({ success: false, error: 'boom' });
             renderModal();
             await flush();
 
-            expect(screen.getByText("Couldn't load Adobe APIs")).toBeInTheDocument();
+            expect(screen.getByText("Couldn't Load Adobe APIs")).toHaveClass('result-outcome');
+            expect(document.querySelector('.result-mark')).toHaveAttribute('data-status', 'error');
+            expect(screen.getByText('boom')).toBeInTheDocument();
             const callsBefore = getClient().request.mock.calls.length;
 
             fireEvent.click(screen.getByRole('button', { name: /^retry$/i }));
@@ -350,7 +362,7 @@ describe('ManageApisModal', () => {
     describe('signed out offers sign-in, not Retry', () => {
         const signedOut = {
             success: false,
-            error: 'Adobe sign-in required.',
+            error: 'Adobe Sign-In Required.',
             code: 'AUTH_REQUIRED',
         };
 
@@ -359,7 +371,9 @@ describe('ManageApisModal', () => {
             renderModal();
             await flush();
 
-            expect(screen.getByText('Sign in to Adobe')).toBeInTheDocument();
+            expect(screen.getByText('Sign In to Adobe')).toHaveClass('result-outcome');
+            expect(document.querySelector('.result-mark')).toHaveAttribute('data-status', 'warning');
+            expect(screen.getByText(/Adobe sign-in will open in your browser/)).toBeInTheDocument();
             expect(screen.getByRole('button', { name: /sign in with adobe/i })).toBeInTheDocument();
             expect(screen.queryByRole('button', { name: /^retry$/i })).not.toBeInTheDocument();
         });
@@ -373,10 +387,10 @@ describe('ManageApisModal', () => {
             fireEvent.click(screen.getByRole('button', { name: /sign in with adobe/i }));
             await flush();
 
-            // reAuthenticate itself, plus the reload it triggers.
+            // The one Sign In itself, plus the reload it triggers.
             expect(getClient().request.mock.calls.length).toBeGreaterThan(before + 1);
             expect(
-                getClient().request.mock.calls.some((c: unknown[]) => c[0] === 'reAuthenticate')
+                getClient().request.mock.calls.some((c: unknown[]) => c[0] === 'authenticate')
             ).toBe(true);
         });
 
@@ -386,7 +400,48 @@ describe('ManageApisModal', () => {
             await flush();
 
             expect(screen.getByRole('button', { name: /^retry$/i })).toBeInTheDocument();
-            expect(screen.queryByText('Sign in to Adobe')).not.toBeInTheDocument();
+            expect(screen.queryByText('Sign In to Adobe')).not.toBeInTheDocument();
+        });
+    });
+
+    // Phase 1b: the Steps layout. One large window from the read to the apply, at one height
+    // (rule 14); a read with no list to show is its own small result window.
+    describe('one window at one height', () => {
+        it('is large and holds its height once the list is read', async () => {
+            mockRequest();
+            renderModal();
+            await flush();
+
+            expect(screen.getByRole('dialog')).toHaveAttribute('data-size', 'L');
+            expect(screen.getByRole('dialog')).toHaveClass('is-locked');
+        });
+
+        it('keeps that height through the apply and its failure', async () => {
+            mockRequest((type) =>
+                type === 'listConsoleApis'
+                    ? Promise.resolve({ success: true, data: { apis: ORG_APIS } })
+                    : Promise.resolve({ success: false, error: 'needs a product profile' })
+            );
+            renderModal();
+            await flush();
+            fireEvent.click(checkboxFor('Firefly Services'));
+            fireEvent.click(applyButton());
+            await flush();
+
+            expect(screen.getByRole('dialog')).toHaveClass('is-locked');
+            expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+        });
+
+        it.each([
+            ['a failed read', { success: false, error: 'boom' }],
+            ['signed out', { success: false, error: 'Sign in.', code: 'AUTH_REQUIRED' }],
+        ])('shows %s as a small result window with Close', async (_what, answer) => {
+            getClient().request.mockResolvedValue(answer);
+            renderModal();
+            await flush();
+
+            expect(screen.getByRole('dialog')).toHaveAttribute('data-size', 'S');
+            expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
         });
     });
 

@@ -25,6 +25,7 @@ import type { Project } from '@/types/base';
 import type { InstalledBlockLibrary } from '@/types/blockLibraries';
 import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/types/state';
+import type { OperationPosition } from '@/types/webviewPayloads';
 
 /**
  * The pair update the integrations card's Update button runs, for any project:
@@ -35,7 +36,7 @@ import type { StateManager } from '@/types/state';
 export type IntegrationPairUpdater = (
     project: Project,
     componentId: string,
-    report: (message: string, subMessage?: string) => void,
+    report: (message: string, subMessage?: string, position?: OperationPosition) => void,
 ) => Promise<RunnerResult>;
 
 /**
@@ -71,6 +72,8 @@ export interface BlockLibraryUpdateTarget {
     project: Project;
     library: InstalledBlockLibrary;
     latestCommit: string;
+    /** The release it moves to, for a repository that ships by release. */
+    version?: string;
 }
 
 /**
@@ -148,6 +151,7 @@ export async function applyBlockLibraryUpdateResolved(
     // A block this update copied is the library's from now on, so deleting its
     // folder later stays deleted too.
     lib.blockIds = [...new Set([...lib.blockIds, ...(version?.blockIds ?? [])])];
+    if (item.version) lib.version = item.version;
     await updateCommitShaWithRollback(lib, item.latestCommit, () =>
         ctx.stateManager.saveProject(item.project),
     );

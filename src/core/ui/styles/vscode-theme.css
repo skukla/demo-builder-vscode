@@ -126,15 +126,15 @@
        they did was replace one palette with a foreign one. `-text-small` is the
        right member of the ramp here because these select text. */
     body [color="positive"] {
-        color: var(--spectrum-semantic-positive-color-text-small);
+        color: var(--spectrum-semantic-positive-color-icon);
     }
 
     body [color="negative"] {
-        color: var(--spectrum-semantic-negative-color-text-small);
+        color: var(--spectrum-semantic-negative-color-icon);
     }
 
     body [color="notice"] {
-        color: var(--spectrum-semantic-notice-color-text-small);
+        color: var(--spectrum-semantic-notice-color-icon);
     }
 
     /* =========================================

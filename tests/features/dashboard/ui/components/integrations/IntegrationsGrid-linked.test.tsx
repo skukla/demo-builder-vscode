@@ -142,12 +142,12 @@ describe('IntegrationsGrid — the system card verbs', () => {
 
     // Simulated downtime (AB-59): through the INTEGRATION's id, naming THIS ERP, in a modal
     // that reads the ERP as it opens.
-    it('Simulate downtime opens its modal on THIS ERP', async () => {
+    it('Simulate Downtime opens its modal on THIS ERP', async () => {
         const { user, panel } = await openSystem();
 
-        await user.click(within(panel).getByRole('button', { name: 'Simulate downtime' }));
+        await user.click(within(panel).getByRole('button', { name: 'Simulate Downtime' }));
 
-        expect(await screen.findByText('Nordwind: simulate downtime')).toBeInTheDocument();
+        expect(await screen.findByText('Nordwind: Simulate Downtime')).toBeInTheDocument();
         expect(getClient().request).toHaveBeenCalledWith('getErpDemoControls', {
             id: 'erp-integration',
             erp: 'demo-erp',
@@ -166,13 +166,17 @@ describe('IntegrationsGrid — the system card verbs', () => {
 describe("IntegrationsGrid — the integration's ERP verbs", () => {
     // It asks first: it removes nothing, but a hand-edited ERP value goes back to
     // Commerce's (audit, 2026-10-18).
-    it('Fill ERPs from Commerce asks first, then fills every ERP it serves — no ERP named', async () => {
+    it('Fill ERPs from Commerce asks first, then fills every ERP it serves — no ERP Named', async () => {
         const { user, panel } = await openIntegration();
 
         await user.click(within(panel).getByRole('button', { name: /^fill erps from commerce$/i }));
-        const dialog = screen.getByRole('dialog', { name: /fill from commerce/i });
-        expect(dialog).toHaveTextContent("A value changed by hand in the ERP is set back to Commerce's.");
+        const dialog = screen.getByRole('dialog', { name: 'Fill Nordwind from Commerce?' });
+        expect(dialog).toHaveAttribute('data-status', 'warning');
+        expect(dialog).toHaveTextContent('Adds or updates records and removes nothing.');
+        expect(dialog).toHaveTextContent("Manual changes in the ERP are replaced with Commerce values.");
         expect(getClient().postMessage).not.toHaveBeenCalledWith('loadErpDemoData', expect.anything());
+        // It overwrites a hand edit, but removes nothing: the main action, not the red one.
+        expect(within(dialog).getByRole('button', { name: /^fill$/i })).toHaveAttribute('data-variant', 'accent');
         await user.click(within(dialog).getByRole('button', { name: /^fill$/i }));
 
         expect(getClient().postMessage).toHaveBeenCalledWith('loadErpDemoData', {
@@ -185,8 +189,8 @@ describe("IntegrationsGrid — the integration's ERP verbs", () => {
         const { user, panel } = await openIntegration();
         await user.click(within(panel).getByRole('button', { name: /^fill erps from commerce$/i }));
 
-        const dialog = screen.getByRole('dialog', { name: /fill from commerce/i });
-        await user.click(within(dialog).getByRole('button', { name: /^close$/i }));
+        const dialog = screen.getByRole('dialog', { name: 'Fill Nordwind from Commerce?' });
+        await user.click(within(dialog).getByRole('button', { name: /^cancel$/i }));
 
         expect(getClient().postMessage).not.toHaveBeenCalledWith('loadErpDemoData', expect.anything());
     });
@@ -196,9 +200,15 @@ describe("IntegrationsGrid — the integration's ERP verbs", () => {
 
         await user.click(within(panel).getByRole('button', { name: /^reset erps$/i }));
 
-        const dialog = screen.getByRole('dialog', { name: /reset erps/i });
-        expect(dialog).toHaveTextContent('Clears Nordwind and reloads it from Commerce.');
-        expect(dialog).toHaveTextContent("Cancelled orders can't be reopened.");
+        const dialog = screen.getByRole('dialog', { name: 'Reset Nordwind?' });
+        expect(dialog).toHaveAttribute('data-status', 'warning');
+        for (const line of [
+            'Clears Nordwind and reloads it from Commerce.',
+            'Permanently cancels open orders in the ERPs; orders already invoiced or shipped get a note instead.',
+            'Removes the credit limits and company blocks the ERPs set in Commerce.',
+            'Nothing else in Commerce changes.',
+        ]) expect(within(dialog).getByText(line)).toHaveClass('dialog-line');
+        expect(within(dialog).getByRole('button', { name: /^reset$/i })).toHaveAttribute('data-variant', 'negative');
         expect(getClient().postMessage).not.toHaveBeenCalledWith(
             'resetErpRecords',
             expect.anything()
@@ -209,7 +219,7 @@ describe("IntegrationsGrid — the integration's ERP verbs", () => {
         const { user, panel } = await openIntegration();
         await user.click(within(panel).getByRole('button', { name: /^reset erps$/i }));
 
-        const dialog = screen.getByRole('dialog', { name: /reset erps/i });
+        const dialog = screen.getByRole('dialog', { name: 'Reset Nordwind?' });
         await user.click(within(dialog).getByRole('button', { name: /^reset$/i }));
 
         // Through the runner, so it carries `progress: 'modal'` and this screen's
@@ -233,7 +243,7 @@ describe("IntegrationsGrid — the integration's ERP verbs", () => {
         const panel = await openPanel(user, 'ERP integration', 'Deployed');
         await user.click(within(panel).getByRole('button', { name: /^reset erps$/i }));
 
-        const dialog = screen.getByRole('dialog', { name: /reset erps/i });
+        const dialog = screen.getByRole('dialog', { name: 'Reset 2 ERPs?' });
         expect(dialog).toHaveTextContent('Clears Nordwind and Brand B ERP and reloads them from Commerce.');
         await user.click(within(dialog).getByRole('button', { name: /^reset$/i }));
 
@@ -245,8 +255,8 @@ describe("IntegrationsGrid — the integration's ERP verbs", () => {
         const { user, panel } = await openIntegration();
         await user.click(within(panel).getByRole('button', { name: /^reset erps$/i }));
 
-        const dialog = screen.getByRole('dialog', { name: /reset erps/i });
-        await user.click(within(dialog).getByRole('button', { name: /^close$/i }));
+        const dialog = screen.getByRole('dialog', { name: 'Reset Nordwind?' });
+        await user.click(within(dialog).getByRole('button', { name: /^cancel$/i }));
 
         expect(getClient().postMessage).not.toHaveBeenCalledWith(
             'resetErpRecords',
@@ -271,8 +281,8 @@ describe('IntegrationsGrid — the link between them', () => {
 
         await user.click(within(panel).getByRole('button', { name: /^remove$/i }));
 
-        const dialog = screen.getByRole('dialog', { name: 'Remove ERP integration' });
-        expect(dialog).toHaveTextContent('Nordwind will be removed too, with its records.');
+        const dialog = screen.getByRole('dialog', { name: 'Remove ERP integration?' });
+        expect(dialog).toHaveTextContent('It also removes Nordwind, with its records');
     });
 
     // AB-12: Demo Builder cannot clear App Management's own record, so the SC is told
@@ -287,11 +297,10 @@ describe('IntegrationsGrid — the link between them', () => {
 
         await user.click(within(panel).getByRole('button', { name: /^remove$/i }));
 
-        const dialog = screen.getByRole('dialog', { name: 'Remove ERP integration' });
-        expect(dialog).toHaveTextContent('Nordwind will be removed too, with its records.');
+        const dialog = screen.getByRole('dialog', { name: 'Remove ERP integration?' });
+        expect(dialog).toHaveTextContent('It also removes Nordwind, with its records');
         expect(dialog).toHaveTextContent(
-            'If you associated it in Commerce Admin under Apps > App Management, unassociate it there first. ' +
-                'Removing it here does not clear that listing.'
+            'It does not clear a listing under Apps > App Management in Commerce Admin. If you associated it there, unassociate it first.'
         );
     });
 
@@ -300,7 +309,7 @@ describe('IntegrationsGrid — the link between them', () => {
 
         await user.click(within(panel).getByRole('button', { name: /^remove$/i }));
 
-        const dialog = screen.getByRole('dialog', { name: 'Remove Nordwind' });
+        const dialog = screen.getByRole('dialog', { name: 'Remove Nordwind?' });
         expect(dialog).not.toHaveTextContent(/App Management/);
     });
 
@@ -309,9 +318,7 @@ describe('IntegrationsGrid — the link between them', () => {
 
         await user.click(within(panel).getByRole('button', { name: /^remove$/i }));
 
-        const dialog = screen.getByRole('dialog', { name: 'Remove Nordwind' });
-        expect(dialog).toHaveTextContent(
-            'Its records will be deleted, and ERP integration will be removed too.'
-        );
+        const dialog = screen.getByRole('dialog', { name: 'Remove Nordwind?' });
+        expect(dialog).toHaveTextContent('It also deletes its records and removes ERP integration');
     });
 });

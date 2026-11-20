@@ -87,7 +87,7 @@ them when the ERP stops pricing them.
 
 | Owner | Owns |
 |---|---|
-| The CRM (customer master; Salesforce for the JustRite client) | The company and its ENTITLEMENTS: which product lines it may buy (a segment or authorization on the account). Not the catalog |
+| The CRM (customer master; Salesforce for the Tailspin client) | The company and its ENTITLEMENTS: which product lines it may buy (a segment or authorization on the account). Not the catalog |
 | Commerce | The shared catalog itself |
 | The CRM integration (the Commerce side of the CRM sync) | Assigning the company's shared catalog, derived from its entitlements |
 | The PIM | The products |

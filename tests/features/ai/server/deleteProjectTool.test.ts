@@ -5,74 +5,34 @@
  * mocked.
  */
 
-jest.mock('@/features/projects-dashboard/services/projectFilesDeletion', () => ({
-    deleteProjectFiles: jest.fn(),
-}));
-
-// The real resolver decides; only the step that would touch the cloud is held
-// back, so what it is HANDED can be read.
-jest.mock('@/features/ai/server/agentProjectCleanup', () => ({
-    ...jest.requireActual('@/features/ai/server/agentProjectCleanup'),
-    cleanUpProjectCloud: jest.fn(),
-}));
-
-import * as vscode from 'vscode';
+// The shared wall first: it owns the subject import (webview-test-authoring §3).
+import {
+    cleanupBehavior,
+    ctxFactory,
+    fakeServer,
+    getAllProjects,
+    loadProjectFromPath,
+    mockRunProjectDelete,
+    registerDeleteProjectTool,
+    useRealDelete,
+} from './deleteProjectTool.testUtils';
 import { z } from 'zod';
-
-import { registerDeleteProjectTool } from '@/features/ai/server/deleteProjectTool';
 import { withPhaseSinks } from '@/core/utils/agentPhaseChannel';
-import type { McpToolSchema } from '@/features/ai/server/mcpToolServer';
-import { cleanUpProjectCloud } from '@/features/ai/server/agentProjectCleanup';
 import { deleteProjectFiles } from '@/features/projects-dashboard/services/projectFilesDeletion';
-import { createMockLogger } from '../../../helpers/loggerFake';
-import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
-import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
-import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import type { AnsweredDelete, ProjectDeleteRun } from '@/features/projects-dashboard/services/projectDeletionService';
 
 const deleteProjectFilesMock = deleteProjectFiles as jest.Mock;
-const cleanUpProjectCloudMock = cleanUpProjectCloud as jest.Mock;
-const getConfiguration = vscode.workspace.getConfiguration as jest.Mock;
 
-/** Put the SC's `cleanupBehavior` setting where the resolver reads it. */
-function cleanupBehavior(value: string): void {
-    getConfiguration.mockReturnValue({ get: () => value });
+/** What the tool handed the button's delete: the answered options of its one call. */
+function handedToDelete(): AnsweredDelete {
+    expect(mockRunProjectDelete).toHaveBeenCalledTimes(1);
+    return mockRunProjectDelete.mock.calls[0][2] as AnsweredDelete;
 }
 
-/**
- * The schema is KEPT, not discarded: `readOnlyHint`/`destructiveHint`, `needsAuth`
- * and the input shape are what a client reads before it decides whether this tool
- * may run unattended, and a stub that throws its second argument away can see none
- * of them (see mcpToolServer.ts's own note on that gap).
- */
-function fakeServer() {
-    const tools = new Map<string, (args: any) => Promise<{ content: Array<{ text: string }> }>>();
-    const schemas = new Map<string, McpToolSchema>();
-    return {
-        registerTool(
-            name: string,
-            def: McpToolSchema,
-            handler: (args: any) => Promise<{ content: Array<{ text: string }> }>
-        ) {
-            tools.set(name, handler);
-            schemas.set(name, def);
-        },
-        schema(): McpToolSchema {
-            return schemas.get('delete_project')!;
-        },
-        async call(args?: unknown): Promise<any> {
-            return JSON.parse((await tools.get('delete_project')!(args)).content[0].text);
-        },
-    };
+/** The checklist the tool handed the delete, in the button's own option names. */
+function ticked(deleteGitHubRepo: boolean, deleteDaLiveSite: boolean) {
+    return { deleteGitHubRepo, deleteDaLiveSite, removeDatapackData: false, nobodyToAsk: true };
 }
-
-const getAllProjects = jest.fn();
-const loadProjectFromPath = jest.fn();
-const ctxFactory = () =>
-    createMockHandlerContext({
-        stateManager: createMockStateManager({ getAllProjects, loadProjectFromPath }),
-        context: createMockExtensionContext(),
-        logger: createMockLogger(),
-    });
 
 describe('delete_project', () => {
     beforeEach(() => {
@@ -83,7 +43,7 @@ describe('delete_project', () => {
         ]);
         loadProjectFromPath.mockResolvedValue({ name: 'alpha', path: '/p/alpha' });
         deleteProjectFilesMock.mockResolvedValue(undefined);
-        cleanUpProjectCloudMock.mockResolvedValue({});
+        useRealDelete();
         cleanupBehavior('ask');
     });
 
@@ -100,7 +60,7 @@ describe('delete_project', () => {
 
         // The gate the handler enforces has to be REACHABLE: an agent can only
         // send confirm/confirmName if the declared input shape accepts them.
-        it('declares the name, both confirmation fields and the two cloud choices', () => {
+        it("declares the name, both confirmation fields, the two cloud choices and the datapack data's", () => {
             const s = fakeServer();
             registerDeleteProjectTool(s, ctxFactory);
             const shape = s.schema().inputSchema as Record<string, z.ZodTypeAny>;
@@ -113,6 +73,9 @@ describe('delete_project', () => {
                 'confirmName',
                 'deleteGithubRepo',
                 'deleteDaLiveSite',
+                'removeData',
+                'changes',
+                'saveAs',
             ]);
             expect(z.object(shape).safeParse({ name: 'alpha' }).success).toBe(true);
             expect(z.object(shape).safeParse({}).success).toBe(false);
@@ -171,9 +134,7 @@ describe('delete_project', () => {
         registerDeleteProjectTool(s, ctxFactory);
         const res = await s.call({ name: 'alpha', confirm: true, confirmName: 'alpha' });
         expect(res).toEqual({ deleted: true, name: 'alpha' });
-        expect(loadProjectFromPath).toHaveBeenCalledWith('/p/alpha', undefined, {
-            persistAfterLoad: false,
-        });
+        expect(loadProjectFromPath).toHaveBeenCalledWith('/p/alpha');
         expect(deleteProjectFilesMock).toHaveBeenCalledWith(expect.anything(), {
             name: 'alpha',
             path: '/p/alpha',
@@ -251,39 +212,55 @@ describe('what it says while it runs', () => {
             s.call({ name: 'alpha', confirm: true, confirmName: 'alpha' })
         );
 
-        expect(seen).toEqual(['Removing project files']);
+        expect(seen).toEqual(['Deleting project files']);
         expect(deleteProjectFilesMock).toHaveBeenCalled();
     });
 });
 
 /**
- * The two cloud choices (AI-9). What the tool hands the cleanup step is the
- * decision: the step itself is tested where it lives.
+ * The two cloud choices (AI-9), and the delete they go to: the button's own,
+ * `runProjectDelete` (PL-104 fix 6), with nobody to ask. What the tool hands it is the
+ * decision; the delete's steps are tested where they live (projectDeletionService and
+ * edsExternalCleanup suites, `nobodyToAsk` included).
  */
 describe('the two cloud choices', () => {
     const CONFIRMED = { name: 'alpha', confirm: true, confirmName: 'alpha' };
     const PROJECT = { name: 'alpha', path: '/p/alpha' };
+    /** A storefront: what the delete reports online is read against these resources. */
+    const STOREFRONT = {
+        name: 'alpha',
+        path: '/p/alpha',
+        componentInstances: {
+            'eds-storefront': { id: 'eds-storefront', metadata: { githubRepo: 'robin/alpha', daLiveOrg: 'robin', daLiveSite: 'alpha' } },
+        },
+    };
+
+    /** The delete reports `rows` and answers `run`, as `runProjectDelete` does. */
+    function deleteAnswers(rows: AnsweredDelete['cleanupResults'], run: ProjectDeleteRun = {}): void {
+        mockRunProjectDelete.mockImplementation(async (_ctx: unknown, _project: unknown, answered: AnsweredDelete) => {
+            answered.cleanupResults.push(...rows);
+            return run;
+        });
+    }
 
     beforeEach(() => {
         jest.clearAllMocks();
         getAllProjects.mockResolvedValue([{ name: 'alpha', path: '/p/alpha' }]);
         loadProjectFromPath.mockResolvedValue(PROJECT);
         deleteProjectFilesMock.mockResolvedValue(undefined);
-        cleanUpProjectCloudMock.mockResolvedValue({});
+        useRealDelete();
         cleanupBehavior('ask');
     });
 
-    it('asks for neither when the call names neither', async () => {
+    it("runs the button's delete on the project, with nobody to ask", async () => {
         const s = fakeServer();
         registerDeleteProjectTool(s, ctxFactory);
 
         await s.call(CONFIRMED);
 
-        expect(cleanUpProjectCloudMock).toHaveBeenCalledTimes(1);
-        expect(cleanUpProjectCloudMock).toHaveBeenCalledWith(expect.anything(), PROJECT, {
-            deleteGithubRepo: false,
-            deleteDaLiveSite: false,
-        });
+        expect(mockRunProjectDelete).toHaveBeenCalledWith(expect.anything(), PROJECT, expect.anything(), expect.any(Function));
+        expect(handedToDelete().cleanupOptions).toStrictEqual(ticked(false, false));
+        expect(deleteProjectFilesMock).toHaveBeenCalledWith(expect.anything(), PROJECT);
     });
 
     it('asks for the repository alone when only that is ticked', async () => {
@@ -292,9 +269,30 @@ describe('the two cloud choices', () => {
 
         await s.call({ ...CONFIRMED, deleteGithubRepo: true });
 
-        expect(cleanUpProjectCloudMock).toHaveBeenCalledWith(expect.anything(), PROJECT, {
-            deleteGithubRepo: true,
-            deleteDaLiveSite: false,
+        expect(handedToDelete().cleanupOptions).toStrictEqual(ticked(true, false));
+    });
+
+    // What another project here still uses is kept, as the button never offers it (owner, 2026-11-04).
+    it('keeps the repository and the site another local project uses, and says so', async () => {
+        const storefront = (name: string, path: string) => ({
+            name,
+            path,
+            componentInstances: {
+                'eds-storefront': { id: 'eds-storefront', metadata: { githubRepo: 'acme/demo', daLiveOrg: 'acme', daLiveSite: 'demo' } },
+            },
+        });
+        getAllProjects.mockResolvedValue([{ name: 'alpha', path: '/p/alpha' }, { name: 'beta', path: '/p/beta' }]);
+        loadProjectFromPath.mockImplementation(async (path: string) => (path === '/p/beta' ? storefront('beta', '/p/beta') : storefront('alpha', '/p/alpha')));
+        deleteAnswers([]);
+        const s = fakeServer();
+        registerDeleteProjectTool(s, ctxFactory);
+
+        const answer = await s.call({ ...CONFIRMED, deleteGithubRepo: true, deleteDaLiveSite: true });
+
+        expect(handedToDelete().cleanupOptions).toMatchObject({ deleteGitHubRepo: false, deleteDaLiveSite: false });
+        expect(answer).toMatchObject({
+            deleted: true,
+            kept: ['Kept the GitHub repository: beta also uses it.', 'Kept the DA.live site: beta also uses it.'],
         });
     });
 
@@ -304,10 +302,7 @@ describe('the two cloud choices', () => {
 
         await s.call({ ...CONFIRMED, deleteDaLiveSite: true });
 
-        expect(cleanUpProjectCloudMock).toHaveBeenCalledWith(expect.anything(), PROJECT, {
-            deleteGithubRepo: false,
-            deleteDaLiveSite: true,
-        });
+        expect(handedToDelete().cleanupOptions).toStrictEqual(ticked(false, true));
     });
 
     // AI-71: a left-out choice was read as "no" before the setting was consulted, so
@@ -319,10 +314,7 @@ describe('the two cloud choices', () => {
 
         await s.call(CONFIRMED);
 
-        expect(cleanUpProjectCloudMock).toHaveBeenCalledWith(expect.anything(), PROJECT, {
-            deleteGithubRepo: true,
-            deleteDaLiveSite: true,
-        });
+        expect(handedToDelete().cleanupOptions).toStrictEqual(ticked(true, true));
     });
 
     it('under deleteAll, a choice the call states is kept', async () => {
@@ -332,10 +324,7 @@ describe('the two cloud choices', () => {
 
         await s.call({ ...CONFIRMED, deleteGithubRepo: false });
 
-        expect(cleanUpProjectCloudMock).toHaveBeenCalledWith(expect.anything(), PROJECT, {
-            deleteGithubRepo: false,
-            deleteDaLiveSite: true,
-        });
+        expect(handedToDelete().cleanupOptions).toStrictEqual(ticked(false, true));
     });
 
     // Same bar as `confirm`: a word is not a tick.
@@ -345,15 +334,13 @@ describe('the two cloud choices', () => {
 
         await s.call({ ...CONFIRMED, deleteGithubRepo: 'yes', deleteDaLiveSite: 1 });
 
-        expect(cleanUpProjectCloudMock).toHaveBeenCalledWith(expect.anything(), PROJECT, {
-            deleteGithubRepo: false,
-            deleteDaLiveSite: false,
-        });
+        expect(handedToDelete().cleanupOptions).toStrictEqual(ticked(false, false));
     });
 
-    it('reports what the cloud step did alongside the local delete', async () => {
-        cleanUpProjectCloudMock.mockResolvedValue({
-            githubRepo: { name: 'jen/alpha', deleted: true },
+    it('reports what the delete did online alongside the local delete', async () => {
+        loadProjectFromPath.mockResolvedValue(STOREFRONT);
+        deleteAnswers([{ type: 'github', name: 'robin/alpha', success: true }], {
+            siteCode: { removed: 12, failed: [], stillServing: false },
         });
         const s = fakeServer();
         registerDeleteProjectTool(s, ctxFactory);
@@ -361,31 +348,47 @@ describe('the two cloud choices', () => {
         expect(await s.call({ ...CONFIRMED, deleteGithubRepo: true })).toEqual({
             deleted: true,
             name: 'alpha',
-            githubRepo: { name: 'jen/alpha', deleted: true },
+            githubRepo: { name: 'robin/alpha', deleted: true, siteCode: { removed: 12, notRemoved: 0, stillServing: false } },
         });
     });
 
-    it('still reports what the cloud step did when the local delete then fails', async () => {
-        cleanUpProjectCloudMock.mockResolvedValue({
-            githubRepo: { name: 'jen/alpha', deleted: true },
+    it("says why a sign-in it could not ask for skipped the repository", async () => {
+        loadProjectFromPath.mockResolvedValue(STOREFRONT);
+        const refused = 'Not signed in to GitHub, so the repository was not deleted. Sign in to GitHub, then delete again.';
+        deleteAnswers([{ type: 'github', name: 'robin/alpha', success: false, skipped: true, error: refused }]);
+        const s = fakeServer();
+        registerDeleteProjectTool(s, ctxFactory);
+
+        expect(await s.call({ ...CONFIRMED, deleteGithubRepo: true })).toEqual({
+            deleted: true,
+            name: 'alpha',
+            githubRepo: { name: 'robin/alpha', deleted: false, error: refused },
         });
-        deleteProjectFilesMock.mockRejectedValueOnce('EBUSY');
+    });
+
+    it('still reports what the delete did online when the local delete then fails', async () => {
+        loadProjectFromPath.mockResolvedValue(STOREFRONT);
+        mockRunProjectDelete.mockImplementation(async (_ctx: unknown, _project: unknown, answered: AnsweredDelete) => {
+            answered.cleanupResults.push({ type: 'github', name: 'robin/alpha', success: true });
+            throw 'EBUSY';
+        });
         const s = fakeServer();
         registerDeleteProjectTool(s, ctxFactory);
 
         expect(await s.call({ ...CONFIRMED, deleteGithubRepo: true })).toEqual({
             deleted: false,
             name: 'alpha',
-            githubRepo: { name: 'jen/alpha', deleted: true },
+            githubRepo: { name: 'robin/alpha', deleted: true },
             error: 'EBUSY',
         });
     });
 
     // EDS-65: the project is how a second try finds the pages that are still live.
-    it('keeps the project, and says why, when the cloud step stopped with pages still live', async () => {
+    it('keeps the project, and says why, when the delete stopped with pages still live', async () => {
+        loadProjectFromPath.mockResolvedValue(STOREFRONT);
         const stopped = 'The pages could not be taken off the live site, so nothing else was deleted.';
-        const daLiveSite = { name: 'jen/alpha', contentDeleted: false, stillPublished: true, publishSummary: '', error: stopped };
-        cleanUpProjectCloudMock.mockResolvedValue({ stopped, daLiveSite });
+        const torn = { contentDeleted: false, stillPublished: true, publishState: 'still-live' as const, publishSummary: 'Pages still answer.', stopped, error: stopped };
+        deleteAnswers([{ type: 'daLive', name: 'robin/alpha', success: false, error: stopped }], { stopped, storefront: torn });
         const s = fakeServer();
         registerDeleteProjectTool(s, ctxFactory);
 
@@ -393,10 +396,9 @@ describe('the two cloud choices', () => {
             deleted: false,
             name: 'alpha',
             stopped,
-            daLiveSite,
+            daLiveSite: { name: 'robin/alpha', contentDeleted: false, stillPublished: true, publishSummary: 'Pages still answer.', error: stopped },
             error: stopped,
         });
-        expect(deleteProjectFilesMock).not.toHaveBeenCalled();
     });
 
     it('says the setting refused when "localOnly" overrode a tick', async () => {
@@ -406,11 +408,7 @@ describe('the two cloud choices', () => {
 
         const res = await s.call({ ...CONFIRMED, deleteDaLiveSite: true });
 
-        expect(cleanUpProjectCloudMock).toHaveBeenCalledWith(
-            expect.anything(),
-            PROJECT,
-            expect.objectContaining({ deleteGithubRepo: false, deleteDaLiveSite: false }),
-        );
+        expect(handedToDelete().cleanupOptions).toMatchObject({ deleteGitHubRepo: false, deleteDaLiveSite: false });
         expect(res).toEqual({
             deleted: true,
             name: 'alpha',
@@ -425,23 +423,6 @@ describe('the two cloud choices', () => {
         const res = await s.call({ ...CONFIRMED, deleteDaLiveSite: true });
 
         expect(res).toEqual({ deleted: true, name: 'alpha' });
-    });
-
-    it('cleans up the cloud before the local files, which are how it is found', async () => {
-        const order: string[] = [];
-        cleanUpProjectCloudMock.mockImplementation(async () => {
-            order.push('cloud');
-            return {};
-        });
-        deleteProjectFilesMock.mockImplementation(async () => {
-            order.push('local');
-        });
-        const s = fakeServer();
-        registerDeleteProjectTool(s, ctxFactory);
-
-        await s.call(CONFIRMED);
-
-        expect(order).toEqual(['cloud', 'local']);
     });
 });
 
@@ -459,6 +440,11 @@ describe('what each input is described as', () => {
                 "Also delete the project's GitHub repository (default: false, or true when the cleanupBehavior setting is deleteAll)",
             deleteDaLiveSite:
                 "Also delete the project's DA.live site and take its pages off the CDN (default: false, or true when the cleanupBehavior setting is deleteAll)",
+            removeData:
+                "Also remove the project's datapack data from its Commerce instance, before anything else (default: false under every cleanupBehavior; refused under localOnly)",
+            changes:
+                "With removeData: keep saves the user's changes in the pack as a new datapack named by saveAs; drop loses them, in the user's own pack too. Left out, changes in the user's own pack are saved into it",
+            saveAs: 'With changes:"keep": the new datapack of the user\'s that their changes are saved as',
         });
     });
 });

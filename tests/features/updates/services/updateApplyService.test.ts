@@ -12,7 +12,6 @@ import { applyUpdatesHeadless } from '@/features/updates/services/updateApplySer
 import type { UpdateSelections } from '@/features/updates/services/updateSelections';
 import {
     applyBlockLibraryUpdateResolved,
-    updateCommitShaWithRollback,
 } from '@/features/updates/services/updateCore';
 import { shouldSkipBlockLibrary } from '@/features/updates/services/updateSources';
 import { createMockLogger } from '../../../helpers/loggerFake';
@@ -62,14 +61,12 @@ jest.mock('@/core/shell/ensureNodeVersion', () => ({
 const executor = createMockCommandExecutor({ execute: executeMock });
 jest.mock('@/features/updates/services/updateCore', () => ({
     applyBlockLibraryUpdateResolved: jest.fn(),
-    updateCommitShaWithRollback: jest.fn(),
 }));
 jest.mock('@/features/updates/services/updateSources', () => ({
     shouldSkipBlockLibrary: jest.fn(() => false),
 }));
 
 const applyBlockResolvedMock = applyBlockLibraryUpdateResolved as jest.Mock;
-const updateShaRollbackMock = updateCommitShaWithRollback as jest.Mock;
 const shouldSkipMock = shouldSkipBlockLibrary as unknown as jest.Mock;
 const getConfigMock = vscode.workspace.getConfiguration as jest.Mock;
 
@@ -95,7 +92,6 @@ const ctx = {
 const project = createMockProject({
     name: 'demo',
     path: '/p/demo',
-    installedInspectorSdk: { commitSha: 'old', installedAt: '2026-01-01T00:00:00.000Z' },
 });
 
 /**
@@ -123,7 +119,6 @@ function emptySelections(): UpdateSelections {
         adobeMcp: [],
         blockLibrary: [],
         blockLibraryInstall: [],
-        inspector: [],
         integration: [],
     };
 }
@@ -141,7 +136,6 @@ describe('applyUpdatesHeadless', () => {
         updateComponentMock.mockResolvedValue(undefined);
         executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
         applyBlockResolvedMock.mockResolvedValue([]);
-        updateShaRollbackMock.mockResolvedValue(undefined);
         shouldSkipMock.mockReturnValue(false);
     });
 
@@ -174,7 +168,7 @@ describe('applyUpdatesHeadless', () => {
                 project,
                 componentId: 'mesh',
                 latestVersion: '2.0.0',
-                downloadUrl: 'http://x/mesh.zip',
+                tag: 'v2.0.0',
             },
         ];
         const res = await applyUpdatesHeadless(sel, ctx);
@@ -182,7 +176,7 @@ describe('applyUpdatesHeadless', () => {
         expect(updateComponentMock).toHaveBeenCalledWith(
             project,
             'mesh',
-            'http://x/mesh.zip',
+            'v2.0.0',
             '2.0.0'
         );
         expect(
@@ -243,26 +237,10 @@ describe('applyUpdatesHeadless', () => {
         expect(res.template.applied).toEqual(['A Demo Builder fix could not be put back: fix-gone (gone).']);
     });
 
-    it('updates the inspector SDK via the rollback-guarded helper', async () => {
-        const sel = emptySelections();
-        sel.inspector = [{ project, latestCommit: 'newsha' }];
-        const res = await applyUpdatesHeadless(sel, ctx);
-        expect(updateShaRollbackMock).toHaveBeenCalledWith(
-            // The WHOLE recorded SDK entry is threaded through, and `installedAt` is
-            // required on it — so the old expectation, `{ commitSha: 'old' }` alone,
-            // pinned a shape production cannot produce. It passed only because the
-            // fixture was cast and was equally incomplete.
-            { commitSha: 'old', installedAt: '2026-01-01T00:00:00.000Z' },
-            'newsha',
-            expect.any(Function)
-        );
-        expect(res.addon.successCount).toBe(1);
-    });
-
     it('aggregates totals across categories', async () => {
         const sel = emptySelections();
         sel.forkSync = [{ owner: 'me', repo: 'a', branch: 'main' }];
-        sel.component = [{ project, componentId: 'mesh', latestVersion: '2', downloadUrl: 'u' }];
+        sel.component = [{ project, componentId: 'mesh', latestVersion: '2', tag: 'v2' }];
         const res = await applyUpdatesHeadless(sel, ctx);
         expect(res.totalApplied).toBe(2);
         expect(res.totalFailed).toBe(0);

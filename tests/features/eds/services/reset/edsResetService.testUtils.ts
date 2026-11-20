@@ -6,9 +6,9 @@
  * together. Every one of these was mocked in three to five of the suites and none of
  * them holds anything up:
  *
- *   vscode · @/core/constants · fstabGenerator · configGenerator
- *   daLiveContentOperations · storefrontStalenessDetector · stalenessDetector
- *   inspectorHelpers · @/core/di · @/types/typeGuards · daLiveAuthService
+ *   vscode, @/core/constants, fstabGenerator, configGenerator
+ *   daLiveContentOperations, storefrontStalenessDetector, stalenessDetector
+ *   inspectorHelpers, @/core/di, @/types/typeGuards, daLiveAuthService
  *
  * WHAT IS LEFT IS LOAD-BEARING, and none of it can move here:
  *

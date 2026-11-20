@@ -1,0 +1,347 @@
+/**
+ * Capture: what "Save store changes to this pack" reads (step 05, owner 2026-10-27).
+ *
+ * It reads back everything the install record lists, and the store's copy of the installed
+ * version's own products, attributes and sets (a pack installed onto a store that already held
+ * some of its SKUs left those off the record, and a save must not lose them; owner, 2026-10-29),
+ * plus what all of those need to install on
+ * an empty store: the categories a captured product sits in and their parents, the attribute set
+ * it uses, its user-defined attributes with their options and their place in the set, and its
+ * quantities with the sources they are held in. The service's export pulls in nothing a selection
+ * depends on (export spec §4); this does. Everything is written in pack form (`packForm.ts`),
+ * so SKUs are kept exactly and every id is a name again.
+ *
+ * The root category is named, never guessed: a category's root is read from its own path in the
+ * store. When that is the root of the store the pack was installed into, the pack names no root
+ * of its own and its paths start with that root's name, which install maps onto whatever root
+ * the next store has. When it is a root the pack made, it is written as the pack's
+ * `root_category`. (The service matches a root by name, and without one exports the store's root
+ * as an ordinary category, §2.) A pack that HAS a root of its own keeps it (step 12): its
+ * categories may have gone under the store's root (`packRoot.ts`), or the SC may have made the
+ * pack's root the store's, and either way the save writes the installed version's root (or the
+ * root this engine made, as it is now) and starts every path with its name, so the new version
+ * still installs as its own root on another store.
+ *
+ * Customers, groups, companies, shared catalogs and their assignments are captured beside these
+ * (`captureB2b.ts`, step 08), and cart rules with their coupons (`capturePromotions.ts`, step 11). A
+ * gift card is read as a product is, and written under `giftcards`.
+ *
+ * What the store already had and nothing captured names is left out: the store's Default set and
+ * default source, Commerce's own attributes, products the pack did not make. Reads only.
+ *
+ * @module features/data-installer/services/demoBuilderEngine/capture
+ */
+
+import { STORE_CONFIG_KIND } from '../datapackCatalog';
+import { captureB2b } from './captureB2b';
+import { capturePromotions } from './capturePromotions';
+import type { CreatedObject } from './installRecord';
+import { type KindContext, segment } from './kindContext';
+import { ancestorIds, attributePackForm, categoryPackForm, productPackForm } from './packForm';
+import { packRootOf } from './packRoot';
+import { withPackSwatch } from './swatchCarry';
+import { GIFT_CARD_KIND } from './productKinds';
+import { type ProductLookups, type StoreCategory, productLookups } from './productLookups';
+import { captureSettings } from './storeConfigKind';
+import { knowingSkus, onceInventory, productsOf, readBySku, readCopies } from './storeCopies';
+import type { CommerceProduct, CommerceSetAttribute } from '@/types/commerceWire';
+
+/** The set and the source every store has, which a pack never carries (export spec §1). */
+const DEFAULT_SET = 'Default';
+const DEFAULT_SOURCE = 'default';
+const PRODUCT_ENTITY_TYPE = 4;
+
+/** Children before the products that name them, as the export sorts them (§3). */
+const TYPE_ORDER = ['simple', 'virtual', 'downloadable', 'configurable', 'bundle', 'grouped'];
+
+/** What a capture read: the new version's rows by kind, and how many of each. */
+export interface CaptureResult {
+    items: Record<string, unknown>;
+    counts: Record<string, number>;
+    /** Each id kept because the store could not name it, as "category 57", once each (step 14). */
+    unnamed: string[];
+    /**
+     * The lookups the capture read through, each answer kept: the record's rebase reads its
+     * categories, options and sets through them rather than ask the store again (`rebaseRecord`).
+     */
+    lookups: ProductLookups;
+}
+
+const idsOf = (created: readonly CreatedObject[], kind: string): string[] => created.filter((o) => o.kind === kind).map((o) => o.id);
+
+function typeRank(product: CommerceProduct): number {
+    const rank = TYPE_ORDER.indexOf(product.type_id ?? '');
+    return rank < 0 ? TYPE_ORDER.length : rank;
+}
+
+/** The categories a product sits in, by id, from its links and its `category_ids`. */
+function linkedCategories(product: CommerceProduct): string[] {
+    const links = (product.extension_attributes?.category_links ?? []).map((l) => String(l.category_id));
+    const listed = product.custom_attributes?.find((a) => a.attribute_code === 'category_ids')?.value;
+    return [...links, ...(Array.isArray(listed) ? listed.map(String) : [])];
+}
+
+/** The root a category hangs from: the second id in its path. */
+const rootOf = (category: StoreCategory): string | undefined => (category.path ?? '').split('/').filter(Boolean)[1];
+
+async function captureCategories(lk: ProductLookups, recorded: string[], linked: string[], storeRoot: number, packRoot?: Row): Promise<{ records?: unknown; count: number }> {
+    const wanted = new Set<string>();
+    let root: string | undefined;
+    for (const id of [...recorded, ...linked]) {
+        const category = await lk.category(id);
+        if (!category) continue;
+        // The pack's root is the root of what this engine made; else the store's own.
+        root ??= recorded.includes(id) ? rootOf(category) : undefined;
+        for (const each of [...ancestorIds(category), String(category.id)]) wanted.add(each);
+    }
+    root ??= String(storeRoot);
+    const rows: Array<{ depth: number; row: { category: Row } }> = [];
+    for (const id of wanted) {
+        const category = await lk.category(id);
+        if (!category || String(category.id) === root || rootOf(category) !== root) continue;
+        rows.push({ depth: (category.path ?? '').split('/').length, row: await categoryPackForm(lk, category) });
+    }
+    if (rows.length === 0) return { count: 0 };
+    const categories = rows.sort((a, b) => a.depth - b.depth).map((r) => r.row);
+    const rootRow = await rootRowOf(lk, root, recorded, String(storeRoot), packRoot);
+    return { records: { ...(rootRow ? { root_category: rootRow } : {}), categories: rootRow ? renamedTop(categories, String(rootRow.name)) : categories }, count: categories.length };
+}
+
+/**
+ * The pack's root row: the root this engine made, as it is now; else, when the installed version
+ * has a root of its own, that root (step 12); else none, the paths naming the store's root.
+ */
+async function rootRowOf(lk: ProductLookups, root: string, recorded: string[], storeRoot: string, packRoot: Row | undefined): Promise<Row | undefined> {
+    const own = root !== storeRoot || recorded.includes(root) ? await lk.category(root) : undefined;
+    if (own) return (({ path: _path, ...fields }) => fields)((await categoryPackForm(lk, own)).category);
+    if (!packRoot) return undefined;
+    const { path: _path, ...fields } = packRoot;
+    return fields;
+}
+
+/** Each path started with the pack root's name in place of the store root's it was read under. */
+function renamedTop(rows: Array<{ category: Row }>, rootName: string): Array<{ category: Row }> {
+    return rows.map(({ category }) => ({ category: { ...category, path: [rootName, ...String(category.path ?? '').split('/').slice(1)].join('/') } }));
+}
+
+/**
+ * The user-defined attributes named, with their options; Commerce's own are every store's. A swatch
+ * keeps the installed version's type and colours, which the store cannot answer (`swatchCarry.ts`).
+ */
+async function captureAttributes(lk: ProductLookups, codes: Set<string>, installed: unknown): Promise<{ rows: unknown[]; codes: Set<string> }> {
+    const packRows = new Map(rowsOf(installed).map((row) => [fieldOf(row, 'attribute', 'attribute_code'), row]));
+    const rows: unknown[] = [];
+    const kept = new Set<string>();
+    for (const code of codes) {
+        const attribute = await lk.attribute(code).catch(() => undefined);
+        if (!attribute?.is_user_defined) continue;
+        rows.push(withPackSwatch(attributePackForm({ attribute_code: code, ...attribute }), packRows.get(code)));
+        kept.add(code);
+    }
+    return { rows, codes: kept };
+}
+
+/** Every attribute code a captured product carries, its configurable options' included. */
+async function attributeCodes(lk: ProductLookups, products: readonly CommerceProduct[], created: readonly CreatedObject[]): Promise<Set<string>> {
+    const codes = new Set<string>([...idsOf(created, 'product_attributes'), ...idsOf(created, 'attribute_options').map((id) => id.split('/')[0])]);
+    for (const product of products) {
+        for (const attr of product.custom_attributes ?? []) codes.add(attr.attribute_code);
+        for (const option of product.extension_attributes?.configurable_product_options ?? []) {
+            const code = await lk.attributeCode(option.attribute_id).catch(() => undefined);
+            if (code) codes.add(code);
+        }
+    }
+    return codes;
+}
+
+/** The sets named, but Default, and each captured attribute's place in every set named. */
+async function captureSets(ctx: KindContext, lk: ProductLookups, setIds: Set<string>, codes: Set<string>): Promise<{ sets: unknown[]; assignments: unknown[] }> {
+    const sets: unknown[] = [];
+    const assignments: unknown[] = [];
+    for (const setId of setIds) {
+        const name = await lk.setName(setId);
+        if (name === undefined) continue;
+        if (name !== DEFAULT_SET) {
+            sets.push({ attributeSet: { attribute_set_name: name, entity_type_id: PRODUCT_ENTITY_TYPE, sort_order: 0 }, skeletonId: PRODUCT_ENTITY_TYPE });
+        }
+        const inSet = ((await ctx.get(`products/attribute-sets/${segment(setId)}/attributes`)) ?? []) as CommerceSetAttribute[];
+        for (const attr of inSet) {
+            if (attr.attribute_code && codes.has(attr.attribute_code)) assignments.push({ attributeSetId: name, attributeCode: attr.attribute_code });
+        }
+    }
+    return { sets, assignments };
+}
+
+interface SourceItem {
+    sku: string;
+    source_code: string;
+    quantity?: number;
+    status?: number;
+}
+
+/** Quantities of the captured products, and the warehouses that hold them, the pack's own. */
+async function captureInventory(ctx: KindContext, lk: ProductLookups, skus: string[], created: readonly CreatedObject[]): Promise<Record<string, unknown>> {
+    const inventory = onceInventory(ctx);
+    const items = (await readBySku<SourceItem>(ctx, 'inventory/source-items', skus)).map(({ sku, source_code, quantity, status }) => ({ sku, source_code, quantity: quantity ?? 0, status: status ?? 0 }));
+    const sourceCodes = new Set([...idsOf(created, 'sources'), ...items.map((i) => i.source_code)].filter((code) => code !== DEFAULT_SOURCE));
+    const as = (kind: string, ids: Iterable<string>) => [...ids].map((id): CreatedObject => ({ kind, id }));
+    const sources = [...(await readCopies(ctx, lk, 'sources', as('sources', sourceCodes), inventory)).values()];
+    const stocks = [...(await readCopies(ctx, lk, 'stocks', as('stocks', idsOf(created, 'stocks')), inventory)).values()];
+    const links = [...(await readCopies(ctx, lk, 'stock_source_links', as('stock_source_links', idsOf(created, 'stock_source_links')), inventory)).values()];
+    return {
+        ...(stocks.length > 0 ? { stocks: { stocks } } : {}),
+        ...(sources.length > 0 ? { sources: { sources } } : {}),
+        ...(links.length > 0 ? { stock_source_links: { stockSourceLinks: links } } : {}),
+        ...(items.length > 0 ? { source_items: { sourceItems: items } } : {}),
+    };
+}
+
+const countOf = (records: unknown): number => {
+    if (Array.isArray(records)) return records.length;
+    const inner = Object.values((records ?? {}) as Record<string, unknown>).find(Array.isArray);
+    return Array.isArray(inner) ? inner.length : 0;
+};
+
+type Row = Record<string, unknown>;
+const rowsOf = (records: unknown): Row[] => (Array.isArray(records) ? (records as Row[]) : []);
+const fieldOf = (row: Row, outer: string, inner: string): string | undefined => {
+    const value = (row[outer] as Row | undefined)?.[inner];
+    return typeof value === 'string' && value !== '' ? value : undefined;
+};
+
+/** The url keys of the categories a capture took. */
+function categoryUrlKeys(records: unknown): Set<string> {
+    const rows = ((records as { categories?: Array<{ category: { custom_attributes?: Array<{ attribute_code: string; value: unknown }> } }> } | undefined)?.categories ?? []);
+    return new Set(rows.map((r) => r.category.custom_attributes?.find((a) => a.attribute_code === 'url_key')?.value).filter((v): v is string => typeof v === 'string'));
+}
+
+/** What the installed version itself names, beside what the record lists. */
+export interface InstalledNames {
+    skus: string[];
+    /** The SKUs of its gift cards (step 11), written back under `giftcards`. */
+    giftCards: string[];
+    attributeCodes: string[];
+    setNames: string[];
+}
+
+/** The SKUs, attribute codes and set names the installed version's own rows hold. */
+export function installedNames(installed: Record<string, unknown>): InstalledNames {
+    const pick = (kind: string, outer: string, inner: string) => rowsOf(installed[kind]).map((r) => fieldOf(r, outer, inner)).filter((v): v is string => v !== undefined);
+    return {
+        skus: pick('products', 'product', 'sku'),
+        giftCards: pick(GIFT_CARD_KIND, 'product', 'sku'),
+        attributeCodes: pick('product_attributes', 'attribute', 'attribute_code'),
+        setNames: pick('attribute_sets', 'attributeSet', 'attribute_set_name'),
+    };
+}
+
+/** One product per SKU as the store spells it, whichever list asked for it first. */
+function uniqueBySku(products: CommerceProduct[]): CommerceProduct[] {
+    const seen = new Map<string, CommerceProduct>();
+    for (const product of products) if (!seen.has(product.sku)) seen.set(product.sku, product);
+    return [...seen.values()];
+}
+
+/** The ids of the sets the installed version names, those the store has. */
+async function namedSetIds(lk: ProductLookups, names: string[]): Promise<string[]> {
+    const ids = await Promise.all(names.map((name) => lk.setId(name).then(String, () => undefined)));
+    return ids.filter((id): id is string => id !== undefined);
+}
+
+/**
+ * The reads a save makes, in order, each as the data types it reads: what the progress window
+ * counts through (`phaseLine`), as an install counts through its kinds (owner, 2026-11-04).
+ */
+export const CAPTURE_PHASES: readonly (readonly string[])[] = [
+    ['products', GIFT_CARD_KIND],
+    ['categories'],
+    ['product_attributes'],
+    ['attribute_sets'],
+    ['source_items'],
+    ['customer_groups', 'customers', 'b2b_companies', 'b2b_shared_catalogs'],
+    ['cart_rules'],
+    [STORE_CONFIG_KIND],
+];
+
+/**
+ * Read back what the install record lists and what the installed version names, with what they
+ * need, as a new version's rows.
+ *
+ * @param ctx - read access to the store; `session.rootCategory` is the install target's root
+ * @param created - what the install record lists
+ * @param installed - the installed version's own rows, by kind
+ * @param onPhase - told as each of `CAPTURE_PHASES` starts, by its place in the list
+ * @param known - products already read whole (a save's read of the website, walk F90); only the
+ *   SKUs not among them are read
+ */
+export async function capturePack(
+    ctx: KindContext,
+    created: readonly CreatedObject[],
+    installed: Record<string, unknown> = {},
+    onPhase: (at: number) => void = () => undefined,
+    known: readonly CommerceProduct[] = [],
+): Promise<CaptureResult> {
+    const unnamed = new Set<string>();
+    const lk: ProductLookups = { ...productLookups(ctx), unnamed: (what, id) => void unnamed.add(`${what} ${id}`) };
+    const names = installedNames(installed);
+    const giftCards = new Set([...idsOf(created, GIFT_CARD_KIND), ...names.giftCards].map((sku) => sku.toLowerCase()));
+    const skus = [...new Set([...idsOf(created, 'products'), ...names.skus, ...idsOf(created, GIFT_CARD_KIND), ...names.giftCards])];
+    onPhase(0);
+    const started = Date.now();
+    const products = uniqueBySku(await productsOf(ctx, skus, known)).sort((a, b) => typeRank(a) - typeRank(b));
+    // Its two halves timed apart (walk F87): reading the products, and turning each into its row.
+    ctx.log(`capture: read ${products.length} products in ${Date.now() - started} ms`);
+    // A gift card's set, categories and quantities are captured with the products'; its row goes under `giftcards`.
+    const isGiftCard = (p: CommerceProduct) => giftCards.has(p.sku.toLowerCase());
+    // A configurable's children named from the products just read, not one request each (`knowingSkus`).
+    const named = knowingSkus(lk, products);
+    const productRows = await Promise.all(products.filter((p) => !isGiftCard(p)).map((p) => productPackForm(named, p)));
+    const giftCardRows = await Promise.all(products.filter(isGiftCard).map((p) => productPackForm(named, p)));
+    ctx.log(`capture: made their rows by ${Date.now() - started} ms`);
+    onPhase(1);
+    const categories = await captureCategories(lk, idsOf(created, 'categories'), products.flatMap(linkedCategories), ctx.session.rootCategory.id, packRootOf(installed.categories));
+    onPhase(2);
+    const codes = await attributeCodes(lk, products, created);
+    for (const code of names.attributeCodes) codes.add(code);
+    const attributes = await captureAttributes(lk, codes, installed.product_attributes);
+    onPhase(3);
+    const setIds = new Set(
+        [
+            ...idsOf(created, 'attribute_sets'),
+            ...idsOf(created, 'attribute_assign_to_set').map((id) => id.split('/')[0]),
+            ...products.map((p) => String(p.attribute_set_id ?? '')),
+            ...(await namedSetIds(lk, names.setNames)),
+        ].filter(Boolean),
+    );
+    const { sets, assignments } = await captureSets(ctx, lk, setIds, attributes.codes);
+    onPhase(4);
+    const inventory = await captureInventory(ctx, lk, products.map((p) => p.sku), created);
+    onPhase(5);
+    // Customers, groups, companies, catalogs and what is assigned to them (step 08).
+    const b2b = await captureB2b(ctx, lk, created, installed, {
+        skus: products.map((p) => p.sku),
+        categoryKeys: categoryUrlKeys(categories.records),
+        tierGroups: products.flatMap((p) => (p.tier_prices ?? []).map((t) => t.customer_group_id)),
+    });
+    onPhase(6);
+    // Cart rules and their coupons (step 11).
+    const promotions = await capturePromotions(ctx, lk, created, installed);
+    onPhase(7);
+    // Store configuration at its values now, each setting at its own scope (step 09).
+    const settings = await captureSettings(ctx.get, created, installed, ctx.session.websiteCode);
+    const items: Record<string, unknown> = {
+        ...(sets.length > 0 ? { attribute_sets: sets } : {}),
+        ...(attributes.rows.length > 0 ? { product_attributes: attributes.rows } : {}),
+        ...(assignments.length > 0 ? { attribute_assign_to_set: assignments } : {}),
+        ...(categories.records ? { categories: categories.records } : {}),
+        ...(productRows.length > 0 ? { products: productRows } : {}),
+        ...(giftCardRows.length > 0 ? { [GIFT_CARD_KIND]: giftCardRows } : {}),
+        ...inventory,
+        ...b2b,
+        ...promotions,
+        ...settings,
+    };
+    const counts = Object.fromEntries(Object.entries(items).map(([kind, records]) => [kind, kind === 'categories' ? categories.count : countOf(records)]));
+    return { items, counts, unnamed: [...unnamed], lookups: lk };
+}
+

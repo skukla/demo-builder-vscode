@@ -17,6 +17,8 @@ import '@/core/ui/styles/index.css';
 import '@/core/ui/styles/vscode-theme.css';
 import '@/core/ui/styles/wizard.css';
 import '@/core/ui/styles/utilities.css';
+// Every enabled button shows the hand on hover, Spectrum's included.
+import '@/core/ui/styles/interaction.css';
 // .datapack-* rules, moved out of utilities.css by the CSS migration.
 // The wizard and the data installer both render a component using them; kept
 // separate from data-installer.css so the wizard does not drag in that
@@ -26,6 +28,10 @@ import '@/features/data-installer/ui/styles/datapack.css';
 // migration (.rptc/plans/css-architecture-migration). The wizard is the only
 // entry whose import graph reaches PrerequisitesStep.
 import '@/features/prerequisites/ui/styles/prerequisites.css';
+// The step bar Prerequisites draws (`StepProgressBar`).
+import '@/core/ui/styles/step-progress.css';
+// Prerequisites' box of tiles (`.step-tiles`, `.step-tile`).
+import '@/core/ui/styles/step-tiles.css';
 // .brand-* and .expandable-* rules, moved out of utilities.css by the CSS
 // migration. They share a sheet because `.expandable-brand-card` IS a brand card,
 // not because they could not be separated — the refusal that forced them to move
@@ -73,8 +79,12 @@ import '../styles/build-areas.css';
 import '@/core/ui/styles/inline-controls.css';
 // The shared UI vocabulary — 19 small families. Seven of the eight entries.
 import '@/core/ui/styles/shared-ui.css';
+// `CardActionsMenu`'s labelled "More ▾" trigger, wherever the menu renders.
+import '@/core/ui/styles/menu-trigger.css';
 // .icon-* — the icon-above-label pattern.
 import '@/core/ui/styles/icon-label.css';
+// A scrolling list's fade: the Updates window, the batch window, the API picker (ADR-017 §6).
+import '@/core/ui/styles/scroll-fade.css';
 import type { WizardInitialData } from '@/types/webviewPayloads';
 
 // Get root element

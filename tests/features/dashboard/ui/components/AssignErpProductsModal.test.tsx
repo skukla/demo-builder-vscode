@@ -29,7 +29,7 @@ import type { ErpAssignOptions, ErpAssignOptionsResult, ErpAssignPreview } from 
 const TARGET = { id: 'erp-integration', erp: 'demo-erp-2', name: 'Accuform ERP' };
 
 /**
- * Four products: two Justrite's by the catch-all (one a sign, one a cabinet), one already
+ * Four products: two Tailspin's by the catch-all (one a sign, one a cabinet), one already
  * Accuform's, and one in an attribute set without erp_owner.
  */
 const STORE: ErpAssignOptions = {
@@ -40,16 +40,16 @@ const STORE: ErpAssignOptions = {
         { value: '7', label: 'Signs › Exit Signs' },
         { value: '8', label: 'Cabinets › Flammables' },
     ],
-    website: 'Justrite Website',
+    website: 'Tailspin Website',
     setsWithoutOwner: [{ id: 9, name: 'Gear', products: 1 }],
     products: [
         { sku: 'ACC-1', name: 'Exit sign', attributeSetId: 4, categoryIds: ['7'], brand: 'Accuform', owner: '' },
-        { sku: 'CAB-30', name: 'Safety cabinet', attributeSetId: 4, categoryIds: ['8'], brand: 'Justrite', owner: '' },
+        { sku: 'CAB-30', name: 'Safety cabinet', attributeSetId: 4, categoryIds: ['8'], brand: 'Tailspin', owner: '' },
         { sku: 'ACC-3', name: 'Floor sign', attributeSetId: 4, categoryIds: ['7'], brand: 'Accuform', owner: 'accuform' },
         { sku: 'ACC-9', name: 'Gear tag', attributeSetId: 9, categoryIds: ['7'], brand: 'Accuform', owner: '' },
     ],
-    owners: { 'ACC-1': ['justrite'], 'CAB-30': ['justrite'], 'ACC-3': ['accuform'], 'ACC-9': ['justrite'] },
-    names: { justrite: 'Justrite ERP', accuform: 'Accuform ERP' },
+    owners: { 'ACC-1': ['tailspin'], 'CAB-30': ['tailspin'], 'ACC-3': ['accuform'], 'ACC-9': ['tailspin'] },
+    names: { tailspin: 'Tailspin ERP', accuform: 'Accuform ERP' },
 };
 
 function answers(data: ErpAssignOptions): ErpAssignOptionsResult {
@@ -118,8 +118,8 @@ describe('AssignErpProductsModal', () => {
         expect(screen.queryByText(/erp_owner=/)).toBeNull();
         expect(screen.getAllByRole('columnheader').map((heading) => heading.textContent).filter(Boolean)).toStrictEqual(['SKU', 'Name', 'Category', 'Owner']);
         expect(shownSkus()).toEqual(['ACC-1', 'ACC-3', 'ACC-9', 'CAB-30']);
-        expect(cells('CAB-30')).toStrictEqual(['CAB-30', 'Safety cabinet', 'Flammables', 'Justrite ERP']);
-        expect(screen.getByText('4 products on Justrite Website')).toBeInTheDocument();
+        expect(cells('CAB-30')).toStrictEqual(['CAB-30', 'Safety cabinet', 'Flammables', 'Tailspin ERP']);
+        expect(screen.getByText('4 products on Tailspin Website')).toBeInTheDocument();
         // Nothing selected: nothing to show or clear yet.
         expect(screen.queryByRole('button', { name: LIST_COPY.selectedOnly })).toBeNull();
         expect(screen.queryByRole('button', { name: LIST_COPY.clear })).toBeNull();
@@ -160,9 +160,9 @@ describe('AssignErpProductsModal', () => {
         await open();
         filterBy(LIST_COPY.category, 'Signs');
         expect(shownSkus()).toEqual(['ACC-1', 'ACC-3', 'ACC-9']);
-        filterBy(LIST_COPY.owner, 'justrite');
+        filterBy(LIST_COPY.owner, 'tailspin');
         expect(shownSkus()).toEqual(['ACC-1', 'ACC-9']);
-        expect(screen.getByText('2 of 4 products on Justrite Website')).toBeInTheDocument();
+        expect(screen.getByText('2 of 4 products on Tailspin Website')).toBeInTheDocument();
         filterBy(LIST_COPY.owner, 'none');
         expect(screen.getByText(LIST_COPY.nothing)).toBeInTheDocument();
     });
@@ -171,8 +171,8 @@ describe('AssignErpProductsModal', () => {
         const { onAssign } = await open();
         pick('ACC-1');
         pick('CAB-30');
-        expect(screen.getByTestId('assign-preview')).toHaveTextContent('2 selected, all from Justrite ERP.');
-        fireEvent.click(screen.getByRole('button', { name: 'Assign 2 products' }));
+        expect(screen.getByTestId('assign-preview')).toHaveTextContent('2 selected, all from Tailspin ERP.');
+        fireEvent.click(screen.getByRole('button', { name: 'Assign 2 Products' }));
         expect(onAssign).toHaveBeenCalledWith(TARGET, { by: 'skus', skus: ['ACC-1', 'CAB-30'] });
     });
 
@@ -185,7 +185,7 @@ describe('AssignErpProductsModal', () => {
         filterBy(LIST_COPY.category, 'any');
         fireEvent.click(screen.getByRole('button', { name: LIST_COPY.selectedOnly }));
         expect(shownSkus()).toEqual(['ACC-1', 'CAB-30']);
-        expect(screen.getByRole('button', { name: 'Assign 2 products' })).not.toHaveAttribute('aria-disabled', 'true');
+        expect(screen.getByRole('button', { name: 'Assign 2 Products' })).not.toHaveAttribute('aria-disabled', 'true');
         fireEvent.click(screen.getByRole('button', { name: LIST_COPY.clear }));
         expect(screen.getByRole('button', { name: ASSIGN_COPY.actionIdle })).toHaveAttribute('aria-disabled', 'true');
     });
@@ -195,7 +195,7 @@ describe('AssignErpProductsModal', () => {
         filterBy(LIST_COPY.category, 'Signs');
         // ACC-3 is already Accuform's and ACC-9 cannot be tagged: one of three is open.
         fireEvent.click(screen.getByRole('checkbox', { name: 'Select All' }));
-        expect(screen.getByRole('button', { name: 'Assign 1 product' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Assign 1 Product' })).toBeInTheDocument();
         pick('ACC-1');
         expect(screen.getByRole('button', { name: ASSIGN_COPY.actionIdle })).toHaveAttribute('aria-disabled', 'true');
     });
@@ -226,16 +226,16 @@ describe('AssignErpProductsModal', () => {
     it('assigns to the catch-all ERP: the untagged are its own, a tagged one moves to it', async () => {
         const catchAll: ErpAssignOptions = {
             ...STORE,
-            erp: { id: 'demo-erp', name: 'Justrite ERP', listId: 'justrite' },
+            erp: { id: 'demo-erp', name: 'Tailspin ERP', listId: 'tailspin' },
             ownerValue: '',
             setsWithoutOwner: [],
         };
         const { onAssign } = await open(catchAll);
         expect(row('ACC-1')).toHaveAttribute('aria-disabled', 'true');
-        expect(cells('ACC-1')[3]).toBe('Justrite ERP');
+        expect(cells('ACC-1')[3]).toBe('Tailspin ERP');
         pick('ACC-3');
         expect(screen.getByTestId('assign-preview')).toHaveTextContent('1 selected, from Accuform ERP.');
-        fireEvent.click(screen.getByRole('button', { name: 'Assign 1 product' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Assign 1 Product' }));
         expect(onAssign).toHaveBeenCalledWith({ ...TARGET }, { by: 'skus', skus: ['ACC-3'] });
     });
 
@@ -248,7 +248,7 @@ describe('AssignErpProductsModal', () => {
         expect(cells('ACC-3')[3]).toBe('Accuform ERP');
         // Greyed: Spectrum draws a disabled row like the rest, so its text carries the grey.
         expect(within(row('ACC-3')).getByText('Accuform ERP')).toHaveClass('text-gray-500');
-        expect(within(row('ACC-1')).getByText('Justrite ERP')).not.toHaveClass('text-gray-500');
+        expect(within(row('ACC-1')).getByText('Tailspin ERP')).not.toHaveClass('text-gray-500');
         expect(row('ACC-9')).toHaveAttribute('aria-disabled', 'true');
         expect(row('ACC-9')).toHaveTextContent(LIST_COPY.blocked);
         // A click on a locked row changes nothing.
@@ -258,15 +258,21 @@ describe('AssignErpProductsModal', () => {
 
     it('names the attribute sets without erp_owner and offers the fix', async () => {
         const { onAddSets } = await open();
-        expect(screen.getByText(ASSIGN_COPY.setsBody('Gear (1 product)'))).toBeInTheDocument();
+        // A warning note over the list, not a box, with its fix beside it. Orange, so it is not
+        // missed, and one short line, so the colour stays simple (owner, 2026-11-02).
+        expect(screen.getByTestId('assign-sets-note')).toHaveTextContent(ASSIGN_COPY.setsBody('Gear (1 product)'));
+        expect(screen.getByTestId('assign-sets-note')).toHaveClass('dialog-problem', 'text-notice');
         fireEvent.click(screen.getByRole('button', { name: ASSIGN_COPY.setsAction }));
         expect(onAddSets).toHaveBeenCalledWith('erp-integration');
     });
 
     it("says why nothing can be assigned to an ERP whose rule is not erp_owner, and shows no list", async () => {
-        const refusal = 'Justrite ERP owns every product no other ERP claims, not the products tagged with erp_owner.';
+        const refusal = 'Tailspin ERP owns every product no other ERP claims, not the products tagged with erp_owner.';
         await open({ ...STORE, ownerValue: undefined, refusal });
-        expect(screen.getByText(ASSIGN_COPY.nothingToAssign('Accuform ERP'))).toBeInTheDocument();
+        // Walk F222: the window's title, the outcome under the large amber mark.
+        expect(screen.getByRole('heading')).toHaveTextContent(ASSIGN_COPY.title('Accuform ERP'));
+        expect(screen.getByText('Nothing to Assign')).toHaveClass('result-outcome');
+        expect(document.querySelector('.result-mark')).toHaveAttribute('data-status', 'warning');
         expect(screen.getByText(refusal)).toBeInTheDocument();
         expect(screen.queryByRole('grid', { name: 'Products' })).toBeNull();
         // Nothing to do here but close.
@@ -274,21 +280,22 @@ describe('AssignErpProductsModal', () => {
     });
 
     it("says the read's words when Commerce could not be read", async () => {
-        mockRequest.mockResolvedValue({ success: false, error: 'Adobe sign-in required to assign products.' });
+        mockRequest.mockResolvedValue({ success: false, error: 'Adobe Sign-In Required to assign products.' });
         render(
             <Provider theme={defaultTheme}>
                 <AssignErpProductsModal target={TARGET} onClose={jest.fn()} onAssign={jest.fn()} onAddSets={jest.fn()} />
             </Provider>,
         );
         await flush();
-        expect(screen.getByText('Adobe sign-in required to assign products.')).toBeInTheDocument();
-        expect(screen.getByText(ASSIGN_COPY.readFailed)).toBeInTheDocument();
+        expect(screen.getByText('Adobe Sign-In Required to assign products.')).toBeInTheDocument();
+        expect(screen.getByText(ASSIGN_COPY.readFailed)).toHaveClass('result-outcome');
+        expect(document.querySelector('.result-mark')).toHaveAttribute('data-status', 'error');
         expect(screen.queryByRole('button', { name: ASSIGN_COPY.actionIdle })).toBeNull();
     });
 
-    // The frame is there from the first moment, so nothing moves as the read lands (owner,
-    // 2026-10-19): the controls off, the reading where the rows will be.
-    it('opens on the whole frame while reading, the controls off and the reading under the headings', async () => {
+    // A wait shows nothing else (dialog design rules, owner 2026-11-01): no search, no filters, no
+    // table, no Assign, and no words, with the way out.
+    it('opens on the wait while reading, with nothing else on screen', async () => {
         mockRequest.mockReturnValue(new Promise(() => undefined));
         render(
             <Provider theme={defaultTheme}>
@@ -296,14 +303,36 @@ describe('AssignErpProductsModal', () => {
             </Provider>,
         );
         await flush();
-        const table = screen.getByRole('grid', { name: 'Products' });
-        expect(within(table).getByText(LIST_COPY.reading)).toBeInTheDocument();
-        expect(within(table).getAllByRole('columnheader').map((heading) => heading.textContent).filter(Boolean)).toStrictEqual(['SKU', 'Name', 'Category', 'Owner']);
-        expect(screen.getByTestId('spectrum-searchfield')).toBeDisabled();
-        expect(screen.getByRole('button', { name: LIST_COPY.category })).toBeDisabled();
-        expect(screen.getByRole('button', { name: LIST_COPY.owner })).toBeDisabled();
-        expect(screen.queryByText(/products on/)).toBeNull();
-        expect(screen.getByRole('button', { name: ASSIGN_COPY.actionIdle })).toHaveAttribute('aria-disabled', 'true');
+        expect(screen.getByRole('progressbar')).toBeInTheDocument();
+        expect(screen.queryByRole('grid', { name: 'Products' })).toBeNull();
+        expect(screen.queryByTestId('spectrum-searchfield')).toBeNull();
+        expect(screen.getByText('Reading products')).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: ASSIGN_COPY.actionIdle })).toBeNull();
+        // Cancel beside a commit, even while the commit waits (Phase 1b, the window rules).
+        expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+    });
+
+    // Phase 1b: the Steps layout. One wide window from the read to Assign, at one height (rule 14);
+    // a read with no list is its own small result window with Close.
+    it('is wide and large, holds its height once read, and offers Cancel beside Assign', async () => {
+        await open();
+        expect(screen.getByRole('dialog')).toHaveAttribute('data-size', 'L');
+        expect(screen.getByRole('dialog')).toHaveClass('modal-wide');
+        expect(screen.getByRole('dialog')).toHaveClass('is-locked');
+        expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Close' })).toBeNull();
+    });
+
+    it('shows nothing to assign as a small result window with Close', async () => {
+        await open({ ...STORE, ownerValue: undefined, refusal: 'Not by erp_owner.' });
+        expect(screen.getByRole('dialog')).toHaveAttribute('data-size', 'S');
+        expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
+    });
+
+    it('writes counts with separators, in the button and the list', () => {
+        expect(ASSIGN_COPY.action(1284)).toBe('Assign 1,284 Products');
+        expect(LIST_COPY.shown(1284, 1284)).toBe('1,284 products');
+        expect(LIST_COPY.shown(12, 1284, 'Tailspin Website')).toBe('12 of 1,284 products on Tailspin Website');
     });
 });
 
@@ -314,17 +343,17 @@ describe('selectionLine', () => {
         toWrite: 3,
         examples: ['A', 'B', 'C'],
         alreadyTagged: 0,
-        movedFrom: [{ name: 'Justrite ERP', count: 1 }],
+        movedFrom: [{ name: 'Tailspin ERP', count: 1 }],
         outsideSets: { count: 0, sets: [] },
         unknownSkus: [],
     };
 
     // One line; the title says where they go (owner, 2026-10-19).
     it('says how many and where they come from, in one line', () => {
-        expect(selectionLine({ ...PREVIEW, movedFrom: [{ name: 'Justrite ERP', count: 3 }] })).toBe('3 selected, all from Justrite ERP.');
-        expect(selectionLine({ ...PREVIEW, toWrite: 1, movedFrom: [{ name: 'Justrite ERP', count: 1 }] })).toBe('1 selected, from Justrite ERP.');
-        expect(selectionLine(PREVIEW)).toBe('3 selected: 1 from Justrite ERP, 2 from no ERP.');
-        expect(selectionLine({ ...PREVIEW, movedFrom: [{ name: 'Justrite ERP', count: 2 }, { name: 'Acme ERP', count: 1 }] })).toBe('3 selected: 2 from Justrite ERP, 1 from Acme ERP.');
+        expect(selectionLine({ ...PREVIEW, movedFrom: [{ name: 'Tailspin ERP', count: 3 }] })).toBe('3 selected, all from Tailspin ERP.');
+        expect(selectionLine({ ...PREVIEW, toWrite: 1, movedFrom: [{ name: 'Tailspin ERP', count: 1 }] })).toBe('1 selected, from Tailspin ERP.');
+        expect(selectionLine(PREVIEW)).toBe('3 selected: 1 from Tailspin ERP, 2 from no ERP.');
+        expect(selectionLine({ ...PREVIEW, movedFrom: [{ name: 'Tailspin ERP', count: 2 }, { name: 'Acme ERP', count: 1 }] })).toBe('3 selected: 2 from Tailspin ERP, 1 from Acme ERP.');
     });
 
     it('says nothing when nothing would be written', () => {

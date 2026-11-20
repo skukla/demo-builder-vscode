@@ -24,6 +24,21 @@ into the wizard the way custom block libraries already are. `loadDemoPackages` a
 says it returns a Promise "to support future async loading scenarios (e.g., remote
 config)".
 
+## Where the list lives: the datapack store (owner, 2026-11-04)
+
+Decided from the [[PL-91]] audit (`.rptc/research/libraries-outside-the-extension/research.md`
+§8 question 1, §9): the list lives in Demo Builder's datapack store, not in a GitHub file. The
+store already answers "who may edit" (owner, Community, team visibility behind the IMS guard),
+keeps immutable versions and has the agent-tool pattern. A GitHub file would answer those from
+scratch, and the one-registry rule says not both. Still to build for either option: the cached
+copy for offline. Still to design: the document shape or route pair for demo entries in the
+store (not yet checked against its routes).
+
+This item is the external demo-package library. The audit found demo packages are pure data
+(13 fields, 2 code sites read a package id) and are already two-thirds outside the extension
+(an SC's added demos in `demoBuilder.demos.added`, a demo's description in its own repo). The
+team list is the missing third, merged into the Welcome grid exactly as added demos are.
+
 ## Why it waits
 
 Decided 2026-09-11: after [[EDS-13a]] and [[EDS-13b]] have shipped and real shared demos

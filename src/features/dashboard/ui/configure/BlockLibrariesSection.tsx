@@ -18,7 +18,6 @@
  */
 
 import React from 'react';
-import { ConfigSection } from '@/core/ui/components/forms/ConfigSection';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { BlockLibrariesStepContent } from '@/features/project-creation/ui/components/BlockLibrariesStepContent';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
@@ -40,15 +39,17 @@ function openCustomLibrarySettings(): void {
 }
 
 /**
- * Whether the project has any block library to show: one to tick, or a native
- * one shown locked. Decides both the rail item and the section body, so the
+ * Whether the project has any block library to show: one to tick, or one that
+ * comes with the storefront shown locked. Decides both the rail item and the section body, so the
  * rail never offers a tab that draws nothing.
  *
  * @param choices - what the extension offers this project, if it sent any
  */
 export function hasBlockLibraryChoices(choices: ConfigureBlockLibraryChoices | undefined): boolean {
     if (!choices) return false;
-    return choices.native.length + choices.available.length + choices.customDefaults.length > 0;
+    return (
+        choices.included.length + choices.native.length + choices.available.length + choices.customDefaults.length > 0
+    );
 }
 
 /**
@@ -65,20 +66,21 @@ export function BlockLibrariesSection({
     onCustomLibraryToggle,
 }: BlockLibrariesSectionProps): React.ReactElement | null {
     if (!hasBlockLibraryChoices(choices)) return null;
-    const { native, available, customDefaults } = choices;
+    const { included, native, available, customDefaults } = choices;
 
     return (
-        <ConfigSection id="block-libraries" label="Block Libraries" showDivider={false}>
-            <BlockLibrariesStepContent
-                nativeBlockLibraries={native}
-                availableBlockLibraries={available}
-                selectedBlockLibraries={selectedBlockLibraries}
-                onBlockLibraryToggle={onBlockLibraryToggle}
-                customBlockLibraryDefaults={customDefaults}
-                customBlockLibraries={customBlockLibraries}
-                onCustomLibraryToggle={onCustomLibraryToggle}
-                onOpenCustomSettings={openCustomLibrarySettings}
-            />
-        </ConfigSection>
+        // The picker heads its own two groups (Block Libraries, Custom Block Libraries), as in
+        // the wizard: wrapped in a section here, the heading appeared twice (2026-11-05).
+        <BlockLibrariesStepContent
+            includedBlockLibraries={included}
+            nativeBlockLibraries={native}
+            availableBlockLibraries={available}
+            selectedBlockLibraries={selectedBlockLibraries}
+            onBlockLibraryToggle={onBlockLibraryToggle}
+            customBlockLibraryDefaults={customDefaults}
+            customBlockLibraries={customBlockLibraries}
+            onCustomLibraryToggle={onCustomLibraryToggle}
+            onOpenCustomSettings={openCustomLibrarySettings}
+        />
     );
 }

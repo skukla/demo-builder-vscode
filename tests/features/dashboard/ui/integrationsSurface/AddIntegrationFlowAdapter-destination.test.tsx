@@ -146,7 +146,7 @@ describe('AddIntegrationFlowAdapter — persisting a destination change', () => 
  * An add on a project with NO destination carries the one its own steps chose
  * (2026-10-15). The SC created "Kukla Commerce Demo" in the add's destination steps;
  * the add ran without it, and its workspace was made in the project cached from
- * earlier — Justrite's.
+ * earlier — Tailspin's.
  */
 describe('AddIntegrationFlowAdapter — an add carries a destination its steps chose', () => {
     function lastAdd(): Record<string, unknown> {

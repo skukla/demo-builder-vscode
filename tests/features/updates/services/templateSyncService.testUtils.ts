@@ -10,11 +10,13 @@
 
 import type { Project } from '@/types/base';
 import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
+import type { OverlayResolver } from '@/features/updates/services/thinLayerUpdate';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
 import { githubAccessFor } from '../../../helpers/githubAccessFake';
 import { createMockSecretStorage, githubTokenSecret } from '../../../helpers/secretStorageFake';
+import { installSiteFetch } from '../../../helpers/siteFetchFake';
 
 export const mockExecute = jest.fn();
 export const mockReadFile = jest.fn();
@@ -64,13 +66,14 @@ export function edsProject(metadataOverrides: Record<string, unknown> = {}): Pro
     });
 }
 
-export function service(logger = createMockLogger()): TemplateSyncService {
+export function service(logger = createMockLogger(), resolveOverlay?: OverlayResolver): TemplateSyncService {
     // The token is the one call each case steers (signed in, or not).
     const access = githubAccessFor(createMockSecretStorage(githubTokenSecret('gh-token')).secrets, logger);
     return new TemplateSyncService(
         { ...access, tokenService: { getToken: () => mockGetToken() } },
         logger,
         createMockCommandExecutor({ execute: (...a: unknown[]) => mockExecute(...a) }),
+        resolveOverlay,
     );
 }
 
@@ -130,6 +133,8 @@ export const pushed = (): boolean => gitCalls().some((c) => /git push/.test(c));
 /** The fakes' resting state: a token, a temp dir, both preserved files present. */
 export function resetFakes(): void {
     jest.clearAllMocks();
+    // A sync reads the patches release. Without this, that goes to GitHub.
+    installSiteFetch([]);
     mockGetToken.mockResolvedValue({ token: 'gh-token' });
     mockMkdtemp.mockResolvedValue(TEMP_DIR);
     mockMkdir.mockResolvedValue(undefined);

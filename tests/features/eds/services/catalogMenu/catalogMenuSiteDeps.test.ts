@@ -23,14 +23,14 @@ import { createMockProject } from '../../../../helpers/projectFake';
 import { createMockStateManager } from '../../../../helpers/stateManagerFake';
 
 const ACCS_ENDPOINT = 'https://na1-sandbox.api.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi/graphql';
-const TARGET = { daLiveOrg: 'skukla', daLiveSite: 'kukla-justrite', repoOwner: 'skukla', repoName: 'kukla-justrite' };
+const TARGET = { daLiveOrg: 'skukla', daLiveSite: 'kukla-tailspin', repoOwner: 'skukla', repoName: 'kukla-tailspin' };
 const CATEGORIES = [
     { id: '41', name: 'Safety Signs', level: 2, parentId: '2', urlPath: 'safety-signs' },
 ];
 
-function justrite(): Project {
+function tailspin(): Project {
     return createMockProject({
-        name: 'kukla-justrite',
+        name: 'kukla-tailspin',
         selectedStack: 'eds-accs',
         componentSelections: { backend: 'adobe-commerce-accs', frontend: COMPONENT_IDS.EDS_STOREFRONT },
         componentConfigs: {
@@ -52,7 +52,7 @@ function answers(...bodies: unknown[]): jest.Mock {
     return fetchImpl;
 }
 
-function build(fetchImpl: jest.Mock, getFileContent = jest.fn(), project = justrite()) {
+function build(fetchImpl: jest.Mock, getFileContent = jest.fn(), project = tailspin()) {
     const daLive = {
         readSource: jest.fn().mockResolvedValue({ status: 404, body: '', bytes: 0, truncated: false }),
         createSource: jest.fn().mockResolvedValue({ success: true, path: '/authored-category-pages.json' }),
@@ -111,7 +111,7 @@ describe('createCatalogMenuSite', () => {
 
         expect(await site.hasBlock()).toBe(true);
         expect(await site.hasBlock()).toBe(false);
-        expect(getFileContent).toHaveBeenCalledWith('skukla', 'kukla-justrite', CATALOG_MENU_BLOCK_FILE);
+        expect(getFileContent).toHaveBeenCalledWith('skukla', 'kukla-tailspin', CATALOG_MENU_BLOCK_FILE);
         expect(CATALOG_MENU_BLOCK_FILE).toBe('blocks/catalog-menu/catalog-menu.js');
     });
 
@@ -132,14 +132,14 @@ describe('createCatalogMenuSite', () => {
         expect(await site.menuLine()).toBe('shop');
         // A block too old to have the core file reads the old line too.
         expect(await site.menuLine()).toBe('shop');
-        expect(getFileContent).toHaveBeenCalledWith('skukla', 'kukla-justrite', CATALOG_MENU_CORE_FILE);
+        expect(getFileContent).toHaveBeenCalledWith('skukla', 'kukla-tailspin', CATALOG_MENU_CORE_FILE);
         expect(CATALOG_MENU_CORE_FILE).toBe('blocks/catalog-menu/catalog-menu-core.js');
     });
 
     it("reads and writes pages on the storefront's DA.live site", async () => {
         const { site, daLive } = build(answers());
         await site.pages.read('/nav');
-        expect(daLive.readSource).toHaveBeenCalledWith('skukla', 'kukla-justrite', 'nav.html', Number.POSITIVE_INFINITY);
+        expect(daLive.readSource).toHaveBeenCalledWith('skukla', 'kukla-tailspin', 'nav.html', Number.POSITIVE_INFINITY);
     });
 
     it("publishes a category page on the storefront's site, through the authenticated Helix path", async () => {
@@ -147,7 +147,7 @@ describe('createCatalogMenuSite', () => {
 
         await site.categoryPages.publish('/signs');
 
-        expect(helix.previewAndPublishPage).toHaveBeenCalledWith('skukla', 'kukla-justrite', '/signs');
+        expect(helix.previewAndPublishPage).toHaveBeenCalledWith('skukla', 'kukla-tailspin', '/signs');
     });
 
     it('writes the authored-pages sheet as a DA.live JSON sheet, then previews and publishes its .json path', async () => {
@@ -156,12 +156,12 @@ describe('createCatalogMenuSite', () => {
         await site.categoryPages.publishAuthoredSheet(['/apparel']);
 
         const [org, siteName, path, body, options] = daLive.createSource.mock.calls[0];
-        expect([org, siteName, path]).toEqual(['skukla', 'kukla-justrite', 'authored-category-pages.json']);
+        expect([org, siteName, path]).toEqual(['skukla', 'kukla-tailspin', 'authored-category-pages.json']);
         expect(JSON.parse(body).data.data).toEqual([{ path: '/apparel' }]);
         expect(options).toEqual({ overwrite: true, contentType: 'application/json' });
         expect(helix.previewAndPublishPage).toHaveBeenCalledWith(
             'skukla',
-            'kukla-justrite',
+            'kukla-tailspin',
             '/authored-category-pages.json',
         );
         expect(daLive.createSource.mock.invocationCallOrder[0]).toBeLessThan(
@@ -182,8 +182,8 @@ describe('createCatalogMenuSite', () => {
 
         await site.categoryPages.removeAuthoredSheet();
 
-        expect(helix.unpublishPage).toHaveBeenCalledWith('skukla', 'kukla-justrite', '/authored-category-pages.json');
-        expect(daLive.deleteSource).toHaveBeenCalledWith('skukla', 'kukla-justrite', 'authored-category-pages.json');
+        expect(helix.unpublishPage).toHaveBeenCalledWith('skukla', 'kukla-tailspin', '/authored-category-pages.json');
+        expect(daLive.deleteSource).toHaveBeenCalledWith('skukla', 'kukla-tailspin', 'authored-category-pages.json');
     });
 
     it('publishes at setup on ACCS, the backend product pages are published for', () => {
@@ -200,7 +200,7 @@ describe('createCatalogMenuSite', () => {
 
         const result = await site.categoryPages.remove(['/gloves']);
 
-        expect(helix.unpublishPages).toHaveBeenCalledWith('skukla', 'kukla-justrite', 'main', ['/gloves']);
+        expect(helix.unpublishPages).toHaveBeenCalledWith('skukla', 'kukla-tailspin', 'main', ['/gloves']);
         expect(result.status).toBe('removed');
     });
 

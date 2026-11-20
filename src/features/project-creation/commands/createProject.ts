@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { watchWizardSettings } from './wizardSettingsWatch';
 import { BundledPanelCommand } from '@/commands/bundledPanelCommand';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { swapWebviewSurface } from '@/core/base/swapWebviewSurface';
@@ -16,14 +17,14 @@ import { getEndpoint as getEndpointHelper } from '@/features/mesh/services/meshE
 // Handler utilities and handlers
 import { projectCreationHandlers } from '@/features/project-creation/handlers/ProjectCreationHandlerRegistry';
 import { formatGroupName as formatGroupNameHelper } from '@/features/project-creation/helpers/formatters';
-import { ADDED_DEMOS_SETTING, readAddedDemos } from '@/features/project-creation/services/addedDemoSettings';
+import { readAddedDemos } from '@/features/project-creation/services/addedDemoSettings';
+import { openCustomBlockLibrarySettings } from '@/features/project-creation/services/blockLibrarySettings';
 import { parseCustomBlockLibrarySettings } from '@/features/project-creation/services/customBlockLibraryUtils';
 import { WIZARD_WEBVIEW_ID } from '@/features/project-creation/wizardWebviewId';
 import { HandlerContext, SharedState } from '@/types/handlers';
 import { parseJSON } from '@/types/typeGuards';
 import type { ComponentSelection } from '@/types/webview';
-import type { BlockLibraryDefaultsUpdatedPayload, AddedDemosUpdatedPayload,
-    CustomBlockLibraryDefaultsUpdatedPayload, WizardInitialData } from '@/types/webviewPayloads';
+import type { WizardInitialData } from '@/types/webviewPayloads';
 import type { EditProjectConfig, ProjectSeed, WizardStepDefinition } from '@/types/wizard';
 
 /**
@@ -56,7 +57,7 @@ function formatComponentDefaults(defaults: ComponentSelection | null): string {
 }
 
 /** The confirm button when leaving an Edit that has changes for Configure. */
-const DISCARD_AND_OPEN = 'Discard and open';
+const DISCARD_AND_OPEN = 'Discard and Open';
 
 export class CreateProjectWebviewCommand extends BundledPanelCommand<WizardInitialData> {
     protected readonly bundleName = 'wizard';
@@ -218,9 +219,12 @@ export class CreateProjectWebviewCommand extends BundledPanelCommand<WizardIniti
     }
 
     protected getWebviewTitle(): string {
-        // editProject is set in execute() before the panel/loading state exist,
-        // so edit mode is identified from the first pixel (tab + loading header).
-        return this.editProject ? 'Edit Project' : 'Create Demo Project';
+        // editProject and importedSettings are set in execute() before the panel/loading state
+        // exist, so the mode is identified from the first pixel (tab + loading header). The words
+        // match the page's own title (getWizardTitle), walk F277.
+        if (this.editProject) return 'Edit Project';
+        if (this.importedSettings) return 'Import Project';
+        return 'Create Demo Project';
     }
 
     protected getLoadingHeader(): { title: string; subtitle?: string } {
@@ -407,13 +411,7 @@ export class CreateProjectWebviewCommand extends BundledPanelCommand<WizardIniti
         });
 
         // Open VS Code settings for custom block libraries
-        comm.on('open-block-library-settings', () => {
-            vscode.commands.executeCommand(
-                'workbench.action.openSettings',
-                'demoBuilder.blockLibraries.custom',
-            );
-            return { success: true };
-        });
+        comm.on('open-block-library-settings', openCustomBlockLibrarySettings);
 
         // Edit's line under the backend cards: the Commerce settings change in
         // Configure, so it links there, and Configure takes Edit's place rather than
@@ -454,29 +452,20 @@ export class CreateProjectWebviewCommand extends BundledPanelCommand<WizardIniti
             });
         }
 
-        // Listen for block library settings changes and propagate to webview
-        const configListener = vscode.workspace.onDidChangeConfiguration((e) => {
-            if (e.affectsConfiguration('demoBuilder.blockLibraries.custom')) {
-                const config = vscode.workspace.getConfiguration('demoBuilder');
-                const updated = parseCustomBlockLibrarySettings(
-                    config.get<string[]>('blockLibraries.custom', []),
+        this.disposables.add(watchWizardSettings((type, payload) => this.sendMessage(type, payload)));
+
+        // A sign-in or sign-out finished anywhere (a notification's Sign In, the palette)
+        // re-checks here, so the Sign In to Adobe step shows the real state (F303).
+        const auth = super.createHandlerContext(this.sharedState).authManager;
+        if (auth) {
+            const recheck = () => {
+                void this.createWizardHandlerContext().then((context) =>
+                    dispatchHandler(projectCreationHandlers, context, 'check-auth', undefined),
                 );
-                this.sendMessage('customBlockLibraryDefaultsUpdated', {
-                    customBlockLibraryDefaults: updated,
-                } satisfies CustomBlockLibraryDefaultsUpdatedPayload);
-            }
-            if (e.affectsConfiguration(`demoBuilder.${ADDED_DEMOS_SETTING}`)) {
-                this.sendMessage('addedDemosUpdated', {
-                    addedDemos: readAddedDemos(),
-                } satisfies AddedDemosUpdatedPayload);
-            }
-            if (e.affectsConfiguration('demoBuilder.blockLibraries.defaults')) {
-                const config = vscode.workspace.getConfiguration('demoBuilder');
-                const blockLibraryDefaults = config.get<string[]>('blockLibraries.defaults', []);
-                this.sendMessage('blockLibraryDefaultsUpdated', { blockLibraryDefaults } satisfies BlockLibraryDefaultsUpdatedPayload);
-            }
-        });
-        this.disposables.add(configListener);
+            };
+            this.disposables.add(auth.onDidSignIn(recheck));
+            this.disposables.add(auth.onDidSignOut(recheck));
+        }
     }
 
     /**

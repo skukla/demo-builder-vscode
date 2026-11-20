@@ -8,16 +8,18 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { ProjectActions } from './components/ProjectActionsMenu';
+import { ProjectsBatchModal } from './components/ProjectsBatchModal';
 import { UpdatesModal } from './components/UpdatesModal';
+import { useListBatch } from './hooks/useListBatch';
 import { useUpdatesModal } from './hooks/useUpdatesModal';
 import { ProjectsDashboard } from './ProjectsDashboard';
 import { OperationProgressModal } from '@/core/ui/components/feedback/OperationProgressModal';
 import { WebviewApp } from '@/core/ui/components/WebviewApp';
 import { useOperationRunner } from '@/core/ui/hooks/useOperationRunner';
+import { useRefreshPress } from '@/core/ui/hooks/useRefreshPress';
 import { useViewModePreference } from '@/core/ui/hooks/useViewModePreference';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import { COPY_SETTINGS_OPERATION_ID, deleteOperationId, resetOperationId } from '@/core/utils/operationIds';
-import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
+import { COPY_SETTINGS_OPERATION_ID, IMPORT_FILE_OPERATION_ID } from '@/core/utils/operationIds';
 import { sleep } from '@/core/utils/sleep';
 import type { Project } from '@/types/base';
 import type {
@@ -39,6 +41,8 @@ import '@/core/ui/styles/reset.css';
 import '@/core/ui/styles/tokens.css';
 import '@/core/ui/styles/index.css';
 import '@/core/ui/styles/utilities.css';
+// Every enabled button shows the hand on hover, Spectrum's included.
+import '@/core/ui/styles/interaction.css';
 // .project-card-* and .project-row-* rules, moved out of utilities.css by
 // the CSS migration. This is the ONLY entry whose graph reaches a component using
 // them — the family looked cross-cutting on a bare `project-` prefix match, which
@@ -46,8 +50,12 @@ import '@/core/ui/styles/utilities.css';
 import './styles/project-cards.css';
 // The Updates modal's project headings (PL-80). This entry alone draws it.
 import './styles/updates-modal.css';
+// Selection mode and the Reset Selected / Delete Selected window. This entry alone draws them.
+import './styles/projects-batch.css';
 // The shared UI vocabulary — 19 small families. Seven of the eight entries.
 import '@/core/ui/styles/shared-ui.css';
+// `CardActionsMenu`'s labelled "More ▾" trigger, wherever the menu renders.
+import '@/core/ui/styles/menu-trigger.css';
 // .db-* — the shared detail drawer.
 import '@/core/ui/styles/drawer.css';
 // The progress modal a reset narrates into is hosted here now (PL-59): a
@@ -64,7 +72,15 @@ import '@/core/ui/styles/checkbox-row.css';
 import '@/core/ui/styles/work-row.css';
 // SectionLabel and LeadText (ADR-017 §6).
 import '@/core/ui/styles/modal-text.css';
-import '@/core/ui/styles/disclosure-toggle.css';
+// A scrolling list's fade: the Updates window, the batch window, the API picker (ADR-017 §6).
+import '@/core/ui/styles/scroll-fade.css';
+// The step bar the Updates run draws (`StepProgressBar`).
+import '@/core/ui/styles/step-progress.css';
+// The Updates run's box of project tiles, as Prerequisites draws its tools (`.step-tiles`).
+import '@/core/ui/styles/step-tiles.css';
+// `.btn-compact`, the Prerequisites step's Install size, for the Updates run's Retry, Fix with AI
+// and Check Again.
+import '@/core/ui/styles/step-scaffold.css';
 
 // Local constant - webview cannot import TIMEOUTS from extension host
 // Equivalent to TIMEOUTS.PROJECT_STATE_PERSIST_DELAY in src/core/utils/timeoutConfig.ts
@@ -150,11 +166,6 @@ function ProjectsDashboardApp() {
             }
         });
 
-        // Subscribe to project deletion (refresh list)
-        const unsubscribeDeleted = webviewClient.onMessage('projectDeleted', () => {
-            fetchProjects(true);
-        });
-
         // Subscribe to demo state changes (start/stop)
         const unsubscribeDemoState = webviewClient.onMessage('demoStateChanged', (data) => {
             const typedData = data as DemoStateChangedPayload | undefined;
@@ -164,15 +175,17 @@ function ProjectsDashboardApp() {
         return () => {
             unsubscribeConfig();
             unsubscribeProjects();
-            unsubscribeDeleted();
             unsubscribeDemoState();
         };
     }, [fetchProjects, adoptViewMode]);
 
     // Handle refresh
+    // A pressed Refresh waits in the projects' place; a re-read after an operation keeps them (F214).
+    const { pressed: refreshPressed, markPressed } = useRefreshPress(isRefreshing);
     const handleRefresh = useCallback(() => {
+        markPressed();
         fetchProjects(true);
-    }, [fetchProjects]);
+    }, [fetchProjects, markPressed]);
 
     // Handle project selection. The optional `opts.forceNewWindow` rides along
     // when the user shift/cmd-clicked the tile — the backend opens the project
@@ -202,15 +215,6 @@ function ProjectsDashboardApp() {
         }
     }, []);
 
-    // Handle import from file
-    const handleImportFromFile = useCallback(async () => {
-        try {
-            await webviewClient.postMessage('importFromFile');
-            // File picker will show, then wizard opens - handled by extension
-        } catch (error) {
-            console.error('Failed to import from file:', error);
-        }
-    }, []);
 
     // Handle export project settings
     const handleExportProject = useCallback(async (project: Project) => {
@@ -224,13 +228,15 @@ function ProjectsDashboardApp() {
         }
     }, []);
 
-    // Both kebab actions that take minutes — delete and reset — narrate into this
-    // screen's one progress modal (PL-59).
+    // Copy from a project narrates into this screen's one progress modal (PL-59).
     const operations = useOperationRunner();
     const startOperation = operations.startWhenItBegins;
     // Check for Updates (PL-80): its list, and then its run, in the Updates modal.
-    const refreshAfterUpdates = useCallback(() => void fetchProjects(true), [fetchProjects]);
-    const updates = useUpdatesModal(refreshAfterUpdates);
+    const refreshList = useCallback(() => void fetchProjects(true), [fetchProjects]);
+    const updates = useUpdatesModal(refreshList);
+    // Reset and Delete, one project's from its card or several selected: one window, run row by row
+    // (owner, 2026-11-04; step-05 S2). The project dashboard's Delete arrives on it (S4).
+    const { batch, listBatch, onResetProject, onDeleteProject } = useListBatch(refreshList);
 
     // Copy from a project: the modal asks which one, then the wizard opens with
     // its settings (picker-to-modal).
@@ -239,32 +245,26 @@ function ProjectsDashboardApp() {
             id: COPY_SETTINGS_OPERATION_ID,
             name: 'settings',
             message: 'copyFromExisting',
-            title: 'Copy settings from a project',
-            failureTitle: "Couldn't copy the settings",
-            successTitle: 'Settings copied',
+            title: 'Copy Settings from a Project',
+            thing: 'Settings',
+            failureTitle: "Couldn't Copy the Settings",
+            successTitle: 'Settings Copied',
         });
     }, [startOperation]);
 
-    // Handle delete project — narrated in this screen's progress modal, which
-    // opens once the run reports: VS Code asks to confirm first, and for an EDS
-    // project it also asks which cloud resources to take with it (PL-59 R1).
-    const handleDeleteProject = useCallback(
-        (project: Project) => {
-            startOperation(
-                {
-                    id: deleteOperationId(project.name),
-                    name: project.name,
-                    message: 'deleteProject',
-                    title: `Deleting ${getProjectDisplayName(project)}`,
-                    failureTitle: `Couldn't delete ${getProjectDisplayName(project)}`,
-                    successTitle: `${getProjectDisplayName(project)} deleted`,
-                    payload: { projectPath: project.path },
-                },
-                () => fetchProjects(true),
-            );
-        },
-        [startOperation, fetchProjects],
-    );
+    // Import from File: the picker first, then the progress window once the import begins, or with
+    // the reason when it is refused (walk F241: it had sent the message and never read the answer).
+    const handleImportFromFile = useCallback(() => {
+        startOperation({
+            id: IMPORT_FILE_OPERATION_ID,
+            name: 'file',
+            message: 'importFromFile',
+            title: 'Import from File',
+            thing: 'Demo',
+            failureTitle: "Couldn't Import the File",
+            successTitle: 'Demo Imported',
+        });
+    }, [startOperation]);
 
     // Handle start demo
     const handleStartDemo = useCallback(
@@ -339,26 +339,6 @@ function ProjectsDashboardApp() {
             console.error('Failed to open admin panel:', error);
         }
     }, []);
-
-    // Handle reset project (all project types) — narrated in this screen's
-    // progress modal (PL-59 R1), which opens once the run starts reporting: VS
-    // Code confirms first, and may ask about sample data.
-    const handleResetProject = useCallback(
-        (project: Project) => {
-            startOperation({
-                id: resetOperationId(project.name),
-                name: project.name,
-                message: 'resetProject',
-                title: `Resetting ${getProjectDisplayName(project)}`,
-                failureTitle: `Couldn't reset ${getProjectDisplayName(project)}`,
-                successTitle: `${getProjectDisplayName(project)} reset`,
-                // The list must reflect what the reset changed; the modal closes
-                // on success, so the refresh rides the same moment.
-                payload: { projectPath: project.path },
-            }, () => fetchProjects(true));
-        },
-        [startOperation, fetchProjects],
-    );
 
     // Handle per-integration redeploy (one kebab item per redeployable keyed
     // integration; the id targets that integration only — ADR-011 D3 Step 04).
@@ -459,14 +439,14 @@ function ProjectsDashboardApp() {
             onOpenLiveSite: handleOpenLiveSite,
             onOpenDaLive: handleOpenDaLive,
             onOpenAdminPanel: handleOpenAdminPanel,
-            onResetProject: handleResetProject,
+            onResetProject,
             onOpenIntegrations: handleOpenIntegrations,
             onEdit: handleEditProject,
             onRenameSubmit: handleRenameSubmit,
             onExport: handleExportProject,
             onOpenAi: handleOpenAiForProject,
             onPinToggle: handlePinToggle,
-            onDelete: handleDeleteProject,
+            onDelete: onDeleteProject,
         }),
         [
             handleStartDemo,
@@ -475,14 +455,14 @@ function ProjectsDashboardApp() {
             handleOpenLiveSite,
             handleOpenDaLive,
             handleOpenAdminPanel,
-            handleResetProject,
+            onResetProject,
             handleOpenIntegrations,
             handleEditProject,
             handleRenameSubmit,
             handleExportProject,
             handleOpenAiForProject,
             handlePinToggle,
-            handleDeleteProject,
+            onDeleteProject,
         ],
     );
 
@@ -498,10 +478,12 @@ function ProjectsDashboardApp() {
             actions={projectActions}
             isLoading={isLoading}
             isRefreshing={isRefreshing}
+            refreshPressed={refreshPressed}
             onRefresh={handleRefresh}
             hasLoadedOnce={hasLoadedOnce}
             initialViewMode={viewMode}
             onViewModeOverride={chooseViewMode}
+            batch={listBatch}
         />
         <OperationProgressModal
             operation={operations.open}
@@ -509,6 +491,7 @@ function ProjectsDashboardApp() {
             onClose={operations.close}
         />
         <UpdatesModal controls={updates} />
+        <ProjectsBatchModal controls={batch} />
         </>
     );
 }

@@ -1,0 +1,353 @@
+library,block,example_page,used_on,use_empty,render_source,render_result
+Demo Team,accordion,docs,,unknown,example,loaded
+Demo Team,cards,docs,/citisignal-fr/experiments/test/index1,no,example,loaded
+Demo Team,carousel,docs,/,no,example,loaded
+Demo Team,columns,docs,/citisignal-fr/experiments/test/index1,no,example,loaded
+Demo Team,commerce-account-header,none,/citisignal-fr/customer/account,no,use,not found (redirected to /citisignal-fr/customer/login)
+Demo Team,commerce-account-sidebar,none,/citisignal-fr/customer/create-return,yes,use,loaded
+Demo Team,commerce-addresses,none,/citisignal-fr/customer/address,no,use,not found (redirected to /citisignal-fr/customer/login)
+Demo Team,commerce-cart,none,/cart,no,use,loaded
+Demo Team,commerce-checkout-success,none,,unknown,none,no preview source
+Demo Team,commerce-checkout,none,/citisignal-fr/checkout,yes,use,not found (redirected to /citisignal-fr/cart)
+Demo Team,commerce-confirm-account,none,/citisignal-fr/customer/account/confirm/,no,use,loaded
+Demo Team,commerce-create-account,none,/citisignal-fr/customer/create,yes,use,loaded
+Demo Team,commerce-create-password,none,/citisignal-fr/customer/createpassword,yes,use,not found (redirected to /citisignal-fr/customer/login)
+Demo Team,commerce-create-return,none,/citisignal-fr/customer/create-return,yes,use,loaded
+Demo Team,commerce-customer-details,none,/citisignal-fr/customer/return-details,yes,use,loaded
+Demo Team,commerce-customer-information,none,/citisignal-fr/customer/account,yes,use,not found (redirected to /citisignal-fr/customer/login)
+Demo Team,commerce-forgot-password,none,/citisignal-fr/customer/forgotpassword,yes,use,loaded
+Demo Team,commerce-gift-options,none,/citisignal-fr/order-details,yes,use,loaded
+Demo Team,commerce-login,none,/citisignal-fr/customer/login,yes,use,loaded
+Demo Team,commerce-mini-cart,none,/citisignal-fr/mini-cart,no,use,loaded
+Demo Team,commerce-order-comments,none,/customer/order-details,yes,use,not found (redirected to /order-status)
+Demo Team,commerce-order-cost-summary,none,/citisignal-fr/order-details,yes,use,loaded
+Demo Team,commerce-order-header,none,/citisignal-fr/order-details,yes,use,loaded
+Demo Team,commerce-order-product-list,none,/citisignal-fr/customer/return-details,yes,use,loaded
+Demo Team,commerce-order-returns,none,/citisignal-fr/order-details,yes,use,loaded
+Demo Team,commerce-order-status,none,/citisignal-fr/customer/return-details,yes,use,loaded
+Demo Team,commerce-orders-list,none,/citisignal-fr/customer/account,no,use,not found (redirected to /citisignal-fr/customer/login)
+Demo Team,commerce-return-header,none,/citisignal-fr/customer/return-details,yes,use,loaded
+Demo Team,commerce-returns-list,none,/citisignal-fr/customer/account,no,use,not found (redirected to /citisignal-fr/customer/login)
+Demo Team,commerce-search-order,none,/citisignal-fr/order-status,yes,use,loaded
+Demo Team,commerce-seller-assisted-buying-activity,none,/customer/seller-assisted-purchasing,yes,use,not found (redirected to /customer/login)
+Demo Team,commerce-seller-assisted-buying-settings,none,/customer/seller-assisted-purchasing,yes,use,not found (redirected to /customer/login)
+Demo Team,commerce-shipping-status,none,/citisignal-fr/customer/return-details,yes,use,loaded
+Demo Team,commerce-wishlist,none,/citisignal-fr/wishlist,no,use,loaded
+Demo Team,embed,none,,unknown,none,no preview source
+Demo Team,enrichment,none,/apparel,no,use,not found
+Demo Team,footer,none,,unknown,none,no preview source
+Demo Team,form,none,,unknown,none,no preview source
+Demo Team,fragment,docs,,unknown,example,loaded
+Demo Team,header,none,,unknown,none,no preview source
+Demo Team,hero-v2,docs,/,no,example,loaded
+Demo Team,hero,docs,/experiments/test/index1,no,example,loaded
+Demo Team,modal,none,,unknown,none,no preview source
+Demo Team,product-details,none,/products/default,no,use,not found (page shows commerce Configuration Error)
+Demo Team,product-list-page,none,/apparel,no,use,loaded
+Demo Team,product-recommendations,docs,/apparel,no,example,loaded
+Demo Team,product-teaser,docs,/phones,no,example,loaded
+Demo Team,quote,none,,unknown,none,no preview source
+Demo Team,search,none,,unknown,none,no preview source
+Demo Team,table,none,,unknown,none,no preview source
+Demo Team,tabs,docs,,unknown,example,loaded
+Demo Team,targeted-block,docs,/citisignal-fr/experiments/test/index1,no,example,loaded
+Demo Team,video,docs,/,no,example,loaded
+Demo Team,widget,none,,unknown,none,no preview source
+Isle5,accordion,none,,unknown,none,no preview source
+Isle5,blog-post,none,/blog/blogpost,no,use,loaded
+Isle5,blog-tiles,none,/blog/,yes,use,loaded
+Isle5,cards-list,none,,unknown,none,no preview source
+Isle5,cards,none,/products/default,no,use,not found (page shows commerce Configuration Error)
+Isle5,carousel,none,,unknown,none,no preview source
+Isle5,circle-carousel,none,,unknown,none,no preview source
+Isle5,columns,none,/experiments/test/index1,no,use,loaded
+Isle5,commerce-account-header,none,,unknown,none,no preview source
+Isle5,commerce-account-sidebar,none,,unknown,none,no preview source
+Isle5,commerce-addresses,none,,unknown,none,no preview source
+Isle5,commerce-cart,none,,unknown,none,no preview source
+Isle5,commerce-checkout-success,none,,unknown,none,no preview source
+Isle5,commerce-checkout,none,,unknown,none,no preview source
+Isle5,commerce-confirm-account,none,,unknown,none,no preview source
+Isle5,commerce-create-account,none,,unknown,none,no preview source
+Isle5,commerce-create-password,none,,unknown,none,no preview source
+Isle5,commerce-create-return,none,,unknown,none,no preview source
+Isle5,commerce-customer-details,none,,unknown,none,no preview source
+Isle5,commerce-customer-information,none,,unknown,none,no preview source
+Isle5,commerce-forgot-password,none,,unknown,none,no preview source
+Isle5,commerce-gift-options,none,,unknown,none,no preview source
+Isle5,commerce-login,none,,unknown,none,no preview source
+Isle5,commerce-mini-cart,none,/mini-cart,no,use,loaded
+Isle5,commerce-order-cost-summary,none,,unknown,none,no preview source
+Isle5,commerce-order-header,none,,unknown,none,no preview source
+Isle5,commerce-order-product-list,none,,unknown,none,no preview source
+Isle5,commerce-order-returns,none,,unknown,none,no preview source
+Isle5,commerce-order-status,none,,unknown,none,no preview source
+Isle5,commerce-orders-list,none,,unknown,none,no preview source
+Isle5,commerce-return-header,none,,unknown,none,no preview source
+Isle5,commerce-returns-list,none,,unknown,none,no preview source
+Isle5,commerce-search-order,none,,unknown,none,no preview source
+Isle5,commerce-shipping-status,none,,unknown,none,no preview source
+Isle5,commerce-wishlist,none,,unknown,none,no preview source
+Isle5,enrichment,none,/accessories,no,use,not found
+Isle5,footer,none,,unknown,none,no preview source
+Isle5,fragment,none,,unknown,none,no preview source
+Isle5,header,none,,unknown,none,no preview source
+Isle5,hero-cta,none,/,no,use,loaded
+Isle5,hero,none,/experiments/test/index1,no,use,loaded
+Isle5,modal,none,,unknown,none,no preview source
+Isle5,newsletter,none,/,no,use,loaded
+Isle5,product-details,none,/products/default,no,use,not found (page shows commerce Configuration Error)
+Isle5,product-list-page,none,/accessories,no,use,loaded
+Isle5,product-rail,none,,unknown,none,no preview source
+Isle5,product-recommendations,none,/accessories,no,use,loaded
+Isle5,promotional-hero,none,/,no,use,loaded
+Isle5,search-bar,none,/,no,use,loaded
+Isle5,store-locator,none,/store-locator,no,use,loaded
+Isle5,targeted-block,none,/citisignal-fr/,no,use,loaded
+Isle5,top-banner,none,/,no,use,loaded
+Bodea,accordion,none,/,no,use,not found (page shows commerce Configuration Error)
+Bodea,blog-post,da,/blog/my-first-post,no,example,not found (page shows commerce Configuration Error)
+Bodea,cards-list,da,,unknown,example,not found (page shows commerce Configuration Error)
+Bodea,cards,none,,unknown,none,no preview source
+Bodea,carousel,none,,unknown,none,no preview source
+Bodea,catalog-highlights,da,/,no,example,not found (page shows commerce Configuration Error)
+Bodea,circle-carousel,da,,unknown,example,not found (page shows commerce Configuration Error)
+Bodea,columns,none,,unknown,none,no preview source
+Bodea,commerce-account-header,none,,unknown,none,no preview source
+Bodea,commerce-account-hub,da,,unknown,example,not found (page shows commerce Configuration Error)
+Bodea,commerce-account-nav,none,,unknown,none,no preview source
+Bodea,commerce-account-sidebar,none,,unknown,none,no preview source
+Bodea,commerce-addresses,none,,unknown,none,no preview source
+Bodea,commerce-b2b-company-hierarchy,none,,unknown,none,no preview source
+Bodea,commerce-b2b-negotiable-quote-template,none,,unknown,none,no preview source
+Bodea,commerce-b2b-negotiable-quote,none,,unknown,none,no preview source
+Bodea,commerce-b2b-po-approval-flow,none,,unknown,none,no preview source
+Bodea,commerce-b2b-po-approval-rule-details,none,,unknown,none,no preview source
+Bodea,commerce-b2b-po-approval-rule-form,none,,unknown,none,no preview source
+Bodea,commerce-b2b-po-approval-rules-list,none,,unknown,none,no preview source
+Bodea,commerce-b2b-po-checkout-success,none,,unknown,none,no preview source
+Bodea,commerce-b2b-po-comment-form,none,,unknown,none,no preview source
+Bodea,commerce-b2b-po-comments-list,none,,unknown,none,no preview source
+Bodea,commerce-b2b-po-company-purchase-orders,none,,unknown,none,no preview source
+Bodea,commerce-b2b-po-customer-purchase-orders,none,,unknown,none,no preview source
+Bodea,commerce-b2b-po-header,none,,unknown,none,no preview source
+Bodea,commerce-b2b-po-history-log,none,,unknown,none,no preview source
+Bodea,commerce-b2b-po-require-approval-purchase-orders,none,,unknown,none,no preview source
+Bodea,commerce-b2b-po-status,none,,unknown,none,no preview source
+Bodea,commerce-b2b-quick-order,none,/quick-order,yes,use,not found (page shows commerce Configuration Error)
+Bodea,commerce-b2b-quote-checkout,none,/b2b/quote-checkout,yes,use,not found (page shows commerce Configuration Error)
+Bodea,commerce-b2b-requisition-list-sharing,none,,unknown,none,no preview source
+Bodea,commerce-b2b-requisition-list-view,none,,unknown,none,no preview source
+Bodea,commerce-b2b-requisition-list,none,,unknown,none,no preview source
+Bodea,commerce-cart,none,/cart,no,use,not found (page shows commerce Configuration Error)
+Bodea,commerce-checkout-success,none,,unknown,none,no preview source
+Bodea,commerce-checkout,none,/checkout,yes,use,not found (page shows commerce Configuration Error)
+Bodea,commerce-company-accept-invitation,none,,unknown,none,no preview source
+Bodea,commerce-company-create,none,,unknown,none,no preview source
+Bodea,commerce-company-credit,none,,unknown,none,no preview source
+Bodea,commerce-company-profile,none,,unknown,none,no preview source
+Bodea,commerce-company-roles-permissions,none,,unknown,none,no preview source
+Bodea,commerce-company-structure,none,,unknown,none,no preview source
+Bodea,commerce-company-users,none,,unknown,none,no preview source
+Bodea,commerce-confirm-account,none,,unknown,none,no preview source
+Bodea,commerce-create-account,none,,unknown,none,no preview source
+Bodea,commerce-create-password,none,,unknown,none,no preview source
+Bodea,commerce-create-return,none,/create-return,yes,use,not found (page shows commerce Configuration Error)
+Bodea,commerce-customer-company,none,,unknown,none,no preview source
+Bodea,commerce-customer-details,none,/order-details,yes,use,not found (page shows commerce Configuration Error)
+Bodea,commerce-customer-information,none,,unknown,none,no preview source
+Bodea,commerce-forgot-password,none,,unknown,none,no preview source
+Bodea,commerce-gift-options,none,/order-details,yes,use,not found (page shows commerce Configuration Error)
+Bodea,commerce-login,none,,unknown,none,no preview source
+Bodea,commerce-mini-cart,none,/mini-cart,no,use,not found (page shows commerce Configuration Error)
+Bodea,commerce-order-comments,none,/order-details,yes,use,not found (page shows commerce Configuration Error)
+Bodea,commerce-order-cost-summary,none,/order-details,yes,use,not found (page shows commerce Configuration Error)
+Bodea,commerce-order-header,none,/order-details,yes,use,not found (page shows commerce Configuration Error)
+Bodea,commerce-order-product-list,none,/order-details,yes,use,not found (page shows commerce Configuration Error)
+Bodea,commerce-order-returns,none,/order-details,yes,use,not found (page shows commerce Configuration Error)
+Bodea,commerce-order-status,none,/order-details,yes,use,not found (page shows commerce Configuration Error)
+Bodea,commerce-orders-list,none,,unknown,none,no preview source
+Bodea,commerce-return-header,none,/return-details,yes,use,not found (page shows commerce Configuration Error)
+Bodea,commerce-returns-list,none,,unknown,none,no preview source
+Bodea,commerce-search-order,none,/order-status,yes,use,not found (page shows commerce Configuration Error)
+Bodea,commerce-seller-assisted-buying-activity,none,,unknown,none,no preview source
+Bodea,commerce-seller-assisted-buying-settings,none,,unknown,none,no preview source
+Bodea,commerce-shipping-status,none,/order-details,yes,use,not found (page shows commerce Configuration Error)
+Bodea,commerce-wishlist,none,/wishlist,no,use,not found (page shows commerce Configuration Error)
+Bodea,customer-segment-personalization-block,da,,unknown,example,not found (page shows commerce Configuration Error)
+Bodea,embed,da,,unknown,example,not found (page shows commerce Configuration Error)
+Bodea,enrichment,none,/products/default,no,use,not found (page shows commerce Configuration Error)
+Bodea,features-grid,da,/,no,example,not found (page shows commerce Configuration Error)
+Bodea,footer,none,,unknown,none,no preview source
+Bodea,form,da,,unknown,example,not found (page shows commerce Configuration Error)
+Bodea,fragment,none,/blog/my-first-post,no,use,not found (page shows commerce Configuration Error)
+Bodea,guided-selling-luxe,da,,unknown,example,not found (page shows commerce Configuration Error)
+Bodea,header,none,,unknown,none,no preview source
+Bodea,hero-3,da,,unknown,example,not found (page shows commerce Configuration Error)
+Bodea,hero-5,da,/fragments/hero-5,no,example,not found (page shows commerce Configuration Error)
+Bodea,hero-6,da,/fragments/enterprise-platform-hero,no,example,not found (page shows commerce Configuration Error)
+Bodea,hero-cta,da,,unknown,example,not found (page shows commerce Configuration Error)
+Bodea,hero,none,,unknown,none,no preview source
+Bodea,how-it-works-stats,da,/,no,example,not found (page shows commerce Configuration Error)
+Bodea,luxury-configurator,da,,unknown,example,not found (page shows commerce Configuration Error)
+Bodea,modal,none,,unknown,none,no preview source
+Bodea,newsletter,da,/,no,example,not found (page shows commerce Configuration Error)
+Bodea,product-details,none,/products/default,yes,use,not found (page shows commerce Configuration Error)
+Bodea,product-highlights,da,,unknown,example,not found (page shows commerce Configuration Error)
+Bodea,product-list-page,none,/cables,no,use,not found (page shows commerce Configuration Error)
+Bodea,product-recommendations,none,/products/default,no,use,not found (page shows commerce Configuration Error)
+Bodea,product-teaser,da,/,no,example,not found (page shows commerce Configuration Error)
+Bodea,promotional-hero,da,,unknown,example,not found (page shows commerce Configuration Error)
+Bodea,quote,da,,unknown,example,not found (page shows commerce Configuration Error)
+Bodea,search-bar,da,/,yes,example,not found (page shows commerce Configuration Error)
+Bodea,search,da,,unknown,example,not found (page shows commerce Configuration Error)
+Bodea,table,da,,unknown,example,not found (page shows commerce Configuration Error)
+Bodea,tabs,da,,unknown,example,not found (page shows commerce Configuration Error)
+Bodea,targeted-block,none,/,no,use,not found (page shows commerce Configuration Error)
+Bodea,top-banner,da,,unknown,example,not found (page shows commerce Configuration Error)
+Bodea,triptych,da,,unknown,example,not found (page shows commerce Configuration Error)
+Bodea,video,da,/blog/my-first-post,no,example,not found (page shows commerce Configuration Error)
+Bodea,widget,none,,unknown,none,no preview source
+BuildRight,breadcrumbs,could not measure,,unknown,none,could not measure (site HTTP 404)
+BuildRight,cart-summary,could not measure,,unknown,none,could not measure (site HTTP 404)
+BuildRight,featured-products,could not measure,,unknown,none,could not measure (site HTTP 404)
+BuildRight,filters-sidebar,could not measure,,unknown,none,could not measure (site HTTP 404)
+BuildRight,footer,could not measure,,unknown,none,could not measure (site HTTP 404)
+BuildRight,fragment,could not measure,,unknown,none,could not measure (site HTTP 404)
+BuildRight,header,could not measure,,unknown,none,could not measure (site HTTP 404)
+BuildRight,inventory-status,could not measure,,unknown,none,could not measure (site HTTP 404)
+BuildRight,mini-cart,could not measure,,unknown,none,could not measure (site HTTP 404)
+BuildRight,pricing-display,could not measure,,unknown,none,could not measure (site HTTP 404)
+BuildRight,product-detail,could not measure,,unknown,none,could not measure (site HTTP 404)
+BuildRight,product-gallery,could not measure,,unknown,none,could not measure (site HTTP 404)
+BuildRight,product-grid,could not measure,,unknown,none,could not measure (site HTTP 404)
+BuildRight,product-tile,could not measure,,unknown,none,could not measure (site HTTP 404)
+BuildRight,project-builder,could not measure,,unknown,none,could not measure (site HTTP 404)
+BuildRight,project-bundle,could not measure,,unknown,none,could not measure (site HTTP 404)
+BuildRight,project-filter,could not measure,,unknown,none,could not measure (site HTTP 404)
+BuildRight,tier-badge,could not measure,,unknown,none,could not measure (site HTTP 404)
+BuildRight,user-menu,could not measure,,unknown,none,could not measure (site HTTP 404)
+BuildRight,wizard-progress,could not measure,,unknown,none,could not measure (site HTTP 404)
+BuildRight,wizard-sidebar,could not measure,,unknown,none,could not measure (site HTTP 404)
+BuildRight,wizard-vertical-progress,could not measure,,unknown,none,could not measure (site HTTP 404)
+Adobe B2C,accordion,docs,,unknown,example,loaded
+Adobe B2C,cards,docs,/,no,example,loaded
+Adobe B2C,carousel,docs,,unknown,example,loaded
+Adobe B2C,columns,docs,/,no,example,loaded
+Adobe B2C,commerce-account-header,none,/customer/account,no,use,not found (redirected to /customer/login)
+Adobe B2C,commerce-account-sidebar,none,/customer/order-details,yes,use,not found (redirected to /order-status)
+Adobe B2C,commerce-addresses,none,/customer/account,no,use,not found (redirected to /customer/login)
+Adobe B2C,commerce-cart,none,/cart,no,use,loaded
+Adobe B2C,commerce-checkout-success,none,,unknown,none,no preview source
+Adobe B2C,commerce-checkout,none,/checkout,yes,use,not found (redirected to /cart)
+Adobe B2C,commerce-confirm-account,none,/customer/account/confirm/,no,use,loaded
+Adobe B2C,commerce-create-account,none,/customer/create,yes,use,loaded
+Adobe B2C,commerce-create-password,none,/customer/createpassword,yes,use,not found (redirected to /customer/login)
+Adobe B2C,commerce-create-return,none,/create-return,yes,use,not found (redirected to /order-status)
+Adobe B2C,commerce-customer-details,none,/return-details,yes,use,not found (redirected to /order-status)
+Adobe B2C,commerce-customer-information,none,/customer/account,yes,use,not found (redirected to /customer/login)
+Adobe B2C,commerce-forgot-password,none,/customer/forgotpassword,yes,use,loaded
+Adobe B2C,commerce-gift-options,none,/customer/order-details,yes,use,not found (redirected to /order-status)
+Adobe B2C,commerce-login,none,/customer/login,yes,use,loaded
+Adobe B2C,commerce-mini-cart,none,/mini-cart,no,use,loaded
+Adobe B2C,commerce-order-comments,none,/customer/order-details,yes,use,not found (redirected to /order-status)
+Adobe B2C,commerce-order-cost-summary,none,/customer/order-details,yes,use,not found (redirected to /order-status)
+Adobe B2C,commerce-order-header,none,/customer/order-details,yes,use,not found (redirected to /order-status)
+Adobe B2C,commerce-order-product-list,none,/return-details,yes,use,not found (redirected to /order-status)
+Adobe B2C,commerce-order-returns,none,/customer/order-details,yes,use,not found (redirected to /order-status)
+Adobe B2C,commerce-order-status,none,/return-details,yes,use,not found (redirected to /order-status)
+Adobe B2C,commerce-orders-list,none,/customer/account,no,use,not found (redirected to /customer/login)
+Adobe B2C,commerce-return-header,none,/return-details,yes,use,not found (redirected to /order-status)
+Adobe B2C,commerce-returns-list,none,/customer/account,no,use,not found (redirected to /customer/login)
+Adobe B2C,commerce-search-order,none,/order-status,yes,use,loaded
+Adobe B2C,commerce-seller-assisted-buying-activity,none,/customer/seller-assisted-purchasing,yes,use,not found (redirected to /customer/login)
+Adobe B2C,commerce-seller-assisted-buying-settings,none,/customer/seller-assisted-purchasing,yes,use,not found (redirected to /customer/login)
+Adobe B2C,commerce-shipping-status,none,/return-details,yes,use,not found (redirected to /order-status)
+Adobe B2C,commerce-wishlist,none,/wishlist,no,use,loaded
+Adobe B2C,enrichment,none,/apparel,no,use,not found
+Adobe B2C,footer,none,,unknown,none,no preview source
+Adobe B2C,fragment,docs,,unknown,example,loaded
+Adobe B2C,header,none,,unknown,none,no preview source
+Adobe B2C,hero,docs,/,no,example,loaded
+Adobe B2C,modal,none,,unknown,none,no preview source
+Adobe B2C,product-details,docs,/products/default,no,example,not found (page shows commerce Configuration Error)
+Adobe B2C,product-list-page,none,/apparel,no,use,loaded
+Adobe B2C,product-recommendations,docs,/apparel,no,example,loaded
+Adobe B2C,targeted-block,none,,unknown,none,no preview source
+Adobe B2C,widget,none,,unknown,none,no preview source
+Adobe B2B,accordion,docs,,unknown,example,loaded
+Adobe B2B,cards,docs,/,no,example,loaded
+Adobe B2B,carousel,none,,unknown,none,no preview source
+Adobe B2B,columns,docs,/,no,example,loaded
+Adobe B2B,commerce-account-header,none,/customer/company/profile,no,use,loaded
+Adobe B2B,commerce-account-nav,none,/customer/nav,no,use,loaded
+Adobe B2B,commerce-account-sidebar,none,/customer/create-return,yes,use,not found (redirected to /order-status)
+Adobe B2B,commerce-addresses,none,/customer/account,no,use,not found (redirected to /customer/login)
+Adobe B2B,commerce-b2b-company-hierarchy,none,/customer/company/hierarchy,yes,use,loaded
+Adobe B2B,commerce-b2b-negotiable-quote-template,none,/customer/negotiable-quote-template,yes,use,loaded
+Adobe B2B,commerce-b2b-negotiable-quote,none,/customer/negotiable-quote,yes,use,loaded
+Adobe B2B,commerce-b2b-po-approval-flow,none,/customer/purchase-order-details,yes,use,loaded
+Adobe B2B,commerce-b2b-po-approval-rule-details,none,/customer/approval-rule-details,yes,use,loaded
+Adobe B2B,commerce-b2b-po-approval-rule-form,none,/customer/approval-rule,yes,use,loaded
+Adobe B2B,commerce-b2b-po-approval-rules-list,none,/customer/approval-rules,yes,use,loaded
+Adobe B2B,commerce-b2b-po-checkout-success,none,,unknown,none,no preview source
+Adobe B2B,commerce-b2b-po-comment-form,none,/customer/purchase-order-details,yes,use,loaded
+Adobe B2B,commerce-b2b-po-comments-list,none,/customer/purchase-order-details,yes,use,loaded
+Adobe B2B,commerce-b2b-po-company-purchase-orders,none,/customer/purchase-orders,yes,use,loaded
+Adobe B2B,commerce-b2b-po-customer-purchase-orders,none,/customer/purchase-orders,yes,use,loaded
+Adobe B2B,commerce-b2b-po-header,none,/customer/purchase-order-details,yes,use,loaded
+Adobe B2B,commerce-b2b-po-history-log,none,/customer/purchase-order-details,yes,use,loaded
+Adobe B2B,commerce-b2b-po-require-approval-purchase-orders,none,/customer/purchase-orders,yes,use,loaded
+Adobe B2B,commerce-b2b-po-status,none,/customer/purchase-order-details,yes,use,loaded
+Adobe B2B,commerce-b2b-quick-order,none,/quick-order,yes,use,loaded
+Adobe B2B,commerce-b2b-quote-checkout,none,/b2b/quote-checkout,yes,use,loaded
+Adobe B2B,commerce-b2b-requisition-list-public-share,none,/customer/requisition-list-public-share,yes,use,loaded
+Adobe B2B,commerce-b2b-requisition-list-sharing,none,/customer/requisition-list-sharing,yes,use,loaded
+Adobe B2B,commerce-b2b-requisition-list-view,none,/customer/requisition-list-view,yes,use,loaded
+Adobe B2B,commerce-b2b-requisition-list,none,/customer/requisition-lists,yes,use,loaded
+Adobe B2B,commerce-cart,none,/cart,no,use,loaded
+Adobe B2B,commerce-checkout-success,none,,unknown,none,no preview source
+Adobe B2B,commerce-checkout,none,/checkout,yes,use,not found (redirected to /cart)
+Adobe B2B,commerce-company-accept-invitation,none,/customer/company/accept-invitation/,yes,use,loaded
+Adobe B2B,commerce-company-create,none,/customer/company/create,yes,use,loaded
+Adobe B2B,commerce-company-credit,none,/customer/company/credit,no,use,loaded
+Adobe B2B,commerce-company-profile,none,/customer/company,no,use,loaded
+Adobe B2B,commerce-company-roles-permissions,none,/customer/company/roles,yes,use,loaded
+Adobe B2B,commerce-company-structure,none,/customer/company/structure,yes,use,loaded
+Adobe B2B,commerce-company-users,none,/customer/company/users,no,use,loaded
+Adobe B2B,commerce-confirm-account,none,/customer/account/confirm/,no,use,loaded
+Adobe B2B,commerce-create-account,none,/customer/create,yes,use,loaded
+Adobe B2B,commerce-create-password,none,/customer/account/createpassword/,yes,use,not found (redirected to /customer/login)
+Adobe B2B,commerce-create-return,none,/create-return,yes,use,not found (redirected to /order-status)
+Adobe B2B,commerce-customer-company,none,/customer/account,yes,use,not found (redirected to /customer/login)
+Adobe B2B,commerce-customer-details,none,/customer/order-details,yes,use,not found (redirected to /order-status)
+Adobe B2B,commerce-customer-information,none,/customer/account,yes,use,not found (redirected to /customer/login)
+Adobe B2B,commerce-forgot-password,none,/customer/forgotpassword,yes,use,loaded
+Adobe B2B,commerce-gift-options,none,/customer/order-details,yes,use,not found (redirected to /order-status)
+Adobe B2B,commerce-login,none,/customer/login,yes,use,loaded
+Adobe B2B,commerce-mini-cart,none,/mini-cart,no,use,loaded
+Adobe B2B,commerce-order-comments,none,/customer/order-details,yes,use,not found (redirected to /order-status)
+Adobe B2B,commerce-order-cost-summary,none,/customer/order-details,yes,use,not found (redirected to /order-status)
+Adobe B2B,commerce-order-header,none,/customer/order-details,yes,use,not found (redirected to /order-status)
+Adobe B2B,commerce-order-product-list,none,/customer/order-details,yes,use,not found (redirected to /order-status)
+Adobe B2B,commerce-order-returns,none,/customer/order-details,yes,use,not found (redirected to /order-status)
+Adobe B2B,commerce-order-status,none,/customer/order-details,yes,use,not found (redirected to /order-status)
+Adobe B2B,commerce-orders-list,none,/customer/account,no,use,not found (redirected to /customer/login)
+Adobe B2B,commerce-return-header,none,/customer/return-details,yes,use,not found (redirected to /order-status)
+Adobe B2B,commerce-returns-list,none,/customer/account,no,use,not found (redirected to /customer/login)
+Adobe B2B,commerce-search-order,none,/order-status,yes,use,loaded
+Adobe B2B,commerce-seller-assisted-buying-activity,none,/customer/seller-assisted-purchasing,yes,use,not found (redirected to /customer/login)
+Adobe B2B,commerce-seller-assisted-buying-settings,none,/customer/seller-assisted-purchasing,yes,use,not found (redirected to /customer/login)
+Adobe B2B,commerce-shipping-status,none,/customer/order-details,yes,use,not found (redirected to /order-status)
+Adobe B2B,commerce-wishlist,none,/wishlist,no,use,loaded
+Adobe B2B,enrichment,none,/apparel,no,use,not found
+Adobe B2B,footer,none,,unknown,none,no preview source
+Adobe B2B,fragment,docs,/customer/company/profile,no,example,loaded
+Adobe B2B,header,none,,unknown,none,no preview source
+Adobe B2B,hero,docs,/,no,example,loaded
+Adobe B2B,modal,none,,unknown,none,no preview source
+Adobe B2B,product-details,none,/products/default,no,use,not found (page shows commerce Configuration Error)
+Adobe B2B,product-list-page,none,/apparel,no,use,loaded
+Adobe B2B,product-recommendations,none,/apparel,no,use,loaded
+Adobe B2B,targeted-block,none,,unknown,none,no preview source
+Adobe B2B,widget,none,,unknown,none,no preview source

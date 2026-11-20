@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { ProjectsGrid } from '@/features/projects-dashboard/ui/components/ProjectsGrid';
 import { createMockProjects } from '../../testUtils';
@@ -100,8 +100,13 @@ describe('ProjectsGrid', () => {
 
     describe('running project', () => {
         // The grid's one decision: which card is told it is the RUNNING one.
-        // Observed through the rename pencil, which ProjectCard hides while a
-        // project runs because the backend rejects a rename mid-run.
+        // Observed through the menu's Rename: with only a rename wired, a running project has no
+        // menu at all, because the backend rejects a rename mid-run.
+        const menuOf = (name: string) =>
+            within(screen.getByRole('button', { name: new RegExp(`^${name},`) })).queryByRole('button', {
+                name: 'More actions',
+            });
+
         function renderGridWithRunning(runningProjectPath: string | undefined) {
             return renderWithProvider(
                 <ProjectsGrid
@@ -124,19 +129,17 @@ describe('ProjectsGrid', () => {
                 />
             );
 
-            expect(
-                screen.queryByRole('button', { name: 'Rename Project 2' })
-            ).not.toBeInTheDocument();
-            expect(screen.getByRole('button', { name: 'Rename Project 1' })).toBeInTheDocument();
-            expect(screen.getByRole('button', { name: 'Rename Project 3' })).toBeInTheDocument();
+            expect(menuOf('Project 2')).not.toBeInTheDocument();
+            expect(menuOf('Project 1')).toBeInTheDocument();
+            expect(menuOf('Project 3')).toBeInTheDocument();
         });
 
         it('marks nothing when no project is running', () => {
             renderGridWithRunning(undefined);
 
-            expect(screen.getByRole('button', { name: 'Rename Project 1' })).toBeInTheDocument();
-            expect(screen.getByRole('button', { name: 'Rename Project 2' })).toBeInTheDocument();
-            expect(screen.getByRole('button', { name: 'Rename Project 3' })).toBeInTheDocument();
+            expect(menuOf('Project 1')).toBeInTheDocument();
+            expect(menuOf('Project 2')).toBeInTheDocument();
+            expect(menuOf('Project 3')).toBeInTheDocument();
         });
 
         it('marks nothing when the running path matches no card', () => {
@@ -144,7 +147,7 @@ describe('ProjectsGrid', () => {
             // under the grid — must not mark an arbitrary card instead.
             renderGridWithRunning('/projects/gone');
 
-            expect(screen.getByRole('button', { name: 'Rename Project 2' })).toBeInTheDocument();
+            expect(menuOf('Project 2')).toBeInTheDocument();
         });
     });
 

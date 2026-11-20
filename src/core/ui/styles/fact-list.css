@@ -2,11 +2,14 @@
  * .fact-list — labelled lines that scan as one small table (`ui/FactList`).
  *
  * REACHES ONLY THE BUNDLES THAT IMPORT IT (ADR-017 §6): `dashboard` and `integrations` (the
- * setup guide). A new host bundle imports it in its entry, or the
+ * setup guide), and `dataInstaller` (a pack's Admin step dialog, `ui/SetupStepHeader` and
+ * `ui/SetupStepFacts`). A new host bundle imports it in its entry, or the
  * list renders as browser-default definition lines with no error.
  *
  * Moved unchanged on 2026-10-23 from the dashboard's integrations.css (.setup-guide-facts),
- * in the same layer.
+ * in the same layer. The step's path, pills and reason (`ui/SetupStepFacts`) moved unchanged from
+ * the same file, in the same layer, on 2026-10-30; then the step's box, title and header
+ * (`ui/SetupStepHeader`, .setup-guide-step*), the same day, for the pack step dialog (DI-5).
  */
 
 @layer theme {
@@ -14,18 +17,106 @@
     .fact-list {
         display: grid;
         grid-template-columns: max-content minmax(0, 1fr);
-        column-gap: 32px;
-        row-gap: 20px;
+        /* The dialog design rules' spacing: 8 between rows (2026-10-31; it was 20, which read
+           as separate paragraphs rather than one small table). */
+        column-gap: 16px;
+        row-gap: 8px;
         margin: 0;
-        line-height: 1.6;
+        line-height: 1.5;
     }
 
+    /* A label: small and muted. */
     .fact-list dt {
+        padding-top: 2px;
+        font-size: 12px;
         color: var(--spectrum-global-color-gray-600);
     }
 
     .fact-list dd {
         margin: 0;
         min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .setup-guide-path {
+        display: inline-flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 8px;
+    }
+
+    /* A path segment: a quiet pill at body size, so the path reads as the Admin's own menu. */
+    .setup-guide-crumb {
+        padding: 2px 10px;
+        border-radius: 10px;
+        background: var(--spectrum-global-color-gray-200);
+        white-space: nowrap;
+    }
+
+    .setup-guide-crumb-sep {
+        color: var(--spectrum-global-color-gray-500);
+    }
+
+    .setup-guide-pills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    /* The reason reads a step quieter than the instructions above it. */
+    .setup-guide-why {
+        color: var(--spectrum-global-color-gray-700);
+    }
+
+    /* One step (`ui/SetupStepHeader` over `ui/SetupStepFacts`): the setup guide's, and the Data
+       Installer's pack step dialog. */
+    .setup-guide-step {
+        display: flex;
+        flex-direction: column;
+        gap: 28px;
+        min-width: 0;
+    }
+
+    /* The step's title with its Optional badge beside it, centred on the title's line. */
+    .setup-guide-step-title {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .setup-guide-step-title > h3 {
+        margin: 0;
+    }
+
+    /* A step's header (`ui/SetupStepHeader`, AB-82): the title, then the house banner for
+       where the step stands, closer to the title than the step's other parts. */
+    .setup-guide-step-head {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .setup-guide-step-status > .inline-notice {
+        margin: 0;
+    }
+
+    /* A check running on the step (`busy`): the banner keeps its size and border, its words
+       hidden, and a small spinner in the middle, so the SC sees the place the answer will land
+       refresh, even when the answer is the same (owner, 2026-10-31). */
+    .setup-guide-step-status {
+        position: relative;
+    }
+
+    .setup-guide-step-status.is-busy > .inline-notice > * {
+        visibility: hidden;
+    }
+
+    .setup-guide-step-status-spinner {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 }

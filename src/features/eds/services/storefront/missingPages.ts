@@ -60,7 +60,7 @@ export function missingPagesSentence(missing: readonly string[]): string {
     const subject = count === 1 ? '1 page the source has is' : `${count} pages the source has are`;
     const named = missing.slice(0, NAMED_IN_SENTENCE).join(', ');
     const rest = count - NAMED_IN_SENTENCE;
-    const tail = rest > 0 ? `, and ${rest} more (all are in the Debug Logs)` : '';
+    const tail = rest > 0 ? `, and ${rest} more` : '';
     return `${subject} missing from this storefront: ${named}${tail}`;
 }
 
@@ -95,7 +95,7 @@ export function carriedWebPaths(copiedFiles: readonly string[], sheetPaths: read
         // A folder the publish skips on purpose (`experiments`, owner 2026-10-12) is
         // not missing when it is not on the site; it was never meant to be.
         if (segments.slice(0, -1).some((folder) => EXCLUDED_FOLDERS.includes(folder))) continue;
-        // So is a page the publish skips by name. Khalil's JustRite source has empty
+        // So is a page the publish skips by name. PersonB's Tailspin source has empty
         // `/metadata` and `/redirects` documents, and every reset of a copy of it said
         // they were "missing" (2026-10-23).
         if (EXCLUDED_NAMES.includes(name)) continue;

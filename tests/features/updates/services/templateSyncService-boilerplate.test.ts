@@ -17,7 +17,20 @@ import {
     resetFakes,
     service,
 } from './templateSyncService.testUtils';
+import { GitHubFileOperations } from '@/features/eds/services/github/githubFileOperations';
 import type { BoilerplateBase } from '@/features/updates/services/boilerplateBase';
+
+const mockRestorePieces = jest.fn();
+jest.mock('@/features/updates/services/thinLayerUpdate', () => ({
+    ...jest.requireActual('@/features/updates/services/thinLayerUpdate'),
+    restoreDemoBuilderPieces: (...a: unknown[]) => mockRestorePieces(...a),
+}));
+// A thin-layer storefront's tested version is read from the patches repo, over the network.
+const mockReadLkgSha = jest.fn();
+jest.mock('@/features/eds/services/patches/lkgReader', () => ({
+    ...jest.requireActual('@/features/eds/services/patches/lkgReader'),
+    readLkgSha: (...a: unknown[]) => mockReadLkgSha(...a),
+}));
 
 const BASE_SHA = '71a67e027b4b288a67f5cda1fc106d2df9a34805';
 const TESTED_SHA = '48bed04d072fff094b49a46709b351bd719b287a';
@@ -28,12 +41,76 @@ const BASE: BoilerplateBase = {
     found: 'first-commit',
 };
 
-/** A storefront built from kmanns/justrite: its template fields name the colleague. */
+/** A storefront built from org-e/tailspin: its template fields name the colleague. */
 const colleagueStorefront = () =>
-    edsProject({ templateOwner: 'kmanns', templateRepo: 'justrite', lastSyncedCommit: '5ac7b52a52a5af2fa71137a591c8a6e5e3826a9b' });
+    edsProject({ templateOwner: 'org-e', templateRepo: 'tailspin', lastSyncedCommit: '5ac7b52a52a5af2fa71137a591c8a6e5e3826a9b' });
+
+/** How many git commands had run when Demo Builder's scripts were moved; -1 if never. */
+let gitCallsAtMove = -1;
 
 beforeEach(() => {
     resetFakes();
+    gitCallsAtMove = -1;
+    mockRestorePieces.mockImplementation(async () => {
+        gitCallsAtMove = gitCalls().length;
+        return [];
+    });
+});
+
+describe("syncBoilerplate: Demo Builder's repairs run in the update's clone, before the change", () => {
+    // Adobe's tested boilerplate deletes scripts/delayed.js, and git cannot delete a file our
+    // blocks still sit in: Tailspin's update stopped on "patch failed: scripts/delayed.js:1"
+    // and was offered again every time (2026-10-29). The repairs that take them out ran
+    // against GitHub until 2026-10-30, so a stopped update had already pushed them.
+    const indexOf = (pattern: RegExp) => gitCalls().findIndex((c) => pattern.test(c));
+
+    it('runs them in the clone, after cloning and before the change is applied, never through GitHub', async () => {
+        answer(/^git status --porcelain$/, ' M scripts/commerce.js\n');
+        const project = colleagueStorefront();
+        const resolveOverlay = jest.fn(() => 'https://overlay.test/render-pdp');
+
+        await service(undefined, resolveOverlay).syncBoilerplate(project, { base: BASE, tested: TESTED_SHA });
+
+        // With the overlay the caller resolves, as a reset does: without it the first-visit
+        // script never reached 404.html, so its old copy stayed in delayed.js (Tailspin, 2026-10-30).
+        expect(mockRestorePieces).toHaveBeenCalledWith(project, expect.anything(), expect.anything(), resolveOverlay);
+        expect(mockRestorePieces.mock.calls[0][1]).not.toBeInstanceOf(GitHubFileOperations);
+        expect(gitCallsAtMove).toBeGreaterThan(indexOf(/^git clone /));
+        expect(gitCallsAtMove).toBeLessThanOrEqual(indexOf(/^git apply /));
+    });
+
+    it('says what could not be put back, beside the update', async () => {
+        answer(/^git status --porcelain$/, ' M scripts/commerce.js\n');
+        mockRestorePieces.mockResolvedValue(['The missing-product page handling could not be put back: x.']);
+
+        const result = await service().syncBoilerplate(colleagueStorefront(), { base: BASE, tested: TESTED_SHA });
+
+        expect(result).toMatchObject({
+            success: true,
+            notes: ['The missing-product page handling could not be put back: x.'],
+        });
+    });
+
+    it("runs them twice in the clone on a storefront built on Demo Builder's tested boilerplate, before its one push", async () => {
+        answer(/^git status --porcelain$/, ' M scripts/commerce.js\n');
+        mockReadLkgSha.mockResolvedValue(TESTED_SHA);
+        const project = edsProject({ lkgSource: BASE.lkgSource });
+
+        await service().syncWithTemplate(project, { strategy: 'merge' });
+
+        // Before the change, and again on the updated code; both before the push.
+        expect(mockRestorePieces).toHaveBeenCalledTimes(2);
+        expect(gitCallsAtMove).toBeLessThan(indexOf(/^git push /));
+        expect(gitCalls().filter((c) => /^git push /.test(c))).toHaveLength(1);
+    });
+
+    it('runs nothing on a storefront that follows its template with no tested version', async () => {
+        answer(/^git status --porcelain$/, ' M scripts/commerce.js\n');
+
+        await service().syncWithTemplate(edsProject(), { strategy: 'merge' });
+
+        expect(mockRestorePieces).not.toHaveBeenCalled();
+    });
 });
 
 describe("syncBoilerplate: a colleague's storefront to Adobe's tested boilerplate", () => {
@@ -47,7 +124,7 @@ describe("syncBoilerplate: a colleague's storefront to Adobe's tested boilerplat
         const calls = gitCalls();
         // Adobe's template is the source, never the colleague's repository.
         expect(calls).toContainEqual(expect.stringContaining('https://github.com/adobe-commerce/boilerplate-b2b-template.git'));
-        expect(calls.join('\n')).not.toContain('github.com/kmanns/justrite');
+        expect(calls.join('\n')).not.toContain('github.com/org-e/tailspin');
         expect(calls).toContainEqual(
             expect.stringMatching(new RegExp(`^git diff-tree -r --name-only ${BASE_SHA} ${TESTED_SHA} -- \\. ":\\(exclude\\)\\.github" `)),
         );
@@ -56,7 +133,7 @@ describe("syncBoilerplate: a colleague's storefront to Adobe's tested boilerplat
         expect(result).toEqual({ success: true, strategy: 'merge', syncedCommit: TESTED_SHA });
         // The colleague's track is not this update's to move.
         expect(project.componentInstances?.['eds-storefront']?.metadata).toMatchObject({
-            templateOwner: 'kmanns',
+            templateOwner: 'org-e',
             lastSyncedCommit: '5ac7b52a52a5af2fa71137a591c8a6e5e3826a9b',
         });
     });
@@ -79,5 +156,6 @@ describe("syncBoilerplate: a colleague's storefront to Adobe's tested boilerplat
 
         expect(result.success).toBe(false);
         expect(gitCalls()).toStrictEqual([]);
+        expect(mockRestorePieces).not.toHaveBeenCalled();
     });
 });

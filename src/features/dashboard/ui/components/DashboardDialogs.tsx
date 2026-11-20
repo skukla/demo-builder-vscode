@@ -1,7 +1,8 @@
 /**
  * DashboardDialogs — everything the project dashboard can open ON TOP of
- * itself: Change source, Share Demo, the long-operation
- * progress modal, and the AI capability catalog.
+ * itself: Change source, Share Demo, Save as Package, the long-operation
+ * progress modal, the Reset batch window, the AI capability catalog, and the
+ * Finish Setup guide (PL-101).
  *
  * Split out of `ProjectDashboardScreen` (EDS-8, 2026-10-09): the screen decides
  * what the dashboard SHOWS; this decides which dialog is mounted over it. The
@@ -15,13 +16,18 @@
 import { DialogContainer } from '@adobe/react-spectrum';
 import React from 'react';
 import type { UseDashboardStatusReturn } from '../hooks/dashboardStatusTypes';
+import type { FinishSetupControls } from '../hooks/useFinishSetup';
 import type { HandoverDialogs } from '../hooks/useHandoverDialogs';
 import { AiCapabilitiesModal } from './AiCapabilitiesModal';
+import { FinishSetupGuide } from './FinishSetupGuide';
+import { SavePackageModal } from './share/SavePackageModal';
 import { ShareModal } from './share/ShareModal';
 import { OperationProgressModal } from '@/core/ui/components/feedback/OperationProgressModal';
 import type { OperationRunnerControls } from '@/core/ui/hooks/useOperationRunner';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { AddDemoModal } from '@/features/project-creation/ui/components/add-demo/AddDemoModal';
+import { ProjectsBatchModal } from '@/features/projects-dashboard/ui/components/ProjectsBatchModal';
+import type { ProjectsBatchControls } from '@/features/projects-dashboard/ui/hooks/useProjectsBatch';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { AddedDemo } from '@/types/projectFile';
 import type { DashboardInitialData } from '@/types/webviewPayloads';
@@ -53,13 +59,19 @@ export interface DashboardDialogsProps {
     /** The added demo whose source is being changed: present only while that dialog is open. */
     changeSourceDemo?: NonNullable<DashboardInitialData['demo']>;
     onCloseChangeSource: () => void;
-    /** The Share dialog's open state. */
+    /** Share Demo's and Save as Package's open state. */
     handover: HandoverDialogs;
     /** The long-operation runner whose modal narrates reset, delete, sync and republish. */
     operations: OperationRunnerControls;
+    /** Reset's window: the projects list's batch window on this project (step-05 S4). */
+    batch: ProjectsBatchControls;
     capabilitiesOpen: boolean;
     onCloseCapabilities: () => void;
     ai: AiCapabilityState;
+    /** The Finish Setup guide's controls (PL-101); its dialog shows only while open. */
+    finishSetup: FinishSetupControls;
+    /** The project's name, for the guide's title. */
+    projectName: string;
 }
 
 /** After a change of source, status is re-requested so the source check re-runs. */
@@ -78,9 +90,12 @@ export function DashboardDialogs({
     onCloseChangeSource,
     handover,
     operations,
+    batch,
     capabilitiesOpen,
     onCloseCapabilities,
     ai,
+    finishSetup,
+    projectName,
 }: DashboardDialogsProps) {
     return (
         <>
@@ -102,11 +117,17 @@ export function DashboardDialogs({
                 <ShareModal isOpen isEds={isEds} onClose={handover.closeShare} />
             ) : null}
 
+            {handover.savePackageOpen ? <SavePackageModal isOpen onClose={handover.closeSavePackage} /> : null}
+
             <OperationProgressModal
                 operation={operations.open}
                 onRetry={operations.retry}
                 onClose={operations.close}
             />
+
+            {batch.view.phase !== 'closed' && <ProjectsBatchModal controls={batch} />}
+
+            <FinishSetupGuide controls={finishSetup} projectName={projectName} />
 
             {/* Capability catalog — reached from the "View AI Capabilities" link,
                 NOT the health badge. Two sections (skills + MCP servers) plus a

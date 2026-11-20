@@ -1,16 +1,16 @@
 /**
  * One Adobe project holds one ERP of a given name.
  *
- * Two Demo Builder projects — `justrite` and its copy — each deployed the ERP
+ * Two Demo Builder projects — `tailspin` and its copy — each deployed the ERP
  * integration into the same Adobe project, in two workspaces, both installed into the
  * same Commerce; Commerce's Orders grid showed the integration's columns twice, both
  * labelled with the Adobe project's title (owner's machine, 2026-10-08). The owner's
  * rule: deploying into an Adobe project that already has that deployment REPLACES it.
  *
  * The unit of uniqueness is the pair's ERP SYSTEM's name within the Adobe project
- * (owner, 2026-10-08 16:05): an SC talks about the ERP ("orders go to Justrite ERP"),
+ * (owner, 2026-10-08 16:05): an SC talks about the ERP ("orders go to Tailspin ERP"),
  * and the integration's name is a default nobody changes. Two pairs whose ERPs are
- * named differently coexist; the copy case, where both ERPs are "Justrite ERP", is the
+ * named differently coexist; the copy case, where both ERPs are "Tailspin ERP", is the
  * one that replaces, and what goes is the other project's INTEGRATION, which takes its
  * bound systems with it (the runner's own rule). An integration that brings no system
  * (the starter kit, a custom app) is unique by its own name instead.

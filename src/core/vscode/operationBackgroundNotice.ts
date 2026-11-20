@@ -5,21 +5,29 @@
  * The modal used to just close, and the SC lost track of what was happening (owner,
  * 2026-09-19). Now the same operation carries on narrating in a VS Code progress
  * notification: titled like the modal, starting at the stage it had reached, and
- * updated with every stage after. Success closes it with a status-bar line, or with a
- * warning notification when the run has something to say (`warning`); a failure
- * turns it into a warning with the reason and the Debug Logs. Reopening the modal
- * takes it back and closes the notification — one surface narrates at a time.
+ * updated with every stage after. It ends in the result's own words, the window's own
+ * titles (prototype-conventions rule 21; step-03 Q4): a clean success as a notification
+ * that closes itself after a few seconds ("Bodea Installed", `showSelfClosingNotice`); a
+ * warning as a warning notification that stays; a note as a plain one; a failure as a
+ * warning with the reason and the Debug Logs. Reopening the modal takes it back and
+ * closes the notification — one surface narrates at a time.
  *
  * @module features/dashboard/handlers/operationBackgroundNotice
  */
 
 import * as vscode from 'vscode';
+import { showSelfClosingNotice } from './selfClosingNotice';
 import { stageLine } from '@/core/utils/stageLine';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { OperationProgressPayload } from '@/types/webviewPayloads';
+import type { BackgroundOperationRequest } from '@/types/webviewRequests';
+
+/** The window's titles a notice ends in: its result's words. */
+export type NoticeTitles = Pick<BackgroundOperationRequest, 'doneTitle' | 'failedTitle' | 'warnedTitle'>;
 
 interface Notice {
+    /** The notification's own title, which its line never repeats. */
     title: string;
+    titles: NoticeTitles;
     report: (message: string) => void;
     end: () => void;
 }
@@ -27,15 +35,13 @@ interface Notice {
 const notices = new Map<string, Notice>();
 
 /**
- * The notification's line for a progress payload: the STAGE, never the step or
- * detail. The stage is the short set of words, capped in `operationStages` so it
- * fits after the title; the step and detail are the long set, written to sit under
- * the stage in the modal. A notification showing a detail alone read as "The APIs
- * on the workspace's credent…" (owner screenshot, 2026-09-19). VS Code draws the
- * notification at a fixed width, so there is no room to buy.
+ * The notification's line: the run's stage, or its step when the stage only says what the title
+ * already does (owner walk, 2026-11-16: "Installing Frescopa: Installing Frescopa").
  */
-function lineFor(payload: OperationProgressPayload): string | undefined {
-    return payload.stage && stageLine(payload.stage, payload.position);
+function lineFor(payload: OperationProgressPayload, title: string): string | undefined {
+    const stage = payload.stage && stageLine(payload.stage, payload.position);
+    if (stage && stage !== title) return stage;
+    return payload.step;
 }
 
 /**
@@ -47,6 +53,7 @@ function lineFor(payload: OperationProgressPayload): string | undefined {
  */
 export function openBackgroundNotice(
     title: string,
+    titles: NoticeTitles,
     current: OperationProgressPayload,
     stillRunning: () => boolean,
 ): void {
@@ -61,13 +68,22 @@ export function openBackgroundNotice(
                 }
                 notices.set(current.id, {
                     title,
+                    titles,
                     report: (message) => progress.report({ message }),
                     end: resolve,
                 });
-                const line = lineFor(current);
+                const line = lineFor(current, title);
                 if (line) progress.report({ message: line });
             }),
     );
+}
+
+/**
+ * Whether the operation runs in the background now: its window was closed and a notification
+ * narrates it. A question it asks then has no window to show in (`askDuringOperation`).
+ */
+export function isInBackground(id: string): boolean {
+    return notices.has(id);
 }
 
 /** Close the notification without a word: the modal has taken the operation back. */
@@ -81,27 +97,37 @@ export function forwardToBackgroundNotice(payload: OperationProgressPayload): vo
     const notice = notices.get(payload.id);
     if (!notice) return;
     if (payload.state === 'running') {
-        const line = lineFor(payload);
+        const line = lineFor(payload, notice.title);
         if (line) notice.report(line);
         return;
     }
     closeBackgroundNotice(payload.id);
+    endNotice(notice.titles, payload);
+}
+
+/**
+ * Say how the operation ended, in its result's words: a success by the run's own title when it gave
+ * one ("No Changes to Save"), else the window's.
+ */
+function endNotice(titles: NoticeTitles, payload: OperationProgressPayload): void {
+    const done = payload.title ?? titles.doneTitle;
     if (payload.state === 'succeeded' && payload.warning) {
-        // The status bar has no room for it, and goes away by itself.
-        void vscode.window.showWarningMessage(`${notice.title} — done. ${payload.warning}`);
+        // Something the SC must act on: a warning, which stays.
+        void vscode.window.showWarningMessage(`${titles.warnedTitle ?? done}. ${payload.warning}`);
         return;
     }
     if (payload.state === 'succeeded' && payload.note) {
         // Something to know, nothing to do: plain, never a warning.
-        void vscode.window.showInformationMessage(`${notice.title} — done. ${payload.note}`);
+        void vscode.window.showInformationMessage(`${done}. ${payload.note}`);
         return;
     }
     if (payload.state === 'succeeded') {
-        vscode.window.setStatusBarMessage(`$(check) ${notice.title} — done`, TIMEOUTS.STATUS_BAR_SUCCESS);
+        void showSelfClosingNotice(done);
         return;
     }
+    const failed = payload.error ? `${titles.failedTitle}. ${payload.error}` : titles.failedTitle;
     void vscode.window
-        .showWarningMessage(`${notice.title} did not finish: ${payload.error}`, 'Open Debug Logs')
+        .showWarningMessage(failed, 'Open Debug Logs')
         .then((choice) => {
             if (choice) void vscode.commands.executeCommand('demoBuilder.showDebugLogs');
         });

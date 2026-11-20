@@ -7,8 +7,11 @@
  * Part of Step 3: Handler Registry Simplification
  */
 
+import { handleAuthenticate } from '@/features/authentication/handlers/authenticationHandlers';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
 import { hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
+import { datapackLibraryHandlers } from '@/features/data-installer/handlers/datapackLibraryHandlers';
+import { projectsListHandlers } from '@/features/projects-dashboard/handlers/projectsListHandlers';
 
 describe('dashboardHandlers', () => {
     describe('handler registration', () => {
@@ -76,23 +79,32 @@ describe('dashboardHandlers', () => {
         it('should include authentication handlers', () => {
             // Given: dashboardHandlers object
             // When: Checking for auth message types
-            // Then: Authentication handlers present (session re-auth + forced org switch)
-            expect(hasHandler(dashboardHandlers, 'reAuthenticate')).toBe(true);
+            // Then: the one Sign In (`authenticate`, shared with the wizard) + forced org switch.
+            // `reAuthenticate` was deleted 2026-11-18: the dashboard's own forced sign-in.
+            expect(dashboardHandlers.authenticate).toBe(handleAuthenticate);
+            expect(hasHandler(dashboardHandlers, 'reAuthenticate')).toBe(false);
             expect(hasHandler(dashboardHandlers, 'switchOrg')).toBe(true);
         });
 
-        it('should include project management handlers', () => {
-            // Given: dashboardHandlers object
-            // When: Checking for project management message types
-            // Then: Project management handlers present
-            expect(hasHandler(dashboardHandlers, 'deleteProject')).toBe(true);
+        // step-05 S4 (owner, 2026-11-13, P5-Q2): Reset opens the projects list's batch window here,
+        // so the map answers its two requests with the list's own handlers, not a fork of them;
+        // Delete hands over to the list. The one-project dialogs' messages are gone.
+        it("answers Reset's batch window with the projects list's own handlers", () => {
+            expect(dashboardHandlers.prepareProjectsBatch).toBe(projectsListHandlers.prepareProjectsBatch);
+            expect(dashboardHandlers.runProjectsBatch).toBe(projectsListHandlers.runProjectsBatch);
         });
 
-        it('should include project reset handler', () => {
-            // Given: dashboardHandlers object
-            // When: Checking for project reset message type
-            // Then: Project reset handler present
-            expect(hasHandler(dashboardHandlers, 'resetProject')).toBe(true);
+        // Walk F229: Share Demo's datapack notice shares the pack with the Datapacks screen's own
+        // handler, the one the share_datapack tool dispatches, not a copy of it.
+        it("answers Share Datapack with the datapack library's own handler", () => {
+            expect(dashboardHandlers['share-library-datapack']).toBe(datapackLibraryHandlers['share-library-datapack']);
+        });
+
+        // Delete runs in the same window, on the dashboard (owner, release test 2.7, 2026-11-16).
+        it("no longer hands Delete over, nor answers the dialogs' messages", () => {
+            expect(hasHandler(dashboardHandlers, 'deleteFromProjectsList')).toBe(false);
+            expect(hasHandler(dashboardHandlers, 'deleteProject')).toBe(false);
+            expect(hasHandler(dashboardHandlers, 'resetProject')).toBe(false);
         });
 
         it('should include the More-menu action handlers', () => {
@@ -133,7 +145,7 @@ describe('dashboardHandlers', () => {
             expect(hasHandler(dashboardHandlers, 'exportProjectSettings')).toBe(true);
         });
 
-        it('should have exactly 94 handlers', () => {
+        it('should have exactly 102 handlers', () => {
             // Given: dashboardHandlers object
             // When: Getting registered types
             const types = getRegisteredTypes(dashboardHandlers) as Array<
@@ -171,7 +183,8 @@ describe('dashboardHandlers', () => {
             //   1  runtime         listRuntimePackages (the list_runtime_packages
             //                      read: what a removal left running, 2026-09-21)
             //   2  storefront      syncStorefront, refreshBlockLibrary
-            //   2  auth            reAuthenticate, switchOrg
+            //   2  auth            authenticate (the one Sign In; replaced
+            //                      reAuthenticate 2026-11-18, so the count holds), switchOrg
             //   1  delete          deleteProject
             //   4  project actions editProject, renameProject,
             //                      exportProjectSettings (headless, for the
@@ -311,7 +324,23 @@ describe('dashboardHandlers', () => {
             // getStorefrontReport + takeStorefrontReportRequest + checkForUpdates removed
             // (97 → 94, EDS-64, 2026-10-23): the report window is gone; Diagnostics and the
             // get_storefront_report tool carry what it said.
-            expect(types).toHaveLength(94);
+            // get-datapack-line (94 → 95, 2026-11-07): the Datapacks card names the demo's pack,
+            // telling it apart from the sidebar's Datapack Library.
+            // resetProject + deleteProject out, prepareProjectsBatch + runProjectsBatch +
+            // deleteFromProjectsList in (95 → 96, step-05 S4, 2026-11-13): Reset opens the projects
+            // list's batch window here; Delete opens the list on its one-row Delete window. The
+            // table's "1 delete" and "1 reset" rows above are those two retired messages.
+            // deleteFromProjectsList out (96 → 95, 2026-11-16, release test 2.7): Delete runs in
+            // the batch window here too, and the dashboard leaves only once the project is gone.
+            // getFinishSetup + setFinishSetupStep + checkFinishSetupSteps + prepareFinishSetupChecks
+            // (95 → 99, PL-101, 2026-11-17): the project's Finish Setup steps, in the setup guide.
+            // share-library-datapack (99 → 100, walk F229, 2026-11-18): Share Demo's datapack
+            // notice shares the pack with the Datapacks screen's own handler.
+            // getShareDatapackCheck (100 → 101, walk F230, 2026-11-18): Share Demo's file step
+            // reads the datapack check on a project with no storefront to preview.
+            // revealFile (101 → 102, walk F236, 2026-11-18): Share Demo's result shows the saved
+            // file in the file browser.
+            expect(types).toHaveLength(102);
         });
 
         it('should have handlers as functions', () => {

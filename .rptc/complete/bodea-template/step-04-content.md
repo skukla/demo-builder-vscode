@@ -1,10 +1,10 @@
 # Step 04 — DA content for `skukla/bodea-source`
 
-**Decision (user, 2026-08-15): seed the datapack's `main` version and update Jen's content to
+**Decision (user, 2026-08-15): seed the datapack's `main` version and update Robin's content to
 match it.** Not the reverse — `legacySkus-20260522` exists but `main` is current, so the catalog
 is the fixed point and the authored content moves.
 
-**Goal: preserve as much of Jen's authoring and design as possible.** Her substantial work is the
+**Goal: preserve as much of Robin's authoring and design as possible.** Her substantial work is the
 homepage, the chrome and the fragments; what needs changing is the thin catalog-bound layer.
 
 ## Source survey (measured from her published sitemap, 87 pages)
@@ -51,14 +51,14 @@ controls (citisignal patches `demo-system-stores` content because we cannot edit
 ours, so nothing about Bodea should be patch-shaped in steady state.
 
 Concretely:
-- The Jen → `bodea-source` migration is a **one-time transform**, not a mechanism. Any tool is
+- The Robin → `bodea-source` migration is a **one-time transform**, not a mechanism. Any tool is
   fine (a script, or `copyContentFromSource` with its patch hook used as a convenient transform);
   it runs once and is then done.
 - **`contentPatches` / `contentPatchSource` stay ABSENT from the bodea package** — verified in
   `demo-packages.json` for both storefronts. Project creation copies our content verbatim, with
   no per-create rewriting and nothing to keep in sync.
 - Any later catalog change is edited **directly in `bodea-source`**, where it is visible and
-  reviewable — never re-derived from Jen's site or layered as a patch. Her site is an ancestor,
+  reviewable — never re-derived from Robin's site or layered as a patch. Her site is an ancestor,
   not an upstream: after the migration we never read from it again.
 
 (Contrast `codePatchSource`, which stays and *should* — that patches `boilerplate-b2b-template`,
@@ -67,9 +67,9 @@ which we genuinely do not own.)
 ## Sequence
 
 1. Obtain the legacy→main mapping (SKUs + category url_keys).
-2. One-time copy: Jen's keep-list → `skukla/bodea-source` DA, applying the mapping to the
+2. One-time copy: Robin's keep-list → `skukla/bodea-source` DA, applying the mapping to the
    re-point set and the `how-it-works-stats-2` → `how-it-works-stats` swap.
-3. Author `/data/guided-selling/bodea-rack-finder.json` (Jen's schema — Bodea-specific, travels)
+3. Author `/data/guided-selling/bodea-rack-finder.json` (Robin's schema — Bodea-specific, travels)
    with its `categoryPath`/`skus` re-pointed to `main`.
 4. Generate the 28 `.da/library/blocks/*` doc pages from the block reference data.
 5. Publish everything (preview + live); confirm the index resolves.

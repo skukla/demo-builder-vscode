@@ -12,7 +12,7 @@ describe('stageLine', () => {
     // "(1 of 2)" read as a step count when each part is many steps (owner, 2026-09-21).
     it('names the part instead of counting it, when it has a name', () => {
         expect(stageLine('Adding Adobe services', { index: 1, total: 2, name: 'Northwind ERP' })).toBe(
-            'Adding Adobe services · Northwind ERP'
+            'Adding Adobe services: Northwind ERP'
         );
     });
 });

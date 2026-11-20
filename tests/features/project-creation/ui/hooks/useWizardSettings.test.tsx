@@ -23,7 +23,7 @@ jest.mock('@/core/ui/utils/vscode-api', () => ({
 // Below the mock on purpose: `jest.mock` hoists above this file's imports only.
 import { useWizardSettings } from '@/features/project-creation/ui/hooks/useWizardSettings';
 
-const JEN = makeAddedDemo();
+const ROBIN = makeAddedDemo();
 const BOB = makeAddedDemo({ name: 'Bob', source: { owner: 'bob', repo: 'shop' }, storefrontKind: 'headless' });
 
 const LIBRARY: CustomBlockLibrary = {
@@ -34,7 +34,7 @@ const LIBRARY: CustomBlockLibrary = {
 const OPEN_VALUES = {
     blockLibraryDefaults: ['hero', 'cards'],
     customBlockLibraryDefaults: [LIBRARY],
-    addedDemos: [JEN],
+    addedDemos: [ROBIN],
 };
 
 /** The handler the hook registered for one push type. */
@@ -57,7 +57,7 @@ describe('useWizardSettings', () => {
 
         expect(result.current.blockLibraryDefaults).toEqual(['hero', 'cards']);
         expect(result.current.customBlockLibraryDefaults).toEqual([LIBRARY]);
-        expect(result.current.addedDemos).toEqual([JEN]);
+        expect(result.current.addedDemos).toEqual([ROBIN]);
     });
 
     it('subscribes once to exactly the three settings pushes', () => {
@@ -79,7 +79,7 @@ describe('useWizardSettings', () => {
 
         expect(result.current.blockLibraryDefaults).toEqual(['columns']);
         expect(result.current.customBlockLibraryDefaults).toEqual([LIBRARY]);
-        expect(result.current.addedDemos).toEqual([JEN]);
+        expect(result.current.addedDemos).toEqual([ROBIN]);
     });
 
     it('replaces the custom libraries when the extension pushes them', () => {
@@ -119,9 +119,9 @@ describe('useWizardSettings', () => {
         act(() => {
             result.current.handleDemoAdded(BOB);
         });
-        expect(result.current.addedDemos).toEqual([JEN, BOB]);
+        expect(result.current.addedDemos).toEqual([ROBIN, BOB]);
 
-        const renamed = { ...JEN, name: 'Renamed' };
+        const renamed = { ...ROBIN, name: 'Renamed' };
         act(() => {
             result.current.handleDemoAdded(renamed);
         });

@@ -50,8 +50,8 @@ function storefront(
     return { read: async (path) => own[path], retired, known };
 }
 
-/** Everything an old JustRite storefront got wrong at once. */
-const OLD_JUSTRITE = {
+/** Everything an old Tailspin storefront got wrong at once. */
+const OLD_TAILSPIN = {
     'head.html': HEAD,
     '404.html': NOT_FOUND,
     [COMMERCE]: COMMERCE_JS_RETIRED_APPLIED,
@@ -59,7 +59,7 @@ const OLD_JUSTRITE = {
 
 describe('runStorefrontRepairs: what a storefront needs', () => {
     it('finds both problems on a storefront made before every fix', async () => {
-        const { done: needed } = await runStorefrontRepairs(storefront(OLD_JUSTRITE));
+        const { done: needed } = await runStorefrontRepairs(storefront(OLD_TAILSPIN));
 
         expect(needed.map((r) => r.id)).toStrictEqual(['not-found-import-map', 'retired-patches']);
     });
@@ -81,7 +81,7 @@ describe('runStorefrontRepairs: what a storefront needs', () => {
 
 describe('runStorefrontRepairs: the changed files', () => {
     it('fixes each problem it finds: the 404 map, the original product-link code', async () => {
-        const { changed } = await runStorefrontRepairs(storefront(OLD_JUSTRITE));
+        const { changed } = await runStorefrontRepairs(storefront(OLD_TAILSPIN));
 
         expect([...changed.keys()].sort()).toStrictEqual(['404.html', COMMERCE].sort());
         expect(changed.get('404.html')).toBe(alignNotFoundImportMap(HEAD, NOT_FOUND));

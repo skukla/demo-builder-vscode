@@ -8,8 +8,8 @@
  * Similar to popular libraries like clsx or classnames
  *
  * @example
- * cn('text-sm', isError && 'text-red-600', 'mb-2')
- * // Returns: "text-sm text-red-600 mb-2" (if isError is true)
+ * cn('text-sm', isError && 'text-negative', 'mb-2')
+ * // Returns: "text-sm text-negative mb-2" (if isError is true)
  */
 export function cn(...classes: (string | undefined | null | false)[]): string {
     return classes.filter(Boolean).join(' ');

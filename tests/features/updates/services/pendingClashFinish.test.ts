@@ -2,14 +2,14 @@
  * finishClash and leaveClash — the one place a clash fixed with AI is pushed, and every
  * check before it (EDS-57 step 5), run against real git.
  *
- * Each case keeps JustRite's header clash first (keepClash, the real path), then plays the
+ * Each case keeps Tailspin's header clash first (keepClash, the real path), then plays the
  * AI's part by writing the file, then finishes. "GitHub" is local bare repositories.
  */
 
 // FIRST: this module owns the jest.mock calls the imports below must see.
 import {
     HEADER_ADOBE,
-    HEADER_KHALIL,
+    HEADER_PERSON_B,
     REAL_GIT_TIMEOUT_MS,
     TEMPLATE,
     finishClash,
@@ -41,6 +41,7 @@ type TestDeps = FinishDeps & {
     latestTarget: jest.Mock<Promise<string | undefined>, [Project, PendingClash]>;
     recordTemplateVersion: jest.Mock;
     restorePieces: jest.Mock;
+    livePatches: jest.Mock;
 };
 
 async function keptProject(before?: () => void): Promise<{ project: Project; deps: TestDeps }> {
@@ -59,6 +60,7 @@ async function keptProject(before?: () => void): Promise<{ project: Project; dep
         latestTarget: jest.fn(async (_project: Project, _clash: PendingClash) => fx.t2 as string | undefined),
         recordTemplateVersion: jest.fn(async () => undefined),
         restorePieces: jest.fn(async () => []),
+        livePatches: jest.fn(async () => []),
     };
     return { project, deps };
 }
@@ -81,7 +83,8 @@ describe('finishClash', () => {
 
         const outcome = await finishClash(project, deps);
 
-        expect(outcome).toEqual({ kind: 'finished', commit: pushedHead(), files: ['blocks/header/header.js'], notes: [] });
+        expect(outcome).toEqual({ kind: 'finished', commit: pushedHead(), files: ['blocks/header/header.js'], notes: [], localCopyClean: true });
+        expect(git(fx.local, 'status', '--porcelain')).toBe('');
         expect(git(fx.scBare, 'rev-list', '--count', `${before}..main`)).toBe('1');
         expect(git(fx.scBare, 'log', '-1', '--format=%s', 'main')).toBe('chore: update the Adobe boilerplate to the tested version');
         expect(git(fx.scBare, 'show', 'main:blocks/header/header.js') + '\n').toBe(FIXED_HEADER);
@@ -92,7 +95,7 @@ describe('finishClash', () => {
         expect(deps.ctx.stateManager.saveProject).toHaveBeenCalledWith(project);
     }, REAL_GIT_TIMEOUT_MS);
 
-    // The git-sync hook committed and pushed JustRite's whole update at the AI's first
+    // The git-sync hook committed and pushed Tailspin's whole update at the AI's first
     // edit (2026-10-21); finishing then refused it as changing files beyond the clash.
     it('finishes an update the git-sync hook already committed and pushed, with no second commit', async () => {
         const { project, deps } = await keptProject();
@@ -102,7 +105,7 @@ describe('finishClash', () => {
 
         const outcome = await finishClash(project, deps);
 
-        expect(outcome).toEqual({ kind: 'finished', commit: pushedByHook, files: ['blocks/header/header.js'], notes: [] });
+        expect(outcome).toEqual({ kind: 'finished', commit: pushedByHook, files: ['blocks/header/header.js'], notes: [], localCopyClean: true });
         expect(pushedHead()).toBe(pushedByHook);
         expect(readBoilerplateBase(project)?.commit).toBe(fx.t2);
         expect(readPendingClash(project)).toBeUndefined();
@@ -121,7 +124,7 @@ describe('finishClash', () => {
         expect(readBoilerplateBase(project)?.commit).toBe(fx.t2);
     }, REAL_GIT_TIMEOUT_MS);
 
-    // Git shortens a file's id to as many characters as it needs that day: JustRite's record
+    // Git shortens a file's id to as many characters as it needs that day: Tailspin's record
     // held 9, and git said 8 at finishing, so an untouched .gitattributes read as changed
     // (2026-10-24). A record written with short ids still matches the same files.
     it('finishes when the record holds file ids shortened to a different length than git uses now', async () => {
@@ -145,7 +148,7 @@ describe('finishClash', () => {
     }, REAL_GIT_TIMEOUT_MS);
 
     // Storefronts made before 2026-10-22 hold our stub where Adobe's checkout labels belong,
-    // and read "undefined" (JustRite). Finishing is an update's push too, so it repairs them.
+    // and read "undefined" (Tailspin). Finishing is an update's push too, so it repairs them.
     it("puts Adobe's checkout labels back over our stub in the same commit, and says so", async () => {
         const { project, deps } = await keptProject(() => {
             write(fx.local, 'placeholders/checkout.json', OLD_SINGLE_SHEET_STUB_JSON);
@@ -240,7 +243,7 @@ describe('finishClash', () => {
 
         expect(pushedHead()).toBe(before);
         expect(git(fx.local, 'status', '--porcelain')).toBe('');
-        expect(read('blocks/header/header.js')).toBe(HEADER_KHALIL);
+        expect(read('blocks/header/header.js')).toBe(HEADER_PERSON_B);
         expect(readPendingClash(project)).toBeUndefined();
         expect(readBoilerplateBase(project)?.commit).toBe(fx.t1);
     }, REAL_GIT_TIMEOUT_MS);
@@ -281,6 +284,7 @@ describe('finishClash', () => {
             latestTarget: jest.fn(async () => fx.t2),
             recordTemplateVersion: jest.fn(async () => undefined),
             restorePieces: jest.fn(async () => []),
+            livePatches: jest.fn(async () => []),
         };
 
         await expect(finishClash(project, deps)).resolves.toMatchObject({ kind: 'finished' });
@@ -289,6 +293,23 @@ describe('finishClash', () => {
         expect(git(fx.scBare, 'log', '-1', '--format=%s', 'main')).toBe('chore: sync with template');
         // Only a tested-boilerplate storefront gets its pieces put back.
         expect(deps.restorePieces).not.toHaveBeenCalled();
+    }, REAL_GIT_TIMEOUT_MS);
+
+    // The Updates window's "Your local copy" line is told it is up to date only when it is (EDS-56).
+    it('says the local copy is not clean when it changed after the push', async () => {
+        const project = storefrontProject();
+        const ctx = updateContext();
+        await keepClash(project, { ...request(), track: 'template', clash: { ...request().clash, source: TEMPLATE } }, ctx);
+        write(fx.local, 'blocks/header/header.js', FIXED_HEADER);
+        const deps = {
+            ctx,
+            latestTarget: jest.fn(async () => fx.t2),
+            recordTemplateVersion: jest.fn(async () => write(fx.local, 'notes.txt', 'written after the push')),
+            restorePieces: jest.fn(async () => []),
+            livePatches: jest.fn(async () => []),
+        };
+
+        await expect(finishClash(project, deps)).resolves.toMatchObject({ kind: 'finished', localCopyClean: false });
     }, REAL_GIT_TIMEOUT_MS);
 
     it('answers nothing for a project with no kept clash', async () => {
@@ -305,7 +326,7 @@ describe('leaveClash', () => {
         await leaveClash(project, deps.ctx);
 
         expect(git(fx.local, 'status', '--porcelain')).toBe('');
-        expect(read('blocks/header/header.js')).toBe(HEADER_KHALIL);
+        expect(read('blocks/header/header.js')).toBe(HEADER_PERSON_B);
         expect(read('blocks/header/header.js')).not.toBe(HEADER_ADOBE);
         await expect(hasKeptClash(fx.local)).resolves.toBe(false);
         expect(readPendingClash(project)).toBeUndefined();

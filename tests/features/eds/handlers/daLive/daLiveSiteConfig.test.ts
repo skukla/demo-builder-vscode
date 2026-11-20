@@ -143,6 +143,12 @@ describe('applyDaLiveOrgConfigSettings — config scope routing', () => {
         expect(mockApplyOrgConfig).not.toHaveBeenCalled();
     });
 
+    it('writes the default experience when the caller names none: a new storefront', async () => {
+        await applyDaLiveOrgConfigSettings(mockContentOps, DA_LIVE_ORG, DA_LIVE_SITE, mockLogger);
+
+        expect(mockApplySiteConfig.mock.calls[0][2]['editor.path']).toBe(`${SITE_ROW_KEY}=https://da.live/canvas#`);
+    });
+
     it('routes Experience Workspace editor.path to applySiteConfig with the canvas row', async () => {
         mockImsOrgId = IMS_ORG_ID;
 

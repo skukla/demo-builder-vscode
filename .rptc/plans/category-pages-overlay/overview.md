@@ -136,7 +136,7 @@ the site's served `config.json` gives the Catalog Service endpoint and the store
 { categories(ids: []) { urlPath name } }
 ```
 
-Measured today on scratch-1022 (Justrite store, guest headers from its `config.json`): `200`,
+Measured today on scratch-1022 (Tailspin store, guest headers from its `config.json`): `200`,
 15 categories, including `signs`, `signs/danger-signs`, `safety-cabinets`, `5s-visual-workplace`,
 and two root categories with an empty `urlPath`. `categories(roles: ["show_in_menu"])` returned
 the same 15. `categories(subtree: ...)` without an id is an error. `includeInMenu` is not a field
@@ -217,7 +217,7 @@ test pinning that.
 (section 1). But three things make root paths the wrong choice here:
 
 1. **It replaces authored pages on every site at once.** One deploy reaches every SC's site.
-   Any site with an authored page at a category's address loses it on its next preview. Justrite
+   Any site with an authored page at a category's address loses it on its next preview. Tailspin
    has hand-built `/apparel`, `/hazard-communication` and `/workplace-safety`
    (`dynamic-commerce-pages/research.md:418-424`). The boilerplate has `/apparel`. Reset and
    republish preview every DA page, so this happens on the next reset, without anyone choosing it.
@@ -430,6 +430,6 @@ nothing, and publish nothing (or a 404).
 | D3 | Menu block: keep the per-category `HEAD` check and search fallback, or link straight to the page? | **Link straight; delete the check.** Smart-404 makes every category page exist on first visit, and the check costs one request per category per page view |
 | D4 | `add_category_pages` / `check_category_pages`: delete or repurpose? | **Delete both.** `sync_content` re-publishes every category page; nothing is left to add |
 | D5 | Overlay off: no category pages, or keep writing DA pages for those sites? | **No category pages, no nav switch, a sentence that says why.** Two paths for one job is what this item removes |
-| D6 | Which categories get a page: all with a url path, or only "show in menu"? | **All.** On Justrite the two sets are the same today (15 and 15) |
+| D6 | Which categories get a page: all with a url path, or only "show in menu"? | **All.** On Tailspin the two sets are the same today (15 and 15) |
 | D7 | Deploy the shared action (live for every SC) | Your go, after S1–S5. Run S0 first if you want the precedence rule measured rather than taken from Adobe's docs |
 | D8 | Migration trigger: next reset/republish only, or also an explicit one-off? | **Next reset/republish only.** Only dev and scratch sites have these pages |

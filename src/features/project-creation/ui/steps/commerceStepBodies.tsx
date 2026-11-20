@@ -13,11 +13,11 @@
  */
 
 import React from 'react';
-import { ChoiceCard } from '../components/ChoiceCard';
 import { BACKEND_LABELS, type CommerceSectionId } from './commerceSections';
+import { DatapackStep } from './DatapackStep';
 import { COMMERCE_SET_IN_CONFIGURE } from './editLocks';
-import { SampleDataStep } from './SampleDataStep';
 import { SetInConfigureNote } from './SetInConfigureNote';
+import { ChoiceCard } from '@/core/ui/components/selection/ChoiceCard';
 import { AdobeAuthStep } from '@/features/authentication/ui/steps/AdobeAuthStep';
 import type { WizardState } from '@/types/webview';
 
@@ -114,7 +114,7 @@ export function sectionBody(id: CommerceSectionId, ctx: SectionBodyContext): Rea
     // .env, and it reads the Data Installer's catalog rather than the connection.
     if (id === 'sample-data') {
         return (
-            <SampleDataStep state={ctx.state} updateState={ctx.updateState} setCanProceed={NOOP} />
+            <DatapackStep state={ctx.state} updateState={ctx.updateState} setCanProceed={NOOP} />
         );
     }
     // Config steps render ONLY the form — the footer Continue advances to the next

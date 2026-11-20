@@ -17,7 +17,6 @@
  * - ToolManager
  * - EdsProjectService
  * - HelixService
- * - CleanupService
  */
 
 import type { Logger } from '@/types/logger';
@@ -134,13 +133,6 @@ describe('Service Logger Injection', () => {
             // constructor no longer takes a CommandExecutor at all, because the
             // read is in-process.
             const readNoToken = () => undefined;
-            // The 4th constructor parameter defaults to the REAL
-            // `refreshStoredToken`, which calls @adobe/aio-lib-ims. On a
-            // signed-in machine that performs a live network refresh and can
-            // escalate to the INTERACTIVE browser login — a unit test must
-            // never do either. Found 2026-08-28 by the console gate: the full
-            // suite printed an Adobe "Login URI" with a live callback port.
-            const noRefresh = async () => undefined;
 
             const { TokenManager } = require('@/features/authentication/services/tokenManager');
 
@@ -149,7 +141,7 @@ describe('Service Logger Injection', () => {
             expect(tokenManager1).toBeDefined();
 
             // Should work with logger (DI pattern)
-            const tokenManager2 = new TokenManager(undefined, mockLogger, readNoToken, noRefresh);
+            const tokenManager2 = new TokenManager(undefined, mockLogger, readNoToken);
             expect(tokenManager2).toBeDefined();
 
             // Trigger operation that logs
@@ -247,37 +239,6 @@ describe('Service Logger Injection', () => {
             };
             const service3 = new HelixService(mockLogger, mockGithubTokenService);
             expect(service3).toBeDefined();
-        });
-    });
-
-    describe('CleanupService', () => {
-        it('should accept optional logger in constructor', () => {
-            // Mock dependencies
-            const mockGithubService = { deleteRepository: jest.fn() };
-            const mockDaLiveService = { deleteSite: jest.fn() };
-            const mockToolManager = { executeAcoCleanup: jest.fn() };
-            const mockCodeRemoval = { files: { listRepoFiles: jest.fn() } };
-
-            const { CleanupService } = require('@/features/eds/services/cleanupService');
-
-            // Should work without logger (backward compatible)
-            const service1 = new CleanupService(
-                mockGithubService,
-                mockDaLiveService,
-                mockToolManager,
-                mockCodeRemoval
-            );
-            expect(service1).toBeDefined();
-
-            // Should work with logger (DI pattern)
-            const service2 = new CleanupService(
-                mockGithubService,
-                mockDaLiveService,
-                mockToolManager,
-                mockCodeRemoval,
-                mockLogger
-            );
-            expect(service2).toBeDefined();
         });
     });
 });

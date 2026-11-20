@@ -4,8 +4,8 @@
  * Handles the delete-adobe-project message: after a native confirmation
  * modal, tears down a Console project (event registrations + 3rd-party
  * providers, then the project itself) via `teardownConsoleProject`, and
- * finalizes on the extension side — conditional console-selection clear,
- * project-list refresh, and an outcome toast.
+ * finalizes on the extension side — project-list refresh and an outcome toast.
+ * The Console selection is cleared by the teardown itself (PL-104 fix 8).
  *
  * Ordering mirrors the house handler shape (validate → org gate → confirm →
  * service → shaped result). Per-entity failures never throw; the teardown
@@ -27,6 +27,7 @@ import {
 } from '@/features/authentication/services/consoleProjectTeardown';
 import { IoEventsClient } from '@/features/authentication/services/ioEventsClient';
 import {
+    NOT_PROJECT_OWNER_MESSAGE,
     stampProjectsDeletable,
     verifyProjectOwnership,
 } from '@/features/authentication/services/projectOwnership';
@@ -79,6 +80,13 @@ export function createTeardownDeps(authService: AuthenticationService): Teardown
             const { projectOps } = await authService.getEntityServices();
             return projectOps.deleteConsoleProject(orgId, projectId);
         },
+        // `getCachedProject()` mirrors the resolved console selection, so comparing its
+        // id is the smallest correct check before the store-mutating clear.
+        clearConsoleSelectionIfCurrent: async (projectId) => {
+            if (authService.getCacheManager().getCachedProject()?.id !== projectId) return;
+            const { selector } = await authService.getEntityServices();
+            await selector.clearConsoleContext();
+        },
         getAccessToken: async () => {
             const inspection = await authService.getTokenManager().inspectToken();
             if (!inspection.valid || !inspection.token) {
@@ -86,6 +94,7 @@ export function createTeardownDeps(authService: AuthenticationService): Teardown
             }
             return inspection.token;
         },
+        isProjectOwner: (target) => verifyProjectOwnership(authService, target),
         createEventsClient: (auth) => new IoEventsClient(auth),
     };
 }
@@ -144,38 +153,12 @@ function runTeardownWithProgress(
     return vscode.window.withProgress(
         {
             location: vscode.ProgressLocation.Notification,
-            title: 'Deleting the Adobe project',
+            title: 'Deleting the Adobe Project',
             cancellable: false,
         },
         (progress) => teardownConsoleProject(deps, target, (p) =>
             progress.report({ message: stageLine(p.message, { index: p.step, total: p.totalSteps }) })),
     );
-}
-
-/**
- * Clear the aio console selection IF it points at the deleted project.
- * Mechanism: `getCachedProject()` mirrors the resolved console selection, so
- * comparing its id against the deleted project is the smallest correct check
- * before the store-mutating `clearConsoleContext()`. Best-effort — a failure
- * here never flips the teardown result.
- */
-async function clearSelectionIfCurrent(
-    context: HandlerContext,
-    result: ConsoleProjectTeardownResult,
-    projectId: string,
-): Promise<void> {
-    if (!result.shouldClearConsoleSelection) {
-        return;
-    }
-    try {
-        const cached = context.authManager?.getCacheManager().getCachedProject();
-        if (cached?.id === projectId) {
-            await context.authManager?.getEntityServices()
-                .then((units) => units.selector.clearConsoleContext());
-        }
-    } catch (clearError) {
-        context.debugLogger.debug('[Project] Post-delete selection clear failed:', clearError);
-    }
 }
 
 /**
@@ -229,14 +212,14 @@ function buildFailureMessage(result: ConsoleProjectTeardownResult, title: string
         + 'run Delete again to retry.';
 }
 
-/** Post-teardown finalization: conditional clear, refresh, and outcome toast. */
+/** Post-teardown finalization: refresh and outcome toast. */
 async function finalizeTeardown(
     context: HandlerContext,
     result: ConsoleProjectTeardownResult,
     target: { orgId: string; projectId: string; title: string },
 ): Promise<void> {
     if (result.projectDeleted) {
-        await clearSelectionIfCurrent(context, result, target.projectId);
+        // The teardown has cleared the Console selection itself (PL-104 fix 8).
         await refreshProjects(context, target.orgId);
         // As every success reads (owner, 2026-10-15): a ✅ line that goes by itself. An
         // information notification stayed in the corner until closed (2026-10-28).
@@ -280,11 +263,14 @@ export async function handleDeleteAdobeProject(
 
     // SECURITY: ownership gate — only the project's creator may delete it.
     // who_created is fetched independently (never trusted from the webview)
-    // and compared to the token's own user id; unknowns fail closed.
-    if (!(await verifyProjectOwnership(context.authManager, { orgId, projectId }))) {
+    // and compared to the token's own user id; unknowns fail closed. The teardown
+    // owns this check for every door (walk F270); the button asks the same dep
+    // first so nobody confirms a delete that will be refused.
+    const deps = createTeardownDeps(context.authManager);
+    if (!(await deps.isProjectOwner({ orgId, projectId }))) {
         return {
             success: false,
-            error: 'You can only delete Adobe projects you created.',
+            error: NOT_PROJECT_OWNER_MESSAGE,
             code: ErrorCode.NOT_PROJECT_OWNER,
         };
     }
@@ -300,7 +286,6 @@ export async function handleDeleteAdobeProject(
     await context.sendMessage('project-delete-started', { projectId });
 
     try {
-        const deps = createTeardownDeps(context.authManager);
         const result = await runTeardownWithProgress(deps, { orgId, projectId, projectTitle });
         await finalizeTeardown(context, result, { orgId, projectId, title });
         return { success: result.success, data: result };

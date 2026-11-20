@@ -7,6 +7,12 @@
  * final steps live in `edsResetFinalize.test.ts`.
  */
 
+const mockCodeServed = jest.fn();
+jest.mock('@/features/eds/services/storefront/codeServed', () => ({
+    ...jest.requireActual('@/features/eds/services/storefront/codeServed'),
+    confirmStorefrontCodeServed: (...args: unknown[]) => mockCodeServed(...args),
+}));
+
 import {
     CATALOG_MENU_SITE,
     helixInstance,
@@ -41,11 +47,15 @@ import {
 } from '@/features/eds/handlers/edsHelpers';
 import { DaLiveAuthError, GitHubAppNotInstalledError } from '@/features/eds/services/types';
 import { createMockPipelineResult } from '../../../../helpers/pipelineResultFake';
+import { createMockProject } from '../../../../helpers/projectFake';
 import type { LeftoverPagesResult } from '@/features/eds/services/storefront/leftoverPages';
 
 jest.setTimeout(5000);
 
-beforeEach(resetOrchestrationMocks);
+beforeEach(() => {
+    resetOrchestrationMocks();
+    mockCodeServed.mockResolvedValue({ files: [] });
+});
 
 // =============================================================================
 // Step 0: name migration
@@ -637,5 +647,44 @@ describe('executeEdsReset - pipeline progress mapping', () => {
                 message: 'Previewing the pages: 3 of 64 pages',
             },
         ]);
+    });
+});
+
+// =============================================================================
+// PL-101: the steps a reset leaves to finish
+// =============================================================================
+
+describe('executeEdsReset - the project\'s Finish Setup steps', () => {
+    it('saves Republish the Code with the files the live site still did not serve', async () => {
+        mockCodeServed.mockResolvedValue({ files: ['scripts/commerce.js'], sentence: '1 code file did not reach the live site.' });
+
+        const { project, result } = await runReset();
+
+        expect(result.success).toBe(true);
+        expect(project.finishSetup).toStrictEqual({ 'republish-code': { files: ['scripts/commerce.js'] } });
+    });
+
+    // The second publish failed too, and the served-code check found nothing to name (it could
+    // not run): the step still exists, checking the two files every storefront page loads.
+    it("saves Republish the Code with the template's own files when the code could not be published at all", async () => {
+        mockPreviewCode.mockRejectedValue(new Error('helix down'));
+
+        const { project } = await runReset();
+
+        expect(project.finishSetup).toStrictEqual({
+            'republish-code': { files: ['scripts/aem.js', 'styles/styles.css'] },
+        });
+    });
+
+    it('replaces an earlier record when the site serves everything (no stale step)', async () => {
+        const { project } = await runReset({
+            project: createMockProject({
+                selectedPackage: 'citisignal',
+                selectedStack: 'eds-paas',
+                finishSetup: { 'republish-code': { files: ['scripts/old.js'], state: 'done' } },
+            }),
+        });
+
+        expect(project).not.toHaveProperty('finishSetup');
     });
 });

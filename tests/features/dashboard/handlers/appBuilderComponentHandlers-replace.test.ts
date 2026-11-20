@@ -44,8 +44,8 @@ function state(kind: AppBuilderComponentState['kind'], name: string, extra: Part
 /** Another local project holding the pair in the fixture's Adobe project (`project123`). */
 function otherPair(erpName: string, adobeProjectId = 'project123'): Project {
     return createMockProject({
-        name: 'justrite',
-        path: '/projects/justrite',
+        name: 'tailspin',
+        path: '/projects/tailspin',
         adobe: { projectId: adobeProjectId, organization: 'org123' },
         appBuilderComponents: {
             'erp-integration': state('integration', 'ERP Integration', { systems: ['demo-erp'] }),
@@ -80,10 +80,10 @@ beforeEach(() => {
 
 describe('handleAddAppBuilderComponent — one Adobe project holds one ERP of a name', () => {
     it('removes the other project\'s pair first when its ERP has the name this one will', async () => {
-        const other = otherPair('Justrite ERP');
+        const other = otherPair('Tailspin ERP');
         const { mockContext, mockProject } = setup(other);
 
-        const result = await handleAddAppBuilderComponent(mockContext, { id: 'erp-integration', name: 'Justrite' });
+        const result = await handleAddAppBuilderComponent(mockContext, { id: 'erp-integration', name: 'Tailspin' });
 
         expect(result.success).toBe(true);
         expect(mockRemoveAppBuilderComponent).toHaveBeenCalledWith(other, 'erp-integration', expect.anything());
@@ -92,13 +92,13 @@ describe('handleAddAppBuilderComponent — one Adobe project holds one ERP of a 
     });
 
     it('stops before deploying, with the reason, when that removal did not finish', async () => {
-        const { mockContext } = setup(otherPair('Justrite ERP'));
+        const { mockContext } = setup(otherPair('Tailspin ERP'));
         mockRemoveAppBuilderComponent.mockResolvedValue({ success: false, error: 'Nothing was removed. Commerce still has it.' });
 
-        const result = await handleAddAppBuilderComponent(mockContext, { id: 'erp-integration', name: 'Justrite' });
+        const result = await handleAddAppBuilderComponent(mockContext, { id: 'erp-integration', name: 'Tailspin' });
 
         expect(result.success).toBe(false);
-        expect(result.error).toContain("justrite's Justrite ERP is still deployed");
+        expect(result.error).toContain("tailspin's Tailspin ERP is still deployed");
         expect(result.error).toContain('Nothing was removed. Commerce still has it.');
         expect(mockAddAppBuilderComponent).not.toHaveBeenCalled();
     });
@@ -106,7 +106,7 @@ describe('handleAddAppBuilderComponent — one Adobe project holds one ERP of a 
     it('adds beside a pair whose ERP has a different name', async () => {
         const { mockContext } = setup(otherPair('Acme ERP'));
 
-        const result = await handleAddAppBuilderComponent(mockContext, { id: 'erp-integration', name: 'Justrite' });
+        const result = await handleAddAppBuilderComponent(mockContext, { id: 'erp-integration', name: 'Tailspin' });
 
         expect(result.success).toBe(true);
         expect(mockRemoveAppBuilderComponent).not.toHaveBeenCalled();
@@ -114,9 +114,9 @@ describe('handleAddAppBuilderComponent — one Adobe project holds one ERP of a 
     });
 
     it('leaves a same-named pair in a different Adobe project alone', async () => {
-        const { mockContext } = setup(otherPair('Justrite ERP', 'another-adobe-project'));
+        const { mockContext } = setup(otherPair('Tailspin ERP', 'another-adobe-project'));
 
-        await handleAddAppBuilderComponent(mockContext, { id: 'erp-integration', name: 'Justrite' });
+        await handleAddAppBuilderComponent(mockContext, { id: 'erp-integration', name: 'Tailspin' });
 
         expect(mockRemoveAppBuilderComponent).not.toHaveBeenCalled();
         expect(mockAddAppBuilderComponent).toHaveBeenCalledTimes(1);

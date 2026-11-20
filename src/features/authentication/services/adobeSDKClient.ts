@@ -89,9 +89,9 @@ export class AdobeSDKClient {
         try {
             // The token is INSPECTED, never fetched. `aio-lib-ims`'s getToken
             // opens a browser when it cannot resolve a token silently, so an SDK
-            // init — which runs in the background — must never reach it. Nothing
-            // in this repo calls it any more (2026-09-02): it is not even in the
-            // library's local typings, so a reintroduction fails to compile.
+            // init — which runs in the background — must never reach it. The
+            // library is not a dependency of this extension (removed 2026-11-15),
+            // so reintroducing that call means adding it back first.
             // Dynamic imports: deferred to avoid module loading chain in tests
             // (TokenManager → loadingHTML → vscode not available during test setup)
             const { TokenManager } = await import('./tokenManager');

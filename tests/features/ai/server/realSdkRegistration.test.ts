@@ -27,6 +27,8 @@ import { registerAdobeTools } from '@/features/ai/server/adobeTools';
 import { registerApplyUpdatesTool } from '@/features/ai/server/applyUpdatesTool';
 import { registerFinishStorefrontUpdateTool } from '@/features/ai/server/finishStorefrontUpdateTool';
 import { registerAuthTools } from '@/features/ai/server/authTools';
+import { registerCancelProjectCreationTool } from '@/features/ai/server/cancelProjectCreationTool';
+import { registerContinueProjectCreationTool } from '@/features/ai/server/continueProjectCreationTool';
 import { registerCloudResourceTools } from '@/features/ai/server/cloudResourceTools';
 import { registerComponentRequirementsTool } from '@/features/ai/server/componentRequirementsTool';
 import { registerConfigureProjectTool } from '@/features/ai/server/configureProjectTool';
@@ -43,6 +45,7 @@ import { registerAddedDemoTools } from '@/features/ai/server/addedDemoTools';
 import { registerDemoPackageTools } from '@/features/ai/server/demoPackageTools';
 import { registerResetProjectTool } from '@/features/ai/server/resetProjectTool';
 import { registerLifecycleTools } from '@/features/ai/server/lifecycleTools';
+import { registerReportIssueTool } from '@/features/ai/server/reportIssueTool';
 import { registerCommerceEndpointsTool } from '@/features/ai/server/commerceEndpointsTool';
 import { registerCommerceQueryTool } from '@/features/ai/server/commerceQueryTool';
 import { registerCommerceRestTool } from '@/features/ai/server/commerceRestTool';
@@ -55,6 +58,9 @@ import { registerViewTools } from '@/features/ai/server/viewTools';
 import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
 import { STATUS_DESCRIPTORS } from '@/features/ai/server/statusDescriptors';
 import { ACTION_DESCRIPTORS } from '@/features/ai/server/actionDescriptors';
+// Registered by extension.ts beside the three tables above; missing here until 2026-10-29
+// (datapack-engine step 05), so its fifteen rows never met the real SDK in a test.
+import { DATA_INSTALLER_DESCRIPTORS } from '@/features/ai/server/dataInstallerDescriptors';
 import { registerDescriptorTools } from '@/features/ai/server/toolDescriptors';
 import { registerValidateSelectionTool } from '@/features/ai/server/validateSelectionTool';
 import type { McpToolSchema, McpToolServer } from '@/features/ai/server/mcpToolServer';
@@ -82,7 +88,7 @@ describe('registration against the real MCP SDK', () => {
         expect(() =>
             registerDescriptorTools(
                 server(),
-                [...READ_DESCRIPTORS, ...STATUS_DESCRIPTORS, ...ACTION_DESCRIPTORS],
+                [...READ_DESCRIPTORS, ...STATUS_DESCRIPTORS, ...ACTION_DESCRIPTORS, ...DATA_INSTALLER_DESCRIPTORS],
                 ctxFactory
             )
         ).not.toThrow();
@@ -125,7 +131,7 @@ describe('registration against the real MCP SDK', () => {
         expect(() => {
             registerDescriptorTools(
                 s,
-                [...READ_DESCRIPTORS, ...STATUS_DESCRIPTORS, ...ACTION_DESCRIPTORS],
+                [...READ_DESCRIPTORS, ...STATUS_DESCRIPTORS, ...ACTION_DESCRIPTORS, ...DATA_INSTALLER_DESCRIPTORS],
                 ctxFactory
             );
             registerDiscoveryTools(s);
@@ -133,6 +139,8 @@ describe('registration against the real MCP SDK', () => {
             registerAuthTools(s, ctxFactory);
             registerAdobeTools(s, ctxFactory);
             registerCreateProjectTool(s, ctxFactory);
+            registerCancelProjectCreationTool(s, ctxFactory);
+            registerContinueProjectCreationTool(s);
             registerCreateProjectFromFileTool(s, ctxFactory);
             registerCopyProjectTool(s, ctxFactory);
             registerCurrentProjectTool(s, ctxFactory);
@@ -160,6 +168,7 @@ describe('registration against the real MCP SDK', () => {
             registerFinishStorefrontUpdateTool(s, ctxFactory);
             registerViewTools(s, async () => undefined);
             registerLifecycleTools(s, ctxFactory, async () => undefined);
+            registerReportIssueTool(s, { openUrl: async () => undefined, loadProjects: async () => [], version: '0.0.0' });
         }).not.toThrow();
     });
 

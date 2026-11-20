@@ -103,7 +103,7 @@ export function GitHubAppInstallDialog({
         return (
             <CenteredFeedbackContainer>
                 <LoadingDisplay
-                    size="L"
+                    size="M" centered
                     message="Checking for GitHub App Installation"
                     subMessage={`Verifying ${owner}/${repo}`}
                 />
@@ -139,7 +139,7 @@ export function GitHubAppInstallDialog({
             />
 
             {hasError && (
-                <Text UNSAFE_className="text-sm text-orange-700 text-center" marginTop="size-200">
+                <Text UNSAFE_className="text-sm text-notice text-center" marginTop="size-200">
                     {/* This branch is now reached ONLY for a measured inner 404 --
                         Helix knows the site and reports no code sync -- so the
                         install advice is warranted. The old `codeStatus === undefined`

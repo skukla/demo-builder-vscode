@@ -23,7 +23,7 @@
  * @module features/components/services/commerceSecretSweep
  */
 
-import { migrateDeclaredSecrets, type SecretWriter } from './commerceSecretMigration';
+import { migrateDeclaredSecrets, type SecretWriter } from './declaredSecretStore';
 
 /** The project shape this sweep touches. */
 export interface SweepableProject {

@@ -73,13 +73,13 @@ import { withSystemWord } from '@/features/app-builder/services/pairNames';
 /** Every tool, and what it says while it runs. Keyed by MCP tool name. */
 export const TOOL_NARRATION: Record<string, string> = {
     // ── Reads: what is being found out ──────────────────────────────────
-    check_datapack_service: 'Checking the sample-data service',
+    check_datapack_service: 'Checking the Data Installer',
     check_github_app: 'Checking the GitHub app',
     check_mesh: 'Checking the API mesh',
     check_prerequisites: 'Checking the required tools',
     check_repo_readiness: 'Checking the storefront repo',
     discover_store_structure: 'Reading the live store',
-    find_datapacks: 'Looking up available sample data',
+    find_datapacks: 'Looking up datapacks',
     find_storefront_name_mismatches: 'Finding mismatched storefronts',
     get_auth_status: 'Checking your sign-ins',
     get_block_authoring_shape: "Looking up a block's shape",
@@ -88,10 +88,10 @@ export const TOOL_NARRATION: Record<string, string> = {
     get_component_config: 'Reading the project config',
     get_component_requirements: 'Looking up component needs',
     get_current_project: 'Checking which project is open',
-    get_datapack: 'Looking up the sample-data pack',
-    get_datapack_activity: 'Reading the sample-data history',
-    get_datapack_import_status: 'Checking sample-data progress',
-    get_datapack_import_target: 'Checking the sample-data target',
+    get_datapack: 'Looking up a datapack',
+    get_datapack_activity: 'Reading the datapack history',
+    get_datapack_import_status: 'Checking the datapack progress',
+    get_datapack_import_target: 'Checking the install target',
     get_project: 'Reading the project',
     get_project_status: 'Checking the demo is running',
     get_project_urls: 'Looking up the project URLs',
@@ -107,12 +107,12 @@ export const TOOL_NARRATION: Record<string, string> = {
     list_content: 'Listing the storefront content',
     list_runtime_packages: 'Listing the deployed packages',
     list_dalive_sites: 'Listing the DA.live sites',
-    list_datapack_data_types: 'Listing the sample-data types',
+    list_datapack_data_types: "Listing a datapack's data types",
     list_datapack_export_items: 'Listing what this store holds',
-    list_datapack_import_scopes: 'Listing sample-data targets',
+    list_datapack_import_scopes: 'Listing the install targets',
     list_demo_packages: 'Listing the demo packages',
     list_github_repos: 'Listing your GitHub repositories',
-    list_installed_datapacks: 'Listing installed sample data',
+    list_installed_datapacks: 'Listing installed datapacks',
     list_orgs: 'Listing your Adobe organizations',
     list_projects: 'Listing your projects',
     list_stacks: 'Listing the available stacks',
@@ -128,11 +128,18 @@ export const TOOL_NARRATION: Record<string, string> = {
     set_setting: 'Asking you to change a setting',
     validate_component_selection: 'Checking the component choices',
     // "same request body as the real thing, without writing".
-    validate_datapack_import: 'Checking the sample-data import',
+    validate_datapack_import: 'Running a datapack dry run',
+    // "What installing a datapack again would change ... Writes nothing."
+    preview_datapack_changes: 'Previewing the datapack changes',
+    verify_datapack_install: 'Checking the datapack install',
+    // "What a website of this project's store holds that Demo Builder did not install ... Writes nothing."
+    check_demo_data: "Checking this demo's store data",
     verify_ai_setup: 'Checking the AI setup',
 
     // ── Projects ────────────────────────────────────────────────────────
     create_project: 'Creating the project',
+    cancel_project_creation: 'Stopping the project creation',
+    continue_project_creation: 'Continuing the project creation',
     create_project_from_file: 'Creating a project from a file',
     copy_project: 'Copying a project',
     delete_project: 'Deleting the project',
@@ -181,6 +188,10 @@ export const TOOL_NARRATION: Record<string, string> = {
     get_setup_checklist: 'Reading the demo setup checklist',
     set_setup_step: 'Marking a demo setup step',
     check_setup_steps: 'Checking demo setup in Commerce',
+    // The project's Finish Setup (PL-101): what a creation or reset left to do.
+    get_finish_setup: 'Reading the finish setup steps',
+    set_finish_setup_step: 'Marking a finish setup step',
+    check_finish_setup: 'Checking the finish setup steps',
 
     // ── I/O Events lifecycle (AB-6) ─────────────────────────────────────
     list_event_providers: 'Listing the event providers',
@@ -237,7 +248,7 @@ export const TOOL_NARRATION: Record<string, string> = {
     edit_added_demo: "Editing the added demo's card",
     change_demo_source: "Repointing the project's demo",
     get_demo_package_preview: 'Reading the demo package draft',
-    save_demo_package: 'Saving the storefront as a demo',
+    save_demo_package: 'Saving the demo as a package',
     remove_demo_package: 'Removing the demo package',
     export_demo_bundle: 'Saving the demo as a file',
     repair_site_configuration: 'Repairing the site configuration',
@@ -252,20 +263,35 @@ export const TOOL_NARRATION: Record<string, string> = {
     // "Hands back to the user — the credential comes from a bookmarklet".
     connect_dalive: 'Asking you to sign in to DA.live',
 
-    // ── Sample data ─────────────────────────────────────────────────────
-    start_datapack_import: 'Importing the sample data',
-    start_datapack_export: 'Capturing the sample data',
-    reset_datapack: 'Removing the sample data',
-    save_datapack_zip: 'Saving the datapack as a file',
-    open_datapack_zip: 'Reading the datapack file',
-    load_datapack_zip: 'Loading a datapack file',
-    delete_library_datapack: 'Deleting a library datapack',
-    copy_library_datapack_to_installer: 'Copying a pack to the installer',
+    // ── Datapacks, in the Datapacks screen's words (Phase 8) ────────────
+    install_datapack: 'Installing a datapack',
+    create_datapack: 'Saving to a datapack',
+    uninstall_datapack: 'Uninstalling a datapack',
+    undo_last_save: "Undoing a datapack's last save",
+    restore_datapack: 'Restoring a datapack',
+    update_datapack: 'Updating a datapack',
+    // "Clear this project's websites of everything check_demo_data listed".
+    clear_demo_data: 'Clearing the demo data',
+    // "Clear whole websites of this project's Commerce instance, whoever put the data there".
+    clear_commerce_instance: 'Clearing the Commerce instance',
+    save_datapack_zip: 'Saving a datapack as a file',
+    read_datapack_file: 'Reading the datapack file',
+    build_datapack_from_export: 'Building a datapack file',
+    add_datapack_from_file: 'Adding a datapack from a file',
+    delete_library_datapack: 'Deleting a datapack',
+    rename_datapack: 'Renaming the datapack',
+    // "Mark one of your own datapacks ... as a Demo Builder datapack".
+    mark_demo_builder_datapack: 'Marking a Demo Builder datapack',
+    // "Share one of your own datapacks in My Datapacks, or stop sharing it".
+    share_datapack: 'Changing who can use a datapack',
+    // "Save the store's copy of the datapack this project uses ...: Save or Save As New".
+    save_store_changes_to_pack: 'Saving Commerce changes',
 
     // ── Environment and session ─────────────────────────────────────────
     install_prerequisite: 'Installing the required tool',
     sign_in: 'Opening sign-in',
     open_url: 'Opening the page in your browser',
+    report_demo_builder_issue: 'Drafting a Demo Builder report',
     open_view: 'Opening the Demo Builder view',
     reload_window: 'Restarting the editor window',
 
@@ -310,8 +336,8 @@ function naming(keys: string[], phrase: (...values: string[]) => string): NamedF
 }
 
 /**
- * "Adding Accuform ERP to JustRite": the ERP as the add will name it, and the project it goes
- * into when one is open. "Agent · Adding another ERP" ran for fifteen minutes beside an action
+ * "Adding Accuform ERP to Tailspin": the ERP as the add will name it, and the project it goes
+ * into when one is open. "Agent: Adding another ERP" ran for fifteen minutes beside an action
  * the SC started, and nothing said which was which (live release test, 2026-10-22).
  */
 const addingErp: NamedForm = (args, project) => {
@@ -324,7 +350,7 @@ const addingErp: NamedForm = (args, project) => {
 /**
  * The phrase for a call that names what it acts on, when the name is readable.
  *
- * "Agent · Deleting the Adobe workspace" said everything but WHICH one (owner,
+ * "Agent: Deleting the Adobe workspace" said everything but WHICH one (owner,
  * 2026-09-21: "Should it not include the workspace's name?"). The consent dialog
  * already names it; the notification now does too. Only tools handed a name a
  * person reads — an internal id is not worth showing, so those keep their phrase.
@@ -337,11 +363,16 @@ const NAMED_NARRATION: Readonly<Record<string, NamedForm>> = {
     delete_github_repo: naming(['owner', 'repo'], (owner, repo) => `Deleting ${owner}/${repo}`),
     cleanup_dalive_site: naming(['org', 'site'], (org, site) => `Deleting ${org}/${site} content`),
     delete_page: naming(['path'], (path) => `Deleting ${path}`),
-    reset_datapack: naming(['datapackName'], (name) => `Resetting ${name}`),
-    start_datapack_import: naming(['datapackName'], (name) => `Importing ${name}`),
-    start_datapack_export: naming(['datapackName'], (name) => `Exporting ${name}`),
+    uninstall_datapack: naming(['datapackName'], (name) => `Uninstalling ${name}`),
+    install_datapack: naming(['datapackName'], (name) => `Installing ${name}`),
+    create_datapack: naming(['datapackName'], (name) => `Saving to ${name}`),
+    undo_last_save: naming(['datapackName'], (name) => `Undoing the last save of ${name}`),
+    restore_datapack: naming(['datapackName'], (name) => `Restoring ${name}`),
+    update_datapack: naming(['datapackName'], (name) => `Updating ${name}`),
     delete_library_datapack: naming(['datapackName'], (name) => `Deleting ${name}`),
-    copy_library_datapack_to_installer: naming(['datapackName'], (name) => `Copying ${name}`),
+    rename_datapack: naming(['datapackName'], (name) => `Renaming the ${name} pack`),
+    mark_demo_builder_datapack: naming(['datapackName'], (name) => `Marking ${name} as a Demo Builder datapack`),
+    share_datapack: naming(['datapackName'], (name) => `Changing who can use the ${name} pack`),
     remove_block_from_library: naming(['blockId'], (block) => `Removing the ${block} block`),
     set_site_admin: naming(['email'], (email) => `Changing ${email}'s access`),
     add_erp: addingErp,

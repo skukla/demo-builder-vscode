@@ -3,6 +3,7 @@
  * whose Commerce reads answer from a table of paths and whose writes are recorded in order.
  */
 
+import { withBulkQueue } from './bulkQueue.testUtils';
 import { CommerceReadError } from '@/features/app-builder/services/erpFillReaders';
 import { type RecordFiles, openInstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import { type KindContext, newCatalogSession } from '@/features/data-installer/services/demoBuilderEngine/kindContext';
@@ -19,6 +20,7 @@ export function memoryFiles(seed: Record<string, string> = {}): RecordFiles & { 
         read: async (p) => data.get(p),
         write: async (p, content) => void data.set(p, content),
         remove: async (p) => void data.delete(p),
+        list: async (dir) => [...data.keys()].filter((p) => p.startsWith(`${dir}/`) && !p.slice(dir.length + 1).includes('/')).map((p) => p.slice(dir.length + 1)),
     };
 }
 
@@ -37,25 +39,53 @@ export interface SentCall {
 export async function fakeContext(
     reads: Record<string, unknown> = {},
     answers: (call: SentCall) => unknown = () => ({}),
-): Promise<KindContext & { sent: SentCall[]; logged: string[] }> {
+): Promise<KindContext & { sent: SentCall[]; logged: string[]; imports: unknown[] }> {
     const sent: SentCall[] = [];
     const logged: string[] = [];
     const recorder = await openInstallRecord(memoryFiles(), PROJECT, PACK, NOW);
+    // Commerce's bulk queue runs each request through the single route below (`bulkQueue.testUtils.ts`).
+    const store = withBulkQueue(
+        async (path) => {
+            if (!(path in reads)) throw new CommerceReadError(`Commerce answered 404 for ${path}`, 404);
+            const answer = reads[path];
+            return typeof answer === 'function' ? (answer as () => unknown)() : answer;
+        },
+        async (method, path, body) => {
+            const call = { method, path, body };
+            sent.push(call);
+            return answers(call);
+        },
+    );
     return {
         sent,
         logged,
         recorder,
         session: newCatalogSession(),
         log: (line) => void logged.push(line),
-        get: async (path) => {
-            if (!(path in reads)) throw new CommerceReadError(`Commerce answered 404 for ${path}`, 404);
-            const answer = reads[path];
-            return typeof answer === 'function' ? (answer as () => unknown)() : answer;
-        },
-        send: async (method, path, body) => {
-            const call = { method, path, body };
-            sent.push(call);
-            return answers(call);
-        },
+        ...store,
     };
 }
+
+/** The first page of a Commerce search, as `readAllPages` asks for it. */
+export const page = (path: string, criteria = '') =>
+    `${path}?searchCriteria[currentPage]=1&searchCriteria[pageSize]=100${criteria}`;
+
+/** One equals filter, as the engine's lookups write it. */
+export const by = (field: string, value: string) =>
+    `&searchCriteria[filterGroups][0][filters][0][field]=${field}&searchCriteria[filterGroups][0][filters][0][value]=${encodeURIComponent(value)}`;
+
+/** The categories under `parentId` whose `field` is `value`, as `childrenWhere` asks for them. */
+export const childSearch = (parentId: number, value: string, field = 'name') =>
+    'categories/list?searchCriteria[filterGroups][0][filters][0][field]=parent_id' +
+    `&searchCriteria[filterGroups][0][filters][0][value]=${parentId}` +
+    `&searchCriteria[filterGroups][1][filters][0][field]=${field}` +
+    `&searchCriteria[filterGroups][1][filters][0][value]=${encodeURIComponent(value)}`;
+
+/** A store with none of these categories under `parentId`, by name and by url key (`urlKeyClashes`). */
+export const noneUnder = (parentId: number, names: Record<string, string>): Record<string, unknown> =>
+    Object.fromEntries(
+        Object.entries(names).flatMap(([name, urlKey]) => [
+            [childSearch(parentId, name), { items: [] }],
+            [childSearch(parentId, urlKey, 'url_key'), { items: [] }],
+        ]),
+    );

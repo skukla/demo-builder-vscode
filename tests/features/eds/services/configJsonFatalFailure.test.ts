@@ -131,7 +131,7 @@ describe("the step creation shows for it", () => {
         await syncEdsConfigToRemote(createMockHandlerContext(), createMockProject(), readyConfig(), true, EDS_PATH, progress);
 
         const step = OPERATION_STAGES.publishingSettings.label;
-        expect(progress).toHaveBeenCalledWith(step, 92, 'Pushing config.json to GitHub');
+        expect(progress).toHaveBeenCalledWith(step, 92, 'Uploading settings');
         expect(progress).toHaveBeenCalledWith(step, 94, 'Waiting for the CDN');
     });
 });
@@ -189,5 +189,39 @@ describe('the skip conditions — when Phase 5 has no work', () => {
         await runPhase5(createMockHandlerContext(), config);
 
         expect(mockSyncConfigToRemote).not.toHaveBeenCalled();
+    });
+});
+
+// Owner, 2026-11-20: an agent's create onto Scratch 1028's repository pushed the new project's
+// config.json, pointing Scratch 1028's live storefront away from its API mesh. A repository another
+// project here uses keeps its config.json.
+describe('a repository another project already uses', () => {
+    function contextWithNeighbour(githubRepo: string): HandlerContext {
+        const context = createMockHandlerContext();
+        (context.stateManager.getAllProjects as jest.Mock).mockResolvedValue([{ path: '/p/other', name: 'other' }]);
+        (context.stateManager.loadProjectFromPath as jest.Mock).mockResolvedValue(
+            createMockProject({
+                name: 'Scratch 1028',
+                path: '/p/other',
+                componentInstances: {
+                    'eds-storefront': { id: 'eds-storefront', name: 'EDS Storefront', status: 'deployed', metadata: { githubRepo } },
+                },
+            }),
+        );
+        return context;
+    }
+
+    it('keeps its config.json: nothing is pushed', async () => {
+        await runPhase5(contextWithNeighbour('acme/demo-storefront'));
+
+        expect(mockSyncConfigToRemote).not.toHaveBeenCalled();
+    });
+
+    it('CONTROL: a repository no other project uses gets this project\'s config.json', async () => {
+        mockSyncConfigToRemote.mockResolvedValue({ success: true, githubPushed: true, cdnPublished: true });
+
+        await runPhase5(contextWithNeighbour('acme/another-storefront'));
+
+        expect(mockSyncConfigToRemote).toHaveBeenCalledTimes(1);
     });
 });

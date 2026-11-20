@@ -15,8 +15,9 @@
 
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { keepClash, type ClashTrack } from '@/features/updates/services/pendingClash';
+import { describeEdit } from '@/features/updates/services/templateSyncMessages';
 import type { TemplateSyncResult } from '@/features/updates/services/templateSyncTypes';
-import { isThinLayerProject } from '@/features/updates/services/thinLayerUpdate';
+import { isThinLayerProject, templateResetRefusal } from '@/features/updates/services/thinLayerUpdate';
 import type { ClashReport } from '@/features/updates/services/updateApplyResult';
 import type { UpdateContext } from '@/features/updates/services/updateCore';
 import type { Project } from '@/types/base';
@@ -42,9 +43,12 @@ export interface ClashQuestion {
     canReset: boolean;
 }
 
-/** The colleague's row may reset; a tested-boilerplate storefront or Adobe's row never. */
+/**
+ * The colleague's row may reset; a tested-boilerplate storefront, an imported project (walk F249) or
+ * Adobe's row never. The rule is `templateResetRefusal`'s, which the sync service applies too.
+ */
 export function canResetOnClash(project: Project, track: ClashTrack): boolean {
-    return track === 'template' && !isThinLayerProject(project);
+    return track === 'template' && templateResetRefusal(project) === undefined;
 }
 
 /**
@@ -80,7 +84,14 @@ export function stoppedClash(
     const name = getProjectDisplayName(project);
     return {
         line: `${name}${LABEL[track]}: ${r.error ?? 'the update clashed'}${reason}`,
-        report: { project: name, projectName: project.name, track, files: r.conflicts ?? [], ...(notKept ? { notKept } : {}) },
+        report: {
+            project: name,
+            projectName: project.name,
+            track,
+            files: r.conflicts ?? [],
+            ...(r.edits ? { edits: r.edits } : {}),
+            ...(notKept ? { notKept } : {}),
+        },
     };
 }
 
@@ -105,8 +116,15 @@ export async function keepForFixing(
     return {
         line:
             `${name}${LABEL[track]}: ${conflicts.length} ${noun} with edits in the storefront ` +
-            `(${conflicts.join(', ')}). It is kept in the project's local copy to fix with AI; ` +
-            'nothing was pushed.',
-        report: { project: name, projectName: project.name, track, files: conflicts, keptIn: outcome.storefrontPath },
+            `(${r.edits?.length ? r.edits.map(describeEdit).join('; ') : conflicts.join(', ')}). ` +
+            "It is kept in the project's local copy to fix with AI; nothing was pushed.",
+        report: {
+            project: name,
+            projectName: project.name,
+            track,
+            files: conflicts,
+            ...(r.edits ? { edits: r.edits } : {}),
+            keptIn: outcome.storefrontPath,
+        },
     };
 }

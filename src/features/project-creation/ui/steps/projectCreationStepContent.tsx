@@ -10,53 +10,55 @@
  * @module features/project-creation/ui/steps/projectCreationStepContent
  */
 
-import { Text, Flex } from '@adobe/react-spectrum';
-import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
-import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React from 'react';
 import type { StepPhase } from '../hooks/useCreationProgressPhase';
 import type { GitHubAppInstallData } from '../hooks/useGitHubAppPreflight';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { useRunClock } from '@/core/ui/hooks/useRunClock';
+import { vscode } from '@/core/ui/utils/vscode-api';
+import { stepsRemainingText } from '@/core/ui/utils/stepsRemaining';
 import { expectationFor } from '@/core/utils/operationStages';
 import { expectationLine, stageLine } from '@/core/utils/stageLine';
 import { GitHubAppInstallDialog } from '@/features/eds/ui/components/GitHubAppInstallDialog';
-import type { CreationProgress, WizardState } from '@/types/webview';
+import type { CreationPause, CreationProgress, WizardState } from '@/types/webview';
 
 /** Success completion content */
-function SuccessContent({ isOpeningProject, isEdit, note }: { isOpeningProject: boolean; isEdit: boolean; note?: string }) {
+function SuccessContent({
+    isOpeningProject,
+    opensDashboard,
+    isEdit,
+    stepsRemaining,
+}: {
+    isOpeningProject: boolean;
+    opensDashboard: boolean;
+    isEdit: boolean;
+    stepsRemaining?: number;
+}) {
     if (isOpeningProject) {
         return (
             <CenteredFeedbackContainer>
                 <LoadingDisplay
                     size="L"
-                    message={isEdit ? 'Opening your project' : 'Loading your projects'}
+                    message={isEdit || opensDashboard ? 'Opening your project' : 'Loading your projects'}
                 />
             </CenteredFeedbackContainer>
         );
     }
 
+    // A whole wizard screen, so the large centred check every wizard success has (dialog design
+    // rules, owner 2026-11-02). Edit's heading says it all; a second line read as a claim about the
+    // project (owner, 2026-10-17). The one line worth knowing is what the run left to finish,
+    // "2 steps remaining" (PL-101); the title stands alone when nothing is.
     return (
-        <CenteredFeedbackContainer>
-            <Flex direction="column" gap="size-200" alignItems="center" maxWidth="520px">
-                <CheckmarkCircle size="L" UNSAFE_className="text-green-600" />
-                <Flex direction="column" gap="size-100" alignItems="center">
-                    <Text UNSAFE_className="text-xl font-medium">
-                        {isEdit ? 'Changes Saved' : 'Project Created Successfully'}
-                    </Text>
-                    {/* Edit's heading says it all; a second line read as a claim about
-                        the project (owner, 2026-10-17). */}
-                    {!isEdit && (
-                        <Text UNSAFE_className="text-sm text-gray-600 text-center">
-                            Click below to view your projects
-                        </Text>
-                    )}
-                </Flex>
-                {/* One line worth knowing about the finished project (broken links, EDS-64). */}
-                {note ? <Text UNSAFE_className="text-sm text-gray-600 text-center">{note}</Text> : null}
-            </Flex>
-        </CenteredFeedbackContainer>
+        <StatusDisplay
+            variant="success"
+            title={isEdit ? 'Changes Saved' : 'Project Created'}
+            message={stepsRemainingText(stepsRemaining)}
+            centerMessage
+            maxWidth="520px"
+        />
     );
 }
 
@@ -72,19 +74,13 @@ function ErrorContent({
 }) {
     const action = isEdit ? 'Saving Changes' : 'Project Creation';
     return (
-        <CenteredFeedbackContainer>
-            <Flex direction="column" gap="size-200" alignItems="center" maxWidth="520px">
-                <AlertCircle size="L" UNSAFE_className="text-red-600" />
-                <Flex direction="column" gap="size-100" alignItems="center">
-                    <Text UNSAFE_className="text-xl font-medium">
-                        {isCancelled ? `${action} Cancelled` : `${action} Failed`}
-                    </Text>
-                    {errorMessage && (
-                        <Text UNSAFE_className="text-sm text-gray-600">{errorMessage}</Text>
-                    )}
-                </Flex>
-            </Flex>
-        </CenteredFeedbackContainer>
+        <StatusDisplay
+            variant={isCancelled ? 'warning' : 'error'}
+            title={isCancelled ? `${action} Cancelled` : `${action} Failed`}
+            message={errorMessage}
+            centerMessage
+            maxWidth="520px"
+        />
     );
 }
 
@@ -116,6 +112,32 @@ function RunningContent({ progress }: { progress: CreationProgress }) {
     );
 }
 
+/** Send the button the SC pressed on a paused step (F307). */
+export function answerPause(answer: string): void {
+    vscode.postMessage('creation-pause-answer', { answer });
+}
+
+/**
+ * A step that failed and waits for the SC (F307): the step's line, why it failed, and the
+ * buttons that run it again. Cancel and Skip This Step are in the footer.
+ */
+function PausedContent({ progress, pause }: { progress: CreationProgress; pause: CreationPause }) {
+    return (
+        <StatusDisplay
+            variant="warning"
+            title={stageLine(progress.currentOperation, progress.position)}
+            message={pause.reason}
+            actions={pause.actions.map((label, index) => ({
+                label,
+                variant: index === 0 ? 'accent' : 'secondary',
+                onPress: () => answerPause(label),
+            }))}
+            centerMessage
+            maxWidth="520px"
+        />
+    );
+}
+
 /** Main content area - renders the appropriate content for each phase */
 export function StepContentArea(props: {
     phase: StepPhase;
@@ -129,6 +151,8 @@ export function StepContentArea(props: {
     onGitHubAppInstalled: () => void;
     /** Edit says "Changes Saved", not "Project Created" (PL-75). */
     isEdit?: boolean;
+    /** Finish Setup is opening the project's dashboard, not the projects list. */
+    opensDashboard?: boolean;
 }) {
     const {
         phase,
@@ -141,6 +165,7 @@ export function StepContentArea(props: {
         githubAppInstallData,
         onGitHubAppInstalled,
         isEdit = false,
+        opensDashboard = false,
     } = props;
 
     if (phase === 'github-app-install' && githubAppInstallData) {
@@ -155,12 +180,23 @@ export function StepContentArea(props: {
         );
     }
 
+    if (isActive && progress?.pause) {
+        return <PausedContent progress={progress} pause={progress.pause} />;
+    }
+
     if (isActive && progress) {
         return <RunningContent progress={progress} />;
     }
 
     if (isCompleted && !progress?.error) {
-        return <SuccessContent isOpeningProject={isOpeningProject} isEdit={isEdit} note={progress?.note} />;
+        return (
+            <SuccessContent
+                isOpeningProject={isOpeningProject}
+                opensDashboard={opensDashboard}
+                isEdit={isEdit}
+                stepsRemaining={progress?.stepsRemaining}
+            />
+        );
     }
 
     if (showGenericError) {

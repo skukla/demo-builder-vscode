@@ -190,7 +190,9 @@ describe('IntegrationsGrid actions', () => {
             const tile = card('custom-app', 'Deployed');
             await user.click(within(tile).getByRole('button', { name: /^open commerce admin$/i }));
 
-            expect(getClient().postMessage).toHaveBeenCalledWith('openAdminPanel', {});
+            // A menu item closes as it is picked, so it asks for the "Opening a private browser"
+            // notification while Chrome starts (owner, 2026-10-31).
+            expect(getClient().postMessage).toHaveBeenCalledWith('openAdminPanel', { notify: true });
         });
 
         // Open moved from the card FACE to the kebab (a healthy card is calm), so
@@ -211,6 +213,30 @@ describe('IntegrationsGrid actions', () => {
     });
 
     describe('mesh card routing (mesh callbacks, never keyed messages)', () => {
+        it('sends Update through the integration update when newer code is recorded', async () => {
+            const user = setupUser();
+            const { onDeployMesh } = renderGrid({
+                withMesh: true,
+                appBuilderComponents: {
+                    'eds-accs-mesh': {
+                        kind: 'mesh',
+                        status: 'deployed',
+                        source: { owner: 'skukla', repo: 'eds-accs-mesh', branch: 'main' },
+                        updateAvailable: { commit: 'abc', checkedAt: '2026-11-01T00:00:00Z' },
+                    },
+                },
+            });
+
+            const tile = card('API Mesh', 'Update needed');
+            await user.click(within(tile).getByRole('button', { name: /^update$/i }));
+
+            expect(onDeployMesh).not.toHaveBeenCalled();
+            expect(getClient().postMessage).toHaveBeenCalledWith('updateAppBuilderComponent', {
+                progress: 'modal',
+                id: 'eds-accs-mesh',
+            });
+        });
+
         it('routes the mesh panel Redeploy to onDeployMesh', async () => {
             const user = setupUser();
             const { onDeployMesh } = renderGrid({ withMesh: true });
@@ -255,7 +281,7 @@ describe('IntegrationsGrid actions', () => {
 
             const panel = await openPanel(user, 'API Mesh', 'Deployed');
             await user.click(within(panel).getByRole('button', { name: /^remove$/i }));
-            const dialog = screen.getByRole('dialog', { name: 'Remove API Mesh' });
+            const dialog = screen.getByRole('dialog', { name: 'Remove API Mesh?' });
             await user.click(within(dialog).getByRole('button', { name: /^remove$/i }));
 
             expect(getClient().postMessage).toHaveBeenCalledWith('removeAppBuilderComponent', {
@@ -284,7 +310,7 @@ describe('IntegrationsGrid actions', () => {
 
             const panel = await openPanel(user, 'API Mesh', 'Deployed');
             await user.click(within(panel).getByRole('button', { name: /^remove$/i }));
-            const dialog = screen.getByRole('dialog', { name: 'Remove API Mesh' });
+            const dialog = screen.getByRole('dialog', { name: 'Remove API Mesh?' });
             await user.click(within(dialog).getByRole('button', { name: /^remove$/i }));
 
             expect(getClient().postMessage).toHaveBeenCalledWith('removeAppBuilderComponent', {
@@ -363,7 +389,7 @@ describe('IntegrationsGrid actions', () => {
 
             await openRemove(user);
 
-            expect(screen.getByRole('dialog', { name: 'Remove custom-app' })).toBeInTheDocument();
+            expect(screen.getByRole('dialog', { name: 'Remove custom-app?' })).toBeInTheDocument();
             expect(getClient().postMessage).not.toHaveBeenCalledWith(
                 'removeAppBuilderComponent',
                 expect.anything()
@@ -375,7 +401,7 @@ describe('IntegrationsGrid actions', () => {
             renderGrid({ appBuilderComponents: oneDeployed() });
 
             await openRemove(user);
-            const dialog = screen.getByRole('dialog', { name: 'Remove custom-app' });
+            const dialog = screen.getByRole('dialog', { name: 'Remove custom-app?' });
             await user.click(within(dialog).getByRole('button', { name: /^remove$/i }));
 
             expect(getClient().postMessage).toHaveBeenCalledWith('removeAppBuilderComponent', {
@@ -389,8 +415,8 @@ describe('IntegrationsGrid actions', () => {
             renderGrid({ appBuilderComponents: oneDeployed() });
 
             await openRemove(user);
-            const dialog = screen.getByRole('dialog', { name: 'Remove custom-app' });
-            await user.click(within(dialog).getByRole('button', { name: /^close$/i }));
+            const dialog = screen.getByRole('dialog', { name: 'Remove custom-app?' });
+            await user.click(within(dialog).getByRole('button', { name: /^cancel$/i }));
 
             expect(getClient().postMessage).not.toHaveBeenCalledWith(
                 'removeAppBuilderComponent',

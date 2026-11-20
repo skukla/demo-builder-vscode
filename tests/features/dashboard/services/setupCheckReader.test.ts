@@ -2,7 +2,7 @@
  * setupCheckReader — the signed Commerce GET the setup checks (and "Prepare this store")
  * read with (AB-77 fix). It must be UNCUT: the agent tool's `sendRest` cuts an answer at
  * 30,000 characters and declares it, which is right for a chat answer and fatal for a
- * check that parses the body (Justrite 2026-10-10: `GET products/attribute-sets/<id>/attributes`
+ * check that parses the body (Tailspin 2026-10-10: `GET products/attribute-sets/<id>/attributes`
  * answers more than that, and the attribute-set check died on "Unterminated string in JSON
  * at position 30000"). With a control that the agent tool's read still cuts.
  */

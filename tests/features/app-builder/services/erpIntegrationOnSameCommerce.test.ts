@@ -1,7 +1,7 @@
 /**
  * One Commerce instance runs one ERP integration (owner, 2026-10-15, AB-78).
  *
- * The SC pointed a new project at the Commerce instance Justrite already uses and added
+ * The SC pointed a new project at the Commerce instance Tailspin already uses and added
  * the ERP integration from a different Adobe project. Commerce would have held two
  * integrations claiming the same orders and gating the same checkout. The add is
  * refused when another local project already runs an ERP integration on that instance;
@@ -9,6 +9,7 @@
  */
 
 import {
+    erpIntegrationIdOf,
     erpIntegrationOnSameCommerce,
     oneErpIntegrationPerInstance,
 } from '@/features/app-builder/services/erpIntegrationOnSameCommerce';
@@ -63,46 +64,46 @@ function onInstance(
     });
 }
 
-const JUSTRITE_PAIR = {
+const TAILSPIN_PAIR = {
     'erp-integration': state('integration'),
     'demo-erp': state('system', { usedBy: 'erp-integration' }),
 };
 
 describe('erpIntegrationOnSameCommerce', () => {
     it('finds the other project running an ERP integration on the same instance', () => {
-        const justrite = onInstance('justrite', INSTANCE, JUSTRITE_PAIR);
+        const tailspin = onInstance('tailspin', INSTANCE, TAILSPIN_PAIR);
 
-        const hit = erpIntegrationOnSameCommerce(onInstance('scratch', INSTANCE), INTEGRATION, CATALOG, [justrite]);
+        const hit = erpIntegrationOnSameCommerce(onInstance('scratch', INSTANCE), INTEGRATION, CATALOG, [tailspin]);
 
-        expect(hit).toBe(justrite);
+        expect(hit).toBe(tailspin);
     });
 
     it('matches the instance however its endpoint is written', () => {
-        const justrite = onInstance('justrite', `${INSTANCE.replace('https://na1', 'HTTPS://NA1')}/`, JUSTRITE_PAIR);
+        const tailspin = onInstance('tailspin', `${INSTANCE.replace('https://na1', 'HTTPS://NA1')}/`, TAILSPIN_PAIR);
 
-        const hit = erpIntegrationOnSameCommerce(onInstance('scratch', INSTANCE), INTEGRATION, CATALOG, [justrite]);
+        const hit = erpIntegrationOnSameCommerce(onInstance('scratch', INSTANCE), INTEGRATION, CATALOG, [tailspin]);
 
-        expect(hit).toBe(justrite);
+        expect(hit).toBe(tailspin);
     });
 
     it('counts a numbered copy of the integration as an ERP integration', () => {
-        const justrite = onInstance('justrite', INSTANCE, {
+        const tailspin = onInstance('tailspin', INSTANCE, {
             'erp-integration-2': state('integration', { catalogId: 'erp-integration' }),
         });
 
-        const hit = erpIntegrationOnSameCommerce(onInstance('scratch', INSTANCE), INTEGRATION, CATALOG, [justrite]);
+        const hit = erpIntegrationOnSameCommerce(onInstance('scratch', INSTANCE), INTEGRATION, CATALOG, [tailspin]);
 
-        expect(hit).toBe(justrite);
+        expect(hit).toBe(tailspin);
     });
 
     it('leaves a different Commerce instance alone', () => {
-        const other = onInstance('justrite', 'https://na1.api.commerce.adobe.com/tenant-y/graphql', JUSTRITE_PAIR);
+        const other = onInstance('tailspin', 'https://na1.api.commerce.adobe.com/tenant-y/graphql', TAILSPIN_PAIR);
 
         expect(erpIntegrationOnSameCommerce(onInstance('scratch', INSTANCE), INTEGRATION, CATALOG, [other])).toBeUndefined();
     });
 
     it('ignores an ERP integration that is not deployed', () => {
-        const other = onInstance('justrite', INSTANCE, { 'erp-integration': state('integration', { status: 'error' }) });
+        const other = onInstance('tailspin', INSTANCE, { 'erp-integration': state('integration', { status: 'error' }) });
 
         expect(erpIntegrationOnSameCommerce(onInstance('scratch', INSTANCE), INTEGRATION, CATALOG, [other])).toBeUndefined();
     });
@@ -114,36 +115,46 @@ describe('erpIntegrationOnSameCommerce', () => {
     });
 
     it('does not block an add that brings no ERP integration', () => {
-        const justrite = onInstance('justrite', INSTANCE, JUSTRITE_PAIR);
+        const tailspin = onInstance('tailspin', INSTANCE, TAILSPIN_PAIR);
 
-        expect(erpIntegrationOnSameCommerce(onInstance('scratch', INSTANCE), SOLO, CATALOG, [justrite])).toBeUndefined();
+        expect(erpIntegrationOnSameCommerce(onInstance('scratch', INSTANCE), SOLO, CATALOG, [tailspin])).toBeUndefined();
         // "Add another ERP" joins an integration; it installs nothing into Commerce.
-        expect(erpIntegrationOnSameCommerce(onInstance('scratch', INSTANCE), SYSTEM, CATALOG, [justrite])).toBeUndefined();
+        expect(erpIntegrationOnSameCommerce(onInstance('scratch', INSTANCE), SYSTEM, CATALOG, [tailspin])).toBeUndefined();
     });
 
     it('never matches the project itself', () => {
-        const justrite = onInstance('justrite', INSTANCE, JUSTRITE_PAIR);
+        const tailspin = onInstance('tailspin', INSTANCE, TAILSPIN_PAIR);
 
-        expect(erpIntegrationOnSameCommerce(justrite, INTEGRATION, CATALOG, [justrite])).toBeUndefined();
+        expect(erpIntegrationOnSameCommerce(tailspin, INTEGRATION, CATALOG, [tailspin])).toBeUndefined();
     });
 
     it('checks nothing for a project with no Commerce backend', () => {
-        const justrite = onInstance('justrite', INSTANCE, JUSTRITE_PAIR);
+        const tailspin = onInstance('tailspin', INSTANCE, TAILSPIN_PAIR);
 
-        expect(erpIntegrationOnSameCommerce(createMockProject({}), INTEGRATION, CATALOG, [justrite])).toBeUndefined();
+        expect(erpIntegrationOnSameCommerce(createMockProject({}), INTEGRATION, CATALOG, [tailspin])).toBeUndefined();
     });
 });
 
 describe('naming the project that holds the instance', () => {
     it('uses the title the SC typed, not the folder name', () => {
-        const holder = { name: 'justrite', title: 'JustRite' };
+        const holder = { name: 'tailspin', title: 'Tailspin' };
 
         expect(oneErpIntegrationPerInstance(holder)).toBe(
-            'JustRite already has an ERP integration on this Commerce instance. Add your ERP there instead.',
+            'Tailspin already has an ERP integration on this Commerce instance. Add your ERP there instead.',
         );
     });
 
     it('falls back to the folder name for a project with no title — control', () => {
-        expect(oneErpIntegrationPerInstance({ name: 'justrite' })).toMatch(/^justrite already has/);
+        expect(oneErpIntegrationPerInstance({ name: 'tailspin' })).toMatch(/^tailspin already has/);
+    });
+});
+
+describe('erpIntegrationIdOf', () => {
+    it('names the deployed ERP integration a project runs, and nothing for a solo integration or an undeployed one', () => {
+        expect(erpIntegrationIdOf(onInstance('tailspin', INSTANCE, TAILSPIN_PAIR), CATALOG)).toBe('erp-integration');
+        const solo = { 'commerce-integration-starter-kit': state('integration') };
+        expect(erpIntegrationIdOf(onInstance('solo', INSTANCE, solo), CATALOG)).toBeUndefined();
+        const failed = { ...TAILSPIN_PAIR, 'erp-integration': state('integration', { status: 'error' }) };
+        expect(erpIntegrationIdOf(onInstance('failed', INSTANCE, failed), CATALOG)).toBeUndefined();
     });
 });

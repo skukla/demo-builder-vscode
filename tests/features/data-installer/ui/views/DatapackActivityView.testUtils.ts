@@ -10,7 +10,7 @@
  * to it), which is the piece every suite gets wrong when it writes its own.
  */
 import { mockRequest } from '../../../../helpers/webviewClientMock';
-import type { ActivityEntry } from '@/features/data-installer/types';
+import type { ActivityEntry, HistoryPage } from '@/features/data-installer/types';
 
 export { mockRequest };
 
@@ -46,6 +46,16 @@ export function resolveWith(
             return { success: true, data: instance ? { instance, projectName: 'demo-1' } : {} };
         }
         return { success: true, data: { items, count: items.length, total } };
+    });
+}
+
+/** Answer the target, then this whole page: for the fields beside the rows (step 14). */
+export function resolveWithPage(page: HistoryPage<ActivityEntry>): void {
+    mockRequest.mockImplementation(async (type: string) => {
+        if (type === 'get-datapack-import-target') {
+            return { success: true, data: { instance: 'TENANT123', projectName: 'demo-1' } };
+        }
+        return { success: true, data: page };
     });
 }
 

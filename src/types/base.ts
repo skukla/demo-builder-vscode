@@ -8,8 +8,9 @@
 import type { CustomBlockLibrary, InstalledBlockLibrary } from './blockLibraries';
 import type { CommerceStoreStructure } from './commerceStore';
 import type { ServiceDefinition } from './components';
+import type { DatapackInstallFailure, ProjectDatapack } from './datapack';
 import type { ErpAssignmentRecord, ErpOwnerSetsRecord } from './erpAssign';
-import type { AddedDemo } from './projectFile';
+import type { AddedDemo, ProjectImportedFrom } from './projectFile';
 import type { CommerceConfigChangeRecord, StorePreparationRecord } from './storePreparation';
 
 /**
@@ -116,12 +117,37 @@ export interface Project {
      */
     demo?: AddedDemo;
     /**
-     * Sample data chosen during creation, installed later from the dashboard.
-     *
-     * Recorded, not applied: an import needs a reachable instance with working
-     * credentials and runs for minutes, so it never happens inside the wizard.
+     * Set on a project Import from File made from a demo bundle (EDS-72): the
+     * import's commit in the project's own repository, which Reset restores, and
+     * where it came from. Such a project has no `demo` row (decision 3).
      */
-    datapack?: { name: string; version: string };
+    importedFrom?: ProjectImportedFrom;
+    /**
+     * The datapack this demo's store holds, and the store that holds the pack.
+     *
+     * Chosen on the wizard's Datapacks step and installed by creation itself
+     * (`executeSampleDataPhase`, since 8ab56b934); also set by an import from the Data
+     * Installer screen and by a save (Save and Save As, `demoPack.ts`), and cleared by a reset once it finishes
+     * having taken out everything the pack put there (a reset that stops, or keeps containers
+     * holding the SC's things, leaves it). `configure_project` records it without installing.
+     */
+    datapack?: ProjectDatapack;
+    /**
+     * The creation-time install of `datapack` that did not end in success, until a later install
+     * of it succeeds or the project stops naming it (`installFailure.ts`). Absent on every project
+     * predating it, which shows nothing. Never exported in a project file.
+     */
+    datapackInstallFailure?: DatapackInstallFailure;
+    /**
+     * The steps a run left for the SC to finish (PL-101), by step id: Republish the Code
+     * (`republish-code`, with the files the live site did not serve yet) and where the SC is on
+     * each step the Finish Setup guide lists (Skip, Mark as Done, what its last check found). A
+     * finished step is kept, shown done, until the next creation or reset REPLACES the record.
+     * Absent when no run left anything. Never exported in a project file.
+     */
+    finishSetup?: Record<string, FinishSetupRecord>;
+    /** The Commerce Admin interface chosen on Configure. Absent: the setting's. */
+    commerceAdminExperience?: CommerceAdminExperience;
     /** Stack ID selected during project creation (e.g., 'headless-paas') */
     selectedStack?: string;
     /** Optional addons selected during project creation (e.g., ['adobe-commerce-aco']) */
@@ -139,13 +165,6 @@ export interface Project {
     customBlockLibraries?: CustomBlockLibrary[];
     /** Installed block library snapshot — source commit SHA captured at install time */
     installedBlockLibraries?: InstalledBlockLibrary[];
-    /** Installed Demo Inspector SDK version tracking */
-    installedInspectorSdk?: {
-        /** Commit SHA of the SDK repo at install time */
-        commitSha: string;
-        /** ISO date string when SDK was installed */
-        installedAt: string;
-    };
     // Mesh staleness summary for card grid display
     meshStatusSummary?:
         | 'deployed'
@@ -300,6 +319,12 @@ export interface SetupStepRecord {
     checkedAt?: string;
 }
 
+/** One Finish Setup step's saved state (PL-101): a setup step's record, and the files a code step is about. */
+export interface FinishSetupRecord extends SetupStepRecord {
+    /** Republish the Code: the repository paths the live site did not serve as committed. */
+    files?: string[];
+}
+
 /** What a setup check concluded. */
 export type SetupCheckOutcome = 'passed' | 'failed' | 'unknown';
 
@@ -421,7 +446,8 @@ export interface AppBuilderComponentState {
         needsReinstall?: boolean;
     };
     /**
-     * Newer code is available: the source branch on GitHub has commits the
+     * Newer code is available: the newest release (or, for a repository the builder
+     * does not own, the source branch) has commits the
      * clone lacks, the clone is at a commit the last good deploy did not ship
      * (`deployedCommit`), or the clone's app version differs from the one
      * installed in Commerce. Set by the integrations screen's check, removed by a
@@ -432,6 +458,8 @@ export interface AppBuilderComponentState {
         commit?: string;
         /** The version in the clone, when it differs from the installed one. */
         version?: string;
+        /** The release an update would move to, for a repository that ships by release. */
+        release?: string;
         /** ISO date string of the check. */
         checkedAt: string;
     };
@@ -508,9 +536,16 @@ export interface CustomIconPaths {
  * Stored per-project on the EDS component-instance metadata as
  * `authoringExperience` (beside `daLiveOrg`/`daLiveSite`). Absence falls back
  * to the global `demoBuilder.daLive.authoringExperience` setting (default
- * 'da-live-classic'). Resolved via resolveAuthoringExperience in authoringExperience.ts.
+ * 'experience-workspace'). Resolved via resolveAuthoringExperience in authoringExperience.ts.
  */
 export type AuthoringExperience = 'da-live-classic' | 'experience-workspace';
+
+/**
+ * Which Commerce Admin interface a Cloud Service project opens. Stored on the project when the SC
+ * chooses; absent, the `demoBuilder.commerce.adminExperience` setting decides. Only which link opens
+ * changes: nothing in Commerce does, and Adobe's classic links keep opening the classic interface.
+ */
+export type CommerceAdminExperience = 'unified-shell' | 'classic';
 
 export interface ComponentInstance {
     id: string; // Component ID (e.g., "headless")

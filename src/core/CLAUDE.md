@@ -19,6 +19,7 @@ core/
 ├── errors/          # domain error classes and their builders (moved from src/types/ 2026-08-31)
 ├── handlers/        # dispatchHandler and friends
 ├── logging/         # DebugLogger, ErrorLogger, StepLogger (→ logging/README.md)
+├── releases/        # readNewestRelease, releaseTrack: which GitHub release a channel gets
 ├── shell/           # CommandExecutor and the concurrency machinery (→ shell/README.md)
 ├── state/           # StateManager and project state (→ state/README.md)
 ├── ui/              # shared React for webviews (→ ui/hooks/CLAUDE.md)

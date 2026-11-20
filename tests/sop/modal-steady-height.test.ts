@@ -1,17 +1,21 @@
 /**
- * A modal does not change size while it works (owner, 2026-09-20).
+ * A modal does not jump between sizes while it works (owner, 2026-09-20).
  *
  * The Data Installer's import modal was three different heights in one dry run: the
  * form, then the spinner, then "Dry run passed". Each state is a different amount of
- * content and nothing held a floor under them, so the whole dialog jumped twice
- * while the SC watched it work.
+ * content and nothing managed the change, so the whole dialog jumped twice while the
+ * SC watched it work.
  *
  * A modal is at risk when its body renders DIFFERENT views — a form, a spinner, a
- * result. Three things hold a floor, and one of them has to be there:
+ * result. These manage the change, and one of them has to be there:
  *
- *   `SteadyHeight`               the tallest state so far, measured
- *   `modal-progress-body`        one fixed height, for a body whose states are known
+ *   `SteadyHeight`               fits each state and eases between them (the dialog
+ *                                design rules, 2026-10-31)
  *   `CenteredFeedbackContainer`  a height the caller names
+ *   `StepsDialog`/`StepsWindow`  opens at its tallest step and keeps that height: a
+ *                                window never changes height once on screen (owner,
+ *                                2026-11-11), which replaces the fit-and-ease
+ *   `ProgressDialog` with `stream`  keeps the height its run opens at to the end
  *
  * What this cannot see: whether the floor is the RIGHT height. That is a judgement,
  * and the ledger is where a modal that legitimately has none says so.
@@ -31,11 +35,20 @@ const LEDGER: { _what: string; noViewsOfItsOwn: Record<string, string> } = JSON.
 const BRANCH = /(view === |phase === |state === |stage === |step === |mode === |status === )/g;
 
 /**
- * The three ways a modal body holds a floor under its states, as they appear when
+ * The two ways a modal body manages the change between its states, as they appear when
  * they are USED. Matching the bare names would match the import line too — which the
  * first version did, so deleting the floor and leaving the import passed the check.
  */
-const HOLDS = [/<SteadyHeight[\s>]/, /modal-progress-body/, /<CenteredFeedbackContainer[\s>]/];
+// `waiting=` counts because the shared Modal holds its own SteadyHeight around the wait.
+// The Steps layout holds one fixed height for every step it shows (owner, 2026-11-11).
+// A streamed ProgressDialog keeps the height it opens at for every state, the same rule.
+const HOLDS = [
+    /<SteadyHeight[\s>]/,
+    /<CenteredFeedbackContainer[\s>]/,
+    /\bwaiting=\{/,
+    /<(StepsDialog|StepsWindow)[\s>]/,
+    /<(ProgressDialog|ProgressWindow)[\s>][\s\S]*?\bstream=\{/,
+];
 
 const COMPONENTS = workingTreeFiles('src')
     .filter((f) => f.endsWith('.tsx'));
@@ -70,16 +83,19 @@ function withoutImports(source: string): string {
         .join('\n');
 }
 
-/** Every component that renders a Modal and switches between views inside it. */
+/** Every component that renders a dialog and switches between views inside it. */
+// A layout component (Phase 1b) renders the Modal for its caller, so the caller is still the
+// dialog whose body switches views: it counts as rendering one.
+const RENDERS_DIALOG = /<(Modal|FormDialog|ConfirmActionDialog|ProgressDialog|ProgressWindow|ResultDialog|GuideDialog|StepsDialog|StepsWindow|ResultWindow)[\s>]/;
 function modalsWithViews(): Modal[] {
     const found: Modal[] = [];
     for (const file of COMPONENTS) {
         const source = readFileSync(join(ROOT, file), 'utf8');
-        if (!source.includes('<Modal')) continue;
+        if (!RENDERS_DIALOG.test(source)) continue;
         const near = localImports(file, source);
         const nearby = near.map((path) => withoutImports(readFileSync(join(ROOT, path), 'utf8')));
         // The view switch can live one file along too, in the modal's OWN body
-        // (`XModal.tsx` beside `XModalBody.tsx`). The import modal's does: once its
+        // (`XModal.tsx` beside `XModalBody.tsx`). The datapack import modal's did, until step 03 replaced it: once its
         // footer and view choice moved to importModalView.ts (EDS-8, 2026-10-09),
         // counting only the modal's own file dropped the very modal this rule was
         // written for out of the scan, with every check still green. Only the
@@ -107,10 +123,9 @@ describe('a modal does not change size while it works', () => {
     it('CONTROL: the scan finds the modals this extension actually shows', () => {
         expect(COMPONENTS.length).toBeGreaterThan(100);
         expect(modals.length).toBeGreaterThan(2);
-        // The one that jumped, and the one that never did.
+        // The one that never jumped.
         expect(modals.map((m) => m.file)).toEqual(
             expect.arrayContaining([
-                'src/features/data-installer/ui/components/ImportDatapackModal.tsx',
                 'src/core/ui/components/feedback/OperationProgressModal.tsx',
             ]),
         );

@@ -276,7 +276,6 @@ describe('executePhaseHelixConfig — inspector tagging', () => {
         );
         expect(progressPushes(sendMessage)).toContainEqual({
             phase: 'storefront-code',
-            message: 'Inspector tagging installed',
             progress: 28,
         });
     });
@@ -293,7 +292,7 @@ describe('executePhaseHelixConfig — inspector tagging', () => {
         const { sendMessage } = await runPhase({});
 
         expect(progressPushes(sendMessage)).not.toContainEqual(
-            expect.objectContaining({ message: 'Inspector tagging installed' }),
+            expect.objectContaining({ progress: 28 }),
         );
     });
 
@@ -360,7 +359,7 @@ describe('executePhaseHelixConfig — what it reports back and records', () => {
      * project being created or edited. They were written onto `getCurrentProject()`
      * until 2026-10-09 — whatever project was open before the wizard — which left
      * the new project with none and REPLACED the open project's list with the new
-     * one's (Justrite carried a library it never selected).
+     * one's (Tailspin carried a library it never selected).
      */
     it('hands what was installed back on the run, and never writes the open project', async () => {
         jest.useFakeTimers().setSystemTime(new Date('2026-09-05T04:00:00.000Z'));
@@ -377,7 +376,7 @@ describe('executePhaseHelixConfig — what it reports back and records', () => {
                 },
             ],
         });
-        const openProject = createMockProject({ name: 'justrite' });
+        const openProject = createMockProject({ name: 'tailspin' });
 
         const { saveProject, repoInfo } = await runPhase(
             { selectedBlockLibraries: ['isle5'] },

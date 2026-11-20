@@ -8,8 +8,9 @@ import { CommerceReadError } from '@/features/app-builder/services/erpFillReader
 import { openInstallRecord, readInstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
 import { demoBuilderEngine, type DemoBuilderEngineDeps } from '@/features/data-installer/services/demoBuilderEngine/engine';
 import type { DatapackEngine } from '@/features/data-installer/services/datapackEngine';
-import type { ImportRequest } from '@/features/data-installer/services/dataInstallerWriteClient';
-import { PACK, PROJECT, type SentCall, fakeContext, memoryFiles } from './demoBuilderEngine.testUtils';
+import type { ImportRequest } from '@/features/data-installer/services/importRequest';
+import { configListPath } from '@/features/app-builder/services/storePreparation/configSetup';
+import { PACK, PROJECT, type SentCall, fakeContext, memoryFiles, noneUnder } from './demoBuilderEngine.testUtils';
 
 /** The store's three structure reads: website base, store view default, root category 2. */
 const STORE = {
@@ -19,12 +20,6 @@ const STORE = {
 };
 
 const SETS_PAGE = 'products/attribute-sets/sets/list?searchCriteria[currentPage]=1&searchCriteria[pageSize]=100';
-const childSearch = (parentId: number, name: string) =>
-    'categories/list?searchCriteria[filterGroups][0][filters][0][field]=parent_id' +
-    `&searchCriteria[filterGroups][0][filters][0][value]=${parentId}` +
-    '&searchCriteria[filterGroups][1][filters][0][field]=name' +
-    `&searchCriteria[filterGroups][1][filters][0][value]=${encodeURIComponent(name)}`;
-
 function request(overrides: Partial<ImportRequest> = {}): ImportRequest {
     return {
         id: PACK,
@@ -73,7 +68,7 @@ async function settle(engine: DatapackEngine, activationId: string) {
 describe('demoBuilderEngine install', () => {
     it('answers a job id at once, then reports every requested kind succeeded, and keeps the record', async () => {
         const { engine, files } = await engineWith(
-            { [SETS_PAGE]: { items: [], total_count: 0 }, [childSearch(2, 'Sale')]: { items: [] } },
+            { [SETS_PAGE]: { items: [], total_count: 0 }, ...noneUnder(2, { Sale: 'sale' }) },
             () => ({ id: 40 }),
         );
 
@@ -83,11 +78,82 @@ describe('demoBuilderEngine install', () => {
         expect(activationId).toMatch(/^demo-builder-/);
         expect(status.perType).toEqual({ attribute_sets: 'success', categories: 'success' });
         expect(await engine.getJobFailureReason(activationId)).toBeUndefined();
-        expect((await readInstallRecord(files, PROJECT, PACK))?.created).toEqual([{ kind: 'categories', id: '40' }]);
+        expect((await readInstallRecord(files, PROJECT, PACK))?.created).toEqual([{ kind: 'categories', id: '40', key: 'Sale' }]);
+    });
+
+    // Owner walk, 2026-11-16 (U2.2): a datapack saved from the store's own category, then installed,
+    // created nothing, so no record was written and the header kept offering Create, never Save.
+    it('keeps a record of an install that created nothing, so the project knows Demo Builder installed it', async () => {
+        const { engine, files } = await engineWith({ [SETS_PAGE]: { items: [], total_count: 0 } }, () => ({ id: 40 }));
+
+        const { activationId } = await engine.startImport(request({ dataTypes: ['attribute_sets'] }));
+        const status = await settle(engine, activationId);
+
+        expect(status.perType).toEqual({ attribute_sets: 'success' });
+        const record = await readInstallRecord(files, PROJECT, PACK);
+        expect(record?.created).toStrictEqual([]);
+        expect(record?.startedAt).toBe('2026-10-27T18:00:00.000Z');
+    });
+
+    it('says in one line what installing again kept, because the SC had changed it in the Admin', async () => {
+        const files = memoryFiles();
+        const recorder = await openInstallRecord(files, PROJECT, PACK, () => '2026-10-27T18:00:00.000Z');
+        await recorder.record({ kind: 'categories', id: '40', key: 'Sale', fingerprint: 'as the install left it', wrote: 'the row it installed' });
+        const { engine, ctx } = await engineWith(
+            {
+                [SETS_PAGE]: { items: [], total_count: 0 },
+                'categories/40': { id: 40, name: 'Summer Sale', path: '1/2/40', children: '' },
+                'categories/2': { id: 2, name: 'Default Category', path: '1/2' },
+            },
+            () => ({ id: 41 }),
+            { files },
+        );
+
+        const { activationId } = await engine.startImport(request());
+        const status = await settle(engine, activationId);
+
+        expect(status.perType).toEqual({ attribute_sets: 'success', categories: 'success' });
+        expect(status.note).toBe('Kept 1 item changed in the Admin.');
+        expect(ctx.sent).toStrictEqual([]);
+    });
+
+    // Step 14 item 3: one refused row does not stop the rest. The kind still ends success (it ran to
+    // its end), and the note names the row and Commerce's reason.
+    it('carries on past a row Commerce refuses, and the note names it with the reason', async () => {
+        const refuseCategory = (call: SentCall) => {
+            if (call.path === 'categories') throw new CommerceReadError('Commerce answered 400 for categories: {"message":"URL key for specified store already exists."}', 400);
+            return { id: 40 };
+        };
+        const { engine } = await engineWith({ [SETS_PAGE]: { items: [], total_count: 0 }, ...noneUnder(2, { Sale: 'sale' }) }, refuseCategory);
+
+        const { activationId } = await engine.startImport(request());
+        const status = await settle(engine, activationId);
+
+        expect(status.perType).toEqual({ attribute_sets: 'success', categories: 'success' });
+        expect(status.note).toBe('Skipped 1 row, and installed the rest: categories Sale (URL key for specified store already exists).');
+        expect(await engine.getJobFailureReason(activationId)).toBeUndefined();
+        // 2026-11-06: the note names ten; the status carries every skipped row whole, and each kind's seconds
+        // (their values: engine-timings.test.ts, on a clock it controls).
+        expect(status.skipped).toEqual([
+            {
+                kind: 'categories',
+                key: 'Sale',
+                reason: 'URL key for specified store already exists.',
+                cause: { by: 'commerce', status: 400, message: 'URL key for specified store already exists.' },
+            },
+        ]);
+        // Walk F221: the window reads it in plain words, grouped by reason; the note keeps Commerce's.
+        expect(status.scLines).toEqual(["Sale wasn't added: another category already uses its web address."]);
+        expect(Object.keys(status.timings ?? {})).toEqual(['attribute_sets', 'categories']);
     });
 
     it('marks the failing kind and every later one as failed, and says why', async () => {
-        const { engine } = await engineWith({ [SETS_PAGE]: { items: [], total_count: 0 } }, () => ({ id: 40 }));
+        // The category's write fails; its reads (and the url-key check's, before any write) succeed.
+        const failCategory = (call: SentCall) => {
+            if (call.path === 'categories') throw new Error('Commerce answered 404 for POST categories');
+            return { id: 40 };
+        };
+        const { engine } = await engineWith({ [SETS_PAGE]: { items: [], total_count: 0 }, ...noneUnder(2, { Sale: 'sale' }) }, failCategory);
 
         const { activationId } = await engine.startImport(request());
         const status = await settle(engine, activationId);
@@ -109,26 +175,26 @@ describe('demoBuilderEngine install', () => {
 
     it('fails every kind, writing nothing, for a kind it cannot install yet', async () => {
         const { engine, ctx } = await engineWith({}, () => ({}), {
-            readPack: async () => ({ ...ITEMS, customers: [] }),
+            readPack: async () => ({ ...ITEMS, aco_products: [] }),
         });
 
-        const { activationId } = await engine.startImport(request({ dataTypes: ['attribute_sets', 'categories', 'customers'] }));
+        const { activationId } = await engine.startImport(request({ dataTypes: ['attribute_sets', 'categories', 'aco_products'] }));
         await settle(engine, activationId);
 
         expect((await engine.getJobFailureReason(activationId))?.error).toBe(
-            'Demo Builder does not install customers yet, so nothing was installed.',
+            'Demo Builder does not install aco_products yet, so nothing was installed.',
         );
         expect(ctx.sent).toStrictEqual([]);
     });
 
     it('reads the pack from the store the request names, the Data Installer when it names none', async () => {
-        const readPack = jest.fn(async (_id: unknown, _kinds: unknown, _source: string) => ITEMS);
+        const readPack = jest.fn(async (_id: unknown, _source: string) => ITEMS);
         const { engine } = await engineWith({}, () => ({}), { readPack });
 
         await settle(engine, (await engine.startImport(request({ source: 'library' }))).activationId);
         await settle(engine, (await engine.startImport(request())).activationId);
 
-        expect(readPack.mock.calls.map((call) => call[2])).toEqual(['library', 'installer']);
+        expect(readPack.mock.calls.map((call) => call[1])).toEqual(['library', 'installer']);
     });
 
     it('fails when the pack does not hold a kind it was asked for', async () => {
@@ -137,16 +203,137 @@ describe('demoBuilderEngine install', () => {
         const { activationId } = await engine.startImport(request());
         await settle(engine, activationId);
 
-        expect((await engine.getJobFailureReason(activationId))?.error).toBe('The pack holds no categories.');
+        expect((await engine.getJobFailureReason(activationId))?.error).toBe('The datapack holds no categories.');
     });
 
     it('says why when the project has no Commerce access', async () => {
-        const { engine } = await engineWith({}, () => ({}), { commerce: async () => ({ refusal: 'Sign in to Adobe first.' }) });
+        const { engine } = await engineWith({}, () => ({}), { commerce: async () => ({ refusal: 'Sign In to Adobe first.' }) });
 
         const { activationId } = await engine.startImport(request());
         await settle(engine, activationId);
 
-        expect((await engine.getJobFailureReason(activationId))?.error).toBe('Sign in to Adobe first.');
+        expect((await engine.getJobFailureReason(activationId))?.error).toBe('Sign In to Adobe first.');
+    });
+});
+
+describe('demoBuilderEngine and the website a pack was installed to', () => {
+    const READS = { [SETS_PAGE]: { items: [], total_count: 0 }, ...noneUnder(2, { Sale: 'sale' }) };
+    const ELSEWHERE = { websiteCode: 'tailspin_test_website', storeCode: 'tailspin_test_view' };
+    const MOVED = `${PACK.name} is installed on the website tailspin_test_website. Uninstall it first, or install it there.`;
+
+    // Names, not codes (owner, 2026-11-15): the website as the Admin shows it, the code only when
+    // the store no longer lists it (as the refusal below, whose store lists none).
+    it('names the website it is installed on by its name in the store', async () => {
+        const files = memoryFiles();
+        await (await openInstallRecord(files, PROJECT, PACK, () => 'then', ELSEWHERE)).record({ kind: 'categories', id: '40' });
+        const named = { ...READS, 'store/websites': [{ id: 6, code: 'tailspin_test_website', name: 'Tailspin Test' }] };
+        const { engine } = await engineWith(named, () => ({ id: 41 }), { files });
+
+        expect(await engine.validateImport(request())).toEqual({
+            valid: false,
+            reason: `${PACK.name} is installed on the website Tailspin Test. Uninstall it first, or install it there.`,
+        });
+    });
+
+    it('writes the website and store view it installs to on the record', async () => {
+        const { engine, files } = await engineWith(READS, () => ({ id: 40 }));
+
+        await settle(engine, (await engine.startImport(request())).activationId);
+
+        expect((await readInstallRecord(files, PROJECT, PACK))?.target).toEqual({ websiteCode: 'base', storeCode: 'default' });
+    });
+
+    // step-07 D6: the instance its Commerce access reaches, not what a caller names, so a removal
+    // from another one can be stopped.
+    it('writes the Commerce instance it installs to on the record', async () => {
+        const { engine, files } = await engineWith(READS, () => ({ id: 40 }), { instance: 'TenantA' });
+
+        await settle(engine, (await engine.startImport(request({ commerceInstance: 'named by a caller' }))).activationId);
+
+        expect((await readInstallRecord(files, PROJECT, PACK))?.instance).toBe('TenantA');
+    });
+
+    it('refuses, writing nothing, to install again into a website other than the one the record names', async () => {
+        const files = memoryFiles();
+        await (await openInstallRecord(files, PROJECT, PACK, () => 'then', ELSEWHERE)).record({ kind: 'categories', id: '40' });
+        const { engine, ctx } = await engineWith(READS, () => ({ id: 41 }), { files });
+
+        const { activationId } = await engine.startImport(request());
+        await settle(engine, activationId);
+
+        expect((await engine.getJobFailureReason(activationId))?.error).toBe(MOVED);
+        expect(ctx.sent).toStrictEqual([]);
+        expect(await engine.validateImport(request())).toEqual({ valid: false, reason: MOVED });
+    });
+
+    it('refuses the same for a record made before targets were kept, by the website its settings went to', async () => {
+        const files = memoryFiles();
+        const previous = { path: 'catalog/frontend/list_per_page', scope: 'website', scopeCode: 'tailspin_test_website', stored: '10', effective: '10', wrote: '15' };
+        await (await openInstallRecord(files, PROJECT, PACK, () => 'then')).record({ kind: 'store_config', id: 'x@website', key: 'x@website', previous });
+        const { engine, ctx } = await engineWith(READS, () => ({ id: 41 }), { files });
+
+        const { activationId } = await engine.startImport(request());
+        await settle(engine, activationId);
+
+        expect((await engine.getJobFailureReason(activationId))?.error).toBe(MOVED);
+        expect(ctx.sent).toStrictEqual([]);
+    });
+});
+
+// D6 review B1: a record from another Commerce instance lists that instance's ids. Reused here, a
+// reinstall would read and write them on this one, and a removal would delete unrelated objects.
+describe('demoBuilderEngine and the Commerce instance a pack was installed to', () => {
+    const READS = { [SETS_PAGE]: { items: [], total_count: 0 }, ...noneUnder(2, { Sale: 'sale' }) };
+    const OTHER = `${PACK.name} is installed on another Commerce instance. Uninstall it there first.`;
+
+    async function recordedOn(instance: string) {
+        const files = memoryFiles();
+        const recorder = await openInstallRecord(files, PROJECT, PACK, () => 'then', { websiteCode: 'base', storeCode: 'default' }, instance);
+        await recorder.record({ kind: 'categories', id: '40' });
+        return files;
+    }
+
+    it('refuses, writing nothing, to install again on another instance', async () => {
+        const { engine, ctx } = await engineWith(READS, () => ({ id: 41 }), { files: await recordedOn('TenantA'), instance: 'TenantB' });
+
+        const { activationId } = await engine.startImport(request());
+        await settle(engine, activationId);
+
+        expect((await engine.getJobFailureReason(activationId))?.error).toBe(OTHER);
+        expect(ctx.sent).toStrictEqual([]);
+        expect(await engine.validateImport(request())).toEqual({ valid: false, reason: OTHER });
+    });
+
+    it('refuses, deleting nothing, to remove it from another instance', async () => {
+        const files = await recordedOn('TenantA');
+        const { engine, ctx } = await engineWith({}, () => true, { files, instance: 'TenantB' });
+
+        const { activationId } = await engine.startDelete(request());
+        await settle(engine, activationId);
+
+        expect((await engine.getJobFailureReason(activationId))?.error).toBe(OTHER);
+        expect(ctx.sent).toStrictEqual([]);
+        expect((await readInstallRecord(files, PROJECT, PACK))?.created).toHaveLength(1);
+    });
+
+    it('names the pack as the SC knows it, in both refusals', async () => {
+        const named = { files: await recordedOn('TenantA'), instance: 'TenantB', nameOf: () => 'Tailspin Racks' };
+        const { engine } = await engineWith({}, () => true, named);
+        const said = 'Tailspin Racks is installed on another Commerce instance. Uninstall it there first.';
+
+        const { activationId } = await engine.startDelete(request());
+        await settle(engine, activationId);
+
+        expect((await engine.getJobFailureReason(activationId))?.error).toBe(said);
+        expect(await engine.validateImport(request())).toEqual({ valid: false, reason: said });
+    });
+
+    it('CONTROL: removes it from the instance it was installed to', async () => {
+        const { engine, ctx } = await engineWith({}, () => true, { files: await recordedOn('TenantA'), instance: 'TenantA' });
+
+        await settle(engine, (await engine.startDelete(request())).activationId);
+
+        expect(ctx.sent).toEqual([{ method: 'DELETE', path: 'categories/40', body: undefined }]);
     });
 });
 
@@ -162,13 +349,56 @@ describe('demoBuilderEngine removal', () => {
         expect(status.perType).toEqual({ attribute_sets: 'success', categories: 'success' });
     });
 
-    it('fails, saying so, when this engine never installed the pack here', async () => {
-        const { engine } = await engineWith({}, () => true);
+    it('says in one line which container it kept because it holds what the SC added', async () => {
+        const { engine, ctx, files } = await engineWith({ 'categories/40': { id: 40, name: 'Sale', path: '1/2/40', children: '77' } }, () => true);
+        await (await openInstallRecord(files, PROJECT, PACK, () => 'then')).record({ kind: 'categories', id: '40' });
 
         const { activationId } = await engine.startDelete(request());
+        const status = await settle(engine, activationId);
+
+        expect(ctx.sent).toStrictEqual([]);
+        expect(status.perType).toEqual({ attribute_sets: 'success', categories: 'success' });
+        expect(status.note).toBe('Kept the category Sale: it holds 1 category you added.');
+        // So the project still names the pack: the store holds part of it, and its record says what.
+        expect(status.leftInStore).toBe(true);
+    });
+
+    // Step-06 C3 re-review: what a clearing deletes next counts as leaving, so the hold lets it go.
+    it("lets go of an attribute only products the clearing deletes next carry, when the request names them", async () => {
+        const carrying = 'products?searchCriteria[currentPage]=1&searchCriteria[pageSize]=100&searchCriteria[filterGroups][0][filters][0][field]=material&searchCriteria[filterGroups][0][filters][0][value]=1&searchCriteria[filterGroups][0][filters][0][conditionType]=notnull&fields=total_count,items[sku]';
+        const { engine, ctx, files } = await engineWith({ [carrying]: { items: [{ sku: 'sc-own-cap' }], total_count: 1 } }, () => true);
+        await (await openInstallRecord(files, PROJECT, PACK, () => 'then')).record({ kind: 'product_attributes', id: 'material' });
+
+        const { activationId } = await engine.startDelete({ ...request(), alsoLeaving: ['sc-own-cap'] });
         await settle(engine, activationId);
 
-        expect((await engine.getJobFailureReason(activationId))?.error).toMatch(/did not install this pack in this project/);
+        expect(ctx.sent).toEqual([{ method: 'DELETE', path: 'products/attributes/material', body: undefined }]);
+    });
+
+    it('says nothing is left in the store when it took everything out', async () => {
+        const { engine, files } = await engineWith({}, () => true);
+        await (await openInstallRecord(files, PROJECT, PACK, () => 'then')).record({ kind: 'categories', id: '40' });
+
+        const { activationId } = await engine.startDelete(request());
+        const status = await settle(engine, activationId);
+
+        expect('leftInStore' in status).toBe(false);
+    });
+
+    // Step 14 item 20 (owner, 2026-10-30): still refused, nothing matched by name, and the SC is
+    // pointed at the one thing that clears what an earlier install left.
+    it('fails, removing nothing, when this engine never installed the pack here, and points to Clear Demo Data', async () => {
+        const { engine, ctx } = await engineWith({}, () => true);
+
+        const { activationId } = await engine.startDelete(request());
+        const status = await settle(engine, activationId);
+
+        expect((await engine.getJobFailureReason(activationId))?.error).toBe(
+            'Demo Builder did not install this datapack in this project, so it has no record of what the datapack made and uninstalls ' +
+                'nothing by name. To clear what an earlier install left in Commerce, use Clear Demo Data on the Data Installer screen.',
+        );
+        expect(status.perType).toEqual({ attribute_sets: 'error', categories: 'error' });
+        expect(ctx.sent).toStrictEqual([]);
     });
 
     it('keeps on the record what Commerce refused to remove', async () => {
@@ -197,14 +427,39 @@ describe('demoBuilderEngine reads', () => {
         [
             'a website the store does not have',
             request({ target: { websiteCode: 'acme', storeCode: 'default' } }),
-            { valid: false, reason: 'The store has no store view default on a website acme. Choose them again in the Commerce step.' },
+            { valid: false, reason: 'Commerce has no store view default on a website acme. Choose them again in the Commerce step.' },
         ],
-        ['a kind it cannot install', request({ dataTypes: ['categories', 'cart_rules'] }), { valid: false, reason: 'Demo Builder does not install cart_rules yet.' }],
+        ['a kind it cannot install', request({ dataTypes: ['categories', 'aco_products'] }), { valid: false, reason: 'Demo Builder does not install aco_products yet.' }],
+        // Live 2026-11-07: the preview counts attribute options apart, and an agent asked for them by name.
+        [
+            'a kind that installs with another',
+            request({ dataTypes: ['product_attributes', 'attribute_options'] }),
+            { valid: false, reason: 'attribute_options is no data type of its own: it installs with product_attributes, so ask for that.' },
+        ],
     ])('dry run with %s', async (_label, req, expected) => {
         const { engine, ctx } = await engineWith({}, () => ({}));
 
         await expect(engine.validateImport(req)).resolves.toEqual(expected);
         expect(ctx.sent).toStrictEqual([]);
+    });
+
+    // Step 14 item 2: the dry run reads the pack's rows, as the service's validate mode does.
+    it("dry run reads the pack's rows and names each kind whose rows Commerce could not take", async () => {
+        const { engine, ctx } = await engineWith({}, () => ({}), {
+            readPack: async () => ({ attribute_sets: [], categories: { categories: [{ category: { name: 'Sale' } }] } }),
+        });
+
+        const verdict = await engine.validateImport(request());
+
+        expect(verdict.valid).toBe(false);
+        expect(verdict.reason).toMatch(/^Nothing would be installed: The datapack's categories are not in the shape Commerce takes/u);
+        expect(ctx.sent).toStrictEqual([]);
+    });
+
+    it('dry run says when the pack does not hold a kind it was asked for', async () => {
+        const { engine } = await engineWith({}, () => ({}), { readPack: async () => ({ attribute_sets: [] }) });
+
+        await expect(engine.validateImport(request())).resolves.toEqual({ valid: false, reason: 'The datapack holds no categories.' });
     });
 
     it('checks the project\'s own Commerce access, not the credentials in the request', async () => {
@@ -213,5 +468,38 @@ describe('demoBuilderEngine reads', () => {
 
         await expect(works.checkCredentials(request())).resolves.toEqual({ usable: true });
         await expect(refused.checkCredentials(request())).resolves.toEqual({ usable: false, reason: 'No credential saved.' });
+    });
+});
+
+describe("demoBuilderEngine and a pack's store settings (step 09)", () => {
+    const GRID = 'catalog/frontend/grid_per_page';
+    const at = (value: string) => ({ [configListPath([GRID], 'default')]: { items: [{ path: GRID, value, scope: 'default' }] } });
+
+    it('says in one line which settings the install set, by path', async () => {
+        const { engine } = await engineWith(at('12'), () => ({ items: [], errors: [] }), {
+            readPack: async () => ({ store_config: [{ path: GRID, value: '24', scope: 'default' }] }),
+        });
+
+        const { activationId } = await engine.startImport(request({ dataTypes: ['store_config'] }));
+        const status = await settle(engine, activationId);
+
+        expect(status.perType).toEqual({ store_config: 'success' });
+        expect(status.note).toBe(`Set ${GRID}: 12 → 24.`);
+    });
+
+    it('says in one line which settings the removal put back, by path', async () => {
+        const { engine, ctx, files } = await engineWith(at('24'), () => ({ items: [], errors: [] }));
+        await (await openInstallRecord(files, PROJECT, PACK, () => 'then')).record({
+            kind: 'store_config',
+            id: `${GRID}@default`,
+            key: `${GRID}@default`,
+            previous: { path: GRID, scope: 'default', stored: '12', effective: '12', wrote: '24' },
+        });
+
+        const { activationId } = await engine.startDelete(request({ dataTypes: ['store_config'] }));
+        const status = await settle(engine, activationId);
+
+        expect(ctx.sent).toEqual([{ method: 'PUT', path: 'system/config', body: { items: [{ path: GRID, value: '12', scope: 'default' }] } }]);
+        expect(status.note).toBe(`Put back ${GRID}: 24 → 12.`);
     });
 });

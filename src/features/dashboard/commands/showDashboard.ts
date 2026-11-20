@@ -15,7 +15,8 @@ import { aiHandlers } from '@/features/dashboard/handlers/aiHandlers';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
 import { postStatusUpdate } from '@/features/dashboard/handlers/statusHandlers';
 import { armOnOpenChecks } from '@/features/dashboard/services/onOpenChecks/orchestrator';
-import { isDataInstallerConfigured } from '@/features/data-installer/services/dataInstallerConfig';
+import { onDatapacksChanged } from '@/features/data-installer/services/datapackChanges';
+import { DATAPACK_LIST_CHANGED_MESSAGE } from '@/features/data-installer/types';
 import {
     getEwCanvasBranch,
     resolveProjectAuthoringExperience,
@@ -30,9 +31,7 @@ import {
     getEdsLiveUrl,
     getEdsDaLiveUrl,
 } from '@/types/typeGuards';
-import type {
-    DashboardInitialData,
-} from '@/types/webviewPayloads';
+import type { DashboardInitialData, DashboardOpenOptions } from '@/types/webviewPayloads';
 
 /** Absolute path to the Demo Builder projects directory (`~/.demo-builder/projects`). */
 const DEMO_BUILDER_PROJECTS_BASE = path.join(os.homedir(), '.demo-builder', 'projects');
@@ -129,12 +128,23 @@ export class ProjectDashboardWebviewCommand extends BundledPanelCommand<Dashboar
     // Static reference to active instance for refreshStatus
     private static activeInstance: ProjectDashboardWebviewCommand | null = null;
 
+    /** The next init opens the Finish Setup guide (PL-101); cleared once sent. */
+    private openFinishSetupNext = false;
+
     constructor(
         context: vscode.ExtensionContext,
         stateManager: import('@/types/state').StateManager,
         logger: import('@/types/logger').Logger,
     ) {
         super(context, stateManager, logger);
+    }
+
+    /**
+     * What the dashboard opens on this time: the creation end screen's Finish Setup asks for its
+     * guide. Called by `execute`; the next init carries it, once.
+     */
+    public openOn(options: DashboardOpenOptions | undefined): void {
+        this.openFinishSetupNext = options?.openFinishSetup === true;
     }
 
     // ============================================================================
@@ -180,12 +190,8 @@ export class ProjectDashboardWebviewCommand extends BundledPanelCommand<Dashboar
         // runs when the project has an Adobe org). Lets the UI telegraph the
         // "Checking Adobe organization…" state before the result arrives.
         const hasAdobeContext = Boolean(project?.adobe?.organization);
-
-        // Whether to OFFER the Sample Data tile at all. Read here rather than in
-        // the webview because these are host settings; the tile used to render
-        // unconditionally, so a user without an API URL got a tile that opened a
-        // surface refusing them.
-        const dataInstallerAvailable = isDataInstallerConfigured();
+        const openFinishSetup = this.openFinishSetupNext;
+        this.openFinishSetupNext = false;
 
         return {
             theme,
@@ -205,7 +211,6 @@ export class ProjectDashboardWebviewCommand extends BundledPanelCommand<Dashboar
             edsDaLiveUrl,
             initialEdsStorefrontStatus,
             hasAdobeContext,
-            dataInstallerAvailable,
             // The keyed map drives the integrations SUMMARY tile (count + dot).
             // No catalog seed: the add-integration picker lives on the dedicated
             // integrations surface, whose own payload carries the catalog.
@@ -220,6 +225,7 @@ export class ProjectDashboardWebviewCommand extends BundledPanelCommand<Dashboar
                       },
                   }
                 : {}),
+            ...(openFinishSetup ? { openFinishSetup: true as const } : {}),
         };
     }
 
@@ -292,6 +298,11 @@ export class ProjectDashboardWebviewCommand extends BundledPanelCommand<Dashboar
                 return dispatchHandler(dashboardHandlers, context, messageType, data);
             });
         }
+
+        // The Datapacks card's line follows the packs, as every Datapacks screen does: an install
+        // or uninstall in the Datapacks tab, or by an agent, re-reads it (release test 1.10,
+        // 2026-11-16: the card kept "None" after Luma installed).
+        this.disposables.add(onDatapacksChanged(() => void this.sendMessage(DATAPACK_LIST_CHANGED_MESSAGE)));
 
         // Register the AI handlers as well so the dashboard hook can call
         // `verify-ai-setup` to populate the AI Ready badge state.
@@ -367,7 +378,8 @@ export class ProjectDashboardWebviewCommand extends BundledPanelCommand<Dashboar
     // Lifecycle Hooks
     // ============================================================================
 
-    public async execute(): Promise<void> {
+    public async execute(options?: DashboardOpenOptions): Promise<void> {
+        this.openOn(options);
         // The project this screen is for, kept after the current project moves (AI-15)
         const project = await this.openForCurrentProject();
         if (!project) {

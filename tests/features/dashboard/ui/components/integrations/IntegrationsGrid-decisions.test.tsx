@@ -152,7 +152,7 @@ describe('IntegrationsGrid — a setup guide nobody holds', () => {
         await user.click(within(menu).getByRole('button'));
 
         expect(getClient().postMessage).not.toHaveBeenCalled();
-        expect(screen.queryByRole('dialog', { name: /^Demo setup:/ })).not.toBeInTheDocument();
+        expect(screen.queryByRole('dialog', { name: /^Demo Setup:/ })).not.toBeInTheDocument();
     });
 });
 
@@ -175,7 +175,7 @@ describe('IntegrationsGrid — the remove confirm', () => {
         const panel = await openPanel(user, 'API Mesh', 'Deployed');
         await user.click(within(panel).getByRole('button', { name: /^remove$/i }));
 
-        const confirm = screen.getByRole('dialog', { name: 'Remove API Mesh' });
+        const confirm = screen.getByRole('dialog', { name: 'Remove API Mesh?' });
         await user.click(within(confirm).getByRole('button', { name: /^remove$/i }));
 
         expect(screen.getByRole('dialog', { name: 'Removing API Mesh' })).toBeInTheDocument();
@@ -190,7 +190,7 @@ describe('IntegrationsGrid — the remove confirm', () => {
         await user.click(within(panel).getByRole('button', { name: /^remove$/i }));
 
         setCards([]);
-        const confirm = screen.getByRole('dialog', { name: 'Remove custom-app' });
+        const confirm = screen.getByRole('dialog', { name: 'Remove custom-app?' });
         await user.click(within(confirm).getByRole('button', { name: /^remove$/i }));
 
         expect(getClient().postMessage).toHaveBeenCalledWith('removeAppBuilderComponent', {
@@ -201,41 +201,42 @@ describe('IntegrationsGrid — the remove confirm', () => {
 });
 
 describe('IntegrationsGrid — the ERP dialogs close', () => {
-    it('closes the reset confirm on Close', async () => {
+    it('closes the reset confirm on Cancel', async () => {
         const user = setupUser();
         renderCards([integrationCard(), systemCard()]);
         const panel = await openPanel(user, 'ERP integration', 'Deployed');
         await user.click(within(panel).getByRole('button', { name: /^reset erps$/i }));
 
-        const dialog = screen.getByRole('dialog', { name: /reset erps/i });
-        await user.click(within(dialog).getByRole('button', { name: /^close$/i }));
+        const dialog = screen.getByRole('dialog', { name: 'Reset Nordwind?' });
+        await user.click(within(dialog).getByRole('button', { name: /^cancel$/i }));
 
-        expect(screen.queryByRole('dialog', { name: /reset erps/i })).not.toBeInTheDocument();
+        expect(screen.queryByRole('dialog', { name: 'Reset Nordwind?' })).not.toBeInTheDocument();
     });
 
-    it('closes the Add another ERP prompt on Close', async () => {
+    it('closes the Add Another ERP prompt on Cancel', async () => {
         const user = setupUser();
         renderCards([integrationCard(), systemCard()]);
         const panel = await openPanel(user, 'ERP integration', 'Deployed');
         await user.click(within(panel).getByRole('button', { name: /^add another erp$/i }));
 
-        const dialog = screen.getByRole('dialog', { name: 'Add another ERP' });
-        await user.click(within(dialog).getByRole('button', { name: /^close$/i }));
+        const dialog = screen.getByRole('dialog', { name: 'Add Another ERP' });
+        await user.click(within(dialog).getByRole('button', { name: /^cancel$/i }));
 
-        expect(screen.queryByRole('dialog', { name: 'Add another ERP' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('dialog', { name: 'Add Another ERP' })).not.toBeInTheDocument();
     });
 
-    it('closes the simulated-downtime modal on Close', async () => {
+    // A form says Cancel beside its commit (Phase 1b: the downtime window is on the Form layout).
+    it('closes the simulated-downtime modal on Cancel', async () => {
         const user = setupUser();
         renderCards([integrationCard(), systemCard()]);
         const panel = await openPanel(user, 'Nordwind', 'Deployed');
-        await user.click(within(panel).getByRole('button', { name: 'Simulate downtime' }));
+        await user.click(within(panel).getByRole('button', { name: 'Simulate Downtime' }));
 
-        const dialog = await screen.findByRole('dialog', { name: 'Nordwind: simulate downtime' });
-        await user.click(within(dialog).getByRole('button', { name: /^close$/i }));
+        const dialog = await screen.findByRole('dialog', { name: 'Nordwind: Simulate Downtime' });
+        await user.click(within(dialog).getByRole('button', { name: /^cancel$/i }));
 
         expect(
-            screen.queryByRole('dialog', { name: 'Nordwind: simulate downtime' })
+            screen.queryByRole('dialog', { name: 'Nordwind: Simulate Downtime' })
         ).not.toBeInTheDocument();
     });
 });
@@ -248,7 +249,7 @@ describe('IntegrationsGrid — the names an added ERP may not take', () => {
     async function openPrompt(user: ReturnType<typeof setupUser>) {
         const panel = await openPanel(user, 'Order ERP', 'Deployed');
         await user.click(within(panel).getByRole('button', { name: /^add another erp$/i }));
-        return screen.getByRole('dialog', { name: 'Add another ERP' });
+        return screen.getByRole('dialog', { name: 'Add Another ERP' });
     }
 
     // Only ERPs are taken names: an ERP may share a name with an integration.
@@ -257,7 +258,7 @@ describe('IntegrationsGrid — the names an added ERP may not take', () => {
         renderCards([orderIntegration(), nordwindErp()]);
         const dialog = await openPrompt(user);
 
-        await user.type(within(dialog).getByRole('textbox', { name: 'ERP name' }), 'Order');
+        await user.type(within(dialog).getByRole('textbox', { name: 'ERP Name' }), 'Order');
 
         expect(within(dialog).queryByText(/is already in this project/)).not.toBeInTheDocument();
     });
@@ -268,7 +269,7 @@ describe('IntegrationsGrid — the names an added ERP may not take', () => {
         setCards([orderIntegration(), nordwindErp()]);
         const dialog = await openPrompt(user);
 
-        await user.type(within(dialog).getByRole('textbox', { name: 'ERP name' }), 'Nordwind');
+        await user.type(within(dialog).getByRole('textbox', { name: 'ERP Name' }), 'Nordwind');
 
         expect(within(dialog).getByText(/is already in this project/)).toBeInTheDocument();
     });

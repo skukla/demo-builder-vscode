@@ -15,6 +15,7 @@ import type { EdsResetParams, EdsResetResult } from './edsResetParams';
 import { COMPONENT_IDS } from '@/core/constants';
 import { RESET_STEP } from '@/core/utils/resetStages';
 import { writeBoilerplateBase } from '@/features/updates/services/boilerplateBase';
+import { recordPatchesReleaseOn } from '@/features/updates/services/templateSyncRelease';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
@@ -37,6 +38,15 @@ export function recordSyncedCommit(project: Project, commitSha: string | undefin
     writeBoilerplateBase(project, undefined);
     const metadata = project.componentInstances[COMPONENT_IDS.EDS_STOREFRONT].metadata;
     if (metadata) metadata.lastSyncedCommit = commitSha;
+}
+
+/**
+ * Record the patches release the reset built from, as the storefront's version. One it cannot
+ * read leaves the old record: the next update check then compares by commit, as it always could.
+ */
+export async function recordPatchesRelease(project: Project, logger: Logger): Promise<void> {
+    const metadata = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata;
+    if (metadata) await recordPatchesReleaseOn(metadata, logger);
 }
 
 /**

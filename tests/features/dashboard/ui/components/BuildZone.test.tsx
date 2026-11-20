@@ -1,6 +1,5 @@
 /**
- * The Build zone: what the demo contains (Edit, Configure, Datapacks, AEM
- * Assets), then Reset and Delete set apart at the foot.
+ * The Build zone: what the demo contains (Edit, Configure, AEM Assets), then Reset and Delete set apart at the foot.
  *
  * Split out of ActionGrid on 2026-10-09 (EDS-8). The ActionGrid suites still
  * pin where the zone sits among its siblings; this one pins the zone itself —
@@ -59,7 +58,6 @@ function props(overrides: Partial<BuildZoneProps> = {}): BuildZoneProps {
     return {
         canEdit: true,
         isMeshActionDisabled: false,
-        dataInstallerAvailable: true,
         handleEditProject: jest.fn(),
         handleConfigure: jest.fn(),
         handleOpenAemAssets: jest.fn(),
@@ -98,7 +96,6 @@ describe('BuildZone', () => {
         expect(labels).toStrictEqual([
             'Edit',
             'Configure',
-            'Datapacks',
             'AEM Assets',
             'Reset',
             'Delete',
@@ -153,20 +150,6 @@ describe('BuildZone', () => {
             render(<BuildZone {...props({ isMeshActionDisabled: true })} />);
 
             expect(buttonFor('Configure')).toBeDisabled();
-        });
-    });
-
-    describe('Datapacks', () => {
-        it('is offered only when the host says the Data Installer is set up', () => {
-            render(<BuildZone {...props({ dataInstallerAvailable: false })} />);
-
-            expect(screen.queryByText('Datapacks')).not.toBeInTheDocument();
-        });
-
-        it('is hidden when the host did not say', () => {
-            render(<BuildZone {...props({ dataInstallerAvailable: undefined })} />);
-
-            expect(screen.queryByText('Datapacks')).not.toBeInTheDocument();
         });
     });
 

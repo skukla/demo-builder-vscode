@@ -43,7 +43,14 @@ jest.mock('@adobe/react-spectrum', () => ({
         </ul>
     ),
     Item: ({ children }: any) => <>{children}</>,
+    Text: ({ children }: any) => <span>{children}</span>,
+    Button: ({ children, onPress, variant, ...props }: any) => (
+        <button onClick={onPress} data-variant={variant} {...props}>
+            {children}
+        </button>
+    ),
 }));
+
 
 jest.mock('@spectrum-icons/workflow/MoreSmallListVert', () => ({
     __esModule: true,
@@ -84,6 +91,7 @@ describe('CardActionsMenu', () => {
             screen.getByRole('button', { name: 'More actions for ERP Sync' })
         ).toBeInTheDocument();
         expect(screen.getByTestId('icon-kebab')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'More actions for ERP Sync' })).not.toHaveTextContent(/\S/);
     });
 
     it('passes its children through as menu items', () => {
@@ -164,5 +172,47 @@ describe('CardActionsMenu — where it opens', () => {
         );
 
         expect(screen.getByTestId('menu-trigger')).toHaveAttribute('data-direction', 'end');
+    });
+});
+
+/**
+ * A labelled trigger, for a menu beside a primary button: the datapack panel's "More" beside
+ * Import, where a bare ⋯ read as unclear (owner, 2026-10-31). It opens below, as a button with
+ * a down arrow does. Cards keep the kebab.
+ */
+describe('CardActionsMenu — with a label', () => {
+    it('shows a pill button with the label and an arrow after it, and opens below', () => {
+        renderMenu({ label: 'More' });
+
+        // The house pill (a secondary Button, like Import beside it), the arrow AFTER the word.
+        const trigger = screen.getByRole('button', { name: 'More actions for ERP Sync' });
+        expect(trigger).toHaveTextContent('More▾');
+        expect(trigger).toHaveAttribute('data-variant', 'secondary');
+        expect(screen.queryByTestId('icon-kebab')).not.toBeInTheDocument();
+        expect(screen.getByTestId('menu-trigger')).toHaveAttribute('data-direction', 'bottom');
+    });
+
+    it('still routes a pick to onAction', () => {
+        const { onAction } = renderMenu({ label: 'More' });
+
+        fireEvent.click(screen.getByText('Remove'));
+
+        expect(onAction).toHaveBeenCalledWith('remove');
+    });
+});
+
+/**
+ * A labelled trigger with an icon: a quiet button among a header's quiet buttons (the Datapacks
+ * header's Save ▾, step-04 S1), led by its icon as they are.
+ */
+describe('CardActionsMenu — with a label and an icon', () => {
+    it('shows a quiet action button: the icon, then the label and its arrow', () => {
+        renderMenu({ label: 'Save', icon: <span data-testid="icon-save" /> });
+
+        const trigger = screen.getByRole('button', { name: 'More actions for ERP Sync' });
+        expect(trigger).not.toHaveAttribute('data-variant');
+        expect(trigger).toHaveTextContent('Save▾');
+        expect(trigger.firstElementChild).toHaveAttribute('data-testid', 'icon-save');
+        expect(screen.getByTestId('menu-trigger')).toHaveAttribute('data-direction', 'bottom');
     });
 });

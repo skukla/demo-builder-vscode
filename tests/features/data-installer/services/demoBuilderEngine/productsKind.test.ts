@@ -8,13 +8,10 @@
  * by SKU. Bodea's rows sell on website 3 of the store they came from.
  */
 
-import {
-    PRODUCT_KIND,
-    installProducts,
-    parseProductRows,
-    removeProduct,
-} from '@/features/data-installer/services/demoBuilderEngine/productsKind';
-import { type SentCall, fakeContext } from './demoBuilderEngine.testUtils';
+import { installProducts, parseProductRows, removeProduct } from '@/features/data-installer/services/demoBuilderEngine/productsKind';
+import { PRODUCT_KIND } from '@/features/data-installer/services/demoBuilderEngine/productKinds';
+import { type SentCall, by, fakeContext, page } from './demoBuilderEngine.testUtils';
+import { CommerceReadError } from '@/features/app-builder/services/erpFillReaders';
 
 const VR_RACK = {
     product: {
@@ -33,7 +30,14 @@ const VR_RACK = {
         price: 7500,
         sku: 'vrrack',
         status: 1,
-        tier_prices: [{ customer_group_id: 'Platinum Buyer', extension_attributes: { percentage_value: 10, website_id: 3 }, qty: 1, value: 6750 }],
+        tier_prices: [
+            {
+                customer_group_id: 'Platinum Buyer',
+                extension_attributes: { percentage_value: 10, website_id: 3 },
+                qty: 1,
+                value: 6750,
+            },
+        ],
         type_id: 'simple',
         visibility: 4,
     },
@@ -43,7 +47,14 @@ const CABLE = {
     product: {
         attribute_set_id: 'Default',
         extension_attributes: {
-            configurable_product_options: [{ attribute_id: 'cable_size', label: 'Size', position: 0, values: [{ value_index: '6 foot' }] }],
+            configurable_product_options: [
+                {
+                    attribute_id: 'cable_size',
+                    label: 'Size',
+                    position: 0,
+                    values: [{ value_index: '6 foot' }],
+                },
+            ],
             configurable_product_links: ['outdoorpatchcable-6foot'],
             website_ids: [3],
         },
@@ -54,14 +65,12 @@ const CABLE = {
     },
 };
 
-const page = (path: string, criteria = '') =>
-    `${path}?searchCriteria[currentPage]=1&searchCriteria[pageSize]=100${criteria}`;
-const by = (field: string, value: string) =>
-    `&searchCriteria[filterGroups][0][filters][0][field]=${field}&searchCriteria[filterGroups][0][filters][0][value]=${encodeURIComponent(value)}`;
-
 /** A store with the Default set, the racks category under root 2, and the Platinum Buyer group. */
 const STORE: Record<string, unknown> = {
-    [page('products/attribute-sets/sets/list')]: { items: [{ attribute_set_id: 4, attribute_set_name: 'Default' }], total_count: 1 },
+    [page('products/attribute-sets/sets/list')]: {
+        items: [{ attribute_set_id: 4, attribute_set_name: 'Default' }],
+        total_count: 1,
+    },
     [page('categories/list', by('url_key', 'racks'))]: {
         items: [
             { id: 90, path: '1/50/90' },
@@ -69,12 +78,18 @@ const STORE: Record<string, unknown> = {
         ],
         total_count: 2,
     },
-    [page('customerGroups/search', by('customer_group_code', 'Platinum Buyer'))]: { items: [{ id: 5, code: 'Platinum Buyer' }], total_count: 1 },
+    [page('customerGroups/search', by('customer_group_code', 'Platinum Buyer'))]: {
+        items: [{ id: 5, code: 'Platinum Buyer' }],
+        total_count: 1,
+    },
     'products/attributes/url_key': { attribute_id: 120, frontend_input: 'text' },
     'products/attributes/cable_size': {
         attribute_id: 210,
         frontend_input: 'select',
-        options: [{ label: ' ', value: '' }, { label: '6 Foot', value: '301' }],
+        options: [
+            { label: ' ', value: '' },
+            { label: '6 Foot', value: '301' },
+        ],
     },
 };
 
@@ -84,10 +99,11 @@ async function storeContext(extra: Record<string, unknown> = {}) {
     return ctx;
 }
 
-const posted = (ctx: { sent: SentCall[] }) => ctx.sent.map((c) => (c.body as { product: Record<string, unknown> }).product);
+const posted = (ctx: { sent: SentCall[] }) =>
+    ctx.sent.map((c) => (c.body as { product: Record<string, unknown> }).product);
 
 describe('installProducts', () => {
-    it('makes a product with this store\'s set, website, category and customer group ids, and records it', async () => {
+    it("makes a product with this store's set, website, category and customer group ids, and records it", async () => {
         const ctx = await storeContext();
 
         await installProducts(ctx, parseProductRows([VR_RACK]));
@@ -111,32 +127,87 @@ describe('installProducts', () => {
                             { attribute_code: 'category_ids', value: ['41'] },
                         ],
                         tier_prices: [
-                            { customer_group_id: 5, extension_attributes: { percentage_value: 10, website_id: 0 }, qty: 1, value: 6750 },
+                            {
+                                customer_group_id: 5,
+                                extension_attributes: { percentage_value: 10, website_id: 0 },
+                                qty: 1,
+                                value: 6750,
+                            },
                         ],
                     },
                 },
             },
         ]);
-        expect(ctx.recorder.created).toEqual([{ kind: PRODUCT_KIND, id: 'vrrack' }]);
+        expect(ctx.recorder.created).toEqual([{ kind: PRODUCT_KIND, id: 'vrrack', key: 'vrrack' }]);
     });
 
-    it('turns a configurable product\'s option labels and child SKUs into this store\'s ids', async () => {
-        const ctx = await storeContext({ 'products/outdoorpatchcable-6foot': { id: 77, sku: 'outdoorpatchcable-6foot' } });
+    it("turns a configurable product's option labels and child SKUs into this store's ids", async () => {
+        const ctx = await storeContext({
+            'products/outdoorpatchcable-6foot': { id: 77, sku: 'outdoorpatchcable-6foot' },
+        });
 
         await installProducts(ctx, parseProductRows([CABLE]));
 
         const [product] = posted(ctx);
         expect(product.extension_attributes).toEqual({
-            configurable_product_options: [{ attribute_id: '210', label: 'Size', position: 0, values: [{ value_index: 301 }] }],
+            configurable_product_options: [
+                { attribute_id: '210', label: 'Size', position: 0, values: [{ value_index: 301 }] },
+            ],
             configurable_product_links: [77],
             website_ids: [1],
         });
         expect(product.custom_attributes).toEqual([{ attribute_code: 'cable_size', value: '301' }]);
     });
 
+    it('makes a child before the configurable that links it, even when the pack lists the parent first', async () => {
+        const child = {
+            product: {
+                attribute_set_id: 'Default',
+                name: '6 Foot',
+                sku: 'outdoorpatchcable-6foot',
+                type_id: 'simple',
+            },
+        };
+        let childMade = false;
+        const ctx = await fakeContext(
+            {
+                ...STORE,
+                // The store has the child only once it is made, as Commerce would.
+                'products/outdoorpatchcable-6foot': () => {
+                    if (!childMade)
+                        throw new CommerceReadError(
+                            'Commerce answered 404 for products/outdoorpatchcable-6foot',
+                            404
+                        );
+                    return { id: 77, sku: 'outdoorpatchcable-6foot' };
+                },
+            },
+            (call) => {
+                if (
+                    (call.body as { product: { sku: string } }).product.sku ===
+                    'outdoorpatchcable-6foot'
+                )
+                    childMade = true;
+                return {};
+            }
+        );
+        ctx.session.websiteId = 1;
+
+        await installProducts(ctx, parseProductRows([CABLE, child]));
+
+        expect(posted(ctx).map((p) => p.sku)).toEqual([
+            'outdoorpatchcable-6foot',
+            'outdoorpatchcable',
+        ]);
+        expect(posted(ctx)[1].extension_attributes).toMatchObject({
+            configurable_product_links: [77],
+        });
+        expect(ctx.session.skipped).toBeUndefined();
+    });
+
     // Frescopa `main`'s own bundle, trimmed (read from the service on 2026-10-27): its options name
     // their parts by SKU, which Commerce takes as is, so only the website and categories change.
-    it('sends a bundle\'s options as the pack has them, its parts named by SKU', async () => {
+    it("sends a bundle's options as the pack has them, its parts named by SKU", async () => {
         const options = [
             {
                 title: 'Machine',
@@ -144,7 +215,17 @@ describe('installProducts', () => {
                 type: 'select',
                 position: 0,
                 sku: 'coffeeexperience',
-                product_links: [{ sku: 'frescoexpresso', qty: 1, position: 0, is_default: false, price: 2499, price_type: null, can_change_quantity: 1 }],
+                product_links: [
+                    {
+                        sku: 'frescoexpresso',
+                        qty: 1,
+                        position: 0,
+                        is_default: false,
+                        price: 2499,
+                        price_type: null,
+                        can_change_quantity: 1,
+                    },
+                ],
             },
         ];
         const bundle = {
@@ -159,7 +240,11 @@ describe('installProducts', () => {
                     { attribute_code: 'price_type', value: '0' },
                     { attribute_code: 'category_ids', value: ['racks'] },
                 ],
-                extension_attributes: { website_ids: [2], category_links: [{ position: -1, category_id: 'racks' }], bundle_product_options: options },
+                extension_attributes: {
+                    website_ids: [2],
+                    category_links: [{ position: -1, category_id: 'racks' }],
+                    bundle_product_options: options,
+                },
             },
         };
         const ctx = await storeContext();
@@ -171,24 +256,59 @@ describe('installProducts', () => {
                 { attribute_code: 'price_type', value: '0' },
                 { attribute_code: 'category_ids', value: ['41'] },
             ],
-            extension_attributes: { website_ids: [1], category_links: [{ position: -1, category_id: '41' }], bundle_product_options: options },
+            extension_attributes: {
+                website_ids: [1],
+                category_links: [{ position: -1, category_id: '41' }],
+                bundle_product_options: options,
+            },
         });
     });
 
-    it('leaves a product the store already has alone, and records nothing for it', async () => {
+    // Owner, 2026-11-20: Products sat on its bare name until Commerce confirmed the whole pack.
+    it('says "0 of N products" before it sends anything, as every other kind does', async () => {
+        const ctx = await storeContext();
+        const lines: string[] = [];
+        const counting = { ...ctx, progress: (line: string) => lines.push(line) };
+
+        await installProducts(counting, parseProductRows([VR_RACK]));
+
+        expect(lines[0]).toBe('0 of 1 products');
+    });
+
+    it('CONTROL: says no count when every product is already in the store', async () => {
+        const ctx = await storeContext({ 'products/vrrack': { id: 12, sku: 'vrrack' } });
+        const lines: string[] = [];
+
+        await installProducts({ ...ctx, progress: (line: string) => lines.push(line) }, parseProductRows([VR_RACK]));
+
+        expect(lines).toStrictEqual([]);
+    });
+
+    // Walk F187 (owner, 2026-11-16): recorded, marked adopted, so a save follows it and no removal takes it.
+    it('leaves a product the store already has alone, and records it as the store\'s', async () => {
         const ctx = await storeContext({ 'products/vrrack': { id: 12, sku: 'vrrack' } });
 
         await installProducts(ctx, parseProductRows([VR_RACK]));
 
         expect(ctx.sent).toStrictEqual([]);
-        expect(ctx.recorder.created).toStrictEqual([]);
+        expect(ctx.recorder.created).toStrictEqual([{ kind: 'products', id: 'vrrack', key: 'vrrack', adopted: true }]);
     });
 
-    it('stops at an option label the store does not have, rather than sending it on', async () => {
+    it('skips a product naming an option label the store does not have, rather than sending it on', async () => {
         const ctx = await storeContext();
-        const row = { product: { ...CABLE.product, extension_attributes: { website_ids: [3] }, custom_attributes: [{ attribute_code: 'cable_size', value: '9 foot' }] } };
+        const row = {
+            product: {
+                ...CABLE.product,
+                extension_attributes: { website_ids: [3] },
+                custom_attributes: [{ attribute_code: 'cable_size', value: '9 foot' }],
+            },
+        };
 
-        await expect(installProducts(ctx, parseProductRows([row]))).rejects.toThrow('The attribute cable_size has no option "9 foot".');
+        await installProducts(ctx, parseProductRows([row]));
+
+        expect(ctx.session.skipped?.map((r) => r.reason)).toEqual([
+            'The attribute cable_size has no option "9 foot".',
+        ]);
         expect(ctx.sent).toStrictEqual([]);
     });
 
@@ -224,7 +344,10 @@ describe('installProducts', () => {
 
             await installProducts(
                 ctx,
-                parseProductRows([withLayout('mug', 'product-full-width'), withLayout('cup', 'product-full-width')]),
+                parseProductRows([
+                    withLayout('mug', 'product-full-width'),
+                    withLayout('cup', 'product-full-width'),
+                ])
             );
 
             expect(posted(ctx).map((p) => p.custom_attributes)).toEqual([
@@ -241,20 +364,97 @@ describe('installProducts', () => {
 
             await installProducts(ctx, parseProductRows([withLayout('mug', '1column')]));
 
-            expect(posted(ctx)[0].custom_attributes).toContainEqual({ attribute_code: 'page_layout', value: '1column' });
+            expect(posted(ctx)[0].custom_attributes).toContainEqual({
+                attribute_code: 'page_layout',
+                value: '1column',
+            });
         });
     });
 
-    it('stops at a customer group the store does not have', async () => {
-        const ctx = await storeContext({ [page('customerGroups/search', by('customer_group_code', 'Platinum Buyer'))]: { items: [], total_count: 0 } });
+    // The service turns an `additional_attributes` object into custom attributes, values as text
+    // (ProductImportProcessor.js L97-114). No pack in the library audit or on this machine is
+    // known to carry one; the rows here are Bodea's, with the object added.
+    describe('additional_attributes', () => {
+        it("become custom attributes, as text and in this store's ids, and are not sent as they are", async () => {
+            const ctx = await storeContext({
+                'products/outdoorpatchcable-6foot': { id: 77, sku: 'outdoorpatchcable-6foot' },
+            });
+            const { custom_attributes: _own, ...cable } = CABLE.product;
 
-        await expect(installProducts(ctx, parseProductRows([VR_RACK]))).rejects.toThrow('The store has no customer group Platinum Buyer.');
+            await installProducts(
+                ctx,
+                parseProductRows([
+                    {
+                        product: {
+                            ...cable,
+                            additional_attributes: { cable_size: '6 foot', warranty_years: 3 },
+                        },
+                    },
+                ])
+            );
+
+            const [product] = posted(ctx);
+            expect(product.custom_attributes).toEqual([
+                { attribute_code: 'cable_size', value: '301' },
+                { attribute_code: 'warranty_years', value: '3' },
+            ]);
+            expect(product).not.toHaveProperty('additional_attributes');
+        });
+
+        it("never override the row's own custom attribute of the same code", async () => {
+            const ctx = await storeContext();
+
+            await installProducts(
+                ctx,
+                parseProductRows([
+                    {
+                        product: {
+                            ...VR_RACK.product,
+                            additional_attributes: { url_key: 'another-key' },
+                        },
+                    },
+                ])
+            );
+
+            expect(posted(ctx)[0].custom_attributes).toContainEqual({
+                attribute_code: 'url_key',
+                value: 'vrrack',
+            });
+            expect(posted(ctx)[0].custom_attributes).not.toContainEqual({
+                attribute_code: 'url_key',
+                value: 'another-key',
+            });
+        });
+    });
+
+    // Step 14 item 3: skipped and named, and the rest of the pack goes on.
+    it('skips a product naming a customer group the store does not have, naming it', async () => {
+        const ctx = await storeContext({
+            [page('customerGroups/search', by('customer_group_code', 'Platinum Buyer'))]: {
+                items: [],
+                total_count: 0,
+            },
+        });
+
+        await installProducts(ctx, parseProductRows([VR_RACK]));
+
+        expect(ctx.session.skipped).toEqual([
+            {
+                kind: 'products',
+                key: VR_RACK.product.sku,
+                reason: 'Commerce has no customer group Platinum Buyer.',
+                cause: { by: 'missing', kind: 'customer_groups', name: 'Platinum Buyer' },
+            },
+        ]);
+        expect(ctx.sent).toStrictEqual([]);
     });
 
     it('refuses when the install target names no website', async () => {
         const ctx = await fakeContext(STORE);
 
-        await expect(installProducts(ctx, parseProductRows([VR_RACK]))).rejects.toThrow(/names no website/);
+        await expect(installProducts(ctx, parseProductRows([VR_RACK]))).rejects.toThrow(
+            /names no website/
+        );
     });
 });
 
@@ -264,6 +464,8 @@ describe('removeProduct', () => {
 
         await removeProduct(ctx.send, 'vr rack/1');
 
-        expect(ctx.sent).toEqual([{ method: 'DELETE', path: 'products/vr%20rack%2F1', body: undefined }]);
+        expect(ctx.sent).toEqual([
+            { method: 'DELETE', path: 'products/vr%20rack%2F1', body: undefined },
+        ]);
     });
 });

@@ -74,9 +74,9 @@ describe('ownStorefrontOf', () => {
 describe('packageDraftFor', () => {
     it("prefills from the brand, from the added demo's row, and from the project's own title for a Starter build", () => {
         expect(packageDraftFor(edsProject(), CATALOG)).toEqual({ name: 'Bodea', description: 'Bodea-branded B2B demo' });
-        expect(packageDraftFor(edsProject({ demo: makeAddedDemo({ description: 'Jen wrote this' }) }), CATALOG)).toEqual({
-            name: 'Isle5 by Jen',
-            description: 'Jen wrote this',
+        expect(packageDraftFor(edsProject({ demo: makeAddedDemo({ description: 'Robin wrote this' }) }), CATALOG)).toEqual({
+            name: 'Isle5 by Robin',
+            description: 'Robin wrote this',
         });
         expect(packageDraftFor(edsProject({ selectedPackage: 'starter', title: 'My Summit Demo' }), CATALOG)).toEqual({
             name: 'My Summit Demo',
@@ -88,11 +88,11 @@ describe('packageDraftFor', () => {
 describe('describeProject', () => {
     it('writes the codes under both key families, the flags, the mesh posture (storefront over package), the datapack, the libraries and the site', () => {
         const project = edsProject({
-            datapack: { name: 'bodea', version: '2026.09' },
+            datapack: { name: 'bodea', version: '2026.09', store: 'library', origin: { name: 'bodea', version: 'main' } },
             selectedBlockLibraries: ['isle5', ''],
             appBuilderComponents: {
                 'app-builder-shell': { kind: 'integration', status: 'deployed', source: { owner: 'adobe', repo: 'app-builder-shell' } },
-                'erp-sync': { kind: 'integration', status: 'deployed', name: 'ERP Sync', source: { owner: 'jen', repo: 'erp-sync', branch: 'main' } },
+                'erp-sync': { kind: 'integration', status: 'deployed', name: 'ERP Sync', source: { owner: 'robin', repo: 'erp-sync', branch: 'main' } },
                 'eds-commerce-mesh': { kind: 'mesh', status: 'deployed', source: { owner: 'adobe', repo: 'mesh' } },
             },
         });
@@ -117,8 +117,9 @@ describe('describeProject', () => {
             },
             configFlags: { 'commerce-b2b-enabled': true },
             requiresMesh: 'optional',
-            datapack: { name: 'bodea', version: '2026.09' },
-            integrations: { catalog: ['app-builder-shell'], custom: { 'erp-sync': { owner: 'jen', repo: 'erp-sync', branch: 'main', name: 'ERP Sync' } } },
+            // Whole: the store and the pack it was made from travel to the colleague.
+            datapack: { name: 'bodea', version: '2026.09', store: 'library', origin: { name: 'bodea', version: 'main' } },
+            integrations: { catalog: ['app-builder-shell'], custom: { 'erp-sync': { owner: 'robin', repo: 'erp-sync', branch: 'main', name: 'ERP Sync' } } },
             blockLibraries: ['isle5'],
             contentSource: CONTENT,
             builtWith: { package: 'bodea', extension: '1.0.0-beta.150' },
@@ -210,15 +211,53 @@ describe('describeProject — builtWith (EDS-13f step 02)', () => {
         });
     });
 
-    it('records no pin when the storefront was not pinned to a last-known-good', () => {
+    // Walk F254 (owner: a user should always be able to apply Adobe's updates with AI help): a
+    // storefront on a plain template, with no patches layer, still records the template commit its
+    // code last matched, so a colleague's import counts updates from there.
+    it('records the template commit the code last matched, with or without a patches layer', () => {
         const project = pinnedProject();
         const metadata = project.componentInstances![COMPONENT_IDS.EDS_STOREFRONT]!.metadata!;
         delete metadata.lkgSource;
 
         const file = describeProject(project, { name: '', description: '' }, CONTENT, { packages: THIN_LAYER });
 
-        expect(file.builtWith).not.toHaveProperty('lkg');
+        expect(file.builtWith?.lkg).toBe(LKG);
         expect(file.builtWith?.extension).toBe('unknown');
+    });
+
+    it('records no pin when the storefront holds no commit it last matched', () => {
+        const project = pinnedProject();
+        const metadata = project.componentInstances![COMPONENT_IDS.EDS_STOREFRONT]!.metadata!;
+        delete metadata.lkgSource;
+        metadata.lastSyncedCommit = 'main';
+
+        const file = describeProject(project, { name: '', description: '' }, CONTENT, { packages: THIN_LAYER });
+
+        expect(file.builtWith).not.toHaveProperty('lkg');
+    });
+
+    // Walk F255: a colleague's import is offered every patches release newer than the sender's,
+    // so the description names the release the storefront was last built or updated from.
+    it('records the patches release the storefront was last built or updated from', () => {
+        const project = pinnedProject();
+        project.componentInstances![COMPONENT_IDS.EDS_STOREFRONT]!.metadata!.patchesRelease = 'v1.1.5';
+
+        const file = describeProject(project, { name: '', description: '' }, CONTENT, { packages: THIN_LAYER });
+
+        expect(file.builtWith?.patchesRelease).toBe('v1.1.5');
+    });
+
+    it("writes the storefront's release over the one a saved package's record carried", () => {
+        const builtWith = { template: B2B, lkg: LKG, patchesRelease: 'v1.0.0', extension: '1.0.0-beta.149' };
+        const project = edsProject({ demo: makeAddedDemo({ builtWith }) });
+        project.componentInstances![COMPONENT_IDS.EDS_STOREFRONT]!.metadata = {
+            ...project.componentInstances![COMPONENT_IDS.EDS_STOREFRONT]!.metadata,
+            patchesRelease: 'v1.1.5',
+        };
+
+        const file = describeProject(project, { name: '', description: '' }, CONTENT, { packages: THIN_LAYER });
+
+        expect(file.builtWith?.patchesRelease).toBe('v1.1.5');
     });
 
     it("carries a saved package's own record forward when the project was started from one", () => {
@@ -237,7 +276,7 @@ describe('describeProject — builtWith (EDS-13f step 02)', () => {
     // colleague should start from where this code actually is.
     it.each([
         ['a record carried from its package', makeAddedDemo({ builtWith: { template: B2B, lkg: LKG, extension: '1.0.0-beta.149' } })],
-        ['no record at all (JustRite)', makeAddedDemo()],
+        ['no record at all (Tailspin)', makeAddedDemo()],
     ])("writes a colleague's storefront's recorded Adobe base over %s", (_label, demo) => {
         const MOVED = '48bed04d072fff094b49a46709b351bd719b287a';
         const project = edsProject({ demo });
@@ -288,7 +327,7 @@ describe('packageChecks', () => {
         const repoOps = { getRepository: jest.fn().mockResolvedValue(repo('steve/kukla-bodea', false)) };
         const checks = await packageChecks(edsProject({ datapack: { name: 'bodea', version: 'main' } }), OWN, { indexFound: true, pageCount: 157 }, {
             repoOps,
-            datapackExists: async () => true,
+            datapackAvailability: async () => ({ where: 'installer', displayName: 'Bodea' }),
             logger,
         });
         // Owner, 2026-09-14: every line says what a COLLEAGUE gets, in plain words.
@@ -296,36 +335,68 @@ describe('packageChecks', () => {
         expect(checks.map((c) => [c.id, c.ok, c.message])).toEqual([
             ['repository', true, "Colleagues can open this storefront's code."],
             ['index', true, 'Colleagues start with your published pages.'],
-            ['datapack', true, 'Colleagues can install the same sample data (bodea).'],
+            ['datapack', true, 'Colleagues can install the same sample data (Bodea).'],
         ]);
     });
 
     it('warns for a private repository, a site with no index (offering Republish), a missing datapack, and a private custom app', async () => {
         const repoOps = {
             getRepository: jest.fn(async (owner: string, name: string) =>
-                name === 'erp-sync' ? repo('jen/erp-sync', true) : repo(`${owner}/${name}`, true, 'develop'),
+                name === 'erp-sync' ? repo('robin/erp-sync', true) : repo(`${owner}/${name}`, true, 'develop'),
             ),
         };
         const project = edsProject({
             datapack: { name: 'bodea', version: 'main' },
-            appBuilderComponents: { 'erp-sync': { kind: 'integration', status: 'deployed', source: { owner: 'jen', repo: 'erp-sync' } } },
+            appBuilderComponents: { 'erp-sync': { kind: 'integration', status: 'deployed', name: 'ERP Sync', source: { owner: 'robin', repo: 'erp-sync' } } },
         });
 
-        const checks = await packageChecks(project, OWN, { indexFound: false }, { repoOps, datapackExists: async () => false, logger });
+        const checks = await packageChecks(project, OWN, { indexFound: false }, { repoOps, datapackAvailability: async () => ({ where: 'missing' }), logger });
 
         expect(checks).toEqual([
             { id: 'repository', ok: false, message: "This storefront's code is private. Colleagues will need access to it, or make it public." },
             { id: 'index', ok: false, message: 'Colleagues would start with an empty site.', action: 'republish' },
-            { id: 'datapack', ok: false, message: "The sample data this demo uses (bodea) isn't available to colleagues yet." },
-            { id: 'custom-app', ok: false, message: "The erp-sync integration's code is private. Colleagues will need access to it.", repository: 'jen/erp-sync' },
+            // Walk F240: names, never codes. A missing pack has no name to give, so it names none.
+            { id: 'datapack', ok: false, message: "The sample data this demo uses isn't available to colleagues yet." },
+            { id: 'custom-app', ok: false, message: "The ERP Sync integration's code is private. Colleagues will need access to it.", repository: 'robin/erp-sync' },
         ]);
+    });
+
+    // Asked of both stores by name AND version (research project-export-datapacks, item 3).
+    it('asks for the pack the project records, version and store included', async () => {
+        const repoOps = { getRepository: jest.fn().mockResolvedValue(repo('steve/kukla-bodea', false)) };
+        const datapackAvailability = jest.fn(async () => ({ where: 'library-shared' as const, displayName: 'Acme' }));
+        const pack = { name: 'acme-1a2b3c', version: '20261029-183000', store: 'library' as const };
+
+        const checks = await packageChecks(edsProject({ datapack: pack }), OWN, { indexFound: true }, { repoOps, datapackAvailability, logger });
+
+        expect(datapackAvailability).toHaveBeenCalledWith(pack);
+        expect(checks).toContainEqual({ id: 'datapack', ok: true, message: 'Colleagues can install the same sample data (Acme).' });
+    });
+
+    // Names, not codes (F227): the pack by the name the SC gave it, and a title the screen shows.
+    // F229: and what Share Datapack needs to share it, the pack the project records.
+    it("warns, by the pack's name, when it is in the SC's library where colleagues can't read it, with its fix", async () => {
+        const repoOps = { getRepository: jest.fn().mockResolvedValue(repo('steve/kukla-bodea', false)) };
+        const checks = await packageChecks(edsProject({ datapack: { name: 'acme', version: '1', store: 'library' } }), OWN, { indexFound: true }, {
+            repoOps,
+            datapackAvailability: async () => ({ where: 'library-yours-only', displayName: 'Release Save Test 2' }),
+            logger,
+        });
+
+        expect(checks).toContainEqual({
+            id: 'datapack',
+            ok: false,
+            title: "Colleagues Can't Use This Demo's Data Yet",
+            message: 'Release Save Test 2 is only visible to you.',
+            share: { pack: { name: 'acme', version: '1' }, displayName: 'Release Save Test 2' },
+        });
     });
 
     it("says nothing about the datapack when the service cannot be asked, and says the repository can't be read when GitHub refuses", async () => {
         const repoOps = { getRepository: jest.fn().mockRejectedValue(new Error('404')) };
         const checks = await packageChecks(edsProject({ datapack: { name: 'bodea', version: 'main' } }), OWN, { indexFound: true, pageCount: 1 }, {
             repoOps,
-            datapackExists: async () => undefined,
+            datapackAvailability: async () => undefined,
             logger,
         });
         expect(checks.map((c) => c.id)).toEqual(['repository', 'index']);

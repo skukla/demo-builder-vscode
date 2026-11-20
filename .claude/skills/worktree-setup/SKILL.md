@@ -41,10 +41,10 @@ description: Create or relocate a git worktree for this repo the way it expects 
    ```bash
    git -C "$WT" config core.hooksPath || (cd "$WT" && npm run hooks:git)
    ```
-   `.githooks/commit-msg` requires every commit to name the backlog item it
-   belongs to (`Backlog: AI-3a`, or `Backlog: none`); `prepare-commit-msg`
-   pre-fills the line. Without this, commits land untagged and
-   `backlog.mjs unlogged` cannot tell whether the record kept up.
+   The dev-pipeline plugin's commit hooks require every commit to name the
+   backlog item it belongs to (`Backlog: AI-3a`, or `Backlog: none`) and
+   pre-fill the line, then run `.githooks/pre-push`. Without them, commits land
+   untagged and the backlog's `unlogged` cannot tell whether the record kept up.
 
    **`core.hooksPath` is SHARED by every worktree of a clone** — worktrees share
    `.git/config` unless `extensions.worktreeConfig` is on, and it is not here.

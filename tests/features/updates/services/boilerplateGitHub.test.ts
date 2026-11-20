@@ -1,7 +1,7 @@
 /**
  * boilerplateGitHub — the REST reads behind the boilerplate base lookup (EDS-56), driven
  * through a fetch fake. Response shapes are GitHub's, as read live on 2026-10-20 for
- * kmanns/justrite and adobe-commerce/boilerplate-b2b-template (trimmed to the fields read).
+ * org-e/tailspin and adobe-commerce/boilerplate-b2b-template (trimmed to the fields read).
  */
 
 import { createBoilerplateGitHub } from '@/features/updates/services/boilerplateGitHub';
@@ -9,7 +9,7 @@ import { createMockSecretStorage, githubTokenSecret } from '../../../helpers/sec
 
 global.fetch = jest.fn();
 const fetchMock = global.fetch as jest.Mock;
-const JUSTRITE = { owner: 'kmanns', repo: 'justrite' };
+const TAILSPIN = { owner: 'org-e', repo: 'tailspin' };
 const B2B = { owner: 'adobe-commerce', repo: 'boilerplate-b2b-template' };
 
 function respond(body: unknown, status = 200): void {
@@ -35,12 +35,12 @@ describe('createBoilerplateGitHub', () => {
             template_repository: { name: 'boilerplate-b2b-template', owner: { login: 'adobe-commerce' } },
         });
 
-        await expect(reads().repository(JUSTRITE)).resolves.toEqual({
+        await expect(reads().repository(TAILSPIN)).resolves.toEqual({
             createdAt: '2026-09-23T16:38:05Z',
             templateRepository: B2B,
         });
         expect(fetchMock).toHaveBeenCalledWith(
-            'https://api.github.com/repos/kmanns/justrite',
+            'https://api.github.com/repos/org-e/tailspin',
             expect.objectContaining({ headers: expect.objectContaining({ Authorization: 'token test-github-token' }) }),
         );
     });
@@ -48,16 +48,16 @@ describe('createBoilerplateGitHub', () => {
     it('reads a repository GitHub made from no template', async () => {
         respond({ created_at: '2026-09-23T16:38:05Z', template_repository: null });
 
-        await expect(reads().repository(JUSTRITE)).resolves.toEqual({ createdAt: '2026-09-23T16:38:05Z' });
+        await expect(reads().repository(TAILSPIN)).resolves.toEqual({ createdAt: '2026-09-23T16:38:05Z' });
     });
 
     it("finds the first commit's tree on the last page of the history", async () => {
         respond(Array.from({ length: 100 }, (_, i) => commit(`c${i}`, `t${i}`)));
         respond([commit('later', 'tl'), commit('root', 'root-tree', 0)]);
 
-        await expect(reads().firstCommitTree(JUSTRITE)).resolves.toBe('root-tree');
+        await expect(reads().firstCommitTree(TAILSPIN)).resolves.toBe('root-tree');
         expect(fetchMock).toHaveBeenLastCalledWith(
-            'https://api.github.com/repos/kmanns/justrite/commits?per_page=100&page=2',
+            'https://api.github.com/repos/org-e/tailspin/commits?per_page=100&page=2',
             expect.anything(),
         );
     });
@@ -87,6 +87,6 @@ describe('createBoilerplateGitHub', () => {
     ])('answers undefined on %s', async (_label, fail) => {
         fail();
 
-        await expect(reads().repository(JUSTRITE)).resolves.toBeUndefined();
+        await expect(reads().repository(TAILSPIN)).resolves.toBeUndefined();
     });
 });

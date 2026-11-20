@@ -1,0 +1,466 @@
+/**
+ * The two actions behind "What would installing again change?" and "Save store changes to this
+ * pack" (step 05): a preview that reads and writes nothing, and a save that writes a NEW version
+ * into the library, keeps the old one, and moves the install record onto the new one.
+ *
+ * The store is the engine suites' fake; the pack rows are in the shapes the engine's parsers
+ * take. The write into the library is a fake of `writePackToStore`'s answer (`PackWriteOutcome`),
+ * asserted by the file it is handed.
+ */
+
+import type { PackWriteOutcome } from '@/features/data-installer/services/datapackTransfer';
+import { fingerprintRow } from '@/features/data-installer/services/demoBuilderEngine/fingerprint';
+import { installRecordPath, openInstallRecord, readInstallRecord } from '@/features/data-installer/services/demoBuilderEngine/installRecord';
+import { saveStoreChanges } from '@/features/data-installer/services/demoBuilderEngine/saveStore';
+import { previewChanges } from '@/features/data-installer/services/demoBuilderEngine/storeChanges';
+import { configListPath } from '@/features/app-builder/services/storePreparation/configSetup';
+import { filterBy } from '@/features/data-installer/services/demoBuilderEngine/b2bReads';
+import { COUPON10, NO_COUPONS_PAGE, NO_RULES_PAGE, TEN_PERCENT_COUPON, WIPER_FLUID } from '../../../../helpers/commerceSalesRuleFixtures';
+import { NOW, PACK, PROJECT, page } from './demoBuilderEngine.testUtils';
+import { ITEMS, SAVE_AS, deps, nothingElse } from './storeChanges.testUtils';
+import type { OperationRow } from '@/types/webviewPayloads';
+
+describe('previewChanges', () => {
+    it("counts a pack's store settings by what installing would do to each, writing nothing (step 09)", async () => {
+        const GRID = 'catalog/frontend/grid_per_page';
+        const LIST = 'catalog/frontend/list_per_page';
+        const reads = {
+            [configListPath([GRID, LIST], 'default')]: { items: [{ path: GRID, value: '12', scope: 'default' }, { path: LIST, value: '20', scope: 'default' }] },
+            [configListPath([GRID], 'default')]: { items: [{ path: GRID, value: '12', scope: 'default' }] },
+        };
+        const settings = [{ path: GRID, value: '24', scope: 'default' }, { path: LIST, value: '20', scope: 'default' }];
+        const { d, ctx } = await deps(false, reads, { store_config: settings });
+
+        const preview = await previewChanges(d, PACK, 'library');
+
+        expect(ctx.sent).toStrictEqual([]);
+        expect(preview.kinds).toContainEqual({
+            kind: 'store_config',
+            update: { count: 0, names: [] },
+            add: { count: 1, names: [`${GRID}@default`] },
+            inStore: { count: 1, names: [`${LIST}@default`] },
+            remove: { count: 0, names: [] },
+            keep: { count: 0, names: [] },
+        });
+        expect(preview.settings).toEqual({ changes: [`${GRID}: 12 → 24`] });
+    });
+
+    it('counts what installing again would do, by kind, with a few names each, and writes nothing', async () => {
+        const { d, ctx, files } = await deps();
+        const before = files.data.get(installRecordPath(PROJECT, PACK));
+
+        const preview = await previewChanges(d, PACK, 'installer');
+
+        expect(preview).toEqual({
+            installed: true,
+            kinds: [
+                {
+                    kind: 'categories',
+                    update: { count: 0, names: [] },
+                    add: { count: 1, names: ['Cables'] },
+                    inStore: { count: 0, names: [] },
+                    remove: { count: 0, names: [] },
+                    keep: { count: 1, names: ['Racks'] },
+                },
+            ],
+            kept: 'Kept 1 item changed in the Admin.',
+        });
+        expect(ctx.sent).toStrictEqual([]);
+        expect(files.data.get(installRecordPath(PROJECT, PACK))).toBe(before);
+    });
+
+    it('says the pack is not installed here when there is no record, and counts every row as new', async () => {
+        const { d } = await deps(false);
+
+        const preview = await previewChanges(d, PACK, 'installer');
+
+        expect(preview.installed).toBe(false);
+        expect(preview.kinds[0]?.add.count).toBe(2);
+    });
+});
+
+describe('saveStoreChanges', () => {
+    // Step 07: a save goes into the demo's own pack, never a new version of the pack installed.
+    it("writes the store's copy into the demo's own pack, saying what the installed pack says", async () => {
+        const { d, written, write } = await deps();
+
+        const result = await saveStoreChanges(d, { pack: PACK, saveAs: SAVE_AS }, write);
+
+        expect(result.saved).toEqual(SAVE_AS.id);
+        expect(written).toHaveLength(1);
+        expect(written[0]).toMatchObject({
+            id: SAVE_AS.id,
+            displayName: 'Acme Demo',
+            description: 'Bodea main',
+            source: 'library',
+            exportedAt: '2026-10-29T18:30:00.000Z',
+        });
+        expect(written[0].items).toEqual([
+            { dataType: 'categories', records: { categories: [{ category: expect.objectContaining({ name: 'Server Racks', path: 'Default Category' }) }] } },
+        ]);
+        expect(result.sentence).toBe('Saved as Acme Demo. Bodea is unchanged.');
+    });
+
+    it("says only where it saved when the pack installed is already the demo's own", async () => {
+        const { d, write } = await deps();
+
+        const result = await saveStoreChanges(d, { pack: PACK, saveAs: { id: { name: PACK.name, version: 'next' }, displayName: 'Acme Demo' } }, write);
+
+        expect(result.sentence).toBe('Saved to Acme Demo.');
+    });
+
+    it('moves the install record onto the new version, so the store and it start out the same', async () => {
+        const { d, files, write } = await deps();
+
+        await saveStoreChanges(d, { pack: PACK, saveAs: SAVE_AS }, write);
+
+        expect(await readInstallRecord(files, PROJECT, PACK)).toBeUndefined();
+        const moved = await readInstallRecord(files, PROJECT, SAVE_AS.id);
+        expect(moved?.created).toEqual([expect.objectContaining({ kind: 'categories', id: '41', key: 'Server Racks' })]);
+    });
+
+    it('refuses, writing nothing, when Demo Builder did not install the pack here', async () => {
+        const { d, written, write } = await deps(false);
+
+        await expect(saveStoreChanges(d, { pack: PACK, saveAs: SAVE_AS }, write)).rejects.toThrow(/didn't install bodea-main@1\.2\.0 in this project/);
+        expect(written).toStrictEqual([]);
+    });
+
+    it('keeps the record where it was when the library refused part of the new version', async () => {
+        const { d, files } = await deps();
+        const refused = async (): Promise<PackWriteOutcome> => ({ pack: 'created', stored: [], failed: [{ dataType: 'categories', reason: 'too large' }] });
+
+        await expect(saveStoreChanges(d, { pack: PACK, saveAs: SAVE_AS }, refused)).rejects.toThrow(/categories: too large/);
+        expect(await readInstallRecord(files, PROJECT, PACK)).toBeDefined();
+    });
+
+    it('reports each stage as it starts, with a line of its own, for the progress window', async () => {
+        const { d, write } = await deps();
+        const stages: Array<[string, string | undefined]> = [];
+
+        await saveStoreChanges(d, { pack: PACK, saveAs: SAVE_AS }, write, (stage, step) => stages.push([stage, step]));
+
+        expect(stages).toEqual([
+            // First what else the demo uses (walk F85), said at once (walk F90), before the data types are known;
+            // then again with the rows, once the pack's own data types are (walk F91).
+            ['Reading from Commerce', "Reading this demo's data"],
+            ['Reading from Commerce', "Reading this demo's data"],
+            // This pack holds categories alone, so the line counts that (`capturePhases.test.ts`).
+            ['Reading from Commerce', '0 of 1 data type: Categories'],
+            ['Reading from Commerce', '0 of 1 data type: Categories'],
+            ['Reading from Commerce', '0 of 1 data type: Categories'],
+            ['Reading from Commerce', '1 of 1 data type'],
+            ['Reading from Commerce', '1 of 1 data type'],
+            ['Reading from Commerce', '1 of 1 data type'],
+            ['Reading from Commerce', '1 of 1 data type'],
+            ['Reading from Commerce', '1 of 1 data type'],
+            ['Reading from Commerce', '1 of 1 data type'],
+            ['Saving to My Datapacks', 'Categories'],
+            ['Saving to My Datapacks', "Finishing the save"],
+        ]);
+    });
+
+    // Walk F91, then Phase 7b (decisions.md): two steps, Export from Commerce with a row per data
+    // type under it, then the write into the pack as its own row, named for the pack it writes.
+    it('sends the window two steps: the export with its data types, then the save into the pack', async () => {
+        const { d, write } = await deps();
+        const sent: OperationRow[][] = [];
+
+        await saveStoreChanges(d, { pack: PACK, saveAs: SAVE_AS }, write, (_stage, _step, _at, rows) => void (rows && sent.push(rows)));
+
+        const steps = (rows: OperationRow[] | undefined) => (rows ?? []).map((row) => `${row.label}: ${row.status}: ${row.line}`);
+        expect(steps(sent[0])).toStrictEqual(["Export from Commerce: checking: Reading this demo's data", 'Save Acme Demo: pending: Waiting']);
+        expect(sent[0]?.[0]?.types?.map((t) => `${t.label}: ${t.status}`)).toStrictEqual(['Categories: pending']);
+        expect(steps(sent.find((rows) => rows[0]?.types?.[0]?.status === 'checking'))).toStrictEqual(['Export from Commerce: checking: 0 of 1 data type', 'Save Acme Demo: pending: Waiting']);
+        expect(steps(sent.at(-1))).toStrictEqual(['Export from Commerce: success: Exported', 'Save Acme Demo: checking: Finishing the save']);
+    });
+
+    it("names what goes in when a save is into the demo's own pack, too", async () => {
+        const { d, write } = await deps();
+        const steps: Array<string | undefined> = [];
+
+        await saveStoreChanges(d, { pack: PACK, saveAs: { ...SAVE_AS, id: { name: PACK.name, version: '20261104-051753' } } }, write, (_stage, step) => steps.push(step));
+
+        // The saving step names it; the record's move after it says only that (walk F91).
+        expect(steps.at(-2)).toBe('Categories');
+    });
+});
+
+/**
+ * Live, scratch-1028, 2026-10-30: a settings pack installed to `tailspin_test_website` while the
+ * project's own website is Tailspin's. The preview opened the store at the project's website and
+ * called the untouched setting "changed in the Admin". Both actions now open the store where the
+ * record says the pack went.
+ */
+describe('previewChanges and saveStoreChanges open the store where the pack was installed', () => {
+    const LIST = 'catalog/frontend/list_per_page';
+    const TEST_SITE = { websiteCode: 'tailspin_test_website', storeCode: 'tailspin_test_view' };
+    const TWO_SITES = {
+        'store/websites': [{ id: 1, code: 'base', name: 'Main Website', default_group_id: 1 }, { id: 2, code: 'tailspin_test_website', name: 'Test', default_group_id: 2 }],
+        'store/storeGroups': [{ id: 1, root_category_id: 2 }, { id: 2, root_category_id: 119 }],
+        'store/storeViews': [{ id: 1, code: 'default', website_id: 1, store_group_id: 1 }, { id: 5, code: 'tailspin_test_view', website_id: 2, store_group_id: 2 }],
+        [configListPath([LIST], 'default')]: { items: [{ path: LIST, value: '12', scope: 'default' }] },
+        [configListPath([LIST], 'website', 'tailspin_test_website')]: { items: [{ path: LIST, value: '15', scope: 'website' }] },
+        [configListPath([LIST], 'website', 'base')]: { items: [{ path: LIST, value: '10', scope: 'website' }] },
+        ...nothingElse(2),
+    };
+    const SETTINGS_PACK = { store_config: [{ path: LIST, value: '15', scope: 'websites', scope_code: 'base' }] };
+    const recordedList = { kind: 'store_config', id: `${LIST}@website`, key: `${LIST}@website`, previous: { path: LIST, scope: 'website', scopeCode: 'tailspin_test_website', stored: '10', effective: '10', wrote: '15' } };
+
+    async function installedTo(target: typeof TEST_SITE | undefined, objects: Array<{ kind: string; id: string; key?: string; previous?: unknown }>) {
+        const made = await deps(false, TWO_SITES, SETTINGS_PACK);
+        const recorder = await openInstallRecord(made.files, PROJECT, PACK, NOW, target);
+        for (const object of objects) await recorder.record(object);
+        const reads: string[] = [];
+        made.d.commerce = async () => ({ get: async (path: string) => { reads.push(path); return made.ctx.get(path); }, send: made.ctx.send });
+        return { ...made, reads };
+    }
+
+    it('finds a setting the pack set on the test website still as it was left, whatever the project names (the live case)', async () => {
+        const { d, ctx, reads } = await installedTo(undefined, [recordedList]);
+
+        const preview = await previewChanges(d, PACK, 'library');
+
+        expect(preview.kept).toBeUndefined();
+        expect(preview.kinds.find((k) => k.kind === 'store_config')?.keep).toEqual({ count: 0, names: [] });
+        expect(reads).toContain(configListPath([LIST], 'website', 'tailspin_test_website'));
+        expect(reads).not.toContain(configListPath([LIST], 'website', 'base'));
+        expect(ctx.sent).toStrictEqual([]);
+    });
+
+    it("reads every row at the record's website and store view, not the project's", async () => {
+        const grid = { path: 'catalog/frontend/grid_per_page', scope: 'default', stored: '12', effective: '12', wrote: '24' };
+        const { d, reads } = await installedTo(TEST_SITE, [{ kind: 'store_config', id: `${grid.path}@default`, key: `${grid.path}@default`, previous: grid }]);
+
+        const preview = await previewChanges(d, PACK, 'library');
+
+        expect(preview.kinds.find((k) => k.kind === 'store_config')).toMatchObject({ inStore: { count: 1, names: [`${LIST}@website`] }, remove: { count: 1 } });
+        expect(reads).not.toContain(configListPath([LIST], 'website', 'base'));
+    });
+
+    it('keeps the website and store view on the record it moves onto the new version', async () => {
+        const { d, files, write } = await installedTo(TEST_SITE, [recordedList]);
+
+        await saveStoreChanges(d, { pack: PACK, source: 'library', saveAs: SAVE_AS }, write);
+
+        expect((await readInstallRecord(files, PROJECT, SAVE_AS.id))?.target).toEqual(TEST_SITE);
+    });
+});
+
+const skuIn = (skus: string) =>
+    page('products', `&searchCriteria[filterGroups][0][filters][0][field]=sku&searchCriteria[filterGroups][0][filters][0][value]=${encodeURIComponent(skus)}&searchCriteria[filterGroups][0][filters][0][conditionType]=in`);
+
+/** A pack row for a product the store already had before the pack was installed. */
+const THEIRS = { product: { sku: 'OldRack', name: 'Old Rack', attribute_set_id: 'Default', type_id: 'simple' } };
+/** The store's copy of it, as `GET products` answers (the captured Bodea shape, trimmed). */
+// Every real product answers its set (products-page.json); the save's shape check needs one.
+const THEIRS_IN_STORE = { id: 9, sku: 'OldRack', name: 'Old Rack (renamed)', type_id: 'simple', attribute_set_id: 4 };
+
+describe('previewChanges, counted the way a save counts', () => {
+    it('counts a pack row the store already has as already in the store, not as new', async () => {
+        const { d } = await deps(true, { [skuIn('OldRack,NewRack')]: { items: [THEIRS_IN_STORE], total_count: 1 } }, {
+            products: [THEIRS, { product: { ...THEIRS.product, sku: 'NewRack' } }],
+        });
+
+        const preview = await previewChanges(d, PACK, 'installer');
+
+        expect(preview.kinds.find((k) => k.kind === 'products')).toMatchObject({
+            add: { count: 1, names: ['NewRack'] },
+            inStore: { count: 1, names: ['OldRack'] },
+        });
+    });
+
+    // Live 2026-11-02: an attribute's options are made with it and never recorded on their own, so
+    // the preview of every installed pack said it would add options the store already held.
+    it('counts an option the store already has as already in the store, however it was made', async () => {
+        const inStore = { attribute_code: 'color', frontend_input: 'select', options: [{ label: ' ', value: '' }, { label: 'Blue', value: '273' }] };
+        const row = { attribute: { attribute_code: 'color', frontend_input: 'select', options: [{ label: 'blue ' }, { label: 'Black' }] } };
+        const { d } = await deps(true, { 'products/attributes/color': inStore }, { product_attributes: [row] });
+
+        const preview = await previewChanges(d, PACK, 'installer');
+
+        expect(preview.kinds.find((k) => k.kind === 'attribute_options')).toMatchObject({
+            add: { count: 1, names: ['color/Black'] },
+            inStore: { count: 1, names: ['color/blue'] },
+        });
+    });
+
+    // Live 2026-11-06: an unchanged Luma's preview said it would add 9 assignments (Default/cost and
+    // the like), attributes the store already had in those sets, which install leaves off the record.
+    it('counts an attribute already in its set as already in the store', async () => {
+        const reads = {
+            'products/attribute-sets/sets/list?searchCriteria[currentPage]=1&searchCriteria[pageSize]=100': { items: [{ attribute_set_id: 4, attribute_set_name: 'Default' }], total_count: 1 },
+            'products/attribute-sets/4/attributes': [{ attribute_code: 'cost' }],
+        };
+        const rows = [{ attributeSetId: 'Default', attributeCode: 'cost' }, { attributeSetId: 'Default', attributeCode: 'fabric' }];
+        const { d, ctx } = await deps(true, reads, { attribute_assign_to_set: rows });
+
+        const preview = await previewChanges(d, PACK, 'installer');
+
+        expect(ctx.sent).toStrictEqual([]);
+        expect(preview.kinds.find((k) => k.kind === 'attribute_assign_to_set')).toMatchObject({
+            add: { count: 1, names: ['Default/fabric'] },
+            inStore: { count: 1, names: ['Default/cost'] },
+        });
+    });
+
+    // F61, live 2026-11-07: Luma's preview named "manufacturer/" and "activity/", Commerce's own
+    // empty choice, which a pack copied from a store carries and install sends nothing for.
+    it('neither counts nor names an option with no label', async () => {
+        const inStore = { attribute_code: 'color', frontend_input: 'select', options: [{ label: ' ', value: '' }, { label: 'Blue', value: '273' }] };
+        const row = { attribute: { attribute_code: 'color', frontend_input: 'select', options: [{ label: ' ' }, { label: '' }, { label: 'Blue' }] } };
+        const { d } = await deps(true, { 'products/attributes/color': inStore }, { product_attributes: [row] });
+
+        const preview = await previewChanges(d, PACK, 'installer');
+
+        expect(preview.kinds.find((k) => k.kind === 'attribute_options')).toMatchObject({
+            add: { count: 0, names: [] },
+            inStore: { count: 1, names: ['color/Blue'] },
+        });
+    });
+
+    it('CONTROL: counts every option as new when the store lacks the attribute', async () => {
+        const row = { attribute: { attribute_code: 'color', frontend_input: 'select', options: [{ label: 'Blue' }] } };
+        const { d } = await deps(true, {}, { product_attributes: [row] });
+
+        const preview = await previewChanges(d, PACK, 'installer');
+
+        expect(preview.kinds.find((k) => k.kind === 'attribute_options')).toMatchObject({ add: { count: 1, names: ['color/Blue'] }, inStore: { count: 0 } });
+    });
+
+    // Live 2026-11-07: an agent copied the preview's kinds into an import, which refused attribute_options.
+    it('says an attribute option installs with its attribute, and a data type of its own says nothing', async () => {
+        const row = { attribute: { attribute_code: 'color', frontend_input: 'select', options: [{ label: 'Blue' }] } };
+        const { d } = await deps(true, {}, { product_attributes: [row] });
+
+        const preview = await previewChanges(d, PACK, 'installer');
+
+        expect(preview.kinds.find((k) => k.kind === 'attribute_options')?.installsWith).toBe('product_attributes');
+        expect(preview.kinds.find((k) => k.kind === 'product_attributes')).not.toHaveProperty('installsWith');
+    });
+
+    it('counts a cart rule or code the store already has by that name as already in the store (step 11)', async () => {
+        const { d } = await deps(true, {
+            [page('salesRules/search', filterBy('name', '10% Coupon'))]: { items: [{ rule_id: 3, name: '10% Coupon' }], total_count: 1 },
+            [page('salesRules/search', filterBy('name', WIPER_FLUID.rule.name))]: NO_RULES_PAGE,
+            [page('coupons/search', filterBy('code', 'coupon10'))]: NO_COUPONS_PAGE,
+        }, { cart_rules: [TEN_PERCENT_COUPON, WIPER_FLUID], coupons: [COUPON10] });
+
+        const preview = await previewChanges(d, PACK, 'installer');
+
+        expect(preview.kinds.find((k) => k.kind === 'cart_rules')).toMatchObject({ add: { count: 1, names: [WIPER_FLUID.rule.name] }, inStore: { count: 1, names: ['10% Coupon'] } });
+        expect(preview.kinds.find((k) => k.kind === 'coupons')).toMatchObject({ add: { count: 1, names: ['coupon10'] } });
+    });
+
+    it('counts a category the pack dropped but the SC has put a category of their own in as kept, not removed', async () => {
+        const { d } = await deps(true, { 'categories/41': { id: 41, name: 'Racks', path: '1/2/41', is_active: true, children: '77' } }, { categories: { categories: [] } });
+
+        const preview = await previewChanges(d, PACK, 'installer');
+
+        expect(preview.kinds[0]).toMatchObject({ remove: { count: 0, names: [] }, keep: { count: 1, names: ['Racks'] } });
+        expect(preview.kept).toBe('Kept the category Racks: it holds 1 category you added.');
+    });
+
+    // An assignment to a kept catalog stays (live, 2026-10-30): the preview must not count it as removed.
+    it('counts an assignment to a catalog it keeps as kept, not removed', async () => {
+        const { d, files } = await deps(false, {
+            [page('sharedCatalog')]: { items: [{ id: 9, name: 'Gold', type: 0, tax_class_id: 3 }] },
+            'sharedCatalog/9': { id: 9, name: 'Gold', type: 0 },
+            'sharedCatalog/9/companies': '[]',
+            'sharedCatalog/9/products': ['vrrack', 'my-own'],
+            'sharedCatalog/9/categories': [],
+        }, { b2b_shared_catalogs: [], b2b_shared_catalog_products: { catalogs: [] } });
+        const recorder = await openInstallRecord(files, PROJECT, PACK, NOW);
+        const catalog = { sharedCatalog: { name: 'Gold', type: 0, store_id: 0, tax_class_id: 3 } };
+        await recorder.record({ kind: 'b2b_shared_catalogs', id: '9', key: 'Gold', fingerprint: fingerprintRow(catalog), previous: { held: { companies: [], products: [], categories: [] } } });
+        await recorder.record({ kind: 'b2b_shared_catalog_products', id: '9/vrrack', key: 'Gold/vrrack', fingerprint: fingerprintRow({ catalog: 'Gold', member: 'vrrack' }) });
+
+        const preview = await previewChanges(d, PACK, 'installer');
+
+        expect(preview.kinds.find((k) => k.kind === 'b2b_shared_catalog_products')).toMatchObject({ remove: { count: 0 }, keep: { count: 1, names: ['Gold/vrrack'] } });
+        expect(preview.kept).toBe('Kept the shared catalog Gold: it holds 1 product you added.');
+    });
+});
+
+/**
+ * The inventory as the three list reads answer it. Every ACCS store has the `default` source,
+ * `Default Stock` and the link between them; the live step 05 test (2026-10-29) showed that link
+ * under "add" on every preview, even right after an install.
+ */
+const INVENTORY = {
+    'inventory/sources?searchCriteria[pageSize]=200': {
+        items: [
+            { source_code: 'default', name: 'Default Source', enabled: true },
+            { source_code: 'carvelo_off', name: 'Carvelo - Closed', enabled: false },
+        ],
+    },
+    'inventory/stocks?searchCriteria[pageSize]=200': { items: [{ stock_id: 1, name: 'Default Stock', extension_attributes: { sales_channels: [{ type: 'website', code: 'base' }] } }] },
+    'inventory/stock-source-links?searchCriteria[pageSize]=200': { items: [{ stock_id: 1, source_code: 'default', priority: 1 }] },
+};
+const INVENTORY_PACK = {
+    sources: {
+        sources: [
+            { source: { source_code: 'default', name: 'Default Source' } },
+            { source: { source_code: 'carvelo_off', name: 'Carvelo - Closed' } },
+            { source: { source_code: 'carvelo_broadway', name: 'Carvelo - Broadway' } },
+        ],
+    },
+    stocks: { stocks: [{ stock: { name: 'Default Stock' } }, { stock: { name: 'Carvelo' } }] },
+    stock_source_links: {
+        stockSourceLinks: [
+            { stockSourceLink: { stock_id: 'Default Stock', source_code: 'default' } },
+            { stockSourceLink: { stock_id: 'Carvelo', source_code: 'carvelo_broadway' } },
+        ],
+    },
+};
+
+describe('previewChanges, inventory counted the way install treats it', () => {
+    it('counts a source, stock or link the store already has as already in the store, as install leaves it alone', async () => {
+        const { d, ctx } = await deps(true, INVENTORY, INVENTORY_PACK);
+
+        const preview = await previewChanges(d, PACK, 'installer');
+        const kind = (name: string) => preview.kinds.find((k) => k.kind === name);
+
+        // A switched-off source is switched on by install, and recorded: a change, so it is not "in the store".
+        expect(kind('sources')).toMatchObject({ add: { count: 2, names: ['carvelo_off', 'carvelo_broadway'] }, inStore: { count: 1, names: ['default'] } });
+        expect(kind('stocks')).toMatchObject({ add: { count: 1, names: ['Carvelo'] }, inStore: { count: 1, names: ['Default Stock'] } });
+        expect(kind('stock_source_links')).toMatchObject({
+            add: { count: 1, names: ['Carvelo/carvelo_broadway'] },
+            inStore: { count: 1, names: ['Default Stock/default'] },
+        });
+        expect(ctx.sent).toStrictEqual([]);
+    });
+});
+
+describe('saveStoreChanges, with the installed version\'s own rows', () => {
+    it('saves a pack product the store already had, read from the store with its SKU exact', async () => {
+        const { d, written, write } = await deps(
+            true,
+            { [skuIn('OldRack')]: { items: [THEIRS_IN_STORE], total_count: 1 }, [skuIn('OldRack').replace('products?', 'inventory/source-items?')]: { items: [], total_count: 0 } },
+            { ...ITEMS, products: [THEIRS] },
+        );
+
+        await saveStoreChanges(d, { pack: PACK, source: 'library', saveAs: SAVE_AS }, write);
+
+        expect(d.readPack).toHaveBeenCalledWith(PACK, 'library');
+        const products = written[0].items.find((i) => i.dataType === 'products')?.records as Array<{ product: { sku: string; name: string } }>;
+        expect(products.map((r) => [r.product.sku, r.product.name])).toEqual([['OldRack', 'Old Rack (renamed)']]);
+    });
+
+    it('reads the installed version from the library first, then the Data Installer, when no store is named', async () => {
+        const { d, write } = await deps();
+        (d.readPack as jest.Mock).mockRejectedValueOnce(new Error('not in the library'));
+
+        await saveStoreChanges(d, { pack: PACK, saveAs: SAVE_AS }, write);
+
+        expect((d.readPack as jest.Mock).mock.calls.map((c) => c[1])).toEqual(['library', 'installer']);
+    });
+
+    it('saves nothing when the installed version cannot be read from either store', async () => {
+        const { d, written, write } = await deps();
+        (d.readPack as jest.Mock).mockRejectedValue(new Error('gone'));
+
+        await expect(saveStoreChanges(d, { pack: PACK, saveAs: SAVE_AS }, write)).rejects.toThrow(/cannot be read from the library or the Data Installer/);
+        expect(written).toStrictEqual([]);
+    });
+});

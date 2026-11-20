@@ -17,10 +17,14 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { DatapackDetailPanel } from '@/features/data-installer/ui/components/DatapackDetailPanel';
 import type { DatapackDetail, DataItemInventory } from '@/features/data-installer/types';
+import { plain } from '@/core/utils/plainText';
+
+/** The one datapack date format (J8-2), in whatever time zone the suite runs. */
+const ONE_FORMAT = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 
 function makeDetail(overrides: Partial<DatapackDetail> = {}): DatapackDetail {
     return {
@@ -44,6 +48,9 @@ const INVENTORY: DataItemInventory = {
     requestedCount: 3,
 };
 
+/** A pack the SC moved to while the last one's detail is still on the props (stale). */
+const ANOTHER_PACK = { name: 'acme', version: 'main' };
+
 function renderPanel(over: Partial<React.ComponentProps<typeof DatapackDetailPanel>> = {}) {
     const onClose = jest.fn();
     const view = render(
@@ -57,7 +64,7 @@ function renderPanel(over: Partial<React.ComponentProps<typeof DatapackDetailPan
             onRetry={jest.fn()}
             onImport={jest.fn()}
             onRemoved={jest.fn()}
-            installsFromLibrary={false}
+            installerOn={false}
             {...over}
         />
     );
@@ -127,7 +134,7 @@ describe('DatapackDetailPanel', () => {
         it('calls out declared types the service has no item for', () => {
             renderPanel();
 
-            expect(screen.getByTestId('datapack-detail-missing')).toHaveTextContent('Giftcards');
+            expect(screen.getByTestId('datapack-detail-missing')).toHaveTextContent('Gift Cards');
         });
 
         it('renders no missing section when the pack holds everything it declares', () => {
@@ -150,36 +157,82 @@ describe('DatapackDetailPanel', () => {
             expect(screen.queryByText('Description')).not.toBeInTheDocument();
         });
 
-        // The count on the Data row counts what the service HOLDS. The pack here
-        // declares three types and the service stores two, so a count of three
-        // would be the same lie the flyout exists to avoid.
-        it('counts the stored types, not the declared ones', () => {
-            renderPanel();
+        // The Data row lists what the service HOLDS. The pack here declares three types and the
+        // service stores two, so listing three would be the same lie the flyout exists to avoid.
+        // No count on its label: "Data (5)" counted a list the SC can see (dialog design rules).
+        it('lists the stored types under a plain label, not the declared ones', () => {
+            const { container } = renderPanel();
 
-            expect(screen.getByText('Data (2)')).toBeInTheDocument();
-            expect(screen.queryByText('Data (3)')).not.toBeInTheDocument();
+            expect(screen.getByText('Data Types')).toBeInTheDocument();
+            expect(screen.queryByText(/^Data \(/)).not.toBeInTheDocument();
+            const stored = container.querySelectorAll('.datapack-panel-type:not(.is-missing)');
+            // In the pick list's order, wherever a pack's types are listed (owner, 2026-11-05).
+            expect(Array.from(stored).map((chip) => chip.textContent)).toEqual(['Products', 'Categories']);
         });
 
-        it('says whether the pack is shared or community', () => {
+        // "Visible to", in plain words: it replaced a Curation row reading "Library, only you"
+        // (owner, 2026-10-31).
+        it('says a curated pack is visible to everyone', () => {
             renderPanel();
 
-            expect(screen.getByText('Shared')).toBeInTheDocument();
+            expect(screen.getByText('Visible To')).toBeInTheDocument();
+            expect(screen.getByText('Everyone')).toBeInTheDocument();
+            expect(screen.queryByText('Curation')).not.toBeInTheDocument();
         });
 
-        it('calls an unshared pack Community', () => {
+        it('says a community pack is visible to everyone, as a community pack', () => {
             renderPanel({ detail: makeDetail({ shared: false }) });
 
-            expect(screen.getByText('Community')).toBeInTheDocument();
-            expect(screen.queryByText('Shared')).not.toBeInTheDocument();
+            expect(screen.getByText('Everyone')).toBeInTheDocument();
+        });
+
+        it("says the SC's own unshared library pack is visible only to them", () => {
+            renderPanel({ detail: makeDetail({ store: 'library', mine: true, shared: false }) });
+
+            expect(screen.getByText('Only you')).toBeInTheDocument();
+        });
+
+        it('says a shared library pack is visible to everyone', () => {
+            renderPanel({ detail: makeDetail({ store: 'library', mine: true, shared: true }) });
+
+            expect(screen.getByText('Everyone')).toBeInTheDocument();
+        });
+
+        // A library pack's owner is the account's internal Adobe id, never a name.
+        it("calls the SC's own library pack's owner You, never the internal id", () => {
+            renderPanel({
+                detail: makeDetail({ store: 'library', mine: true, owner: 'fe785d7c5b6d82680a495cea@adobe.com' }),
+            });
+
+            expect(screen.getByText('You')).toBeInTheDocument();
+            expect(screen.queryByText(/fe785d7c/)).not.toBeInTheDocument();
+        });
+
+        it("shows no owner for a colleague's library pack, since there is no name to show", () => {
+            renderPanel({
+                detail: makeDetail({ store: 'library', mine: false, owner: 'abc123@adobe.com' }),
+            });
+
+            expect(screen.queryByText('Owner')).not.toBeInTheDocument();
+            expect(screen.queryByText(/abc123/)).not.toBeInTheDocument();
+        });
+
+        // The version sits beside the title, in place of a Version row.
+        it('shows the version beside the title, and no Version row', () => {
+            renderPanel();
+
+            expect(screen.getByText('main')).toBeInTheDocument();
+            expect(screen.queryByText('Version')).not.toBeInTheDocument();
         });
 
         // These cross the webview boundary as ISO strings, and a raw one on screen
         // is both unreadable and a UTC date that is wrong by a day for anyone west
         // of Greenwich in the evening.
-        it('shows the update date formatted, never the raw ISO string', () => {
+        // Step-04 S6 (J8-2): one absolute format for every datapack date, "Nov 10, 9:15 AM".
+        it('shows the update date in the one datapack format, never the raw ISO string', () => {
             renderPanel();
 
-            const formatted = new Date('2026-08-06T18:12:13.115Z').toLocaleDateString();
+            const formatted = ONE_FORMAT.format(new Date('2026-08-06T18:12:13.115Z'));
             expect(screen.getByText(formatted)).toBeInTheDocument();
             expect(screen.queryByText('2026-08-06T18:12:13.115Z')).not.toBeInTheDocument();
         });
@@ -203,10 +256,10 @@ describe('DatapackDetailPanel', () => {
          * missing until something has actually looked.
          */
         it('falls back to the declared types when no inventory has arrived', () => {
-            renderPanel({ inventory: null });
+            const { container } = renderPanel({ inventory: null });
 
-            expect(screen.getByText('Data (3)')).toBeInTheDocument();
-            expect(screen.getByText('Giftcards')).toBeInTheDocument();
+            expect(container.querySelectorAll('.datapack-panel-type')).toHaveLength(3);
+            expect(screen.getByText('Gift Cards')).toBeInTheDocument();
             expect(screen.queryByTestId('datapack-detail-missing')).not.toBeInTheDocument();
         });
     });
@@ -214,7 +267,7 @@ describe('DatapackDetailPanel', () => {
     /**
      * The panel RAISES import; it does not own the modal.
      *
-     * It used to render `ImportDatapackModal` as a child of the Drawer — a dialog
+     * It used to render the import window as a child of the Drawer — a dialog
      * nested inside a drawer, which no other surface here does. The view mounts it
      * now, the way `IntegrationsScreen` mounts its flow modal beside the list, so
      * this panel is view-only like `IntegrationDetailPanel`.
@@ -223,7 +276,7 @@ describe('DatapackDetailPanel', () => {
         it('offers an Import affordance for a pack the service actually stores', () => {
             renderPanel();
 
-            expect(screen.getByRole('button', { name: /import/i })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /install/i })).toBeInTheDocument();
         });
 
         // The types you can import are the ones the service HOLDS, not the ones
@@ -239,7 +292,7 @@ describe('DatapackDetailPanel', () => {
                 },
             });
 
-            expect(screen.queryByRole('button', { name: /import/i })).not.toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /install/i })).not.toBeInTheDocument();
         });
 
         // Declared is not stored. Until the inventory lands nothing is KNOWN to be
@@ -247,14 +300,14 @@ describe('DatapackDetailPanel', () => {
         it('withholds Import until the inventory says what is stored', () => {
             renderPanel({ inventory: null });
 
-            expect(screen.queryByRole('button', { name: /import/i })).not.toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /install/i })).not.toBeInTheDocument();
         });
 
         it('raises import with the pack it is showing', () => {
             const onImport = jest.fn();
             renderPanel({ onImport });
 
-            fireEvent.click(screen.getByRole('button', { name: /import/i }));
+            fireEvent.click(screen.getByRole('button', { name: /install/i }));
 
             expect(onImport).toHaveBeenCalledWith({ name: 'bodea', version: 'main' });
         });
@@ -262,7 +315,7 @@ describe('DatapackDetailPanel', () => {
         it('renders no modal of its own', () => {
             renderPanel();
 
-            fireEvent.click(screen.getByRole('button', { name: /import/i }));
+            fireEvent.click(screen.getByRole('button', { name: /install/i }));
 
             expect(screen.queryByText('Commerce instance')).not.toBeInTheDocument();
         });
@@ -278,25 +331,33 @@ describe('DatapackDetailPanel', () => {
          * just navigated away from. Hiding the button while loading closes the
          * window in which the wrong pack can be imported.
          */
-        it('withholds Import while a detail is loading, stale detail and all', () => {
-            renderPanel({ loading: true });
+        // Owner, 2026-11-05: the title showed the pack's id while it loaded, then jumped to its name.
+        it("names the pack as its card does while the detail loads, not by its id", () => {
+            renderPanel({ loading: true, detail: null, selectedName: 'Data Pack for PersonB' });
 
-            expect(screen.queryByRole('button', { name: /import/i })).not.toBeInTheDocument();
+            expect(screen.getByText('Data Pack for PersonB')).toBeInTheDocument();
+            expect(screen.queryByText('bodea')).not.toBeInTheDocument();
+        });
+
+        it('withholds Import while a detail is loading, stale detail and all', () => {
+            renderPanel({ selected: ANOTHER_PACK, loading: true });
+
+            expect(screen.queryByRole('button', { name: /install/i })).not.toBeInTheDocument();
         });
 
         it('imports the pack on screen, never the one still loading', () => {
             const onImport = jest.fn();
-            renderPanel({ loading: true, onImport });
+            renderPanel({ selected: ANOTHER_PACK, loading: true, onImport });
 
-            expect(screen.queryByRole('button', { name: /import/i })).toBeNull();
+            expect(screen.queryByRole('button', { name: /install/i })).toBeNull();
             expect(onImport).not.toHaveBeenCalled();
         });
 
         /** Same stale-data window, reached through a failure instead of a load. */
         it('withholds Import when the panel is showing a failure', () => {
-            renderPanel({ failure: { message: 'The service did not answer.' } });
+            renderPanel({ failure: { message: plain('The service did not answer.') } });
 
-            expect(screen.queryByRole('button', { name: /import/i })).not.toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /install/i })).not.toBeInTheDocument();
         });
 
         /**
@@ -305,20 +366,20 @@ describe('DatapackDetailPanel', () => {
          * extension using it. One instance is not a convention; it is a stray
          * mark that invites exactly the question it got.
          */
-        it('labels the button Import, with no trailing ellipsis', () => {
+        it('labels the row Install, with no trailing ellipsis', () => {
             renderPanel();
 
-            const button = screen.getByRole('button', { name: /import/i });
-
-            expect(button).toHaveTextContent(/^Import$/);
+            // The exact name: its icon is hidden from the name, so "Install…" would not match.
+            expect(screen.getByRole('button', { name: 'Install' }).textContent).not.toMatch(/…|\.\.\./u);
         });
     });
 
     describe('states', () => {
-        it('shows a loading message while the detail is in flight', () => {
+        it('shows only a spinner under the title while the detail is in flight', () => {
             renderPanel({ detail: null, inventory: null, loading: true });
 
-            expect(screen.getByText(/loading/i)).toBeInTheDocument();
+            expect(screen.getByRole('status')).toBeInTheDocument();
+            expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
         });
 
         /**
@@ -329,28 +390,38 @@ describe('DatapackDetailPanel', () => {
          * contents to another.
          */
         it('shows the spinner over a stale detail, not the stale rows', () => {
+            renderPanel({ selected: ANOTHER_PACK, loading: true });
+
+            expect(screen.getByRole('status')).toBeInTheDocument();
+            expect(screen.queryByText('Visible To')).not.toBeInTheDocument();
+        });
+
+        // Owner, 2026-11-08: after Share the rows gave way to "Reading the datapack" for a second, and
+        // the flyout jumped. A read of the pack on show updates it in place.
+        it('keeps the rows and Import on show while the same pack is read again', () => {
             renderPanel({ loading: true });
 
-            expect(screen.getByText(/loading/i)).toBeInTheDocument();
-            expect(screen.queryByText('Version')).not.toBeInTheDocument();
+            expect(screen.queryByRole('status')).not.toBeInTheDocument();
+            expect(screen.getByText('Visible To')).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Install' })).toBeInTheDocument();
         });
 
         it('shows the failure treatment with a retry', () => {
             renderPanel({
                 detail: null,
                 inventory: null,
-                failure: { message: 'Could not load the datapack.' },
+                failure: { message: plain('Could not load the datapack.') },
             });
 
             expect(screen.getByText('Could not load the datapack.')).toBeInTheDocument();
-            expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
         });
 
         it('offers sign-in rather than retry for an auth refusal', () => {
             renderPanel({
                 detail: null,
                 inventory: null,
-                failure: { message: 'Adobe sign-in is required.', code: 'AUTH_REQUIRED' },
+                failure: { message: plain('Adobe sign-in is required.'), code: 'AUTH_REQUIRED' },
             });
 
             expect(screen.getByRole('button', { name: /sign in with adobe/i })).toBeInTheDocument();
@@ -358,54 +429,69 @@ describe('DatapackDetailPanel', () => {
     });
 });
 
-describe('DatapackDetailPanel — a library pack', () => {
-    const LIBRARY = makeDetail({ store: 'library', shared: false });
+/**
+ * The actions live in `PackActions` (its own suite): one visible Actions list, Install first (owner,
+ * 2026-11-17, matching the integration flyouts). The panel only hands it the pack, and offers
+ * nothing while the detail is loading or failed.
+ */
+describe('DatapackDetailPanel — actions', () => {
+    it('puts the Actions list for this pack in the flyout, Install first, with no More menu', () => {
+        renderPanel({});
 
-    it('offers Copy to the Data Installer instead of Import, warns it is shared, and saves from the library', () => {
-        renderPanel({ detail: LIBRARY });
-
-        expect(screen.queryByRole('button', { name: 'Import' })).not.toBeInTheDocument();
-        expect(
-            screen.getByRole('button', { name: 'Copy to the Data Installer' })
-        ).toBeInTheDocument();
-        expect(
-            screen.getByText(/Other teams will see bodea in the Data Installer/)
-        ).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Save as file' })).toBeInTheDocument();
-        expect(screen.getByText('Library, only you')).toBeInTheDocument();
+        const actions = within(screen.getByRole('region', { name: 'Actions' }));
+        expect(actions.getByRole('button', { name: 'Install' })).toBeInTheDocument();
+        expect(actions.getByRole('button', { name: 'Save as File' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'More actions for Bodea' })).not.toBeInTheDocument();
     });
 
-    it('offers Remove only when the pack is the SC own', () => {
-        const { unmount } = renderPanel({ detail: LIBRARY });
-        expect(
-            screen.queryByRole('button', { name: 'Remove it from the library' })
-        ).not.toBeInTheDocument();
-        unmount();
+    it('offers no actions while the detail is loading', () => {
+        renderPanel({ selected: ANOTHER_PACK, loading: true });
 
-        renderPanel({ detail: { ...LIBRARY, mine: true } });
-        expect(
-            screen.getByRole('button', { name: 'Remove it from the library' })
-        ).toBeInTheDocument();
+        expect(screen.queryByRole('region', { name: 'Actions' })).not.toBeInTheDocument();
+    });
+});
+
+describe('DatapackDetailPanel and a settings layer (datapack-engine step 09)', () => {
+    const LAYER = { id: { name: 'bodea-settings', version: '2' }, mine: true, settings: [{ path: 'catalog/frontend/grid_per_page', value: '24' }] };
+
+    // Clarity 1.8: one name, Store Configuration, and a count; the paths wait behind Show. No layer id.
+    it('says how many settings of Store Configuration Install also sets, with the paths behind Show', () => {
+        renderPanel({ settingsLayer: LAYER });
+
+        expect(screen.getByText('Store Configuration')).toBeInTheDocument();
+        expect(screen.getByText('1 Setting')).toBeInTheDocument();
+        expect(screen.queryByText('catalog/frontend/grid_per_page: 24')).not.toBeInTheDocument();
+        expect(screen.queryByText(/bodea-settings/)).not.toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole('button', { name: 'Show' }));
+
+        expect(screen.getByText('catalog/frontend/grid_per_page: 24')).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: 'Hide' }));
+        expect(screen.queryByText('catalog/frontend/grid_per_page: 24')).not.toBeInTheDocument();
     });
 
-    // DI-5: Demo Builder's engine reads the library itself, so with it chosen a library pack is
-    // imported where it is, and there is nothing to copy first.
-    it("offers Import in place of Copy when Demo Builder's engine is chosen", () => {
-        const onImport = jest.fn();
-        renderPanel({ detail: LIBRARY, installsFromLibrary: true, onImport });
+    it('has no such row for a pack with no layer', () => {
+        renderPanel();
 
-        expect(screen.queryByRole('button', { name: 'Copy to the Data Installer' })).not.toBeInTheDocument();
-        fireEvent.click(screen.getByRole('button', { name: 'Import' }));
-        expect(onImport).toHaveBeenCalledWith(LIBRARY.id);
-        expect(screen.getByRole('button', { name: 'Save as file' })).toBeInTheDocument();
+        expect(screen.queryByText('Store Configuration')).not.toBeInTheDocument();
+    });
+});
+
+// Walk F220 (owner, 2026-11-17): a newer version waiting is said in the flyout's status line under
+// its title, as the integration flyout says an update, in the card's words; the actions stay plain.
+describe('a newer version waiting', () => {
+    it('says so under the title, with the amber dot, and no dot on any action', () => {
+        renderPanel({ updates: true, restores: false });
+
+        const line = document.querySelector('.integration-panel-health') as HTMLElement;
+        expect(line).toHaveTextContent(/^Newer version available$/);
+        expect(line.querySelector('[data-variant="warning"]')).not.toBeNull();
+        expect(document.querySelectorAll('.db-drawer-body [data-variant="warning"]')).toHaveLength(0);
     });
 
-    it('a Data Installer pack keeps Import and never offers Remove — the control', () => {
-        renderPanel({ detail: makeDetail({ mine: true }) });
+    it('CONTROL: says nothing under the title while no newer version waits', () => {
+        renderPanel({ restores: true });
 
-        expect(screen.getByRole('button', { name: 'Import' })).toBeInTheDocument();
-        expect(
-            screen.queryByRole('button', { name: 'Remove it from the library' })
-        ).not.toBeInTheDocument();
+        expect(document.querySelector('.integration-panel-health')).toBeNull();
     });
 });

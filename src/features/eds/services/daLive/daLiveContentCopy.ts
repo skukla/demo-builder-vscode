@@ -42,6 +42,7 @@ import type { DaLiveApiClient } from './daLiveApiClient';
 import {
     copyPathsInBatches,
     discoverAndCopyReferences,
+    skipMissingOnSource,
     type BatchCopyDeps,
 } from './daLiveBatchCopy';
 import type { DaLiveContentDiscovery } from './daLiveContentDiscovery';
@@ -165,8 +166,8 @@ export class DaLiveContentCopy {
         return this.copyOne(args);
     }
 
-    /** The one path every document takes; `sheets` collects the sheets one run wrote. */
-    private copyOne(args: Parameters<CopySingleFile>, sheets?: string[]): Promise<boolean> {
+    /** The one path every document takes; one run's sheets written and source 404s collect here. */
+    private copyOne(args: Parameters<CopySingleFile>, sheets?: string[], missing?: Set<string>): Promise<boolean> {
         const [
             token,
             source,
@@ -191,6 +192,7 @@ export class DaLiveContentCopy {
                 patchReport,
                 discoveredPaths,
                 writtenSheets: sheets,
+                missingOnSource: missing,
             },
         );
     }
@@ -213,12 +215,12 @@ export class DaLiveContentCopy {
         );
     }
 
-    /** The batch loops' collaborators: THIS instance's per-file copy, and one run's sheet list. */
-    private batchDeps(writtenSheets?: string[]): BatchCopyDeps {
+    /** The batch loops' collaborators: THIS instance's per-file copy, and one run's collections. */
+    private batchDeps(writtenSheets?: string[], missingOnSource?: Set<string>): BatchCopyDeps {
         return {
             apiClient: this.apiClient,
             logger: this.logger,
-            copySingleFile: (...args) => this.copyOne(args, writtenSheets),
+            copySingleFile: (...args) => this.copyOne(args, writtenSheets, missingOnSource),
         };
     }
 
@@ -339,12 +341,15 @@ export class DaLiveContentCopy {
         const { copiedFiles, failedFiles, discoveredPaths } = outcome;
         let totalFiles = contentPaths.length;
         const sheetPaths: string[] = [];
-        const deps = this.batchDeps(sheetPaths);
+        const missingOnSource = new Set<string>();
+        const deps = this.batchDeps(sheetPaths, missingOnSource);
         const dest = { org: destOrg, site: destSite };
         const patches = { contentPatchIds, contentPatchSource, patchReport };
 
         // Copy files in parallel batches for improved performance (~5x faster)
         await copyPathsInBatches(deps, source, dest, contentPaths, outcome, progressCallback, patches);
+        const realFailures = skipMissingOnSource(this.logger, failedFiles, missingOnSource);
+        totalFiles -= failedFiles.length - realFailures.length;
 
         // Reference-following discovery: copy internal documents referenced by
         // already-copied pages but absent from the index + backfill lists (e.g.
@@ -383,12 +388,12 @@ export class DaLiveContentCopy {
         progressCallback?.({ processed: totalFiles, total: totalFiles, percentage: 100 });
 
         return {
-            success: failedFiles.length === 0,
+            success: realFailures.length === 0,
             copiedFiles,
-            failedFiles,
+            failedFiles: realFailures,
             totalFiles,
             sheetPaths,
-            codePathsOnSource,
+            codePathsOnSource: codePathsOnSource.filter((p) => !missingOnSource.has(p.replace(/\.json$/, ''))),
         };
     }
 }

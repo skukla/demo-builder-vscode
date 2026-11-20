@@ -1,0 +1,263 @@
+/**
+ * Install the wizard's chosen datapack as part of the build.
+ *
+ * Stage 4 shipped as a seam — the wizard RECORDED a pack and the dashboard
+ * installed it afterwards. The intent was always that the build runs it, with
+ * the target chosen in the wizard, and this closes that loop.
+ *
+ * The argument against installing during creation was that an import needs a
+ * reachable instance. That does not survive the
+ * wizard's own order: the Commerce **Connection** sub-step validates exactly
+ * that, several sub-steps earlier, and **Business Structure** records the
+ * website and store view this writes into. By the time this runs, both are
+ * measured facts.
+ *
+ * **It can never fail the build.** A project is complete and usable without
+ * sample data, and by the time an import goes wrong the instance is already
+ * partly populated — which the wizard has no rollback for. Failing creation
+ * would mark a good project bad over optional content and leave the mess
+ * anyway. So every failure is reported and swallowed, and the dashboard's
+ * verified import modal is where a retry happens.
+ *
+ * Dependencies are injected rather than imported: this is orchestration, and
+ * every interesting case (a refusal, a partial import, an empty inventory) is
+ * worth a test that does not need a live service.
+ *
+ * @module features/data-installer/services/projectDatapackInstall
+ */
+
+import type { DataTypeStatus } from '../types';
+import { deriveImportInstance } from './importInstance';
+import type { ImportRequest } from './importRequest';
+import { type InstallTarget, resolveInstallTarget } from '@/features/data-installer/installTarget';
+import type { ComponentConfigs } from '@/types/components';
+import type { DatapackLocation, ProjectDatapack } from '@/types/datapack';
+
+/** What the phase did, for the build to report. */
+export interface SampleDataResult {
+    /** True only when an import was actually started and watched. */
+    ran: boolean;
+    /** True when there was nothing to do — no pack, no target, no items. */
+    skipped?: boolean;
+    outcome?: string;
+    perType?: Record<string, DataTypeStatus>;
+    /** Why it did not run, or did not finish cleanly. Never a credential. */
+    reason?: string;
+    /** A removal left part of the pack in the store on purpose (`ImportJobResult.leftInStore`). */
+    leftInStore?: boolean;
+    /** What the engine kept and why, in one line (`ImportJobResult.note`): a delete names it. */
+    note?: string;
+    /**
+     * Skipped for want of a website and store view, with no install record of the pack either:
+     * nothing can have been installed, so a removal has nothing to remove.
+     */
+    noTarget?: true;
+}
+
+interface ProjectLike {
+    datapack?: ProjectDatapack;
+    componentSelections?: { backend?: string };
+    componentConfigs?: ComponentConfigs;
+}
+
+/**
+ * What to ask for: what the service HOLDS, plus the dependency nobody is here
+ * to warn about.
+ *
+ * The declared list is not it — a pack can declare a type the service stores no
+ * item for, and asking imports nothing while reporting a failure that is not
+ * one.
+ *
+ * `products` without `customer_groups` is the measured trap (2026-08-14): tier
+ * prices name a group, the service resolves that name at import time, and with
+ * no groups the lookup failed and took the ENTIRE products type down — 56
+ * products, zero landed. The import modal warns a human. A build phase has
+ * nobody to warn, so it corrects it. Only when the pack actually holds groups;
+ * asking for a type it has not got is a 400.
+ */
+export function typesToInstall(declared: string[], stored: string[]): string[] {
+    // The intersection: declared AND actually stored. An earlier version wrote
+    // `declared.includes(t) || stored.includes(t)`, where the second term is
+    // always true for a member of `stored` — a filter that filtered nothing.
+    const types = stored.filter((type) => declared.includes(type));
+    const needsGroups =
+        types.includes('products') &&
+        !types.includes('customer_groups') &&
+        declared.includes('customer_groups');
+
+    return needsGroups ? [...types, 'customer_groups'] : types;
+}
+
+/** What the phase needs, injected so every branch is testable without a service. */
+export interface SampleDataDeps {
+    /** The types the store that holds this pack actually stores for it. */
+    inventory: (pack: DatapackLocation) => Promise<string[]>;
+    /**
+     * Typed with the write client's OWN request shape, so the literal built
+     * below is checked against it. This boundary shipped a wrong-shape request
+     * once (flattened target codes) while it was `unknown` end-to-end and the
+     * test fixtures invented the same wrong shape.
+     */
+    startImport: (request: ImportRequest) => Promise<{ activationId: string }>;
+    /** Removes it again, for Reset. Same request, different verb. */
+    startDelete?: (request: ImportRequest) => Promise<{ activationId: string }>;
+    watch: (args: {
+        activationId: string;
+        requestedTypes: string[];
+        /**
+         * Names the job in the poller's log line. Defaults to `import`, which is
+         * what a REMOVAL was labelled for its whole life — every poll of a
+         * reset's delete read `data-installer import <id>`, saying the opposite
+         * of what was running.
+         */
+        operation?: 'import' | 'reset';
+        onProgress?: (perType: Record<string, DataTypeStatus>, detail?: string) => void;
+    }) => Promise<{
+        outcome: string;
+        perType: Record<string, DataTypeStatus>;
+        reason?: string;
+        leftInStore?: boolean;
+        note?: string;
+    }>;
+    /** Live per-type progress, for the build's progress line, with the engine's detail ("1,200 of 2,046 products"). */
+    onProgress?: (perType: Record<string, DataTypeStatus>, detail?: string) => void;
+    /**
+     * Demo Builder's install record of a pack in this project, when there is one: where it was
+     * installed. A removal goes there first, today's codes only when the record names none
+     * (step-07 D6): the record is where the data is.
+     */
+    installRecordOf?: (pack: { name: string; version: string }) => Promise<{ target?: InstallTarget } | undefined>;
+}
+
+/** A removal whose project names no target now and whose record names none either: never guessed. */
+const NO_RECORDED_TARGET = 'No website and store view are set for this project, and its install record names none, so its datapack cannot be uninstalled.';
+
+/**
+ * Where a job writes, or why it does not. An install goes where the project says now. A removal
+ * goes where the install record says the pack went, since that is where the data is (step-07 D6:
+ * a website changed since would strand it), else where the project says now; only with no record
+ * and no codes is there nothing to remove (`noTarget`), since nothing can have been installed.
+ */
+async function targetOf(project: ProjectLike, deps: SampleDataDeps, mode: 'install' | 'remove', id: { name: string; version: string }): Promise<InstallTarget | SampleDataResult> {
+    const record = mode === 'remove' ? await deps.installRecordOf?.(id) : undefined;
+    if (record?.target) return record.target;
+    const now = resolveInstallTarget(project);
+    if (now) return now;
+    if (record) return { ran: false, skipped: true, reason: NO_RECORDED_TARGET };
+    return { ran: false, skipped: true, noTarget: true, reason: 'No website and store view were recorded for this project.' };
+}
+
+/**
+ * Install the recorded pack. See the module docstring for why it cannot throw.
+ */
+export function installSampleData(
+    project: ProjectLike,
+    deps: SampleDataDeps,
+): Promise<SampleDataResult> {
+    return runSampleDataJob(project, deps, 'install');
+}
+
+/**
+ * Remove it again, for the Reset workflow.
+ *
+ * The same job as installing with a different verb — same target, same
+ * instance, same inventory-derived type list — so it runs through the same
+ * runner. A near-copy would drift the moment one side gained a guard, and this
+ * is the side that DELETES from a live Commerce instance.
+ *
+ * The caller is responsible for having confirmed. This does not ask.
+ */
+export function removeSampleData(
+    project: ProjectLike,
+    deps: SampleDataDeps,
+    options: Pick<ImportRequest, 'alsoLeaving'> = {},
+): Promise<SampleDataResult> {
+    return runSampleDataJob(project, deps, 'remove', options);
+}
+
+async function runSampleDataJob(
+    project: ProjectLike,
+    deps: SampleDataDeps,
+    mode: 'install' | 'remove',
+    options: Pick<ImportRequest, 'alsoLeaving'> = {},
+): Promise<SampleDataResult> {
+    const recorded = project.datapack;
+    if (!recorded) {
+        return { ran: false, skipped: true, reason: 'This project chose no sample data.' };
+    }
+
+    const id = { name: recorded.name, version: recorded.version };
+    const target = await targetOf(project, deps, mode, id);
+    if ('ran' in target) return target;
+
+    // Shared with `get-datapack-import-target`, so the build and the modal
+    // cannot resolve the same project to different instances.
+    const commerceInstance = deriveImportInstance(project.componentConfigs);
+    if (!commerceInstance) {
+        return {
+            ran: false,
+            skipped: true,
+            reason: 'This project names no Commerce instance to act on.',
+        };
+    }
+
+    // The identity alone (`id`, above), and the store beside it: the request's `id` is a pair, and
+    // a recorded pack may also name the pack it was made from, which is not the one to install.
+    const source = recorded.store;
+    try {
+        const stored = await deps.inventory({ ...id, ...(source ? { store: source } : {}) });
+        const dataTypes = typesToInstall(stored, stored);
+        if (dataTypes.length === 0) {
+            return {
+                ran: false,
+                skipped: true,
+                reason: 'The service holds no data for this datapack.',
+            };
+        }
+
+        // The REAL request shape: `target` is nested. An earlier version flattened
+        // websiteCode/storeCode to the top level — a shape the client does not
+        // accept, which the test agreed with because the test invented it too.
+        const request: ImportRequest = {
+            id,
+            commerceInstance,
+            dataTypes,
+            target,
+            // Absent for the Data Installer, as every request before the store was recorded.
+            ...(source === 'library' ? { source } : {}),
+            // Clear Demo Data's removal: the products its wipe deletes next (step-06 C3 re-review).
+            ...(options.alsoLeaving ? { alsoLeaving: options.alsoLeaving } : {}),
+        };
+        const start = mode === 'remove' ? deps.startDelete : deps.startImport;
+        if (!start) {
+            return { ran: false, reason: 'This caller cannot uninstall a datapack.' };
+        }
+        const started = await start(request);
+        const watched = await deps.watch({
+            activationId: started.activationId,
+            requestedTypes: dataTypes,
+            // Per PHASE, not per caller. A restore runs both verbs through this
+            // runner, and hardcoding either one mislabels the other — as it did
+            // for a few hours today, when a fix for "a removal logged as an
+            // import" pinned this to 'reset' and mislabelled every install.
+            operation: mode === 'remove' ? 'reset' : 'import',
+            ...(deps.onProgress ? { onProgress: deps.onProgress } : {}),
+        });
+
+        // The run's reason travels too: a failed creation install records it (step-04 S7).
+        const reason = watched.reason ? { reason: watched.reason } : {};
+        // A reset reads it to decide whether the project still names the pack (step-05 R1).
+        const left = watched.leftInStore ? { leftInStore: true } : {};
+        // What it left and why: a delete that stops names it (step-07 D1).
+        const note = watched.note ? { note: watched.note } : {};
+        return { ran: true, outcome: watched.outcome, perType: watched.perType, ...reason, ...left, ...note };
+    } catch (error) {
+        // Swallowed on purpose — see the module docstring. A build must not fail
+        // over optional content, least of all after the instance is already
+        // partly written.
+        return {
+            ran: false,
+            reason: error instanceof Error ? error.message : String(error),
+        };
+    }
+}

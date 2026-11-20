@@ -20,6 +20,7 @@ jest.mock('@/features/eds/services/reset/edsResetParams', () => ({
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     getGitHubServices: jest.fn(),
     getDaLiveAuthService: jest.fn(),
+    tryCreateDaLiveTokenProvider: jest.fn(() => undefined),
     resolveByomOverlayConfig: jest.fn(
         (fromConfigUrl: string | undefined, org: string, site: string) =>
             fromConfigUrl ? `${fromConfigUrl}?org=${org}&site=${site}&key=test-secret` : undefined
@@ -27,6 +28,16 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 }));
 jest.mock('@/features/eds/services/daLive/daLiveTokenProviders', () => ({
     createDaLiveServiceTokenProvider: jest.fn(() => ({})),
+}));
+// The added demo's source check (owner, 2026-11-14): faked, reachable unless a case says otherwise.
+jest.mock('@/features/eds/services/reset/demoSourceCheck', () => ({
+    ...jest.requireActual('@/features/eds/services/reset/demoSourceCheck'),
+    checkDemoSource: jest.fn(),
+}));
+// The AEM Code Sync app check answers installed; its refusal is in edsResetTool-preflight.test.ts.
+jest.mock('@/features/eds/services/appInstallationResolver', () => ({
+    ...jest.requireActual('@/features/eds/services/appInstallationResolver'),
+    resolveAppInstallation: jest.fn(async () => ({ kind: 'installed' })),
 }));
 jest.mock('@/types/typeGuards', () => ({
     isEdsProject: jest.fn(),
@@ -49,6 +60,7 @@ jest.mock('@/features/ai/server/adobeTargetStore', () => ({
 
 import { registerResetProjectTool } from '@/features/ai/server/resetProjectTool';
 import { withPhaseSinks } from '@/core/utils/agentPhaseChannel';
+import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { RESET_STAGES } from '@/core/utils/resetStages';
 import { executeProjectReset } from '@/features/lifecycle/services/projectResetService';
 import { runWithAdobeTarget } from '@/features/ai/server/adobeTargetStore';
@@ -56,6 +68,8 @@ import { extractResetParams } from '@/features/eds/services/reset/edsResetParams
 import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { isEdsProject, getMeshComponentInstance } from '@/types/typeGuards';
+import { CONTENT_KEPT_LINE, checkDemoSource } from '@/features/eds/services/reset/demoSourceCheck';
+import { makeAddedDemo } from '../../../helpers/demoPackageFixtures';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
@@ -67,6 +81,7 @@ const getGitHubServicesMock = getGitHubServices as jest.Mock;
 const getDaLiveAuthServiceMock = getDaLiveAuthService as jest.Mock;
 const isEdsProjectMock = isEdsProject as unknown as jest.Mock;
 const getMeshComponentInstanceMock = getMeshComponentInstance as unknown as jest.Mock;
+const checkDemoSourceMock = checkDemoSource as jest.MockedFunction<typeof checkDemoSource>;
 
 interface CapturedDef {
     needsAuth?: unknown;
@@ -104,6 +119,8 @@ const ctxFactory = () =>
     });
 
 const PROJECT = { name: 'eds-proj', path: '/p/eds-proj' };
+/** The same project carrying an Adobe org, as a project with a mesh always does. */
+const WITH_ORG = { ...PROJECT, adobe: { organization: 'org-1' } };
 const PARAMS = {
     repoOwner: 'me',
     repoName: 'shop',
@@ -124,6 +141,7 @@ describe('reset_project on an Edge Delivery project', () => {
         });
         getDaLiveAuthServiceMock.mockReturnValue({ isAuthenticated: jest.fn(async () => true) });
         getMeshComponentInstanceMock.mockReturnValue(undefined);
+        checkDemoSourceMock.mockResolvedValue({ reachable: true, checked: true, message: '', contentReachable: true });
         mockInspectToken.mockResolvedValue({ valid: true });
         executeEdsResetMock.mockImplementation(
             async (
@@ -309,7 +327,9 @@ describe('reset_project on an Edge Delivery project', () => {
         // The step from the stage table, as the button's modal shows it (progress
         // vocabulary slice 8): the service's own message is the line under it, which
         // a one-line agent surface does not have.
+        // The pre-flight first, under its one stage, as the window shows it (PL-104 fix 1).
         expect(lines).toStrictEqual([
+            OPERATION_STAGES.checkingRequirements.label,
             `${RESET_STAGES.resettingCode.label} (1 of 2)`,
             `${RESET_STAGES.publishingCodeAndSettings.label} (2 of 2)`,
         ]);
@@ -346,8 +366,9 @@ describe('reset_project on an Edge Delivery project', () => {
         const s = fakeServer();
         registerResetProjectTool(s, ctxFactory);
         expect(await s.call({ confirm: true })).toMatchObject({
+            reset: false,
             error: /Template/,
-            code: 'CONFIG_INVALID',
+            errorType: 'CONFIG_INVALID',
         });
         expect(executeEdsResetMock).not.toHaveBeenCalled();
     });
@@ -372,8 +393,9 @@ describe('reset_project on an Edge Delivery project', () => {
         expect(executeEdsResetMock).not.toHaveBeenCalled();
     });
 
-    it('hands off to Adobe auth only when the project has a mesh and Adobe is not signed in', async () => {
-        getMeshComponentInstanceMock.mockReturnValueOnce({ path: '/p/mesh' });
+    // The window's rule (PL-104 fix 1): any project carrying an Adobe org, as a mesh project does.
+    it('hands off to Adobe auth when the project carries an Adobe org and Adobe is not signed in', async () => {
+        getCurrentProject.mockResolvedValue(WITH_ORG);
         mockInspectToken.mockResolvedValueOnce({ valid: false });
         const s = fakeServer();
         registerResetProjectTool(s, ctxFactory);
@@ -391,9 +413,12 @@ describe('reset_project on an Edge Delivery project', () => {
         const def = s.def();
         expect(def.needsAuth).toEqual(['adobe', 'dalive']);
         expect(def.annotations).toEqual({ readOnlyHint: false, destructiveHint: true });
+        // removeData, changes and saveAs: Uninstall Datapack, as delete_project takes it (step-05 S7).
+        // No block-library or CDN switch: the reset decides both, for every door (PL-104 fix 1).
         expect(Object.keys(def.inputSchema!)).toEqual([
-            'includeBlockLibrary',
-            'verifyCdn',
+            'removeData',
+            'changes',
+            'saveAs',
             'confirm',
         ]);
     });
@@ -429,7 +454,7 @@ describe('reset_project on an Edge Delivery project', () => {
     it('treats an Adobe token inspection that throws as not signed in', async () => {
         // The pre-flight is best-effort; a thrown inspection must hand off rather
         // than fall through into a reset whose mesh redeploy will fail late.
-        getMeshComponentInstanceMock.mockReturnValue({ path: '/p/mesh' });
+        getCurrentProject.mockResolvedValue(WITH_ORG);
         mockInspectToken.mockRejectedValue(new Error('IMS unreachable'));
         const s = fakeServer();
         registerResetProjectTool(s, ctxFactory);
@@ -438,7 +463,7 @@ describe('reset_project on an Edge Delivery project', () => {
         expect(executeEdsResetMock).not.toHaveBeenCalled();
     });
 
-    it('defaults every optional flag OFF when the caller omits them', async () => {
+    it('restores the block library and checks the CDN on every reset, as the button does', async () => {
         const s = fakeServer();
         registerResetProjectTool(s, ctxFactory);
 
@@ -446,8 +471,8 @@ describe('reset_project on an Edge Delivery project', () => {
 
         expect(executeEdsResetMock).toHaveBeenCalledWith(
             expect.objectContaining({
-                includeBlockLibrary: false,
-                verifyCdn: false,
+                includeBlockLibrary: true,
+                verifyCdn: true,
             }),
             expect.anything(),
             expect.anything(),
@@ -474,7 +499,7 @@ describe('reset_project on an Edge Delivery project', () => {
     it('resets and returns the captured timeline + result fields on success', async () => {
         const s = fakeServer();
         registerResetProjectTool(s, ctxFactory);
-        const res = await s.call({ confirm: true, includeBlockLibrary: true });
+        const res = await s.call({ confirm: true });
 
         expect(res).toMatchObject({
             reset: true,
@@ -490,7 +515,7 @@ describe('reset_project on an Edge Delivery project', () => {
             expect.objectContaining({
                 repoOwner: 'me',
                 includeBlockLibrary: true,
-                verifyCdn: false,
+                verifyCdn: true,
                 redeployMesh: false,
             }),
             expect.anything(),
@@ -541,5 +566,79 @@ describe('reset_project on an Edge Delivery project', () => {
         registerResetProjectTool(s, ctxFactory);
         const res = await s.call({ confirm: true });
         expect(res).toMatchObject({ reset: false, error: 'boom', rerunSafe: true });
+    });
+
+    // Owner 2026-11-14 (item 4): the agent's reset checks an added demo's source as the screen's does.
+    describe('on a project built on an added demo', () => {
+        const UNREACHABLE = "The Isle5 by Robin demo's repository can't be reached. Reset and updates are unavailable until it is.";
+        const withDemo = { ...PROJECT, demo: makeAddedDemo() };
+
+        beforeEach(() => {
+            getCurrentProject.mockResolvedValue(withDemo);
+            getGitHubServicesMock.mockReturnValue({
+                tokenService: { validateToken: jest.fn(async () => ({ valid: true })) },
+                repoOperations: { getRepository: jest.fn() },
+            });
+        });
+
+        it("refuses in the screen's sentence when the repository can't be reached, resetting nothing", async () => {
+            checkDemoSourceMock.mockResolvedValue({ reachable: false, checked: true, message: UNREACHABLE, contentReachable: false });
+            const s = fakeServer();
+            registerResetProjectTool(s, ctxFactory);
+
+            const res = await s.call({ confirm: true });
+
+            expect(res).toMatchObject({ reset: false, project: 'eds-proj', error: UNREACHABLE, errorType: 'DEMO_SOURCE_UNREACHABLE' });
+            expect(executeEdsResetMock).not.toHaveBeenCalled();
+        });
+
+        it("keeps the content and says so when only the demo's pages can't be reached", async () => {
+            checkDemoSourceMock.mockResolvedValue({ reachable: true, checked: true, message: '', contentReachable: false });
+            const s = fakeServer();
+            registerResetProjectTool(s, ctxFactory);
+
+            const res = await s.call({ confirm: true });
+
+            expect(executeEdsResetMock.mock.calls[0][0]).toMatchObject({ keepContent: true });
+            // Kept on purpose is a note, not a caveat, as both screens say it (review of step-07 small fix 2).
+            expect(res).toMatchObject({ reset: true, note: CONTENT_KEPT_LINE });
+            expect('caveats' in res).toBe(false);
+        });
+
+        it('CONTROL: sends no keepContent when the source and its pages answer', async () => {
+            const s = fakeServer();
+            registerResetProjectTool(s, ctxFactory);
+
+            const res = await s.call({ confirm: true });
+
+            expect('keepContent' in executeEdsResetMock.mock.calls[0][0]).toBe(false);
+            expect('caveats' in res).toBe(false);
+        });
+    });
+
+    // EDS-72 decision 1: the answer says what the reset restored for an imported project.
+    describe('on a project imported from a demo bundle', () => {
+        it('says it restored the code to the import, and its commit', async () => {
+            getCurrentProject.mockResolvedValue({
+                ...PROJECT,
+                importedFrom: { bundleName: 'Bodea Summit', commit: '1234567890abcdef' },
+            });
+            const s = fakeServer();
+            registerResetProjectTool(s, ctxFactory);
+
+            const res = await s.call({ confirm: true });
+
+            expect(res).toMatchObject({ reset: true, restored: 'Restored the code to Bodea Summit as it was imported (commit 1234567).' });
+        });
+
+        it('CONTROL: says nothing of the kind for any other project', async () => {
+            const s = fakeServer();
+            registerResetProjectTool(s, ctxFactory);
+
+            const res = await s.call({ confirm: true });
+
+            expect(res.reset).toBe(true);
+            expect('restored' in res).toBe(false);
+        });
     });
 });

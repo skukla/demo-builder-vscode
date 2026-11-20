@@ -68,10 +68,10 @@ export function getComponentSummary(
     // If there are more components than we're showing, indicate that
     const remaining = instances.length - maxComponents;
     if (remaining > 0) {
-        return `${names.join(' · ')} +${remaining}`;
+        return `${names.join(', ')} +${remaining}`;
     }
 
-    return names.join(' · ');
+    return names.join(', ');
 }
 
 /**
@@ -104,7 +104,7 @@ export function getBrandStackSummary(project: Project): string | undefined {
         }
     }
 
-    return parts.length > 0 ? parts.join(' · ') : undefined;
+    return parts.length > 0 ? parts.join(', ') : undefined;
 }
 
 /**
@@ -148,5 +148,5 @@ export function getProjectDescription(project: Project): string {
         }
     }
 
-    return parts.join(' · ');
+    return parts.join(', ');
 }

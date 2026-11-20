@@ -55,6 +55,7 @@
 import { execSync } from 'child_process';
 import { existsSync, readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
+import { ALL_SURFACES, surfacesReaching } from '../.claude/skills/webview-visual-baseline/css-reach.mjs';
 
 const ROOT = execSync('git rev-parse --show-toplevel', { encoding: 'utf8' }).trim();
 const RECORDS = join(ROOT, 'reports', 'visual-baseline');
@@ -94,7 +95,7 @@ function restingRecords() {
     return out.sort((a, b) => String(b.capturedAt).localeCompare(String(a.capturedAt)));
 }
 
-function fail(files, why) {
+function fail(files, why, surfaces = []) {
     console.error(`
 css-baseline: REFUSED — this push changes ${files.length} stylesheet(s) and no resting
 baseline was captured while they were modified.
@@ -110,7 +111,9 @@ styled on one surface and absent on the next with no error anywhere.
 Capture one:
 
   eval "$(.claude/skills/webview-visual-baseline/serve.sh --build)"
-  # drive a browser at $VR_BASE and run capture.js's capture({ sentinel: $VR_SENTINEL })
+  # drive a browser at $VR_BASE and run capture.js's
+  # capture({ surfaces: ${JSON.stringify(surfaces)}, sentinel: $VR_SENTINEL })
+  # (the surfaces these stylesheets reach; css-reach.mjs --changed names them)
   .claude/skills/webview-visual-baseline/serve.sh --stop
 
 The capture records itself; re-run the push once it has.
@@ -139,9 +142,16 @@ if (bypass) {
     process.exit(0);
 }
 
+// Only the surfaces these stylesheets reach can have moved, so only they need capturing
+// (owner, 2026-11-04: a capture of all nine for one stylesheet took over half an hour).
+// A stylesheet that reaches nothing now was deleted or moved, and the surfaces that imported it
+// cannot be read back from this tree: then every surface, the safe direction.
+const found = await surfacesReaching(ROOT, sheets);
+const reach = found.length > 0 ? found : ALL_SURFACES;
+
 const records = restingRecords();
 if (records === null) {
-    fail(sheets, 'reports/visual-baseline/ does not exist — no capture has ever run here.');
+    fail(sheets, 'reports/visual-baseline/ does not exist — no capture has ever run here.', reach);
 }
 
 const head = sh('git rev-parse HEAD');
@@ -149,19 +159,27 @@ const head = sh('git rev-parse HEAD');
 // asks. `HEAD` alone asks about the dirty tree, where a capture of the last commit
 // says nothing about the edit sitting on top of it.
 const committedRange = range.includes('..');
-const matched = records.filter(
+const timely = records.filter(
     (r) =>
         (Array.isArray(r.dirtyPaths) && r.dirtyPaths.some((p) => sheets.includes(p))) ||
         (committedRange && Boolean(head) && r.sha === head)
 );
 
-if (matched.length === 0) {
+if (timely.length === 0) {
     fail(
         sheets,
         records.length
             ? `${records.length} resting capture(s) recorded, none while these files were modified and none at HEAD ${String(head).slice(0, 9)}.`
-            : 'No resting capture has been recorded at all.'
+            : 'No resting capture has been recorded at all.',
+        reach
     );
+}
+
+// A capture counts when it covered every surface these stylesheets reach.
+const missingFrom = (r) => reach.filter((s) => !(Array.isArray(r.surfaces) && r.surfaces.includes(s)));
+const matched = timely.filter((r) => missingFrom(r).length === 0);
+if (matched.length === 0) {
+    fail(sheets, `the capture taken for this change left out ${missingFrom(timely[0]).join(', ')}, which these stylesheets reach.`, reach);
 }
 
 const how =

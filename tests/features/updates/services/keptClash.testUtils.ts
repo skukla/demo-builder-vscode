@@ -1,7 +1,7 @@
 /**
  * The real-git fixture the kept-clash suites share (EDS-57): Adobe's template with two
- * commits, a storefront that started from the first and carries Khalil's header edit, and
- * the project's local copy of it. JustRite's clash in miniature: his quote-icon line and
+ * commits, a storefront that started from the first and carries PersonB's header edit, and
+ * the project's local copy of it. Tailspin's clash in miniature: his quote-icon line and
  * Adobe's accessibility line are the same line.
  *
  * THIS FILE OWNS THE jest.mock CALLS and re-exports the code under test, so the mocks are
@@ -27,12 +27,12 @@ jest.mock('@/features/eds/handlers/edsServiceCache', () => ({
 }));
 
 export const REAL_GIT_TIMEOUT_MS = 60_000;
-export const SC_REPO = 'skukla/kukla-justrite';
+export const SC_REPO = 'skukla/kukla-tailspin';
 export const TEMPLATE = { owner: 'adobe-commerce', repo: 'boilerplate-b2b-template' };
 
 export const HEADER_BASE = "// nav start\nconst dropDown = 'drop-down line';\n// nav end\n";
 export const HEADER_ADOBE = "// nav start\nconst dropDown = 'drop-down line with aria attributes';\n// nav end\n";
-export const HEADER_KHALIL = "// nav start\nconst dropDown = 'drop-down line plus the quote icon';\n// nav end\n";
+export const HEADER_PERSON_B = "// nav start\nconst dropDown = 'drop-down line plus the quote icon';\n// nav end\n";
 
 export interface Fixture {
     root: string;
@@ -85,7 +85,7 @@ function buildTemplate(): { t1: string; t2: string } {
     return { t1, t2: git(work, 'rev-parse', 'HEAD') };
 }
 
-/** The storefront: its own first commit with T1's files, then Khalil's header edit. */
+/** The storefront: its own first commit with T1's files, then PersonB's header edit. */
 function buildStorefront(): string {
     const work = path.join(fx.root, 'sc-work');
     fs.mkdirSync(work);
@@ -94,7 +94,7 @@ function buildStorefront(): string {
     write(work, 'scripts/scripts.js', 'scripts 1\n');
     git(work, 'add', '-A');
     git(work, 'commit', '-q', '-m', 'Initial commit');
-    write(work, 'blocks/header/header.js', HEADER_KHALIL);
+    write(work, 'blocks/header/header.js', HEADER_PERSON_B);
     git(work, 'commit', '-q', '-am', 'edit nav bar and request a quote icon');
     const scBare = bare(SC_REPO);
     git(work, 'push', '-q', scBare, 'main');
@@ -103,7 +103,7 @@ function buildStorefront(): string {
 
 export function storefrontProject(metadata: Record<string, unknown> = {}): Project {
     return createMockProject({
-        name: 'justrite',
+        name: 'tailspin',
         componentInstances: {
             'eds-storefront': {
                 id: 'eds-storefront',

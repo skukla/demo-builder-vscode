@@ -39,7 +39,7 @@ const addIntegrationSchema = {
         .string()
         .optional()
         .describe(
-            'For the ERP integration: the name of its first ERP, e.g. "Justrite" gives "Justrite ERP" ' +
+            'For the ERP integration: the name of its first ERP, e.g. "Tailspin" gives "Tailspin ERP" ' +
                 '(a trailing "ERP"/"Integration" is dropped first; default "Acme ERP"); fixed after the ' +
                 'add. The integration itself is called "ERP Integration" (rename it with ' +
                 'rename_integration). For a custom/blank instance: its display name (defaults to the repo name).',
@@ -94,7 +94,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             'Pass a catalog `id` (from list_components) OR a custom GitHub `source`. Adding a ' +
             'catalog id the project already has adds a numbered copy in its own workspace; a ' +
             'project has one mesh and one ERP integration (a second ERP is add_erp). Adding the ' +
-            'ERP integration also adds its first ERP; `name` names that ERP ("Justrite" → Justrite ' +
+            'ERP integration also adds its first ERP; `name` names that ERP ("Tailspin" → Tailspin ' +
             'ERP), which cannot be changed once added, so ask the user. The integration keeps ' +
             '"ERP Integration" (rename_integration can change it later). ' +
             'Adding the ERP integration also prepares the store before its ERP is filled: the ' +
@@ -443,6 +443,45 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         },
     },
     {
+        tool: 'set_finish_setup_step',
+        needsAuth: false,
+        readOnly: false,
+        description:
+            "Mark one of the open project's Finish Setup steps (from get_finish_setup: what it " +
+            'still needs after it was created or reset) done, skip it (dismissed), or undo a ' +
+            'skip (open). Changes only the record in Demo Builder, not the storefront or the ' +
+            'store. Mark a step done only when the user says they did it.',
+        map: dashboardHandlers,
+        type: 'setFinishSetupStep',
+        inputSchema: {
+            stepId: z.string().describe('The step id (from get_finish_setup)'),
+            state: z.enum(['done', 'dismissed', 'open']).describe('What the step becomes'),
+        },
+    },
+    {
+        tool: 'check_finish_setup',
+        // The code step reads the storefront repository and the live site; the root step
+        // reads the store through the project's credential.
+        needsAuth: ['adobe', 'github'],
+        // A write, though it changes nothing outside Demo Builder: it saves what each check
+        // found on the project's record, as check_setup_steps does.
+        readOnly: false,
+        description:
+            "Check what the open project still needs after it was created or reset (its Finish " +
+            'Setup): whether the live site now serves the code as the repository has it, or ' +
+            "whether the store's root category is set. Reads only, publishes nothing; saves " +
+            'what each check found: a pass marks the step done, a fail opens it again with the ' +
+            'reason. One step when stepId is sent, else every step not skipped.',
+        map: dashboardHandlers,
+        type: 'checkFinishSetupSteps',
+        inputSchema: {
+            stepId: z
+                .string()
+                .optional()
+                .describe('Only this step (from get_finish_setup); default every step not skipped'),
+        },
+    },
+    {
         tool: 'redeploy_integration',
         needsAuth: ['adobe'],
         readOnly: false,
@@ -467,7 +506,8 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: ['adobe'],
         readOnly: false,
         description:
-            'Update an integration to the newest code on its GitHub branch: fetch it ' +
+            'Update an integration or API mesh to its newest release (or, for a repository the ' +
+            'builder does not own, its GitHub branch): fetch it ' +
             '(fast-forward only), install its dependencies, redeploy, and upgrade the app in ' +
             'Commerce. An integration and its ERP update as a pair from either id: each with ' +
             'newer code is updated, the ERP first. Also works on one whose last deploy failed, and ' +
@@ -489,8 +529,9 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         // so it is not a pure read.
         readOnly: false,
         description:
-            'Check which deployed integrations (and their ERPs) have newer code on their GitHub ' +
-            'branch, code an earlier update fetched but never deployed, or a version Commerce ' +
+            'Check which deployed integrations, ERPs and API meshes have a newer release (or, for a ' +
+            'repository the builder does not own, newer code on its GitHub branch), code an earlier ' +
+            'update fetched but never deployed, or a version Commerce ' +
             'does not have installed. Records the answer where the ' +
             'integration cards read it. Changes no files and deploys nothing.',
         map: dashboardHandlers,
@@ -804,8 +845,14 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             'newest step first, or the one stepId names. Settings go back to the value in force before; ' +
             'an attribute or shared catalog the run created is deleted (never one that pre-existed); a ' +
             'stock the run created is deleted and a source the run created is DISABLED, because Commerce ' +
-            'cannot delete a source. A step whose undo Commerce refuses keeps its record. WITHOUT confirm ' +
-            'it only answers which steps are recorded and what each holds. Takes the integration id.',
+            'cannot delete a source. What changed since is KEPT, never overwritten: a setting no longer ' +
+            'holding the value written, a shared catalog holding products, categories or companies the ' +
+            'run did not put there (its company is still taken out), a stock holding a source the run did ' +
+            'not link (its own links still go), a source changed since. Each step says what it kept in one ' +
+            'line (steps[].kept); show it to the user. Keeping is not a refusal; a kept catalog or stock stays ' +
+            'recorded, so undoing the step again deletes it once it is empty. A ' +
+            'step whose undo Commerce refuses keeps its record. WITHOUT confirm it only answers which ' +
+            'steps are recorded and what each holds. Takes the integration id.',
         map: dashboardHandlers,
         type: 'undoCommerceStorePreparation',
         inputSchema: {
@@ -826,7 +873,8 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             'reading first; a value already in force is not written. With confirm:true it writes the ' +
             'rest in one call, names what Commerce refused (rejected, from the answer\'s errors list), ' +
             'and records the previous values on the project (data.previous); undo:true writes those ' +
-            'back and forgets them. Only the LAST write is recorded. For the settings a setup step ' +
+            'back and forgets them, keeping (data.kept) a setting no longer holding the value written; ' +
+            'undo:true without confirm previews that. Only the LAST write is recorded. For the settings a setup step ' +
             'declares, use prepare_commerce_store instead, which records per step.',
         map: dashboardHandlers,
         type: 'setCommerceConfig',
@@ -893,7 +941,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             path: z
                 .string()
                 .describe('The ERP route, e.g. "orders/0000001003/confirm" or "partners/C21"'),
-            body: z.record(z.unknown()).optional().describe('The JSON body the route takes'),
+            body: z.record(z.string(), z.unknown()).optional().describe('The JSON body the route takes'),
         },
     },
     {
@@ -926,7 +974,7 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
                 .string()
                 .describe('The action, as <package>/<action>, e.g. "webhook/item-prices"'),
             payload: z
-                .record(z.unknown())
+                .record(z.string(), z.unknown())
                 .optional()
                 .describe("The action's parameters as a JSON object"),
         },
@@ -1056,7 +1104,9 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
             'component configs, Adobe context). The file never carries a credential, so it is ' +
             'safe to hand to someone else; the response returns { path }. The target must be ' +
             'inside the project directory (defaults to ' +
-            '<project>/<name>.project.demo-builder.json).',
+            '<project>/<name>.project.demo-builder.json). When the project\'s pack is your own private ' +
+            'library pack, the answer carries packNote: teammates cannot use its data until it is shared ' +
+            '(share_datapack, after asking the user).',
         map: dashboardHandlers,
         type: 'exportProjectSettings',
         inputSchema: {

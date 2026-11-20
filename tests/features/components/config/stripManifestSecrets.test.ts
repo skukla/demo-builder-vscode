@@ -2,7 +2,7 @@
  * A manifest handed to an agent carries no credentials — from ANY of its fields.
  *
  * The first version of this strip covered `componentConfigs`, because that is
- * where a probe found a live `ACCS_OAUTH_CLIENT_SECRET` in a `get_project`
+ * where a probe found a live `ADOBE_COMMERCE_ADMIN_PASSWORD` in a `get_project`
  * response. It was not the only place. Four staleness baselines keep flat env
  * snapshots of whatever was set when they were captured, and `PAAS_MESH_ENV_VARS`
  * includes `ADOBE_CATALOG_API_KEY` — so the same leak survived one field over,
@@ -30,7 +30,7 @@ const manifest = () => ({
         mesh: {
             name: 'Mesh',
             envVars: { ADOBE_CATALOG_API_KEY: SECRET },
-            providesEnvVars: { ACCS_OAUTH_CLIENT_SECRET: SECRET },
+            providesEnvVars: { ADOBE_COMMERCE_ADMIN_PASSWORD: SECRET },
         },
     },
 });
@@ -62,7 +62,7 @@ describe('every env-carrying field', () => {
 
         expect(safe.appBuilderComponents.mesh.envVars).not.toHaveProperty('ADOBE_CATALOG_API_KEY');
         expect(safe.appBuilderComponents.mesh.providesEnvVars).not.toHaveProperty(
-            'ACCS_OAUTH_CLIENT_SECRET',
+            'ADOBE_COMMERCE_ADMIN_PASSWORD',
         );
     });
 

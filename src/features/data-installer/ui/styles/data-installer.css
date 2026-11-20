@@ -70,6 +70,13 @@
     color: var(--spectrum-global-color-gray-900);
     border-bottom-color: var(--spectrum-global-color-blue-500);
 }
+
+/* A tab's marker after its label: the same notice dot a row carries (owner, 2026-11-11, J1-3b). */
+.view-switcher-marker {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 6px;
+}
 }
 
 /* ===========================================
@@ -104,15 +111,27 @@
 /* ===========================================
    Detail flyout
    =========================================== */
-/* Head/body chrome and the key/value rows come from utilities.css
-   (`db-drawer-*`, `integration-panel-row*`) — global, so they reach this bundle.
+/* Head/body chrome comes from drawer.css (`db-drawer-*`) and the key/value rows from
+   integration-cards.css (`integration-panel-row*`); this bundle's entry imports both.
    Only what is specific to a datapack lives here. */
 @layer theme {
 .datapack-panel-title {
     flex: 1;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
     font-size: 15px;
     font-weight: 600;
     color: var(--spectrum-global-color-gray-900);
+}
+
+/* The version beside the name, in place of a Version row (owner, 2026-10-31). Beside the
+   title rather than in it, so renaming the pack never edits it. */
+.datapack-panel-version {
+    flex-shrink: 0;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--spectrum-global-color-gray-600);
 }
 }
 
@@ -219,12 +238,6 @@
 }
 
 @layer theme {
-.datapack-row-instance {
-    font-family: var(--vscode-editor-font-family, monospace);
-}
-}
-
-@layer theme {
 .datapack-row-mode {
     font-size: 11px;
     text-transform: uppercase;
@@ -272,142 +285,13 @@
 }
 
 /* ===========================================
-   Import modal
+   The job window's run
    =========================================== */
+/* The import's run (`ImportRunView`): its steps (`StepRows`, styled by work-row.css's `.step-rows`),
+   then the clock or how it ended under them. */
 @layer theme {
-.datapack-import-body {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-}
-
-/* Where the pack lands. Two pickers side by side — they are one decision, and
-   stacking them reads as two unrelated fields. */
-/* Side by side: website and store view are one decision, and the hint that used
-   to sit under them (explaining a rule the picker already enforces) is gone. */
-@layer theme {
-.datapack-import-scope {
-    display: flex;
-    gap: 16px;
-}
-}
-
-@layer theme {
-.datapack-import-scope > * {
-    flex: 1 1 0;
-    min-width: 0;
-}
-}
-
-@layer theme {
-.datapack-import-scope > [data-testid='spectrum-picker-wrapper'],
-.datapack-import-scope > div {
-    min-width: 0;
-}
-}
-
-/* Label above, control below — and while discovery runs the spinner IS the
-   control, in the same place, under a label that does not move. */
-@layer theme {
-.datapack-scope-field {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-width: 0;
-}
-}
-
-/* Holds the control's height so the dialog does not jump when the picker
-   replaces it. These fields used to appear only once the scopes landed, and
-   that jump is what the disabled-placeholder version was written to stop; the
-   swap must not reintroduce it. The value is the Spectrum medium field height —
-   a literal, because the token and the size prop resolve to different px in
-   this webview. */
-/* Shrinks to the LABEL, so the spinner below it has something narrow enough to
-   be centred under. `align-self: flex-start` stops the column stretching it to
-   the field's full width, which would put the centre back mid-column. */
-@layer theme {
-.datapack-scope-busy {
-    display: inline-flex;
-    flex-direction: column;
-    align-items: center;
-    align-self: flex-start;
-    gap: 4px;
-}
-}
-
-@layer theme {
-.datapack-scope-loading {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 32px;
-}
-}
-
-/* The products/customer_groups dependency. Warning colour, not error: the import
-   is still valid and a pack without tier prices is unaffected. */
-@layer theme {
-.datapack-import-type-warning {
-    margin: 4px 0 0;
-    font-size: 11px;
-    line-height: 1.4;
-    color: var(--vscode-editorWarning-foreground, var(--vscode-descriptionForeground));
-}
-}
-
-@layer theme {
-.datapack-import-types {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-}
-
-/* Label and bulk toggle sit TOGETHER on the left. They used to be pushed apart
-   by space-between, which at the wide modal width left the toggle a screen away
-   from the heading it acts on — easy to miss entirely. */
-@layer theme {
-.datapack-import-types-head {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-}
-
-/* The data-type checkbox list, shared by BOTH modals — import and export.
-
-   It was two classes. The export copy set minmax(420px, 1fr), sized back when a
-   type was a raw underscore code held on one unbroken line, and at the wide
-   modal's ~685px content box auto-fill fits floor(685/420) = 1 track: eighteen
-   exportable types in a single scrolling column. The import copy had already
-   been tuned away from that and the export one could not inherit it, because
-   nothing linked them. One class now, so they cannot drift apart again.
-
-   260px tracks give two columns at that same width, which halves the export
-   list from eighteen rows to nine — shorter, not necessarily scroll-free. Equal
-   tracks keep the rows aligned; a list read downward wants alignment more than
-   density. */
-@layer theme {
-.datapack-type-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 8px 24px;
-    /* A safety net rather than the rule it once was. Labels now carry spaces
-       ("B2B shared catalog company assignments") and break on their own, but a
-       code still reaches this grid whenever the service adds a type the label
-       derivation has not been taught. `anywhere` is the only value that breaks a
-       word with no break opportunity; `break-word` leaves it overflowing.
-       Inherited, so it reaches the Spectrum label without naming a Spectrum
-       class. */
-    overflow-wrap: anywhere;
-}
-}
-
-@layer theme {
-.datapack-type-grid > * {
-    min-width: 0;
+.import-run-foot {
+    margin-top: 16px;
 }
 }
 
@@ -420,116 +304,7 @@
    live. Owning the element removes the question instead of answering it. */
 @layer theme {
 .datapack-import-label {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--spectrum-global-color-gray-600);
-}
-}
-
-
-
-
-
-
-
-/* The armed reset confirmation. An accent BORDER, not a filled banner — that is
-   the convention here (see OrgContextNotice); saturated fills are not used. */
-@layer theme {
-.datapack-import-danger {
-    padding: 8px 12px;
-    border-left: 2px solid var(--spectrum-global-color-red-600);
-    font-size: 13px;
-    line-height: 1.5;
-}
-}
-
-/* The question, the facts, then the warning — three blocks rather than one run
-   of prose. The list of data types can be fourteen entries long, and read as a
-   sentence it was the part nobody finished before pressing the button. */
-@layer theme {
-.datapack-import-danger p {
-    margin: 0;
-}
-}
-
-@layer theme {
-.datapack-import-danger p + p {
-    margin-top: 8px;
-}
-}
-
-@layer theme {
-.datapack-danger-lede {
-    font-weight: 600;
-}
-}
-
-/* A label the eye can skip to, so "Instance" and "14 data types" read as fields
-   rather than as the start of another sentence. */
-@layer theme {
-.datapack-danger-term {
-    display: block;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--spectrum-global-color-gray-600);
-}
-}
-
-/* The VALUE beside the term above — the Commerce instance whose data is about to be
-   removed, and the count of data types going with it. The markup gave each value its
-   own span (with a comment saying it did so precisely so the value could be styled)
-   and the rule was never written, so on a destructive-action confirm the single most
-   important fact rendered as plain body text while its label was styled. Weight and
-   contrast only: the term above is deliberately small, grey and uppercase, so the
-   value simply needs to out-read it. Added 2026-09-08 (PL-20). */
-@layer theme {
-.datapack-danger-value {
-    font-weight: 500;
-    color: var(--spectrum-global-color-gray-900);
-}
-}
-
-@layer theme {
-.datapack-danger-warning {
-    color: var(--spectrum-global-color-red-600);
-}
-}
-
-
-/* The derived target, shown instead of an input. Leads with the project name —
-   the only part a person can confirm — and keeps the instance id visible but
-   subordinate, because the id is what actually decides where data lands. */
-@layer theme {
-.datapack-import-target {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-}
-
-@layer theme {
-.datapack-import-target-name {
-    font-size: 14px;
-    font-weight: 600;
-}
-}
-
-@layer theme {
-.datapack-import-target-id {
-    /* Monospace, matching `.datapack-row-instance`: an instance id is checked
-       character by character against the console, which proportional type makes
-       harder for exactly the strings that matter (l/1, O/0). */
-    font-family: var(--vscode-editor-font-family, monospace);
-    font-size: 12px;
-    color: var(--spectrum-global-color-gray-700);
-    overflow-wrap: anywhere;
-}
-}
-
-@layer theme {
-.datapack-import-target-warning {
+    /* Small, muted, sentence case (dialog design rules, 2026-10-31): it was small capitals. */
     font-size: 12px;
     color: var(--spectrum-global-color-gray-600);
 }
@@ -548,18 +323,147 @@
 }
 
 @layer theme {
-.datapack-export-intro {
-    margin: 0;
-    line-height: 1.5;
-    color: var(--spectrum-global-color-gray-700);
-}
-}
-
-@layer theme {
 .datapack-export-note {
     margin: 0;
     font-size: 12px;
     color: var(--vscode-descriptionForeground);
+}
+}
+
+/* Create a datapack's card screens (create-flow): two across, as Add Integration's kind screen has
+   them, or three for the service's many short data types. Equal heights by row. */
+@layer theme {
+.datapack-flow-cards {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    align-items: stretch;
+    overflow-wrap: anywhere;
+}
+
+/* Checkboxes for what an export can take several of (CheckRows): a long list scrolls in the dialog. */
+.datapack-check-rows {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+/* The kinds beside the shown kind's items (StorePicksStage): one height whatever is read, so nothing
+   moves. Every row is one height too, so a note arriving moves no row. */
+/* The kinds column is wide enough for a kind's name and its count on ONE line (owner, 2026-11-04):
+   two-line rows ran Select All Data's column past the dialog's height, and it scrolled with nothing
+   to show it did. */
+.datapack-picks {
+    display: grid;
+    /* Wide enough that a type's name and its note share one line, the shown row's bold name too
+       ("B2B Shared Catalogs  4 of 4 selected"): at 248px the note wrapped under the name (owner walk,
+       2026-11-16). */
+    grid-template-columns: 320px minmax(0, 1fr);
+    /* Taller with the extra-wide step (owner, 2026-11-05: it felt cramped). */
+    height: 480px;
+}
+
+.datapack-picks-rail {
+    list-style: none;
+    margin: 0;
+    padding: 0 14px 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    overflow-x: hidden;
+    border-right: 1px solid var(--spectrum-global-color-gray-300);
+}
+
+.datapack-picks-kind {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    column-gap: 8px;
+    width: 100%;
+    min-height: 30px;
+    padding: 0 10px;
+    border: 0;
+    border-left: 2px solid transparent;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--spectrum-global-color-gray-800);
+    font: inherit;
+    line-height: 1.25;
+    text-align: left;
+    cursor: pointer;
+}
+
+.datapack-picks-kind:hover {
+    background: var(--spectrum-global-color-gray-200);
+}
+
+.datapack-picks-kind:disabled {
+    background: transparent;
+    color: var(--spectrum-global-color-gray-500);
+    cursor: default;
+}
+
+.datapack-picks-kind--shown,
+.datapack-picks-kind--shown:hover {
+    border-left-color: var(--spectrum-global-color-blue-500);
+    background: var(--spectrum-global-color-gray-200);
+    color: var(--spectrum-global-color-gray-900);
+    font-weight: 600;
+}
+
+.datapack-picks-note {
+    margin-left: auto;
+    font-size: 11px;
+    font-weight: 400;
+    white-space: nowrap;
+    color: var(--spectrum-global-color-gray-600);
+}
+
+.datapack-picks-kind:disabled .datapack-picks-note {
+    color: var(--spectrum-global-color-gray-500);
+}
+
+.datapack-picks-kind--picked .datapack-picks-note {
+    color: var(--spectrum-global-color-blue-600);
+}
+
+.datapack-picks-pane {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+    min-height: 0;
+    padding-left: 18px;
+}
+
+.datapack-picks-pane > .modal-wait {
+    flex: 1;
+}
+}
+
+/* A kind's items (StoreKindItems, StoreItemChecklist; datapack-engine step 14), searchable, in a
+   list that scrolls inside the modal rather than growing it. Only this bundle renders it. */
+@layer theme {
+.datapack-pick-list {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 0;
+}
+
+/* The list's own gap sets the space under the count, so Select All sits close to what it counts. */
+.datapack-pick-list .search-header-count-row {
+    margin-bottom: 0;
+}
+}
+
+@layer theme {
+.datapack-pick-rows {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
 }
 }
 
@@ -571,5 +475,111 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 6px;
+}
+}
+
+/* The held pack's one Admin step in the flyout (PackSetupStepLine, DI-5): one quiet line, the
+   text then Show step, while the step is open; nothing once it is done. No box: the step itself
+   is in its dialog (PackSetupStepDialog). Only this bundle renders it. */
+@layer theme {
+.datapack-setup-line {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 16px 0 0;
+}
+}
+
+/* What the flyout's actions say, under the Actions list (PackActions): where a saved file went,
+   Share's and Delete's confirmation, that a pack was deleted, or why not. Left, under the list's
+   rows (walk, owner 2026-11-17). Only this bundle renders it. */
+@layer theme {
+.datapack-action-notes {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 0 18px 16px;
+}
+}
+
+/* A datapack job's summary, the type table (TypeTable, step 03 S4; prototype-conventions rule 8):
+   one row per data type, its name in a fixed column so the counts line up (rule 11), a rule
+   between rows. Only this bundle renders it. */
+@layer theme {
+.type-table {
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid var(--spectrum-global-color-gray-300);
+}
+
+.type-row {
+    display: grid;
+    grid-template-columns: 140px minmax(0, 1fr);
+    gap: 12px;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--spectrum-global-color-gray-300);
+}
+
+.type-name {
+    font-weight: 600;
+}
+
+.type-cell {
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* An update's table, a tick on each type (step-07 U1, J9-2, as the prototype drew it): Select All's
+   rule above stands in for the table's own, and the wider name column holds the checkbox. */
+.type-table--picks {
+    border-top: none;
+}
+
+.type-table--picks .type-row {
+    grid-template-columns: 180px minmax(0, 1fr);
+    align-items: center;
+}
+}
+
+/* Review Records (TypeRail, step 03 S4; rule 19): the picks layout read-only, one height whatever
+   type is shown, the left column scrolling inside itself past what it holds. Only this bundle. */
+@layer theme {
+.type-rail {
+    height: 400px;
+}
+
+.type-rail .datapack-picks-rail {
+    overflow-y: auto;
+}
+
+.type-record-head {
+    padding: 5px 0;
+    font-weight: 600;
+    border-bottom: 1px solid var(--spectrum-global-color-gray-300);
+}
+
+.type-record {
+    padding: 5px 0;
+    border-bottom: 1px solid var(--spectrum-global-color-gray-300);
+}
+
+/* A product's SKU and Name side by side (walk F147): the shared set every products grid shows. */
+.type-record--two {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    column-gap: 16px;
+}
+
+/* Clear's kept slot after a type's count (step 06, C2b; J1-3b): on every row, a dot's width, so the
+   counts and the notice dots each line up down the column (rule 11). Its words are the hover text. */
+.type-rail-kept {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 8px;
+    margin-left: 8px;
 }
 }

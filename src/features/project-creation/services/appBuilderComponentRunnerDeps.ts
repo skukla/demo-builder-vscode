@@ -7,6 +7,7 @@
  */
 
 import * as vscode from 'vscode';
+import { readComponentRelease } from '@/core/releases/componentRelease';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import type { CachedOrgRef } from '@/core/shell/orgContextEnv';
@@ -35,9 +36,8 @@ import { githubRepoTextReader, customIntegrationNodeResolver } from '@/features/
 import { deployAppComponentIsolated } from '@/features/app-builder/services/deployAppIsolated';
 import { displayNameInProject } from '@/features/app-builder/services/deployInputs';
 import { subscriberTarget } from '@/features/app-builder/services/ensureMeshApiSubscribed';
+import { checkComponentSource, updateComponentSource } from '@/features/app-builder/services/integrationReleaseSource';
 import {
-    checkCloneForUpdate,
-    fastForwardClone,
     readCloneCommit,
     type GitRunner,
 } from '@/features/app-builder/services/integrationSourceUpdate';
@@ -53,7 +53,7 @@ import { readMeshEnvVarsFromFile } from '@/features/mesh/services/meshEnvVars';
 import { calculateMeshSourceHash } from '@/features/mesh/services/meshSourceHash';
 import { regenerateComponentEnvFile } from '@/features/project-creation/helpers/envFileRegeneration';
 import { erpRunnerDeps } from '@/features/project-creation/services/erpRunnerDeps';
-import { refreshStorefront } from '@/features/project-creation/services/storefrontRefresh';
+import { refreshStorefront } from '@/features/project-creation/services/meshAddressRepublish';
 import { buildWorkspaceRegistryDeps } from '@/features/project-creation/services/workspaceRegistryDeps';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { Project } from '@/types/base';
@@ -152,6 +152,7 @@ export function buildDefaultRunnerDeps(
             shell: DEFAULT_SHELL,
             timeout: TIMEOUTS.LONG,
         });
+    const readRelease = (repo: string) => readComponentRelease(repo, ctx.logger);
     // The signed-in identity every per-app API call carries (five callers below).
     const authFor = (project: Project) => () => resolveAppManagementAuth(project, ctx.authManager);
     return {
@@ -214,10 +215,10 @@ export function buildDefaultRunnerDeps(
         // add path runs (ComponentManager, with the entry's Node version).
         // The commit every successful deploy records as shipped (AB-71).
         readCloneCommit: (componentPath) => readCloneCommit(componentPath, gitIn),
-        fetchComponentSource: (componentPath, branch) =>
-            fastForwardClone(componentPath, branch, gitIn),
-        checkComponentSource: (componentPath, branch) =>
-            checkCloneForUpdate(componentPath, branch, gitIn),
+        fetchComponentSource: (componentPath, branch, repoUrl) =>
+            updateComponentSource(componentPath, branch, gitIn, readRelease, repoUrl),
+        checkComponentSource: (componentPath, branch, repoUrl) =>
+            checkComponentSource(componentPath, branch, gitIn, readRelease, repoUrl),
         installComponentDependencies: (componentPath, definition, nodeVersion) =>
             ctx.componentManager.installNpmDependencies(componentPath, definition, nodeVersion),
         // The app's own uninstall API ahead of a remove (the ERP undo and wipe: erpRunnerDeps):

@@ -52,7 +52,7 @@ export interface ErpFillForProjectDeps {
     /**
      * Where the workspace credential is kept across reloads (VS Code SecretStorage). Required,
      * so no caller can skip it: without it every reload read the credential from Adobe
-     * Console again, about two minutes on Justrite (2026-10-18).
+     * Console again, about two minutes on Tailspin (2026-10-18).
      */
     credentials: CredentialStore | undefined;
     /** The signed-in identity the integration's and the ERP's actions take. */
@@ -104,7 +104,7 @@ async function commerceReply(
         : await requestRest(method, target, path, body, fetchImpl);
     const route = path.split('?')[0];
     if ('failed' in answer)
-        throw new CommerceReadError(`Commerce did not answer ${route}: ${answer.failed}`);
+        throw new CommerceReadError(`Commerce did not respond to ${route}: ${answer.failed}`);
     if (!answer.ok) {
         throw new CommerceReadError(
             `Commerce answered ${answer.status} for ${route}: ${answer.text.slice(0, 200)}`,
@@ -140,14 +140,17 @@ export async function commerceGetForProject(
  * "Assign products" and the attribute-set fix write with (AB-74). The write takes the bulk
  * route when asked (`V1/async/bulk`), and waits as long as every signed call does
  * (`requestRest`: TIMEOUTS.LONG, past the 120 s a product save took on ACCS).
+ *
+ * @param storeView - the Store header for every call; absent, the project's own store view
  */
 export async function commerceClientForProject(
     project: Project,
     authManager: AuthenticationService,
     credentials: CredentialStore | undefined,
     fetchImpl: typeof fetch = globalThis.fetch,
+    storeView?: string,
 ): Promise<{ get: CommerceGet; send: CommerceSend } | { refusal: string }> {
-    const rest = await resolveRestTargetFor(project, authManager, undefined, fetchImpl, credentials);
+    const rest = await resolveRestTargetFor(project, authManager, storeView, fetchImpl, credentials);
     if ('refusal' in rest) return { refusal: rest.refusal.replace(/^Error: /u, '') };
     return {
         get: commerceGet(rest, fetchImpl),

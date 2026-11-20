@@ -3,7 +3,7 @@
 ## Provenance — and a false alarm, disproved
 
 2026-08-18. A colleague's AI agent, working in a Demo Builder storefront project
-(`jogosset/agilent-b2b`), reported that "a background process on this project
+(`org-f/client-a-b2b`), reported that "a background process on this project
 (labeled `chore: sync config.json with mesh endpoint`) is periodically
 force-pushing and rewriting main's history, silently discarding real commits",
 and that it had "wiped out actual bug fixes twice now" — a `.hlxignore` fix and a
@@ -16,7 +16,7 @@ gh api "/repos/{owner}/{repo}/events" → each PushEvent's before/head
 gh api "/repos/{owner}/{repo}/compare/{before}...{head}" → .status
 ```
 
-Every push on `jogosset/agilent-b2b` AND `jogosset/agilent-2`, across
+Every push on `org-f/client-a-b2b` AND `org-f/client-a-2`, across
 2026-08-14 → 2026-08-18, returns `ahead` with `behind=0`. A rewrite would show
 `behind > 0` or `diverged`. The chain is unbroken: each push's `before` is
 exactly the previous push's `head`. **No branch was ever force-moved, and no
@@ -85,7 +85,7 @@ that publishes some other way or looks later. Different moments, both needed.
 
 On a non-fast-forward, `storefrontSyncService` throws `PushRejectedError` with
 "Pull and rebase, then retry" — manually. The agent then pulled and **merged**,
-which is where the two `Merge branch 'main'` commits in `agilent-b2b` came from.
+which is where the two `Merge branch 'main'` commits in `client-a-b2b` came from.
 The data was safe; the recovery was dumped on the caller, who resolved it in a
 way our own message did not ask for.
 

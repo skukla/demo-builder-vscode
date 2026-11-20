@@ -19,6 +19,7 @@ import {
     consoleApiProject,
     subscribeRequiredApis,
 } from './consoleApiHandlers.testUtils';
+import { ErrorCode } from '@/types/errorCodes';
 
 function bodea() {
     return consoleApiProject({
@@ -89,6 +90,32 @@ describe('add_console_apis for one integration', () => {
         expect(result).toMatchObject({ success: false });
         expect(result.error).toContain('"nope"');
         expect(subscribeRequiredApis).not.toHaveBeenCalled();
+    });
+
+    // PL-104 fix 15: the guard lives in the subscription both doors share, so Manage
+    // APIs and set_console_apis refuse a phantom integration exactly as add does,
+    // instead of saving picks for it and subscribing them on the shared workspace.
+    it('Manage APIs (setConsoleApis) gives the same refusal for an id the project does not have', async () => {
+        const addContext = consoleApiContext(bodea());
+        const setContext = consoleApiContext(bodea());
+
+        const added = await handleAddConsoleApis(addContext, {
+            apis: ['FireflyAPISDK'],
+            componentId: 'nope',
+        });
+        const set = await handleSetConsoleApis(setContext, {
+            apis: ['FireflyAPISDK'],
+            componentId: 'nope',
+        });
+
+        expect(set).toEqual({
+            success: false,
+            error: 'This project has no integration "nope".',
+            code: ErrorCode.CONFIG_INVALID,
+        });
+        expect(set).toEqual(added);
+        expect(subscribeRequiredApis).not.toHaveBeenCalled();
+        expect(setContext.stateManager.saveProject).not.toHaveBeenCalled();
     });
 
     it("CONTROL: without a componentId it still adds on the project's workspace", async () => {

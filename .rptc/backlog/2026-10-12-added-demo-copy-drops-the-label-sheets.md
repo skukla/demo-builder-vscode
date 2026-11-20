@@ -10,7 +10,7 @@ status: active
 
 # A storefront copied from a colleague's demo loses the demo's label sheets
 
-Filed 2026-10-12, from a project built on `sayurihanki/jenhankib2bbodea`.
+Filed 2026-10-12, from a project built on `org-j/org-k`.
 
 ## What was measured
 
@@ -76,7 +76,7 @@ in the stub list now (`ea374381d`).
 
 ## The stub list cannot know an added demo's code (owner, 2026-10-12)
 
-`company-switcher` was not Jen's own addition and not missing from the list by oversight: it
+`company-switcher` was not Robin's own addition and not missing from the list by oversight: it
 is what Adobe's boilerplate asked for until template #1213 (2026-04-22), and her repository
 was made on 4.0.1 in February. The list was measured on the template Demo Builder creates
 from, which is 6.0.0 and asks for `quick-order` instead.

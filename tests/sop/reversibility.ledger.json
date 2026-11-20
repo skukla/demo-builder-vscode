@@ -8,7 +8,7 @@
         "The reversal need not share a verb stem. `deploy_mesh` is undone by `delete_mesh`, `publish_page` by `delete_page`. A naming rule was measured and REJECTED - it wrongly flags at least three - see PL-55's design section."
     ],
     "_measured": "2026-09-10: 109 tools across both registration forms, read via tests/sop/tool.testUtils.ts (`src/features/ai/server/*.ts`, `src/mcp-server.ts`, `src/mcp/*.ts`). 15 create-shaped. An earlier hand-rolled walk read only one directory and found 100 - the shared helper exists because that mistake has now been made twice.",
-    "openReasonCeiling": 4,
+    "openReasonCeiling": 3,
     "entries": [
         {
             "tool": "add_integration",
@@ -97,13 +97,19 @@
             "reason": "A sign-in, not a created resource - nothing is provisioned that could be deleted, so reversibility does not apply. DECIDED 2026-09-11 (owner): whether an agent should be able to sign you OUT is a question about agent power rather than about undo, and is out of scope for this ledger."
         },
         {
-            "tool": "start_datapack_export",
-            "reason": "Writes into the SHARED datapack catalog, so the reversal is not merely a delete - it would have to consider other consumers. DECIDED 2026-09-11 (owner): design it now. Note the boundary - the catalog is owned by the data-installer service, so the design may conclude the reversal does not live in this repo."
+            "tool": "create_datapack",
+            "reverses": "delete_library_datapack",
+            "note": "Corrected 2026-11-14 (step-07 A3). The old row said this writes into the SHARED Data Installer catalog; since D7 (2026-11-13) agents have no Data Installer destination, so a save goes only into the user's own My Datapacks, and delete_library_datapack removes it."
         },
         {
-            "tool": "start_datapack_import",
-            "reverses": "reset_datapack",
-            "note": "Corrected 2026-09-11, same mistake: reset_datapack removes a datapack's data from the Commerce instance so the project can be reused, which is precisely what the import put there. The first pass called it 'adjacent' without reading its description."
+            "tool": "add_datapack_from_file",
+            "reverses": "delete_library_datapack",
+            "note": "Joined the ledger 2026-11-14 when load_datapack_zip was renamed (step-07 A3): the new name starts with a create verb. delete_library_datapack with keepSettingsLayer:true removes exactly what the load made, and a settings layer the load created is deleted by its own id (step-07 F2, both stated in delete_library_datapack's description)."
+        },
+        {
+            "tool": "install_datapack",
+            "reverses": "uninstall_datapack",
+            "note": "Corrected 2026-09-11, same mistake: uninstall_datapack removes a datapack's data from the Commerce instance so the project can be reused, which is precisely what the import put there. The first pass called it 'adjacent' without reading its description."
         },
         {
             "tool": "start_erp_downtime",

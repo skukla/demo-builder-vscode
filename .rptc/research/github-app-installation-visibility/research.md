@@ -15,7 +15,7 @@ repos that haven't been configured with Helix yet."
 
 That was a workaround for a classification bug, not a timing problem. An unconfigured repo
 returns `404 [admin] no such site`, and the old classifier read that as "App not installed."
-The same conflation, wearing a 401 instead, produced Jen's eleven false failures in July.
+The same conflation, wearing a 401 instead, produced Robin's eleven false failures in July.
 Both are fixed on `hotfix/beta.122` (`githubAppService.ts` now returns
 installed / not-installed / **undetermined**).
 

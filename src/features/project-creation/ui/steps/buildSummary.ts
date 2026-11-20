@@ -16,8 +16,13 @@ import { isSetInConfigure } from './editLocks';
 import { STOREFRONT_SECTION_TITLES } from './storefrontSections';
 import { isAdobeSignedIn, meshComponentForStack } from './tileStatus';
 import { ACCS_STORE_VIEW_CODE, PAAS_STORE_VIEW_CODE } from '@/core/config/envVarKeys';
+import { storeViewNameIn } from '@/core/utils/commerceNames';
 import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
-import { isAlwaysIncludedBlockLibrary } from '@/features/components/services/blockLibraryLoader';
+import {
+    getAlwaysIncludedBlockLibraries,
+    getNativeBlockLibraries,
+} from '@/features/components/services/blockLibraryLoader';
+import { getStackById } from '@/features/components/services/demoPackageLoader';
 import { resolveIntegrationRows } from '@/features/project-creation/ui/components/integration-flow/integrationRows';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { AddedDemo } from '@/types/projectFile';
@@ -50,6 +55,9 @@ export function architectureLabel(state: WizardState, stacks: Stack[]): string |
 /**
  * The Commerce group. A row shows ✓ + value only when its sub-step is BOTH done
  * AND committed (the user pressed Continue past it) — values never appear alone.
+ * An import skips the commit: the file already chose what it has, so a done step
+ * shows its value at once (F278, owner 2026-11-18). Its settings steps are in the
+ * strip, unlike Edit's, so each row still follows its own step.
  */
 export function commerceSummaryGroup(state: WizardState): SummaryGroup {
     const isAccs = state.selectedBackend === ACCS_BACKEND;
@@ -58,9 +66,10 @@ export function commerceSummaryGroup(state: WizardState): SummaryGroup {
     if (isSetInConfigure(state)) {
         return { heading: 'Commerce', rows: editingRows(state, sectionStates) };
     }
+    const isImport = state.wizardMode === 'import';
     const committed = new Set(state.committedCommerceSteps ?? []);
     const rows: SummaryRow[] = sectionStates.map((s) => {
-        const done = s.status === 'done' && committed.has(s.id);
+        const done = s.status === 'done' && (isImport || committed.has(s.id));
         return { label: ROW_LABELS[s.id], value: done ? s.value : undefined, done };
     });
     return { heading: 'Commerce', rows };
@@ -83,12 +92,18 @@ function editingRows(
     });
     const settings: SummaryRow[] = [
         { label: ROW_LABELS.connection, value: 'Connected', done: true },
-        { label: ROW_LABELS['business-structure'], value: storeViewCodeOf(state) ?? 'Selected', done: true },
+        { label: ROW_LABELS['business-structure'], value: storeViewOf(state) ?? 'Selected', done: true },
         { label: ROW_LABELS.catalog, value: 'Configured', done: true },
     ];
     // Before Datapacks, the last row, as in the strip they came from.
     rows.splice(rows.length - 1, 0, ...settings);
     return rows;
+}
+
+/** The store view the project records, by its name once discovery has read the store (owner, 2026-11-15), else its code. */
+function storeViewOf(state: WizardState): string | undefined {
+    const code = storeViewCodeOf(state);
+    return code === undefined ? undefined : storeViewNameIn(state.storeDiscoveryData, code);
 }
 
 /** The store view code the project records, under either backend's name for it. */
@@ -110,12 +125,7 @@ export function storefrontSummaryGroup(state: WizardState): SummaryGroup {
     const accountsDone =
         Boolean(eds?.githubAuth?.isAuthenticated) && Boolean(eds?.daLiveAuth?.isAuthenticated);
     const repoDone = state.storefrontRepoValid === true;
-    // What the picker shows: the always-included library is kept out of it, though a
-    // built project records it, so Edit counted 2 beside 1 card (owner, 2026-10-17).
-    const chosen = (state.selectedBlockLibraries ?? []).filter(
-        (id) => !isAlwaysIncludedBlockLibrary(id),
-    );
-    const libCount = chosen.length + (state.customBlockLibraries?.length ?? 0);
+    const libCount = includedLibraryCount(state);
 
     const rows: SummaryRow[] = [
         // An added demo names itself first (D21): the card is far away by now.
@@ -133,17 +143,34 @@ export function storefrontSummaryGroup(state: WizardState): SummaryGroup {
     ];
     rows.push({
         label: STOREFRONT_SECTION_TITLES['block-libraries'],
-        value: libCount > 0 ? `${libCount} selected` : undefined,
+        value: libCount > 0 ? `${libCount} included` : undefined,
         done: libCount > 0,
     });
     return { heading: 'Storefront', rows };
 }
 
-/** "Demo — Isle5 by Jen · Edge Delivery", with a note when it has no pages to copy. */
+/**
+ * How many libraries the storefront gets: the cards the picker shows ticked, the locked ones
+ * with them, each once, plus the custom ones. The count is what the picker shows (owner,
+ * 2026-10-17); since the picker shows the locked cards (2026-11-03), they count, and the row
+ * says "included" (owner, 2026-11-05: "1 selected" beside two ticks).
+ */
+function includedLibraryCount(state: WizardState): number {
+    const stack = state.selectedStack ? getStackById(state.selectedStack) : undefined;
+    const packageId = state.selectedPackage;
+    const locked =
+        stack && packageId
+            ? [...getAlwaysIncludedBlockLibraries(stack, packageId), ...getNativeBlockLibraries(stack, packageId)]
+            : [];
+    const ids = new Set([...(state.selectedBlockLibraries ?? []), ...locked.map((library) => library.id)]);
+    return ids.size + (state.customBlockLibraries?.length ?? 0);
+}
+
+/** "Demo — Isle5 by Robin · Edge Delivery", with a note when it has no pages to copy. */
 function demoRow(demo: AddedDemo): SummaryRow {
     const kind = demo.storefrontKind === 'headless' ? 'Headless' : 'Edge Delivery';
     const pages = demo.storefrontKind === 'eds' && !demo.contentSource ? ' (no published pages yet: the site starts empty)' : '';
-    return { label: 'Demo', value: `${demo.name} · ${kind}${pages}`, done: true };
+    return { label: 'Demo', value: `${demo.name}, ${kind}${pages}`, done: true };
 }
 
 /**

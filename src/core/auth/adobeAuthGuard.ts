@@ -85,31 +85,36 @@ async function promptAndSignIn(
     // deploy sat 9+ minutes on this exact prompt in a window nobody was
     // watching (2026-08-27) — the third interactive pause of the day to hang a
     // headless call silently (consent modal, teardown, now this). Unanswered
-    // resolves into the existing cancelled path; a late "Sign In" click grants
-    // nothing, matching the consent gate's semantics.
+    // resolves into the existing cancelled path. The operation does not resume on
+    // a late "Sign In", but the sign-in itself still runs: a VS Code modal cannot
+    // be taken down from code, so it stays on screen after the wait ends, and a
+    // button that does nothing when pressed reads as broken (owner, 2026-10-31,
+    // after pressing it seven hours on).
     logger.info(`${logPrefix} awaiting the sign-in prompt in the VS Code window`);
     let timedOut = false;
+    let waitTimer: ReturnType<typeof setTimeout> | undefined;
+    const asked = askDuringOperation({ title: 'Sign In to Adobe', message: warningMessage }, 'Sign In', 'Cancel');
     const selection = await Promise.race([
-        askDuringOperation({ title: 'Sign in to Adobe', message: warningMessage }, 'Sign In', 'Cancel'),
-        new Promise<undefined>((resolve) =>
-            setTimeout(() => {
+        asked,
+        new Promise<undefined>((resolve) => {
+            waitTimer = setTimeout(() => {
                 timedOut = true;
                 resolve(undefined);
-            }, TIMEOUTS.LONG),
-        ),
+            }, TIMEOUTS.LONG);
+        }),
     ]);
+    // An answer ends the wait: the timer must not outlive it by minutes.
+    clearTimeout(waitTimer);
     if (selection !== 'Sign In') {
         if (timedOut) {
             logger.warn(`${logPrefix} sign-in prompt unanswered — treating as cancelled`);
+            void asked.then((late) => signInLate(late, authManager, logger, logPrefix, projectContext));
         }
         return { authenticated: false, cancelled: true };
     }
 
     logger.info(`${logPrefix} Starting Adobe sign-in`);
-    // Signing in happens in the browser; say so where the SC is looking, with a Cancel.
-    const loginSuccess = await withBrowserSignInNotice(() =>
-        authManager.loginAndRestoreProjectContext(projectContext),
-    );
+    const loginSuccess = await signIn(authManager, projectContext);
 
     if (!loginSuccess || !(await authManager.isAuthenticated())) {
         return signInWasCancelled() ? { authenticated: false, cancelled: true } : { authenticated: false };
@@ -117,4 +122,26 @@ async function promptAndSignIn(
 
     logger.info(`${logPrefix} Adobe sign-in successful`);
     return { authenticated: true };
+}
+
+/** Signing in happens in the browser; say so where the SC is looking, with a Cancel. */
+function signIn(authManager: AdobeAuthManager, projectContext: Record<string, unknown>): Promise<boolean> {
+    return withBrowserSignInNotice(() => authManager.loginAndRestoreProjectContext(projectContext));
+}
+
+/** "Sign In" pressed after the operation stopped waiting: sign in, and resume nothing. */
+async function signInLate(
+    late: string | undefined,
+    authManager: AdobeAuthManager,
+    logger: Logger,
+    logPrefix: string,
+    projectContext: Record<string, unknown>,
+): Promise<void> {
+    if (late !== 'Sign In') return;
+    logger.info(`${logPrefix} Sign In pressed after the wait ended — signing in; the operation is not resumed`);
+    try {
+        await signIn(authManager, projectContext);
+    } catch (error) {
+        logger.warn(`${logPrefix} late sign-in failed: ${(error as Error).message}`);
+    }
 }

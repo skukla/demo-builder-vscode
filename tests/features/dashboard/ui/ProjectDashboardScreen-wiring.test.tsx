@@ -137,7 +137,7 @@ describe('ProjectDashboardScreen - screen-owned wiring', () => {
             rerenderWith({ isEds: true, edsLiveUrl: 'https://first.example.com' });
             fireEvent.click(screen.getByText('Open in Browser'));
 
-            expect(client().postMessage).toHaveBeenCalledWith('openLiveSite', {
+            expect(client().request).toHaveBeenCalledWith('openLiveSite', {
                 url: 'https://first.example.com',
             });
         });
@@ -151,7 +151,7 @@ describe('ProjectDashboardScreen - screen-owned wiring', () => {
             rerenderWith({ isEds: true, edsLiveUrl: 'https://second.example.com' });
             fireEvent.click(screen.getByText('Open in Browser'));
 
-            expect(client().postMessage).toHaveBeenCalledWith('openLiveSite', {
+            expect(client().request).toHaveBeenCalledWith('openLiveSite', {
                 url: 'https://first.example.com',
             });
         });
@@ -161,7 +161,7 @@ describe('ProjectDashboardScreen - screen-owned wiring', () => {
         it('drops the separator when only one of package/stack is known', () => {
             renderDashboard({ stackName: 'Headless + PaaS' });
 
-            // `[undefined, stack].join(' · ')` would render " · Headless + PaaS";
+            // `[undefined, stack].join(', ')` would render ", Headless + PaaS";
             // the filter is what keeps the leading separator off.
             expect(screen.getByText('Headless + PaaS')).toBeInTheDocument();
         });

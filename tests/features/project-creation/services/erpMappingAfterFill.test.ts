@@ -115,7 +115,7 @@ describe('mapAfterFill', () => {
             },
         });
         expect(steps).toContain(
-            "Filled the integration's mapping from the ERP: website base sells under sales organization 1000.",
+            "Filled the integration's mapping from the ERP: the website Main Website sells under sales organization 1000.",
         );
     });
 
@@ -171,7 +171,7 @@ describe('mapAfterFill', () => {
         expect(result.mapping?.filled).toStrictEqual([]);
         expect(result.mapping?.failed).toHaveLength(1);
         expect(result.note).toBe(
-            'Demo data loaded; the mapping for website base was not saved: ERP erps answered 500: store unavailable. Fill ERPs from Commerce again to retry.',
+            'Demo data loaded; the mapping for the website Main Website was not saved: ERP erps answered 500: store unavailable. Fill ERPs from Commerce again to retry.',
         );
     });
 

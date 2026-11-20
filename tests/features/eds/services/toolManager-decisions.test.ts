@@ -184,7 +184,7 @@ describe('ToolManager decisions', () => {
         });
 
         it('prefixes DRY_RUN and appends the flag only when a dry run is asked for', async () => {
-            await toolManager.executeAcoCleanup({ dryRun: true });
+            await toolManager.executeToolScript('delete:aco', { dryRun: true });
 
             expect(executor.execute).toHaveBeenCalledWith(
                 'DRY_RUN=true npm run delete:aco --dry-run',

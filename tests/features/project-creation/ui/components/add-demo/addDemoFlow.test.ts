@@ -18,11 +18,11 @@ import type { SharedDemoRead } from '@/types/webviewRequests';
 
 const READ: SharedDemoRead = {
     outcome: 'read',
-    fullName: 'jen/isle5-demo',
+    fullName: 'robin/isle5-demo',
     defaultBranch: 'main',
     isTemplate: false,
     kind: 'eds',
-    contentSource: { org: 'jen', site: 'isle5-demo', indexPath: '/full-index.json' },
+    contentSource: { org: 'robin', site: 'isle5-demo', indexPath: '/full-index.json' },
     contentPublished: { indexFound: true, pageCount: 12 },
     storeCodes: { websiteCode: 'isle5', storeCode: 'isle5_store', storeViewCode: 'isle5_us' },
     b2b: 'on',
@@ -34,8 +34,8 @@ const READ: SharedDemoRead = {
 describe('defaultDemoName', () => {
     it("prefers the description file's name, else spells the repository for people", () => {
         expect(defaultDemoName(READ)).toBe('Isle5 Demo');
-        expect(defaultDemoName({ ...READ, description: { kind: 'demo', version: 1, name: 'Isle5 by Jen' } })).toBe(
-            'Isle5 by Jen',
+        expect(defaultDemoName({ ...READ, description: { kind: 'demo', version: 1, name: 'Isle5 by Robin' } })).toBe(
+            'Isle5 by Robin',
         );
     });
 });
@@ -54,13 +54,13 @@ describe('isBuildable', () => {
 describe('foundRows', () => {
     it('names the kind, the pages, the codes and the B2B answer when known', () => {
         expect(foundRows(READ)).toEqual([
-            { label: 'Code', value: 'github.com/jen/isle5-demo', done: true },
+            { label: 'Code', value: 'github.com/robin/isle5-demo', done: true },
             { label: 'Type', value: 'Edge Delivery', done: true },
             { label: 'Pages', value: '12 published', done: true },
             { label: 'Website', value: 'isle5', done: true },
             { label: 'Store', value: 'isle5_store', done: true },
-            { label: 'Store view', value: 'isle5_us', done: true },
-            { label: 'Company (B2B) features', value: 'On', done: true },
+            { label: 'Store View', value: 'isle5_us', done: true },
+            { label: 'Company (B2B) Features', value: 'On', done: true },
         ]);
     });
 
@@ -72,7 +72,7 @@ describe('foundRows', () => {
             storeCodes: undefined,
             contentPublished: { indexFound: false },
         });
-        expect(rows.map((r) => r.label)).toEqual(['Code', 'Type', 'Pages', 'Website', 'Store', 'Store view']);
+        expect(rows.map((r) => r.label)).toEqual(['Code', 'Type', 'Pages', 'Website', 'Store', 'Store View']);
         expect(rows[2]).toEqual({ label: 'Pages', value: undefined, done: false });
         expect(rows[3]).toEqual({ label: 'Website', value: undefined, done: false });
     });
@@ -80,7 +80,7 @@ describe('foundRows', () => {
     it("adds ONE row naming what the storefront was built on, when it was read (EDS-13f)", () => {
         const rows = foundRows({ ...READ, boilerplate: { name: '@adobe/aem-boilerplate-commerce', version: '6.0.0' } });
 
-        expect(rows[2]).toEqual({ label: 'Built on', value: "Adobe's Commerce boilerplate 6.0.0", done: true });
+        expect(rows[2]).toEqual({ label: 'Built On', value: "Adobe's Commerce boilerplate 6.0.0", done: true });
         expect(rows).toHaveLength(foundRows(READ).length + 1);
     });
 
@@ -88,7 +88,7 @@ describe('foundRows', () => {
         const rows = foundRows({ ...READ, boilerplate: { name: '@adobe/aem-boilerplate-commerce', version: '4.0.1' } });
 
         expect(rows[2]).toEqual({
-            label: 'Built on',
+            label: 'Built On',
             value: "Adobe's Commerce boilerplate 4.0.1. Built on an older boilerplate (4.x) than Demo Builder tests on.",
             done: true,
         });
@@ -120,8 +120,8 @@ describe('buildAddedDemo', () => {
                 ACCS_STORE_VIEW_CODE: 'isle5_us',
             },
             configFlags: { 'commerce-b2b-enabled': true, 'commerce-companies-enabled': true },
-            contentSource: { org: 'jen', site: 'isle5-demo', indexPath: '/full-index.json' },
-            source: { owner: 'jen', repo: 'isle5-demo', branch: 'main' },
+            contentSource: { org: 'robin', site: 'isle5-demo', indexPath: '/full-index.json' },
+            source: { owner: 'robin', repo: 'isle5-demo', branch: 'main' },
             storefrontKind: 'eds',
         });
     });
@@ -129,9 +129,9 @@ describe('buildAddedDemo', () => {
     it("takes the SC's switch when the probe could not tell, and the typed name", () => {
         const unknown: SharedDemoRead = { ...READ, b2b: 'unknown', b2bSource: undefined };
         expect(buildAddedDemo(unknown, INITIAL_DRAFT)).not.toHaveProperty('configFlags');
-        const row = buildAddedDemo(unknown, { ...INITIAL_DRAFT, b2bOn: true, name: '  Isle5 by Jen  ' });
+        const row = buildAddedDemo(unknown, { ...INITIAL_DRAFT, b2bOn: true, name: '  Isle5 by Robin  ' });
         expect(row.configFlags).toEqual({ 'commerce-b2b-enabled': true, 'commerce-companies-enabled': true });
-        expect(row.name).toBe('Isle5 by Jen');
+        expect(row.name).toBe('Isle5 by Robin');
     });
 
     it('takes the typed description, trimmed, over the file; a blank one leaves the file\'s or none', () => {
@@ -141,7 +141,7 @@ describe('buildAddedDemo', () => {
         expect(buildAddedDemo(READ, { ...INITIAL_DRAFT, description: '   ' })).not.toHaveProperty('description');
         const withFile: SharedDemoRead = {
             ...READ,
-            description: { kind: 'demo', version: 1, name: 'Isle5 by Jen', description: 'From the file' },
+            description: { kind: 'demo', version: 1, name: 'Isle5 by Robin', description: 'From the file' },
         };
         expect(buildAddedDemo(withFile, INITIAL_DRAFT).description).toBe('From the file');
         expect(buildAddedDemo(withFile, { ...INITIAL_DRAFT, description: 'Typed' }).description).toBe('Typed');
@@ -153,7 +153,7 @@ describe('buildAddedDemo', () => {
             description: {
                 kind: 'demo',
                 version: 1,
-                name: 'Isle5 by Jen',
+                name: 'Isle5 by Robin',
                 description: 'B2B with custom blocks',
                 configDefaults: { ACCS_WEBSITE_CODE: 'other' },
                 requiresMesh: 'optional',
@@ -165,7 +165,7 @@ describe('buildAddedDemo', () => {
         const row = buildAddedDemo(withFile, INITIAL_DRAFT);
         expect(row).toEqual(
             expect.objectContaining({
-                name: 'Isle5 by Jen',
+                name: 'Isle5 by Robin',
                 description: 'B2B with custom blocks',
                 configDefaults: { ACCS_WEBSITE_CODE: 'other' },
                 requiresMesh: 'optional',
@@ -211,18 +211,18 @@ describe('buildAddedDemo', () => {
 describe('continueLabel', () => {
     it('is Continue on the link stage, Use <name> for a shipped template, Add demo otherwise', () => {
         expect(continueLabel('link', undefined, undefined)).toBe('Continue');
-        expect(continueLabel('link', undefined, undefined, 'add', 'zip')).toBe('Choose a zip file');
+        expect(continueLabel('link', undefined, undefined, 'add', 'zip')).toBe('Choose a Zip File');
         expect(
             continueLabel('found', { outcome: 'shipped', shippedPackageId: 'starter', fullName: 'a/b' }, 'Starter (B2B + B2C)'),
         ).toBe('Use Starter (B2B + B2C)');
-        expect(continueLabel('found', READ, undefined)).toBe('Add demo package');
+        expect(continueLabel('found', READ, undefined)).toBe('Add Demo Package');
     });
 });
 
 describe('change mode', () => {
-    it('labels the commit Change source whatever the probe said', () => {
-        expect(continueLabel('found', READ, undefined, 'change')).toBe('Change source');
-        expect(continueLabel('found', { outcome: 'shipped', shippedPackageId: 'starter', fullName: 'a/b' }, 'Starter', 'change')).toBe('Change source');
+    it('labels the commit Change Source whatever the probe said', () => {
+        expect(continueLabel('found', READ, undefined, 'change')).toBe('Change Source');
+        expect(continueLabel('found', { outcome: 'shipped', shippedPackageId: 'starter', fullName: 'a/b' }, 'Starter', 'change')).toBe('Change Source');
         expect(continueLabel('link', undefined, undefined, 'change')).toBe('Continue');
     });
 
@@ -231,8 +231,8 @@ describe('change mode', () => {
         expect(kindMatches(READ, 'headless')).toBe(false);
         expect(kindMatches({ ...READ, kind: 'headless' }, 'headless')).toBe(true);
         expect(kindMatches(READ, undefined)).toBe(true);
-        expect(wrongKindMessage('eds')).toBe('This project is built on an Edge Delivery demo; pick a demo of the same kind.');
-        expect(wrongKindMessage('headless')).toBe('This project is built on a headless demo; pick a demo of the same kind.');
+        expect(wrongKindMessage('eds')).toBe('This project uses an Edge Delivery demo. Select a demo of the same type.');
+        expect(wrongKindMessage('headless')).toBe('This project uses a headless demo. Select a demo of the same type.');
     });
 
     it('starts with the update-demo-package box off', () => {
@@ -240,6 +240,6 @@ describe('change mode', () => {
     });
 
     it('names the demo package the box updates, by its name (owner, 2026-09-15)', () => {
-        expect(updateDemoPackageLabel('Bodea')).toBe('Also update the Bodea demo package');
+        expect(updateDemoPackageLabel('Bodea')).toBe('Also Update the Bodea Demo Package');
     });
 });

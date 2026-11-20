@@ -34,8 +34,6 @@ export interface SearchableListProps<T extends SearchableListItem> {
     onRefresh?: () => void;
     /** Whether data has loaded at least once */
     hasLoadedOnce: boolean;
-    /** Show search field threshold (default: 5) */
-    searchThreshold?: number;
     /** Aria label for the list */
     ariaLabel: string;
     /** Custom item renderer */
@@ -50,6 +48,8 @@ export interface SearchableListProps<T extends SearchableListItem> {
     refreshAriaLabel?: string;
     /** Optional action element to show inline (e.g., "+ New" button) */
     action?: React.ReactNode;
+    /** Say no count of the list: in a dialog, a count of what the SC can see is cut. */
+    hideCount?: boolean;
 }
 
 /**
@@ -59,7 +59,7 @@ export interface SearchableListProps<T extends SearchableListItem> {
  * Used for Adobe resource selection (projects, workspaces, organizations).
  *
  * Features:
- * - Search field (shown when items > threshold)
+ * - Search field (shown whenever there are items)
  * - Refresh button
  * - Item count display
  * - Selection handling
@@ -93,7 +93,6 @@ export function SearchableList<T extends SearchableListItem>({
     isRefreshing = false,
     onRefresh,
     hasLoadedOnce,
-    searchThreshold = 5,
     ariaLabel,
     renderItem,
     itemNoun = 'item',
@@ -101,6 +100,7 @@ export function SearchableList<T extends SearchableListItem>({
     searchPlaceholder = 'Type to filter',
     refreshAriaLabel = 'Refresh list',
     action,
+    hideCount,
 }: SearchableListProps<T>) {
     // Use provided plural or default to simple +s
     const nounPlural = itemNounPlural || `${itemNoun}s`;
@@ -141,7 +141,6 @@ export function SearchableList<T extends SearchableListItem>({
                 searchQuery={searchQuery}
                 onSearchQueryChange={onSearchQueryChange}
                 searchPlaceholder={searchPlaceholder}
-                searchThreshold={searchThreshold}
                 totalCount={items.length}
                 filteredCount={filteredItems.length}
                 itemNoun={itemNoun}
@@ -152,6 +151,7 @@ export function SearchableList<T extends SearchableListItem>({
                 hasLoadedOnce={hasLoadedOnce}
                 alwaysShowCount={true}
                 action={action}
+                hideCount={hideCount}
             />
 
             {/* List Container (with refresh opacity) */}

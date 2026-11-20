@@ -434,7 +434,7 @@ describe('agent-operation visibility (the notifier seam)', () => {
     it('callRequestsConsent: the OPERATION decides, not the agent assertion', () => {
         // Both halves required. `confirm` is the agent's own gate; membership is
         // ours. Keying on `confirm` alone aimed the dialog at open_url (opens a
-        // browser tab) while remove_integration and reset_datapack raised
+        // browser tab) while remove_integration and uninstall_datapack raised
         // nothing.
         expect(callRequestsConsent('delete_project', { confirm: true })).toBe(true);
         expect(callRequestsConsent('delete_project', { confirm: true, path: '/x' })).toBe(true);

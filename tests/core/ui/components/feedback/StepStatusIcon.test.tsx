@@ -13,15 +13,15 @@ function markup(node: React.ReactNode): string {
 
 describe('StepStatusIcon', () => {
     it('marks success with the green tick', () => {
-        expect(markup(<StepStatusIcon status="success" />)).toContain('class="text-green-600"');
+        expect(markup(<StepStatusIcon status="success" />)).toContain('class="text-positive"');
     });
 
     it('marks error with the red cross', () => {
-        expect(markup(<StepStatusIcon status="error" />)).toContain('class="text-red-600"');
+        expect(markup(<StepStatusIcon status="error" />)).toContain('class="text-negative"');
     });
 
-    it('marks warning with the yellow alert', () => {
-        expect(markup(<StepStatusIcon status="warning" />)).toContain('class="text-yellow-600"');
+    it('marks warning with the orange alert', () => {
+        expect(markup(<StepStatusIcon status="warning" />)).toContain('class="text-notice"');
     });
 
     it('shows a spinner, not an icon, while a check is running', () => {

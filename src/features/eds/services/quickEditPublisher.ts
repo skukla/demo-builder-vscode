@@ -26,7 +26,7 @@
  * @module features/eds/services/quickEditPublisher
  */
 
-import { GitHubFileOperations } from './github/githubFileOperations';
+import type { RepoFileAccess } from './github/githubFileOperations';
 import {
     QUICK_EDIT_BRANCH_MARKER,
     QUICK_EDIT_FIRSTIMAGE_MARKER,
@@ -86,7 +86,7 @@ export interface QuickEditInstallResult {
  * flips the result to failure on its own.
  */
 export async function installQuickEdit(
-    githubFileOps: GitHubFileOperations,
+    githubFileOps: RepoFileAccess,
     repoOwner: string,
     repoName: string,
     logger: Logger,
@@ -107,7 +107,7 @@ export async function installQuickEdit(
  * result for the whole step.
  */
 async function installQuickEditScripts(
-    githubFileOps: GitHubFileOperations,
+    githubFileOps: RepoFileAccess,
     repoOwner: string,
     repoName: string,
     logger: Logger,
@@ -163,7 +163,7 @@ async function installQuickEditScripts(
  * the storefront).
  */
 async function installQuickEditModule(
-    githubFileOps: GitHubFileOperations,
+    githubFileOps: RepoFileAccess,
     repoOwner: string,
     repoName: string,
     logger: Logger,

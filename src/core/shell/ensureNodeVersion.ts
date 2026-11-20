@@ -91,7 +91,7 @@ export async function ensureFnmNodeVersion(
         // The SC reads the sentence; fnm's own words go to the log (ADR-023). A manual
         // `fnm install` would land in the SC's own fnm, which Demo Builder does not read.
         logger.debug(`[EnsureNode] fnm install ${major} failed: ${detail}`);
-        return `Could not install Node ${major}. See Debug Logs for details.`;
+        return `Could not install Node ${major}.`;
     }
 
     logger.debug(`[EnsureNode] Node ${major} available in Demo Builder's Node folder`);
@@ -149,7 +149,7 @@ export async function ensureNodeWithAdobeCli(
         });
         if (result.code !== 0) {
             logger.debug(`[EnsureNode] "${command}" failed under Node ${major}: ${failureDetail(result)}`);
-            return `Could not install the Adobe CLI for Node ${major}. See Debug Logs for details.`;
+            return `Could not install the Adobe CLI for Node ${major}.`;
         }
     }
     return undefined;

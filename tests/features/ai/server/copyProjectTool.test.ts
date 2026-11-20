@@ -42,7 +42,8 @@ const SOURCE: Project = createMockProject({
             [CATALOG_API_KEY]: 'fake-test-pw-not-a-secret',
         },
     },
-    datapack: { name: 'citisignal', version: '1.2.0' },
+    // A demo's own pack in the library: the copy starts from it, store and origin included.
+    datapack: { name: 'acme-demo-1a2b3c', version: '20261029-183000', store: 'library' as const, origin: { name: 'citisignal', version: '1.2.0', store: 'installer' as const } },
     componentInstances: {
         'eds-storefront': {
             ...edsStorefrontInstance(),
@@ -94,9 +95,7 @@ describe('copy_project — checked before anything is created', () => {
     it('loads the source without saving it back', async () => {
         await toolServer().call({ sourceProject: 'bodea-demo', projectName: 'bodea-copy', ...RECEIVER });
 
-        expect(loadProjectFromPath).toHaveBeenCalledWith('/projects/bodea-demo', undefined, {
-            persistAfterLoad: false,
-        });
+        expect(loadProjectFromPath).toHaveBeenCalledWith('/projects/bodea-demo');
     });
 
     it('requires confirm:true, and says what the copy would create before it does', async () => {
@@ -151,7 +150,11 @@ describe('copy_project — the copy reaches creation whole, minus what never tra
 
         expect(res).toMatchObject({ created: true, name: 'bodea-copy' });
         expect(buildProjectConfig).toHaveBeenCalledTimes(1);
-        expect(executeProjectCreation).toHaveBeenCalledWith(expect.anything(), { projectName: 'assembled' });
+        expect(executeProjectCreation).toHaveBeenCalledWith(
+            expect.anything(),
+            { projectName: 'assembled' },
+            expect.any(AbortSignal),
+        );
     });
 
     it('hands creation the package, stack, libraries, datapack and settings — never a credential', async () => {
@@ -163,8 +166,9 @@ describe('copy_project — the copy reaches creation whole, minus what never tra
             selectedPackage: 'citisignal',
             selectedStack: 'eds-accs',
             selectedBlockLibraries: ['isle5'],
-            datapack: { name: 'citisignal', version: '1.2.0' },
+            datapack: { name: 'acme-demo-1a2b3c', version: '20261029-183000', store: 'library' as const, origin: { name: 'citisignal', version: '1.2.0', store: 'installer' as const } },
         });
+        expect(state).not.toHaveProperty('ownDatapack');
         expect(state.componentConfigs).toEqual({
             'adobe-commerce-accs': { ACCS_GRAPHQL_ENDPOINT: 'https://accs.example/graphql' },
         });
@@ -198,9 +202,7 @@ describe('copy_project — the copy reaches creation whole, minus what never tra
                 },
             ],
         });
-        expect(res.stillNeeded.credentials).toEqual([
-            { component: 'adobe-commerce-accs', key: 'ACCS_OAUTH_CLIENT_SECRET' },
-        ]);
+        expect(res.stillNeeded.credentials).toStrictEqual([]);
         expect(res).not.toHaveProperty('fromFile');
     });
 });

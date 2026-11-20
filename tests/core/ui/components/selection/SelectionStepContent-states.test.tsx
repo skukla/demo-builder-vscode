@@ -36,6 +36,20 @@ describe('SelectionStepContent — which state it shows', () => {
             expect(screen.queryByText('Selectable Org')).not.toBeInTheDocument();
         });
 
+        // Walk F202 (owner, 2026-11-17): "Adobe can be slow to respond" showed over a GitHub
+        // repository list. The line is the caller's to give, for an Adobe list.
+        it('says nothing of Adobe unless the caller gives that line', () => {
+            renderContent({ showLoading: true });
+
+            expect(screen.queryByText(/Adobe can be slow/u)).not.toBeInTheDocument();
+        });
+
+        it("CONTROL: shows the caller's line while it loads", () => {
+            renderContent({ showLoading: true, labels: { ...baseLabels, loadingHelper: 'Adobe can be slow to respond' } });
+
+            expect(screen.getByText('Adobe can be slow to respond')).toBeInTheDocument();
+        });
+
         it('shows loading on a FIRST load even when showLoading is false', () => {
             // `isLoading && !hasLoadedOnce` — the first fetch has nothing behind it,
             // so the spinner is the whole screen.
@@ -63,11 +77,11 @@ describe('SelectionStepContent — which state it shows', () => {
             expect(screen.queryByText('Selectable Org')).not.toBeInTheDocument();
         });
 
-        it('offers Try Again, and retrying calls onLoad', async () => {
+        it('offers Retry, and retrying calls onLoad', async () => {
             const onLoad = jest.fn();
             renderContent({ error: 'Adobe said no', onLoad });
 
-            await user().click(screen.getByRole('button', { name: /try again/i }));
+            await user().click(screen.getByRole('button', { name: /retry/i }));
 
             expect(onLoad).toHaveBeenCalledTimes(1);
         });
@@ -96,16 +110,16 @@ describe('SelectionStepContent — which state it shows', () => {
             await user().click(screen.getByRole('button', { name: /switch ims org/i }));
 
             expect(onSwitchOrg).toHaveBeenCalledTimes(1);
-            expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
         });
 
-        it('falls back to Try Again alone when the host cannot switch orgs', () => {
+        it('falls back to Retry alone when the host cannot switch orgs', () => {
             renderContent({ error: 'Wrong org', errorCode: ErrorCode.ORG_MISMATCH });
 
             expect(
                 screen.queryByRole('button', { name: /switch ims org/i })
             ).not.toBeInTheDocument();
-            expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
         });
 
         it('a NON-mismatch error never offers the org switch, even when it could', () => {

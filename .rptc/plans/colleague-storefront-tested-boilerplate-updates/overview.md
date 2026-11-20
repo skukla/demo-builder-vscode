@@ -10,7 +10,7 @@ has something new:
 
 | Row | Source | Today |
 |---|---|---|
-| "Changes from kmanns/justrite" | the colleague's repository, its branch head | exists, worded "EDS template" |
+| "Changes from org-e/tailspin" | the colleague's repository, its branch head | exists, worded "EDS template" |
 | "Adobe boilerplate, tested version" | Adobe's B2B template at the patches repo's last-known-good (LKG) | new |
 
 The second row applies Adobe's change between the storefront's recorded Adobe base and the
@@ -54,7 +54,7 @@ resets.
 | D2 | This extends the 2026-10-04 ruling ("fork sync only for forks, never reset a generated repository onto the current boilerplate"). That ruling assumed a generated repository could only be modernised by a reset (`step-05-version-gap.md:29-31`); the 3-way apply (`5d805a57a`, 2026-09-15) is a fourth option the owner was not shown. It is not a reset, so the ruling's letter holds | owner, 2026-10-20 | confirmed |
 | D3 | The Adobe base lives in its own storefront metadata field (`boilerplateBase: { template, commit, lkgFile }`), never in `lastSyncedCommit` or `lkgSource` | plan | proposed |
 | D4 | Keeping the base honest when the colleague updates their own boilerplate: A (re-read the colleague's description file) where it records a base, else B (let the 3-way apply absorb the replay). Where the file lives was checked (step 05) | owner, 2026-10-20 | approved |
-| D5 | Storefronts with no recorded base (JustRite) | owner, 2026-10-20: "figure out the JustRite thing first" | built: the base is found by matching the colleague's first commit to the template's history (see As built) |
+| D5 | Storefronts with no recorded base (Tailspin) | owner, 2026-10-20: "figure out the Tailspin thing first" | built: the base is found by matching the colleague's first commit to the template's history (see As built) |
 | D6 | The opt-in fixes are not re-applied by this update; the storefront report keeps offering them | plan | proposed |
 
 ## Steps
@@ -94,15 +94,15 @@ makes), so an SC's own fork, including a pre-2026-09-14 copy, keeps it.
 
 ## As built (2026-10-20, branch `feature/eds-56-colleague-boilerplate`)
 
-- **JustRite qualifies.** GitHub says kmanns/justrite was made from
+- **Tailspin qualifies.** GitHub says org-e/tailspin was made from
   adobe-commerce/boilerplate-b2b-template on 2026-09-23. Its first commit has every file of
   template commit 71a67e0 (2026-08-11), all 3,342, except `.github`: the template's
   `cleanup-on-create` workflow deletes Adobe's CI when a repository is made. So the lookup
   compares the top-level entries with `.github` left out, walking back from the day the
-  repository was made (the 39th commit for JustRite). Verified live with the real code. Our
+  repository was made (the 39th commit for Tailspin). Verified live with the real code. Our
   tested version 48bed04 is 73 commits ahead, 300 files.
 - **`.github` is left out of every template change**, not only this track. Adobe's change
-  71a67e0..48bed04 edits 14 workflow files; generated repositories (JustRite's, and our own
+  71a67e0..48bed04 edits 14 workflow files; generated repositories (Tailspin's, and our own
   skukla/my-commerce-demo and skukla/patch-canary-b2b) have none of them, so each would stop
   the update. This was a defect in the existing template update too.
 - **Departures from the steps:**

@@ -35,22 +35,22 @@ function renderDialog(target: PairedSystemNameTarget | null = TARGET) {
     return { onSave, onClose };
 }
 
-const field = () => screen.getByLabelText(/^ERP name/);
+const field = () => screen.getByLabelText(/^ERP Name/);
 const save = () => screen.getByRole('button', { name: /^save$/i });
 
 describe('PairedSystemNameDialog', () => {
     it('opens on the ERP\'s current name, under the integration\'s title', () => {
         renderDialog();
-        expect(screen.getByText('ERP Integration settings')).toBeInTheDocument();
+        expect(screen.getByText('ERP Integration Settings')).toBeInTheDocument();
         expect(field()).toHaveValue('Acme ERP');
         expect(screen.getByText(NAME_IS_FIXED)).toBeInTheDocument();
     });
 
     it('saves the typed name by the add\'s rule, then closes', () => {
         const { onSave, onClose } = renderDialog();
-        fireEvent.change(field(), { target: { value: 'Justrite' } });
+        fireEvent.change(field(), { target: { value: 'Tailspin' } });
         fireEvent.click(save());
-        expect(onSave).toHaveBeenCalledWith('erp-integration', 'Justrite ERP');
+        expect(onSave).toHaveBeenCalledWith('erp-integration', 'Tailspin ERP');
         expect(onClose).toHaveBeenCalled();
     });
 
@@ -71,6 +71,6 @@ describe('PairedSystemNameDialog', () => {
 
     it('renders nothing while closed', () => {
         renderDialog(null);
-        expect(screen.queryByLabelText(/^ERP name/)).not.toBeInTheDocument();
+        expect(screen.queryByLabelText(/^ERP Name/)).not.toBeInTheDocument();
     });
 });

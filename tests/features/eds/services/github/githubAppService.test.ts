@@ -120,7 +120,7 @@ describe('GitHub App Service', () => {
             const result = await service.isAppInstalled('test-owner', 'test-repo');
 
             // Then: NOT installed and NOT a definitive "no" — undetermined (EDS-23).
-            // Measured 2026-09-30/10-01 on skukla/kukla-justrite: an inner 400 both
+            // Measured 2026-09-30/10-01 on skukla/kukla-tailspin: an inner 400 both
             // before the App covered the repo and after it did, so it proves neither.
             expect(result).toEqual({ isInstalled: false, codeStatus: 400, transient: true });
         });

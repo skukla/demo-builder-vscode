@@ -97,6 +97,30 @@ describe('InlineRenameField', () => {
         });
     });
 
+    // A project card: its menu's Rename asks, and no pencil sits beside the name (owner, 2026-11-05).
+    describe('when the host offers Rename itself', () => {
+        const field = (editRequest: number) => (
+            <Provider theme={defaultTheme} colorScheme="light">
+                <InlineRenameField name="My Project" onRename={jest.fn()} noPencil editRequest={editRequest} />
+            </Provider>
+        );
+
+        it('shows no pencil', () => {
+            render(field(0));
+            expect(screen.queryByRole('button', { name: 'Rename My Project' })).not.toBeInTheDocument();
+        });
+
+        it('starts editing on each request, not before', () => {
+            const { rerender } = render(field(0));
+            expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+
+            rerender(field(1));
+
+            expect(screen.getByRole('textbox')).toHaveFocus();
+            expect((screen.getByRole('textbox') as HTMLInputElement).value).toBe('My Project');
+        });
+    });
+
     // The pencil's own label follows `name`, so a stale closure inside
     // `startEditing` shows up only in what the input is PREFILLED with.
     it('prefills the name the parent currently shows, not the one it mounted with', () => {
@@ -412,5 +436,59 @@ describe('InlineRenameField', () => {
             expect(outerClick).not.toHaveBeenCalled();
             expect(outerKeyDown).not.toHaveBeenCalled();
         });
+    });
+});
+
+// Walk F224 (owner, 2026-11-18): Enter on a rename showed no sign the save was under way. A small
+// spinner sits where the pencil does while it saves, the house wait for a small control.
+describe('InlineRenameField while it saves', () => {
+    it('shows a small spinner beside the name until the save answers', async () => {
+        let resolveRename!: (value: string | null) => void;
+        const onRename = jest.fn(
+            () =>
+                new Promise<string | null>((res) => {
+                    resolveRename = res;
+                })
+        );
+        renderField({ onRename });
+        const input = enterEditMode();
+        fireEvent.change(input, { target: { value: 'Pending Name' } });
+        fireEvent.keyDown(input, { key: 'Enter' });
+
+        expect(await screen.findByRole('progressbar')).toBeInTheDocument();
+        resolveRename(null);
+        await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument());
+    });
+
+    it('CONTROL: shows no spinner while editing, before Enter', () => {
+        renderField();
+        enterEditMode();
+
+        expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+    });
+});
+
+// Walk F225 (owner, 2026-11-18): after the spinner the old name showed for about a second, until the
+// parent's re-read handed the new one. The name just saved shows at once.
+describe('InlineRenameField after a save', () => {
+    it('shows the saved name at once, before the parent hands it back', async () => {
+        renderField({ onRename: jest.fn().mockResolvedValue(null) });
+        const input = enterEditMode();
+        fireEvent.change(input, { target: { value: 'Saved Name' } });
+        fireEvent.keyDown(input, { key: 'Enter' });
+
+        await waitFor(() => expect(screen.queryByRole('textbox')).not.toBeInTheDocument());
+        expect(screen.getByText('Saved Name')).toBeInTheDocument();
+        expect(screen.queryByText('My Project')).not.toBeInTheDocument();
+    });
+
+    it('CONTROL: a refused save keeps the field open on the typed name', async () => {
+        renderField({ onRename: jest.fn().mockResolvedValue('That name is taken') });
+        const input = enterEditMode();
+        fireEvent.change(input, { target: { value: 'Taken' } });
+        fireEvent.keyDown(input, { key: 'Enter' });
+
+        expect(await screen.findByRole('alert')).toHaveTextContent('That name is taken');
+        expect(screen.getByRole('textbox')).toHaveValue('Taken');
     });
 });

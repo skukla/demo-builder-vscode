@@ -8,8 +8,8 @@ settled say so at the top.
 
 ## Goal, in the SC's words
 
-"Build my project on the demo Jen made" works the way "build it on CitiSignal" works: pick a
-card, carry on. And "let Jen build on mine" is one action. Underneath, the project's own
+"Build my project on the demo Robin made" works the way "build it on CitiSignal" works: pick a
+card, carry on. And "let Robin build on mine" is one action. Underneath, the project's own
 export, import and copy carry the whole project, on one versioned file.
 
 ## Context and constraints (from research)
@@ -51,10 +51,10 @@ export, import and copy carry the whole project, on one versioned file.
 | D13 | ONE contract: the versioned project file; the storefront description is the slice that travels with a repo | program 01 |
 | D14 | Copy and Edit both stay, fed by that one complete file | PL-56 children |
 | D15 | Agent surface ships with each human surface | shareable-demo 07, 09; PL-56f |
-| D16 | ~~Fork on add, ticked by default: the SC's fork is the demo's source; updates are "Pull Jen's changes"; Forget offers to delete the fork~~ **Reversed 2026-09-14 (D33):** no copy; an added demo reads from its link, as a shipped package does | shareable-demo 04–07, 11 |
+| D16 | ~~Fork on add, ticked by default: the SC's fork is the demo's source; updates are "Pull Robin's changes"; Forget offers to delete the fork~~ **Reversed 2026-09-14 (D33):** no copy; an added demo reads from its link, as a shipped package does | shareable-demo 04–07, 11 |
 | D17 | Source gone (unforked): dashboard notice, reset refuses up front, rename self-heal, "Change source" repoints via the Add dialog; content gone: reset offers to keep current content | shareable-demo 06 |
 | D20 | A demo's blocks always arrive complete: they are code in the generated repo, the palette is generated from that code, and the example pages are copied from the demo's content site as library doc pages regardless of the page copy | shareable-demo 05 |
-| D21 | The Storefront area names the demo: a first summary row "Demo — Isle5 by Jen · Edge Delivery" and the existing-repo tick reads "Reset to Isle5 by Jen (replaces all content)"; same for shipped brands | shareable-demo 05 |
+| D21 | The Storefront area names the demo: a first summary row "Demo — Isle5 by Robin · Edge Delivery" and the existing-repo tick reads "Reset to Isle5 by Robin (replaces all content)"; same for shipped brands | shareable-demo 05 |
 | D22 | A shared demo's blocks belong to that demo only: Add never registers them as a block library for other demos; the palette and example pages come with the demo itself | shareable-demo 05 |
 | D23 | Dry-check caveats are worded by consequence in the SC's words (three lines for five patches, ids only in the debug log), shown in the completion card at create and again at reset; nothing persists on the dashboard | shareable-demo 05, 06 |
 | D24 | The project file never carries a credential (no include flag, no stamp); it shares the demo's SHAPE. Import names what the receiver must supply and the existing Commerce step collects it; same-machine Copy moves credentials keychain to keychain; follow-on: offer reuse of a login already saved for the same backend | PL-56a, 56c, 56d |

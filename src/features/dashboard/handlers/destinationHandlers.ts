@@ -24,8 +24,9 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import { DESTINATION_OPERATION_ID } from '@/core/utils/operationIds';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { narrateOutcomeToModal, progressSurfaceOf } from '@/core/vscode/operationProgress';
+import { askDuringOperation, modalIsAsking } from '@/core/vscode/operationPrompt';
 import { withOperationProgress, type ReportStage } from '@/core/vscode/withOperationProgress';
-import { moveAppBuilderComponentsToDestination } from '@/features/app-builder/services/appBuilderComponentMigration';
+import { moveAppBuilderComponentsToDestination } from '@/features/app-builder/services/appBuilderComponentRelocation';
 import { ownWorkspaceGroups } from '@/features/app-builder/services/componentRelocation';
 import {
     sendAppBuilderComponentStatusUpdate,
@@ -88,7 +89,7 @@ export const handleSetProjectDestination: MessageHandler<SetProjectDestinationPa
                 };
             }
 
-            const target = `${nextProject.title ?? nextProject.name} \u00b7 ${nextWorkspace.title ?? nextWorkspace.name}`;
+            const target = `${nextProject.title ?? nextProject.name}, ${nextWorkspace.title ?? nextWorkspace.name}`;
             return withOperationProgress(
                 {
                     // No card options: the destination is PROJECT-scoped, so no single card
@@ -96,7 +97,7 @@ export const handleSetProjectDestination: MessageHandler<SetProjectDestinationPa
                     // callback handed to the migration below — this slot has no card to fill,
                     // which is NOT the same as the move having nothing to say.
                     id: payload?.id ?? DESTINATION_OPERATION_ID,
-                    title: `Changing destination to ${target}`,
+                    title: `Changing Destination to ${target}`,
                     inModal: progressSurfaceOf(payload) === 'modal',
                 },
                 async (report) =>
@@ -294,6 +295,11 @@ export async function applyDestination(
  * the integration there — uninstalled from Commerce, its workspace deleted — before
  * adding it again (componentRelocation).
  *
+ * Where it asks (owner, 2026-10-31, the multi-dialog audit): in the progress window when one is
+ * narrating the move (the Integrations screen's change of destination), so the question is not a
+ * VS Code dialog beside the window already on screen; otherwise a VS Code modal, as an Edit asks
+ * it before anything runs.
+ *
  * @returns true to go ahead
  */
 export async function confirmLeavingAdobeProject(
@@ -309,16 +315,14 @@ export async function confirmLeavingAdobeProject(
     const to = nextProject.title ?? nextProject.name ?? nextProject.id;
     const names = groups.map((group) => group.workspace.title ?? group.workspace.name).join(', ');
     const theirs = groups.length > 1 ? 'their workspaces' : 'its workspace';
-    const choice = await vscode.window.showWarningMessage(
-        `Move this project to ${to}?`,
-        {
-            modal: true,
-            detail:
-                `${names} will be removed from ${from} — uninstalled from Commerce and ` +
-                `${theirs} deleted — then added again in ${to}.`,
-        },
-        'Move',
-    );
+    const title = `Move this project to ${to}?`;
+    const detail =
+        `${names} will be removed from ${from} — uninstalled from Commerce and ` +
+        `${theirs} deleted — then added again in ${to}.`;
+    if (modalIsAsking()) {
+        return (await askDuringOperation({ title, message: detail }, 'Move', 'Cancel')) === 'Move';
+    }
+    const choice = await vscode.window.showWarningMessage(title, { modal: true, detail }, 'Move');
     return choice === 'Move';
 }
 

@@ -117,6 +117,30 @@ export async function copyPathsInBatches(
 }
 
 /**
+ * Split a run's failures into the ones that count and the listed pages the source
+ * answered 404 for (walk F287). A content index or the storefront's code can name a
+ * page the source's published site does not have: a sender's `/sitemap.json`
+ * carried over from its template listed 60 French pages the sender never published.
+ * Nothing can be copied from a page that is not there and nothing is lost, so those
+ * are skipped and said once in the log.
+ *
+ * @returns the real failures: a page the source has that could not be read or written
+ */
+export function skipMissingOnSource(
+    logger: Logger,
+    failedFiles: { path: string; error: string }[],
+    missingOnSource: ReadonlySet<string>,
+): { path: string; error: string }[] {
+    const skipped = failedFiles.filter((f) => missingOnSource.has(f.path)).map((f) => f.path);
+    if (skipped.length > 0) {
+        logger.info(
+            `[DA.live] Skipped ${skipped.length} listed pages the source does not have: ${skipped.join(', ')}`,
+        );
+    }
+    return failedFiles.filter((f) => !missingOnSource.has(f.path));
+}
+
+/**
  * Follow internal references discovered while copying and pull them from
  * canonical. Transitive (depth-capped) and deduped against everything already
  * enumerated/copied. Best-effort: a referenced doc that 404s is skipped, not

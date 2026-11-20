@@ -20,6 +20,7 @@ import * as vscode from 'vscode';
 import { keepClash } from '@/features/updates/services/pendingClash';
 import { applyUpdatesHeadless, type UpdateQuestions } from '@/features/updates/services/updateApplyService';
 import type { ClashAnswer } from '@/features/updates/services/updateClash';
+import type { TemplateSyncResult } from '@/features/updates/services/templateSyncTypes';
 import type { Project } from '@/types/base';
 
 // Keeping a clash runs real git in the local copy; that is pendingClash.test's.
@@ -32,15 +33,16 @@ function setSyncBehavior(value: 'ask' | 'enabled' | 'disabled'): void {
     getConfigMock.mockReturnValue({ get: jest.fn((_k: string, def: unknown) => value ?? def) });
 }
 
-function questions(answers: { clash?: ClashAnswer; replace?: boolean } = {}): jest.Mocked<UpdateQuestions> {
+function questions(answers: { clash?: ClashAnswer; replace?: boolean; aiAsksFirst?: boolean } = {}): jest.Mocked<UpdateQuestions> {
     return {
         onClash: jest.fn().mockResolvedValue(answers.clash ?? 'leave'),
         onUnfinished: jest.fn().mockResolvedValue('later'),
         replaceLibraryBlocks: jest.fn().mockResolvedValue(answers.replace ?? false),
+        aiAsksFirst: jest.fn(() => answers.aiAsksFirst ?? true),
     };
 }
 
-const CONFLICTED = {
+const CONFLICTED: TemplateSyncResult = {
     success: false,
     strategy: 'merge',
     syncedCommit: '',
@@ -51,7 +53,10 @@ const CONFLICTED = {
         target: 'b'.repeat(40),
         preserveFiles: ['fstab.yaml', 'config.json'],
     },
-    error: 'Merge conflicts in 1 file (blocks/hero/hero.js); the update was not applied.',
+    edits: [{ file: 'blocks/hero/hero.js', whose: 'storefront' }],
+    error:
+        'The update stopped on 1 file that was edited (blocks/hero/hero.js, an edit made in this storefront). '
+        + 'Nothing was changed: the storefront on GitHub is as it was.',
 };
 
 /** A storefront built on the tested boilerplate: it records an LKG source (ADR-006). */
@@ -103,7 +108,9 @@ describe('a template update that clashes with edits in the storefront', () => {
         expect(mockSyncWithTemplate).toHaveBeenCalledTimes(1);
         expect(mockKeepClash).not.toHaveBeenCalled();
         expect(res.template.failCount).toBe(1);
-        expect(res.template.clashes).toEqual([{ project: 'demo', projectName: 'demo', track: 'template', files: ['blocks/hero/hero.js'] }]);
+        expect(res.template.clashes).toEqual([
+            { project: 'demo', projectName: 'demo', track: 'template', files: ['blocks/hero/hero.js'], edits: [{ file: 'blocks/hero/hero.js', whose: 'storefront' }] },
+        ]);
     });
 
     it('keeps the clash in the local copy on Fix with AI, saves the record and says where it is', async () => {
@@ -122,10 +129,18 @@ describe('a template update that clashes with edits in the storefront', () => {
         expect(ctx.stateManager.saveProject).toHaveBeenCalledWith(project);
         expect(mockSyncWithTemplate).toHaveBeenCalledTimes(1);
         expect(res.template.clashes).toEqual([
-            { project: 'demo', projectName: 'demo', track: 'template', files: ['blocks/hero/hero.js'], keptIn: '/p/demo/components/eds-storefront' },
+            {
+                project: 'demo',
+                projectName: 'demo',
+                track: 'template',
+                files: ['blocks/hero/hero.js'],
+                edits: [{ file: 'blocks/hero/hero.js', whose: 'storefront' }],
+                keptIn: '/p/demo/components/eds-storefront',
+            },
         ]);
         expect(res.template.errors).toEqual([
-            "demo: 1 file clashes with edits in the storefront (blocks/hero/hero.js). It is kept in the project's local copy to fix with AI; nothing was pushed.",
+            'demo: 1 file clashes with edits in the storefront (blocks/hero/hero.js, an edit made in this storefront). '
+                + "It is kept in the project's local copy to fix with AI; nothing was pushed.",
         ]);
     });
 
@@ -204,29 +219,58 @@ describe("Adobe's boilerplate update that clashes", () => {
 
         expect(onItem).toHaveBeenLastCalledWith('boilerplate', item, {
             state: 'skipped',
-            message: 'Not updated. The earlier edits were left as they are.',
+            message: 'Not updated. It clashes with an edit made in this storefront, which was left as it is. Nothing was changed.',
         });
         expect(res.boilerplate.failCount).toBe(1);
+    });
+
+    it("says on Leave when the edit came with the colleague's demo, naming no file", async () => {
+        mockSyncBoilerplate.mockResolvedValue({
+            ...CONFLICTED,
+            edits: [{ file: 'blocks/hero/hero.js', whose: 'copied-demo', from: 'org-e/tailspin' }],
+        });
+        const onItem = jest.fn();
+        const item = { project: edsProject(), base: BASE, tested: 'b'.repeat(40) };
+
+        await applyUpdatesHeadless({ ...emptySelections(), boilerplate: [item] }, makeCtx(), undefined, {
+            questions: questions({ clash: 'leave' }),
+            onItem,
+        });
+
+        expect(onItem.mock.calls.at(-1)?.[2]).toEqual({
+            state: 'skipped',
+            message: 'Not updated. It clashes with an edit that came with org-e/tailspin, which was left as it is. Nothing was changed.',
+        });
     });
 });
 
 describe("a template update's row, when its clash was answered", () => {
-    const tell = async (answer: ClashAnswer) => {
+    const tell = async (answer: ClashAnswer, aiAsksFirst = true) => {
         mockSyncWithTemplate.mockResolvedValue(CONFLICTED);
         const onItem = jest.fn();
         await applyUpdatesHeadless({ ...emptySelections(), template: [{ project: edsProject() }] }, makeCtx(), undefined, {
-            questions: questions({ clash: answer }),
+            questions: questions({ clash: answer, aiAsksFirst }),
             onItem,
         });
         return onItem.mock.calls.at(-1)?.[2];
     };
 
-    it('is left alone, saying where the clash is, when it was kept to fix with AI', async () => {
+    it('is left alone, saying the AI asks before it goes live, when it was kept to fix with AI and approvals are on', async () => {
         mockKeepClash.mockResolvedValue({ kind: 'kept', storefrontPath: '/p/demo/components/eds-storefront', files: ['blocks/hero/hero.js'] });
 
         expect(await tell('fix')).toEqual({
             state: 'skipped',
-            message: 'Not updated yet. Your AI is working on it, and nothing goes live until you approve it.',
+            message: 'Not updated yet. Your AI is working on it, and your AI asks you before anything goes live.',
+        });
+    });
+
+    // Owner, 2026-10-30: "nothing goes live until you approve it" was false with approvals off.
+    it('says it goes live as soon as the AI finishes when approvals are off', async () => {
+        mockKeepClash.mockResolvedValue({ kind: 'kept', storefrontPath: '/p/demo/components/eds-storefront', files: ['blocks/hero/hero.js'] });
+
+        expect(await tell('fix', false)).toEqual({
+            state: 'skipped',
+            message: 'Not updated yet. Your AI is working on it, and it goes live as soon as your AI finishes.',
         });
     });
 

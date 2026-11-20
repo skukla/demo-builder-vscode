@@ -21,15 +21,16 @@
  */
 
 import {
-    happyClient,
+    happyEngine,
     importHandlers,
     makeImportHarness,
-    stubWriteClient,
+    stubEngine,
     mockedWatch,
     PAYLOAD,
     resetImportHandlerMocks,
     setupSettings,
 } from './importHandlers.testUtils';
+import { JOB_KEY } from '@/features/data-installer/handlers/importJobWatch';
 
 describe('start-datapack-import', () => {
     beforeEach(() => {
@@ -37,7 +38,7 @@ describe('start-datapack-import', () => {
     });
 
     it('records itself as an import', async () => {
-        happyClient();
+        happyEngine();
         const { context, stores } = makeImportHarness();
 
         await importHandlers['start-datapack-import'](context, PAYLOAD);
@@ -49,7 +50,7 @@ describe('start-datapack-import', () => {
     });
 
     it('validates BEFORE starting', async () => {
-        const { validateImport, startImport } = happyClient();
+        const { validateImport, startImport } = happyEngine();
         const { context } = makeImportHarness();
 
         await importHandlers['start-datapack-import'](context, PAYLOAD);
@@ -66,7 +67,7 @@ describe('start-datapack-import', () => {
             .fn()
             .mockResolvedValue({ valid: false, reason: 'Invalid input. Must provide one of: …' });
         const startImport = jest.fn();
-        stubWriteClient({ validateImport, startImport });
+        stubEngine({ validateImport, startImport });
         const { context } = makeImportHarness();
 
         const result = await importHandlers['start-datapack-import'](context, PAYLOAD);
@@ -77,7 +78,7 @@ describe('start-datapack-import', () => {
     });
 
     it('returns the activation id once accepted', async () => {
-        happyClient();
+        happyEngine();
         const { context } = makeImportHarness();
 
         const result = await importHandlers['start-datapack-import'](context, PAYLOAD);
@@ -87,7 +88,7 @@ describe('start-datapack-import', () => {
     });
 
     it('passes the instance string through untouched', async () => {
-        const { startImport } = happyClient();
+        const { startImport } = happyEngine();
         const { context } = makeImportHarness();
 
         await importHandlers['start-datapack-import'](context, {
@@ -100,7 +101,7 @@ describe('start-datapack-import', () => {
 
     describe('credentials', () => {
         it('refuses before any network call when a PaaS project has no admin pair', async () => {
-            const { startImport, validateImport } = happyClient();
+            const { startImport, validateImport } = happyEngine();
             const { context } = makeImportHarness({
                 name: 'demo-a',
                 stack: { backend: 'adobe-commerce-paas' },
@@ -115,7 +116,7 @@ describe('start-datapack-import', () => {
         });
 
         it('asks for ACCS credentials when none are stored', async () => {
-            happyClient();
+            happyEngine();
             const { context } = makeImportHarness({
                 name: 'demo-a',
                 stack: { backend: 'adobe-commerce-accs' },
@@ -131,7 +132,7 @@ describe('start-datapack-import', () => {
 
     describe('input', () => {
         it('requires both halves of the datapack identity', async () => {
-            happyClient();
+            happyEngine();
             const { context } = makeImportHarness();
 
             const result = await importHandlers['start-datapack-import'](context, {
@@ -143,7 +144,7 @@ describe('start-datapack-import', () => {
         });
 
         it('requires at least one data type', async () => {
-            const { validateImport } = happyClient();
+            const { validateImport } = happyEngine();
             const { context } = makeImportHarness();
 
             const result = await importHandlers['start-datapack-import'](context, {
@@ -163,7 +164,7 @@ describe('start-datapack-import', () => {
          * a 400 arriving minutes after a 202 is the worst place to learn it.
          */
         it('passes a complete target through to the request', async () => {
-            const { startImport } = happyClient();
+            const { startImport } = happyEngine();
             const { context } = makeImportHarness();
 
             await importHandlers['start-datapack-import'](context, {
@@ -180,7 +181,7 @@ describe('start-datapack-import', () => {
         });
 
         it('sends NO target when neither code was chosen — the service defaults to base', async () => {
-            const { startImport } = happyClient();
+            const { startImport } = happyEngine();
             const { context } = makeImportHarness();
 
             await importHandlers['start-datapack-import'](context, PAYLOAD);
@@ -191,7 +192,7 @@ describe('start-datapack-import', () => {
         });
 
         it('refuses a half pair rather than letting the service 400 after the 202', async () => {
-            const { startImport } = happyClient();
+            const { startImport } = happyEngine();
             const { context } = makeImportHarness();
 
             const result = await importHandlers['start-datapack-import'](context, {
@@ -205,7 +206,7 @@ describe('start-datapack-import', () => {
         });
 
         it('requires a commerce instance — it is the write target', async () => {
-            happyClient();
+            happyEngine();
             const { context } = makeImportHarness();
 
             const result = await importHandlers['start-datapack-import'](context, {
@@ -227,7 +228,7 @@ describe('validate-datapack-import', () => {
     // Credentials first: if the pair cannot reach the instance, whether the
     // request is well-formed is not the useful answer.
     it('checks credentials BEFORE the request shape', async () => {
-        const { validateImport, checkCredentials } = happyClient();
+        const { validateImport, checkCredentials } = happyEngine();
         const { context } = makeImportHarness();
 
         await importHandlers['validate-datapack-import'](context, PAYLOAD);
@@ -239,7 +240,7 @@ describe('validate-datapack-import', () => {
 
     it('stops at unusable credentials and says so', async () => {
         const validateImport = jest.fn();
-        stubWriteClient({
+        stubEngine({
             checkCredentials: jest
                 .fn()
                 .mockResolvedValue({ usable: false, reason: 'Authentication failed' }),
@@ -258,7 +259,7 @@ describe('validate-datapack-import', () => {
     });
 
     it('validates WITHOUT starting anything', async () => {
-        const { validateImport, startImport } = happyClient();
+        const { validateImport, startImport } = happyEngine();
         const { context } = makeImportHarness();
 
         const result = await importHandlers['validate-datapack-import'](context, PAYLOAD);
@@ -269,17 +270,19 @@ describe('validate-datapack-import', () => {
         expect(result.data).toEqual({ valid: true });
     });
 
+    // It records its own answer (step 03, S5, `importHandlers-dryRunFix.test.ts`), never a job.
     it('never records a job — nothing ran', async () => {
-        happyClient();
+        happyEngine();
         const { context, stores } = makeImportHarness();
 
         await importHandlers['validate-datapack-import'](context, PAYLOAD);
 
-        expect(stores.globalState.update).not.toHaveBeenCalled();
+        expect(stores.globalState.update).not.toHaveBeenCalledWith(JOB_KEY, expect.anything());
+        expect(stores.globalState.update).toHaveBeenCalledTimes(1);
     });
 
     it('never starts a watch', async () => {
-        happyClient();
+        happyEngine();
         const { context } = makeImportHarness();
 
         await importHandlers['validate-datapack-import'](context, PAYLOAD);
@@ -293,7 +296,7 @@ describe('validate-datapack-import', () => {
         const validateImport = jest
             .fn()
             .mockResolvedValue({ valid: false, reason: 'Invalid input. Must provide one of: …' });
-        stubWriteClient({
+        stubEngine({
             validateImport,
             startImport: jest.fn(),
             // Credentials pass, so the shape verdict is what comes back.
@@ -311,7 +314,7 @@ describe('validate-datapack-import', () => {
     });
 
     it('checks credentials before sending, like the start path', async () => {
-        const { validateImport } = happyClient();
+        const { validateImport } = happyEngine();
         const { context } = makeImportHarness({
             name: 'demo-a',
             stack: { backend: 'adobe-commerce-paas' },
@@ -333,8 +336,19 @@ describe('reset-datapack', () => {
         resetImportHandlerMocks();
     });
 
+    // Step 03, S2: the record says what the job is for, for the window and agents.
+    it('records the job as an uninstall', async () => {
+        happyEngine();
+        const { context } = makeImportHarness();
+
+        await importHandlers['reset-datapack'](context, CONFIRMED);
+
+        const status = await importHandlers['get-datapack-import-status'](context, {});
+        expect(status.data).toMatchObject({ operation: 'reset', purpose: 'uninstall' });
+    });
+
     it('removes the data rather than importing it', async () => {
-        const { startDelete, startImport } = happyClient();
+        const { startDelete, startImport } = happyEngine();
         const { context } = makeImportHarness();
 
         const result = await importHandlers['reset-datapack'](context, CONFIRMED);
@@ -347,7 +361,7 @@ describe('reset-datapack', () => {
     // A reset is destructive and irreversible, so it requires the same explicit
     // opt-in the MCP action tools use. Nothing removes data by default.
     it('refuses without an explicit confirm', async () => {
-        const { startDelete } = happyClient();
+        const { startDelete } = happyEngine();
         const { context } = makeImportHarness();
 
         const result = await importHandlers['reset-datapack'](context, {
@@ -360,7 +374,7 @@ describe('reset-datapack', () => {
     });
 
     it('validates before removing, as the import path does', async () => {
-        const { validateImport, startDelete } = happyClient();
+        const { validateImport, startDelete } = happyEngine();
         const { context } = makeImportHarness();
 
         await importHandlers['reset-datapack'](context, CONFIRMED);
@@ -373,7 +387,7 @@ describe('reset-datapack', () => {
     // The seam test: the runner watches a reset with no changes, because a reset
     // is an activation id like any other.
     it('watches the reset with the unchanged runner', async () => {
-        happyClient();
+        happyEngine();
         const { context } = makeImportHarness();
 
         await importHandlers['reset-datapack'](context, CONFIRMED);
@@ -389,7 +403,7 @@ describe('reset-datapack', () => {
     // The record must know WHICH operation it was: the modal showed "Import
     // finished" for a completed reset, live, because nothing carried this.
     it('records itself as a reset, not an import', async () => {
-        happyClient();
+        happyEngine();
         const { context, stores } = makeImportHarness();
 
         await importHandlers['reset-datapack'](context, CONFIRMED);
@@ -401,7 +415,7 @@ describe('reset-datapack', () => {
     });
 
     it('records the reset so the panel can be closed', async () => {
-        happyClient();
+        happyEngine();
         const { context, stores } = makeImportHarness();
 
         await importHandlers['reset-datapack'](context, CONFIRMED);
@@ -425,7 +439,7 @@ describe('get-datapack-import-status', () => {
     });
 
     it('returns the recorded job after a start', async () => {
-        happyClient();
+        happyEngine();
         const { context } = makeImportHarness();
         await importHandlers['start-datapack-import'](context, PAYLOAD);
 

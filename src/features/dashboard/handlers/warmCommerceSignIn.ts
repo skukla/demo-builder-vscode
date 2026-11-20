@@ -2,7 +2,7 @@
  * Sign in to Commerce in the background, so the first thing that reads the store does not wait.
  *
  * The REST client signs with the integration workspace's credential. With none kept from an
- * earlier session it reads that credential from Adobe Console, and on Justrite that took about
+ * earlier session it reads that credential from Adobe Console, and on Tailspin that took about
  * two minutes (2026-10-18): Add another ERP showed "Reading the store" for all of it. Once
  * signed, the token is held in memory and the credential is kept across reloads, so this costs
  * nothing the next time.

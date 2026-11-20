@@ -447,18 +447,15 @@ describe('IntegrationsSummaryTile — the dot explains itself', () => {
         expect(screen.getByRole('tooltip')).toHaveTextContent('Deploy failed');
     });
 
-    it('says it beside the label too, not only on hover', () => {
+    it('keeps its description, with the words on hover and in its accessible name', () => {
         render(
             <IntegrationsSummaryTile
                 appBuilderComponents={{ a: integration('error') }}
             />
         );
 
-        const words = screen
-            .getByRole('button', { name: /integrations/i })
-            .querySelector('.dashboard-tile-status-text');
-        expect(words).toHaveTextContent('Deploy failed');
-        expect(words).toHaveAttribute('data-variant', 'error');
+        expect(screen.getByText('Connected systems')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Integrations, Deploy failed' })).toBeInTheDocument();
     });
 
     // Owner, 2026-10-06: the green dot was the one status always showing, and the

@@ -10,12 +10,17 @@ import * as os from 'os';
 import * as path from 'path';
 import { promisify } from 'util';
 import * as vscode from 'vscode';
+import { sleep } from './sleep';
+import { TIMEOUTS } from './timeoutConfig';
 
 const execFileAsync = promisify(execFile);
 
 /**
  * Open a URL in incognito mode (Chrome on macOS)
  * Falls back to normal browser if incognito is not available
+ *
+ * Resolves once Chrome's window is likely up, not when `open` returns: it waits Chrome's usual
+ * start (`TIMEOUTS.UI.BROWSER_START`), so every caller's busy state covers the whole wait.
  *
  * @returns true if opened in incognito, false if fell back to normal browser
  */
@@ -25,6 +30,7 @@ export async function openInIncognito(url: string): Promise<boolean> {
             // Arguments, never a shell string: a URL is data. Inside a quoted shell
             // string, `$(…)` in a stored URL would run as a command.
             await execFileAsync('open', ['-na', 'Google Chrome', '--args', '--incognito', url]);
+            await sleep(TIMEOUTS.UI.BROWSER_START);
             return true;
         } catch {
             // Chrome not available, fall back
@@ -37,11 +43,32 @@ export async function openInIncognito(url: string): Promise<boolean> {
 }
 
 /**
+ * Open a URL in the SC's own browser, signed in as they are, keeping its address exactly.
+ *
+ * On macOS through `open`: a Unified Shell address carries `@` and `:` after its `#`, and
+ * `vscode.Uri` percent-encodes those when it writes the address back out. Elsewhere VS Code's opener
+ * is the only one there is. The URL is expected to be validated already.
+ */
+export async function openInDefaultBrowser(url: string): Promise<void> {
+    if (process.platform === 'darwin') {
+        try {
+            await execFileAsync('open', [url]);
+            return;
+        } catch {
+            // No opener answered; VS Code's may.
+        }
+    }
+    await vscode.env.openExternal(vscode.Uri.parse(url));
+}
+
+/**
  * Open a URL in a private browser window, with a notification covering the launch.
  *
- * Chrome takes a second or two to start, and the two screens that open a live site
- * had written this notification out separately. The URL is expected to be validated
- * already — the caller refuses a bad one in its own shape before anything opens.
+ * For an open with no button to show it working: a menu item, which closes as it is picked
+ * (owner, 2026-10-31). A button shows its own spinner and calls `openInIncognito`. Chrome takes
+ * two or three seconds to start, and `openInIncognito` waits that out, so the notification lasts
+ * until the window is likely up. The URL is expected to be validated already — the caller
+ * refuses a bad one in its own shape before anything opens.
  *
  * @param url - a validated URL
  * @returns true if opened in incognito, false if fell back to normal browser
@@ -52,7 +79,7 @@ export async function openPrivateBrowser(url: string): Promise<boolean> {
     await vscode.window.withProgress(
         {
             location: vscode.ProgressLocation.Notification,
-            title: 'Opening a private browser',
+            title: 'Opening a Private Browser',
             cancellable: false,
         },
         async () => {

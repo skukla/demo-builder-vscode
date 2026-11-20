@@ -6,7 +6,7 @@ needs: []
 value: med
 status: gated
 layer: F
-waiting-on: Mod Agent access
+waiting-on: the hand trial of Stardust's deploy on a Commerce storefront (owner 2026-11-19: build the skills in, do not rely on Mod Agent access)
 ---
 # EDS site-scraping capability for Demo Builder
 
@@ -16,10 +16,88 @@ waiting-on: Mod Agent access
 
 Scrape client URLs → working EDS blocks at 90–95% fidelity. Two workflows. **Re-measured 2026-08-23: the Playwright workflow is FULLY SHIPPED** — all six scraping skills generate into every EDS project, `@playwright/mcp` is wired via ai-defaults (which superseded the item's global-prerequisite step with a better per-project mechanism), and the palette command exists (`openModernizationAgent.ts`). What remains is only the Mod Agent path: Phase 1.5 (GitHub OAuth to install AEM Code Connector/Sync) + Phase 2 subagents, **still gated on Mod Agent access** (request filed 2026-05-28).
 
+## 2026-11-19: the Stardust skills may lift the gate
+
+The owner passed on (2026-11-19) that the Experience Modernization Agent's skills are published at
+https://stardust.style/ and can be installed however we want, best with GitHub Copilot or any LLM
+setup that can also edit the GitHub repository. They redesign, fix, or migrate a site to EDS: "half
+of our demo battles". The agent's own console and its access-request channel stay outside this public
+repository.
+
+That changes what this item waits on: the skills, not Mod Agent access, are what Phase 2 needs. Next:
+
+1. Read what the Stardust skills are (format, install method, the tools they expect) and whether they
+   install per project like the six scraping skills, through the AI bundle's ai-defaults
+   (`ai-context-authoring`: all four seams, and an `AI_CONTEXT_VERSION` bump).
+2. Try one on a scratch EDS project with Copilot, which this extension already drives, and record what
+   it changed in the storefront repository.
+3. Decide with the owner: ship them in every EDS project's bundle, offer them as an add-on, or point to
+   them from the palette command (`openModernizationAgent.ts`).
+
+## 2026-11-19: research on the Stardust skills; the goal is the skills, not access (owner)
+
+The owner (2026-11-19): "I don't want to rely on access. The goal should be to add the AEM
+Modernization SKILLS to the Demo Builder MCP." Research the same day (sources below; read-only):
+
+**What they are.** Adobe's public **Stardust** plugin, `plugins/stardust/` in
+https://github.com/adobe/skills, Apache-2.0, no sign-in. One `SKILL.md` folder per skill
+(agentskills.io format). It runs standalone: nothing read mentions the Mod Agent service. Not on npm.
+Installs through Claude Code's plugin marketplace, Copilot CLI (which loads only part of a plugin), or
+`npx skills add adobe/skills` (skills only).
+
+**The 16 skills.** Core: `extract` (a live site's colours, fonts and copy into PRODUCT.md and
+DESIGN.md), `direct`, `prototype`, `prepare-migration`, `replica` (one page per template, checked
+against the original by pixel diff), `reskin`, `migrate`, `audit`, `uplift` (three pitch variants
+from one URL), `diff`, and a routing `stardust` skill. EDS delivery: `deploy` (static HTML into EDS
+blocks and DA.live content, then preview and publish), `rollout` (the whole site, with sitemap and
+redirects), `dynamics`, `spec`, `qa` (reviews, does not edit).
+
+**What it needs.** Node 22 or later; the Playwright library with Chromium in the project; and
+**Impeccable** (https://github.com/pbakaus/impeccable, Apache-2.0), a hard dependency that downloads
+its own program to `~/.impeccable/bin/`. `deploy` reads a DA.live token from `DA_TOKEN` in the
+repository's `.env`, writes with curl to the DA.live and Helix admin APIs, and expects the plain
+`aem-boilerplate` starter, not our `aem-boilerplate-commerce` with drop-ins.
+
+**What it would let an SC do** (inferred from the descriptions): point at a prospect's live site and
+get its look as an EDS storefront, kept or redesigned (`uplift`: three variants for a first meeting);
+move that content into the project's DA.live site and publish it; run `audit` and `qa` on an existing
+demo storefront. Demo Builder already provides what they need around them: the GitHub repository with
+code sync, the DA.live site and sign-in, the storefront checkout, `@playwright/mcp`, and the publish,
+sync and reset tools (an undo path for whatever they publish).
+
+**How it fits.** `copyAdobeSkillBundle` (`aiBundle/skillsWriter.ts`) already copies Adobe skill
+folders into projects through the hash-and-skip writer, from an npm package; Stardust has no package,
+so it would be fetched from GitHub at a pinned commit. That touches the four AI-bundle gate seams and
+an `AI_CONTEXT_VERSION` bump. Exposing skills as MCP prompts would be new infrastructure (the server
+has no prompts) and is not recommended. Overlap with the six skills we ship: `scrape-reference-site`
+and `refine-visual-match` are largely covered by `extract` and `replica`; `commerce-block-mapper`,
+`demo-data-injector` and `connect-authenticated-site` have no Stardust counterpart and stay. The Mod
+Agent branch in `scrape-reference-site.md` and `openModernizationAgent.ts` would go in the same change
+(no soft deprecation), taking the internal channel name and address out of tracked files.
+
+**Risks.** Licence: low (Apache-2.0; keep LICENSE and any NOTICE). Pace: about a release a day (v0.42.0
+on 2026-11-19, six in five days), so pin a commit and re-pin on purpose. Quality on Commerce pages is
+unknown. `DA_TOKEN` in `.env` could be committed by an SC; a token handoff that keeps it out of the
+repository is needed. Weight: 16 skills plus Impeccable, many browser runs.
+
+**Recommendation.** First, the trial already planned as step 2: install Stardust by hand on a scratch
+EDS Commerce project and run `extract`, then `deploy`. That answers the biggest unknown, whether
+`deploy` works on our storefront. Then build it as an opt-in for EDS projects: fetch `plugins/stardust`
+and Impeccable at a pinned commit, deliver them like `copyAdobeSkillBundle`, delete the Mod Agent path,
+cut `scrape-reference-site` down to a router, keep the Commerce skills, and hand the DA.live token over
+without writing it into the repository.
+
+Sources: https://stardust.style/, https://github.com/adobe/skills (`plugins/stardust/`, its README,
+CHANGELOG, `skills/deploy/SKILL.md` and `skills/deploy/reference/da-source-api.md`),
+https://github.com/pbakaus/impeccable. Not verified: other skills' SKILL.md files, NOTICE files,
+whether `npx skills add` brings Impeccable.
+
 ## Shipped so far
 
 - Six new Demo Builder skills — verified shipped; see the sub-part marked ✅ below
 - 2026-10-03  Parked 2026-10-03 (owner): stays waiting on Mod Agent access.
+- 2026-11-19  docs(backlog): EDS-3 records what the AEM Modernization skills would let the Demo Builder MCP do (`b6078d04b`)
+- 2026-11-19  docs(backlog): EDS-3 gains the Stardust skills, which may lift its wait on Mod Agent access (`374158071`)
 
 ## Provenance
 

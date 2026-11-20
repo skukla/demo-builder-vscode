@@ -132,7 +132,7 @@ describe('handleResetErpRecords', () => {
         const titles = (vscode.window.withProgress as jest.Mock).mock.calls.map(
             ([options]: [{ title: string }]) => options.title
         );
-        expect(titles).toEqual(['Resetting Nordwind records']);
+        expect(titles).toEqual(['Resetting Nordwind Records']);
         expect(mockDetach).toHaveBeenCalledTimes(1);
         // The ERP's own wipe, at its own URLs, with the sign-in.
         expect(mockCallErpApi).toHaveBeenCalledWith(
@@ -184,7 +184,7 @@ describe('handleResetErpRecords', () => {
 
     it('a failed guard blocks before the reset runs', async () => {
         const { mockContext } = setupMocks(pairProject());
-        mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: false, error: 'Sign in first' });
+        mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: false, error: 'Sign In first' });
         const result = await handleResetErpRecords(mockContext, { id: 'erp-integration' });
         expect(result.success).toBe(false);
         expect(mockDetach).not.toHaveBeenCalled();

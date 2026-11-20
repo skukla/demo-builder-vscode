@@ -13,13 +13,14 @@
  * link, neither of which had a test.
  */
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 
 import { mockPostMessage } from '../../../../helpers/webviewClientMock';
 import { press, settle } from '../../../../helpers/reactSettle';
 import '@testing-library/jest-dom';
 
 import {
+    SOURCE_NOTICE_COPY,
     DatapackCatalogView,
     mockRequest,
     requestOfType,
@@ -27,6 +28,8 @@ import {
     resolveCatalogThenDetail,
     CATALOG,
     INVENTORY_WITH_GAP,
+    makeSummary,
+    showSelect,
 } from './DatapackCatalogView.testUtils';
 
 /** How many times a request of this type has been sent. */
@@ -39,23 +42,19 @@ beforeEach(() => {
     mockPostMessage.mockReset();
 });
 
-describe('refresh re-asks with the toggle as it stands now', () => {
-    it('carries the community setting the user has actually chosen', async () => {
-        // Curation is a SERVER-side filter, so the payload is the whole request.
-        // A refresh built when the toggle was off goes on asking for the curated
-        // list forever, and the button reads as broken with no error anywhere.
+describe('refresh', () => {
+    it('asks for every pack again, whatever the Show list is on', async () => {
         resolveWith(CATALOG);
         render(<DatapackCatalogView />);
         await settle();
         await screen.findAllByTestId('datapack-card');
 
-        await press(screen.getByRole('checkbox', { name: /community/i }));
         await press(screen.getByRole('button', { name: /refresh datapacks/i }));
 
         await waitFor(() =>
             expect(requestOfType('find-datapacks')).toEqual({
                 type: 'find-datapacks',
-                payload: { includeCommunity: true, includeLibrary: true },
+                payload: { includeCommunity: true },
             }),
         );
     });
@@ -69,7 +68,7 @@ describe('closing the import modal re-reads what this project holds', () => {
         const cards = await screen.findAllByTestId('datapack-card');
         await press(cards[0]);
         await settle();
-        await press(await screen.findByRole('button', { name: /^import/i }));
+        await press(await screen.findByRole('button', { name: /^install$/i }));
         await settle();
         await settle();
     }
@@ -84,7 +83,8 @@ describe('closing the import modal re-reads what this project holds', () => {
         const targetsBefore = countOf('get-datapack-import-target');
         const installedBefore = countOf('list-installed-datapacks');
 
-        await press(screen.getByRole('button', { name: /^close$/i }));
+        // A first install's summary commits, so its way out is Cancel (step 03, S4).
+        await press(screen.getByRole('button', { name: /^cancel$/i }));
 
         expect(countOf('get-datapack-import-target')).toBeGreaterThan(targetsBefore);
         expect(countOf('list-installed-datapacks')).toBeGreaterThan(installedBefore);
@@ -126,7 +126,7 @@ describe('closing the import modal re-reads what this project holds', () => {
     });
 });
 
-describe('the flyout’s Try Again', () => {
+describe('the flyout’s Retry', () => {
     /** Catalog loads; every detail request refuses. */
     function detailAlwaysFails(): void {
         mockRequest.mockImplementation((type: string) => {
@@ -155,68 +155,123 @@ describe('the flyout’s Try Again', () => {
         await settle();
         const before = countOf('get-datapack-detail');
 
-        await press(await screen.findByRole('button', { name: /try again/i }));
+        await press(await screen.findByRole('button', { name: /retry/i }));
 
         expect(countOf('get-datapack-detail')).toBeGreaterThan(before);
         expect(requestOfType('get-datapack-detail')).toEqual({
             type: 'get-datapack-detail',
-            payload: { datapackName: 'bodea', version: 'main', store: 'installer' },
+            payload: { datapackName: 'bodea', version: 'main', store: 'library' },
         });
     });
 });
 
 describe('the two doors out of the catalog', () => {
-    it('offers Open Settings on a configuration refusal, and opens them', async () => {
-        // The refusal names two settings by key. Without the action the user is
-        // told what is wrong and left to find Settings themselves.
-        mockRequest.mockResolvedValue({
-            success: false,
-            error: 'The Data Installer is not configured.',
-            code: 'INVALID_OPERATION',
-        });
-        render(<DatapackCatalogView />);
-        await settle();
-
-        await press(await screen.findByRole('button', { name: /open settings/i }));
-
-        expect(mockPostMessage).toHaveBeenCalledWith('open-data-installer-settings');
-    });
-
-    // 2026-10-29: export is the Data Installer service's own, so the link shows only with
-    // that engine chosen; with Demo Builder's (the default) it offered an export that
-    // cannot work and writes to a catalog other teams share.
+    // The choice is for an SC the Data Installer answers: one with no address, or one it turns
+    // away, has no such packs to choose (owner, 2026-11-03). No address shows no banner either.
     it.each([
-        ['demo-builder', false],
-        [undefined, false],
-        ['service', true],
-    ] as const)('with the %s engine, shows the export link: %s', async (engine, shown) => {
+        ['has no address', 'no-address', false],
+        ['turns the Adobe account away', 'no-access', true],
+    ] as const)('offers no Data Installer choice while the Data Installer %s', async (_how, missing, banner) => {
         mockRequest.mockResolvedValue({
             success: true,
-            data: { items: CATALOG, count: CATALOG.length, total: CATALOG.length, ...(engine ? { engine } : {}) },
+            data: { items: CATALOG, count: CATALOG.length, installerMissing: missing },
         });
         render(<DatapackCatalogView />);
         await settle();
         await screen.findAllByTestId('datapack-card');
 
-        expect(screen.queryByText('Export from this instance') !== null).toBe(shown);
-        expect(screen.getByText('Load from file')).toBeInTheDocument();
+        const choices = within(showSelect());
+        expect(choices.queryByRole('option', { name: 'Data Installer Datapacks', hidden: true })).not.toBeInTheDocument();
+        // CONTROL: the choice beside it is there.
+        expect(choices.getByRole('option', { name: 'Community Datapacks', hidden: true })).toBeInTheDocument();
+        expect(Boolean(screen.queryByTestId('datapack-source-notice'))).toBe(banner);
     });
 
-    it('opens the export modal from the header link, and closes it again', async () => {
+    // Only "no access" closes: it is true on every visit and the SC cannot fix it (owner, 2026-11-03).
+    it('closes the "no access" banner, and tells the extension to remember it', async () => {
+        mockRequest.mockResolvedValue({ success: true, data: { items: CATALOG, count: CATALOG.length, installerMissing: 'no-access' } });
+        render(<DatapackCatalogView />);
+        await settle();
+        await screen.findAllByTestId('datapack-card');
+
+        await press(screen.getByRole('button', { name: SOURCE_NOTICE_COPY.dismiss }));
+
+        expect(screen.queryByTestId('datapack-source-notice')).not.toBeInTheDocument();
+        expect(mockPostMessage).toHaveBeenCalledWith('dismiss-datapack-no-access');
+    });
+
+    it('shows nothing for "no access" once dismissed, and offers no close on "didn\'t answer"', async () => {
         mockRequest.mockResolvedValue({
             success: true,
-            data: { items: CATALOG, count: CATALOG.length, total: CATALOG.length, engine: 'service' },
+            data: { items: CATALOG, count: CATALOG.length, installerMissing: 'no-access', noAccessDismissed: true },
+        });
+        const { unmount } = render(<DatapackCatalogView />);
+        await settle();
+        await screen.findAllByTestId('datapack-card');
+        expect(screen.queryByTestId('datapack-source-notice')).not.toBeInTheDocument();
+        unmount();
+
+        mockRequest.mockResolvedValue({ success: true, data: { items: CATALOG, count: CATALOG.length, installerMissing: 'no-answer' } });
+        render(<DatapackCatalogView />);
+        await settle();
+        await screen.findAllByTestId('datapack-card');
+        // CONTROL: the banner is there, with no way to close it.
+        expect(screen.getByTestId('datapack-source-notice')).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: SOURCE_NOTICE_COPY.dismiss })).not.toBeInTheDocument();
+    });
+
+    it('offers the Data Installer choice while it answers', async () => {
+        resolveWith(CATALOG);
+        render(<DatapackCatalogView />);
+        await settle();
+        await screen.findAllByTestId('datapack-card');
+
+        expect(within(showSelect()).getByRole('option', { name: 'Data Installer Datapacks', hidden: true })).toBeInTheDocument();
+    });
+
+    // 2026-10-30 (owner): one Create datapack in place of "Export from this instance" and "Save
+    // from this store", quiet buttons rather than links; Clear demo data last. Step-04 S1: the
+    // button reads Create, and the file action Install from File in a project's Datapacks. Step 06
+    // C5: Clear Demo Data became the Clear menu, still last.
+    it(
+        'offers Create, Install from File and, last, Clear',
+        async () => {
+            mockRequest.mockResolvedValue({
+                success: true,
+                data: { items: CATALOG, count: CATALOG.length, total: CATALOG.length },
+            });
+            render(<DatapackCatalogView />);
+            await settle();
+            await screen.findAllByTestId('datapack-card');
+
+            const labels = ['Create', 'Install from File', 'Clear'];
+            const buttons = labels.map((name) => screen.getByRole('button', { name }));
+            expect(buttons.every((button, i) => i === 0 || buttons[i - 1].compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
+            expect(screen.queryByText('Export from this instance')).not.toBeInTheDocument();
+            expect(screen.queryByText('Save from this store')).not.toBeInTheDocument();
+            expect(screen.queryByRole('link')).not.toBeInTheDocument();
+        },
+    );
+
+    // Create is two windows (step-04 S3; J3-2): what it holds first, everything ticked, then the
+    // name. The service's own export window was deleted on 2026-11-06 (DI-12).
+    it("opens Create's picks first, everything ticked, with Next on", async () => {
+        const PAGE = { items: [{ id: 'VR-Rack', displayName: 'VR Rack', key: 'VR-Rack' }], totalCount: 1, excludedCount: 0, inPackCount: 0 };
+        mockRequest.mockImplementation(async (type: string) => {
+            if (type === 'list-datapack-export-items') return { success: true, data: PAGE };
+            if (type === 'count-datapack-export-items') return { success: true, data: {} };
+            return { success: true, data: { items: CATALOG, count: CATALOG.length, total: CATALOG.length } };
         });
         render(<DatapackCatalogView />);
         await settle();
         await screen.findAllByTestId('datapack-card');
 
-        await press(screen.getByText('Export from this instance'));
-        expect(await screen.findByText('Export a datapack')).toBeInTheDocument();
+        await press(screen.getByRole('button', { name: 'Create' }));
 
-        await press(screen.getByRole('button', { name: /^close$/i }));
-
-        expect(screen.queryByText('Export a datapack')).not.toBeInTheDocument();
+        expect(await screen.findByRole('heading', { name: 'Create Datapack' })).toBeInTheDocument();
+        expect(screen.queryByRole('textbox', { name: /Datapack Name/ })).not.toBeInTheDocument();
+        expect(screen.getByRole('checkbox', { name: 'Select All Data' })).toBeChecked();
+        expect(screen.getByRole('button', { name: 'Next' })).toHaveAttribute('aria-disabled', 'false');
     });
 });
 
@@ -229,7 +284,44 @@ describe('a response carrying no page at all', () => {
         render(<DatapackCatalogView />);
         await settle();
 
-        expect(await screen.findByText('No datapacks found')).toBeInTheDocument();
+        expect(await screen.findByText('No Datapacks Yet')).toBeInTheDocument();
         expect(screen.queryByRole('checkbox', { name: /community/i })).not.toBeInTheDocument();
+    });
+});
+
+// Clarity 1.15 (step-04 S10): the file load asks about replacing only a version the SC's own
+// datapacks already hold, which the screen reads from the catalog it has.
+describe('the file load and My Datapacks', () => {
+    const OPENED = { path: '/Users/sc/acme.zip', datapackName: 'acme', version: '20261109-141504', displayName: 'Acme', dataTypes: ['products'] };
+    const answer = (items: ReturnType<typeof makeSummary>[]) =>
+        mockRequest.mockImplementation(async (type: string) => {
+            if (type === 'open-datapack-zip') return { success: true, data: OPENED };
+            return { success: true, data: { items, count: items.length, total: items.length } };
+        });
+
+    // Asked as Replace or Keep Both since step-07 F1; the form starts on Replace.
+    it('offers Replace or Keep Both for a version the SC already has', async () => {
+        answer([makeSummary('acme', '20261109-141504', { store: 'library', mine: true, shared: false })]);
+        render(<DatapackCatalogView library />);
+        await settle();
+        await screen.findAllByTestId('datapack-card');
+
+        await press(screen.getByRole('button', { name: 'Add from File' }));
+        await settle();
+
+        expect(screen.getByRole('radio', { name: 'Keep Both' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Replace' })).toBeInTheDocument();
+    });
+
+    it("offers Load when the same version is someone else's, not the SC's", async () => {
+        answer([makeSummary('acme', '20261109-141504', { store: 'library', mine: false, team: true })]);
+        render(<DatapackCatalogView library />);
+        await settle();
+        await screen.findAllByTestId('datapack-card');
+
+        await press(screen.getByRole('button', { name: 'Add from File' }));
+        await settle();
+
+        expect(screen.getByRole('button', { name: 'Add' })).toBeInTheDocument();
     });
 });

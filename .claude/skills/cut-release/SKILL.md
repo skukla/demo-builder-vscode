@@ -20,6 +20,25 @@ Also expect, on direct pushes to `develop`/`master`:
 `Bypassed rule violations ... 2 of 2 required status checks expected` — that's the
 branch-protection notice, **not** a failure.
 
+## Periodic passes gate (develop cuts only)
+
+First thing on a develop cut, before the preconditions below: run the `/dev-pipeline:freshness` skill's release-cut check and do what it says. Hotfix cuts skip this.
+
+**The release check, before the tag.** Once the version is bumped and the notes are written
+(steps 1 and 2 below), package the VSIX (`npm run package`, step 7's command) and run the toolbox
+tool `release_check` with:
+
+```
+["--artifact", "adobe-demo-builder-1.0.0-beta.<N>.vsix",
+ "--notes", "/tmp/release-notes-<N>.md",
+ "--plan", ".rptc/plans/beta-<N>-release-tests/overview.md"]
+```
+
+`--plan` names THAT release's test plan. **Do not tag (step 5) while it says anything blocks.** It
+reads the shipped bundle and the notes for private names, the plan's open and failed tests, and
+the overdue periodic passes. Step 7 then publishes this same VSIX; rebuild only if anything changed
+since the check.
+
 ## Preconditions (verify, don't assume)
 
 1. On `develop`, working tree clean (`git status --short` empty).
@@ -57,7 +76,8 @@ decide what (if anything) to fix before tagging.
   the mutation runs it never starts (they are the `overnight` cadence, started by hand).
 - **`codebase-sweep`** — the judgement half of the above: triage the sweep's hits against
   measured baselines and decide what to fix. The sweep gathers; this decides.
-- **`dream`** — memory / skills / CLAUDE.md staleness across recent sessions.
+- **`/dev-pipeline:reflect`** — what recent sessions got wrong or did by hand, as proposals
+  (replaced `dream` at the dev-pipeline rollout; its records stay in `.rptc/dream/`).
 - **`bash .rptc/plans/evaluation-mode/battery/sweep.sh`** — the full-coverage
   battery (AI-1q): every unattended-safe prompt (tier 1 + skills read-only, then
   the tier-2 scratch writes), closing with the coverage gates. Needs a live dev
@@ -137,8 +157,8 @@ Let `N` = new beta number, `PREV` = current one.
 6. **Push:**
    `git push origin master && git push origin v1.0.0-beta.<N>`
 
-7. **Package the VSIX:**
-   `npm run package` (= `vsce package`; runs `vscode:prepublish` → compile).
+7. **Package the VSIX** (already done for the release check above; repeat only if anything
+   changed since): `npm run package` (= `vsce package`; runs `vscode:prepublish` → compile).
    Produces `adobe-demo-builder-1.0.0-beta.<N>.vsix` in the repo root (`*.vsix` is
    gitignored). A "LICENSE not found" warning is pre-existing and harmless.
 
@@ -150,7 +170,14 @@ Let `N` = new beta number, `PREV` = current one.
      adobe-demo-builder-1.0.0-beta.<N>.vsix
    ```
 
-9. **Return to develop:** `git checkout develop`. Report the release URL.
+9. **Close what shipped in the backlog.** Record any commit trailer not yet logged:
+   `node "$(git config dev-pipeline.root)/lib/backlog.mjs" unlogged --write`. Then run the toolbox
+   tool `backlog_ship` with `["--tag", "v1.0.0-beta.<N>"]` to see which items the tag contains, and
+   again with `["--tag", "v1.0.0-beta.<N>", "--write"]` to mark them shipped. Reconcile what it
+   reports as partial or without evidence: file the remainder as its own item, or reword it as
+   history if it is done (PL-99's 54 items belong here).
+
+10. **Return to develop:** `git checkout develop`. Report the release URL.
 
 ## Hotfix releases — the merge-back is NOT optional
 

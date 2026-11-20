@@ -7,7 +7,7 @@
  * who signed in before that change, so nobody has to sign in again.
  *
  * The sequencing is the whole safety property, copied from
- * `commerceSecretMigration`: write, read back, and only then remove the old copy.
+ * `declaredSecretStore`: write, read back, and only then remove the old copy.
  * A keychain that refuses the write, or accepts it and stores nothing, must leave
  * the globalState copy exactly where it was.
  */

@@ -16,7 +16,8 @@ import {
     getLatestBranchCommit,
     type GitHubCompareResponse,
 } from './githubApiClient';
-import { SDK_SOURCE } from '@/features/eds/services/inspectorHelpers';
+import { refOfSource } from '@/core/releases/componentRelease';
+import { releasedRepoOf } from '@/core/releases/releasedRepos';
 import type { Project } from '@/types/base';
 import type { InstalledBlockLibrary } from '@/types/blockLibraries';
 import type { Logger } from '@/types/logger';
@@ -29,13 +30,8 @@ export interface BlockLibraryUpdateResult {
     library: InstalledBlockLibrary;
     latestCommit: string;
     commitsBehind: number;
-}
-
-export interface InspectorSdkUpdateResult {
-    hasUpdate: boolean;
-    currentCommit: string;
-    latestCommit: string;
-    commitsBehind: number;
+    /** The release it would move to, for a repository that ships by release. */
+    version?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -46,9 +42,6 @@ export interface InspectorSdkUpdateResult {
 const LIBRARY_ROOT_FILES = new Set(['component-definition.json', 'component-filters.json', 'component-models.json']);
 
 const libraryInstalls = (path: string): boolean => path.startsWith('blocks/') || LIBRARY_ROOT_FILES.has(path);
-
-/** The SDK install vendors the `.js` files under its source folder (`inspectorHelpers`). */
-const sdkInstalls = (path: string): boolean => path.startsWith(`${SDK_SOURCE.srcDir}/`) && path.endsWith('.js');
 
 /** GitHub lists at most this many changed files; a list this long may have left one out. */
 const COMPARE_FILE_CAP = 300;
@@ -106,8 +99,15 @@ export class AddonUpdateChecker {
                     continue;
                 }
 
+                // A repository the builder owns offers its newest release, and nothing until it has one.
+                const { ref, version } = await refOfSource(lib.source, this.logger);
+                if (!version && releasedRepoOf(`https://github.com/${lib.source.owner}/${lib.source.repo}`)) {
+                    this.logger.debug(`[Updates] Library "${lib.name}": no release to offer`);
+                    continue;
+                }
+
                 const latestCommit = await getLatestBranchCommit(
-                    this.secrets, lib.source.owner, lib.source.repo, lib.source.branch,
+                    this.secrets, lib.source.owner, lib.source.repo, ref,
                 );
                 if (!latestCommit) {
                     this.logger.warn(`[Updates] Could not fetch latest commit for ${lib.source.owner}/${lib.source.repo}`);
@@ -131,7 +131,12 @@ export class AddonUpdateChecker {
                     continue;
                 }
 
-                results.push({ library: lib, latestCommit, commitsBehind: comparison?.ahead_by ?? 0 });
+                results.push({
+                    library: lib,
+                    latestCommit,
+                    commitsBehind: comparison?.ahead_by ?? 0,
+                    ...(version ? { version } : {}),
+                });
             } catch (error) {
                 this.logger.warn(
                     `[Updates] Failed to check library "${lib.name}": ${(error as Error).message}`,
@@ -142,52 +147,4 @@ export class AddonUpdateChecker {
         return results;
     }
 
-    /**
-     * Check if the Demo Inspector SDK has updates available.
-     * Returns null if the SDK is not installed.
-     */
-    async checkInspectorSdk(project: Project): Promise<InspectorSdkUpdateResult | null> {
-        if (!project.installedInspectorSdk) {
-            return null;
-        }
-
-        const { commitSha: currentCommit } = project.installedInspectorSdk;
-
-        try {
-            const latestCommit = await getLatestBranchCommit(
-                this.secrets, SDK_SOURCE.owner, SDK_SOURCE.repo, SDK_SOURCE.branch,
-            );
-            if (!latestCommit) {
-                this.logger.warn(`[Updates] Could not fetch latest commit for Inspector SDK`);
-                return null;
-            }
-
-            if (latestCommit === currentCommit) {
-                this.logger.debug(`[Updates] Inspector SDK: up to date (${currentCommit.slice(0, 7)})`);
-                return { hasUpdate: false, currentCommit, latestCommit, commitsBehind: 0 };
-            }
-
-            this.logger.debug(
-                `[Updates] Inspector SDK: ${currentCommit.slice(0, 7)} → ${latestCommit.slice(0, 7)}`,
-            );
-
-            const comparison = await compareCommits(
-                this.secrets, SDK_SOURCE.owner, SDK_SOURCE.repo, currentCommit, latestCommit,
-            );
-            if (changesNothingInstalled(comparison, sdkInstalls)) {
-                this.logger.debug(`[Updates] Inspector SDK: newer commits change no SDK files`);
-                return { hasUpdate: false, currentCommit, latestCommit, commitsBehind: 0 };
-            }
-
-            return {
-                hasUpdate: true,
-                currentCommit,
-                latestCommit,
-                commitsBehind: comparison?.ahead_by ?? 0,
-            };
-        } catch (error) {
-            this.logger.error(`[Updates] Failed to check Inspector SDK updates`, error as Error);
-            return null;
-        }
-    }
 }

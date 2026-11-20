@@ -93,7 +93,7 @@ describe('setupChecklistOf', () => {
     it("fills each ERP's own name into a value entered once per ERP, and keeps the placeholder with none", () => {
         const warehouse = (erpNames?: string[]) =>
             setupChecklistOf('erp-integration', {}, erpNames)?.find((item) => item.id === 'second-source')?.enter;
-        expect(warehouse(['Justrite ERP', 'Accuform ERP'])).toStrictEqual(['Justrite Warehouse', 'Accuform Warehouse']);
+        expect(warehouse(['Tailspin ERP', 'Accuform ERP'])).toStrictEqual(['Tailspin Warehouse', 'Accuform Warehouse']);
         // A name without a trailing "ERP" is used whole.
         expect(warehouse(['Northwind'])).toStrictEqual(['Northwind Warehouse']);
         expect(warehouse()).toStrictEqual(['<ERP name> Warehouse']);
@@ -144,13 +144,13 @@ describe('the App Management listing step', () => {
     });
 
     it('names the real project and workspace once they are known', () => {
-        const items = withAdobeNames(setupChecklistOf('erp-integration', {}) ?? [], { project: 'Kukla Justrite', workspace: 'Justrite ERP' });
-        expect(listing(items)?.enter).toStrictEqual(['Kukla Justrite', 'Justrite ERP']);
+        const items = withAdobeNames(setupChecklistOf('erp-integration', {}) ?? [], { project: 'Kukla Tailspin', workspace: 'Tailspin ERP' });
+        expect(listing(items)?.enter).toStrictEqual(['Kukla Tailspin', 'Tailspin ERP']);
     });
 
     it('leaves out a name it does not know rather than showing its placeholder', () => {
-        const items = withAdobeNames(setupChecklistOf('erp-integration', {}) ?? [], { workspace: 'Justrite ERP' });
-        expect(listing(items)?.enter).toStrictEqual(['Justrite ERP']);
+        const items = withAdobeNames(setupChecklistOf('erp-integration', {}) ?? [], { workspace: 'Tailspin ERP' });
+        expect(listing(items)?.enter).toStrictEqual(['Tailspin ERP']);
         expect(listing(withAdobeNames(items, {}))).not.toHaveProperty('enter', []);
     });
 

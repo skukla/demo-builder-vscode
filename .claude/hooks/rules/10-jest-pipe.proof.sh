@@ -1,4 +1,7 @@
 #!/bin/bash
+# Markers this run's router drops go to a folder of its own, removed on exit (PL-86): in the
+# shared temp folder they outlived the run, and a later session of the same name went silent.
+PROOF_TMP="$(mktemp -d)"; export TMPDIR="$PROOF_TMP"; trap 'rm -rf "$PROOF_TMP"' EXIT
 # Proves 10-jest-pipe.rule blocks a jest run piped into a pager, and leaves
 # everything else alone.
 #
@@ -27,7 +30,7 @@ cd "$(git rev-parse --show-toplevel)" || exit 1
 # the rule it is named after.
 _IDLE_PS=$(mktemp)
 printf '%s\n' "99999 /bin/zsh -l" > "$_IDLE_PS"
-trap 'rm -f "$_IDLE_PS"' EXIT
+trap 'rm -f "$_IDLE_PS"; rm -rf "$PROOF_TMP"' EXIT
 
 run() {
   local cmd="$1" label="$2" expect="$3"

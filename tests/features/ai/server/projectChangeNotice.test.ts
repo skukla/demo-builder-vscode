@@ -7,7 +7,7 @@ import { asText } from '@/features/ai/server/mcpToolResult';
 import { withProjectChangeNotice } from '@/features/ai/server/projectChangeNotice';
 import type { AgentWorkingProject } from '@/types/handlers';
 
-const JUSTRITE = { name: 'justrite', path: '/p/justrite' };
+const TAILSPIN = { name: 'tailspin', path: '/p/tailspin' };
 const SCRATCH = { name: 'scratch', path: '/p/scratch' };
 
 type Answer = { content: Array<{ text: string }>; isError?: boolean };
@@ -54,13 +54,13 @@ describe('withProjectChangeNotice', () => {
         const agent = connection();
         await agent.call();
 
-        agent.personOpens(JUSTRITE);
+        agent.personOpens(TAILSPIN);
         const answer = await agent.call();
 
         expect(texts(answer)).toEqual([
             '{"ok":true}',
-            'Note: the open project changed from "scratch" to "justrite" since your last call, so this answer is ' +
-                'about "justrite". To keep working on "scratch", call set_current_project with /p/scratch.',
+            'Note: the open project changed from "scratch" to "tailspin" since your last call, so this answer is ' +
+                'about "tailspin". To keep working on "scratch", call set_current_project with /p/scratch.',
         ]);
     });
 
@@ -74,7 +74,7 @@ describe('withProjectChangeNotice', () => {
     it('says it once, not on every call after', async () => {
         const agent = connection();
         await agent.call();
-        agent.personOpens(JUSTRITE);
+        agent.personOpens(TAILSPIN);
         await agent.call();
 
         expect(texts(await agent.call())).toEqual(['{"ok":true}']);
@@ -84,18 +84,18 @@ describe('withProjectChangeNotice', () => {
     it('says nothing to an agent working on its own project', async () => {
         const agent = connection({ path: '/p/mine' });
         await agent.call();
-        agent.personOpens(JUSTRITE);
+        agent.personOpens(TAILSPIN);
 
         expect(texts(await agent.call())).toEqual(['{"ok":true}']);
     });
 });
 
 // AI-76: the notice arrives on the answer to a call that already ran. For a write, that is
-// too late — on 2026-10-20 an add meant for Justrite ran against the project opened since.
+// too late — on 2026-10-20 an add meant for Tailspin ran against the project opened since.
 describe('withProjectChangeNotice — a write after the project moved', () => {
     async function movedUnder(agent: ReturnType<typeof connection>) {
         await agent.call();
-        agent.personOpens(JUSTRITE);
+        agent.personOpens(TAILSPIN);
     }
 
     it('does not run, and says why, naming both projects', async () => {
@@ -107,8 +107,8 @@ describe('withProjectChangeNotice — a write after the project moved', () => {
         expect(agent.ran).not.toContain('add_integration');
         expect(answer.isError).toBe(true);
         expect(texts(answer)).toEqual([
-            'Error: not done. The open project changed from "scratch" to "justrite" since your last call, ' +
-                'and add_integration would have changed "justrite". Nothing was changed. To act on "justrite", ' +
+            'Error: not done. The open project changed from "scratch" to "tailspin" since your last call, ' +
+                'and add_integration would have changed "tailspin". Nothing was changed. To act on "tailspin", ' +
                 'call add_integration again. To keep working on "scratch", call set_current_project with /p/scratch.',
         ]);
     });

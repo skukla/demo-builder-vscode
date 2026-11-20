@@ -13,14 +13,6 @@
  */
 
 /**
- * A reset, keyed by the project it resets — the projects list can start one for
- * any project it lists, so "the reset" alone would not say which.
- */
-export function resetOperationId(projectName: string): string {
-    return `reset:${projectName}`;
-}
-
-/**
  * The dashboard's storefront buttons. One project is open at a time there, so
  * these need no key of their own — they name the operation, not the target.
  */
@@ -35,6 +27,12 @@ export const REPUBLISH_OPERATION_ID = 'republish';
 export const COPY_SETTINGS_OPERATION_ID = 'copy-settings';
 
 /**
+ * The projects list's "Import from File": a settings file or a demo bundle, its steps and any
+ * refusal in that screen's progress window (walk F241).
+ */
+export const IMPORT_FILE_OPERATION_ID = 'import-file';
+
+/**
  * Changing where a project's integrations deploy. Project-scoped, like the
  * storefront buttons, so it names the operation rather than a target.
  */
@@ -45,6 +43,15 @@ export const DESTINATION_OPERATION_ID = 'destination';
  * single activation), so the id names the operation rather than the pack.
  */
 export const DATAPACK_OPERATION_ID = 'datapack';
+
+/**
+ * "Save store changes to this pack": a pack's flyout writes the store's copy of it into the
+ * library. One at a time, like an import, so it names the operation rather than the pack.
+ */
+export const DATAPACK_SAVE_OPERATION_ID = 'datapack-save';
+
+/** "Clear Demo Data" (datapack-engine step 10): the project's websites cleared. One at a time. */
+export const DEMO_DATA_CLEAR_OPERATION_ID = 'demo-data-clear';
 
 /** Applying an edit from the Manage APIs modal. */
 export const CONSOLE_APIS_OPERATION_ID = 'console-apis';
@@ -58,13 +65,11 @@ export const AI_FILES_OPERATION_ID = 'ai-files';
  */
 export const CONFIGURE_REPUBLISH_OPERATION_ID = 'configure-republish-storefront';
 
-/** A project deletion, keyed by the project being deleted. */
-export function deleteOperationId(projectName: string): string {
-    return `delete:${projectName}`;
-}
-
 /**
  * Applying the updates the SC left ticked in the Updates modal (PL-80). One list
  * across every project, so it names the operation rather than a target.
  */
 export const UPDATES_OPERATION_ID = 'apply-updates';
+
+/** Resetting or deleting several projects at once from the projects list: one run at a time. */
+export const PROJECTS_BATCH_OPERATION_ID = 'projects-batch';

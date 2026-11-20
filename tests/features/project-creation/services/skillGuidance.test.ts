@@ -11,7 +11,7 @@
  *   that builds, pushes and browses and serves no product page. An agent
  *   following the old table found scope healthy and reported an empty catalog
  *   while the catalog was fine.
- * - `import-datapack`'s worst trap is that `start_datapack_import` returns a
+ * - `datapacks`'s worst trap is that `install_datapack` returns a
  *   RECEIPT. Reporting it as an outcome is invisible: the user sees "imported"
  *   and an empty catalog.
  *
@@ -91,12 +91,13 @@ describe('diagnose-demo routes the empty-product-page symptom correctly', () => 
         // NOT a bare /root categor/ — that matched even after the sentence
         // carrying the claim was gutted, because the words survive elsewhere.
         // Pin the two claims that make this actionable instead.
-        expect(c).toMatch(/does not attach it to a store/i);
+        expect(c).toMatch(/without attaching\s+it to a store/i);
         // The distinguishing check: the flat search is what shows reality when
         // the tree endpoint hides it.
         expect(c).toMatch(/categories\/list|flat search/i);
         // And the instruction that stops the wrong instinct.
-        expect(c).toMatch(/rather than re-importing/i);
+        // Phase 8: the screen's word is Install (decision D1), so the skill says reinstalling.
+        expect(c).toMatch(/rather than reinstalling/i);
     });
 
     it('can ask whether a feature is off rather than broken', () => {
@@ -106,16 +107,16 @@ describe('diagnose-demo routes the empty-product-page symptom correctly', () => 
     });
 });
 
-describe('import-datapack teaches the traps, not just the sequence', () => {
-    const content = () => skill('import-datapack');
+describe('datapacks teaches the traps, not just the sequence', () => {
+    const content = () => skill('datapacks');
 
     it('ships as an always-on skill', () => {
-        expect([...DEMO_BUILDER_ALWAYS_ON_SKILLS]).toContain('import-datapack');
+        expect([...DEMO_BUILDER_ALWAYS_ON_SKILLS]).toContain('datapacks');
     });
 
     it('says the start call returns a handle and must be polled', () => {
         const c = content();
-        expect(c).toContain('start_datapack_import');
+        expect(c).toContain('install_datapack');
         expect(c).toContain('get_datapack_import_status');
         // NOT `/receipt|handle/` — that matched the one-line sequence block, so
         // gutting the whole trap section still passed. Pin the two sentences
@@ -147,14 +148,15 @@ describe('import-datapack teaches the traps, not just the sequence', () => {
 
     it('warns that reset cannot be undone', () => {
         const c = content();
-        expect(c).toContain('reset_datapack');
+        expect(c).toContain('uninstall_datapack');
         expect(c).toMatch(/cannot be undone/i);
     });
 
-    it('flags the shared catalog on export', () => {
+    // Phase 8 (D7): nothing an agent saves reaches the Data Installer's shared catalog.
+    it('says a save goes to My Datapacks, never the shared catalog', () => {
         const c = content();
-        expect(c).toContain('start_datapack_export');
-        expect(c).toMatch(/other teams/i);
+        expect(c).toContain('create_datapack');
+        expect(c).toMatch(/never into the Data\s+Installer/i);
     });
 
     /**
@@ -165,21 +167,52 @@ describe('import-datapack teaches the traps, not just the sequence', () => {
         const c = content();
         // "cannot be undone" and "unbounded" are different claims and only the
         // first is true. An agent told the second refuses a safe operation.
-        expect(c).toMatch(/import in reverse/i);
+        expect(c).toMatch(/install in reverse/i);
         // Matched on the distinctive phrase alone, not the full sentence: prose
         // in these files wraps, so a multi-word regex spanning a line break
         // fails for a reason that has nothing to do with the claim.
         expect(c).toMatch(/instance wipe/i);
     });
 
-    it('says EXPORT is the one operation the caller must order', () => {
+    // Phase 8 (D7, owner 2026-11-10): agents lose the Data Installer destination, which fails for
+    // our accounts; the screen hides it too. The copy tool is gone, and the skill says so.
+    it('offers no way to put a pack in the Data Installer', () => {
         const c = content();
-        // `startDelete`'s own comment: the service supplies dependency ordering
-        // for import and delete. Export has no such guarantee, so exporting
-        // types individually in the wrong order is on the caller.
-        expect(c).toMatch(/attributes before products/i);
-        expect(c).toContain('list_datapack_data_types');
-        expect(c).toMatch(/operationMode.*export|export.*operationMode/i);
+        expect(c).not.toContain('copy_library_datapack_to_installer');
+        expect(c).toMatch(/cannot put a datapack into the\s+Data Installer/i);
+    });
+
+    // Phase 8: each screen action an SC names, with the tool that does it.
+    it("maps the Datapacks screen's words to the tools", () => {
+        const c = content();
+        for (const [word, tool] of [
+            ['Add from File', 'add_datapack_from_file'],
+            ['Save as File', 'save_datapack_zip'],
+            ['Save As New', 'save_store_changes_to_pack'],
+            ['Undo Last Save', 'undo_last_save'],
+            ['Stop Sharing', 'share_datapack'],
+            ['Delete', 'delete_library_datapack'],
+            ['Clear Commerce Instance', 'clear_commerce_instance'],
+        ]) {
+            expect(c).toContain(word);
+            expect(c).toContain(tool);
+        }
+        expect(c).toContain('everyVersion');
+        expect(c).not.toMatch(/team (data)?pack/i);
+    });
+
+    // Step-04 S7/S8: a creation install that failed is recorded, and Retry installs again.
+    it('tells the agent how to read a failed install and retry it', () => {
+        const c = content();
+        expect(c).toContain('installFailed');
+        expect(c).toMatch(/Retry/);
+    });
+
+    // Step 06 C3: Clear Demo Data uninstalls the datapack first, asking the save question.
+    it('says Clear Demo Data uninstalls the datapack first and asks the save question', () => {
+        const c = content();
+        expect(c).toMatch(/clear_demo_data` uninstalls the project's datapack first/);
+        expect(c).toMatch(/CHANGES_NEED_ANSWER/);
     });
 
     /**
@@ -202,12 +235,6 @@ describe('import-datapack teaches the traps, not just the sequence', () => {
         // Customer segments: the rule installs and is silently broken.
         expect(c).toMatch(/segment/i);
     });
-
-    it('says a re-export rewrites rather than duplicates', () => {
-        // This is what makes a wrong-order export recoverable, and without it an
-        // agent would treat the mistake as needing a fresh pack.
-        expect(content()).toMatch(/rewrites the previous/i);
-    });
 });
 
 /*
@@ -217,13 +244,13 @@ describe('import-datapack teaches the traps, not just the sequence', () => {
 describe('author-commerce-data', () => {
     const content = () => skill('author-commerce-data');
 
-    it('ships as an always-on skill, like import-datapack', () => {
+    it('ships as an always-on skill, like datapacks', () => {
         expect([...DEMO_BUILDER_ALWAYS_ON_SKILLS]).toContain('author-commerce-data');
     });
 
     it('keeps the two purposes apart: sharing is a datapack, this is working the store', () => {
         // Owner, 2026-10-01: "two purposes, kept apart".
-        expect(content()).toMatch(/import-datapack/);
+        expect(content()).toMatch(/the `datapacks` skill/);
         expect(content()).toMatch(/Sharing finished data/i);
     });
 

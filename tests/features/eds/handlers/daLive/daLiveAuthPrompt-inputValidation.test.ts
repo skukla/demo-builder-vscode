@@ -34,7 +34,7 @@ jest.mock('vscode', () => ({
             showInputBoxIndex++;
             return Promise.resolve(response);
         }),
-        showInformationMessage: jest.fn().mockResolvedValue('I have my token'),
+        showInformationMessage: jest.fn().mockResolvedValue('I Have My Token'),
         showErrorMessage: jest.fn(),
         showWarningMessage: jest.fn(),
         setStatusBarMessage: jest.fn().mockReturnValue({ dispose: jest.fn() }),
@@ -101,33 +101,33 @@ beforeEach(async () => {
 
 describe('the namespace box', () => {
     it('will not accept an empty namespace', () => {
-        expect(validatorFor('namespace')('')).toMatch(/required/i);
+        expect(validatorFor('Namespace')('')).toMatch(/required/i);
     });
 
     it('will not accept a namespace that is only spaces', () => {
         // Untrimmed, this passes the box and then fails much later as a bad org.
-        expect(validatorFor('namespace')('   ')).toMatch(/required/i);
+        expect(validatorFor('Namespace')('   ')).toMatch(/required/i);
     });
 
     it('accepts a real namespace', () => {
-        expect(validatorFor('namespace')('demo-system-stores')).toBeNull();
+        expect(validatorFor('Namespace')('demo-system-stores')).toBeNull();
     });
 });
 
 describe('the token box', () => {
     it('will not accept an empty token', () => {
-        expect(validatorFor('token')('')).toMatch(/required/i);
+        expect(validatorFor('Token')('')).toMatch(/required/i);
     });
 
     it('will not accept a token that is only spaces', () => {
-        expect(validatorFor('token')('   ')).toMatch(/required/i);
+        expect(validatorFor('Token')('   ')).toMatch(/required/i);
     });
 
     it('rejects something that is not a token at all, naming what one looks like', () => {
         // The common mistake is pasting the page URL or a different credential. Saying
         // what a token starts with is the difference between a fixable message and a
         // dead end.
-        const message = validatorFor('token')('https://da.live/#/my-org');
+        const message = validatorFor('Token')('https://da.live/#/my-org');
 
         expect(message).toMatch(/eyJ/);
     });
@@ -138,11 +138,11 @@ describe('the token box', () => {
         //
         // The token is BUILT, not written: a literal starting `eyJ` is what a secret
         // scanner matches on, whatever it decodes to, and this repository is public.
-        expect(validatorFor('token')(`  ${fakeJwt()}  `)).toBeNull();
+        expect(validatorFor('Token')(`  ${fakeJwt()}  `)).toBeNull();
     });
 
     it('is password-masked, so a shoulder-surfer does not read the credential', () => {
-        const call = showInputBoxCalls.find((c) => (c.title ?? '').includes('token'));
+        const call = showInputBoxCalls.find((c) => (c.title ?? '').includes('Token'));
         expect(call?.password).toBe(true);
     });
 });
@@ -151,11 +151,11 @@ describe('both boxes survive the user looking away', () => {
     // The token lives in a browser: the SC clicks "Open DA.live", runs the
     // bookmarklet, and comes back. A box that closes on focus loss loses the
     // whole flow and the token they just copied.
-    it.each([['namespace'], ['token']])('the %s box ignores focus loss', (which) => {
+    it.each([['Namespace'], ['Token']])('the %s box ignores focus loss', (which) => {
         expect(boxOptions(which).ignoreFocusOut).toBe(true);
     });
 
-    it.each([['namespace'], ['token']])(
+    it.each([['Namespace'], ['Token']])(
         'the %s box refuses a value VS Code never supplied',
         (which) => {
             // validateInput is declared to take a string, but VS Code calls it

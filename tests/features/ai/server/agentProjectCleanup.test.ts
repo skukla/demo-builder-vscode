@@ -6,56 +6,18 @@
  * from the same setting: `ask` leaves them unticked, `deleteAll` ticks both, and
  * `localOnly` refuses them however the call was written.
  *
- * AND cleanUpProjectCloud — which sign-in an agent's delete hands the storefront teardown.
- *
- * The teardown unpublishes through Helix, and a registered site's Helix admin API
- * accepts ONE credential: the DA.live session's token. The Adobe Console token is a
- * different sign-in and Helix answers it "[admin] not authenticated".
- *
- * Measured live 2026-10-12, on a storefront made and reset for the purpose: an agent's
- * `delete_project` got a 401 on the page listing and on every one of 63 unpublishes,
- * deleted the repository and the DA.live content anyway, and left the site answering.
- * `cleanup_dalive_site`, on the same site a minute later with the DA.live session,
- * unpublished 59 pages and 49 product pages. The only difference was the token.
- *
- * So these assert the ARGUMENT. The teardown is mocked, and a mocked teardown answers
- * the same whichever token it is handed — which is how this went unnoticed.
+ * AND agentCloudOutcome — the agent's answer, read off the button's own delete
+ * (`runProjectDelete`, PL-104 fix 6). The sign-in the teardown runs on is no longer
+ * this file's: `cleanUpProjectCloud`, which chose it, is deleted, and the one rule
+ * (the DA.live session, or stop) is pinned in `storefrontTeardown.test.ts` and
+ * `edsExternalCleanup.test.ts`.
  */
 
 import * as vscode from 'vscode';
-import { cleanUpProjectCloud, resolveCloudCleanup } from '@/features/ai/server/agentProjectCleanup';
-import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { agentCloudOutcome, resolveCloudCleanup } from '@/features/ai/server/agentProjectCleanup';
+import type { CleanupResultItem } from '@/features/eds/services/resourceCleanupHelpers';
+import type { StorefrontTeardownResult } from '@/features/eds/services/storefront/storefrontTeardown';
 import { createMockProject, edsStorefrontInstance } from '../../../helpers/projectFake';
-
-const mockTearDown = jest.fn();
-jest.mock('@/features/eds/services/storefront/storefrontTeardown', () => ({
-    tearDownStorefront: (...args: unknown[]) => mockTearDown(...args),
-}));
-
-const mockDaLiveSessionToken = jest.fn();
-jest.mock('@/features/eds/handlers/edsHelpers', () => ({
-    getDaLiveAuthService: () => ({ getAccessToken: () => mockDaLiveSessionToken() }),
-    getGitHubServices: jest.fn(),
-    tryCreateDaLiveTokenProvider: () => ({ getAccessToken: () => mockDaLiveSessionToken() }),
-}));
-
-// The repository delete and the code removal after it (EDS-67). Mocked, so these assert
-// what it was HANDED; the order inside it is `storefrontCodeRemoval.test.ts`'s.
-const mockDeleteStorefrontRepository = jest.fn();
-jest.mock('@/features/eds/services/storefront/storefrontCodeRemoval', () => ({
-    deleteStorefrontRepository: (...args: unknown[]) => mockDeleteStorefrontRepository(...args),
-}));
-
-const mockInspectToken = jest.fn();
-jest.mock('@/core/di/serviceLocator', () => ({
-    ServiceLocator: {
-        getAuthenticationService: () => ({ getTokenManager: () => ({ inspectToken: () => mockInspectToken() }) }),
-    },
-}));
-
-jest.mock('@/features/eds/services/helix/helixService', () => ({
-    HelixService: { initKeyStore: jest.fn() },
-}));
 
 const getConfiguration = vscode.workspace.getConfiguration as jest.Mock;
 
@@ -126,8 +88,26 @@ describe('"localOnly"', () => {
     });
 });
 
-const DA_LIVE_TOKEN = 'da-live-session-token';
-const ADOBE_TOKEN = 'adobe-console-token';
+// Uninstall Datapack (walk F96): only when the call asks, under any setting but localOnly.
+// deleteAll never ticks it: it writes to a store, and the button never removes it without a tick.
+describe("the datapack's data", () => {
+    it.each(['ask', 'deleteAll'])('under %s, is removed only when the call asks', (setting) => {
+        behavior(setting);
+
+        expect(resolveCloudCleanup({ removeData: true }).removeData).toBe(true);
+        expect(resolveCloudCleanup({}).removeData).toBeUndefined();
+        expect(resolveCloudCleanup({ removeData: false }).removeData).toBeUndefined();
+    });
+
+    it('is refused under localOnly, saying why', () => {
+        behavior('localOnly');
+
+        const choice = resolveCloudCleanup({ removeData: true });
+
+        expect(choice.removeData).toBeUndefined();
+        expect(choice.refusedBySetting).toContain('localOnly');
+    });
+});
 
 function storefrontProject() {
     return createMockProject({
@@ -141,169 +121,61 @@ function storefrontProject() {
     });
 }
 
-/** The token the teardown would send, read off the provider it was handed. */
-async function tokenHandedToTeardown(): Promise<string | null> {
-    const deps = mockTearDown.mock.calls[0][1] as { tokenProvider: { getAccessToken(): Promise<string | null> } };
-    return deps.tokenProvider.getAccessToken();
-}
+const TORN: StorefrontTeardownResult = {
+    contentDeleted: true,
+    deletedCount: 7,
+    unpublishedPages: 3,
+    stillPublished: false,
+    publishState: 'down',
+    publishSummary: 'The pages are off the live site.',
+    productPages: { status: 'removed', found: 2, liveRemoved: 2, previewRemoved: 2, summary: 'Removed 2 product pages.' },
+};
 
-beforeEach(() => {
-    mockTearDown.mockResolvedValue({ contentDeleted: true, unpublishedPages: 3, stillPublished: false });
-    mockInspectToken.mockResolvedValue({ valid: true, token: ADOBE_TOKEN });
-});
-
-describe('the sign-in an agent delete hands the storefront teardown', () => {
-    it('is the DA.live session, when there is one', async () => {
-        mockDaLiveSessionToken.mockResolvedValue(DA_LIVE_TOKEN);
-
-        const outcome = await cleanUpProjectCloud(createMockHandlerContext(), storefrontProject(), {
-            deleteDaLiveSite: true,
-            deleteGithubRepo: false,
-        });
-
-        expect(await tokenHandedToTeardown()).toBe(DA_LIVE_TOKEN);
-        expect(outcome.daLiveSite).toMatchObject({ name: 'acme/site', contentDeleted: true, stillPublished: false });
-    });
-
-    it('falls back to the Adobe sign-in only when there is no DA.live session', async () => {
-        mockDaLiveSessionToken.mockResolvedValue(null);
-
-        await cleanUpProjectCloud(createMockHandlerContext(), storefrontProject(), {
-            deleteDaLiveSite: true,
-            deleteGithubRepo: false,
-        });
-
-        expect(await tokenHandedToTeardown()).toBe(ADOBE_TOKEN);
-    });
-
-    it('takes nothing down, and says the pages may still be live, when neither sign-in is usable', async () => {
-        mockDaLiveSessionToken.mockResolvedValue(null);
-        mockInspectToken.mockResolvedValue({ valid: false });
-
-        const outcome = await cleanUpProjectCloud(createMockHandlerContext(), storefrontProject(), {
-            deleteDaLiveSite: true,
-            deleteGithubRepo: false,
-        });
-
-        expect(mockTearDown).not.toHaveBeenCalled();
-        expect(outcome.daLiveSite).toMatchObject({ name: 'acme/site', contentDeleted: false, stillPublished: true });
-        expect(outcome.daLiveSite?.error).toContain('DA.live');
-    });
-});
-
-// EDS-65: on 2026-10-25 the DA.live sign-in had expired, the Adobe fallback was refused
-// by Helix, and the repository was deleted anyway. A teardown that stopped keeps it.
-describe('when the teardown stops because the pages are still live', () => {
-    const STOPPED = 'The pages could not be taken off the live site, so nothing else was deleted.';
-
-    it('keeps the repository and says why', async () => {
-        mockDaLiveSessionToken.mockResolvedValue(null);
-        mockTearDown.mockResolvedValue({ contentDeleted: false, stillPublished: true, stopped: STOPPED, error: STOPPED });
-        const { getGitHubServices } = jest.requireMock('@/features/eds/handlers/edsHelpers') as { getGitHubServices: jest.Mock };
-
-        const outcome = await cleanUpProjectCloud(createMockHandlerContext(), storefrontProject(), {
-            deleteDaLiveSite: true,
-            deleteGithubRepo: true,
-        });
-
-        expect(getGitHubServices).not.toHaveBeenCalled();
-        expect(outcome.githubRepo).toBeUndefined();
-        expect(outcome.stopped).toBe(STOPPED);
-        expect(outcome.daLiveSite).toMatchObject({ contentDeleted: false, stillPublished: true, error: STOPPED });
-    });
-});
-
-// EDS-67: the repository went and AEM's copy of its code stayed on aem.live.
-describe("an agent's repository delete, and the site's code after it", () => {
-    const repoLifecycle = { deleteRepository: jest.fn() };
-    const fileOperations = { listRepoFiles: jest.fn() };
-
-    beforeEach(() => {
-        const { getGitHubServices } = jest.requireMock('@/features/eds/handlers/edsHelpers') as {
-            getGitHubServices: jest.Mock;
-        };
-        getGitHubServices.mockReturnValue({ repoLifecycle, fileOperations });
-        repoLifecycle.deleteRepository.mockResolvedValue(undefined);
-        mockDeleteStorefrontRepository.mockResolvedValue({
-            code: { removed: 12, failed: [], stillServing: false },
-        });
-    });
-
-    it('deletes THE repository through the code removal, which lists its files first', async () => {
-        mockDaLiveSessionToken.mockResolvedValue(DA_LIVE_TOKEN);
-
-        await cleanUpProjectCloud(createMockHandlerContext(), storefrontProject(), {
-            deleteDaLiveSite: false,
-            deleteGithubRepo: true,
-        });
-
-        expect(mockDeleteStorefrontRepository).toHaveBeenCalledTimes(1);
-        const [target, deps] = mockDeleteStorefrontRepository.mock.calls[0] as [
-            unknown,
-            {
-                files: unknown;
-                deleteRepository: (o: string, r: string) => Promise<void>;
-                tokenProvider: { getAccessToken(): Promise<string | null> };
-            },
+describe("agentCloudOutcome: the agent's answer from the button delete", () => {
+    it("is the teardown's own result for the site, and the repository with its code", () => {
+        const rows: CleanupResultItem[] = [
+            { type: 'daLive', name: 'acme/site', success: true },
+            { type: 'github', name: 'acme/site', success: true },
         ];
-        expect(target).toStrictEqual({ owner: 'acme', repo: 'site' });
-        expect(deps.files).toBe(fileOperations);
-        await deps.deleteRepository('acme', 'site');
-        expect(repoLifecycle.deleteRepository).toHaveBeenCalledWith('acme', 'site');
-        // The DA.live session: the one credential the code bus DELETE was measured with.
-        expect(await deps.tokenProvider.getAccessToken()).toBe(DA_LIVE_TOKEN);
-    });
 
-    it('says the code is gone only when aem.live no longer serves it', async () => {
-        const outcome = await cleanUpProjectCloud(createMockHandlerContext(), storefrontProject(), {
-            deleteDaLiveSite: false,
-            deleteGithubRepo: true,
-        });
+        const outcome = agentCloudOutcome(storefrontProject(), { storefront: TORN, siteCode: { removed: 12, failed: [], stillServing: false } }, rows);
 
-        expect(outcome.githubRepo).toStrictEqual({
-            name: 'acme/site',
-            deleted: true,
-            siteCode: { removed: 12, notRemoved: 0, stillServing: false },
+        expect(outcome).toStrictEqual({
+            daLiveSite: {
+                name: 'acme/site',
+                contentDeleted: true,
+                unpublishedPages: 3,
+                stillPublished: false,
+                publishSummary: 'The pages are off the live site.',
+                productPages: 'Removed 2 product pages.',
+                error: undefined,
+            },
+            githubRepo: { name: 'acme/site', deleted: true, siteCode: { removed: 12, notRemoved: 0, stillServing: false } },
         });
     });
 
-    it("carries the sentence when the code is left, so a 'deleted' is never said over it", async () => {
-        const summary = "The site's code was removed from aem.live, but aem.live still serves its scripts/aem.js.";
-        mockDeleteStorefrontRepository.mockResolvedValue({
-            code: { removed: 0, failed: [], stillServing: true, summary },
-        });
+    it('says the pages may still be live, with why, when a sign-in kept the teardown from running', () => {
+        const refused = 'Not signed in to DA.live, so the storefront was not taken down.';
 
-        const outcome = await cleanUpProjectCloud(createMockHandlerContext(), storefrontProject(), {
-            deleteDaLiveSite: false,
-            deleteGithubRepo: true,
-        });
+        const outcome = agentCloudOutcome(storefrontProject(), {}, [{ type: 'daLive', name: 'acme/site', success: false, skipped: true, error: refused }]);
 
-        expect(outcome.githubRepo?.siteCode).toStrictEqual({ removed: 0, notRemoved: 0, stillServing: true, summary });
+        expect(outcome.daLiveSite).toMatchObject({ name: 'acme/site', contentDeleted: false, stillPublished: true, error: refused });
     });
 
-    // Owner, 2026-10-28: with no working DA.live sign-in the repository is kept, and the
-    // project with it, so "delete again" can still remove the site code.
-    it('keeps the repository and stops the delete when there is no working DA.live sign-in', async () => {
+    it('carries the stop, and a kept repository, when the site code could not be removed', () => {
         const kept = 'The repository was kept so its site code can still be removed. Sign in to DA.live and delete again.';
-        mockDeleteStorefrontRepository.mockResolvedValue({ kept });
 
-        const outcome = await cleanUpProjectCloud(createMockHandlerContext(), storefrontProject(), {
-            deleteDaLiveSite: false,
-            deleteGithubRepo: true,
-        });
+        const outcome = agentCloudOutcome(storefrontProject(), { stopped: kept }, [{ type: 'github', name: 'acme/site', success: false, error: kept }]);
 
-        expect(outcome.githubRepo).toStrictEqual({ name: 'acme/site', deleted: false, error: kept });
-        expect(outcome.stopped).toBe(kept);
+        expect(outcome).toStrictEqual({ stopped: kept, githubRepo: { name: 'acme/site', deleted: false, error: kept } });
     });
 
-    it('reports a refused repository delete, with no code outcome', async () => {
-        mockDeleteStorefrontRepository.mockRejectedValue(new Error('403 from GitHub'));
+    it('carries no stop that came from the datapack, which is not an online outcome', () => {
+        expect(agentCloudOutcome(storefrontProject(), { stopped: 'Its datapack was not uninstalled.' }, [])).toStrictEqual({});
+    });
 
-        const outcome = await cleanUpProjectCloud(createMockHandlerContext(), storefrontProject(), {
-            deleteDaLiveSite: false,
-            deleteGithubRepo: true,
-        });
-
-        expect(outcome.githubRepo).toStrictEqual({ name: 'acme/site', deleted: false, error: '403 from GitHub' });
+    it('says nothing about resources the delete was not asked to touch', () => {
+        expect(agentCloudOutcome(storefrontProject(), {}, [])).toStrictEqual({});
+        expect(agentCloudOutcome(createMockProject({}), { storefront: TORN }, [])).toStrictEqual({});
     });
 });

@@ -32,13 +32,12 @@ export interface CheckFailure {
 
 /**
  * Why a check request that threw could not answer. The client's own throw (its time limit,
- * a lost channel) says nothing an SC can act on, and the extension may well have finished
- * and saved the check after the guide stopped waiting (2026-10-01) — so this says that,
- * the same honest sentence whatever the transport detail was. The detail goes to the
- * webview logger; the extension's own log records what the check itself did.
+ * a lost channel) says nothing an SC can act on, so this is the same short line whatever the
+ * transport detail was: what is wrong and what to do. The extension may well have finished and
+ * saved the check after the guide stopped waiting (2026-10-01), and pressing again reads that.
+ * The detail goes to the webview logger; the extension's own log records what the check did.
  */
-export const NO_ANSWER =
-    "Demo Builder didn't get an answer in time. The check may still have finished; press Check all steps to try again.";
+export const NO_ANSWER = 'No answer in time. Press Check all steps to try again.';
 
 /** Where a check run is: the step being checked, and how far along. */
 export interface CheckProgress {
@@ -59,6 +58,11 @@ export interface SetupChecklistActions {
     checkAll: (stepIds: string[]) => Promise<SetupChecklistItem[] | undefined>;
     /** The step being checked during a run, if one is running. */
     progress?: CheckProgress;
+    /**
+     * The run's steps not answered yet, the one being checked included: the list shows them
+     * empty, so a run starts from nothing and fills in one step at a time (owner, 2026-11-03).
+     */
+    waiting?: ReadonlySet<string>;
     /** The steps the last run could not check. */
     failures: CheckFailure[];
     /**
@@ -72,15 +76,50 @@ export interface SetupChecklistActions {
     busy: boolean;
     /** Why the last request failed, if it did. */
     error?: string;
+    /** The step that request was about. */
+    errorStepId?: string;
 }
 
 /**
+ * Where the guide's requests go: the three message names, and what every request carries
+ * beside its step. An integration's steps go to its handlers with its id
+ * ({@link integrationSetupTarget}); steps that are not an integration's name their own.
+ */
+export interface SetupRequestTarget {
+    messages: {
+        /** Mark one step done or dismissed, or open it again: `{ ...payload, stepId, state }`. */
+        setStep: string;
+        /** Check one step: `{ ...payload, stepId }`, answering the saved checklist. */
+        check: string;
+        /** Sign in ahead of the checks: `payload` alone. */
+        prepare: string;
+    };
+    /** Carried by every request, the step's fields added to it. */
+    payload: Readonly<Record<string, unknown>>;
+}
+
+/**
+ * An integration's setup requests: its handlers, with its id.
+ *
  * @param componentId - the integration whose checklist this is
+ * @returns the target its guide sends to
+ */
+export function integrationSetupTarget(componentId: string): SetupRequestTarget {
+    return {
+        messages: { setStep: 'setSetupStep', check: 'checkSetupSteps', prepare: 'prepareSetupChecks' },
+        payload: { id: componentId },
+    };
+}
+
+/**
+ * @param target - where the requests go; held stable across renders by the caller (a hook
+ *   dependency)
  * @returns the actions, whether one is running, and how far a check run is
  */
-export function useSetupChecklist(componentId: string): SetupChecklistActions {
+export function useSetupChecklist(target: SetupRequestTarget): SetupChecklistActions {
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string>();
+    const [errorStepId, setErrorStepId] = useState<string>();
 
     const run = useCallback(async (type: string, payload: Record<string, unknown>) => {
         setBusy(true);
@@ -92,18 +131,22 @@ export function useSetupChecklist(componentId: string): SetupChecklistActions {
         } catch (thrown) {
             // The client's own throw is a transport detail; the SC gets a sentence.
             log.warn(`${type} did not answer`, thrown);
-            setError("Demo Builder didn't get an answer in time. Try again.");
+            setError('No answer in time. Try again.');
         } finally {
             setBusy(false);
         }
     }, []);
 
     const setStep = useCallback(
-        (stepId: string, state: StepState) => void run('setSetupStep', { id: componentId, stepId, state }),
-        [componentId, run],
+        (stepId: string, state: StepState) => {
+            setErrorStepId(stepId);
+            void run(target.messages.setStep, { ...target.payload, stepId, state });
+        },
+        [target, run],
     );
     const [progress, setProgress] = useState<CheckProgress>();
     const [failures, setFailures] = useState<CheckFailure[]>([]);
+    const [waiting, setWaiting] = useState<ReadonlySet<string>>();
     const checkAll = useCallback(
         async (stepIds: string[]): Promise<SetupChecklistItem[] | undefined> => {
             setBusy(true);
@@ -111,18 +154,23 @@ export function useSetupChecklist(componentId: string): SetupChecklistActions {
             setFailures([]);
             const failed: CheckFailure[] = [];
             let items: SetupChecklistItem[] | undefined;
+            const left = new Set(stepIds);
+            setWaiting(new Set(left));
             for (const [index, stepId] of stepIds.entries()) {
                 setProgress({ stepId, position: index + 1, total: stepIds.length });
-                const answer = await checkOne(componentId, stepId);
+                const answer = await checkOne(target, stepId);
                 if ('reason' in answer) failed.push({ stepId, reason: answer.reason });
                 else items = answer.items ?? items;
+                left.delete(stepId);
+                setWaiting(new Set(left));
             }
             setFailures(failed);
+            setWaiting(undefined);
             setProgress(undefined);
             setBusy(false);
             return items;
         },
-        [componentId],
+        [target],
     );
 
     const [connecting, setConnecting] = useState(false);
@@ -130,12 +178,12 @@ export function useSetupChecklist(componentId: string): SetupChecklistActions {
         setConnecting(true);
         // Its failure is not the SC's to read here: a check that cannot sign in says so.
         webviewClient
-            .request('prepareSetupChecks', { id: componentId })
+            .request(target.messages.prepare, { ...target.payload })
             .catch((thrown: unknown) => log.warn('sign-in ahead of the checks did not answer', thrown))
             .finally(() => setConnecting(false));
-    }, [componentId]);
+    }, [target]);
 
-    return { setStep, checkAll, progress, failures, prepare, connecting, busy, error };
+    return { setStep, checkAll, progress, waiting, failures, prepare, connecting, busy, error, errorStepId };
 }
 
 /**
@@ -143,11 +191,11 @@ export function useSetupChecklist(componentId: string): SetupChecklistActions {
  * carries the handler's own sentence; a throw gets {@link NO_ANSWER}.
  */
 async function checkOne(
-    componentId: string,
+    target: SetupRequestTarget,
     stepId: string,
 ): Promise<{ items?: SetupChecklistItem[] } | { reason: string }> {
     try {
-        const answer = await webviewClient.request<Answer>('checkSetupSteps', { id: componentId, stepId });
+        const answer = await webviewClient.request<Answer>(target.messages.check, { ...target.payload, stepId });
         if (answer?.success === false) return { reason: answer.error ?? NO_ANSWER };
         return { items: answer?.data?.items };
     } catch (thrown) {

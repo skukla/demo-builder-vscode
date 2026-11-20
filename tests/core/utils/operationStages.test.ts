@@ -6,12 +6,21 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
+import { ADOBE_PROJECT_STAGES } from '@/core/utils/adobeProjectStages';
+import { CREATION_STAGES } from '@/core/utils/creationStages';
+import { DATAPACK_STAGES } from '@/core/utils/datapackStages';
+import { RESET_STAGES } from '@/core/utils/resetStages';
+import { STOREFRONT_STAGES } from '@/core/utils/storefrontStages';
+import { UPDATE_STAGES } from '@/core/utils/updateStages';
 import {
     OPERATION_STAGES,
+    baseStage,
     detailFor,
     expectationFor,
     type OperationStage,
 } from '@/core/utils/operationStages';
+import { packStage } from '@/core/utils/packStage';
+import { stepPosition } from '@/core/utils/numberedSteps';
 
 const ROOT = join(__dirname, '..', '..', '..');
 
@@ -23,7 +32,7 @@ const ROOT = join(__dirname, '..', '..', '..');
 const STAGE_REPORTERS = [
     // The reset's sample-data removal, split out of edsResetUI.ts on 2026-10-08. Until then
     // it reported a literal, so neither file could be listed here.
-    'src/features/eds/services/reset/edsResetSampleData.ts',
+    'src/features/eds/services/reset/edsResetDatapack.ts',
     // Split out of appBuilderComponentRunner.ts (decompose-god-file, 2026-10-07); its
     // stage reports moved with the code, so the rule follows them.
     'src/features/app-builder/services/appBuilderAddRun.ts',
@@ -55,6 +64,9 @@ const STAGE_REPORTERS = [
     'src/features/dashboard/handlers/edsContentHandlers.ts',
     'src/features/eds/services/storefront/storefrontContentRepublishService.ts',
     'src/features/eds/services/storefront/storefrontRepublishService.ts',
+    // Clearing a demo's stores (datapack-engine step 10): its stages are the table's.
+    'src/features/data-installer/services/demoDataWipe/wipeRun.ts',
+    'src/features/data-installer/handlers/demoDataHandlers.ts',
 ];
 
 /** A progress call whose FIRST argument is a string or template literal. */
@@ -63,24 +75,59 @@ const LITERAL_STAGE = /\b(?:onProgress\??\.?|report)\(\s*[`'"]/;
 describe('OPERATION_STAGES', () => {
     // The detail is row 2, shown when a report names no step of its own. A stage
     // without one left that row blank, and the modal read as two lines with a gap
-    // (owner, 2026-09-19).
-    it('gives every stage a label, an expectation and a detail', () => {
-        for (const stage of Object.values(OPERATION_STAGES)) {
+    // (owner, 2026-09-19). The datapack stages whose label says it all have none
+    // (Phase 1, owner 2026-11-10): their waits drop the row (`noBlankRows`). Every
+    // other stage still needs one.
+    const STANDS_ALONE: ReadonlySet<string> = new Set(
+        Object.values(DATAPACK_STAGES).map((stage) => stage.label),
+    );
+
+    it('gives every stage a label, an expectation and, outside the datapack stages, a detail', () => {
+        const stages = Object.values(OPERATION_STAGES) as readonly OperationStage[];
+        for (const stage of stages) {
             expect(stage.label.trim()).not.toBe('');
             expect(stage.expectation.trim()).not.toBe('');
-            expect(stage.detail.trim()).not.toBe('');
         }
+        const needDetail = stages.filter((stage) => stage.detail !== undefined || !STANDS_ALONE.has(stage.label));
+        expect(needDetail.filter((stage) => (stage.detail ?? '').trim() === '')).toStrictEqual([]);
     });
 
-    // The label is the SHORT set: it is all a background notification shows, after a
-    // title that already takes ~29 of the ~64 characters VS Code draws before cutting
-    // the line off (owner screenshot, 2026-09-19). The detail is the long set.
-    it('keeps every label to 25 characters, so a notification shows it whole', () => {
-        const long = Object.values(OPERATION_STAGES)
-            .map((stage) => stage.label)
-            .filter((label) => label.length > 25);
+    // The label is the SHORT set: a background notification shows "title: label" on one
+    // line, and VS Code cuts it off at about 62 characters (owner screenshot,
+    // 2026-09-19). So the label's room is what its operation's running title leaves,
+    // checked per operation, not a fixed cap (Phase 1b, owner 2026-11-10). A title that
+    // carries a name is checked with a realistic one.
+    const NOTIFICATION_WIDTH = 62;
+    const labelsOf = (table: Record<string, OperationStage>) => Object.values(table).map((stage) => stage.label);
+    const tabled = new Set(
+        [STOREFRONT_STAGES, RESET_STAGES, ADOBE_PROJECT_STAGES, CREATION_STAGES, DATAPACK_STAGES, UPDATE_STAGES]
+            .flatMap(labelsOf),
+    );
+    const OPERATIONS: ReadonlyArray<{ title: string; labels: readonly string[] }> = [
+        { title: 'Clearing Demo Data', labels: labelsOf(DATAPACK_STAGES) },
+        { title: 'Deleting citisignal-demo', labels: labelsOf(STOREFRONT_STAGES) },
+        { title: 'Resetting citisignal-demo', labels: labelsOf(RESET_STAGES) },
+        { title: 'Creating citisignal-demo', labels: [...labelsOf(CREATION_STAGES), ...labelsOf(ADOBE_PROJECT_STAGES)] },
+        { title: 'Updating Demo Builder to v1.2.3', labels: labelsOf(UPDATE_STAGES) },
+        // Everything else: App Builder, mesh, ERP and republish runs.
+        { title: 'Redeploying ERP Integration', labels: labelsOf(OPERATION_STAGES).filter((label) => !tabled.has(label)) },
+    ];
+    const overWidth = (operations: typeof OPERATIONS) =>
+        operations.flatMap(({ title, labels }) =>
+            labels.map((label) => `${title}: ${label}`).filter((line) => line.length > NOTIFICATION_WIDTH),
+        );
 
-        expect(long).toStrictEqual([]);
+    it('CONTROL: the width check flags a planted pair over 62 characters and passes one at it', () => {
+        const title = 'T'.repeat(20);
+        expect(overWidth([{ title, labels: ['x'.repeat(40), 'y'.repeat(41)] }])).toStrictEqual([
+            `${title}: ${'y'.repeat(41)}`,
+        ]);
+        // Every stage is in some operation, so none escapes the check.
+        expect(new Set(OPERATIONS.flatMap(({ labels }) => labels)).size).toBe(labelsOf(OPERATION_STAGES).length);
+    });
+
+    it("fits every label beside its operation's title in a notification", () => {
+        expect(overWidth(OPERATIONS)).toStrictEqual([]);
     });
 
     // Lines are SHORT BY DESIGN (owner, 2026-10-16: "Why should we need lines that are
@@ -94,7 +141,7 @@ describe('OPERATION_STAGES', () => {
         max: number,
         stages: readonly OperationStage[] = Object.values(OPERATION_STAGES),
     ) =>
-        stages.map((stage) => stage[field]).filter((text) => text.length > max);
+        stages.map((stage) => stage[field] ?? '').filter((text) => text.length > max);
 
     it('CONTROL: the length checks flag a planted long line and pass one at the limit', () => {
         const planted: OperationStage[] = [
@@ -158,5 +205,45 @@ describe('stage reporters', () => {
         expect(LITERAL_STAGE.test("deps.onProgress?.('Subscribing Adobe APIs…');")).toBe(true);
         expect(LITERAL_STAGE.test("report('Checking requirements…');")).toBe(true);
         expect(LITERAL_STAGE.test('report(OPERATION_STAGES.adding.label);')).toBe(false);
+    });
+});
+
+// Owner, 2026-11-16: an Edit's switch read "Uninstalling the datapack", then "Installing the
+// datapack". The steps now name the pack, and still find their timing line and their place in a run.
+describe('a datapack step named for its pack', () => {
+    const { installingDatapack: install, removingDatapack: remove } = OPERATION_STAGES;
+
+    it('names the pack on each step', () => {
+        expect(packStage(remove, 'We.Cafe')).toBe('Uninstalling We.Cafe');
+        expect(packStage(install, 'Frescopa')).toBe('Installing Frescopa');
+    });
+
+    it('CONTROL: keeps the table label when the name is not known', () => {
+        expect(packStage(install, undefined)).toBe(install.label);
+    });
+
+    it('keeps the timing and detail lines of the step it names', () => {
+        expect(expectationFor('Installing Frescopa')).toBe(install.expectation);
+        expect(detailFor('Uninstalling We.Cafe')).toBe(remove.detail);
+        expect(baseStage('Uninstalling We.Cafe')).toBe(remove.label);
+    });
+
+    it('sits where the run lists the step', () => {
+        const steps = [OPERATION_STAGES.writingConfigFiles.label, install.label, OPERATION_STAGES.finishingProject.label];
+
+        expect(stepPosition(steps, 'Installing Frescopa')).toEqual({ index: 2, total: 3 });
+    });
+
+    it('CONTROL: a table label is its own base, whatever its first word', () => {
+        expect(baseStage(OPERATION_STAGES.installingUpdateDependencies.label)).toBe(OPERATION_STAGES.installingUpdateDependencies.label);
+    });
+});
+
+// Walk F205 (owner, 2026-11-17): a step's second line names what the step works on, as its
+// neighbours do ("Removing old pages from the CDN"); "The live site serves every demo page" read
+// as a claim.
+describe('the copied-pages check', () => {
+    it('names what it checks, in the voice of the steps around it', () => {
+        expect(RESET_STAGES.checkingCopiedPages.detail).toBe('Verifying live pages');
     });
 });

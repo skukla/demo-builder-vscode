@@ -46,4 +46,4 @@ pendingClash: {
 
 ## Done when
 
-On JustRite, the local `blocks/header/header.js` carries the markers and nothing is pushed.
+On Tailspin, the local `blocks/header/header.js` carries the markers and nothing is pushed.

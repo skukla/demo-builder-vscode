@@ -10,14 +10,14 @@ status: built
 # A screen opened for one project acts on whichever project is current
 
 **What happened (2026-10-09, 14:30 to 14:35 UTC).** The owner had the Integrations screen
-open for JustRite and removed Kukla ERP, then tried Add another ERP ("Accuform ERP"). At
+open for Tailspin and removed Kukla ERP, then tried Add another ERP ("Accuform ERP"). At
 14:32 an agent's `create_project` finished a scratch project and made it the current one
-(`state.json` `currentProjectPath`). The screen still said JustRite, but every handler
+(`state.json` `currentProjectPath`). The screen still said Tailspin, but every handler
 behind it resolves `stateManager.getCurrentProject()` (`appBuilderComponentOperation.ts`
 `resolveComponentTarget`), so the add ran against the scratch project, found no
 `erp-integration`, and the owner was told it "does not serve several ERPs". The Kukla
 removal, started two minutes earlier, kept its own project object but its finishing
-snapshot read the current project, so the JustRite screen was left showing the card
+snapshot read the current project, so the Tailspin screen was left showing the card
 mid-removal. `get_erp_status` from the agent answered "not found" for the same reason.
 
 **Two things.**
@@ -36,11 +36,11 @@ mid-removal. `get_erp_status` from the agent answered "not found" for the same r
 
 **The same fault from the other side (2026-10-12, 14:02 to 14:14 local).** An agent created
 a project (`create_project`, finished 14:02:36) and went on working on it. At 14:04:01 the
-Your Projects screen sent `selectProject` for JustRite: the log line `Selected project:
-justrite` carries no agent call id, and the only two senders of that message are click
+Your Projects screen sent `selectProject` for Tailspin: the log line `Selected project:
+tailspin` carries no agent call id, and the only two senders of that message are click
 handlers on a project card (`projects-dashboard/ui/index.tsx`). From then on the agent's
-tools answered for JustRite: `run_commerce_query` at 14:04:02 and `get_storefront_report` at
-14:09:21 (it named `skukla/kukla-justrite`). Nothing told the agent. It called
+tools answered for Tailspin: `run_commerce_query` at 14:04:02 and `get_storefront_report` at
+14:09:21 (it named `skukla/kukla-tailspin`). Nothing told the agent. It called
 `set_current_project` at 14:14 and carried on.
 
 What was ruled out by reading: the named reads (`get_project`, `get_component_config`,

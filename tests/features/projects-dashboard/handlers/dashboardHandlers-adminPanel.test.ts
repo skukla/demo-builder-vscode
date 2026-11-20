@@ -5,9 +5,12 @@
  * repo's file-size limit (see docs/testing/test-file-splitting-playbook.md).
  */
 
-const mockOpenInIncognito = jest.fn().mockResolvedValue(true);
+// The projects list opens the Admin from a card's menu, which closes as the item is picked, so
+// it opens with the "Opening a private browser" notification (owner, 2026-10-31). Only that
+// opener is mocked: a call to the bare one would fail here.
+const mockOpenPrivateBrowser = jest.fn().mockResolvedValue(true);
 jest.mock('@/core/utils/browserUtils', () => ({
-    openInIncognito: (...args: unknown[]) => mockOpenInIncognito(...args),
+    openPrivateBrowser: (...args: unknown[]) => mockOpenPrivateBrowser(...args),
 }));
 
 import { handleOpenAdminPanel } from './dashboardHandlers.testUtils';
@@ -53,7 +56,7 @@ describe('dashboardHandlers', () => {
 
             expect(result.success).toBe(false);
             expect(result.error).toMatch(/path is required/i);
-            expect(mockOpenInIncognito).not.toHaveBeenCalled();
+            expect(mockOpenPrivateBrowser).not.toHaveBeenCalled();
         });
 
         it('rejects a path outside the projects directory before loading', async () => {
@@ -65,7 +68,7 @@ describe('dashboardHandlers', () => {
 
             expect(result.success).toBe(false);
             expect(result.error).toMatch(/invalid project path/i);
-            expect(mockOpenInIncognito).not.toHaveBeenCalled();
+            expect(mockOpenPrivateBrowser).not.toHaveBeenCalled();
         });
 
         it('returns error when the project cannot be loaded', async () => {
@@ -85,7 +88,7 @@ describe('dashboardHandlers', () => {
 
             expect(result.success).toBe(false);
             expect(result.error).toMatch(/not found/i);
-            expect(mockOpenInIncognito).not.toHaveBeenCalled();
+            expect(mockOpenPrivateBrowser).not.toHaveBeenCalled();
         });
 
         it('opens the configured admin URL externally when set', async () => {
@@ -98,8 +101,8 @@ describe('dashboardHandlers', () => {
             });
 
             expect(result.success).toBe(true);
-            expect(mockOpenInIncognito).toHaveBeenCalledTimes(1);
-            expect(mockOpenInIncognito).toHaveBeenCalledWith(ADMIN_URL);
+            expect(mockOpenPrivateBrowser).toHaveBeenCalledTimes(1);
+            expect(mockOpenPrivateBrowser).toHaveBeenCalledWith(ADMIN_URL);
             // No configure prompt when the URL exists.
             expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
         });
@@ -116,7 +119,7 @@ describe('dashboardHandlers', () => {
 
             expect(result.success).toBe(false);
             expect(result.error).toMatch(/invalid/i);
-            expect(mockOpenInIncognito).not.toHaveBeenCalled();
+            expect(mockOpenPrivateBrowser).not.toHaveBeenCalled();
         });
 
         it('opens an http admin URL (Configure accepts http, so open-time must too)', async () => {
@@ -129,8 +132,8 @@ describe('dashboardHandlers', () => {
             });
 
             expect(result.success).toBe(true);
-            expect(mockOpenInIncognito).toHaveBeenCalledTimes(1);
-            expect(mockOpenInIncognito).toHaveBeenCalledWith(httpUrl);
+            expect(mockOpenPrivateBrowser).toHaveBeenCalledTimes(1);
+            expect(mockOpenPrivateBrowser).toHaveBeenCalledWith(httpUrl);
         });
 
         it('shows a notification with an Open Configure action when no URL is set', async () => {
@@ -148,7 +151,7 @@ describe('dashboardHandlers', () => {
                 'No Admin Panel URL is set for this project.',
                 'Open Configure'
             );
-            expect(mockOpenInIncognito).not.toHaveBeenCalled();
+            expect(mockOpenPrivateBrowser).not.toHaveBeenCalled();
             // Toast dismissed (no selection) — no pointer write, no navigation.
             expect(context.stateManager.saveProject).not.toHaveBeenCalled();
             expect(vscode.commands.executeCommand).not.toHaveBeenCalled();

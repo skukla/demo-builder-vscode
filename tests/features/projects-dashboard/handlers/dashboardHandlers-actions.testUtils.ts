@@ -39,11 +39,6 @@ jest.mock('@/features/projects-dashboard/services/settingsTransferService', () =
     exportProjectSettings: (...args: unknown[]) => mockExportProjectSettings(...args),
 }));
 
-export const mockDeleteProject = jest.fn();
-jest.mock('@/features/projects-dashboard/services/projectDeletionService', () => ({
-    deleteProject: (...args: unknown[]) => mockDeleteProject(...args),
-}));
-
 export const mockRenameProjectCore = jest.fn();
 jest.mock('@/features/projects-dashboard/services/projectRenameService', () => ({
     renameProjectCore: (...args: unknown[]) => mockRenameProjectCore(...args),
@@ -72,16 +67,6 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     getEwCanvasBranch: (...args: unknown[]) => mockGetEwCanvasBranch(...args),
 }));
 
-export const mockResetProjectWithUI = jest.fn();
-jest.mock('@/features/lifecycle/services/projectResetService', () => ({
-    resetProjectWithUI: (...args: unknown[]) => mockResetProjectWithUI(...args),
-}));
-
-export const mockResetEdsProjectWithUI = jest.fn();
-jest.mock('@/features/eds/services/reset/edsResetUI', () => ({
-    resetEdsProjectWithUI: (...args: unknown[]) => mockResetEdsProjectWithUI(...args),
-}));
-
 export const mockGetCommandExecutor = jest.fn();
 export const mockGetAuthenticationService = jest.fn();
 jest.mock('@/core/di/serviceLocator', () => ({
@@ -94,7 +79,6 @@ jest.mock('@/core/di/serviceLocator', () => ({
 // Below the mocks on purpose — see the note above about hoisting.
 export {
     handleCopyFromExisting,
-    handleDeleteProject,
     handleEditProject,
     handleExportProject,
     handleImportFromFile,
@@ -104,7 +88,6 @@ export {
     handleOpenLiveSite,
     handleOpenSettings,
     handleRenameProject,
-    handleResetProject,
     handleSetProjectPinned,
     handleStartDemo,
     handleStopDemo,

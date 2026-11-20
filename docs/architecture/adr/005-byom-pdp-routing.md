@@ -156,7 +156,7 @@ each category to its own address.
 page at a product path, previewed and published, was not served: the overlay's template was.
 On preview the overlay is asked first and its answer beats authored content (the BYOM spec
 says so; this is the measurement). At a category's address that means an authored page —
-Justrite's hand-built `/apparel`, `/hazard-communication`, `/workplace-safety` — would be
+Tailspin's hand-built `/apparel`, `/hazard-communication`, `/workplace-safety` — would be
 replaced the next time anything previewed it.
 
 **So the overlay steps aside, and only on sites that opt in.** A public published sheet,

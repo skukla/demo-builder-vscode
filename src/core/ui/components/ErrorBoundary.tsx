@@ -13,8 +13,8 @@
  */
 
 import { View, Text, Heading } from '@adobe/react-spectrum';
-import Alert from '@spectrum-icons/workflow/Alert';
 import React, { Component, ReactNode, ErrorInfo } from 'react';
+import { StatusIcon } from '@/core/ui/components/feedback/StatusIcon';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 
 const log = webviewLogger('ErrorBoundary');
@@ -79,7 +79,7 @@ export class ErrorBoundary extends Component<Props, State> {
                     borderColor="negative"
                 >
                     <View marginBottom="size-200">
-                        <Alert size="L" color="negative" />
+                        <StatusIcon status="error" size="L" />
                     </View>
                     <Heading level={3} marginBottom="size-100">
                         Something went wrong

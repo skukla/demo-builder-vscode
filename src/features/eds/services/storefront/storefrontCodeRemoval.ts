@@ -40,12 +40,14 @@
  * @module features/eds/services/storefront/storefrontCodeRemoval
  */
 
+import { hlxIgnored, parseHlxIgnore } from './hlxIgnore';
 import { checkLiveStatus } from './liveStatusCheck';
 import { aemLiveBaseUrl } from './storefrontProbe';
 import type { DaLiveTokenProvider } from './storefrontTeardown';
 import type { LiveStatusCheck } from './storefrontUnpublish';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { runInBatches } from '@/core/utils/promiseUtils';
+import { countLine } from '@/core/utils/storefrontJobs';
 import { askImsAboutDaLiveToken, type ImsTokenVerdict } from '@/features/eds/services/daLive/daLiveSignInCheck';
 import { HelixService } from '@/features/eds/services/helix/helixService';
 import type { Logger } from '@/types/logger';
@@ -67,6 +69,8 @@ export interface CodeRemovalHelix {
 /** How the repository's files are read before it is deleted (`GitHubFileOperations`). */
 export interface RepoFileLister {
     listRepoFiles(owner: string, repo: string, branch?: string): Promise<Array<{ path: string }>>;
+    /** Reads `.hlxignore`; null when the repository has none. */
+    getFileContent(owner: string, repo: string, path: string, ref?: string): Promise<{ content: string } | null>;
 }
 
 /** What happened to AEM's copy of the code. */
@@ -114,6 +118,8 @@ export interface StorefrontRepoDeletionDeps {
     checkSignIn?: (token: string) => Promise<ImsTokenVerdict>;
     /** The step as it starts, for a caller narrating progress. */
     onStep?: (step: string) => void;
+    /** The line under the step: how many code files are done, "120 of 480 files". */
+    onStepDetail?: (step: string, detail: string) => void;
 }
 
 /** Why a storefront's repository was kept (owner's words, 2026-10-28). */
@@ -137,7 +143,17 @@ async function usableToken(tokenProvider: StorefrontRepoDeletionDeps['tokenProvi
     }
 }
 
-/** The repository's files as code-bus paths, or an Error when they could not be read. */
+/** The repository's `.hlxignore`; empty when it has none or it cannot be read (then every file is deleted). */
+async function readHlxIgnore(owner: string, repo: string, deps: StorefrontRepoDeletionDeps): Promise<string> {
+    try {
+        return (await deps.files.getFileContent(owner, repo, '.hlxignore', BRANCH))?.content ?? '';
+    } catch (error) {
+        deps.logger.debug(`[Code Removal] Could not read ${owner}/${repo}/.hlxignore: ${(error as Error).message}`);
+        return '';
+    }
+}
+
+/** The code-bus paths of the repository's files AEM serves, or an Error when they could not be read. */
 async function listCodePaths(
     owner: string,
     repo: string,
@@ -145,7 +161,14 @@ async function listCodePaths(
 ): Promise<string[] | Error> {
     try {
         const files = await deps.files.listRepoFiles(owner, repo, BRANCH);
-        return files.map((file) => `/${file.path.replace(/^\/+/, '')}`);
+        const rules = parseHlxIgnore(await readHlxIgnore(owner, repo, deps));
+        // AEM never copied what `.hlxignore` leaves out, so there is nothing to delete. On
+        // 2026-11-18 a storefront listed 3,482 files and 2,709 were `*.d.ts`, which it
+        // excludes: about 13 minutes of deletes for files the code bus never had.
+        return files
+            .map((file) => file.path.replace(/^\/+/, ''))
+            .filter((path) => path === PROBE_FILE || !hlxIgnored(rules, path))
+            .map((path) => `/${path}`);
     } catch (error) {
         deps.logger.warn(`[Code Removal] Could not list ${owner}/${repo}: ${(error as Error).message}`);
         return error instanceof Error ? error : new Error(String(error));
@@ -183,8 +206,12 @@ async function removeCodePaths(
     repo: string,
     paths: string[],
     helix: CodeRemovalHelix,
-    logger: Logger,
+    deps: Pick<StorefrontRepoDeletionDeps, 'logger' | 'onStepDetail'>,
 ): Promise<Array<{ path: string; reason: string }>> {
+    const { logger, onStepDetail } = deps;
+    const step = OPERATION_STAGES.removingSiteCode.label;
+    let done = 0;
+    onStepDetail?.(step, countLine(done, paths.length, 'file'));
     const outcomes = await runInBatches(paths, CONCURRENCY, async (path) => {
         try {
             await helix.deleteCode(owner, repo, path, BRANCH);
@@ -193,6 +220,9 @@ async function removeCodePaths(
             const reason = failure instanceof Error ? failure.message : String(failure);
             logger.warn(`[Code Removal] ${owner}/${repo}${path} was not removed: ${reason}`);
             return { path, reason };
+        } finally {
+            done += 1;
+            onStepDetail?.(step, countLine(done, paths.length, 'file'));
         }
     });
     return outcomes.filter((outcome): outcome is { path: string; reason: string } => outcome !== undefined);
@@ -255,7 +285,7 @@ export async function deleteStorefrontRepository(
 
     const tokenProvider: DaLiveTokenProvider = { getAccessToken: () => usableToken(deps.tokenProvider) };
     const helix = (deps.makeHelix ?? ((l, tp) => new HelixService(l, undefined, tp)))(logger, tokenProvider);
-    const failed = await removeCodePaths(owner, repo, paths, helix, logger);
+    const failed = await removeCodePaths(owner, repo, paths, helix, deps);
     const stillServing = await stillServes(owner, repo, checkLive);
     const summary = removalSummary(paths.length, failed.length, stillServing);
     logger.info(

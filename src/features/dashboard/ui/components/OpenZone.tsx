@@ -5,8 +5,10 @@ import Refresh from '@spectrum-icons/workflow/Refresh';
 import StopCircle from '@spectrum-icons/workflow/StopCircle';
 import UserAdmin from '@spectrum-icons/workflow/UserAdmin';
 import React from 'react';
-import { DashboardTile } from './DashboardTile';
+import type { OpeningTile } from '../hooks/useDashboardActions';
+import { DashboardTile, type DashboardTileStatus } from './DashboardTile';
 import { DashboardZone, RemedyTile } from './DashboardZone';
+import { DataInstallerTile } from './DataInstallerTile';
 
 /**
  * Start and Stop as ONE tile — they were always mutually exclusive, and merging
@@ -56,6 +58,13 @@ function LifecycleTile({
     );
 }
 
+/** Manage Commerce's dot while the Finish Setup step Set the Root Category is open (PL-101). */
+const ADMIN_STEP_DOT: DashboardTileStatus = {
+    variant: 'warning',
+    tooltip: "Root category needed — the store does not show the datapack's categories yet",
+    testId: 'manage-commerce-dot',
+};
+
 /** A tile whose host handler is optional still needs something to press. */
 const NOOP = (): void => undefined;
 
@@ -74,6 +83,7 @@ export function OpenZone({
     isStartDisabled,
     isStopDisabled,
     isOpeningBrowser,
+    openingTile = null,
     lifecycleDot,
     statusText,
     canRestart,
@@ -85,6 +95,7 @@ export function OpenZone({
     handleOpenLiveSite,
     handleOpenDaLive,
     handleOpenAdminPanel,
+    adminStepDue = false,
     integrations,
 }: {
     isEds: boolean;
@@ -92,6 +103,8 @@ export function OpenZone({
     isStartDisabled: boolean;
     isStopDisabled: boolean;
     isOpeningBrowser: boolean;
+    /** The tile whose private Chrome window is opening (live site, Admin): a spinner for its icon. */
+    openingTile?: OpeningTile;
     lifecycleDot: 'info' | 'error' | undefined;
     statusText: string | undefined;
     canRestart: boolean;
@@ -103,7 +116,9 @@ export function OpenZone({
     handleOpenLiveSite?: () => void;
     handleOpenDaLive?: () => void;
     handleOpenAdminPanel: () => void;
-    /** The Integrations card, built by the caller (it owns the status inputs). Last card. */
+    /** The Finish Setup step Set the Root Category is open (PL-101): Manage Commerce wears its dot. */
+    adminStepDue?: boolean;
+    /** The Integrations card, built by the caller (it owns the status inputs). */
     integrations?: React.ReactNode;
 }): React.ReactElement {
     return (
@@ -129,7 +144,7 @@ export function OpenZone({
                     needed={needsRestart}
                     icon={<Refresh size="L" />}
                     testId="restart-tile"
-                    description="Pick up configuration changes"
+                    description="Apply changes"
                     onPress={handleRestartDemo}
                 />
             )}
@@ -142,6 +157,7 @@ export function OpenZone({
                 icon={<Globe size="L" />}
                 onPress={isEds ? (handleOpenLiveSite ?? NOOP) : handleOpenBrowser}
                 isDisabled={isOpeningBrowser || (!isEds && !isRunning)}
+                isBusy={openingTile === 'live'}
                 className={isEds ? 'dashboard-action-button--hero' : undefined}
                 description={isEds ? 'The live storefront' : 'The local storefront'}
             />
@@ -159,15 +175,21 @@ export function OpenZone({
             )}
 
             {/* Manage Commerce — always visible; the admin URL resolves
-                backend-side, so no isOpeningBrowser gating here. */}
+                backend-side, so no isOpeningBrowser gating here. Busy while its
+                private window opens (owner, 2026-10-31). */}
             <DashboardTile
                 label="Manage Commerce"
                 description="The Commerce Admin"
                 icon={<UserAdmin size="L" />}
                 onPress={handleOpenAdminPanel}
+                isBusy={openingTile === 'admin'}
+                status={adminStepDue ? ADMIN_STEP_DOT : undefined}
             />
 
             {integrations}
+
+            {/* The global catalog, opened beside the dashboard. */}
+            <DataInstallerTile />
         </DashboardZone>
     );
 }

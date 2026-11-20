@@ -18,6 +18,9 @@ jest.setTimeout(30_000);
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { handleCreationPauseAnswer } from '@/features/project-creation/handlers/creationPause';
+import type { HandlerContext } from '@/types/handlers';
+import type { CreationProgressPayload } from '@/types/webviewPayloads';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
@@ -77,7 +80,7 @@ jest.mock('@/features/project-creation/handlers/executorEditApply', () => ({
     finishEditWithoutRebuild: jest.fn().mockResolvedValue(false),
 }));
 
-jest.mock('@/features/components/services/commerceSecretMigration', () => ({
+jest.mock('@/features/components/services/declaredSecretStore', () => ({
     migrateDeclaredSecrets: jest
         .fn()
         .mockResolvedValue({ sanitizedConfigs: {}, retained: [] }),
@@ -118,6 +121,7 @@ jest.mock('@/features/project-creation/services/componentInstallationOrchestrato
 jest.mock('@/features/project-creation/services/projectFinalizationService', () => ({
     generateEnvironmentFiles: jest.fn().mockResolvedValue(undefined),
     finalizeProject: jest.fn().mockResolvedValue(undefined),
+    reportProjectCreated: jest.fn().mockResolvedValue(undefined),
     sendCompletionAndCleanup: jest.fn().mockResolvedValue(undefined),
 }));
 
@@ -125,7 +129,7 @@ import * as fsPromises from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import { reportPhase } from '@/core/utils/agentPhaseChannel';
-import { migrateDeclaredSecrets } from '@/features/components/services/commerceSecretMigration';
+import { migrateDeclaredSecrets } from '@/features/components/services/declaredSecretStore';
 import { syncEdsConfigToRemote } from '@/features/project-creation/handlers/executorEdsPhase';
 import { executeCatalogMenuPhase } from '@/features/project-creation/services/catalogMenuPhase';
 import { generateAIContextFiles } from '@/features/project-creation/services/aiBundle/aiBundleService';
@@ -136,6 +140,7 @@ import {
 } from '@/features/project-creation/services/componentInstallationOrchestrator';
 import {
     finalizeProject,
+    generateEnvironmentFiles,
     sendCompletionAndCleanup,
 } from '@/features/project-creation/services/projectFinalizationService';
 import {
@@ -186,6 +191,14 @@ function makeContext() {
     return { context, saveProject, saveProjectConfigOnly, sendMessage };
 }
 
+/** Wait until the run pauses on a failed step, then press `answer` (F307). */
+async function answerWhenPaused(context: HandlerContext, answer: string): Promise<void> {
+    for (let i = 0; i < 500 && !context.sharedState.creationPauseAnswer; i++) {
+        await new Promise((resolve) => setImmediate(resolve));
+    }
+    await expect(handleCreationPauseAnswer(context, { answer })).resolves.toEqual({ success: true });
+}
+
 /** Every `mkdir` path the run asked for. */
 function madeDirectories(): Array<[string, unknown]> {
     return (fsPromises.mkdir as jest.Mock).mock.calls as Array<[string, unknown]>;
@@ -196,6 +209,7 @@ beforeEach(() => {
     (generateAIContextFiles as jest.Mock).mockResolvedValue(undefined);
     (cloneAllComponents as jest.Mock).mockResolvedValue(undefined);
     (finalizeProject as jest.Mock).mockResolvedValue(undefined);
+    (generateEnvironmentFiles as jest.Mock).mockResolvedValue(undefined);
 });
 
 describe('executeProjectCreation — the progress it reports', () => {
@@ -210,7 +224,7 @@ describe('executeProjectCreation — the progress it reports', () => {
         expect(sendMessage).toHaveBeenCalledWith('creationProgress', {
             currentOperation: OPERATION_STAGES.settingUpProject.label,
             progress: 10,
-            message: 'Creating project directory structure',
+            message: 'Creating folders',
             logs: [],
             position: { index: 1, total: 8 },
             startedAt: expect.any(Number),
@@ -254,6 +268,9 @@ describe('executeProjectCreation — an Edit finished without the rebuild (PL-75
         expect(finishEditWithoutRebuild).toHaveBeenCalledWith(
             context,
             expect.objectContaining({ editProjectPath: EDIT_PATH, editChanges: [] }),
+            expect.any(Function),
+            undefined,
+            // The run's step runner: an Edit's steps pause as creation's do (F307).
             expect.any(Function),
         );
         expect(handlePortConflicts).not.toHaveBeenCalled();
@@ -377,11 +394,78 @@ describe('executeProjectCreation — the AI bundle step', () => {
         const { context, saveProjectConfigOnly } = makeContext();
         (generateAIContextFiles as jest.Mock).mockRejectedValue(new Error('bundle blew up'));
 
-        await expect(executeProjectCreation(context, config())).resolves.toBeUndefined();
+        const run = executeProjectCreation(context, config());
+        await answerWhenPaused(context, 'Check Again');
+        await answerWhenPaused(context, 'Skip This Step');
 
+        await expect(run).resolves.toBeUndefined();
         expect(saveProjectConfigOnly).toHaveBeenCalledWith(
             expect.objectContaining({ name: 'seam-demo' })
         );
+    });
+
+    it('pauses on a failed bundle, then carries on once Check Again passes (F307)', async () => {
+        const { context, sendMessage } = makeContext();
+        (generateAIContextFiles as jest.Mock).mockRejectedValueOnce(new Error('bundle blew up'));
+
+        const run = executeProjectCreation(context, config());
+        await answerWhenPaused(context, 'Check Again');
+        await run;
+
+        const pauses = sendMessage.mock.calls
+            .map(([, payload]) => (payload as CreationProgressPayload).pause)
+            .filter(Boolean);
+        expect(pauses).toEqual([
+            {
+                reason: 'The AI files could not be written: bundle blew up',
+                actions: ['Fix with AI', 'Check Again'],
+                canSkip: false,
+            },
+        ]);
+        expect(generateAIContextFiles).toHaveBeenCalledTimes(2);
+    });
+});
+
+/** The pauses the creation screen was sent, in order. */
+function pausesSent(sendMessage: jest.Mock): unknown[] {
+    return sendMessage.mock.calls
+        .map(([, payload]) => (payload as CreationProgressPayload).pause)
+        .filter(Boolean);
+}
+
+describe('executeProjectCreation — a step that ended the run now pauses it (F307)', () => {
+    it('offers no Skip This Step before the code is on disk, and runs the step again on Retry', async () => {
+        const { context, sendMessage } = makeContext();
+        (cloneAllComponents as jest.Mock).mockRejectedValueOnce(new Error('The request timed out'));
+
+        const run = executeProjectCreation(context, config());
+        await answerWhenPaused(context, 'Retry');
+        await run;
+
+        expect(pausesSent(sendMessage)).toEqual([
+            { reason: 'The request timed out', actions: ['Retry'], canSkip: false },
+        ]);
+        expect(cloneAllComponents).toHaveBeenCalledTimes(2);
+        expect(finalizeProject).toHaveBeenCalled();
+    });
+
+    it('lets a step after the code be skipped once a fix attempt failed too, and finishes without it', async () => {
+        const { context, sendMessage } = makeContext();
+        const failed = new Error('The settings files could not be written.');
+        (generateEnvironmentFiles as jest.Mock).mockRejectedValueOnce(failed).mockRejectedValueOnce(failed);
+
+        const run = executeProjectCreation(context, config());
+        await answerWhenPaused(context, 'Check Again');
+        await answerWhenPaused(context, 'Skip This Step');
+        await run;
+
+        const pause = { reason: failed.message, actions: ['Fix with AI', 'Check Again'] };
+        expect(pausesSent(sendMessage)).toEqual([
+            { ...pause, canSkip: false },
+            { ...pause, canSkip: true },
+        ]);
+        expect(generateEnvironmentFiles).toHaveBeenCalledTimes(2);
+        expect(finalizeProject).toHaveBeenCalled();
     });
 });
 
@@ -421,14 +505,14 @@ describe('executeProjectCreation — what an agent and the wizard are told', () 
         const loading = OPERATION_STAGES.loadingComponents.label;
         expect(sendMessage).toHaveBeenCalledWith(
             'creationProgress',
-            expect.objectContaining({ progress: 15, message: 'Initializing project configuration' })
+            expect.objectContaining({ progress: 15, message: 'Writing settings' })
         );
         expect(sendMessage).toHaveBeenCalledWith(
             'creationProgress',
-            expect.objectContaining({ progress: 20, message: 'Preparing component definitions' })
+            expect.objectContaining({ progress: 20, message: 'Reading components' })
         );
-        expect(reportPhase).toHaveBeenCalledWith(`${setUp} (1 of 8) — Creating project directory structure`);
-        expect(reportPhase).toHaveBeenCalledWith(`${loading} (2 of 8) — Preparing component definitions`);
+        expect(reportPhase).toHaveBeenCalledWith(`${setUp} (1 of 8) — Creating folders`);
+        expect(reportPhase).toHaveBeenCalledWith(`${loading} (2 of 8) — Reading components`);
     });
 
     it('sends an empty message, and the bare stage to the agent, when a step names none', async () => {

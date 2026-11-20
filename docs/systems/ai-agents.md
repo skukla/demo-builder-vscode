@@ -49,9 +49,9 @@ two commands stay in the Command Palette for every agent.
 
 | Level | Claude Code |
 |---|---|
-| Ask first (default) | — |
+| Ask First (default) | — |
 | Auto | `--permission-mode auto` |
-| Full access | `--dangerously-skip-permissions` |
+| Full Access | `--dangerously-skip-permissions` |
 
 VS Code's chat panel cannot be given a level at launch; it follows the permissions picker
 in the chat box (Default, Bypass Approvals, Autopilot), whose default is VS Code's

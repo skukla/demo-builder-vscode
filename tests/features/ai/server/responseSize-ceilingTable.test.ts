@@ -27,10 +27,11 @@ describe('the ceiling table tracks the tool surface', () => {
         // bounded by the 28 type codes, never by the size of the pack's rows, which
         // go to disk or to the store and never into the response.
         'save_datapack_zip',
-        'open_datapack_zip',
-        'load_datapack_zip',
+        'read_datapack_file',
+        'add_datapack_from_file',
+        // Counts, and two lists cut at 50 entries with a count past that (`exportPackHandlers.ts`).
+        'build_datapack_from_export',
         'delete_library_datapack',
-        'copy_library_datapack_to_installer',
         'regenerate_ai_files',
         'start_demo',
         'stop_demo',
@@ -87,11 +88,21 @@ describe('the ceiling table tracks the tool surface', () => {
         'install_prerequisite',
         // Group 8's three job-handle writes. Each returns an activation id or
         // a short per-type outcome list — bounded by the number of DATA TYPES
-        // in one datapack, not by how much data moved.
-        'start_datapack_import',
-        'reset_datapack',
-        'start_datapack_export',
-        // A target reference and a status record. Both fixed-shape.
+        // in one datapack, not by how much data moved. Since 2026-11-05 the start
+        // and the removal may carry the job record (`waitSeconds`), whose note names
+        // at most ten skipped rows (`skippedLine`), so that stays bounded too.
+        'install_datapack',
+        'uninstall_datapack',
+        // Undo Last Save starts the same import (`startDatapackImport`), so it answers the same.
+        'undo_last_save',
+        // Restore starts the same import too, or answers upToDate: fixed-shape either way.
+        'restore_datapack',
+        // Update starts the same import too, answers upToDate, or its check: a row per data type,
+        // at most three names each (`records`, every name, is the screen's alone).
+        'update_datapack',
+        'create_datapack',
+        // A target reference and a status record. Both fixed-shape; the record's note
+        // names at most ten skipped rows (`skippedLine`, 2026-11-05).
         'get_datapack_import_target',
         'get_datapack_import_status',
         // AB-5 pair. `install_integration` returns one three-field install
@@ -137,6 +148,11 @@ describe('the ceiling table tracks the tool surface', () => {
         'get_setup_checklist',
         'set_setup_step',
         'check_setup_steps',
+        // One row per Finish Setup step a creation or reset left (PL-101: the code step and the
+        // root category step), bounded by the step kinds, not by the project or the instance.
+        'get_finish_setup',
+        'set_finish_setup_step',
+        'check_finish_setup',
     ]);
 
     it('records a ceiling for every DESCRIPTOR tool that is not deliberately exempt', () => {
@@ -160,7 +176,35 @@ describe('the ceiling table tracks the tool surface', () => {
         // list_runtime_packages: one name per package, so its size is the size of
         // somebody's namespace. Measured on the first live call, then promoted.
         // assign_erp_products (AB-74): its unknown SKUs are as long as what was pasted.
-        const PENDING_LIVE_MEASUREMENT = new Set<string>(['list_runtime_packages', 'assign_erp_products']);
+        // preview_datapack_changes and save_store_changes_to_pack (datapack-engine step 05): the
+        // preview's size is the number of kinds a pack holds, at most three names each, and the
+        // plan sets its ceiling from Frescopa and Bodea measured live; neither has run live yet.
+        // rename_datapack (datapack-engine step 07): three fixed fields; not yet run live.
+        // check_demo_data and clear_demo_data (step 10): see below; not yet run live.
+        const PENDING_LIVE_MEASUREMENT = new Set<string>([
+            'list_runtime_packages',
+            'assign_erp_products',
+            'preview_datapack_changes',
+            'save_store_changes_to_pack',
+            'rename_datapack',
+            // check_demo_data and clear_demo_data (datapack-engine step 10): since step 06 the check
+            // lists every record by name, so its size grows with the store; neither has run live yet.
+            'check_demo_data',
+            'clear_demo_data',
+            // clear_commerce_instance (step 06 C6): the clearing's fixed fields and its note, which names
+            // each project uninstalled first and each that kept its data. The INSTANCE CHECK it needs is
+            // check_demo_data with website codes, and it is the large one: on the C4 fixtures (3 projects,
+            // 10 records) it answered 1,204 bytes, 463 of them the projects, against 983 for the project
+            // check of the same store; it grows with every record of every chosen website. No ceiling
+            // is set for either until a live store is measured.
+            'clear_commerce_instance',
+            // share_datapack (owner, 2026-10-30): three fixed fields; not yet run live.
+            'share_datapack',
+            // mark_demo_builder_datapack (beta.153): three fixed fields; not yet run live.
+            'mark_demo_builder_datapack',
+            // verify_datapack_install (2026-11-06): counts and at most 20 examples per finding.
+            'verify_datapack_install',
+        ]);
 
         const missing = descriptorTools.filter(
             (t) => !RESPONSE_CEILINGS[t] && !EXEMPT.has(t) && !PENDING_LIVE_MEASUREMENT.has(t)
@@ -218,7 +262,7 @@ describe('the ceiling table tracks the tool surface', () => {
         const DIRECT_PENDING = new Set<string>([
             'apply_updates',
             // 2026-10-21 (EDS-57): its preview carries the clashing files' diff, so its size
-            // depends on a real clash; measured on the first live run (JustRite's header).
+            // depends on a real clash; measured on the first live run (Tailspin's header).
             'finish_storefront_update',
             'create_project',
             'copy_project',

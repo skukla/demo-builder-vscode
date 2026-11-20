@@ -1,21 +1,42 @@
 # Component version management
 
-Components update independently of the extension. A mesh fix ships without anyone
-installing a new VSIX.
+Components update independently of the extension, and in the same way: **a push reaches no SC until
+it is released.** Every repository the builder owns ships as a GitHub Release with a semantic version
+(`RELEASED_REPOS`, `src/core/releases/releasedRepos.ts`, checked against the catalogs by a test).
+Repositories it does not own are not ours to release, so they keep following their branch.
 
-## The floating stable tag
+The plan this is being built to, with what is still to move: `.rptc/plans/component-semantic-versions/overview.md`.
 
-A component declares the ref it installs from in `components.json`, and most declare
-`"tag": "stable"` — a tag that **moves**. Publishing a fix means moving the tag; no
-extension release is involved.
+## How a component moves
 
-Not everything floats. At least one component pins a real version (`v1.0.0`), which
-is the right choice where a moving target would be dangerous rather than convenient.
-Pinning is a per-component decision made in the registry, not a global policy.
+| Component | Installs from | Offered an update when | Applying it |
+|---|---|---|---|
+| API Mesh, ERP, our integrations | Its newest release | A newer release has commits the clone lacks | Fetches the tag and deploys |
+| Adobe's starter kit, custom integrations | A branch | The branch has commits the clone lacks | Fetches and deploys |
+| Thin-layer EDS storefront | Adobe's template at the commit the newest `eds-demo-patches` release names | A newer release of `eds-demo-patches`, or a moved tested commit | Merges to that commit and re-applies the patches, even when only the patches changed |
+| Other EDS storefronts | A template repository | The template moves | Syncs the repository |
+| Headless storefront | Its newest release | A newer release | Moves the clone to the tag, then installs and builds |
 
-The cost of floating is that "which version is installed" becomes a question about
-the checkout rather than about the extension — which is why the updater records what
-it installed rather than inferring it.
+`readNewestRelease` is the one reader of releases: the highest version the channel accepts. A tag that is not a
+version never qualifies. Early access reads every track for a component, and is honoured only for a collaborator.
+
+A clone's own remote says which route it takes, so a project holds nothing to migrate. A clone ahead of the release
+is never moved back. An SC's edit refuses the move and names the file. A folder with no git history, which the old
+updater left behind, is cloned again at the release, and the old folder is kept under `component-backups`. An owned repository with no release yet offers nothing, and installs from its branch until it
+has one.
+
+A thin-layer storefront's version is the `eds-demo-patches` release it was last built or updated from
+(`metadata.patchesRelease`). It names the base the repository last merged from, not everything in it: the repository
+is the SC's. One from before this was recorded compares by commit alone until its next update or reset. The patches
+repository's lookup never falls back to `main`: if neither the API nor GitHub's web address can say, the patches read
+as unreachable. `lkg-gate.yml` publishes that repository's release itself when its checks pass and something a storefront reads has changed (owner, 2026-11-02).
+
+A mesh keeps `mesh.json` under version control and rebuilds it on every deploy, so a rebuilt one is not read as
+the SC's own edit.
+
+Not everything floats. A component can pin a real version (`"tag": "v1.0.0"`), which is the right choice where a
+moving target would be dangerous rather than convenient. A tag that is not a version records the version from
+`package.json` instead.
 
 ## Repositories are resolved from the registry
 

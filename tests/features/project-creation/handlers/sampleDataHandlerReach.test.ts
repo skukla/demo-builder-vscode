@@ -23,13 +23,19 @@ describe('the wizard handler map', () => {
         expect(projectCreationHandlers['find-datapacks']).toBeInstanceOf(Function);
     });
 
+    // Step 07: an imported or copied project's pack may not be readable; the step asks, and
+    // says what creation will install instead. A read: it writes nothing.
+    it('can ask whether a recorded pack can be read', () => {
+        expect(projectCreationHandlers['check-recorded-datapack']).toBeInstanceOf(Function);
+    });
+
     /**
      * The sub-step's whole recovery path when the Data Installer was never
      * configured. Unregistered, the button would be a no-op — the silent-failure
      * mode this file exists to prevent, in the one place a stuck user presses.
      */
     it('can open the Data Installer settings the sub-step points at', () => {
-        expect(projectCreationHandlers['open-data-installer-settings']).toBeInstanceOf(Function);
+        expect(projectCreationHandlers['open-setting']).toBeInstanceOf(Function);
     });
 
     /**

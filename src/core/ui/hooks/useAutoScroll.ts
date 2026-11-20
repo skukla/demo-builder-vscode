@@ -1,4 +1,4 @@
-import { useRef, RefObject } from 'react';
+import React, { useCallback, useRef, RefObject } from 'react';
 
 interface UseAutoScrollOptions {
     /** Enable/disable auto-scroll */
@@ -9,6 +9,8 @@ interface UseAutoScrollOptions {
     delay?: number;
     /** Padding from container edges (px) */
     padding?: number;
+    /** A container ref the caller already owns (Prerequisites scrolls it to the top too); else the hook makes one */
+    containerRef?: React.MutableRefObject<HTMLElement | null>;
 }
 
 interface UseAutoScrollReturn<
@@ -66,16 +68,18 @@ export function useAutoScroll<
         padding = 10,
     } = options;
 
-    const containerRef = useRef<C>(null);
+    const ownContainerRef = useRef<C>(null);
+    const containerRef = (options.containerRef ?? ownContainerRef) as RefObject<C>;
     const itemRefs = useRef<(I | null)[]>([]);
 
-    // Create a ref setter for a specific index
-    const createItemRef = (index: number) => (el: I | null) => {
+    // Create a ref setter for a specific index. Stable, like scrollToItem, so a caller can
+    // scroll from an effect without it re-running on every render.
+    const createItemRef = useCallback((index: number) => (el: I | null) => {
         itemRefs.current[index] = el;
-    };
+    }, []);
 
     // Scroll to a specific item if it's not fully visible
-    const scrollToItem = (index: number) => {
+    const scrollToItem = useCallback((index: number) => {
         if (!enabled || !containerRef.current || !itemRefs.current[index]) {
             return;
         }
@@ -111,7 +115,7 @@ export function useAutoScroll<
                 });
             }
         }, delay);
-    };
+    }, [enabled, behavior, delay, padding, containerRef]);
 
     const scrollToTop = () => {
         if (containerRef.current) {

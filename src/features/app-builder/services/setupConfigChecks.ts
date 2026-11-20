@@ -3,7 +3,7 @@
  * two custom order statuses, Catalog Price Scope, and Payment on Account, storefront returns
  * and card payments on the project's website. Until 2026-10-01 the first four were "Mark as
  * done" only, because no read for them had been tried. Both routes come from Adobe's Commerce as a Cloud Service REST reference and
- * were read live on the Justrite sandbox that day:
+ * were read live on the Tailspin sandbox that day:
  *
  * - `GET /V1/order-statuses` answers every status with its state assignments, one row per
  *   (status, state): `{ status, label, state, default, visible_on_front }`.
@@ -72,7 +72,7 @@ interface WebsiteRow {
 }
 
 /**
- * The name Commerce shows for a website code ("Justrite Website" for `justrite`), for a
+ * The name Commerce shows for a website code ("Tailspin Website" for `tailspin`), for a
  * check's note: an SC knows the website by the name the Admin shows, not its code
  * (owner, 2026-10-01). `GET store/websites`, read live on the sandbox that day. A read that
  * fails falls back to the code, which is still true, rather than failing the check.
@@ -174,7 +174,7 @@ export function paymentOnAccountEnabled(read: Read, scope: { websiteCode?: strin
 
 /**
  * Returns are on for the project's storefront (Enable RMA on Storefront), so a buyer can ask
- * for one; staff can enter a return in the Admin either way. Unset on Justrite on 2026-10-02.
+ * for one; staff can enter a return in the Admin either way. Unset on Tailspin on 2026-10-02.
  */
 export function storefrontReturnsEnabled(read: Read, scope: { websiteCode?: string }): Promise<Result> {
     return websiteSwitch(read, scope, 'sales/magento_rma/enabled', (on, name) =>
@@ -183,7 +183,7 @@ export function storefrontReturnsEnabled(read: Read, scope: { websiteCode?: stri
 
 /**
  * Card payments are on for the project's storefront: Payment Services, Commerce's own card
- * payments, powered by PayPal. An optional step. Stored "0" on Justrite on 2026-10-02.
+ * payments, powered by PayPal. An optional step. Stored "0" on Tailspin on 2026-10-02.
  */
 export function cardPaymentsEnabled(read: Read, scope: { websiteCode?: string }): Promise<Result> {
     return websiteSwitch(read, scope, 'payment/payment_services/active', (on, name) =>

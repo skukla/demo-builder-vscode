@@ -21,7 +21,7 @@ import { keepIntegrationSettings } from '@/features/app-builder/services/compone
 import {
     migrateDeclaredSecrets,
     type SecretWriter,
-} from '@/features/components/services/commerceSecretMigration';
+} from '@/features/components/services/declaredSecretStore';
 import { mergeEnvValuesFromSources } from '@/features/dashboard/commands/configureEnvLoader';
 import { applyConfigChanges } from '@/features/dashboard/services/configureConfigChanges';
 import {
