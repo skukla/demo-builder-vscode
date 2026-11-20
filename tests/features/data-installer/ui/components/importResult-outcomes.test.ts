@@ -67,7 +67,7 @@ describe('an import that finished cleanly (walk F134)', () => {
         expect(result).toEqual({
             thing: PACK_NAME,
             variant: 'success',
-            title: `${PACK_NAME} Installed`,
+            title: `Switched to ${PACK_NAME}`,
             finished: true,
             details: ['Kept 2 things you had changed in the Admin.'],
         });
@@ -247,13 +247,14 @@ describe('an ending worded for what the job was for', () => {
         expect(outcomeOf({ ...stop, purpose: 'undo' })?.title).toBe("Couldn't Undo Last Save");
     });
 
-    it('ends a switch as an install does', () => {
-        expect(outcomeOf({ ...clean, purpose: 'switch' })?.title).toBe(`${PACK_NAME} Installed`);
-        expect(outcomeOf({ ...stop, purpose: 'switch' })?.title).toBe(`Couldn't Install ${PACK_NAME}`);
+    // Owner, 2026-11-20: a switch ends on its own verb, as its button says.
+    it('ends a switch as "Switched to", or "Couldn\'t Switch to"', () => {
+        expect(outcomeOf({ ...clean, purpose: 'switch' })?.title).toBe(`Switched to ${PACK_NAME}`);
+        expect(outcomeOf({ ...stop, purpose: 'switch' })?.title).toBe(`Couldn't Switch to ${PACK_NAME}`);
     });
 
     it('words a record with no purpose by what it replaces: another datapack is a switch', () => {
-        expect(outcomeOf({ ...stop, replaces: 'Luma, eds-compatible' })?.title).toBe(`Couldn't Install ${PACK_NAME}`);
+        expect(outcomeOf({ ...stop, replaces: 'Luma, eds-compatible' })?.title).toBe(`Couldn't Switch to ${PACK_NAME}`);
     });
 });
 

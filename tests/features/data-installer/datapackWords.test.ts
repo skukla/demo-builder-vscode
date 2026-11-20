@@ -10,7 +10,7 @@ import type { JobPurpose } from '@/features/data-installer/types';
 describe('jobWords', () => {
     const cases: Array<[JobPurpose, string, [string, string, string]]> = [
         ['install', 'Bodea', ['Installing Bodea', 'Bodea Installed', "Couldn't Install Bodea"]],
-        ['switch', 'Bodea', ['Switching to Bodea', 'Bodea Installed', "Couldn't Install Bodea"]],
+        ['switch', 'Bodea', ['Switching to Bodea', 'Switched to Bodea', "Couldn't Switch to Bodea"]],
         [
             'uninstall',
             'My Luma',

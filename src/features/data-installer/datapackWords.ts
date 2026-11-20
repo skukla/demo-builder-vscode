@@ -69,15 +69,16 @@ export interface JobWords {
 /**
  * A job's titles, by what it is for (datapack simplification step 03). The result names the thing
  * first, "Bodea Installed" (conventions rule 21); a failure is "Couldn't …" (the house rule). A
- * switch ends as an install does; an undo's result names the save it undid, not the datapack.
+ * switch ends on its own verb, "Switched to Bodea" ("Switched" under the mark), as the button the
+ * SC pressed says (owner, 2026-11-20); an undo's result names the save it undid, not the datapack.
  */
 export function jobWords(purpose: JobPurpose, name: string): JobWords {
     switch (purpose) {
         case 'switch':
             return {
                 running: `Switching to ${name}`,
-                done: `${name} Installed`,
-                failed: `Couldn't ${INSTALL} ${name}`,
+                done: `Switched to ${name}`,
+                failed: `Couldn't Switch to ${name}`,
             };
         case 'uninstall':
             return {

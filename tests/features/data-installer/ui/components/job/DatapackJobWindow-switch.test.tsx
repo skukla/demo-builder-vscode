@@ -194,8 +194,8 @@ describe('Switch with nothing changed', () => {
                 {
                     id: DATAPACK_OPERATION_ID,
                     title: 'Switching to Bodea',
-                    doneTitle: 'Bodea Installed',
-                    failedTitle: "Couldn't Install Bodea",
+                    doneTitle: 'Switched to Bodea',
+                    failedTitle: "Couldn't Switch to Bodea",
                 },
             ],
         ]);
