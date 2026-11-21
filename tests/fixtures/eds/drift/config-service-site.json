@@ -1,0 +1,36 @@
+{
+  "version": 42,
+  "code": {
+    "owner": "acme",
+    "repo": "acme-storefront",
+    "source": {
+      "type": "github",
+      "url": "https://github.com/acme/acme-storefront"
+    }
+  },
+  "content": {
+    "source": {
+      "url": "https://content.da.live/acme/acme-storefront/",
+      "type": "markup"
+    },
+    "overlay": {
+      "url": "https://example.invalid/api/v1/web/render-pdp?org=acme&site=acme-storefront",
+      "type": "markup",
+      "suffix": ".html"
+    },
+    "contentBusId": "0000000000000000000000000000000000000000000000000000000000000"
+  },
+  "lastModified": "2026-11-16T11:45:25.487Z",
+  "created": "2026-11-04T21:59:47.122Z",
+  "access": {
+    "admin": {
+      "role": {
+        "admin": [
+          "sc@example.test"
+        ]
+      },
+      "requireAuth": "auto"
+    }
+  },
+  "apiKeys": {}
+}

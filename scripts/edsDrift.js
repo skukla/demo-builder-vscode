@@ -75,7 +75,9 @@ function endpoints(cfg) {
             action: 'helix-status',
             fixture: 'helix-status.json',
             url: `${HELIX_ADMIN_URL}/status/${cfg.owner}/${cfg.repo}/main?editUrl=auto`,
-            headers: { 'x-auth-token': cfg.githubToken },
+            // A site with any admin role refuses the GitHub token alone; the extension's
+            // own status read sends the admin Bearer with it (githubAppService).
+            headers: { Authorization: `Bearer ${cfg.daToken}`, 'x-auth-token': cfg.githubToken },
             needs: 'EDS_DRIFT_GITHUB_TOKEN',
         },
         {

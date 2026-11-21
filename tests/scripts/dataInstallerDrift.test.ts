@@ -230,6 +230,37 @@ describe('checkEndpoint', () => {
         const [, init] = fetchImpl.mock.calls[0];
         expect(init.headers.Authorization).toBe('Bearer secret-value');
     });
+
+    // The gateway answers 401 "missing x-gw-ims-org-id header" to the bearer alone, as the
+    // extension's own requests learned (dataInstallerSignIn.ts).
+    it('names the org, as the extension does, when it is known', async () => {
+        const fetchImpl = respond(200, fixture);
+        await checkEndpoint({
+            action: 'find-datapacks',
+            url: 'https://example.invalid/find-datapacks',
+            fixture,
+            token: 't',
+            orgCode: 'ABC123@AdobeOrg',
+            fetchImpl,
+        });
+
+        const [, init] = fetchImpl.mock.calls[0];
+        expect(init.headers['x-gw-ims-org-id']).toBe('ABC123@AdobeOrg');
+    });
+
+    it('sends no org header when none is known', async () => {
+        const fetchImpl = respond(200, fixture);
+        await checkEndpoint({
+            action: 'find-datapacks',
+            url: 'https://example.invalid/find-datapacks',
+            fixture,
+            token: 't',
+            fetchImpl,
+        });
+
+        const [, init] = fetchImpl.mock.calls[0];
+        expect(init.headers).not.toHaveProperty('x-gw-ims-org-id');
+    });
 });
 
 /**

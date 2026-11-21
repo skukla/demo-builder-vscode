@@ -1,0 +1,15 @@
+{
+  "users": [
+    {
+      "id": "placeholder-user-id",
+      "email": "sc@example.test",
+      "roles": [
+        "admin"
+      ]
+    }
+  ],
+  "lastModified": "2026-08-15T08:40:56.756Z",
+  "created": "2026-02-13T23:26:22.950Z",
+  "version": 3,
+  "apiKeys": {}
+}
