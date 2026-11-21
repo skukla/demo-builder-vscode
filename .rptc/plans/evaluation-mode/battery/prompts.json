@@ -839,9 +839,12 @@
     "id": "cross-graphql-shapes",
     "prompt": "What GraphQL query does the storefront's product listing use to fetch products, and what fields does it return?",
     "expect": [
-      "list_graphql_queries"
+      "list_graphql_queries",
+      "Read",
+      "Grep",
+      "Glob"
     ],
-    "why": "Verbatim class of the ERP journey's schema question. ADJUDICATED 2026-08-28: at project cwd, with AGENTS.md naming list_graphql_queries explicitly, the agent still answered by grepping scripts/__dropins__ \u2014 CORRECTLY, file+line, 4-5 calls, twice. Per rule 5 (grade outcomes not paths) NATIVE-FILES is an ACCEPTED outcome here: the vendored source is version-exact ground truth. A future miss+NATIVE-FILES on this prompt is fine; a WRONG answer or >8 calls is not. The dropins server wins on asks the local source cannot answer (cross-version diffs, event flows) \u2014 cross-design-tokens is that measurement and hits 2/2.",
+    "why": "Reading the vendored dropin source counts, as adjudicated below (encoded 2026-11-21; a Bash-only grep still scores a miss, because Bash would accept anything). Verbatim class of the ERP journey's schema question. ADJUDICATED 2026-08-28: at project cwd, with AGENTS.md naming list_graphql_queries explicitly, the agent still answered by grepping scripts/__dropins__ \u2014 CORRECTLY, file+line, 4-5 calls, twice. Per rule 5 (grade outcomes not paths) NATIVE-FILES is an ACCEPTED outcome here: the vendored source is version-exact ground truth. A future miss+NATIVE-FILES on this prompt is fine; a WRONG answer or >8 calls is not. The dropins server wins on asks the local source cannot answer (cross-version diffs, event flows) \u2014 cross-design-tokens is that measurement and hits 2/2.",
     "cwd": "project"
   },
   {
