@@ -142,6 +142,10 @@ let PROMPTS = JSON.parse(readFileSync(`${AB}/prompts.json`, 'utf-8'));
 // --tier2 — outside it they would trip the unanswerable-prompt abort on
 // every full run, so they are not selectable at all.
 if (!TIER2) PROMPTS = PROMPTS.filter((p) => p.tier !== 2);
+// Tier-3 prompts expect a write that reaches Commerce, Adobe, GitHub or DA.live with no
+// scratch harness, so they never run unattended. They stay in prompts.json so the tool
+// they name still counts as prompted (toolPromptCoverage.test.ts).
+PROMPTS = PROMPTS.filter((p) => p.tier !== 3);
 
 // `--only <id>` re-runs ONE prompt, and `--repeat <n>` runs the selection n times.
 // Both exist for the same reason: every result here is n=1, and agents are

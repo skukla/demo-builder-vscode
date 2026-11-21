@@ -16,7 +16,7 @@ measurement can only compare against itself.
 |---|---|
 | `prompts.json` | The battery. Each prompt declares the tool that SHOULD answer it. |
 | `run.mjs` | Runs every prompt once and scores what the agent actually reached for. |
-| `readonly-tools.txt` | The 43 read-only tool names, extracted live from `mcp-live-probe`'s `info`. |
+| `readonly-tools.txt` | The read-only tool names (75 on 2026-11-21), extracted live from `mcp-live-probe`'s `info`. |
 | `results/<utc>.jsonl` | One immutable file per run: a row per prompt, with the full route. |
 | `results/<utc>.meta.json` | Which build was serving, prompt count, cache state. |
 | `score.test.mjs` | Drives all six diagnoses with fabricated transcripts. No agent runs. |

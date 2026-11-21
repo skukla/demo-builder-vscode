@@ -422,6 +422,7 @@
   },
   {
     "id": "integration-install-retry",
+    "tier": 3,
     "prompt": "The starter kit app's Commerce install failed earlier but the deploy itself was fine. Re-run just the install \u2014 don't redeploy the whole app.",
     "expect": [
       "install_integration"
@@ -869,6 +870,7 @@
   },
   {
     "id": "erp-reset",
+    "tier": 3,
     "prompt": "Reset the ERP records for my ERP integration so it mirrors Commerce again.",
     "expect": [
       "reset_erp_records"
@@ -878,6 +880,7 @@
   },
   {
     "id": "erp-screen",
+    "tier": 3,
     "prompt": "Open my ERP's screen so I can look at its products.",
     "expect": [
       "open_erp_screen"
@@ -914,6 +917,7 @@
   },
   {
     "id": "commerce-rest-write-credit",
+    "tier": 3,
     "prompt": "Raise the credit limit of Commerce company 12 to 50000 through the Commerce API.",
     "expect": [
       "write_commerce_rest"
@@ -932,6 +936,7 @@
   },
   {
     "id": "erp-rest-write-confirm",
+    "tier": 3,
     "prompt": "In the ERP, confirm sales order 0000001003 so Commerce moves the order to Processing.",
     "expect": [
       "write_erp_rest"
@@ -959,6 +964,7 @@
   },
   {
     "id": "runtime-invoke-replay",
+    "tier": 3,
     "prompt": "The contract-price webhook left a cart at Commerce's price and its successful run left no record in Runtime. Run webhook/item-prices yourself with a cart payload for customer group 18 and show me what it answered and logged.",
     "expect": [
       "invoke_runtime_action"
@@ -977,6 +983,7 @@
   },
   {
     "id": "integration-settings-set",
+    "tier": 3,
     "prompt": "Rename the ERP behind my ERP integration to Nordwind so its screen shows the new name.",
     "expect": [
       "set_integration_settings"
@@ -986,6 +993,7 @@
   },
   {
     "id": "rename-adobe-project",
+    "tier": 3,
     "prompt": "Rename my Adobe project 'Kukla Test' to 'Kukla Bodea'.",
     "expect": [
       "rename_adobe_project"
@@ -1083,6 +1091,7 @@
   },
   {
     "id": "delete-workspace",
+    "tier": 3,
     "prompt": "Delete the 'scratch' workspace from my Adobe project.",
     "expect": [
       "delete_adobe_workspace"
@@ -1091,6 +1100,7 @@
   },
   {
     "id": "integration-reinstall",
+    "tier": 3,
     "prompt": "I updated the ERP integration and Commerce says it cannot upgrade it in place. Reinstall it in Commerce so the new version applies.",
     "expect": [
       "reinstall_integration"
@@ -1100,6 +1110,7 @@
   },
   {
     "id": "integration-update",
+    "tier": 3,
     "prompt": "There's a newer version of my ERP integration on GitHub. Update it in this project.",
     "expect": [
       "update_integration"
@@ -1109,6 +1120,7 @@
   },
   {
     "id": "integration-update-check",
+    "tier": 3,
     "prompt": "Do any of my integrations have updates available?",
     "expect": [
       "check_integration_updates"
@@ -1126,6 +1138,7 @@
   },
   {
     "id": "erp-load-demo-data",
+    "tier": 3,
     "prompt": "The ERP that came with the ERP integration is empty. Fill it with the store's products and companies.",
     "expect": [
       "load_erp_demo_data"
@@ -1134,6 +1147,7 @@
   },
   {
     "id": "runtime-left-behind",
+    "tier": 3,
     "prompt": "The ERP integration's order column moved to a new action, but the old erp/order-grid action is still deployed. Clean up the code the integration no longer uses.",
     "expect": [
       "delete_undeclared_runtime_code"
@@ -1150,6 +1164,7 @@
   },
   {
     "id": "setup-checklist-mark",
+    "tier": 3,
     "prompt": "I created the Confirmed in ERP order status; tick it off the ERP integration's setup list.",
     "expect": [
       "set_setup_step"
@@ -1158,6 +1173,7 @@
   },
   {
     "id": "setup-checklist-check",
+    "tier": 3,
     "prompt": "Check whether each company already has its own shared catalog for the ERP demo.",
     "expect": [
       "check_setup_steps"
@@ -1175,6 +1191,7 @@
   },
   {
     "id": "finish-setup-mark",
+    "tier": 3,
     "cwd": "project",
     "prompt": "I set the root category myself in Commerce Admin; mark that step of my project's finish setup as done.",
     "expect": [
@@ -1184,6 +1201,7 @@
   },
   {
     "id": "finish-setup-check",
+    "tier": 3,
     "cwd": "project",
     "prompt": "Check whether my live storefront serves the latest code now, and tick it off the project's finish setup if it does.",
     "expect": [
@@ -1193,6 +1211,7 @@
   },
   {
     "id": "erp-add-another",
+    "tier": 3,
     "prompt": "Add a second ERP to this demo called Brand B ERP, next to the one the ERP integration already has.",
     "expect": [
       "add_erp"
@@ -1201,6 +1220,7 @@
   },
   {
     "id": "erp-assign-products",
+    "tier": 3,
     "prompt": "Give the Accuform ERP every product whose brand is Accuform. Show me what changes first.",
     "expect": [
       "assign_erp_products"
@@ -1210,6 +1230,7 @@
   },
   {
     "id": "erp-owner-attribute-sets",
+    "tier": 3,
     "prompt": "Some of my products never move to the second ERP when I tag them. Make sure the erp_owner attribute is in every attribute set my products use.",
     "expect": [
       "add_erp_owner_to_attribute_sets"
@@ -1219,6 +1240,7 @@
   },
   {
     "id": "erp-undo-assignment",
+    "tier": 3,
     "prompt": "Put the products I just gave the Accuform ERP back where they were.",
     "expect": [
       "undo_erp_assignment"
@@ -1228,6 +1250,7 @@
   },
   {
     "id": "erp-owner-attribute-sets-undo",
+    "tier": 3,
     "prompt": "Take the erp_owner attribute back out of the attribute sets Demo Builder added it to.",
     "expect": [
       "remove_erp_owner_from_attribute_sets"
@@ -1237,6 +1260,7 @@
   },
   {
     "id": "erp-settings",
+    "tier": 3,
     "prompt": "On my ERP integration, which products does the second ERP own, and set its sales organisation on the Bodea website to 2000.",
     "expect": [
       "get_erp_settings",
@@ -1255,6 +1279,7 @@
   },
   {
     "id": "t3-content-reader",
+    "tier": 3,
     "prompt": "Let colleague@example.test read my storefront's content on DA.live so they can build on it.",
     "expect": [
       "set_content_reader"
@@ -1263,6 +1288,7 @@
   },
   {
     "id": "erp-demo-look",
+    "tier": 3,
     "prompt": "Make my demo ERP's screen use the Foundry theme, but in plum.",
     "expect": [
       "set_erp_appearance"
@@ -1272,6 +1298,7 @@
   },
   {
     "id": "erp-demo-downtime-start",
+    "tier": 3,
     "prompt": "Take the ERP behind my ERP integration down for 15 minutes so I can show what happens to orders while it is in maintenance.",
     "expect": [
       "start_erp_downtime"
@@ -1281,6 +1308,7 @@
   },
   {
     "id": "erp-demo-downtime-end",
+    "tier": 3,
     "prompt": "End the simulated downtime on my demo ERP now; I'm done showing the outage.",
     "expect": [
       "end_erp_downtime"
@@ -1290,6 +1318,7 @@
   },
   {
     "id": "reset-headless",
+    "tier": 3,
     "prompt": "Reset this headless demo back to a clean copy of its components. I broke something in the storefront code and want to start over.",
     "expect": [
       "reset_project"
@@ -1299,6 +1328,7 @@
   },
   {
     "id": "create-from-file",
+    "tier": 3,
     "prompt": "A colleague sent me their exported project file at ~/Downloads/summit.project.demo-builder.json. Create a new project called summit-copy from it.",
     "expect": [
       "create_project_from_file"
@@ -1307,6 +1337,7 @@
   },
   {
     "id": "copy-project",
+    "tier": 3,
     "prompt": "Make a copy of my tailspin project called tailspin-trade-show, with its own storefront repository.",
     "expect": [
       "copy_project"
@@ -1323,6 +1354,7 @@
   },
   {
     "id": "delete-event-provider",
+    "tier": 3,
     "prompt": "Delete the 'ERP events' event provider from my project's workspace, and its registrations.",
     "expect": [
       "delete_event_provider"
@@ -1360,6 +1392,7 @@
   },
   {
     "id": "check-category-pages",
+    "tier": 3,
     "prompt": "I added a couple of categories in Commerce this morning. Do they have pages on my storefront yet?",
     "expect": [
       "check_category_pages"
@@ -1419,6 +1452,7 @@
   },
   {
     "id": "app-save-to-github",
+    "tier": 3,
     "prompt": "Save my custom App Builder app to its own GitHub repository called order-sync.",
     "expect": [
       "save_app_to_github"
@@ -1428,6 +1462,7 @@
   },
   {
     "id": "app-delete-github-repo",
+    "tier": 3,
     "prompt": "I don't want my app on GitHub any more. Delete the repository you made for it.",
     "expect": [
       "delete_app_github_repo"
@@ -1437,6 +1472,7 @@
   },
   {
     "id": "finish-clash-fixed-with-ai",
+    "tier": 3,
     "prompt": "I fixed the header file the Adobe update clashed on in tailspin. Get that update finished and live.",
     "expect": [
       "finish_storefront_update"
@@ -1446,6 +1482,7 @@
   },
   {
     "id": "t2-datapack-zip-roundtrip",
+    "tier": 3,
     "prompt": "Save the Data Installer's citisignal datapack, version main, as a file in this project. Tell me what is in the file, load it into our datapack library, then delete it from the library again.",
     "expect": [
       "save_datapack_zip",
@@ -1457,6 +1494,7 @@
   },
   {
     "id": "t2-datapack-from-export",
+    "tier": 3,
     "prompt": "I exported our products from Commerce to products.csv in this project. Save the Data Installer's luma datapack, version eds-compatible, as a file, then build a new datapack called luma-from-export from the CSV using that file for the attributes, and tell me what it holds and anything it left out.",
     "expect": [
       "save_datapack_zip",
@@ -1494,6 +1532,7 @@
   },
   {
     "id": "save-store-changes-to-pack",
+    "tier": 3,
     "prompt": "I changed some prices in the Admin. Make that the Frescopa pack.",
     "expect": [
       "save_store_changes_to_pack"
@@ -1503,6 +1542,7 @@
   },
   {
     "id": "rename-demo-pack",
+    "tier": 3,
     "prompt": "Rename my demo's pack to Acme Q4.",
     "expect": [
       "rename_datapack"
@@ -1512,6 +1552,7 @@
   },
   {
     "id": "create-from-colleagues-file",
+    "tier": 3,
     "prompt": "Create a project from the file Priya sent me (~/Downloads/acme.project.demo-builder.json). Her demo's datapack has been deleted.",
     "expect": [
       "create_project_from_file"
@@ -1520,6 +1561,7 @@
   },
   {
     "id": "install-bodea-b2b",
+    "tier": 3,
     "prompt": "Install the Bodea datapack into this project's store, with its customers and companies.",
     "expect": [
       "install_datapack"
@@ -1529,6 +1571,7 @@
   },
   {
     "id": "install-pack-with-store-settings",
+    "tier": 3,
     "prompt": "Install the store-settings test pack from the datapack library onto this project's test website, and tell me which Commerce settings it changed and what they were before.",
     "expect": [
       "install_datapack"
@@ -1538,6 +1581,7 @@
   },
   {
     "id": "reset-demo-leave-store-empty",
+    "tier": 3,
     "prompt": "Clear this demo's data from its websites for the next customer, the datapack included. Show me the list first.",
     "expect": [
       "check_demo_data",
@@ -1548,6 +1592,7 @@
   },
   {
     "id": "share-my-demo-pack",
+    "tier": 3,
     "prompt": "My teammate can't use the data in the project file I sent them. Share my demo's datapack with the team.",
     "expect": [
       "share_datapack"
@@ -1557,6 +1602,7 @@
   },
   {
     "id": "mark-team-pack",
+    "tier": 3,
     "prompt": "Make my Bodea pack one of the official team packs, so everyone sees it without turning on Include Community.",
     "expect": [
       "mark_demo_builder_datapack"
@@ -1566,6 +1612,7 @@
   },
   {
     "id": "undo-last-save",
+    "tier": 3,
     "prompt": "Undo my last save of My Luma and put the store back how it was before.",
     "expect": [
       "undo_last_save"
@@ -1575,6 +1622,7 @@
   },
   {
     "id": "restore-datapack",
+    "tier": 3,
     "prompt": "Put My Luma back how I last saved it; throw away what I changed in the Admin.",
     "expect": [
       "restore_datapack"
@@ -1584,6 +1632,7 @@
   },
   {
     "id": "clear-commerce-instance-websites",
+    "tier": 3,
     "prompt": "Wipe the test website on this Commerce instance back to empty, whichever project put data there. Show me what goes first.",
     "expect": [
       "check_demo_data",
@@ -1594,6 +1643,7 @@
   },
   {
     "id": "update-datapack",
+    "tier": 3,
     "cwd": "project",
     "prompt": "Luma got updated in the library. Apply just the new attributes to my demo and keep my own edits.",
     "expect": [
@@ -1603,6 +1653,7 @@
   },
   {
     "id": "restore-datapack-original",
+    "tier": 3,
     "cwd": "project",
     "prompt": "Take My Luma all the way back to its original, before any of my saves.",
     "expect": [
@@ -1612,6 +1663,7 @@
   },
   {
     "id": "continue-paused-creation",
+    "tier": 3,
     "prompt": "The summit-demo creation stopped on the mesh step. I fixed the mesh settings, carry on.",
     "expect": [
       "continue_project_creation"
@@ -1620,6 +1672,7 @@
   },
   {
     "id": "stop-running-creation",
+    "tier": 3,
     "prompt": "Stop the summit-demo project you're creating, I picked the wrong package.",
     "expect": [
       "cancel_project_creation"
@@ -1628,6 +1681,7 @@
   },
   {
     "id": "report-demo-builder-issue",
+    "tier": 3,
     "prompt": "This looks like a bug in Demo Builder itself, not my project. Can you report it to the Demo Builder team for me?",
     "expect": [
       "report_demo_builder_issue"
