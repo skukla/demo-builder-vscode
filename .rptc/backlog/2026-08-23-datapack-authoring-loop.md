@@ -203,3 +203,4 @@ Step 2 fails today (gap 1). Steps 1 and 3 work now.
 - 2026-10-30  docs(data-installer): saving a store into a pack, and step 14's G3 items as built (`dd352da2c`)
 - 2026-10-30  feat(data-installer): pick what goes into a save from the store, on the catalog screen (`cc69149b2`)
 - 2026-10-30  feat(data-installer): save any store into the demo's own pack, with the items picked (`3c1630c54`)
+- 2026-11-21  Reconciled 2026-11-21: the authoring loop exists and is taught by the datapacks skill (5f9f3ed00, 3c1630c54, in v1.0.0-beta.153). Left: the owner says whether to run the live round trip (change shared catalogs, save to a private pack, reinstall on a fresh scope) or close the item as done by the datapack store.

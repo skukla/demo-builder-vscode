@@ -4,7 +4,7 @@ kind: feature
 area: ai
 needs: []
 value: med
-status: active
+status: shipped
 ---
 
 # An agent can rebuild a project on a repository and site that already exist
@@ -33,3 +33,4 @@ retry", which nothing implemented: every retry asked for a new repository again.
 ## Shipped so far
 
 - 2026-10-16  Shipped in 6958aff36 (with PL-82): adoptExisting on create_project; canary recreated with it
+- 2026-11-21  Reconciled 2026-11-21: done. adoptExisting is wired in createProjectTool.ts (repoMode 'existing'), both failure hints point to it; 6958aff36 is in v1.0.0-beta.153.

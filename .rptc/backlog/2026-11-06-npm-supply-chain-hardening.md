@@ -56,3 +56,4 @@ and the MCP SDK's server dependencies (`body-parser`, `@hono/node-server`).
 ## Shipped so far
 
 - 2026-11-05  chore(deps): drop crypto-js, axios, @types/uuid and uuid (`f196c2f25`)
+- 2026-11-21  Reconciled 2026-11-21: upgrades done, adm-zip and zod (128b40296) and the MCP SDK (890a87b99). Left: .npmrc with ignore-scripts, a CI gate on high/critical advisories with a ledger, a waiting period for new versions, and the remaining advisories.

@@ -4,7 +4,7 @@ kind: feature
 area: eds
 needs: [EDS-48]
 value: high
-status: active
+status: shipped
 ---
 
 # A storefront canary: check that the patched boilerplate still WORKS, not just that patches fit
@@ -21,7 +21,7 @@ the day after Adobe ships it, with nothing between. The 2026-10-16 audit (every 
 against Adobe's diff, a storefront rebuilt on the new boilerplate, each patch confirmed in
 the served code) is the check this item automates.
 
-High value because it is what makes the next step safe: merging a rewritten patch
+High value because it makes a later step safe: merging a rewritten patch
 automatically (see "What it unlocks").
 
 ## How it works (built 2026-10-17)
@@ -89,3 +89,4 @@ not on a patch PR yet.
 - 2026-10-17  docs(eds): the root LKG pointer is still read by older projects (`b4fcfb316`)
 - 2026-10-17  test(eds): point the patch-registry fixture at a ledger that exists (`e838e9543`)
 - 2026-10-17  docs(walk): record row 2.4, and log the canary commits on EDS-49 (`815b46b3a`)
+- 2026-11-21  Reconciled 2026-11-21: done. The extension side (src/features/updates/canary/, b15496d54, d68880054) is in v1.0.0-beta.153, and a real update has since been observed: eds-demo-patches has three 'the canary now matches' commits (2c77951b6, 63f81f760, fb95b00b5) with green canary runs after them.

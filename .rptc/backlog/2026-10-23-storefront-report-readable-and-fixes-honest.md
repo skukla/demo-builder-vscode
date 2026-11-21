@@ -4,13 +4,13 @@ kind: fix
 area: eds
 needs: []
 value: med
-status: active
+status: shipped
 ---
 
 # The Storefront Report is readable, and its fixes are offered honestly
 
 Filed 2026-10-23 from the Tailspin walk. The plan, with the evidence and the three
-decisions it waits on, is `.rptc/plans/storefront-report-and-fixes/overview.md`.
+decisions it waited on, is `.rptc/complete/storefront-report-and-fixes/overview.md`.
 
 In short: the report opens as a raw markdown tab and pops a modal offering fixes; the
 reset never offers them to a project made before 2026-10-03; Apply would write nothing
@@ -25,3 +25,4 @@ category pages couldn't be published").
 - 2026-10-23  Owner decided a third time: every live patch in the shipped ledgers goes into every storefront it fits, on creation and reset, with no offer and no second list. Built as the known-patches repair (knownPatches.ts, shippedPatchLedger.ts) in the extension worktree, uncommitted. Dry run on Tailspin: 4 of 6 would apply.
 - 2026-10-23  feat(eds): every known fix reaches every storefront; the report is a window (`c75b52793`)
 - 2026-10-24  feat(eds): remove the Storefront Report; name broken links where they are found (`316903008`)
+- 2026-11-21  Reconciled 2026-11-21: done. The fix offers were removed and reset warnings kept (c75b52793); the report window itself was then removed (316903008), its content moved to Diagnostics and get_storefront_report. Both are in v1.0.0-beta.153.

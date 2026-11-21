@@ -63,3 +63,4 @@ contract and the order the same day.
 - 2026-10-13  fix(configure): restart prompt, Republish sign-in, and a stored password no longer block Save (`e5c6e117a`)
 - 2026-10-13  fix(configure): log a post-save prompt failure instead of dropping it (`7560c1881`)
 - 2026-10-13  docs(configure): a page for Configure; test rows for this week's fixes (`c1a158202`)
+- 2026-11-21  Reconciled 2026-11-21: steps 1-3 and the docs are done and in v1.0.0-beta.153. Left: step 4's live check, release test rows 2.9, 3.1, 3.2, 3.4 and 3.10-3.14, none run yet.

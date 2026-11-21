@@ -390,8 +390,8 @@ its own I/O Events provider.
 
 ### What that means for the plan
 
-`boundTo` is where this starts, and it is a genuine piece of work rather than a
-follow-on. Sequence it after the workspace spine lands — the spine is what makes
+`boundTo` was where this started, and it was built inside this item rather than
+as a follow-on (`b7de86803`, `1e255fde4`). Sequence it after the workspace spine lands — the spine is what makes
 instance pairing worth building — but keep it inside this item, because "two of the
 same integration" is the capability an SC actually asks for and two DIFFERENT
 integrations is only half of it.
@@ -460,7 +460,7 @@ and re-adding an integration — no migration code ships.
 - 2026-09-20  fix(ai): point delete_adobe_workspace at a tool that exists (`e6e5ca096`)
 - 2026-09-20  docs(research): the Commerce-profile row cited a function that is gone (`97cde4033`)
 - 2026-09-20  docs(backlog): one workspace per add, so a pair shares one (`01b00deba`)
-- 2026-09-20  docs(backlog): two of the same integration is in scope, not a follow-on (`37b44ef52`)
+- 2026-09-20  docs(backlog): two of the same integration is in scope, not a later item (`37b44ef52`)
 - 2026-09-20  docs(backlog): the id names the workspace, the SC name titles it (`551fc7133`)
 - 2026-09-20  docs(backlog): how workspaces are made and named today (`eb422d0a9`)
 - 2026-09-20  fix(destination): a workspace without its machine name is refused (`4eb80a1e5`)
@@ -471,7 +471,7 @@ and re-adding an integration — no migration code ships.
 - 2026-09-20  feat(app-builder): an added component gets its own Adobe workspace (`614a09e70`)
 - 2026-09-20  docs(backlog): no migration is built — moving Bodea is a testing step (`c9cc8478e`)
 - 2026-09-20  docs(backlog): the migration deletes itself, and says when (`1dca6660d`)
-- 2026-09-20  docs(backlog): moving existing projects is part of AB-23, not a follow-on (`ee53cef66`)
+- 2026-09-20  docs(backlog): moving existing projects is part of AB-23, not a later item (`ee53cef66`)
 - 2026-09-20  feat(app-builder): removing a component deletes its workspace (`0af3ac9f6`)
 - 2026-09-21  feat(app-builder): subscribe a component's own APIs, not the project's union (`9b08d6757`)
 - 2026-09-21  fix(apis): never add a Commerce API without its product profile (`837395477`)

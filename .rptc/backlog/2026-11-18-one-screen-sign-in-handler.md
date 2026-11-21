@@ -48,3 +48,4 @@ sign-in.
 - 2026-11-18  refactor(integrations): the Add Integration window owns its sign-in (F248) (`cbf302a26`)
 - 2026-11-18  refactor(auth): Adobe sign-in starts from three entry points, and a pin keeps it so (F248) (`c32cfdd79`)
 - 2026-11-18  fix(auth): a sign-in Adobe refused counts as signed out, and Sign In makes a new one (F246, F247) (`756f3382a`)
+- 2026-11-21  Reconciled 2026-11-21: one sign-in door, no reAuthenticate message left (c32cfdd79, cbf302a26). Left: the live check whether a refused token still needs a forced sign-in after F247, and two webview callbacks still named handleReAuthenticate.

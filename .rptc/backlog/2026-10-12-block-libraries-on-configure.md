@@ -55,6 +55,7 @@ install at once or leave it to the update check; the first is what an SC expects
 - 2026-10-12  fix(configure): custom block libraries follow the setting while Configure is open (`c92fa06b0`)
 - 2026-10-12  docs(changelog): Edit and Configure split; the Block Libraries tab on Configure (`7b330e4de`)
 - 2026-10-12  feat(wizard): Edit leaves the name, Commerce settings and block libraries to Configure (`a74724958`)
+- 2026-11-21  Reconciled 2026-11-21: the Block Libraries tab on Configure is built with removal and Edit locks (9f2c73f26, 70d62496f, c92fa06b0, a74724958, in v1.0.0-beta.153). Left: one run on a real storefront, and the owner's call on showing orphaned custom libraries. Ship once those are run or waived.
 
 ## Left open by the first build (2026-10-12)
 

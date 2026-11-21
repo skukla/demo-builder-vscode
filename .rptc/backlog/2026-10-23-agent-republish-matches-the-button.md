@@ -4,7 +4,7 @@ kind: fix
 area: ai
 needs: []
 value: med
-status: active
+status: shipped
 ---
 
 # The agent's `republish` does what the dashboard's Republish does
@@ -41,3 +41,4 @@ button's result. `sync_content` is removed (no soft deprecation): its job is now
 
 - 2026-10-23  Built, not committed: republish runs republishStorefrontContent (the button's publish); sync_content removed; four generated skills renamed, AI_CONTEXT_VERSION 44; docs, catalog and pins updated; full suite green
 - 2026-10-23  feat(eds): every known fix reaches every storefront; the report is a window (`c75b52793`)
+- 2026-11-21  Reconciled 2026-11-21: done. The republish tool (storefrontTools.ts) runs the button's job: settings, code, every page, category pages. c75b52793 is in v1.0.0-beta.153.

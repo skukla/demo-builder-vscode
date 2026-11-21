@@ -32,10 +32,9 @@ another feature", was broken by 857 imports and checked by nothing.
 
 **Deep imports are the convention for features.** Import the module that defines the
 symbol (`@/features/authentication/services/authenticationService`), not a feature
-`index.ts`, and do not add a new feature barrel. This does NOT apply to `@/core/*`
-or `@/types`, which are imported through their barrels by design — `@/types` has 168
-importers, `@/core/shell` 104, `@/core/di` 86. See
-[ADR-022](../../docs/architecture/adr/022-barrel-files.md) for the rule and the
+`index.ts`, and do not add a new feature barrel. The same holds for `@/core/*` and
+`@/types`: their barrels were retired (PL-31), so import the declaring module there too.
+See [ADR-022](../../docs/architecture/adr/022-barrel-files.md) for the rule and the
 measurement.
 
 Nothing under `src/core/` imports a feature; that direction is enforced separately

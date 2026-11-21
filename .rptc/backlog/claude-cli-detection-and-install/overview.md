@@ -353,7 +353,7 @@ Tests: 3 cases (gate-passes when engine available; gate-shows-notification when 
 
 ## Open questions before implementation
 
-None remaining — UX decisions are locked in above. The only implementation-time confirmation is: does `claude --version` exit non-zero (127) or zero with a different stdout when the binary is missing? Almost certainly 127 + ENOENT, but worth a 5-second verify when wiring Step 1.
+None open — UX decisions are locked in above. The only implementation-time confirmation is: does `claude --version` exit non-zero (127) or zero with a different stdout when the binary is missing? Almost certainly 127 + ENOENT, but worth a 5-second verify when wiring Step 1.
 
 ## Kickoff prompt
 

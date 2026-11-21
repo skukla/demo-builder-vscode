@@ -120,3 +120,4 @@ packs by name, which it already does.
 - 2026-10-30  docs(datapack): port spec for the Data Installer's ACO export (`6bf5fe8ac`)
 - 2026-10-30  fix(data-installer): an ACO pack reads Commerce's "0"/"1" attribute flags and category descriptions as Commerce sends them (`83817aa33`)
 - 2026-11-03  feat(data-installer): hold ACO datapacks back until ACO support ships (`29e5644fd`)
+- 2026-11-21  Reconciled 2026-11-21: ACO is still held back on develop (29e5644fd). The build sits on branch loop/2026-10-31-aco-clear, 59 commits not in develop, last 2026-11-02. Left: finish and merge that branch, then the owner's live check on an ACO tenant.

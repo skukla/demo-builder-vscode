@@ -107,3 +107,4 @@ the register), [[PL-36]] (an untested Node-version sort in the prerequisites ins
 - 2026-10-08  refactor(app-builder): split appBuilderComponentRunner into add, redeploy and remove runs (`04d373365`)
 - 2026-10-08  docs: the god-file ratchet no longer cites the runner as a cohesive long file; log PR-1a and EDS-8 (`a6f122009`)
 - 2026-10-08  test(sop): a new import cycle in src fails the build (`e6ff8d1d9`)
+- 2026-11-21  Reconciled 2026-11-21: steps 0-9 built, 10 partly. Left: steps 11-14 of .rptc/plans/node-versions-in-one-place/overview.md: prune unused Nodes and a one-time shared-fnm cleanup (no such code in nodeFolder.ts), what the SC sees, docs, the owner's live check.

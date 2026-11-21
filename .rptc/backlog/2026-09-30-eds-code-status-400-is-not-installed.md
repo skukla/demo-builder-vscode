@@ -47,7 +47,7 @@ an existing repository, and the phase-3 gate accepts the 400.
 
 1. **Classify the 400 by asking the one endpoint that says why.** After a 400 in
    `confirmCodeSync` (phase 3), issue the code-preview POST the phase is about to make anyway
-   (`previewCode('/*')`, already the next step in `executePhaseCodeSync`) and read its
+   (`previewCode('/*')`, already what `executePhaseCodeSync` does after it) and read its
    `x-error`. `github bot not installed on repository` → the same "install the App" pause EDS-20
    built for the inner 404, with the repository named. Any other 400 → the existing wait.
    This keeps `check_github_app` read-only (its `skipTrigger` pin stands) and moves the

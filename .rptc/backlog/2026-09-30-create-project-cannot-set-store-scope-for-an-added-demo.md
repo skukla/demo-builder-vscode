@@ -39,5 +39,5 @@ stack is ACCS and the demo's codes are not among what `discover_store_structure`
 endpoint, say so and name the found codes, rather than publishing a storefront that cannot load.
 
 ## Shipped so far
-- 2026-10-03  2026-10-03 (worktree night2-b, uncommitted): create_project and create_project_from_file take storeScope {website, store, storeView} from configure_project's one schema (storeScope.ts), checked before anything is created and written to the backend's config that generates config.json; live ACCS proof left for the owner.
+- 2026-10-03  2026-10-03 (worktree night2-b, uncommitted): create_project and create_project_from_file take storeScope {website, store, storeView} from configure_project's one schema (storeScope.ts), checked before anything is created and written to the backend's config that generates config.json; the live ACCS proof is now on the owner's list, PL-111.
 - 2026-11-20  Released in v1.0.0-beta.152 (24d4902ae); found at the beta.153 reconcile

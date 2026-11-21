@@ -23,7 +23,7 @@ call the same primitive with different options:
 Everything else is the same: both branch on `isEdsProject`, both dynamically
 import `resetEdsProjectWithUI` for EDS projects and `resetProjectWithUI`
 otherwise, both build the same `meshDeps`. The defaults are declared at
-`src/features/eds/services/reset/edsResetUI.ts:367-370`.
+`src/features/eds/services/reset/edsResetUI.ts` (lines 367-370 when this was written; the file has since been split).
 
 So one demo, reset two ways, ends up in two different states: the projects-list
 reset restores the block library configuration and verifies the CDN afterwards;

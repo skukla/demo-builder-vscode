@@ -4,7 +4,7 @@ kind: fix
 area: platform
 needs: []
 value: med
-status: active
+status: shipped
 ---
 
 # The hook router's tests flake: old once-per-session markers survive and collide
@@ -38,3 +38,4 @@ test markers were deleted.
 - 2026-10-31  fix(hooks): every rule proof and the probe keep their markers to themselves (`175976d61`)
 - 2026-11-15  fix(hooks): the written-paths proof no longer fails while another jest run is live (`05c644154`)
 - 2026-11-15  docs(backlog): record 05c644154 on PL-86 (`c2e9bf73b`)
+- 2026-11-21  Reconciled 2026-11-21: done. tests/hooks/router.test.ts makes a private TMPDIR, and all 22 *.proof.sh files use mktemp and trap. 05c644154 is in v1.0.0-beta.153.

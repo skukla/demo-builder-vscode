@@ -22,7 +22,7 @@ images." The reset an hour earlier had said nothing about fixes.
    matches `adobe-commerce/boilerplate-b2b-template`, and offers. The two disagree.
 2. **Apply would have written nothing, and said the wrong reason.** The report's Apply
    calls the same pass (`storefrontReportDeps.ts:51`), hits the same missing record, and
-   answers "none of the fixes fit this code any more" (`src/commands/storefrontReport.ts:137`).
+   answers "none of the fixes fit this code any more" (`src/commands/storefrontReport.ts`, line 137 then; the report was removed in 316903008).
    *Inferred*; not run. The agent's `reset_project applyFixes:true` has the same gap.
 3. **Had it written, the product-links fix would have broken the block.** The offered list
    (`STOREFRONT_FIX_IDS`, `loadBearingPatches.ts:74`) has `product-teaser-sku-encoding`,

@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: high
-status: active
+status: shipped
 ---
 
 # A storefront delete goes on deleting while its pages are still live
@@ -58,3 +58,4 @@ Row 7.4 of the release test plan walks the button version of this.
 ## Shipped so far
 
 - 2026-10-25  fix(eds): a storefront delete stops while its pages are still live (`d3ebc9945`)
+- 2026-11-21  Reconciled 2026-11-21: done. storefrontTeardown.ts stops the delete on still-live (STOPPED_STILL_LIVE); unknown carries on by design. d3ebc9945 is in v1.0.0-beta.153.

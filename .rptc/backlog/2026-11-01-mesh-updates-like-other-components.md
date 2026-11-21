@@ -4,7 +4,7 @@ kind: feature
 area: platform
 needs: []
 value: high
-status: active
+status: built
 ---
 
 # A mesh is released and updated like the other components
@@ -63,3 +63,4 @@ answers unknown and offers nothing. Removing and adding the mesh again puts it r
 ## Shipped so far
 
 - 2026-11-01  fix(mesh): a mesh updates from its branch, as the other components do (`a2bea4164`)
+- 2026-11-21  Reconciled 2026-11-21: done under PL-89. Meshes update to their newest release (7a136fb7c, in v1.0.0-beta.153); the last piece, no branch fallback for owned repos, landed after the tag (68d7aedff), so built until the next release.

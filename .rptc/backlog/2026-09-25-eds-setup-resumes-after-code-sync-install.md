@@ -50,8 +50,8 @@ setup" / "Resuming content copy"). The App case wants the same shape:
   and WAIT — poll Adobe's status at the existing lenient cadence, bounded (say 30 minutes, the
   Runtime timeout being the real ceiling), honouring the run's abort controller so Cancel still
   works.
-- When the poll sees the App, log it, send a "resuming" progress line, and continue with the
-  next step of the same phase. Nothing is repeated; `partialState` stays truthful.
+- When the poll sees the App, log it, send a "resuming" progress line, and carry on with
+  what follows in the same phase. Nothing is repeated; `partialState` stays truthful.
 - The dialog's Check Again becomes a nudge to the same poll (or simply disappears when the run's
   own poll succeeds); "select Retry to run it again" is deleted with the wall it explained.
 - On the bound expiring: the existing error state, now honestly "waited N minutes for the App

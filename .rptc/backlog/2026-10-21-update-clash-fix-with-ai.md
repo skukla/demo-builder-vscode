@@ -59,3 +59,4 @@ is; the Adobe row has no choice at all. Nothing an SC who does not read code can
 - 2026-10-20  feat(updates): a stopped update's clash can be kept in the local copy (`fc1345248`)
 - 2026-10-21  fix(updates): finishing a kept clash accepts what was committed since (`377934fc0`)
 - 2026-10-21  fix(ai): the storefront git-sync hook waits while an update's clash is kept (`f9bcee141`)
+- 2026-11-21  Reconciled 2026-11-21: steps 1-6 built and in v1.0.0-beta.153. Left: live runs, release rows 1.19 (re-walk on the next real clash), 1.20 and 1.21 (never run).

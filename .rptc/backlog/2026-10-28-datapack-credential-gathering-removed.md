@@ -78,3 +78,4 @@ They were not removed in the same change because existing projects hold values i
 
 - 2026-10-28  fix(data-installer): stop gathering Commerce secrets; remove the shared-credential broker (`ff7c67be1`)
 - 2026-10-28  fix(data-installer): stop gathering Commerce secrets; remove the shared-credential broker (`dedcf8c7d`)
+- 2026-11-21  Reconciled 2026-11-21: broker and shared credential removed. DEFECT found: 2aea69b3e took ACCS_OAUTH_CLIENT_SECRET out of SECRET_ENV_KEYS without the clean-up this item said must come first, so an older project still holding it in componentConfigs would export it in plain text, and SecretStorage copies are never deleted. Left: strip or clean that key for existing projects, then the live reset under Before finishing.

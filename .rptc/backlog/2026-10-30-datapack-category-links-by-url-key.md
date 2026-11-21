@@ -57,3 +57,4 @@ to confirm which category was meant.
 ## Shipped so far
 
 - 2026-10-31  fix(data-installer): an install says when a category key names two categories (`515532cdb`)
+- 2026-11-21  Reconciled 2026-11-21: only part 3 shipped (515532cdb). Left: saves write a unique category key (url_path is still stripped in packForm.ts DERIVED_CATEGORY_FIELDS; links still go by categoryUrlKey), and fixing or re-exporting Bodea, the owner's call.

@@ -47,3 +47,5 @@ carrying the fix is out.
 - 2026-11-02  feat(components): the watchdog fails a workflow that holds back a check tool (`a3a3aae8c`)
 - 2026-11-20  2026-11-20 every owned repository released (owner go): first beta of app-builder-shell, bodea-source, buildright-eds, commerce-erp-integration, demo-builder-block-library, demo-erp, demo-inspector-sdk (1.0.0-beta.1); citisignal-nextjs and commerce-eds-mesh 1.0.0-beta.6, eds-accs-mesh 1.0.0-beta.3, headless-commerce-mesh 1.0.0-beta.2. Each main is at its release. fix/node-24 (2 repos) and fix/shared-order-cases merged first. eds-demo-patches: gate run, nothing a storefront reads changed. Left: delete the branch fallback (refOfSource, installer)
 - 2026-11-21  Final step done in 68d7aedff: the branch fallback for owned repositories is deleted; an unreadable release refuses (ReleaseUnreadableError). Full gate passed; pushed to develop.
+- 2026-11-21  docs(backlog): PL-89 built (`84e36b420`)
+- 2026-11-20  fix(release): the ERP integration's release reads demo-erp's betas (`908d88d18`)

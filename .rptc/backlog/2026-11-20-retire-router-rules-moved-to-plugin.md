@@ -19,3 +19,7 @@ pre-filter (the `git commit`, `--include=`/`-name`, `=$(` / `; do`, `| head`/`| 
 comments, after checking no remaining rule needs one of the tokens (rule 10, jest piped into tail,
 is admitted by `*jest*` already). `tests/hooks/router.test.ts` and `rule-proofs.test.ts` mention the
 old rules in comments and may probe them; update them in the same change.
+
+## Shipped so far
+
+- 2026-11-20  docs(backlog): file the pipeline review's Demo Builder items (`2d3fa91a7`)

@@ -4,7 +4,7 @@ kind: feature
 area: data-installer
 needs: []
 value: high
-status: active
+status: shipped
 ---
 
 # Demo Builder installs datapacks itself, beside the service
@@ -120,3 +120,4 @@ High value: SCs cannot install any datapack until this exists or the service cha
 - 2026-11-03  feat(data-installer): datapacks work with or without the Data Installer (`88475c876`)
 - 2026-11-03  feat(data-installer): the "no access" banner can be dismissed, and a team pack is never tagged Yours (`1884a7e2e`)
 - 2026-11-03  fix(data-installer): say what the Datapacks screen lists, and switch the Data Installer on or off (`d116d2f5f`)
+- 2026-11-21  Reconciled 2026-11-21: done. Demo Builder's own engine installs every kind (demoBuilderEngine/runPack.ts, buildDatapackEngine.ts); the one-setting engine choice was replaced by DI-12's decision to delete the service engine. d116d2f5f is in v1.0.0-beta.153.

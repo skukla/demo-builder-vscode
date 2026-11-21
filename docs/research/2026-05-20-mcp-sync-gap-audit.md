@@ -50,7 +50,7 @@ Three places the same block code can live and drift independently:
 Key code paths:
 - `src/features/eds/services/blockCollectionHelpers.ts:62-264` — atomic-tree-commit install (no local clone)
 - `src/features/eds/services/storefrontSetupPhase2.ts` — unified built-in / custom processing (file no longer exists; this document is a dated snapshot of 2026-05-20 and is not being rewritten)
-- `src/features/updates/commands/updateExecutor.ts:287-330` — broken update apply (advances `commitSha` without re-copying files)
+- `src/features/updates/commands/updateExecutor.ts` (lines 287-330; file removed in 339e1021a) — broken update apply (advances `commitSha` without re-copying files)
 - `src/types/blockLibraries.ts:31-46` — `InstalledBlockLibrary` data model
 
 The AI agent's view of "the block" is always the divorced storefront copy. `list_blocks` and `get_block_source` query the storefront's local clone exclusively — no library-source awareness.

@@ -29,3 +29,4 @@ the same change that adds its reader and writer, with a regenerate/existing-proj
 ## Shipped so far
 
 - 2026-10-06  chore(settings): remove demoBuilder.appBuilderComponents.custom, which nothing read (`cb0f5812d`)
+- 2026-11-21  Reconciled 2026-11-21: only the dead setting's removal shipped (cb0f5812d). Left: the feature itself, a user setting the Add Integration custom stage writes, its repos shown as catalog entries on the Integrations screen and the dashboard's Add Integration.

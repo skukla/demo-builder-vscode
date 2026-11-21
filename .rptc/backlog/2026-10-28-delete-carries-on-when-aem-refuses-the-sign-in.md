@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: high
-status: active
+status: shipped
 ---
 
 # A storefront delete carries on when AEM refuses the sign-in
@@ -43,3 +43,4 @@ A 401/403 from AEM is "sign-in refused", not "can't tell":
 
 ## Shipped so far
 - 2026-10-28  fix(eds): a storefront delete removes the site's code, and stops when DA.live is signed out (`a2072e04f`)
+- 2026-11-21  Reconciled 2026-11-21: done. helixPublishedPaths.ts throws DaLiveAuthError on 401/403, and the teardown stops on sign-in-refused. a2072e04f is in v1.0.0-beta.153.

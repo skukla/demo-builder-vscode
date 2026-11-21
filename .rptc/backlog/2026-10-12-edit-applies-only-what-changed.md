@@ -81,3 +81,4 @@ from, Configure for its settings.
 - 2026-10-13  fix(edit): going Back keeps the project's Adobe destination (`9d9416a8d`)
 - 2026-10-13  fix(wizard): Welcome settles, and Edit keeps the project's DA.live org and repository (`bc6ee1a90`)
 - 2026-10-19  fix(edit): an Edit onto a new package, or a reset to the template, replaces the site's pages (`04fb4e046`)
+- 2026-11-21  Reconciled 2026-11-21: the diff-based Finish is built for nothing, integrations, mesh, datapack, Adobe project and package (in v1.0.0-beta.153). Left: backend, stack, org and repo/site (PL-77, PL-78, PL-79, EDS-42, all backlog), then step 9, delete Edit's rebuild branch (carriedOverFromEdit is still in executor.ts), and a first live run on a scratch project.

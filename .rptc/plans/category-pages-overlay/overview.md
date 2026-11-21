@@ -282,7 +282,7 @@ that still carries `pages` is read once by the migration and then rewritten with
 
 | Tool / field | Fate | Where |
 |---|---|---|
-| `add_category_pages` | **Delete** (recommended, D4). There is nothing to add: a category's page exists on first visit, and `sync_content` re-publishes all of them | `src/features/ai/server/categoryPageTools.ts:137-...`; narration `toolNarration.ts:230`; alert copy `agentAlertCopy.ts:213`; ledger `tests/sop/reversibility.ledger.json:118`; pin `tests/templates/spine-chokepoints.test.ts:545` |
+| `add_category_pages` | **Delete** (recommended, D4). There is nothing to add: a category's page exists on first visit, and `sync_content` re-publishes all of them | `src/features/ai/server/categoryPageTools.ts` (deleted in c75b52793); narration `toolNarration.ts:230`; alert copy `agentAlertCopy.ts:213`; ledger `tests/sop/reversibility.ledger.json:118`; pin `tests/templates/spine-chokepoints.test.ts:545` |
 | `check_category_pages` | **Delete** with it | `categoryPageTools.ts:110-...`; `toolNarration.ts:229` |
 | `sync_content`, `reset_project` | Keep the `categoryPages` field. It now says how many category pages were published, how many old ones were removed, and which edited pages were kept | `storefrontTools.ts:265`, `edsResetTool.ts:168` |
 | `get_settings` allow-list | Remove `demoBuilder.categoryPages.autoAdd` | `settingsTools.ts:79` |

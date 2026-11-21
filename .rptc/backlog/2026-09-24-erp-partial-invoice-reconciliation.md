@@ -17,7 +17,7 @@ additional customization, alongside order routing, not built into the pair.
 ## The case
 
 Commerce can invoice an order in parts (one invoice per shipment, or per line), but once an
-order is partly invoiced it has no way to take further payment against the remainder; the
+order is partly invoiced it has no way to take further payment against the rest; the
 ERP therefore invoices the whole order once, after every line has shipped or been closed
 (`lib/fulfilment.js createInvoice`, owner decision 2026-09-23). An ERP that invoices per
 shipment (SAP's delivery-related billing does) would produce several ERP invoices against

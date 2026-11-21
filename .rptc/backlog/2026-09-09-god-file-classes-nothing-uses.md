@@ -123,7 +123,7 @@ would have spared were deleted with the rest.
 **What the visual diff contributed, stated honestly:** an empty diff across 2,700
 elements and 168 interaction cells, which rules out collateral damage and does NOT
 prove these were dead. The evidence for deadness is the name search with its
-controls. The remaining risk is a class applied from outside this repo's code, and
+controls. The remaining risk, a class applied from outside this repo's code, is now on the owner's list, PL-111, and
 it is closed by opening the Extension Development Host — the owner's check, not a
 scripted one.
 

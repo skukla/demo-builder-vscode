@@ -4,7 +4,7 @@ kind: feature
 area: data-installer
 needs: []
 value: med
-status: active
+status: shipped
 ---
 
 # `product_export`: the bulk product form Luma and Venia carry
@@ -119,3 +119,4 @@ prove one with a live install and removal.
 - 2026-11-06  feat(ai): import-datapack previews before installing a pack again (`dca2f4970`)
 - 2026-11-06  test(datapacks): shared-catalog categories and products install again sending nothing (`43420bec6`)
 - 2026-11-06  fix(datapacks): stock quantities five calls at once, yes/no words install, and the preview counts what the store has (`fb95e1b65`)
+- 2026-11-21  Reconciled 2026-11-21: done. product_export installs natively through the Import API (26f6cdb78, 9dd98255e); a full Luma install and removal ran live 2026-11-06. fb95e1b65 is in v1.0.0-beta.153.

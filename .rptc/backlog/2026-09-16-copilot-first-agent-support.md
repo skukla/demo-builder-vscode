@@ -67,3 +67,4 @@ Two things break rather than degrade:
 - 2026-10-06  feat(ai): Copilot CLI is no longer a Chat engine — Copilot in VS Code or Claude Code (`26e40019f`)
 - 2026-10-06  feat(ai): no Claude Code install help — the missing-CLI message points at Copilot (`d160381a3`)
 - 2026-10-06  feat(ai): warn as soon as Claude Code is chosen without the claude CLI (`4b539d54a`)
+- 2026-11-21  Reconciled 2026-11-21: plan steps 01-04 and 08-10 built, 05-07 closed by measurement; 4b539d54a is in v1.0.0-beta.153. Left: one live check, a destructive call from the Copilot panel. Ship once the owner runs or waives it.

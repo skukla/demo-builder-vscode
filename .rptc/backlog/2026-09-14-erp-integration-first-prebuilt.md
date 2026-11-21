@@ -73,3 +73,4 @@ the flyout, the agent tools · 06 live acceptance on Bodea and docs.
 - 2026-09-17  feat(integrations): the ERP is a card of its own, and removal cleans up before it undeploys (`2365f948c`)
 - 2026-09-17  docs(plan): decision 24 — the ERP's offline switch is removed, not kept (`bc15c7a7f`)
 - 2026-09-24  docs(plan): the ERP programme — every piece of ERP research and planning in one order of work (`99c0539da`)
+- 2026-11-21  Reconciled 2026-11-21: steps 01-05 built and the ERP pair in use. Left: step 06, the live acceptance (step-06-acceptance.md), or the owner decides the Tailspin release-walk rows count instead.

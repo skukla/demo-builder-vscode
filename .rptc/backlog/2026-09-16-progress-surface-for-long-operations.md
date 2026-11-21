@@ -76,9 +76,10 @@ vocabulary for theirs. Develop's side is the OLD text minus its ellipsis.
 
 Taking develop there would revert that pass while looking like a routine merge
 resolution, which is exactly why it is written down rather than decided again at
-the keyboard. The remaining 158 hunks differ in code structure and still need
-reading one at a time; `adobeOrgServices.ts` is the one to be most careful with,
-because it holds the credential-APIs fix that develop does not have.
+the keyboard. The remaining 158 hunks differed in code structure and were read one
+at a time; `adobeOrgServices.ts` was the one to be most careful with, because it
+held the credential-APIs fix that develop did not have. The merge has since landed:
+the ERP branch's merges (e.g. `83191f99c`) are in develop's history.
 
 ## Shipped so far
 

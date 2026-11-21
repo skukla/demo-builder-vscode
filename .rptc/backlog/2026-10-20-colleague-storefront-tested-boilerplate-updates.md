@@ -86,3 +86,4 @@ storefronts that are not forks but meet the requirements above.
 - 2026-10-30  feat(updates): tell the SC when their AI finishes or drops a storefront fix (`d0917eba2`)
 - 2026-10-30  fix(updates): say when a fix with AI goes live by the approvals setting (`ab697244e`)
 - 2026-10-30  Merge parity/g6-update-own-pieces: an update never clashes with Demo Builder's own pieces, and a stop changes nothing (`403a18d08`)
+- 2026-11-21  Reconciled 2026-11-21: all 13 commits are in v1.0.0-beta.153 and plan steps 01-07 are built. Left: release row 1.18, a live Apply onto a real throwaway storefront (a cloud write the owner runs).

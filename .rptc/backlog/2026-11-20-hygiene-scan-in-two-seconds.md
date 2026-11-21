@@ -17,3 +17,7 @@ mostly starting processes per file. The pipeline's turn-end drift check runs it,
 Fix: read the files in one process (one node or python pass over the backlog and plans) instead of
 a process per file. Keep every section's CONTROL line, and prove the faster scan prints the same
 findings as the old one on today's tree before replacing it.
+
+## Shipped so far
+
+- 2026-11-20  docs(backlog): file the pipeline review's Demo Builder items (`2d3fa91a7`)

@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: med
-status: active
+status: shipped
 ---
 
 # A new storefront's template code reaches the site, or setup says it did not
@@ -50,3 +50,4 @@ already sees, which says to press Republish. Creation and reset both run it.
 ## Shipped so far
 
 - 2026-10-27  fix(eds): a new storefront's template code reaches the site, or setup says it did not (`a9467b4aa`)
+- 2026-11-21  Reconciled 2026-11-21: done. codeServed.ts probes scripts/aem.js and styles/styles.css and republishes /* when they are missing. a9467b4aa is in v1.0.0-beta.153.

@@ -28,3 +28,7 @@ R-229), nine to this repo:
 The proposals tool (`proposals list`) is the record; each closes from a commit carrying
 `Reflect: R-N`. R-118 may already be met by the memory rule "Think About It Means Discuss";
 check, and close it with a commit that says so if it is.
+
+## Shipped so far
+
+- 2026-11-20  docs(backlog): file the pipeline review's Demo Builder items (`2d3fa91a7`)

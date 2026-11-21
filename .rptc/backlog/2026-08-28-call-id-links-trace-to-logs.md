@@ -15,7 +15,7 @@ status: shipped
      months later. The frontmatter carries the structure so the prose need not. -->
 
 Filed 2026-08-28, owner-approved in discussion, with one hard design rule
-(below). Follow-on to the agent activity record (AI-2c).
+(below). It follows the agent activity record (AI-2c).
 
 ## The gap
 

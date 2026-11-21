@@ -48,7 +48,7 @@ Observations are marked as such.
 | Settings, with website scope and ERP switcher | INT `components/settings-section.jsx`, `scope-switcher.jsx`, `settings-view.js` | Settings per website with "Use Default"; with 2+ ERPs, a picker: "Every ERP" or one ERP | Save, Cancel | **yes**: `erpChoices` (`settings-view.js:178-186`); saves one ERP's keys (`settings-section.jsx:168-178`). One sentence is still singular, "this ERP owns" (`:255-259`) | 11 |
 | Order view button "ERP parts" | `app.commerce.config.ts:111-118`; INT `pages/order-parts-page.jsx`, `components/order-parts.jsx` | One row per part: ERP, lines, status, ERP number, why it waits; lines no part holds | Re-send per part, Back to the order | **yes**: rows keyed by `erpId` (`order-parts.jsx:132-133`); Re-send per part (`:24-35`) | 1, 4, 5, 6 |
 | Orders grid: "ERP parts" column | `app.commerce.config.ts:87-108`; `actions/order-grid/index.js:17-20, 38` | e.g. "2 of 2 sent" | — | **yes** | 1, 5, 6 |
-| Orders grid: ERP number column | same, `index.js:37`, `src/lib/order-grid.js:19-24` | This app's ERP number and status | — | **no**: one column labelled with one ERP's name | 1 |
+| Orders grid: ERP number column | same, `index.js:37`, `commerce-erp-integration/src/lib/order-grid.js:19-24` | This app's ERP number and status | — | **no**: one column labelled with one ERP's name | 1 |
 | Product grid "Move stock between {ERP} warehouses" | `app.commerce.config.ts:123-133`; INT `pages/move-stock-page.jsx` | Move stock between one ERP's sources | Move N products, Back | **no**: one `erpName` (`:94`, `:124`, `:143`, `:155`) | 3 |
 | Crash screen | INT `components/crash-boundary.jsx` | A fallback | — | not applicable | — |
 | Preview, current page | `commerce-erp-integration/preview/index.html`, `main.jsx`, `fake-api.js` | The real components against stand-in data | Everything above; `?one-erp`, `?page=order-parts` | **yes**: two ERPs, Northwind and Contoso (`fake-api.js:270-283`, `:424-433`) | — |
@@ -123,7 +123,7 @@ Human surface compared with agent surface:
 - The fill does filter by the owning ERP (`erpFill.ts:128-135`).
 - But when an ERP has no "which products it owns" setting, the filter falls back to every
   product. That fallback is in two places: `erpFillRows.ts:184` and the integration's
-  `src/lib/structure.js:108`.
+  `commerce-erp-integration/src/lib/structure.js:108`.
 - Nothing in Demo Builder sets that setting, and no agent tool can (see the settings row above).
 - So a second ERP starts with every product, unless someone sets its ownership by hand in the
   Admin page's ERP switcher.

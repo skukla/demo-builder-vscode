@@ -12,8 +12,8 @@ status: shipped
 Found 2026-09-02 by a sweep for follow-up work across every source at once
 (register: `.rptc/handoff/2026-09-02-follow-up-register.md`).
 
-**18 items are at `shipped` or `built` and still name remaining work inside
-them.** Nobody re-opens a finished item, so that work is invisible: it does not
+**On 2026-09-02, 18 items were at `shipped` or `built` and still named remaining
+work inside them.** Nobody re-opens a finished item, so that work is invisible: it does not
 appear in `backlog.mjs next`, it is not `stale`, and no check reads it.
 
 That is the only category the sweep found that was genuinely LOST rather than
@@ -33,7 +33,8 @@ None of them reads a FINISHED item's prose.
 
 ## The proposed check
 
-Flag any item at `shipped` or `built` whose body contains a forward-looking
+The check was built as `leftovers` (b7bc129d2, now section 7 of
+`rptc-hygiene-scan`), and it flags any item at `shipped` or `built` whose body contains a forward-looking
 remainder — "remaining", "remainder", "next step", "follow-on", "not yet done",
 "left for" — and which has neither a child item nor `superseded-by`.
 

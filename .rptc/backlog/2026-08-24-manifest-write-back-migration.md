@@ -13,7 +13,7 @@ layer: G
 
 *The item in one paragraph. Moved off the index 2026-08-26, which carried a second copy that drifted from this file.*
 
-Old project manifests are converted in memory on every load but never rewritten, so the legacy-read code (~half the repo's remaining `legacy` mentions, incl. the whole `meshState`/`appState` synthesis family) is load-bearing forever. Two phases: (1) an idempotent activation sweep step — joining the SEQUENCED upkeep chain in `extension.ts`, never beside it — loads and saves each unstamped manifest, plus a real format stamp (`version: '1.0.0'` today is static) and a pinned rollback floor; (2) two releases later, delete the converters — done = the `singularStateAccessGuard` allowlist (7 files) is empty. Settings export files and external-system shapes are explicitly out of scope. ~1 day per phase. Filed 2026-08-24 from the trim-cycle 4 sweep.
+Old project manifests are converted in memory on every load but never rewritten, so the legacy-read code (~half the repo's `legacy` mentions at the time, incl. the whole `meshState`/`appState` synthesis family) is load-bearing forever. Two phases: (1) an idempotent activation sweep step — joining the SEQUENCED upkeep chain in `extension.ts`, never beside it — loads and saves each unstamped manifest, plus a real format stamp (`version: '1.0.0'` today is static) and a pinned rollback floor; (2) two releases later, delete the converters — done = the `singularStateAccessGuard` allowlist (7 files) is empty. Settings export files and external-system shapes are explicitly out of scope. ~1 day per phase. Filed 2026-08-24 from the trim-cycle 4 sweep.
 
 > **Phase 1 SHIPPED 2026-08-24** (`feature/manifest-write-back-migration` →
 > develop): `MANIFEST_FORMAT_VERSION = 2` stamped by every save
@@ -55,7 +55,7 @@ Old project manifests (`~/.demo-builder/projects/<name>/.demo-builder.json`)
 written by earlier versions still carry retired shapes. The extension converts
 them **in memory on every load** but never writes the converted result back, so
 an old-format project stays old-format forever and the conversion code is
-load-bearing forever. The 2026-08-24 structural baseline counted ~170 remaining
+load-bearing forever. The 2026-08-24 structural baseline counted ~170
 `legacy` mentions; the largest families all trace to this.
 
 The write side already emits ONLY the new format (`projectConfigWriter` — its

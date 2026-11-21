@@ -13,7 +13,7 @@ Filed 2026-10-15 from the release walk. On a storefront built from
 `adobe-commerce/boilerplate-b2b-template`, any missing page (seen on a product page that had
 not been published) draws nothing: no header, no footer text.
 
-**Cause, read from the page:** the start-up code (`scripts/initializers/index.js:248`) imports
+**Cause, read from the page:** the template's start-up code (`boilerplate-b2b-template/scripts/initializers/index.js:248`) imports
 `@dropins/storefront-company-switcher/api.js`. The site's `head.html` import map names it (18
 dropins), but the template's own `404.html` carries its own import map with only four
 (`storefront-auth`, `storefront-cart`, `storefront-personalization`, `tools`). The browser

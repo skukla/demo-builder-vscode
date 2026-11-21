@@ -30,3 +30,4 @@ show, checked side by side in the Extension Dev Host.
 
 ## Shipped so far
 - 2026-10-15  fix(ui): Site Access loads behind the house full-window spinner (`bac79ab35`)
+- 2026-11-21  Reconciled 2026-11-21: bac79ab35 (in v1.0.0-beta.153) puts the shared FullScreenLoading on SiteAccessScreen. Left: the side-by-side look in the Extension Dev Host its done-condition asks for. Ship once run or waived.

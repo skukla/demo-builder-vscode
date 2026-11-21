@@ -20,3 +20,4 @@ Research: `.rptc/research/ue-retirement-component-definition/research.md`.
 ## Shipped so far
 
 - 2026-11-08  docs(rptc): walk findings F62 to F68, release tests 1.10 and 1.11, and the block library plan (`85f44f49c`)
+- 2026-11-21  Reconciled 2026-11-21: planned; waits on the owner's sign-off of .rptc/plans/block-library-without-universal-editor/overview.md. The palette is still built from component-definition.json.

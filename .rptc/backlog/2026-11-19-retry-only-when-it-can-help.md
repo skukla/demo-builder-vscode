@@ -67,3 +67,4 @@ Retry label offered without it.
 ## Shipped so far
 
 - 2026-11-19  refactor(errors): one answer to "can a retry help?"; file the convention for everywhere (PL-106) (`b187ef26d`)
+- 2026-11-21  Reconciled 2026-11-21: only the Updates window and the data installer follow the rule; OperationProgressModal.tsx still offers Retry on every failure. Left: retryable in the shared failure shapes (with PL-102 slice 4), every listed screen on failedButtonLabel, and a rule check.

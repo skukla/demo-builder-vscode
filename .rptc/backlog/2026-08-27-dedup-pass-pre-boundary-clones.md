@@ -17,7 +17,7 @@ Filed 2026-08-27, from the quality-sweep loop (report:
 `.rptc/handoff/2026-08-27-quality-sweep-report.md`). Both sweep passes found
 these with jscpd, blame-dated every one to BEFORE the beta.143 consolidation
 boundary, and left them per scope discipline. Repo-wide duplication is low
-(0.62%) — this is the concentrated remainder, one tidy pass.
+(0.62%) — this was the concentrated rest, one tidy pass.
 
 The worklist, largest first (jscpd regions as of 2026-08-27; re-run
 `code-duplication-scan` before working — lines move):

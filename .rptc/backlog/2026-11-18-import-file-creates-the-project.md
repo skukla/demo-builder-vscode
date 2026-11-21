@@ -101,3 +101,4 @@ live cycle: import a bundle on a second account, create, publish, reset.
 - 2026-11-18  docs(plan): every import and package action has its agent tool (`3bcc0bd11`)
 - 2026-11-18  docs(plan): import creates the project; Save as Package makes the template (`31bae6ec3`)
 - 2026-11-18  docs(backlog): EDS-72, importing a demo file gives the project, not a template (`9c6e78fbb`)
+- 2026-11-21  Reconciled 2026-11-21: code and docs are in v1.0.0-beta.153 and release test U3.1 passed live 2026-11-20. Left: the plan's phase 3 live step, reset an imported project and see its own code come back.

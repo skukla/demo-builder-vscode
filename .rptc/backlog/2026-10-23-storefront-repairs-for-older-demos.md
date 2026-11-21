@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: high
-status: active
+status: shipped
 ---
 
 # A demo made before a storefront fix never gets it
@@ -57,3 +57,4 @@ screen; "Loading product..." then the product.
 ## Shipped so far
 
 - 2026-10-23  feat(eds): every known fix reaches every storefront; the report is a window (`c75b52793`)
+- 2026-11-21  Reconciled 2026-11-21: done. Repairs run at creation, reset and template update (storefrontRepairs.ts), and Needs reset shows on the dashboard, the project card, the agent status tool and Diagnostics. c75b52793 is in v1.0.0-beta.153.
