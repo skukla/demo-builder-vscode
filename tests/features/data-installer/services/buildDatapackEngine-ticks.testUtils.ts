@@ -181,6 +181,8 @@ export function ticksHarness(): TicksHarness {
         },
         writes: (route = '') => store.sent.filter((call) => call.path.startsWith(route)).map((call) => `${call.method} ${call.path}`),
         onRecord: async () => (await readInstallRecord(nodeRecordFiles, dir, PACK))?.created ?? [],
-        cleanUp: () => fs.rmSync(dir, { recursive: true, force: true }),
+        // The engine's activity-log write (onJobEnd -> writeActivity) is not awaited, so it can
+        // still be landing in `dir` here; CI failed once on ENOTEMPTY. rmSync retries that race.
+        cleanUp: () => fs.rmSync(dir, { recursive: true, force: true, maxRetries: 3 }),
     };
 }
