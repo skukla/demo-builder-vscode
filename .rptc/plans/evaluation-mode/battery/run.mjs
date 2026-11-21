@@ -26,6 +26,14 @@ const REPO = new URL('../../../..', import.meta.url).pathname;
 // The project's own MCP config — the four servers the extension provisions.
 const PROJECT_MCP = `${ROOT}/bodea/.mcp.json`;
 
+/** Where a prompt's agent starts: `"project"` is bodea, another value names a project folder. */
+function cwdOf(cwd) {
+    if (!cwd) return ROOT;
+    const dir = `${ROOT}/${cwd === 'project' ? 'bodea' : cwd}`;
+    if (!existsSync(`${dir}/.demo-builder.json`)) throw new Error(`cwd "${cwd}" names no project at ${dir}`);
+    return dir;
+}
+
 /**
  * The agent's memory directory for these runs.
  *
@@ -107,11 +115,11 @@ const NATIVE_TOOLS = [
 ALLOWED.push(...NATIVE_TOOLS);
 
 // ── Tier 2 (--tier2): scratch-project writes ─────────────────────────────────
-// The hand-curated write list joins the allowlist ONLY under the flag, and the
-// harness (tier2-harness.mjs) flips the current-project pointer to the scratch
-// project BEFORE any agent runs — export_project_settings writes SECRETS from
-// whatever project is current (tier2-design.md finding 1). Setup throws on a
-// failed flip; restore notes print at the TOP of the results.
+// The hand-curated write list joins the allowlist ONLY under the flag, and every
+// tier-2 agent runs INSIDE the scratch folder, which the extension scopes its
+// connection to — export_project_settings writes SECRETS from whatever project is
+// current (tier2-design.md finding 1). Setup proves that scope through the real
+// proxy and throws when it does not hold; restore notes print at the TOP of the results.
 const TIER2 = process.argv.includes('--tier2');
 let tier2Token = null;
 if (TIER2) {
@@ -122,7 +130,7 @@ if (TIER2) {
     // agent hand-edited the manifest as a workaround (itself a finding: denial
     // text invites 'other tools', and the agent obliged).
     ALLOWED.push(...tier2Writes().map((t) => `mcp__demo-builder__${t}`));
-    tier2Token = setup();
+    tier2Token = await setup();
 }
 
 
@@ -398,6 +406,13 @@ function runOnce(prompt, cwd = ROOT) {
                 if (ev.type === 'result') result = ev;
             }
         });
+        // An agent that cannot start (a cwd that no longer exists answers ENOENT) is this
+        // prompt's failure, never the run's: an unhandled error here once skipped the
+        // tier-2 restore (2026-11-21, after a rename moved the scratch folder).
+        child.on('error', (err) => {
+            said.push(`the agent did not start: ${err.message}`);
+            resolve({ calls, said, results, result });
+        });
         child.on('close', () => resolve({ calls, said, results, result }));
     });
 }
@@ -420,9 +435,14 @@ try {
         const memSnap = snapshotMemory();
         // `cwd: "project"` runs the prompt INSIDE the project directory — where
         // a producer's session actually sits, and the only place project skills
-        // (`.claude/skills/<name>/SKILL.md`) are discoverable. Default stays the
-        // projects root (the home surface), matching every recorded run so far.
-        const runCwd = cwd === 'project' ? `${ROOT}/bodea` : ROOT;
+        // (`.claude/skills/<name>/SKILL.md`) are discoverable. Any other value names
+        // a project folder (`"justrite"`, which has an ERP integration): the extension
+        // scopes the session to it. A tier-2 prompt always runs in the scratch folder.
+        // Default stays the projects root (the home surface).
+        const runCwd = tier2Token ? tier2Token.cwd : cwdOf(cwd);
+        // Each tier-2 prompt starts from the fixture: one prompt renames the project, which
+        // moves its folder, and every prompt after it would start in a folder that is gone.
+        if (tier2Token) (await import('./tier2-harness.mjs')).resetScratch();
         const { calls, said, results, result } = await runOnce(prompt, runCwd);
         if (restoreMemory(memSnap)) {
             console.log('    (agent wrote to memory; restored so the next run is independent)');
@@ -505,7 +525,7 @@ try {
 } finally {
     if (tier2Token) {
         const { restore } = await import('./tier2-harness.mjs');
-        const notes = restore(tier2Token);
+        const notes = restore();
         console.log('\n=== TIER-2 RESTORE (read this FIRST) ===');
         for (const n of notes) console.log('  ' + n);
         if (notes.some((n) => n.includes('tier2 RED:'))) {

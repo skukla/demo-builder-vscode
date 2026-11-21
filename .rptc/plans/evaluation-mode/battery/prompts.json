@@ -88,6 +88,7 @@
     "prompt": "My storefront isn't showing any products. Work out whether the problem is the catalog, the storefront configuration, or the page itself.",
     "expect": [
       "run_commerce_query",
+      "run_commerce_rest",
       "get_commerce_endpoints"
     ],
     "expectServers": [
@@ -160,9 +161,10 @@
     "id": "component-config",
     "prompt": "Show me what's in my project's .env file for the storefront component.",
     "expect": [
-      "get_component_config"
+      "get_component_config",
+      "Read"
     ],
-    "why": "AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS here is a discoverability finding about the tool, not a bad prompt."
+    "why": "Reading the .env directly is as good an answer as the tool for a file-reading job (2026-11-21 run), so both count. AI-1q tier 1: coverage prompt, drafted from the tool description. A MISS here is a discoverability finding about the tool, not a bad prompt."
   },
   {
     "id": "store-structure",
@@ -417,7 +419,7 @@
     "expect": [
       "get_integration_install_status"
     ],
-    "cwd": "project",
+    "cwd": "justrite",
     "why": "AB-5 (2026-08-27): the persisted installation record and the app's live step tree existed with NO reader \u2014 answering this took a hand-scripted GET three times in one session. The prompt is that exact question."
   },
   {
@@ -865,7 +867,7 @@
     "expect": [
       "get_erp_status"
     ],
-    "cwd": "project",
+    "cwd": "justrite",
     "why": "Plan step 05 (2026-09-14): the ERP pair's read. The prompt asks two things only the integration's own status action answers, so the agent has to find the ERP tool rather than get_project."
   },
   {
@@ -894,7 +896,7 @@
     "expect": [
       "get_erp_record"
     ],
-    "cwd": "project",
+    "cwd": "justrite",
     "why": "2026-09-24: the agent surface could read Commerce products through GraphQL but had no way to see a B2B company or its credit. The prompt asks for BOTH systems' view of one company, which only the integration's own lookup answers (the Admin page's lookup card); run_commerce_query cannot, since GraphQL has no company read."
   },
   {
@@ -903,7 +905,7 @@
     "expect": [
       "get_erp_order_trace"
     ],
-    "cwd": "project",
+    "cwd": "justrite",
     "why": "2026-09-24: 'where is order X' is the store operator's question and it took three screens to answer. The trace merges the Commerce order, the integration's history and the ERP's own order by time. The prompt names an order and asks for its life across both sides, which get_erp_status (counts only) cannot answer."
   },
   {
@@ -931,7 +933,7 @@
     "expect": [
       "run_erp_rest"
     ],
-    "cwd": "project",
+    "cwd": "justrite",
     "why": "2026-09-24: the ERP's screens read its own API; an agent had no way to. get_erp_status gives counts only and get_erp_order_trace takes one Commerce order number, so a list of the ERP's orders is only answerable by reading its orders route."
   },
   {
@@ -959,7 +961,7 @@
     "expect": [
       "read_runtime_activation"
     ],
-    "cwd": "project",
+    "cwd": "justrite",
     "why": "2026-09-24: the refresh job reported success while its log said 'partner refresh failed: Request timed out'. Only the activation's own log says that; the extension's debug log cannot see inside Runtime."
   },
   {
@@ -978,7 +980,7 @@
     "expect": [
       "get_integration_settings"
     ],
-    "cwd": "project",
+    "cwd": "justrite",
     "why": "AB-21 (2026-09-18): an integration's settings moved to its tile, so the agent reads them through the integration's own settings tool rather than configure_project or get_project."
   },
   {
@@ -1007,7 +1009,7 @@
       "change_demo_source"
     ],
     "why": "Step 06 of the shareable-demo program (EDS-13a): the repoint is the one recovery for a project whose added demo vanished; without the tool an agent rewrites .demo-builder.json and leaves the instance metadata behind, which is exactly the split the tool exists to prevent. Tier 2: it writes the current project, so it runs only under --tier2 against the scratch project.",
-    "tier": 2
+    "tier": 3
   },
   {
     "id": "t2-forget-added-demo",
@@ -1016,7 +1018,7 @@
       "forget_added_demo"
     ],
     "why": "Step 06 of the shareable-demo program (EDS-13a): the list lives in a user setting, so an agent without the tool edits settings.json directly and skips the project count the confirmation is built around. Tier 2: it writes a user setting, so it runs only under --tier2.",
-    "tier": 2
+    "tier": 3
   },
   {
     "id": "t2-edit-added-demo",
@@ -1025,7 +1027,7 @@
       "edit_added_demo"
     ],
     "why": "The Welcome step's Edit on an added demo package (EDS-13a): the card lives in a user setting, so an agent without the tool edits settings.json directly and can break the row the card reads. Tier 2: it writes a user setting, so it runs only under --tier2.",
-    "tier": 2
+    "tier": 3
   },
   {
     "id": "probe-shared-demo",
@@ -1042,7 +1044,7 @@
       "add_shared_demo"
     ],
     "why": "Step 07 of the shareable-demo program (EDS-13a): the dialog's Add commit. The list lives in a user setting, so an agent without the tool writes settings.json by hand and skips the probe that decides the row's kind and codes. Tier 2: it writes a user setting, so it runs only under --tier2.",
-    "tier": 2
+    "tier": 3
   },
   {
     "id": "t1-get-demo-package-preview",
@@ -1060,7 +1062,7 @@
       "save_demo_package"
     ],
     "why": "Step 09 of the shareable-demo program (EDS-13b): the Save commit. Without the tool an agent writes demo.demo-builder.json by hand from memory of the format, pushes it, and edits the demos.added setting, skipping the ownership rule that keeps a hand-edited file from being overwritten. Tier 2: it writes into the SC's GitHub repository and a user setting, so it runs only under --tier2.",
-    "tier": 2
+    "tier": 3
   },
   {
     "id": "t2-remove-demo-package",
@@ -1069,7 +1071,7 @@
       "remove_demo_package"
     ],
     "why": "Step 09 of the shareable-demo program (EDS-13b): the undo. Without the tool an agent deletes the file with a GitHub call and leaves the card, the template flag and the project's record behind. Tier 2: it removes a file from the SC's GitHub repository, so it runs only under --tier2.",
-    "tier": 2
+    "tier": 3
   },
   {
     "id": "t2-add-demo-from-zip",
@@ -1078,7 +1080,7 @@
       "add_shared_demo"
     ],
     "why": "Step 10 of the shareable-demo program (EDS-13a): the zip door. Without it an agent unzips by hand, runs git init and push with a token it has to find, and pastes its own link back into the add tool. Tier 2: it creates a repository in the SC's GitHub account, so it runs only under --tier2.",
-    "tier": 2
+    "tier": 3
   },
   {
     "id": "t2-export-demo-bundle",
@@ -1087,7 +1089,7 @@
       "export_demo_bundle"
     ],
     "why": "Export umbrella (PL-56), the file form: one bundle of the ticked parts (owner, 2026-09-13: export hands an artifact to someone else, by link or by file). Without the tool an agent downloads the archive with curl, forgets the description file, and sends the settings file with credentials in it. Tier 2: it writes a file into the project directory, so it runs only under --tier2.",
-    "tier": 2
+    "tier": 3
   },
   {
     "id": "delete-workspace",
@@ -1160,6 +1162,7 @@
     "expect": [
       "get_setup_checklist"
     ],
+    "cwd": "justrite",
     "why": "Added with the tool (2026-09-25, AB-26x): the SC's demo setup steps in Commerce Admin, as a checklist Demo Builder keeps. A MISS is a discoverability finding about the tool, not a bad prompt."
   },
   {
@@ -1378,7 +1381,7 @@
     ],
     "cwd": "project",
     "why": "Added 2026-10-04 when write_page became confirm-gated (owner: 'Yes, write_page should ask'; CLAUDE.md property 5). Judges two things: that the agent reaches write_page rather than curling DA.live, and that its refusal (which names the storefront, the page and that it publishes) is put to the SC before a confirm:true call. Tier 2: it writes and publishes a page on a live storefront.",
-    "tier": 2
+    "tier": 3
   },
   {
     "id": "t2-publish-page",
@@ -1388,7 +1391,7 @@
     ],
     "cwd": "project",
     "why": "Added 2026-10-04 when publish_page became confirm-gated alongside write_page (property 5). A MISS means the agent calls republish and republishes the whole site for one page. Tier 2: it publishes to a live storefront.",
-    "tier": 2
+    "tier": 3
   },
   {
     "id": "check-category-pages",
@@ -1408,7 +1411,7 @@
     ],
     "cwd": "project",
     "why": "Added 2026-10-05 with the tool (EDS-27): the add-only write. A MISS means the agent runs sync_content (which refreshes pages and edits the nav) or writes pages one at a time with write_page, outside the record that lets a reset remove them. Tier 2: it writes and publishes pages on a live storefront.",
-    "tier": 2
+    "tier": 3
   },
   {
     "id": "prepare-commerce-store",
@@ -1418,7 +1421,7 @@
     ],
     "cwd": "project",
     "why": "Added 2026-10-10 with the tool (AB-77): the preview-then-apply of the setup steps Demo Builder can do itself (settings through PUT system/config, the attributes, the warehouse and stock, the shared catalogs), each checked first and recorded. A MISS means the agent writes settings one at a time with write_commerce_rest, with nothing recorded and no undo. Tier 2: it writes to the live store with confirm.",
-    "tier": 2
+    "tier": 3
   },
   {
     "id": "undo-commerce-store-preparation",
@@ -1428,7 +1431,7 @@
     ],
     "cwd": "project",
     "why": "Added 2026-10-10 with the tool (AB-77): the undo from the per-step record. A MISS means the agent guesses the previous values and rewrites them by hand, or deletes a source Commerce cannot delete. Tier 2: it writes to the live store with confirm.",
-    "tier": 2
+    "tier": 3
   },
   {
     "id": "undo-price-scope-step",
@@ -1438,7 +1441,7 @@
     ],
     "cwd": "project",
     "why": "Added 2026-10-29 with datapack-engine step 06 (AB-83): one step's undo by stepId, which keeps a setting changed since and says so in steps[].kept. A MISS means the agent rewrites the setting by hand with set_commerce_config or write_commerce_rest, over whatever was set since. Tier 2: it writes to the live store with confirm.",
-    "tier": 2
+    "tier": 3
   },
   {
     "id": "set-commerce-config",
@@ -1448,7 +1451,7 @@
     ],
     "cwd": "project",
     "why": "Added 2026-10-10 with the tool (AB-77): one settings write through PUT system/config that reads first, reads the answer's errors list and records the previous values. A MISS means a raw write_commerce_rest PUT whose refused rows go unread under HTTP 200. Tier 2: it writes to the live store with confirm.",
-    "tier": 2
+    "tier": 3
   },
   {
     "id": "app-save-to-github",

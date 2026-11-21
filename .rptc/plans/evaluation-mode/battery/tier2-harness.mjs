@@ -1,38 +1,38 @@
 /**
- * Tier-2 harness — scratch project + pointer choreography (AI-1q, tier2-design.md).
+ * Tier-2 harness — the scratch project and the scope check (AI-1q, tier2-design.md).
  *
  * A module, not a sibling runner: run.mjs stays the one runner (the design's
  * rejected-alternatives section says why), and activates this under `--tier2`.
  *
- * Everything here is SAFETY choreography:
- *   setup:    ensure the scratch project exists (reset from the committed
- *             fixture — comparable runs), snapshot the current-project
- *             pointer, flip it to scratch VIA THE PROBE (never as an agent
- *             step — export_project_settings writes SECRETS from whatever
- *             project is current; tier2-design.md finding 1).
- *   restore:  flip the pointer back (skipped, and SAID, when no project was
- *             current before — a fresh isolated host has none), reset the
- *             scratch content, and VERIFY the restore by reading the pointer
- *             back. A harness that cannot verify restore reports RED — see
- *             the design's acceptance section.
+ * Tier-2 agents run INSIDE the scratch folder, and the extension scopes a
+ * connection to the project folder its session started in (connectionScope.ts,
+ * since 2026-10-19). Nothing global moves, so nothing has to be put back.
+ * Until 2026-11-21 this flipped the dashboard's current-project pointer through
+ * set_current_project and read it back; once that tool became per-connection,
+ * the read-back (a second connection) always disagreed and setup refused.
  *
- * The probe is invoked as a child process (`probe.mjs call … --force <tool>`)
- * because set_current_project is a write and the probe's per-tool force flag
- * is the established consent shape for rig-driven writes.
+ *   setup:    reset the scratch project from the committed fixture (comparable
+ *             runs), then PROVE the scope through the real proxy started in the
+ *             scratch folder: get_current_project must answer battery-scratch,
+ *             scoped to the session's directory. Anything else THROWS, because
+ *             export_project_settings writes SECRETS from whatever project is
+ *             current (tier2-design.md finding 1).
+ *   restore:  reset the scratch content. Never throws; it reports.
  */
 
-import { execFileSync } from 'node:child_process';
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { spawn } from 'node:child_process';
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const AB = dirname(fileURLToPath(import.meta.url));
-const REPO = join(AB, '..', '..', '..', '..');
-const PROBE = join(REPO, '.claude', 'skills', 'mcp-live-probe', 'probe.mjs');
 const PROJECTS = join(homedir(), '.demo-builder', 'projects');
 export const SCRATCH_NAME = 'battery-scratch';
 export const SCRATCH_DIR = join(PROJECTS, SCRATCH_NAME);
+/** The project config whose demo-builder entry starts the proxy, as run.mjs uses it. */
+const PROJECT_MCP = join(PROJECTS, 'bodea', '.mcp.json');
+const SCOPE_CHECK_TIMEOUT_MS = 60_000;
 
 /** The hand-curated tier-2 write list, one per cleared handler (see tier2-writes.txt). */
 export function tier2Writes() {
@@ -40,12 +40,14 @@ export function tier2Writes() {
         .split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#'));
 }
 
-function probe(args) {
-    return execFileSync('node', [PROBE, ...args], { encoding: 'utf8', timeout: 90_000 });
-}
-
-/** Reset the scratch project to the committed fixture (idempotent). */
+/**
+ * Reset the scratch project to the committed fixture (idempotent). A rename prompt moves the
+ * folder to `battery-scratch-<suffix>`; those copies are the harness's own and go too.
+ */
 export function resetScratch() {
+    for (const entry of readdirSync(PROJECTS)) {
+        if (entry.startsWith(`${SCRATCH_NAME}-`)) rmSync(join(PROJECTS, entry), { recursive: true, force: true });
+    }
     rmSync(SCRATCH_DIR, { recursive: true, force: true });
     mkdirSync(SCRATCH_DIR, { recursive: true });
     cpSync(join(AB, 'scratch-fixture.json'), join(SCRATCH_DIR, '.demo-builder.json'));
@@ -53,54 +55,61 @@ export function resetScratch() {
     writeFileSync(join(SCRATCH_DIR, '.env'), '# battery scratch\nFAKE_KEY=fake-test-pw-not-a-secret\n');
 }
 
-/** The current project's path per the live server, or null. */
-function currentProjectPath() {
-    const out = probe(['call', 'get_current_project', '{}', '--full']);
-    const m = /"path"\s*:\s*"([^"]+)"/.exec(out);
-    return m ? m[1] : null;
+/**
+ * What get_current_project answers for a session started in `cwd`, asked through the real
+ * proxy (the route an agent's session takes, so the scope it reports is the one an agent
+ * gets). Resolves the parsed tool answer; rejects on a timeout or a malformed reply.
+ */
+export function currentProjectSeenFrom(cwd) {
+    const server = JSON.parse(readFileSync(PROJECT_MCP, 'utf8')).mcpServers['demo-builder'];
+    return new Promise((resolve, reject) => {
+        const child = spawn(server.command, server.args, { cwd, env: { ...process.env, ...server.env } });
+        const timer = setTimeout(() => { child.kill(); reject(new Error('no answer from the proxy')); }, SCOPE_CHECK_TIMEOUT_MS);
+        let buffered = '';
+        child.stdout.on('data', (chunk) => {
+            buffered += chunk;
+            for (const line of buffered.split('\n').slice(0, -1)) {
+                const message = JSON.parse(line);
+                if (message.id !== 2) continue;
+                clearTimeout(timer);
+                child.kill();
+                try { resolve(JSON.parse(message.result.content[0].text)); } catch (err) { reject(err); }
+            }
+            buffered = buffered.slice(buffered.lastIndexOf('\n') + 1);
+        });
+        const send = (message) => child.stdin.write(`${JSON.stringify(message)}\n`);
+        send({ jsonrpc: '2.0', id: 1, method: 'initialize', params: {
+            protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'battery-tier2', version: '1' },
+        } });
+        send({ jsonrpc: '2.0', method: 'notifications/initialized' });
+        send({ jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'get_current_project', arguments: {} } });
+    });
 }
 
 /**
- * Snapshot the pointer and flip to scratch. Returns the restore token.
- * Flip failures THROW — running tier-2 prompts against the owner's real
- * project is the exact accident this harness exists to prevent.
+ * Reset scratch and prove a session started in it works on it. A failed proof THROWS:
+ * running tier-2 prompts against the owner's real project is the exact accident this
+ * harness exists to prevent.
  */
-export function setup() {
+export async function setup() {
     resetScratch();
-    const prior = currentProjectPath();
-    probe(['call', 'set_current_project', JSON.stringify({ projectPath: SCRATCH_DIR }),
-        '--force', 'set_current_project']);
-    const now = currentProjectPath();
-    if (now !== SCRATCH_DIR) {
-        throw new Error(`tier2 setup: pointer flip failed (current=${now ?? 'none'})`);
+    const seen = await currentProjectSeenFrom(SCRATCH_DIR);
+    if (seen.currentProject?.path !== SCRATCH_DIR || seen.scope !== 'session-directory') {
+        throw new Error(
+            `tier2 setup: a session in the scratch folder works on ${seen.currentProject?.path ?? 'no project'} `
+            + `(scope ${seen.scope}), not ${SCRATCH_DIR}`,
+        );
     }
-    console.log(`tier2: scratch ready, pointer flipped (prior: ${prior ?? 'none'})`);
-    return { prior };
+    console.log('tier2: scratch ready, and a session started in it is scoped to it');
+    return { cwd: SCRATCH_DIR };
 }
 
 /**
- * Restore the pointer and reset scratch. Never throws — it reports; the
- * CALLER prints the returned lines at the TOP of the results (design
- * acceptance: a silent bad restore is worse than no harness).
+ * Reset scratch. Never throws — it reports; the CALLER prints the returned lines at the
+ * TOP of the results (design acceptance: a silent bad restore is worse than no harness).
  */
-export function restore(token) {
+export function restore() {
     const notes = [];
-    try {
-        if (token.prior) {
-            probe(['call', 'set_current_project', JSON.stringify({ projectPath: token.prior }),
-                '--force', 'set_current_project']);
-            const now = currentProjectPath();
-            notes.push(now === token.prior
-                ? `tier2: pointer RESTORED to ${token.prior}`
-                : `tier2 RED: pointer restore FAILED — current is ${now ?? 'none'}, wanted ${token.prior}`);
-        } else {
-            // No project was current before (fresh isolated host). There is no
-            // "set to none" tool; scratch stays current, and that is SAID.
-            notes.push('tier2: no prior project existed — pointer left on battery-scratch (restore-to-none is not expressible)');
-        }
-    } catch (err) {
-        notes.push(`tier2 RED: restore threw — ${err.message}`);
-    }
     try {
         resetScratch();
         notes.push('tier2: scratch reset to fixture');
