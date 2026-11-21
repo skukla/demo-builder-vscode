@@ -9,6 +9,12 @@ standards: [CLAUDE.md#what-this-extension-never-compromises-on, CLAUDE.md#words-
 periodic:
   reflect:        { budget: 3 releases or 30 days, last: 2026-11-16 }
   codebase-sweep: { budget: 3 releases, last: 2026-11-16 }
+  # Each check below writes its own date through scripts/lib/pipelineLast.js when it ran (PL-107).
+  sweep:                { budget: 3 releases or 30 days }
+  test-divergence-scan: { budget: 3 releases or 30 days, last: 2026-11-21 }
+  eds-drift:            { budget: 3 releases or 30 days }
+  data-installer-drift: { budget: 3 releases or 30 days }
+  battery:              { budget: 3 releases or 30 days }
 repo_hooks: .githooks
 backlog:
   commit_trailer: required

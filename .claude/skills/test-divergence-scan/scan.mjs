@@ -20,6 +20,7 @@
  */
 
 import { readFileSync, readdirSync, statSync } from 'fs';
+import { createRequire } from 'module';
 import { join, relative } from 'path';
 
 const ROOT = process.argv[2] ?? 'tests';
@@ -143,4 +144,9 @@ for (const probe of PROBES) {
 if (anyBroken) {
     console.log('At least one probe matched nothing. Fix the probe before trusting this run.');
     process.exit(2);
+}
+
+// A run over the whole suite is the periodic check; the release check reads this date (PL-107).
+if (ROOT === 'tests') {
+    createRequire(import.meta.url)('../../../scripts/lib/pipelineLast.js').recordRun('test-divergence-scan');
 }

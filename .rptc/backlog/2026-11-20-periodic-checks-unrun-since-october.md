@@ -4,7 +4,7 @@ kind: fix
 area: platform
 needs: []
 value: high
-status: backlog
+status: built
 ---
 
 # Four periodic checks have no recorded run since at least October
@@ -42,3 +42,4 @@ transcript kept is from 2026-10-10, so "none" means none since then, not never:
 
 - 2026-11-20  test-divergence-scan run 2026-11-20 (2,922 files; baseline 2026-08-28, 1,288). Inline hand-rolled fakes: Logger 341 to 6, CommandExecutor 81 to 52, StateManager 48 to 56 (34 shapes), Project fixture 38 to 61 (56 shapes), HandlerContext 4 to 21 (3 to 13 shapes). As a share of uses all fell except HandlerContext (2% to 7%), the one canonical-fakes should already hold: triage those 21 first. Three checks still have no run: eds:drift, data-installer:drift (owner's credentials), the battery (live dev host).
 - 2026-11-21  test-divergence-scan fixed: it counted objects handed INTO a shared builder as hand-rolled fakes. The 21 HandlerContexts were 0: 12 builder overrides, 18 message-channel fakes in 9 files (now set aside and counted on their own line), and 1 finalization-service input. The same fix lowers StateManager 56 to 11 and Project fixture 61 to 30 inline suites. Baseline updated in the skill and CLAUDE.md. Left open: step 3 (last: dates for the periodic checks).
+- 2026-11-21  Step 3 built: sweep, test-divergence-scan, eds-drift, data-installer-drift and battery are periodic steps in .pipeline.yaml (budget 3 releases or 30 days), and each writes its own last: date through scripts/lib/pipelineLast.js when it ran (a drift check that could not read a contract writes none). test-divergence-scan has a real date from today's run; the other four show as never run until they next run. Not dated: test-strategy-scan and the overnight mutation re-measure.

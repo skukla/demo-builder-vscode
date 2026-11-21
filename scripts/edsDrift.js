@@ -48,6 +48,7 @@
 const fs = require('fs');
 const path = require('path');
 const { checkEndpoint, shapeDrift } = require('./lib/driftCore');
+const { recordRun } = require('./lib/pipelineLast');
 
 const FIXTURES = path.join(__dirname, '..', 'tests', 'fixtures', 'eds', 'drift');
 
@@ -229,10 +230,13 @@ async function main() {
     }
 
     let failed = 0;
+    // Checks that could not read their contract: the run only counts as run without them.
+    let unread = 0;
     for (const check of checks) {
         const fixturePath = path.join(FIXTURES, check.fixture);
         if (!fs.existsSync(fixturePath)) {
             failed += 1;
+            unread += 1;
             console.log(
                 `  FAILED    ${check.action} — no fixture committed; bootstrap with --capture first`,
             );
@@ -251,6 +255,7 @@ async function main() {
         }
         failed += 1;
         if (result.unreachable || result.error) {
+            unread += 1;
             console.log(`  FAILED    ${result.action} — ${result.error} (needs ${check.needs})`);
             continue;
         }
@@ -267,6 +272,7 @@ async function main() {
         console.log(`  ok        ${encoding.action} (CDN still rejects percent-encoded paths)`);
     } else {
         failed += 1;
+        if (encoding.invalidated) unread += 1;
         console.log(
             `  ${encoding.invalidated ? 'INVALID  ' : 'DRIFTED  '} ${encoding.action} — ${encoding.error}`,
         );
@@ -277,6 +283,7 @@ async function main() {
             ? '\nEDS contracts match their pins.'
             : `\n${failed} check(s) need attention. Re-capture the fixture after verifying the change, or fix the consumer.`,
     );
+    if (unread === 0) recordRun('eds-drift');
     process.exit(failed === 0 ? 0 : 1);
 }
 

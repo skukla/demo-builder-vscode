@@ -123,5 +123,8 @@ console.log(
 if (broken.length) console.log(`\nA broken instrument is a bug in the tooling, not a finding. Fix or delete it.`);
 console.log('');
 
+// Every instrument started, so the sweep ran: the release check reads this date (PL-107).
+if (!broken.length) require('./lib/pipelineLast.js').recordRun('sweep');
+
 // Only a broken instrument fails the sweep. Findings are for reading.
 process.exit(broken.length ? 1 : 0);

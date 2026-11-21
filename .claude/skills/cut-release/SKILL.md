@@ -115,6 +115,11 @@ Offer them; do not silently skip. If the user declines, say so in the release no
 so the next cut knows the interval. These were documented as "runs at release cuts"
 long before anything invoked them — naming the step here is what makes that true.
 
+Five of them now date themselves: `npm run sweep`, `test-divergence-scan`, `eds:drift`,
+`data-installer:drift` and the battery each write their own `last:` date into
+`.pipeline.yaml` when they ran (`scripts/lib/pipelineLast.js`, PL-107), so the release
+check's freshness list names the ones past their budget. Never write those dates by hand.
+
 ## Steps (run from `develop`)
 
 Let `N` = new beta number, `PREV` = current one.

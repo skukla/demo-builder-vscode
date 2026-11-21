@@ -44,6 +44,7 @@ const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const { shapeDrift, checkEndpoint: coreCheckEndpoint } = require('./lib/driftCore');
+const { recordRun } = require('./lib/pipelineLast');
 
 const FIXTURES = path.join(__dirname, '..', 'tests', 'fixtures', 'data-installer');
 
@@ -232,6 +233,8 @@ async function main() {
     }
 
     let failed = 0;
+    // Endpoints that could not be read: the run only counts as run without them.
+    let unread = 0;
     for (const result of results) {
         if (result.ok) {
             console.log(`  ok        ${result.action}`);
@@ -239,6 +242,7 @@ async function main() {
         }
         failed += 1;
         if (result.unreachable || result.error) {
+            unread += 1;
             console.log(`  FAILED    ${result.action} — ${result.error}`);
             continue;
         }
@@ -275,6 +279,8 @@ async function main() {
         );
     }
 
+    // A failed control (`invalidates`) means the mode counts were not read either.
+    if (unread === 0 && !findings.some((f) => f.invalidates)) recordRun('data-installer-drift');
     process.exit(failed === 0 && findings.length === 0 ? 0 : 1);
 }
 
