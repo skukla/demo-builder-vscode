@@ -126,13 +126,13 @@ describe('a repository the builder owns', () => {
         expect(cloneCall()[0]).toContain('--branch "v1.2.0-beta.1"');
     });
 
-    it('clones its branch until it has a first release', async () => {
+    it('refuses when its release cannot be read, and never clones its branch', async () => {
         setUpdateChannel('stable');
         respondWith([]);
 
-        await install(OWNED());
+        await expect(install(OWNED())).rejects.toThrow('Could not read the newest release of');
 
-        expect(cloneCall()[0]).toContain('-b "main"');
+        expect(cloneCall()).toBeUndefined();
     });
 
     it("someone else's repository clones its branch, and is not looked up", async () => {

@@ -71,7 +71,7 @@ beforeEach(() => {
 afterEach(() => rmSync(root, { recursive: true, force: true }));
 
 describe('a repository the builder owns', () => {
-    it('a push with no release offers nothing, and moves nothing', async () => {
+    it('a release that cannot be read is an unknown check and a refused update, and moves nothing', async () => {
         cloneAs(RELEASED_URL);
         const before = git('rev-parse HEAD', clone);
         commit('pushed-to-main');
@@ -79,8 +79,11 @@ describe('a repository the builder owns', () => {
         const checked = await checkComponentSource(clone, 'main', run, reads(null));
         const updated = await updateComponentSource(clone, 'main', run, reads(null));
 
-        expect(checked).toMatchObject({ status: 'current', from: before, to: before });
-        expect(updated).toMatchObject({ status: 'current', from: before, to: before });
+        const refusal = 'Could not read the newest release of skukla/demo-erp';
+        expect(checked.status).toBe('unknown');
+        expect(checked.detail).toContain(refusal);
+        expect(updated.status).toBe('failed');
+        expect(updated.detail).toContain(refusal);
         expect(git('rev-parse HEAD', clone)).toBe(before);
     });
 
@@ -230,10 +233,11 @@ describe('a folder with no git history', () => {
         expect(checked).toMatchObject({ status: 'available', version: '1.1.0' });
     });
 
-    it('is offered nothing while there is no release', async () => {
+    it('is an unknown check, never "current", when its release cannot be read', async () => {
         const checked = await checkComponentSource(folder, 'main', run2, reads(null), URL);
 
-        expect(checked.status).toBe('current');
+        expect(checked.status).toBe('unknown');
+        expect(checked.detail).toContain('Could not read the newest release of skukla/eds-accs-mesh');
     });
 
     it('is cloned again at the release, keeping the old folder and the settings', async () => {

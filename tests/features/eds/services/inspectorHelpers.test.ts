@@ -40,7 +40,7 @@ function releasesListed(...tags: string[]): void {
 
 beforeEach(() => {
     (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({ get: jest.fn(() => 'stable') });
-    releasesListed();
+    releasesListed('v1.0.0');
 });
 
 describe('generateInspectorTreeEntries', () => {
@@ -53,12 +53,14 @@ describe('generateInspectorTreeEntries', () => {
         expect(gh.listRepoFiles).toHaveBeenCalledWith(SDK_SOURCE.owner, SDK_SOURCE.repo, 'v1.2.0');
     });
 
-    it('vendors its branch while it has no release', async () => {
+    it('refuses when its release cannot be read, and never reads its branch', async () => {
+        releasesListed();
         const gh = github({});
 
-        await generateInspectorTreeEntries(gh, 'me', 'store', undefined, createMockLogger());
-
-        expect(gh.listRepoFiles).toHaveBeenCalledWith(SDK_SOURCE.owner, SDK_SOURCE.repo, SDK_SOURCE.branch);
+        await expect(
+            generateInspectorTreeEntries(gh, 'me', 'store', undefined, createMockLogger()),
+        ).rejects.toThrow(`Could not read the newest release of ${SDK_SOURCE.owner}/${SDK_SOURCE.repo}`);
+        expect(gh.listRepoFiles).not.toHaveBeenCalled();
     });
 
     it('vendors the SDK and writes the init script, and never reads or writes delayed.js', async () => {

@@ -83,15 +83,28 @@ export async function readComponentRelease(
     }
 }
 
+/** A repository the builder owns whose newest release could not be read. */
+export class ReleaseUnreadableError extends Error {
+    constructor(readonly repo: string) {
+        super(`Could not read the newest release of ${repo}, so nothing was changed. Try again later.`);
+        this.name = 'ReleaseUnreadableError';
+    }
+}
+
 /**
  * The git ref to read a source's files at: the newest release of a repository the builder owns,
- * and otherwise the branch it names. An owned repository with no release yet reads its branch.
+ * and otherwise the branch it names. Every owned repository has a release, so one that cannot be
+ * read refuses rather than reading the branch, which would ship unreleased code.
+ *
+ * @throws ReleaseUnreadableError for an owned repository whose release cannot be read
  */
 export async function refOfSource(
     source: { owner: string; repo: string; branch: string },
     logger?: ReadReleaseOptions['logger'],
 ): Promise<{ ref: string; version?: string }> {
     const repo = releasedRepoOf(`https://github.com/${source.owner}/${source.repo}`);
-    const release = repo ? await readComponentRelease(repo, logger) : null;
-    return release ? { ref: release.tag, version: release.version } : { ref: source.branch };
+    if (!repo) return { ref: source.branch };
+    const release = await readComponentRelease(repo, logger);
+    if (!release) throw new ReleaseUnreadableError(repo);
+    return { ref: release.tag, version: release.version };
 }

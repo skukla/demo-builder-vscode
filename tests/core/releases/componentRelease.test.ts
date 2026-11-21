@@ -134,10 +134,12 @@ describe('refOfSource', () => {
         expect(await refOfSource(OWNED)).toStrictEqual({ ref: 'v0.2.0', version: '0.2.0' });
     });
 
-    it('an owned repository with no release yet reads its branch', async () => {
+    it('an owned repository whose release cannot be read refuses, and never reads its branch', async () => {
         answers([]);
 
-        expect(await refOfSource(OWNED)).toStrictEqual({ ref: 'main' });
+        await expect(refOfSource(OWNED)).rejects.toThrow(
+            `Could not read the newest release of ${OWNED.owner}/${OWNED.repo}`,
+        );
     });
 
     it("someone else's repository reads its branch, and is not looked up", async () => {

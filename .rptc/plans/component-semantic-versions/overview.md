@@ -171,6 +171,10 @@ All before beta.153. Develop keeps PL-88's commits until stage 2 replaces them.
 **At the cut:** beta.153 ships, then the first beta of each repository through the release step, starting with the meshes,
 then the ERP pair, then the rest. Then the fallback to a branch for our repositories is deleted: `refOfSource` and the installer read a branch only while a repository has no release, and they cannot yet tell "no release" from "could not ask". Once all have one, a failed lookup must refuse instead.
 
+**Done 2026-11-21:** all 12 repositories have a release, and the fallback is deleted. `refOfSource` and the installer
+throw `ReleaseUnreadableError` for an owned repository whose release cannot be read; update checks report it as a
+check that could not run, and integration source checks as `unknown`.
+
 ## Surfaces
 
 - Tools: `check_integration_updates`, `update_integration`, `apply_updates`, `sync_storefront` dispatch to the same handlers.

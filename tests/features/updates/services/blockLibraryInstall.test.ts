@@ -126,7 +126,7 @@ function releasesListed(...tags: string[]): void {
 beforeEach(() => {
     jest.clearAllMocks();
     (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({ get: jest.fn(() => 'stable') });
-    releasesListed();
+    releasesListed('v0.1.0');
     fileOps.getRefCommit.mockResolvedValue('release-commit');
     fileOps.getBranchInfo.mockResolvedValue({ commitSha: 'src-commit-1', treeSha: 't' });
     fileOps.getBlobContent.mockImplementation(async (_o, _r, sha: string) => `content of ${sha}`);
@@ -217,7 +217,7 @@ describe('applyBlockLibraryInstall', () => {
 
         expect(GitHubFileOperationsCtor).toHaveBeenCalledWith(tokenService, ctx.logger);
         expect(fileOps.listRepoFiles).toHaveBeenCalledWith('me', 'demo-storefront', 'main');
-        expect(fileOps.listRepoFiles).toHaveBeenCalledWith(SRC.owner, SRC.repo, SRC.branch);
+        expect(fileOps.listRepoFiles).toHaveBeenCalledWith(SRC.owner, SRC.repo, 'v0.1.0');
         expect(fileOps.commitTreeToBranch).toHaveBeenCalledTimes(1);
         expect(fileOps.commitTreeToBranch).toHaveBeenCalledWith(
             'me',
@@ -255,7 +255,8 @@ describe('applyBlockLibraryInstall', () => {
             {
                 name: LIBRARY.name,
                 source: SRC,
-                commitSha: 'src-commit-1',
+                commitSha: 'release-commit',
+                version: '0.1.0',
                 blockIds: ['commerce-nav'],
                 installedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
             },
@@ -289,7 +290,7 @@ describe('applyBlockLibraryInstall', () => {
 
         expect(fileOps.commitTreeToBranch).not.toHaveBeenCalled();
         expect(mockGetLatestBranchCommit).toHaveBeenCalledWith(
-            ctx.secrets, SRC.owner, SRC.repo, SRC.branch,
+            ctx.secrets, SRC.owner, SRC.repo, 'v0.1.0',
         );
         expect(outcome).toEqual({ name: LIBRARY.name, blockIds: [] });
         expect(project.installedBlockLibraries).toEqual([
@@ -339,6 +340,21 @@ describe('applyBlockLibraryInstall', () => {
 
             expect(mockGetLatestBranchCommit).toHaveBeenCalledWith(ctx.secrets, SRC.owner, SRC.repo, 'v0.2.0');
         });
+    });
+
+    it('refuses when the release cannot be read, and writes and records nothing', async () => {
+        releasesListed();
+        repos([], ['blocks/commerce-nav/commerce-nav.js']);
+        const project = edsProject();
+        const ctx = makeCtx();
+
+        await expect(applyBlockLibraryInstall({ project, library: LIBRARY }, ctx)).rejects.toThrow(
+            `Could not read the newest release of ${SRC.owner}/${SRC.repo}`,
+        );
+
+        expect(fileOps.commitTreeToBranch).not.toHaveBeenCalled();
+        expect(project.installedBlockLibraries).toBeUndefined();
+        expect(ctx.stateManager.saveProject).not.toHaveBeenCalled();
     });
 
     it('fails without recording when the library has no blocks at all', async () => {

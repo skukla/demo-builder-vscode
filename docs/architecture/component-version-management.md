@@ -22,8 +22,12 @@ version never qualifies. Early access reads every track for a component, and is 
 
 A clone's own remote says which route it takes, so a project holds nothing to migrate. A clone ahead of the release
 is never moved back. An SC's edit refuses the move and names the file. A folder with no git history, which the old
-updater left behind, is cloned again at the release, and the old folder is kept under `component-backups`. An owned repository with no release yet offers nothing, and installs from its branch until it
-has one.
+updater left behind, is cloned again at the release, and the old folder is kept under `component-backups`.
+
+An owned repository is never read at its branch. When its newest release cannot be read (`ReleaseUnreadableError`,
+`src/core/releases/componentRelease.ts`), an install, a storefront update or a block library install refuses with
+nothing changed, and an update check reports that it could not check rather than "up to date". Brand assets are
+reported as not published, and storefront creation carries on.
 
 A thin-layer storefront's version is the `eds-demo-patches` release it was last built or updated from
 (`metadata.patchesRelease`). It names the base the repository last merged from, not everything in it: the repository

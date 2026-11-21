@@ -5,24 +5,32 @@
  */
 
 import { lkgSourceOf } from './thinLayerUpdate';
-import { refOfSource } from '@/core/releases/componentRelease';
+import { refOfSource, ReleaseUnreadableError } from '@/core/releases/componentRelease';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { GitHubFileOperations } from '@/features/eds/services/github/githubFileOperations';
 import { readPatchesRelease } from '@/features/eds/services/patches/lkgReader';
 import type { Logger } from '@/types/logger';
 
-/** The newest release's commit, for a template the builder owns. Anyone else's has none. */
+/**
+ * The newest release's commit, for a template the builder owns. Anyone else's has none. One we
+ * own whose release cannot be read answers the refusal a person reads, so nothing is merged.
+ */
 export async function releaseCommitOf(
     target: { templateOwner: string; templateRepo: string; templateBranch?: string },
     fileOperations: Pick<GitHubFileOperations, 'getRefCommit'>,
     logger: Logger,
-): Promise<string | undefined> {
+): Promise<{ commit?: string } | { refusal: string }> {
     const { templateOwner, templateRepo, templateBranch = 'main' } = target;
-    const { version, ref } = await refOfSource(
-        { owner: templateOwner, repo: templateRepo, branch: templateBranch },
-        logger,
-    );
-    return version ? fileOperations.getRefCommit(templateOwner, templateRepo, ref) : undefined;
+    try {
+        const { version, ref } = await refOfSource(
+            { owner: templateOwner, repo: templateRepo, branch: templateBranch },
+            logger,
+        );
+        return { commit: version ? await fileOperations.getRefCommit(templateOwner, templateRepo, ref) : undefined };
+    } catch (unread) {
+        if (unread instanceof ReleaseUnreadableError) return { refusal: unread.message };
+        throw unread;
+    }
 }
 
 /**

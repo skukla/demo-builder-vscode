@@ -216,7 +216,9 @@ notification, for a library the storefront has and the project no longer selects
 
 A deployed integration and its ERPs are one more category of the startup check and
 Check for Updates (AB-73), with the Integrations screen's own rule
-(`checkIntegrationUpdates`: the GitHub branch is ahead of the clone, a fetched commit
+(`checkIntegrationUpdates`: a newer release than the clone for a repository the builder
+owns, or the branch ahead of it for anyone else's; a release that cannot be read is a
+check that could not run, never "up to date"; a fetched commit
 was never deployed, or the clone's app version differs from the one installed in
 Commerce). It runs for ALL projects, one row per pair ("Tailspin: ERP Integration and
 Tailspin ERP"), alongside the other project checks so the extension's own update notice

@@ -321,7 +321,14 @@ export async function publishBrandAssets(
     logger: Logger,
 ): Promise<BrandAssetsPublishResult> {
     // Brand assets in a repository the builder owns are read at its newest release.
-    const { ref: sourceRef } = await refOfSource(config.source, logger);
+    let sourceRef: string;
+    try {
+        sourceRef = (await refOfSource(config.source, logger)).ref;
+    } catch (error) {
+        const reason = (error as Error).message;
+        logger.warn(`[BrandAssets] Not published: ${reason}`);
+        return { success: false, files: config.files.map((file) => ({ path: file.to, installed: false, reason })) };
+    }
     const context: PublishContext = { githubFileOps, repoOwner, repoName, logger, sourceRef };
 
     const files: BrandAssetResult[] = [];

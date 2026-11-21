@@ -17,7 +17,6 @@ import {
     type GitHubCompareResponse,
 } from './githubApiClient';
 import { refOfSource } from '@/core/releases/componentRelease';
-import { releasedRepoOf } from '@/core/releases/releasedRepos';
 import type { Project } from '@/types/base';
 import type { InstalledBlockLibrary } from '@/types/blockLibraries';
 import type { Logger } from '@/types/logger';
@@ -99,12 +98,8 @@ export class AddonUpdateChecker {
                     continue;
                 }
 
-                // A repository the builder owns offers its newest release, and nothing until it has one.
+                // A repository the builder owns offers its newest release; one unread is skipped below.
                 const { ref, version } = await refOfSource(lib.source, this.logger);
-                if (!version && releasedRepoOf(`https://github.com/${lib.source.owner}/${lib.source.repo}`)) {
-                    this.logger.debug(`[Updates] Library "${lib.name}": no release to offer`);
-                    continue;
-                }
 
                 const latestCommit = await getLatestBranchCommit(
                     this.secrets, lib.source.owner, lib.source.repo, ref,

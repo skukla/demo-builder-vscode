@@ -10,6 +10,7 @@
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { ReleaseUnreadableError } from '@/core/releases/componentRelease';
 import { reapplyPatchesInCheckout } from '@/features/updates/services/thinLayerUpdate';
 import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
 import type { Project } from '@/types/base';
@@ -187,5 +188,23 @@ describe('a template the builder owns', () => {
         expect(result).toMatchObject({ success: true, syncedCommit: released });
         expect(git(bareOf(SC_REPO), 'show', 'main:scripts/scripts.js')).toBe('const a = 2;');
         expect(reapply).not.toHaveBeenCalled();
+    }, REAL_GIT_TIMEOUT_MS);
+
+    it('refuses, and pushes nothing, when its release cannot be read', async () => {
+        const base = repoWith('skukla/buildright-eds', { 'scripts/scripts.js': 'const a = 1;\n' });
+        repoWith(SC_REPO, { 'scripts/scripts.js': 'const a = 1;\n' });
+        const before = originHead();
+        mockRef.mockRejectedValue(new ReleaseUnreadableError('skukla/buildright-eds'));
+        const metadata = { githubRepo: SC_REPO, templateOwner: 'skukla', templateRepo: 'buildright-eds', lastSyncedCommit: base };
+        const target = createMockProject({
+            name: 'demo',
+            componentInstances: { 'eds-storefront': { id: 'eds-storefront', name: 'EDS', status: 'ready', metadata } },
+        });
+
+        const result = await service().syncWithTemplate(target, { strategy: 'merge' });
+
+        expect(result.success).toBe(false);
+        expect(result.error).toBe(new ReleaseUnreadableError('skukla/buildright-eds').message);
+        expect(originHead()).toBe(before);
     }, REAL_GIT_TIMEOUT_MS);
 });

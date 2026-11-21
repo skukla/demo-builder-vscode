@@ -12,7 +12,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as semver from 'semver';
-import { readComponentRelease } from '@/core/releases/componentRelease';
+import { readComponentRelease, ReleaseUnreadableError } from '@/core/releases/componentRelease';
 import { releasedRepoOf } from '@/core/releases/releasedRepos';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
@@ -83,14 +83,17 @@ export class ComponentInstallation {
         // Build git clone command with options
         const cloneFlags: string[] = [];
 
-        // A repository the builder owns ships by release, so it clones its newest one. So does
-        // anything with a tag in its catalog entry, which falls back to that tag. Everything else,
-        // and an owned repository with no release yet, clones its branch.
+        // A repository the builder owns ships by release, so it clones its newest one, and refuses
+        // when that cannot be read: its branch is unreleased code. Anything with a tag in its
+        // catalog entry clones its newest release too, falling back to that tag. Everything else
+        // clones its branch.
         const fallbackTag = componentDef.source.gitOptions?.tag;
+        const ownedRepo = releasedRepoOf(componentDef.source.url);
         let cloneTag: string | undefined = fallbackTag;
 
-        if (fallbackTag || releasedRepoOf(componentDef.source.url)) {
+        if (fallbackTag || ownedRepo) {
             const latestTag = await this.fetchLatestReleaseTag(componentDef.source.url);
+            if (!latestTag && ownedRepo) throw new ReleaseUnreadableError(ownedRepo);
             cloneTag = latestTag ?? fallbackTag;
             this.logger.debug(`[ComponentManager] Cloning at tag: ${cloneTag ?? 'none, using branch'}`);
         }

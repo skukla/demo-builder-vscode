@@ -169,15 +169,15 @@ export class TemplateSyncService {
         if (typeof base !== 'string' || !COMMIT_SHA.test(base)) {
             return failure('merge', NO_RECORDED_VERSION);
         }
-        // A thin-layer storefront goes to the TESTED version, never Adobe's latest,
-        // which nothing has checked against its fixes (EDS-51).
+        // A thin-layer storefront goes to the TESTED version, never Adobe's unchecked latest (EDS-51).
         const tested = lkgSource ? await readLkgSha(lkgSource, this.logger) : undefined;
         if (lkgSource && !tested) return failure('merge', TESTED_VERSION_UNREADABLE);
-        const release = lkgSource ? undefined : await releaseCommitOf(target, this.github.fileOperations, this.logger);
+        const read = lkgSource ? {} : await releaseCommitOf(target, this.github.fileOperations, this.logger);
+        if ('refusal' in read) return failure('merge', read.refusal);
         return withCheckout(this.deps, 'merge', target, preserveFiles, (checkout) =>
-            this.mergeFromBase(
-                checkout, target, { base, tested, preserveFiles, fixes: Boolean(tested), release }, project,
-            ),
+            this.mergeFromBase(checkout, target, {
+                base, tested, preserveFiles, fixes: Boolean(tested), release: read.commit,
+            }, project),
         );
     }
 

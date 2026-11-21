@@ -164,10 +164,11 @@ describe('a template the builder owns', () => {
         expect(files.getLatestCommitSha).not.toHaveBeenCalled();
     });
 
-    it('is at its branch head until it has a first release', async () => {
+    it('is unknown when its release cannot be read, and never reads its branch head', async () => {
         global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200, json: async () => [] });
         const files = { getRefCommit: jest.fn(), getLatestCommitSha: jest.fn().mockResolvedValue('head') };
 
-        expect(await resolveTemplateCommitSha(OWNED, files, createMockLogger())).toBe('head');
+        expect(await resolveTemplateCommitSha(OWNED, files, createMockLogger())).toBeUndefined();
+        expect(files.getLatestCommitSha).not.toHaveBeenCalled();
     });
 });

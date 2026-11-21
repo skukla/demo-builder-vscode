@@ -20,13 +20,13 @@ import {
     type SourceUpdateResult,
     type UpdateCheckResult,
 } from './integrationSourceUpdate';
-import type { ComponentRelease } from '@/core/releases/componentRelease';
+import { ReleaseUnreadableError, type ComponentRelease } from '@/core/releases/componentRelease';
 import { releasedRepoOf } from '@/core/releases/releasedRepos';
 
 /** The newest release of `owner/repo` this user's channel accepts, or null. */
 export type ComponentReleaseReader = (repo: string) => Promise<ComponentRelease | null>;
 
-type UpdateTarget = { ref: string; release?: ComponentRelease } | { unreleased: true };
+type UpdateTarget = { ref: string; release?: ComponentRelease } | { unread: string };
 
 /** Settings the deploy reads and that no repository holds. */
 const LOCAL_SETTINGS = ['.env', '.env.local'];
@@ -57,7 +57,7 @@ async function targetOf(
     const repo = origin.code === 0 ? releasedRepoOf(origin.stdout) : null;
     if (!repo) return { ref: branch };
     const release = await readRelease(repo);
-    return release ? { ref: `refs/tags/${release.tag}`, release } : { unreleased: true };
+    return release ? { ref: `refs/tags/${release.tag}`, release } : { unread: repo };
 }
 
 /** A path nothing holds yet: a retry after a failed install must not stop on the earlier copy. */
@@ -122,13 +122,12 @@ export async function checkComponentSource(
         const repo = releasedRepoOf(repoUrl);
         if (!repo) return { status: 'unknown', detail: 'This folder has no git history to compare.' };
         const release = await readRelease(repo);
-        return release ? { status: 'available', version: release.version } : { status: 'current' };
+        return release
+            ? { status: 'available', version: release.version }
+            : { status: 'unknown', detail: new ReleaseUnreadableError(repo).message };
     }
     const target = await targetOf(componentPath, branch, run, readRelease);
-    if ('unreleased' in target) {
-        const commit = await readCloneCommit(componentPath, run);
-        return { status: 'current', from: commit, to: commit };
-    }
+    if ('unread' in target) return { status: 'unknown', detail: new ReleaseUnreadableError(target.unread).message };
     const checked = await checkCloneForUpdate(componentPath, target.ref, run);
     return target.release ? { ...checked, version: target.release.version } : checked;
 }
@@ -149,15 +148,7 @@ export async function updateComponentSource(
             : { status: 'failed', detail: 'This folder has no git history, and there is no release to replace it with.' };
     }
     const target = await targetOf(componentPath, branch, run, readRelease);
-    if ('unreleased' in target) {
-        const commit = await readCloneCommit(componentPath, run);
-        return {
-            status: 'current',
-            detail: 'There is no release of this component to update to yet.',
-            from: commit,
-            to: commit,
-        };
-    }
+    if ('unread' in target) return { status: 'failed', detail: new ReleaseUnreadableError(target.unread).message };
     const updated = await fastForwardClone(componentPath, target.ref, run);
     if (!target.release) return updated;
     const { version } = target.release;

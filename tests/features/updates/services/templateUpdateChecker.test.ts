@@ -380,12 +380,12 @@ describe('a forked storefront whose template the builder owns', () => {
         (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({ get: () => 'stable' });
     });
 
-    it('offers nothing while it has no release, whatever its branch holds', async () => {
+    it('reports the check as failed when its release cannot be read, and never reads its branch', async () => {
         global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200, json: async () => [] });
 
         const result = await checker().checkForUpdates(owned());
 
-        expect(result?.hasUpdates).toBe(false);
+        expect(result).toBeNull();
         expect(mockGetLatestBranchCommit).not.toHaveBeenCalled();
     });
 
