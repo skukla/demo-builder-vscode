@@ -10,6 +10,7 @@
  * property; the migration succeeding is the easy half.
  */
 
+import { REMOVED_CREDENTIAL_ENV_KEYS } from '@/core/config/envVarKeys';
 import {
     commerceSecretKey,
     resolvePaasAdminPair,
@@ -626,9 +627,11 @@ describe('what the migration reports', () => {
 });
 
 describe('forgetting a deleted project', () => {
-    it('asks for every declared secret under every component the project configured, and says how many', async () => {
+    it('asks for every declared and removed secret under every component the project configured, and says how many', async () => {
         const secrets = workingStore();
-        const declared = [...declaredSecretKeys()];
+        // Removed credentials too: one the activation sweep has not reached yet would
+        // otherwise stay in the keychain with nothing left to delete it.
+        const declared = [...declaredSecretKeys(), ...REMOVED_CREDENTIAL_ENV_KEYS];
 
         const asked = await forgetProjectCommerceSecrets(PROJECT, ['adobe-commerce-paas', 'adobe-commerce-paas'], secrets);
 
@@ -638,6 +641,11 @@ describe('forgetting a deleted project', () => {
         expect(declared.length).toBeGreaterThan(0);
         expect(secrets.delete.mock.calls.map(([key]) => key)).toStrictEqual(expected);
         expect(asked).toBe(expected.length);
+        // Named, not derived: the list above copies the code's own expression, so it alone
+        // would still pass if the removed credentials stopped being deleted.
+        expect(secrets.delete).toHaveBeenCalledWith(
+            commerceSecretKey(PROJECT, 'adobe-commerce-paas', 'ACCS_OAUTH_CLIENT_SECRET'),
+        );
     });
 
     it('asks for nothing when the project configured no component', async () => {

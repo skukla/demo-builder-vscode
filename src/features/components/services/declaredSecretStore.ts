@@ -24,6 +24,7 @@
 import componentsConfig from '../config/components.json';
 import { commerceSecretKey, type SecretReader } from './commerceCredentialStore';
 import type { ConfigMap } from './envVarHelpers';
+import { REMOVED_CREDENTIAL_ENV_KEYS } from '@/core/config/envVarKeys';
 
 /** The SecretStorage surface this module needs. */
 export interface SecretWriter extends SecretReader {
@@ -305,6 +306,10 @@ export async function migrateDeclaredSecrets(
  * project is deleted (owner, 2026-10-01); the counterpart of {@link reKeyProjectSecrets},
  * which moves the same keys when the project's path changes. Never logs a value.
  *
+ * Removed credentials (`REMOVED_CREDENTIAL_ENV_KEYS`) go too: a project deleted before the
+ * activation sweep reached it would otherwise leave one in the keychain with nothing left
+ * to delete it.
+ *
  * @returns how many keys were asked to be deleted
  */
 export async function forgetProjectCommerceSecrets(
@@ -314,10 +319,42 @@ export async function forgetProjectCommerceSecrets(
 ): Promise<number> {
     let asked = 0;
     for (const componentId of componentIds) {
-        for (const varName of declaredSecretKeys()) {
+        for (const varName of [...declaredSecretKeys(), ...REMOVED_CREDENTIAL_ENV_KEYS]) {
             await secrets.delete(commerceSecretKey(projectId, componentId, varName));
             asked += 1;
         }
     }
     return asked;
+}
+
+/**
+ * Delete every removed credential a project still holds (`REMOVED_CREDENTIAL_ENV_KEYS`).
+ *
+ * From the config map, in place, and from SecretStorage under the key the migration
+ * above saved it at. Nothing reads these any more, so unlike a live secret they need
+ * no safe copy first: deleting is the whole job, with or without a store (DI-6).
+ *
+ * @param configs - the project's componentConfigs, edited in place
+ * @param projectId - the key's project segment (`project.path`)
+ * @param secrets - SecretStorage, or undefined to clean the config map only
+ * @returns whether the config map changed and so needs saving
+ */
+export async function dropRemovedCredentials(
+    configs: ConfigMap,
+    projectId: string,
+    secrets: SecretWriter | undefined,
+): Promise<boolean> {
+    let changed = false;
+    for (const [componentId, config] of Object.entries(configs ?? {})) {
+        for (const varName of REMOVED_CREDENTIAL_ENV_KEYS) {
+            if (config && varName in config) {
+                delete config[varName];
+                changed = true;
+            }
+            if (!secrets) continue;
+            const key = commerceSecretKey(projectId, componentId, varName);
+            if ((await secrets.get(key)) !== undefined) await secrets.delete(key);
+        }
+    }
+    return changed;
 }

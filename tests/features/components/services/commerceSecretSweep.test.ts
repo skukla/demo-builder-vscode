@@ -114,7 +114,7 @@ describe('blast radius', () => {
         expect(saved).toEqual(['/p/dirty']);
     });
 
-    it('does nothing at all without SecretStorage', async () => {
+    it('leaves a live secret exactly where it is without SecretStorage', async () => {
         const saveProject = jest.fn(async () => {});
         const log = jest.fn();
         const projects = [withSecret('/p/one')];
@@ -127,8 +127,9 @@ describe('blast radius', () => {
         });
 
         expect(saveProject).not.toHaveBeenCalled();
-        // Returns the zero counts rather than falling through to the loop with
-        // no store — a project must be left exactly as it was.
+        // With no store a live secret has nowhere safe to go, so the project is left
+        // exactly as it was. (A REMOVED credential is still dropped without a store,
+        // since nothing needs a copy of it: see 'removed credentials' below.)
         expect(result).toStrictEqual({ converged: 0, retained: 0 });
         expect(projects[0].componentConfigs['adobe-commerce-accs'].ADOBE_COMMERCE_ADMIN_PASSWORD).toBe(
             FAKE_SECRET,
@@ -137,9 +138,8 @@ describe('blast radius', () => {
     });
 
     it('does not even attempt a migration without SecretStorage', async () => {
-        // The guard is what makes "nothing at all" true. Without it the sweep
-        // walks every project and calls the migration with no store — which
-        // returns the configs untouched, so the only visible difference is the
+        // The guard keeps the live-secret migration from running with no store, which
+        // would return the configs untouched, so the only visible difference is the
         // work itself.
         migrateMock.mockClear();
 
@@ -264,5 +264,72 @@ describe('reporting', () => {
 
         expect(result).toStrictEqual({ converged: 0, retained: 0 });
         expect(log).not.toHaveBeenCalled();
+    });
+});
+
+/**
+ * A credential whose field Demo Builder removed (DI-6). Nothing reads it any more,
+ * so nothing protects it: the declared-secret migration no longer knows the field,
+ * and an older project still holding it would hand it to every export.
+ */
+describe('removed credentials', () => {
+    const KEY = 'demoBuilder.componentSecret./p/old.adobe-commerce-accs.ACCS_OAUTH_CLIENT_SECRET';
+
+    const withRemovedCredential = (path: string) => ({
+        path,
+        componentConfigs: {
+            'adobe-commerce-accs': {
+                ADOBE_COMMERCE_ADMIN_USERNAME: 'id',
+                ACCS_OAUTH_CLIENT_ID: 'old-client-id',
+                ACCS_OAUTH_CLIENT_SECRET: FAKE_SECRET,
+            },
+        },
+    });
+
+    it('deletes it from the project file and saves the project', async () => {
+        const saveProject = jest.fn(async () => {});
+        const projects = [withRemovedCredential('/p/old')];
+
+        const result = await sweepCommerceSecrets({ projects, secrets: workingStore(), saveProject });
+
+        expect(projects[0].componentConfigs['adobe-commerce-accs']).toStrictEqual({
+            ADOBE_COMMERCE_ADMIN_USERNAME: 'id',
+        });
+        expect(saveProject).toHaveBeenCalledTimes(1);
+        expect(result.converged).toBe(1);
+    });
+
+    it('deletes the copy kept in SecretStorage, under the project and component it was saved for', async () => {
+        const secrets = workingStore();
+        await secrets.store(KEY, FAKE_SECRET);
+
+        await sweepCommerceSecrets({
+            projects: [withoutSecret('/p/old')],
+            secrets,
+            saveProject: jest.fn(async () => {}),
+        });
+
+        expect(secrets.delete).toHaveBeenCalledWith(KEY);
+        expect(await secrets.get(KEY)).toBeUndefined();
+    });
+
+    it('deletes it from the file even without SecretStorage, since nothing needs a copy', async () => {
+        const saveProject = jest.fn(async () => {});
+        const projects = [withRemovedCredential('/p/old')];
+
+        await sweepCommerceSecrets({ projects, secrets: undefined, saveProject });
+
+        expect(projects[0].componentConfigs['adobe-commerce-accs']).not.toHaveProperty('ACCS_OAUTH_CLIENT_SECRET');
+        expect(saveProject).toHaveBeenCalledTimes(1);
+    });
+
+    it('touches nothing when a project never held one', async () => {
+        const secrets = workingStore();
+        const saveProject = jest.fn(async () => {});
+
+        await sweepCommerceSecrets({ projects: [withoutSecret('/p/clean')], secrets, saveProject });
+
+        expect(saveProject).not.toHaveBeenCalled();
+        expect(secrets.delete).not.toHaveBeenCalled();
     });
 });

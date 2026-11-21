@@ -33,18 +33,6 @@ export const PAAS_ENVIRONMENT_ID = 'ADOBE_COMMERCE_ENVIRONMENT_ID';
 // ==========================================================
 
 export const ACCS_GRAPHQL_ENDPOINT = 'ACCS_GRAPHQL_ENDPOINT';
-
-/**
- * ACCS credential pair — the IMS OAuth Server-to-Server model, which is the
- * best-practice credential for a SaaS instance.
- *
- * Optional on the component: an ACCS project is created and runs without these,
- * and they are needed only to import sample data. Making them required would put a
- * Developer Console trip in front of every project.
- *
- * The client id is NOT a secret — it is public by design, and only its paired
- * secret belongs in {@link SECRET_ENV_KEYS}.
- */
 export const ACCS_WEBSITE_CODE = 'ACCS_WEBSITE_CODE';
 export const ACCS_STORE_CODE = 'ACCS_STORE_CODE';
 export const ACCS_STORE_VIEW_CODE = 'ACCS_STORE_VIEW_CODE';
@@ -135,7 +123,28 @@ export const SECRET_ENV_KEYS: readonly string[] = [
 ];
 
 /**
- * Strip every {@link SECRET_ENV_KEYS} value from a componentConfigs map.
+ * The credential of a field Demo Builder REMOVED, which older projects can still hold.
+ *
+ * Not a live field: nothing reads, writes or offers these. They are listed because a
+ * project saved before the removal may still carry a value, in `componentConfigs` or
+ * in SecretStorage, and dropping the field took the value out of every strip below.
+ * So the strips remove these too, and the activation secret sweep
+ * (`commerceSecretSweep.ts`) deletes them from existing projects.
+ *
+ * `ACCS_OAUTH_CLIENT_ID` and `ACCS_OAUTH_CLIENT_SECRET`: the Cloud Service OAuth
+ * override, removed 2026-11-03 (2aea69b3e) with the shared credential it overrode (DI-6).
+ */
+export const REMOVED_CREDENTIAL_ENV_KEYS: readonly string[] = [
+    'ACCS_OAUTH_CLIENT_ID',
+    'ACCS_OAUTH_CLIENT_SECRET',
+];
+
+/** Every key a strip removes: the live secrets and the removed credentials. */
+const STRIPPED_ENV_KEYS: readonly string[] = [...SECRET_ENV_KEYS, ...REMOVED_CREDENTIAL_ENV_KEYS];
+
+/**
+ * Strip every {@link SECRET_ENV_KEYS} and {@link REMOVED_CREDENTIAL_ENV_KEYS} value from a
+ * componentConfigs map.
  *
  * Returns a new map; the input is untouched, because callers hand this the LIVE
  * `project.componentConfigs` and a mutating strip would empty the running
@@ -167,11 +176,11 @@ export function stripSecretValues<T>(
  * one field over from the leak that motivated the strip in the first place.
  *
  * @param values - a flat env map
- * @returns a copy with every {@link SECRET_ENV_KEYS} entry removed
+ * @returns a copy with every {@link SECRET_ENV_KEYS} and {@link REMOVED_CREDENTIAL_ENV_KEYS} entry removed
  */
 export function stripSecretKeys<T>(values: Record<string, T> | undefined): Record<string, T> {
     const copy = { ...(values ?? {}) };
-    for (const key of SECRET_ENV_KEYS) delete copy[key];
+    for (const key of STRIPPED_ENV_KEYS) delete copy[key];
     return copy;
 }
 
@@ -185,14 +194,14 @@ export function stripSecretKeys<T>(values: Record<string, T> | undefined): Recor
  * (an agent needs to know a credential IS configured); values are replaced.
  *
  * @param content - raw .env file text
- * @returns the text with every {@link SECRET_ENV_KEYS} value masked
+ * @returns the text with every {@link SECRET_ENV_KEYS} and {@link REMOVED_CREDENTIAL_ENV_KEYS} value masked
  */
 export function maskEnvFileSecrets(content: string): string {
     return content
         .split('\n')
         .map((line) => {
             const m = /^(\s*)([A-Z0-9_]+)(\s*=)/.exec(line);
-            if (m && (SECRET_ENV_KEYS as readonly string[]).includes(m[2])) {
+            if (m && STRIPPED_ENV_KEYS.includes(m[2])) {
                 return `${m[1]}${m[2]}${m[3]}[secret hidden]`;
             }
             return line;

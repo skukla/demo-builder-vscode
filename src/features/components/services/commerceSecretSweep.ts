@@ -23,7 +23,7 @@
  * @module features/components/services/commerceSecretSweep
  */
 
-import { migrateDeclaredSecrets, type SecretWriter } from './declaredSecretStore';
+import { dropRemovedCredentials, migrateDeclaredSecrets, type SecretWriter } from './declaredSecretStore';
 
 /** The project shape this sweep touches. */
 export interface SweepableProject {
@@ -47,7 +47,8 @@ export interface SweepResult {
 }
 
 /**
- * Move declared secrets out of every project's config map.
+ * Move declared secrets out of every project's config map, and delete the
+ * credentials of removed fields.
  *
  * @returns counts only — never project paths or var values, since this line can
  *          reach a log a user pastes into a ticket
@@ -59,24 +60,29 @@ export async function sweepCommerceSecrets<T extends SweepableProject>(
     let converged = 0;
     let retained = 0;
 
-    if (!secrets) {
-        return { converged, retained };
-    }
-
     for (const project of projects) {
         try {
-            const outcome = await migrateDeclaredSecrets(
-                project.componentConfigs,
-                project.path,
-                secrets,
-            );
-            retained += outcome.retained.length;
+            let changed = await dropRemovedCredentials(project.componentConfigs, project.path, secrets);
 
-            // Nothing moved means nothing to persist. Saving anyway would rewrite
+            // A live secret moves only when there is a store to move it to; without
+            // one the project keeps it exactly where it was.
+            if (secrets) {
+                const outcome = await migrateDeclaredSecrets(
+                    project.componentConfigs,
+                    project.path,
+                    secrets,
+                );
+                retained += outcome.retained.length;
+                if (outcome.moved.length > 0) {
+                    project.componentConfigs = outcome.sanitizedConfigs as T['componentConfigs'];
+                    changed = true;
+                }
+            }
+
+            // Nothing changed means nothing to persist. Saving anyway would rewrite
             // every manifest on every activation for no change.
-            if (outcome.moved.length === 0) continue;
+            if (!changed) continue;
 
-            project.componentConfigs = outcome.sanitizedConfigs as T['componentConfigs'];
             await saveProject(project);
             converged += 1;
         } catch {
