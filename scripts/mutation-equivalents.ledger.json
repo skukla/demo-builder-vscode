@@ -8766,7 +8766,7 @@
             "anchors": [
                 "if (args?.confirm !== true || args?.confirmName !== fullName) {"
             ],
-            "line": 260,
+            "line": 263,
             "mutants": 2,
             "category": "optionalChain",
             "reason": "delete_github_repo reads args?.owner and args?.repo above this line and returns early unless both are non-empty, so by the time the confirmation gate runs, args is known to be an object carrying them. Dropping either optional chain here cannot throw on any input that reaches the line. The chains on the owner and repo reads ARE killed, by the no-arguments test - which is where a missing argument object actually arrives.",
@@ -8779,7 +8779,7 @@
             "anchors": [
                 "if (args?.confirm !== true || args?.confirmName !== fullName) {"
             ],
-            "line": 362,
+            "line": 365,
             "mutants": 2,
             "category": "optionalChain",
             "reason": "cleanup_dalive_site's copy of the same situation: args?.org and args?.site are read above and the tool returns early unless both are non-empty strings, so args is an object by the time this gate runs and the optional chains cannot fire. Both halves of the gate - confirm:true and the confirmName echo - are killed by their own tests, including one that supplies a correct echo without confirm. Re-anchored 2026-10-28 (342 -> 344): unchanged code, moved when delete_github_repo keeps a storefront with no working DA.live sign-in (EDS-67).",
@@ -8792,7 +8792,7 @@
             "anchors": [
                 "const offset = Math.max(0, Math.trunc(args?.offset ?? 0));"
             ],
-            "line": 317,
+            "line": 320,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "This line is inside list_dalive_sites, past its \"org is required\" guard, which reads args?.org and returns early when it is empty - so args is an object with a non-empty org string by the time pagination is computed. Dropping the optional chain here cannot throw on any input that reaches the line. The identical line in list_github_repos has no guard in front of it and its chain IS killed, by the test that calls that tool with no argument object at all. Re-anchored 2026-10-28 (297 -> 299): unchanged code, moved when delete_github_repo keeps a storefront with no working DA.live sign-in (EDS-67).",
@@ -8805,7 +8805,7 @@
             "anchors": [
                 "const limit = Math.min(100, Math.max(1, Math.trunc(args?.limit ?? 30)));"
             ],
-            "line": 318,
+            "line": 321,
             "mutants": 1,
             "category": "optionalChain",
             "reason": "This line is inside list_dalive_sites, past its \"org is required\" guard, which reads args?.org and returns early when it is empty - so args is an object with a non-empty org string by the time pagination is computed. Dropping the optional chain here cannot throw on any input that reaches the line. The identical line in list_github_repos has no guard in front of it and its chain IS killed, by the test that calls that tool with no argument object at all. Re-anchored 2026-10-28 (298 -> 300): unchanged code, moved when delete_github_repo keeps a storefront with no working DA.live sign-in (EDS-67).",

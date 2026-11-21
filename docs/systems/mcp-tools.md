@@ -131,7 +131,7 @@ server IS — transport, lifecycle, scoping, security — is in
 | `create_github_repo` |  | Create a GitHub repo from a source repository (the EDS storefront path): generated when the source is a GitHub template, otherwise created empty and reset onto the source, as the wizard does. Returns |
 | `delete_github_repo` | **confirm** | Permanently delete a GitHub repository (irreversible), and for a storefront its code on aem.live. A storefront is kept (kept:true, deleted:false) when there is no working DA.live sign-in, because its |
 | `list_dalive_sites` |  | List DA.live sites in an organization (paginated summary) |
-| `list_github_repos` |  | List GitHub repositories you can push to (paginated summary) |
+| `list_github_repos` |  | List the GitHub repositories you can push to, as seen by the GitHub account Demo Builder |
 
 ## `src/features/ai/server/commerceEndpointsTool.ts`
 

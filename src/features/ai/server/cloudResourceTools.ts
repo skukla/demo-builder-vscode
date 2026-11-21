@@ -102,7 +102,10 @@ export function registerCloudResourceTools(
         {
             needsAuth: ['github'],
             annotations: { readOnlyHint: true, destructiveHint: false },
-            description: 'List GitHub repositories you can push to (paginated summary)',
+            description:
+                'List the GitHub repositories you can push to, as seen by the GitHub account Demo Builder ' +
+                'is signed in to (the one that creates and pushes storefront repos). Use this instead of ' +
+                'the gh CLI, which can be signed in to a different account. Most recently updated first, paginated.',
             inputSchema: {
                 offset: z.number().int().min(0).optional().describe('Start index for pagination (default 0)'),
                 limit: z.number().int().min(1).max(100).optional().describe('Max repos to return (default 30)'),
