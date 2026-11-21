@@ -12,7 +12,7 @@ were wrong within an hour of being written. This one is derived from the
 handbook's own callouts and checked against the enforcers on disk in both
 directions, so it cannot.
 
-- **147** conventions, **144** enforced
+- **148** conventions, **145** enforced
 - **31** name the decision record behind them
 - **6** name a procedure — an SOP or a skill
 - **1** have all three layers
@@ -216,6 +216,7 @@ it means the rule rests on somebody noticing.
 | A list of paths reaches a command through `xargs`, never as a bare `$VAR`. Quote the variable when one argument is what you meant. |  |  | `eslint.config.mjs` |
 | Quote glob arguments passed to `grep` or `find`. In zsh an unquoted pattern is expanded before the command sees it, and an unquoted variable is not split into separate arguments. |  |  | *named in prose* |
 | Anything claiming to be an instrument is in the registry, and the registry and the disk must agree in both directions. A count written in prose has something checking it. |  |  | `tooling-registry.test.ts` |
+| Every instrument with a command is also a dev-pipeline toolbox tool, declared in `.pipeline.yaml` exactly as `tests/sop/toolboxTools.ts` derives it from the registry, so an agent runs it through `run_tool` or `job_start` instead of a shell. |  |  | `toolbox-tools.test.ts` |
 | A module path named in a document resolves. A citation must reach a file or directory; an `import` in a code example must reach something importable. |  |  | `doc-module-refs.test.ts` |
 | Delete obsolete code. No deprecated stubs, no accepted-but-ignored options. Enforced by measurement — `.claude/skills/dead-code-scan`. |  | [procedure](../../.claude/skills/dead-code-scan/SKILL.md) | *named in prose* |
 | Secrets live in VS Code settings, never in code. This repository is public. Enforced by `.claude/hooks/rules/20-secret-files.rule`, which blocks a write of any `.env` file or secret-shaped content headed for the repo tree; GitGuardian scans every push as the second line. |  |  | `20-secret-files.rule`<br>`GitGuardian` |

@@ -177,7 +177,7 @@ red, and so is a registry entry for something deleted.
 | Cadence | What runs | Who triggers it |
 |---|---|---|
 | per-tool-call | 22 hook rules in `.claude/hooks/rules/` | automatic |
-| per-jest-run | 73 enforcer suites in `tests/sop/` | automatic |
+| per-jest-run | 74 enforcer suites in `tests/sop/` | automatic |
 | per-push | lint, both typecheckers, 2 validators | CI |
 | per-push (local) | the CSS baseline check — `.githooks/pre-push` only, never CI | the git hook |
 | periodic | 15 scripted checks + 9 guided reviews | **`npm run sweep`** |
@@ -185,6 +185,13 @@ red, and so is a registry entry for something deleted.
 
 The sweep REPORTS and never starts Stryker: it lists stale mutation rows, and the
 overnight re-measure corrects them.
+
+**Every instrument with a command is also a dev-pipeline toolbox tool**, so run it
+through the toolbox rather than typing it into a shell: `run_tool` (with no arguments
+it lists them) for a quick one, `job_start` for anything over a few minutes (the
+sweep, the battery, the mutation runs). The `tools:` block in `.pipeline.yaml` is
+generated from the registry by `tests/sop/toolboxTools.ts`, and
+`tests/sop/toolbox-tools.test.ts` fails when the two disagree.
 
 Read a sweep by its labels, not its exit code: a `reported` row always exits 0
 and its OUTPUT is the result; a failing `gate` row is a real failure; `COULD NOT
@@ -254,7 +261,7 @@ without producing a signal.
 ## The conventions live in one place
 
 **[docs/development/handbook.md](docs/development/handbook.md)** states every convention
-this codebase holds itself to — 147 of them, 144 with an enforcer that fails the build — and
+this codebase holds itself to — 148 of them, 145 with an enforcer that fails the build — and
 explains each one for a human reader. Read it once, start to finish.
 
 Some rules appear both there and here, deliberately: this file is loaded into every agent

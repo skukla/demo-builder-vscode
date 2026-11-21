@@ -419,7 +419,7 @@
     "expect": [
       "get_integration_install_status"
     ],
-    "cwd": "justrite",
+    "cwd": "erp",
     "why": "AB-5 (2026-08-27): the persisted installation record and the app's live step tree existed with NO reader \u2014 answering this took a hand-scripted GET three times in one session. The prompt is that exact question."
   },
   {
@@ -870,7 +870,7 @@
     "expect": [
       "get_erp_status"
     ],
-    "cwd": "justrite",
+    "cwd": "erp",
     "why": "Plan step 05 (2026-09-14): the ERP pair's read. The prompt asks two things only the integration's own status action answers, so the agent has to find the ERP tool rather than get_project."
   },
   {
@@ -899,7 +899,7 @@
     "expect": [
       "get_erp_record"
     ],
-    "cwd": "justrite",
+    "cwd": "erp",
     "why": "2026-09-24: the agent surface could read Commerce products through GraphQL but had no way to see a B2B company or its credit. The prompt asks for BOTH systems' view of one company, which only the integration's own lookup answers (the Admin page's lookup card); run_commerce_query cannot, since GraphQL has no company read."
   },
   {
@@ -908,7 +908,7 @@
     "expect": [
       "get_erp_order_trace"
     ],
-    "cwd": "justrite",
+    "cwd": "erp",
     "why": "2026-09-24: 'where is order X' is the store operator's question and it took three screens to answer. The trace merges the Commerce order, the integration's history and the ERP's own order by time. The prompt names an order and asks for its life across both sides, which get_erp_status (counts only) cannot answer."
   },
   {
@@ -936,7 +936,7 @@
     "expect": [
       "run_erp_rest"
     ],
-    "cwd": "justrite",
+    "cwd": "erp",
     "why": "2026-09-24: the ERP's screens read its own API; an agent had no way to. get_erp_status gives counts only and get_erp_order_trace takes one Commerce order number, so a list of the ERP's orders is only answerable by reading its orders route."
   },
   {
@@ -964,7 +964,7 @@
     "expect": [
       "read_runtime_activation"
     ],
-    "cwd": "justrite",
+    "cwd": "erp",
     "why": "2026-09-24: the refresh job reported success while its log said 'partner refresh failed: Request timed out'. Only the activation's own log says that; the extension's debug log cannot see inside Runtime."
   },
   {
@@ -983,7 +983,7 @@
     "expect": [
       "get_integration_settings"
     ],
-    "cwd": "justrite",
+    "cwd": "erp",
     "why": "AB-21 (2026-09-18): an integration's settings moved to its tile, so the agent reads them through the integration's own settings tool rather than configure_project or get_project."
   },
   {
@@ -1011,7 +1011,7 @@
     "expect": [
       "change_demo_source"
     ],
-    "why": "Step 06 of the shareable-demo program (EDS-13a): the repoint is the one recovery for a project whose added demo vanished; without the tool an agent rewrites .demo-builder.json and leaves the instance metadata behind, which is exactly the split the tool exists to prevent. Tier 2: it writes the current project, so it runs only under --tier2 against the scratch project.",
+    "why": "Step 06 of the shareable-demo program (EDS-13a): the repoint is the one recovery for a project whose added demo vanished; without the tool an agent rewrites .demo-builder.json and leaves the instance metadata behind, which is exactly the split the tool exists to prevent. Tier 2: it writes the current project, so it was tier 2 until 2026-11-21, when it moved to tier 3: its tool is not on the scratch write list, so it never runs unattended.",
     "tier": 3
   },
   {
@@ -1020,7 +1020,7 @@
     "expect": [
       "forget_added_demo"
     ],
-    "why": "Step 06 of the shareable-demo program (EDS-13a): the list lives in a user setting, so an agent without the tool edits settings.json directly and skips the project count the confirmation is built around. Tier 2: it writes a user setting, so it runs only under --tier2.",
+    "why": "Step 06 of the shareable-demo program (EDS-13a): the list lives in a user setting, so an agent without the tool edits settings.json directly and skips the project count the confirmation is built around. Tier 2: it writes a user setting, so it was tier 2 until 2026-11-21, when it moved to tier 3: its tool is not on the scratch write list, so it never runs unattended.",
     "tier": 3
   },
   {
@@ -1029,7 +1029,7 @@
     "expect": [
       "edit_added_demo"
     ],
-    "why": "The Welcome step's Edit on an added demo package (EDS-13a): the card lives in a user setting, so an agent without the tool edits settings.json directly and can break the row the card reads. Tier 2: it writes a user setting, so it runs only under --tier2.",
+    "why": "The Welcome step's Edit on an added demo package (EDS-13a): the card lives in a user setting, so an agent without the tool edits settings.json directly and can break the row the card reads. Tier 2: it writes a user setting, so it was tier 2 until 2026-11-21, when it moved to tier 3: its tool is not on the scratch write list, so it never runs unattended.",
     "tier": 3
   },
   {
@@ -1046,7 +1046,7 @@
     "expect": [
       "add_shared_demo"
     ],
-    "why": "Step 07 of the shareable-demo program (EDS-13a): the dialog's Add commit. The list lives in a user setting, so an agent without the tool writes settings.json by hand and skips the probe that decides the row's kind and codes. Tier 2: it writes a user setting, so it runs only under --tier2.",
+    "why": "Step 07 of the shareable-demo program (EDS-13a): the dialog's Add commit. The list lives in a user setting, so an agent without the tool writes settings.json by hand and skips the probe that decides the row's kind and codes. Tier 2: it writes a user setting, so it was tier 2 until 2026-11-21, when it moved to tier 3: its tool is not on the scratch write list, so it never runs unattended.",
     "tier": 3
   },
   {
@@ -1064,7 +1064,7 @@
     "expect": [
       "save_demo_package"
     ],
-    "why": "Step 09 of the shareable-demo program (EDS-13b): the Save commit. Without the tool an agent writes demo.demo-builder.json by hand from memory of the format, pushes it, and edits the demos.added setting, skipping the ownership rule that keeps a hand-edited file from being overwritten. Tier 2: it writes into the SC's GitHub repository and a user setting, so it runs only under --tier2.",
+    "why": "Step 09 of the shareable-demo program (EDS-13b): the Save commit. Without the tool an agent writes demo.demo-builder.json by hand from memory of the format, pushes it, and edits the demos.added setting, skipping the ownership rule that keeps a hand-edited file from being overwritten. Tier 2: it writes into the SC's GitHub repository and a user setting, so it was tier 2 until 2026-11-21, when it moved to tier 3: its tool is not on the scratch write list, so it never runs unattended.",
     "tier": 3
   },
   {
@@ -1073,7 +1073,7 @@
     "expect": [
       "remove_demo_package"
     ],
-    "why": "Step 09 of the shareable-demo program (EDS-13b): the undo. Without the tool an agent deletes the file with a GitHub call and leaves the card, the template flag and the project's record behind. Tier 2: it removes a file from the SC's GitHub repository, so it runs only under --tier2.",
+    "why": "Step 09 of the shareable-demo program (EDS-13b): the undo. Without the tool an agent deletes the file with a GitHub call and leaves the card, the template flag and the project's record behind. Tier 2: it removes a file from the SC's GitHub repository, so it was tier 2 until 2026-11-21, when it moved to tier 3: its tool is not on the scratch write list, so it never runs unattended.",
     "tier": 3
   },
   {
@@ -1082,7 +1082,7 @@
     "expect": [
       "add_shared_demo"
     ],
-    "why": "Step 10 of the shareable-demo program (EDS-13a): the zip door. Without it an agent unzips by hand, runs git init and push with a token it has to find, and pastes its own link back into the add tool. Tier 2: it creates a repository in the SC's GitHub account, so it runs only under --tier2.",
+    "why": "Step 10 of the shareable-demo program (EDS-13a): the zip door. Without it an agent unzips by hand, runs git init and push with a token it has to find, and pastes its own link back into the add tool. Tier 2: it creates a repository in the SC's GitHub account, so it was tier 2 until 2026-11-21, when it moved to tier 3: its tool is not on the scratch write list, so it never runs unattended.",
     "tier": 3
   },
   {
@@ -1091,7 +1091,7 @@
     "expect": [
       "export_demo_bundle"
     ],
-    "why": "Export umbrella (PL-56), the file form: one bundle of the ticked parts (owner, 2026-09-13: export hands an artifact to someone else, by link or by file). Without the tool an agent downloads the archive with curl, forgets the description file, and sends the settings file with credentials in it. Tier 2: it writes a file into the project directory, so it runs only under --tier2.",
+    "why": "Export umbrella (PL-56), the file form: one bundle of the ticked parts (owner, 2026-09-13: export hands an artifact to someone else, by link or by file). Without the tool an agent downloads the archive with curl, forgets the description file, and sends the settings file with credentials in it. Tier 2: it writes a file into the project directory, so it was tier 2 until 2026-11-21, when it moved to tier 3: its tool is not on the scratch write list, so it never runs unattended.",
     "tier": 3
   },
   {
@@ -1165,7 +1165,7 @@
     "expect": [
       "get_setup_checklist"
     ],
-    "cwd": "justrite",
+    "cwd": "erp",
     "why": "Added with the tool (2026-09-25, AB-26x): the SC's demo setup steps in Commerce Admin, as a checklist Demo Builder keeps. A MISS is a discoverability finding about the tool, not a bad prompt."
   },
   {

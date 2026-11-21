@@ -2,6 +2,14 @@
 # Each periodic step updates its own `last` date when it runs; do not edit by hand.
 rptc_version: 4.3.0
 checks: [npm run gate]
+# Owner 2026-11-21: a commit needs a passing checks run since its staged files changed,
+# and a filed Opus review of its staged non-Markdown files.
+checks_before_commit: true
+review_before_commit: true
+# Owner 2026-11-21: no private name enters a commit (the repo is public). The names live
+# OUTSIDE the repo; never list them here. A machine without the file warns, not blocks.
+names_check: ["**"]
+redact_from: [~/.config/dev-pipeline/private-names.txt]
 artifact_dir: .rptc
 records_dir: .rptc/dream
 on_demand_plugins: [tech-case-engine]
@@ -30,6 +38,51 @@ neighbours:
 tools:
   compile: { run: npm run compile, about: "Build the extension and its webview bundles (the esbuild production build)" }
   ledger: { run: python3 scripts/ledger.py, about: "List, check, add, remove or move rows of the mutation, errors and progress ledgers, keeping each file's format; --dry-run previews" }
+  # Generated from tests/sop/toolingRegistry.ts by tests/sop/toolboxTools.ts; toolbox-tools.test.ts holds them equal.
+  # Reach them with run_tool (no arguments lists them) or job_start. copy: false = writes tracked files.
+  clones_check: { run: npm run clones:check, about: "the duplication burn-down: every duplicate block in tests/ is fixed or carries a written reason, and a reason for code that no longer duplicates has to leave", listed: false }
+  patches_released: { run: npm run patches:released, about: "the patches repo's daily gate is switched on, has run, and its verified boilerplate is in a release, so new projects and Check for Updates get it (seven week...", listed: false }
+  components_ci: { run: npm run components:ci, about: "every repository the builder owns still carries the release process: a checks job on every push, RELEASING.md, nothing else publishing", listed: false }
+  health: { run: npm run health, about: "one reading of codebase health across duplication, mutation, debt ledgers and enforcement — appended to a time series so runs can be compared", listed: false, copy: false }
+  css_cycle: { run: npm run css:cycle -- --worklist, about: "the CSS migration's actions and its own checks — `--worklist` triages what is left and re-measures every deferred item, `--move` takes a family out of the go...", listed: false, copy: false }
+  dead_mock_scan: { run: bash .claude/skills/dead-mock-scan/scan.sh tests, about: "jest.mock calls that do nothing — redundant automocks (static) and mocks no test needs (scoped probe)", listed: false }
+  dead_code_scan: { run: bash .claude/skills/dead-code-scan/scan.sh src, about: "unused exports (ts-prune) and docs naming symbols that no longer exist", listed: false }
+  circular_dependency_scan: { run: bash .claude/skills/circular-dependency-scan/scan.sh src, about: "import cycles (madge), and how to break them", listed: false }
+  code_duplication_scan: { run: bash .claude/skills/code-duplication-scan/scan.sh src, about: "copy-paste LOGIC duplication (jscpd) that should be one function", listed: false }
+  docs_adr_check: { run: npm run docs:adr-check, about: "every path and identifier an ADR names either resolves, or is DECLARED under its `## Reference notes` with a reason; every row of the index's routing table p...", listed: false }
+  rptc_hygiene_scan: { run: bash .claude/skills/rptc-hygiene-scan/scan.sh, about: "rot in the RECORD: backlog index drift, shipped plans never moved, citations naming deleted files", listed: false }
+  ai_coverage_scan: { run: bash .claude/skills/ai-coverage-scan/scan.sh, about: "which features an agent can reach: the human surface (handler types) minus the agent surface (MCP tools)", listed: false }
+  test_mutation_stale: { run: npm run test:mutation:stale -- --limit 30, about: "mutation baseline rows whose module or mirroring suite changed after the row was recorded — a floor that may sit ABOVE the truth. Lists only; `mutationSweep....", listed: false }
+  test_mutation_sweep: { run: npm run test:mutation:sweep -- --stale --minutes 480, about: "the overnight re-measure: with `--stale` it runs Stryker over every baseline row older than its module, oldest first, and pins what it finds — a lower floor...", listed: false, copy: false }
+  mutation_test_pilot: { run: npm run test:mutation, about: "Stryker mutation testing over a 4-module pilot scope — the only instrument that measures whether the tests would CATCH a defect rather than whether they exec...", listed: false, copy: false }
+  test_mutation_focus: { run: npm run test:mutation:focus, about: "Stryker over ONE module — 3 minutes instead of the sample's 16, so a survivor can be killed and re-measured inside a working session rather than a release cut", listed: false, copy: false }
+  test_mutation_measure: { run: npm run test:mutation:measure --, about: "the BOUNDED focused measurement, and the way a working session measures: refuses a group over 400 mutants, kills the whole Stryker tree at a 12-minute limit,...", listed: false, copy: false }
+  mutation_status: { run: npm run mutation:status, about: "how far the mutation burn-down is and whether it is still moving: gaps now against the run start, the batch and measurement in flight, pace, and a STALLED li...", listed: false }
+  test_mutation_worklist: { run: npm run test:mutation:worklist, about: "turns a Stryker report into the ranked list of DECISIONS nothing constrains — dropping log lines, log-only branches and non-decisions, because a score is not...", listed: false }
+  lint: { run: npm run lint, about: "eslint over the whole repo — the check a scoped local lint misses", listed: false }
+  typecheck_tests: { run: npm run typecheck:tests, about: "typechecks the test tree, so a fixture cannot invent a shape", listed: false }
+  validate_tsc_blindspots: { run: npm run validate:tsc-blindspots, about: "files tsc silently skips through basename shadowing (index.ts beats index.tsx)", listed: false }
+  validate_source_duplication: { run: npm run validate:source-duplication, about: "copy-paste in src/ may not GROW: a shrink-only pin on jscpd's clone-pair count. The periodic code-duplication-scan reads the same number and proposes fixes;...", listed: false }
+  validate_test_file_sizes: { run: npm run validate:test-file-sizes, about: "test files past the 750-line CI limit", listed: false }
+  validate_css_baseline: { run: npm run validate:css-baseline, about: "a stylesheet change pushed with no resting visual baseline captured while it was modified — the evidence gap that let a dashboard regression reach a release...", listed: false }
+  validate_convention_proofs: { run: npm run validate:convention-proofs, about: "whether a convention's named enforcer would actually go RED if the rule were broken - it plants a real violation in a throwaway worktree and requires the enf...", listed: false, copy: false }
+  validate_jest_config: { run: npm run validate:jest-config, about: "jest config drift", listed: false }
+  validate_test_guidelines: { run: npm run validate:test-guidelines, about: "test files that break the documented guidelines (its own export detector was buggy while unrun)", listed: false }
+  eds_drift: { run: npm run eds:drift, about: "did the external contracts EDS builds on move since the last release", listed: false, copy: false }
+  data_installer_drift: { run: npm run data-installer:drift, about: "datapack contract drift", listed: false, copy: false }
+  program_metrics: { run: node .rptc/plans/pattern-conformance-audit/harness/program-metrics.mjs, about: "the convergence program's impact meter — one dated snapshot; impact is the diff between two", listed: false }
+  craft_census: { run: node .rptc/plans/pattern-conformance-audit/harness/craft-census.mjs, about: "every suite classified against the accepted test-craft patterns and double styles (ADR-016)", listed: false }
+  test_census: { run: node .rptc/plans/pattern-conformance-audit/harness/test-census.mjs, about: "for each ADR-015 queue file, can its tests OBJECT to a bad refactor, or would they pass regardless", listed: false }
+  classify: { run: node .rptc/plans/pattern-conformance-audit/harness/classify.mjs, about: "fills the audit ledger with one verdict per (unit, pattern)", listed: false }
+  webview_visual_baseline: { run: bash .claude/skills/webview-visual-baseline/serve.sh, about: "computed-style fingerprint of every webview — the baseline that makes an ADR-018 CSS change provable. `serve.sh` is the ONE launcher (--build/--restage/--sto...", listed: false, copy: false }
+  sweep: { run: npm run sweep, about: "Every scripted periodic check, from the registry. About 15 minutes: start it with job_start", listed: false, copy: false }
+  test_divergence_scan: { run: node .claude/skills/test-divergence-scan/scan.mjs tests, about: "How many different ways the suite builds the same fake", listed: false, copy: false }
+  battery: { run: bash .rptc/plans/evaluation-mode/battery/sweep.sh, about: "The full prompt battery: tier 1, skills, tier 2, coverage gates. Needs a live dev host; minutes, so job_start", listed: false, copy: false }
+  battery_run: { run: node .rptc/plans/evaluation-mode/battery/run.mjs, about: "Run battery prompts; pass --only id,id or --tier2. Needs a live dev host", listed: false, copy: false }
+  mcp_probe: { run: node .claude/skills/mcp-live-probe/probe.mjs, about: "Talk to the running MCP server: info, list, schema <tool>, call <tool> <json>", listed: false }
+  check_ledger: { run: node .rptc/plans/pattern-conformance-audit/harness/check-ledger.mjs, about: "Every src file has an adjudicated dependency-injection verdict (test-strategy-scan)", listed: false }
+  node_resolve_check: { run: npm run node:resolve -- --check, about: "The Node version Demo Builder ships on still matches every component (cut-release precondition)", listed: false }
+  docs_tools: { run: npm run docs:tools, about: "Regenerate docs/systems/mcp-tools.md from the tool registrations", listed: false, copy: false }
 # Paused by the owner 2026-11-16: since 11-09 automatic reflect put 258 proposals on the ledger
 # (about 32 a day, many duplicates), more than anyone can answer. By-hand reflect is unaffected.
 auto_reflect: { enabled: false }

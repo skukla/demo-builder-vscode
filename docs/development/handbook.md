@@ -2074,11 +2074,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 22 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 73 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 74 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, agent coverage (import cycles moved to an enforcer suite on 2026-10-08)
 
-**This handbook states 147 conventions. 144 of them are enforced; 3 are not.**
+**This handbook states 148 conventions. 145 of them are enforced; 3 are not.**
 
 The last one to get there was "vendor CSS sits in the lowest cascade layer", and it was
 outstanding because it was **not yet true**: `@layer vendor` existed in no bundle, so a
@@ -2231,6 +2231,15 @@ not.
 > *Why:* two scans were once in no list at all, and a validator had been failing silently
 > for months because nothing ran it.
 > Enforced by `tests/sop/tooling-registry.test.ts`.
+
+> **Convention.** Every instrument with a command is also a dev-pipeline toolbox tool,
+> declared in `.pipeline.yaml` exactly as `tests/sop/toolboxTools.ts` derives it from the
+> registry, so an agent runs it through `run_tool` or `job_start` instead of a shell.
+> *Why:* a tool typed by hand is invisible to reflect's usage count, gets no time limit
+> or progress reporting, and runs from wherever the shell happens to be. Kept by hand,
+> the toolbox list would drift from the registry the way the instrument list once
+> drifted from the disk.
+> Enforced by `tests/sop/toolbox-tools.test.ts`.
 
 > **Convention.** A module path named in a document resolves. A citation must reach a
 > file or directory; an `import` in a code example must reach something importable.

@@ -26,9 +26,27 @@ const REPO = new URL('../../../..', import.meta.url).pathname;
 // The project's own MCP config — the four servers the extension provisions.
 const PROJECT_MCP = `${ROOT}/bodea/.mcp.json`;
 
-/** Where a prompt's agent starts: `"project"` is bodea, another value names a project folder. */
+/**
+ * A project folder with an ERP integration (a `demo-erp*` component), found rather than
+ * named: project folders are often named for a customer, and this repo is public.
+ */
+function erpProject() {
+    for (const name of readdirSync(ROOT)) {
+        const manifest = `${ROOT}/${name}/.demo-builder.json`;
+        if (!existsSync(manifest)) continue;
+        const ids = Object.keys(JSON.parse(readFileSync(manifest, 'utf8')).appBuilderComponents ?? {});
+        if (ids.some((id) => id.startsWith('demo-erp'))) return `${ROOT}/${name}`;
+    }
+    throw new Error('cwd "erp": no project under ~/.demo-builder/projects has an ERP integration');
+}
+
+/**
+ * Where a prompt's agent starts: `"project"` is bodea, `"erp"` is a project with an ERP,
+ * and another value names a project folder.
+ */
 function cwdOf(cwd) {
     if (!cwd) return ROOT;
+    if (cwd === 'erp') return erpProject();
     const dir = `${ROOT}/${cwd === 'project' ? 'bodea' : cwd}`;
     if (!existsSync(`${dir}/.demo-builder.json`)) throw new Error(`cwd "${cwd}" names no project at ${dir}`);
     return dir;
@@ -150,9 +168,12 @@ let PROMPTS = JSON.parse(readFileSync(`${AB}/prompts.json`, 'utf-8'));
 // --tier2 — outside it they would trip the unanswerable-prompt abort on
 // every full run, so they are not selectable at all.
 if (!TIER2) PROMPTS = PROMPTS.filter((p) => p.tier !== 2);
-// Tier-3 prompts expect a write that reaches Commerce, Adobe, GitHub or DA.live with no
-// scratch harness, so they never run unattended. They stay in prompts.json so the tool
-// they name still counts as prompted (toolPromptCoverage.test.ts).
+// Tier-3 prompts expect a tool that is neither on the read-only allowlist
+// (readonly-tools.txt) nor on the tier-2 scratch write list (tier2-writes.txt). Most write
+// to Commerce, Adobe, GitHub or DA.live; some only touch state the scratch harness does
+// not reset, or are reads whose tool is not yet declared read-only. None runs unattended.
+// They stay in prompts.json so the tool they name still counts as prompted
+// (toolPromptCoverage.test.ts).
 PROMPTS = PROMPTS.filter((p) => p.tier !== 3);
 
 // `--only <id>` re-runs ONE prompt, and `--repeat <n>` runs the selection n times.
@@ -239,7 +260,15 @@ let serving = 'unknown';
 try {
     serving = execFileSync('node', ['.claude/skills/mcp-live-probe/probe.mjs', 'info'],
         { encoding: 'utf8', cwd: REPO }).split('\n')[0].replace(/^serving:\s*/, '').trim();
-} catch { /* probe unavailable — recorded as unknown rather than guessed */ }
+} catch { /* probe unavailable: handled just below */ }
+
+// No server answering means every prompt would fail the same way, and a run of
+// failures would read as results. Stop before spending an agent session on any.
+if (serving === 'unknown' || serving === '') {
+    console.error('No Demo Builder dev host is serving the MCP socket, so the battery did not run.');
+    console.error('Start one (the mcp-live-probe skill has the relaunch steps) and run it again.');
+    process.exit(1);
+}
 
 // Adobe auth, read at the start AND checked again at the end.
 //
@@ -435,9 +464,9 @@ try {
         const memSnap = snapshotMemory();
         // `cwd: "project"` runs the prompt INSIDE the project directory — where
         // a producer's session actually sits, and the only place project skills
-        // (`.claude/skills/<name>/SKILL.md`) are discoverable. Any other value names
-        // a project folder (`"justrite"`, which has an ERP integration): the extension
-        // scopes the session to it. A tier-2 prompt always runs in the scratch folder.
+        // (`.claude/skills/<name>/SKILL.md`) are discoverable. `cwd: "erp"` runs it in a
+        // project that has an ERP integration (`erpProject`): the extension scopes the
+        // session to it. A tier-2 prompt always runs in the scratch folder.
         // Default stays the projects root (the home surface).
         const runCwd = tier2Token ? tier2Token.cwd : cwdOf(cwd);
         // Each tier-2 prompt starts from the fixture: one prompt renames the project, which
