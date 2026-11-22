@@ -5,6 +5,7 @@ area: platform
 needs: []
 value: high
 status: shipped
+plan: operation-progress
 ---
 
 # A long operation should say what it is doing, not just spin

@@ -2,7 +2,7 @@
  * Writes ../../journeys.md from reviewSteps.ts, the one list of review steps the prototype's step
  * switcher also reads. Run after changing a step (from the repo root):
  *
- *   node .rptc/plans/datapack-simplification/mockups/flow/gen-journeys.mjs
+ *   node .rptc/complete/datapack-simplification/mockups/flow/gen-journeys.mjs
  *
  * `--check` writes nothing and exits 1 when journeys.md is out of date.
  */

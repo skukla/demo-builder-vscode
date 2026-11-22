@@ -249,7 +249,7 @@ export interface AppBuilderComponentCatalogEntry {
      * 'app-management': the app must also be installed/associated with a
      * Commerce instance through its own generated REST API (POST
      * /installation, /association — see the plan at
-     * .rptc/plans/app-management-support/) before events flow; deploy alone
+     * .rptc/complete/app-management-support/) before events flow; deploy alone
      * leaves it dormant.
      */
     lifecycle?: 'deploy-only' | 'app-management';

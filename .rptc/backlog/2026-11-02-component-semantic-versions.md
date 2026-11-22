@@ -5,6 +5,7 @@ area: platform
 needs: []
 value: high
 status: built
+plan: component-semantic-versions
 ---
 
 # Every component ships as a semantic-version release

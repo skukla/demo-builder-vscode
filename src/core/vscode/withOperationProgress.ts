@@ -1,7 +1,7 @@
 /**
  * Where a long operation reports while it runs — decided once, here (PL-59 phase 2).
  *
- * `.rptc/plans/operation-progress/extension-wide.md` routes every operation by how it
+ * `.rptc/complete/operation-progress/extension-wide.md` routes every operation by how it
  * was started. This is that routing, so a handler cannot pick the wrong surface:
  *
  * - **R1, a button on a screen** (`inModal`): each stage goes to the screen's progress

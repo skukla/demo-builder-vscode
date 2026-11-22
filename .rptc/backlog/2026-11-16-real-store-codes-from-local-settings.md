@@ -12,7 +12,7 @@ status: backlog
 Filed 2026-11-16, during the beta.153 name cleanup.
 
 The test store's real website, store and store view codes contain the client's name, so the repo
-can no longer hold them. The release-test plan (`.rptc/plans/beta-153-release-tests/overview.md`)
+can no longer hold them. The release-test plan (`.rptc/complete/beta-153-release-tests/overview.md`)
 and one evaluation-battery prompt (`.rptc/plans/evaluation-mode/battery/prompts.json`) now say "the
 test website", "the test store" and "the test store view" instead, and the real codes sit in a local
 note outside the repo (`~/.demo-builder/real-store-codes.md`).

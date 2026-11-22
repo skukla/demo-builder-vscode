@@ -240,7 +240,7 @@ ratio is one reversible encoding crossed with a fixture table. Zero open gaps.
 
 ## The plan
 
-`.rptc/plans/test-suite-consolidation/overview.md` sequences this item with
+`.rptc/complete/test-suite-consolidation/overview.md` sequences this item with
 [[PL-49]]: Phase 1 is this item's pilot, Phase 3 its continuation, and the gate between them
 decides whether Phase 3 happens at all.
 

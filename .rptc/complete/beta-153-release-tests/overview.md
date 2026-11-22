@@ -1100,7 +1100,7 @@ change to every SC with the ERP integration.
    work, CI green), push develop, then cut beta.153 with the `cut-release` skill. Expect the
    pre-release published.
 
-Details for 4.1 to 4.3: `.rptc/plans/datapack-engine/overview.md`, "Before beta.153 ships".
+Details for 4.1 to 4.3: `.rptc/complete/datapack-engine/overview.md`, "Before beta.153 ships".
 
 **Result:** 4.1 and 4.2 passed 2026-11-16 (`main` holds every listed commit). 4.3 passed 2026-11-16: the three demo-erp folders fast-forwarded to `origin/main` (`e76b7b4`, which adds release docs; each keeps its local `app.config.yaml` package names), and `get_erp_status` answered `closesOrdersByStore: true` and `refundsOnReset: true` from the deployed integration (0.13.0). 4.4 passed 2026-11-16: Bodea, Carvello, CitiSignal, CitiSignal Original, Frescopa, Grocery, Health and Beauty, We.Cafe and WKND marked team (`mark_demo_builder_datapack`) and shared (`share_datapack`), one version each; `find_datapacks` lists each `team: true, shared: true, source: demo-builder`, which the card shows as the Demo Builder tag (step-04), not Yours or Community. Luma and Venia, added 2026-11-06 after this step was written, are team but not shared. 4.5 open. 4.5a ran 2026-11-16 while the owner
 slept: `npm run sweep` and the codebase-sweep triage (`.rptc/research/codebase-sweep-2026-11-16/sweep.md`,

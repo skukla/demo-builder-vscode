@@ -6,6 +6,7 @@ needs: []
 value: high
 status: shipped
 parent: AB-26
+plan: ab-26z-contract-prices
 ---
 
 # ERP contract prices live in each company's shared catalog, not in a cart webhook

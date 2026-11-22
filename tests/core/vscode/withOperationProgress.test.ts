@@ -1,6 +1,6 @@
 /**
  * withOperationProgress — the one place that decides where a long operation reports
- * (PL-59 phase 2, `.rptc/plans/operation-progress/extension-wide.md`, rules R1–R3, R7).
+ * (PL-59 phase 2, `.rptc/complete/operation-progress/extension-wide.md`, rules R1–R3, R7).
  *
  * The rule each test pins is named beside it; the plan's routing table says which
  * operation starts where.

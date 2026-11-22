@@ -532,7 +532,7 @@ meant.
 > kept deliberately (owner, 2026-10-16).
 >
 > 16 titles and 40 messages predate the rule and are ledgered; they are reworded slice
-> by slice in `.rptc/plans/operation-progress/extension-wide.md`. Stage names are held
+> by slice in `.rptc/complete/operation-progress/extension-wide.md`. Stage names are held
 > separately by `operationStages.test.ts`. Enforced by
 > `tests/sop/progress-wording.test.ts` against a shrink-only ledger.
 

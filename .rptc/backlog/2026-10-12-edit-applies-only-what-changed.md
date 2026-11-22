@@ -5,6 +5,7 @@ area: platform
 needs: []
 value: high
 status: active
+plan: edit-applies-only-what-changed
 ---
 
 # Edit applies only what changed

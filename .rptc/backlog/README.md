@@ -333,7 +333,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-75` | fix | [A created storefront's sitemap is the template's, unchanged](2026-11-18-created-site-keeps-template-sitemap.md) | — | med | backlog |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | shipped |
 
-### app-builder  (136)
+### app-builder  (137)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -392,6 +392,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-22` | feature | [Import a colleague's integration, and ask only for what it really needs](2026-09-18-import-colleague-integration.md) | AB-21 | med | backlog |
 | `AB-24` | chore | [Stop creating a Stage workspace](2026-09-20-drop-the-stage-workspace.md) | — | med | shipped |
 | `AB-26a` | feature | └ [Composite-entity research: what a buying organization (and seven others) is made of, record by record](2026-09-24-erp-composite-entities.md) | — | high | shipped |
+| `AB-26aa` | feature | └ [ERP and integration screens: the readability pass](2026-11-22-erp-screens-readability.md) | _the owner's go to start the readability pass (waiting since 2026-09-28)_ | med | gated |
 | `AB-26b` | feature | └ [Commerce API inventory and validation — every call the programme needs, proven to exist, captured as fixtures](2026-09-24-erp-commerce-api-inventory.md) | — | high | shipped |
 | `AB-26c` | feature | └ [Pair-in-a-box: the ERP in-process behind the integration, a fake Commerce in front (T-1)](2026-09-24-erp-pair-in-a-box.md) | AB-26b | high | shipped |
 | `AB-26d` | feature | └ [Headless screen checks over the ERP preview (T-2)](2026-09-24-erp-headless-screen-checks.md) | — | med | shipped |
@@ -783,7 +784,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — shipped
 
-*383 item(s) sit outside the A–G chain.*
+*384 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 

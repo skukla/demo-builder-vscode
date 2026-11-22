@@ -663,5 +663,5 @@ so no SC sees the gap.
 ## Not in this plan
 
 - Walk tests 1.4 to 1.8, 2.6, 2.8, EDS-71 and the cut steps: they stay in
-  `.rptc/plans/beta-153-release-tests/overview.md`.
+  `.rptc/complete/beta-153-release-tests/overview.md`.
 - The held-back ACO export screens.

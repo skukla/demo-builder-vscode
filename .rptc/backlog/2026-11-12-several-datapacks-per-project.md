@@ -75,7 +75,7 @@ Read from the local clone; a fresh fetch was refused by the org's IP allow list.
 - A shared SKU across websites adds the website to the product, never replaces the list.
 - Every screen: cards show several installed; Save, Restore and Undo Last Save act on one
   datapack; the dashboard line and the reset rows list several; the MCP tools follow.
-- Re-walk J2 to J8 of `.rptc/plans/datapack-simplification/` (the prototype) for several.
+- Re-walk J2 to J8 of `.rptc/complete/datapack-simplification/` (the prototype) for several.
 
 ## Design questions to walk first
 

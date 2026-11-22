@@ -1,6 +1,6 @@
 /**
  * SOP: every window is one of six layouts, and each layout is one component (owner, 2026-11-10,
- * Phase 1b of `.rptc/plans/datapack-simplification/overview.md`). Form, Confirm, Progress, Result,
+ * Phase 1b of `.rptc/complete/datapack-simplification/overview.md`). Form, Confirm, Progress, Result,
  * Guide and Steps each own their width, spacing, text classes, button order and how they end; a
  * caller passes words and actions. So only those six components (and `Modal` itself) render
  * `Modal`. Steps (2026-11-11) is the window that goes Form, Running, Result at one fixed height.

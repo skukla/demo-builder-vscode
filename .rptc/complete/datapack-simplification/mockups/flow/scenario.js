@@ -5,8 +5,8 @@
  * interfaces; this file only decides which answer, when, and in what order.
  *
  * Rebuild the data after editing scenarioData.ts (from the repo root):
- *   npx tsc --noEmit -p .rptc/plans/datapack-simplification/mockups/flow/tsconfig.json
- *   npx esbuild .rptc/plans/datapack-simplification/mockups/flow/scenarioData.ts --bundle \
+ *   npx tsc --noEmit -p .rptc/complete/datapack-simplification/mockups/flow/tsconfig.json
+ *   npx esbuild .rptc/complete/datapack-simplification/mockups/flow/scenarioData.ts --bundle \
  *     --format=iife --global-name=SCENARIO_DATA --alias:@=./src --outfile=<served dir>/scenarioData.js
  *
  * Order of events, read from the host handlers:

@@ -5,11 +5,12 @@ area: data-installer
 needs: []
 value: high
 status: shipped
+plan: datapack-engine
 ---
 
 # Demo Builder installs datapacks itself, beside the service
 
-Filed 2026-10-27. Plan: `.rptc/plans/datapack-engine/overview.md`.
+Filed 2026-10-27. Plan: `.rptc/complete/datapack-engine/overview.md`.
 
 The Data Installer service reads fine but no longer installs for us: since its 2026-10-27
 commit "remove the postman backward compatibility params" it ignores the Commerce credentials

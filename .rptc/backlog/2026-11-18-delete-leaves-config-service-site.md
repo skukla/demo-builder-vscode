@@ -10,7 +10,7 @@ status: backlog
 # Deleting a storefront leaves its AEM Configuration Service site behind
 
 Filed 2026-11-18, verified from source after the setup-stop work (F275 in
-`.rptc/plans/beta-153-release-tests/overview.md`, which noted it in passing). No live call was
+`.rptc/complete/beta-153-release-tests/overview.md`, which noted it in passing). No live call was
 made.
 
 ## What is left

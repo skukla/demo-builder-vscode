@@ -154,7 +154,7 @@ will meet it.
 
 ## The plan
 
-`.rptc/plans/test-suite-consolidation/overview.md` sequences this item with
+`.rptc/complete/test-suite-consolidation/overview.md` sequences this item with
 [[PL-48]]: Phase 2 is this item's investigation, Phase 4 the enforcer that only exists if
 Phase 2 finds a real habit.
 

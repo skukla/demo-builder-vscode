@@ -6,6 +6,7 @@ parent: AB-1
 needs: []
 value: high
 status: active
+plan: erp-integration
 ---
 
 # ERP integration: the first pre-built integration in the catalog

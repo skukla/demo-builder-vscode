@@ -902,7 +902,7 @@ removed; a failed save, code
 with `CHANGES_NEED_ANSWER`. A pack the service installed has no record of changes, and is removed as
 before. Both read the store with the project's own
 credential, behind the same org guard as the import. Plan:
-`.rptc/plans/datapack-engine/step-05-capture-and-repeat-installs.md`.
+`.rptc/complete/datapack-engine/step-05-capture-and-repeat-installs.md`.
 
 ### Switching to another pack, or another version (walk F97, 2026-11-09)
 
@@ -954,7 +954,7 @@ assigned to a kept catalog is unassigned: decided read-only before any write (li
 when unassigning first moved the SC's customer to group 1 and deleting the admin was refused). A customer row's
 `password` is sent when the customer is made and nowhere else: never logged, never in the install
 record, and never written into a saved pack, a copy between stores or a zip. Plan:
-`.rptc/plans/datapack-engine/step-08-customers-b2b.md`.
+`.rptc/complete/datapack-engine/step-08-customers-b2b.md`.
 
 ### Cart rules, coupons and gift cards through Demo Builder's engine (datapack-engine step 11, 2026-10-30)
 
@@ -966,7 +966,7 @@ gift card is a product (`POST products`), its amounts sent once on every website
 the store already has by that exact name is left alone and not recorded. Removal, reinstall and
 the preview keep a rule the pack made while it holds a code the pack did not ("Kept the cart rule
 … : it holds 1 coupon you added."). `customers_export` and the ACO kinds are still refused before
-anything is written. Plan: `.rptc/plans/datapack-engine/step-11-later.md`.
+anything is written. Plan: `.rptc/complete/datapack-engine/step-11-later.md`.
 
 `product_export` installs since 2026-11-06 (`productExportKind.ts`): the service's own import-form
 kind, sent to Commerce's Import API with the service's substitutions (the target's website, store
@@ -1007,7 +1007,7 @@ written. The outcome's `note` names each setting set ("Set catalog/frontend/grid
 24."). `uninstall_datapack` puts each back first, keeping one the SC changed since ("Kept
 catalog/frontend/grid_per_page as it is: it was changed after Demo Builder set it."), and the
 `note` says which. `preview_datapack_changes` counts settings like any kind. Plan:
-`.rptc/plans/datapack-engine/step-09-store-settings.md`.
+`.rptc/complete/datapack-engine/step-09-store-settings.md`.
 
 The install record now keeps the website and store view the pack went to (`target`), and the
 preview and "save store changes" read the store there, not at the project's website: a pack
@@ -1050,7 +1050,7 @@ done once set; the Data Installer's pack flyout shows the step with its own Chec
 `preview_datapack_changes` answers `root`, the same sentence beforehand. Removal keeps the pack's
 root while a store shows it as its root, saying to point that store back first. "Save store changes"
 writes the pack's root back either way, so the saved version still installs as its own root
-elsewhere. Plan: `.rptc/plans/datapack-engine/step-12-pack-categories-on-storefront.md`.
+elsewhere. Plan: `.rptc/complete/datapack-engine/step-12-pack-categories-on-storefront.md`.
 
 ### Clearing a demo's websites (datapack-engine step 10, 2026-10-30; whole websites since 2026-11-13)
 
@@ -1116,7 +1116,7 @@ which installing it again puts back. From the screen it runs in one progress win
 <Datapack>", then a row per data type; payment-review orders and list settings end it amber with
 Open Commerce Admin. The Data Installer's "Clear Demo Data" is the human surface; no reset offers it
 (owner, 2026-11-12), neither the buttons nor `reset_project`. Plans:
-`.rptc/plans/datapack-engine/step-10-wipe.md`, `.rptc/plans/datapack-simplification/step-06.md`.
+`.rptc/complete/datapack-engine/step-10-wipe.md`, `.rptc/complete/datapack-simplification/step-06.md`.
 
 `clear_commerce_instance` (confirm-gated, step 06 C6) needs an instance check's token and
 `understood: true` (the window's "I understand"; the handler requires it too). It takes each
@@ -1341,7 +1341,7 @@ it went out in a file, on this machine; `delete_library_datapack` then carries o
 `sharedInFile` without confirm and as `warning` with it: "You shared this pack in a project file
 on 27 October. Anyone who hasn't created that project yet will get Bodea instead." The pack it was
 made from is named as the store lists it, never by its id. Plan:
-`.rptc/plans/datapack-engine/step-07-demo-packs.md`.
+`.rptc/complete/datapack-engine/step-07-demo-packs.md`.
 
 ### What a creation or reset left to finish (PL-101, 2026-11-17)
 

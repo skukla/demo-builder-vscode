@@ -2,7 +2,7 @@
 
 How an Edge Delivery storefront's nav reaches the Commerce catalog without anyone typing
 the category structure into it (EDS-24), and how each category gets its page from the
-product page overlay (EDS-61). Design: `.rptc/plans/category-pages-overlay/overview.md`.
+product page overlay (EDS-61). Design: `.rptc/complete/category-pages-overlay/overview.md`.
 
 ## What the SC gets
 

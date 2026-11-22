@@ -12,7 +12,7 @@
  * field or order-line field the real types do not have, and a wrong value type. An outcome outside
  * `ResetRuleOutcome` fails when the table loads.
  *
- * The rule, in plain words, is in `.rptc/plans/datapack-engine/step-10-wipe.md` ("One reset rule"),
+ * The rule, in plain words, is in `.rptc/complete/datapack-engine/step-10-wipe.md` ("One reset rule"),
  * as changed by `.rptc/plans/erp-order-close/overview.md`. None of these bodies is captured from a
  * live store.
  */

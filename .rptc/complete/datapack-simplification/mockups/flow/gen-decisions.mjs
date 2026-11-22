@@ -4,7 +4,7 @@
  * own window while the owner clicks through the journey (owner, 2026-11-11: "a click-through
  * journey that encapsulates all of the decisions made", not a page of screenshots).
  *
- *   node .rptc/plans/datapack-simplification/mockups/flow/gen-decisions.mjs [--check]
+ *   node .rptc/complete/datapack-simplification/mockups/flow/gen-decisions.mjs [--check]
  *
  * log-verdict.mjs runs it after every verdict. Rebuild the prototype afterwards (build-j1.js).
  */

@@ -1,6 +1,6 @@
 /**
  * Progress notifications follow one wording (PL-59 phase 2,
- * `.rptc/plans/operation-progress/extension-wide.md`):
+ * `.rptc/complete/operation-progress/extension-wide.md`):
  *
  * - The TITLE is an "-ing" verb and its object, fixed for the whole run: "Deploying API
  *   Mesh". No trailing "…", "..." or ":" — VS Code's spinner already says it is

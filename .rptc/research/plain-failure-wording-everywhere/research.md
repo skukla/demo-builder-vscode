@@ -27,7 +27,7 @@ what does a message say when the cause is unknown, and in what order is it built
    (`.rptc/plans/error-handling-strategy/overview.md:215-219`: "Those are two fields, not one").
 4. **The "Debug Logs" rule is narrower than it has been stated.** What the owner objected to (F221)
    was failure text that named Debug Logs. The owner chose an **Open Debug Logs button** as a failed
-   run's action on 2026-11-10 (`.rptc/plans/datapack-simplification/overview.md:298-302`). So: a
+   run's action on 2026-11-10 (`.rptc/complete/datapack-simplification/overview.md:298-302`). So: a
    button is endorsed; a sentence sending a person there is not. The house rule for translated
    failures still recommends that sentence, and 23 strings use it.
 5. **Recommended shape:** one core door with two layers (plain for people, raw kept beside it),
@@ -147,7 +147,7 @@ an agent is meant to relay to a person (memory note, owner 2026-11-15).
 
 ## The honest fallback, and Debug Logs
 
-**What the record says.** F221 (`.rptc/plans/beta-153-release-tests/overview.md:251`) records the
+**What the record says.** F221 (`.rptc/complete/beta-153-release-tests/overview.md:251`) records the
 owner reading failures "each named in Debug Logs" and finding them hard to read. The phrase "sends an
 SC to a developer tool" appears only in PL-102's own text; no owner quote of it was found. The owner
 chose **Open Debug Logs** as a failed background run's button on 2026-11-10. So the evidence

@@ -55,7 +55,7 @@ quality gate (31,226 tests); the ERP passes all 621 of its tests.
 - **Category pages and a menu built from the Commerce category tree.** The block, the page writer
   and its undo are built and tested; a new local block library holds the block. Creating its GitHub
   repository, adding it to the catalog and the first live run are the steps in
-  `.rptc/plans/category-pages/overview.md`.
+  `.rptc/complete/category-pages/overview.md`.
 
 ### Answered
 

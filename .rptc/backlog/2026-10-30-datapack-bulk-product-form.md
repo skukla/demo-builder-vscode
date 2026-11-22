@@ -11,7 +11,7 @@ status: shipped
 
 Filed 2026-10-30 from datapack-engine step 11 (owner, 2026-10-29: `product_export` becomes its own
 item). What was known before is in step 05's "Left out, and later"
-(`.rptc/plans/datapack-engine/step-05-capture-and-repeat-installs.md`).
+(`.rptc/complete/datapack-engine/step-05-capture-and-repeat-installs.md`).
 
 ## What is known
 

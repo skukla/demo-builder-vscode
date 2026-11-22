@@ -10,9 +10,8 @@
  *
  * The API is served BY the deployed app's own generated actions — the spec's
  * `servers` entry is a bare `/`, so the reachable base URL is per-app and
- * must be passed in by the caller (resolving it is the supervised spike in
- * .rptc/plans/app-management-support/overview.md; this client is NOT wired
- * to any flow until that lands).
+ * must be passed in by the caller. `appManagementInstaller.ts` resolves it
+ * from the app's deployed action URLs (`deriveAppManagementBaseUrl`).
  *
  * Auth is passed in by callers — this module does NOT mint or refresh
  * tokens. Every call sends `Authorization: Bearer <IMS access token>` plus

@@ -18,7 +18,7 @@ price (setup 2 or 3 below), and the order carries the campaign discount to the E
 
 ERPs own discounts, not only list prices: an ERP's pricing turns a list price into a
 customer's net price on every sales document (SAP: base price then discount conditions,
-`../../plans/ab-26z-contract-prices/sap-mapping.md`; Business Central: line and invoice
+`../../complete/ab-26z-contract-prices/sap-mapping.md`; Business Central: line and invoice
 discounts, from general knowledge, not re-read). List price is the item's own master data.
 
 **For the demo:** setup 1 (ERP only) is the default story; a seasonal campaign (setup 3) is an

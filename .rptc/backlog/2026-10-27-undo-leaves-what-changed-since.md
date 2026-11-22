@@ -38,7 +38,7 @@ changed since, leaves it, and says so.
 ## The fix (decided by the owner, 2026-10-27)
 
 Use the shared "is this still as we left it?" rule DI-5 builds first
-(`.rptc/plans/datapack-engine/step-04-still-as-we-left-it.md`, in `src/core/utils/`). Nothing here writes a fourth copy. The rule answers "still as we left it, or
+(`.rptc/complete/datapack-engine/step-04-still-as-we-left-it.md`, in `src/core/utils/`). Nothing here writes a fourth copy. The rule answers "still as we left it, or
 changed?"; each undo decides what to do with a change, by who owns the thing:
 
 - **The ERP's detach puts everything back regardless**, as it does today: the ERP is transient

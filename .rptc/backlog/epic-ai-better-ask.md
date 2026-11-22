@@ -6,6 +6,7 @@ needs: []
 value: med
 status: gated
 waiting-on: parked by the owner (2026-10-03)
+plan: evaluation-mode
 ---
 # Helping a producer write a better ask
 

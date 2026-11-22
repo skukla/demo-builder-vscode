@@ -2,7 +2,7 @@
 
 Research: `.rptc/research/dynamic-commerce-pages/research.md` (read its UPDATE 3 first — the
 web research on how brands actually do this). Replaces the button-driven shape of
-`.rptc/plans/category-pages/overview.md`.
+`.rptc/complete/category-pages/overview.md`.
 
 ## The problem (owner, 2026-10-05)
 

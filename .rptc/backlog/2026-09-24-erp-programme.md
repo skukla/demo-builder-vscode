@@ -6,6 +6,7 @@ parent: AB-9
 needs: []
 value: high
 status: active
+plan: erp-programme
 ---
 
 # The ERP programme — every ERP slice, in one order, run by the loop

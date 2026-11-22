@@ -1,7 +1,7 @@
 # Adobe retired Universal Editor from the Commerce templates: what it means for Demo Builder
 
 Research, 2026-11-08 (owner asked after F67). Read with the walk plan's F67:
-`.rptc/plans/beta-153-release-tests/overview.md`.
+`.rptc/complete/beta-153-release-tests/overview.md`.
 
 ## What Adobe did, and why
 

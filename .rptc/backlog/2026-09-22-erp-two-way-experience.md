@@ -7,6 +7,7 @@ needs: []
 value: med
 status: superseded
 superseded-by: AB-26
+plan: erp-history-retry
 ---
 
 # The two-way ERP integration, as the two business users experience it

@@ -5,6 +5,7 @@ area: platform
 needs: []
 value: med
 status: shipped
+plan: pattern-conformance-audit
 ---
 
 # Pattern-conformance audit — one architecture, or one per feature?

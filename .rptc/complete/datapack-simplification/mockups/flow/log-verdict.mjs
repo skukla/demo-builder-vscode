@@ -2,7 +2,7 @@
  * Records the owner's verdict on one review step in ../../prototype-feedback.md, in the owner's own
  * words, and any item it leaves for the build phase. From the repo root:
  *
- *   node .rptc/plans/datapack-simplification/mockups/flow/log-verdict.mjs \
+ *   node .rptc/complete/datapack-simplification/mockups/flow/log-verdict.mjs \
  *     --step J2-1 --verdict Pass --words "Looks good." [--note "what changed"] [--build "item"]...
  *
  * Refuses a step that reviewSteps.ts does not have, a verdict outside Pass / Change / Fail / Open,

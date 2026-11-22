@@ -187,7 +187,7 @@ prefix no authored page could share a category's address, so the overlay could n
 one, with no list to keep. Its stated cost was that the URLs are not Adobe's canonical shape
 (Adobe's `aem-commerce-prerender` serves categories at their root paths). The owner chose the
 root shape on 2026-10-22; the opt-in sheet is what makes it safe. Design and history:
-`.rptc/plans/category-pages-overlay/overview.md`; behaviour: `docs/systems/category-pages.md`.
+`.rptc/complete/category-pages-overlay/overview.md`; behaviour: `docs/systems/category-pages.md`.
 
 ---
 

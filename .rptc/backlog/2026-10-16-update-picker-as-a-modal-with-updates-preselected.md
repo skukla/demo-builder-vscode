@@ -6,6 +6,7 @@ parent: PL-81
 needs: []
 value: med
 status: shipped
+plan: pl-80-updates-modal
 ---
 
 # Check for Updates in a modal, with the updates already ticked

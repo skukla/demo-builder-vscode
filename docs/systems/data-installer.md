@@ -274,7 +274,7 @@ which lists every object the install made. It never removes by name.
   cannot make a value inherited again, so "Use Default Value" in the Admin stays the
   one way to do that). Orders are closed, never deleted. What another demo also uses
   stays, listed as kept. Rules, write order and live proof:
-  `.rptc/plans/datapack-engine/step-10-wipe.md`, `.rptc/plans/datapack-simplification/step-06.md`.
+  `.rptc/complete/datapack-engine/step-10-wipe.md`, `.rptc/complete/datapack-simplification/step-06.md`.
 
 When an install hits trouble (step 14 items 1 to 3):
 

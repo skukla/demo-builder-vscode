@@ -16,7 +16,7 @@ instructions: memory, skills, CLAUDE.md, mined from session transcripts) last ra
 only write a proposal file; nothing changes until items are accepted.
 
 `high` because the cut waits on it. It is a step in the beta.153 test plan's "Before the cut" list
-(`.rptc/plans/beta-153-release-tests/overview.md`, 4.5a, immediately before the cut in 4.5), so it
+(`.rptc/complete/beta-153-release-tests/overview.md`, 4.5a, immediately before the cut in 4.5), so it
 comes up right before the cut. The cut skill's own "Periodic passes gate" (the dev-pipeline
 freshness check, `.claude/skills/cut-release/SKILL.md`) also flags both as overdue at the cut.
 

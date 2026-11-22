@@ -117,7 +117,7 @@ P pass, F fail, a dash where the column does not apply. 13 of 63 states pass eve
 
 ### F1. The old words are still on every window (large, wording only)
 
-Decided 2026-11-10 (`.rptc/plans/datapack-simplification/overview.md:39-44`): Install and
+Decided 2026-11-10 (`.rptc/complete/datapack-simplification/overview.md:39-44`): Install and
 Uninstall, Add from File and Save as File, Check First. The code still says:
 
 | Old word | Where an SC reads it | Main files |

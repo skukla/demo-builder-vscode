@@ -73,7 +73,7 @@ waits on it, and `EDS-1` (multisite) specifies ACO catalog views per locale.
 
 ## The ACO pack kinds, and why Demo Builder's engine does not install them (2026-10-30)
 
-Decided in datapack-engine step 11 (`.rptc/plans/datapack-engine/step-11-later.md`): the eight
+Decided in datapack-engine step 11 (`.rptc/complete/datapack-engine/step-11-later.md`): the eight
 `aco_<brand>` packs (`aco_bodea`, `aco_carvello`, `aco_citisignal_new`, `aco_citisignal_original`,
 `aco_frescopa`, `aco_healthbeauty`, `aco_wecafe`, `aco_wknd`, all `main`) stay refused by Demo
 Builder's engine, before anything is written, until this item is planned. Rows read from

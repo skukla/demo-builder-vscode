@@ -2,7 +2,7 @@
  * OperationProgressModal — what a long operation is doing, while it does it (PL-59).
  *
  * THE progress modal for any operation an SC starts with a button on a screen (rule R1
- * of `.rptc/plans/operation-progress/extension-wide.md`); a screen hosts this rather
+ * of `.rptc/complete/operation-progress/extension-wide.md`); a screen hosts this rather
  * than building its own. Titled "-ing verb + object". It shows the stage, the step
  * under it and how long the stage usually takes (the Storefront setup step's
  * `LoadingDisplay`, row for row), in one fixed height. While the operation runs it

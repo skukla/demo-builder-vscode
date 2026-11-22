@@ -6,6 +6,7 @@ parent: AB-9
 needs: [AB-23]
 value: med
 status: shipped
+plan: erp-linked-tiles
 ---
 
 # One integration, several ERPs
@@ -112,7 +113,7 @@ Deciding between them is the first thing this item needs; everything else follow
 4. **Reset, detach and removal per ERP:** the ledger records which ERP made each write;
    removing the integration removes all of its ERPs.
 5. **Cards:** the integration's Uses row lists every ERP (the stored link is already a list,
-   `.rptc/plans/erp-linked-tiles/overview.md`).
+   `.rptc/complete/erp-linked-tiles/overview.md`).
 
 ## Waiting on AB-23
 
