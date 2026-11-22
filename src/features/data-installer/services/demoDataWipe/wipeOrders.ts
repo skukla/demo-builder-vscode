@@ -2,10 +2,10 @@
  * What a wipe does with the orders and returns placed in the chosen stores: the ONE reset rule for
  * orders, shared with the ERP integration's reset (owner, 2026-10-30; in plain words in
  * `.rptc/complete/datapack-engine/step-10-wipe.md`, "One reset rule"; changed 2026-11-11,
- * `.rptc/plans/erp-order-close/overview.md`: every order a Clear touches ends Canceled or Closed, in
- * Commerce). It mirrors the integration's `src/lib/reset-rule.js` (`commerce-erp-integration`, branch
- * feature/one-reset-rule); **the integration's copy still has the 2026-10-30 rule until that plan's
- * step 2.** An App Builder app cannot be imported here. Commerce cannot delete an order, so each is
+ * `.rptc/complete/erp-order-close/overview.md`: every order a Clear touches ends Canceled or
+ * Closed, in Commerce). It mirrors the integration's `src/lib/reset-rule.js`
+ * (`commerce-erp-integration`, main), which has had the 2026-11-11 rule since that plan's step 2.
+ * An App Builder app cannot be imported here. Commerce cannot delete an order, so each is
  * closed off, and nothing is ever deleted:
  *
  * | The order | What it gets | Its note |

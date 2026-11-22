@@ -43,8 +43,8 @@ Steps 1 to 5 write nothing to a real store. Step 6 writes to the test store and 
   ERP steps are ERP problems in `outcome.erp` (`broughtInLine`, `problem`; `orderNumbers` deleted),
   never in the order counts or `failed`. A clearing whose integration can now be asked though the
   list said it was held still writes nothing (the token covers the asked stores).
-- Step 3 skipped (owner, 2026-11-11: "Skip it."). The two copies of the order cases stay identical
-  by hand; each file's header says so.
+- Step 3 was skipped on 2026-11-11 (owner: "Skip it."), then done later: one shared table of the
+  order cases, `ac4a6923a` here and `f64bd32` in the integration repo.
 - Step 6 passed live, 2026-11-11, on `tailspin_test_store` only, with the integration at `d17e9f7`
   deployed to Tailspin (owner: "Yes"). Two orders placed there: one shipped, not invoiced; one with 1
   of 2 items invoiced. Both reached Tailspin ERP. Clear then: invoiced the rest, refunded in full,

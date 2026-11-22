@@ -1,6 +1,6 @@
 /**
  * The handlers behind "What would installing again change?", the install check (2026-11-06), and Save / Save As (step 05,
- * `.rptc/plans/datapack-save-as/`): what they hand the service, what they refuse before it is
+ * `.rptc/complete/datapack-save-as/`): what they hand the service, what they refuse before it is
  * asked, and what they record on the project once a save lands.
  *
  * The service (`storeChanges.ts`) has its own suite; here it is mocked and its ARGUMENTS

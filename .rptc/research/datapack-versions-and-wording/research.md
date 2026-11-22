@@ -45,7 +45,7 @@ committed yet. So saved versions exist only where a development build ran.
 | Not lose Admin changes at a reset or uninstall | Built and automatic (above) | Fact. How fast versions pile up is a guess |
 | Go back to the datapack the demo started from | `origin` is carried from save to save. Importing that datapack over the demo's does it. A reset returns to the newest save, not the first | Fact. How often it is wanted is a guess |
 | Keep a variant | Save As New Datapack, and Save As New beside Save. Saves are not variants (`packVersions.ts`) | Fact |
-| Keep a demo on an older version on purpose | The plan says so for a team datapack's named versions (`.rptc/plans/datapack-save-as/overview.md`). For saves it only matters when two projects use one of the SC's datapacks | The plan is a fact. Two demos on one saved datapack is a guess |
+| Keep a demo on an older version on purpose | The plan says so for a team datapack's named versions (`.rptc/complete/datapack-save-as/overview.md`). For saves it only matters when two projects use one of the SC's datapacks | The plan is a fact. Two demos on one saved datapack is a guess |
 | Pick the right one from a list of dates | Nothing helps: a version is a date with no note, so two saves an hour apart cannot be told apart | Fact |
 
 Three things in today's model do not work as written. All three are read from the code, not run.

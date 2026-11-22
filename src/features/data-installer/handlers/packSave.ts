@@ -1,6 +1,6 @@
 /**
  * Where a save from the project's store goes, and the save itself: Save and Save As (owner,
- * 2026-11-03, `.rptc/plans/datapack-save-as/`). Split from `storeChangesHandlers.ts`, which
+ * 2026-11-03, `.rptc/complete/datapack-save-as/`). Split from `storeChangesHandlers.ts`, which
  * opens the store and dispatches, when the two doors became one decision that also serves a
  * removal's "save my changes first" (`removalChanges.ts`).
  *

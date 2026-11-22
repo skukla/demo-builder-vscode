@@ -80,7 +80,7 @@ export const importTargetHandlers = defineHandlers({
         // depending on which surface asked, with nothing to report the difference.
         const instance = deriveImportInstance(configs);
         // When Demo Builder's engine installed the pack: so the demo's card can tell a team pack
-        // updated in place since (owner, 2026-11-03, `.rptc/plans/datapack-save-as/`).
+        // updated in place since (owner, 2026-11-03, `.rptc/complete/datapack-save-as/`).
         const { installedAt, updateBehind } = await installStateOf(project?.path, datapack);
         // By the name the SC knows it, for the form's "Replaces …" when another pack is imported (walk F97).
         const heldName = installedAt && datapack ? await heldDisplayName(context, datapack) : undefined;

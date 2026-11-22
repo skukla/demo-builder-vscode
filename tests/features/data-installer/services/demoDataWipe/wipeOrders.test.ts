@@ -1,5 +1,5 @@
 /**
- * The one reset rule for orders (owner, 2026-10-30; changed 2026-11-11, `.rptc/plans/erp-order-close/`),
+ * The one reset rule for orders (owner, 2026-10-30; changed 2026-11-11, `.rptc/complete/erp-order-close/`),
  * shared with the ERP integration's reset: the example orders named as the owner named them, then the
  * edges. Every case asserts the calls sent to Commerce, in order, with their bodies. The reset's note
  * is always the first write to an order: the integration skips the events of an order whose history

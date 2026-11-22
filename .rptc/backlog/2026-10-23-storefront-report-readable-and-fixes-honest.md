@@ -5,6 +5,7 @@ area: eds
 needs: []
 value: med
 status: shipped
+plan: storefront-report-and-fixes
 ---
 
 # The Storefront Report is readable, and its fixes are offered honestly

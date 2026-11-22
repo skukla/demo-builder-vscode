@@ -1,6 +1,6 @@
 /**
  * Deleting one of the SC's own library packs: the project is never written (there is no automatic
- * pack per demo to clear any more, owner 2026-11-03, `.rptc/plans/datapack-save-as/`), and a
+ * pack per demo to clear any more, owner 2026-11-03, `.rptc/complete/datapack-save-as/`), and a
  * version takes its settings layer of the same version with it (datapack-engine step 09).
  */
 

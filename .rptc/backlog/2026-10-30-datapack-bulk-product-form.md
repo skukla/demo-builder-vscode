@@ -5,6 +5,7 @@ area: data-installer
 needs: []
 value: med
 status: shipped
+plan: datapack-batching
 ---
 
 # `product_export`: the bulk product form Luma and Venia carry

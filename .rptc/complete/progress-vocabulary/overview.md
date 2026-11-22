@@ -1,7 +1,7 @@
 # One progress vocabulary and structure for every flow
 
 **Status: all eight slices done (2026-10-16).** Slices 1 to 7 are committed (`dd3710d91`
-to `7461e9409`); slice 8 is in the working tree, uncommitted.
+to `7461e9409`); slice 8 landed as `a4cb0ee15` (Backlog: PL-59).
 
 Owner, 2026-10-16 (release walk): "Everything should be consistent. Republish and project
 creation. Every flow." Approved plan and order the same day.
@@ -74,7 +74,7 @@ Mesh, App Builder, ERP and AI-files steps already come from the table and keep t
 5. **[done `7461e9409`] Counts misused as positions** — store-change product pages, datapack watcher.
 6. **[done `7461e9409`] Edit keeps Reset's position; generic project reset steps into the table.**
 7. **[done `7461e9409`] Check for Updates / apply** — onto the shared progress routing.
-8. **[done, uncommitted] Enforcer** — a `tests/sop` suite: every step reported is a table label; no step
+8. **[done `a4cb0ee15`] Enforcer** — a `tests/sop` suite: every step reported is a table label; no step
    carries a count that is not a position. Handbook convention + count bumps.
 
 ## Watch-outs

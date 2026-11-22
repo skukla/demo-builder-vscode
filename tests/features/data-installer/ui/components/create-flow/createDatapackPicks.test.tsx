@@ -1,5 +1,5 @@
 /**
- * Create Datapack's pick screen (datapack-engine step 14, `.rptc/plans/datapack-save-as/`): the kinds
+ * Create Datapack's pick screen (datapack-engine step 14, `.rptc/complete/datapack-save-as/`): the kinds
  * on the left; clicking one shows its checklist on the right, its items asked of
  * `list-datapack-export-items`; selections kept across kinds and counted on each row ("1 of 2
  * selected", "All selected" for a kind ticked whole and unread; step-07 S3-b); Next goes on to the

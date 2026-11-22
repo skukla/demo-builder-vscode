@@ -1,6 +1,6 @@
 /**
  * SOP: one progress vocabulary (handbook, "progress"; plan
- * `.rptc/plans/progress-vocabulary/overview.md`, owner 2026-10-16).
+ * `.rptc/complete/progress-vocabulary/overview.md`, owner 2026-10-16).
  *
  * - **Line 1 is a step from the stage table.** Every call that reports a STEP passes a
  *   label from `OPERATION_STAGES` (or a list built from it), never a string literal or

@@ -24,7 +24,7 @@ what does a message say when the cause is unknown, and in what order is it built
    (`src/features/ai/server/agentOperationNotifier.ts:242`). So the raw words cannot simply move to
    "the agent's copy"; a failure needs a plain field for people and a separate raw field for agents
    and logs. That split was already decided once, on 2026-09-11, and never built
-   (`.rptc/plans/error-handling-strategy/overview.md:215-219`: "Those are two fields, not one").
+   (`.rptc/complete/error-handling-strategy/overview.md:215-219`: "Those are two fields, not one").
 4. **The "Debug Logs" rule is narrower than it has been stated.** What the owner objected to (F221)
    was failure text that named Debug Logs. The owner chose an **Open Debug Logs button** as a failed
    run's action on 2026-11-10 (`.rptc/complete/datapack-simplification/overview.md:298-302`). So: a

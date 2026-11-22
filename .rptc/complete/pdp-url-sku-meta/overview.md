@@ -62,6 +62,9 @@ patches. Tailspin: one product-page reset after the deploy.
 
 ## Verify
 
+Moved to complete on 2026-11-22. The code shipped (`833c1857b`, ADR-024; the patches change is
+`21f7e02` on `eds-demo-patches` main), but the live check below was never recorded as run.
+
 Live, after deploy: all 49 Tailspin products answer 200 at their link path, and
 each page's `meta[name=sku]` equals the Commerce SKU; the 10 underscore SKUs
 render product data, not the template.

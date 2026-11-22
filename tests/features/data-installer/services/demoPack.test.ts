@@ -1,6 +1,6 @@
 /**
  * Where a save from a demo goes, Save and Save As (owner, 2026-11-03,
- * `.rptc/plans/datapack-save-as/`): a new pack's generated name, the version a save makes, the pack
+ * `.rptc/complete/datapack-save-as/`): a new pack's generated name, the version a save makes, the pack
  * it records it was made from, and what the project then records.
  */
 

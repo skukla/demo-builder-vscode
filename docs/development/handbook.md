@@ -562,7 +562,7 @@ meant.
 > through a variable, or one reported by number ("report(1, …)"). No sites predate it:
 > the ones it found were fixed the day it landed. The table's own rules (the lengths
 > below, no label twice) are `operationStages.test.ts`. Plan:
-> `.rptc/plans/progress-vocabulary/overview.md`. Enforced by
+> `.rptc/complete/progress-vocabulary/overview.md`. Enforced by
 > `tests/sop/progress-steps.test.ts`.
 >
 > The limits keep each line to one line on the progress displays, so nothing jumps as

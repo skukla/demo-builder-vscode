@@ -222,7 +222,7 @@ reads first; stop if `check_demo_data` lists anything the test did not make.
 
 The same rule closes orders in the demo-data wipe here and in the ERP integration's reset
 (`commerce-erp-integration`, branch feature/one-reset-rule, 0a10b95). **Changed 2026-11-11**
-(`.rptc/plans/erp-order-close/overview.md`): every order a Clear touches ends Canceled or Closed.
+(`.rptc/complete/erp-order-close/overview.md`): every order a Clear touches ends Canceled or Closed.
 This side has the new rule (step 1 of that plan); the integration's copy still has the old one
 until its step 2. In plain words, as it is now here:
 

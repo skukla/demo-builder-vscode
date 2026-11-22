@@ -30,7 +30,7 @@ Open, `prototype-conventions.md`, overview Phase 6, the walked J7 (`mockups/flow
   projects-list entry does not import (`projects-dashboard/ui/index.tsx:40-60`); the dashboard entry
   imports neither `projects-batch.css` nor `updates-modal.css` (`dashboard/ui/main.tsx:26-70`).
 - Stale in `decisions.md` Open: "The order rule's live test" passed live on 2026-11-11
-  (`.rptc/plans/erp-order-close/overview.md`, step 6).
+  (`.rptc/complete/erp-order-close/overview.md`, step 6).
 - Over the caps: `projects-dashboard/ui/index.tsx` 543 lines (component 350),
   `projectResetService.ts` 471 (service 400).
 

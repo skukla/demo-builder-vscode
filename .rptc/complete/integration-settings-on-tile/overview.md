@@ -75,7 +75,7 @@ component that has settings (`envSchema` in `app-builder-components.json`), not 
    deploys is step 4's order, and it matters only where the two ERP names were set apart.
 
 **Not in scope:**
-- The ERP's own settings inside Commerce Admin (AB-10, `.rptc/plans/erp-integration-settings/`).
+- The ERP's own settings inside Commerce Admin (AB-10, `.rptc/complete/erp-integration-settings/`).
   Those are the merchant's, not the SC's.
 - The workspace per integration (`.rptc/research/workspace-per-integration/`).
 

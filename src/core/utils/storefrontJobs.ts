@@ -11,7 +11,7 @@
  *
  * A name is also a step label where a flow's step IS the job. Counts go after the
  * name, never in it.
- * The vocabulary is `.rptc/plans/progress-vocabulary/overview.md`.
+ * The vocabulary is `.rptc/complete/progress-vocabulary/overview.md`.
  *
  * vscode-free: the MCP server's process runs the same pipeline.
  *

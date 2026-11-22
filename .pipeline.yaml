@@ -29,6 +29,7 @@ backlog:
   areas: [ai, eds, app-builder, data-installer, prerequisites, platform]
   layers: [A, B, C, D, E, F, G]
   record_dirs: [.rptc/plans, .rptc/complete]
+  archive_dirs: [.rptc/complete]
   record_check: "bash .claude/skills/rptc-hygiene-scan/scan.sh | grep -E '^\s+(DEAD|UNINDEXED)' || true"
   claim_files: ["src/*.ts", "src/*.tsx", "src/*/templates/*.md"]
 neighbours:

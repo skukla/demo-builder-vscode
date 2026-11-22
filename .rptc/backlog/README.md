@@ -333,7 +333,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-75` | fix | [A created storefront's sitemap is the template's, unchanged](2026-11-18-created-site-keeps-template-sitemap.md) | — | med | backlog |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | shipped |
 
-### app-builder  (137)
+### app-builder  (138)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -393,6 +393,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-24` | chore | [Stop creating a Stage workspace](2026-09-20-drop-the-stage-workspace.md) | — | med | shipped |
 | `AB-26a` | feature | └ [Composite-entity research: what a buying organization (and seven others) is made of, record by record](2026-09-24-erp-composite-entities.md) | — | high | shipped |
 | `AB-26aa` | feature | └ [ERP and integration screens: the readability pass](2026-11-22-erp-screens-readability.md) | _the owner's go to start the readability pass (waiting since 2026-09-28)_ | med | gated |
+| `AB-26ab` | feature | └ [ERP admin page: what changed, real links, and ERP columns on Commerce's grids](2026-11-22-erp-admin-change-detail-and-grid-columns.md) | — | med | backlog |
 | `AB-26b` | feature | └ [Commerce API inventory and validation — every call the programme needs, proven to exist, captured as fixtures](2026-09-24-erp-commerce-api-inventory.md) | — | high | shipped |
 | `AB-26c` | feature | └ [Pair-in-a-box: the ERP in-process behind the integration, a fake Commerce in front (T-1)](2026-09-24-erp-pair-in-a-box.md) | AB-26b | high | shipped |
 | `AB-26d` | feature | └ [Headless screen checks over the ERP preview (T-2)](2026-09-24-erp-headless-screen-checks.md) | — | med | shipped |
@@ -475,7 +476,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-87` | fix | [Deleting a project leaves its mesh and App Builder integrations deployed](2026-11-18-delete-leaves-adobe-deployments.md) | — | med | backlog |
 | `PL-24` | feature | [Component updates cannot follow an environment-variable rename](2026-08-30-env-var-rename-migration.md) | — | med | shipped |
 
-### data-installer  (17)
+### data-installer  (18)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -493,6 +494,7 @@ each item's own file; what has already landed against an item is in its
 | `DI-13` | question | [The same pack in both stores, with different data: which one does an SC get?](2026-11-06-same-pack-in-both-stores.md) | — | med | open |
 | `DI-14` | feature | [A reinstall misreads a pack that holds one thing in two forms](2026-11-06-datapack-reinstall-both-product-forms.md) | — | med | backlog |
 | `DI-17` | feature | [Update's Review Records: what Commerce holds now, and what each changed record was](2026-11-17-update-review-records-now-and-was.md) | — | low | backlog |
+| `DI-18` | feature | [Datapack installs: the smaller kinds through Commerce's bulk API](2026-11-22-datapack-bulk-for-the-small-kinds.md) | — | low | backlog |
 | `DI-15` | feature | └ [Several datapacks per project](2026-11-12-several-datapacks-per-project.md) | — | med | backlog |
 | `DI-16` | question | └ [Will a multi-site datapack still install through the Data Installer service?](2026-11-15-multisite-datapacks-and-the-data-installer-service.md) | — | high | open |
 | `DI-3` | question | └ [Spike: export a pack to the service through the item APIs, end to end](2026-09-11-spike-export-a-pack-through-the-item-apis.md) | — | low | superseded |
@@ -784,7 +786,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — shipped
 
-*384 item(s) sit outside the A–G chain.*
+*386 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 

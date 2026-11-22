@@ -1,9 +1,9 @@
 /**
  * The order and return writes of a wipe (the one reset rule, `wipeOrders.ts`), mirroring the ERP
  * integration's `closeOne`, `settle` and `closeReturn` (`commerce-erp-integration`
- * `src/lib/close-orders.js`, branch feature/one-reset-rule; the invoice is not there yet, see
- * `.rptc/plans/erp-order-close/overview.md` step 2). Each names its own order or return id; nothing
- * here is store-wide.
+ * `src/lib/close-orders.js` on main, invoice included; see
+ * `.rptc/complete/erp-order-close/overview.md`). Each names its own order or return id;
+ * nothing here is store-wide.
  *
  * One order's writes, in order: its note; each open return closed; its hold released; then canceled,
  * or invoiced (when something is not yet invoiced) and refunded; then, only when Commerce's answer
@@ -11,12 +11,12 @@
  *
  * | Write | Route and body | Confirmed from a real answer? |
  * |---|---|---|
- * | note | `POST orders/{id}/comments`, `{ statusHistory: { comment, is_customer_notified: 0, is_visible_on_front: 0 } }` | the integration's `orders.comment`, live; from here **no** |
+ * | note | `POST orders/{id}/comments`, `{ statusHistory: { comment, is_customer_notified: 0, is_visible_on_front: 0 } }` | **yes**: step 6 of that plan, live 2026-11-11 (each order's note written before its invoice); also the integration's `orders.comment` |
  * | close a return | `GET returns/{id}`, then `PUT returns/{id}` with `{ rmaDataObject }`: the header as read, without `comments` and `tracks` (saved through their own routes), with `items: []` (Commerce keeps them; it refuses an approved item sent back, even unchanged, Tailspin 2026-10-02) and `status: "closed"`; then read back | **no** from here; the integration measured the shape live 2026-10-02 |
  * | release a hold | `POST orders/{id}/unhold` | **no** from here; the integration's `unholdIfHeld`. On ACCS a REST hold does not take, so a REST-held order is not `holded` and is never sent this |
  * | cancel | `POST orders/{id}/cancel`, answer `true` | the integration's reset, live; from here **no** |
- * | invoice | `POST order/{id}/invoice`, `{ capture: false, notify: false }`: no `items`, so every line not yet invoiced is invoiced | **no**: not confirmed from any live answer, here or in the integration (the owner's decision, 2026-11-11, names it; step 6 of that plan is the live check) |
- * | refund | `GET orders/{id}` for its lines as invoiced now, then `POST order/{id}/refund`, `{ items[order_item_id,qty], notify: false, arguments[shipping_amount, adjustment_positive 0, adjustment_negative 0] }`, then `GET orders/{id}` for its `state` | **no**; the integration's `refundOrder` makes the same call, its answer the credit memo id (measured 2026-10-02) |
+ * | invoice | `POST order/{id}/invoice`, `{ capture: false, notify: false }`: no `items`, so every line not yet invoiced is invoiced | **yes**: step 6 of that plan, live on the test store 2026-11-11, with the integration deployed (the owner's decision, 2026-11-11, names it) |
+ * | refund | `GET orders/{id}` for its lines as invoiced now, then `POST order/{id}/refund`, `{ items[order_item_id,qty], notify: false, arguments[shipping_amount, adjustment_positive 0, adjustment_negative 0] }`, then `GET orders/{id}` for its `state` | **yes**: step 6 of that plan, live 2026-11-11 (both orders refunded in full and read Closed); the integration's `refundOrder` makes the same call, its answer the credit memo id (measured 2026-10-02) |
  *
  * @module features/data-installer/services/demoDataWipe/wipeOrderRun
  */

@@ -20,7 +20,7 @@ nothing in Demo Builder brings that change to an installed project:
   `skipped` without a word. A new event or a changed webhook never reaches Commerce.
 
 Found on the Bodea sandbox on 2026-09-17, when the ERP integration moved its orders from a
-webhook to an event (`.rptc/plans/erp-integration-settings/overview.md`, step 3).
+webhook to an event (`.rptc/complete/erp-integration-settings/overview.md`, step 3).
 
 ## What Adobe's library now does (2.0.0, published 2026-09-15; read from the package)
 

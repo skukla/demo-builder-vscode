@@ -142,7 +142,7 @@ export interface Transience {
  * comes from a formatter that KNOWS its provider, or from a domain error constructed
  * knowing what went wrong. The raw text still reaches the Debug Logs, where it belongs.
  *
- * Owner-decided 2026-09-11; see `.rptc/plans/error-handling-strategy/`.
+ * Owner-decided 2026-09-11; see `.rptc/complete/error-handling-strategy/`.
  */
 export function classifyTransience(error: unknown): Transience {
     const lowerMessage = extractErrorMessage(error).toLowerCase();

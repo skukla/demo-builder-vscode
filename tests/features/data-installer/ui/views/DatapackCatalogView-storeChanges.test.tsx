@@ -1,6 +1,6 @@
 /**
  * DatapackCatalogView — the demo's own datapack in the library, and saving it (owner, 2026-11-04,
- * `.rptc/plans/datapack-save-as/`).
+ * `.rptc/complete/datapack-save-as/`).
  *
  * The pack the project installs from and resets to is one of the library's cards, wearing the
  * check, wherever it lives. Saving the demo's datapack lives in its flyout (owner, 2026-11-17, walk

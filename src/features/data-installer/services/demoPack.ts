@@ -1,6 +1,6 @@
 /**
  * Where a save from a demo goes: Save and Save As (owner, 2026-11-03,
- * `.rptc/plans/datapack-save-as/`).
+ * `.rptc/complete/datapack-save-as/`).
  *
  * The demo's pack is `project.datapack`: the pack it installs from and resets to.
  *

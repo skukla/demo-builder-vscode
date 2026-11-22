@@ -355,7 +355,7 @@ judgement in this feature:
 
 ## Saving a store into a pack, with Demo Builder's engine (datapack-engine step 14)
 
-**Create Datapack and Save Changes** (owner, 2026-11-03 and 2026-11-04, `.rptc/plans/datapack-save-as/`).
+**Create Datapack and Save Changes** (owner, 2026-11-03 and 2026-11-04, `.rptc/complete/datapack-save-as/`).
 There is no automatic pack per demo. The demo's pack (`project.datapack`, the pack it installs from
 and resets to) is one of the library's cards, wearing the check wherever it lives, the SC's library
 included, and opening on the version the demo uses (`DatapackCatalogGrid`):
