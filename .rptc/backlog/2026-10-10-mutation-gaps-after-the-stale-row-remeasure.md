@@ -4,7 +4,8 @@ kind: chore
 area: platform
 needs: []
 value: med
-status: active
+status: gated
+waiting-on: the overnight mutation re-measure, started by the owner; close it if it still reads 0
 ---
 
 # Mutation gaps after the stale row remeasure

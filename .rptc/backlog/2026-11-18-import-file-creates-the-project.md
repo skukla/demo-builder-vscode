@@ -4,8 +4,9 @@ kind: fix
 area: eds
 needs: []
 value: high
-status: active
+status: gated
 plan: import-creates-project
+waiting-on: the owner's live check: reset an imported project and see its own code come back
 ---
 
 # Importing a demo file gives the SC the project, not a template to build one from

@@ -4,7 +4,7 @@ kind: epic
 area: platform
 needs: []
 value: med
-status: active
+status: shipped
 parent: PL-30
 ---
 
@@ -181,3 +181,4 @@ coverage of split families) hold or improve across two release cuts.
 - 2026-09-08  fix(mutation): the baseline command silently destroyed 617 of its own 629 rows (`a80ab0171`)
 - 2026-09-08  FINDING (not acted on, out of PL-19's scope): tests/features/sidebar/providers/sidebarProvider.test.ts (546 lines) hand-rolls its own MockWebviewView type, factory AND full jest.mock preamble for vscode/lifecycleService, while its sibling sidebarProvider-messages.test.ts uses the shared sidebarProvider.testUtils that already provides all of it. They are one test family. Not converted because the suite registers its OWN jest.mock('vscode'), so importing the testUtils would collide on hoisting — it needs a whole-suite conversion, not a partial one. test-family-setup.test.ts passes because it checks a .testUtils EXISTS, not that every family member imports it; that is the gap.
 - 2026-09-08  fix(scan): stop re-reporting a comment already ruled accurate history, twice (`b07391838`)
+- 2026-11-22  Closed 2026-11-22: every child is finished (PL-14, PL-46, PL-47, PL-48, PL-50); last direct work 2026-09-08.

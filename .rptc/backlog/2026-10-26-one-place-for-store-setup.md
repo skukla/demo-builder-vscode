@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: med
-status: active
+status: backlog
 ---
 
 # One place for store setup
@@ -151,3 +151,4 @@ These landed first and this item builds on them:
 - 2026-11-03  fix(setup-guide): Check All Steps empties the steps it will check, then fills each in as it answers (`763d64ddf`)
 - 2026-11-03  fix(setup-guide): Check All Steps sits in the footer, under the list, where a long list cannot clip it (`ba9765a04`)
 - 2026-11-21  Reconciled 2026-11-21: Apply All is built and the old Prepare window is gone (92970b746, 0aa3116be, ba9765a04). Left: re-walk release row 4.19 after its layout fix, capture the visual baseline, decide the 'Add and Prepare the Store?' title (PrepareOnAddConfirm.tsx), and fix the stale comment at ErpConfirmDialogs.tsx:11.
+- 2026-11-22  Paused 2026-11-22: back to backlog, last work 2026-11-03. Where it stopped is the 2026-11-21 reconcile line above.

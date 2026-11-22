@@ -4,7 +4,8 @@ kind: fix
 area: platform
 needs: []
 value: high
-status: active
+status: gated
+waiting-on: the owner's live check: release rows 2.9, 3.1, 3.2, 3.4 and 3.10-3.14
 ---
 
 # Configure saves what changed, in one place, and tells the truth about it

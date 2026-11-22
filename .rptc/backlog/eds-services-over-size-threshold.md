@@ -4,7 +4,7 @@ kind: chore
 area: platform
 needs: []
 value: high
-status: active
+status: backlog
 layer: G
 ---
 # Files over the god-file threshold
@@ -1082,3 +1082,4 @@ date and what happened; a failure becomes its own `fix` item.
 - 2026-10-09  refactor(core): one JWT payload decoder for DA.live and IMS tokens (`d18d9dbbf`)
 - 2026-10-10  merge: the god-file splits (EDS-8) into the integration branch, with the fix branch's behaviour carried into the split files (`c6df529b1`)
 - 2026-11-21  Reconciled 2026-11-21: godFileCandidates still pins 17 (tests/sop/architecture-rules.exemptions.json); last splits 2026-10-09/10. Left: split the 17 or give each a dated one-job verdict until it reads 0.
+- 2026-11-22  Paused 2026-11-22: back to backlog, last work 2026-10-10. Where it stopped is the 2026-11-21 reconcile line above.

@@ -36,3 +36,8 @@ Keep the configs `config.json` was generated from, and hand that snapshot to
 `updateStorefrontState` in both places, as the republish path does: through the reset's
 parameters and through the creation pipeline. Then point both comments at this item's fix, or
 remove them.
+
+## Shipped so far
+
+- 2026-11-22  docs: source comments point at plans where they live now (`5f20abfdd`)
+- 2026-11-22  2026-11-22: set back to backlog. The 5f20abfdd log made it active, but that commit only pointed a source comment at this item; no work has started.

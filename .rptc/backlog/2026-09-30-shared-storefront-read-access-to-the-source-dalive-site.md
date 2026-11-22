@@ -4,7 +4,8 @@ kind: feature
 area: eds
 needs: []
 value: high
-status: active
+status: gated
+waiting-on: the owner's decisions on the sharer-side reader intake and the shared-catalog facts, then one live grant on a real org
 ---
 
 # Shared storefront: read access to the colleague's DA.live site is the missing piece

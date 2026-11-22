@@ -5,8 +5,9 @@ area: eds
 parent: EDS-13
 needs: []
 value: high
-status: active
+status: gated
 plan: colleague-storefront-tested-boilerplate-updates
+waiting-on: the owner's live Apply onto a throwaway storefront (release row 1.18)
 ---
 
 # A colleague's storefront gets the tested boilerplate updates too, when it qualifies

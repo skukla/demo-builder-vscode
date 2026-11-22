@@ -4,7 +4,7 @@ kind: epic
 area: app-builder
 needs: [AB-51]
 value: high
-status: active
+status: shipped
 ---
 
 # Tailspin from nothing: wipe the Adobe I/O project, rebuild on Person B's storefront, one data model
@@ -143,3 +143,4 @@ ERP integration + Northwind (`erp`) + Contoso (`demo-erp-2`).
 - 2026-09-30  docs(backlog): AB-53 records the content-copy and no-grant decisions; tear-down begins (`868d515a4`)
 - 2026-10-01  2026-10-01: Tailspin tree restructured (owner-approved): Safety Signs -> Signs and Labels (/signs) with new Emergency and First Aid 140, Fire 141, ADA and Restroom 142, Hazmat and NFPA 143; new families Lockout and Tagout 144, 5S and Visual Workplace 145, Safety Cabinets 146 (empty, for the cabinet load); 25 Tailspin products reassigned; the 13 categories granted to shared catalogs 1 (public), 15 and 16; old branches 120-123 deleted. Restore snapshot taken first. Minutes later guests saw 5 products (was 0) and Northgate 49 — the feed was still syncing.
 - 2026-10-01  2026-10-01, ~20 min after the restructure: Live Search on tailspin_us answers identically for a guest and a Northgate buyer — all 49, signs 45, ADA and Restroom 8, Danger 7, Lockout and Tagout 3, 5S 1, every count as planned. The 'empty index' was B2B category permissions all along; the 24 Accuform configurables now appear to guests too.
+- 2026-11-22  Closed 2026-11-22 (owner): the rebuild was done in early October; no work since 2026-10-01.

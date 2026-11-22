@@ -5,7 +5,7 @@ area: platform
 parent: EDS-13
 needs: []
 value: high
-status: active
+status: backlog
 ---
 
 # Project portability: export, import and copy carry the whole project
@@ -89,3 +89,4 @@ two ways to describe one storefront. That is why both sit under one program.
 
 - 2026-09-11  Cut into six children; D24-D25 decided (6a66780e6)
 - 2026-09-11  chore(backlog): log the cut commit on PL-56 (`1416a2075`)
+- 2026-11-22  Paused 2026-11-22: back to backlog, last direct work 2026-09-11; no child is in progress (PL-56h backlog, PL-56b gated).

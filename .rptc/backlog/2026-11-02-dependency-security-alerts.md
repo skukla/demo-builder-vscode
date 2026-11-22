@@ -4,7 +4,7 @@ kind: fix
 area: platform
 needs: []
 value: high
-status: active
+status: backlog
 ---
 
 # Work through the dependency security alerts on the repositories we own
@@ -48,3 +48,4 @@ under the MCP SDK. The name `proxy-addr` does not appear in the built extension,
 - 2026-11-02  Owner, 2026-11-02: limit the Headless dev server to the SC's machine. Measured against next dev -H: the extension's port check read the held port as free, so Start would report a timeout. The check is fixed on this branch. The one-line storefront change waits on its branch fix/dev-server-local-only until beta.153 is out, because beta.152 still has the old check. With it, the LAN address is refused, localhost serves the same page as before in a real browser, and Stop's lookup finds the process. Lead, not proved: nothing appears to pass a project's port to next dev, so any port but 3000 may also time out.
 - 2026-11-02  fix(lifecycle): the port check sees a server limited to one address (`c7439fc41`)
 - 2026-11-21  Reconciled 2026-11-21: the Next.js upgrade (citisignal-nextjs 844c896) and the port-check fix (c7439fc41) are done. Left: merge and release citisignal-nextjs fix/dev-server-local-only (its wait condition, beta.153 out, is met), then triage the runtime high/critical alerts per repo.
+- 2026-11-22  Paused 2026-11-22: back to backlog, last work 2026-11-02. Where it stopped is the 2026-11-21 reconcile line above.

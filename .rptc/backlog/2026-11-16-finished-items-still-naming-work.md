@@ -22,3 +22,7 @@ in the same pass.
 ## Shipped so far
 
 - 2026-11-21  Reconciled 2026-11-21: all 54 finished items read against the code. Their remainders were reworded as history where the work was done or dropped, pointed at an open item where one carries it, moved to PL-111 where only the owner can settle it, or filed as new child items (AB-88 to AB-92, PL-112 to PL-121, AI-80, AI-81). leftovers reads 0.
+- 2026-11-22  docs(backlog): the last finished plans move to complete; only one plan names no item (`71d0ed51c`)
+- 2026-11-22  docs(backlog): 12 more items name their plans; 14 finished plans move to complete (`df621c77d`)
+- 2026-11-21  docs(backlog): items name their plans; finished plans move to complete (`1d62400f3`)
+- 2026-11-21  docs(backlog): reconcile every item against the code (`0ac3ea1e8`)

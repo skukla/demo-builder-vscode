@@ -4,7 +4,7 @@ kind: fix
 area: data-installer
 needs: []
 value: med
-status: active
+status: backlog
 ---
 
 # A pack links products to categories by url key, which two categories can share
@@ -58,3 +58,4 @@ to confirm which category was meant.
 
 - 2026-10-31  fix(data-installer): an install says when a category key names two categories (`515532cdb`)
 - 2026-11-21  Reconciled 2026-11-21: only part 3 shipped (515532cdb). Left: saves write a unique category key (url_path is still stripped in packForm.ts DERIVED_CATEGORY_FIELDS; links still go by categoryUrlKey), and fixing or re-exporting Bodea, the owner's call.
+- 2026-11-22  Paused 2026-11-22: back to backlog, last work 2026-10-31. Where it stopped is the 2026-11-21 reconcile line above.

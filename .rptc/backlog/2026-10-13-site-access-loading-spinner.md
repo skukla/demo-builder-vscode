@@ -4,7 +4,8 @@ kind: fix
 area: eds
 needs: []
 value: low
-status: active
+status: gated
+waiting-on: the owner's side-by-side look in the Extension Dev Host (or waive it)
 ---
 
 # The Site Access screen's loading spinner matches the rest of the extension

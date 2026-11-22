@@ -194,7 +194,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-31` | feature | [Runtime debugging from the agent surface — the three gaps the ERP validation measured](2026-09-25-runtime-debugging-tools.md) | — | high | shipped |
 | `AB-32` | fix | [read_runtime_activation cannot read the App Management installer's runs](2026-09-26-runtime-activation-read-fails-on-installer-runs.md) | — | med | shipped |
 | `AB-70` | feature | [Ownership reconcile: adding or removing an ERP leaves no products behind](2026-10-09-erp-ownership-reconcile.md) | — | high | shipped |
-| `AI-1` | epic | [Is the surface good enough for an agent to do the work?](epic-ai-surface-good-enough.md) | — | high | active |
+| `AI-1` | epic | [Is the surface good enough for an agent to do the work?](epic-ai-surface-good-enough.md) | — | high | backlog |
 | `AI-1a` | question | └ [AI-surface coverage: do the MCP tools, skills and agents empower an agent to USE the extension?](2026-08-16-mcp-surface-for-sc-design-work.md) | AI-1c | high | shipped |
 | `AI-1b` | question | └ [104 tools, and agents reach 20 of them (measured 2026-08-25; 121 tools now)](2026-08-25-agents-barely-use-the-tool-surface.md) | AI-1c | high | shipped |
 | `AI-1c` | feature | └ [The other half of suggestions: finding holes in OUR tools](2026-08-26-find-the-gaps-in-our-own-surface.md) | — | high | shipped |
@@ -232,7 +232,7 @@ each item's own file; what has already landed against an item is in its
 | `AI-9` | question | [Should an agent's project delete also clean up the cloud, as a person's does?](2026-09-19-agent-project-delete-leaves-cloud.md) | — | med | shipped |
 | `AI-10` | feature | [A demo-data authoring skill: an SC's agent builds and loads the demo data from a brief](2026-09-30-demo-data-authoring-skill-for-agents.md) | — | high | shipped |
 | `AI-11` | feature | [Create project cannot set store scope for an added demo](2026-09-30-create-project-cannot-set-store-scope-for-an-added-demo.md) | — | med | shipped |
-| `AI-12` | feature | [Demo Builder works with GitHub Copilot, and with Claude Code while it lasts](2026-09-16-copilot-first-agent-support.md) | — | high | active |
+| `AI-12` | feature | [Demo Builder works with GitHub Copilot, and with Claude Code while it lasts](2026-09-16-copilot-first-agent-support.md) | _the owner's live check: one destructive call from the Copilot panel (or waive it)_ | high | gated |
 | `AI-13` | fix | [The AI tools install and run on whatever Node is first on the PATH](2026-10-07-ai-tools-wrong-node.md) | — | med | shipped |
 | `AI-14` | fix | [Agent-run project creation waited for the AEM Code Sync App and told nobody](2026-10-09-agent-creation-waits-for-code-sync-silently.md) | — | med | shipped |
 | `AI-15` | fix | [A screen opened for one project acts on whichever project is current](2026-10-09-screens-act-on-the-current-project.md) | — | high | shipped |
@@ -263,25 +263,25 @@ each item's own file; what has already landed against an item is in its
 | `EDS-10` | feature | [Custom themes as savable entities](2026-08-28-custom-themes-as-savable-entities.md) | — | med | backlog |
 | `EDS-11` | fix | [RETRACTED — HelixService's optional credentials are not the hazard I described](2026-08-28-helix-auth-variance-unmodeled.md) | — | low | dropped |
 | `EDS-12` | fix | [Resetting the same EDS project does less from the dashboard than from the projects list](2026-09-02-two-reset-doors-differ.md) | — | med | shipped |
-| `EDS-13` | epic | [Portable demos: share storefronts, move whole projects](2026-09-11-colleague-built-storefront.md) | — | high | active |
+| `EDS-13` | epic | [Portable demos: share storefronts, move whole projects](2026-09-11-colleague-built-storefront.md) | — | high | backlog |
 | `EDS-13a` | feature | └ ["Add a demo": build a project on a demo someone shared by link](2026-09-11-add-a-demo-import.md) | PL-56a | high | shipped |
 | `EDS-13b` | feature | └ ["Share this demo": turn an existing project into a demo others can add](2026-09-11-share-a-demo-export.md) | EDS-13c | med | shipped |
 | `EDS-13c` | chore | └ [The shareable-demo process, published: how to make a storefront addable](2026-09-11-shareable-demo-contract.md) | PL-56a | high | shipped |
 | `EDS-13d` | feature | └ [A team catalog of shared demos](2026-09-11-team-demo-catalog.md) | EDS-13a, EDS-13b | low | backlog |
 | `EDS-13e` | feature | └ [Share a headless demo](2026-09-11-share-a-headless-demo.md) | EDS-13b | low | superseded |
-| `EDS-13f` | feature | └ [Shared demos carry their boilerplate, their patches and a way to stay fixed](2026-09-14-shared-demo-patches-and-provenance.md) | EDS-13a, EDS-13b | high | active |
+| `EDS-13f` | feature | └ [Shared demos carry their boilerplate, their patches and a way to stay fixed](2026-09-14-shared-demo-patches-and-provenance.md) | EDS-13a, EDS-13b | high | backlog |
 | `EDS-13g` | feature | └ [A headless project keeps its code in a repository of the SC's own, as Edge Delivery does](2026-09-15-headless-storefront-repository.md) | — | med | backlog |
-| `EDS-40` | fix | └ [A storefront copied from a colleague's demo loses the demo's label sheets](2026-10-12-added-demo-copy-drops-the-label-sheets.md) | — | med | active |
-| `EDS-56` | feature | └ [A colleague's storefront gets the tested boilerplate updates too, when it qualifies](2026-10-20-colleague-storefront-tested-boilerplate-updates.md) | — | high | active |
+| `EDS-40` | fix | └ [A storefront copied from a colleague's demo loses the demo's label sheets](2026-10-12-added-demo-copy-drops-the-label-sheets.md) | — | med | backlog |
+| `EDS-56` | feature | └ [A colleague's storefront gets the tested boilerplate updates too, when it qualifies](2026-10-20-colleague-storefront-tested-boilerplate-updates.md) | _the owner's live Apply onto a throwaway storefront (release row 1.18)_ | high | gated |
 | `EDS-14` | fix | [Template update falls back to a full reset on conflict, overwriting the SC's own edits](2026-09-11-template-update-conflict-fallback-overwrites-edits.md) | — | med | shipped |
 | `EDS-15` | fix | ["Cleanup DA.live sites" builds its DA.live calls on the Adobe token DA.live refuses](2026-09-13-dalive-cleanup-command-token.md) | — | low | shipped |
 | `EDS-16` | fix | [The "no admin role" remedy sent people to a page that cannot grant anything](2026-09-14-site-access-remedy-dead-link.md) | — | high | shipped |
-| `EDS-17` | feature | [A storefront can live in an organization's repository, not only the SC's own](2026-09-16-storefront-in-an-org-repository.md) | — | high | active |
+| `EDS-17` | feature | [A storefront can live in an organization's repository, not only the SC's own](2026-09-16-storefront-in-an-org-repository.md) | _the owner's four decisions (D1-D4 in the plan), then two live checks: adopt an empty org repo, and an SSO org refusal_ | high | gated |
 | `EDS-18` | fix | [A created GitHub repository becomes the selected repository, and the Code Sync notice centres](2026-09-25-eds-created-repo-becomes-the-selection.md) | — | high | shipped |
 | `EDS-19` | fix | [The Code Sync sub-step leaves the Storefront area; setup is the one place the App is asked about](2026-09-25-eds-code-sync-substep-removed.md) | — | high | shipped |
 | `EDS-20` | fix | [Setup resumes when the install dialog detects AEM Code Sync, instead of demanding a Retry](2026-09-25-eds-setup-resumes-after-code-sync-install.md) | — | high | shipped |
 | `EDS-21` | feature | [A project tile that opens AEM Assets](2026-09-30-aem-assets-project-tile.md) | — | med | shipped |
-| `EDS-22` | feature | [Shared storefront: read access to the colleague's DA.live site is the missing piece](2026-09-30-shared-storefront-read-access-to-the-source-dalive-site.md) | — | high | active |
+| `EDS-22` | feature | [Shared storefront: read access to the colleague's DA.live site is the missing piece](2026-09-30-shared-storefront-read-access-to-the-source-dalive-site.md) | _the owner's decisions on the sharer-side reader intake and the shared-catalog facts, then one live grant on a real org_ | high | gated |
 | `EDS-23` | fix | [An inner code status 400 can mean "the App is not on this repository", and the check calls it installed](2026-09-30-eds-code-status-400-is-not-installed.md) | — | high | shipped |
 | `EDS-24` | feature | [Category pages and the nav are generated from the Commerce category tree](2026-10-01-category-pages-and-nav-from-the-commerce-tree.md) | _the owner watching the first real run on Tailspin_ | high | shipped |
 | `EDS-25` | question | [Should product pages use Adobe's prerender, and how?](2026-10-05-prerender-for-product-pages.md) | — | med | shipped |
@@ -297,8 +297,8 @@ each item's own file; what has already landed against an item is in its
 | `EDS-36` | fix | [A block library install put back block entries the SC had deleted](2026-10-09-block-library-respects-hand-deletions.md) | — | med | shipped |
 | `EDS-37` | fix | [Storefront setup recorded its block libraries on the wrong project](2026-10-09-storefront-setup-records-block-libraries-on-the-open-project.md) | — | med | shipped |
 | `EDS-38` | question | [Should a block library report success when its site-config registration failed?](2026-10-10-block-library-success-when-site-config-registration-fails.md) | — | low | shipped |
-| `EDS-39` | feature | [Choose block libraries on Configure, not only in Edit](2026-10-12-block-libraries-on-configure.md) | — | med | active |
-| `EDS-41` | fix | [The Site Access screen's loading spinner matches the rest of the extension](2026-10-13-site-access-loading-spinner.md) | — | low | active |
+| `EDS-39` | feature | [Choose block libraries on Configure, not only in Edit](2026-10-12-block-libraries-on-configure.md) | _one run on a real storefront, and the owner's call on showing orphaned custom libraries_ | med | gated |
+| `EDS-41` | fix | [The Site Access screen's loading spinner matches the rest of the extension](2026-10-13-site-access-loading-spinner.md) | _the owner's side-by-side look in the Extension Dev Host (or waive it)_ | low | gated |
 | `EDS-42` | feature | [Edit switches a project's repository or site](2026-10-13-edit-switches-repository-or-site.md) | PL-75 | med | backlog |
 | `EDS-43` | feature | [Save a block from a storefront as a reusable block library](2026-10-13-save-a-storefront-block-as-a-library.md) | — | med | backlog |
 | `EDS-44` | fix | [Changing the store in Configure makes pages for the new catalog](2026-10-15-store-change-makes-pages-for-the-new-catalog.md) | — | med | shipped |
@@ -313,11 +313,11 @@ each item's own file; what has already landed against an item is in its
 | `EDS-53` | fix | [CitiSignal's checkout label sheet will not preview on a copy](2026-10-18-citisignal-checkout-sheet-will-not-preview.md) | — | med | shipped |
 | `EDS-54` | fix | [An expired DA.live sign-in during the access grant is logged and passed over](2026-10-19-dalive-grant-401-passed-over.md) | — | low | shipped |
 | `EDS-55` | chore | [The storefront pipeline's warnings travel one route, not one each](2026-10-20-storefront-warnings-one-channel.md) | — | med | shipped |
-| `EDS-57` | feature | [A storefront update that stops on a clash can be fixed with AI, from the builder](2026-10-21-update-clash-fix-with-ai.md) | — | high | active |
+| `EDS-57` | feature | [A storefront update that stops on a clash can be fixed with AI, from the builder](2026-10-21-update-clash-fix-with-ai.md) | _live runs of release rows 1.19 (the next real clash), 1.20 and 1.21_ | high | gated |
 | `EDS-58` | question | [Does the Sync Storefront button earn its keep when no SC edits code?](2026-10-21-sync-storefront-earns-its-keep.md) | — | med | open |
 | `EDS-59` | feature | [A storefront update can be undone from the builder](2026-10-21-undo-a-storefront-update.md) | — | med | backlog |
 | `EDS-60` | question | [Does a storefront update work on a machine with no git name or email?](2026-10-22-storefront-update-without-git-identity.md) | — | med | open |
-| `EDS-61` | feature | [Category pages through the same overlay as product pages](2026-10-22-category-pages-through-the-overlay.md) | — | high | active |
+| `EDS-61` | feature | [Category pages through the same overlay as product pages](2026-10-22-category-pages-through-the-overlay.md) | — | high | backlog |
 | `EDS-62` | fix | [A demo made before a storefront fix never gets it](2026-10-23-storefront-repairs-for-older-demos.md) | — | high | shipped |
 | `EDS-64` | fix | [The Storefront Report is readable, and its fixes are offered honestly](2026-10-23-storefront-report-readable-and-fixes-honest.md) | — | med | shipped |
 | `EDS-65` | fix | [A storefront delete goes on deleting while its pages are still live](2026-10-25-delete-stops-while-pages-stay-live.md) | — | high | shipped |
@@ -327,7 +327,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-69` | fix | [A storefront delete carries on when AEM refuses the sign-in](2026-10-28-delete-carries-on-when-aem-refuses-the-sign-in.md) | — | high | shipped |
 | `EDS-70` | question | [Could one Adobe credential replace our separate DA.live and publishing sign-ins?](2026-11-03-eds-service-credential-question.md) | — | med | backlog |
 | `EDS-71` | feature | [The DA.live block library without Universal Editor's `component-definition.json`](2026-11-08-block-library-without-universal-editor.md) | — | high | planned |
-| `EDS-72` | fix | [Importing a demo file gives the SC the project, not a template to build one from](2026-11-18-import-file-creates-the-project.md) | — | high | active |
+| `EDS-72` | fix | [Importing a demo file gives the SC the project, not a template to build one from](2026-11-18-import-file-creates-the-project.md) | _the owner's live check: reset an imported project and see its own code come back_ | high | gated |
 | `EDS-73` | fix | [Deleting a storefront leaves its AEM Configuration Service site behind](2026-11-18-delete-leaves-config-service-site.md) | — | med | backlog |
 | `EDS-74` | fix | [Deleting a storefront leaves its publish key registered with the shared PDP action](2026-11-18-delete-leaves-publish-key-registration.md) | — | low | backlog |
 | `EDS-75` | fix | [A created storefront's sitemap is the template's, unchanged](2026-11-18-created-site-keeps-template-sitemap.md) | — | med | backlog |
@@ -344,7 +344,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-1c` | feature | └ [Promote a shell-built custom app to a GitHub repo](2026-07-13-promote-app-to-repo.md) | AB-1 | low | shipped |
 | `AB-4` | feature | └ [Uninstall an App Management app before removing it](2026-08-27-app-management-uninstall-on-remove.md) | — | med | shipped |
 | `AB-5` | feature | └ [Surface App Management install state to the dashboard and agents](2026-08-27-app-management-install-surface.md) | — | med | shipped |
-| `AB-9` | feature | └ [ERP integration: the first pre-built integration in the catalog](2026-09-14-erp-integration-first-prebuilt.md) | — | high | active |
+| `AB-9` | feature | └ [ERP integration: the first pre-built integration in the catalog](2026-09-14-erp-integration-first-prebuilt.md) | _the owner's live acceptance (step-06-acceptance.md), or the owner's word that the Tailspin release-walk rows count_ | high | gated |
 | `AB-1d` | feature | [Build Commerce integrations FROM the integration starter kit, not a blank shell](2026-08-26-scaffold-integrations-from-starter-kit.md) | — | med | shipped |
 | `AB-2` | epic | [Move deliberately to a per-SC Adobe I/O project (Option 2)](per-sc-io-project.md) | — | med | spiked |
 | `AB-3` | fix | [Integration add must fail on install error](2026-08-27-integration-add-must-fail-on-install-error.md) | — | med | shipped |
@@ -364,7 +364,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-20` | feature | └ [Ask the ERP live whether the account has the credit, as the order is placed](2026-09-18-live-credit-check.md) | — | med | shipped |
 | `AB-23` | feature | └ [Every integration and system gets its own Adobe workspace](2026-09-20-workspace-per-integration.md) | — | high | shipped |
 | `AB-25` | epic | └ [The two-way ERP integration, as the two business users experience it](2026-09-22-erp-two-way-experience.md) | — | med | superseded |
-| `AB-26` | epic | └ [The ERP programme — every ERP slice, in one order, run by the loop](2026-09-24-erp-programme.md) | — | high | active |
+| `AB-26` | epic | └ [The ERP programme — every ERP slice, in one order, run by the loop](2026-09-24-erp-programme.md) | — | high | backlog |
 | `AB-27` | fix | └ [The first add of an integration dies on a Console 504 that the second add gets past](2026-09-24-console-first-try-504-on-credential-read.md) | — | high | shipped |
 | `AB-16a` | feature | └ [The integration signs in to each ERP with that ERP's own credential](2026-09-28-erp-per-erp-credentials.md) | — | high | shipped |
 | `AB-16b` | fix | └ [Bodea carts fail intermittently with "Internal server error"](2026-09-28-erp-bodea-carts-fail.md) | — | high | shipped |
@@ -454,9 +454,9 @@ each item's own file; what has already landed against an item is in its
 | `AB-39` | question | [Loop branch labels use AB-16 sub-ids that are not their backlog items](2026-09-29-erp-branch-label-id-divergence.md) | — | low | shipped |
 | `AB-90` | fix | └ [Redeploying the ERP integration updates its Commerce event fields on existing projects](2026-11-21-redeploy-updates-existing-event-subscriptions.md) | — | med | backlog |
 | `AB-50` | chore | [Push the stranded docs commits; delete the two remote branches already on main](2026-09-30-erp-branches-housekeeping.md) | — | low | backlog |
-| `AB-53` | epic | [Tailspin from nothing: wipe the Adobe I/O project, rebuild on Person B's storefront, one data model](2026-09-30-tailspin-from-nothing-fresh-project-person-b-storefront.md) | AB-51 | high | active |
+| `AB-53` | epic | [Tailspin from nothing: wipe the Adobe I/O project, rebuild on Person B's storefront, one data model](2026-09-30-tailspin-from-nothing-fresh-project-person-b-storefront.md) | AB-51 | high | shipped |
 | `AB-67` | fix | [An agent cannot name the first ERP when it adds the ERP integration](2026-10-04-add-integration-names-its-first-erp.md) | — | med | shipped |
-| `AB-68` | feature | [Remember custom integration repos across projects](2026-10-06-remember-custom-integration-repos.md) | — | med | active |
+| `AB-68` | feature | [Remember custom integration repos across projects](2026-10-06-remember-custom-integration-repos.md) | — | med | backlog |
 | `AB-69` | fix | [One deployment per Adobe project](2026-10-08-one-deployment-per-adobe-project.md) | — | med | shipped |
 | `AB-71` | fix | [An update whose deploy failed then says "already up to date"](2026-10-09-update-after-failed-deploy-says-up-to-date.md) | — | med | shipped |
 | `AB-72` | fix | [ERP ownership: the ERP on "everything" is the catch-all](2026-10-09-erp-ownership-all-is-the-catch-all.md) | — | high | shipped |
@@ -469,8 +469,8 @@ each item's own file; what has already landed against an item is in its
 | `AB-79` | fix | [The mesh's "redeploy needed" flag only ever turns on](2026-10-17-mesh-stale-flag-never-clears.md) | — | low | shipped |
 | `AB-80` | fix | [An add into a workspace it just made skips the leftover-code check](2026-10-17-add-skips-leftover-check-on-fresh-workspace.md) | — | low | shipped |
 | `AB-81` | fix | [An order paid on account leaves the buyer short by its shipping](2026-10-22-erp-invoice-carries-no-shipping.md) | — | med | backlog |
-| `AB-82` | feature | [One place for store setup](2026-10-26-one-place-for-store-setup.md) | — | med | active |
-| `AB-83` | fix | [Undo leaves what changed since](2026-10-27-undo-leaves-what-changed-since.md) | — | med | active |
+| `AB-82` | feature | [One place for store setup](2026-10-26-one-place-for-store-setup.md) | — | med | backlog |
+| `AB-83` | fix | [Undo leaves what changed since](2026-10-27-undo-leaves-what-changed-since.md) | — | med | backlog |
 | `AB-84` | feature | [The integration catalog row lives outside the extension](2026-11-04-integration-catalog-row-outside-the-extension.md) | AB-85 | med | backlog |
 | `AB-85` | fix | [Five generic paths treat every bound system as an ERP](2026-11-04-generic-paths-treat-every-system-as-an-erp.md) | — | high | backlog |
 | `AB-86` | feature | [Bulk selection on the Integrations screen](2026-11-05-integrations-bulk-selection.md) | — | med | backlog |
@@ -481,14 +481,14 @@ each item's own file; what has already landed against an item is in its
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
-| `DI-1` | feature | [Datapack authoring loop — export, modify, publish-your-own via project skills](2026-08-23-datapack-authoring-loop.md) | — | med | active |
+| `DI-1` | feature | [Datapack authoring loop — export, modify, publish-your-own via project skills](2026-08-23-datapack-authoring-loop.md) | _the owner's call: run the live round trip, or close it as done by the datapack store_ | med | gated |
 | `DI-2` | feature | [Instance wipe option — remove as much data as the service allows](2026-08-22-instance-wipe-option.md) | — | med | backlog |
 | `DI-4` | question | [Has the Data Installer superseded the ACO data ingestion tool?](2026-10-07-aco-ingestion-tool-vs-data-installer.md) | — | low | superseded |
 | `DI-5` | feature | [Demo Builder installs datapacks itself, beside the service](2026-10-27-demo-builder-installs-datapacks.md) | — | high | shipped |
-| `DI-6` | chore | [The Commerce secrets gathered for the Data Installer service are no longer needed](2026-10-28-datapack-credential-gathering-removed.md) | — | med | active |
+| `DI-6` | chore | [The Commerce secrets gathered for the Data Installer service are no longer needed](2026-10-28-datapack-credential-gathering-removed.md) | _the owner's live reset of an older project (Before finishing); the clean-up shipped in 90f494b15_ | med | gated |
 | `DI-7` | feature | [Datapack images: how a pack carries its product images](2026-10-30-datapack-images.md) | — | low | backlog |
 | `DI-8` | feature | [`product_export`: the bulk product form Luma and Venia carry](2026-10-30-datapack-bulk-product-form.md) | — | med | shipped |
-| `DI-9` | fix | [A pack links products to categories by url key, which two categories can share](2026-10-30-datapack-category-links-by-url-key.md) | — | med | active |
+| `DI-9` | fix | [A pack links products to categories by url key, which two categories can share](2026-10-30-datapack-category-links-by-url-key.md) | — | med | backlog |
 | `DI-10` | feature | [A colleague's shared pack should say who made it](2026-10-31-library-pack-owner-name.md) | — | low | backlog |
 | `DI-11` | feature | [One Export motion for a datapack's copies](2026-11-05-datapack-one-export-motion.md) | — | low | backlog |
 | `DI-12` | feature | [Datapack sources as adapters, and one setting for either or both](2026-11-05-datapack-sources-as-adapters.md) | — | med | active |
@@ -507,14 +507,14 @@ each item's own file; what has already landed against an item is in its
 | `PL-23` | feature | [Graph-based dependency system](2026-08-30-graph-based-dependencies.md) | — | low | dropped |
 | `PL-36` | fix | [The third Node-version sort in installHandler is untested](2026-09-02-install-handler-target-version-sort.md) | — | med | shipped |
 | `PR-1` | epic | [Reframe prerequisites: extension-wide tools vs project-shape requirements (Path A)](2026-06-11-prereqs-architecture-reframe.md) | — | low | backlog |
-| `PR-1a` | feature | └ [Node versions in one place: one register, one resolver, one runner](2026-10-07-node-versions-in-one-place.md) | — | med | active |
+| `PR-1a` | feature | └ [Node versions in one place: one register, one resolver, one runner](2026-10-07-node-versions-in-one-place.md) | — | med | backlog |
 
 ### platform  (126)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
-| `EDS-8` | chore | [Files over the god-file threshold](eds-services-over-size-threshold.md) | — | high | active |
-| `PL-56` | epic | └ [Project portability: export, import and copy carry the whole project](2026-09-11-project-portability.md) | — | high | active |
+| `EDS-8` | chore | [Files over the god-file threshold](eds-services-over-size-threshold.md) | — | high | backlog |
+| `PL-56` | epic | └ [Project portability: export, import and copy carry the whole project](2026-09-11-project-portability.md) | — | high | backlog |
 | `PL-1` | chore | [Manifest write-back migration — retire the legacy-format read layer](2026-08-24-manifest-write-back-migration.md) | — | med | shipped |
 | `PL-2` | chore | [Regroup crowded service directories into subfolders — where measurement says so](2026-08-23-services-directory-regrouping.md) | — | low | shipped |
 | `PL-120` | chore | └ [authentication/services is past its own size bar again](2026-11-21-authentication-services-past-its-bar.md) | — | low | backlog |
@@ -541,13 +541,13 @@ each item's own file; what has already landed against an item is in its
 | `PL-121` | chore | └ [The Pattern B sendMessage ceiling rose; nothing brings it down](2026-11-21-pattern-b-ceiling-rising-again.md) | — | low | backlog |
 | `PL-17` | question | [The architecture is written for the extension host only; the frontend has rules but no document](2026-08-28-adr015-webview-jurisdiction.md) | — | high | shipped |
 | `PL-18` | feature | [ADR-017 §6 is stated but unenforced — the check that closes it](2026-08-29-adr017-stylesheet-bundle-check.md) | — | high | shipped |
-| `PL-42` | fix | └ [Read the redundancy lists and delete what pins nothing — about half of every suite is a candidate](2026-09-04-redundant-test-read.md) | — | high | active |
+| `PL-42` | fix | └ [Read the redundancy lists and delete what pins nothing — about half of every suite is a candidate](2026-09-04-redundant-test-read.md) | — | high | backlog |
 | `PL-43` | fix | └ [651 assertions claim something is empty using a comparison that accepts an empty value instead](2026-09-04-lenient-equality-hides-empty-values.md) | — | high | shipped |
 | `PL-45` | fix | └ [Tests named so the mirror convention misses them](2026-09-05-tests-named-so-the-mirror-convention-misses-them.md) | — | high | shipped |
 | `PL-25` | chore | [Skill descriptions should trigger, not describe](skill-description-triggers.md) | — | med | dropped |
 | `PL-28` | question | [Rules stated as law that no handbook, ADR or check backs](unratified-rules-register.md) | — | high | shipped |
-| `PL-30` | epic | [The four-track program — enforceable conventions, in sequence](four-track-program.md) | — | high | active |
-| `PL-11` | epic | └ [Test health and optimization](2026-08-28-test-health-epic.md) | — | med | active |
+| `PL-30` | epic | [The four-track program — enforceable conventions, in sequence](four-track-program.md) | — | high | shipped |
+| `PL-11` | epic | └ [Test health and optimization](2026-08-28-test-health-epic.md) | — | med | shipped |
 | `PL-13` | chore | └ [ADR-015 convergence — empty the exemption ledger](2026-08-28-adr-015-convergence.md) | — | high | shipped |
 | `PL-19` | fix | └ [The sidebar is the only webview not using the shared client](2026-08-29-sidebar-converge-on-webview-client.md) | — | med | shipped |
 | `PL-20` | fix | └ [19 classes a component asks for that nothing styles](2026-08-29-triage-classes-defined-nowhere.md) | — | med | shipped |
@@ -588,7 +588,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-118` | feature | └ [Moving projects to a new machine asks for each backend's login once](2026-11-21-import-asks-each-backend-login-once.md) | — | med | backlog |
 | `PL-119` | feature | └ [An imported project says what it brought in, what it still needs, and whether its datapack can install](2026-11-21-imported-project-says-what-it-brought.md) | — | med | backlog |
 | `PL-59` | feature | [A long operation should say what it is doing, not just spin](2026-09-16-progress-surface-for-long-operations.md) | — | high | shipped |
-| `PL-60` | feature | [Finish Adobe Commerce Optimizer (ACO) support](2026-09-17-aco-support.md) | — | high | active |
+| `PL-60` | feature | [Finish Adobe Commerce Optimizer (ACO) support](2026-09-17-aco-support.md) | — | high | backlog |
 | `PL-61` | question | [What does a product profile per Commerce instance change for each SC?](2026-09-17-per-instance-commerce-profiles.md) | — | high | dropped |
 | `PL-62` | feature | [Adding something is a card, everywhere](2026-09-21-add-is-a-card.md) | — | low | shipped |
 | `PL-63` | fix | [The CSS baseline check refuses every push that MERGES a stylesheet change](2026-09-23-css-baseline-cannot-accept-a-merged-capture.md) | — | med | shipped |
@@ -597,13 +597,13 @@ each item's own file; what has already landed against an item is in its
 | `PL-66` | feature | [UI tests that drive more than one VS Code surface](2026-10-03-vscode-multi-surface-ui-tests.md) | — | low | shipped |
 | `PL-68` | fix | ["Features do not import other features" says it is enforced by eslint; nothing enforces it](2026-10-08-features-import-features-unenforced.md) | — | med | shipped |
 | `PL-69` | chore | [Every clone pair gets a verdict, and the 34 that are the same job get extracted](2026-10-08-every-clone-pair-gets-a-verdict.md) | — | med | shipped |
-| `PL-70` | chore | [Mutation gaps after the stale row remeasure](2026-10-10-mutation-gaps-after-the-stale-row-remeasure.md) | — | med | active |
+| `PL-70` | chore | [Mutation gaps after the stale row remeasure](2026-10-10-mutation-gaps-after-the-stale-row-remeasure.md) | _the overnight mutation re-measure, started by the owner; close it if it still reads 0_ | med | gated |
 | `PL-71` | fix | [Widening a mutation measurement crashes when the module is imported everywhere](2026-10-10-mutation-widen-crashes-on-widely-imported-module.md) | — | low | shipped |
 | `PL-72` | chore | [The result builders' failure-flag tests sit in a suite a mutation measurement cannot count](2026-10-10-mutation-suite-named-for-behaviour-hides-mcp-tool-result-tests.md) | — | low | backlog |
 | `PL-73` | chore | [Review the tests the redundancy sweep found idle](2026-10-11-review-the-idle-test-leads.md) | — | low | backlog |
 | `PL-74` | fix | [The jest-concurrent hook proof failed once under the full suite's load](2026-10-12-the-jest-concurrent-hook-proof-failed-once-under-load.md) | — | low | shipped |
-| `PL-75` | feature | [Edit applies only what changed](2026-10-12-edit-applies-only-what-changed.md) | — | high | active |
-| `PL-76` | fix | [Configure saves what changed, in one place, and tells the truth about it](2026-10-13-configure-is-solid.md) | — | high | active |
+| `PL-75` | feature | [Edit applies only what changed](2026-10-12-edit-applies-only-what-changed.md) | — | high | backlog |
+| `PL-76` | fix | [Configure saves what changed, in one place, and tells the truth about it](2026-10-13-configure-is-solid.md) | _the owner's live check: release rows 2.9, 3.1, 3.2, 3.4 and 3.10-3.14_ | high | gated |
 | `PL-77` | feature | [Edit switches a project's Adobe org](2026-10-13-edit-switches-adobe-org.md) | PL-75 | med | backlog |
 | `PL-78` | feature | [Edit switches a project's Commerce backend](2026-10-13-edit-switches-backend.md) | PL-75 | med | backlog |
 | `PL-79` | feature | [Edit switches a project's stack](2026-10-13-edit-switches-stack.md) | PL-75 | med | backlog |
@@ -612,16 +612,16 @@ each item's own file; what has already landed against an item is in its
 | `PL-82` | fix | [The projects list shows a project an agent is building, with an honest status](2026-10-16-projects-list-creating-status.md) | — | med | shipped |
 | `PL-83` | fix | [The hooks resolve a shell edit's path against the wrong folder when the command starts with `cd`](2026-10-18-hook-shell-paths-ignore-cd.md) | — | low | shipped |
 | `PL-84` | fix | [Signing in to Adobe again also signs the SC out of DA.live, and nobody says so](2026-10-28-forced-adobe-sign-in-signs-out-of-dalive.md) | — | high | shipped |
-| `PL-85` | feature | [Dialogs: one design for content, size and motion](2026-10-31-dialog-design-system.md) | — | high | active |
+| `PL-85` | feature | [Dialogs: one design for content, size and motion](2026-10-31-dialog-design-system.md) | — | high | backlog |
 | `PL-86` | fix | [The hook router's tests flake: old once-per-session markers survive and collide](2026-11-01-hook-router-tests-flake-on-stale-markers.md) | — | med | shipped |
 | `PL-88` | feature | [A mesh is released and updated like the other components](2026-11-01-mesh-updates-like-other-components.md) | — | high | built |
 | `PL-89` | feature | [Every component ships as a semantic-version release](2026-11-02-component-semantic-versions.md) | — | high | built |
-| `PL-90` | fix | [Work through the dependency security alerts on the repositories we own](2026-11-02-dependency-security-alerts.md) | — | high | active |
+| `PL-90` | fix | [Work through the dependency security alerts on the repositories we own](2026-11-02-dependency-security-alerts.md) | — | high | backlog |
 | `PL-91` | question | [Should the other libraries live outside the extension, the way datapacks now do?](2026-11-04-libraries-outside-the-extension.md) | — | med | spiked |
 | `PL-92` | question | [What plug-in contract lets an SC's own integration bring its extension behaviour?](2026-11-04-integration-plugin-mechanism.md) | — | med | open |
 | `PL-93` | chore | [Colleague first names in tracked files](2026-11-04-colleague-names-in-tracked-files.md) | — | low | backlog |
-| `PL-94` | chore | [Harden what we take from npm, and act on the advisories already in the tree](2026-11-06-npm-supply-chain-hardening.md) | — | high | active |
-| `PL-95` | chore | [Before the next release cut: the two lapsed quality passes](2026-11-07-pre-cut-quality-passes.md) | _the next release cut (beta.153) — run just before `cut-release`, after the walk's last fix_ | high | gated |
+| `PL-94` | chore | [Harden what we take from npm, and act on the advisories already in the tree](2026-11-06-npm-supply-chain-hardening.md) | — | high | backlog |
+| `PL-95` | chore | [Before the next release cut: the two lapsed quality passes](2026-11-07-pre-cut-quality-passes.md) | _the next release cut (beta.153) — run just before `cut-release`, after the walk's last fix_ | high | shipped |
 | `PL-96` | chore | [Dependabot's open alerts on the lockfile](2026-11-09-dependabot-vulnerabilities.md) | — | med | backlog |
 | `PL-97` | chore | [Real store codes from local settings](2026-11-16-real-store-codes-from-local-settings.md) | — | low | backlog |
 | `PL-98` | chore | [Batch question table shell](2026-11-16-batch-question-table-shell.md) | — | low | backlog |
@@ -769,7 +769,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `AB-1c` [Promote a shell-built custom app to a GitHub repo](2026-07-13-promote-app-to-repo.md) — shipped
 - `AB-2` [Move deliberately to a per-SC Adobe I/O project (Option 2)](per-sc-io-project.md) — spiked
 - `AI-4a` [Engine-aware AI launch + detection + opt-in install (Claude wired, Codex placeholders)](claude-cli-detection-and-install/overview.md) — shipped
-- `DI-1` [Datapack authoring loop — export, modify, publish-your-own via project skills](2026-08-23-datapack-authoring-loop.md) — active
+- `DI-1` [Datapack authoring loop — export, modify, publish-your-own via project skills](2026-08-23-datapack-authoring-loop.md) — gated
 - `DI-2` [Instance wipe option — remove as much data as the service allows](2026-08-22-instance-wipe-option.md) — backlog
 - `EDS-1` [Multi-site: storefront and backend data](2026-05-19-multisite-multilocale.md) — backlog
 - `EDS-2` [Plan — Hybrid storefront (Tier 2) + B2B-ready prerequisite & detection](hybrid-storefront-model/overview.md) — gated
@@ -780,7 +780,7 @@ the table cannot hold: why the layers are ordered this way.*
 **G** — 7 items
 
 - `EDS-7` [The two EDS service cards are one shell rendered twice](2026-08-25-eds-service-cards-are-one-shell.md) — shipped
-- `EDS-8` [Files over the god-file threshold](eds-services-over-size-threshold.md) — active
+- `EDS-8` [Files over the god-file threshold](eds-services-over-size-threshold.md) — backlog
 - `PL-1` [Manifest write-back migration — retire the legacy-format read layer](2026-08-24-manifest-write-back-migration.md) — shipped
 - `PL-2` [Regroup crowded service directories into subfolders — where measurement says so](2026-08-23-services-directory-regrouping.md) — shipped
 - `PL-3` [Monorepo Support with Independent Release Tracking - Implementation Plan](monorepo-independent-release-tracking/overview.md) — dropped

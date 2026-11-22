@@ -4,7 +4,7 @@ kind: chore
 area: platform
 needs: []
 value: high
-status: active
+status: backlog
 ---
 
 # Harden what we take from npm, and act on the advisories already in the tree
@@ -57,3 +57,4 @@ and the MCP SDK's server dependencies (`body-parser`, `@hono/node-server`).
 
 - 2026-11-05  chore(deps): drop crypto-js, axios, @types/uuid and uuid (`f196c2f25`)
 - 2026-11-21  Reconciled 2026-11-21: upgrades done, adm-zip and zod (128b40296) and the MCP SDK (890a87b99). Left: .npmrc with ignore-scripts, a CI gate on high/critical advisories with a ledger, a waiting period for new versions, and the remaining advisories.
+- 2026-11-22  Paused 2026-11-22: back to backlog, last work 2026-11-05. Where it stopped is the 2026-11-21 reconcile line above.

@@ -5,8 +5,9 @@ area: app-builder
 parent: AB-1
 needs: []
 value: high
-status: active
+status: gated
 plan: erp-integration
+waiting-on: the owner's live acceptance (step-06-acceptance.md), or the owner's word that the Tailspin release-walk rows count
 ---
 
 # ERP integration: the first pre-built integration in the catalog

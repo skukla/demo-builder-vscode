@@ -4,7 +4,8 @@ kind: feature
 area: eds
 needs: []
 value: med
-status: active
+status: gated
+waiting-on: one run on a real storefront, and the owner's call on showing orphaned custom libraries
 ---
 
 # Choose block libraries on Configure, not only in Edit

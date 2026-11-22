@@ -4,7 +4,7 @@ kind: epic
 area: platform
 needs: []
 value: high
-status: active
+status: shipped
 ---
 
 # The four-track program — enforceable conventions, in sequence
@@ -223,3 +223,4 @@ the state table above is the record until there is real work to hold.
 - 2026-09-10  docs(backlog): two shipped, one demoted — "used" decided all three (`66e871331`)
 - 2026-09-10  docs(backlog): the work list, remade from the whole program (`38ddabd43`)
 - 2026-09-10  docs(backlog): the four-track table catches up with what shipped (`d959b4c21`)
+- 2026-11-22  Closed 2026-11-22: its last unfinished child, PL-11, closed today; all four tracks are done.

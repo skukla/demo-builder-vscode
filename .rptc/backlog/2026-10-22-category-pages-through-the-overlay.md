@@ -4,7 +4,7 @@ kind: feature
 area: eds
 needs: []
 value: high
-status: active
+status: backlog
 plan: category-pages-any-catalog
 ---
 
@@ -67,3 +67,4 @@ category's own address. After the beta.152 cut.
 - 2026-10-29  fix(eds): the first-visit 404 handler lives in 404.html, not delayed.js (`161ba1cd9`)
 - 2026-10-29  fix(eds): the Demo Inspector loads from head.html; 404 recovery smooths three edges (`9df70d297`)
 - 2026-11-21  Reconciled 2026-11-21: first-visit category publishing and the own-page fix are in v1.0.0-beta.153. Left (plan category-pages-any-catalog steps 1, 3, 4): the /products/a/b store check in the service and categoryPagePlan.ts, the catalog-menu block linking each category's own address (block repo), and the live proof on a store.
+- 2026-11-22  Paused 2026-11-22: back to backlog, last work 2026-10-29. Where it stopped is the 2026-11-21 reconcile line above.

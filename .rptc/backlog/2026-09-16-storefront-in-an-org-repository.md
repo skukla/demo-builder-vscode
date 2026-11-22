@@ -4,8 +4,9 @@ kind: feature
 area: eds
 needs: []
 value: high
-status: active
+status: gated
 plan: storefront-in-org-repository
+waiting-on: the owner's four decisions (D1-D4 in the plan), then two live checks: adopt an empty org repo, and an SSO org refusal
 ---
 
 # A storefront can live in an organization's repository, not only the SC's own

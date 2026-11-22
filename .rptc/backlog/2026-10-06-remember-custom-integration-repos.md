@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: med
-status: active
+status: backlog
 ---
 
 # Remember custom integration repos across projects
@@ -30,3 +30,4 @@ the same change that adds its reader and writer, with a regenerate/existing-proj
 
 - 2026-10-06  chore(settings): remove demoBuilder.appBuilderComponents.custom, which nothing read (`cb0f5812d`)
 - 2026-11-21  Reconciled 2026-11-21: only the dead setting's removal shipped (cb0f5812d). Left: the feature itself, a user setting the Add Integration custom stage writes, its repos shown as catalog entries on the Integrations screen and the dashboard's Add Integration.
+- 2026-11-22  Paused 2026-11-22: back to backlog, last work 2026-10-06. Where it stopped is the 2026-11-21 reconcile line above.

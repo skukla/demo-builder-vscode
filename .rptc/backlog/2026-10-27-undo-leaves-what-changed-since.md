@@ -4,7 +4,7 @@ kind: fix
 area: app-builder
 needs: []
 value: med
-status: active
+status: backlog
 ---
 
 # Undo leaves what changed since
@@ -65,3 +65,4 @@ repo (detach). Closes when both have landed.
 - 2026-10-29  feat(app-builder): setup-guide undos keep what the SC changed since (datapack step 06) (`4cadd9184`)
 - 2026-11-02  feat(data-installer): Clear demo data leaves nothing only the chosen stores use (`c8556c19f`)
 - 2026-11-21  Reconciled 2026-11-21: the setup-guide undos shipped (4cadd9184). Left: the ERP detach half in commerce-erp-integration: revertOne in src/lib/ledger.js writes back before without comparing after, so fields edited since are overwritten silently.
+- 2026-11-22  Paused 2026-11-22: back to backlog, last work 2026-11-02. Where it stopped is the 2026-11-21 reconcile line above.

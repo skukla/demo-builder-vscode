@@ -4,7 +4,7 @@ kind: chore
 area: platform
 needs: []
 value: high
-status: gated
+status: shipped
 waiting-on: the next release cut (beta.153) — run just before `cut-release`, after the walk's last fix
 ---
 
@@ -23,3 +23,7 @@ freshness check, `.claude/skills/cut-release/SKILL.md`) also flags both as overd
 ## To do
 
 > Before the release cut, run the `codebase-sweep` skill, then the `dream` skill. Both are overdue (last runs 27 and 24 August). Show me each proposal so I can accept or reject items. Apply only what I accept. Afterwards, update the `last:` dates for `codebase-sweep` and `reflect` in `.pipeline.yaml` to today. Don't commit until I say so.
+
+## Shipped so far
+
+- 2026-11-22  Closed 2026-11-22: both passes ran 2026-11-16 (codebase-sweep, and dev-pipeline:reflect in dream's place; the freshness list records both), before the beta.153 cut on 2026-11-20.

@@ -4,8 +4,9 @@ kind: feature
 area: ai
 needs: []
 value: high
-status: active
+status: gated
 plan: copilot-first-agent-support
+waiting-on: the owner's live check: one destructive call from the Copilot panel (or waive it)
 ---
 
 # Demo Builder works with GitHub Copilot, and with Claude Code while it lasts

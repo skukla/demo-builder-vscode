@@ -4,8 +4,9 @@ kind: feature
 area: eds
 needs: []
 value: high
-status: active
+status: gated
 plan: update-clash-fix-with-ai
+waiting-on: live runs of release rows 1.19 (the next real clash), 1.20 and 1.21
 ---
 
 # A storefront update that stops on a clash can be fixed with AI, from the builder

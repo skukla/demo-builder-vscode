@@ -4,7 +4,7 @@ kind: epic
 area: eds
 needs: []
 value: high
-status: active
+status: backlog
 plan: portable-demos
 ---
 
@@ -105,3 +105,4 @@ shared storefront is one of its parts. The decision of record, with the parts ta
 - 2026-10-12  fix(project-creation): a project built on an added demo publishes its config flags (`fb0bc2185`)
 - 2026-10-12  refactor(eds): creation, reset and republish build config.json params in one place (`01b7e84c1`)
 - 2026-10-23  feat(eds): every known fix reaches every storefront; the report is a window (`c75b52793`)
+- 2026-11-22  Paused 2026-11-22: back to backlog, last direct work 2026-10-23; no child is in progress after today's sort (EDS-56 gated on a live check, the rest backlog).

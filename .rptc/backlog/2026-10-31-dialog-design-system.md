@@ -4,7 +4,7 @@ kind: feature
 area: platform
 needs: []
 value: high
-status: active
+status: backlog
 ---
 
 # Dialogs: one design for content, size and motion
@@ -78,3 +78,4 @@ dialog (about 26) as the screen checks reach it, the datapack dialogs first.
 - 2026-11-03  feat(data-installer): Clear Demo Data's store list has the filter (`b3fa6b5f7`)
 - 2026-11-03  fix(ui): the last Title Case and Select wording, and a label the check missed (`3af36bb50`)
 - 2026-11-21  Reconciled 2026-11-21: every dialog is converted (modal-layouts ledger empty since 4aaa357d4). Left: long-content fixtures for the five dialog layouts in the visual harness, captured at 420px (the harness has no dialog fixtures). This also carries PL-20's 'not visually verified' note.
+- 2026-11-22  Paused 2026-11-22: back to backlog, last work 2026-11-03. Where it stopped is the 2026-11-21 reconcile line above.

@@ -4,9 +4,10 @@ kind: feature
 area: data-installer
 needs: []
 value: med
-status: active
+status: gated
 layer: F
 plan: datapack-store
+waiting-on: the owner's call: run the live round trip, or close it as done by the datapack store
 ---
 # Datapack authoring loop — export, modify, publish-your-own via project skills
 
