@@ -12,7 +12,7 @@ plan: erp-programme
 # The ERP programme — every ERP slice, in one order, run by the loop
 
 Filed 2026-09-24. The plan is `.rptc/plans/erp-programme/overview.md`; this epic is its backlog form so the unattended loop
-(`.claude/skills/unattended-loop`) can pick slices with `backlog.mjs next`. Each child is
+(`dev-pipeline:unattended-loop`) can pick slices with `backlog.mjs next`. Each child is
 one slice; `needs` carries the dependency column of the plan's §6; the lane and the
 verification block are in each child.
 

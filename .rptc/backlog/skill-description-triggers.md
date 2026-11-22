@@ -93,7 +93,7 @@ across the whole repo.
 **And they cannot be marked user-invoked either**, which is where this was heading.
 `disable-model-invocation: true` is real frontmatter (verified in
 `claude-security/SKILL.md`, not merely mentioned in a reference doc). But our skills
-COMPOSE: `unattended-loop` instructs invoking six of these as its done gate,
+COMPOSE: the unattended loop's done scans (`.rptc/loop-rules.md`) invoke six of these,
 `codebase-sweep` invokes four, `cut-release` offers five. Only 2 of the 16 periodic
 skills — `mutation-test-pilot` and `ai-bundle-coherence` — have nothing pointing at
 them. Disabling model invocation on the rest would sever documented chains to buy

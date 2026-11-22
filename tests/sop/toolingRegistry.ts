@@ -542,7 +542,6 @@ const AUTHORING: readonly Instrument[] = (
         ['debug-log-triage', 'parse a pasted Debug Logs dump'],
         ['adobe-docs-lookup', 'route an Adobe docs question to the source that has it'],
         ['decompose-god-file', 'split an oversized file without breaking its public API'],
-        ['unattended-loop', 'the owner-away working mode'],
         ['reuse-first', 'find the house component before building a new one'],
         [
             'ask-the-tool',
