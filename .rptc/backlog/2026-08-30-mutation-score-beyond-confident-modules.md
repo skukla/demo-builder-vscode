@@ -7,6 +7,7 @@ needs: [PL-9]
 value: med
 status: shipped
 layer: A
+plan: mutation-scope-and-thresholds
 ---
 
 # 93% was the ceiling, not the norm — mutation scores fall as async density rises
@@ -144,7 +145,7 @@ the full set rather than sixteen: the tiers are right, the floors are targets, a
 ## What keeps this open
 
 1. ~~Nothing is ratified yet.~~ **Ratified 2026-09-03** in the shape stated at the top of
-   `.rptc/plans/mutation-scope-and-thresholds/overview.md`: tiers as measured, floors as
+   `.rptc/complete/mutation-scope-and-thresholds/overview.md`: tiers as measured, floors as
    targets, `openGaps` zero as done, the per-change ratchet unchanged.
 2. ~~The burn-down is at 3.2%.~~ **The map exists — 98% measured.** What remains is
    working it: 17,475 open gaps, 71 modules done. The plan's step 6 says order by

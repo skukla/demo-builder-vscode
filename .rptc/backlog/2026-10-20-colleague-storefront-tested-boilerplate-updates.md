@@ -6,6 +6,7 @@ parent: EDS-13
 needs: []
 value: high
 status: active
+plan: colleague-storefront-tested-boilerplate-updates
 ---
 
 # A colleague's storefront gets the tested boilerplate updates too, when it qualifies

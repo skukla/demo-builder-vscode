@@ -7,6 +7,7 @@ needs: AB-1
 value: low
 status: shipped
 layer: F
+plan: promote-app-to-repo
 ---
 # Promote a shell-built custom app to a GitHub repo
 
@@ -105,7 +106,7 @@ the dashboard action first; add the MCP tool later (see the `mcp-tool-authoring`
 ## Shipped so far
 
 - 2026-10-03  Reconciled 2026-10-03 (second pass): createEmptyRepository already exists (src/features/eds/services/github/githubRepoOperations.ts); the item's 'add a create-empty-repo method' step is done.
-- 2026-10-04  Built to the supervised edge (night4-b, staged, uncommitted): 'Save to GitHub' on a named blank-starter app's card creates a PUBLIC repo (owner picker + name + modal confirm naming the file count and what is left out), pushes the app through the GitHub API (zip import's pushFiles; .env*, .aio, dist, .gitignore entries dropped), and makes that repo the app's source, so project exports carry the real app. Undo = 'Delete its GitHub repository' (modal; restores the starter as source; local app untouched). Apps keyed by the catalog id itself are refused (a redeploy would write the starter source back). Open: first real save is the owner's; public-only, no 'update repo', no MCP tool. Plan: .rptc/plans/promote-app-to-repo/overview.md
+- 2026-10-04  Built to the supervised edge (night4-b, staged, uncommitted): 'Save to GitHub' on a named blank-starter app's card creates a PUBLIC repo (owner picker + name + modal confirm naming the file count and what is left out), pushes the app through the GitHub API (zip import's pushFiles; .env*, .aio, dist, .gitignore entries dropped), and makes that repo the app's source, so project exports carry the real app. Undo = 'Delete its GitHub repository' (modal; restores the starter as source; local app untouched). Apps keyed by the catalog id itself are refused (a redeploy would write the starter source back). Open: first real save is the owner's; public-only, no 'update repo', no MCP tool. Plan: .rptc/complete/promote-app-to-repo/overview.md
 - 2026-10-04  feat: save a blank-starter app to GitHub; adding is a card on every grid (`79f8ed297`)
 - 2026-10-04  2026-10-05 Built to the owner's live check: first real Save to GitHub and its undo not yet run.
 - 2026-10-18  test(ai): keep the response-size suite under its 750-line limit (`5bbec3f7b`)

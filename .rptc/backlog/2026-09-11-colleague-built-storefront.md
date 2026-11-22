@@ -5,6 +5,7 @@ area: eds
 needs: []
 value: high
 status: active
+plan: portable-demos
 ---
 
 # Portable demos: share storefronts, move whole projects

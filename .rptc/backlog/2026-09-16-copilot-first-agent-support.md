@@ -5,6 +5,7 @@ area: ai
 needs: []
 value: high
 status: active
+plan: copilot-first-agent-support
 ---
 
 # Demo Builder works with GitHub Copilot, and with Claude Code while it lasts

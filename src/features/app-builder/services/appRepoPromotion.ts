@@ -17,7 +17,7 @@
  *
  * Dialog-free on purpose: the dashboard handler asks and confirms; an agent's
  * tool would pass its own `confirm` gate. Design:
- * `.rptc/plans/promote-app-to-repo/overview.md`.
+ * `.rptc/complete/promote-app-to-repo/overview.md`.
  *
  * @module features/app-builder/services/appRepoPromotion
  */

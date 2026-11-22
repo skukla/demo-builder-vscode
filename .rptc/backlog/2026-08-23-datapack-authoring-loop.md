@@ -6,6 +6,7 @@ needs: []
 value: med
 status: active
 layer: F
+plan: datapack-store
 ---
 # Datapack authoring loop — export, modify, publish-your-own via project skills
 

@@ -5,6 +5,7 @@ area: eds
 needs: []
 value: high
 status: planned
+plan: block-library-without-universal-editor
 ---
 
 # The DA.live block library without Universal Editor's `component-definition.json`

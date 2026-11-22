@@ -7,6 +7,7 @@ value: high
 status: shipped
 title: CSS has no architecture and no safety net — understand it before changing any of it
 parent: PL-30
+plan: css-architecture-migration
 ---
 
 # CSS: understand it, then get a safety net, then rule on it — refactor last, if at all

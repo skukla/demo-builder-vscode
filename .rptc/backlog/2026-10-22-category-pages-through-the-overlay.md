@@ -5,6 +5,7 @@ area: eds
 needs: []
 value: high
 status: active
+plan: category-pages-any-catalog
 ---
 
 # Category pages through the same overlay as product pages

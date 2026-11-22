@@ -6,6 +6,7 @@ parent: EDS-13
 needs: [EDS-13a, EDS-13b]
 value: high
 status: active
+plan: shareable-demo-patches
 ---
 
 # Shared demos carry their boilerplate, their patches and a way to stay fixed

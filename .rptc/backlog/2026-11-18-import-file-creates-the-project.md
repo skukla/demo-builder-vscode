@@ -5,6 +5,7 @@ area: eds
 needs: []
 value: high
 status: active
+plan: import-creates-project
 ---
 
 # Importing a demo file gives the SC the project, not a template to build one from

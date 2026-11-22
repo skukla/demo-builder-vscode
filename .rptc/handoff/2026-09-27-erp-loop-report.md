@@ -37,7 +37,7 @@ integration subscribes to it. The backlog item now carries the correction.
 
 A stored table of which Commerce record is which ERP record. Today the pairing is implied:
 customer `C12` is Commerce company 12, and products match by SKU. The design is in
-`.rptc/plans/erp-demo-filling/overview.md`, and nothing is built yet. It follows the model you
+`.rptc/complete/erp-demo-filling/overview.md`, and nothing is built yet. It follows the model you
 decided on 2026-09-25, so I can build it next unless you say otherwise.
 
 ## Your decisions

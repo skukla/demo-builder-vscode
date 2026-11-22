@@ -5,6 +5,7 @@ area: platform
 needs: []
 value: high
 status: active
+plan: plain-failure-wording
 ---
 
 # Failure text a person reads, in plain words, everywhere outside the datapack windows

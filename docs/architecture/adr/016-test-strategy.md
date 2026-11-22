@@ -3,7 +3,7 @@
 **Status:** Accepted (owner-ratified 2026-08-28)
 **Companion to:** ADR-015 (dependency architecture) — the two were designed
 together and enforce each other; neither stands alone.
-**Evidence base:** `.rptc/plans/test-strategy-audit/` — the escape analysis
+**Evidence base:** `.rptc/complete/test-strategy-audit/` — the escape analysis
 (15 shipped defects with receipts), the witness census (54/54 convergence
 files), the craft census (1,179/1,179 suites), the coverage run (84% lines /
 73% branches), and the run-noise measurement (355 act() warnings per green

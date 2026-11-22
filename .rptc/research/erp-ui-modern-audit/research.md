@@ -3,7 +3,7 @@
 Date: 2026-09-24. Repo audited: `demo-erp` at `1c00e32` (`feature/erp-grids`), every screen
 opened in the local preview (`npm run preview`) with the stand-in records. Builds on
 `../erp-realism-audit/research.md` (2026-09-23, what a real ERP shows) and the plan
-`.rptc/plans/erp-screen-realism/overview.md`; neither is repeated here.
+`.rptc/complete/erp-screen-realism/overview.md`; neither is repeated here.
 
 **The question asked.** Keep the FUNCTION of the ERPs we captured (SAP S/4HANA, Business
 Central — the fields, the documents, the refusals), and make the screen look like software

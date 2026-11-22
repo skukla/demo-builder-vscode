@@ -72,7 +72,7 @@ const FOCUS_REPORT = 'reports/mutation/focus.json';
  * `scripts/checkAttributionEquality.mjs` is the check that proves it.
  *
  * Full reasoning and the four Stryker runs behind it:
- * `.rptc/plans/unmeasured-fifth/attribution-design.md`.
+ * `.rptc/complete/unmeasured-fifth/attribution-design.md`.
  */
 export function suitesFor(modulePath) {
     const mirrored = mirroringSuites(modulePath);

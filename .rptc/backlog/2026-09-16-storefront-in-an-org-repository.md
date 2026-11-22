@@ -5,6 +5,7 @@ area: eds
 needs: []
 value: high
 status: active
+plan: storefront-in-org-repository
 ---
 
 # A storefront can live in an organization's repository, not only the SC's own

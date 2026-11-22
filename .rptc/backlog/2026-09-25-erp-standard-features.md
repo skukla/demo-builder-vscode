@@ -6,6 +6,7 @@ parent: AB-26
 needs: []
 value: high
 status: shipped
+plan: erp-demo-filling
 ---
 
 # The mock ERP knows nothing about Commerce: filling at reset, running as if the ERP were the source
@@ -100,7 +101,7 @@ events.
 
 - 2026-09-25  feat(integrations): an ERP pair's name is fixed when it is added (`b8219846e`)
 - 2026-09-25  Step 1, words (demo-erp be9879b): the ERP's screens stop naming Commerce; the monitor says Inbound/Outbound/Sent; Home's sync card gone. Fixed name (demo-erp 1554681, this repo b8219846e). Left in step 1: Sync records and Wipe move to Demo Builder with the demo copy.
-- 2026-09-25  Plan written for steps 1c to 5: .rptc/plans/erp-demo-filling/overview.md. Three owner questions: Wipe to Demo Builder; detach becomes Demo Builder's over the integration's write log; whether the Mapping tab can be pre-filled from outside the app.
+- 2026-09-25  Plan written for steps 1c to 5: .rptc/complete/erp-demo-filling/overview.md. Three owner questions: Wipe to Demo Builder; detach becomes Demo Builder's over the integration's write log; whether the Mapping tab can be pre-filled from outside the app.
 - 2026-09-27  fix(app-builder): the ERP's first sync after an add actually starts (`281f5275b`)
 - 2026-09-27  2026-09-27  Owner: during A3's live run, capture Commerce's own event payloads (shipment, invoice, order hold/cancel save, product delete) from the Developer Console's registration debug tracing, scrubbed, into commerce-erp-integration test/fixtures/commerce/events/, and point the handler tests at them (today they use hand-written payloads). Turn tracing on before the run's first order.
 - 2026-09-27  feat(erp): Demo Builder fills the ERP from Commerce (`706583816`)
@@ -110,7 +111,7 @@ events.
 - 2026-09-27  feat(erp): "Load demo data" on the ERP card (`6670494a9`)
 - 2026-09-27  Plan steps 2 and 3 built (loop branches, not deployed): the integration's copy removed (mirror, mirror-job, reset, refresh-job and its timer, refresh-partners, the Admin page's Sync/Refresh/Reset buttons; commerce-erp-integration 4eaf6ac, contract 4649ef0), and the ERP's Sync records button and sync record removed (demo-erp ef7727b). Demo Builder fills the ERP at add, at Reset records, and from Load demo data on the ERP card.
 - 2026-09-27  Correction to the 2026-09-27 live-run line: Commerce DOES raise a company event (observer.company_save_commit_after, in the Cloud Service's supported list); the integration subscribes to it since 30e37cb, not yet proven live. Stock moved by Commerce's own Transfer, Import or a REST write still raises nothing and no longer reaches the ERP; the Move stock action is the path.
-- 2026-09-27  Next: the key map (plan step 1's second half, prerequisite of step 5). Today the pairing is implicit: ERP customer C<companyId>, product by SKU. Design written in .rptc/plans/erp-demo-filling/overview.md.
+- 2026-09-27  Next: the key map (plan step 1's second half, prerequisite of step 5). Today the pairing is implicit: ERP customer C<companyId>, product by SKU. Design written in .rptc/complete/erp-demo-filling/overview.md.
 - 2026-09-27  feat(erp): the fill hands the integration its key map (`5cee05c3f`)
 - 2026-09-27  docs(handoff): ERP loop report, 2026-09-27 (`de8956524`)
 - 2026-09-27  docs(plan): ERP filling progress, and the key-map design (`37fe91fb3`)

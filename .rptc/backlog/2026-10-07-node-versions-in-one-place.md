@@ -6,6 +6,7 @@ parent: PR-1
 needs: []
 value: med
 status: active
+plan: node-versions-in-one-place
 ---
 
 # Node versions in one place: one register, one resolver, one runner

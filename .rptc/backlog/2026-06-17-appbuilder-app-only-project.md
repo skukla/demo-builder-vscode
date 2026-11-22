@@ -6,6 +6,7 @@ parent: AB-1
 needs: AB-1
 value: low
 status: planned
+plan: app-only-project
 ---
 # App Builder app — app-only / no-storefront project
 

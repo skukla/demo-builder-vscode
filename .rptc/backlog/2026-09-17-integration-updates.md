@@ -6,6 +6,7 @@ parent: AB-9
 needs: []
 value: high
 status: shipped
+plan: integration-updates
 ---
 
 # An installed integration takes an update: new code, then Commerce brought to it
@@ -16,7 +17,7 @@ deploy whatever is in the clone (neither fetches), the updates feature stops at 
 with `@adobe/aio-commerce-lib-app` 1.x an installed app answers "already installed", so a new
 event or a changed webhook never reaches Commerce.
 
-The design and steps are in `.rptc/plans/integration-updates/overview.md`: the integration moves
+The design and steps are in `.rptc/complete/integration-updates/overview.md`: the integration moves
 to lib-app 2.x (which upgrades an installed app when `metadata.version` changes), Demo Builder
 fetches the newer code on Update, reports what the install pass did and records the installed
 version, offers a confirmed reinstall when Commerce refuses to upgrade in place, and shows when

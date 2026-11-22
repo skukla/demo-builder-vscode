@@ -5,6 +5,7 @@ area: eds
 needs: []
 value: high
 status: active
+plan: update-clash-fix-with-ai
 ---
 
 # A storefront update that stops on a clash can be fixed with AI, from the builder
