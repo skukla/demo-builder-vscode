@@ -247,7 +247,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-33` | fix | [A storefront teardown leaves its pages live when the DA.live content is already gone](2026-10-09-teardown-unpublish-lists-from-deleted-content.md) | — | high | shipped |
 | `EDS-63` | fix | [The agent's `republish` does what the dashboard's Republish does](2026-10-23-agent-republish-matches-the-button.md) | — | med | shipped |
 
-### eds  (81)
+### eds  (82)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -331,6 +331,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-73` | fix | [Deleting a storefront leaves its AEM Configuration Service site behind](2026-11-18-delete-leaves-config-service-site.md) | — | med | backlog |
 | `EDS-74` | fix | [Deleting a storefront leaves its publish key registered with the shared PDP action](2026-11-18-delete-leaves-publish-key-registration.md) | — | low | backlog |
 | `EDS-75` | fix | [A created storefront's sitemap is the template's, unchanged](2026-11-18-created-site-keeps-template-sitemap.md) | — | med | backlog |
+| `EDS-76` | fix | [Reset and creation record the storefront's state from what they published](2026-11-22-storefront-state-from-the-published-snapshot.md) | — | low | backlog |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | shipped |
 
 ### app-builder  (138)
@@ -786,7 +787,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 - `PL-58` [The never-compromise property with no convention — and a writer that may already bypass it](2026-09-11-user-edits-never-overwritten-no-convention.md) — shipped
 
-*386 item(s) sit outside the A–G chain.*
+*387 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 

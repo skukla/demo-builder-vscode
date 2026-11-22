@@ -10,7 +10,7 @@
  * the correct call while the grid lived in a dashboard SUBSECTION, where a
  * viewport drawer covered the whole webview to show one card; it stopped being
  * the right call once the grid owned the surface. See decision 1 in
- * `.rptc/plans/integrations-surface/overview.md`.)
+ * `.rptc/complete/integrations-surface/overview.md`.)
  *
  * The CONTENT is host-independent — key/value rows that render only when their
  * datum exists, the emphasis→variant action bar, rename-in-place when

@@ -50,7 +50,7 @@ function sessionViews({ state, handleLogin }: AuthViewInputs): StatusDisplayProp
     // Switching orgs requires re-authentication: IMS tokens are org-bound, so the
     // only way to reach a different org is a forced sign-in, where the browser
     // presents the account/org chooser. The wizard then reflects whichever org you
-    // land on. See .rptc/plans/adobe-org-context-self-heal/overview.md.
+    // land on. See .rptc/complete/adobe-org-context-self-heal/overview.md.
     const switchAccount = () => handleLogin(true);
     // Renewing the session is a fresh sign-in of the same account, not an org switch
     // (owner, 2026-11-18).

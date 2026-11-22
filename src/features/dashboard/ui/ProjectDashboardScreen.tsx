@@ -4,7 +4,7 @@
  * Main dashboard screen for a demo project. Displays project status, a grid of
  * action buttons, and the integrations SUMMARY TILE (count + worst status). The
  * integrations card grid itself lives on its own surface — it needs room this
- * band does not have (`.rptc/plans/integrations-surface/overview.md`).
+ * band does not have (`.rptc/complete/integrations-surface/overview.md`).
  *
  * @module features/dashboard/ui/ProjectDashboardScreen
  */

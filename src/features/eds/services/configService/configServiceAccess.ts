@@ -43,7 +43,7 @@
  * never `granted` — this value gates a claim made to the user about whether
  * their access is fixed.
  *
- * Full API record: `.rptc/plans/config-service-admin-grant/`.
+ * Full API record: `.rptc/complete/config-service-admin-grant/`.
  *
  * @module features/eds/services/configService/configServiceAccess
  */
