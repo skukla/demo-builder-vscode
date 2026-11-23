@@ -39,6 +39,12 @@ run() {
 echo "=== a NEW script: rule 33 answers ==="
 run "$ROOT/scripts/brandNewScanner.mjs"  "a new .mjs"   new-instrument
 run "$ROOT/scripts/brandNewThing.js"     "a new .js"    new-instrument
+# A shell write by RELATIVE path carries neither `.mjs` nor `/scripts/`, so the router's
+# pre-filter used to drop it before its shell-write pass could hand it to this rule.
+payload=$(S="inst-sh-$RANDOM$$" python3 -c 'import json,os;print(json.dumps({"tool_name":"Bash","tool_input":{"command":"cat > scripts/brandNewTool.js <<EOF\nx\nEOF"},"session_id":os.environ["S"]}))')
+got=$(fired_rule "$(printf '%s' "$payload" | bash .claude/hooks/router.sh 2>&1)")
+verdict="OK"; [ "$got" != new-instrument ] && verdict="*** WRONG ***"
+printf '%-58s expect=%-15s got=%-15s %s\n' "a shell write by relative path" new-instrument "$got" "$verdict"
 
 echo
 echo "=== existing scripts and everything else stay silent ==="

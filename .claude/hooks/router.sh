@@ -55,7 +55,9 @@ case "$payload" in
     # `.test.ts` also covers `.test.tsx` (substring), which rule 40 already claims —
     # the rules sort it out, the gate only has to let it through.
     *.test.ts*|*.testUtils.ts*) ;;
-    *.mjs*|*/scripts/*) ;;
+    # `scripts/` without a leading slash: a shell write by relative path
+    # (`cat > scripts/x.js`) has no `/scripts/` in its payload (PL-110 review).
+    *.mjs*|*scripts/*) ;;
     *.css*) ;;
     # 35-wizard-step, 36-ai-bundle, 37-mcp-tool (added 2026-09-10). NECESSARY
     # conditions for each — every one is a literal from the rule's own matcher, so
