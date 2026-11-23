@@ -124,8 +124,8 @@ named; the SOP holds the worked examples and the refactoring steps.
 - **Before pushing, run the pipeline's `checks` tool** (mcp__plugin_dev-pipeline_pipeline__checks).
   It runs `npm run gate` (`.pipeline.yaml`: `checks: [npm run gate]`) — one command, every
   check, stopping at the first failure — and says pass or fail per check with the failing
-  output. A hand-typed `npm run gate` is pointed at it once per session
-  (`.claude/hooks/rules/22-gate-via-checks.rule`). The gate exists because this line used to name three of them
+  output. The dev-pipeline plugin's shell guard refuses a hand-typed `npm run gate` and
+  points to it. The gate exists because this line used to name three of them
   (`lint` + `tsc --noEmit` + jest), and a list of commands in a doc is a list
   somebody transcribes incompletely. That is not hypothetical: a session on
   2026-08-30 ran exactly those three all day and never touched

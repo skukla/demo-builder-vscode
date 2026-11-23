@@ -4,7 +4,7 @@ kind: fix
 area: platform
 needs: []
 value: low
-status: backlog
+status: built
 ---
 
 # Remove the router's pre-filter entries for the rules that moved to the plugin

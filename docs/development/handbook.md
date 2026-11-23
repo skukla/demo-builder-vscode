@@ -1169,8 +1169,8 @@ check says so and names the file.
 > and reports pass or fail per check with the failing output, so nothing is read back from a
 > file; sessions typed the gate by hand 448 times in 11 sessions (reflect proposal 2,
 > accepted 2026-11-16).
-> Enforced by `.claude/hooks/rules/22-gate-via-checks.rule`, which stops the first
-> hand-typed `npm run gate` in a session and lets a repeat run.
+> Enforced by the dev-pipeline plugin's shell guard (on through `.pipeline.yaml`), which
+> refuses a hand-typed `checks:` command and points to the `checks` tool.
 
 > **Convention.** A new webview message is wired through its skill.
 > *Why:* a message is only live when the MessageType, the handler, the feature's
@@ -2073,7 +2073,7 @@ it is, and the count of unenforced rules is stated rather than hidden.
 
 Conventions decay unless something checks them. Four layers do:
 
-- **Hooks** stop a bad action as it happens — 22 rules in `.claude/hooks/rules/`
+- **Hooks** stop a bad action as it happens — 21 rules in `.claude/hooks/rules/`
 - **Enforcer suites** fail the build when code drifts — 74 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, agent coverage (import cycles moved to an enforcer suite on 2026-10-08)

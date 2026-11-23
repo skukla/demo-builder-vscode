@@ -46,13 +46,6 @@ case "$payload" in
     # two-word literal rather than a bare *test* — that would drag in every path
     # with "test" in it, which is most of this repo.
     *"npm test"*|*"npm run test"*) ;;
-    # 22-gate-via-checks: a hand-typed `npm run gate` (reflect proposal 2, 2026-11-16).
-    *"npm run gate"*) ;;
-    # 14-commit-backtick. NECESSARY condition for that rule: it only fires on a
-    # git commit. Without this token the rule would never run and would look
-    # exactly like a guard that simply never matches — the failure this
-    # pre-filter has already caused once (see the --exclude note below).
-    *"git commit"*) ;;
     # 32-test-authoring, 33-new-instrument, 34-css-baseline (added 2026-09-10).
     # NECESSARY conditions for each, and the reason these rules exist at all: none
     # of these tokens was admitted before, so a Write to a `.test.ts`, a new script
@@ -73,10 +66,10 @@ case "$payload" in
     *Descriptors.ts*|*mcp-server.ts*) ;;
     # 21-push-no-verify. NECESSARY: the rule only fires on a push.
     *"git push"*) ;;
-    # 38/39/41/42/43/44 (added 2026-09-10). The four directory tokens are the kinds
-    # 41-god-file has a limit for, and they also admit 42/43/44, whose files all sit
+    # 38/39/42/43/44/49 (added 2026-09-10). The four directory tokens are the kinds
+    # 49-god-file has a limit for, and they also admit 42/43/44, whose files all sit
     # under services/. Broad on purpose: correctness before the ~55ms python parse
-    # this gate exists to avoid, and 41 has to measure a file before it can judge it.
+    # this gate exists to avoid, and 49 has to measure a file before it can judge it.
     */services/*|*/handlers/*|*/ui/components/*|*/utils/*|*/helpers/*) ;;
     *messages.ts*|*app-builder-components.json*) ;;
     # Two files the directory tokens above do NOT reach, each found by its rule's
@@ -85,56 +78,6 @@ case "$payload" in
     # rules matched them and both were gated out — the fourth and fifth instance of
     # the failure this pre-filter's docblock describes.
     *handlers.ts*|*orgContextEnv*) ;;
-    # 12-unquoted-glob. Each of these is a NECESSARY condition for that rule to
-    # fire, so the gate cannot hide a real hit. Kept as the specific flag spellings
-    # rather than a bare `*"*"*` (an asterisk appears in most payloads) — this stays
-    # cheap while still admitting everything the rule can match.
-    # `--exclude` without the `=` on purpose: `--exclude-dir=` does NOT contain
-    # `--exclude=`, so gating on the latter silently dropped every exclude-dir
-    # call. Caught by a test; it looked exactly like a rule that simply never
-    # matched.
-    *"--include="*|*"--exclude"*|*"-name "*|*"-iname "*|*"-path "*|*"-ipath "*) ;;
-    # 16-unsplit-var. The rule requires a variable assigned from a command
-    # substitution, so `=$(` is a NECESSARY condition and the gate cannot hide a
-    # real hit. Both spellings, because `F="$(ls)"` is as common as `F=$(ls)`.
-    #
-    # This rule's proof script failed 3 of its 4 blocking cases before this line
-    # existed, and the one that "passed" did so by ACCIDENT — its payload happened
-    # to contain `-name "x"`, a token rule 12 had already registered. Exactly the
-    # failure the note above predicts: a rule that is never reached is
-    # indistinguishable from a rule that never matches.
-    #
-    # SINGLE quotes, both. Written as *"=$("* first, which bash parses as the
-    # START of a command substitution inside the double quotes — the router
-    # stopped parsing and EVERY Bash, Edit and Write call in the session failed
-    # with "unexpected EOF". A broken router fails CLOSED against its own stated
-    # contract, and it gates the very tools needed to edit it back.
-    # The THIRD spelling is the JSON-escaped one. This gate reads the raw payload,
-    # where a command containing F="$(ls)" arrives as F=\"$(ls)\" — so the plain
-    # ="$( never appears and that case silently never reached the rule.
-    #
-    # `; do` admits the LOOP form, which carries no command substitution at all and
-    # so matched none of the tokens above. That gap made this rule's own proof PASS
-    # a case it must block — the third time a rule has been silently unreachable at
-    # this gate. `tests/hooks/rule-proofs.test.ts` now runs every proof on each
-    # build, which turns a recurring surprise into a red test.
-    *'=$('*|*'="$('*|*'=\"$('*|*'; do'*) ;;
-    # 13-piped-exit-code. The rule requires a pipe INTO head/tail/wc, so the pipe
-    # must be part of the token — a bare *head* would admit every path containing
-    # the word. Both spacings, because `|wc` and `| wc` are equally common.
-    *"| head"*|*"|head"*|*"| tail"*|*"|tail"*|*"| wc"*|*"|wc"*) ;;
-    # Same rule, its `grep -c` arm (added 2026-09-01). `grep -c` is a NECESSARY
-    # substring of every shape that arm matches, and it covers clusters like
-    # `grep -cE` too. `--count` spelled separately.
-    #
-    # THIRD time in one session that a rule was written, proved against its own
-    # harness, and found dead at this gate. Note what makes this one different and
-    # worse: rule 13 ALREADY had a passing probe in router.test.ts (the `| wc`
-    # case), so the reachability test stayed green while a whole new arm of the
-    # same rule was unreachable. That test proves one payload per RULE reaches it;
-    # it cannot prove every SHAPE does. The .proof.sh files are what cover that,
-    # which is the argument for running them rather than trusting them.
-    *"grep -c"*|*"grep --count"*) ;;
     # 31-registry-dir. The rule fires on a Write whose path is under tests/sop/ or
     # tests/helpers/ — plain .ts files, which the *.tsx* token above does NOT admit
     # (".tsx" is not a substring of ".ts"). Without this line the rule would be the

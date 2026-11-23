@@ -385,7 +385,8 @@ describe('secret-files rule — public repo defense-in-depth', () => {
  * `--exclude-dir=` call) and again on 2026-08-30 to `13-piped-exit-code`, which was
  * written, reviewed, and proved dead by its own harness before anyone noticed the
  * gate. The first was caught by a test written for that one rule; this generalises
- * it so the third time fails immediately.
+ * it so the third time fails immediately. (Both rules have since moved to the
+ * dev-pipeline plugin's shell guard, 319ab010a; their files are gone here.)
  *
  * The table is checked against the directory in BOTH directions, so a new rule
  * cannot skip it and a deleted one cannot leave a row behind.
@@ -437,8 +438,6 @@ describe('every rule is reachable through the pre-filter', () => {
         // first run and found by their own proofs, which is the fourth and fifth
         // time that gate has been the actual bug.
         'push-no-verify': () => run(bash(`git push --no-verify origin develop`), fresh()),
-        // Reflect proposal 2 (2026-11-16): a hand-typed gate is pointed at the `checks` tool.
-        'gate-via-checks': () => run(bash(`npm run gate > gate.txt 2>&1`), fresh()),
         'webview-handler': () => run(edit(path.join(REPO2, 'src/types/messages.ts')), fresh()),
         'appbuilder-component': () =>
             run(edit(path.join(REPO2, 'src/features/components/config/app-builder-components.json')), fresh()),

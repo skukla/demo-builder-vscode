@@ -176,7 +176,7 @@ red, and so is a registry entry for something deleted.
 
 | Cadence | What runs | Who triggers it |
 |---|---|---|
-| per-tool-call | 22 hook rules in `.claude/hooks/rules/` | automatic |
+| per-tool-call | 21 hook rules in `.claude/hooks/rules/` | automatic |
 | per-jest-run | 74 enforcer suites in `tests/sop/` | automatic |
 | per-push | lint, both typecheckers, 2 validators | CI |
 | per-push (local) | the CSS baseline check — `.githooks/pre-push` only, never CI | the git hook |

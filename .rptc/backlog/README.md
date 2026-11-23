@@ -453,7 +453,7 @@ each item's own file; what has already landed against an item is in its
 | `AB-34` | fix | [add_integration's answer names the catalog entry, not the name the SC gave](2026-09-26-add-integration-answer-names-catalog-entry.md) | — | low | shipped |
 | `AB-39` | question | [Loop branch labels use AB-16 sub-ids that are not their backlog items](2026-09-29-erp-branch-label-id-divergence.md) | — | low | shipped |
 | `AB-90` | fix | └ [Redeploying the ERP integration updates its Commerce event fields on existing projects](2026-11-21-redeploy-updates-existing-event-subscriptions.md) | — | med | backlog |
-| `AB-50` | chore | [Push the stranded docs commits; delete the two remote branches already on main](2026-09-30-erp-branches-housekeeping.md) | — | low | backlog |
+| `AB-50` | chore | [Push the stranded docs commits; delete the two remote branches already on main](2026-09-30-erp-branches-housekeeping.md) | — | low | shipped |
 | `AB-53` | epic | [Tailspin from nothing: wipe the Adobe I/O project, rebuild on Person B's storefront, one data model](2026-09-30-tailspin-from-nothing-fresh-project-person-b-storefront.md) | AB-51 | high | shipped |
 | `AB-67` | fix | [An agent cannot name the first ERP when it adds the ERP integration](2026-10-04-add-integration-names-its-first-erp.md) | — | med | shipped |
 | `AB-68` | feature | [Remember custom integration repos across projects](2026-10-06-remember-custom-integration-repos.md) | — | med | backlog |
@@ -578,7 +578,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-52` | fix | [A hook-proof suite fails under full parallel load and refuses pushes](2026-09-08-hook-proof-suite-flakes-under-load.md) | — | med | shipped |
 | `PL-53` | question | [351 of the god file's 647 classes appear in no source string — 254 rules deleted](2026-09-09-god-file-classes-nothing-uses.md) | — | med | shipped |
 | `PL-56a` | feature | └ [The portable-project contract: one versioned file, and the storefront slice of it](2026-09-11-portable-project-contract.md) | — | high | shipped |
-| `PL-56b` | chore | └ [Portability: delete what is already dead](2026-09-11-portability-delete-the-dead.md) | PL-56d | low | gated |
+| `PL-56b` | chore | └ [Portability: delete what is already dead](2026-09-11-portability-delete-the-dead.md) | PL-56d | low | shipped |
 | `PL-56c` | feature | └ [Export carries the whole project, and never a credential](2026-09-11-export-carries-the-project.md) | PL-56a | high | shipped |
 | `PL-56d` | fix | └ [Import creates what the file says, re-proves sign-ins, and tells the SC what it did](2026-09-11-import-creates-what-the-file-says.md) | PL-56c | high | shipped |
 | `PL-56e` | fix | └ [Copy and Edit read the same complete file, so neither can drop what the other keeps](2026-09-11-copy-and-edit-on-one-file.md) | PL-56c, PL-56d | med | shipped |
@@ -636,7 +636,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-107` | fix | [Four periodic checks have no recorded run since at least October](2026-11-20-periodic-checks-unrun-since-october.md) | — | high | built |
 | `PL-108` | feature | [Build the nine accepted reflect proposals that are Demo Builder's](2026-11-20-build-nine-accepted-reflect-proposals.md) | — | med | backlog |
 | `PL-109` | fix | [The record scan should take a second or two](2026-11-20-hygiene-scan-in-two-seconds.md) | — | low | backlog |
-| `PL-110` | fix | [Remove the router's pre-filter entries for the rules that moved to the plugin](2026-11-20-retire-router-rules-moved-to-plugin.md) | — | low | backlog |
+| `PL-110` | fix | [Remove the router's pre-filter entries for the rules that moved to the plugin](2026-11-20-retire-router-rules-moved-to-plugin.md) | — | low | built |
 | `PL-111` | chore | [Live checks and decisions the owner owes, from the 2026-11-21 reconciliation](2026-11-21-owner-checks-from-reconciliation.md) | — | med | backlog |
 | `PL-122` | feature | [Demo Builder has a process map the pipeline checks](2026-11-21-demo-builder-process-map.md) | — | med | backlog |
 

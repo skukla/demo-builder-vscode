@@ -12,7 +12,8 @@
  *
  * The `.proof.sh` files DO cover per-shape behaviour, in both directions. They
  * were just never run by anything. So three separate guards were written, proved
- * by hand, and found dead later:
+ * by hand, and found dead later (all three moved to the dev-pipeline plugin's
+ * shell guard at the pipeline rollout, 319ab010a, so their files are gone here):
  *
  *   - 12-unquoted-glob's `--exclude-dir` case (2026-08-13)
  *   - 13-piped-exit-code, written and proved dead by its own harness (2026-08-30)
