@@ -4,7 +4,7 @@ kind: chore
 area: ai
 needs: []
 value: med
-status: backlog
+status: built
 ---
 
 # Triage untriaged agent coverage handlers
@@ -26,3 +26,7 @@ has `reset_project` and `delete_project` beside it). Read each, add a row to the
 
 The 3 judged gaps are unchanged: `check-store-view-products`, `clear-dalive-auth`,
 `github-change-account`.
+
+## Shipped so far
+
+- 2026-11-23  Loop 2026-11-23: built (57d910a95, on loop/2026-11-23-backlog). All 20 untriaged handlers have a row: 8 aliases, 12 exclusions, 2 new gaps (check-recorded-datapack; getShareDatapackCheck for a project without Edge Delivery). Scan: UNTRIAGED 0, REAL GAP 5. Reviewed (opus, 4 findings fixed). The two new gaps are judged, not built: whether an agent should get them is the owner's call.
