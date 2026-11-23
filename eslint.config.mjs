@@ -227,6 +227,35 @@ export default tseslint.config(
             'jest/prefer-to-be': 'warn',
             'jest/prefer-to-have-length': 'warn',
 
+            // No test erases a type (PL-32, PL-112). `as any` and `as never` reached zero
+            // in tests/ under a shrink-only ceiling; this ban replaced the ceiling when it
+            // emptied, as the feature-barrel ledger did. A builder is typed as the REAL
+            // type it fakes (handbook, "No test erases a type").
+            'no-restricted-syntax': ['error',
+                {
+                    // The bare keyword and its arrays (`as any[]`, `as any[][]`): the forms the
+                    // ceiling's `\bas\s+any\b` counted. `as Record<string, any>` it never did.
+                    selector: [
+                        'TSAsExpression > TSAnyKeyword.typeAnnotation',
+                        'TSTypeAssertion > TSAnyKeyword.typeAnnotation',
+                        'TSAsExpression > TSArrayType.typeAnnotation > TSAnyKeyword',
+                        'TSAsExpression > TSArrayType.typeAnnotation > TSArrayType > TSAnyKeyword',
+                        'TSTypeAssertion > TSArrayType.typeAnnotation > TSAnyKeyword',
+                    ].join(', '),
+                    message: 'Do not erase a type in a test: no `as any`. Type the value as what it fakes (a builder in tests/helpers/, jest.Mocked<T>).',
+                },
+                {
+                    selector: [
+                        'TSAsExpression > TSNeverKeyword.typeAnnotation',
+                        'TSTypeAssertion > TSNeverKeyword.typeAnnotation',
+                        'TSAsExpression > TSArrayType.typeAnnotation > TSNeverKeyword',
+                        'TSAsExpression > TSArrayType.typeAnnotation > TSArrayType > TSNeverKeyword',
+                        'TSTypeAssertion > TSArrayType.typeAnnotation > TSNeverKeyword',
+                    ].join(', '),
+                    message: 'Do not erase a type in a test: no `as never`. Type the value as what it fakes (a builder in tests/helpers/, jest.Mocked<T>).',
+                },
+            ],
+
             // Relax rules for tests
             '@typescript-eslint/no-explicit-any': 'off',
             '@typescript-eslint/no-require-imports': 'off',

@@ -197,7 +197,7 @@ it means the rule rests on somebody noticing.
 | A value handed to a hook that DEPENDS on it must be stable across renders. |  |  | `stable-hook-arguments.test.ts` |
 | A component is declared ONE way: `function Name(props: NameProps)`. `React.FC` is banned. |  |  | `one-component-form.test.ts` |
 | PRODUCTION erases no types. `as any` and `as never` are banned in `src/` outright. |  |  | `src-erases-no-types.test.ts` |
-| No test erases a type. `as any` and `as never` are banned anywhere in `tests/`. A builder is declared as the REAL type it stands for; where the structural fake cannot satisfy that type honestly, cast the object literal INTO it at the builder's boundary as `as unknown as X` — once, where it is visible. | [ADR](../architecture/adr/016-test-strategy.md) |  | `type-erasing-casts.test.ts`<br>`eslint.config.mjs` |
+| No test erases a type. `as any` and `as never` are banned anywhere in `tests/`. A builder is declared as the REAL type it stands for; where the structural fake cannot satisfy that type honestly, cast the object literal INTO it at the builder's boundary as `as unknown as X` — once, where it is visible. | [ADR](../architecture/adr/016-test-strategy.md) |  | `eslint.config.mjs` |
 | Do not mock a configuration leaf. |  |  | `no-config-leaf-mocks.test.ts` |
 | A stylesheet change is not pushed until a RESTING visual baseline has been captured while it was in the tree. |  |  | `.githooks/` |
 | Never assign a `jest.fn()` onto a Node builtin's namespace (`fs`, `fs.promises`, `os`, …). Use `jest.spyOn`, and restore in `afterEach`. |  |  | `no-builtin-namespace-mock-assignment.test.ts` |

@@ -36,7 +36,6 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
 HANDOFF = os.path.join(REPO, '.rptc/handoff')
 LAUNCH = os.path.join(HANDOFF, 'overnight-launch.log')
-LEDGER = os.path.join(REPO, 'tests/sop/type-erasing-casts.ledger.json')
 FAKES = os.path.join(REPO, 'tests/sop/canonical-fakes.ledger.json')
 
 FAIL = re.compile(r'Goal cleared|unrecoverable error|REFUSED|exhausted|'
@@ -68,11 +67,9 @@ def rundir():
 
 
 def ledger_state():
+    # The type-erasing-cast ceilings left with their ledger when they became an eslint
+    # ban (PL-112); the Project fake's cast ceiling is the one still counted.
     out = {}
-    try:
-        out.update(json.loads(read(LEDGER))['ceilings'])
-    except Exception:
-        pass
     try:
         out['Project'] = json.loads(read(FAKES))['castCeilings']['Project']
     except Exception:

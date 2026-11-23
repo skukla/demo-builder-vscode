@@ -10,11 +10,10 @@
  * It is the same move that banked eight architecture zeros the same day. A count of
  * zero is not the achievement; a count of zero that CANNOT rise is.
  *
- * WHY `src/` GETS A BAN AND `tests/` GETS A RATCHET. They are at different places
- * and the same rule would be wrong for both. `src/` is at 0; `tests/` carries 1,268,
- * and a ban that emits 1,268 errors gets switched off within a week — this repo says
- * so in its own handbook, which is why the test-side rule is a shrink-only ceiling
- * (`type-erasing-casts.test.ts`) that can only fall.
+ * WHY THIS SUITE AND NOT ESLINT. `tests/` is banned by `no-restricted-syntax` in
+ * `eslint.config.mjs` since it reached zero (PL-112); until then it carried 1,268 and
+ * ran on a shrink-only ceiling, because a ban that emits 1,268 errors gets switched off
+ * within a week. `src/` was at 0 first and kept this suite.
  *
  * WHAT IS STILL ALLOWED, because banning the wrong thing teaches people to work
  * around the check rather than write better types:
@@ -34,7 +33,7 @@
  * `as unknown as CollectionChildren<object>` now. Both spellings silence the same
  * error; only one tells the next reader what the value is being treated as.
  *
- * @see tests/sop/type-erasing-casts.test.ts — the tests-side ceiling
+ * @see eslint.config.mjs — the tests-side ban (`no-restricted-syntax`)
  * @see docs/development/handbook.md — the convention, with the allowed forms
  */
 
