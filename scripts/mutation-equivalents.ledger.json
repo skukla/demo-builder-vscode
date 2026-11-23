@@ -3987,7 +3987,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 162,
+            "line": 165,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is one logger.debug call. Emptying it still swallows the probe failure and still returns false, so the copy runs anyway \u2014 pinned by 'copies content anyway when the probe itself fails'. Only the debug line differs. Re-anchored 2026-09-10 (142 -> 128): the probe moved into contentExistsInDaLive when ensureEdsContent was decomposed. Same code, new line. Re-anchored 2026-10-16 (135 -> 137): unchanged code; the progress lines above it now import the vocabulary (progress vocabulary slice 4). Re-anchored 2026-10-19 (137 -> 154): unchanged code; the copy now reads the storefront's code paths first (EDS-40). Re-anchored 2026-10-19 (154 -> 157): unchanged code, moved when an expired sign-in stopped the access grant (EDS-54). Re-anchored 2026-10-22 (157 -> 162): unchanged code; the beforeContentPublish dep was added or changed above it (EDS-61).",
@@ -4012,7 +4012,7 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 257,
+            "line": 260,
             "mutants": 1,
             "category": "block",
             "reason": "The else body is one logger.info reporting the copied file count. Emptying it removes that line and changes nothing else \u2014 same reasoning as the condition above. Re-anchored 2026-09-10 (177 -> 207): unchanged code, shifted by the decomposition of ensureEdsContent. Re-anchored 2026-10-16 (218 -> 225): unchanged code; the copy now reports in the vocabulary (progress vocabulary slice 4). Re-anchored 2026-10-19 (225 -> 249): unchanged code; the copy now reads the storefront's code paths first (EDS-40). Re-anchored 2026-10-19 (249 -> 252): unchanged code, moved when an expired sign-in stopped the access grant (EDS-54). Re-anchored 2026-10-22 (252 -> 257): unchanged code; the beforeContentPublish dep was added or changed above it (EDS-61).",
@@ -4818,23 +4818,11 @@
             "source": "PL-22 batch MUT-04"
         },
         {
-            "module": "src/features/eds/handlers/storefrontSetup/storefrontSetupPhases.ts",
-            "anchors": [
-                "if (phase3Result) {"
-            ],
-            "mutants": 1,
-            "category": "branch",
-            "reason": "The surviving variant forces this guard true, so the wrapper always returns { blockCollectionIds, earlyReturn: phase3Result }. When phase 3 has no verdict that field is null, and the orchestrator's own 'if (earlyReturn) return earlyReturn' treats null exactly as it treats an absent field \u2014 the run continues with the same block collection ids either way. The two forms differ only in whether an explicitly-null property is present on an object nothing else reads. Forcing it FALSE is a real change and IS killed, by the test that proves a code-sync verdict stops the run.",
-            "decision": "none - the true-variant produces an object the caller cannot distinguish",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-04"
-        },
-        {
             "module": "src/features/eds/services/edsPipeline.ts",
             "anchors": [
                 "if (!result.success) {"
             ],
-            "line": 246,
+            "line": 249,
             "mutants": 4,
             "category": "branch",
             "reason": "publishBrandAssets never throws \u2014 fetch and write failures come back as a partly-successful result \u2014 and this guard's whole body is a logger.warn naming the targets that did not land. Nothing downstream reads result: the pipeline proceeds to the next step either way, deliberately, because an incomplete brand set degrades to an unbranded storefront rather than a failed run (proceed-and-warn, ADR-006 D1). Forcing the guard either way, or emptying it, changes only whether that warn prints. Re-anchored 2026-10-19 (235 -> 237): unchanged code, moved when the pipeline's warnings became one list (EDS-55). Re-anchored 2026-10-22 (237 -> 246): unchanged code; the beforeContentPublish hook's parameter and call were added above it (EDS-61).",
@@ -4862,18 +4850,6 @@
             "mutants": 1,
             "category": "block",
             "reason": "Emptying this branch's body removes a logger.info and nothing else \u2014 the branch's PURPOSE is to not re-throw, and the else that does re-throw is untouched. Both sides of the decision are tested (a 'No publishable pages' failure finishes the run, any other publish error fails it); only the explanatory log inside the tolerated side is unobservable.",
-            "decision": "none - the tolerated branch's body is a single info log",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-04"
-        },
-        {
-            "module": "src/features/eds/services/edsPipeline.ts",
-            "anchors": [
-                "if (error instanceof DaLiveError && error.statusCode === 403) {"
-            ],
-            "mutants": 1,
-            "category": "block",
-            "reason": "Same shape: the 403 branch's body is one logger.info saying the CDN fallback will handle this source. Emptying it keeps the swallow, which is the behaviour \u2014 and the swallow is tested on both sides (a 403 lets the run finish, a 504 and a plain Error both fail it).",
             "decision": "none - the tolerated branch's body is a single info log",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-04"
@@ -4959,7 +4935,7 @@
             "anchors": [
                 "if (result.success) {"
             ],
-            "line": 138,
+            "line": 135,
             "mutants": 3,
             "category": "branch",
             "reason": "The body of this guard is a single logger.debug; the result is returned unchanged on the next line whichever way the guard goes. Forcing it either way, or emptying it, changes only whether one debug line prints. Both outcomes of the write ARE tested \u2014 a refused POST comes back as { success: false } with the status and body in the error.",
@@ -4972,7 +4948,7 @@
             "anchors": [
                 "if (result.success) {"
             ],
-            "line": 272,
+            "line": 269,
             "mutants": 3,
             "category": "branch",
             "reason": "The merged-data twin of the guard above, and the same shape: its body is a single logger.info naming the keys applied, and the return on the next line is built from result regardless. The removed-key reporting that DOES depend on success is a separate expression and is tested on both sides.",
@@ -4985,7 +4961,7 @@
             "anchors": [
                 "removeKeys: string[] = [],"
             ],
-            "line": 174,
+            "line": 171,
             "mutants": 1,
             "category": "other",
             "reason": "The mutant replaces the empty default with a one-element array holding a junk string. A caller that omits removeKeys therefore asks to remove a key no config has ever held: the filter that computes 'removed' finds nothing, so removedAnything stays false, the map delete is a no-op, and both the POSTed document and the returned result are identical. Only a config containing a key of that exact literal name could tell them apart.",
@@ -4998,7 +4974,7 @@
             "anchors": [
                 "removeKeys: string[] = [],"
             ],
-            "line": 207,
+            "line": 204,
             "mutants": 1,
             "category": "other",
             "reason": "The private twin of the default above, reached only when applySiteConfig itself omits the argument, and unkillable for the same reason: a removal request for a key no config holds changes neither the document written nor the removed list reported.",
@@ -5011,7 +4987,7 @@
             "anchors": [
                 "const existingRows = dataSheet?.data || [];"
             ],
-            "line": 219,
+            "line": 216,
             "mutants": 1,
             "category": "other",
             "reason": "The mutant seeds the fallback with a junk STRING rather than an empty list, for the case where the site config has no data sheet. The loop that follows reads row.key off each entry and skips anything falsy, and a string has no key property \u2014 so the junk entry contributes nothing to the map and the written sheet is identical. The fallback's real job (not iterating undefined) is unchanged.",
@@ -5024,7 +5000,7 @@
             "anchors": [
                 "const errorText = await response.text().catch(() => '');"
             ],
-            "line": 381,
+            "line": 378,
             "mutants": 1,
             "category": "other",
             "reason": "The mutant makes the catch answer undefined instead of an empty string. The only reader is the ternary on the next line, which appends the body to the error message when it is TRUTHY \u2014 and both an empty string and undefined are falsy, so the message is byte-identical either way. A response whose text() rejects and one that returns an empty body already produce the same message, which is tested.",
@@ -5443,7 +5419,7 @@
             "anchors": [
                 "if (response.ok || response.status === 404) {"
             ],
-            "line": 180,
+            "line": 186,
             "mutants": 6,
             "category": "branch",
             "reason": "Both arms of this if/else hold exactly one statement, a this.logger.debug, and deleteSiteRoot returns void with nothing after them - so whichever arm runs, the caller sees the same undefined and the same set of requests already sent. Forcing the condition either way, swapping its || for &&, flipping the === 404 to !== or emptying the block changes only which debug line prints, and the only test that could separate them is one asserting a logger call's arguments. That pins wording rather than behaviour. The request this method sends IS constrained, by a test asserting the DELETE verb, the bearer header and the site-root URL. Re-anchored 2026-10-22 (179 -> 180): unchanged code; createSource's doc gained a line for its contentType option (EDS-61).",
@@ -5456,7 +5432,7 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 184,
+            "line": 190,
             "mutants": 1,
             "category": "block",
             "reason": "The else half of the log-only branch described in the entry for line 179: its body is one this.logger.debug and deleteSiteRoot returns void, so emptying it removes a debug line and nothing else. Recorded separately because the ledger keys an entry by module, line and anchor, and this block sits on its own line four lines below the condition that selects it. Re-anchored 2026-10-22 (183 -> 184): unchanged code; createSource's doc gained a line for its contentType option (EDS-61).",
@@ -5469,7 +5445,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 189,
+            "line": 195,
             "mutants": 1,
             "category": "block",
             "reason": "deleteSiteRoot is documented best-effort and returns void: it swallows a transport failure on purpose, so its catch body is one this.logger.debug and nothing more. Emptying that body still swallows the error and still returns undefined, which is exactly what the caller sees today - the test that drives fetchWithRetry to reject asserts the method resolves rather than throws, and it passes either way. Separating the two would need an assertion on the debug line's wording. Re-anchored 2026-10-22 (188 -> 189): unchanged code; createSource's doc gained a line for its contentType option (EDS-61).",
@@ -6089,7 +6065,7 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 266,
+            "line": 264,
             "mutants": 1,
             "category": "block",
             "reason": "This else block holds one statement, a logger.warn saying a selected block library has no source configured. The library is skipped either way \u2014 the skip is the absent push, not anything this block does \u2014 so emptying it removes a log line and changes neither the list handed to installBlockCollections nor any progress payload. Re-anchored 2026-10-16 (234 -> 237): unchanged code; the progress line above it now names the libraries in the vocabulary (progress vocabulary slice 4). Re-anchored 2026-10-18 (237 -> 249): unchanged code; EDS-53 added the template-label-file removal after the stub commit above it. Re-anchored 2026-10-22 (249 -> 256): unchanged code; the template's own label files are now read before the stub commit above it, so their labels are kept. Re-anchored 2026-10-23 (256 -> 257): unchanged code; the comment above the smart 404 install now says it is followed by bringing the storefront up to Demo Builder's current fixes (EDS-62). Re-anchored 2026-10-29 (260 -> 259): unchanged code; the comment above the storefront-current step lost a line when the smart 404 script moved from delayed.js to 404.html (EDS-61). Re-anchored 2026-10-29 (259 -> 261): unchanged code; the call that brings the storefront current now says creation has just installed inspector tagging, so its loader goes in head.html (EDS-61).",
@@ -6102,7 +6078,7 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 426,
+            "line": 422,
             "mutants": 1,
             "category": "block",
             "reason": "The same shape at the end of applyStandaloneInspectorTagging: the else holds one logger.warn naming why standalone inspector tagging was skipped. The function returns void, sends no progress push on this arm and the caller ignores it, so emptying the block is invisible to everything except the log. Re-anchored 2026-10-16 (355 -> 361): unchanged code; the progress lines above it are reworded (progress vocabulary slice 4). Re-anchored 2026-10-18 (398 -> 410): unchanged code; EDS-53 added the template-label-file removal after the stub commit above it. Re-anchored 2026-10-22 (410 -> 417): unchanged code; the template's own label files are now read before the stub commit above it, so their labels are kept. Re-anchored 2026-10-23 (417 -> 418): unchanged code; the comment above the smart 404 install now says it is followed by bringing the storefront up to Demo Builder's current fixes (EDS-62). Re-anchored 2026-10-29 (421 -> 420): unchanged code; the comment above the storefront-current step lost a line when the smart 404 script moved from delayed.js to 404.html (EDS-61). Re-anchored 2026-10-29 (420 -> 422): unchanged code; the call that brings the storefront current now says creation has just installed inspector tagging, so its loader goes in head.html (EDS-61).",
@@ -14526,18 +14502,6 @@
             "decision": "none \u2014 the body is narration; the swallow is what is tested",
             "recorded": "2026-10-10",
             "source": "PL-70 MUT-02, 2026-10-10"
-        },
-        {
-            "module": "src/features/eds/services/daLive/daLiveBlockLibraryOperations.ts",
-            "anchors": [
-                "const blocks = (parsed.groups ?? []).flatMap("
-            ],
-            "mutants": 1,
-            "category": "other",
-            "reason": "The mutant replaces the empty-array fallback with ['Stryker was here']. flatMap then visits one string, reads .components off it, gets undefined, and the inner '?? []' yields no blocks - the same empty list the real fallback produces. That the fallback EXISTS is tested: 'tolerates a definition with no groups key at all' would get a TypeError from undefined.flatMap without it. What the fallback array holds cannot matter unless an element has a components array, and no array literal can stand in for parsed JSON there. Planted by hand on 2026-10-10 against all eleven suites of the module, including 'asks DA.live for nothing when the definition has no groups key at all': 139 tests green.",
-            "decision": "none - any array of non-group values flattens to no blocks",
-            "recorded": "2026-10-10",
-            "source": "PL-70 MUT-04, 2026-10-10"
         },
         {
             "module": "src/features/dashboard/handlers/dashboardHandlers.ts",

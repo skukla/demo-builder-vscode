@@ -63,7 +63,7 @@ describe('executeEdsPipeline - clearing content', () => {
                     copyContentFromSource: jest.fn(),
                 },
                 blockLibOps: {
-                    createBlockLibraryFromTemplate: jest.fn(),
+                    writeStorefrontBlockLibrary: jest.fn(),
                 },
             },
             githubFileOps: { getFileContent: jest.fn() },

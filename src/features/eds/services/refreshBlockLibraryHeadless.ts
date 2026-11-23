@@ -1,9 +1,8 @@
 /**
  * Refresh Block Library — shared, UI-free core.
  *
- * Re-syncs the DA.live authoring library with the project's current
- * `component-definition.json` (the destructive full-rebuild path, for users who
- * hand-edit `component-definition.json` outside the AI promote flow). Runs
+ * Rebuilds the DA.live authoring library from the storefront's code and pages
+ * (`buildStorefrontBlockLibrary`, the pipeline's block-library step). Runs
  * `executeEdsPipeline` with `includeBlockLibrary: true` / `skipContent: true` /
  * `skipPublish: true`, retrying once on a mid-pipeline DA.live token expiry.
  *
@@ -23,6 +22,7 @@
 
 import type * as vscode from 'vscode';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
+import { withAlwaysIncludedBlockLibraries } from '@/features/components/services/blockLibraryLoader';
 import {
     ensureDaLiveAuth,
     getDaLiveAuthService,
@@ -153,19 +153,18 @@ export async function refreshBlockLibraryHeadless(
                     repoName: params.repoName,
                     daLiveOrg: params.daLiveOrg,
                     daLiveSite: params.daLiveSite,
-                    templateOwner: params.templateOwner,
-                    templateRepo: params.templateRepo,
                     includeBlockLibrary: true,
                     skipContent: true,
                     skipPublish: true,
                     ...(deps.publishOnlyBlocks ? { publishLibraryBlocksOnly: deps.publishOnlyBlocks } : {}),
-                    // Load-bearing: pass an empty array (truthy in JS) so
-                    // executeEdsPipeline rebuilds from the USER's repo's
-                    // component-definition.json — not the template's. Blocks
-                    // promoted via the MCP tool live there. Without this flag,
-                    // the rebuild reads the template comp-def and silently
-                    // drops every promoted block from the library.
-                    blockCollectionIds: [],
+                    // Where the block library looks for Adobe's library and real uses;
+                    // with skipContent no page is copied from them.
+                    contentSource: params.contentSource,
+                    accountContentSource: params.accountContentSource,
+                    blockLibraries: withAlwaysIncludedBlockLibraries(
+                        project.selectedBlockLibraries, project.selectedPackage ?? '',
+                    ),
+                    demoContentSource: project.demo?.contentSource,
                 },
                 { daLiveContentOps, githubFileOps, helixService, logger },
                 reportProgress,

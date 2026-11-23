@@ -250,8 +250,8 @@ async function attemptCopy(
  * the only host where everything a source HAS is reachable.
  *
  * Aimed at the published host, this copy silently skipped whichever blocks
- * happened to be preview-only, and those fell through to
- * `generateStubDocPages`: an author opening the DA.live palette got a box
+ * happened to be preview-only, and those fell through to a stub page (the
+ * library build of the time): an author opening the DA.live palette got a box
  * with the block's name where the authored example should be, for some
  * blocks and not others. That is worse than a clean failure, because a
  * library half full of stubs looks like it worked.

@@ -284,9 +284,8 @@ export const blockToolHandlers = {
         const daLiveOps = new DaLiveContentOperations(staticTokenProvider(daLiveToken), noopLogger);
 
         // Doc page: upsertBlockDocPage always writes so AI iteration on
-        // unsafeHTML refreshes the rendered preview. (ensureBlockDocPages is
-        // deliberately non-destructive for the template path — wrong contract
-        // for this flow.)
+        // unsafeHTML refreshes the rendered preview. (The library build keeps a
+        // page the storefront already has — the wrong contract for this flow.)
         const docPage = await daLiveOps.blockLibOps.upsertBlockDocPage(ctx.daLiveOrg, ctx.daLiveSite, {
             id: blockId,
             exampleHtml: safeHtml,

@@ -10,6 +10,7 @@ import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { STOREFRONT_JOBS } from '@/core/utils/storefrontJobs';
 import { ensureEdsContent } from '@/features/project-creation/services/edsContentSetup';
 import type { EdsContentHelix } from '@/features/project-creation/services/edsContentSetup';
+import type { StorefrontLibraryInput } from '@/features/eds/services/blockLibrary/storefrontLibraryWriter';
 import type { PatchReport } from '@/features/eds/services/patches/patchReportHelper';
 import { DaLiveAuthError } from '@/features/eds/services/types';
 import { createMockLogger } from '../../../helpers/loggerFake';
@@ -17,7 +18,8 @@ import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 
 const mockCopyContentFromSource = jest.fn();
-const mockCreateBlockLibraryFromTemplate = jest.fn();
+const mockWriteStorefrontBlockLibrary = jest.fn();
+const mockGetBlocksWithDocs = jest.fn();
 const mockOverlayAccountChrome = jest.fn();
 
 jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
@@ -27,7 +29,10 @@ jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
             overlayAccountChrome: mockOverlayAccountChrome,
         },
         blockLibOps: {
-            createBlockLibraryFromTemplate: mockCreateBlockLibraryFromTemplate,
+            getBlocksWithDocs: mockGetBlocksWithDocs,
+            readBlockDocPage: jest.fn().mockResolvedValue(undefined),
+            readBlocksSheetRows: jest.fn().mockResolvedValue(null),
+            writeStorefrontBlockLibrary: mockWriteStorefrontBlockLibrary,
         },
     })),
 }));
@@ -82,10 +87,12 @@ jest.mock('@/features/eds/services/daLive/daLiveAuthService', () => ({
 }));
 
 const mockGetFileContent = jest.fn();
+const mockListRepoFiles = jest.fn();
 
 jest.mock('@/features/eds/services/github/githubFileOperations', () => ({
     GitHubFileOperations: jest.fn().mockImplementation(() => ({
         getFileContent: mockGetFileContent,
+        listRepoFiles: mockListRepoFiles,
     })),
 }));
 
@@ -128,6 +135,7 @@ function makeConfig(overrides = {}) {
         daLiveOrg: 'test-org',
         daLiveSite: 'test-site',
         contentSource: { org: 'source-org', site: 'source-site', indexPath: '/full-index.json' },
+        blockLibraries: [] as string[],
         ...overrides,
     };
 }
@@ -149,7 +157,10 @@ function setupDefaultMocks() {
     mockCopyContentFromSource.mockResolvedValue({ success: true, totalFiles: 10, failedFiles: [], sheetPaths: [] });
     mockGetUserEmail.mockResolvedValue('user@example.com');
     mockConfigureDaLivePermissions.mockResolvedValue({ success: true });
-    mockCreateBlockLibraryFromTemplate.mockResolvedValue({ blocksCount: 3, paths: ['/library'] });
+    mockWriteStorefrontBlockLibrary.mockResolvedValue({ success: true, blocksCount: 3, paths: ['/library'] });
+    mockGetBlocksWithDocs.mockResolvedValue([]);
+    mockListRepoFiles.mockResolvedValue([{ path: 'blocks/hero/hero.js', type: 'blob', sha: 'h' }]);
+    mockGetFileContent.mockResolvedValue(null);
     mockApplyDaLiveOrgConfigSettings.mockResolvedValue(undefined);
     mockPurgeCacheAll.mockResolvedValue(undefined);
     mockPreviewAndPublishPage.mockResolvedValue(undefined);
@@ -245,17 +256,12 @@ describe('ensureEdsContent', () => {
     });
 
     it('copies content and runs all operations when content is missing', async () => {
-        const config = makeConfig({
-            templateOwner: 'tmpl-owner',
-            templateRepo: 'tmpl-repo',
-        });
-
-        const result = await ensureEdsContent(config, makeDeps());
+        const result = await ensureEdsContent(makeConfig(), makeDeps());
 
         expect(result).toBe(true);
         expect(mockCopyContentFromSource).toHaveBeenCalledTimes(1);
         expect(mockConfigureDaLivePermissions).toHaveBeenCalledTimes(1);
-        expect(mockCreateBlockLibraryFromTemplate).toHaveBeenCalledTimes(1);
+        expect(mockWriteStorefrontBlockLibrary).toHaveBeenCalledTimes(1);
         expect(mockApplyDaLiveOrgConfigSettings).toHaveBeenCalledTimes(1);
         expect(mockPurgeCacheAll).toHaveBeenCalledWith('test-owner', 'test-repo', 'main');
         expect(mockPublishAllSiteContent).toHaveBeenCalledWith(
@@ -292,11 +298,10 @@ describe('ensureEdsContent', () => {
     });
 
     it('block library failure is non-fatal', async () => {
-        mockCreateBlockLibraryFromTemplate.mockRejectedValue(new Error('lib error'));
+        mockWriteStorefrontBlockLibrary.mockRejectedValue(new Error('lib error'));
         const deps = makeDeps();
-        const config = makeConfig({ templateOwner: 'o', templateRepo: 'r' });
 
-        const result = await ensureEdsContent(config, deps);
+        const result = await ensureEdsContent(makeConfig(), deps);
 
         expect(result).toBe(true);
         expect(deps.logger.warn).toHaveBeenCalledWith(
@@ -332,21 +337,10 @@ describe('ensureEdsContent', () => {
         expect(mockPublishAllSiteContent).toHaveBeenCalled();
     });
 
-    it('skips block library when templateOwner/templateRepo missing', async () => {
-        const config = makeConfig(); // no templateOwner/templateRepo
-
-        const result = await ensureEdsContent(config, makeDeps());
-
-        expect(result).toBe(true);
-        expect(mockCreateBlockLibraryFromTemplate).not.toHaveBeenCalled();
-        expect(mockPublishLibraryPaths).not.toHaveBeenCalled();
-    });
-
     it('skips block library publish when no library paths returned', async () => {
-        mockCreateBlockLibraryFromTemplate.mockResolvedValue({ blocksCount: 0, paths: [] });
-        const config = makeConfig({ templateOwner: 'o', templateRepo: 'r' });
+        mockWriteStorefrontBlockLibrary.mockResolvedValue({ success: true, blocksCount: 0, paths: [] });
 
-        await ensureEdsContent(config, makeDeps());
+        await ensureEdsContent(makeConfig(), makeDeps());
 
         expect(mockPublishLibraryPaths).not.toHaveBeenCalled();
     });
@@ -526,11 +520,7 @@ describe('ensureEdsContent — the calls it makes', () => {
                 }
             );
 
-            await ensureEdsContent(
-                makeConfig({ templateOwner: 'tmpl-owner', templateRepo: 'tmpl-repo' }),
-                makeDeps(),
-                onProgress
-            );
+            await ensureEdsContent(makeConfig(), makeDeps(), onProgress);
 
             const steps = onProgress.mock.calls.map(([stage]) => stage as string);
             expect([...new Set(steps)]).toStrictEqual([
@@ -593,47 +583,46 @@ describe('ensureEdsContent — the calls it makes', () => {
         });
     });
 
-    describe('the block library from the template', () => {
-        it('needs BOTH the template owner and the template repo', async () => {
-            // Either alone cannot address a repository; running with half of one
-            // asks GitHub for `undefined/tmpl-repo`.
-            await ensureEdsContent(makeConfig({ templateOwner: 'tmpl-owner' }), makeDeps());
-            await ensureEdsContent(makeConfig({ templateRepo: 'tmpl-repo' }), makeDeps());
+    describe('the block library', () => {
+        it("builds from the storefront's own repository and writes to its DA.live site", async () => {
+            await ensureEdsContent(makeConfig(), makeDeps());
 
-            expect(mockCreateBlockLibraryFromTemplate).not.toHaveBeenCalled();
+            expect(mockListRepoFiles).toHaveBeenCalledWith('test-owner', 'test-repo', 'main');
+            const [org, site, input] = mockWriteStorefrontBlockLibrary.mock.calls[0];
+            expect([org, site]).toEqual(['test-org', 'test-site']);
+            expect((input as StorefrontLibraryInput).blocks.map((block) => block.id)).toEqual(['hero']);
         });
 
-        it('addresses the template repo it was given', async () => {
-            const config = makeConfig({ templateOwner: 'tmpl-owner', templateRepo: 'tmpl-repo' });
+        it("reads the package's content sources, the libraries and the demo's site", async () => {
+            const config = makeConfig({
+                accountContentSource: { org: 'b2b-org', site: 'b2b-site' },
+                blockLibraries: ['isle5'],
+                demoContentSource: { org: 'demo-org', site: 'demo-site' },
+            });
 
             await ensureEdsContent(config, makeDeps());
 
-            const [org, site, owner, repo] = mockCreateBlockLibraryFromTemplate.mock.calls[0];
-            expect([org, site, owner, repo]).toEqual([
-                'test-org',
-                'test-site',
-                'tmpl-owner',
-                'tmpl-repo',
-            ]);
+            const asked = mockFetch.mock.calls.map(([url]) => url as string);
+            expect(asked).toEqual(expect.arrayContaining([
+                'https://main--source-site--source-org.aem.page/docs/library/blocks.json',
+                'https://main--b2b-site--b2b-org.aem.page/docs/library/blocks.json',
+                'https://main--demo-site--demo-org.aem.page/docs/library/blocks/hero.plain.html',
+            ]));
+            expect(mockListRepoFiles).toHaveBeenCalledWith('stephen-garner-adobe', 'isle5', 'main');
         });
 
-        it('hands the builder a reader that fetches from GitHub', async () => {
-            const config = makeConfig({ templateOwner: 'tmpl-owner', templateRepo: 'tmpl-repo' });
-            await ensureEdsContent(config, makeDeps());
+        it('hands the writer a code reader that fetches from the storefront on GitHub', async () => {
+            await ensureEdsContent(makeConfig(), makeDeps());
 
-            const readFile = mockCreateBlockLibraryFromTemplate.mock.calls[0][4] as (
-                owner: string,
-                repo: string,
-                path: string
-            ) => Promise<unknown>;
-            await readFile('tmpl-owner', 'tmpl-repo', 'component-definition.json');
+            const input = mockWriteStorefrontBlockLibrary.mock.calls[0][2] as StorefrontLibraryInput;
+            await input.placeholderFor('hero');
 
-            // A closure that resolves to undefined leaves the builder reporting
-            // "no component-definition.json" for every template that has one.
+            // A reader that resolves to undefined shapes every placeholder as one cell.
             expect(mockGetFileContent).toHaveBeenCalledWith(
-                'tmpl-owner',
-                'tmpl-repo',
-                'component-definition.json'
+                'test-owner',
+                'test-repo',
+                'blocks/hero/hero.js',
+                'main'
             );
         });
     });
@@ -684,6 +673,7 @@ describe('ensureEdsContent — the calls it makes', () => {
 
         it('publishes them after the pages', async () => {
             withSheets(['/metadata.json']);
+            mockWriteStorefrontBlockLibrary.mockResolvedValue({ success: true, blocksCount: 0, paths: [] });
 
             await ensureEdsContent(makeConfig(), makeDeps());
 

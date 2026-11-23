@@ -39,7 +39,6 @@ import { readShippedPatches } from '@/features/eds/services/patches/shippedPatch
 import { installQuickEdit } from '@/features/eds/services/quickEditPublisher';
 import {
     getBlockLibrarySource,
-    getBlockLibraryContentSource,
     getBlockLibraryName,
     isBlockLibraryAvailableForPackage,
 } from '@/features/components/services/blockLibraryLoader';
@@ -76,9 +75,6 @@ export const mocks = {
     installQuickEdit: installQuickEdit as jest.MockedFunction<typeof installQuickEdit>,
     getBlockLibrarySource: getBlockLibrarySource as jest.MockedFunction<
         typeof getBlockLibrarySource
-    >,
-    getBlockLibraryContentSource: getBlockLibraryContentSource as jest.MockedFunction<
-        typeof getBlockLibraryContentSource
     >,
     getBlockLibraryName: getBlockLibraryName as jest.MockedFunction<typeof getBlockLibraryName>,
     isBlockLibraryAvailableForPackage: isBlockLibraryAvailableForPackage as jest.MockedFunction<
@@ -126,7 +122,6 @@ export function installDefaults(): void {
     mocks.installQuickEdit.mockResolvedValue({ installed: true });
     mocks.isBlockLibraryAvailableForPackage.mockReturnValue(true);
     mocks.getBlockLibrarySource.mockReturnValue(undefined);
-    mocks.getBlockLibraryContentSource.mockReturnValue(undefined);
     mocks.getBlockLibraryName.mockReturnValue('');
     mockGetLatestCommitSha.mockResolvedValue(null);
 }

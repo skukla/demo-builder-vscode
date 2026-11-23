@@ -56,14 +56,13 @@ describe('storefront setup: a stop ends at the next step boundary', () => {
         ServiceLocator.setCommandExecutor(createMockCommandExecutor());
         stop = new AbortController();
         mockPhase1.mockResolvedValue(null);
-        mockPhase2.mockResolvedValue({ blockCollectionIds: [] });
+        mockPhase2.mockResolvedValue(undefined);
         mockPhase3.mockResolvedValue(null);
     });
 
     it('stopped during the code step: the site is not registered, nothing after it starts', async () => {
         mockPhase2.mockImplementation(async () => {
             stop.abort(); // the stop arrives while this step runs; the step still finishes
-            return { blockCollectionIds: [] };
         });
 
         const result = await executeStorefrontSetupPhases(

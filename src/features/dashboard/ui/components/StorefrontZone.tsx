@@ -62,7 +62,7 @@ export function StorefrontZone({
                     icon={<ViewGrid size="L" />}
                     onPress={handleRefreshBlockLibrary}
                     action="refresh-block-library"
-                    tooltip="Refresh the block library: bring in the latest blocks from your block libraries"
+                    tooltip="Rebuild the DA.live block list from the storefront's code and pages"
                 />
             )}
             {handleOpenSiteAccess && (

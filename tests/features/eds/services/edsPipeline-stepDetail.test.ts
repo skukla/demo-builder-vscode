@@ -2,7 +2,7 @@
  * EDS Pipeline: what each step reports and how it handles its own edges.
  *
  * The copy step's account-chrome overlay, the publish step's one tolerated
- * failure, the block library's comp-def read. Each of these is a decision the
+ * failure, the block library's reads of the storefront's code. Each of these is a decision the
  * pipeline makes on the SC's behalf and then reports; the progress payloads are
  * the only place most of them become visible. Publishing the library and the
  * sheets is in edsPipeline-stepDetail-publish.test.ts; the setup both share is in
@@ -10,8 +10,8 @@
  */
 
 import { executeEdsPipeline, stepDetailHarness } from './edsPipeline-stepDetail.testUtils';
-import { DaLiveError } from '@/features/eds/services/types';
 import { createPatchReport } from '@/features/eds/services/patches/patchReportHelper';
+import type { StorefrontLibraryInput } from '@/features/eds/services/blockLibrary/storefrontLibraryWriter';
 import type { EdsPipelineParams } from '@/features/eds/services/edsPipeline';
 
 describe('executeEdsPipeline - step detail', () => {
@@ -331,24 +331,26 @@ describe('executeEdsPipeline - step detail', () => {
             ...over,
         });
 
-        it('reads the component definition through the GitHub file operations', async () => {
-            // The reader is handed in as a callback; if it stops delegating, the
-            // library builds from nothing and every block silently disappears.
+        it("reads the storefront's blocks and their code through the GitHub file operations", async () => {
+            // The code reader is handed to the writer as a callback; if it stops delegating,
+            // every placeholder falls back to one cell whatever the block's code reads.
+            h.mockListRepoFiles.mockResolvedValue([
+                { path: 'blocks/hero/hero.js', type: 'blob', sha: 'h' },
+            ]);
+            h.mockGetFileContent.mockImplementation(async (_o: string, _r: string, path: string) =>
+                path === 'blocks/hero/hero.js' ? { content: 'row.children[1]', sha: 'abc' } : null);
+
             await executeEdsPipeline(withLibrary(), h.services, h.onProgress);
 
-            const readFile = h.mockCreateBlockLibrary.mock.calls[0]?.[4] as (
-                owner: string,
-                repo: string,
-                path: string
-            ) => Promise<unknown>;
-            const answer = await readFile('an-owner', 'a-repo', 'component-definition.json');
-
+            expect(h.mockListRepoFiles).toHaveBeenCalledWith('test-owner', 'test-repo', 'main');
+            const input = h.mockWriteBlockLibrary.mock.calls[0]?.[2] as StorefrontLibraryInput;
+            expect(await input.placeholderFor('hero')).toEqual({ rows: 1, columns: 2, variants: [] });
             expect(h.mockGetFileContent).toHaveBeenCalledWith(
-                'an-owner',
-                'a-repo',
-                'component-definition.json'
+                'test-owner',
+                'test-repo',
+                'blocks/hero/hero.js',
+                'main'
             );
-            expect(answer).toEqual({ content: '{}', sha: 'abc' });
         });
 
         it('says it is configuring the library before it starts', async () => {
@@ -375,7 +377,7 @@ describe('executeEdsPipeline - step detail', () => {
         it('stays quiet when the library came back empty', async () => {
             // The control for the message above — and an empty library is worth
             // NOT announcing as a success.
-            h.mockCreateBlockLibrary.mockResolvedValue({
+            h.mockWriteBlockLibrary.mockResolvedValue({
                 success: true,
                 blocksCount: 0,
                 paths: [],
@@ -389,7 +391,7 @@ describe('executeEdsPipeline - step detail', () => {
         // EDS-38: the palette lists blocks only through the site config, so a library whose
         // registration failed is said out loud where the SC is looking.
         it('warns that the palette will be empty when the library could not be registered', async () => {
-            h.mockCreateBlockLibrary.mockResolvedValue({
+            h.mockWriteBlockLibrary.mockResolvedValue({
                 success: false,
                 blocksCount: 5,
                 paths: [],
@@ -409,47 +411,17 @@ describe('executeEdsPipeline - step detail', () => {
             ]);
         });
 
-        it('tolerates a source org the SC has no DA.live access to', async () => {
-            // 403 means someone else owns the library org; the CDN fallback
-            // inside the library build handles it.
-            h.mockCopyContent.mockRejectedValue(new DaLiveError('Forbidden', 'FORBIDDEN', 403));
+        it("leaves the list alone and says so when GitHub cannot list the storefront's blocks", async () => {
+            // Writing a list without the storefront's own blocks would drop their rows.
+            h.mockListRepoFiles.mockRejectedValue(new Error('GitHub 502'));
 
-            const result = await executeEdsPipeline(
-                withLibrary({ libraryContentSources: [{ org: 'other-org', site: 'blocks' }] }),
-                h.services,
-                h.onProgress
-            );
+            const result = await executeEdsPipeline(withLibrary(), h.services, h.onProgress);
 
             expect(result.success).toBe(true);
-            expect(h.mockCreateBlockLibrary).toHaveBeenCalled();
-        });
-
-        it('fails the run on a DA.live error that is not a permission one', async () => {
-            h.mockCopyContent.mockRejectedValue(
-                new DaLiveError('Gateway timeout', 'GATEWAY_TIMEOUT', 504)
-            );
-
-            const result = await executeEdsPipeline(
-                withLibrary({ libraryContentSources: [{ org: 'other-org', site: 'blocks' }] }),
-                h.services,
-                h.onProgress
-            );
-
-            expect(result.success).toBe(false);
-            expect(result.error).toBe('Gateway timeout');
-        });
-
-        it('fails the run on an error that is not a DA.live error at all', async () => {
-            h.mockCopyContent.mockRejectedValue(new Error('socket hang up'));
-
-            const result = await executeEdsPipeline(
-                withLibrary({ libraryContentSources: [{ org: 'other-org', site: 'blocks' }] }),
-                h.services,
-                h.onProgress
-            );
-
-            expect(result.success).toBe(false);
-            expect(result.error).toBe('socket hang up');
+            expect(h.mockWriteBlockLibrary).not.toHaveBeenCalled();
+            expect(result.warnings).toEqual([
+                "The storefront's blocks could not be read from GitHub, so the block list in DA.live was left unchanged.",
+            ]);
         });
     });
 

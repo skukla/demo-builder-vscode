@@ -61,6 +61,8 @@ import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 import { createMockPipelineResult } from '../../../helpers/pipelineResultFake';
+import { makeAddedDemo } from '../../../helpers/demoPackageFixtures';
+import { withAlwaysIncludedBlockLibraries } from '@/features/components/services/blockLibraryLoader';
 
 const pipelineMock = executeEdsPipeline as jest.Mock;
 const ensureAuthMock = ensureDaLiveAuth as jest.Mock;
@@ -128,7 +130,6 @@ describe('refreshBlockLibraryHeadless', () => {
         // The site's pages are untouched by a block list change; the library's own
         // pages publish whatever this says (2026-10-15).
         expect(params.skipPublish).toBe(true);
-        expect(params.blockCollectionIds).toStrictEqual([]);
         // The full rebuild: every doc page, unless a caller names the blocks it added.
         expect(params).not.toHaveProperty('publishLibraryBlocksOnly');
 
@@ -136,6 +137,34 @@ describe('refreshBlockLibraryHeadless', () => {
             success: true,
             libraryPaths: ['/.da/library/blocks/hero'],
         });
+    });
+
+    it("hands the library the project's content sources, its libraries and its demo's site", async () => {
+        const contentSource = { org: 'brand', site: 'brand-content', indexPath: '/full-index.json' };
+        const accountContentSource = { org: 'adobe-commerce', site: 'boilerplate-b2b' };
+        extractParamsMock.mockReturnValue({
+            success: true,
+            params: {
+                repoOwner: 'demo-org', repoName: 'demo-repo',
+                daLiveOrg: 'demo-org', daLiveSite: 'demo-site',
+                contentSource, accountContentSource,
+            },
+        });
+        const demoSource = { org: 'org-e', site: 'tailspin', indexPath: '/query-index.json' };
+        const project = createMockProject({
+            name: 'Demo', path: '/p', selectedPackage: 'citisignal',
+            selectedBlockLibraries: ['isle5'],
+            demo: makeAddedDemo({ contentSource: demoSource }),
+        });
+
+        await refreshBlockLibraryHeadless(deps({ project }));
+
+        expect(pipelineMock.mock.calls[0][0]).toEqual(expect.objectContaining({
+            contentSource,
+            accountContentSource,
+            blockLibraries: withAlwaysIncludedBlockLibraries(['isle5'], 'citisignal'),
+            demoContentSource: demoSource,
+        }));
     });
 
     it('publishes only the blocks a caller names, when it names them', async () => {

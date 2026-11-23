@@ -15,17 +15,14 @@ jest.setTimeout(5000);
 // =============================================================================
 
 // Its own wall rather than `storefrontSetupPhases.sharedMocks`: that file's
-// blockLibraryLoader double answers two functions, and the library content
-// sources this suite drives come from a third.
+// blockLibraryLoader double answers two functions, and the library list this
+// suite drives goes through a third.
 jest.mock('@/features/components/services/blockLibraryLoader', () => ({
     // Pass-through: the always-included libraries are tested where they are added.
     withAlwaysIncludedBlockLibraries: (selected?: string[]) => selected ?? [],
     getBlockLibrarySource: jest.fn(),
     getBlockLibraryName: jest.fn(),
     isBlockLibraryAvailableForPackage: jest.fn().mockReturnValue(true),
-    getBlockLibraryContentSource: jest.fn((id: string) =>
-        id === 'known-library' ? { org: 'library-org', site: 'library-site' } : undefined
-    ),
 }));
 
 jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({
@@ -169,8 +166,8 @@ describe('a project imported from a demo bundle', () => {
         expect(createEmptyRepository).toHaveBeenCalledWith('test-repo', false, 'test-org');
         expect(mockCreateFromTemplate).not.toHaveBeenCalled();
         const input = mockExecuteEdsPipeline.mock.calls[0][0];
-        // Block definitions are the bundle's, read from the project's own repository.
-        expect(input).toMatchObject({ templateOwner: 'test-owner', templateRepo: 'test-repo', contentSource: SENDER_PAGES, skipContent: false });
+        // The blocks are the bundle's: the library reads the project's own repository.
+        expect(input).toMatchObject({ repoOwner: 'test-owner', repoName: 'test-repo', contentSource: SENDER_PAGES, skipContent: false });
         expect(input.codePatches).toBeUndefined();
         expect(input.codePatchSource).toBeUndefined();
     });

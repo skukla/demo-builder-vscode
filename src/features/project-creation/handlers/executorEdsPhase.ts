@@ -18,6 +18,7 @@ import { andList } from '@/core/utils/andList';
 import { parseGitHubUrl } from '@/core/utils/githubUrlParser';
 import { OPERATION_STAGES } from '@/core/utils/operationStages';
 import { catalogMenuSiteFor } from '@/features/ai/server/storefrontPages';
+import { withAlwaysIncludedBlockLibraries } from '@/features/components/services/blockLibraryLoader';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { detectB2bReadiness } from '@/features/eds/services/b2bReadinessDetection';
 import { authoredSheetRefresh } from '@/features/eds/services/catalogMenu/authoredSheetRefresh';
@@ -403,8 +404,10 @@ export async function setupEdsContent(
                 accountContentSource: typedConfig.edsConfig.accountContentSource,
                 contentPatches: typedConfig.edsConfig.contentPatches,
                 contentPatchSource: typedConfig.edsConfig.contentPatchSource,
-                templateOwner: typedConfig.edsConfig.templateOwner,
-                templateRepo: typedConfig.edsConfig.templateRepo,
+                blockLibraries: withAlwaysIncludedBlockLibraries(
+                    typedConfig.selectedBlockLibraries, typedConfig.selectedPackage ?? '',
+                ),
+                demoContentSource: project?.demo?.contentSource,
             },
             {
                 logger: context.logger,

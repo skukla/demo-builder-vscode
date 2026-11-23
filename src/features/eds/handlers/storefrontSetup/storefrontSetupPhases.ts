@@ -34,7 +34,6 @@ import {
 import { confirmStorefrontCodeServed } from '../../services/storefront/codeServed';
 import { getDaLiveAuthService } from '../edsHelpers';
 import { codeSource, executePhaseBundleRepo, hasCodeSource, readSetupBundle } from './storefrontSetupBundle';
-import { withDemoContentSource } from './storefrontSetupDemo';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
 import { executePhaseGitHubRepo } from './storefrontSetupPhase1';
 import { executePhaseHelixConfig, type BlockLibraryOptions } from './storefrontSetupPhase2';
@@ -48,7 +47,7 @@ import {
 } from './storefrontSetupProgress';
 import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefrontSetupTypes';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { getBlockLibraryContentSource } from '@/features/components/services/blockLibraryLoader';
+import { withAlwaysIncludedBlockLibraries } from '@/features/components/services/blockLibraryLoader';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { projectTargetsStorefront } from '@/features/eds/services/storefrontIdentityGuard';
 import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
@@ -92,21 +91,9 @@ function createSetupServices(context: HandlerContext): SetupServices {
     };
 }
 
-/** Build content source entries for block library doc pages */
-function buildLibraryContentSources(
-    blockLibraries: string[],
-): Array<{ org: string; site: string }> {
-    const sources: Array<{ org: string; site: string }> = [];
-    for (const libraryId of blockLibraries) {
-        const cs = getBlockLibraryContentSource(libraryId);
-        if (cs) sources.push(cs);
-    }
-    return sources;
-}
-
 /**
  * Run Phase 2 (Helix config) and Phase 3 (code sync) with DA.live auth recovery.
- * Returns blockCollectionIds and any early-return result.
+ * Returns any early-return result.
  */
 async function runConfigCodeSyncPhases(
     context: HandlerContext,
@@ -115,31 +102,18 @@ async function runConfigCodeSyncPhases(
     repoInfo: RepoInfo,
     signal: AbortSignal,
     options?: BlockLibraryOptions,
-): Promise<{ blockCollectionIds: string[] | undefined; earlyReturn?: StorefrontSetupResult }> {
+): Promise<{ earlyReturn?: StorefrontSetupResult }> {
     return withDaLiveAuthRetry(
         context,
         async () => {
-            const phase2Result = await executePhaseHelixConfig(
-                context,
-                edsConfig,
-                services,
-                repoInfo,
-                signal,
-                options,
-            );
+            await executePhaseHelixConfig(context, edsConfig, services, repoInfo, signal, options);
             // A step boundary (F275): a stop during the code step registers no site.
             if (signal.aborted) throw new Error('Operation cancelled');
             // From here the run writes the site; one it was handed is never its to remove.
             if (!edsConfig.selectedSite) repoInfo.siteWritten = true;
             const phase3Result =
                 await executePhaseCodeSync(context, edsConfig, services, repoInfo, signal);
-            if (phase3Result) {
-                return {
-                    blockCollectionIds: phase2Result.blockCollectionIds,
-                    earlyReturn: phase3Result,
-                };
-            }
-            return { blockCollectionIds: phase2Result.blockCollectionIds };
+            return phase3Result ? { earlyReturn: phase3Result } : {};
         },
         {
             maxAttempts: MAX_REAUTH_ATTEMPTS,
@@ -200,10 +174,7 @@ async function runEdsPipelineWithRecovery(
     services: SetupServices,
     repoInfo: RepoInfo,
     edsConfig: StorefrontSetupStartPayload['edsConfig'],
-    templateOwner: string,
-    templateRepo: string,
-    blockCollectionIds: string[] | undefined,
-    libraryContentSources: Array<{ org: string; site: string }>,
+    blockLibraries: string[],
     wantsToResetContent: boolean,
     skipContent: boolean,
     onProgress: (info: PipelineProgressInfo) => void,
@@ -241,8 +212,6 @@ async function runEdsPipelineWithRecovery(
                     repoName: repoInfo.repoName,
                     daLiveOrg: edsConfig.daLiveOrg,
                     daLiveSite: edsConfig.daLiveSite,
-                    templateOwner,
-                    templateRepo,
                     clearExistingContent: wantsToResetContent,
                     skipContent,
                     contentSource: edsConfig.contentSource,
@@ -258,8 +227,10 @@ async function runEdsPipelineWithRecovery(
                     // there's a single toast per setup, not one per source.
                     patchReport,
                     includeBlockLibrary: true,
-                    blockCollectionIds,
-                    libraryContentSources,
+                    blockLibraries,
+                    // An added demo's own content site holds its blocks' example pages,
+                    // which arrive even when its pages are not copied (D20).
+                    demoContentSource: edsConfig.demo?.contentSource,
                     purgeCache: Boolean(edsConfig.resetToTemplate || wantsToResetContent),
                     byomOverlayUrl: edsConfig.byomOverlayUrl,
                     project: project ?? undefined,
@@ -417,7 +388,11 @@ export async function executeStorefrontSetupPhases(
 
     const repoInfo: RepoInfo = { repoOwner: githubOwner, repoName: edsConfig.repoName };
     const template = codeSource(undefined, repoInfo, edsConfig);
-    const effectiveBlockLibraries = options?.selectedBlockLibraries ?? [];
+    // Every library the storefront has, the always-included ones too: the block library
+    // reads their content sites for examples.
+    const blockLibraries = withAlwaysIncludedBlockLibraries(
+        options?.selectedBlockLibraries, options?.packageId ?? '',
+    );
     const phaseOptions: BlockLibraryOptions = { ...options };
 
     // Shared patch report — canonical-phase results from Phase 1's LKG pin
@@ -442,7 +417,7 @@ export async function executeStorefrontSetupPhases(
               );
         if (phase1Result) return phase1Result;
 
-        const { blockCollectionIds, earlyReturn } = await runConfigCodeSyncPhases(
+        const { earlyReturn } = await runConfigCodeSyncPhases(
             context,
             edsConfig,
             services,
@@ -459,11 +434,7 @@ export async function executeStorefrontSetupPhases(
             services,
             repoInfo,
             edsConfig,
-            // An imported project's code is its own repository's: block definitions are read there.
-            codeSource(bundle, repoInfo, edsConfig).owner,
-            codeSource(bundle, repoInfo, edsConfig).repo,
-            blockCollectionIds,
-            withDemoContentSource(buildLibraryContentSources(effectiveBlockLibraries), edsConfig.demo),
+            blockLibraries,
             wantsToResetContent,
             skipContent,
             buildPipelineProgressCallback(context),

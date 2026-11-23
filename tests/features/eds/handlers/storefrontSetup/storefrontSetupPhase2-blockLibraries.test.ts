@@ -41,7 +41,7 @@ async function runPhase(
 ) {
     const { context, sendMessage, saveProject } = makePhaseContext(project);
     const repoInfo = makeRepoInfo();
-    const result = await executePhaseHelixConfig(
+    await executePhaseHelixConfig(
         context,
         EDS_CONFIG,
         servicesWith(fileOps),
@@ -49,7 +49,7 @@ async function runPhase(
         new AbortController().signal,
         options,
     );
-    return { result, repoInfo, fileOps, context, sendMessage, saveProject };
+    return { repoInfo, fileOps, context, sendMessage, saveProject };
 }
 
 /** The library list as it reached the installer. */
@@ -299,10 +299,9 @@ describe('executePhaseHelixConfig — inspector tagging', () => {
     it('skips tagging entirely when generating the entries threw', async () => {
         inspectorHelpers.generateInspectorTreeEntries.mockRejectedValue(new Error('rate limited'));
 
-        const { result } = await runPhase({});
+        await runPhase({});
 
         expect(inspectorHelpers.installInspectorTagging).not.toHaveBeenCalled();
-        expect(result).toEqual({ blockCollectionIds: undefined });
     });
 
     it('still installs blocks with an empty entry list when generating them threw', async () => {
@@ -322,25 +321,13 @@ describe('executePhaseHelixConfig — inspector tagging', () => {
     });
 });
 
-describe('executePhaseHelixConfig — what it reports back and records', () => {
+describe('executePhaseHelixConfig — what it records', () => {
     beforeEach(() => {
         blockLibraryLoader.getBlockLibrarySource.mockReturnValue(ISLE5_SOURCE);
         blockLibraryLoader.getBlockLibraryName.mockReturnValue('Isle5 Blocks');
     });
 
-    it('returns the installed block ids', async () => {
-        blockCollectionHelpers.installBlockCollections.mockResolvedValue({
-            success: true,
-            blocksCount: 3,
-            blockIds: ['hero', 'cards', 'columns'],
-        });
-
-        const { result } = await runPhase({ selectedBlockLibraries: ['isle5'] });
-
-        expect(result).toEqual({ blockCollectionIds: ['hero', 'cards', 'columns'] });
-    });
-
-    it('returns nothing when the install failed', async () => {
+    it('records nothing when the install failed', async () => {
         blockCollectionHelpers.installBlockCollections.mockResolvedValue({
             success: false,
             blocksCount: 0,
@@ -348,10 +335,10 @@ describe('executePhaseHelixConfig — what it reports back and records', () => {
             error: 'source repo not found',
         });
 
-        const { result, saveProject } = await runPhase({ selectedBlockLibraries: ['isle5'] });
+        const { saveProject, repoInfo } = await runPhase({ selectedBlockLibraries: ['isle5'] });
 
-        expect(result).toEqual({ blockCollectionIds: undefined });
         expect(saveProject).not.toHaveBeenCalled();
+        expect(repoInfo.installedBlockLibraries).toBeUndefined();
     });
 
     /**
@@ -408,13 +395,12 @@ describe('executePhaseHelixConfig — what it reports back and records', () => {
             ],
         });
 
-        const { saveProject, result, repoInfo } = await runPhase(
+        const { saveProject, repoInfo } = await runPhase(
             { selectedBlockLibraries: ['isle5'] },
             null,
         );
 
         expect(saveProject).not.toHaveBeenCalled();
-        expect(result).toEqual({ blockCollectionIds: ['hero'] });
         expect(repoInfo.installedBlockLibraries?.map((lib) => lib.name)).toEqual(['Isle5 Blocks']);
     });
 

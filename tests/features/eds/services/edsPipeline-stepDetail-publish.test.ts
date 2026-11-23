@@ -18,7 +18,7 @@ describe('executeEdsPipeline - publishing the library and the sheets', () => {
 
     describe('publishing the block library', () => {
         const withPaths = (paths: string[]) => {
-            h.mockCreateBlockLibrary.mockResolvedValue({
+            h.mockWriteBlockLibrary.mockResolvedValue({
                 success: true,
                 blocksCount: paths.length,
                 paths,

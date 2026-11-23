@@ -450,7 +450,7 @@ export const dashboardHandlers = defineHandlers({
     // EDS storefront sync
     syncStorefront: handleSyncStorefront,
 
-    // EDS block library refresh (re-sync DA.live library from component-definition.json)
+    // EDS block library refresh (rebuild the DA.live block list from code and pages)
     refreshBlockLibrary: handleRefreshBlockLibrary,
 
     authenticate: handleAuthenticate, // the one Sign In; the screen re-reads status after

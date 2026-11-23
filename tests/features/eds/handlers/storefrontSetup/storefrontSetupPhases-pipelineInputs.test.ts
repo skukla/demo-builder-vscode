@@ -16,17 +16,14 @@ jest.setTimeout(5000);
 // =============================================================================
 
 // Its own wall rather than `storefrontSetupPhases.sharedMocks`: that file's
-// blockLibraryLoader double answers two functions, and the library content
-// sources this suite drives come from a third.
+// blockLibraryLoader double answers two functions, and the library list this
+// suite drives goes through a third.
 jest.mock('@/features/components/services/blockLibraryLoader', () => ({
     // Pass-through: the always-included libraries are tested where they are added.
     withAlwaysIncludedBlockLibraries: (selected?: string[]) => selected ?? [],
     getBlockLibrarySource: jest.fn(),
     getBlockLibraryName: jest.fn(),
     isBlockLibraryAvailableForPackage: jest.fn().mockReturnValue(true),
-    getBlockLibraryContentSource: jest.fn((id: string) =>
-        id === 'known-library' ? { org: 'library-org', site: 'library-site' } : undefined
-    ),
 }));
 
 jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({
@@ -91,8 +88,7 @@ import {
 import type { SetupServices } from '@/features/eds/handlers/storefrontSetup/storefrontSetupTypes';
 import type { StorefrontSetupStartPayload } from '@/types/webviewRequests';
 import { executeEdsPipeline } from '@/features/eds/services/edsPipeline';
-import { installBlockCollections } from '@/features/eds/services/blockCollectionHelpers';
-import { getBlockLibrarySource } from '@/features/components/services/blockLibraryLoader';
+import { makeAddedDemo } from '../../../../helpers/demoPackageFixtures';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockCommandExecutor } from '../../../../helpers/commandExecutorFake';
 import { createMockPipelineResult } from '../../../../helpers/pipelineResultFake';
@@ -386,7 +382,7 @@ describe('the authored-pages sheet before the content publish', () => {
 });
 
 describe('the rest of the pipeline instruction', () => {
-    it('names the repo, the site, the template and the block library work', async () => {
+    it('names the repo, the site, the content and the block library work', async () => {
         await runSetup(
             createEdsConfig({
                 contentSource: { org: 'src-org', site: 'src-site', indexPath: '/full-index.json' },
@@ -401,27 +397,34 @@ describe('the rest of the pipeline instruction', () => {
                 repoName: 'test-repo',
                 daLiveOrg: 'test-org',
                 daLiveSite: 'test-site',
-                templateOwner: 'template-owner',
-                templateRepo: 'template-repo',
                 contentSource: { org: 'src-org', site: 'src-site', indexPath: '/full-index.json' },
                 byomOverlayUrl: 'https://overlay.example/render-pdp',
                 includeBlockLibrary: true,
+                blockLibraries: ['known-library'],
             })
         );
     });
 
-    it('carries a content source for each library that publishes doc pages', async () => {
-        // A library with no doc pages contributes nothing rather than an
-        // undefined entry the pipeline would then try to read.
+    it('carries every library the storefront has, for the library to read their sites', async () => {
         await runSetup(createEdsConfig(), {
             blockLibraries: ['known-library', 'library-without-docs'],
         });
 
-        // Length asserted separately: `toEqual` treats a trailing undefined in
-        // an array as absent, so a list that gained an empty slot would pass.
-        const sources = pipelineInput().libraryContentSources as unknown[];
-        expect(sources).toHaveLength(1);
-        expect(sources[0]).toEqual({ org: 'library-org', site: 'library-site' });
+        expect(pipelineInput().blockLibraries).toStrictEqual(['known-library', 'library-without-docs']);
+    });
+
+    it("carries an added demo's content site, where its blocks' example pages are (D20)", async () => {
+        const contentSource = { org: 'org-e', site: 'tailspin', indexPath: '/query-index.json' };
+
+        await runSetup(createEdsConfig({ demo: makeAddedDemo({ contentSource }) }));
+
+        expect(pipelineInput().demoContentSource).toStrictEqual(contentSource);
+    });
+
+    it('carries no demo site for a shipped brand', async () => {
+        await runSetup(createEdsConfig());
+
+        expect(pipelineInput().demoContentSource).toBeUndefined();
     });
 
     it('hands the pipeline the collaborators it runs on', async () => {
@@ -437,25 +440,6 @@ describe('the rest of the pipeline instruction', () => {
             }),
             expect.any(Function)
         );
-    });
-
-    it('carries the block ids phase two installed', async () => {
-        // The pipeline publishes the doc pages for exactly these blocks; losing
-        // the list publishes none of them and the library looks empty.
-        (getBlockLibrarySource as jest.Mock).mockReturnValue({
-            owner: 'library-org',
-            repo: 'blocks',
-            branch: 'main',
-        });
-        (installBlockCollections as jest.Mock).mockResolvedValue({
-            success: true,
-            blocksCount: 2,
-            blockIds: ['cards', 'hero'],
-        });
-
-        await runSetup(createEdsConfig(), { blockLibraries: ['known-library'] });
-
-        expect(pipelineInput().blockCollectionIds).toEqual(['cards', 'hero']);
     });
 
     it('creates the new repository under the name the SC chose', async () => {
@@ -481,10 +465,10 @@ describe('the rest of the pipeline instruction', () => {
         expect(pipelineInput().repoName).toBe('test-repo');
     });
 
-    it('carries no content sources when no libraries were selected', async () => {
+    it('carries no libraries when none were selected', async () => {
         await runSetup(createEdsConfig());
 
-        expect(pipelineInput().libraryContentSources).toStrictEqual([]);
+        expect(pipelineInput().blockLibraries).toStrictEqual([]);
     });
 });
 

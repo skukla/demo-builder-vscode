@@ -20,6 +20,7 @@
 import { DaLiveApiClient } from './daLiveApiClient';
 import { DA_LIVE_BASE_URL } from './daLiveConstants';
 import { hasWriteAccess } from './daLiveOrgOperations';
+import { siteLibraryRows, type LibraryEntry } from './daLiveSiteLibraryRows';
 import type { Logger } from '@/types/logger';
 
 /**
@@ -44,23 +45,6 @@ export class DaLiveConfigOperations {
         private readonly logger: Logger,
     ) {}
 
-    /**
-     * Update the site's block-library config sheet.
-     *
-     * The /config/ API is a special endpoint for managing site configuration.
-     * It handles the /.da/config file and automatically syncs to CDN.
-     * This is different from creating files via /source/ endpoint.
-     *
-     * Uses the same fail-closed read + 401 ownership discipline as
-     * `writeMergedDataConfig`: a transient GET error never triggers a skeleton
-     * write, and `:names` is computed dynamically so a `permissions` (or any
-     * other) sheet already on the site config is preserved, not clobbered.
-     *
-     * @param org - Organization name
-     * @param site - Site name
-     * @param libraryEntries - Array of library entries with title and path
-     * @returns Result with success status
-     */
     /**
      * The site config exactly as DA.live holds it — for diagnostics only.
      *
@@ -91,10 +75,30 @@ export class DaLiveConfigOperations {
         }
     }
 
+    /**
+     * Update the site's block-library config sheet (`library`).
+     *
+     * The /config/ API is a special endpoint for managing site configuration.
+     * It handles the /.da/config file and automatically syncs to CDN.
+     * This is different from creating files via /source/ endpoint.
+     *
+     * Uses the same fail-closed read + 401 ownership discipline as
+     * `writeMergedDataConfig`: a transient GET error never triggers a skeleton
+     * write, and `:names` is computed dynamically so a `permissions` (or any
+     * other) sheet already on the site config is preserved, not clobbered.
+     *
+     * @param org - Organization name
+     * @param site - Site name
+     * @param libraryEntries - Array of library entries with title and path
+     * @param options - `keepOtherRows`: keep the `library` rows already there
+     *   (see `siteLibraryRows`) instead of writing exactly `libraryEntries`
+     * @returns Result with success status
+     */
     async updateSiteConfig(
         org: string,
         site: string,
-        libraryEntries: Array<{ title: string; path: string }>,
+        libraryEntries: LibraryEntry[],
+        options: { keepOtherRows?: boolean } = {},
     ): Promise<{ success: boolean; error?: string }> {
         const token = await this.apiClient.getImsToken();
         const configUrl = `${DA_LIVE_BASE_URL}/config/${org}/${site}`;
@@ -104,6 +108,11 @@ export class DaLiveConfigOperations {
             return { success: false, error: read.error };
         }
         const existingConfig = read.config;
+        const rows = siteLibraryRows(
+            existingConfig.library,
+            libraryEntries,
+            options.keepOtherRows,
+        );
 
         // Preserve the existing data sheet, (re)write the library sheet, and
         // preserve ALL other sheets. `:names` is computed dynamically so a
@@ -116,19 +125,7 @@ export class DaLiveConfigOperations {
                 limit: 1,
                 data: [{}],
             },
-            library: {
-                total: libraryEntries.length,
-                offset: 0,
-                limit: libraryEntries.length,
-                data: libraryEntries.map((entry) => ({
-                    title: entry.title,
-                    path: entry.path,
-                    format: '',
-                    ref: '',
-                    icon: '',
-                    experience: '',
-                })),
-            },
+            library: { total: rows.length, offset: 0, limit: rows.length, data: rows },
             ':version': 3,
             ':names': this.computeSheetNames(existingConfig, ['data', 'library']),
             ':type': 'multi-sheet',

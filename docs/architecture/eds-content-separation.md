@@ -31,7 +31,9 @@ serves each one as `.json` (`…/placeholders/cart.json`).
 `/source/{org}/{site}/{path}.json`, then previewing and publishing that `.json` path.**
 `buildSheetDocument` in `services/daLive/daLiveSpreadsheetUtils.ts` is the one place
 that knows the document's shape. Two writers use it: the block library's sheet
-(`DaLiveBlockLibrarySheet.createJsonSpreadsheet`) and the content copy
+(`DaLiveBlockLibrarySheet.createJsonSpreadsheet`, whose rows come from the storefront's
+block folders and pages, not `component-definition.json`:
+`.rptc/plans/block-library-without-universal-editor/step-02.md`) and the content copy
 (`copySpreadsheetFile`, which reads the source sheet off the public CDN and keeps
 every sheet in it).
 

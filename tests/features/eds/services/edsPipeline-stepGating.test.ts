@@ -12,6 +12,7 @@ import { createMockLogger } from '../../../helpers/loggerFake';
 import {
     basePipelineParams,
     executeEdsPipeline,
+    pipelineBlockLibOps,
     pipelineServices,
     type EdsPipelineParams,
     type EdsPipelineServices,
@@ -40,7 +41,7 @@ const PROJECT = createMockProject({ name: 'demo-project' });
 const CODE_PATCH_SOURCE = { owner: 'patch-owner', repo: 'patches', path: 'ledger' };
 
 describe('executeEdsPipeline - step gating', () => {
-    let mockCreateBlockLibrary: jest.Mock;
+    let mockWriteBlockLibrary: jest.Mock;
     let mockPurgeCacheAll: jest.Mock;
     let mockPublishAllSiteContent: jest.Mock;
     let mockCopyContentFromSource: jest.Mock;
@@ -50,9 +51,8 @@ describe('executeEdsPipeline - step gating', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         mockPrewarmCatalog.mockResolvedValue({ skipped: false, succeeded: 3, attempted: 3 });
-        mockCreateBlockLibrary = jest
-            .fn()
-            .mockResolvedValue({ success: true, blocksCount: 0, paths: [] });
+        const blockLibOps = pipelineBlockLibOps();
+        mockWriteBlockLibrary = blockLibOps.writeStorefrontBlockLibrary;
         mockPurgeCacheAll = jest.fn().mockResolvedValue(undefined);
         mockPublishAllSiteContent = jest.fn().mockResolvedValue(undefined);
         mockCopyContentFromSource = jest.fn().mockResolvedValue({
@@ -69,14 +69,15 @@ describe('executeEdsPipeline - step gating', () => {
                 copyOps: {
                     copyContentFromSource: mockCopyContentFromSource,
                 },
-                blockLibOps: {
-                    createBlockLibraryFromTemplate: mockCreateBlockLibrary,
-                },
+                blockLibOps,
                 sourceOps: {
                     deleteAllSiteContent: jest.fn(),
                 },
             },
-            githubFileOps: { getFileContent: jest.fn().mockResolvedValue({ content: '{}' }) },
+            githubFileOps: {
+                getFileContent: jest.fn().mockResolvedValue({ content: '{}' }),
+                listRepoFiles: jest.fn().mockResolvedValue([]),
+            },
             helixService: {
                 purgeCacheAll: mockPurgeCacheAll,
                 publishAllSiteContent: mockPublishAllSiteContent,
@@ -109,7 +110,7 @@ describe('executeEdsPipeline - step gating', () => {
             // Rebuilding one nobody asked for overwrites an SC's promoted blocks.
             await executeEdsPipeline({ ...params, skipContent: true }, services);
 
-            expect(mockCreateBlockLibrary).not.toHaveBeenCalled();
+            expect(mockWriteBlockLibrary).not.toHaveBeenCalled();
         });
 
         it('does not purge the cache', async () => {
@@ -258,15 +259,15 @@ describe('executeEdsPipeline - step gating', () => {
     // again on every refresh (17s), and every doc page with them (37s).
     describe('a block library refresh', () => {
         const LIBRARY = ['/.da/library/blocks.json', '/.da/library/blocks/hero', '/.da/library/blocks/cards'];
+        const TEMPLATES = ['/.da/library/templates.json', '/.da/library/templates/category-page'];
 
         beforeEach(() => {
-            mockCreateBlockLibrary.mockResolvedValue({ success: true, blocksCount: 2, paths: LIBRARY });
+            mockWriteBlockLibrary.mockResolvedValue({ success: true, blocksCount: 2, paths: LIBRARY });
             params = {
                 ...basePipelineParams(),
                 includeBlockLibrary: true,
                 skipContent: true,
                 skipPublish: true,
-                blockCollectionIds: [],
             };
         });
 
@@ -287,6 +288,18 @@ describe('executeEdsPipeline - step gating', () => {
                 ['/.da/library/blocks.json', '/.da/library/blocks/cards'],
                 expect.anything(),
             );
+        });
+
+        it("publishes Adobe's templates with the named blocks: an older storefront has none live", async () => {
+            mockWriteBlockLibrary.mockResolvedValue({
+                success: true, blocksCount: 2, paths: [...LIBRARY, ...TEMPLATES],
+            });
+
+            await executeEdsPipeline({ ...params, publishLibraryBlocksOnly: ['cards'] }, services);
+
+            expect((publishLibraryPaths as jest.Mock).mock.calls[0][3]).toEqual([
+                '/.da/library/blocks.json', '/.da/library/blocks/cards', ...TEMPLATES,
+            ]);
         });
 
         it('publishes just the block list when no block was added (a removal)', async () => {

@@ -97,7 +97,7 @@ describe('executeEdsPipeline - pages left over after a reset', () => {
                             codePathsOnSource: [],
                         }),
                 },
-                blockLibOps: { createBlockLibraryFromTemplate: jest.fn() },
+                blockLibOps: { writeStorefrontBlockLibrary: jest.fn() },
             },
             githubFileOps: { getFileContent: jest.fn() },
             helixService: helix as unknown as EdsPipelineServices['helixService'],

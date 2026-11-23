@@ -197,12 +197,13 @@ describe('DaLiveBlockLibraryOperations sheet rows', () => {
                 title: 'Hero',
             });
 
+            // Keeping the config's other library rows (a Templates row) is the option.
             expect(h.updateSiteConfig).toHaveBeenCalledWith(org, site, [
                 {
                     title: 'Blocks',
                     path: 'https://content.da.live/user-org/user-site/.da/library/blocks.json',
                 },
-            ]);
+            ], { keepOtherRows: true });
             expect(result.siteConfigRegistered).toBe(true);
         });
 

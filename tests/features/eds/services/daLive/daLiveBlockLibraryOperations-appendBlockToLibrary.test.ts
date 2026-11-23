@@ -64,8 +64,10 @@ describe('DaLiveContentOperations.blockLibOps.appendBlockToLibrary', () => {
         configGetStatus?: number;
         configPostStatus?: number;
         sheetPostStatus?: number;
+        existingConfig?: Record<string, unknown>;
     } = {}) {
         const {
+            existingConfig = {},
             existingRows,
             sheetGetStatus,
             configGetStatus = 200,
@@ -128,7 +130,7 @@ describe('DaLiveContentOperations.blockLibOps.appendBlockToLibrary', () => {
                 return {
                     ok: configGetStatus === 200,
                     status: configGetStatus,
-                    json: async () => ({}),
+                    json: async () => existingConfig,
                 } as unknown as Response;
             }
 
@@ -243,6 +245,34 @@ describe('DaLiveContentOperations.blockLibOps.appendBlockToLibrary', () => {
         expect(configJson.library.data[0].path).toBe(
             `https://content.da.live/${org}/${site}/.da/library/blocks.json`,
         );
+    });
+
+    it('keeps the site config\'s other library rows, a Templates row included', async () => {
+        // The `library` sheet is replaced whole on each write, so registering Blocks alone
+        // dropped the Templates list the library build wrote (step-02.md).
+        const templates = {
+            title: 'Templates',
+            path: `https://content.da.live/${org}/${site}/.da/library/templates.json`,
+            format: '', ref: '', icon: 'tpl', experience: '',
+        };
+        const oldBlocks = { ...templates, title: 'Blocks', path: 'https://old/blocks.json', icon: 'b' };
+        const existingConfig = { library: { total: 2, data: [oldBlocks, templates] } };
+        mockFetch.mockImplementation(buildMockFetch({ existingRows: [], existingConfig }));
+
+        await service.blockLibOps.appendBlockToLibrary(org, site, { blockId, title });
+
+        const configPost = mockFetch.mock.calls.find(
+            (call: FetchCall) => call[0].includes('/config/') && call[1]?.method === 'POST',
+        );
+        const configJson = JSON.parse((configPost![1]!.body as FormData).get('config') as string);
+        expect(configJson.library.data).toEqual([
+            {
+                ...oldBlocks,
+                path: `https://content.da.live/${org}/${site}/.da/library/blocks.json`,
+            },
+            templates,
+        ]);
+        expect(configJson.library.total).toBe(2);
     });
 
     it('does NOT call deleteSource — append path must be non-destructive', async () => {

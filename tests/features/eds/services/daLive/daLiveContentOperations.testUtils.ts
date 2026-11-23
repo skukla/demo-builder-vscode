@@ -7,12 +7,10 @@
  * behind in a spec loads the real module before these mocks register.
  *
  * Extracted 2026-08-30 (lane C1) from byte-identical copies in:
- *   daLiveBlockLibraryOperations-blockDocPages.test.ts   (renamed 2026-10-10)
  *   daLiveContentOperations-enumeration.test.ts
- *   daLiveBlockLibraryOperations-library-cdnCopy.test.ts   (renamed 2026-10-10)
- *   daLiveBlockLibraryOperations-library-creation.test.ts   (renamed 2026-10-10)
  *   daLiveContentOperations-transform.test.ts
  *   daLiveContentOperations-utils.test.ts
+ * and three block-library suites removed 2026-11-23 with the build they covered.
  */
 
 // Mock global fetch

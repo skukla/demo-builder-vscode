@@ -28,7 +28,9 @@ created from it. They have their own copy, and that copy is now theirs to change
 
 Installing also merges the library's entries into the storefront's three authoring
 files — `component-definition.json`, `component-filters.json` and
-`component-models.json`, the list of blocks authors can pick in DA.live. Those files
+`component-models.json` (Universal Editor's block registry; the DA.live block list
+is built from the storefront's block folders and pages instead, see
+`.rptc/plans/block-library-without-universal-editor/step-02.md`). Those files
 are the SC's too, so the merge follows two rules:
 
 - **A hand deletion stays deleted.** The project records, per library, which entries
@@ -93,9 +95,10 @@ still as the library added it:
   commit on `main` ("chore: remove <library> (N blocks)").
 - **DA.live.** Each removed `component-definition.json` entry is taken off the DA.live
   block list (its doc page and its sheet row). Then, whenever the action added or
-  removed at least one block, it runs Refresh Block Library: the block list is rebuilt
-  from the storefront's `component-definition.json` and published, so the DA.live
-  picker matches. If that fails the result says so; the file changes stay.
+  removed at least one block, it runs Refresh Blocks: the block list is rebuilt from
+  the storefront's code and pages (one entry per `blocks/<id>/` folder, each with an
+  example page; `.rptc/plans/block-library-without-universal-editor/step-02.md`) and
+  published, so the DA.live picker matches. If that fails the result says so; the file changes stay.
 - **A block left in place is named once.** A block left because the SC changed it, or
   because another library provides it, is the SC's own (or that library's) from then
   on. The library's record is dropped from `installedBlockLibraries`, so no later save

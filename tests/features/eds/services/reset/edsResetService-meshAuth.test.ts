@@ -39,7 +39,6 @@ jest.mock('@/features/components/services/blockLibraryLoader', () => ({
     withAlwaysIncludedBlockLibraries: (selected?: string[]) => selected ?? [],
     getBlockLibrarySource: jest.fn(),
     getBlockLibraryName: jest.fn(),
-    getBlockLibraryContentSource: jest.fn().mockReturnValue(null),
     isBlockLibraryAvailableForPackage: jest.fn().mockReturnValue(true),
 }));
 

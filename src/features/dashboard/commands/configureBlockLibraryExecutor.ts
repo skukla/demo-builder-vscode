@@ -59,7 +59,7 @@ async function daLiveBlockList(
 }
 
 /**
- * Rebuild the DA.live block list from the storefront's `component-definition.json`
+ * Rebuild the DA.live block list from the storefront's code and pages
  * and publish it — the dashboard's Refresh Block Library, not a second one. An
  * install needs it (nothing else puts the new blocks in the DA.live picker); a
  * removal needs it to republish the list its rows were just taken out of. Only the

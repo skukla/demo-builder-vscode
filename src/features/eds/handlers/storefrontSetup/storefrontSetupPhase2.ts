@@ -80,7 +80,7 @@ export async function executePhaseHelixConfig(
     repoInfo: RepoInfo,
     signal: AbortSignal,
     options?: BlockLibraryOptions,
-): Promise<{ blockCollectionIds?: string[] }> {
+): Promise<void> {
     const logger = context.logger;
     const { githubFileOps } = services;
     const effectiveBlockLibraries = options?.selectedBlockLibraries ?? [];
@@ -144,7 +144,7 @@ export async function executePhaseHelixConfig(
         options?.packageId ?? '',
         logger,
     );
-    const blockCollectionIds = await installBlockCollectionsWithTracking(
+    await installBlockCollectionsWithTracking(
         githubFileOps,
         repoInfo,
         allLibraries,
@@ -198,8 +198,6 @@ export async function executePhaseHelixConfig(
         phase: 'storefront-code',
         progress: 35,
     } satisfies StorefrontSetupProgressPayload);
-
-    return { blockCollectionIds };
 }
 
 /** Push fstab.yaml to GitHub with the DA.live content source configuration */
@@ -292,7 +290,6 @@ function collectAllBlockLibraries(
 /**
  * Generate inspector entries and install block collections atomically.
  * Falls back to standalone inspector tagging when no libraries are selected.
- * Returns the installed block collection IDs, or undefined if none installed.
  */
 async function installBlockCollectionsWithTracking(
     githubFileOps: GitHubFileOperations,
@@ -301,7 +298,7 @@ async function installBlockCollectionsWithTracking(
     context: HandlerContext,
     packageId: string | undefined,
     logger: Logger,
-): Promise<string[] | undefined> {
+): Promise<void> {
     await context.sendMessage('storefront-setup-progress', {
         phase: 'storefront-code',
         message: 'Adding inspector tags',
@@ -355,13 +352,12 @@ async function installBlockCollectionsWithTracking(
             if (versions.length > 0) {
                 repoInfo.installedBlockLibraries = versions.map((lv) => toInstalledBlockLibrary(lv));
             }
-            return result.blockIds;
+            return;
         }
         logger.warn(`[Storefront Setup] Block library installation failed: ${result.error}`);
     } else if (inspectorEntries.length > 0) {
         await applyStandaloneInspectorTagging(githubFileOps, repoInfo, packageId, context, logger);
     }
-    return undefined;
 }
 
 /**

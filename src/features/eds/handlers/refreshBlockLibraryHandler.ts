@@ -17,7 +17,7 @@ import { isEdsProject } from '@/types/typeGuards';
 
 /**
  * Handle 'refresh-block-library' — rebuild the current EDS project's DA.live
- * authoring library from its component-definition.json.
+ * block list from the storefront's code and pages (`buildStorefrontBlockLibrary`).
  */
 export const handleRefreshBlockLibraryHeadless: MessageHandler = async (context) => {
     const project = await context.stateManager.getCurrentProject();

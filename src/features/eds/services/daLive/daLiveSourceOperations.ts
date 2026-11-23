@@ -86,6 +86,12 @@ export class DaLiveSourceOperations {
      * @param options - Options {overwrite, contentType}: `contentType` defaults to
      *   `text/html`; a sheet goes as `application/json` to its `.json` path
      * @returns Result with success status and path
+     *
+     * DA.live ALWAYS writes: its source POST ignores the `overwrite` form field and replaces any
+     * page at the path, keeping the old content as a version; only a conditional header can refuse
+     * (adobe/da-admin `src/storage/object/put.js`, read 2026-11-23). So `overwrite` changes nothing
+     * and the 409 branch below does not occur; a caller that must not replace a page has to check
+     * for one first (`daLiveSourceProbe.ts`).
      */
     async createSource(
         org: string,

@@ -96,7 +96,7 @@ export class DaLiveBlockLibrarySheet {
     /**
      * Append a single block to the `.da/library/blocks.json` sheet (non-destructive).
      *
-     * Sibling to the destructive `createBlockLibrary` flow: this method preserves
+     * Sibling to the full rebuild (`writeStorefrontBlockLibrary`): this method preserves
      * existing rows via a read-merge-rewrite cycle and is safe to call repeatedly
      * (e.g., from the AI promotion path). It never calls `deleteSource`.
      *
@@ -217,6 +217,29 @@ export class DaLiveBlockLibrarySheet {
     }
 
     /**
+     * The rows of the site's `.da/library/blocks.json`; null when there is no
+     * sheet (404). Throws for any other failure, so a caller never rewrites a
+     * sheet it could not read.
+     */
+    async readBlocksSheetRows(
+        org: string,
+        site: string,
+    ): Promise<Array<Record<string, string>> | null> {
+        return this.readSheetRows(org, site, '.da/library/blocks.json');
+    }
+
+    /** The rows of any of the site's library sheets (`sheetPath` ends `.json`), as above. */
+    async readSheetRows(
+        org: string,
+        site: string,
+        sheetPath: string,
+    ): Promise<Array<Record<string, string>> | null> {
+        const token = await this.apiClient.getImsToken();
+        const sheetUrl = `${DA_LIVE_BASE_URL}/source/${org}/${site}/${sheetPath}`;
+        return this.readBlockLibraryRows(sheetUrl, token);
+    }
+
+    /**
      * Read the current `.da/library/blocks.json` sheet rows.
      *
      * Returns `null` when the sheet is missing (HTTP 404). Throws for any other
@@ -247,14 +270,20 @@ export class DaLiveBlockLibrarySheet {
      * Returns `true` on success, `false` on a non-fatal failure (logged but not
      * thrown — the sheet write has already succeeded and the caller may still
      * be useful with a stale config).
+     *
+     * Keeps the config's other `library` rows (a Templates row): the sheet is
+     * replaced whole on each write, so Blocks alone would drop them.
      */
     async registerBlocksLibrarySection(org: string, site: string): Promise<boolean> {
-        const result = await this.configOps.updateSiteConfig(org, site, [
-            {
+        const result = await this.configOps.updateSiteConfig(
+            org,
+            site,
+            [{
                 title: 'Blocks',
                 path: `https://content.da.live/${org}/${site}/.da/library/blocks.json`,
-            },
-        ]);
+            }],
+            { keepOtherRows: true },
+        );
         if (!result.success) {
             this.logger.warn(
                 `[DA.live] Failed to register Blocks library section: ${result.error}`,

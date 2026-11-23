@@ -64,11 +64,11 @@ export const handleSyncStorefront: MessageHandler<StorefrontActionPayload> = nar
 );
 
 /**
- * Handle 'refreshBlockLibrary' message - Rebuild the DA.live authoring library
- * from the project's current component-definition.json.
+ * Handle 'refreshBlockLibrary' message - Rebuild the DA.live block list from the
+ * storefront's code and pages.
  *
- * EDS-only kebab action for users who hand-edit component-definition.json
- * outside the AI flow and want to re-sync the DA.live library destructively.
+ * EDS-only: for when blocks were added to or removed from the storefront's
+ * repository outside the AI flow. Pages already in the list are kept.
  *
  * Return contract: `{ success: true }` means the command was **dispatched**, not
  * that the rebuild succeeded. The pipeline runs asynchronously under the

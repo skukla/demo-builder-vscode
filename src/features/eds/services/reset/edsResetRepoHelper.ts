@@ -25,7 +25,6 @@ import { type EdsResetParams } from './edsResetParams';
 import { RESET_STEP } from '@/core/utils/resetStages';
 import {
     getBlockLibrarySource,
-    getBlockLibraryContentSource,
     getBlockLibraryName,
     isBlockLibraryAvailableForPackage,
     withAlwaysIncludedBlockLibraries,
@@ -48,12 +47,8 @@ function collectLibrarySources(
     project: Project,
     effectiveBlockLibraries: string[],
     logger: Logger,
-): {
-    allLibraries: Array<{ source: AddonSource; name: string }>;
-    libraryContentSources: Array<{ org: string; site: string }>;
-} {
+): Array<{ source: AddonSource; name: string }> {
     const allLibraries: Array<{ source: AddonSource; name: string }> = [];
-    const libraryContentSources: Array<{ org: string; site: string }> = [];
     const packageId = project.selectedPackage ?? '';
 
     for (const libraryId of effectiveBlockLibraries) {
@@ -71,8 +66,6 @@ function collectLibrarySources(
                 `[EdsReset] Block library '${libraryId}' selected but no source configured`,
             );
         }
-        const cs = getBlockLibraryContentSource(libraryId);
-        if (cs) libraryContentSources.push(cs);
     }
 
     for (const lib of project.customBlockLibraries ?? []) {
@@ -82,7 +75,7 @@ function collectLibrarySources(
     logger.info(
         `[EdsReset] Installing blocks from: ${allLibraries.map((l) => `${l.source.owner}/${l.source.repo}`).join(', ')}`,
     );
-    return { allLibraries, libraryContentSources };
+    return allLibraries;
 }
 
 /** Step 2: Install block collections with inspector tagging merged into the same commit. */
@@ -94,7 +87,7 @@ async function installWithBlockLibraries(
     logger: Logger,
     inspectorEntries: GitHubTreeInput[],
     report: (step: number, message: string) => void,
-): Promise<string[]> {
+): Promise<void> {
     report(
         RESET_STEP.resettingCode,
         `Re-installing blocks from ${allLibraries.length} ${allLibraries.length === 1 ? 'library' : 'libraries'}`,
@@ -111,10 +104,9 @@ async function installWithBlockLibraries(
         logger.info(
             `[EdsReset] Reinstalled ${blockResult.blocksCount} unique blocks from ${allLibraries.length} libraries (+ inspector tagging)`,
         );
-        return blockResult.blockIds;
+        return;
     }
     logger.warn(`[EdsReset] Block library reinstall failed: ${blockResult.error}`);
-    return [];
 }
 
 /** Step 3: Install inspector tagging as a standalone commit (no block libraries present). */
@@ -146,8 +138,6 @@ async function installInspectorOnly(
  *
  * Step 2 installs block libraries (with inspector entries merged into the same commit).
  * Step 3 runs only when no block libraries are configured — it is skipped in the Step 2 path.
- *
- * Returns block collection IDs and DA.live content sources for installed libraries.
  */
 async function reinstallBlockLibraries(
     project: Project,
@@ -156,10 +146,7 @@ async function reinstallBlockLibraries(
     githubFileOps: GitHubFileOperations,
     logger: Logger,
     report: (step: number, message: string) => void,
-): Promise<{
-    blockCollectionIds?: string[];
-    libraryContentSources: Array<{ org: string; site: string }>;
-}> {
+): Promise<void> {
     report(RESET_STEP.resettingCode, 'Preparing block libraries');
 
     // Generate inspector tree entries (always, for consistency with storefront setup)
@@ -184,15 +171,14 @@ async function reinstallBlockLibraries(
         package: project.selectedPackage,
     });
 
-    const { allLibraries, libraryContentSources } = collectLibrarySources(
+    const allLibraries = collectLibrarySources(
         project,
         withAlwaysIncludedBlockLibraries(project.selectedBlockLibraries, project.selectedPackage ?? ''),
         logger,
     );
 
-    let allBlockIds: string[] = [];
     if (allLibraries.length > 0) {
-        allBlockIds = await installWithBlockLibraries(
+        await installWithBlockLibraries(
             githubFileOps,
             repoOwner,
             repoName,
@@ -211,11 +197,6 @@ async function reinstallBlockLibraries(
             report,
         );
     }
-
-    return {
-        blockCollectionIds: allBlockIds.length > 0 ? allBlockIds : undefined,
-        libraryContentSources,
-    };
 }
 
 // ==========================================================
@@ -225,7 +206,7 @@ async function reinstallBlockLibraries(
 /**
  * Step 1: Reset repository to template using bulk Git Tree operations.
  * Takes its file overrides from buildResetFileOverrides and pushes a single commit.
- * @returns Number of files reset, optional block collection IDs, and the template commit reset onto.
+ * @returns Number of files reset and the template commit reset onto.
  */
 export async function resetRepoToTemplate(
     params: EdsResetParams,
@@ -234,8 +215,6 @@ export async function resetRepoToTemplate(
     report: (step: number, message: string) => void,
 ): Promise<{
     filesReset: number;
-    blockCollectionIds?: string[];
-    libraryContentSources: Array<{ org: string; site: string }>;
     canonicalCodePatchResults?: CodePatchResult[];
     /** The template commit the repository now matches; absent when it could not be resolved. */
     templateCommitSha?: string;
@@ -348,7 +327,7 @@ export async function resetRepoToTemplate(
         context.logger,
     );
 
-    const { blockCollectionIds, libraryContentSources } = await reinstallBlockLibraries(
+    await reinstallBlockLibraries(
         project,
         repoOwner,
         repoName,
@@ -398,8 +377,6 @@ export async function resetRepoToTemplate(
     return {
         ...(boilerplate.status === 'read' ? { boilerplate: boilerplate.value } : {}),
         filesReset: resetResult.fileCount,
-        blockCollectionIds,
-        libraryContentSources,
         canonicalCodePatchResults,
         templateCommitSha,
         buildComplete,

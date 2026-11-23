@@ -40,7 +40,7 @@ server IS — transport, lifecycle, scoping, security — is in
 | `open_erp_screen` | **confirm** | Open the ERP's own screen (products, partners, pricing, orders, events) in a private |
 | `prepare_commerce_store` | **confirm** | Apply an integration\ |
 | `redeploy_integration` |  | Redeploy one App Builder integration by its id (idempotent re-run of its deploy). |
-| `refresh_block_library` | **confirm** | Rebuild the current EDS project's DA.live authoring block library from its |
+| `refresh_block_library` | **confirm** | Rebuild the current EDS project's DA.live block list from the storefront's code |
 | `regenerate_ai_files` |  | Regenerate the project's AI context files (AGENTS.md, .mcp.json, skills) |
 | `reinstall_integration` | **confirm** | Uninstall a DEPLOYED App Management integration from Commerce and install it again |
 | `remove_erp_owner_from_attribute_sets` |  | Undo add_erp_owner_to_attribute_sets: take erp_owner out of the attribute sets Demo Builder |

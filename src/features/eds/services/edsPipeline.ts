@@ -10,7 +10,7 @@
  * 0.5. Read the storefront's code from the SC's repository, for the paths it loads
  *    (gated by skipContent; EDS-40). Failing, the copy uses the fixed lists
  * 1. Copy DA.live content from source (gated by skipContent)
- * 2. Create block library from component-definition.json
+ * 2. Build the block library from the storefront's code and the package's content
  * 3. Apply EDS settings (AEM Assets, Universal Editor config)
  * 4. Purge CDN cache (conditional)
  * 5. Publish content to CDN
@@ -25,6 +25,7 @@
  * @module features/eds/services/edsPipeline
  */
 
+import { buildStorefrontBlockLibrary } from './blockLibrary/storefrontBlockLibrary';
 import { failedTargets, publishBrandAssets } from './brandAssetPublisher';
 import { prewarmCatalog } from './catalogPrewarmService';
 import { contentIndexUrl } from './contentIndex';
@@ -41,7 +42,7 @@ import {
 } from './storefront/leftoverPages';
 import { carriedWebPaths, findMissingPages } from './storefront/missingPages';
 import { readStorefrontCodePaths } from './storefrontCodeReader';
-import { DaLiveAuthError, DaLiveError, type EdsPipelineProgressCallback } from './types';
+import { DaLiveAuthError, type EdsPipelineProgressCallback } from './types';
 import { STOREFRONT_JOBS, countLine, itemCount, jobLine } from '@/core/utils/storefrontJobs';
 import type { Project } from '@/types/base';
 import type { BrandAssetsConfig, ContentPatchSource, CodePatchSource } from '@/types/demoPackages';
@@ -76,8 +77,6 @@ export interface EdsPipelineParams {
     repoName: string;
     daLiveOrg: string;
     daLiveSite: string;
-    templateOwner: string;
-    templateRepo: string;
 
     // Content management
     /**
@@ -113,9 +112,13 @@ export interface EdsPipelineParams {
 
     // Block library
     includeBlockLibrary?: boolean;
-    blockCollectionIds?: string[];
-    /** DA.live content sources for block library doc pages (.da/library/blocks/) */
-    libraryContentSources?: Array<{ org: string; site: string }>;
+    /**
+     * The block libraries the storefront has (`withAlwaysIncludedBlockLibraries`); their
+     * content sites are where the block library looks for examples of their blocks.
+     */
+    blockLibraries?: string[];
+    /** An added demo's content site: example pages for every block (D20). */
+    demoContentSource?: { org: string; site: string };
     /**
      * Publish only these blocks' doc pages, and the block list itself. For a caller
      * that knows which blocks it just added (Configure's block libraries): the other
@@ -465,11 +468,8 @@ async function pipelinePublishContent(
 }
 
 /**
- * Step 2: configure the block library.
- *
- * Copies block doc pages from library content sources (DA.live API, 403-tolerant),
- * then builds the authoring library from the template (or the user's repo, per the
- * load-bearing `blockCollectionIds` routing). Returns the resulting library paths.
+ * Step 2: build the block library from the storefront's code and the package's content
+ * (`buildStorefrontBlockLibrary`, the one door). Returns the library paths to publish.
  */
 async function pipelineConfigureBlockLibrary(
     services: EdsPipelineServices,
@@ -477,16 +477,7 @@ async function pipelineConfigureBlockLibrary(
     onProgress?: EdsPipelineProgressCallback,
 ): Promise<{ paths: string[]; emptyPalette?: string }> {
     const { daLiveContentOps, githubFileOps, logger } = services;
-    const {
-        repoOwner,
-        repoName,
-        daLiveOrg,
-        daLiveSite,
-        templateOwner,
-        templateRepo,
-        blockCollectionIds,
-        libraryContentSources,
-    } = params;
+    const { daLiveOrg, daLiveSite } = params;
 
     onProgress?.({
         operation: 'block-library',
@@ -496,38 +487,17 @@ async function pipelineConfigureBlockLibrary(
         subMessage: `${daLiveOrg}/${daLiveSite}`,
     });
 
-    // Copy block doc pages from library content sources via DA.live API.
-    // This works for orgs the user owns (has DA.live auth on). For
-    // third-party orgs (403), we log a warning and fall back to CDN-based
-    // copy inside createBlockLibraryFromTemplate.
-    if (libraryContentSources?.length) {
-        await copyLibraryDocPages(
-            daLiveContentOps,
-            libraryContentSources,
+    const libResult = await buildStorefrontBlockLibrary(
+        { blockLibOps: daLiveContentOps.blockLibOps, files: githubFileOps, fetchImpl: fetch, logger },
+        {
             daLiveOrg,
             daLiveSite,
-            logger,
-        );
-    }
-
-    // Load-bearing: truthy `blockCollectionIds` (including the empty
-    // array `[]`) routes the comp-def read to the USER's repo so any
-    // MCP-promoted blocks survive a destructive rebuild. `undefined`
-    // falls back to the template repo (initial setup / template-only
-    // refresh). Do NOT change this to `blockCollectionIds?.length`
-    // — RefreshBlockLibraryCommand passes `[]` deliberately as the
-    // "rebuild from user repo" signal. See src/commands/refreshBlockLibrary.ts.
-    const compDefOwner = blockCollectionIds ? repoOwner : templateOwner;
-    const compDefRepo = blockCollectionIds ? repoName : templateRepo;
-
-    const libResult = await daLiveContentOps.blockLibOps.createBlockLibraryFromTemplate(
-        daLiveOrg,
-        daLiveSite,
-        compDefOwner,
-        compDefRepo,
-        (owner, repo, path) => githubFileOps.getFileContent(owner, repo, path),
-        libraryContentSources,
-        blockCollectionIds,
+            repo: { owner: params.repoOwner, repo: params.repoName },
+            contentSource: params.contentSource,
+            accountContentSource: params.accountContentSource,
+            blockLibraries: params.blockLibraries ?? [],
+            demoSite: params.demoContentSource,
+        },
     );
 
     if (libResult.blocksCount > 0) {
@@ -544,44 +514,6 @@ async function pipelineConfigureBlockLibrary(
     }
 
     return { paths: libResult.paths };
-}
-
-/**
- * Copy block doc pages from library content sources via the DA.live API.
- *
- * Works for orgs the user owns (has DA.live auth on). For third-party orgs the
- * API returns 403 — that's tolerated and logged, since the CDN-based fallback
- * inside createBlockLibraryFromTemplate handles those sources. Any other error
- * is propagated.
- */
-async function copyLibraryDocPages(
-    daLiveContentOps: DaLiveContentOperations,
-    libraryContentSources: Array<{ org: string; site: string }>,
-    daLiveOrg: string,
-    daLiveSite: string,
-    logger: Logger,
-): Promise<void> {
-    for (const libSource of libraryContentSources) {
-        try {
-            logger.info(
-                `[EdsPipeline] Copying block doc pages from ${libSource.org}/${libSource.site}`,
-            );
-            await daLiveContentOps.copyOps.copyContent(
-                { org: libSource.org, site: libSource.site, path: '.da/library/blocks' },
-                { org: daLiveOrg, site: daLiveSite, path: '.da/library/blocks' },
-                { recursive: true },
-            );
-        } catch (error) {
-            // 403 = no auth on source org — CDN fallback will handle it
-            if (error instanceof DaLiveError && error.statusCode === 403) {
-                logger.info(
-                    `[EdsPipeline] No DA.live access to ${libSource.org}/${libSource.site}, will use CDN fallback`,
-                );
-            } else {
-                throw error; // Unexpected error — propagate
-            }
-        }
-    }
 }
 
 // ==========================================================
@@ -902,13 +834,15 @@ async function pipelinePublishSheets({ params, services, ctx, onProgress }: Pipe
 }
 
 /**
- * The library paths to publish: all of them, or the block list and the named blocks'
- * doc pages (`publishLibraryBlocksOnly`).
+ * The library paths to publish: all of them, or the block list, Adobe's templates (a
+ * storefront built before the library had them has none live yet) and the named
+ * blocks' doc pages (`publishLibraryBlocksOnly`).
  */
 function libraryPathsToPublish(paths: string[], onlyBlocks: string[] | undefined): string[] {
     if (!onlyBlocks) return paths;
     const wanted = new Set(onlyBlocks.map((id) => `/.da/library/blocks/${id}`));
-    return paths.filter((path) => path === '/.da/library/blocks.json' || wanted.has(path));
+    return paths.filter((path) => path === '/.da/library/blocks.json'
+        || path.startsWith('/.da/library/templates') || wanted.has(path));
 }
 
 /**

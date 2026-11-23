@@ -23,6 +23,7 @@ import { writeBrokenLinks } from '../storefront/brokenLinksRecord';
 import type { LeftoverPagesResult } from '../storefront/leftoverPages';
 import type { EdsResetParams } from './edsResetParams';
 import { PIPELINE_RESET_STAGE, RESET_STEP } from '@/core/utils/resetStages';
+import { withAlwaysIncludedBlockLibraries } from '@/features/components/services/blockLibraryLoader';
 import type { HandlerContext } from '@/types/handlers';
 import type { StorefrontBrokenLink } from '@/types/webviewPayloads';
 
@@ -55,8 +56,6 @@ export interface ContentPipelineOutcome {
 export async function runContentPipeline(
     params: EdsResetParams,
     repoResetResult: {
-        blockCollectionIds?: string[];
-        libraryContentSources: Array<{ org: string; site: string }>;
         canonicalCodePatchResults?: import('../patches/codePatchRegistry').CodePatchResult[];
     },
     daLiveContentOps: DaLiveContentOperations,
@@ -71,8 +70,6 @@ export async function runContentPipeline(
         repoName,
         daLiveOrg,
         daLiveSite,
-        templateOwner,
-        templateRepo,
         contentSource: contentSourceConfig,
         accountContentSource: accountContentSourceConfig,
         includeBlockLibrary = false,
@@ -126,8 +123,6 @@ export async function runContentPipeline(
                     repoName,
                     daLiveOrg,
                     daLiveSite,
-                    templateOwner,
-                    templateRepo,
                     // Keep-my-current-content: an added demo's content site is gone,
                     // the SC chose to reset the code only (content is not forkable).
                     clearExistingContent: !params.keepContent,
@@ -141,8 +136,10 @@ export async function runContentPipeline(
                     codePatchSource,
                     brandAssets,
                     patchReport,
-                    blockCollectionIds: repoResetResult.blockCollectionIds,
-                    libraryContentSources: repoResetResult.libraryContentSources,
+                    blockLibraries: withAlwaysIncludedBlockLibraries(
+                        project.selectedBlockLibraries, project.selectedPackage ?? '',
+                    ),
+                    demoContentSource: project.demo?.contentSource,
                     purgeCache: true,
                     skipPublish: false,
                     byomOverlayUrl,

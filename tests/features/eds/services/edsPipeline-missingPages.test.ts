@@ -68,7 +68,7 @@ describe('executeEdsPipeline - what the storefront’s code loads', () => {
         services = pipelineServices({
             daLiveContentOps: {
                 copyOps: { copyContentFromSource },
-                blockLibOps: { createBlockLibraryFromTemplate: jest.fn() },
+                blockLibOps: { writeStorefrontBlockLibrary: jest.fn() },
             },
             githubFileOps: { getFileContent: jest.fn(), repoArchive: { downloadRepoContents } },
             helixService: {

@@ -42,7 +42,7 @@ export interface UseDashboardActionsReturn {
      */
     handleRestartDemo: () => void;
     /** Sync storefront — git push + Helix preview/publish (EDS projects only) */
-    /** Refresh DA.live block library from component-definition.json (EDS projects only) */
+    /** Rebuild the DA.live block list from the storefront's code and pages (EDS projects only) */
     /** Open demo in browser (non-EDS projects) */
     handleOpenBrowser: () => void;
     /** Open live site in browser (EDS projects) */

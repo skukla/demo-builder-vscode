@@ -21,6 +21,7 @@ import { STOREFRONT_JOBS, countLine, jobLine } from '@/core/utils/storefrontJobs
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { LibraryPublishHelix } from '@/features/eds/handlers/blockLibraryPublish';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
+import { buildStorefrontBlockLibrary } from '@/features/eds/services/blockLibrary/storefrontBlockLibrary';
 import { contentIndexUrl } from '@/features/eds/services/contentIndex';
 import { DA_LIVE_BASE_URL } from '@/features/eds/services/daLive/daLiveConstants';
 import type { TokenProvider } from '@/features/eds/services/daLive/daLiveOrgOperations';
@@ -54,8 +55,10 @@ interface EdsContentConfig {
         repo: string;
         path: string;
     };
-    templateOwner?: string;
-    templateRepo?: string;
+    /** The block libraries the storefront has (`withAlwaysIncludedBlockLibraries`). */
+    blockLibraries: string[];
+    /** An added demo's content site: example pages for every block. */
+    demoContentSource?: { org: string; site: string };
 }
 
 /**
@@ -300,27 +303,30 @@ export async function ensureEdsContent(
         );
     });
 
-    // Block library from template (non-fatal, skip if no template info)
+    // Block library from the storefront's code and the package's content (non-fatal)
     let libraryPaths: string[] = [];
-    if (config.templateOwner && config.templateRepo) {
-        onProgress?.(S.settingUpAuthoring.label, STOREFRONT_JOBS.buildingBlockLibrary);
-        await nonFatal('Block library setup', logger, async () => {
-            const { GitHubFileOperations } = await import('@/features/eds/services/github/githubFileOperations');
-            const githubFileOps = new GitHubFileOperations(githubTokenService, logger);
-            const libResult = await daLiveContentOps.blockLibOps.createBlockLibraryFromTemplate(
-                config.daLiveOrg,
-                config.daLiveSite,
-                config.templateOwner as string,
-                config.templateRepo as string,
-                (owner, repo, path) => githubFileOps.getFileContent(owner, repo, path),
-            );
-            if (libResult.blocksCount > 0) {
-                logger.info(`[EDS Content] Block library: ${libResult.blocksCount} blocks configured`);
-                libraryPaths = libResult.paths;
-            }
-            if (!libResult.success && libResult.error) logger.warn(`[EDS Content] ${libResult.error}`);
-        });
-    }
+    onProgress?.(S.settingUpAuthoring.label, STOREFRONT_JOBS.buildingBlockLibrary);
+    await nonFatal('Block library setup', logger, async () => {
+        const { GitHubFileOperations } = await import('@/features/eds/services/github/githubFileOperations');
+        const githubFileOps = new GitHubFileOperations(githubTokenService, logger);
+        const libResult = await buildStorefrontBlockLibrary(
+            { blockLibOps: daLiveContentOps.blockLibOps, files: githubFileOps, fetchImpl: fetch, logger },
+            {
+                daLiveOrg: config.daLiveOrg,
+                daLiveSite: config.daLiveSite,
+                repo: repoInfo,
+                contentSource: config.contentSource,
+                accountContentSource: config.accountContentSource,
+                blockLibraries: config.blockLibraries,
+                demoSite: config.demoContentSource,
+            },
+        );
+        if (libResult.blocksCount > 0) {
+            logger.info(`[EDS Content] Block library: ${libResult.blocksCount} blocks configured`);
+            libraryPaths = libResult.paths;
+        }
+        if (!libResult.success && libResult.error) logger.warn(`[EDS Content] ${libResult.error}`);
+    });
 
     // EDS settings — AEM Assets / Universal Editor (non-fatal)
     onProgress?.(S.settingUpAuthoring.label, STOREFRONT_JOBS.applyingDaLiveSettings);

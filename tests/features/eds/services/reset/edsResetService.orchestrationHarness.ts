@@ -113,8 +113,6 @@ const SKIPPED: StorefrontMigrationResult = { skipped: true, migrated: false };
 
 export const REPO_RESULT = {
     filesReset: 5,
-    blockCollectionIds: ['hero', 'cards'],
-    libraryContentSources: [{ org: 'lib-org', site: 'lib-site' }],
     canonicalCodePatchResults: [] as CodePatchResult[],
     buildComplete: true,
 };

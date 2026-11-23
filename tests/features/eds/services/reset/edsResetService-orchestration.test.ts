@@ -35,6 +35,7 @@ import {
 import { mockEnsureDaLiveAuth } from './edsResetService.sharedMocks';
 
 import { RESET_STEP } from '@/core/utils/resetStages';
+import { withAlwaysIncludedBlockLibraries } from '@/features/components/services/blockLibraryLoader';
 import type { CodePatchResult } from '@/features/eds/services/patches/codePatchRegistry';
 
 import { lostGrantsMessage } from '@/features/eds/services/configService/lostGrantsMessage';
@@ -277,8 +278,6 @@ describe('executeEdsReset - content pipeline', () => {
             repoName: 'test-repo',
             daLiveOrg: 'test-org',
             daLiveSite: 'test-repo',
-            templateOwner: 'template-owner',
-            templateRepo: 'template-repo',
             clearExistingContent: true,
             skipContent: false,
             contentSource: { org: 'content-org', site: 'content-site' },
@@ -302,8 +301,10 @@ describe('executeEdsReset - content pipeline', () => {
                     },
                 ],
             },
-            blockCollectionIds: ['hero', 'cards'],
-            libraryContentSources: [{ org: 'lib-org', site: 'lib-site' }],
+            // The project's libraries (none ticked: the always-included ones), whose
+            // sites the block library reads, and no added demo.
+            blockLibraries: withAlwaysIncludedBlockLibraries(undefined, 'citisignal'),
+            demoContentSource: undefined,
             purgeCache: true,
             skipPublish: false,
             byomOverlayUrl: 'https://byom.example.com',

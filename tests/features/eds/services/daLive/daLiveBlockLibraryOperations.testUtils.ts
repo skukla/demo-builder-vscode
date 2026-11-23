@@ -141,31 +141,6 @@ export function sheetProbe(
     };
 }
 
-/**
- * A `component-definition.json` body, as `getFileContent` hands it over —
- * already base64-decoded by `GitHubFileOperations`.
- *
- * Typed rather than hand-written per spec: the shape the module destructures
- * (`groups[].components[].plugins.da.unsafeHTML`) is invented easily and the
- * compiler only reads it here.
- */
-export interface ComponentDefinitionGroup {
-    id?: string;
-    components?: Array<{
-        title: string;
-        id: string;
-        plugins?: { da?: { unsafeHTML?: string } };
-    }>;
-}
-
-/** Serialize groups the way the template repo stores them. */
-export function componentDefinition(groups: ComponentDefinitionGroup[]): {
-    content: string;
-    sha: string;
-} {
-    return { content: JSON.stringify({ groups }), sha: 'test-sha' };
-}
-
 /** The `[url, init]` pair of the nth `fetchWithRetry` call, typed. */
 export function fetchCall(
     fetchWithRetry: jest.Mock,

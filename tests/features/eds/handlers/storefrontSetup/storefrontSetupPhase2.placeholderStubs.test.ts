@@ -212,7 +212,7 @@ describe('executePhaseHelixConfig — placeholder stubs (creation)', () => {
                 REPO_INFO,
                 new AbortController().signal
             )
-        ).resolves.toBeDefined();
+        ).resolves.toBeUndefined();
 
         expect(context.logger.warn).toHaveBeenCalledWith(
             expect.stringContaining('Placeholder stubs skipped')

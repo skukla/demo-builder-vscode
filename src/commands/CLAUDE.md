@@ -20,7 +20,7 @@ works, because each file carries a substantial header comment.
 | `ResetAllCommand.ts` | Dev-only full reset — clears extension state, cached credentials and the DA.live auth session, so a first-time experience can be replayed. Lived under `src/core/commands/` until 2026-08-31; it was never core code, just filed there |
 | `ResetAiOnboardingCommand.ts` | Dev-only reset of just the AI onboarding flag. Moved with `ResetAllCommand.ts` for the same reason |
 | `openModernizationAgent.ts` | Opens the AEM Experience Modernization Agent console with a tip about the current project's repo |
-| `refreshBlockLibrary.ts` | Dashboard kebab action, EDS-only — a destructive full re-sync of the DA.live block library |
+| `refreshBlockLibrary.ts` | Dashboard action, EDS-only — rebuilds the DA.live block list from the storefront's code and pages |
 | `showPromptsPicker.ts` | Prompt QuickPick; dispatches to `openInClaude` (insert) or `openAi` (manage) |
 
 Six modules here are not commands but support them:

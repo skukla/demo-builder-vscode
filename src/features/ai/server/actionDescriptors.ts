@@ -1124,9 +1124,10 @@ export const ACTION_DESCRIPTORS: ToolDescriptor[] = [
         needsAuth: false,
         readOnly: false,
         description:
-            "Rebuild the current EDS project's DA.live authoring block library from its " +
-            'component-definition.json (destructive full re-sync — use after hand-editing ' +
-            'component-definition.json outside the promote flow). EDS projects only; returns the ' +
+            "Rebuild the current EDS project's DA.live block list from the storefront's code " +
+            'and pages: one entry per blocks/<id>/ folder in its repository, Adobe\'s blocks ' +
+            'first, each with an example page. A page already there is kept. Use after blocks ' +
+            'were added to or removed from the repository. EDS projects only; returns the ' +
             'rebuilt library paths. Republishes the library to the live site, so it requires ' +
             'confirm:true.',
         map: edsHandlers,

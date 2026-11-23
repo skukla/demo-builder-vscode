@@ -11,6 +11,7 @@ import { createMockLogger } from '../../../helpers/loggerFake';
 import {
     basePipelineParams,
     executeEdsPipeline,
+    pipelineBlockLibOps,
     pipelineHelixFake,
     pipelineServices,
     type EdsPipelineParams,
@@ -61,17 +62,16 @@ describe('executeEdsPipeline - integration', () => {
                     codePathsOnSource: [],
                 }),
             },
-            blockLibOps: {
-                createBlockLibraryFromTemplate: jest.fn().mockResolvedValue({
-                    success: true,
-                    blocksCount: 5,
-                    paths: ['/.da/library/blocks.json', '/.da/library/blocks/hero'],
-                }),
-            },
+            blockLibOps: pipelineBlockLibOps({
+                success: true,
+                blocksCount: 5,
+                paths: ['/.da/library/blocks.json', '/.da/library/blocks/hero'],
+            }),
         } as unknown as EdsPipelineServices['daLiveContentOps'];
 
         mockGithubFileOps = {
             getFileContent: jest.fn().mockResolvedValue(null),
+            listRepoFiles: jest.fn().mockResolvedValue([]),
         } as unknown as EdsPipelineServices['githubFileOps'];
 
         mockHelixService = pipelineHelixFake();
@@ -230,7 +230,7 @@ describe('executeEdsPipeline - integration', () => {
                     return { success: true, totalFiles: 10, copiedFiles: [], failedFiles: [], sheetPaths: [], codePathsOnSource: [] };
                 }
             );
-            (mockDaLiveContentOps.blockLibOps.createBlockLibraryFromTemplate as jest.Mock).mockImplementation(
+            (mockDaLiveContentOps.blockLibOps.writeStorefrontBlockLibrary as jest.Mock).mockImplementation(
                 async () => {
                     callOrder.push('createBlockLibrary');
                     return { success: true, blocksCount: 3, paths: ['.da/library/blocks.json'] };

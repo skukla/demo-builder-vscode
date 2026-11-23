@@ -30,6 +30,7 @@
 
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { installSiteFetch } from '../../../helpers/siteFetchFake';
+import type { BlockLibraryResult } from '@/features/eds/services/blockLibrary/storefrontLibraryWriter';
 import type { EdsPipelineParams, EdsPipelineServices } from '@/features/eds/services/edsPipeline';
 
 // The pipeline probes the published site for missing pages. Without this, that goes to aem.live.
@@ -47,8 +48,25 @@ export function basePipelineParams(): EdsPipelineParams {
         repoName: 'test-repo',
         daLiveOrg: 'test-org',
         daLiveSite: 'test-site',
-        templateOwner: 'template-owner',
-        templateRepo: 'template-repo',
+    };
+}
+
+/**
+ * The DA.live calls the block-library step makes (`buildStorefrontBlockLibrary`): which
+ * blocks already have a page (none), reading a found page and the blocks sheet, and the
+ * write. The write answers `written`.
+ */
+export function pipelineBlockLibOps(
+    written: BlockLibraryResult = { success: true, blocksCount: 0, paths: [] },
+): Record<
+    'getBlocksWithDocs' | 'readBlockDocPage' | 'readBlocksSheetRows' | 'writeStorefrontBlockLibrary',
+    jest.Mock
+> {
+    return {
+        getBlocksWithDocs: jest.fn().mockResolvedValue([]),
+        readBlockDocPage: jest.fn().mockResolvedValue(undefined),
+        readBlocksSheetRows: jest.fn().mockResolvedValue(null),
+        writeStorefrontBlockLibrary: jest.fn().mockResolvedValue(written),
     };
 }
 

@@ -51,11 +51,11 @@ export class StepDetailHarness {
     };
     mockCopyContentFromSource = jest.fn();
     mockOverlayAccountChrome = jest.fn();
-    mockCreateBlockLibrary = jest.fn();
-    mockCopyContent = jest.fn();
+    mockWriteBlockLibrary = jest.fn();
     mockReadSiteConfig = jest.fn();
     mockPublishAllSiteContent = jest.fn();
     mockGetFileContent = jest.fn();
+    mockListRepoFiles = jest.fn();
     services: EdsPipelineServices = this.buildServices();
     params: EdsPipelineParams = { ...basePipelineParams(), contentSource: CONTENT_SOURCE };
 
@@ -75,13 +75,13 @@ export class StepDetailHarness {
         this.mockOverlayAccountChrome = jest
             .fn()
             .mockResolvedValue({ success: true, copiedFiles: [], failedFiles: [], totalFiles: 8 });
-        this.mockCreateBlockLibrary = jest
+        this.mockWriteBlockLibrary = jest
             .fn()
             .mockResolvedValue({ success: true, blocksCount: 5, paths: ['/.da/library/blocks'] });
-        this.mockCopyContent = jest.fn().mockResolvedValue({ success: true });
         this.mockReadSiteConfig = jest.fn().mockResolvedValue({ some: 'config' });
         this.mockPublishAllSiteContent = jest.fn().mockResolvedValue(undefined);
         this.mockGetFileContent = jest.fn().mockResolvedValue({ content: '{}', sha: 'abc' });
+        this.mockListRepoFiles = jest.fn().mockResolvedValue([]);
         this.services = this.buildServices();
         this.params = { ...basePipelineParams(), contentSource: CONTENT_SOURCE };
     }
@@ -97,10 +97,12 @@ export class StepDetailHarness {
                 copyOps: {
                     copyContentFromSource: this.mockCopyContentFromSource,
                     overlayAccountChrome: this.mockOverlayAccountChrome,
-                    copyContent: this.mockCopyContent,
                 },
                 blockLibOps: {
-                    createBlockLibraryFromTemplate: this.mockCreateBlockLibrary,
+                    getBlocksWithDocs: jest.fn().mockResolvedValue([]),
+                    readBlockDocPage: jest.fn().mockResolvedValue(undefined),
+                    readBlocksSheetRows: jest.fn().mockResolvedValue(null),
+                    writeStorefrontBlockLibrary: this.mockWriteBlockLibrary,
                 },
                 configOps: {
                     readSiteConfigForDiagnostics: this.mockReadSiteConfig,
@@ -109,7 +111,10 @@ export class StepDetailHarness {
                     deleteAllSiteContent: jest.fn(),
                 },
             },
-            githubFileOps: { getFileContent: this.mockGetFileContent },
+            githubFileOps: {
+                getFileContent: this.mockGetFileContent,
+                listRepoFiles: this.mockListRepoFiles,
+            },
             helixService: {
                 purgeCacheAll: jest.fn().mockResolvedValue(undefined),
                 publishAllSiteContent: this.mockPublishAllSiteContent,

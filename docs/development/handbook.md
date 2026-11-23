@@ -359,6 +359,16 @@ check says so and names the file.
 > failed run emails the owner) and in the periodic sweep. It fails when the gate is switched off,
 > has not run for two days, or holds verified work two days older than any release.
 
+> **Convention.** A block's example in the DA.live block list is the first that exists:
+> Adobe's example page, its block library's example page, a real use copied from a page
+> (library site first, then the storefront's content source), else a placeholder shaped by the
+> block's code. Never an invented sample, and a page someone wrote is never replaced.
+> *Why:* an author placing a block gets the table the block really uses, settings included.
+> The invented placeholders it replaced put the words "Commerce Checkout" in a checkout table
+> that is empty on Adobe's own page, and dropped the cart's settings rows (2026-11-23).
+> Stated in `.rptc/plans/block-library-without-universal-editor/step-02.md`; enforced by
+> `tests/features/eds/services/blockLibrary/blockExampleConvention.test.ts`.
+
 ## 5. What survives between calls
 
 **Position.** Anything cached exists once per session, is built on first use, and can be
@@ -2091,7 +2101,7 @@ Conventions decay unless something checks them. Four layers do:
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, agent coverage (import cycles moved to an enforcer suite on 2026-10-08)
 
-**This handbook states 149 conventions. 146 of them are enforced; 3 are not.**
+**This handbook states 150 conventions. 147 of them are enforced; 3 are not.**
 
 The last one to get there was "vendor CSS sits in the lowest cascade layer", and it was
 outstanding because it was **not yet true**: `@layer vendor` existed in no bundle, so a

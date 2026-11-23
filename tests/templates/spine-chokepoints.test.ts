@@ -620,6 +620,26 @@ describe('spine choke-points', () => {
         ]);
     });
 
+    it('block library BUILD: one entry point gathers the list and writes it (step-02)', () => {
+        // Audited 2026-11-23. The library is built from the storefront's code and the
+        // package's content by ONE function, `buildStorefrontBlockLibrary`; it is the only
+        // caller of the writer through the DA.live ops. Its doors: the shared pipeline's
+        // block-library step (creation, reset, Refresh Blocks and Configure all run it) and
+        // the import path's content setup (`ensureEdsContent`). The old
+        // `component-definition.json` build and its repo-or-template switch were removed;
+        // a second builder, or a door calling the writer directly, fails here.
+        const sorted = (pattern: RegExp): string[] => filesTouchingPrimitive(pattern).sort();
+
+        expect(sorted(/\bbuildStorefrontBlockLibrary\(/)).toStrictEqual([
+            'features/eds/services/blockLibrary/storefrontBlockLibrary.ts',
+            'features/eds/services/edsPipeline.ts',
+            'features/project-creation/services/edsContentSetup.ts',
+        ]);
+        expect(sorted(/\.writeStorefrontBlockLibrary\(/)).toStrictEqual([
+            'features/eds/services/blockLibrary/storefrontBlockLibrary.ts',
+        ]);
+    });
+
     it('category PAGE removal: one implementation, reached only through the catalog menu site', () => {
         // Audited 2026-10-22 (EDS-61). Category pages are published through the overlay
         // at each category's own address and have no DA.live document. The primitive is

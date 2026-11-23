@@ -1,7 +1,12 @@
 ---
 backlog: EDS-71
-status: planned
+status: active
 ---
+
+Owner sign-off, 2026-11-23: "Yes" to doing all of EDS-71 on `feature/eds-71-block-library-content`.
+Stops for the owner: step 4b (writes to our libraries' DA.live sites and Bodea's site config), step 5b's
+choice for existing projects on the Classic authoring setting, step 8 (lifting the hold is a release
+in the patches repository), and step 9 (live cycle).
 
 # The DA.live block library, driven by content, not `component-definition.json`
 
@@ -51,14 +56,19 @@ tools fail.
 - **Creating**: the progress window's block library step as before; the finished screen stays exactly
   as today (owner: a missing example is not a failure, and the success screen is not where to say what
   is left to do).
-- **DA.live / Experience Workspace**: the block list holds Adobe's placeable blocks and every placeable
-  block from the storefront's libraries, each opening its example. Account, order, checkout, header and
-  footer blocks are not listed (their pages are built). A block with no example opens a short page:
-  "No example for this block yet. Ask Demo Builder to draft one."
+- **DA.live / Experience Workspace**: the block list holds Adobe's blocks first, then every other block
+  the storefront's code has, with the Commerce blocks grouped at the end. Each opens its example: a
+  real use of the block where one exists, one per style, else a placeholder shaped like the block, as
+  DA.live's own Import Blocks builds it. (Owner, 2026-11-23, replacing the Nov 8 lines that left out
+  account, order, checkout, header and footer blocks and showed a "No example yet" page; detail in
+  `step-02.md`.)
 - **Dashboard, Storefront zone**: a **Draft Examples** tile, with an amber dot while any block has no
   example (hover: "13 blocks have no example"). It opens the SC's AI with the starter prompt; the AI
   writes each example into the storefront's block list, marked as a draft for the SC to check. The dot
-  clears when every block has an example. **Refresh Blocks** stays as it is.
+  clears when every block has an example. **Refresh Blocks** is the one button that rebuilds the
+  block list, doing what DA.live's Import Blocks does with nothing to type; its hover text says so
+  ("Rebuild the DA.live block list from the storefront's code and pages"). No second button for
+  Import Blocks (owner, 2026-11-23).
 - **Configure, Block Libraries**: adding or removing a library updates the block list.
 - **Prompts list**: a seeded starter prompt, **Draft Block Examples** ("Write an example page for each
   block in this storefront that has none. Read each block's code and description, and mark each page as
@@ -71,9 +81,9 @@ tools fail.
 | # | Step | Status |
 |---|---|---|
 | 1 | Measured: which blocks draw today | done |
-| 2 | Connect Adobe's library | not started |
-| 3 | Add block library blocks from the library | not started |
-| 4 | Examples, best first | not started |
+| 2 | Connect Adobe's library (designed in `step-02.md`) | done |
+| 3 | Add block library blocks from the library (with step 2) | done |
+| 4 | Examples, best first (with step 2: the convention in `step-02.md`) | done |
 | 4b | Our own libraries get real examples once | not started |
 | 4c | Draft Examples tile, prompt and agent tool | not started |
 | 5 | Agent tools work on the DA.live library | not started |
@@ -89,19 +99,15 @@ The detail of each step:
    The rest are mostly account, order and checkout blocks (need a signed-in customer; not placed by
    hand), header and footer, Bodea's site missing its Commerce config, BuildRight having no site, and a
    real gap of blocks with no example and no use anywhere (Demo Team 10, Isle5 35, Bodea 50, Adobe 14).
-2. **Connect Adobe's library.** At creation, reset and refresh: take the copied `/docs/library`
-   (`blocks.json`, the block pages, `templates.json`), rewrite every path to the new storefront, and
-   write the site config's `library` rows (Blocks, Templates). Replaces reading
-   `component-definition.json` for Adobe's blocks. Also read `/docs/library` where the code reads
-   `/.da/library` today (Adobe's 2026-10 move).
-3. **Add block library blocks from the library.** For each library a storefront has: a row and page per
-   block, the page copied from the library's DA site where it has one (`docs/library` or `.da/library`,
-   public preview), else from step 4, else a placeholder. Names from the block's folder (or a title the
-   library gives). The library's own `component-definition.json`, if it has one, is a fallback for
-   names and sample markup only, never the storefront's copy.
-4. **Examples, best first**: the library's own example page; else a real use of the block on its
-   library's site (its table copied from the page); else the "No example yet" page. Only placeable
-   blocks are listed (commerce account, order, checkout, header, footer left out, as Adobe does).
+2. **Connect Adobe's library** (built 2026-11-23, as designed in `step-02.md`): Adobe's blocks and
+   templates are read from the package's Adobe source site's `/docs/library` sheets, their example
+   pages copied from that site, and the site config gets its Blocks and Templates rows in one write.
+3. **Every block the storefront has** (built with step 2): every `blocks/<id>/` folder is listed,
+   none left out, after Adobe's blocks, with the Commerce blocks grouped at the end. Names as DA.live's
+   Import Blocks writes them. `component-definition.json` is no longer read for the block list.
+4. **Examples, best first** (built with step 2): the convention in `step-02.md` and the handbook:
+   Adobe's page, the library's page, a real use (per style), else a placeholder shaped by the block's
+   code. A page someone wrote is kept; an old Demo Builder placeholder is replaced.
 4b. **Our own libraries get real examples once**: fix Bodea's site Commerce config and re-check its pages
    in a real storefront; draft (step 4c's tool), check and save the missing example pages into each
    library's own DA site (Demo Team, Bodea; BuildRight once it has a site).

@@ -1,10 +1,10 @@
 /**
  * RefreshBlockLibraryCommand
  *
- * Dashboard kebab action (EDS-only) that re-syncs the DA.live authoring library
- * with the project's current `component-definition.json`. This is the destructive
- * full-rebuild path — for users who hand-edit `component-definition.json` outside
- * the AI promote flow and need the library to catch up.
+ * Dashboard action (EDS-only) that rebuilds the DA.live block list from the
+ * storefront's code and pages — for when blocks were added to or removed from the
+ * repository outside the AI promote flow and the list needs to catch up. Pages
+ * already in the list are kept.
  *
  * The command owns UX only — the progress notification and the success/error
  * toasts. The whole rebuild sequence (extract params → build services → run the

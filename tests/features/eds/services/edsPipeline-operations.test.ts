@@ -15,12 +15,14 @@ import { createMockProject } from '../../../helpers/projectFake';
 import {
     basePipelineParams,
     executeEdsPipeline,
+    pipelineBlockLibOps,
     pipelineHelixFake,
     pipelineServices,
     type EdsPipelineParams,
     type EdsPipelineServices,
 } from './edsPipeline.testUtils';
-import { DaLiveError, DaLiveAuthError } from '@/features/eds/services/types';
+import { installSiteFetch } from '../../../helpers/siteFetchFake';
+import { DaLiveAuthError } from '@/features/eds/services/types';
 
 // Mock edsHelpers
 const mockApplyDaLiveOrgConfigSettings = jest.fn().mockResolvedValue(undefined);
@@ -63,24 +65,17 @@ describe('executeEdsPipeline - operations', () => {
                     sheetPaths: [],
                     codePathsOnSource: [],
                 }),
-                copyContent: jest.fn().mockResolvedValue({
-                    success: true,
-                    copiedFiles: [],
-                    failedFiles: [],
-                    totalFiles: 0,
-                }),
             },
-            blockLibOps: {
-                createBlockLibraryFromTemplate: jest.fn().mockResolvedValue({
-                    success: true,
-                    blocksCount: 5,
-                    paths: ['/.da/library/blocks.json', '/.da/library/blocks/hero'],
-                }),
-            },
+            blockLibOps: pipelineBlockLibOps({
+                success: true,
+                blocksCount: 5,
+                paths: ['/.da/library/blocks.json', '/.da/library/blocks/hero'],
+            }),
         } as unknown as EdsPipelineServices['daLiveContentOps'];
 
         mockGithubFileOps = {
             getFileContent: jest.fn().mockResolvedValue({ content: '{}', sha: 'abc' }),
+            listRepoFiles: jest.fn().mockResolvedValue([]),
         } as unknown as EdsPipelineServices['githubFileOps'];
 
         mockHelixService = pipelineHelixFake();
@@ -224,119 +219,55 @@ describe('executeEdsPipeline - operations', () => {
 
             expect(result.success).toBe(true);
             expect(result.libraryPaths).toStrictEqual([]);
-            expect(mockDaLiveContentOps.blockLibOps.createBlockLibraryFromTemplate).not.toHaveBeenCalled();
+            expect(mockDaLiveContentOps.blockLibOps.writeStorefrontBlockLibrary).not.toHaveBeenCalled();
         });
 
-        it('should use template repo without blockCollectionIds', async () => {
+        it("builds the list from the storefront's own repository and writes it to its site", async () => {
+            (mockGithubFileOps.listRepoFiles as jest.Mock).mockResolvedValue([
+                { path: 'blocks/hero/hero.js', type: 'blob', sha: 'h' },
+            ]);
+
             const result = await executeEdsPipeline(
                 { ...baseParams, skipContent: true, includeBlockLibrary: true },
                 services,
             );
 
             expect(result.success).toBe(true);
-            expect(mockDaLiveContentOps.blockLibOps.createBlockLibraryFromTemplate).toHaveBeenCalledWith(
+            expect(mockGithubFileOps.listRepoFiles).toHaveBeenCalledWith('test-owner', 'test-repo', 'main');
+            expect(mockDaLiveContentOps.blockLibOps.writeStorefrontBlockLibrary).toHaveBeenCalledWith(
                 'test-org',
                 'test-site',
-                'template-owner',
-                'template-repo',
-                expect.any(Function),
-                undefined,
-                undefined,
+                expect.objectContaining({
+                    blocks: [{ id: 'hero', title: 'Hero', example: { kind: 'placeholder' } }],
+                }),
             );
         });
 
-        it('should use user repo with blockCollectionIds', async () => {
-            const blockCollectionIds = ['hero', 'columns'];
-            const result = await executeEdsPipeline(
-                { ...baseParams, skipContent: true, includeBlockLibrary: true, blockCollectionIds },
-                services,
-            );
+        it("reads Adobe's library, the libraries' and the demo's sites from the params", async () => {
+            const site = installSiteFetch([]);
+            (mockGithubFileOps.listRepoFiles as jest.Mock).mockResolvedValue([
+                { path: 'blocks/hero/hero.js', type: 'blob', sha: 'h' },
+            ]);
 
-            expect(result.success).toBe(true);
-            expect(mockDaLiveContentOps.blockLibOps.createBlockLibraryFromTemplate).toHaveBeenCalledWith(
-                'test-org',
-                'test-site',
-                'test-owner',   // user's repo, not template
-                'test-repo',
-                expect.any(Function),
-                undefined,
-                blockCollectionIds,
-            );
-        });
-
-        it('should copy doc pages via DA.live API for owned orgs', async () => {
-            const libraryContentSources = [
-                { org: 'demo-system-stores', site: 'accs-citisignal' },
-                { org: 'stephen-garner-adobe', site: 'isle5' },
-            ];
             await executeEdsPipeline(
-                { ...baseParams, skipContent: true, includeBlockLibrary: true, libraryContentSources },
+                {
+                    ...baseParams,
+                    skipContent: true,
+                    includeBlockLibrary: true,
+                    contentSource: { org: 'brand', site: 'brand-content', indexPath: '/full-index.json' },
+                    accountContentSource: { org: 'adobe-commerce', site: 'boilerplate-b2b' },
+                    blockLibraries: ['isle5'],
+                    demoContentSource: { org: 'demo-org', site: 'demo-site' },
+                },
                 services,
             );
 
-            // copyContent called for each source (DA.live API enumeration)
-            expect(mockDaLiveContentOps.copyOps.copyContent).toHaveBeenCalledTimes(2);
-            expect(mockDaLiveContentOps.copyOps.copyContent).toHaveBeenCalledWith(
-                { org: 'demo-system-stores', site: 'accs-citisignal', path: '.da/library/blocks' },
-                { org: 'test-org', site: 'test-site', path: '.da/library/blocks' },
-                { recursive: true },
-            );
-
-            // libraryContentSources also forwarded for CDN fallback
-            expect(mockDaLiveContentOps.blockLibOps.createBlockLibraryFromTemplate).toHaveBeenCalledWith(
-                'test-org', 'test-site', 'template-owner', 'template-repo',
-                expect.any(Function),
-                libraryContentSources,
-                undefined,
-            );
-        });
-
-        it('should swallow 403 from copyContent and continue (CDN fallback)', async () => {
-            (mockDaLiveContentOps.copyOps.copyContent as jest.Mock).mockRejectedValue(
-                new DaLiveError('Access denied when trying to list directory.', 'HTTP_403', 403),
-            );
-
-            const libraryContentSources = [
-                { org: 'third-party-org', site: 'their-site' },
-            ];
-            const result = await executeEdsPipeline(
-                { ...baseParams, skipContent: true, includeBlockLibrary: true, libraryContentSources },
-                services,
-            );
-
-            // Pipeline succeeds despite 403
-            expect(result.success).toBe(true);
-            // createBlockLibraryFromTemplate still called with sources for CDN fallback
-            expect(mockDaLiveContentOps.blockLibOps.createBlockLibraryFromTemplate).toHaveBeenCalledWith(
-                expect.anything(), expect.anything(), expect.anything(), expect.anything(),
-                expect.any(Function),
-                libraryContentSources,
-                undefined,
-            );
-        });
-
-        it('should propagate non-403 errors from copyContent', async () => {
-            (mockDaLiveContentOps.copyOps.copyContent as jest.Mock).mockRejectedValue(
-                new Error('Network failure'),
-            );
-
-            const result = await executeEdsPipeline(
-                { ...baseParams, skipContent: true, includeBlockLibrary: true, libraryContentSources: [{ org: 'o', site: 's' }] },
-                services,
-            );
-
-            // Non-403 errors should fail the pipeline
-            expect(result.success).toBe(false);
-            expect(result.error).toContain('Network failure');
-        });
-
-        it('should not call copyContent when libraryContentSources is empty', async () => {
-            await executeEdsPipeline(
-                { ...baseParams, skipContent: true, includeBlockLibrary: true, libraryContentSources: [] },
-                services,
-            );
-
-            expect(mockDaLiveContentOps.copyOps.copyContent).not.toHaveBeenCalled();
+            expect(site.asked()).toEqual(expect.arrayContaining([
+                'https://main--brand-content--brand.aem.page/docs/library/blocks.json',
+                'https://main--boilerplate-b2b--adobe-commerce.aem.page/docs/library/blocks.json',
+                'https://main--demo-site--demo-org.aem.page/docs/library/blocks/hero.plain.html',
+            ]));
+            expect(mockGithubFileOps.listRepoFiles).toHaveBeenCalledWith('stephen-garner-adobe', 'isle5', 'main');
         });
 
         it('should include library paths in result', async () => {
@@ -514,7 +445,7 @@ describe('executeEdsPipeline - operations', () => {
         });
 
         it('should not publish when no library paths', async () => {
-            (mockDaLiveContentOps.blockLibOps.createBlockLibraryFromTemplate as jest.Mock).mockResolvedValue({
+            (mockDaLiveContentOps.blockLibOps.writeStorefrontBlockLibrary as jest.Mock).mockResolvedValue({
                 success: true,
                 blocksCount: 0,
                 paths: [],

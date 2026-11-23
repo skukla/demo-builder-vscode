@@ -224,8 +224,8 @@ export class CommandManager {
         this.registerCommand('demoBuilder.syncStorefront', () => syncStorefront.execute());
 
         // Refresh Block Library (EDS projects only — dashboard kebab) —
-        // destructive rebuild of the DA.live authoring library from the project's
-        // current component-definition.json. No package.json contribution: the
+        // rebuild of the DA.live block list from the storefront's code and pages.
+        // No package.json contribution: the
         // dashboard is the only entrypoint.
         const refreshBlockLibrary = new RefreshBlockLibraryCommand(
             this.context,

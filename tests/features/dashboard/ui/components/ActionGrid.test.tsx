@@ -300,6 +300,19 @@ describe('ActionGrid', () => {
             ]);
         });
 
+        it('says Refresh Blocks rebuilds the list from the storefront\'s code and pages', () => {
+            // step-02 of the block-library plan: the list no longer comes from
+            // component-definition.json, so the hover text names what it does read.
+            render(<ActionGrid {...edsProps} handleRefreshBlockLibrary={jest.fn()} />);
+
+            // The mocked TooltipTrigger renders the tooltip right after its button.
+            const tip = screen.getByText('Refresh Blocks').closest('button')?.nextElementSibling;
+            expect(tip?.getAttribute('role')).toBe('tooltip');
+            expect(tip?.textContent).toBe(
+                'Rebuild the DA.live block list from the storefront\'s code and pages',
+            );
+        });
+
         it('should not place the Author button in the storefront zone', () => {
             const { container } = render(<ActionGrid {...edsProps} />);
 

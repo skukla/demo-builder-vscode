@@ -2,9 +2,9 @@
  * resetRepoToTemplate — which block libraries get reinstalled, and how.
  *
  * Mutation testing (PL-22, batch MUT-07) found every decision in the library
- * walk unconstrained: package filtering, the source/name lookup, content-source
- * collection, the custom-library append, the singular/plural progress line, the
- * merged-vs-standalone inspector commit, and the ids the reset reports back.
+ * walk unconstrained: package filtering, the source/name lookup, the custom-library
+ * append, the singular/plural progress line, and the merged-vs-standalone
+ * inspector commit.
  * Each test here asserts the list handed to `installBlockCollections` or the
  * call handed to `installInspectorTagging` — the argument, not the answer.
  */
@@ -37,9 +37,6 @@ beforeEach(installDefaults);
 describe('resetRepoToTemplate — block library reinstall', () => {
     it('installs every available library, named from the catalog, with inspector entries in the same commit', async () => {
         catalog({ 'lib-a': SOURCE_A, 'lib-b': SOURCE_B }, { 'lib-a': 'Library A' });
-        mocks.getBlockLibraryContentSource.mockImplementation((id) =>
-            id === 'lib-a' ? { org: 'content-org', site: 'content-site' } : undefined,
-        );
         mocks.generateInspectorTreeEntries.mockResolvedValue([INSPECTOR_ENTRY]);
         mocks.installBlockCollections.mockResolvedValue({
             success: true,
@@ -50,7 +47,7 @@ describe('resetRepoToTemplate — block library reinstall', () => {
             project: projectWith({ selectedBlockLibraries: ['lib-a', 'lib-b'] }),
         });
 
-        const { result, githubFileOps, report, context } = await runReset(params);
+        const { githubFileOps, report, context } = await runReset(params);
 
         expect(mocks.isBlockLibraryAvailableForPackage).toHaveBeenCalledWith('lib-a', 'pkg');
         expect(mocks.installBlockCollections).toHaveBeenCalledWith(
@@ -69,38 +66,30 @@ describe('resetRepoToTemplate — block library reinstall', () => {
             RESET_STEP.resettingCode,
             'Re-installing blocks from 2 libraries',
         );
-        expect(result.blockCollectionIds).toEqual(['hero', 'cards']);
-        expect(result.libraryContentSources).toEqual([{ org: 'content-org', site: 'content-site' }]);
     });
 
     it('skips a library the package excludes before looking up its source', async () => {
         catalog({ 'lib-a': SOURCE_A, 'lib-x': SOURCE_B });
         mocks.isBlockLibraryAvailableForPackage.mockImplementation((id) => id !== 'lib-x');
-        mocks.getBlockLibraryContentSource.mockReturnValue({ org: 'o', site: 's' });
         const params = buildParams({
             project: projectWith({ selectedBlockLibraries: ['lib-a', 'lib-x'] }),
         });
 
-        const { result } = await runReset(params);
+        await runReset(params);
 
         expect(mocks.getBlockLibrarySource).not.toHaveBeenCalledWith('lib-x');
         expect(mocks.installBlockCollections.mock.calls[0][3]).toEqual([
             { source: SOURCE_A, name: 'lib-a' },
         ]);
-        // One content source: the excluded library never reaches the lookup.
-        expect(result.libraryContentSources).toEqual([{ org: 'o', site: 's' }]);
     });
 
-    it('leaves out a selected library with no source but keeps its content source; one library reads singular', async () => {
+    it('leaves out a selected library with no source; one library reads singular', async () => {
         catalog({ 'lib-a': SOURCE_A, ghost: undefined }, { 'lib-a': 'Library A' });
-        mocks.getBlockLibraryContentSource.mockImplementation((id) =>
-            id === 'ghost' ? { org: 'ghost-org', site: 'ghost-site' } : undefined,
-        );
         const params = buildParams({
             project: projectWith({ selectedBlockLibraries: ['lib-a', 'ghost'] }),
         });
 
-        const { result, report } = await runReset(params);
+        const { report } = await runReset(params);
 
         expect(mocks.installBlockCollections.mock.calls[0][3]).toEqual([
             { source: SOURCE_A, name: 'Library A' },
@@ -109,7 +98,6 @@ describe('resetRepoToTemplate — block library reinstall', () => {
             RESET_STEP.resettingCode,
             'Re-installing blocks from 1 library',
         );
-        expect(result.libraryContentSources).toEqual([{ org: 'ghost-org', site: 'ghost-site' }]);
     });
 
     it('checks package availability against an empty id when the project has no package', async () => {
@@ -140,26 +128,11 @@ describe('resetRepoToTemplate — block library reinstall', () => {
         ]);
     });
 
-    it('reports no collection ids when the block install fails', async () => {
-        catalog({ 'lib-a': SOURCE_A });
-        mocks.installBlockCollections.mockResolvedValue({
-            success: false,
-            blocksCount: 0,
-            blockIds: [],
-            error: 'tree push failed',
-        });
-        const params = buildParams({ project: projectWith({ selectedBlockLibraries: ['lib-a'] }) });
-
-        const { result } = await runReset(params);
-
-        expect(result.blockCollectionIds).toBeUndefined();
-    });
-
     it('installs inspector tagging standalone when there are entries but no libraries', async () => {
         mocks.generateInspectorTreeEntries.mockResolvedValue([INSPECTOR_ENTRY]);
         const params = buildParams({ project: projectWith({ selectedBlockLibraries: [] }) });
 
-        const { result, githubFileOps, report, context } = await runReset(params);
+        const { githubFileOps, report, context } = await runReset(params);
 
         expect(mocks.installBlockCollections).not.toHaveBeenCalled();
         expect(mocks.installInspectorTagging).toHaveBeenCalledWith(
@@ -170,8 +143,6 @@ describe('resetRepoToTemplate — block library reinstall', () => {
             context.logger,
         );
         expect(report).toHaveBeenCalledWith(RESET_STEP.resettingCode, 'Installing the inspector');
-        expect(result.blockCollectionIds).toBeUndefined();
-        expect(result.libraryContentSources).toStrictEqual([]);
     });
 
     it('installs nothing when the project selects no libraries and no inspector entries exist', async () => {
@@ -179,7 +150,7 @@ describe('resetRepoToTemplate — block library reinstall', () => {
             project: projectWith({ selectedBlockLibraries: undefined }),
         });
 
-        const { result, report } = await runReset(params);
+        const { report } = await runReset(params);
 
         expect(mocks.isBlockLibraryAvailableForPackage).not.toHaveBeenCalled();
         expect(mocks.installBlockCollections).not.toHaveBeenCalled();
@@ -188,7 +159,6 @@ describe('resetRepoToTemplate — block library reinstall', () => {
         // number alone cannot show it was skipped: the message is the witness.
         const messages = report.mock.calls.map(([, message]) => message);
         expect(messages).not.toContain('Installing the inspector');
-        expect(result.blockCollectionIds).toBeUndefined();
     });
 
     it('proceeds with no extra tree entries when inspector generation throws', async () => {

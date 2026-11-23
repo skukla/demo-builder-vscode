@@ -171,10 +171,6 @@ describe('RefreshBlockLibraryCommand', () => {
         expect(params.skipContent).toBe(true);
         // Not the site's pages (2026-10-15); the library's publish runs regardless.
         expect(params.skipPublish).toBe(true);
-        // Load-bearing: an empty (truthy) blockCollectionIds array signals the
-        // pipeline to read component-definition.json from the USER's repo so
-        // MCP-promoted blocks survive the destructive rebuild.
-        expect(params.blockCollectionIds).toStrictEqual([]);
     });
 
     it('surfaces progress messages during pipeline execution', async () => {

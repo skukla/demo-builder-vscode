@@ -2,10 +2,11 @@
  * DaLiveBlockLibraryOperations — `createJsonSpreadsheet`.
  *
  * The single write every other sheet path in this module funnels through:
- * `appendBlockToLibrary`, `removeBlockLibraryRow` and `createBlockLibrary` all
- * rewrite `.da/library/blocks.json` by calling it. So the URL it builds, the
- * DA.live native envelope it uploads and the `overwrite` flag it sets are the
- * arguments a malformed call would corrupt for all three.
+ * `appendBlockToLibrary`, `removeBlockLibraryRow`, the storefront library writer
+ * (`storefrontLibraryWriter.ts`) and the templates sheet (`libraryTemplates.ts`)
+ * all rewrite a library sheet by calling it. So the URL it builds, the DA.live
+ * native envelope it uploads and the `overwrite` flag it sets are the arguments a
+ * malformed call would corrupt for all of them.
  *
  * Argument-level, not call-count: a mock answers the same however it is
  * invoked, so asserting only "it was called" would pass on a request that
