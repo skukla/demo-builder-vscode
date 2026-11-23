@@ -2,7 +2,7 @@
  * A failed call that comes back through a DESCRIPTOR ROW is reported as failed —
  * `isError: true` on the result `registerDescriptorTools` hands the SDK.
  *
- * The registrar half of `toolFailureEnvelope.test.ts`, which explains why the flag
+ * The registrar half of `mcpToolResult-failureFlag.test.ts`, which explains why the flag
  * exists and holds the half the two builders own. It lives here, named for the
  * module, because the registrar DECIDES the flag itself: `shape` returns a string,
  * so `asRawText` has to be told, and `res.success === false` in

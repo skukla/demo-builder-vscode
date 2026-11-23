@@ -370,7 +370,7 @@ corrects by calling again with `confirm: true`.
 `{ success: true, data: { success: false, error: 'cancelled' } }` — a handler that ran
 correctly and is reporting that the user backed out. Marking that as a tool failure
 would tell an agent to retry something a person just declined.
-`tests/features/ai/server/toolFailureEnvelope.test.ts` (the builders) and
+`tests/features/ai/server/mcpToolResult-failureFlag.test.ts` (the builders) and
 `tests/features/ai/server/toolDescriptors-failureFlag.test.ts` (descriptor rows) pin all
 of this, including that case. Added 2026-09-11; before that the flag was set nowhere and every failure returned
 as a success whose text happened to say otherwise.

@@ -1416,7 +1416,7 @@ promising an agent that every response parses.
 > *How it is set:* `asText` reads the answer's own top-level `success`, because handlers
 > already answer `{ success, … }` (Pattern B) — so this restates a fact rather than making
 > a judgement. `asRawText` takes a string and must be TOLD.
-> Enforced by `tests/features/ai/server/toolFailureEnvelope.test.ts` (the builders) and
+> Enforced by `tests/features/ai/server/mcpToolResult-failureFlag.test.ts` (the builders) and
 > `tests/features/ai/server/toolDescriptors-failureFlag.test.ts` (descriptor rows) — not the
 > shape suite next to them: a response can be perfectly shaped and still lie about whether
 > it worked.
