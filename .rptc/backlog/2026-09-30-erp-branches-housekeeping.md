@@ -4,7 +4,7 @@ kind: chore
 area: app-builder
 needs: []
 value: low
-status: backlog
+status: shipped
 ---
 
 # Push the stranded docs commits; delete the two remote branches already on main
@@ -43,3 +43,4 @@ and `main`, demo-builder-vscode `loop/2026-09-30-erp-programme`, the integration
 ## Shipped so far
 
 - 2026-11-23  Rechecked 2026-11-23: the four demo-builder-vscode docs commits are on develop, and origin/feature/erp-integration is gone. Left: delete two remote branches whose commits are on main (git cherry: commerce-erp-integration loop/2026-09-29-ab-26e-sync-validation, all six; demo-erp loop/erp-local-date, 7e119fe by patch and 8a96803 as 15136e2, same subject, rebased). Needs the owner's yes.
+- 2026-11-23  Done 2026-11-23 (owner's yes): deleted origin/loop/2026-09-29-ab-26e-sync-validation (commerce-erp-integration) and origin/loop/erp-local-date (demo-erp). Nothing left.
