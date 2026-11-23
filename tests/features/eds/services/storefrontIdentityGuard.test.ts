@@ -40,12 +40,12 @@ describe('projectTargetsStorefront', () => {
 
     /** The exact 2026-08-18 shape: a different project of the same user's. */
     it('rejects a different project belonging to the same user', () => {
-        expect(projectTargetsStorefront(projectFor('leahrayard/leah-b2b-demo'), 'leahrayard', 'leah-bodea'))
+        expect(projectTargetsStorefront(projectFor('avery/avery-b2b-demo'), 'avery', 'avery-bodea'))
             .toBe(false);
     });
 
     it('rejects the same repo name under a different owner', () => {
-        expect(projectTargetsStorefront(projectFor('someone-else/leah-bodea'), 'leahrayard', 'leah-bodea'))
+        expect(projectTargetsStorefront(projectFor('someone-else/avery-bodea'), 'avery', 'avery-bodea'))
             .toBe(false);
     });
 

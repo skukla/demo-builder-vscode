@@ -101,7 +101,7 @@ export const isAbsentValue = (value: unknown): boolean => value === undefined;
  * FILL-only: a stored value is never overridden. Package defaults used to
  * override, which stomped a user's saved Business Structure scope back to the
  * brand's codes every time the wizard loaded a project (2026-08-13,
- * leah-b2b-demo). A real package SWITCH clears the old package's keys first
+ * avery-b2b-demo). A real package SWITCH clears the old package's keys first
  * (`removeKeysFromComponents`) so this fill applies the new ones.
  *
  * Writes through {@link writeToComponents} to {@link resolveWriteTargets}, so the

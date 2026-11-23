@@ -245,7 +245,7 @@ describe('buildComponent', () => {
         describe('a failed build leaves a readable trace, not just a message', () => {
             /** Exactly the shape node emits — path first, everything else after. */
             const NODE_CRASH = [
-                '/Users/leah/.demo-builder/projects/demo/components/eds-accs-mesh/mesh.config.js:1',
+                '/Users/avery/.demo-builder/projects/demo/components/eds-accs-mesh/mesh.config.js:1',
                 "require('dotenv').config();",
                 '^',
                 "Error: Cannot find module 'dotenv'",

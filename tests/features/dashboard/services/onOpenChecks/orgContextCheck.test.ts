@@ -154,7 +154,7 @@ it('SDK unavailable (undefined SDK-only read) → unknown, NOT signed out; no CL
 });
 
 it('token valid but SDK answers ZERO orgs → warning with the Switch IMS Org recovery', async () => {
-    // Regression (2026-08-13, Leah): a valid token whose landed org exposes no
+    // Regression (2026-08-13, Avery): a valid token whose landed org exposes no
     // Developer Console orgs returned `[]` from a SUCCESSFUL SDK read. The check
     // mapped it to `unknown` ("Sign in to check"), whose recovery is a NON-forced
     // login — which silently reuses the same browser SSO session and can never

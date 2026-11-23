@@ -58,7 +58,7 @@ describe('readOrgAdmins', () => {
         // different (and much scarier) claim than "you cannot see them".
         mockFetchOnce(403);
 
-        const result = await readOrgAdmins(tokenProvider, 'leahrayard', logger);
+        const result = await readOrgAdmins(tokenProvider, 'avery', logger);
 
         expect(result.status).toBe('not_authorized');
         expect(result.admins).toBeUndefined();
@@ -132,8 +132,8 @@ describe('the grant wire format (through ensureSiteAdmin)', () => {
 
         const result = await ensureSiteAdmin(
             tokenProvider,
-            'leahrayard',
-            'leah-b2b-demo',
+            'avery',
+            'avery-b2b-demo',
             'teammate@example.test',
             logger,
         );
@@ -176,8 +176,8 @@ describe('probeConfigWriteAccess — the oracle', () => {
 
         const result = await probeConfigWriteAccess(
             tokenProvider,
-            'leahrayard',
-            'leah-b2b-demo',
+            'avery',
+            'avery-b2b-demo',
             logger,
         );
 
@@ -201,8 +201,8 @@ describe('probeConfigWriteAccess — the oracle', () => {
 
         const result = await probeConfigWriteAccess(
             tokenProvider,
-            'leahrayard',
-            'leah-b2b-demo',
+            'avery',
+            'avery-b2b-demo',
             logger,
         );
 
@@ -321,8 +321,8 @@ describe('ensureSiteAdmin', () => {
 
         const result = await ensureSiteAdmin(
             tokenProvider,
-            'leahrayard',
-            'leah-b2b-demo',
+            'avery',
+            'avery-b2b-demo',
             'teammate@example.test',
             logger,
         );

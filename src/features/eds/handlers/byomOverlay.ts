@@ -132,7 +132,7 @@ export const BYOM_OVERLAY_REGISTRATION_FAILED_MESSAGE =
  *
  * The Configuration Service admin role is minted for the GitHub user who installs
  * the AEM Code Sync App at org creation, so an org predating that flow refuses even
- * its own owner (2026-08-13, leah-b2b-demo — Code Sync verified installed, DA.live
+ * its own owner (2026-08-13, avery-b2b-demo — Code Sync verified installed, DA.live
  * accepting the same token). The remedy is a role grant by someone who holds it.
  *
  * It does NOT name the AEM setup page (`tools.aem.live/bot/setup`). This message

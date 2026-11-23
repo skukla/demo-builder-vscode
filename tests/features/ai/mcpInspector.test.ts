@@ -99,7 +99,7 @@ describe('inspectAllServers', () => {
         });
     });
 
-    // Regression: Leah's first AI-verify showed "mcp demo-builder: timeout —
+    // Regression: Avery's first AI-verify showed "mcp demo-builder: timeout —
     // Exceeded 15000ms budget". The inspector spawned the stdio→UDS proxy and
     // ran a full SDK handshake that loops back into the same extension host;
     // under first-run contention (playwright + commerce-extensibility spawning

@@ -440,7 +440,7 @@ describe('ComponentUpdater - Core Workflow', () => {
             });
 
             const nodeCrash = [
-                '/Users/leah/.demo-builder/projects/demo/components/commerce-mesh/mesh.config.js:1',
+                '/Users/avery/.demo-builder/projects/demo/components/commerce-mesh/mesh.config.js:1',
                 "Error: Cannot find module 'dotenv'",
             ].join('\n');
 
